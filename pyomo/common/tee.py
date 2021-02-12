@@ -23,6 +23,7 @@ import threading
 import time
 
 _mswindows = sys.platform.startswith('win')
+_poll_interval = 0.1
 try:
     if _mswindows:
         from msvcrt import get_osfhandle
@@ -37,21 +38,25 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 class _StreamHandle(object):
-    def __init__(self, mode, buffering, encoding):
+    def __init__(self, mode, buffering, encoding, newline):
         self.buffering = buffering
+        self.newlines = newline
         self.read_pipe, self.write_pipe = os.pipe()
         if not buffering and 'b' not in mode:
             # While we support "unbuffered" behavior in text mode,
             # python does not
             buffering = -1
         self.write_file = os.fdopen(self.write_pipe, mode=mode,
-                                    buffering=buffering, encoding=encoding)
+                                    buffering=buffering, encoding=encoding,
+                                    newline=newline)
         self.decoder_buffer = b''
         try:
-            self.encoding = self.write_file.encoding
-            self.output_buffer = ''
+            self.encoding = encoding or self.write_file.encoding
         except AttributeError:
             self.encoding = None
+        if self.encoding:
+            self.output_buffer = ''
+        else:
             self.output_buffer = b''
 
     def fileno(self):
@@ -94,9 +99,12 @@ class _StreamHandle(object):
                 chars = self.decoder_buffer[:raw_len].decode(self.encoding)
                 break
             except:
-                # partial read of unicode character, try again with
-                # a shorter bytes buffer
-                raw_len -= 1
+                pass
+            # partial read of unicode character, try again with
+            # a shorter bytes buffer
+            raw_len -= 1
+        if self.newlines is None:
+            chars = chars.replace('\r\n', '\n').replace('\r', '\n')
         self.output_buffer += chars
         self.decoder_buffer = self.decoder_buffer[raw_len:]
 
@@ -115,21 +123,22 @@ class _StreamHandle(object):
 
         for stream in ostreams:
             try:
-                writeOK = stream.write(ostring)
+                written = stream.write(ostring)
             except:
-                writeOK = False
-            if writeOK and not self.buffering:
+                written = 0
+            if written and not self.buffering:
                 stream.flush()
-            if not writeOK:
+            if written != len(ostring):
                 logger.error(
                     "Output stream closed before all output was "
                     "written to it. The following was left in "
-                    "the output buffer:\n\t%r" % (ostring,))
+                    "the output buffer:\n\t%r" % (ostring[written:],))
 
 
 class TeeStream(object):
-    def __init__(self, *ostreams):
+    def __init__(self, *ostreams, encoding=None):
         self.ostreams = ostreams
+        self.encoding = encoding
         self._stdout = None
         self._stderr = None
         self._handles = []
@@ -147,8 +156,10 @@ class TeeStream(object):
             self._stderr = self.open(buffering=0)
         return self._stderr
 
-    def open(self, mode='w', buffering=-1, encoding=None):
-        handle = _StreamHandle(mode, buffering, encoding)
+    def open(self, mode='w', buffering=-1, encoding=None, newline=None):
+        if encoding is None:
+            encoding = self.encoding
+        handle = _StreamHandle(mode, buffering, encoding, newline)
         if handle.buffering:
             self._handles.append(handle)
         else:
@@ -176,6 +187,10 @@ class TeeStream(object):
         return self
 
     def __exit__(self, et, ev, tb):
+        self.close()
+
+    def __del__(self):
+        # Implement __del__ to guarantee that file descriptors are closed
         self.close()
 
     def _start(self, handle):
@@ -218,7 +233,7 @@ class TeeStream(object):
                 new_data = None
                 for handle in handles:
                     try:
-                        pipe = handle.read_pipe
+                        pipe = get_osfhandle(handle.read_pipe)
                         numAvail = PeekNamedPipe(pipe, 0)[1]
                         if numAvail:
                             result, new_data = ReadFile(pipe, numAvail, None)
@@ -231,12 +246,17 @@ class TeeStream(object):
                 if new_data is None:
                     # PeekNamedPipe is non-blocking; to avoid swamping
                     # the core, sleep for a "short" amount of time
-                    time.sleep(0.1)
+                    time.sleep(_poll_interval)
                     continue
             else:
-                ready_handles = select(handles, noop, noop)[0]
+                # Because we could be *adding* handles to the TeeStream
+                # while the _mergedReader is running, we want to
+                # periodically time out and update the list of handles
+                # that we are waiting for
+                ready_handles = select(handles, noop, noop, _poll_interval)[0]
                 if not ready_handles:
-                    break
+                    continue
+
                 handle = ready_handles[0]
                 new_data = os.read(handle.read_pipe, io.DEFAULT_BUFFER_SIZE)
                 if not new_data:
