@@ -179,14 +179,14 @@ class TeeStream(object):
         join_iter = 1
         while self._threads:
             if join_iter == 10:
-                for h in self._handles:
-                    print("HANDLE: %s" % (h.state,))
                 if in_exception:
                     # We are already processing an exception: no reason
                     # to trigger another
                     break
-                raise RuntimeError(
-                    "TeeStream: deadlock observed joining reader threads")
+                msg = "TeeStream: deadlock observed joining reader threads"
+                for h in self._handles:
+                    msg += "\n    HANDLE STATE: %s" % (h.state,)
+                raise RuntimeError(msg)
             for th in self._threads:
                 th.join(_poll_interval*join_iter)
             self._threads[:] = [th for th in self._threads if th.is_alive()]
@@ -245,7 +245,7 @@ class TeeStream(object):
         while handles:
             if _mswindows:
                 new_data = None
-                for handle in handles:
+                for handle in list(handles):
                     try:
                         pipe = get_osfhandle(handle.read_pipe)
                         numAvail = PeekNamedPipe(pipe, 0)[1]
@@ -255,7 +255,7 @@ class TeeStream(object):
                             break
                     except:
                         handle.finalize(self.ostreams)
-                        self._handles.remove(handle)
+                        handles.remove(handle)
                         new_data = None
                 if new_data is None:
                     # PeekNamedPipe is non-blocking; to avoid swamping
@@ -266,7 +266,11 @@ class TeeStream(object):
                 # Because we could be *adding* handles to the TeeStream
                 # while the _mergedReader is running, we want to
                 # periodically time out and update the list of handles
-                # that we are waiting for
+                # that we are waiting for.  It is also critical that we
+                # send select() a *copy* of the handles list, as we see
+                # deadlocks when handles are added while select() is
+                # waiting
+                handle.state = "select: %r" % (handles,)
                 ready_handles = select(
                     list(handles), noop, noop, _poll_interval)[0]
                 if not ready_handles:
@@ -277,7 +281,7 @@ class TeeStream(object):
                 new_data = os.read(handle.read_pipe, io.DEFAULT_BUFFER_SIZE)
                 if not new_data:
                     handle.finalize(self.ostreams)
-                    self._handles.remove(handle)
+                    handles.remove(handle)
                     continue
                 handle.decoder_buffer += new_data
 
