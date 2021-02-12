@@ -277,11 +277,13 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         if solver_exec is None:
             ver = _extract_version('')
         else:
-            results = subprocess.run([solver_exec],
-                                 input=('from gurobipy import *; print(gurobi.version()); exit()'.encode()),
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT,
-                                 universal_newlines=True)
+            results = subprocess.run(
+                [solver_exec],
+                input='from gurobipy import *; print(gurobi.version()); exit()',
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+            )
             ver = None
             try:
                 ver = tuple(eval(results.stdout.strip()))
