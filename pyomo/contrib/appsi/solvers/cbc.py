@@ -235,12 +235,12 @@ class Cbc(Solver):
             timeout = None
 
         out = open(self._filename + '.log', 'wb')
-        err = subprocess.STDOUT
+        err = out
         capture_output = False
 
         thread = None
         if config.stream_solver:
-            thread = TeeThread(self._filename + '.log')
+            thread = TeeThread(self._filename + '.log', stream_to_flush=out)
             thread.start()
 
         def _check_and_escape_options():

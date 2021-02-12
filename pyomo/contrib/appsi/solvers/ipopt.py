@@ -269,19 +269,20 @@ class Ipopt(Solver):
             timeout = None
 
         out = open(self._filename + '.log', 'wb')
-        err = subprocess.STDOUT
+        err = out
         capture_output = False
 
         thread = None
         if config.stream_solver:
-            thread = TeeThread(self._filename + '.log')
+            thread = TeeThread(self._filename + '.log', stream_to_flush=out)
             thread.start()
 
         timer.start('subprocess')
         try:
             cp = subprocess.run([str(config.executable),
                                  self._filename + '.nl',
-                                 '-AMPL'],
+                                 '-AMPL',
+                                 'halt_on_ampl_error=yes'],
                                 timeout=timeout,
                                 stdout=out,
                                 stderr=err,
