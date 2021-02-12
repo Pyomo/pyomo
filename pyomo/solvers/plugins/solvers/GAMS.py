@@ -17,6 +17,7 @@ from pyomo.opt import ProblemFormat, SolverFactory
 
 import pyomo.common
 from pyomo.common.collections import Options
+from pyomo.common.tee import TeeStream
 
 from pyomo.opt.base.solvers import _extract_version
 from pyutilib.misc import quote_split
@@ -812,18 +813,14 @@ class GAMSShell(_GAMSSolver):
             command.append("lf=" + str(logfile))
 
         try:
-            with subprocess.Popen(command, stdout=subprocess.PIPE,
-                                  stderr=subprocess.STDOUT, bufsize=1,
-                                  universal_newlines=True) as p, \
-                open('logfile', 'w') as f:
-                for line in p.stdout:
-                    if tee:
-                        sys.stdout.write(line)
-                    f.write(line)
-            rc = p.poll()
-            with open('logfile', 'r') as f:
-                txt = f.read()
-            os.remove('logfile')
+            ostreams = [StringIO()]
+            if tee:
+                ostreams.append(sys.stdout)
+            with TeeStream(*ostreams) as t:
+                result = subprocess.run(command, stdout=t.STDOUT,
+                                        stderr=t.STDERR)
+            rc = result.returncode
+            txt = ostreams[0].getvalue()
 
             if keepfiles:
                 print("\nGAMS WORKING DIRECTORY: %s\n" % tmpdir)

@@ -317,8 +317,7 @@ class SystemCallSolver(OptSolver):
                     timeout=timeout,
                     env=command.env,
                     stdout=t.STDOUT,
-                    stderr=t.STDERR,
-                    universal_newlines=True
+                    stderr=t.STDERR
                 )
 
             rc = result.returncode
