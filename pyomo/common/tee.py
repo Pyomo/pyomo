@@ -60,6 +60,9 @@ class _StreamHandle(object):
         else:
             self.output_buffer = b''
 
+    def __repr__(self):
+        return "%s(%s)" % (self.buffering, id(self))
+
     def fileno(self):
         return self.read_pipe
 
