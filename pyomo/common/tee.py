@@ -23,6 +23,7 @@ import threading
 import time
 
 _mswindows = sys.platform.startswith('win')
+_poll_interval = 0.1
 try:
     if _mswindows:
         from msvcrt import get_osfhandle
@@ -245,12 +246,17 @@ class TeeStream(object):
                 if new_data is None:
                     # PeekNamedPipe is non-blocking; to avoid swamping
                     # the core, sleep for a "short" amount of time
-                    time.sleep(0.1)
+                    time.sleep(_poll_interval)
                     continue
             else:
-                ready_handles = select(handles, noop, noop)[0]
+                # Because we could be *adding* handles to the TeeStream
+                # while the _mergedReader is running, we want to
+                # periodically time out and update the list of handles
+                # that we are waiting for
+                ready_handles = select(handles, noop, noop, _poll_interval)[0]
                 if not ready_handles:
-                    break
+                    continue
+
                 handle = ready_handles[0]
                 new_data = os.read(handle.read_pipe, io.DEFAULT_BUFFER_SIZE)
                 if not new_data:

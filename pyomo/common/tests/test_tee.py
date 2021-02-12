@@ -43,14 +43,14 @@ class TestTeeStream(unittest.TestCase):
         a = StringIO()
         b = StringIO()
         with tee.TeeStream(a,b) as t:
+            # This is a slightly nondeterministic (on Windows), so a
+            # flush() and short pause should help
             t.STDOUT.write("Hello\nWorld")
             t.STDOUT.flush()
-            # This is a slightly nondeterministic (on Windows), so a
-            # short pause should help
-            time.sleep(0.15)
+            time.sleep(0.11)
             t.STDERR.write("interrupting\ncow")
             t.STDERR.flush()
-            time.sleep(0.15)
+            time.sleep(0.11)
         self.assertEqual(a.getvalue(), "Hello\ninterrupting\ncowWorld")
         self.assertEqual(b.getvalue(), "Hello\ninterrupting\ncowWorld")
 
@@ -60,10 +60,13 @@ class TestTeeStream(unittest.TestCase):
         try:
             _tmp, tee._peek_available = tee._peek_available, False
             with tee.TeeStream(a,b) as t:
+                # Ensure both threads are running
+                t.STDOUT
+                t.STDERR
+                # ERR should come out before OUT, but this is slightly
+                # nondeterministic, so a short pause should help
                 t.STDERR.write("Hello\n")
                 t.STDERR.flush()
-                # This is a slightly nondeterministic, so a short pause
-                # should help
                 time.sleep(0.11)
                 t.STDOUT.write("World\n")
         finally:
