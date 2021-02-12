@@ -312,7 +312,6 @@ class SystemCallSolver(OptSolver):
             ostreams.append(sys.stdout)
 
         try:
-            print(command.cmd)
             with TeeStream(*ostreams) as t:
                 proc = subprocess.Popen(
                     command.cmd,
@@ -322,10 +321,10 @@ class SystemCallSolver(OptSolver):
                     stderr=t.STDERR
                 )
                 try:
-                    result = proc.communicate(input=_input, timeout=timeout)
+                    proc.communicate(input=_input, timeout=timeout)
                 except TimeoutExpired:
                     proc.kill()
-                    result = proc.communicate()
+                    proc.communicate()
 
             rc = proc.returncode
             log = ostreams[0].getvalue()
