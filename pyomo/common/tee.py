@@ -112,7 +112,7 @@ class _StreamHandle(object):
         if not self.encoding:
             ostring, self.output_buffer = self.output_buffer, b''
         elif self.buffering == 1:
-            EOL = self.output_buffer.rfind('\n') + 1
+            EOL = self.output_buffer.rfind(self.newlines or '\n') + 1
             ostring = self.output_buffer[:EOL]
             self.output_buffer = self.output_buffer[EOL:]
         else:
