@@ -170,6 +170,7 @@ class TeeStream(object):
             # Unbuffered handles should appear earlier in the list so
             # that they get processed first
             self._handles.insert(0, handle)
+        print("ADD HANDLE: %r" % (handle,))
         self._start(handle)
         return handle.write_file
 
@@ -180,7 +181,14 @@ class TeeStream(object):
 
         # Join all stream processing threads
         join_iter = 1
-        while self._threads:
+        while True:
+            for th in self._threads:
+                th.join(_poll_interval*join_iter)
+            self._threads[:] = [th for th in self._threads if th.is_alive()]
+            if not self._threads:
+                break
+            time.sleep(0.1)
+            join_iter += 1
             if join_iter == 10:
                 if in_exception:
                     # We are already processing an exception: no reason
@@ -190,10 +198,6 @@ class TeeStream(object):
                 for h in self._handles:
                     msg += "\n    HANDLE STATE: %s" % (h.state,)
                 raise RuntimeError(msg)
-            for th in self._threads:
-                th.join(_poll_interval*join_iter)
-            self._threads[:] = [th for th in self._threads if th.is_alive()]
-            join_iter += 1
 
         self._threads.clear()
         self._handles.clear()
@@ -285,6 +289,7 @@ class TeeStream(object):
                 handle.state = 'read'
                 new_data = os.read(handle.read_pipe, io.DEFAULT_BUFFER_SIZE)
                 if not new_data:
+                    print("REMOVE HANDLE: %r" % (handle,))
                     handle.finalize(self.ostreams)
                     handles.remove(handle)
                     continue
