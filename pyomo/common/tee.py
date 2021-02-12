@@ -187,10 +187,11 @@ class TeeStream(object):
 
     def close(self, in_exception=False):
         state = {}
+        handles = list(self._handles)
         # Close all open handles
-        for h in self._handles:
-            h.close()
+        for h in handles:
             state[id(h)] = [h.select_count]
+            h.close()
 
         # Join all stream processing threads
         join_iter = 1
@@ -200,7 +201,7 @@ class TeeStream(object):
             self._threads[:] = [th for th in self._threads if th.is_alive()]
             if not self._threads:
                 break
-            for h in self._handles:
+            for h in handles:
                 state[id(h)].append(h.select_count)
             join_iter += 1
             if join_iter == 10:
@@ -209,7 +210,7 @@ class TeeStream(object):
                     # to trigger another
                     break
                 msg = "TeeStream: deadlock observed joining reader threads"
-                for h in self._handles:
+                for h in handles:
                     msg += "\n    HANDLE STATE: %s: %s" % (h.state,state[id(h)])
                 raise RuntimeError(msg)
 
