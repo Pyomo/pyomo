@@ -46,8 +46,9 @@ class TestTeeStream(unittest.TestCase):
             t.STDOUT.write("Hello\nWorld")
             # This is a slightly nondeterministic (on Windows), so a
             # short pause should help
-            time.sleep(0.15)
+            time.sleep(0.1)
             t.STDERR.write("interrupting\ncow")
+            time.sleep(0.1)
         self.assertEqual(a.getvalue(), "Hello\ninterrupting\ncowWorld")
         self.assertEqual(b.getvalue(), "Hello\ninterrupting\ncowWorld")
 
