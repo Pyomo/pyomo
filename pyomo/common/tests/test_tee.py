@@ -50,7 +50,7 @@ class TestTeeStream(unittest.TestCase):
             time.sleep(tee._poll_interval*1.1)
             t.STDERR.write("interrupting\ncow")
             t.STDERR.flush()
-            time.sleep(tee._poll_interval*1.5)
+            time.sleep(tee._poll_interval*2)
         self.assertEqual(a.getvalue(), "Hello\ninterrupting\ncowWorld")
         self.assertEqual(b.getvalue(), "Hello\ninterrupting\ncowWorld")
 
