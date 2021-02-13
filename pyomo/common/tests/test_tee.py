@@ -47,10 +47,10 @@ class TestTeeStream(unittest.TestCase):
             # flush() and short pause should help
             t.STDOUT.write("Hello\nWorld")
             t.STDOUT.flush()
-            time.sleep(0.11)
+            time.sleep(tee._poll_interval*1.1)
             t.STDERR.write("interrupting\ncow")
             t.STDERR.flush()
-            time.sleep(0.11)
+            time.sleep(tee._poll_interval*1.5)
         self.assertEqual(a.getvalue(), "Hello\ninterrupting\ncowWorld")
         self.assertEqual(b.getvalue(), "Hello\ninterrupting\ncowWorld")
 
@@ -67,7 +67,7 @@ class TestTeeStream(unittest.TestCase):
                 # nondeterministic, so a short pause should help
                 t.STDERR.write("Hello\n")
                 t.STDERR.flush()
-                time.sleep(0.11)
+                time.sleep(tee._poll_interval*1.1)
                 t.STDOUT.write("World\n")
         finally:
             tee._peek_available = _tmp
