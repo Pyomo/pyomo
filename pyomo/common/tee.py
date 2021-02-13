@@ -39,8 +39,6 @@ logger = logging.getLogger(__name__)
 
 class _StreamHandle(object):
     def __init__(self, mode, buffering, encoding, newline):
-        self.state = 'init'
-        self.select_count = 0
         self.buffering = buffering
         self.newlines = newline
         self.read_pipe, self.write_pipe = os.pipe()
@@ -186,11 +184,10 @@ class TeeStream(object):
         return handle.write_file
 
     def close(self, in_exception=False):
-        state = {}
-        handles = list(self._handles)
-        # Close all open handles
-        for h in handles:
-            state[id(h)] = [h.select_count]
+        # Close all open handles.  Note that as the threads may
+        # immediately start removing handles from the list, it is
+        # important that we iterate over a copy of the list.
+        for h in list(self._handles):
             h.close()
 
         # Join all stream processing threads
@@ -201,18 +198,14 @@ class TeeStream(object):
             self._threads[:] = [th for th in self._threads if th.is_alive()]
             if not self._threads:
                 break
-            for h in handles:
-                state[id(h)].append(h.select_count)
             join_iter += 1
             if join_iter == 10:
                 if in_exception:
                     # We are already processing an exception: no reason
                     # to trigger another
                     break
-                msg = "TeeStream: deadlock observed joining reader threads"
-                for h in handles:
-                    msg += "\n    HANDLE STATE: %s: %s" % (h.state,state[id(h)])
-                raise RuntimeError(msg)
+                raise RuntimeError(
+                    "TeeStream: deadlock observed joining reader threads")
 
         self._threads.clear()
         self._handles.clear()
@@ -292,17 +285,12 @@ class TeeStream(object):
                 # send select() a *copy* of the handles list, as we see
                 # deadlocks when handles are added while select() is
                 # waiting
-                _handles = list(handles)
-                for handle in _handles:
-                    handle.state = "select: %r" % (_handles,)
-                    handle.select_count += 1
                 ready_handles = select(
-                    _handles, noop, noop, _poll_interval)[0]
+                    list(handles), noop, noop, _poll_interval)[0]
                 if not ready_handles:
                     continue
 
                 handle = ready_handles[0]
-                handle.state = 'read'
                 new_data = os.read(handle.read_pipe, io.DEFAULT_BUFFER_SIZE)
                 if not new_data:
                     handle.finalize(self.ostreams)
@@ -312,13 +300,9 @@ class TeeStream(object):
 
             # At this point, we have new data sitting in the
             # handle.decoder_buffer
-            handle.state = 'decode'
             handle.decodeIncomingBuffer()
 
             # Now, output whatever we have decoded to the output streams
-            handle.state = 'write'
             handle.writeOutputBuffer(self.ostreams)
-
-            handle.state = 'ready'
         #
         #print("MERGED READER: DONE")
