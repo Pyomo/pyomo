@@ -67,7 +67,10 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
     if config.nlp_solver == 'ipopt':
         getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
         getattr(solve_data.mip, 'ipopt_zU_out', _DoNothing()).deactivate()
-    masteropt = SolverFactory(config.mip_solver)
+    if regularization_problem:
+        masteropt = SolverFactory(config.mip_projection_solver)
+    else:
+        masteropt = SolverFactory(config.mip_solver)
     # determine if persistent solver is called.
     if isinstance(masteropt, PersistentSolver):
         masteropt.set_instance(solve_data.mip, symbolic_solver_labels=True)

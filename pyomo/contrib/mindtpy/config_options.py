@@ -254,6 +254,13 @@ def _add_subsolver_configs(CONFIG):
         description='Stream the output of nlp solver to terminal.',
         domain=bool
     ))
+    CONFIG.declare('mip_projection_solver', ConfigValue(
+        default=None,
+        domain=In(['gurobi', 'cplex', 'cbc', 'glpk', 'gams',
+                   'gurobi_persistent', 'cplex_persistent']),
+        description='MIP subsolver for projection problem',
+        doc='Which MIP subsolver is going to be used for solving the projection problem'
+    ))
 
 
 def _add_tolerance_configs(CONFIG):
@@ -416,6 +423,8 @@ def check_config(config):
             # if no method is activated by users, we will use use_bb_tree_incumbent by default
             if not (config.reduce_level_coef or config.use_bb_tree_incumbent):
                 config.use_bb_tree_incumbent = True
+        if config.mip_projection_solver is None:
+            config.mip_projection_solver = config.mip_solver
     if config.single_tree:
         config.iteration_limit = 1
         config.add_slack = False

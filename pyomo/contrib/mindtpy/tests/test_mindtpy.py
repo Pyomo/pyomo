@@ -52,7 +52,7 @@ class TestMindtPy(unittest.TestCase):
                                 bound_tolerance=1E-5)
 
             self.assertIs(results.solver.termination_condition,
-                          TerminationCondition.optimal)
+                          TerminationCondition.feasible)
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
     def test_OA_8PP_nonconvex(self):

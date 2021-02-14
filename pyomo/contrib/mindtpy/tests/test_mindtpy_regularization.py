@@ -19,7 +19,7 @@ from pyomo.solvers.tests.models.MIQCP_simple import MIQCP_simple
 from pyomo.opt import TerminationCondition
 from pyomo.contrib.mindtpy.tests.MINLP4_simple import SimpleMINLP4
 
-required_solvers = ('ipopt', 'cplex')
+required_solvers = ('ipopt', 'gurobi')
 # required_solvers = ('gams', 'gams')
 if all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = True
