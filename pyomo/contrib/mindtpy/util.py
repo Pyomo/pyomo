@@ -405,11 +405,12 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
     elapsed = get_main_elapsed_time(solve_data.timing)
     remaining = int(max(config.time_limit - elapsed, 1))
     if solver_type == 'mip':
-        solver_name = config.mip_solver
         if regularization:
+            solver_name = config.mip_projection_solver
             if config.projection_mip_threads > 0:
                 opt.options['threads'] = config.projection_mip_threads
         else:
+            solver_name = config.mip_solver
             if config.threads > 0:
                 opt.options['threads'] = config.threads
     elif solver_type == 'nlp':
