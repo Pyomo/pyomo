@@ -33,7 +33,8 @@ def _failIfPyomoResultsDiffer(self, cmd=None, baseline=None, cwd=None):
             INPUT.close()
     
         output = subprocess.run(cmd, stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT)
+                                stderr=subprocess.STDOUT,
+                                universal_newlines=True)
     finally:
         os.chdir(oldpwd)
     
@@ -41,7 +42,7 @@ def _failIfPyomoResultsDiffer(self, cmd=None, baseline=None, cwd=None):
         self.fail("Command terminated with nonzero status: '%s'" % cmd)
     # !!THIS SEEMS LIKE A BUG!! - mrmundt #
     # There is nothing imported called "extract_results" nor "compare_results"
-    results = extract_results(re.split('\n', output.stdout.decode("utf-8")))
+    results = extract_results(re.split('\n', output.stdout))
     try:
         compare_results(results, baseline)
     except IOError:

@@ -71,7 +71,8 @@ class PicoMIPConverter(object):
                     raise ConverterError("File "+item+" does not exist!")
                 cmd = cmd + " "+item
         print("Running command: "+cmd)
-        subprocess.run(cmd)
+        subprocess.run(cmd, stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL)
         if not os.path.exists(output_filename):       #pragma:nocover
             raise ApplicationError(\
                     "Problem launching 'pico_convert' to create "+output_filename)

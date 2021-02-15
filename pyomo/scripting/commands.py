@@ -122,7 +122,7 @@ def pyomo_python(args=None):
         console.interact('Pyomo Python Console\n'+sys.version)
     else:
         cmd = sys.executable+' '+ ' '.join(args)
-        subprocess.run(cmd, stdout=sys.stdout, stderr=sys.stderr)
+        subprocess.run(cmd)
 
 @pyomo_command('pyomo', "The main command interface for Pyomo")
 def pyomo(args=None):
