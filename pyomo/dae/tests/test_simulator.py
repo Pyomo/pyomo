@@ -33,10 +33,10 @@ from pyomo.core.expr.template_expr import (
     IndexTemplate, 
     _GetItemIndexer,
 )
+from pyomo.common.fileutils import import_file
 
 import os
 from pyutilib.misc import setup_redirect, reset_redirect
-from pyutilib.misc import import_file
 
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
