@@ -37,9 +37,12 @@ class TestTeeStream(unittest.TestCase):
             self.assertIsNot(out, err)
 
     @unittest.skipIf(not tee._peek_available,
-                     "This test is not deterministic if select/peek "
-                     "are available")
+                     "Requires the _mergedReader, but _peek_available==False")
     def test_merge_out_and_err(self):
+        # Test that the STDERR/STDOUT streams are merged correctly
+        # (i.e., STDOUT is line buffered and STDERR is not).  This merge
+        # logic is only applicable when using the merged reader (i.e.,
+        # _peek_available is True)
         a = StringIO()
         b = StringIO()
         with tee.TeeStream(a,b) as t:
