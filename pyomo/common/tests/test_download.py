@@ -14,10 +14,11 @@ import re
 import six
 import shutil
 import tempfile
+import subprocess
 
 import pyutilib.th as unittest
 from pyutilib.misc import capture_output
-from pyutilib.subprocess import run
+
 
 from pyomo.common import DeveloperError
 from pyomo.common.config import PYOMO_CONFIG_DIR
@@ -169,7 +170,8 @@ class Test_FileDownloader(unittest.TestCase):
                 self.assertEqual(_ver, v)
                 self.assertTrue(v.replace('.','').startswith(dist_ver))
 
-            if run(['lsb_release'])[0] == 0:
+            if subprocess.run(['lsb_release'], stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL).returncode == 0:
                 d, v = f._get_distver_from_lsb_release()
                 #print(d,v)
                 self.assertEqual(_os, d)
