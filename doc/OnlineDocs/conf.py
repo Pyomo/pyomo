@@ -219,6 +219,7 @@ from pyomo.common.dependencies import (
     pympler_available, dill_available,
 )
 pint_available = attempt_import('pint', defer_check=False)[1]
+from pyomo.contrib.parmest.parmest import parmest_available
 
 import pyomo.opt
 # Not using SolverFactory to check solver availability because
