@@ -13,10 +13,10 @@ from os.path import dirname, abspath, join
 thisDir = dirname( abspath(__file__) )
 
 import pyutilib.th as unittest
-import pyutilib.misc
 
 import pyomo.opt
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
+from pyomo.common.fileutils import import_file
 from pyomo.core.base import Var
 from pyomo.core.base.objective import minimize, maximize
 from pyomo.core.base.piecewise import Bound, PWRepn
@@ -53,10 +53,8 @@ def createTestMethod(pName,problem,solver,writer,kwds):
             obj.skipTest("Solver %s (interface=%s) is not available"
                          % (solver, writer))
 
-        m = pyutilib.misc.import_file(os.path.join(thisDir,
-                                                   'problems',
-                                                   problem),
-                                      clear_cache=True)
+        m = import_file(os.path.join(thisDir, 'problems', problem + '.py'),
+                        clear_cache=True)
 
         model = m.define_model(**kwds)
 

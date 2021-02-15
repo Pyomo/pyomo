@@ -11,13 +11,14 @@
 # Unit Tests for Pyomo tutorials
 #
 
+import runpy
+import sys
 import os
 from os.path import abspath, dirname
 topdir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))
 currdir = dirname(abspath(__file__))+os.sep
 tutorial_dir=topdir+os.sep+"examples"+os.sep+"pyomo"+os.sep+"tutorials"+os.sep
 
-from pyutilib.misc import run_file
 import pyutilib.th as unittest
 
 try:
@@ -51,31 +52,47 @@ except:
 class PyomoTutorials(unittest.TestCase):
 
     def setUp(self):
-        pass
+        self.cwd = os.getcwd()
+        self.tmp_path = list(sys.path)
+        os.chdir(tutorial_dir)
+        sys.path = [os.path.dirname(tutorial_dir)] + sys.path
+        sys.path.append(os.path.dirname(tutorial_dir))
+        sys.stderr.flush()
+        sys.stdout.flush()
+        self.save_stdout = sys.stdout
+        self.save_stderr = sys.stderr
 
-    def construct(self,filename):
-        pass
+    def tearDown(self):
+        os.chdir(self.cwd)
+        sys.path = self.tmp_path
+        sys.stdout = self.save_stdout
+        sys.stderr = self.save_stderr
+
+    def driver(self, name):
+        OUTPUT = open(currdir+name+'.log', 'w')
+        sys.stdout = OUTPUT
+        sys.stderr = OUTPUT
+        runpy.run_module(name, None, "__main__")
+        OUTPUT.close()
+        self.assertIn(open(tutorial_dir+name+".out", 'r').read(),
+                      open(currdir+name+".log", 'r').read())
+        os.remove(currdir+name+".log")
 
     def test_data(self):
-        run_file(tutorial_dir+"data.py", logfile=currdir+"data.log", execdir=tutorial_dir)
-        self.assertFileEqualsBaseline(currdir+"data.log", tutorial_dir+"data.out")
+        self.driver('data')
 
     @unittest.skipIf(not ((_win32com and _excel_available) or _xlrd or _openpyxl), "Cannot read excel file.")
     def test_excel(self):
-        run_file(tutorial_dir+"excel.py", logfile=currdir+"excel.log", execdir=tutorial_dir)
-        self.assertFileEqualsBaseline(currdir+"excel.log", tutorial_dir+"excel.out")
+        self.driver('excel')
 
     def test_set(self):
-        run_file(tutorial_dir+"set.py", logfile=currdir+"set.log", execdir=tutorial_dir)
-        self.assertFileEqualsBaseline(currdir+"set.log", tutorial_dir+"set.out")
+        self.driver('set')
 
     def test_table(self):
-        run_file(tutorial_dir+"table.py", logfile=currdir+"table.log", execdir=tutorial_dir)
-        self.assertFileEqualsBaseline(currdir+"table.log", tutorial_dir+"table.out")
+        self.driver('table')
 
     def test_param(self):
-        run_file(tutorial_dir+"param.py", logfile=currdir+"param.log", execdir=tutorial_dir)
-        self.assertFileEqualsBaseline(currdir+"param.log", tutorial_dir+"param.out")
+        self.driver('param')
 
 if __name__ == "__main__":
     unittest.main()

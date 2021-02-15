@@ -1,7 +1,16 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import os.path
-from pyomo.common.fileutils import this_file_dir
+from pyomo.common.fileutils import this_file_dir, import_file
 import pyutilib.th as unittest
-from pyutilib.misc import import_file
 import pyomo.environ as pyo
 
 from pyomo.contrib.pynumero.dependencies import (
@@ -36,13 +45,13 @@ class TestPyomoCyIpoptSolver(unittest.TestCase):
 
 class TestExamples(unittest.TestCase):
     def test_external_grey_box_react_example_maximize_cb_outputs(self):
-        ex = import_file(os.path.join(example_dir, 'external_grey_box', 'react-example', 'maximize_cb_outputs.py'))
+        ex = import_file(os.path.join(example_dir, 'external_grey_box', 'react_example', 'maximize_cb_outputs.py'))
         m = ex.maximize_cb_outputs()
         self.assertAlmostEqual(pyo.value(m.reactor.inputs['sv']), 1.34381, places=3)
         self.assertAlmostEqual(pyo.value(m.reactor.outputs['cb']), 1072.4372, places=2)
 
     def test_external_grey_box_react_example_maximize_cb_outputs_scaling(self):
-        ex = import_file(os.path.join(example_dir, 'external_grey_box', 'react-example', 'maximize_cb_ratio_residuals.py'))
+        ex = import_file(os.path.join(example_dir, 'external_grey_box', 'react_example', 'maximize_cb_ratio_residuals.py'))
         aoptions={'nlp_scaling_method': 'user-scaling',
                  'output_file': '_cyipopt-external-greybox-react-scaling.log',
                  'file_print_level':10}
@@ -78,21 +87,35 @@ class TestExamples(unittest.TestCase):
         self.assertIn('c scaling vector[    6]= 1.0000000000000000e+01', solver_trace)
 
     def test_external_grey_box_react_example_maximize_with_output(self):
-        ex = import_file(os.path.join(example_dir, 'external_grey_box', 'react-example', 'maximize_cb_ratio_residuals.py'))
+        ex = import_file(os.path.join(example_dir, 'external_grey_box', 'react_example', 'maximize_cb_ratio_residuals.py'))
         m = ex.maximize_cb_ratio_residuals_with_output()
         self.assertAlmostEqual(pyo.value(m.reactor.inputs['sv']), 1.26541996, places=3)
         self.assertAlmostEqual(pyo.value(m.reactor.inputs['cb']), 1071.7410089, places=2)
         self.assertAlmostEqual(pyo.value(m.reactor.outputs['cb_ratio']), 0.15190409266, places=3)
 
-    def test_external_grey_box_react_example_maximize_with_obj(self):
-        ex = import_file(os.path.join(example_dir, 'external_grey_box', 'react-example', 'maximize_cb_ratio_residuals.py'))
+    def test_external_grey_box_react_example_maximize_with_hessian_with_output(self):
+        ex = import_file(os.path.join(example_dir, 'external_grey_box', 'react_example', 'maximize_cb_ratio_residuals.py'))
+        m = ex.maximize_cb_ratio_residuals_with_hessian_with_output()
+        self.assertAlmostEqual(pyo.value(m.reactor.inputs['sv']), 1.26541996, places=3)
+        self.assertAlmostEqual(pyo.value(m.reactor.inputs['cb']), 1071.7410089, places=2)
+        self.assertAlmostEqual(pyo.value(m.reactor.outputs['cb_ratio']), 0.15190409266, places=3)
+
+    def test_external_grey_box_react_example_maximize_with_hessian_with_output_pyomo(self):
+        ex = import_file(os.path.join(example_dir, 'external_grey_box', 'react_example', 'maximize_cb_ratio_residuals.py'))
+        m = ex.maximize_cb_ratio_residuals_with_hessian_with_output_pyomo()
+        self.assertAlmostEqual(pyo.value(m.sv), 1.26541996, places=3)
+        self.assertAlmostEqual(pyo.value(m.cb), 1071.7410089, places=2)
+        self.assertAlmostEqual(pyo.value(m.cb_ratio), 0.15190409266, places=3)
+
+    def test_pyomo_react_example_maximize_with_obj(self):
+        ex = import_file(os.path.join(example_dir, 'external_grey_box', 'react_example', 'maximize_cb_ratio_residuals.py'))
         m = ex.maximize_cb_ratio_residuals_with_obj()
         self.assertAlmostEqual(pyo.value(m.reactor.inputs['sv']), 1.26541996, places=3)
         self.assertAlmostEqual(pyo.value(m.reactor.inputs['cb']), 1071.7410089, places=2)
         self.assertAlmostEqual(pyo.value(m.obj), 0.15190409266, places=3)
 
     def test_external_grey_box_react_example_maximize_with_additional_pyomo_variables(self):
-        ex = import_file(os.path.join(example_dir, 'external_grey_box', 'react-example', 'maximize_cb_ratio_residuals.py'))
+        ex = import_file(os.path.join(example_dir, 'external_grey_box', 'react_example', 'maximize_cb_ratio_residuals.py'))
         m = ex.maximize_cb_ratio_residuals_with_pyomo_variables()
         self.assertAlmostEqual(pyo.value(m.reactor.inputs['sv']), 1.26541996, places=3)
         self.assertAlmostEqual(pyo.value(m.reactor.inputs['cb']), 1071.7410089, places=2)

@@ -15,6 +15,8 @@ import logging
 import os
 import platform
 import six
+import importlib.util
+import sys
 
 from .deprecation import deprecated
 from . import config
@@ -386,6 +388,31 @@ def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):
     ext = _exeExt.get(_system(), None)
     return find_file(exename, cwd=cwd, ext=ext, mode=os.R_OK|os.X_OK,
                      pathlist=pathlist, allow_pathlist_deep_references=False)
+
+
+def import_file(path, clear_cache=False):
+    """
+    Import a module given the full path/filename of the file.
+    Replaces import_file from pyutilib (Pyomo 6.0.0).
+    
+    This function returns the module object that is created.
+    Parameters
+    ----------
+    path : str
+        Full path to .py file.
+    clear_cache: bool
+        Remove module if already loaded. The default is False.
+    """
+    path = os.path.expanduser(os.path.expandvars(path))
+    if not os.path.exists(path):
+        raise FileNotFoundError('File does not exist. Check path.')
+    module_dir, module_file = os.path.split(path)
+    module_name, module_ext = os.path.splitext(module_file)
+    if clear_cache and module_name in sys.modules:
+        del sys.modules[module_name]
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    module = spec.loader.load_module()
+    return module
 
 
 class _PathData(object):
