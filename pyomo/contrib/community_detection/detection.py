@@ -460,8 +460,7 @@ class CommunityMap(object):
         community_map_type = self.type_of_community_map.capitalize()
         main_graph_title = "%s graph - colored using %s community map" % (graph_type, community_map_type)
 
-        main_font_size = 14
-        plt.suptitle(main_graph_title, fontsize=main_font_size)
+        plt.suptitle(main_graph_title)  # Suggested font size is 14
 
         # Define a dict that will be used for the graph subtitle
         subtitle_naming_dict = {
@@ -470,8 +469,7 @@ class CommunityMap(object):
             'variable': 'Nodes are variables & Edges are shared constraints'}
 
         # Make the subtitle
-        subtitle_font_size = 11
-        plt.title(subtitle_naming_dict[type_of_graph], fontsize=subtitle_font_size)
+        plt.title(subtitle_naming_dict[type_of_graph])  # Suggested font size is 11
 
         if filename is None:
             plt.show()

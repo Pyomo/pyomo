@@ -58,15 +58,13 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
 
     # Make a dict of all the components we need for the NetworkX graph (since we cannot use the components directly
     # in the NetworkX graph)
+    ctypes = [Constraint, Var]
     if with_objective:
-        component_number_map = ComponentMap((component, number) for number, component in enumerate(
-            model.component_data_objects(ctype=(Constraint, Var, Objective), active=use_only_active_components,
-                                         descend_into=True,
-                                         sort=SortComponents.deterministic)))
-    else:
-        component_number_map = ComponentMap((component, number) for number, component in enumerate(
-            model.component_data_objects(ctype=(Constraint, Var), active=use_only_active_components, descend_into=True,
-                                         sort=SortComponents.deterministic)))
+        ctypes.append(Objective)
+
+    component_number_map = ComponentMap((component, number) for number, component in enumerate(
+        model.component_data_objects(ctype=ctypes, active=use_only_active_components,
+                                     descend_into=True, sort=SortComponents.deterministic)))
 
     # Create the reverse of component_number_map, which will be used in detect_communities to convert the node numbers
     # to their corresponding Pyomo modeling components
