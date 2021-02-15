@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Tests for the model size report utility."""
 import logging
 from os.path import abspath, dirname, join, normpath
@@ -10,7 +20,7 @@ from pyomo.core import Binary, Block, ConcreteModel, Constraint, Integers, Var
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.util.model_size import (build_model_size_report,
                                    log_model_size_report)
-from pyutilib.misc import import_file
+from pyomo.common.fileutils import import_file
 
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'gdp'))

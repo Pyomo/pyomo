@@ -152,14 +152,7 @@ class RunAllNEOSSolvers(object):
         self._run('snopt')
 
     def test_raposa(self):
-        # RAPOSa does not appear to recognize maximization problems and
-        # returns an incorrect result (as of 29 Jan 20: 2.5)
-        if self.sense == pyo.maximize:
-            with self.assertRaisesRegex(
-                    AssertionError, '.* != 1 within'):
-                self._run('raposa')
-        else:
-            self._run('raposa')
+        self._run('raposa')
 
     def test_lgo(self):
         self._run('lgo')

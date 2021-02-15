@@ -17,9 +17,25 @@ Define the plugin for DAKOTA TEXT IO
 """
 
 import re
-
-from pyutilib.math import as_number
+import six
 from pyomo.opt.blackbox.problem_io import BlackBoxOptProblemIOFactory
+
+
+def as_number(value):
+    if type(value) in [int, float]:
+        return value
+    if isinstance(value, six.string_types):
+        try:
+            tmp = int(value)
+            return tmp
+        except ValueError:
+            pass
+        try:
+            tmp = float(value)
+            return tmp
+        except ValueError:
+            pass
+    return value
 
 
 @BlackBoxOptProblemIOFactory.register('dakota')
