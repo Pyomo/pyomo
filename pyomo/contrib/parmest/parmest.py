@@ -23,11 +23,6 @@ from pyomo.common.dependencies import (
 )
 
 import pyomo.environ as pyo
-import pyomo.pysp.util.rapper as st
-from pyomo.pysp.scenariotree import tree_structure
-from pyomo.pysp.scenariotree.tree_structure_model import (
-    CreateAbstractScenarioTreeModel
-)
 from pyomo.opt import SolverFactory
 from pyomo.environ import Block, ComponentUID
 
@@ -35,10 +30,16 @@ import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
 import pyomo.contrib.parmest.graphics as graphics
 
-parmest_available = numpy_available & pandas_available & scipy_available
+pysp, pysp_available = attempt_import('pysp')
+
+parmest_available = numpy_available & pandas_available & scipy_available & \
+                    pysp_available
 
 inverse_reduced_hessian, inverse_reduced_hessian_available = attempt_import(
     'pyomo.contrib.interior_point.inverse_reduced_hessian')
+
+st = attempt_import('pysp.util.rapper')[0]
+scenariotree = attempt_import('pysp.scenariotree')[0]
 
 logger = logging.getLogger(__name__)
 
@@ -251,7 +252,8 @@ def _treemaker(scenlist):
     """
 
     num_scenarios = len(scenlist)
-    m = CreateAbstractScenarioTreeModel().create_instance()
+    m = scenariotree.tree_structure_model.CreateAbstractScenarioTreeModel()
+    m = m.create_instance()
     m.Stages.add('Stage1')
     m.Stages.add('Stage2')
     m.Nodes.add('RootNode')
@@ -484,15 +486,15 @@ class Estimator(object):
             # backwards compatibility reasons, and so a ton of tests
             # don't have to be updated) still defaults to the old
             # representation.
-            _cuidver = tree_structure.CUID_repr_version
-            tree_structure.CUID_repr_version = 2
+            _cuidver = scenariotree.tree_structure.CUID_repr_version
+            scenariotree.tree_structure.CUID_repr_version = 2
             stsolver = st.StochSolver(
                 fsfile = "pyomo.contrib.parmest.parmest",
                 fsfct = "_pysp_instance_creation_callback",
                 tree_model = tree_model
             )
         finally:
-            tree_structure.CUID_repr_version = _cuidver
+            scenariotree.tree_structure.CUID_repr_version = _cuidver
                 
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
