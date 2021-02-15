@@ -148,14 +148,6 @@ def run_setup():
         pyomo_old=pyomo.scripting.pyomo_command:main
 
         [pyomo.command]
-        pyomo.runbenders=pyomo.pysp.benders
-        pyomo.evaluate_xhat=pyomo.pysp.evaluate_xhat
-        pyomo.runph=pyomo.pysp.phinit
-        pyomo.runef=pyomo.pysp.ef_writer_script
-        pyomo.phsolverserver=pyomo.pysp.phsolverserver
-        pyomo.scenariotreeserver=pyomo.pysp.scenariotree.server_pyro
-        pyomo.computeconf=pyomo.pysp.computeconf
-
         pyomo.help = pyomo.scripting.driver_help
         pyomo.test.pyomo = pyomo.scripting.runtests
         pyomo.pyro_mip_server = pyomo.scripting.pyro_mip_server
