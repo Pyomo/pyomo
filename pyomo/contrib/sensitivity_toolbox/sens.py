@@ -90,26 +90,24 @@ class _NotAnIndex(object):
 def _generate_data_objects(components):
     if type(components) not in {list, tuple}:
         components = (components,)
-    else:
-        for comp in components:
-            if comp.is_indexed():
-                for idx in sorted_robust(comp):
-                    yield comp[idx]
-            else:
-                yield comp
+    for comp in components:
+        if comp.is_indexed():
+            for idx in sorted_robust(comp):
+                yield comp[idx]
+        else:
+            yield comp
 
 def _generate_component_items(components):
     if type(components) not in {list, tuple}:
         components = (components,)
-    else:
-        for comp in components:
-            if comp.is_indexed():
-                for idx in sorted_robust(comp):
-                    yield idx, comp[idx]
-            else:
-                yield _NotAnIndex, comp
+    for comp in components:
+        if comp.is_indexed():
+            for idx in sorted_robust(comp):
+                yield idx, comp[idx]
+        else:
+            yield _NotAnIndex, comp
 
-def sensitivity_calculation(method, instance, paramList, perturbList,
+def _sensitivity_calculation(method, instance, paramList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None):
     """This function accepts a Pyomo ConcreteModel, a list of 
     parameters, along with their corresponding perturbation list. The model
@@ -267,7 +265,7 @@ def setup_sensitivity(method, instance, paramList, perturbList,
             myParam = Param(var.index_set(), initialize=d)
         else:
             d = value(var)
-            myParam = Param(intialize=d)
+            myParam = Param(initialize=d)
         block.add_component(name, myParam)
         addedParams.append(myParam)
 
@@ -482,6 +480,39 @@ def perturb_parameters(method, instance, paramList, perturbList):
         instance.DeltaP[con] = value(var - ptb)
         # FIXME: ^ This is incorrect. DeltaP should be (ptb - current).
 
+def sensitivity_calculation(method, instance, paramList, perturbList,
+         cloneModel=True, tee=False, keepfiles=False, solver_options=None):
+    ipopt_sens = SolverFactory('ipopt_sens', solver_io='nl')
+    ipopt_sens.options['run_sens'] = 'yes'
+    kaug = SolverFactory('k_aug', solver_io='nl')
+    dotsens = SolverFactory('dot_sens', solver_io='nl')
+    ipopt = SolverFactory('ipopt', solver_io='nl')
+
+    sens = SensitivityInterface(method, instance, cloneModel=cloneModel)
+    sens.setup_sensitivity(paramList)
+
+    m = sens.model_instance
+
+    if method == 'kaug':
+        ipopt.solve(m, tee=tee)
+        m.ipopt_zL_in.update(m.ipopt_zL_out)  #: important!
+        m.ipopt_zU_in.update(m.ipopt_zU_out)  #: important!    
+
+        kaug.options['dsdp_mode'] = ""  #: sensitivity mode!
+        kaug.solve(m, tee=tee)
+
+    sens.perturb_parameters(perturbList)
+
+    if method == 'sipopt':
+        # Send the model to the ipopt_sens and collect the solution
+        results = ipopt_sens.solve(m, keepfiles=keepfiles, tee=tee)
+
+    elif method == 'kaug':
+        dotsens.options["dsdp_mode"] = ""
+        dotsens.solve(m, tee=tee) 
+
+    return m
+
 class SensitivityInterface(object):
 
     def __init__(self, method, instance, cloneModel=True):
@@ -551,7 +582,7 @@ class SensitivityInterface(object):
                 raise RuntimeError(msg)
 
         block = Block()
-        instance.add_component(self.get_default_block_name(), self.block)
+        instance.add_component(self.get_default_block_name(), block)
         self.block = block
         block.has_replaced_expressions = False
         block.sens_data_list = []
@@ -564,7 +595,7 @@ class SensitivityInterface(object):
         # lists.
         for i, comp in enumerate(paramList):
             if comp.ctype is Param:
-                if not param.mutable:
+                if not comp.mutable:
                     raise ValueError(
                             "Specified parameters must be mutable. "
                             "Got %s, which is not mutable." % comp.name
@@ -575,7 +606,7 @@ class SensitivityInterface(object):
                     var = Var(comp.index_set(), initialize=d)
                 else:
                     d = value(comp)
-                    var = Var(intialize=d)
+                    var = Var(initialize=d)
                 name = self.get_default_var_name(comp.local_name)
                 name = unique_component_name(instance, name)
                 block.add_component(name, var)
@@ -600,7 +631,7 @@ class SensitivityInterface(object):
                     param = Param(comp.index_set(), mutable=True, initialize=d)
                 else:
                     d = value(comp)
-                    param = Param(mutable=True, intialize=d)
+                    param = Param(mutable=True, initialize=d)
                 name = self.get_default_param_name(comp.local_name)
                 name = unique_component_name(instance, name)
                 block.add_component(name, param)
@@ -616,7 +647,7 @@ class SensitivityInterface(object):
             var.unfix()
 
         # Map used to replace user-provided parameters.
-        variableSubMap = dict(id(param), var
+        variableSubMap = dict((id(param), var)
                 for var, param, list_idx, _ in sens_data_list
                 if paramList[list_idx].ctype is Param)
         if variableSubMap:
@@ -634,7 +665,7 @@ class SensitivityInterface(object):
                 )
 
         # clone Objective, add to Block, and update any Expressions
-        for obj in list(m.component_data_objects(Objective,
+        for obj in list(instance.component_data_objects(Objective,
                                                 active=True,
                                                 descend_into=True)):
             tempName = unique_component_name(block, obj.local_name)
@@ -650,7 +681,7 @@ class SensitivityInterface(object):
         # variables.
         # 
         block.constList = ConstraintList()
-        for con in list(m.component_data_objects(Constraint, 
+        for con in list(instance.component_data_objects(Constraint, 
                                        active=True,
                                        descend_into=True)):
             if con.equality:
@@ -673,6 +704,7 @@ class SensitivityInterface(object):
                     block.constList.add(expr=(new_upper >= new_body))
             con.deactivate()
 
+        block.paramConst = ConstraintList()
         for var, param, _, _ in sens_data_list:
             block.paramConst.add(var - param == 0)
 
@@ -699,8 +731,10 @@ class SensitivityInterface(object):
         # of the cloned model. All we need are the values.
         instance = self.model_instance
         sens_data_list = self.block.sens_data_list
+        paramConst = self.block.paramConst
 
-        for var, param, con, list_idx, comp_idx in sens_data_list:
+        for i, (var, param, list_idx, comp_idx) in enumerate(sens_data_list):
+            con = paramConst[i+1]
             if comp_idx is _NotAnIndex:
                 ptb = value(perturbList[list_idx])
             else:
