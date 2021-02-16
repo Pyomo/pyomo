@@ -7,7 +7,18 @@
 # rights in this software.
 # This software is distributed under the 3-clause BSD License
 # ______________________________________________________________________________
-from pyomo.environ import Param, Var, Block, ComponentMap, Objective, Constraint, ConstraintList, Suffix, value
+from pyomo.environ import (
+        Param,
+        Var,
+        Block,
+        ComponentMap,
+        Objective,
+        Constraint,
+        ConstraintList,
+        Suffix,
+        value,
+        ComponentUID,
+        )
 
 from pyomo.core.base.misc import sorted_robust
 from pyomo.core.expr.current import ExpressionReplacementVisitor
@@ -73,6 +84,9 @@ def _add_sensitivity_suffixes(block):
             # assume it is the proper suffix and move on.
             block.add_component(name, Suffix(direction=direction))
 
+class _NotAnIndex(object):
+    pass
+
 def _generate_data_objects(components):
     if type(components) not in {list, tuple}:
         components = (components,)
@@ -83,6 +97,17 @@ def _generate_data_objects(components):
                     yield comp[idx]
             else:
                 yield comp
+
+def _generate_component_items(components):
+    if type(components) not in {list, tuple}:
+        components = (components,)
+    else:
+        for comp in components:
+            if comp.is_indexed():
+                for idx in sorted_robust(comp):
+                    yield idx, comp[idx]
+            else:
+                yield _NotAnIndex, comp
 
 def sensitivity_calculation(method, instance, paramList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None):
@@ -223,8 +248,14 @@ def setup_sensitivity(method, instance, paramList, perturbList,
     else:
         m = instance
 
+    # TODO: generate var, param list earlier
     userParams = list(param for param in paramList if param.ctype is Param)
     userVars = list(var for var in paramList if var.ctype is Var)
+
+    # Iterate over user data, create var, param list.
+    # The only real reason I don't do this here is that I need to preserve
+    # the "user-provided" objects and order so I know how to use the
+    # perturbations...
 
     # For every user-provided var we add a param, and for every user-
     # provided param we add a var.
@@ -354,7 +385,7 @@ def setup_sensitivity(method, instance, paramList, perturbList,
         m.dcdp[con] = idx
         #m.DeltaP[con] = value(param - perturbedParamData[i])
     
-    return m        
+    return m
 
 def perturb_parameters(method, instance, paramList, perturbList):
     """
@@ -362,6 +393,29 @@ def perturb_parameters(method, instance, paramList, perturbList):
     #block_name = unique_component_name(instance, '_SENSITIVITY_TOOLBOX_DATA')
     block_name = '_' + method + '_data'
     block = instance.component(block_name)
+
+    # NOTE that this doesn't work if we previously cloned the user's model.
+
+    # TODO:
+    # A better implementation would be to iterate over a list
+    # that contains the information we need to locate the "parameter"
+    # in the user-provided list.
+    # We would just iterate over this list and put the proper value
+    # in the corresponding value of the perturbation suffixes.
+#    for var, param, con, list_idx, comp_idx in sens_data_list:
+#        if comp_idx is _NotAnIndex:
+#            ptb = value(perturbList[list_idx])
+#        else:
+#            ptb = value(perturbList[list_idx][comp_idx])
+#
+#        # sipopt
+#        instance.sens_state_value_1[var] = ptb
+#
+#        # k_aug
+#        #instance.DeltaP[con] = value(ptb - var)
+#        instance.DeltaP[con] = value(var - ptb)
+#        # FIXME: ^ This is incorrect. DeltaP should be (ptb - current).
+#        # But at least one test doesn't pass unless I use (current - ptb).
     
     # Need to put perturbList in the right order. The right order depends
     # on which of the user-provided "parameters" are vars and which are params.
@@ -387,6 +441,9 @@ def perturb_parameters(method, instance, paramList, perturbList):
                 # and ptb is a number
                 varPerturbValues.append(value(ptb))
                 sens_vardata.append(comp)
+                # ^ We just appended the component in the user's list.
+                # This is presumably in the original model, not the cloned
+                # model, which is what we need for the suffix to make sense.
 
         elif comp.ctype is Param:
             # This is the var we created for this param in the
@@ -424,4 +481,236 @@ def perturb_parameters(method, instance, paramList, perturbList):
         #instance.DeltaP[con] = value(ptb - var)
         instance.DeltaP[con] = value(var - ptb)
         # FIXME: ^ This is incorrect. DeltaP should be (ptb - current).
-        # But at least one test doesn't pass unless I use (current - ptb).
+
+class SensitivityInterface(object):
+
+    def __init__(self, method, instance, cloneModel=True):
+        """
+        """
+        self.method = method
+        self._original_model = instance
+        # We need a pointer to the original model to properly handle the case
+        # where instance is not a ConcreteModel but instead a general
+        # block-like object.
+        # The user will later provide a list of parameters, presumably
+        # in the same block that they passed in. But if we have cloned the
+        # model, these parameters will not be meaningful. We get around this
+        # by finding components on the cloned model with the same CUID.
+        # However, this only works if we can `find_component_on` the cloned
+        # block, which means we need to construct the CUID in the `context`
+        # of the block that we cloned.
+
+        if cloneModel:
+            # Note that we are not "cloning" the user's parameters
+            # or perturbations.
+            self.model_instance = instance.clone()
+        else:
+            self.model_instance = instance
+
+        self.has_replaced_expressions = False
+
+    def get_default_block_name(self):
+        # return '_SENSITIVITY_TOOLBOX_DATA'
+        return '_'.join(('', self.method, 'data'))
+
+    def get_default_var_name(self, name):
+        return '_'.join(('sens_var', name))
+
+    def get_default_param_name(self, name):
+        return '_'.join(('sens_param', name))
+
+    def setup_sensitivity(self, paramList):
+        """
+        """
+        # We need to translate the components in paramList into
+        # components in our possibly cloned model.
+        orig = self._original_model
+        instance = self.model_instance
+        paramList = list(
+                ComponentUID(param, context=orig).find_component_on(instance)
+                for param in paramList
+                )
+
+        # If a sensitivity block already exists, and we have not done
+        # any expression replacement, we delete the old block, unfix the
+        # sensitivity variables, and start again.
+        existing_block = instance.component(self.get_default_block_name())
+        if existing_block is not None:
+            if (hasattr(existing_block, 'has_replaced_expressions') and
+                    not existing_block.has_replaced_expressions):
+                for var, _, _, _ in existing_block.sens_data_list:
+                    # Re-fix variables that the previous block was
+                    # treating as parameters.
+                    var.fix()
+                instance.del_component(existing_block)
+            else:
+                msg = ("Sensitivty block %s detected, but cannot verify "
+                        "that no expression replacement has occurred. "
+                        "This is not supported."
+                        % existing_block.local_name)
+                raise RuntimeError(msg)
+
+        block = Block()
+        instance.add_component(self.get_default_block_name(), self.block)
+        self.block = block
+        block.has_replaced_expressions = False
+        block.sens_data_list = []
+        block.paramList = paramList
+
+        sens_data_list = block.sens_data_list
+        # This is a list of (var, param, list_idx, comp_idx) tuples.
+        # Its purpose is to match corresponding vars and params and
+        # to map these to a component or value in the user-provided
+        # lists.
+        for i, comp in enumerate(paramList):
+            if comp.ctype is Param:
+                if not param.mutable:
+                    raise ValueError(
+                            "Specified parameters must be mutable. "
+                            "Got %s, which is not mutable." % comp.name
+                            )
+                # Add a param:
+                if comp.is_indexed():
+                    d = {k: value(comp[k]) for k in comp.index_set()}
+                    var = Var(comp.index_set(), initialize=d)
+                else:
+                    d = value(comp)
+                    var = Var(intialize=d)
+                name = self.get_default_var_name(comp.local_name)
+                name = unique_component_name(instance, name)
+                block.add_component(name, var)
+
+                sens_data_list.extend(
+                        (var[idx], param, i, idx) if idx is not _NotAnIndex
+                        else (var, param, i, idx) for idx, param in 
+                        _generate_component_items(comp)
+                        )
+
+            elif comp.ctype is Var:
+                for _, data in generate_component_items(comp):
+                    if not data.fixed:
+                        raise ValueError(
+                                "Specified \"parameter\" variables must be "
+                                "fixed. Got %s, which is not fixed."
+                                % comp.name
+                                )
+                # Add a var:
+                if comp.is_indexed():
+                    d = {k: value(comp[k]) for k in comp.index_set()}
+                    param = Param(comp.index_set(), mutable=True, initialize=d)
+                else:
+                    d = value(comp)
+                    param = Param(mutable=True, intialize=d)
+                name = self.get_default_param_name(comp.local_name)
+                name = unique_component_name(instance, name)
+                block.add_component(name, param)
+
+                sens_data_list.extend(
+                        (var, param[idx], i, idx) if idx is not _NotAnIndex
+                        else (var, param, i, idx) for idx, var in
+                        _generate_component_items(comp)
+                        )
+
+        for var, _, _, _ in sens_data_list:
+            # This unfixes all variables, not just those the user added.
+            var.unfix()
+
+        # Map used to replace user-provided parameters.
+        variableSubMap = dict(id(param), var
+                for var, param, list_idx, _ in sens_data_list
+                if paramList[list_idx].ctype is Param)
+        if variableSubMap:
+            # Assume that if the user provided parameters,
+            # they will get replaced somewhere. This means we will no
+            # longer allow the user to use this model instance for
+            # further sensitivity problems.
+            block.has_replaced_expressions = True
+
+        # Visitor that we will use to replace user-provided parameters
+        # in the objective and the constraints.
+        param_replacer = ExpressionReplacementVisitor(
+                substitute=variableSubMap,
+                remove_named_expressions=True,
+                )
+
+        # clone Objective, add to Block, and update any Expressions
+        for obj in list(m.component_data_objects(Objective,
+                                                active=True,
+                                                descend_into=True)):
+            tempName = unique_component_name(block, obj.local_name)
+            new_expr = param_replacer.dfs_postorder_stack(obj.expr)
+            block.add_component(tempName, Objective(expr=new_expr))
+            obj.deactivate()
+
+        # clone Constraints, add to Block, and update any Expressions
+        #
+        # Unfortunate that this deactivates and replaces constraints
+        # even if they don't contain the parameters.
+        # In fact it will do this even if the user only specified fixed
+        # variables.
+        # 
+        block.constList = ConstraintList()
+        for con in list(m.component_data_objects(Constraint, 
+                                       active=True,
+                                       descend_into=True)):
+            if con.equality:
+                new_expr = param_replacer.dfs_postorder_stack(con.expr)
+                block.constList.add(expr=new_expr)
+            else:
+                if con.lower is None or con.upper is None:
+                    new_expr = param_replacer.dfs_postorder_stack(con.expr)
+                    block.constList.add(expr=new_expr)
+                else:
+                    # Constraint must be a ranged inequality, break into separate constraints
+                    new_body = param_replacer.dfs_postorder_stack(con.body)
+                    new_lower = param_replacer.dfs_postorder_stack(con.lower)
+                    new_upper = param_replacer.dfs_postorder_stack(con.upper)
+
+                    # Add constraint for lower bound
+                    block.constList.add(expr=(new_lower <= new_upper))
+
+                    # Add constraint for upper bound
+                    block.constList.add(expr=(new_upper >= new_body))
+            con.deactivate()
+
+        for var, param, _, _ in sens_data_list:
+            block.paramConst.add(var - param == 0)
+
+        # Declare Suffixes
+        _add_sensitivity_suffixes(instance)
+        
+        for i, (var, _, _, _) in enumerate(sens_data_list):
+            idx = i + 1
+            con = block.paramConst[idx]
+
+            # sipopt
+            instance.sens_state_0[var] = idx
+            instance.sens_state_1[var] = idx
+            instance.sens_init_constr[con] = idx
+
+            # k_aug
+            instance.dcdp[con] = idx
+
+
+    def perturb_parameters(self, perturbList): 
+        """
+        """
+        # Note that entries of perturbList need not be components
+        # of the cloned model. All we need are the values.
+        instance = self.model_instance
+        sens_data_list = self.block.sens_data_list
+
+        for var, param, con, list_idx, comp_idx in sens_data_list:
+            if comp_idx is _NotAnIndex:
+                ptb = value(perturbList[list_idx])
+            else:
+                ptb = value(perturbList[list_idx][comp_idx])
+
+            # sipopt
+            instance.sens_state_value_1[var] = ptb
+
+            # k_aug
+            #instance.DeltaP[con] = value(ptb - var)
+            instance.DeltaP[con] = value(var - ptb)
+            # FIXME: ^ This is incorrect. DeltaP should be (ptb - current).
+            # But at least one test doesn't pass unless I use (current - ptb).
