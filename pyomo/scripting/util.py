@@ -926,7 +926,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             else:
                 _options = parser.parse_args(args=args)
             # Replace the parser options object with a
-            # pyutilib.misc.Options object
+            # pyomo.common.collections.Options object
             options = Options()
             for key in dir(_options):
                 if key[0] != '_':

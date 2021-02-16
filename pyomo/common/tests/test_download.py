@@ -84,14 +84,14 @@ class Test_FileDownloader(unittest.TestCase):
         with capture_output() as io:
             with self.assertRaises(SystemExit):
                 f.parse_args(['--cacert'])
-            self.assertIn('argument --cacert: expected one argument',
+        self.assertIn('argument --cacert: expected one argument',
                           io.getvalue())
 
         f = FileDownloader()
         with capture_output() as io:
             with self.assertRaises(SystemExit):
                 f.parse_args(['--cacert', '--insecure'])
-            self.assertIn('argument --cacert: expected one argument',
+        self.assertIn('argument --cacert: expected one argument',
                           io.getvalue())
 
         f = FileDownloader()
@@ -104,7 +104,7 @@ class Test_FileDownloader(unittest.TestCase):
         with capture_output() as io:
             with self.assertRaises(SystemExit):
                 f.parse_args(['--foo'])
-            self.assertIn('error: unrecognized arguments: --foo',
+        self.assertIn('error: unrecognized arguments: --foo',
                           io.getvalue())
 
     def test_set_destination_filename(self):
