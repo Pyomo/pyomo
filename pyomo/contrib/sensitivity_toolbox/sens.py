@@ -539,8 +539,6 @@ class SensitivityInterface(object):
         else:
             self.model_instance = instance
 
-        self.has_replaced_expressions = False
-
     def get_default_block_name(self):
         # return '_SENSITIVITY_TOOLBOX_DATA'
         return '_'.join(('', self.method, 'data'))
@@ -567,13 +565,13 @@ class SensitivityInterface(object):
                 )
 
         # If a sensitivity block already exists, and we have not done
-        # any expression replacement, we delete the old block, unfix the
+        # any expression replacement, we delete the old block, re-fix the
         # sensitivity variables, and start again.
         existing_block = instance.component(self.get_default_block_name())
         if existing_block is not None:
             if (hasattr(existing_block, 'has_replaced_expressions') and
                     not existing_block.has_replaced_expressions):
-                for var, _, _, _ in existing_block.sens_data_list:
+                for var, _, _, _ in existing_block._sens_data_list:
                     # Re-fix variables that the previous block was
                     # treating as parameters.
                     var.fix()
@@ -588,12 +586,11 @@ class SensitivityInterface(object):
         block = Block()
         instance.add_component(self.get_default_block_name(), block)
         self.block = block
-        # TODO: underscore
-        block.has_replaced_expressions = False
-        block.sens_data_list = []
-        block.paramList = paramList
+        block._has_replaced_expressions = False
+        block._sens_data_list = []
+        block._paramList = paramList
 
-        sens_data_list = block.sens_data_list
+        sens_data_list = block._sens_data_list
         # This is a list of (vardata, paramdata, list_idx, comp_idx) tuples.
         # Its purpose is to match corresponding vars and params and
         # to map these to a component or value in the user-provided
@@ -718,7 +715,7 @@ class SensitivityInterface(object):
 
             # Assume that we just replaced some params
             # TODO: underscore
-            block.has_replaced_expressions = True
+            block._has_replaced_expressions = True
 
         block.paramConst = ConstraintList()
         for var, param, _, _ in sens_data_list:
@@ -746,7 +743,7 @@ class SensitivityInterface(object):
         # Note that entries of perturbList need not be components
         # of the cloned model. All we need are the values.
         instance = self.model_instance
-        sens_data_list = self.block.sens_data_list
+        sens_data_list = self.block._sens_data_list
         paramConst = self.block.paramConst
 
         for i, (var, param, list_idx, comp_idx) in enumerate(sens_data_list):
