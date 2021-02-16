@@ -39,5 +39,5 @@ def run_subproc_pytest(test_file, test_func, freq=1, timeout=10.0):
 
 @unittest.skipIf(skip_qt_tests, "Required packages not available")
 class TestViewerQT(unittest.TestCase):
-    def test_model_information():
+    def test_model_information(self):
         run_subproc_pytest(test_file, "test_model_information")
