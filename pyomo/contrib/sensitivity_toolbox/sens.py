@@ -480,7 +480,7 @@ def perturb_parameters(method, instance, paramList, perturbList):
         instance.DeltaP[con] = value(var - ptb)
         # FIXME: ^ This is incorrect. DeltaP should be (ptb - current).
 
-def sensitivity_calculation(method, instance, paramList, perturbList,
+def sensitivity_calculation_class(method, instance, paramList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None):
     ipopt_sens = SolverFactory('ipopt_sens', solver_io='nl')
     ipopt_sens.options['run_sens'] = 'yes'
@@ -545,10 +545,12 @@ class SensitivityInterface(object):
         return '_'.join(('', self.method, 'data'))
 
     def get_default_var_name(self, name):
-        return '_'.join(('sens_var', name))
+        #return '_'.join(('sens_var', name))
+        return name
 
     def get_default_param_name(self, name):
-        return '_'.join(('sens_param', name))
+        #return '_'.join(('sens_param', name))
+        return name
 
     def setup_sensitivity(self, paramList):
         """
@@ -608,7 +610,7 @@ class SensitivityInterface(object):
                     d = value(comp)
                     var = Var(initialize=d)
                 name = self.get_default_var_name(comp.local_name)
-                name = unique_component_name(instance, name)
+                name = unique_component_name(block, name)
                 block.add_component(name, var)
 
                 sens_data_list.extend(
@@ -633,7 +635,7 @@ class SensitivityInterface(object):
                     d = value(comp)
                     param = Param(mutable=True, initialize=d)
                 name = self.get_default_param_name(comp.local_name)
-                name = unique_component_name(instance, name)
+                name = unique_component_name(block, name)
                 block.add_component(name, param)
 
                 sens_data_list.extend(
@@ -748,3 +750,5 @@ class SensitivityInterface(object):
             instance.DeltaP[con] = value(var - ptb)
             # FIXME: ^ This is incorrect. DeltaP should be (ptb - current).
             # But at least one test doesn't pass unless I use (current - ptb).
+
+sensitivity_calculation = sensitivity_calculation_class
