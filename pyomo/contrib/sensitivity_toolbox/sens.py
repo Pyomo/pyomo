@@ -482,18 +482,16 @@ def perturb_parameters(method, instance, paramList, perturbList):
 
 def sensitivity_calculation_class(method, instance, paramList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None):
-    ipopt_sens = SolverFactory('ipopt_sens', solver_io='nl')
-    ipopt_sens.options['run_sens'] = 'yes'
-    kaug = SolverFactory('k_aug', solver_io='nl')
-    dotsens = SolverFactory('dot_sens', solver_io='nl')
-    ipopt = SolverFactory('ipopt', solver_io='nl')
-
     sens = SensitivityInterface(method, instance, cloneModel=cloneModel)
     sens.setup_sensitivity(paramList)
 
     m = sens.model_instance
 
     if method == 'kaug':
+        kaug = SolverFactory('k_aug', solver_io='nl')
+        dotsens = SolverFactory('dot_sens', solver_io='nl')
+        ipopt = SolverFactory('ipopt', solver_io='nl')
+
         ipopt.solve(m, tee=tee)
         m.ipopt_zL_in.update(m.ipopt_zL_out)  #: important!
         m.ipopt_zU_in.update(m.ipopt_zU_out)  #: important!    
@@ -504,6 +502,9 @@ def sensitivity_calculation_class(method, instance, paramList, perturbList,
     sens.perturb_parameters(perturbList)
 
     if method == 'sipopt':
+        ipopt_sens = SolverFactory('ipopt_sens', solver_io='nl')
+        ipopt_sens.options['run_sens'] = 'yes'
+
         # Send the model to the ipopt_sens and collect the solution
         results = ipopt_sens.solve(m, keepfiles=keepfiles, tee=tee)
 
@@ -559,7 +560,8 @@ class SensitivityInterface(object):
         # components in our possibly cloned model.
         orig = self._original_model
         instance = self.model_instance
-        paramList = list(
+        if orig is not instance:
+            paramList = list(
                 ComponentUID(param, context=orig).find_component_on(instance)
                 for param in paramList
                 )
@@ -577,21 +579,22 @@ class SensitivityInterface(object):
                     var.fix()
                 instance.del_component(existing_block)
             else:
-                msg = ("Sensitivty block %s detected, but cannot verify "
-                        "that no expression replacement has occurred. "
-                        "This is not supported."
-                        % existing_block.local_name)
+                msg = ("Re-using sensitivity interface is not supported "
+                        "when calculating sensitivity for mutable parameters. "
+                        "Used fixed vars instead if you want to do this."
+                        )
                 raise RuntimeError(msg)
 
         block = Block()
         instance.add_component(self.get_default_block_name(), block)
         self.block = block
+        # TODO: underscore
         block.has_replaced_expressions = False
         block.sens_data_list = []
         block.paramList = paramList
 
         sens_data_list = block.sens_data_list
-        # This is a list of (var, param, list_idx, comp_idx) tuples.
+        # This is a list of (vardata, paramdata, list_idx, comp_idx) tuples.
         # Its purpose is to match corresponding vars and params and
         # to map these to a component or value in the user-provided
         # lists.
@@ -613,14 +616,16 @@ class SensitivityInterface(object):
                 name = unique_component_name(block, name)
                 block.add_component(name, var)
 
-                sens_data_list.extend(
-                        (var[idx], param, i, idx) if idx is not _NotAnIndex
-                        else (var, param, i, idx) for idx, param in 
-                        _generate_component_items(comp)
-                        )
+                if comp.is_indexed():
+                    sens_data_list.extend(
+                            (var[idx], param, i, idx)
+                            for idx, param in _generate_component_items(comp)
+                            )
+                else:
+                    sens_data_list.append((var, comp, i, _NotAnIndex))
 
             elif comp.ctype is Var:
-                for _, data in generate_component_items(comp):
+                for _, data in _generate_component_items(comp):
                     if not data.fixed:
                         raise ValueError(
                                 "Specified \"parameter\" variables must be "
@@ -638,11 +643,13 @@ class SensitivityInterface(object):
                 name = unique_component_name(block, name)
                 block.add_component(name, param)
 
-                sens_data_list.extend(
-                        (var, param[idx], i, idx) if idx is not _NotAnIndex
-                        else (var, param, i, idx) for idx, var in
-                        _generate_component_items(comp)
-                        )
+                if comp.is_indexed():
+                    sens_data_list.extend(
+                            (var, param[idx], i, idx)
+                            for idx, var in _generate_component_items(comp)
+                            )
+                else:
+                    sens_data_list.append((comp, param, i, _NotAnIndex))
 
         for var, _, _, _ in sens_data_list:
             # This unfixes all variables, not just those the user added.
@@ -664,6 +671,9 @@ class SensitivityInterface(object):
                     substitute=variableSubMap,
                     remove_named_expressions=True,
                     )
+            # TODO: Flag to ExpressionReplacementVisitor to only replace
+            # named expressions if a node has been replaced within that
+            # expression.
 
             # clone Objective, add to Block, and update any Expressions
             for obj in list(instance.component_data_objects(Objective,
@@ -707,6 +717,7 @@ class SensitivityInterface(object):
                 con.deactivate()
 
             # Assume that we just replaced some params
+            # TODO: underscore
             block.has_replaced_expressions = True
 
         block.paramConst = ConstraintList()
@@ -743,7 +754,12 @@ class SensitivityInterface(object):
             if comp_idx is _NotAnIndex:
                 ptb = value(perturbList[list_idx])
             else:
-                ptb = value(perturbList[list_idx][comp_idx])
+                try:
+                    ptb = value(perturbList[list_idx][comp_idx])
+                except TypeError:
+                    # If the user provided a scalar value to perturb
+                    # an indexed component.
+                    ptb = value(perturbList[list_idx])
 
             # sipopt
             instance.sens_state_value_1[var] = ptb
