@@ -108,3 +108,17 @@ def compressed_to_full(compressed_array, compression_mask, out=None, default=Non
         ret[~compression_mask] = default
 
     return ret
+
+def make_lower_triangular_full(lower_triangular_matrix):
+    '''
+    This function takes a symmetric matrix that only has entries in the
+    lower triangle and makes is a full matrix by duplicating the entries
+    '''
+    diff = lower_triangular_matrix.row - lower_triangular_matrix.col
+    mask = np.where(diff != 0)
+
+    row = np.concatenate((lower_triangular_matrix.row, lower_triangular_matrix.col[mask]))
+    col = np.concatenate((lower_triangular_matrix.col, lower_triangular_matrix.row[mask]))
+    data = np.concatenate((lower_triangular_matrix.data, lower_triangular_matrix.data[mask]))
+
+    return coo_matrix((data, (row, col)), shape=lower_triangular_matrix.shape)

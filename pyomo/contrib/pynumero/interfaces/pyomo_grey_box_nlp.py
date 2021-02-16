@@ -16,12 +16,14 @@ import os
 import numpy as np
 import six
 
-from scipy.sparse import coo_matrix
+from scipy.sparse import coo_matrix, identity
 from pyomo.common.deprecation import deprecated
 import pyomo.core.base as pyo
 from pyomo.common.collections import ComponentMap
 from ..sparse.block_matrix import BlockMatrix
+from ..sparse.block_vector import BlockVector
 from pyomo.contrib.pynumero.interfaces.nlp import NLP
+from pyomo.contrib.pynumero.interfaces.utils import make_lower_triangular_full
 from .external_grey_box import ExternalGreyBoxBlock
 
 
@@ -657,13 +659,13 @@ class _ExternalGreyBoxAsNLP(NLP):
         prefix = self._block.getname(fully_qualified=True)
         self._constraint_names = \
             ['{}.{}'.format(prefix, nm) \
-             for nm in self._ex_model.equality_constraint_names()])
+             for nm in self._ex_model.equality_constraint_names()]
         output_var_names = \
             [self._block.outputs[k].getname(fully_qualified=False) \
              for k in self._block.outputs]
         self._constraint_names.extend(
-            ['{}.output_con_{}'.format(prefix, nm) \
-             for nm in output_var_names])
+            ['{}.output_constraints[{}]'.format(prefix, nm) \
+             for nm in self._ex_model.output_names()])
 
         # create the numpy arrays of bounds on the primals
         self._primals_lb = [self._block.inputs[k].lb \
@@ -671,13 +673,13 @@ class _ExternalGreyBoxAsNLP(NLP):
         self._primals_lb.extend(
             [self._block.outputs[k].lb for k in self._block.outputs]
         )
-        self._primals_lb = np.asarray(self._primals_lb)
+        self._primals_lb = np.asarray(self._primals_lb, dtype=np.float64)
         self._primals_ub = \
             [self._block.inputs[k].ub for k in self._block.inputs]
         self._primals_ub.extend(
             [self._block.outputs[k].ub for k in self._block.outputs]
         )
-        self._primals_ub = np.asarray(self.primals_ub)
+        self._primals_ub = np.asarray(self._primals_ub, dtype=np.float64)
 
         # create the numpy arrays for the initial values
         self._init_primals = \
@@ -685,7 +687,7 @@ class _ExternalGreyBoxAsNLP(NLP):
         self._init_primals.extend(
             [pyo.value(self._block.outputs[k]) for k in self._block.outputs]
         )
-        self._init_primals = np.asarray(self._init_primals)
+        self._init_primals = np.asarray(self._init_primals, dtype=np.float64)
 
         # create a numpy array to store the values of the primals
         self._primal_values = np.copy(self._init_primals)
@@ -694,9 +696,11 @@ class _ExternalGreyBoxAsNLP(NLP):
 
         # create the numpy arrays for bounds on the constraints
         # for now all of these are equalities
-        self._constraints_lb = np.zeros(self.n_constraints())
-        self._constraints_ub = np.zeros(self.n_constraints())
+        self._constraints_lb = np.zeros(self.n_constraints(), dtype=np.float64)
+        self._constraints_ub = np.zeros(self.n_constraints(), dtype=np.float64)
 
+        # create the numpy arrays for the initial values
+        self._init_duals = np.zeros(self.n_constraints(), dtype=np.float64)
         # create the numpy arrays to store the dual variables
         self._dual_values = np.copy(self._init_duals)
         # make sure the values are passed through to other objects
@@ -704,6 +708,9 @@ class _ExternalGreyBoxAsNLP(NLP):
         
         self._nnz_jacobian = None
         self._nnz_hessian_lag = None
+        self._cached_constraint_residuals = None
+        self._cached_jacobian = None
+        self._cached_hessian = None
 
     def n_primals(self):
         return len(self._primals_names)
@@ -730,23 +737,22 @@ class _ExternalGreyBoxAsNLP(NLP):
         return self._nnz_hessian_lag
 
     def primals_lb(self):
-        return self._primals_lb
-    
+        return np.copy(self._primals_lb)
+
     def primals_ub(self):
-        return self._primals_ub
+        return np.copy(self._primals_ub)
 
     def constraints_lb(self):
-        return self._constraints_lb
+        return np.copy(self._constraints_lb)
 
     def constraints_ub(self):
-        return self._constraints_ub
+        return np.copy(self._constraints_ub)
 
     def init_primals(self):
-        return self._init_primals
+        return np.copy(self._init_primals)
 
     def init_duals(self):
-        # for now, these are initialized to 1.0
-        return np.ones(self.n_constraints)
+        return np.copy(self._init_duals)
 
     def create_new_vector(self, vector_type):
         if vector_type == 'primals':
@@ -754,7 +760,13 @@ class _ExternalGreyBoxAsNLP(NLP):
         elif vector_type == 'constraints' or vector_type == 'duals':
             return np.zeros(self.n_constraints(), dtype=np.float64)
 
+    def _cache_invalidate_primals(self):
+        self._cached_constraint_residuals = None
+        self._cached_jacobian = None
+        self._cached_hessian = None
+
     def set_primals(self, primals):
+        self._cache_invalidate_primals()
         assert len(primals) == self.n_primals()
         np.copyto(self._primal_values, primals)
         self._ex_model.set_input_values(primals[:self._ex_model.n_inputs()])
@@ -762,7 +774,11 @@ class _ExternalGreyBoxAsNLP(NLP):
     def get_primals(self):
         return np.copy(self._primal_values)
 
+    def _cache_invalidate_duals(self):
+        self._cached_hessian = None
+
     def set_duals(self, duals):
+        self._cache_invalidate_duals()
         assert len(duals) == self.n_constraints()
         np.copyto(self._dual_values, duals)
         if self._ex_model.n_equality_constraints() > 0:
@@ -794,98 +810,138 @@ class _ExternalGreyBoxAsNLP(NLP):
             )
 
     def get_constraints_scaling(self):
-        scaling = np.ones(self.n_constraints())
+        # todo: would this be better with block vectors
+        scaling = np.ones(self.n_constraints(), dtype=np.float64)
+        scaled = False
         if self._ex_model.n_equality_constraints() > 0:
             eq_scaling = self._ex_model.get_equality_constraint_scaling_factors()
             if eq_scaling is not None:
-                scaling[:self._ex_model.n_equality_constraints] = eq_scaling
+                scaling[:self._ex_model.n_equality_constraints()] = eq_scaling
+                scaled = True
         if self._ex_model.n_outputs() > 0:
             output_scaling = self._ex_model.get_output_constraint_scaling_factors()
             if output_scaling is not None:
-                scaling[:self._ex_model.n_output_constraints] = output_scaling
+                scaling[self._ex_model.n_equality_constraints():] = output_scaling
+                scaled = True
+        if scaled:
+            return scaling
+        return None
 
-    CRASH HERE Not IMPLEMENTED...
-                
-    @abc.abstractmethod
     def evaluate_objective(self):
-        """Returns value of objective function evaluated at the 
-        values given for the primal variables in set_primals
+        # todo: Should we return 0 here?
+        raise NotImplementedError('_ExternalGreyBoxNLP does not support objectives')
 
-        Returns
-        -------
-        float
-        """
-        pass
-
-    @abc.abstractmethod
     def evaluate_grad_objective(self, out=None):
-        """Returns gradient of the objective function evaluated at the 
-        values given for the primal variables in set_primals
+        # todo: Should we return 0 here?
+        raise NotImplementedError('_ExternalGreyBoxNLP does not support objectives')
 
-        Parameters
-        ----------
-        out: vector_like, optional
-            Output vector. Its type is preserved and it
-            must be of the right shape to hold the output.
-
-        Returns
-        -------
-        vector_like
-        """
-        pass
-
-    @abc.abstractmethod
+    def _evaluate_constraints_if_necessary_and_cache(self):
+        if self._cached_constraint_residuals is None:
+            c = BlockVector(2)
+            if self._ex_model.n_equality_constraints() > 0:
+                c.set_block(0, self._ex_model.evaluate_equality_constraints())
+            else:
+                c.set_block(0, np.zeros(0, dtype=np.float64))
+            if self._ex_model.n_outputs() > 0:
+                output_values = self._primal_values[self._ex_model.n_inputs():]
+                c.set_block(1, self._ex_model.evaluate_outputs() - output_values)
+            else:
+                c.set_block(1,np.zeros(0, dtype=np.float64))
+            self._cached_constraint_residuals = c.flatten()
+            
     def evaluate_constraints(self, out=None):
-        """Returns the values for the constraints evaluated at
-        the values given for the primal variales in set_primals
+        self._evaluate_constraints_if_necessary_and_cache()
+        if out is not None:
+            assert len(out) == self.n_constraints()
+            np.copyto(out, self._cached_constraint_residuals)
+            return out
 
-        Parameters
-        ----------
-        out: array_like, optional
-            Output array. Its type is preserved and it
-            must be of the right shape to hold the output.
+        return np.copy(self._cached_constraint_residuals)
 
-        Returns
-        -------
-        vector_like
-        """
-        pass
+    def _evaluate_jacobian_if_necessary_and_cache(self):
+        if self._cached_jacobian is None:
+            jac = BlockMatrix(2,2)
+            jac.set_row_size(0,self._ex_model.n_equality_constraints())
+            jac.set_row_size(1,self._ex_model.n_outputs())
+            jac.set_col_size(0,self._ex_model.n_inputs())
+            jac.set_col_size(1,self._ex_model.n_outputs())
+            
+            if self._ex_model.n_equality_constraints() > 0:
+                jac.set_block(0,0,self._ex_model.evaluate_jacobian_equality_constraints())
+            if self._ex_model.n_outputs() > 0:
+                jac.set_block(1,0,self._ex_model.evaluate_jacobian_outputs())
+                jac.set_block(1,1,-1.0*identity(self._ex_model.n_outputs()))
 
-    @abc.abstractmethod
+            self._cached_jacobian = jac.tocoo()
+            
     def evaluate_jacobian(self, out=None):
-        """Returns the Jacobian of the constraints evaluated
-        at the values given for the primal variables in set_primals
+        self._evaluate_jacobian_if_necessary_and_cache()
+        if out is not None:
+            jac = self._cached_jacobian
+            assert np.array_equal(jac.row, out.row)
+            assert np.array_equal(jac.col, out.col)
+            np.copyto(out.data, jac.data)
+            return out
+        
+        return self._cached_jacobian.copy()
 
-        Parameters
-        ----------
-        out : matrix_like (e.g., coo_matrix), optional
-            Output matrix with the structure of the jacobian already defined.
+    def _evaluate_hessian_if_necessary_and_cache(self):
+        if self._cached_hessian is None:
+            hess = BlockMatrix(2,2)
+            hess.set_row_size(0,self._ex_model.n_inputs())
+            hess.set_row_size(1,self._ex_model.n_outputs())
+            hess.set_col_size(0,self._ex_model.n_inputs())
+            hess.set_col_size(1,self._ex_model.n_outputs())
 
-        Returns
-        -------
-        matrix_like
-        """
-        pass
+            # get the hessian w.r.t. the equality constraints
+            eq_hess = None
+            if self._ex_model.n_equality_constraints() > 0:
+                eq_hess = self._ex_model.evaluate_hessian_equality_constraints()
+                # let's check that it is lower triangular
+                if np.any(eq_hess.row < eq_hess.col):
+                    raise ValueError('ExternalGreyBoxModel must return lower '
+                                     'triangular portion of the Hessian only')
 
-    @abc.abstractmethod
+                eq_hess = make_lower_triangular_full(eq_hess)
+
+            output_hess = None
+            if self._ex_model.n_outputs() > 0:
+                output_hess = self._ex_model.evaluate_hessian_outputs()
+                # let's check that it is lower triangular
+                if np.any(output_hess.row < output_hess.col):
+                    raise ValueError('ExternalGreyBoxModel must return lower '
+                                     'triangular portion of the Hessian only')
+
+                output_hess = make_lower_triangular_full(output_hess)
+
+            input_hess = None
+            if eq_hess is not None and output_hess is not None:
+                # we may want to make this more efficient
+                row = np.concatenate((eq_hess.row, output_hess.row))
+                col = np.concatenate((eq_hess.col, output_hess.col))
+                data = np.concatenate((eq_hess.data, output_hess.data))
+
+                assert eq_hess.shape == output_hess.shape
+                input_hess = coo_matrix( (data, (row,col)), shape=eq_hess.shape)
+            elif eq_hess is not None:
+                input_hess = eq_hess
+            elif output_hess is not None:
+                input_hess = output_hess
+            assert input_hess is not None # need equality or outputs or both
+
+            hess.set_block(0,0,input_hess)
+            self._cached_hessian = hess.tocoo()
+
     def evaluate_hessian_lag(self, out=None):
-        """Return the Hessian of the Lagrangian function evaluated
-        at the values given for the primal variables in set_primals and
-        the dual variables in set_duals
+        self._evaluate_hessian_if_necessary_and_cache()
+        if out is not None:
+            hess = self._cached_hessian
+            assert np.array_equal(hess.row, out.row)
+            assert np.array_equal(hess.col, out.col)
+            np.copyto(out.data, hess.data)
+            return out
+        
+        return self._cached_hessian.copy()
 
-        Parameters
-        ----------
-        out : matrix_like (e.g., coo_matrix), optional
-            Output matrix with the structure of the hessian already defined. Optional
-
-        Returns
-        -------
-        matrix_like
-        """
-        pass
-
-    @abc.abstractmethod
     def report_solver_status(self, status_code, status_message):
-        """Report the solver status to NLP class using the values for the 
-        primals and duals defined in the set methods"""
-        pass
+        raise NotImplementedError('report_solver_status not implemented')

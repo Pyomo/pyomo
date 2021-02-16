@@ -604,8 +604,12 @@ class AslNLP(ExtendedNLP):
             self._asl.eval_hes_lag(self._primals, self._duals_full,
                                    data, obj_factor=self._obj_factor)
             values = np.concatenate((data, data[self._lower_hess_mask]))
-            #TODO: find out why this is done
-            values += 1e-16 # this is to deal with scipy bug temporarily
+            # note: this was done to ensure that scipy did not change
+            # the structure of a sparse matrix if one of the nonzeros
+            # happened to be zero.
+            # CDL: I am removing this for now to see if it is necessary
+            # values += 1e-16 # this is to deal with scipy bug temporarily
+            # CDL
             np.copyto(self._cached_hessian_lag.data, values)
             self._hessian_lag_is_cached = True
 
