@@ -190,7 +190,6 @@ jobs:
         for pkg in bash pkg-config unixodbc freetds glpk; do
             brew list $pkg || brew install $pkg
         done
-        #brew link --overwrite gcc
 
     - name: Update Linux
       if: matrix.TARGET == 'linux'

@@ -11,16 +11,16 @@
 import shlex
 from six import StringIO, iteritems, string_types
 from tempfile import mkdtemp
-import os, sys, math, logging, shutil, time
+import os, sys, math, logging, shutil, time, subprocess
 
 from pyomo.core.base import Constraint, Var, value, Objective
 from pyomo.opt import ProblemFormat, SolverFactory
 
 import pyomo.common
 from pyomo.common.collections import Options
+from pyomo.common.tee import TeeStream
 
 from pyomo.opt.base.solvers import _extract_version
-import pyutilib.subprocess
 
 from pyomo.core.kernel.block import IBlock
 from pyomo.core.kernel.objective import IObjective
@@ -192,7 +192,7 @@ class GAMSDirect(_GAMSSolver):
         tmpdir = mkdtemp()
         try:
             from gams import GamsWorkspace, DebugLevel
-            GamsWorkspace(debug=DebugLevel.Off,
+            ws = GamsWorkspace(debug=DebugLevel.Off,
                           working_directory=tmpdir)
             t1 = ws.add_job_from_string(self._simple_model(n))
             t1.run()
@@ -630,9 +630,11 @@ class GAMSShell(_GAMSSolver):
             test = os.path.join(tmpdir, 'test.gms')
             with open(test, 'w') as FILE:
                 FILE.write(self._simple_model(n))
-            rc, txt = pyutilib.subprocess.run(
-                [self.executable(), test, "curdir=" + tmpdir, 'lo=0'])
-            return not rc
+            result = subprocess.run(
+                [self.executable(), test, "curdir=" + tmpdir, 'lo=0'],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL)
+            return not result.returncode
         finally:
             shutil.rmtree(tmpdir)
         return False
@@ -659,8 +661,10 @@ class GAMSShell(_GAMSSolver):
         else:
             # specify logging to stdout for windows compatibility
             cmd = [solver_exec, "audit", "lo=3"]
-            _, txt = pyutilib.subprocess.run(cmd, tee=False)
-            return _extract_version(txt)
+            results = subprocess.run(cmd, stdout=subprocess.PIPE,
+                                     stderr=subprocess.STDOUT,
+                                     universal_newlines=True)
+            return _extract_version(results.stdout)
 
     @staticmethod
     def _parse_special_values(value):
@@ -811,7 +815,14 @@ class GAMSShell(_GAMSSolver):
             command.append("lf=" + str(logfile))
 
         try:
-            rc, txt = pyutilib.subprocess.run(command, tee=tee)
+            ostreams = [StringIO()]
+            if tee:
+                ostreams.append(sys.stdout)
+            with TeeStream(*ostreams) as t:
+                result = subprocess.run(command, stdout=t.STDOUT,
+                                        stderr=t.STDERR)
+            rc = result.returncode
+            txt = ostreams[0].getvalue()
 
             if keepfiles:
                 print("\nGAMS WORKING DIRECTORY: %s\n" % tmpdir)
