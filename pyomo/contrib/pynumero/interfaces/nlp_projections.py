@@ -196,22 +196,16 @@ class ProjectedNLP(_BaseNLPDelegator):
     def primals_names(self):
         return list(self._primals_ordering)
 
-    def _compute_nnz_jacobian(self):
-        J = self.evaluate_jacobian()
-        self._nnz_jacobian = len(J.data)
-        
     def nnz_jacobian(self):
         if self._nnz_jacobian is None:
-            self._compute_nnz_jacobian()
+            J = self.evaluate_jacobian()
+            self._nnz_jacobian = len(J.data)
         return self._nnz_jacobian
 
-    def _compute_nnz_hessian_lag(self):
-        H = self.evaluate_hessian_lag()
-        self._nnz_hessian_lag = len(H.data)
-        
     def nnz_hessian_lag(self):
         if self._nnz_hessian_lag is None:
-            self._compute_nnz_hessian_lag()
+            H = self.evaluate_hessian_lag()
+            self._nnz_hessian_lag = len(H.data)
         return self._nnz_hessian_lag
 
     def _project_primals(self, default, original_primals):
