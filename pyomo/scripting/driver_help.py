@@ -18,8 +18,6 @@ import logging
 import socket
 import subprocess
 
-import pyutilib.misc
-
 import pyomo.common
 from pyomo.common.collections import Options
 import pyomo.scripting.pyomo_parser

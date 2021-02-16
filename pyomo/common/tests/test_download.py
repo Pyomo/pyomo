@@ -17,13 +17,13 @@ import tempfile
 import subprocess
 
 import pyutilib.th as unittest
-from pyutilib.misc import capture_output
 
 
 from pyomo.common import DeveloperError
 from pyomo.common.config import PYOMO_CONFIG_DIR
 from pyomo.common.fileutils import this_file
 from pyomo.common.download import FileDownloader, distro_available
+from pyomo.common.tee import capture_output
 
 class Test_FileDownloader(unittest.TestCase):
     def setUp(self):
