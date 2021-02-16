@@ -11,16 +11,16 @@ from pyomo.contrib.pynumero.sparse import BlockMatrix
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 import matplotlib.pylab as plt
 
-from pyomo.pysp.scenariotree.manager import \
+from pysp.scenariotree.manager import \
     ScenarioTreeManagerFactory
-from pyomo.pysp.scenariotree.instance_factory import \
+from pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
 
 
 from gas_network_model import (pysp_instance_creation_callback,
                                nx_scenario_tree)
 
-from pyomo.pysp.ef import create_ef_instance
+from pysp.ef import create_ef_instance
 
 # define and initialize the SP
 instance_factory = ScenarioTreeInstanceFactory(
