@@ -21,6 +21,7 @@ import os
 import sys
 import threading
 import time
+from six import StringIO
 
 _mswindows = sys.platform.startswith('win')
 _poll_interval = 0.1
@@ -36,6 +37,46 @@ except ImportError:
     _peek_available = False
 
 logger = logging.getLogger(__name__)
+
+
+class capture_output(object):
+    def __init__(self, output=None):
+        if output is None:
+            output = StringIO()
+        self.output = output
+        self.output_file = None
+        self.old = None
+        self.tee = None
+
+    def __enter__(self):
+        if isinstance(self.output, str):
+            self.output_file = ostream = open(self.output, 'w')
+        else:
+            ostream = self.output
+        self.old = (sys.stdout, sys.stderr)
+        self.tee = TeeStream(ostream)
+        self.tee.__enter__()
+        sys.stdout = self.tee.STDOUT
+        sys.stderr = self.tee.STDERR
+        return self.output
+
+    def __exit__(self, et, ev, tb):
+        sys.stdout, sys.stderr = self.old
+        self.old = None
+        self.tee.__exit__(et, ev, tb)
+        self.tee = None
+        if self.output_file is not None:
+            self.output_file.close()
+            self.output_file = None
+
+    def setup(self):
+        if self.old is not None:
+            raise RuntimeError('Duplicate call to capture_output.setup.')
+        return self.__enter__()
+
+    def reset(self):
+        return self.__exit__(None, None, None)
+
 
 class _StreamHandle(object):
     def __init__(self, mode, buffering, encoding, newline):

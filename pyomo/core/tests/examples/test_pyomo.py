@@ -19,9 +19,9 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import subprocess
 import pyutilib.th as unittest
-from pyutilib.misc import setup_redirect, reset_redirect
 
 from pyomo.common.dependencies import yaml_available
+from pyomo.common.tee import capture_output
 import pyomo.core
 import pyomo.scripting.pyomo_main as main
 from pyomo.opt import check_available_solvers
@@ -57,16 +57,15 @@ class BaseTester(unittest.TestCase):
         else:
             OUTPUT=StringIO()
             results='results.jsn'
-        setup_redirect(OUTPUT)
-        os.chdir(currdir)
-        if type(cmd) is list:
-            output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + cmd)
-        elif cmd.endswith('json') or cmd.endswith('yaml'):
-            output = main.main(['solve', '--results-format=json', '--save-results=%s' % results] + [cmd])
-        else:
-            args=re.split('[ ]+',cmd)
-            output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + list(args))
-        reset_redirect()
+        with capture_output(OUTPUT):
+            os.chdir(currdir)
+            if type(cmd) is list:
+                output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + cmd)
+            elif cmd.endswith('json') or cmd.endswith('yaml'):
+                output = main.main(['solve', '--results-format=json', '--save-results=%s' % results] + [cmd])
+            else:
+                args=re.split('[ ]+',cmd)
+                output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + list(args))
         if not 'root' in kwds:
             return OUTPUT.getvalue()
         return output

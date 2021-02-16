@@ -23,8 +23,7 @@ from pyomo.common.deprecation import deprecated
 from pyomo.common.log import is_debug_set
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.fileutils import import_file
-
-from pyutilib.misc import setup_redirect, reset_redirect
+from pyomo.common.tee import capture_output
 
 from pyomo.common.dependencies import (
     yaml, yaml_available, yaml_load_args,
@@ -868,7 +867,8 @@ class PyomoCommandLogContext(object):
             _pyutilib.addHandler(self.fileLogger)
             # TBD: This seems dangerous in Windows, as the process will
             # have multiple open file handles pointing to the same file.
-            setup_redirect(_logfile)
+            self.capture = capture_output(_logfile)
+            self.capture.setup()
 
         return self
 
@@ -884,7 +884,7 @@ class PyomoCommandLogContext(object):
             self.fileLogger.close()
             # TBD: This seems dangerous in Windows, as the process will
             # have multiple open file handles pointing to the same file.
-            reset_redirect()
+            self.capture.reset()
 
 
 @pyomo_api(namespace='pyomo.script')

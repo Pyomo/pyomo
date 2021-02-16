@@ -114,3 +114,25 @@ class TestTeeStream(unittest.TestCase):
             "Output stream closed before all output was written to it. "
             "The following was left in the output buffer:\n\t'hi\\n'\n"
         )
+
+    def test_capture_output(self):
+        out = StringIO()
+        with tee.capture_output(out) as OUT:
+            print('Hello World')
+        self.assertEqual(OUT.getvalue(), 'Hello World\n')
+
+    def test_duplicate_capture_output(self):
+        out = StringIO()
+        capture = tee.capture_output(out)
+        capture.setup()
+        with self.assertRaisesRegex(RuntimeError, 'Duplicate call to capture_output.setup'):
+            capture.setup()
+
+    def test_capture_output_logfile_string(self):
+        currdir = os.getcwd()
+        logfile = os.path.join(currdir, 'tee_log.log')
+        self.assertTrue(isinstance(logfile, str))
+        with tee.capture_output(logfile):
+            print('HELLO WORLD')
+        self.assertEqual('HELLO WORLD\n', open(logfile, 'r').read())
+        os.remove(logfile)
