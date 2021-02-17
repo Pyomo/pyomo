@@ -34,10 +34,10 @@ from six import StringIO, iterkeys
 
 currdir = dirname(abspath(__file__))+os.sep
 
-from pyutilib.misc import flatten_tuple as pyutilib_misc_flatten_tuple
 import pyutilib.th as unittest
 
 import pyomo.core.base
+from pyomo.core.base.util import flattener
 from pyomo.environ import (Set, SetOf, RangeSet, Param, ConcreteModel, 
                            AbstractModel, Expression, EmptySet, NonPositiveIntegers,
                            NonPositiveReals, PositiveReals, NegativeReals, 
@@ -3632,19 +3632,19 @@ class TestNestedSetOperations(unittest.TestCase):
         self.assertTrue(isinstance(inst.product1,
                                    pyomo.core.base.set.SetProduct))
         # See if we can get away with using a standard flattener here
-        prod1 = set([pyutilib_misc_flatten_tuple(i) \
+        prod1 = set([flattener(i) \
                      for i in set( p(s1,p(s2,p(s3,p(s3,s2)))) )])
         self.assertEqual(sorted(inst.product1),
                          sorted(prod1))
         self.assertTrue(isinstance(inst.product2,
                                    pyomo.core.base.set.SetProduct))
-        prod2 = set([pyutilib_misc_flatten_tuple(i) \
+        prod2 = set([flattener(i) \
                      for i in  set( p(s1,p(s2,p(s3,p(s3,s2)))) )])
         self.assertEqual(sorted(inst.product2),
                          sorted(prod2))
         self.assertTrue(isinstance(inst.product3,
                                    pyomo.core.base.set.SetProduct))
-        prod3 = set([pyutilib_misc_flatten_tuple(i) \
+        prod3 = set([flattener(i) \
                      for i in set( p(p(p(p(s1,s2),s3),s3),s2) )])
         self.assertEqual(sorted(inst.product3),
                          sorted(prod3))

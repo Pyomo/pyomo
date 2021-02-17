@@ -34,12 +34,30 @@ from pyomo.common import DeveloperError
 from pyomo.core.expr.numvalue import (
     native_types,
 )
+from pyomo.core.base.indexed_component import normalize_index
 
 def is_functor(obj):
     """
     Returns true iff obj.__call__ is defined.
     """
     return inspect.isfunction(obj) or hasattr(obj,'__call__')
+
+
+def flattener(x):
+    """
+    This wraps around normalize_index. It flattens a nested sequence into 
+    a single tuple and always returns a tuple, even for single
+    element inputs.
+    
+    Returns
+    -------
+    tuple
+
+    """
+    x = normalize_index(x)
+    if isinstance(x, tuple):
+        return x
+    return (x,)
 
 
 #
