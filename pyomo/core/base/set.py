@@ -39,7 +39,6 @@ from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, normalize_index,
 )
-
 from pyomo.core.base.global_set import (
     GlobalSets, GlobalSetBase,
 )
