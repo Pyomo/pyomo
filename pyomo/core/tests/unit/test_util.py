@@ -16,7 +16,7 @@ from pyomo.common import DeveloperError
 from pyomo.core.base.util import (
     Initializer, ConstantInitializer, ItemInitializer, ScalarCallInitializer,
     IndexedCallInitializer, CountedCallInitializer, CountedCallGenerator,
-    disable_methods,
+    disable_methods, flattener
 )
 from pyomo.environ import (
     ConcreteModel, Var,
@@ -125,6 +125,14 @@ def _init_indexed(m, *args):
     return i
 
 class Test_Initializer(unittest.TestCase):
+    def test_flattener(self):
+        tup = (1, 0, (0, 1), (2, 3))
+        self.assertEqual((1, 0, 0, 1, 2, 3), flattener(tup))
+        li = [0]
+        self.assertEqual((0,), flattener(li))
+        ex = [(1, 0), [2, 3]]
+        self.assertEqual((1, 0, 2, 3), flattener(ex))
+
     def test_constant(self):
         m = ConcreteModel()
         a = Initializer(5)

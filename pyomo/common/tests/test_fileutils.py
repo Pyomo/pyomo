@@ -27,7 +27,7 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common.fileutils import (
     this_file, this_file_dir, find_file, find_library, find_executable, 
     PathManager, _system, _path, _exeExt, _libExt, _ExecutableData,
-    import_file
+    import_file, StreamIndenter
 )
 from pyomo.common.download import FileDownloader
 
@@ -120,6 +120,20 @@ class TestFileUtils(unittest.TestCase):
         with self.assertRaises(FileNotFoundError) as context:
             import_file(os.path.join(_this_file_dir, 'import_ex'))
         self.assertTrue('File does not exist' in str(context.exception))
+
+    def test_StreamIndenter_noprefix(self):
+        OUT1 = StringIO()
+        OUT2 = StreamIndenter(OUT1)
+        OUT2.write('Hello?\nHello, world!')
+        self.assertEqual('        Hello?\n        Hello, world!',
+                         OUT2.getvalue())
+
+    def test_StreamIndenter_prefix(self):
+        prefix = 'foo:'
+        OUT1 = StringIO()
+        OUT2 = StreamIndenter(OUT1, prefix)
+        OUT2.write('Hello?\nHello, world!')
+        self.assertEqual('foo:Hello?\nfoo:Hello, world!', OUT2.getvalue())
 
     def test_system(self):
         self.assertTrue(platform.system().lower().startswith(_system()))
