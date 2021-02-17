@@ -88,6 +88,9 @@ def timeout(seconds):
     import multiprocessing
     import queue
     def timeout_decorator(fcn):
+        if multiprocessing.get_start_method() != 'fork':
+            return skip("unittest.timeout() requires "
+                        "multiprocessing.get_start_method()=='fork'")(fcn)
         @functools.wraps(fcn)
         def test_timer(*args, **kwargs):
             q = multiprocessing.Queue()
