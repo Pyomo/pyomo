@@ -16,7 +16,7 @@ from os.path import abspath, dirname
 
 import pyutilib.th as unittest
 
-from pyomo.core.base import (
+from pyomo.environ import (
     Block, Constraint, ConcreteModel, Var, Set, TransformationFactory
 )
 from pyomo.dae import ContinuousSet, DerivativeVar
