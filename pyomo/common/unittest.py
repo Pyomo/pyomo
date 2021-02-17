@@ -27,6 +27,7 @@ from pyomo.common.collections import Mapping, Sequence
 __all__ = _unittest.__all__ + ['category', 'nottest']
 
 def _test_runner(q, fcn, args, kwargs):
+    "Utility wrapper for running functions, used by timeout()"
     try:
         q.put((False, fcn(*args, **kwargs)))
     except:
@@ -37,7 +38,47 @@ def _test_runner(q, fcn, args, kwargs):
                 e, ''.join(traceback.format_tb(tb))))
         q.put((True, e))
 
+
 def timeout(seconds):
+    """Function decorator to timeout the decorated function.
+
+    This decorator will wrap a function call with a timeout, returning
+    the result of the wrapped function.  The timeout is implemented
+    using multiprocessing to execute the function in a forked process.
+    If the wrapped function raises an exception, then the exception will
+    be re-raised in this process.  If the function times out, a
+    :python:`TimeoutError` will be raised.
+
+    Note that as this method uses multiprocessing, the wrapped function
+    should NOT spawn any subprocesses.  The timeout is implemented using
+    `multiprocessing.Process.terminate()`, which sends a SIGTERM signal
+    to the subprocess.  Any spawned subprocesses are not collected and
+    will be orphaned and left running.
+
+    Parameters
+    ----------
+    seconds: float
+        Number of seconds to wait before timing out the function
+
+    Examples
+    --------
+    >>> import pyomo.common.unittest as unittest
+    >>> @unittest.timeout(1)
+    ... def test_function():
+    ...     return 42
+    >>> test_function()
+    42
+
+    >>> @unittest.timeout(0.01)
+    ... def test_function():
+    ...     while 1:
+    ...         pass
+    >>> test_function()
+    Traceback (most recent call last):
+        ...
+    TimeoutError: test timed out after 0.01 seconds
+
+    """
     import functools
     import multiprocessing
     import queue
@@ -62,6 +103,7 @@ def timeout(seconds):
                 return result
         return test_timer
     return timeout_decorator
+
 
 class TestCase(_pyunit.TestCase):
     """A Pyomo-specific class whose instances are single test cases.
