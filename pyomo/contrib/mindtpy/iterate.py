@@ -85,7 +85,11 @@ def MindtPy_iteration_loop(solve_data, config):
             if (solve_data.objective_sense == minimize and solve_data.LB != float('-inf')) or (solve_data.objective_sense == maximize and solve_data.UB != float('inf')):
                 master_mip, master_mip_results = solve_master(
                     solve_data, config, regularization_problem=True)
-                if master_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
+                if master_mip_results is None:
+                    config.logger.info(
+                        'Failed to solve the projection problem.'
+                        'The solution of the OA master problem will be adopted.')
+                elif master_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
                     handle_master_optimal(
                         master_mip, solve_data, config, update_bound=False)
                 elif master_mip_results.solver.termination_condition is tc.maxTimeLimit:
@@ -96,6 +100,10 @@ def MindtPy_iteration_loop(solve_data, config):
                 elif master_mip_results.solver.termination_condition is tc.infeasible:
                     config.logger.info(
                         'Regularization problem infeasible.')
+                elif master_mip_results.solver.termination_condition is tc.unknown:
+                    config.logger.info(
+                        'Termination condition of the projection problem is unknown.'
+                        'The solution of the OA master problem will be adopted.')
                 else:
                     raise ValueError(
                         'MindtPy unable to handle projection problem termination condition '
