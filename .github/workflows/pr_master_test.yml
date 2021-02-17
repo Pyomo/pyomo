@@ -661,7 +661,7 @@ jobs:
                 ((i+=1))
                 echo "Uploading coverage to codecov (attempt ${i})"
                 bash $CODECOV -Z -e TAG,GHA_OS_NAME -X gcov -X s3 \
-                    -f coverage.xml
+                    -f coverage.xml -C $GITHUB_SHA
                 if test $? == 0; then
                     echo "PASS $CODECOV_NAME" >> codecov.result
                     break
