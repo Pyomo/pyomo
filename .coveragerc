@@ -7,6 +7,7 @@ omit =
 # The [run] section must be at the end, as the build harness will add a
 # "data_file" directive to the end of this file.
 [run]
+concurrency = multiprocessing,thread
 parallel = True
 source =
     pyomo
