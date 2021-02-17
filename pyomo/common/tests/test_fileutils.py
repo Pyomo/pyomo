@@ -125,7 +125,7 @@ class TestFileUtils(unittest.TestCase):
         OUT1 = StringIO()
         OUT2 = StreamIndenter(OUT1)
         OUT2.write('Hello?\nHello, world!')
-        self.assertEqual('        Hello?\n        Hello, world!',
+        self.assertEqual('    Hello?\n    Hello, world!',
                          OUT2.getvalue())
 
     def test_StreamIndenter_prefix(self):
