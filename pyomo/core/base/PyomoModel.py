@@ -18,7 +18,7 @@ import time
 import math
 
 from pyomo.common import timing, PyomoAPIFactory
-from pyomo.common.collections import Container, OrderedDict
+from pyomo.common.collections import Container
 from pyomo.common.dependencies import pympler, pympler_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.gc_manager import PauseGC
@@ -46,11 +46,7 @@ from pyomo.core.base.label import CNameLabeler, CuidLabeler
 
 from pyomo.opt.results import SolverResults, Solution, SolverStatus, UndefinedData
 
-from six import itervalues, iteritems, StringIO, string_types
-try:
-    unicode
-except:
-    basestring = unicode = str
+from six import itervalues, iteritems, StringIO
 
 logger = logging.getLogger('pyomo.core')
 id_func = id
@@ -649,7 +645,7 @@ class Model(SimpleBlock):
         # filename is specified.  A concrete model is already
         # constructed, so passing in a data file is a waste of time.
         #
-        if self.is_constructed() and isinstance(filename, string_types):
+        if self.is_constructed() and isinstance(filename, str):
             msg = "The filename=%s will not be loaded - supplied as an " \
                   "argument to the create_instance() method of a "\
                   "concrete instance with name=%s." % (filename, name)
@@ -751,7 +747,7 @@ arguments (which have been ignored):"""
                 "The report_timing argument to Model.load() is deprecated.  "
                 "Use pyomo.common.timing.report_timing() to enable reporting "
                 "construction timing")
-        if arg is None or isinstance(arg, basestring):
+        if arg is None or isinstance(arg, str):
             dp = DataPortal(filename=arg, model=self)
         elif type(arg) is DataPortal:
             dp = arg
@@ -829,6 +825,8 @@ arguments (which have been ignored):"""
 
                 self._initialize_component(modeldata, namespaces, component_name, profile_memory)
                 if False:
+                    # !!THIS SEEMS LIKE A BUG!! - mrmundt
+                    # there is no start_time
                     total_time = time.time() - start_time
                     if isinstance(component, IndexedComponent):
                         clen = len(component)
@@ -841,7 +839,7 @@ arguments (which have been ignored):"""
                     tmp_clone_counter = expr_common.clone_counter
                     if clone_counter != tmp_clone_counter:
                         clone_counter = tmp_clone_counter
-                        print("             Cloning detected! (clone count: %d)" % clone_counters)
+                        print("             Cloning detected! (clone count: %d)" % clone_counter)
 
             # Note: As is, connectors are expanded when using command-line pyomo but not calling model.create(...) in a Python script.
             # John says this has to do with extension points which are called from commandline but not when writing scripts.
