@@ -40,6 +40,11 @@ logger = logging.getLogger(__name__)
 
 
 class capture_output(object):
+    """
+    Drop-in substitute for PyUtilib's capture_output.
+    Takes in a StringIO and file-like object and temporarily redirects
+    output to a string buffer.
+    """
     def __init__(self, output=None):
         if output is None:
             output = StringIO()

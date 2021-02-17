@@ -3631,7 +3631,6 @@ class TestNestedSetOperations(unittest.TestCase):
 
         self.assertTrue(isinstance(inst.product1,
                                    pyomo.core.base.set.SetProduct))
-        # See if we can get away with using a standard flattener here
         prod1 = set([flattener(i) \
                      for i in set( p(s1,p(s2,p(s3,p(s3,s2)))) )])
         self.assertEqual(sorted(inst.product1),
