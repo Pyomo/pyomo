@@ -21,7 +21,7 @@ from pyomo.core.base.indexed_component import (
 from pyomo.core.base.indexed_component_slice import (
     IndexedComponent_slice, _IndexedComponent_slice_iter
 )
-from pyomo.core.base.util import flattener
+from pyomo.core.base.util import flatten_tuple
 
 import six
 from six import iteritems, itervalues, advance_iterator
@@ -332,7 +332,7 @@ class _ReferenceDict(MutableMapping):
             key = (key,)
         return _IndexedComponent_slice_iter(
             _slice,
-            _fill_in_known_wildcards(flattener(key),
+            _fill_in_known_wildcards(flatten_tuple(key),
                                      get_if_not_present=get_if_not_present)
         )
 
@@ -395,7 +395,7 @@ class _ReferenceSet(collections_Set):
             key = (key,)
         return _IndexedComponent_slice_iter(
             _slice,
-            _fill_in_known_wildcards(flattener(key), look_in_index=True),
+            _fill_in_known_wildcards(flatten_tuple(key), look_in_index=True),
             iter_over_index=True
         )
 

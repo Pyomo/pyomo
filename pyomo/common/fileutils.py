@@ -431,7 +431,7 @@ class StreamIndenter(object):
     StreamIndenter objects may be arbitrarily nested.
     """
 
-    def __init__(self, ostream, indent="        "):
+    def __init__(self, ostream, indent=' '*4):
         self.os = ostream
         self.indent = indent
         self.stripped_indent = indent.rstrip()

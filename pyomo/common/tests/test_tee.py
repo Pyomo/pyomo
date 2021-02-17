@@ -11,12 +11,13 @@
 
 import os
 import time
+import sys
 
 from six import StringIO, BytesIO
 
 from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
-
+from pyomo.common.tempfiles import TempfileManager
 import pyomo.common.tee as tee
 
 class TestTeeStream(unittest.TestCase):
@@ -125,14 +126,35 @@ class TestTeeStream(unittest.TestCase):
         out = StringIO()
         capture = tee.capture_output(out)
         capture.setup()
-        with self.assertRaisesRegex(RuntimeError, 'Duplicate call to capture_output.setup'):
-            capture.setup()
+        try: 
+            with self.assertRaisesRegex(RuntimeError, 'Duplicate call to capture_output.setup'):
+                capture.setup()
+        finally:
+            capture.reset()
 
     def test_capture_output_logfile_string(self):
-        currdir = os.getcwd()
-        logfile = os.path.join(currdir, 'tee_log.log')
+        logfile = TempfileManager.create_tempfile()
         self.assertTrue(isinstance(logfile, str))
-        with tee.capture_output(logfile):
-            print('HELLO WORLD')
-        self.assertEqual('HELLO WORLD\n', open(logfile, 'r').read())
-        os.remove(logfile)
+        try: 
+            with tee.capture_output(logfile):
+                print('HELLO WORLD')
+            with open(logfile, 'r') as f:
+                result = f.read()
+            self.assertEqual('HELLO WORLD\n', result)
+        finally:
+            TempfileManager.clear_tempfiles()
+
+    def test_capture_output_stack_error(self):
+        OUT1 = StringIO()
+        OUT2 = StringIO()
+        old = (sys.stdout, sys.stderr)
+        try:
+            a = tee.capture_output(OUT1)
+            a.setup()
+            b = tee.capture_output(OUT2)
+            b.setup()
+            with self.assertRaisesRegex(RuntimeError, 'Captured output does not match sys.stdout'):
+                a.reset()
+            b.tee = None
+        finally:
+            sys.stdout, sys.stderr = old

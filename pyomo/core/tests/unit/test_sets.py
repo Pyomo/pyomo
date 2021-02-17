@@ -37,9 +37,10 @@ currdir = dirname(abspath(__file__))+os.sep
 import pyutilib.th as unittest
 
 import pyomo.core.base
-from pyomo.core.base.util import flattener
+from pyomo.core.base.util import flatten_tuple
 from pyomo.environ import (Set, SetOf, RangeSet, Param, ConcreteModel, 
-                           AbstractModel, Expression, EmptySet, NonPositiveIntegers,
+                           AbstractModel, Expression, EmptySet,
+                           NonPositiveIntegers,
                            NonPositiveReals, PositiveReals, NegativeReals, 
                            IntegerSet, NegativeIntegers, 
                            PositiveIntegers, RealSet, BooleanSet, 
@@ -3631,19 +3632,19 @@ class TestNestedSetOperations(unittest.TestCase):
 
         self.assertTrue(isinstance(inst.product1,
                                    pyomo.core.base.set.SetProduct))
-        prod1 = set([flattener(i) \
+        prod1 = set([flatten_tuple(i) \
                      for i in set( p(s1,p(s2,p(s3,p(s3,s2)))) )])
         self.assertEqual(sorted(inst.product1),
                          sorted(prod1))
         self.assertTrue(isinstance(inst.product2,
                                    pyomo.core.base.set.SetProduct))
-        prod2 = set([flattener(i) \
+        prod2 = set([flatten_tuple(i) \
                      for i in  set( p(s1,p(s2,p(s3,p(s3,s2)))) )])
         self.assertEqual(sorted(inst.product2),
                          sorted(prod2))
         self.assertTrue(isinstance(inst.product3,
                                    pyomo.core.base.set.SetProduct))
-        prod3 = set([flattener(i) \
+        prod3 = set([flatten_tuple(i) \
                      for i in set( p(p(p(p(s1,s2),s3),s3),s2) )])
         self.assertEqual(sorted(inst.product3),
                          sorted(prod3))

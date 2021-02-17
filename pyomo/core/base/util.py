@@ -43,7 +43,7 @@ def is_functor(obj):
     return inspect.isfunction(obj) or hasattr(obj,'__call__')
 
 
-def flattener(x):
+def flatten_tuple(x):
     """
     This wraps around normalize_index. It flattens a nested sequence into 
     a single tuple and always returns a tuple, even for single

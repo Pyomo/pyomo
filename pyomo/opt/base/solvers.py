@@ -400,7 +400,6 @@ class OptSolver(object):
             return ans
         if istr[0] == "'" or istr[0] == '"':
             istr = eval(istr)
-        print('[ ]+', istr)
         tokens = shlex.split(istr)
         for token in tokens:
             index = token.find('=')

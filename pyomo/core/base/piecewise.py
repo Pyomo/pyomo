@@ -55,7 +55,7 @@ from pyomo.core.base.sos import SOSConstraint
 from pyomo.core.base.var import Var, _VarData, IndexedVar
 from pyomo.core.base.set_types import PositiveReals, NonNegativeReals, Binary
 from pyomo.core.base.numvalue import value
-from pyomo.core.base.util import flattener
+from pyomo.core.base.util import flatten_tuple
 
 from six import iterkeys, advance_iterator
 from six.moves import xrange, zip
@@ -149,7 +149,7 @@ def _characterize_function(name, tol, f_rule, model, points, *index):
     # we use future division to protect against the case where
     # the user supplies integer type points for return values
     if isinstance(f_rule,types.FunctionType):
-        values = [f_rule(model,*flattener((index,x))) for x in points]
+        values = [f_rule(model,*flatten_tuple((index,x))) for x in points]
     elif f_rule.__class__ is dict:
         if len(index) == 1:
             values = f_rule[index[0]]
@@ -185,7 +185,7 @@ def _characterize_function(name, tol, f_rule, model, points, *index):
               "documentation for information on how to disable this warning."
         if index == ():
             index = None
-        print(msg % (name, flattener(index)))
+        print(msg % (name, flatten_tuple(index)))
 
     if step is True:
         return 0,values,True

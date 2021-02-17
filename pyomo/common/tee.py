@@ -42,8 +42,8 @@ logger = logging.getLogger(__name__)
 class capture_output(object):
     """
     Drop-in substitute for PyUtilib's capture_output.
-    Takes in a StringIO and file-like object and temporarily redirects
-    output to a string buffer.
+    Takes in a StringIO, file-like object, or filename and temporarily
+    redirects output to a string buffer.
     """
     def __init__(self, output=None):
         if output is None:
@@ -55,24 +55,31 @@ class capture_output(object):
 
     def __enter__(self):
         if isinstance(self.output, str):
-            self.output_file = ostream = open(self.output, 'w')
+            self.output_stream = open(self.output, 'w')
         else:
-            ostream = self.output
+            self.output_stream = self.output
         self.old = (sys.stdout, sys.stderr)
-        self.tee = TeeStream(ostream)
+        self.tee = TeeStream(self.output_stream)
         self.tee.__enter__()
         sys.stdout = self.tee.STDOUT
         sys.stderr = self.tee.STDERR
-        return self.output
+        return self.output_stream
 
     def __exit__(self, et, ev, tb):
+        FAIL = self.tee.STDOUT is not sys.stdout
+        self.tee.__exit__(et, ev, tb)
+        if self.output_stream is not self.output:
+            self.output_stream.close()
         sys.stdout, sys.stderr = self.old
         self.old = None
-        self.tee.__exit__(et, ev, tb)
         self.tee = None
-        if self.output_file is not None:
-            self.output_file.close()
-            self.output_file = None
+        self.output_stream = None
+        if FAIL:
+            raise RuntimeError('Captured output does not match sys.stdout.')
+
+    def __del__(self):
+        if self.tee is not None:
+            self.__exit__(None, None, None)
 
     def setup(self):
         if self.old is not None:
