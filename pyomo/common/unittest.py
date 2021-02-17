@@ -26,8 +26,9 @@ from pyomo.common.collections import Mapping, Sequence
 # This augments the unittest exports with two additional decorators
 __all__ = _unittest.__all__ + ['category', 'nottest']
 
-def _test_runner(q, fcn, args, kwargs):
+def _test_runner(q):
     "Utility wrapper for running functions, used by timeout()"
+    fcn, args, kwargs = _test_runner.data[q]
     try:
         q.put((False, fcn(*args, **kwargs)))
     except:
@@ -37,6 +38,10 @@ def _test_runner(q, fcn, args, kwargs):
             e = etype("%s\nOriginal traceback:\n%s" % (
                 e, ''.join(traceback.format_tb(tb))))
         q.put((True, e))
+
+# Data structure for passing functions/arguments to the _test_runner
+# without forcing them to be pickled / unpickled
+_test_runner.data = {}
 
 
 def timeout(seconds):
@@ -86,8 +91,9 @@ def timeout(seconds):
         @functools.wraps(fcn)
         def test_timer(*args, **kwargs):
             q = multiprocessing.Queue()
+            _test_runner.data[q] = (fcn, args, kwargs)
             test_proc = multiprocessing.Process(
-                target=_test_runner, args=(q, fcn, args, kwargs))
+                target=_test_runner, args=(q,))
             test_proc.daemon = False
             test_proc.start()
             try:
@@ -96,6 +102,8 @@ def timeout(seconds):
                 test_proc.terminate()
                 raise TimeoutError(
                     "test timed out after %s seconds" % (seconds,)) from None
+            finally:
+                _test_runner.data.pop(q)
             test_proc.join()
             if exception_raised:
                 raise result
