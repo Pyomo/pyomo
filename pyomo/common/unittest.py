@@ -10,6 +10,7 @@
 
 import math
 import six
+import sys
 
 # Import base classes privately (so that we have handles on them)
 import pyutilib.th.pyunit as _pyunit
@@ -24,6 +25,43 @@ from pyomo.common.collections import Mapping, Sequence
 
 # This augments the unittest exports with two additional decorators
 __all__ = _unittest.__all__ + ['category', 'nottest']
+
+def _test_runner(q, fcn, args, kwargs):
+    try:
+        q.put((False, fcn(*args, **kwargs)))
+    except:
+        import traceback
+        etype, e, tb = sys.exc_info()
+        if not isinstance(e, AssertionError):
+            e = etype("%s\nOriginal traceback:\n%s" % (
+                e, ''.join(traceback.format_tb(tb))))
+        q.put((True, e))
+
+def timeout(seconds):
+    import functools
+    import multiprocessing
+    import queue
+    def timeout_decorator(fcn):
+        @functools.wraps(fcn)
+        def test_timer(*args, **kwargs):
+            q = multiprocessing.Queue()
+            test_proc = multiprocessing.Process(
+                target=_test_runner, args=(q, fcn, args, kwargs))
+            test_proc.daemon = False
+            test_proc.start()
+            try:
+                exception_raised, result = q.get(True, seconds)
+            except queue.Empty:
+                test_proc.terminate()
+                raise TimeoutError(
+                    "test timed out after %s seconds" % (seconds,)) from None
+            test_proc.join()
+            if exception_raised:
+                raise result
+            else:
+                return result
+        return test_timer
+    return timeout_decorator
 
 class TestCase(_pyunit.TestCase):
     """A Pyomo-specific class whose instances are single test cases.
