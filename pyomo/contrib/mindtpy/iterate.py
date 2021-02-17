@@ -100,6 +100,10 @@ def MindtPy_iteration_loop(solve_data, config):
                 elif master_mip_results.solver.termination_condition is tc.infeasible:
                     config.logger.info(
                         'Regularization problem infeasible.')
+                elif master_mip_results.solver.termination_condition is tc.unbounded:
+                    config.logger.info(
+                        'Regularization problem ubounded.'
+                        'Sometimes solving MIQP in cplex, unbounded means infeasible.')
                 elif master_mip_results.solver.termination_condition is tc.unknown:
                     config.logger.info(
                         'Termination condition of the projection problem is unknown.'
