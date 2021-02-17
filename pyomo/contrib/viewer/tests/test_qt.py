@@ -32,6 +32,11 @@ test_file = os.path.join(this_file_dir(), "pytest_qt.py")
 
 try:
     import pytest
+    # Contextvars is required for anyio/sniffio (pytest), but was not
+    # added to the standard library until Python 3.7.  If it is not
+    # available (either directly or through the 3.6 backport), do not
+    # attempt the QT tests.
+    import contextvars
     from pyomo.contrib.viewer.qt import qt_available
 except:
     qt_available = False
