@@ -527,6 +527,18 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                         elif master_mip_results.solver.termination_condition is tc.infeasible:
                             config.logger.info('Projection problem still infeasible with reduced level_coef. '
                                                'NLP subproblem is generated based on the incumbent solution of the master problem.')
+                        elif master_mip_results.solver.termination_condition is tc.maxTimeLimit:
+                            config.logger.info(
+                                'Regularization problem failed to converge within the time limit.')
+                            solve_data.results.solver.termination_condition = tc.maxTimeLimit
+                        elif master_mip_results.solver.termination_condition is tc.unbounded:
+                            config.logger.info(
+                                'Regularization problem ubounded.'
+                                'Sometimes solving MIQP using cplex, unbounded means infeasible.')
+                        elif master_mip_results.solver.termination_condition is tc.unknown:
+                            config.logger.info(
+                                'Termination condition of the projection problem is unknown.'
+                                'The solution of the OA master problem will be adopted.')
                         else:
                             raise ValueError(
                                 'MindtPy unable to handle projection problem termination condition '
