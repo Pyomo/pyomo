@@ -236,7 +236,7 @@ class ProjectedNLP(_BaseNLPDelegator):
         # not be the best idea since we can't really support this
         # same strategy for other methods (e.g., init_primals) where
         # we now use NaNs to fill in any "missing" entries.
-        np.copy_to(self._projected_primals, primals)
+        np.copyto(self._projected_primals, primals)
         original_primals = self._original_nlp.get_primals()
         original_primals[self._original_idxs] = primals[self._projected_idxs]
         self._original_nlp.set_primals(original_primals)

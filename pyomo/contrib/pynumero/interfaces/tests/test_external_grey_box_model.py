@@ -471,7 +471,6 @@ class TestExternalGreyBoxModel(unittest.TestCase):
 
 # TODO: make this work even if there is only external and no variables anywhere in pyomo part
 class TestPyomoGreyBoxNLP(unittest.TestCase):
-    @unittest.skip("It looks like ASL exits when there are no variables")
     def test_error_no_variables(self):
         m = pyo.ConcreteModel()
         m.egb = ExternalGreyBoxBlock()
