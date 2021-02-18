@@ -10,6 +10,7 @@
 
 import math
 import six
+import sys
 
 # Import base classes privately (so that we have handles on them)
 import pyutilib.th.pyunit as _pyunit
@@ -24,6 +25,96 @@ from pyomo.common.collections import Mapping, Sequence
 
 # This augments the unittest exports with two additional decorators
 __all__ = _unittest.__all__ + ['category', 'nottest']
+
+def _test_runner(q):
+    "Utility wrapper for running functions, used by timeout()"
+    fcn, args, kwargs = _test_runner.data[q]
+    try:
+        q.put((False, fcn(*args, **kwargs)))
+    except:
+        import traceback
+        etype, e, tb = sys.exc_info()
+        if not isinstance(e, AssertionError):
+            e = etype("%s\nOriginal traceback:\n%s" % (
+                e, ''.join(traceback.format_tb(tb))))
+        q.put((True, e))
+
+# Data structure for passing functions/arguments to the _test_runner
+# without forcing them to be pickled / unpickled
+_test_runner.data = {}
+
+
+def timeout(seconds):
+    """Function decorator to timeout the decorated function.
+
+    This decorator will wrap a function call with a timeout, returning
+    the result of the wrapped function.  The timeout is implemented
+    using multiprocessing to execute the function in a forked process.
+    If the wrapped function raises an exception, then the exception will
+    be re-raised in this process.  If the function times out, a
+    :python:`TimeoutError` will be raised.
+
+    Note that as this method uses multiprocessing, the wrapped function
+    should NOT spawn any subprocesses.  The timeout is implemented using
+    `multiprocessing.Process.terminate()`, which sends a SIGTERM signal
+    to the subprocess.  Any spawned subprocesses are not collected and
+    will be orphaned and left running.
+
+    Parameters
+    ----------
+    seconds: float
+        Number of seconds to wait before timing out the function
+
+    Examples
+    --------
+    >>> import pyomo.common.unittest as unittest
+    >>> @unittest.timeout(1)
+    ... def test_function():
+    ...     return 42
+    >>> test_function()
+    42
+
+    >>> @unittest.timeout(0.01)
+    ... def test_function():
+    ...     while 1:
+    ...         pass
+    >>> test_function()
+    Traceback (most recent call last):
+        ...
+    TimeoutError: test timed out after 0.01 seconds
+
+    """
+    import functools
+    import multiprocessing
+    import queue
+    def timeout_decorator(fcn):
+        if multiprocessing.get_start_method() != 'fork':
+            return skip("unittest.timeout() requires "
+                        "multiprocessing.get_start_method()=='fork'")(fcn)
+        @functools.wraps(fcn)
+        def test_timer(*args, **kwargs):
+            q = multiprocessing.Queue()
+            _test_runner.data[q] = (fcn, args, kwargs)
+            test_proc = multiprocessing.Process(
+                target=_test_runner, args=(q,))
+            test_proc.daemon = False
+            test_proc.start()
+            try:
+                exception_raised, result = q.get(True, seconds)
+            except queue.Empty:
+                test_proc.terminate()
+                raise TimeoutError(
+                    "test timed out after %s seconds" % (seconds,)) from None
+            finally:
+                _test_runner.data.pop(q)
+            test_proc.join()
+            if exception_raised:
+                raise result
+            else:
+                return result
+        return test_timer
+    return timeout_decorator
+
 
 class TestCase(_pyunit.TestCase):
     """A Pyomo-specific class whose instances are single test cases.

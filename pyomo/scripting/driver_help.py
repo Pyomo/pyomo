@@ -16,8 +16,7 @@ import datetime
 import textwrap
 import logging
 import socket
-
-import pyutilib.subprocess
+import subprocess
 
 import pyomo.common
 from pyomo.common.collections import Options
@@ -53,7 +52,9 @@ def command_exec(options):
     if not os.path.exists(cmddir+options.command[0]):
         print("  ERROR: the command '%s' does not exist" % (cmddir+options.command[0]))
         return 1
-    return pyutilib.subprocess.run(cmddir+' '.join(options.command), tee=True)[0]
+    return subprocess.run([cmddir] + options.command,
+                          stdout=subprocess.DEVNULL,
+                          stderr=subprocess.DEVNULL).returncode
 
 #
 # Add a subparser for the pyomo command
@@ -290,13 +291,13 @@ def help_solvers():
         print(wrapper.fill(format % (s , pyomo.opt.SolverManagerFactory.doc(s))))
     print("")
     wrapper = textwrap.TextWrapper(subsequent_indent='')
-    print(wrapper.fill("If no solver manager is specified, Pyomo uses the serial solver manager to execute solvers locally.  The pyro and phpyro solver managers require the installation and configuration of the pyro software.  The neos solver manager is used to execute solvers on the NEOS optimization server."))
+    print(wrapper.fill("If no solver manager is specified, Pyomo uses the serial solver manager to execute solvers locally.  The pyro solver manager requires the installation and configuration of the pyro software.  The neos solver manager is used to execute solvers on the NEOS optimization server."))
     print("")
 
     print("")
     print("Serial Solver Interfaces")
     print("------------------------")
-    print(wrapper.fill("The serial, pyro and phpyro solver managers support the following solver interfaces:"))
+    print(wrapper.fill("The serial and pyro solver managers support the following solver interfaces:"))
     print("")
     solver_list = list(pyomo.opt.SolverFactory)
     solver_list = sorted( filter(lambda x: '_' != x[0], solver_list) )
@@ -397,7 +398,7 @@ def print_components(data):
     print("Pyomo Model Components:")
     print("----------------------------------------------------------------")
     components = pyomo.core.base._pyomo.model_components()
-    index = pyutilib.misc.sort_index(components)
+    index = list(idx for idx, item in sorted(enumerate(components), key=lambda item: item[1]))
     for i in index:
         print("")
         print(" "+components[i][0])
@@ -408,7 +409,7 @@ def print_components(data):
     print("Pyomo Virtual Sets:")
     print("----------------------------------------------------------------")
     pyomo_sets = pyomo.core.base._pyomo.predefined_sets()
-    index = pyutilib.misc.sort_index(pyomo_sets)
+    index = list(idx for idx, item in sorted(enumerate(pyomo_sets), key=lambda item: item[1]))
     for i in index:
         print("")
         print(" "+pyomo_sets[i][0])

@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import datetime
+import time
 
 import pyomo.common.unittest as unittest
 
@@ -127,3 +128,39 @@ class TestPyomoUnittest(unittest.TestCase):
         with self.assertRaisesRegex(self.failureException,
                                     '3 !~= 2.999'):
             self.assertStructuredAlmostEqual(a, b)
+
+    @unittest.timeout(1)
+    def short_sleep(self):
+        time.sleep(0.01)
+        return 42
+
+    @unittest.timeout(0.01)
+    def long_sleep(self):
+        time.sleep(1)
+        return 42
+
+    @unittest.timeout(1)
+    def raise_exception(self):
+        foo.bar
+        return 42
+
+    @unittest.timeout(1)
+    def fail(self):
+        self.assertEqual(0, 1)
+
+    def test_timeout(self):
+        self.assertEqual(self.short_sleep(), 42)
+        with self.assertRaisesRegex(
+                TimeoutError, 'test timed out after 0.01 seconds'):
+            self.long_sleep()
+        with self.assertRaisesRegex(
+                NameError,
+                f"name 'foo' is not defined\s+Original traceback:"):
+            self.raise_exception()
+        with self.assertRaisesRegex(
+                AssertionError,
+                r"^0 != 1$"):
+            self.fail()
+
+if __name__ == '__main__':
+    unittest.main()

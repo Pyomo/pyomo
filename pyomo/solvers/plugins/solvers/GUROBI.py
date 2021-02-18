@@ -18,7 +18,6 @@ import subprocess
 from pyomo.common import Executable
 from pyomo.common.collections import Options, Bunch
 from pyomo.common.tempfiles import TempfileManager
-from pyutilib.subprocess import run
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
@@ -28,7 +27,7 @@ from pyomo.core.kernel.block import IBlock
 
 logger = logging.getLogger('pyomo.solvers')
 
-from six import iteritems, StringIO
+from six import iteritems
 
 try:
     unicode
@@ -278,14 +277,16 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         if solver_exec is None:
             ver = _extract_version('')
         else:
-            f = StringIO()
-            results = run([solver_exec],
-                          stdin=('from gurobipy import *; '
-                                 'print(gurobi.version()); exit()'),
-                          ostream=f)
+            results = subprocess.run(
+                [solver_exec],
+                input='from gurobipy import *; print(gurobi.version()); exit()',
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+            )
             ver = None
             try:
-                ver = tuple(eval(f.getvalue().strip()))
+                ver = tuple(eval(results.stdout.strip()))
                 while(len(ver) < 4):
                     ver += (0,)
             except SyntaxError:

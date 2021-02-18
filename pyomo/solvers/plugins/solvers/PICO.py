@@ -10,14 +10,13 @@
 
 import re
 import os
-
+import subprocess
 from six import iteritems
 
 from pyomo.common import Executable
 from pyomo.common.errors import  ApplicationError
 from pyomo.common.collections import Options, Bunch
 from pyomo.common.tempfiles import TempfileManager
-from pyutilib.subprocess import run
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
@@ -134,12 +133,15 @@ class PICOSHELL(SystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = run([solver_exec, "--version"], timelimit=1)
+        results = subprocess.run([solver_exec, "--version"], timeout=1,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT,
+                                 universal_newlines=True)
         # 'PICO --version' seems to print 'pebble <version>, PICO <version>
         # we don't wan't the pebble version being advertised so we split
         # the string at the comma before extracting a version number. It
         # also exits with a nonzero return code so don't bother checking it.
-        return _extract_version(results[1].split(',')[1])
+        return _extract_version(results.stdout.split(',')[1])
 
     # Nothing needs to be done here
     #def _presolve(self, *args, **kwds):

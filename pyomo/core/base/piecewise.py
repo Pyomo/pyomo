@@ -45,8 +45,6 @@ import operator
 import types
 import enum
 
-from pyutilib.misc import flatten_tuple
-
 from pyomo.common.log import is_debug_set
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.timing import ConstructionTimer
@@ -57,6 +55,7 @@ from pyomo.core.base.sos import SOSConstraint
 from pyomo.core.base.var import Var, _VarData, IndexedVar
 from pyomo.core.base.set_types import PositiveReals, NonNegativeReals, Binary
 from pyomo.core.base.numvalue import value
+from pyomo.core.base.util import flatten_tuple
 
 from six import iterkeys, advance_iterator
 from six.moves import xrange, zip

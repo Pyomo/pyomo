@@ -13,12 +13,11 @@ import os
 import re
 import time
 import logging
+import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
-from pyutilib.misc import yaml_fix
 from pyomo.common.tempfiles import TempfileManager
-from pyutilib.subprocess import run
 
 from pyomo.common.collections import ComponentMap, Options, Bunch
 from pyomo.opt.base import (
@@ -397,8 +396,11 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = run( [solver_exec,'-c','quit'], timelimit=1 )
-        return _extract_version(results[1])
+        results = subprocess.run( [solver_exec,'-c','quit'], timeout=1,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT,
+                                 universal_newlines=True)
+        return _extract_version(results.stdout)
 
     def create_command_line(self, executable, problem_files):
 
@@ -621,7 +623,8 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 results.solver.termination_message = ' '.join(tokens)
 
         try:
-            results.solver.termination_message = yaml_fix(results.solver.termination_message)
+            if isinstance(results.solver.termination_message, basestring):
+                results.solver.termination_message = results.solver.termination_message.replace(':', '\\x3a')
         except:
             pass
         return results
