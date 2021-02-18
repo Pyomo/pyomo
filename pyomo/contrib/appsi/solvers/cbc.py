@@ -114,7 +114,7 @@ class Cbc(Solver):
         try:
             TempfileManager.push()
             if self.config.filename is None:
-                self._filename = TempfileManager.create_tempfile()
+                self._filename = TempfileManager.create_tempfile(dir='./')
             else:
                 self._filename = self.config.filename
             TempfileManager.add_tempfile(self._filename + '.lp', exists=False)
