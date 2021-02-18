@@ -21,12 +21,12 @@ import textwrap
 
 from inspect import isclass
 from operator import itemgetter
-from six import iteritems, iterkeys, itervalues, StringIO, string_types, \
+from six import iteritems, iterkeys, itervalues, StringIO, \
     advance_iterator, PY3
 
 from pyutilib.misc.indent_io import StreamIndenter
 
-from pyomo.common.collections import ComponentMap, Mapping
+from pyomo.common.collections import Mapping
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
@@ -1265,7 +1265,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         return that component IFF the component is a child of this
         block. Returns None on lookup failure.
         """
-        if isinstance(name_or_object, string_types):
+        if isinstance(name_or_object, str):
             if name_or_object in self._decl:
                 return self._decl_order[self._decl[name_or_object]][0]
         else:

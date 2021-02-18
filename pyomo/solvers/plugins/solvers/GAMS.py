@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import StringIO, iteritems, string_types
+from six import StringIO, iteritems
 from tempfile import mkdtemp
 import os, sys, math, logging, shutil, time, subprocess
 
@@ -69,7 +69,7 @@ class _GAMSSolver(object):
         return self._default_variable_value
 
     def set_options(self, istr):
-        if isinstance(istr, string_types):
+        if isinstance(istr, str):
             istr = self._options_string_to_dict(istr)
         for key in istr:
             if not istr[key] is None:

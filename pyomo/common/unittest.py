@@ -8,8 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import math
-import six
 
 # Import base classes privately (so that we have handles on them)
 import pyutilib.th.pyunit as _pyunit
@@ -157,7 +155,7 @@ class TestCase(_pyunit.TestCase):
                             str(e), _unittest.case.safe_repr(key)))
             return # PASS!
 
-        elif any(isinstance(_, six.string_types) for _ in args):
+        elif any(isinstance(_, str) for _ in args):
             if first == second:
                 return # PASS!
 

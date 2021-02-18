@@ -164,7 +164,7 @@ class ShortNameLabeler(object):
         else:
             self.labeler = AlphaNumericTextLabeler()
         self.known_labels = set() if caseInsensitive else None
-        if isinstance(legalRegex, six.string_types):
+        if isinstance(legalRegex, str):
             self.legalRegex = re.compile(legalRegex)
         else:
             self.legalRegex = legalRegex
