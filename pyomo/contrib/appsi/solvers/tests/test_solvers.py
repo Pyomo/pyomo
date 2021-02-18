@@ -50,11 +50,13 @@ fixed variables
 class TestSolvers(unittest.TestCase):
     @parameterized.expand(input=all_solvers)
     def test_range_constraint(self, name: str, opt_class: Type[Solver]):
+        opt: Solver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.obj = pe.Objective(expr=m.x)
         m.c = pe.Constraint(expr=(-1, m.x, 1))
-        opt: Solver = opt_class()
         res = opt.solve(m)
         self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(m.x.value, -1)
@@ -69,11 +71,13 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=all_solvers)
     def test_reduced_costs(self, name: str, opt_class: Type[Solver]):
+        opt: Solver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
         m = pe.ConcreteModel()
         m.x = pe.Var(bounds=(-1, 1))
         m.y = pe.Var(bounds=(-2, 2))
         m.obj = pe.Objective(expr=3*m.x + 4*m.y)
-        opt: Solver = opt_class()
         res = opt.solve(m)
         self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(m.x.value, -1)
@@ -84,6 +88,9 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=all_solvers)
     def test_param_changes(self, name: str, opt_class: Type[Solver]):
+        opt: Solver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -94,7 +101,6 @@ class TestSolvers(unittest.TestCase):
         m.obj = pe.Objective(expr=m.y)
         m.c1 = pe.Constraint(expr=(0, m.y - m.a1*m.x - m.b1, None))
         m.c2 = pe.Constraint(expr=(None, -m.y + m.a2*m.x + m.b2, 0))
-        opt: Solver = opt_class()
 
         params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
         for (a1, a2, b1, b2) in params_to_test:
@@ -114,6 +120,9 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=all_solvers)
     def test_equality(self, name: str, opt_class: Type[Solver]):
+        opt: Solver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -124,7 +133,6 @@ class TestSolvers(unittest.TestCase):
         m.obj = pe.Objective(expr=m.y)
         m.c1 = pe.Constraint(expr=m.y == m.a1 * m.x + m.b1)
         m.c2 = pe.Constraint(expr=m.y == m.a2 * m.x + m.b2)
-        opt: Solver = opt_class()
 
         params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
         for (a1, a2, b1, b2) in params_to_test:
@@ -144,6 +152,9 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=all_solvers)
     def test_no_objective(self, name: str, opt_class: Type[Solver]):
+        opt: Solver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -153,7 +164,6 @@ class TestSolvers(unittest.TestCase):
         m.b2 = pe.Param(mutable=True)
         m.c1 = pe.Constraint(expr=m.y == m.a1 * m.x + m.b1)
         m.c2 = pe.Constraint(expr=m.y == m.a2 * m.x + m.b2)
-        opt: Solver = opt_class()
         opt.config.stream_solver = True
 
         params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
@@ -174,6 +184,9 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=all_solvers)
     def test_add_remove_cons(self, name: str, opt_class: Type[Solver]):
+        opt: Solver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -186,7 +199,6 @@ class TestSolvers(unittest.TestCase):
         m.obj = pe.Objective(expr=m.y)
         m.c1 = pe.Constraint(expr=m.y >= a1 * m.x + b1)
         m.c2 = pe.Constraint(expr=m.y >= a2 * m.x + b2)
-        opt: Solver = opt_class()
         res = opt.solve(m)
         self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
@@ -222,13 +234,15 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=all_solvers)
     def test_results_infeasible(self, name: str, opt_class: Type[Solver]):
+        opt: Solver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
         m.obj = pe.Objective(expr=m.y)
         m.c1 = pe.Constraint(expr=m.y >= m.x)
         m.c2 = pe.Constraint(expr=m.y <= m.x - 1)
-        opt: Solver = opt_class()
         with self.assertRaises(Exception):
             res = opt.solve(m)
         opt.config.load_solution = False
@@ -242,6 +256,9 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=all_solvers)
     def test_duals(self, name: str, opt_class: Type[Solver]):
+        opt: Solver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -249,7 +266,6 @@ class TestSolvers(unittest.TestCase):
         m.c1 = pe.Constraint(expr=m.y - m.x >= 0)
         m.c2 = pe.Constraint(expr=m.y + m.x - 2 >= 0)
 
-        opt: Solver = opt_class()
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, 1)
         self.assertAlmostEqual(m.y.value, 1)
@@ -263,6 +279,9 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=qcp_solvers)
     def test_mutable_quadratic_coefficient(self, name: str, opt_class: Type[Solver]):
+        opt: Solver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -271,7 +290,6 @@ class TestSolvers(unittest.TestCase):
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
         m.c = pe.Constraint(expr=m.y >= (m.a*m.x + m.b)**2)
 
-        opt: Solver = opt_class()
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, 0.41024548525899274, 4)
         self.assertAlmostEqual(m.y.value, 0.34781038127030117, 4)
@@ -283,6 +301,9 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=qcp_solvers)
     def test_mutable_quadratic_objective(self, name: str, opt_class: Type[Solver]):
+        opt: Solver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.y = pe.Var()
@@ -293,7 +314,6 @@ class TestSolvers(unittest.TestCase):
         m.obj = pe.Objective(expr=m.x**2 + m.c*m.y**2 + m.d*m.x)
         m.ccon = pe.Constraint(expr=m.y >= (m.a*m.x + m.b)**2)
 
-        opt: Solver = opt_class()
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, 0.2719178742733325, 4)
         self.assertAlmostEqual(m.y.value, 0.5301035741688002, 4)
@@ -305,6 +325,9 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=all_solvers)
     def test_fixed_vars(self, namee: str, opt_class: Type[Solver]):
+        opt: Solver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
         m = pe.ConcreteModel()
         m.x = pe.Var()
         m.x.fix(0)
@@ -316,7 +339,6 @@ class TestSolvers(unittest.TestCase):
         m.obj = pe.Objective(expr=m.y)
         m.c1 = pe.Constraint(expr=m.y >= a1 * m.x + b1)
         m.c2 = pe.Constraint(expr=m.y >= a2 * m.x + b2)
-        opt: Solver = opt_class()
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, 0)
         self.assertAlmostEqual(m.y.value, 2)
@@ -327,6 +349,9 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=all_solvers)
     def test_mutable_param_with_range(self, name: str, opt_class: Type[Solver]):
+        opt: Solver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
         try:
             import numpy as np
         except:
@@ -343,7 +368,6 @@ class TestSolvers(unittest.TestCase):
         m.obj = pe.Objective(expr=m.y)
         m.con1 = pe.Constraint(expr=(m.b1, m.y - m.a1 * m.x, m.c1))
         m.con2 = pe.Constraint(expr=(m.b2, m.y - m.a2 * m.x, m.c2))
-        opt: Solver = opt_class()
 
         np.random.seed(0)
         params_to_test = [(np.random.uniform(0, 10), np.random.uniform(-10, 0),
@@ -387,10 +411,12 @@ class TestSolvers(unittest.TestCase):
 
     @parameterized.expand(input=all_solvers)
     def test_add_and_remove_vars(self, name: str, opt_class: Type[Solver]):
+        opt = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
         m = pe.ConcreteModel()
         m.y = pe.Var(bounds=(-1, None))
         m.obj = pe.Objective(expr=m.y)
-        opt = opt_class()
         opt.update_config.update_params = False
         opt.update_config.update_vars = False
         opt.update_config.update_constraints = False

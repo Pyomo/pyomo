@@ -208,6 +208,10 @@ class Solver(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def available(self):
+        pass
+
+    @abc.abstractmethod
     def load_vars(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> NoReturn:
         """
         Load the solution of the primal variables into the value attribut of the variables.

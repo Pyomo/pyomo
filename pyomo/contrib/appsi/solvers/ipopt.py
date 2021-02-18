@@ -40,6 +40,11 @@ class Ipopt(Solver):
         self._primal_sol = ComponentMap()
         self._reduced_costs = ComponentMap()
 
+    def available(self):
+        if self.config.executable.path() is None:
+            return False
+        return True
+
     def version(self):
         cp = subprocess.run([str(self.config.executable), '--version'],
                             capture_output=True, text=True)
@@ -129,12 +134,14 @@ class Ipopt(Solver):
         f.close()
 
     def solve(self, model, timer: HierarchicalTimer = None):
+        if not self.available():
+            raise RuntimeError('Could not find Ipopt executable')
         if timer is None:
             timer = HierarchicalTimer()
         try:
             TempfileManager.push()
             if self.config.filename is None:
-                self._filename = TempfileManager.create_tempfile(dir='./')
+                self._filename = TempfileManager.create_tempfile()
             else:
                 self._filename = self.config.filename
             TempfileManager.add_tempfile(self._filename + '.nl', exists=False)

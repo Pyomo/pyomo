@@ -161,13 +161,22 @@ class Gurobi(PersistentBase, Solver):
         self._constraints_added_since_update = OrderedSet()
         self._vars_added_since_update = ComponentSet()
 
-        import gurobipy
-        self._gurobipy = gurobipy
+        try:
+            import gurobipy
+            self._gurobipy = gurobipy
+            self._gurobipy_available = True
+        except ImportError:
+            self._gurobipy = None
+            self._gurobipy_available = False
 
-        if self._gurobipy.GRB.VERSION_MAJOR < 7:
-            # The reason for this is that it is too difficult to manage the gurobi lazy updates both for
-            # versions >= 7 and < 7.
-            raise ImportError('The persistent interface to Gurobi requires at least Gurobi version 7. ')
+        if self._gurobipy_available:
+            if self._gurobipy.GRB.VERSION_MAJOR < 7:
+                # The reason for this is that it is too difficult to manage the gurobi lazy updates both for
+                # versions >= 7 and < 7.
+                raise ImportError('The persistent interface to Gurobi requires at least Gurobi version 7. ')
+
+    def available(self):
+        return self._gurobipy_available
 
     @property
     def config(self):
@@ -255,6 +264,8 @@ class Gurobi(PersistentBase, Solver):
         pass
 
     def set_instance(self, model):
+        if not self.available():
+            raise ImportError('Could not import gurobipy')
         saved_config = self.config
         saved_options = self.solver_options
         saved_update_config = self.update_config

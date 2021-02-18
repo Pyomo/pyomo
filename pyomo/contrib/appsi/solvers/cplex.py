@@ -41,9 +41,19 @@ class Cplex(Solver):
         self._solver_options = dict()
         self._writer = LPWriter()
         self._filename = None
-        import cplex
-        self._cplex = cplex
-        self._cplex_model: Optional[cplex.Cplex] = None
+
+        try:
+            import cplex
+            self._cplex = cplex
+            self._cplex_model: Optional[cplex.Cplex] = None
+            self._cplex_available = True
+        except ImportError:
+            self._cplex = None
+            self._cplex_model = None
+            self._cplex_available = False
+
+    def available(self):
+        return self._cplex_available
 
     def lp_filename(self):
         if self._filename is None:
@@ -106,6 +116,8 @@ class Cplex(Solver):
         self._writer.update_params()
 
     def solve(self, model, timer: HierarchicalTimer = None):
+        if not self.available():
+            raise ImportError('Could not import cplex')
         if timer is None:
             timer = HierarchicalTimer()
         try:
