@@ -86,7 +86,7 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-18.04
-          python: 3.7
+          python: 3.6
           other: /cython
           setup_options: --with-cython
           skip_doctest: 1

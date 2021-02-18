@@ -62,7 +62,7 @@ jobs:
           PACKAGES: glpk
 
         - os: ubuntu-18.04
-          python: 3.7
+          python: 3.8
           other: /mpi
           mpi: 3
           skip_doctest: 1
@@ -87,14 +87,6 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-18.04
-          python: 3.7
-          other: /singletest
-          category: neos
-          skip_doctest: 1
-          TARGET: linux
-          PYENV: pip
-
-        - os: ubuntu-18.04
           python: 3.6
           other: /cython
           setup_options: --with-cython
@@ -102,6 +94,14 @@ jobs:
           TARGET: linux
           PYENV: pip
           PACKAGES: cython
+
+        - os: ubuntu-18.04
+          python: 3.7
+          other: /singletest
+          category: neos
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: pip
 
         exclude:
         - {os: macos-latest, python: pypy3}
@@ -195,7 +195,6 @@ jobs:
         for pkg in bash pkg-config unixodbc freetds glpk; do
             brew list $pkg || brew install $pkg
         done
-        #brew link --overwrite gcc
 
     - name: Update Linux
       if: matrix.TARGET == 'linux'
