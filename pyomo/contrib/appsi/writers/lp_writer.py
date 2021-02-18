@@ -1,5 +1,4 @@
 from typing import List
-import pyomo.environ as pe
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.constraint import _GeneralConstraintData
@@ -14,9 +13,10 @@ from pyomo.common.timing import HierarchicalTimer
 from .config import WriterConfig
 from .cmodel_converter import PyomoToCModelWalker
 from pyomo.common.dependencies import attempt_import
+from pyomo.core.kernel.objective import minimize, maximize
 
 
-cmodel, cmodel_available = attempt_import('pyomo.contrib.appsi.cmodel',
+cmodel, cmodel_available = attempt_import('pyomo.contrib.appsi.cmodel.cmodel',
                                           'Appsi requires building a small c++ extension. '
                                           'Please use thye "pyomo build-extensions" command')
 
@@ -206,7 +206,7 @@ class LPWriter(PersistentBase):
             quad_coef = [self._walker.dfs_postorder_stack(i) for i in repn.quadratic_coefs]
             quad_vars_1 = [self._pyomo_var_to_solver_var_map[id(i[0])] for i in repn.quadratic_vars]
             quad_vars_2 = [self._pyomo_var_to_solver_var_map[id(i[1])] for i in repn.quadratic_vars]
-            if obj.sense is pe.minimize:
+            if obj.sense is minimize:
                 sense = 0
             else:
                 sense = 1

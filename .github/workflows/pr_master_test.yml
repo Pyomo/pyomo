@@ -21,7 +21,7 @@ env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
   PYTHON_REQUIRED_PKGS: >
-      nose coverage
+      nose coverage parameterized
   PYTHON_BASE_PKGS: >
       ply six dill ipython networkx openpyxl pathos
       pint pyro4 pyyaml sphinx_rtd_theme sympy xlrd
@@ -246,6 +246,7 @@ jobs:
         python -m pip install --cache-dir cache/pip --upgrade pip
         pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS}
         pip install --cache-dir cache/pip ${PYTHON_PACKAGES}
+        pip install --cache-dir cache/pip pybind11
         # pymysql 1.0.0: No longer supports Python 2 or pypy2
         pip install --cache-dir cache/pip pymysql || \
             pip install --cache-dir cache/pip pymysql==0.10.1
@@ -276,6 +277,7 @@ jobs:
         conda list --show-channel-urls
         conda install -q -y -c conda-forge ${PYTHON_CORE_PKGS}
         conda install -q -y -c conda-forge ${PYTHON_PACKAGES}
+        conda install -q -y -c conda-forge pybind11
         if test -z "${{matrix.slim}}"; then
             # Note: CPLEX 12.9 (the last version in conda that supports
             #    Python 2.7) causes a seg fault in the tests.

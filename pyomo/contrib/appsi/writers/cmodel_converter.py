@@ -6,7 +6,7 @@ from pyomo.core.expr import current as _expr
 from pyomo.common.dependencies import attempt_import
 
 
-cmodel, cmodel_available = attempt_import('pyomo.contrib.appsi.cmodel',
+cmodel, cmodel_available = attempt_import('pyomo.contrib.appsi.cmodel.cmodel',
                                           'Appsi requires building a small c++ extension. '
                                           'Please use thye "pyomo build-extensions" command')
 

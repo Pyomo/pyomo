@@ -1,22 +1,19 @@
 import logging
-from pyomo.core.expr.numvalue import value, is_constant, native_types, is_fixed
+from pyomo.core.expr.numvalue import value, is_constant, is_fixed
 from pyomo.repn import generate_standard_repn
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.base.var import Var, _GeneralVarData
-from pyomo.core.base.constraint import Constraint, _GeneralConstraintData
-from pyomo.core.base.sos import SOSConstraint, _SOSConstraintData
+from pyomo.core.base.constraint import _GeneralConstraintData
+from pyomo.core.base.sos import _SOSConstraintData
 from pyomo.core.base.param import _ParamData
-from pyomo.core.base.objective import Objective
 from pyomo.common.errors import PyomoException
-from pyomo.contrib.appsi.base import Solver, Results, TerminationCondition, MIPSolverConfig, UpdateConfig, PersistentBase
+from pyomo.contrib.appsi.base import Solver, Results, TerminationCondition, MIPSolverConfig, PersistentBase
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
-from pyomo.core.expr.visitor import StreamBasedExpressionVisitor, identify_variables
-import pyomo.core.expr.numeric_expr as numeric_expr
 import collections
-from pyomo.contrib.appsi.utils import OrderedSet, get_objective, identify_named_expressions
+from pyomo.contrib.appsi.utils import OrderedSet
 import math
-from typing import List, Optional, Dict
+from typing import List, Dict
 from pyomo.common.timing import HierarchicalTimer
 
 
