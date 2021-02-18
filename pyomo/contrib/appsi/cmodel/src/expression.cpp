@@ -437,13 +437,15 @@ void LogOperator::evaluate(double* values)
 
 double Expression::evaluate()
 {
-  double values[n_operators];
+  double* values = new double[n_operators];
   for (unsigned int i=0; i<n_operators; ++i)
     {
       operators->at(i)->index = i;
       operators->at(i)->evaluate(values);
     }
-  return get_value_from_array(values);
+  double res = get_value_from_array(values);
+  delete[] values;
+  return res;
 }
 
 
@@ -636,7 +638,7 @@ std::string Constant::__str__()
 
 std::string Expression::__str__()
 {
-  std::string string_array[n_operators];
+  std::string* string_array = new std::string[n_operators];
   std::shared_ptr<Operator> oper;
   for (unsigned int i=0; i<n_operators; ++i)
     {
@@ -644,7 +646,9 @@ std::string Expression::__str__()
       oper->index = i;
       oper->print(string_array);
     }
-  return string_array[n_operators-1];
+  std::string res = string_array[n_operators-1];
+  delete[] string_array;
+  return res;
 }
 
 
