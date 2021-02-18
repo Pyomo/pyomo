@@ -361,7 +361,14 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
         list_of_hessians = [nlp.evaluate_hessian_lag() for nlp in self._nlps]
         if self._sparse_hessian_summation is None:
             self._sparse_hessian_summation = CondensedSparseSummation(list_of_hessians)
-        return self._sparse_hessian_summation.sum(list_of_hessians)
+        ret = self._sparse_hessian_summation.sum(list_of_hessians)
+
+        if out is not None:
+            assert np.array_equal(ret.row, out.row)
+            assert np.array_equal(ret.col, out.col)
+            np.copyto(out.data, ret.data)
+            return out
+        return ret
 
     def report_solver_status(self, status_code, status_message):
         raise NotImplementedError('This is not yet implemented.')

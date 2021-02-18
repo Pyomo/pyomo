@@ -39,6 +39,7 @@ ipopt, ipopt_available = attempt_import(
 # imports here so that the solver can be registered even when numpy is
 # not available.
 pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
+pyomo_grey_box = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_grey_box_nlp')[0]
 egb = attempt_import('pyomo.contrib.pynumero.interfaces.external_grey_box')[0]
 
 from pyomo.common.config import ConfigBlock, ConfigValue
@@ -485,7 +486,8 @@ class PyomoCyIpoptSolver(object):
         grey_box_blocks = list(model.component_data_objects(
             egb.ExternalGreyBoxBlock, active=True))
         if grey_box_blocks:
-            nlp = pyomo_nlp.PyomoGreyBoxNLP(model)
+            # nlp = pyomo_nlp.PyomoGreyBoxNLP(model)
+            nlp = pyomo_grey_box.PyomoNLPWithGreyBoxBlocks(model)
         else:
             nlp = pyomo_nlp.PyomoNLP(model)
         problem = CyIpoptNLP(nlp)
