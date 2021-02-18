@@ -24,11 +24,8 @@ from pyomo.environ import (value, ConcreteModel, Param, Var,
 from pyomo.core.expr.numvalue import (NumericConstant,
                                       as_numeric,
                                       is_numeric_data)
+long = int
 
-try:
-    unicode
-except:
-    long = int
 try:
     import numpy
     numpy_available=True

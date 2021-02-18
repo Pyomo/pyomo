@@ -15,7 +15,7 @@ from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.global_set import UnindexedComponent_set
 
 def _to_iterable(source):
-    iterable_scalars = str + (six.binary_type, six.text_type)
+    iterable_scalars = (str,) + (six.binary_type, six.text_type)
     if hasattr(source, '__iter__'):
         if isinstance(source, iterable_scalars):
             yield source

@@ -25,15 +25,8 @@ from pyomo.dataportal.factory import DataManagerFactory, UnknownDataManager
 from pyomo.core.base.set import UnknownSetDimen
 
 from six.moves import xrange
-try:
-    unicode
-except:
-    unicode = str
-try:
-    long
-    numlist = {bool, int, float, long}
-except:
-    numlist = {bool, int, float}
+
+numlist = {bool, int, float}
 
 logger = logging.getLogger('pyomo.core')
 
