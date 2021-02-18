@@ -13,13 +13,12 @@ import six
 import sys
 from copy import deepcopy
 from pickle import PickleError
-from six import iteritems, string_types
+from six import iteritems
 from weakref import ref as weakref_ref
-
-from pyutilib.misc.indent_io import StreamIndenter
 
 import pyomo.common
 from pyomo.common.deprecation import deprecated, relocated_module_attribute
+from pyomo.common.fileutils import StreamIndenter
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base.misc import tabular_writer, sorted_robust
 

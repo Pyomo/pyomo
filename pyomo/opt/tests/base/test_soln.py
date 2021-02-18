@@ -18,7 +18,6 @@ pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-import pyutilib.misc
 
 from pyomo.common.dependencies import yaml_available
 from pyomo.common.tempfiles import TempfileManager
@@ -150,9 +149,8 @@ class Test(unittest.TestCase):
         self.soln.variable[1]["Value"]=0.0
         self.soln.variable[2]["Value"]=0.0
         self.soln.variable[4]["Value"]=0.0
-        pyutilib.misc.setup_redirect(currdir+"soln_pprint2.out")
-        print(self.soln)
-        pyutilib.misc.reset_redirect()
+        with open(currdir+'soln_pprint2.out', 'w') as f:
+            f.write(str(self.soln))
         self.assertFileEqualsBaseline(currdir+"soln_pprint2.out", currdir+"soln_pprint2.txt")
 
     def test_soln_suffix_getiter(self):
@@ -172,5 +170,4 @@ class Test(unittest.TestCase):
         self.assertEqual(self.soln.variable[4]["Slack"],0.4)
 
 if __name__ == "__main__":
-    #sys.settrace(pyutilib.misc.traceit)
     unittest.main()

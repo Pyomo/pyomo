@@ -12,11 +12,11 @@
 import os
 import re
 import logging
+from six import string_types
 
 from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Options, Bunch
-from pyutilib.misc import yaml_fix
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
@@ -26,7 +26,6 @@ from pyomo.opt.solver import ILMLicensedSystemCallSolver
 from pyomo.solvers.mockmip import MockMIP
 
 logger = logging.getLogger('pyomo.solvers')
-
 
 @SolverFactory.register('xpress', doc='The XPRESS LP/MIP solver')
 class XPRESS(OptSolver):
@@ -303,7 +302,8 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
                 results.solver.termination_message = ' '.join(tokens)
 
         try:
-            results.solver.termination_message = yaml_fix(results.solver.termination_message)
+            if isinstance(results.solver.termination_message, string_types):
+                results.solver.termination_message = results.solver.termination_message.replace(':', '\\x3a')
         except:
             pass
         return results
@@ -372,6 +372,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
                 variable_reduced_cost = None
                 ### TODO: What is going on here with field_name, and shortly thereafter, with variable_status and whatnot? They've never been defined. 
                 ### It seems like this is trying to mimic the CPLEX solver but has some issues
+                ## !! THIS SEEMS LIKE A BUG!! - mrmundt
                 if (extract_reduced_costs is True) and (field_name == "reducedCost"):
                     variable_reduced_cost = tertiary_value
 
