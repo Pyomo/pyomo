@@ -17,6 +17,7 @@ from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
 import sys
 import time
+from pyomo.opt.base import SolverFactory
 
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,7 @@ class CplexResults(Results):
         self.wallclock_time = None
 
 
+@SolverFactory.register(name='appsi_cplex', doc='Automated persistent interface to Cplex')
 class Cplex(Solver):
     def __init__(self):
         self._config = CplexConfig()

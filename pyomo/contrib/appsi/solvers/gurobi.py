@@ -15,6 +15,7 @@ from pyomo.contrib.appsi.utils import OrderedSet
 import math
 from typing import List, Dict
 from pyomo.common.timing import HierarchicalTimer
+from pyomo.opt.base import SolverFactory
 
 
 logger = logging.getLogger(__name__)
@@ -136,6 +137,7 @@ class _MutableQuadraticCoefficient(object):
         self.var2 = None
 
 
+@SolverFactory.register(name='appsi_gurobi', doc='Automated persistent interface to Gurobi')
 class Gurobi(PersistentBase, Solver):
     """
     Interface to Gurobi

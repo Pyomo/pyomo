@@ -15,6 +15,7 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
+from pyomo.opt.base import SolverFactory
 
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,7 @@ class CbcConfig(SolverConfig):
         self.keepfiles = False
 
 
+@SolverFactory.register(name='appsi_cbc', doc='Automated persistent interface to CBC')
 class Cbc(Solver):
     def __init__(self):
         self._config = CbcConfig()
