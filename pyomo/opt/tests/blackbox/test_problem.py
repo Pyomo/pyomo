@@ -18,11 +18,11 @@ pyomodir += os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-import pyutilib.misc
 
 import pyomo.opt
 import pyomo.opt.blackbox
 from pyomo.common.tempfiles import TempfileManager
+from pyomo.common.tee import capture_output
 
 old_tempdir = TempfileManager.tempdir
 
@@ -285,17 +285,15 @@ class TestPoint(unittest.TestCase):
         point.reals = [1.0]
         point.ints = [1.0]
         point.bits = [0]
-        pyutilib.misc.setup_redirect(currdir+'mi_point.out')
-        point.display()
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'mi_point.out'):
+            point.display()
         self.assertFileEqualsBaseline(currdir+'mi_point.out', currdir+'mi_point.txt')
 
     def test_reals(self):
         point = pyomo.opt.blackbox.RealVars()
         point.vars = [1.0]
-        pyutilib.misc.setup_redirect(currdir+'real_point.out')
-        point.display()
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'real_point.out'):
+            point.display()
         self.assertFileEqualsBaseline(currdir+'real_point.out', currdir+'real_point.txt')
 
 

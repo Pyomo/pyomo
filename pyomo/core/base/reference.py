@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyutilib.misc import flatten_tuple
 from pyomo.common import DeveloperError
 from pyomo.common.collections import (
     UserDict, OrderedDict, Mapping, MutableMapping,
@@ -22,6 +21,7 @@ from pyomo.core.base.indexed_component import (
 from pyomo.core.base.indexed_component_slice import (
     IndexedComponent_slice, _IndexedComponent_slice_iter
 )
+from pyomo.core.base.util import flatten_tuple
 
 import six
 from six import iteritems, itervalues, advance_iterator

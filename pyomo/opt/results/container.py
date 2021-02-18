@@ -129,9 +129,9 @@ class ScalarData(object):
                     ostream.write(prefix+'Type: '+self.yaml_fix(self.scalar_type)+'\n')
 
     def yaml_fix(self, val):
-        if not isinstance(val,basestring):
+        if not isinstance(val, basestring):
             return val
-        return val.replace(':','\\x3a')
+        return val.replace(':', '\\x3a')
 
     def load(self, repn):
         if type(repn) is dict:
