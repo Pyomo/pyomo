@@ -627,6 +627,11 @@ jobs:
     - name: Upload codecov reports
       run: |
         set +e
+        if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
+            SHA=$(jq --raw-output .pull_request.head.sha "$GITHUB_EVENT_PATH")
+        else
+            SHA=$GITHUB_SHA
+        fi
         function upload {
             echo ""
             echo "Build group: $1"
@@ -647,7 +652,7 @@ jobs:
                 ((i+=1))
                 echo "Uploading coverage to codecov (attempt ${i})"
                 bash $CODECOV -Z -e TAG,GHA_OS_NAME -X gcov -X s3 \
-                    -f coverage.xml -C $GITHUB_SHA
+                    -f coverage.xml -C $SHA
                 if test $? == 0; then
                     echo "PASS $CODECOV_NAME" >> codecov.result
                     break
