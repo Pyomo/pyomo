@@ -2,8 +2,13 @@ from typing import Dict
 from pyomo.core.base.expression import _GeneralExpressionData, SimpleExpression
 from pyomo.core.expr.visitor import ExpressionValueVisitor, nonpyomo_leaf_types
 from pyomo.core.expr.numvalue import value, is_constant
-from pyomo.contrib.appsi.cmodel import cmodel
 from pyomo.core.expr import current as _expr
+from pyomo.common.dependencies import attempt_import
+
+
+cmodel, cmodel_available = attempt_import('pyomo.contrib.appsi.cmodel',
+                                          'Appsi requires building a small c++ extension. '
+                                          'Please use thye "pyomo build-extensions" command')
 
 
 class PyomoToCModelWalker(ExpressionValueVisitor):

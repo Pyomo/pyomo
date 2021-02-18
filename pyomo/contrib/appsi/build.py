@@ -1,41 +1,44 @@
-from setuptools import setup, find_packages
-from pybind11.setup_helpers import Pybind11Extension, build_ext
-import pybind11.setup_helpers
+from distutils.core import Distribution
 import shutil
 import glob
+import os
 
-pybind11.setup_helpers.MACOS = False
 
-ext_modules = [Pybind11Extension("cmodel.cmodel",
-                                 ['cmodel/src/expression.cpp',
-                                  'cmodel/src/common.cpp',
-                                  'cmodel/src/nl_writer.cpp',
-                                  'cmodel/src/lp_writer.cpp',
-                                  'cmodel/src/cmodel_bindings.cpp'])]
+def build_appsi():
+    from pybind11.setup_helpers import Pybind11Extension, build_ext
+    import pybind11.setup_helpers
 
-setup(name='appsi',
-      version='0.1.0',
-      packages=find_packages(),
-      description='APPSI: Auto Persistent Pyomo Solver Interfaces',
-      long_description=open('README.md').read(),
-      long_description_content_type="text/markdown",
-      author='Michael Bynum',
-      maintainer_email='mlbynum@sandia.gov',
-      license='Revised BSD',
-      url='TBD',
-      install_requires=['pyomo'],
-      include_package_data=True,
-      ext_modules=ext_modules,
-      cmdclass={"build_ext": build_ext},
-      python_requires='>=3.6',
-      classifiers=["Programming Language :: Python :: 3",
-                   "Programming Language :: Python :: 3.6",
-                   "Programming Language :: Python :: 3.7",
-                   "Programming Language :: Python :: 3.8",
-                   "Programming Language :: Python :: 3.9",
-                   "License :: OSI Approved :: BSD License",
-                   "Operating System :: OS Independent"]
-      )
+    original_pybind11_setup_helpers_macos = pybind11.setup_helpers.MACOS
+    pybind11.setup_helpers.MACOS = False
 
-library = glob.glob("build/*/cmodel/cmodel.*")[0]
-shutil.copy(library, 'cmodel/')
+    ext_modules = [Pybind11Extension("cmodel.cmodel",
+                                     ['cmodel/src/expression.cpp',
+                                      'cmodel/src/common.cpp',
+                                      'cmodel/src/nl_writer.cpp',
+                                      'cmodel/src/lp_writer.cpp',
+                                      'cmodel/src/cmodel_bindings.cpp'])]
+
+    package_config = {'name': 'appsi',
+                      'packages': list(),
+                      'ext_modules': ext_modules,
+                      'cmdclass': {"build_ext": build_ext}}
+    dist = Distribution(package_config)
+    try:
+        basedir = os.path.abspath(os.path.curdir)
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        os.chdir(current_dir)
+        dist.run_command('build_ext')
+        library = glob.glob("build/*/cmodel/cmodel.*")[0]
+        shutil.copy(library, 'cmodel/')
+    finally:
+        os.chdir(basedir)
+        pybind11.setup_helpers.MACOS = original_pybind11_setup_helpers_macos
+
+
+class AppsiBuilder(object):
+    def __call__(self, parallel):
+        return build_appsi()
+
+
+if __name__ == '__main__':
+    build_appsi()

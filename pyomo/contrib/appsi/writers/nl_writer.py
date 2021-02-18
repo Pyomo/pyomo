@@ -10,10 +10,15 @@ from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.expr.numvalue import value
 from pyomo.contrib.appsi.base import PersistentBase
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
-from pyomo.contrib.appsi.cmodel import cmodel
 from pyomo.common.timing import HierarchicalTimer
 from .config import WriterConfig
 from .cmodel_converter import PyomoToCModelWalker
+from pyomo.common.dependencies import attempt_import
+
+
+cmodel, cmodel_available = attempt_import('pyomo.contrib.appsi.cmodel',
+                                          'Appsi requires building a small c++ extension. '
+                                          'Please use thye "pyomo build-extensions" command')
 
 
 class NLWriter(PersistentBase):
