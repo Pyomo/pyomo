@@ -24,6 +24,7 @@ from unittest import *
 from pyutilib.th import *
 
 from pyomo.common.collections import Mapping, Sequence
+from pyomo.common.tee import capture_output
 
 # This augments the unittest exports with two additional decorators
 __all__ = _unittest.__all__ + ['category', 'nottest']
@@ -46,15 +47,18 @@ def _runner(q, qualname):
     else:
         qualname, fcn, args, kwargs = qualname
     _runner.data[qualname] = None
+    OUT = six.StringIO()
     try:
-        q.put((resultType, fcn(*args, **kwargs)))
+        with capture_output(OUT):
+            result = fcn(*args, **kwargs)
+        q.put((resultType, result, OUT.getvalue()))
     except:
         import traceback
         etype, e, tb = sys.exc_info()
         if not isinstance(e, AssertionError):
             e = etype("%s\nOriginal traceback:\n%s" % (
                 e, ''.join(traceback.format_tb(tb))))
-        q.put((_RunnerResult.exception, e))
+        q.put((_RunnerResult.exception, e, OUT.getvalue()))
     finally:
         _runner.data.pop(qualname)
 
@@ -156,13 +160,14 @@ def timeout(seconds, require_fork=False):
                         "one of its arguments is not serializable")
                 raise
             try:
-                resultType, result = q.get(True, seconds)
+                resultType, result, stdout = q.get(True, seconds)
             except queue.Empty:
                 test_proc.terminate()
                 raise TimeoutError(
                     "test timed out after %s seconds" % (seconds,)) from None
             finally:
                 _runner.data.pop(q, None)
+            sys.stdout.write(stdout)
             test_proc.join()
             if resultType == _RunnerResult.call:
                 return result
