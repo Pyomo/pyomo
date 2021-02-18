@@ -13,12 +13,12 @@ import os
 import re
 import time
 import logging
+import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
 from pyutilib.misc import yaml_fix
 from pyomo.common.tempfiles import TempfileManager
-from pyutilib.subprocess import run
 
 from pyomo.common.collections import ComponentMap, Options, Bunch
 from pyomo.opt.base import (
@@ -397,8 +397,11 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = run( [solver_exec,'-c','quit'], timelimit=1 )
-        return _extract_version(results[1])
+        results = subprocess.run( [solver_exec,'-c','quit'], timeout=1,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT,
+                                 universal_newlines=True)
+        return _extract_version(results.stdout)
 
     def create_command_line(self, executable, problem_files):
 
@@ -776,9 +779,21 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                     break
                 tINPUT.close()
 
-            elif tokens[0].startswith("objectiveValue"):
+            elif tokens[0].startswith("objectiveValue") and tokens[0] != 'objectiveValues':
+                # prior to 12.10.0, the objective value came back as an
+                # attribute on the <header> tag
                 objective_value = (tokens[0].split('=')[1].strip()).lstrip("\"").rstrip("\"")
                 soln.objective['__default_objective__']['Value'] = float(objective_value)
+
+            elif tokens[0] == "objective":
+                # beginning in 12.10.0, CPLEX supports multiple
+                # objectives in an <objectiveValue> tag
+                fields = {}
+                for field in tokens[1:]:
+                    k,v = field.split('=')
+                    fields[k] = v.strip('"')
+                soln.objective.setdefault(fields['name'], {})['Value'] = float(fields['value'])
+
             elif tokens[0].startswith("solutionStatusValue"):
                pieces = tokens[0].split("=")
                solution_status = eval(pieces[1])

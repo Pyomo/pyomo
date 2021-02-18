@@ -15,8 +15,9 @@ from six import iteritems
 from weakref import ref as weakref_ref
 
 from pyomo.common.collections import ComponentMap
-from pyomo.common.timing import ConstructionTimer
+from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
+from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
@@ -336,7 +337,7 @@ class Port(IndexedComponent):
         return tmp
 
     def construct(self, data=None):
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):  #pragma:nocover
+        if is_debug_set(logger):  #pragma:nocover
             logger.debug( "Constructing Port, name=%s, from data=%s"
                           % (self.name, data) )
 

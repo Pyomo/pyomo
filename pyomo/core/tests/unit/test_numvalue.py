@@ -15,7 +15,7 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-from pyutilib.math import nan, infinity
+from math import nan, inf
 import pyutilib.th as unittest
 
 from pyomo.environ import (value, ConcreteModel, Param, Var, 
@@ -169,7 +169,7 @@ class Test_value(unittest.TestCase):
         self.assertEqual(id(val), id(value(val)))
 
     def test_inf(self):
-        val = infinity
+        val = inf
         self.assertEqual(id(val), id(value(val)))
 
     def test_string(self):
@@ -185,8 +185,8 @@ class Test_value(unittest.TestCase):
         self.assertEqual(id(nan), id(value(val)))
 
     def test_const4(self):
-        val = NumericConstant(infinity)
-        self.assertEqual(id(infinity), id(value(val)))
+        val = NumericConstant(inf)
+        self.assertEqual(id(inf), id(value(val)))
 
     def test_param1(self):
         m = ConcreteModel()
@@ -261,7 +261,7 @@ class Test_polydegree(unittest.TestCase):
         self.assertEqual(0, polynomial_degree(val))
 
     def test_inf(self):
-        val = infinity
+        val = inf
         self.assertEqual(0, polynomial_degree(val))
 
     def test_string(self):
@@ -277,7 +277,7 @@ class Test_polydegree(unittest.TestCase):
         self.assertEqual(0, polynomial_degree(val))
 
     def test_const4(self):
-        val = NumericConstant(infinity)
+        val = NumericConstant(inf)
         self.assertEqual(0, polynomial_degree(val))
 
     def test_param1(self):

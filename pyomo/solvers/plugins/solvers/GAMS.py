@@ -10,16 +10,16 @@
 
 from six import StringIO, iteritems, string_types
 from tempfile import mkdtemp
-import os, sys, math, logging, shutil, time
+import os, sys, math, logging, shutil, time, subprocess
 
 from pyomo.core.base import Constraint, Var, value, Objective
 from pyomo.opt import ProblemFormat, SolverFactory
 
 import pyomo.common
 from pyomo.common.collections import Options
+from pyomo.common.tee import TeeStream
 
 from pyomo.opt.base.solvers import _extract_version
-import pyutilib.subprocess
 from pyutilib.misc import quote_split
 
 from pyomo.core.kernel.block import IBlock
@@ -96,6 +96,21 @@ class _GAMSSolver(object):
             ans[token[:index]] = val
         return ans
 
+    def _simple_model(self, n):
+        return \
+            """
+            option limrow = 0;
+            option limcol = 0;
+            option solprint = off;
+            set I / 1 * %s /;
+            variables ans;
+            positive variables x(I);
+            equations obj;
+            obj.. ans =g= sum(I, x(I));
+            model test / all /;
+            solve test using lp minimizing ans;
+            """ % (n,)
+
     #
     # Support "with" statements.
     #
@@ -119,12 +134,8 @@ class GAMSSolver(_GAMSSolver):
             Requires the gams executable be on your system PATH.
     """
     def __new__(cls, *args, **kwds):
-        try:
-            mode = kwds['solver_io']
-            if mode is None:
-                mode = 'shell'
-            del kwds['solver_io']
-        except KeyError:
+        mode = kwds.pop('solver_io', 'shell')
+        if mode is None:
             mode = 'shell'
 
         if mode == 'direct' or mode == 'python':
@@ -149,21 +160,22 @@ class GAMSDirect(_GAMSSolver):
         """True if the solver is available."""
         try:
             from gams import GamsWorkspace, DebugLevel
-            return True
         except ImportError as e:
             if not exception_flag:
                 return False
-            else:
-                raise ImportError("Import of gams failed - GAMS direct "
-                                  "solver functionality is not available.\n"
-                                  "GAMS message: %s" % (e,))
-        except:
-            logger.warning(
-                "Attempting to import gams generated unexpected exception:\n"
-                "\t%s: %s" % (sys.exc_info()[0].__name__, sys.exc_info()[1]))
-            if not exception_flag:
-                return False
-            raise
+            raise ImportError("Import of gams failed - GAMS direct "
+                              "solver functionality is not available.\n"
+                              "GAMS message: %s" % (e,))
+        avail = self._run_simple_model(1)
+        if not avail and exception_flag:
+            raise NameError(
+                "'gams' command failed to solve a simple model - "
+                "GAMS shell solver functionality is not available.")
+        return avail
+
+    def license_is_valid(self):
+        # New versions of the community license can run LPs up to 5k
+        return self._run_simple_model(5001)
 
     def _get_version(self):
         """Returns a tuple describing the solver executable version."""
@@ -175,6 +187,20 @@ class GAMSDirect(_GAMSSolver):
         while(len(version) < 4):
             version += (0,)
         return version
+
+    def _run_simple_model(self, n):
+        tmpdir = mkdtemp()
+        try:
+            from gams import GamsWorkspace, DebugLevel
+            ws = GamsWorkspace(debug=DebugLevel.Off,
+                          working_directory=tmpdir)
+            t1 = ws.add_job_from_string(self._simple_model(n))
+            t1.run()
+            return True
+        except:
+            return False
+        finally:
+            shutil.rmtree(tmpdir)
 
     def solve(self, *args, **kwds):
         """
@@ -578,15 +604,40 @@ class GAMSShell(_GAMSSolver):
     def available(self, exception_flag=True):
         """True if the solver is available."""
         exe = pyomo.common.Executable("gams")
-        if exception_flag is False:
-            if not exe.available():
+        if not exe.available():
+            if not exception_flag:
                 return False
-        else:
-            if not exe.available():
-                raise NameError(
-                    "No 'gams' command found on system PATH - GAMS shell "
-                    "solver functionality is not available.")
-        return True
+            raise NameError(
+                "No 'gams' command found on system PATH - GAMS shell "
+                "solver functionality is not available.")
+        # New versions of GAMS require a license to run anything.
+        # Instead of parsing the output, we will try solving a trivial
+        # model.
+        avail = self._run_simple_model(1)
+        if not avail and exception_flag:
+            raise NameError(
+                "'gams' command failed to solve a simple model - "
+                "GAMS shell solver functionality is not available.")
+        return avail
+
+    def license_is_valid(self):
+        # New versions of the community license can run LPs up to 5k
+        return self._run_simple_model(5001)
+
+    def _run_simple_model(self, n):
+        tmpdir = mkdtemp()
+        try:
+            test = os.path.join(tmpdir, 'test.gms')
+            with open(test, 'w') as FILE:
+                FILE.write(self._simple_model(n))
+            result = subprocess.run(
+                [self.executable(), test, "curdir=" + tmpdir, 'lo=0'],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL)
+            return not result.returncode
+        finally:
+            shutil.rmtree(tmpdir)
+        return False
 
     def _default_executable(self):
         executable = pyomo.common.Executable("gams")
@@ -610,8 +661,10 @@ class GAMSShell(_GAMSSolver):
         else:
             # specify logging to stdout for windows compatibility
             cmd = [solver_exec, "audit", "lo=3"]
-            _, txt = pyutilib.subprocess.run(cmd, tee=False)
-            return _extract_version(txt)
+            results = subprocess.run(cmd, stdout=subprocess.PIPE,
+                                     stderr=subprocess.STDOUT,
+                                     universal_newlines=True)
+            return _extract_version(results.stdout)
 
     @staticmethod
     def _parse_special_values(value):
@@ -762,7 +815,14 @@ class GAMSShell(_GAMSSolver):
             command.append("lf=" + str(logfile))
 
         try:
-            rc, txt = pyutilib.subprocess.run(command, tee=tee)
+            ostreams = [StringIO()]
+            if tee:
+                ostreams.append(sys.stdout)
+            with TeeStream(*ostreams) as t:
+                result = subprocess.run(command, stdout=t.STDOUT,
+                                        stderr=t.STDERR)
+            rc = result.returncode
+            txt = ostreams[0].getvalue()
 
             if keepfiles:
                 print("\nGAMS WORKING DIRECTORY: %s\n" % tmpdir)

@@ -16,8 +16,9 @@ import datetime
 import textwrap
 import logging
 import socket
+import subprocess
 
-import pyutilib.subprocess
+import pyutilib.misc
 
 import pyomo.common
 from pyomo.common.collections import Options
@@ -53,7 +54,9 @@ def command_exec(options):
     if not os.path.exists(cmddir+options.command[0]):
         print("  ERROR: the command '%s' does not exist" % (cmddir+options.command[0]))
         return 1
-    return pyutilib.subprocess.run(cmddir+' '.join(options.command), tee=True)[0]
+    return subprocess.run([cmddir] + options.command,
+                          stdout=subprocess.DEVNULL,
+                          stderr=subprocess.DEVNULL).returncode
 
 #
 # Add a subparser for the pyomo command
@@ -290,13 +293,13 @@ def help_solvers():
         print(wrapper.fill(format % (s , pyomo.opt.SolverManagerFactory.doc(s))))
     print("")
     wrapper = textwrap.TextWrapper(subsequent_indent='')
-    print(wrapper.fill("If no solver manager is specified, Pyomo uses the serial solver manager to execute solvers locally.  The pyro and phpyro solver managers require the installation and configuration of the pyro software.  The neos solver manager is used to execute solvers on the NEOS optimization server."))
+    print(wrapper.fill("If no solver manager is specified, Pyomo uses the serial solver manager to execute solvers locally.  The pyro solver manager requires the installation and configuration of the pyro software.  The neos solver manager is used to execute solvers on the NEOS optimization server."))
     print("")
 
     print("")
     print("Serial Solver Interfaces")
     print("------------------------")
-    print(wrapper.fill("The serial, pyro and phpyro solver managers support the following solver interfaces:"))
+    print(wrapper.fill("The serial and pyro solver managers support the following solver interfaces:"))
     print("")
     solver_list = list(pyomo.opt.SolverFactory)
     solver_list = sorted( filter(lambda x: '_' != x[0], solver_list) )
@@ -310,9 +313,7 @@ def help_solvers():
                 ver = ''
                 if opt.available(False):
                     avail = '-'
-                    if not hasattr(opt, 'license_is_valid'):
-                        avail = '+'
-                    elif opt.license_is_valid():
+                    if opt.license_is_valid():
                         avail = '+'
                     try:
                         ver = opt.version()
@@ -346,7 +347,7 @@ def help_solvers():
 
     print("")
     wrapper = textwrap.TextWrapper(subsequent_indent='')
-    print(wrapper.fill("""The leading symbol (one of *, -, +) indicates the current solver availability.  A plus (+) indicates the solver is currently available to be run from Pyomo with the serial solver manager, and (if applicable) has a valid license.  A minus (-) indicates the solver executables are available but do not reporthaving a valid license.  The solver may still be usable in an unlicensed or "demo" mode for limited problem sizes. An asterisk (*) indicates meta-solvers or generic interfaces, which are always available."""))
+    print(wrapper.fill("""The leading symbol (one of *, -, +) indicates the current solver availability.  A plus (+) indicates the solver is currently available to be run from Pyomo with the serial solver manager, and (if applicable) has a valid license.  A minus (-) indicates the solver executables are available but do not report having a valid license.  The solver may still be usable in an unlicensed or "demo" mode for limited problem sizes. An asterisk (*) indicates meta-solvers or generic interfaces, which are always available."""))
     print('')
     print(wrapper.fill('Pyomo also supports solver interfaces that are wrappers around third-party solver interfaces. These interfaces require a subsolver specification that indicates the solver being executed.  For example, the following indicates that the ipopt solver will be used:'))
     print('')

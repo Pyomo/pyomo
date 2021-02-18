@@ -9,4 +9,3 @@
 #  ___________________________________________________________________________
 
 import pyomo.solvers.plugins.smanager.pyro
-import pyomo.solvers.plugins.smanager.phpyro

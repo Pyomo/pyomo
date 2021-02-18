@@ -16,7 +16,7 @@ import glob
 import sys
 from os.path import basename, dirname, abspath, join
 
-import pyutilib.subprocess
+import subprocess
 import pyutilib.th as unittest
 
 from pyomo.common.dependencies import numpy_available, scipy_available
@@ -64,8 +64,10 @@ def create_test_method(example):
             if (not testing_solvers['ipopt','nl']) or \
                (not testing_solvers['mosek_direct','python']):
                 self.skipTest("Ipopt or Mosek is not available")
-        rc, log = pyutilib.subprocess.run([sys.executable,example])
-        self.assertEqual(rc, 0, msg=log)
+        result = subprocess.run([sys.executable, example],
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                universal_newlines=True)
+        self.assertEqual(result.returncode, 0, msg=result.stdout)
     return testmethod
 
 class TestKernelExamples(unittest.TestCase):

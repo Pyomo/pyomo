@@ -19,9 +19,12 @@ import time
 import json
 from six import iteritems
 from pyomo.common import pyomo_api
+from pyomo.common.deprecation import deprecated
+from pyomo.common.log import is_debug_set
 from pyomo.common.tempfiles import TempfileManager
+from pyomo.common.fileutils import import_file
 
-from pyutilib.misc import import_file, setup_redirect, reset_redirect
+from pyutilib.misc import setup_redirect, reset_redirect
 
 from pyomo.common.dependencies import (
     yaml, yaml_available, yaml_load_args,
@@ -67,11 +70,6 @@ def setup_environment(data):
     if postsolve:
         if not yaml_available and data.options.postsolve.results_format == 'yaml':
             raise ValueError("Configuration specifies a yaml file, but pyyaml is not installed!")
-        if data.options.postsolve.results_format is None:
-            if yaml_available:
-                data.options.postsolve.results_format = 'yaml'
-            else:
-                data.options.postsolve.results_format = 'json'
     #
     global start_time
     start_time = time.time()
@@ -132,7 +130,7 @@ def setup_environment(data):
 
         tb_list = traceback.extract_tb(tb,None)
         i = 0
-        if not logger.isEnabledFor(logging.DEBUG) and filter_excepthook:
+        if not is_debug_set(logger) and filter_excepthook:
             while i < len(tb_list):
                 if data.options.model.filename in tb_list[i][0]:
                     break
@@ -191,7 +189,8 @@ def apply_preprocessing(data, parser=None):
     #
     filter_excepthook=True
     tick = time.time()
-    data.local.usermodel = import_file(data.options.model.filename, clear_cache=True)
+    data.local.usermodel = import_file(data.options.model.filename,
+                                       clear_cache=True)
     data.local.time_initial_import = time.time()-tick
     filter_excepthook=False
 
@@ -353,7 +352,8 @@ def create_model(data):
                                                  profile_memory=data.options.runtime.profile_memory,
                                                  report_timing=data.options.runtime.report_timing)
             elif suffix == "py":
-                userdata = import_file(data.options.data.files[0], clear_cache=True)
+                userdata = import_file(data.options.data.files[0],
+                                       clear_cache=True)
                 if "modeldata" in dir(userdata):
                     if len(ep) == 1:
                         msg = "Cannot apply 'pyomo_create_modeldata' and use the" \
@@ -414,7 +414,7 @@ def create_model(data):
         total_time = time.time() - modify_start_time
         print("      %6.2f seconds required for problem transformations" % total_time)
 
-    if logger.isEnabledFor(logging.DEBUG):
+    if is_debug_set(logger):
         print("MODEL INSTANCE")
         instance.pprint()
         print("")
@@ -505,7 +505,7 @@ def apply_optimizer(data, instance=None):
     if len(data.options.solvers[0].suffixes) > 0:
         for suffix_name in data.options.solvers[0].suffixes:
             if suffix_name[0] in ['"',"'"]:
-                suffix_name = suffix[1:-1]
+                suffix_name = suffix_name[1:-1]
             # Don't redeclare the suffix if it already exists
             suffix = getattr(instance, suffix_name, None)
             if suffix is None:
@@ -805,51 +805,87 @@ def finalize(data, model=None, instance=None, results=None):
             print('\n# Leaving Interpreter, back to Pyomo\n')
 
 
+@deprecated("configure_loggers is deprecated. The Pyomo command uses the "
+            "PyomoCommandLogContext to update the logger configuration",
+            version='5.7.3')
 def configure_loggers(options=None, shutdown=False):
+    context = PyomoCommandLogContext(options)
     if shutdown:
-        options = Options()
-        options.runtime = Options()
-        options.runtime.logging = 'quiet'
-        if configure_loggers.fileLogger is not None:
-            logging.getLogger('pyomo').handlers = []
-            logging.getLogger('pyutilib').handlers = []
-            configure_loggers.fileLogger.close()
-            configure_loggers.fileLogger = None
-            # TBD: This seems dangerous in Windows, as the process will
-            # have multiple open file handles pointint to the same file.
-            reset_redirect()
-
-    #
-    # Configure the logger
-    #
-    if options.runtime is None:
-        options.runtime = Options()
-    if options.runtime.logging == 'quiet':
-        logging.getLogger('pyomo').setLevel(logging.ERROR)
-    elif options.runtime.logging == 'warning':
-        logging.getLogger('pyomo').setLevel(logging.WARNING)
-    elif options.runtime.logging == 'info':
-        logging.getLogger('pyomo').setLevel(logging.INFO)
-        logging.getLogger('pyutilib').setLevel(logging.INFO)
-    elif options.runtime.logging == 'verbose':
-        logging.getLogger('pyomo').setLevel(logging.DEBUG)
-        logging.getLogger('pyutilib').setLevel(logging.DEBUG)
-    elif options.runtime.logging == 'debug':
-        logging.getLogger('pyomo').setLevel(logging.DEBUG)
-        logging.getLogger('pyutilib').setLevel(logging.DEBUG)
-
-    if options.runtime.logfile:
-        configure_loggers.fileLogger \
-            = logging.FileHandler(options.runtime.logfile, 'w')
-        logging.getLogger('pyomo').handlers = []
-        logging.getLogger('pyutilib').handlers = []
-        logging.getLogger('pyomo').addHandler(configure_loggers.fileLogger)
-        logging.getLogger('pyutilib').addHandler(configure_loggers.fileLogger)
-        # TBD: This seems dangerous in Windows, as the process will
-        # have multiple open file handles pointint to the same file.
-        setup_redirect(options.runtime.logfile)
+        # historically, configure_loggers(shutdown=True) forced 'quiet'
+        context.options.runtime.logging = 'quiet'
+        context.fileLogger = configure_loggers.fileLogger
+        context.__exit__(None,None,None)
+    else:
+        context.__enter__()
+        configure_loggers.fileLogger = context.fileLogger
 
 configure_loggers.fileLogger = None
+
+
+class PyomoCommandLogContext(object):
+    """Context manager to setup/restore logging for the Pyomo command"""
+
+    def __init__(self, options):
+        if options is None:
+            options = Options()
+        if options.runtime is None:
+            options.runtime = Options()
+        self.options = options
+        self.fileLogger = None
+        self.original = None
+
+    def __enter__(self):
+        _pyomo = logging.getLogger('pyomo')
+        _pyutilib = logging.getLogger('pyutilib')
+        self.original = ( _pyomo.level, _pyomo.handlers,
+                          _pyutilib.level, _pyutilib.handlers )
+
+        #
+        # Configure the logger
+        #
+        if self.options.runtime.logging == 'quiet':
+            _pyomo.setLevel(logging.ERROR)
+        elif self.options.runtime.logging == 'warning':
+            _pyomo.setLevel(logging.WARNING)
+        elif self.options.runtime.logging == 'info':
+            _pyomo.setLevel(logging.INFO)
+            _pyutilib.setLevel(logging.INFO)
+        elif self.options.runtime.logging == 'verbose':
+            _pyomo.setLevel(logging.DEBUG)
+            _pyutilib.setLevel(logging.DEBUG)
+        elif self.options.runtime.logging == 'debug':
+            _pyomo.setLevel(logging.DEBUG)
+            _pyutilib.setLevel(logging.DEBUG)
+        elif _pyomo.getEffectiveLevel() == logging.NOTSET:
+            _pyomo.setLevel(logging.WARNING)
+
+        if self.options.runtime.logfile:
+            _logfile = self.options.runtime.logfile
+            self.fileLogger = logging.FileHandler(_logfile, 'w')
+            _pyomo.handlers = []
+            _pyutilib.handlers = []
+            _pyomo.addHandler(self.fileLogger)
+            _pyutilib.addHandler(self.fileLogger)
+            # TBD: This seems dangerous in Windows, as the process will
+            # have multiple open file handles pointing to the same file.
+            setup_redirect(_logfile)
+
+        return self
+
+    def __exit__(self, et, ev, tb):
+        _pyomo = logging.getLogger('pyomo')
+        _pyomo.setLevel(self.original[0])
+        _pyomo.handlers = self.original[1]
+        _pyutilib = logging.getLogger('pyutilib')
+        _pyutilib.setLevel(self.original[2])
+        _pyutilib.handlers = self.original[3]
+
+        if self.fileLogger is not None:
+            self.fileLogger.close()
+            # TBD: This seems dangerous in Windows, as the process will
+            # have multiple open file handles pointing to the same file.
+            reset_redirect()
+
 
 @pyomo_api(namespace='pyomo.script')
 def run_command(command=None, parser=None, args=None, name='unknown', data=None, options=None):
@@ -883,15 +919,14 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
     # Parse command-line options
     #
     #
-    retval = None
-    errorcode = 0
     if options is None:
         try:
             if type(args) is argparse.Namespace:
                 _options = args
             else:
                 _options = parser.parse_args(args=args)
-            # Replace the parser options object with a pyutilib.misc.Options object
+            # Replace the parser options object with a
+            # pyutilib.misc.Options object
             options = Options()
             for key in dir(_options):
                 if key[0] != '_':
@@ -901,15 +936,29 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
         except SystemExit:
             # the parser throws a system exit if "-h" is specified - catch
             # it to exit gracefully.
-            return Container(retval=retval, errorcode=errorcode)
+            return Container(retval=None, errorcode=0)
     #
     # Configure loggers
     #
-    configure_loggers(options=options)
+    TempfileManager.push()
+    try:
+        with PyomoCommandLogContext(options):
+            retval, errorcode = _run_command_impl(
+                command, parser, args, name, data, options)
+    finally:
+        if options.runtime.disable_gc:
+            gc.enable()
+        TempfileManager.pop(remove=not options.runtime.keep_files)
+
+    return Container(retval=retval, errorcode=errorcode)
+
+
+def _run_command_impl(command, parser, args, name, data, options):
     #
     # Call the main Pyomo runner with profiling
     #
-    TempfileManager.push()
+    retval = None
+    errorcode = 0
     pcount = options.runtime.profile_count
     if pcount > 0:
         # Defer import of profiling packages until we know that they
@@ -921,13 +970,13 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
                 import profile
             import pstats
         except ImportError:
-            configure_loggers(shutdown=True)
             raise ValueError(
                 "Cannot use the 'profile' option: the Python "
                 "'profile' or 'pstats' package cannot be imported!")
         tfile = TempfileManager.create_tempfile(suffix=".profile")
         tmp = profile.runctx(
-          command.__name__ + '(options=options,parser=parser)', command.__globals__, locals(), tfile
+            command.__name__ + '(options=options,parser=parser)',
+            command.__globals__, locals(), tfile
         )
         p = pstats.Stats(tfile).strip_dirs()
         p.sort_stats('time', 'cumulative')
@@ -947,7 +996,6 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
         #
         # Call the main Pyomo runner without profiling
         #
-        TempfileManager.push()
         try:
             retval = command(options=options, parser=parser)
         except SystemExit:
@@ -957,7 +1005,6 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             # exit.  Otherwise, print an "Exiting..." message.
             #
             if __debug__ and (options.runtime.logging == 'debug' or options.runtime.catch_errors):
-                configure_loggers(shutdown=True)
                 sys.exit(0)
             print('Exiting %s: %s' % (name, str(err)))
             errorcode = err.code
@@ -968,8 +1015,6 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             # pass the exception up the chain (to pyomo_excepthook)
             #
             if __debug__ and (options.runtime.logging == 'debug' or options.runtime.catch_errors):
-                configure_loggers(shutdown=True)
-                TempfileManager.pop(remove=not options.runtime.keep_files)
                 raise
 
             if not options.model is None and not options.model.save_file is None:
@@ -997,12 +1042,8 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             logger.error(msg+errStr)
             errorcode = 1
 
-    configure_loggers(shutdown=True)
+    return retval, errorcode
 
-    if options.runtime.disable_gc:
-        gc.enable()
-    TempfileManager.pop(remove=not options.runtime.keep_files)
-    return Container(retval=retval, errorcode=errorcode)
 
 def cleanup():
     for key in modelapi:
