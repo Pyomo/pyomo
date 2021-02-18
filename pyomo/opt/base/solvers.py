@@ -491,8 +491,8 @@ class OptSolver(object):
             Whether or not the solver has the specified capability.
         """
         if not isinstance(cap, str):
-            raise TypeError("Expected argument to be of type '%s', not " + \
-                  "'%s'." % (str(type(str())), str(type(cap))))
+            raise TypeError("""Expected argument to be of type '%s', not 
+                  '%s'.""" % (str(type(str())), str(type(cap))))
         else:
             val = self._capabilities[str(cap)]
             if val is None:
@@ -682,13 +682,8 @@ class OptSolver(object):
                     "Solver="+self.type+" passed unrecognized keywords: \n\t"
                     +("\n\t".join("%s = %s" % (k,v) for k,v in iteritems(kwds))))
 
-        if six.PY3:
-            compare_type = str
-        else:
-            compare_type = basestring
-
         if (type(self._problem_files) in (list,tuple)) and \
-           (not isinstance(self._problem_files[0], compare_type)):
+           (not isinstance(self._problem_files[0], str)):
             self._problem_files = self._problem_files[0]._problem_files()
         if self._results_format is None:
             self._results_format = self._default_results_format(self._problem_format)

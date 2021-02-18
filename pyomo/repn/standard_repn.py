@@ -21,8 +21,6 @@ from pyomo.core.base import (Constraint,
                              Objective,
                              ComponentMap)
 
-from math import isclose
-
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.objective import (_GeneralObjectiveData,
                                        SimpleObjective)
@@ -40,10 +38,6 @@ from pyomo.core.kernel.objective import objective
 
 from six import iteritems, StringIO, PY3
 from six.moves import zip
-try:
-    basestring
-except:
-    basestring = str
 
 logger = logging.getLogger('pyomo.core')
 

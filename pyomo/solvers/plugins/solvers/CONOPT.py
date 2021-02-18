@@ -23,11 +23,6 @@ from pyomo.opt.solver import  SystemCallSolver
 import logging
 logger = logging.getLogger('pyomo.solvers')
 
-try:
-    unicode
-except:
-    basestring = str
-
 
 @SolverFactory.register('conopt', doc='The CONOPT NLP solver')
 class CONOPT(SystemCallSolver):
@@ -138,7 +133,7 @@ class CONOPT(SystemCallSolver):
         for key in self.options:
             if key == 'solver':
                 continue
-            if isinstance(self.options[key], basestring) and ' ' in self.options[key]:
+            if isinstance(self.options[key], str) and ' ' in self.options[key]:
                 opt.append(key+"=\""+str(self.options[key])+"\"")
                 cmd.append(str(key)+"="+str(self.options[key]))
             elif key == 'subsolver':

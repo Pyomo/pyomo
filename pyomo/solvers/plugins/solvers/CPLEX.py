@@ -41,10 +41,6 @@ logger = logging.getLogger('pyomo.solvers')
 from six import iteritems
 from six.moves import xrange
 
-try:
-    unicode
-except:
-    basestring = unicode = str
 
 def _validate_file_name(cplex, filename, description):
     """Validate filenames against the set of allowable chaacters in CPLEX.
@@ -317,11 +313,11 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # create the temporary file - assuming that the user has already, via some external
         # mechanism, invoked warm_start() with a instance to create the warm start file.
         if self._warm_start_solve and \
-           isinstance(args[0], basestring):
+           isinstance(args[0], str):
             # we assume the user knows what they are doing...
             pass
         elif self._warm_start_solve and \
-             (not isinstance(args[0], basestring)):
+             (not isinstance(args[0], str)):
             # assign the name of the warm start file *before* calling the base class
             # presolve - the base class method ends up creating the command line,
             # and the warm start file-name is (obviously) needed there.
@@ -338,7 +334,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
         if (
             self._priorities_solve
-            and not isinstance(args[0], basestring)
+            and not isinstance(args[0], str)
             and not user_priorities
         ):
             self._priorities_file_name = TempfileManager.create_tempfile(
@@ -351,7 +347,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # NB: we must let the base class presolve run first so that the
         # symbol_map is actually constructed!
 
-        if (len(args) > 0) and (not isinstance(args[0], basestring)):
+        if (len(args) > 0) and (not isinstance(args[0], str)):
 
             if len(args) != 1:
                 raise ValueError(
@@ -437,7 +433,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         for key in self.options:
             if key == 'relax_integrality' or key == 'mipgap':
                 continue
-            elif isinstance(self.options[key], basestring) and \
+            elif isinstance(self.options[key], str) and \
                  (' ' in self.options[key]):
                 opt = ' '.join(key.split('_'))+' '+str(self.options[key])
             else:
