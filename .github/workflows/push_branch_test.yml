@@ -650,17 +650,22 @@ jobs:
             i=0
             while : ; do
                 ((i+=1))
+                rm -f codecov.log
                 echo "Uploading coverage to codecov (attempt ${i})"
                 bash $CODECOV -Z -e TAG,GHA_OS_NAME -X gcov -X s3 \
-                    -f coverage.xml -C $SHA
+                    -f coverage.xml -C $SHA | tee codecov.log
                 if test $? == 0; then
                     echo "PASS $CODECOV_NAME" >> codecov.result
                     break
                 elif test $i -ge 2; then
-                    # Do not fail the build (yet) just because the codecov
-                    # upload fails
-                    echo "FAIL $CODECOV_NAME" >> codecov.result
-                    break
+                    if test `grep successfully codecov.log | wc -l` -gt 0; then
+                        echo "PASS $CODECOV_NAME (implied)" >> codecov.result
+                    else
+                        # Do not fail the build (yet) just because the
+                        # codecov upload fails
+                        echo "FAIL $CODECOV_NAME" >> codecov.result
+                        break
+                    fi
                 fi
                 DELAY=$(( RANDOM % 30 + 30))
                 echo "Pausing $DELAY seconds before re-attempting upload"
