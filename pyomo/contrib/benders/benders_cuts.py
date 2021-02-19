@@ -48,7 +48,7 @@ s.t.
     f(x, y) <= eta
     h(y) <= 0
     
-Master problem must be of the form
+Root problem must be of the form
 
 min h0(y) + eta
 s.t.
