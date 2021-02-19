@@ -1,14 +1,15 @@
-import pyutilib.misc
+from pyomo.common.tee import capture_output
 from six import StringIO
 
 output = StringIO()
-pyutilib.misc.setup_redirect(output)
+capture = capture_output(output)
+capture.setup()
 
 try:
     # Run the runner
     from run_path_constraint import results, m as model
 finally:
-    pyutilib.misc.reset_redirect()
+    capture.reset()
 
 # Report the result
 for line in output.getvalue().splitlines():

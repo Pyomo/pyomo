@@ -50,10 +50,16 @@ import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
 import pyomo.contrib.parmest.graphics as graphics
 
-parmest_available = numpy_available & pandas_available & scipy_available
+pysp, pysp_available = attempt_import('pysp')
+
+parmest_available = numpy_available & pandas_available & scipy_available & \
+                    pysp_available
 
 inverse_reduced_hessian, inverse_reduced_hessian_available = attempt_import(
     'pyomo.contrib.interior_point.inverse_reduced_hessian')
+
+st = attempt_import('pysp.util.rapper')[0]
+scenariotree = attempt_import('pysp.scenariotree')[0]
 
 logger = logging.getLogger(__name__)
 
@@ -237,6 +243,40 @@ def _pysp_instance_creation_callback(scenario_name, node_names=None, cb_data=Non
     return instance
 
 #=============================================
+def _treemaker(scenlist):
+    """
+    Makes a scenario tree (avoids dependence on daps)
+    
+    Parameters
+    ---------- 
+    scenlist (list of `int`): experiment (i.e. scenario) numbers
+
+    Returns
+    -------
+    a `ConcreteModel` that is the scenario tree
+    """
+
+    num_scenarios = len(scenlist)
+    m = scenariotree.tree_structure_model.CreateAbstractScenarioTreeModel()
+    m = m.create_instance()
+    m.Stages.add('Stage1')
+    m.Stages.add('Stage2')
+    m.Nodes.add('RootNode')
+    for i in scenlist:
+        m.Nodes.add('LeafNode_Experiment'+str(i))
+        m.Scenarios.add('Experiment'+str(i))
+    m.NodeStage['RootNode'] = 'Stage1'
+    m.ConditionalProbability['RootNode'] = 1.0
+    for node in m.Nodes:
+        if node != 'RootNode':
+            m.NodeStage[node] = 'Stage2'
+            m.Children['RootNode'].add(node)
+            m.Children[node].clear()
+            m.ConditionalProbability[node] = 1.0/num_scenarios
+            m.ScenarioLeafNode[node.replace('LeafNode_','')] = node
+
+    return m
+
     
 def group_data(data, groupby_column_name, use_mean=None):
     """

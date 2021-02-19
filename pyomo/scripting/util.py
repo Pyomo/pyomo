@@ -22,8 +22,8 @@ from pyomo.common import pyomo_api
 from pyomo.common.deprecation import deprecated
 from pyomo.common.log import is_debug_set
 from pyomo.common.tempfiles import TempfileManager
-
-from pyutilib.misc import import_file, setup_redirect, reset_redirect
+from pyomo.common.fileutils import import_file
+from pyomo.common.tee import capture_output
 
 from pyomo.common.dependencies import (
     yaml, yaml_available, yaml_load_args,
@@ -188,7 +188,8 @@ def apply_preprocessing(data, parser=None):
     #
     filter_excepthook=True
     tick = time.time()
-    data.local.usermodel = import_file(data.options.model.filename, clear_cache=True)
+    data.local.usermodel = import_file(data.options.model.filename,
+                                       clear_cache=True)
     data.local.time_initial_import = time.time()-tick
     filter_excepthook=False
 
@@ -350,7 +351,8 @@ def create_model(data):
                                                  profile_memory=data.options.runtime.profile_memory,
                                                  report_timing=data.options.runtime.report_timing)
             elif suffix == "py":
-                userdata = import_file(data.options.data.files[0], clear_cache=True)
+                userdata = import_file(data.options.data.files[0],
+                                       clear_cache=True)
                 if "modeldata" in dir(userdata):
                     if len(ep) == 1:
                         msg = "Cannot apply 'pyomo_create_modeldata' and use the" \
@@ -502,7 +504,7 @@ def apply_optimizer(data, instance=None):
     if len(data.options.solvers[0].suffixes) > 0:
         for suffix_name in data.options.solvers[0].suffixes:
             if suffix_name[0] in ['"',"'"]:
-                suffix_name = suffix[1:-1]
+                suffix_name = suffix_name[1:-1]
             # Don't redeclare the suffix if it already exists
             suffix = getattr(instance, suffix_name, None)
             if suffix is None:
@@ -865,7 +867,8 @@ class PyomoCommandLogContext(object):
             _pyutilib.addHandler(self.fileLogger)
             # TBD: This seems dangerous in Windows, as the process will
             # have multiple open file handles pointing to the same file.
-            setup_redirect(_logfile)
+            self.capture = capture_output(_logfile)
+            self.capture.setup()
 
         return self
 
@@ -881,7 +884,7 @@ class PyomoCommandLogContext(object):
             self.fileLogger.close()
             # TBD: This seems dangerous in Windows, as the process will
             # have multiple open file handles pointing to the same file.
-            reset_redirect()
+            self.capture.reset()
 
 
 @pyomo_api(namespace='pyomo.script')
@@ -923,7 +926,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             else:
                 _options = parser.parse_args(args=args)
             # Replace the parser options object with a
-            # pyutilib.misc.Options object
+            # pyomo.common.collections.Options object
             options = Options()
             for key in dir(_options):
                 if key[0] != '_':

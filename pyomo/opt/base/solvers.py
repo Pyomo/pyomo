@@ -17,12 +17,12 @@ import re
 import sys
 import time
 import logging
+import shlex
 
 from pyomo.common.config import ConfigBlock, ConfigList, ConfigValue
 from pyomo.common import Factory
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Options
-from pyutilib.misc import quote_split
 
 from pyomo.opt.base.problem import ProblemConfigFactory
 from pyomo.opt.base.convert import convert_problem
@@ -171,9 +171,9 @@ class SolverFactoryClass(Factory):
                     if opt is not None:
                         opt.set_options('solver='+_name)
         except:
-            err = sys.exc_info()[1]
+            err = sys.exc_info()
             logger.warning("Failed to create solver with name '%s':\n%s"
-                         % (_name, err))
+                           % (_name, err[1]), exc_info=err)
             opt = None
         if opt is not None and _name != "py" and subsolver is not None:
             # py just creates instance of its subsolver, no need for this option
@@ -400,7 +400,7 @@ class OptSolver(object):
             return ans
         if istr[0] == "'" or istr[0] == '"':
             istr = eval(istr)
-        tokens = quote_split('[ ]+',istr)
+        tokens = shlex.split(istr)
         for token in tokens:
             index = token.find('=')
             if index == -1:

@@ -16,13 +16,13 @@ import logging
 from pyomo.common.log import is_debug_set
 from pyomo.common.collections import Options, OrderedDict
 from pyomo.common.errors import ApplicationError
-from pyutilib.misc import flatten
 
 from pyomo.dataportal.parse_datacmds import (
     parse_data_commands, _re_number
 )
 from pyomo.dataportal.factory import DataManagerFactory, UnknownDataManager
 from pyomo.core.base.set import UnknownSetDimen
+from pyomo.core.base.util import flatten_tuple
 
 from six.moves import xrange
 try:
@@ -749,7 +749,7 @@ def _process_table(cmd, _model, _data, _default, options=None):
             tmp.append(cmap[col])
         if not sname in cmap:
             cmap[sname] = tmp
-        cols = flatten(tmp)
+        cols = list(flatten_tuple(tmp))
         #
         _cmd = ['set', sname, ':=']
         i = 0
@@ -782,7 +782,7 @@ def _process_table(cmd, _model, _data, _default, options=None):
                 raise IOError("Unexpected table column '%s' for table value '%s'" % (col, vname))
             tmp.append(cmap[col])
         #print("X %s %s" % (len(cols), tmp))
-        cols = flatten(tmp)
+        cols = list(flatten_tuple(tmp))
         #print("X %s" % len(cols))
         #print("VNAME %s %s" % (vname, cmap[vname]))
         if vname in cmap:

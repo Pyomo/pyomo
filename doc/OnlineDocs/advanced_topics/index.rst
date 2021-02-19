@@ -5,6 +5,5 @@ Advanced Topics
    :maxdepth: 1
 
    persistent_solvers.rst
-   pysp_rapper/index.rst
    units_container.rst
    linearexpression.rst

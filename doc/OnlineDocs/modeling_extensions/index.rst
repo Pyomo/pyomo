@@ -6,7 +6,7 @@ Modeling Extensions
 
    bilevel.rst
    dae.rst
-   mpec.rst
    gdp/index.rst
-   pysp.rst
+   mpec.rst
+   stochastic_programming.rst
    network.rst
