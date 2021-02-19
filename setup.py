@@ -143,7 +143,6 @@ def run_setup():
         launch_pyro_mip_servers = pyomo.scripting.commands:launch_pyro_mip_servers
         OSSolverService = pyomo.scripting.commands:OSSolverService
         pyomo_python = pyomo.scripting.commands:pyomo_python
-        pyomo_old=pyomo.scripting.pyomo_command:main
 
         [pyomo.command]
         pyomo.help = pyomo.scripting.driver_help
