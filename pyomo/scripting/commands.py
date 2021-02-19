@@ -124,14 +124,3 @@ def pyomo(args=None):
     else:
         ret = parser.parse_args(args)
     ret.func(ret)
-
-
-@pyomo_command('results_schema', "Print the predefined schema for a results object")
-def results_schema():
-    if len(sys.argv) > 1:
-        print("results_schema  - Print the predefined schema in a SolverResults object")
-    options = Options(schema=True)
-    r=SolverResults()
-    repn = r._repn_(options)
-    r.pprint(sys.stdout, options, repn=repn)
-

@@ -134,7 +134,6 @@ def run_setup():
       ext_modules = ext_modules,
       entry_points="""
         [console_scripts]
-        results_schema=pyomo.scripting.commands:results_schema
         pyro_mip_server = pyomo.scripting.pyro_mip_server:main
         test.pyomo = pyomo.scripting.runtests:runPyomoTests
         pyomo = pyomo.scripting.pyomo_main:main_console_script
@@ -150,7 +149,6 @@ def run_setup():
         pyomo.help = pyomo.scripting.driver_help
         pyomo.test.pyomo = pyomo.scripting.runtests
         pyomo.pyro_mip_server = pyomo.scripting.pyro_mip_server
-        pyomo.results_schema=pyomo.scripting.commands
         pyomo.viewer=pyomo.contrib.viewer.pyomo_viewer
       """
       )
