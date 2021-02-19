@@ -27,7 +27,7 @@ from pyomo.core.base.suffix import \
      local_suffix_generator,
      active_suffix_generator,
      suffix_generator)
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, Suffix, Var, Param, Set, Objective, Constraint, Block, sum_product
 
 from six import StringIO
 

@@ -17,9 +17,12 @@ from six import StringIO
 
 import pyutilib.th as unittest
 from pyomo.core.base import NumericLabeler, SymbolMap
-from pyomo.environ import (Block, ConcreteModel, Connector, Constraint,
+from pyomo.environ import (Block, ConcreteModel, Constraint,
                            Objective, TransformationFactory, Var, exp, log,
-                           ceil, floor, asin, acos, atan, asinh, acosh, atanh)
+                           ceil, floor, asin, acos, atan, asinh, acosh, atanh,
+                           Binary, quicksum)
+from pyomo.gdp import Disjunction
+from pyomo.network import Port, Arc
 from pyomo.repn.plugins.gams_writer import (StorageTreeChecker,
                                             expression_to_string,
                                             split_long_line)
@@ -116,6 +119,72 @@ class Test(unittest.TestCase):
         model.c = Constraint(expr=model.other.a + 2 * model.x <= 0)
         model.obj = Objective(expr=model.x)
         self._check_baseline(model)
+
+    def test_fixed_linear_expr(self):
+        # Note that this checks both that a fixed variable is fixed, and
+        # that the resulting model type is correctly classified (in this
+        # case, fixing a binary makes this an LP)
+        m = ConcreteModel()
+        m.y = Var(within=Binary)
+        m.y.fix(0)
+        m.x = Var(bounds=(0,None))
+        m.c1 = Constraint(expr=quicksum([m.y, m.y], linear=True) >= 0)
+        m.c2 = Constraint(expr=quicksum([m.x, m.y], linear=True) == 1)
+        m.obj = Objective(expr=m.x)
+        self._check_baseline(m)
+
+    def test_nested_GDP_with_deactivate(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 1))
+
+        @m.Disjunct([0, 1])
+        def disj(disj, _):
+            @disj.Disjunct(['A', 'B'])
+            def nested(n_disj, _):
+                pass  # Blank nested disjunct
+
+            return disj
+
+        m.choice = Disjunction(expr=[m.disj[0], m.disj[1]])
+
+        m.c = Constraint(expr=m.x ** 2 + m.disj[1].nested['A'].indicator_var >= 1)
+
+        m.disj[0].indicator_var.fix(1)
+        m.disj[1].deactivate()
+        m.disj[0].nested['A'].indicator_var.fix(1)
+        m.disj[0].nested['B'].deactivate()
+        m.disj[1].nested['A'].indicator_var.set_value(1)
+        m.disj[1].nested['B'].deactivate()
+        m.o = Objective(expr=m.x)
+        TransformationFactory('gdp.fix_disjuncts').apply_to(m)
+
+        outs = StringIO()
+        m.write(outs, format='gams', io_options=dict(solver='dicopt'))
+        self.assertIn("USING minlp", outs.getvalue())
+
+    def test_quicksum(self):
+        m = ConcreteModel()
+        m.y = Var(domain=Binary)
+        m.c = Constraint(expr=quicksum([m.y, m.y], linear=True) == 1)
+        m.y.fix(1)
+        lbl = NumericLabeler('x')
+        smap = SymbolMap(lbl)
+        tc = StorageTreeChecker(m)
+        self.assertEqual(("x1 + x1", False), expression_to_string(m.c.body, tc, smap=smap))
+        m.x = Var()
+        m.c2 = Constraint(expr=quicksum([m.x, m.y], linear=True) == 1)
+        self.assertEqual(("x2 + x1", False), expression_to_string(m.c2.body, tc, smap=smap))
+
+    def test_quicksum_integer_var_fixed(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var(domain=Binary)
+        m.c = Constraint(expr=quicksum([m.y, m.y], linear=True) == 1)
+        m.o = Objective(expr=m.x ** 2)
+        m.y.fix(1)
+        outs = StringIO()
+        m.write(outs, format='gams')
+        self.assertIn("USING nlp", outs.getvalue())
 
     def test_expr_xfrm(self):
         from pyomo.repn.plugins.gams_writer import (
@@ -231,38 +300,38 @@ class Test(unittest.TestCase):
                 "GAMS files cannot represent the unary function atanh"):
             expression_to_string(atanh(m.x), tc, lbl, smap=smap)
 
-    def test_gams_connector_in_active_constraint(self):
+    def test_gams_arc_in_active_constraint(self):
         m = ConcreteModel()
         m.b1 = Block()
         m.b2 = Block()
         m.b1.x = Var()
         m.b2.x = Var()
-        m.b1.c = Connector()
+        m.b1.c = Port()
         m.b1.c.add(m.b1.x)
-        m.b2.c = Connector()
+        m.b2.c = Port()
         m.b2.c.add(m.b2.x)
-        m.c = Constraint(expr=m.b1.c == m.b2.c)
+        m.c = Arc(source=m.b1.c, destination=m.b2.c)
         m.o = Objective(expr=m.b1.x)
-        os = StringIO()
+        outs = StringIO()
         with self.assertRaises(RuntimeError):
-            m.write(os, format="gams")
+            m.write(outs, format="gams")
 
-    def test_gams_expanded_connectors(self):
+    def test_gams_expanded_arcs(self):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
-        m.CON1 = Connector()
+        m.CON1 = Port()
         m.CON1.add(m.x, 'v')
-        m.CON2 = Connector()
+        m.CON2 = Port()
         m.CON2.add(m.y, 'v')
-        m.c = Constraint(expr=m.CON1 + m.CON2 >= 10)
-        TransformationFactory("core.expand_connectors").apply_to(m)
+        m.c = Arc(source=m.CON1, destination=m.CON2)
+        TransformationFactory("network.expand_arcs").apply_to(m)
         m.o = Objective(expr=m.x)
-        os = StringIO()
+        outs = StringIO()
         io_options = dict(symbolic_solver_labels=True)
-        m.write(os, format="gams", io_options=io_options)
+        m.write(outs, format="gams", io_options=io_options)
         # no error if we're here, but check for some identifying string
-        self.assertIn("x + y", os.getvalue())
+        self.assertIn("x - y", outs.getvalue())
 
     def test_split_long_line(self):
         pat = "var1 + log(var2 / 9) - "
@@ -283,9 +352,9 @@ class Test(unittest.TestCase):
         m.x = Var()
         m.c = Constraint(expr=m.x == 2)
         m.o = Objective(expr=m.x)
-        os = StringIO()
-        m.write(os, format="gams", io_options=dict(solver="gurobi"))
-        self.assertIn("option lp=gurobi", os.getvalue())
+        outs = StringIO()
+        m.write(outs, format="gams", io_options=dict(solver="gurobi"))
+        self.assertIn("option lp=gurobi", outs.getvalue())
 
     def test_negative_float_double_operator(self):
         m = ConcreteModel()

@@ -3,7 +3,7 @@ Installation
 
 Pyomo currently supports the following versions of Python:
 
-* CPython: 2.7, 3.4, 3.5, 3.6, 3.7, 3.8
+* CPython: 2.7, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9
 * PyPy: 2, 3
 
 
@@ -23,7 +23,7 @@ optimization solvers can be installed with conda as well:
 
 ::
 
-   conda install -c conda-forge ipopt coincbc glpk
+   conda install -c conda-forge ipopt glpk
 
 
 Using PIP

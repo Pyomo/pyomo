@@ -11,15 +11,13 @@
 import sys
 import logging
 import math
-import collections
-if sys.version_info[:2] >= (3,6):
+
+from pyomo.common.collections import OrderedDict
+if sys.version_info[:2] >= (3,7):
+    # dict became ordered in CPython 3.6 and added to the standard in 3.7
     _ordered_dict_ = dict
 else:
-    try:
-        _ordered_dict_ = collections.OrderedDict
-    except ImportError:                         #pragma:nocover
-        import ordereddict
-        _ordered_dict_ = ordereddict.OrderedDict
+    _ordered_dict_ = OrderedDict
 
 from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.kernel.base import \
@@ -357,7 +355,6 @@ class block(IBlock):
                 value in the solution is consistent with the
                 value of a fixed variable.
         """
-        import pyomo.opt
         from pyomo.core.kernel.suffix import \
             import_suffix_generator
 

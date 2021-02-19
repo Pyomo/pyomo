@@ -10,17 +10,13 @@
 
 import sys
 import os
-try:
-    import yaml
-    yaml_available=True
-except ImportError:
-    yaml_available=False
 
 import pyutilib.th as unittest
 
-from pyomo.checker import *
+from pyomo.checker import ModelCheckRunner
 from pyomo.checker.plugins.checker import PyomoModelChecker
 
+from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 
 currdir = os.path.dirname(os.path.abspath(__file__))
 exdir = os.path.join(currdir, "examples")
@@ -28,7 +24,6 @@ exdir = os.path.join(currdir, "examples")
 def createTestMethod(defs, package, checkerName, key):
     def testMethod(obj, name):
         import pyomo.environ
-
         runner = ModelCheckRunner()
         path = os.path.join(exdir, package, "{0}_{1}.py".format(checkerName, key))
         runner.run(script = path, checkers = {package:[checkerName]})
@@ -44,7 +39,8 @@ def createTestMethod(defs, package, checkerName, key):
 
 
 def assignTests(cls):
-    defs = yaml.load(open(os.path.join(currdir, 'examples.yml'), 'r'))
+    defs = yaml.load(open(os.path.join(currdir, 'examples.yml'), 'r'),
+                     **yaml_load_args)
     
     for package in defs:
         for checkerName in defs[package]:

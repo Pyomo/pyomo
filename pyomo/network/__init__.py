@@ -8,6 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.network.arc import *
-from pyomo.network.port import *
-from pyomo.network.decomposition import *
+from pyomo.network.arc import Arc
+from pyomo.network.port import Port
+from pyomo.network.decomposition import SequentialDecomposition

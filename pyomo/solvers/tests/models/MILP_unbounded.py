@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.kernel as pmo
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, Integers, Binary, NonNegativeReals, Integers
+from pyomo.core import ConcreteModel, Var, Objective, Integers
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
@@ -61,7 +61,7 @@ class MILP_unbounded_kernel(MILP_unbounded):
         model = self.model
         model._name = self.description
 
-        model.x = pmo.variable(domain=pmo.Integers)
-        model.y = pmo.variable(domain=pmo.Integers)
+        model.x = pmo.variable(domain=pmo.IntegerSet)
+        model.y = pmo.variable(domain=pmo.IntegerSet)
 
         model.o = pmo.objective(model.x+model.y)

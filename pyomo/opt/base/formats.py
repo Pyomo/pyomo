@@ -13,7 +13,7 @@
 #
 __all__ = ['ProblemFormat', 'ResultsFormat', 'guess_format']
 
-from pyutilib.enum import Enum
+import enum 
 
 #
 # pyomo - A pyomo.core.PyomoModel object, or a *.py file that defines such an object
@@ -31,7 +31,28 @@ from pyutilib.enum import Enum
 # bar - A Baron input file
 # gams - A GAMS input file
 #
-ProblemFormat = Enum('colin', 'pyomo', 'cpxlp', 'nl', 'mps', 'mod', 'lpxlp', 'osil', 'colin_optproblem', 'FuncDesigner','bar','gams')
+class ProblemFormat(str, enum.Enum):
+    colin='colin'
+    pyomo='pyomo'
+    cpxlp='cpxlp'
+    nl='nl'
+    mps='mps'
+    mod='mod'
+    lpxlp='lpxlp'
+    osil='osil'
+    colin_optproblem='colin_optproblem'
+    FuncDesigner='FuncDesigner'
+    bar='bar'
+    gams='gams'
+    
+    # Overloading __str__ is needed to match the behavior of the old
+    # pyutilib.enum class (removed June 2020). There are spots in the
+    # code base that expect the string representation for items in the
+    # enum to not include the class name. New uses of enum shouldn't
+    # need to do this.
+    def __str__(self):
+        return self.value
+
 
 #
 # osrl - osrl XML file defined by the COIN-OR OS project: Result
@@ -41,7 +62,21 @@ ProblemFormat = Enum('colin', 'pyomo', 'cpxlp', 'nl', 'mps', 'mod', 'lpxlp', 'os
 # yaml - A Pyomo results file in YAML format
 # json - A Pyomo results file in JSON format
 #
-ResultsFormat = Enum('osrl', 'results', 'sol', 'soln', 'yaml', 'json')
+class ResultsFormat(str, enum.Enum):
+    osrl='osrl'
+    results='results'
+    sol='sol'
+    soln='soln'
+    yaml='yaml'
+    json='json'
+
+    # Overloading __str__ is needed to match the behavior of the old
+    # pyutilib.enum class (removed June 2020). There are spots in the
+    # code base that expect the string representation for items in the
+    # enum to not include the class name. New uses of enum shouldn't
+    # need to do this.
+    def __str__(self):
+        return self.value
 
 
 def guess_format(filename):

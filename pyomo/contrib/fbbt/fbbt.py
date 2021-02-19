@@ -1,5 +1,14 @@
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_set import ComponentSet
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+from pyomo.common.collections import ComponentMap, ComponentSet
 import pyomo.core.expr.numeric_expr as numeric_expr
 from pyomo.core.expr.visitor import ExpressionValueVisitor, identify_variables
 from pyomo.core.expr.numvalue import nonpyomo_leaf_types, value
@@ -319,7 +328,7 @@ def _prop_bnds_leaf_to_root_asin(node, bnds_dict, feasibility_tol):
     assert len(node.args) == 1
     arg = node.args[0]
     lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.asin(lb1, ub1, -interval.inf, interval.inf)
+    bnds_dict[node] = interval.asin(lb1, ub1, -interval.inf, interval.inf, feasibility_tol)
 
 
 def _prop_bnds_leaf_to_root_acos(node, bnds_dict, feasibility_tol):
@@ -339,7 +348,7 @@ def _prop_bnds_leaf_to_root_acos(node, bnds_dict, feasibility_tol):
     assert len(node.args) == 1
     arg = node.args[0]
     lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.acos(lb1, ub1, -interval.inf, interval.inf)
+    bnds_dict[node] = interval.acos(lb1, ub1, -interval.inf, interval.inf, feasibility_tol)
 
 
 def _prop_bnds_leaf_to_root_atan(node, bnds_dict, feasibility_tol):
@@ -809,7 +818,7 @@ def _prop_bnds_root_to_leaf_sin(node, bnds_dict, feasibility_tol):
     arg = node.args[0]
     lb0, ub0 = bnds_dict[node]
     lb1, ub1 = bnds_dict[arg]
-    _lb1, _ub1 = interval.asin(lb0, ub0, lb1, ub1)
+    _lb1, _ub1 = interval.asin(lb0, ub0, lb1, ub1, feasibility_tol)
     if _lb1 > lb1:
         lb1 = _lb1
     if _ub1 < ub1:
@@ -835,7 +844,7 @@ def _prop_bnds_root_to_leaf_cos(node, bnds_dict, feasibility_tol):
     arg = node.args[0]
     lb0, ub0 = bnds_dict[node]
     lb1, ub1 = bnds_dict[arg]
-    _lb1, _ub1 = interval.acos(lb0, ub0, lb1, ub1)
+    _lb1, _ub1 = interval.acos(lb0, ub0, lb1, ub1, feasibility_tol)
     if _lb1 > lb1:
         lb1 = _lb1
     if _ub1 < ub1:
@@ -1404,14 +1413,14 @@ def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, feasibi
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     max_iter: int
-        Used for Blocks only (i.e., comp.type() == Block). When performing FBBT on a Block, we first perform FBBT on
+        Used for Blocks only (i.e., comp.ctype == Block). When performing FBBT on a Block, we first perform FBBT on
         every constraint in the Block. We then attempt to identify which constraints to repeat FBBT on based on the
         improvement in variable bounds. If the bounds on a variable improve by more than improvement_tol, then FBBT
         is performed on the constraints using that Var. However, this algorithm is not guaranteed to converge, so
         max_iter limits the total number of times FBBT is performed to max_iter times the number of constraints
         in the Block.
     improvement_tol: float
-        Used for Blocks only (i.e., comp.type() == Block). When performing FBBT on a Block, we first perform FBBT on
+        Used for Blocks only (i.e., comp.ctype == Block). When performing FBBT on a Block, we first perform FBBT on
         every constraint in the Block. We then attempt to identify which constraints to repeat FBBT on based on the
         improvement in variable bounds. If the bounds on a variable improve by more than improvement_tol, then FBBT
         is performed on the constraints using that Var.
@@ -1435,7 +1444,7 @@ def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, feasibi
     config.declare('improvement_tol', improvement_tol_config)
 
     new_var_bounds = ComponentMap()
-    if comp.type() == Constraint:
+    if comp.ctype == Constraint:
         if comp.is_indexed():
             for _c in comp.values():
                 _new_var_bounds = _fbbt_con(comp, config)
@@ -1443,7 +1452,7 @@ def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, feasibi
         else:
             _new_var_bounds = _fbbt_con(comp, config)
             new_var_bounds.update(_new_var_bounds)
-    elif comp.type() in {Block, Disjunct}:
+    elif comp.ctype in {Block, Disjunct}:
         _new_var_bounds = _fbbt_block(comp, config)
         new_var_bounds.update(_new_var_bounds)
     else:
@@ -1482,7 +1491,7 @@ class BoundsManager(object):
         self._vars = ComponentSet()
         self._saved_bounds = list()
 
-        if comp.type() == Constraint:
+        if comp.ctype == Constraint:
             if comp.is_indexed():
                 for c in comp.values():
                     self._vars.update(identify_variables(c.body))

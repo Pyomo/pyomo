@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.kernel as pmo
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, RangeSet, ConstraintList
+from pyomo.core import ConcreteModel, Var, Objective, Constraint, RangeSet, ConstraintList
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 @register_model
@@ -23,6 +23,7 @@ class LP_duals_minimize(_BaseTestModel):
     description = "LP_duals_minimize"
     level = ('nightly', 'expensive')
     capabilities = set(['linear'])
+    size = (12, 12, None)
 
     def __init__(self):
         _BaseTestModel.__init__(self)

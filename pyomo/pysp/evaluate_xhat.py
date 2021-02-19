@@ -8,12 +8,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import sys
 import time
 import copy
 
 from pyomo.common import pyomo_command
-from pyomo.core import minimize
+from pyomo.common.dependencies import yaml
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
                                     safe_register_common_option,
@@ -150,10 +149,8 @@ def run_evaluate_xhat(options,
                       solution_loaders=(),
                       solution_savers=()):
 
-    import pyomo.environ
-
     start_time = time.time()
-
+    import pyomo.environ
     solution_loaders = sort_extensions_by_precedence(solution_loaders)
     solution_savers = sort_extensions_by_precedence(solution_savers)
 
@@ -214,7 +211,6 @@ def run_evaluate_xhat(options,
                 with open(options.output_scenario_costs, 'w') as f:
                     json.dump(result, f, indent=2, sort_keys=True)
             elif options.output_scenario_costs.endswith('.yaml'):
-                import yaml
                 result = {}
                 for scenario in sp.scenario_tree.scenarios:
                     result[str(scenario.name)] = scenario._cost

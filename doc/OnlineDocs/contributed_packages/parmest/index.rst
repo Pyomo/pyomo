@@ -11,6 +11,9 @@ confidence regions and subsequent creation of scenarios for PySP.
    overview.rst
    installation.rst
    driver.rst
+   datarec.rst
+   covariance.rst
+   scencreate.rst
    graphics.rst
    examples.rst
    parallel.rst

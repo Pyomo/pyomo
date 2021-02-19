@@ -14,15 +14,15 @@ import pyomo.core
 
 import six
 
-try:
-    import networkx
-    # The code below conforms to the networkx>=2.0 API
-    has_networkx = int(networkx.__version__.split('.')[0]) >= 2
-except ImportError:                               #pragma:nocover
-    has_networkx = False
+from pyomo.common.dependencies import attempt_import
+
+# The code below conforms to the networkx>=2.0 API
+networkx, networkx_available = attempt_import('networkx', minimum_version="2.0")
 
 def CreateAbstractScenarioTreeModel():
-    from pyomo.core import (AbstractModel, Set, Param, Boolean)
+    from pyomo.core import (
+        AbstractModel, Set, Param, Boolean, Any, UnitInterval,
+    )
 
     model = AbstractModel()
 
@@ -40,6 +40,7 @@ def CreateAbstractScenarioTreeModel():
                          initialize=[],
                          ordered=True)
     model.ConditionalProbability = Param(model.Nodes,
+                                         within=UnitInterval,
                                          mutable=True)
 
     model.Scenarios = Set(ordered=True)
@@ -56,14 +57,17 @@ def CreateAbstractScenarioTreeModel():
                               ordered=True)
 
     model.StageCost = Param(model.Stages,
+                            within=Any,
                             mutable=True,
                             default=None)
     model.NodeCost = Param(model.Nodes,
+                           within=Any,
                            mutable=True,
                            default=None)
 
     # DEPRECATED
     model.StageCostVariable = Param(model.Stages,
+                                    within=Any,
                                     mutable=True)
 
     # it is often the case that a subset of the stage variables are strictly "derived"
@@ -117,13 +121,13 @@ def CreateAbstractScenarioTreeModel():
 #
 def CreateConcreteTwoStageScenarioTreeModel(num_scenarios):
     m = CreateAbstractScenarioTreeModel()
+    m = m.create_instance()
     m.Stages.add('Stage1')
     m.Stages.add('Stage2')
     m.Nodes.add('RootNode')
     for i in range(1, num_scenarios+1):
         m.Nodes.add('LeafNode_Scenario'+str(i))
         m.Scenarios.add('Scenario'+str(i))
-    m = m.create_instance()
     m.NodeStage['RootNode'] = 'Stage1'
     m.ConditionalProbability['RootNode'] = 1.0
     for node in m.Nodes:
@@ -231,10 +235,6 @@ def ScenarioTreeModelFromNetworkX(
         >>> model = ScenarioTreeModelFromNetworkX(G)
     """
 
-    if not has_networkx:                          #pragma:nocover
-        raise ValueError(
-            "networkx>=2.0 module is not available")
-
     if not networkx.is_tree(tree):
         raise TypeError(
             "Graph object is not a tree "
@@ -263,6 +263,7 @@ def ScenarioTreeModelFromNetworkX(
         raise ValueError(
             "The number of stages must be at least 2")
     m = CreateAbstractScenarioTreeModel()
+    m = m.create_instance()
     if stage_names is not None:
         unique_stage_names = set()
         for cnt, stage_name in enumerate(stage_names,1):
@@ -312,7 +313,7 @@ def ScenarioTreeModelFromNetworkX(
                 tree.nodes[u].get('bundle', None)
     _setup(root,
            networkx.dfs_successors(tree, root))
-    m = m.create_instance()
+
     def _add_node(u, stage, succ, pred):
         node_name = node_to_name[u]
         m.NodeStage[node_name] = m.Stages[stage]

@@ -8,18 +8,22 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import copy
-
 from pyomo.core.expr import current as EXPR
 
-from pyomo.core import *
-from pyomo.core.base.expression import _ExpressionData
-from pyomo.core.base.var import SimpleVar, _VarData
+from pyomo.core import (nonpyomo_leaf_types, TransformationFactory, IntegerSet,
+                        Integers, PositiveIntegers, NonPositiveIntegers,
+                        NegativeIntegers, NonNegativeIntegers, Reals, PositiveReals,
+                        NonNegativeReals, NegativeReals, NonPositiveReals,
+                        PercentFraction, RealSet, Var, Set, value, Binary, 
+                        Constraint, Objective)
 from pyomo.core.base.misc import create_name
 from pyomo.core.plugins.transform.util import partial
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.core.plugins.transform.util import collectAbstractComponents
 
+
+import logging
+logger = logging.getLogger('pyomo.core')
 
 class VarmapVisitor(EXPR.ExpressionReplacementVisitor):
 
@@ -157,12 +161,8 @@ class NonNegativeTransformation(IsomorphicTransformation):
                     v_ndx = str(ndx)
 
                 # Get the variable bounds
-                lb = var[ndx].lb
-                ub = var[ndx].ub
-                if lb is not None:
-                    lb = value(lb)
-                if ub is not None:
-                    ub = value(ub)
+                lb = value(var[ndx].lb)
+                ub = value(var[ndx].ub)
                 orig_bounds[ndx] = (lb, ub)
 
                 # Get the variable domain
@@ -247,20 +247,21 @@ class NonNegativeTransformation(IsomorphicTransformation):
                 # Domain will either be NonNegativeReals, NonNegativeIntegers,
                 # or Binary. We consider Binary because some solvers may
                 # optimize over binary variables.
-                if isinstance(orig_domain[ndx], RealSet):
+                if var[ndx].is_continuous():
                     for x in new_indices:
                         domains[x] = NonNegativeReals
-                elif isinstance(orig_domain[ndx], IntegerSet):
-                    for x in new_indices:
-                        domains[x] = NonNegativeIntegers
-                elif isinstance(orig_domain[ndx], BooleanSet):
+                elif var[ndx].is_binary():
                     for x in new_indices:
                         domains[x] = Binary
-                else:
-                    print ("Warning: domain '%s' not recognized, " + \
-                           "defaulting to 'Reals'") % (str(var.domain))
+                elif var[ndx].is_integer():
                     for x in new_indices:
-                        domains[x] = Reals
+                        domains[x] = NonNegativeIntegers
+                else:
+                    logger.warning(
+                        "Warning: domain '%s' not recognized, "
+                        "defaulting to 'NonNegativeReals'" % (var.domain,))
+                    for x in new_indices:
+                        domains[x] = NonNegativeReals
 
             constraint_rules[var_name] = constraints
             domain_rules[var_name] = partial(self.exprMapRule, domains)

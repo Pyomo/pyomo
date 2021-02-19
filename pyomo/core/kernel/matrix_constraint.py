@@ -8,26 +8,16 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.core.expr
+from pyomo.common.dependencies import (
+    numpy, numpy_available as has_numpy,
+    scipy, scipy_available as has_scipy,
+)
 from pyomo.core.expr.numvalue import NumericValue
 from pyomo.core.kernel.constraint import \
     (IConstraint,
      constraint_tuple)
 
-import six
 from six.moves import zip, xrange
-
-try:
-    import numpy
-    has_numpy = True
-except:     #pragma:nocover
-    has_numpy = False
-
-try:
-    import scipy
-    has_scipy = True
-except:     #pragma:nocover
-    has_scipy = False
 
 _noarg = object()
 

@@ -12,89 +12,115 @@
 
 """Pyomo Units Container Module
 
-.. warning:: This module is in beta and is not yet complete.
+This module provides support for including units within Pyomo expressions. This module
+can be used to define units on a model, and to check the consistency of units
+within the underlying constraints and expressions in the model. The module also
+supports conversion of units within expressions using the `convert` method to support
+construction of constraints that contain embedded unit conversions.
 
-This module provides support for including units within Pyomo expressions, and provides
-methods for checking the consistency of units within those expresions.
-
-To use this package within your Pyomo model, you first need an instance of a PyomoUnitsContainer.
-You can use the module level instance called `units` and use the pre-defined units in expressions or
-components.
-
-Examples:
-    To use a unit within an expression, simply reference the desired unit as an attribute on the
-    module singleton `units`.
+To use this package within your Pyomo model, you first need an instance of a
+PyomoUnitsContainer. You can use the module level instance already defined as
+'units'. This object 'contains' the units - that is, you can access units on
+this module using common notation.
 
     .. doctest::
+       :skipif: not pint_available
 
-       >>> from pyomo.environ import ConcreteModel, Var, Objective, units # import components and 'units' instance
+       >>> from pyomo.environ import units as u
+       >>> print(3.0*u.kg)
+       3.0*kg
+
+Units can be assigned to Var, Param, and ExternalFunction components, and can
+be used directly in expressions (e.g., defining constraints). You can also
+verify that the units are consistent on a model, or on individual components
+like the objective function, constraint, or expression using
+`assert_units_consistent` (from pyomo.util.check_units).
+There are other methods there that may be helpful for verifying correct units on a model.
+
+    .. doctest::
+       :skipif: not pint_available
+
+       >>> from pyomo.environ import ConcreteModel, Var, Objective
+       >>> from pyomo.environ import units as u
+       >>> from pyomo.util.check_units import assert_units_consistent, assert_units_equivalent, check_units_equivalent
        >>> model = ConcreteModel()
-       >>> model.acc = Var()
-       >>> model.obj = Objective(expr=(model.acc*units.m/units.s**2 - 9.81*units.m/units.s**2)**2)
-       >>> print(units.get_units(model.obj.expr))
-       m ** 2 / s ** 4
+       >>> model.acc = Var(initialize=5.0, units=u.m/u.s**2)
+       >>> model.obj = Objective(expr=(model.acc - 9.81*u.m/u.s**2)**2)
+       >>> assert_units_consistent(model.obj) # raise exc if units invalid on obj
+       >>> assert_units_consistent(model) # raise exc if units invalid anywhere on the model
+       >>> assert_units_equivalent(model.obj.expr, u.m**2/u.s**4) # raise exc if units not equivalent
+       >>> print(u.get_units(model.obj.expr)) # print the units on the objective
+       m**2/s**4
+       >>> print(check_units_equivalent(model.acc, u.m/u.s**2))
+       True
 
-.. note:: This module has a module level instance of a PyomoUnitsContainer called `units` that you
-         should use for creating, retreiving, and checking units
+The implementation is currently based on the `pint
+<http://pint.readthedocs.io>`_ package and supports all the units that
+are supported by pint.  The list of units that are supported by pint
+can be found at the following url:
+https://github.com/hgrecco/pint/blob/master/pint/default_en.txt.
 
-.. note:: This is a work in progress. Once the components units implementations are complete, the units will eventually
-          work similar to the following.
+If you need a unit that is not in the standard set of defined units,
+you can create your own units by adding to the unit definitions within
+pint. See :py:meth:`PyomoUnitsContainer.load_definitions_from_file` or
+:py:meth:`PyomoUnitsContainer.load_definitions_from_strings` for more
+information.
 
-          .. code-block:: python
+.. note:: In this implementation of units, "offset" units for
+          temperature are not supported within expressions (i.e. the
+          non-absolute temperature units including degrees C and
+          degrees F).  This is because there are many non-obvious
+          combinations that are not allowable. This concern becomes
+          clear if you first convert the non-absolute temperature
+          units to absolute and then perform the operation. For
+          example, if you write 30 degC + 30 degC == 60 degC, but
+          convert each entry to Kelvin, the expression is not true
+          (i.e., 303.15 K + 303.15 K is not equal to 333.15
+          K). Therefore, there are several operations that are not
+          allowable with non-absolute units, including addition,
+          multiplication, and division.
 
-             from pyomo.environ import ConcreteModel, Var, Objective, units
-             model = ConcreteModel()
-             model.x = Var(units=units.kg/units.m)
-             model.obj = Objective(expr=(model.x - 97.2*units.kg/units.m)**2)
+          This module does support conversion of offset units to
+          absolute units numerically, using convert_value_K_to_C,
+          convert_value_C_to_K, convert_value_R_to_F,
+          convert_value_F_to_R.  These are useful for converting input
+          data to absolute units, and for converting data to
+          convenient units for reporting.
 
-Notes:
-    * The implementation is currently based on the `pint <http://pint.readthedocs.io>`_
-      package and supports all the units that are supported by pint.
-    * The list of units that are supported by pint can be found at
-      the following url: https://github.com/hgrecco/pint/blob/master/pint/default_en.txt
-    * Currently, we do NOT test units of unary functions that include native data types
-      e.g. explicit float (3.0) since these are removed by the expression system
-      before getting to the code that checks the units.
-
-.. note:: In this implementation of units, "offset" units for temperature are not supported within
-          expressions (i.e. the non-absolute temperature units including degrees C and degrees F).
-          This is because there are many non-obvious combinations that are not allowable. This
-          concern becomes clear if you first convert the non-absolute temperature units to absolute
-          and then perform the operation. For example, if you write 30 degC + 30 degC == 60 degC,
-          but convert each entry to Kelvin, the expression is not true (i.e., 303.15 K + 303.15 K
-          is not equal to 333.15 K). Therefore, there are several operations that are not allowable
-          with non-absolute units, including addition, multiplication, and division.
-
-          Please see the pint documentation `here <https://pint.readthedocs.io/en/0.9/nonmult.html>`_
-          for more discussion. While pint implements "delta" units (e.g., delta_degC) to support correct
-          unit conversions, it can be difficult to identify and guarantee valid operations in a general
-          algebraic modeling environment. While future work may support units with relative scale, the current
-          implementation requires use of absolute temperature units (i.e. K and R) within expressions and
-          a direct conversion of numeric values using specific functions for converting input data and reporting.
+          Please see the pint documentation `here
+          <https://pint.readthedocs.io/en/0.9/nonmult.html>`_ for more
+          discussion. While pint implements "delta" units (e.g.,
+          delta_degC) to support correct unit conversions, it can be
+          difficult to identify and guarantee valid operations in a
+          general algebraic modeling environment. While future work
+          may support units with relative scale, the current
+          implementation requires use of absolute temperature units
+          (i.e. K and R) within expressions and a direct conversion of
+          numeric values using specific functions for converting input
+          data and reporting.
 
 """
 # TODO
-#    * implement specific functions for converting numeric values of absolute temperatures
-#    * implement convert functionality
 #    * create a new pint unit definition file (and load from that file)
-#      since the precision in pint seems insufficient for 1e-8 constraint tolerances
-#    * clean up use of unit and units in the naming
-#    * implement and test pickling and un-pickling
-#    * implement ignore_unit(x, expected_unit) that returns a dimensionless version of the expression
-#      (Note that this may need to be a special expression object that may appear in the tree)
-#    * Add units capabilities to Var and Param
-#    * Investigate issues surrounding absolute and relative temperatures (delta units)
-#    * Implement external function interface that specifies units for the arguments and the function itself
+#       since the precision in pint seems insufficient for 1e-8 constraint tolerances
+#    * Investigate when we can and cannot handle offset units and expand capabilities if possible
+#    * Further investigate issues surrounding absolute and relative temperatures (delta units)
+#    * Extend external function interface to support units for the arguments in addition to the function itself
 
-
-from pyomo.core.expr.numvalue import NumericValue, nonpyomo_leaf_types, value
-from pyomo.core.base.template_expr import IndexTemplate
-from pyomo.core.expr import current as expr
+import logging
 import six
-try:
-    import pint as pint_module
-except ImportError:
-    pint_module = None
+import sys
+
+from pyomo.common.dependencies import attempt_import
+from pyomo.core.expr.numvalue import NumericValue, nonpyomo_leaf_types, value, native_types, native_numeric_types, pyomo_constant_types
+from pyomo.core.expr.template_expr import IndexTemplate
+from pyomo.core.expr import current as EXPR
+
+pint_module, pint_available = attempt_import(
+    'pint', defer_check=True, error_message='The "pint" package failed '
+    'to import. This package is necessary to use Pyomo units.')
+
+logger = logging.getLogger(__name__)
 
 class UnitsError(Exception):
     """
@@ -111,7 +137,7 @@ class InconsistentUnitsError(UnitsError):
     """
     An exception indicating that inconsistent units are present on an expression.
 
-    E.g., x == y, where x is in units of units.kg and y is in units of units.meter
+    E.g., x == y, where x is in units of kg and y is in units of meter
     """
     def __init__(self, exp1, exp2, msg):
         msg = '{}: {} not compatible with {}.'.format(str(msg), str(exp1), str(exp2))
@@ -123,9 +149,11 @@ class _PyomoUnit(NumericValue):
 
     Users should not create instances of _PyomoUnit directly, but rather access
     units as attributes on an instance of a :class:`PyomoUnitsContainer`.
-    This module contains a global PyomoUnitContainer :py:data:`units`.
+    This module contains a global PyomoUnitsContainer object :py:data:`units`.
     See module documentation for more information.
     """
+    __slots__ = ('_pint_unit', '_pint_registry')
+
     def __init__(self, pint_unit, pint_registry):
         super(_PyomoUnit, self).__init__()
         assert pint_unit is not None
@@ -140,8 +168,6 @@ class _PyomoUnit(NumericValue):
     def _get_pint_registry(self):
         """ Return the pint registry (pint.UnitRegistry) object used to create this unit. """
         return self._pint_registry
-
-    # Todo: test pickle and implement __getstate__/__setstate__ to do the right thing
 
     def getname(self, fully_qualified=False, name_buffer=None):
         """
@@ -234,6 +260,43 @@ class _PyomoUnit(NumericValue):
         """
         return 0
 
+    def __getstate__(self):
+        state = super(_PyomoUnit, self).__getstate__()
+        state['_pint_unit'] = str(self._pint_unit)
+        if self._pint_registry is not units._pint_registry:
+            # FIXME: we currently will not correctly unpickle units
+            # associated with a unit manager other than the default
+            # singleton.  If we wanted to support this, we would need to
+            # do something like create a global units manager registry
+            # that would associate each unit manager with a name.  We
+            # could then pickle that name and then attempt to restore
+            # the association with the original units manager.  As we
+            # expect all users to just use the global default, for the
+            # time being we will just issue a warning that things may
+            # break.
+            logger.warning(
+                "pickling a _PyomoUnit associated with a PyomoUnitsContainer "
+                "that is not the default singleton (%s.units).  Restoring "
+                "this pickle will attempt to return a unit associated with "
+                "the default singleton." % (__name__,))
+        return state
+
+    def __setstate__(self, state):
+        self._pint_registry = units._pint_registry
+        self._pint_unit = self._pint_registry(state.pop('_pint_unit')).units
+        super(_PyomoUnit, self).__setstate__(state)
+
+    def __deepcopy__(self, memo):
+        # Note that while it is possible to deepcopy the _pint_unit and
+        # _pint_registry object (in pint>0.10), that version does not
+        # support all Python versions currently supported by Pyomo.
+        # Further, Pyomo's use of units relies on a model using a single
+        # instance of the pint unit registry.  As we regularly assemble
+        # block models using multiple clones (deepcopies) of a base
+        # model, it is important that we treat _PyomoUnit objects
+        # as outside the model scope and DO NOT duplicate them.
+        return self
+
     def __float__(self):
         """
         Coerce the value to a floating point
@@ -304,7 +367,7 @@ class _PyomoUnit(NumericValue):
         # delta temperatures).  So that things work cleanly in Python 2
         # and 3, we will generate the string as unicode, then explicitly
         # encode it to UTF-8 in Python 2
-        retstr = u'{:!~s}'.format(self._pint_unit)
+        retstr = u'{:!~C}'.format(self._pint_unit)
         if retstr == '':
             retstr = 'dimensionless'
         if six.PY2:
@@ -324,7 +387,11 @@ class _PyomoUnit(NumericValue):
         : bool
            A string representation for the expression tree.
         """
-        return str(self)
+        if len(self._pint_unit.dimensionality) > 1 or any(
+                i < 0 for i in self._pint_unit.dimensionality.values()):
+            return "("+str(self)+")"
+        else:
+            return str(self)
 
     def __nonzero__(self):
         """Unit is treated as a constant value of 1.0. Therefore, it is always nonzero
@@ -368,12 +435,13 @@ class _PyomoUnit(NumericValue):
         #     ostream.write('{:!~s}'.format(self._pint_unit))
 
 
-class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
+class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
     def __init__(self, pyomo_units_container, units_equivalence_tolerance=1e-12):
         """
         Visitor class used to determine units of an expression. Do not use
-        this class directly, but rather use :func:`get_units` or
-        :func:`check_units_consistency`.
+        this class directly, but rather use
+        "py:meth:`PyomoUnitsContainer.assert_units_consistent`
+        or :py:meth:`PyomoUnitsContainer.get_units`
 
         Parameters
         ----------
@@ -384,7 +452,7 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
 
         units_equivalence_tolerance : float (default 1e-12)
             Floating point tolerance used when deciding if units are equivalent
-            or not. (It can happen that units
+            or not.
 
         Notes
         -----
@@ -396,71 +464,14 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
         particular method that should be called to return the units of the node based
         on the units of its child arguments. This map is used in exitNode.
         """
-        super(_UnitExtractionVisitor, self).__init__()
+        super(PintUnitExtractionVisitor, self).__init__()
         self._pyomo_units_container = pyomo_units_container
-        self._pint_registry = self._pyomo_units_container._pint_registry
-        self._units_equivalence_tolerance = units_equivalence_tolerance
+        self._pint_dimensionless = pyomo_units_container._pint_dimensionless
+        self._pint_radian = pyomo_units_container._pint_registry.radian
+        self._equivalent_pint_units = pyomo_units_container._equivalent_pint_units
+        self._equivalent_to_dimensionless = pyomo_units_container._equivalent_to_dimensionless
 
-    def _pint_unit_equivalent_to_dimensionless(self, pint_unit):
-        """
-        Check if a pint unit is equivalent to 'dimensionless' (this is true if it
-        is either None or 'dimensionless' (or even radians)
-
-        Parameters
-        ----------
-        pint_unit : pint unit
-           The pint unit you want to check
-
-        Returns
-        -------
-        : bool
-           Returns True if pint_unit is equivalent to dimensionless units.
-
-        """
-        if pint_unit is None:
-            return True
-        return self._pint_units_equivalent(pint_unit, self._pint_registry.dimensionless)
-
-    def _pint_units_equivalent(self, lhs, rhs):
-        """
-        Check if two pint units are equivalent
-
-        Parameters
-        ----------
-        lhs : pint unit
-            first pint unit to compare
-        rhs : pint unit
-            second pint unit to compare
-
-        Returns
-        -------
-        : bool
-           True if they are equivalent, and False otherwise
-        """
-        if lhs == rhs:
-            # units are the same objects (or both None)
-            return True
-        elif lhs is None:
-            # lhs is None, but rhs is not
-            # check if rhs is equivalent to dimensionless (e.g. dimensionless or radians)
-            return self._pint_unit_equivalent_to_dimensionless(rhs)
-        elif rhs is None:
-            # rhs is None, but lhs is not
-            # check if lhs is equivalent to dimensionless (e.g. dimensionless or radians)
-            return self._pint_unit_equivalent_to_dimensionless(lhs)
-
-        # Units are not the same objects, and they are both not None
-        # Now, use pint mechanisms to check by converting to Quantity objects
-        lhsq = (1.0 * lhs).to_base_units()
-        rhsq = (1.0 * rhs).to_base_units()
-
-        if lhsq.dimensionality == rhsq.dimensionality and \
-               abs(lhsq.magnitude/rhsq.magnitude - 1.0) < self._units_equivalence_tolerance:
-            return True
-
-        return False
-
-    def _get_unit_for_equivalent_children(self, node, list_of_unit_tuples):
+    def _get_unit_for_equivalent_children(self, node, child_units):
         """
         Return (and test) the units corresponding to an expression node in the
         expression tree where all children should have the same units (e.g. sum).
@@ -470,37 +481,37 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
         node : Pyomo expression node
             The parent node of the children
 
-        list_of_unit_tuples : list
-           This is a list of tuples (one for each of the children) where each tuple
-           is a PyomoUnit, pint unit pair
+        child_units : list
+           This is a list of pint units (one for each of the children)
 
         Returns
         -------
-        : tuple (PyomoUnit, pint unit)
+        : pint unit
         """
-        # TODO: This may be expensive for long summations and, in the case of reporting only, we may want to skip the checks
-        assert len(list_of_unit_tuples) > 0
+        # TODO: This may be expensive for long summations and, in the
+        # case of reporting only, we may want to skip the checks
+        assert bool(child_units)
 
         # verify that the pint units are equivalent from each
         # of the child nodes - assume that PyomoUnits are equivalent
-        pint_unit_0 = list_of_unit_tuples[0][1]
-        for i in range(1, len(list_of_unit_tuples)):
-            pint_unit_i = list_of_unit_tuples[i][1]
-            if not self._pint_units_equivalent(pint_unit_0, pint_unit_i):
-                raise InconsistentUnitsError(pint_unit_0, pint_unit_i,
-                        'Error in units found in expression: {}'.format(str(node)))
+        pint_unit_0 = child_units[0]
+        for pint_unit_i in child_units:
+            if not self._equivalent_pint_units(pint_unit_0, pint_unit_i):
+                raise InconsistentUnitsError(
+                    pint_unit_0, pint_unit_i,
+                    'Error in units found in expression: %s' % (node,))
 
         # checks were OK, return the first one in the list
-        return (list_of_unit_tuples[0][0], list_of_unit_tuples[0][1])
+        return pint_unit_0
 
-    def _get_unit_for_linear_expression(self, node, list_of_unit_tuples):
+    def _get_unit_for_linear_expression(self, node, child_units):
         """
         Return (and test) the units corresponding to a :py:class:`LinearExpression` node
         in the expression tree.
 
         This is a special node since it does not use "args" the way
         other expression types do. Because of this, the StreamBasedExpressionVisitor
-        does not pick up on the "children", and list_of_unit_tuples is empty.
+        does not pick up on the "children", and child_units is empty.
         Therefore, we implement the recursion into coeffs and vars ourselves.
 
         Parameters
@@ -508,59 +519,37 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
         node : Pyomo expression node
             The parent node of the children
 
-        list_of_unit_tuples : list
-           This is a list of tuples (one for each of the children) where each tuple
-           is a PyomoUnit, pint unit pair (Note: this is different for LinearExpression,
-           - see method documentation above).
+        child_units : list
+           This is a list of pint units (one for each of the children)
 
         Returns
         -------
-        : tuple (PyomoUnit, pint unit)
+        : pint unit
         """
         # StreamBasedExpressionVisitor does not handle the children of this node
-        assert len(list_of_unit_tuples) == 0
+        assert not child_units
 
-        # TODO: This may be expensive for long summations and, in the case of reporting only, we may want to skip the checks
+        # TODO: This may be expensive for long summations and, in the
+        # case of reporting only, we may want to skip the checks
         term_unit_list = []
-        if node.constant:
+        if node.constant not in { 0. }:
             # we have a non-zero constant term, get its units
-            const_units = self._pyomo_units_container.get_units(node.constant)
-            term_unit_list.append(const_units)
+            term_unit_list.append(
+                self._pyomo_units_container._get_pint_units(node.constant))
 
         # go through the coefficients and variables
         assert len(node.linear_coefs) == len(node.linear_vars)
         for k,v in enumerate(node.linear_vars):
             c = node.linear_coefs[k]
-            v_units = self._pyomo_units_container._get_units_tuple(v)
-            c_units = self._pyomo_units_container._get_units_tuple(c)
-            if c_units[1] is None and v_units[1] is None:
-                term_unit_list.append((None,None))
-            elif c_units[1] is None:
-                # v_units[1] is not None
-                term_unit_list.append(v_units)
-            elif v_units[1] is None:
-                # c_units[1] is not None
-                term_unit_list.append(c_units)
-            else:
-                # both are not none
-                term_unit_list.append((c_units[0]*v_units[0], c_units[1]*v_units[1]))
+            v_units = self._pyomo_units_container._get_pint_units(v)
+            c_units = self._pyomo_units_container._get_pint_units(c)
+            term_unit_list.append(c_units*v_units)
 
-        assert len(term_unit_list) > 0
+        assert term_unit_list
 
-        # collected the units for all the terms, so now
-        # verify that the pint units are equivalent from each
-        # of the child nodes - assume that PyomoUnits are equivalent
-        pint_unit_0 = term_unit_list[0][1]
-        for i in range(1, len(term_unit_list)):
-            pint_unit_i = term_unit_list[i][1]
-            if not self._pint_units_equivalent(pint_unit_0, pint_unit_i):
-                raise InconsistentUnitsError(pint_unit_0, pint_unit_i,
-                        'Error in units found in expression: {}'.format(str(node)))
+        return self._get_unit_for_equivalent_children(node, term_unit_list)
 
-        # checks were OK, return the first one in the list
-        return (term_unit_list[0][0], term_unit_list[0][1])
-
-    def _get_unit_for_product(self, node, list_of_unit_tuples):
+    def _get_unit_for_product(self, node, child_units):
         """
         Return (and test) the units corresponding to a product expression node
         in the expression tree.
@@ -570,34 +559,23 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
         node : Pyomo expression node
             The parent node of the children
 
-        list_of_unit_tuples : list
-           This is a list of tuples (one for each of the children) where each tuple
-           is a PyomoUnit, pint unit pair
+        child_units : list
+           This is a list of pint units (one for each of the children)
 
         Returns
         -------
-        : tuple (PyomoUnit, pint unit)
+        : pint unit
         """
-        assert len(list_of_unit_tuples) > 1
+        assert len(child_units) == 2
 
-        pyomo_unit = None
-        pint_unit = None
-        for i in range(len(list_of_unit_tuples)):
-            pyomo_unit_i = list_of_unit_tuples[i][0]
-            pint_unit_i = list_of_unit_tuples[i][1]
-            if pint_unit_i is not None:
-                assert pyomo_unit_i is not None
-                if pint_unit is None:
-                    assert pyomo_unit is None
-                    pint_unit = pint_unit_i
-                    pyomo_unit = pyomo_unit_i
-                else:
-                    pyomo_unit = pyomo_unit * pyomo_unit_i
-                    pint_unit = pint_unit * pint_unit_i
+        pint_unit = child_units[0] * child_units[1]
 
-        return (pyomo_unit, pint_unit)
+        if hasattr(pint_unit, 'units'):
+            return pint_unit.units
 
-    def _get_unit_for_division(self, node, list_of_unit_tuples):
+        return pint_unit
+
+    def _get_unit_for_division(self, node, child_units):
         """
         Return (and test) the units corresponding to a division expression node
         in the expression tree.
@@ -607,31 +585,19 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
         node : Pyomo expression node
             The parent node of the children
 
-        list_of_unit_tuples : list
-           This is a list of tuples (one for each of the children) where each tuple
-           is a PyomoUnit, pint unit pair
+        child_units : list
+           This is a list of pint units (one for each of the children)
 
         Returns
         -------
-        : tuple (PyomoUnit, pint unit)
+        : pint unit
         """
-        assert len(list_of_unit_tuples) == 2
+        assert len(child_units) == 2
 
-        num_pyomo_unit, num_pint_unit = list_of_unit_tuples[0]
-        den_pyomo_unit, den_pint_unit = list_of_unit_tuples[1]
-        if den_pint_unit is None:
-            assert den_pyomo_unit is None
-            return (num_pyomo_unit, num_pint_unit)
-        # CDL using **(-1) since this returns a pint Unit and not a Quantity,
-        # CDL but we could also return the units from the Quantity
-        # CDL return (1.0/pyomo_unit, 1.0/pint_unit)
-        if num_pint_unit is None:
-            assert num_pyomo_unit is None
-            return (1.0/den_pyomo_unit, den_pint_unit**(-1))
-        else:
-            return (num_pyomo_unit/den_pyomo_unit, num_pint_unit/den_pint_unit)
+        # this operation can create a quantity, but we want a pint unit object
+        return child_units[0] / child_units[1]
 
-    def _get_unit_for_reciprocal(self, node, list_of_unit_tuples):
+    def _get_unit_for_reciprocal(self, node, child_units):
         """
         Return (and test) the units corresponding to a reciprocal expression node
         in the expression tree.
@@ -641,26 +607,19 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
         node : Pyomo expression node
             The parent node of the children
 
-        list_of_unit_tuples : list
-           This is a list of tuples (one for each of the children) where each tuple
-           is a PyomoUnit, pint unit pair
+        child_units : list
+           This is a list of pint units (one for each of the children)
 
         Returns
         -------
-        : tuple (PyomoUnit, pint unit)
+        : pint unit
         """
-        assert len(list_of_unit_tuples) == 1
+        assert len(child_units) == 1
 
-        pyomo_unit, pint_unit = list_of_unit_tuples[0]
-        if pint_unit is None:
-            assert pyomo_unit is None
-            return (None, None)
-        # CDL using **(-1) since this returns a pint Unit and not a Quantity,
-        # CDL but we could also return the units from the Quantity
-        # CDL return (1.0/pyomo_unit, 1.0/pint_unit)
-        return (1.0/pyomo_unit, pint_unit**(-1))
+        # this operation can create a quantity, but we want a pint unit object
+        return (1.0 / child_units).units
 
-    def _get_unit_for_pow(self, node, list_of_unit_tuples):
+    def _get_unit_for_pow(self, node, child_units):
         """
         Return (and test) the units corresponding to a pow expression node
         in the expression tree.
@@ -670,54 +629,42 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
         node : Pyomo expression node
             The parent node of the children
 
-        list_of_unit_tuples : list
-           This is a list of tuples (one for each of the children) where each tuple
-           is a PyomoUnit, pint unit pair
+        child_units : list
+           This is a list of pint units (one for each of the children)
 
         Returns
         -------
-        : tuple (PyomoUnit, pint unit)
+        : pint unit
         """
-        assert len(list_of_unit_tuples) == 2
+        assert len(child_units) == 2
 
-        # this operation is x^y
-        # x should be in list_of_unit_tuples[0] and
-        # y should be in list_of_unit_tuples[1]
-        pyomo_unit_base = list_of_unit_tuples[0][0]
-        pint_unit_base = list_of_unit_tuples[0][1]
-        pyomo_unit_exponent = list_of_unit_tuples[1][0]
-        pint_unit_exponent = list_of_unit_tuples[1][1]
+        # the exponent needs to be dimensionless
+        if not self._equivalent_to_dimensionless(child_units[1]):
+            # todo: allow radians?
+            raise UnitsError(
+                "Error in sub-expression: {}. "
+                "Exponents in a pow expression must be dimensionless."
+                "".format(node))
 
-        # check to make sure that the exponent is unitless or dimensionless
-        if pint_unit_exponent is not None and \
-            not self._pint_unit_equivalent_to_dimensionless(pint_unit_exponent):
-            # unit is not unitless, dimensionless, or equivalent to dimensionless (e.g. radians)
-            raise UnitsError("Error in sub-expression: {}. "
-                             "Exponents in a pow expression must be dimensionless."
-                             "".format(node))
-
-        # if the base is unitless or dimensionless, it does not matter if the exponent is fixed
-        if pint_unit_base is None or \
-            self._pint_unit_equivalent_to_dimensionless(pint_unit_base):
-            return (pyomo_unit_base, pyomo_unit_exponent)
-
-        # the base is NOT (None, dimensionless, or equivalent to dimensionless)
-        # need to make sure that the exponent is a fixed number
+        # common case - exponent is a constant number
         exponent = node.args[1]
-        if type(exponent) not in nonpyomo_leaf_types \
-            and not (exponent.is_fixed() or exponent.is_constant()):
+        if type(exponent) in nonpyomo_leaf_types:
+            return child_units[0]**value(exponent)
+
+        # if base is dimensioness, exponent doesn't matter
+        if self._equivalent_to_dimensionless(child_units[0]):
+            return self._pint_dimensionless
+
+        # base is not dimensionless, exponent is dimensionless
+        # ensure that the exponent is fixed
+        if not exponent.is_fixed():
             raise UnitsError("The base of an exponent has units {}, but "
                              "the exponent is not a fixed numerical value."
-                             "".format(str(list_of_unit_tuples[0][0])))
+                             "".format(child_units[0]))
 
-        # base has units and exponent is fixed, return the appropriate unit
-        exponent_value = value(exponent)
-        pyomo_unit = pyomo_unit_base**exponent_value
-        pint_unit = pint_unit_base**exponent_value
+        return child_units[0]**value(exponent)
 
-        return (pyomo_unit, pint_unit)
-
-    def _get_unit_for_single_child(self, node, list_of_unit_tuples):
+    def _get_unit_for_single_child(self, node, child_units):
         """
         Return (and test) the units corresponding to a unary operation (e.g. negation)
         expression node in the expression tree.
@@ -727,80 +674,108 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
         node : Pyomo expression node
             The parent node of the children
 
-        list_of_unit_tuples : list
-           This is a list of tuples (one for each of the children) where each tuple
-           is a PyomoUnit, pint unit pair
+        child_units : list
+           This is a list of pint units (one for each of the children)
 
         Returns
         -------
-        : tuple (PyomoUnit, pint unit)
+        : pint unit
         """
-        assert len(list_of_unit_tuples) == 1
+        assert len(child_units) == 1
+        return child_units[0]
 
-        pyomo_unit = list_of_unit_tuples[0][0]
-        pint_unit = list_of_unit_tuples[0][1]
-        return (pyomo_unit, pint_unit)
-
-    def _get_dimensionless_with_dimensionless_children(self, node, list_of_unit_tuples):
+    def _get_units_ExternalFunction(self, node, child_units):
         """
-        Check to make sure that any child arguments are unitless / dimensionless (for functions like exp())
-        and return (None, None) if successful. Although odd that this does not just return
-        a boolean, it is done this way to match the signature of the other methods used to get
-        units for expressions.
+        Check to make sure that any child arguments are consistent with 
+        arg_units return the value from node.get_units() This
+        was written for ExternalFunctionExpression where the external
+        function has units assigned to its return value and arguments
 
         Parameters
         ----------
         node : Pyomo expression node
             The parent node of the children
 
-        list_of_unit_tuples : list
-           This is a list of tuples (one for each of the children) where each tuple
-           is a PyomoUnit, pint unit pair
+        child_units : list
+           This is a list of pint units (one for each of the children)
 
         Returns
         -------
-        : tuple (None, None)
+        : pint unit
         """
-        for (pyomo_unit, pint_unit) in list_of_unit_tuples:
-            if not self._pint_unit_equivalent_to_dimensionless(pint_unit):
-                raise UnitsError('Expected no units or dimensionless units in {}, but found {}.'.format(str(node), str(pyomo_unit)))
+        # get the list of arg_units
+        arg_units = node.get_arg_units()
+        dless = self._pint_dimensionless
+        if arg_units is None:
+            # they should all be dimensionless
+            arg_units = [dless]*len(child_units)
+        else:
+            # copy arg_units so we don't overwrite the ones in the expression object
+            arg_units = list(arg_units)
+            for i,a in enumerate(arg_units):
+                arg_units[i] = self._pyomo_units_container._get_pint_units(a)
 
-        # if we make it here, then all are equal to None
-        return (None, None)
+        for (arg_unit, pint_unit) in zip(arg_units, child_units):
+            assert arg_unit is not None
+            if not self._equivalent_pint_units(arg_unit, pint_unit):
+                raise InconsistentUnitsError(
+                    arg_unit, pint_unit,
+                    'Inconsistent units found in ExternalFunction.')
 
-    def _get_dimensionless_no_children(self, node, list_of_unit_tuples):
+        # now return the units in node.get_units
+        return self._pyomo_units_container._get_pint_units(node.get_units())
+
+    def _get_dimensionless_with_dimensionless_children(self, node, child_units):
         """
-        Check to make sure the length of list_of_unit_tuples is zero, and returns
-        (None, None) to indicate unitless. Used for leaf nodes that should not have any units.
+        Check to make sure that any child arguments are unitless /
+        dimensionless (for functions like exp()) and return dimensionless.
 
         Parameters
         ----------
         node : Pyomo expression node
             The parent node of the children
 
-        list_of_unit_tuples : list
-           This is a list of tuples (one for each of the children) where each tuple
-           is a PyomoUnit, pint unit pair
+        child_units : list
+           This is a list of pint units (one for each of the children)
 
         Returns
         -------
-        : tuple (None, None)
+        : pint unit
         """
-        assert len(list_of_unit_tuples) == 0
-        assert type(node) != _PyomoUnit
+        for pint_unit in child_units:
+            if not self._equivalent_to_dimensionless(pint_unit):
+                raise UnitsError(
+                    'Expected no units or dimensionless units in {}, '
+                    'but found {}.'.format(str(node), str(pint_unit)))
 
-        # # check that the leaf does not have any units
-        # # TODO: Leave this commented code here since this "might" be similar to the planned mechanism for getting units from Pyomo component leaves
-        # if hasattr(node, 'get_units') and node.get_units() is not None:
-        #     raise UnitsError('Expected dimensionless units in {}, but found {}.'.format(str(node),
-        #                         str(node.get_units())))
+        return self._pint_dimensionless
 
-        return (None, None)
+    def _get_dimensionless_no_children(self, node, child_units):
+        """
+        Check to make sure the length of child_units is zero, and returns
+        dimensionless. Used for leaf nodes that should not have any units.
 
-    def _get_unit_for_unary_function(self, node, list_of_unit_tuples):
+        Parameters
+        ----------
+        node : Pyomo expression node
+            The parent node of the children
+
+        child_units : list
+           This is a list of pint units (one for each of the children)
+
+        Returns
+        -------
+        : pint unit
+        """
+        assert len(child_units) == 0
+        # may need more checks for dimensionless for other types
+        assert type(node) is IndexTemplate
+        return self._pint_dimensionless
+
+    def _get_unit_for_unary_function(self, node, child_units):
         """
         Return (and test) the units corresponding to a unary function expression node
-        in the expression tree. Checks that the list_of_unit_tuples is of length 1
+        in the expression tree. Checks that child_units is of length 1
         and calls the appropriate method from the unary function method map.
 
         Parameters
@@ -808,101 +783,86 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
         node : Pyomo expression node
             The parent node of the children
 
-        list_of_unit_tuples : list
-           This is a list of tuples (one for each of the children) where each tuple
-           is a PyomoUnit, pint unit pair
+        child_units : list
+           This is a list of pint units (one for each of the children)
 
         Returns
         -------
-        : tuple (PyomoUnit, pint unit)
+        : pint unit
         """
-        assert len(list_of_unit_tuples) == 1
+        assert len(child_units) == 1
         func_name = node.getname()
-        if func_name in self.unary_function_method_map:
-            node_func = self.unary_function_method_map[func_name]
-            if node_func is not None:
-                return node_func(self, node, list_of_unit_tuples)
-
-        raise TypeError('An unhandled unary function: {} was encountered while retrieving the'
+        node_func = self.unary_function_method_map.get(func_name, None)
+        if node_func is None:
+            raise TypeError('An unhandled unary function: {} was encountered while retrieving the'
                         ' units of expression {}'.format(func_name, str(node)))
+        return node_func(self, node, child_units)
 
-    def _get_unit_for_expr_if(self, node, list_of_unit_tuples):
+    def _get_unit_for_expr_if(self, node, child_units):
         """
         Return (and test) the units corresponding to an Expr_if expression node
         in the expression tree. The _if relational expression is validated and
         the _then/_else are checked to ensure they have the same units. Also checks
-        to make sure length of list_of_unit_tuples is 3
+        to make sure length of child_units is 3
 
         Parameters
         ----------
         node : Pyomo expression node
             The parent node of the children
 
-        list_of_unit_tuples : list
-           This is a list of tuples (one for each of the children) where each tuple
-           is a PyomoUnit, pint unit pair
+        child_units : list
+           This is a list of pint units (one for each of the children)
 
         Returns
         -------
-        : tuple (PyomoUnit, pint unit)
+        : pint unit
         """
-        assert len(list_of_unit_tuples) == 3
+        assert len(child_units) == 3
 
         # the _if should already be consistent (since the children were
         # already checked)
+        if not self._equivalent_pint_units(child_units[1], child_units[2]):
+            raise InconsistentUnitsError(
+                child_units[1], child_units[2],
+                'Error in units found in expression: %s' % (node,))
 
-        # verify that they _then and _else are equivalent
-        then_pyomo_unit, then_pint_unit = list_of_unit_tuples[1]
-        else_pyomo_unit, else_pint_unit = list_of_unit_tuples[2]
+        return child_units[1]
 
-        if not self._pint_units_equivalent(then_pint_unit, else_pint_unit):
-            raise InconsistentUnitsError(then_pyomo_unit, else_pyomo_unit,
-                    'Error in units found in expression: {}'.format(str(node)))
-
-        # then and else are the same
-        return (then_pyomo_unit, then_pint_unit)
-
-    def _get_dimensionless_with_radians_child(self, node, list_of_unit_tuples):
+    def _get_dimensionless_with_radians_child(self, node, child_units):
         """
         Return (and test) the units corresponding to a trig function expression node
-        in the expression tree. Checks that the length of list_of_unit_tuples is 1
+        in the expression tree. Checks that the length of child_units is 1
         and that the units of that child expression are unitless or radians and
-        returns (None, None) for the units.
+        returns dimensionless for the units.
 
         Parameters
         ----------
         node : Pyomo expression node
             The parent node of the children
 
-        list_of_unit_tuples : list
-           This is a list of tuples (one for each of the children) where each tuple
-           is a PyomoUnit, pint unit pair
+        child_units : list
+           This is a list of pint units (one for each of the children)
 
         Returns
         -------
-        : tuple (None, None)
+        : pint unit
         """
-        assert len(list_of_unit_tuples) == 1
+        assert len(child_units) == 1
 
-        pyomo_unit = list_of_unit_tuples[0][0]
-        pint_unit = list_of_unit_tuples[0][1]
-        if pint_unit is None:
-            assert pyomo_unit is None
-            # unitless, all is OK
-            return (None, None)
-        else:
-            # pint unit is not None, now compare against radians / dimensionless
-            if self._pint_units_equivalent(pint_unit, self._pint_registry.radians):
-                return (None, None)
+        if self._equivalent_to_dimensionless(child_units[0]):
+            return self._pint_dimensionless
+        if self._equivalent_pint_units(child_units[0], self._pint_radian):
+            return self._pint_dimensionless
 
         # units are not None, dimensionless, or radians
-        raise UnitsError('Expected radians in argument to function in expression {}, but found {}'.format(
-            str(node), str(pyomo_unit)))
+        raise UnitsError(
+            'Expected radians or dimensionless in argument to function '
+            'in expression %s, but found %s' % (node, child_units[0]))
 
-    def _get_radians_with_dimensionless_child(self, node, list_of_unit_tuples):
+    def _get_radians_with_dimensionless_child(self, node, child_units):
         """
         Return (and test) the units corresponding to an inverse trig expression node
-        in the expression tree. Checks that the length of list_of_unit_tuples is 1
+        in the expression tree. Checks that the length of child_units is 1
         and that the child argument is dimensionless, and returns radians
 
         Parameters
@@ -910,79 +870,69 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
         node : Pyomo expression node
             The parent node of the children
 
-        list_of_unit_tuples : list
-           This is a list of tuples (one for each of the children) where each tuple
-           is a PyomoUnit, pint unit pair
+        child_units : list
+           This is a list of pint units (one for each of the children)
 
         Returns
         -------
-        : tuple (PyomoUnit for radians, pint_unit for radians)
+        : pint unit
         """
-        assert len(list_of_unit_tuples) == 1
+        assert len(child_units) == 1
 
-        pyomo_unit = list_of_unit_tuples[0][0]
-        pint_unit = list_of_unit_tuples[0][1]
-        if not self._pint_unit_equivalent_to_dimensionless(pint_unit):
-            raise UnitsError('Expected dimensionless argument to function in expression {},'
-                             ' but found {}'.format(
-                             str(node), str(pyomo_unit)))
+        if self._equivalent_to_dimensionless(child_units[0]):
+            return self._pint_radian
 
-        uc = self._pyomo_units_container
-        return (uc.radians, self._pint_registry.radians)
+        raise UnitsError(
+            'Expected dimensionless argument to function in expression {},'
+            ' but found {}'.format(str(node), str(child_units[0])))
 
-    def _get_unit_sqrt(self, node, list_of_unit_tuples):
+    def _get_unit_sqrt(self, node, child_units):
         """
         Return (and test) the units corresponding to a sqrt expression node
-        in the expression tree. Checks that the length of list_of_unit_tuples is one.
+        in the expression tree. Checks that the length of child_units is one.
 
         Parameters
         ----------
         node : Pyomo expression node
             The parent node of the children
 
-        list_of_unit_tuples : list
-           This is a list of tuples (one for each of the children) where each tuple
-           is a PyomoUnit, pint unit pair
+        child_units : list
+           This is a list of pint units (one for each of the children)
 
         Returns
         -------
-        : tuple (PyomoUnit, pint unit)
+        : pint unit
         """
-        assert len(list_of_unit_tuples) == 1
-        pint_unit = list_of_unit_tuples[0][1]
-        if pint_unit is None:
-            return (None, None)
-
-        # units are not None
-        return (list_of_unit_tuples[0][0]**0.5, list_of_unit_tuples[0][1]**0.5)
+        assert len(child_units) == 1
+        return child_units[0]**0.5
 
     node_type_method_map = {
-        expr.EqualityExpression: _get_unit_for_equivalent_children,
-        expr.InequalityExpression: _get_unit_for_equivalent_children,
-        expr.RangedExpression: _get_unit_for_equivalent_children,
-        expr.SumExpression: _get_unit_for_equivalent_children,
-        expr.NPV_SumExpression: _get_unit_for_equivalent_children,
-        expr.ProductExpression: _get_unit_for_product,
-        expr.MonomialTermExpression: _get_unit_for_product,
-        expr.NPV_ProductExpression: _get_unit_for_product,
-        expr.DivisionExpression: _get_unit_for_division,
-        expr.NPV_DivisionExpression: _get_unit_for_division,
-        expr.ReciprocalExpression: _get_unit_for_reciprocal,
-        expr.NPV_ReciprocalExpression: _get_unit_for_reciprocal,
-        expr.PowExpression: _get_unit_for_pow,
-        expr.NPV_PowExpression: _get_unit_for_pow,
-        expr.NegationExpression: _get_unit_for_single_child,
-        expr.NPV_NegationExpression: _get_unit_for_single_child,
-        expr.AbsExpression: _get_unit_for_single_child,
-        expr.NPV_AbsExpression: _get_unit_for_single_child,
-        expr.UnaryFunctionExpression: _get_unit_for_unary_function,
-        expr.NPV_UnaryFunctionExpression: _get_unit_for_unary_function,
-        expr.Expr_ifExpression: _get_unit_for_expr_if,
+        EXPR.EqualityExpression: _get_unit_for_equivalent_children,
+        EXPR.InequalityExpression: _get_unit_for_equivalent_children,
+        EXPR.RangedExpression: _get_unit_for_equivalent_children,
+        EXPR.SumExpression: _get_unit_for_equivalent_children,
+        EXPR.NPV_SumExpression: _get_unit_for_equivalent_children,
+        EXPR.ProductExpression: _get_unit_for_product,
+        EXPR.MonomialTermExpression: _get_unit_for_product,
+        EXPR.NPV_ProductExpression: _get_unit_for_product,
+        EXPR.DivisionExpression: _get_unit_for_division,
+        EXPR.NPV_DivisionExpression: _get_unit_for_division,
+        EXPR.ReciprocalExpression: _get_unit_for_reciprocal,
+        EXPR.NPV_ReciprocalExpression: _get_unit_for_reciprocal,
+        EXPR.PowExpression: _get_unit_for_pow,
+        EXPR.NPV_PowExpression: _get_unit_for_pow,
+        EXPR.NegationExpression: _get_unit_for_single_child,
+        EXPR.NPV_NegationExpression: _get_unit_for_single_child,
+        EXPR.AbsExpression: _get_unit_for_single_child,
+        EXPR.NPV_AbsExpression: _get_unit_for_single_child,
+        EXPR.UnaryFunctionExpression: _get_unit_for_unary_function,
+        EXPR.NPV_UnaryFunctionExpression: _get_unit_for_unary_function,
+        EXPR.Expr_ifExpression: _get_unit_for_expr_if,
         IndexTemplate: _get_dimensionless_no_children,
-        expr.GetItemExpression: _get_dimensionless_with_dimensionless_children,
-        expr.ExternalFunctionExpression: _get_dimensionless_with_dimensionless_children,
-        expr.NPV_ExternalFunctionExpression: _get_dimensionless_with_dimensionless_children,
-        expr.LinearExpression: _get_unit_for_linear_expression
+        EXPR.GetItemExpression: _get_dimensionless_with_dimensionless_children,
+        EXPR.ExternalFunctionExpression: _get_units_ExternalFunction,
+        EXPR.NPV_ExternalFunctionExpression: _get_units_ExternalFunction,
+        EXPR.LinearExpression: _get_unit_for_linear_expression
     }
 
     unary_function_method_map = {
@@ -1011,71 +961,131 @@ class _UnitExtractionVisitor(expr.StreamBasedExpressionVisitor):
         method is called when moving back up the tree in a depth first search."""
         
         # first check if the node is a leaf
-        if type(node) in nonpyomo_leaf_types \
-                or not node.is_expression_type():
-            if isinstance(node, _PyomoUnit):
-                return (node, node._get_pint_unit())
+        nodetype = type(node)
 
-            # TODO: Check for Var or Param and return their units...
-            # I have a leaf, but this is not a PyomoUnit - (treat as dimensionless)
-            return (None, None)
+        if nodetype in native_types or nodetype in pyomo_constant_types:
+            return self._pint_dimensionless
 
-        # not a leaf - get the appropriate function for type of the node
-        node_func = self.node_type_method_map.get(type(node), None)
+        node_func = self.node_type_method_map.get(nodetype, None)
         if node_func is not None:
-            pyomo_unit, pint_unit = node_func(self, node, data)
-            if pint_unit is not None and \
-                 self._pint_unit_equivalent_to_dimensionless(pint_unit):
-                # I want to return None instead of dimensionless
-                # but radians are also equivalent to dimensionless
-                # For now, this test works, but we need to find a better approach
-                teststr = '{:!~s}'.format(pint_unit)
-                if teststr == '':
-                    return (None, None)
+            return node_func(self, node, data)
 
-            return (pyomo_unit, pint_unit)
+        elif not node.is_expression_type():
+            # this is a leaf, but not a native type
+            if nodetype is _PyomoUnit:
+                return node._get_pint_unit()
+            elif hasattr(node, 'get_units'):
+                # might want to add other common types here
+                pyomo_unit = node.get_units()
+                pint_unit = self._pyomo_units_container._get_pint_units(pyomo_unit)
+                return pint_unit
+
+        # not a leaf - check if it is a named expression
+        if hasattr(node, 'is_named_expression_type') and node.is_named_expression_type():
+            pint_unit = self._get_unit_for_single_child(node, data)
+            return pint_unit
 
         raise TypeError('An unhandled expression node type: {} was encountered while retrieving the'
-                        ' units of expression'.format(str(node_type), str(node)))
+                        ' units of expression'.format(str(nodetype), str(node)))
 
-
+    
 class PyomoUnitsContainer(object):
     """Class that is used to create and contain units in Pyomo.
 
-    This is the class that is used to create, contain, and interact with units in Pyomo.
-    The module (:mod:`pyomo.core.base.units_container`) also contains a module attribute
-    called `units` that is a singleton instance of a PyomoUnitsContainer. This singleton should be
-    used instead of creating your own instance of a :py:class:`PyomoUnitsContainer`.
-    For an overview of the usage of this class, see the module documentation
+    This is the class that is used to create, contain, and interact
+    with units in Pyomo.  The module
+    (:mod:`pyomo.core.base.units_container`) also contains a module
+    level units container :py:data:`units` that is an instance of a
+    PyomoUnitsContainer. This module instance should typically be used
+    instead of creating your own instance of a
+    :py:class:`PyomoUnitsContainer`.  For an overview of the usage of
+    this class, see the module documentation
     (:mod:`pyomo.core.base.units_container`)
 
-    This class is based on the "pint" module. Documentation for available units can be found
-    at the following url: https://github.com/hgrecco/pint/blob/master/pint/default_en.txt
+    This class is based on the "pint" module. Documentation for
+    available units can be found at the following url:
+    https://github.com/hgrecco/pint/blob/master/pint/default_en.txt
 
-    Note: Pre-defined units can be accessed through attributes on the PyomoUnitsContainer
-    class; however, these attributes are created dynamically through the __getattr__ method,
-    and are not present on the class until they are requested.
+    .. note::
+
+        Pre-defined units can be accessed through attributes on the
+        PyomoUnitsContainer class; however, these attributes are created
+        dynamically through the __getattr__ method, and are not present
+        on the class until they are requested.
+
     """
     def __init__(self):
-        """Create a PyomoUnitsContainer instance. """
-        # Developers: Do not interact with this attribute directly, but instead
-        # access through the property _pint_registry since that is where the import
-        # of the 'pint' module is checked
-        self.__pint_registry = None
+        """Create a PyomoUnitsContainer instance."""
+        self._pint_registry = pint_module.UnitRegistry()
+        self._pint_dimensionless = self._pint_registry.dimensionless
 
-    @property
-    def _pint_registry(self):
-        """ Return the pint.UnitsRegistry instance corresponding to this container. """
-        if pint_module is None:
-            # pint was not imported for some reason
-            raise RuntimeError("The PyomoUnitsContainer in the units_container module requires"
-                              " the package 'pint', but this package could not be imported."
-                              " Please make sure you have 'pint' installed.")
 
-        if self.__pint_registry is None:
-            self.__pint_registry = pint_module.UnitRegistry()
+    def load_definitions_from_file(self, definition_file):
+        """Load new units definitions from a file
 
-        return self.__pint_registry
+        This method loads additional units definitions from a user
+        specified definition file. An example of a definitions file
+        can be found at:
+        https://github.com/hgrecco/pint/blob/master/pint/default_en.txt
+
+        If we have a file called ``my_additional_units.txt`` with the
+        following lines::
+
+            USD = [currency]
+
+        Then we can add this to the container with:
+
+        .. doctest::
+            :skipif: not pint_available
+            :hide:
+
+            # get a local units object (to avoid duplicate registration
+            # with the example in load_definitions_from_strings)
+            >>> import pyomo.core.base.units_container as _units
+            >>> u = _units.PyomoUnitsContainer()
+            >>> with open('my_additional_units.txt', 'w') as FILE:
+            ...     tmp = FILE.write("USD = [currency]\\n")
+
+        .. doctest::
+            :skipif: not pint_available
+
+            >>> u.load_definitions_from_file('my_additional_units.txt')
+            >>> print(u.USD)
+            USD
+
+        """
+        self._pint_registry.load_definitions(definition_file)
+        self._pint_dimensionless = self._pint_registry.dimensionless
+
+    def load_definitions_from_strings(self, definition_string_list):
+        """Load new units definitions from a string
+
+        This method loads additional units definitions from a list of
+        strings (one for each line). An example of the definitions
+        strings can be found at:
+        https://github.com/hgrecco/pint/blob/master/pint/default_en.txt
+
+        For example, to add the currency dimension and US dollars as a
+        unit, use
+
+        .. doctest::
+            :skipif: not pint_available
+            :hide:
+
+            # get a local units object (to avoid duplicate registration
+            # with the example in load_definitions_from_strings)
+            >>> import pyomo.core.base.units_container as _units
+            >>> u = _units.PyomoUnitsContainer()
+
+        .. doctest::
+            :skipif: not pint_available
+
+            >>> u.load_definitions_from_strings(['USD = [currency]'])
+            >>> print(u.USD)
+            USD
+
+        """
+        self._pint_registry.load_definitions(definition_string_list)
 
     def __getattr__(self, item):
         """
@@ -1086,7 +1096,7 @@ class PyomoUnitsContainer(object):
         ----------
         item : str
             the name of the new field requested
-
+external
         Returns
         -------
         : PyomoUnit
@@ -1119,10 +1129,7 @@ class PyomoUnitsContainer(object):
         if pint_unit is None:
             raise AttributeError('Attribute {0} not found.'.format(str(item)))
 
-    def create_PyomoUnit(self, pint_unit):
-        return _PyomoUnit(pint_unit, self._pint_registry)
-
-    # TODO: Add support to specify a units definition file instead of this programatic interface
+    # We added support to specify a units definition file instead of this programatic interface
     # def create_new_base_dimension(self, dimension_name, base_unit_name):
     #     """
     #     Use this method to create a new base dimension (e.g. a new dimension other than Length, Mass) for the unit manager.
@@ -1176,9 +1183,27 @@ class PyomoUnitsContainer(object):
     #                                                                  float(conv_offset))
     #     self._pint_registry.define(defn_str)
 
-    def _get_units_tuple(self, expr):
+    def _equivalent_pint_units(self, a, b, TOL=1e-12):
+        if a is b or a == b:
+            return True
+        base_a = self._pint_registry.get_base_units(a)
+        base_b = self._pint_registry.get_base_units(b)
+        if base_a[1] != base_b[1]:
+            return False
+        return abs(base_a[0] - base_b[0]) / min(base_a[0], base_b[0]) <= TOL
+
+    def _equivalent_to_dimensionless(self, a, TOL=1e-12):
+        if a is self._pint_dimensionless or a == self._pint_dimensionless:
+            return True
+        base_a = self._pint_registry.get_base_units(a)
+        if not base_a[1].dimensionless:
+            return False
+        return abs(base_a[0] - 1.) / min(base_a[0], 1.) <= TOL
+
+    def _get_pint_units(self, expr):
         """
-        Return a tuple of the PyomoUnit, and pint_unit corresponding to the expression in expr.
+        Return the pint units corresponding to the expression. This does
+        a number of checks as well.
 
         Parameters
         ----------
@@ -1187,17 +1212,17 @@ class PyomoUnitsContainer(object):
 
         Returns
         -------
-        : tuple (PyomoUnit, pint unit)
+        : pint unit
         """
-        pyomo_unit, pint_unit = _UnitExtractionVisitor(self).walk_expression(expr=expr)
+        if expr is None:
+            return self._pint_dimensionless
 
-        if pint_unit is not None:
-            assert pyomo_unit is not None
-            if type(pint_unit) != type(self._pint_registry.kg):
-                pint_unit = pint_unit.units
-            return (_PyomoUnit(pint_unit, self._pint_registry), pint_unit)
-        return (None, None)
-
+        pint_units = PintUnitExtractionVisitor(self).walk_expression(expr=expr)
+        if hasattr(pint_units, 'units'):
+            # likely, we got a quantity object and not a units object
+            return pint_units.units
+        return pint_units
+    
     def get_units(self, expr):
         """
         Return the Pyomo units corresponding to this expression (also performs validation
@@ -1218,100 +1243,178 @@ class PyomoUnitsContainer(object):
         :py:class:`pyomo.core.base.units_container.UnitsError`, :py:class:`pyomo.core.base.units_container.InconsistentUnitsError`
 
         """
-        pyomo_unit, pint_unit = self._get_units_tuple(expr=expr)
+        pint_unit = self._get_pint_units(expr)
+        if pint_unit.dimensionless:
+            if pint_unit == self._pint_dimensionless:
+                return None
+        return _PyomoUnit(pint_unit, self._pint_registry)
 
-        # Currently testing the idea that a PyomoUnit can contain a pint_unit expression
-        # (instead of just a single unit). If this is OK long term, then we can clean up the
-        # visitor code to only track the pint units
-        return pyomo_unit
-
-    def check_units_consistency(self, expr, allow_exceptions=True):
+    def _pint_convert_temp_from_to(self, numerical_value, pint_from_units, pint_to_units):
+        if type(numerical_value) not in native_numeric_types:
+            raise UnitsError('Conversion routines for absolute and relative temperatures require a numerical value only.'
+                             ' Pyomo objects (Var, Param, expressions) are not supported. Please use value(x) to'
+                             ' extract the numerical value if necessary.')
+        
+        src_quantity = self._pint_registry.Quantity(numerical_value, pint_from_units)
+        dest_quantity = src_quantity.to(pint_to_units)
+        return dest_quantity.magnitude
+        
+    def convert_temp_K_to_C(self, value_in_K):
         """
-        Check the consistency of the units within an expression. IF allow_exceptions is False,
-        then this function swallows the exception and returns only True or False. Otherwise,
-        it will throw an exception if the units are inconsistent.
+        Convert a value in Kelvin to degrees Celcius.  Note that this method
+        converts a numerical value only. If you need temperature
+        conversions in expressions, please work in absolute
+        temperatures only.
+        """
+        return self._pint_convert_temp_from_to(value_in_K, self._pint_registry.K, self._pint_registry.degC)
+
+    def convert_temp_C_to_K(self, value_in_C):
+        """
+        Convert a value in degrees Celcius to Kelvin Note that this
+        method converts a numerical value only. If you need
+        temperature conversions in expressions, please work in
+        absolute temperatures only.
+        """
+        return self._pint_convert_temp_from_to(value_in_C, self._pint_registry.degC, self._pint_registry.K)
+
+    def convert_temp_R_to_F(self, value_in_R):
+        """
+        Convert a value in Rankine to degrees Fahrenheit.  Note that
+        this method converts a numerical value only. If you need
+        temperature conversions in expressions, please work in
+        absolute temperatures only.
+        """
+        return self._pint_convert_temp_from_to(value_in_R, self._pint_registry.rankine, self._pint_registry.degF)
+
+    def convert_temp_F_to_R(self, value_in_F):
+        """
+        Convert a value in degrees Fahrenheit to Rankine.  Note that
+        this method converts a numerical value only. If you need
+        temperature conversions in expressions, please work in
+        absolute temperatures only.
+        """
+        return self._pint_convert_temp_from_to(value_in_F, self._pint_registry.degF, self._pint_registry.rankine)
+
+    def convert(self, src, to_units=None):
+        """
+        This method returns an expression that contains the
+        explicit conversion from one unit to another.
 
         Parameters
         ----------
-        expr : Pyomo expression
-            The source expression to check.
-
-        allow_exceptions: bool
-            True if you want any exceptions to be thrown, False if you only want a boolean
-            (and the exception is ignored).
+        src : Pyomo expression
+           The source value that will be converted. This could be a
+           Pyomo Var, Pyomo Param, or a more complex expression.
+        to_units : Pyomo units expression
+           The desired target units for the new expression
 
         Returns
         -------
-        : bool
-           True if units are consistent, and False if not
-
-        Raises
-        ------
-        :py:class:`pyomo.core.base.units_container.UnitsError`, :py:class:`pyomo.core.base.units_container.InconsistentUnitsError`
-
+           ret : Pyomo expression
         """
-        try:
-            pyomo_unit, pint_unit = self._get_units_tuple(expr=expr)
-        except (UnitsError, InconsistentUnitsError):
-            if allow_exceptions:
-                raise
-            return False
+        src_pint_unit = self._get_pint_units(src)
+        to_pint_unit = self._get_pint_units(to_units)
+        if src_pint_unit == to_pint_unit:
+            return src
 
-        return True
+        # We disallow offset units, so we only need a factor to convert
+        # between the two
+        src_base_factor, base_units_src = self._pint_registry.get_base_units(
+            src_pint_unit, check_nonmult=True)
+        to_base_factor, base_units_to = self._pint_registry.get_base_units(
+            to_pint_unit, check_nonmult=True)
 
+        if base_units_src != base_units_to:
+            raise InconsistentUnitsError(
+                src_pint_unit, to_pint_unit,
+                'Error in convert: units not compatible.')
 
-    def check_units_equivalent(self, expr1, expr2):
+        return (src_base_factor/to_base_factor) * _PyomoUnit(
+            to_pint_unit/src_pint_unit, self._pint_registry) * src
+
+    def convert_value(self, num_value, from_units=None, to_units=None):
         """
-        Check if the units associated with each of the expressions are equivalent.
+        This method performs explicit conversion of a numerical value
+        from one unit to another, and returns the new value.
+
+        The argument "num_value" must be a native numeric type (e.g. float).
+        Note that this method returns a numerical value only, and not an
+        expression with units.
 
         Parameters
         ----------
-        expr1 : Pyomo expression
-           The first expression.
-        expr2 : Pyomo expression
-           The second expression.
+        num_value : float or other native numeric type
+           The value that will be converted
+        from_units : Pyomo units expression
+           The units to convert from
+        to_units : Pyomo units expression
+           The units to convert to
 
         Returns
         -------
-        : bool
-           True if the expressions have equivalent units, False otherwise.
-
-        Raises
-        ------
-        :py:class:`pyomo.core.base.units_container.UnitsError`, :py:class:`pyomo.core.base.units_container.InconsistentUnitsError`
+           float : The converted value
 
         """
-        pyomo_unit1, pint_unit1 = self._get_units_tuple(expr1)
-        pyomo_unit2, pint_unit2 = self._get_units_tuple(expr2)
-        return _UnitExtractionVisitor(self)._pint_units_equivalent(pint_unit1, pint_unit2)
+        if type(num_value) not in native_numeric_types:
+            raise UnitsError('The argument "num_value" in convert_value must be a native numeric type, but'
+                             ' instead type {} was found.'.format(type(num_value)))
+        
+        from_pint_unit = self._get_pint_units(from_units)
+        to_pint_unit = self._get_pint_units(to_units)
+        if from_pint_unit == to_pint_unit:
+            return num_value
 
-    # def convert_value(self, src_value, from_units=None, to_units=None):
-    #     """
-    #     This method performs explicit conversion of a numerical value in
-    #     one unit to a numerical value in another unit.
-    #
-    #     Parameters
-    #     ----------
-    #     src_value : float
-    #        The numeric value that will be converted
-    #     from_units : Pyomo expression with units
-    #        The source units for value
-    #     to_units : Pyomo expression with units
-    #        The desired target units for the new value
-    #
-    #     Returns
-    #     -------
-    #        float : The new value (src_value converted from from_units to to_units)
-    #     """
-    #     from_pyomo_unit, from_pint_unit = self._get_units_tuple(from_units)
-    #     to_pyomo_unit, to_pint_unit = self._get_units_tuple(to_units)
-    #
-    #     src_quantity = src_value * pint_src_unit
-    #     dest_quantity = src_quantity.to(pint_dest_unit)
-    #     return dest_quantity.magnitude
+        # We disallow offset units, so we only need a factor to convert
+        # between the two
+        #
+        # TODO: Do we need to disallow offset units here? Should we
+        # assume the user knows what they are doing?
+        #
+        # TODO: This check may be overkill - pint will raise an error
+        # that may be sufficient
+        from_base_factor, from_base_units = self._pint_registry.get_base_units(
+            from_pint_unit, check_nonmult=True)
+        to_base_factor, to_base_units = self._pint_registry.get_base_units(
+            to_pint_unit, check_nonmult=True)
+        if from_base_units != to_base_units:
+            raise UnitsError(
+                'Cannot convert %s to %s. Units are not compatible.'
+                % (from_units, to_units))
 
-#: Module level instance of a PyomoUnitsContainer to use for all units within a Pyomo model
-# See module level documentation for an example.
-units = PyomoUnitsContainer()
+        # convert the values
+        from_quantity = num_value * from_pint_unit
+        to_quantity = from_quantity.to(to_pint_unit)
+        return to_quantity.magnitude
 
 
+class _DeferredUnitsSingleton(PyomoUnitsContainer):
+    """A class supporting deferred interrogation of pint_available.
+
+    This class supports creating a module-level singleton, but deferring
+    the interrogation of the pint_available flag until the first time
+    the object is actually used.  If pint is available, this instance
+    object is replaced by an actual PyomoUnitsContainer.  Otherwise this
+    leverages the pint_module to raise an (informative)
+    DeferredImportError exception.
+
+    """
+
+    def __init__(self):
+        # do NOT call the base class __init__ so that the pint_module is
+        # not accessed
+        pass
+
+    def __getattribute__(self, attr):
+        if pint_available:
+            self.__class__ = PyomoUnitsContainer
+            self.__init__()
+            return getattr(self, attr)
+        else:
+            # Generate the ImportError
+            return getattr(pint_module, attr)
+
+# Define a module level instance of a PyomoUnitsContainer to use for
+# all units within a Pyomo model. If pint is not available, this will
+# cause an error at the first usage See module level documentation for
+# an example.
+units = _DeferredUnitsSingleton()

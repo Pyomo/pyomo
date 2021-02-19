@@ -17,14 +17,16 @@ pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-import pyutilib.services
 
+from pyomo.common.tempfiles import TempfileManager
 import pyomo.opt
 from pyomo.opt import (TerminationCondition,
                        SolutionStatus,
-                       SolverStatus)
+                       SolverStatus,
+                       check_optimal_termination,
+                       assert_optimal_termination)
 
-old_tempdir = pyutilib.services.TempfileManager.tempdir
+old_tempdir = TempfileManager.tempdir
 
 class Test(unittest.TestCase):
 
@@ -33,11 +35,11 @@ class Test(unittest.TestCase):
         import pyomo.environ
 
     def setUp(self):
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
 
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        TempfileManager.clear_tempfiles()
+        TempfileManager.tempdir = old_tempdir
         if os.path.exists(currdir+"test_sol.txt"):
             os.remove(currdir+"test_sol.txt")
 
@@ -60,6 +62,11 @@ class Test(unittest.TestCase):
                              SolutionStatus.infeasible)
             self.assertEqual(soln.solver.status,
                              SolverStatus.warning)
+            
+            self.assertFalse(check_optimal_termination(soln))
+
+            with self.assertRaises(RuntimeError):
+                assert_optimal_termination(soln)
 
     def test_infeasible2(self):
         with pyomo.opt.ReaderFactory("sol") as reader:
@@ -84,6 +91,8 @@ class Test(unittest.TestCase):
                              SolutionStatus.optimal)
             self.assertEqual(soln.solver.status,
                              SolverStatus.ok)
+            self.assertTrue(check_optimal_termination(soln))
+            assert_optimal_termination(soln)
 
     def test_bad_options(self):
         with pyomo.opt.ReaderFactory("sol") as reader:

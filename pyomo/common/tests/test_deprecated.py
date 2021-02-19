@@ -1,7 +1,24 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+#
 """Testing for deprecated function."""
+import sys
+import types
+import weakref
+
 import pyutilib.th as unittest
+
 from pyomo.common import DeveloperError
-from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.deprecation import (
+    deprecated, deprecation_warning, relocated_module_attribute,
+)
 from pyomo.common.log import LoggingIntercept
 
 from six import StringIO
@@ -43,7 +60,7 @@ class TestDeprecated(unittest.TestCase):
         # Note: No docstring, else nose replaces the function name with
         # the docstring in output.
         #"""Test for deprecated function decorator."""
-        @deprecated(version='')
+        @deprecated(version='test')
         def foo(bar='yeah'):
             logger.warning(bar)
 
@@ -79,7 +96,7 @@ class TestDeprecated(unittest.TestCase):
 
 
     def test_with_doc_string(self):
-        @deprecated(version='')
+        @deprecated(version='test')
         def foo(bar='yeah'):
             """Show that I am a good person.
 
@@ -121,7 +138,7 @@ class TestDeprecated(unittest.TestCase):
 
 
     def test_with_custom_message(self):
-        @deprecated('This is a custom message, too.', version='')
+        @deprecated('This is a custom message, too.', version='test')
         def foo(bar='yeah'):
             """Show that I am a good person.
 
@@ -163,7 +180,7 @@ class TestDeprecated(unittest.TestCase):
 
     def test_with_custom_logger(self):
         @deprecated('This is a custom message', logger='pyomo.common',
-                    version='')
+                    version='test')
         def foo(bar='yeah'):
             """Show that I am a good person.
 
@@ -205,7 +222,7 @@ class TestDeprecated(unittest.TestCase):
         self.assertNotIn('DEPRECATED:', DEP_OUT.getvalue())
 
     def test_with_class(self):
-        @deprecated(version='')
+        @deprecated(version='test')
         class foo(object):
             def __init__(self):
                 logger.warning('yeah')
@@ -231,7 +248,7 @@ class TestDeprecated(unittest.TestCase):
         class foo(object):
             def __init__(self):
                 pass
-            @deprecated(version='')
+            @deprecated(version='test')
             def bar(self):
                 logger.warning('yeah')
 
@@ -280,6 +297,66 @@ class TestDeprecated(unittest.TestCase):
                       DEP_OUT.getvalue())
 
 
+class Bar(object):
+    data = 21
+
+relocated_module_attribute(
+    'myFoo', 'pyomo.common.tests.relocated.Bar', 'test')
+
+class TestRelocated(unittest.TestCase):
+
+    def test_relocated_class(self):
+        # Before we test multiple relocated objects, verify that it will
+        # handle the import of a new module
+        warning = "DEPRECATED: the 'myFoo' class has been moved to " \
+                  "'pyomo.common.tests.relocated.Bar'"
+        OUT = StringIO()
+        with LoggingIntercept(OUT, 'pyomo.core'):
+            from pyomo.common.tests.test_deprecated import myFoo
+        self.assertEqual(myFoo.data, 42)
+        self.assertIn(warning, OUT.getvalue().replace('\n', ' '))
+
+        from pyomo.common.tests import relocated
+
+        if sys.version_info < (3,5):
+            # Make sure that the module is only wrapped once
+            self.assertIs(type(relocated._wrapped_module),
+                          types.ModuleType)
+
+        self.assertNotIn('Foo', dir(relocated))
+        self.assertNotIn('Foo_2', dir(relocated))
+
+        warning = "DEPRECATED: the 'Foo_2' class has been moved to " \
+                  "'pyomo.common.tests.relocated.Bar'"
+
+        OUT = StringIO()
+        with LoggingIntercept(OUT, 'pyomo.core'):
+            self.assertIs(relocated.Foo_2, relocated.Bar)
+            self.assertEqual(relocated.Foo_2.data, 42)
+        self.assertIn(warning, OUT.getvalue().replace('\n', ' '))
+
+        self.assertNotIn('Foo', dir(relocated))
+        self.assertIn('Foo_2', dir(relocated))
+        self.assertIs(relocated.Foo_2, relocated.Bar)
+
+        warning = "DEPRECATED: the 'Foo' class has been moved to " \
+                  "'pyomo.common.tests.test_deprecated.Bar'"
+
+        OUT = StringIO()
+        with LoggingIntercept(OUT, 'pyomo.core'):
+            from pyomo.common.tests.relocated import Foo
+            self.assertEqual(Foo.data, 21)
+        self.assertIn(warning, OUT.getvalue().replace('\n', ' '))
+
+        self.assertIn('Foo', dir(relocated))
+        self.assertIn('Foo_2', dir(relocated))
+        self.assertIs(relocated.Foo, Bar)
+
+        with self.assertRaisesRegex(
+                AttributeError,
+                "(?:module 'pyomo.common.tests.relocated')|"
+                "(?:'module' object) has no attribute 'Baz'"):
+            relocated.Baz.data
 
 if __name__ == '__main__':
     unittest.main()

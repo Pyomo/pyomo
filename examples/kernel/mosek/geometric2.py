@@ -80,7 +80,7 @@ def solve_conic():
     m.o = pmo.objective(m.t,
                         sense=pmo.minimize)
 
-    mosek = pmo.SolverFactory("mosek")
+    mosek = pmo.SolverFactory("mosek_direct")
     result = mosek.solve(m)
     assert str(result.solver.termination_condition) == "optimal"
     x, y, z = pmo.exp(m.u()), pmo.exp(m.v()), pmo.exp(m.w())

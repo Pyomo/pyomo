@@ -10,9 +10,10 @@
 
 import os
 
-import pyutilib
+from pyomo.common.tempfiles import TempfileManager
 import pyutilib.th as unittest
 
+import pyomo.kernel as pmo
 from pyomo.core import Binary, ConcreteModel, Constraint, Objective, Var, Integers, RangeSet, minimize, quicksum, Suffix
 from pyomo.opt import (BranchDirection, ProblemFormat, SolverFactory,
                        SolverStatus, TerminationCondition, convert_problem)
@@ -62,18 +63,18 @@ class CPLEX_utils(unittest.TestCase):
 
 
 class CPLEXShellWritePrioritiesFile(unittest.TestCase):
-    def setUp(self):
-        from pyomo.solvers.plugins.converter.model import PyomoMIPConverter  # register the `ProblemConverterFactory`
-        from pyomo.repn.plugins.cpxlp import ProblemWriter_cpxlp  # register the `WriterFactory`
+    """ Unit test on writing of priorities via `CPLEXSHELL._write_priorities_file()` """
+    suffix_cls = Suffix
 
+    def setUp(self):
         self.mock_model = self.get_mock_model()
         self.mock_cplex_shell = self.get_mock_cplex_shell(self.mock_model)
-        self.mock_cplex_shell._priorities_file_name = pyutilib.services.TempfileManager.create_tempfile(
+        self.mock_cplex_shell._priorities_file_name = TempfileManager.create_tempfile(
             suffix=".cplex.ord"
         )
 
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
+        TempfileManager.clear_tempfiles()
 
     def get_mock_model(self):
         model = ConcreteModel()
@@ -97,60 +98,68 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
             priorities_file = ord_file.read()
         return priorities_file
 
+    @staticmethod
+    def _set_suffix_value(suffix, variable, value):
+        suffix.set_value(variable, value)
+
     def test_write_without_priority_suffix(self):
         with self.assertRaises(ValueError):
             CPLEXSHELL._write_priorities_file(self.mock_cplex_shell, self.mock_model)
 
     def test_write_priority_to_priorities_file(self):
-        self.mock_model.priority = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
+        self.mock_model.priority = self.suffix_cls(direction=Suffix.EXPORT, datatype=Suffix.INT)
         priority_val = 10
-        self.mock_model.priority.set_value(self.mock_model.x, priority_val)
+        self._set_suffix_value(self.mock_model.priority, self.mock_model.x, priority_val)
 
         CPLEXSHELL._write_priorities_file(self.mock_cplex_shell, self.mock_model)
         priorities_file = self.get_priorities_file_as_string(self.mock_cplex_shell)
 
         self.assertEqual(
             priorities_file,
-            "* ENCODING=ISO-8859-1\nNAME             Priority Order\n  x1 %d\nENDATA\n"
-            % (priority_val,),
+            "* ENCODING=ISO-8859-1\n"
+            "NAME             Priority Order\n"
+            "  x1 10\n"
+            "ENDATA\n"
         )
 
     def test_write_priority_and_direction_to_priorities_file(self):
-        self.mock_model.priority = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
+        self.mock_model.priority = self.suffix_cls(direction=Suffix.EXPORT, datatype=Suffix.INT)
         priority_val = 10
-        self.mock_model.priority.set_value(self.mock_model.x, priority_val)
+        self._set_suffix_value(self.mock_model.priority, self.mock_model.x, priority_val)
 
-        self.mock_model.direction = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
+        self.mock_model.direction = self.suffix_cls(direction=Suffix.EXPORT, datatype=Suffix.INT)
         direction_val = BranchDirection.down
-        self.mock_model.direction.set_value(self.mock_model.x, direction_val)
+        self._set_suffix_value(self.mock_model.direction, self.mock_model.x, direction_val)
 
         CPLEXSHELL._write_priorities_file(self.mock_cplex_shell, self.mock_model)
         priorities_file = self.get_priorities_file_as_string(self.mock_cplex_shell)
 
         self.assertEqual(
             priorities_file,
-            "* ENCODING=ISO-8859-1\nNAME             Priority Order\n %s x1 %d\nENDATA\n"
-            % (ORDFileSchema._direction_to_str(direction_val), priority_val),
+            "* ENCODING=ISO-8859-1\n"
+            "NAME             Priority Order\n"
+            " DN x1 10\n"
+            "ENDATA\n"
         )
 
     def test_raise_due_to_invalid_priority(self):
-        self.mock_model.priority = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
-        self.mock_model.priority.set_value(self.mock_model.x, -1)
+        self.mock_model.priority = self.suffix_cls(direction=Suffix.EXPORT, datatype=Suffix.INT)
+        self._set_suffix_value(self.mock_model.priority, self.mock_model.x, -1)
         with self.assertRaises(ValueError):
             CPLEXSHELL._write_priorities_file(self.mock_cplex_shell, self.mock_model)
 
-        self.mock_model.priority.set_value(self.mock_model.x, 1.1)
+        self._set_suffix_value(self.mock_model.priority, self.mock_model.x, 1.1)
         with self.assertRaises(ValueError):
             CPLEXSHELL._write_priorities_file(self.mock_cplex_shell, self.mock_model)
 
     def test_use_default_due_to_invalid_direction(self):
-        self.mock_model.priority = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
+        self.mock_model.priority = self.suffix_cls(direction=Suffix.EXPORT, datatype=Suffix.INT)
         priority_val = 10
-        self.mock_model.priority.set_value(self.mock_model.x, priority_val)
+        self._set_suffix_value(self.mock_model.priority, self.mock_model.x, priority_val)
 
-        self.mock_model.direction = Suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
-        self.mock_model.direction.set_value(
-            self.mock_model.x, "invalid_branching_direction"
+        self.mock_model.direction = self.suffix_cls(direction=Suffix.EXPORT, datatype=Suffix.INT)
+        self._set_suffix_value(
+            self.mock_model.direction, self.mock_model.x, "invalid_branching_direction"
         )
 
         CPLEXSHELL._write_priorities_file(self.mock_cplex_shell, self.mock_model)
@@ -158,15 +167,30 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
 
         self.assertEqual(
             priorities_file,
-            "* ENCODING=ISO-8859-1\nNAME             Priority Order\n  x1 %d\nENDATA\n"
-            % (priority_val,),
+            "* ENCODING=ISO-8859-1\n"
+            "NAME             Priority Order\n"
+            "  x1 10\n"
+            "ENDATA\n"
         )
 
 
-class CPLEXShellSolvePrioritiesFile(unittest.TestCase):
-    def setUp(self):
-        pass
+class CPLEXShellWritePrioritiesFileKernel(CPLEXShellWritePrioritiesFile):
+    suffix_cls = pmo.suffix
 
+    @staticmethod
+    def _set_suffix_value(suffix, variable, value):
+        suffix[variable] = value
+
+    def get_mock_model(self):
+        model = pmo.block()
+        model.x = pmo.variable(domain=Binary)
+        model.con = pmo.constraint(expr=model.x >= 1)
+        model.obj = pmo.objective(expr=model.x)
+        return model
+
+
+class CPLEXShellSolvePrioritiesFile(unittest.TestCase):
+    """ Integration test on the end-to-end application of priorities via the `Suffix` through a `solve()` """
     def get_mock_model_with_priorities(self):
         m = ConcreteModel()
         m.x = Var(domain=Integers)
@@ -196,32 +220,34 @@ class CPLEXShellSolvePrioritiesFile(unittest.TestCase):
             with open(opt._priorities_file_name, "r") as ord_file:
                 priorities_file = ord_file.read()
 
-        assert priorities_file == (
-            "* ENCODING=ISO-8859-1\n"
-            "NAME             Priority Order\n"
-            "  x1 1\n"
-            " DN x2 2\n"
-            " DN x3 2\n"
-            " DN x4 2\n"
-            " DN x5 2\n"
-            " DN x6 2\n"
-            " DN x7 2\n"
-            " DN x8 2\n"
-            " DN x9 2\n"
-            " DN x10 2\n"
-            " UP x11 2\n"
-            "ENDATA\n"
+        self.assertEqual(
+            priorities_file,
+            (
+                "* ENCODING=ISO-8859-1\n"
+                "NAME             Priority Order\n"
+                "  x1 1\n"
+                " DN x2 2\n"
+                " DN x3 2\n"
+                " DN x4 2\n"
+                " DN x5 2\n"
+                " DN x6 2\n"
+                " DN x7 2\n"
+                " DN x8 2\n"
+                " DN x9 2\n"
+                " DN x10 2\n"
+                " UP x11 2\n"
+                "ENDATA\n"
+            ),
         )
-
-        assert "read %s\n" % (opt._priorities_file_name,) in opt._command.script
+        self.assertIn("read %s\n" % (opt._priorities_file_name,), opt._command.script)
 
     def test_ignore_variable_priorities(self):
         model = self.get_mock_model_with_priorities()
         with SolverFactory("_mock_cplex") as opt:
             opt._presolve(model, priorities=False, keepfiles=True)
 
-            assert opt._priorities_file_name is None
-            assert ".ord" not in opt._command.script
+            self.assertIsNone(opt._priorities_file_name)
+            self.assertNotIn(".ord", opt._command.script)
 
     def test_can_use_manual_priorities_file_with_lp_solve(self):
         """ Test that we can pass an LP file (not a pyomo model) along with a priorities file to `.solve()` """
@@ -243,24 +269,46 @@ class CPLEXShellSolvePrioritiesFile(unittest.TestCase):
                 keepfiles=True,
             )
 
-            assert ".ord" in opt._command.script
+            self.assertIn(".ord", opt._command.script)
 
             with open(opt._priorities_file_name, "r") as ord_file:
                 priorities_file = ord_file.read()
 
-        assert priorities_file == provided_priorities_file
+        self.assertEqual(priorities_file, provided_priorities_file)
+
+
+class CPLEXShellSolvePrioritiesFileKernel(CPLEXShellSolvePrioritiesFile):
+    def get_mock_model_with_priorities(self):
+        m = pmo.block()
+        m.x = pmo.variable(domain=Integers)
+        m.s = range(10)
+
+        m.y = pmo.variable_list(pmo.variable(domain=Integers) for _ in m.s)
+
+        m.o = pmo.objective(expr=m.x + sum(m.y), sense=minimize)
+        m.c = pmo.constraint(expr=m.x >= 1)
+        m.c2 = pmo.constraint(expr=quicksum(m.y[i] for i in m.s) >= 10)
+
+        m.priority = pmo.suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
+        m.direction = pmo.suffix(direction=Suffix.EXPORT, datatype=Suffix.INT)
+
+        m.priority[m.x] = 1
+        m.priority[m.y] = 2
+        m.direction[m.y] = BranchDirection.down
+        m.direction[m.y[-1]] = BranchDirection.up
+        return m
 
 
 class TestCPLEXSHELLProcessLogfile(unittest.TestCase):
     def setUp(self):
         solver = MockCPLEX()
-        solver._log_file = pyutilib.services.TempfileManager.create_tempfile(
+        solver._log_file = TempfileManager.create_tempfile(
             suffix=".log"
         )
         self.solver = solver
 
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
+        TempfileManager.clear_tempfiles()
 
     def test_log_file_shows_no_solution(self):
         log_file_text = """

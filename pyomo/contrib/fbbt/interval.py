@@ -1,5 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import math
-import warnings
 import logging
 from pyomo.common.errors import DeveloperError, InfeasibleConstraintException, PyomoException
 
@@ -418,7 +427,7 @@ def tan(xl, xu):
     return lb, ub
 
 
-def asin(xl, xu, yl, yu):
+def asin(xl, xu, yl, yu, feasibility_tol):
     """
     y = asin(x); propagate bounds from x to y
     x = sin(y)
@@ -471,7 +480,7 @@ def asin(xl, xu, yl, yu):
         # satisfies xl = sin(y)
         lb1 = i1 + dist
         lb2 = i2 + dist
-        if lb1 >= yl:
+        if lb1 >= yl - feasibility_tol:
             lb = lb1
         else:
             lb = lb2
@@ -486,7 +495,7 @@ def asin(xl, xu, yl, yu):
         dist = pi / 2 - y_tmp
         lb1 = i1 + dist
         lb2 = i2 + dist
-        if lb1 >= yl:
+        if lb1 >= yl - feasibility_tol:
             lb = lb1
         else:
             lb = lb2
@@ -506,7 +515,7 @@ def asin(xl, xu, yl, yu):
         dist = pi / 2 - y_tmp
         ub1 = i1 - dist
         ub2 = i2 - dist
-        if ub1 <= yu:
+        if ub1 <= yu + feasibility_tol:
             ub = ub1
         else:
             ub = ub2
@@ -521,7 +530,7 @@ def asin(xl, xu, yl, yu):
         dist = y_tmp - (-pi / 2)
         ub1 = i1 - dist
         ub2 = i2 - dist
-        if ub1 <= yu:
+        if ub1 <= yu + feasibility_tol:
             ub = ub1
         else:
             ub = ub2
@@ -529,7 +538,7 @@ def asin(xl, xu, yl, yu):
     return lb, ub
 
 
-def acos(xl, xu, yl, yu):
+def acos(xl, xu, yl, yu, feasibility_tol):
     """
     y = acos(x); propagate bounds from x to y
     x = cos(y)
@@ -582,7 +591,7 @@ def acos(xl, xu, yl, yu):
         # satisfies xl = sin(y)
         lb1 = i1 + dist
         lb2 = i2 + dist
-        if lb1 >= yl:
+        if lb1 >= yl - feasibility_tol:
             lb = lb1
         else:
             lb = lb2
@@ -598,7 +607,7 @@ def acos(xl, xu, yl, yu):
         dist = y_tmp
         lb1 = i1 + dist
         lb2 = i2 + dist
-        if lb1 >= yl:
+        if lb1 >= yl - feasibility_tol:
             lb = lb1
         else:
             lb = lb2
@@ -618,7 +627,7 @@ def acos(xl, xu, yl, yu):
         dist = y_tmp
         ub1 = i1 - dist
         ub2 = i2 - dist
-        if ub1 <= yu:
+        if ub1 <= yu + feasibility_tol:
             ub = ub1
         else:
             ub = ub2
@@ -633,7 +642,7 @@ def acos(xl, xu, yl, yu):
         dist = pi - y_tmp
         ub1 = i1 - dist
         ub2 = i2 - dist
-        if ub1 <= yu:
+        if ub1 <= yu + feasibility_tol:
             ub = ub1
         else:
             ub = ub2

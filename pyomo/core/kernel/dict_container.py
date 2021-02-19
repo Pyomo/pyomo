@@ -10,28 +10,19 @@
 
 import sys
 import logging
-import collections
-if sys.version_info[:2] >= (3,6):
-    _ordered_dict_ = dict
-else:
-    try:
-        _ordered_dict_ = collections.OrderedDict
-    except ImportError:                           #pragma:nocover
-        import ordereddict
-        _ordered_dict_ = ordereddict.OrderedDict
+
+from pyomo.common.collections import OrderedDict, Mapping, MutableMapping
 
 from pyomo.core.kernel.homogeneous_container import \
     IHomogeneousContainer
 
-import six
-from six import itervalues, iteritems
-
-if six.PY3:
-    from collections.abc import MutableMapping as collections_MutableMapping
-    from collections.abc import Mapping as collections_Mapping
+if sys.version_info[:2] >= (3,7):
+    # dict became ordered in CPython 3.6 and added to the standard in 3.7
+    _ordered_dict_ = dict
 else:
-    from collections import MutableMapping as collections_MutableMapping
-    from collections import Mapping as collections_Mapping
+    _ordered_dict_ = OrderedDict
+
+from six import itervalues
 
 logger = logging.getLogger('pyomo.core')
 
@@ -43,8 +34,7 @@ logger = logging.getLogger('pyomo.core')
 # code a work around for the Python 2 case as we are moving
 # closer to a Python 3-only world these types of objects are
 # not memory bottlenecks.
-class DictContainer(IHomogeneousContainer,
-                    collections_MutableMapping):
+class DictContainer(IHomogeneousContainer, MutableMapping):
     """
     A partial implementation of the IHomogeneousContainer
     interface that provides dict-like storage functionality.
@@ -168,7 +158,7 @@ class DictContainer(IHomogeneousContainer,
     # plain dictionary mapping key->(type(val), id(val)) and
     # compare that instead.
     def __eq__(self, other):
-        if not isinstance(other, collections_Mapping):
+        if not isinstance(other, Mapping):
             return False
         return {key:(type(val), id(val))
                     for key, val in self.items()} == \

@@ -10,7 +10,7 @@
 
 import logging
 
-from pyomo.core.base.suffix import ComponentMap
+from pyomo.common.collections import ComponentMap
 from pyomo.core.base.constraint import Constraint, _ConstraintData
 from pyomo.core.base.var import Var, _VarData
 from pyomo.core.base.expression import Expression, _ExpressionData
@@ -18,7 +18,6 @@ from pyomo.core.base.param import Param, _ParamData
 from pyomo.core.base.objective import Objective, _ObjectiveData
 from pyomo.core.base.block import Block, _BlockData
 
-import pyomo.pysp
 logger = logging.getLogger('pyomo.pysp')
 
 def locate_annotations(model, annotation_type, max_allowed=None):

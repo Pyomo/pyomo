@@ -10,18 +10,17 @@
 
 __all__ = ['test_solver_cases', 'available_solvers']
 
-import os
 import six
 import logging
 
-from pyutilib.misc import Options
+from pyomo.common.collections import Options
 from pyomo.opt import SolverFactory
 from pyomo.opt.base.solvers import UnknownSolver
 
 import pyomo.environ
 from pyomo.solvers.plugins.solvers.GUROBI import GUROBISHELL
 from pyomo.solvers.plugins.solvers.BARON import BARONSHELL
-from pyomo.solvers.plugins.solvers.mosek_direct import MosekDirect
+from pyomo.solvers.plugins.solvers.mosek_direct import MOSEKDirect
 
 # ----------------------------------------------------------------
 
@@ -29,6 +28,8 @@ _test_solver_cases = {}
 
 
 # ----------------------------------------------------------------
+
+licensed_solvers_with_demo_mode = {'baron',}
 
 #
 # NOTE: we initialize the test case, since different
@@ -39,27 +40,29 @@ def initialize(**kwds):
     #
     # Set obj.available
     #
-    opt = None
     try:
         opt = SolverFactory(obj.name, solver_io=obj.io)
     except:
-        pass
+        opt = None
+
     if opt is None or isinstance(opt, UnknownSolver):
         obj.available = False
-    elif (obj.name == "gurobi") and \
-       (not GUROBISHELL.license_is_valid()):
+    elif not opt.available(exception_flag=False):
         obj.available = False
-    elif (obj.name == "baron") and \
-       (not BARONSHELL.license_is_valid()):
+    elif hasattr(opt, 'executable') and opt.executable() is None:
         obj.available = False
-    elif (obj.name == "mosek") and \
-       (not MosekDirect.license_is_valid()):
+    elif not opt.license_is_valid() \
+         and obj.name not in licensed_solvers_with_demo_mode:
         obj.available = False
     else:
-        obj.available = \
-            (opt.available(exception_flag=False)) and \
-            ((not hasattr(opt,'executable')) or \
-            (opt.executable() is not None))
+        obj.available = True
+    #
+    # Set the limits for the solver's "demo" (unlicensed) mode:
+    #   ( nVars, nCons, nNonZeros )
+    obj.demo_limits = (None, None, None)
+    if obj.available:
+        if obj.name == "baron" and not opt.license_is_valid():
+            obj.demo_limits = (10, 10, 50)
     #
     # Check capabilities, even if the solver is not available
     #
@@ -82,6 +85,7 @@ def test_solver_cases(*args):
     if len(_test_solver_cases) == 0:
         logging.disable(logging.WARNING)
 
+
         #
         # MOSEK
         #
@@ -89,13 +93,24 @@ def test_solver_cases(*args):
         _mosek_capabilities = set(['linear',
                                    'integer',
                                    'quadratic_objective',
-                                   'quadratic_constraint'])
-
+                                   'quadratic_constraint',
+                                   'conic_constraints'])
+    
         _test_solver_cases['mosek', 'python'] = initialize(
-            name='mosek',
+            name='mosek_direct',
             io='python',
             capabilities=_mosek_capabilities,
             import_suffixes=['dual', 'rc', 'slack'])
+
+        #
+        # MOSEK Persistent
+        #
+        _test_solver_cases['mosek_persistent','python'] = initialize(
+                name = 'mosek_persistent',
+                io = 'python',
+                capabilities=_mosek_capabilities,
+                import_suffixes=['dual','rc','slack'])
+
         #
         # CPLEX
         #
@@ -298,19 +313,40 @@ def test_solver_cases(*args):
             name='xpress',
             io='lp',
             capabilities=_xpress_capabilities,
-            import_suffixes=['dual','rc','slack'])
+            import_suffixes=['dual','rc','slack'],
+            options={'bargapstop':1e-9,})
 
         _test_solver_cases['xpress', 'mps'] = initialize(
             name='xpress',
             io='mps',
             capabilities=_xpress_capabilities,
-            import_suffixes=['dual','rc','slack'])
+            import_suffixes=['dual','rc','slack'],
+            options={'bargapstop':1e-9,})
 
         _test_solver_cases['xpress', 'nl'] = initialize(
             name='xpress',
             io='nl',
             capabilities=_xpress_capabilities,
-            import_suffixes=['dual'])
+            import_suffixes=['dual'],
+            options={'bargapstop':1e-9,})
+
+        _test_solver_cases['xpress', 'python'] = initialize(
+            name='xpress',
+            io='python',
+            capabilities=_xpress_capabilities,
+            import_suffixes=['dual','rc','slack'],
+            options={'bargapstop':1e-9,})
+
+        #
+        # XPRESS PERSISTENT 
+        #
+
+        _test_solver_cases['xpress_persistent', 'python'] = initialize(
+            name='xpress_persistent',
+            io='python',
+            capabilities=_xpress_capabilities,
+            import_suffixes=['slack', 'dual', 'rc'],
+            options={'bargapstop':1e-9,})
 
         #
         # IPOPT

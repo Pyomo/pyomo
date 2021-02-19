@@ -11,16 +11,15 @@
 import sys
 import pprint as _pprint_
 
+from pyomo.common.collections import ComponentMap
 import pyomo.core
 from pyomo.core.expr.numvalue import \
     NumericValue
-from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
      _no_ctype,
      _convert_ctype,
      _convert_descend_into)
-from pyomo.core.kernel.block import block
 
 import six
 

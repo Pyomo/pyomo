@@ -19,16 +19,11 @@ import time
 # simple_preprocessor, which in turn is invoked by the preprocess()
 # method of PyomoModel.
 from pyomo.core.base.objective import Objective
-from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
-from pyomo.core.base.sos import SOSConstraint
-from pyomo.opt import ProblemFormat
-from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.repn.standard_repn import (preprocess_block_objectives,
                                       preprocess_block_constraints,
                                       preprocess_constraint_data)
 
-import pyomo.common
 from pyomo.pysp.util.config import (PySPConfigBlock,
                                     safe_declare_common_option)
 from pyomo.pysp.util.configured_object import PySPConfiguredObject

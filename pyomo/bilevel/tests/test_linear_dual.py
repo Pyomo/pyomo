@@ -15,24 +15,20 @@
 import os
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
-exdir = normpath(join(currdir,'..','..','..','examples','bilevel'))
+exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'bilevel'))
 
 import pyutilib.th as unittest
 
+from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 import pyomo.opt
 import pyomo.scripting.pyomo_main as pyomo_main
 from pyomo.scripting.util import cleanup
-from pyomo.environ import *
+import pyomo.environ
 
 from six import iteritems
 
-try:
-    import yaml
-    yaml_available=True
-except ImportError:
-    yaml_available=False
-
 solvers = pyomo.opt.check_available_solvers('cplex', 'glpk')
+
 
 class CommonTests:
 
@@ -42,7 +38,7 @@ class CommonTests:
         if self.solve:
             args = ['solve']
             if 'solver' in kwds:
-                _solver = kwds.get('solver','glpk')
+                _solver = kwds.get('solver', 'glpk')
                 args.append('--solver=bilevel_ld')
                 args.append('--solver-options="solver=%s"' % _solver)
             args.append('--save-results=result.yml')
@@ -50,7 +46,7 @@ class CommonTests:
         else:
             args = ['convert']
         if 'preprocess' in kwds:
-            #args.append('--solver=glpk')
+            # args.append('--solver=glpk')
             pp = kwds['preprocess']
             if pp == 'linear_dual':
                 args.append('--transform=bilevel.linear_dual')
@@ -60,8 +56,8 @@ class CommonTests:
         # which now causes a helpful error message.
         # I've manually inserted them into those tests that need them to pass
         # (which is where they also get used)
-        #args.append('--symbolic-solver-labels')
-        #args.append('--file-determinism=2')
+        # args.append('--symbolic-solver-labels')
+        # args.append('--file-determinism=2')
 
         if False:
             args.append('--stream-solver')
@@ -73,7 +69,7 @@ class CommonTests:
         os.chdir(currdir)
 
         print('***')
-        #print(' '.join(args))
+        # print(' '.join(args))
         try:
             output = pyomo_main.main(args)
         except SystemExit:
@@ -93,7 +89,7 @@ class CommonTests:
 
     def getObjective(self, fname):
         FILE = open(fname)
-        data = yaml.load(FILE)
+        data = yaml.load(FILE, **yaml_load_args)
         FILE.close()
         solutions = data.get('Solution', [])
         ans = []
@@ -104,17 +100,17 @@ class CommonTests:
     def updateDocStrings(self):
         for key in dir(self):
             if key.startswith('test'):
-                getattr(self,key).__doc__ = " (%s)" % getattr(self,key).__name__
+                getattr(self, key).__doc__ = " (%s)" % getattr(self, key).__name__
 
     def test_t5(self):
-        self.problem='test_t5'
-        self.run_bilevel( join(exdir,'t5.py'))
-        self.check( 't5', 'linear_dual' )
+        self.problem = 'test_t5'
+        self.run_bilevel(join(exdir, 't5.py'))
+        self.check('t5', 'linear_dual')
 
     def test_t1(self):
-        self.problem='test_t1'
-        self.run_bilevel( join(exdir,'t1.py'))
-        self.check( 't1', 'linear_dual' )
+        self.problem = 'test_t1'
+        self.run_bilevel(join(exdir, 't1.py'))
+        self.check('t1', 'linear_dual')
 
     def Xtest_t2(self):
         self.problem='test_t2'
@@ -127,8 +123,8 @@ class Reformulate(unittest.TestCase, CommonTests):
     solve = False
 
     def tearDown(self):
-        if os.path.exists(os.path.join(currdir,'result.yml')):
-            os.remove(os.path.join(currdir,'result.yml'))
+        if os.path.exists(os.path.join(currdir, 'result.yml')):
+            os.remove(os.path.join(currdir, 'result.yml'))
 
     def run_bilevel(self,  *args, **kwds):
         args = list(args)

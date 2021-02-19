@@ -11,29 +11,20 @@
 from __future__ import print_function
 import pyutilib.th as unittest
 
-from pyomo.environ import (Var, Set, ConcreteModel, value, Constraint,
+from pyomo.environ import (Var, Set, ConcreteModel, 
                            TransformationFactory, pyomo)
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 
 from pyomo.repn import generate_standard_repn
 
-import os
 from six import StringIO
-from pyutilib.misc import setup_redirect, reset_redirect
-from pyutilib.misc import import_file
 
 from pyomo.common.log import  LoggingIntercept
 
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'dae'))
-
-try:
-    import numpy
-    numpy_available = True
-except ImportError:
-    numpy_available = False
 
 
 def repn_to_rounded_dict(repn, digits):

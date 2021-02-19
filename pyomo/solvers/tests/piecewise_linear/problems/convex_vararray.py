@@ -20,7 +20,7 @@ f(x) = | 1     , -1 <= x <=  1
 
 """
 
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, Var, Param, Piecewise, Constraint, Objective, sum_product, maximize
 
 INDEX_SET = range(1,8) # There will be two copies of this function
 DOMAIN_PTS = dict([(t,[float(i) for i in (list(range(-5,0))+list(range(1,5)))]) for t in INDEX_SET])

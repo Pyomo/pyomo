@@ -14,7 +14,7 @@ Unit Tests for interfacing with sIPOPT
 
 import pyutilib.th as unittest
 
-from pyomo.environ import * 
+from pyomo.environ import ConcreteModel, Param, Var, Block,  Suffix, value
 from pyomo.opt import SolverFactory
 from pyomo.dae import ContinuousSet
 from pyomo.dae.simulator import scipy_available
@@ -29,7 +29,7 @@ opt = SolverFactory('ipopt_sens', solver_io='nl')
 class TestSensitivityToolbox(unittest.TestCase):
 
     #test arguments
-    @unittest.skipIf(not opt.available(False), "ipopt_sense is not available")
+    @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
     def test_bad_arg(self):
         m = ConcreteModel()
         m.t = ContinuousSet(bounds=(0,1))
@@ -97,56 +97,56 @@ class TestSensitivityToolbox(unittest.TestCase):
         self.assertFalse(m_sipopt == m_orig)
 
         self.assertTrue(hasattr(m_sipopt,'_sipopt_data') and
-                        m_sipopt._sipopt_data.type() is Block)
+                        m_sipopt._sipopt_data.ctype is Block)
 
         self.assertFalse(hasattr(m_orig,'_sipopt_data'))
         self.assertFalse(hasattr(m_orig,'b'))
 
         #verify variable declaration
         self.assertTrue(hasattr(m_sipopt._sipopt_data,'a') and 
-                        m_sipopt._sipopt_data.a.type() is Var)
+                        m_sipopt._sipopt_data.a.ctype is Var)
         self.assertTrue(hasattr(m_sipopt._sipopt_data,'H') and 
-                        m_sipopt._sipopt_data.H.type() is Var)
+                        m_sipopt._sipopt_data.H.ctype is Var)
    
         #verify suffixes
         self.assertTrue(hasattr(m_sipopt,'sens_state_0') and
-                        m_sipopt.sens_state_0.type() is Suffix and
+                        m_sipopt.sens_state_0.ctype is Suffix and
                         m_sipopt.sens_state_0[m_sipopt._sipopt_data.H]==2 and
                         m_sipopt.sens_state_0[m_sipopt._sipopt_data.a]==1)
   
         self.assertTrue(hasattr(m_sipopt,'sens_state_1') and
-                        m_sipopt.sens_state_1.type() is Suffix and
+                        m_sipopt.sens_state_1.ctype is Suffix and
                         m_sipopt.sens_state_1[m_sipopt._sipopt_data.H]==2 and
                         m_sipopt.sens_state_1[m_sipopt._sipopt_data.a]==1)  
 
         self.assertTrue(hasattr(m_sipopt,'sens_state_value_1') and
-                        m_sipopt.sens_state_value_1.type() is Suffix and
+                        m_sipopt.sens_state_value_1.ctype is Suffix and
                         m_sipopt.sens_state_value_1[
                                         m_sipopt._sipopt_data.H]==0.55 and
                         m_sipopt.sens_state_value_1[
                                         m_sipopt._sipopt_data.a]==-0.25)
   
         self.assertTrue(hasattr(m_sipopt,'sens_init_constr') and
-                        m_sipopt.sens_init_constr.type() is Suffix and
+                        m_sipopt.sens_init_constr.ctype is Suffix and
                         m_sipopt.sens_init_constr[
                                      m_sipopt._sipopt_data.paramConst[1]]==1 and
                         m_sipopt.sens_init_constr[
                                      m_sipopt._sipopt_data.paramConst[2]]==2)
 
         self.assertTrue(hasattr(m_sipopt,'sens_sol_state_1') and
-                        m_sipopt.sens_sol_state_1.type() is Suffix)
+                        m_sipopt.sens_sol_state_1.ctype is Suffix)
         self.assertAlmostEqual(
                         m_sipopt.sens_sol_state_1[
                            m_sipopt.F[15]],-0.00102016765,8)
 
         self.assertTrue(hasattr(m_sipopt,'sens_sol_state_1_z_L') and
-                        m_sipopt.sens_sol_state_1_z_L.type() is Suffix)
+                        m_sipopt.sens_sol_state_1_z_L.ctype is Suffix)
         self.assertAlmostEqual(
                         m_sipopt.sens_sol_state_1_z_L[
                            m_sipopt.u[15]],-2.181712e-09,13)
 
         self.assertTrue(hasattr(m_sipopt,'sens_sol_state_1_z_U') and
-                        m_sipopt.sens_sol_state_1_z_U.type() is Suffix)
+                        m_sipopt.sens_sol_state_1_z_U.ctype is Suffix)
         self.assertAlmostEqual(
                         m_sipopt.sens_sol_state_1_z_U[
                            m_sipopt.u[15]],6.580899e-09,13)
@@ -191,53 +191,53 @@ class TestSensitivityToolbox(unittest.TestCase):
 
         #test _sipopt_data block exists
         self.assertTrue(hasattr(m_orig,'_sipopt_data') and
-                        m_orig._sipopt_data.type() is Block)
+                        m_orig._sipopt_data.ctype is Block)
         
         #test variable declaration
         self.assertTrue(hasattr(m_sipopt._sipopt_data,'a') and 
-                        m_sipopt._sipopt_data.a.type() is Var)
+                        m_sipopt._sipopt_data.a.ctype is Var)
         self.assertTrue(hasattr(m_sipopt._sipopt_data,'H') and 
-                        m_sipopt._sipopt_data.H.type() is Var)
+                        m_sipopt._sipopt_data.H.ctype is Var)
 
         #test for suffixes
         self.assertTrue(hasattr(m_sipopt,'sens_state_0') and
-                        m_sipopt.sens_state_0.type() is Suffix and
+                        m_sipopt.sens_state_0.ctype is Suffix and
                         m_sipopt.sens_state_0[m_sipopt._sipopt_data.H]==2 and  
                         m_sipopt.sens_state_0[m_sipopt._sipopt_data.a]==1)
   
         self.assertTrue(hasattr(m_sipopt,'sens_state_1') and
-                        m_sipopt.sens_state_1.type() is Suffix and
+                        m_sipopt.sens_state_1.ctype is Suffix and
                         m_sipopt.sens_state_1[m_sipopt._sipopt_data.H]==2 and
                         m_sipopt.sens_state_1[m_sipopt._sipopt_data.a]==1)  
 
         self.assertTrue(hasattr(m_sipopt,'sens_state_value_1') and
-                        m_sipopt.sens_state_value_1.type() is Suffix and
+                        m_sipopt.sens_state_value_1.ctype is Suffix and
                         m_sipopt.sens_state_value_1[
                                         m_sipopt._sipopt_data.H]==0.55 and
                         m_sipopt.sens_state_value_1[
                                         m_sipopt._sipopt_data.a]==-0.25)
   
         self.assertTrue(hasattr(m_sipopt,'sens_init_constr') and
-                        m_sipopt.sens_init_constr.type() is Suffix and
+                        m_sipopt.sens_init_constr.ctype is Suffix and
                         m_sipopt.sens_init_constr[
                                      m_sipopt._sipopt_data.paramConst[1]]==1 and
                         m_sipopt.sens_init_constr[
                                      m_sipopt._sipopt_data.paramConst[2]]==2)
 
         self.assertTrue(hasattr(m_sipopt,'sens_sol_state_1') and
-                        m_sipopt.sens_sol_state_1.type() is Suffix)
+                        m_sipopt.sens_sol_state_1.ctype is Suffix)
         self.assertAlmostEqual(
                         m_sipopt.sens_sol_state_1[
                            m_sipopt.F[15]],-0.00102016765,8)
 
         self.assertTrue(hasattr(m_sipopt,'sens_sol_state_1_z_L') and
-                        m_sipopt.sens_sol_state_1_z_L.type() is Suffix)
+                        m_sipopt.sens_sol_state_1_z_L.ctype is Suffix)
         self.assertAlmostEqual(
                         m_sipopt.sens_sol_state_1_z_L[
                            m_sipopt.u[15]],-2.181712e-09,13)
 
         self.assertTrue(hasattr(m_sipopt,'sens_sol_state_1_z_U') and
-                        m_sipopt.sens_sol_state_1_z_U.type() is Suffix)
+                        m_sipopt.sens_sol_state_1_z_U.ctype is Suffix)
         self.assertAlmostEqual(
                         m_sipopt.sens_sol_state_1_z_U[
                            m_sipopt.u[15]],6.580899e-09,13)
@@ -317,8 +317,8 @@ class TestSensitivityToolbox(unittest.TestCase):
         m_sipopt = sipopt(m,[m.a,m.b], [m.pert_a,m.pert_b])
 
         #verify substitutions in equality constraint
-        self.assertTrue(m_sipopt.C_equal.lower.type() is Param and
-                        m_sipopt.C_equal.upper.type() is Param)
+        self.assertTrue(m_sipopt.C_equal.lower.ctype is Param and
+                        m_sipopt.C_equal.upper.ctype is Param)
         self.assertFalse(m_sipopt.C_equal.active)
 
         self.assertTrue(m_sipopt._sipopt_data.constList[3].lower == 0.0 and
@@ -328,7 +328,7 @@ class TestSensitivityToolbox(unittest.TestCase):
 
         #verify substitutions in one-sided bounded constraint
         self.assertTrue(m_sipopt.C_singleBnd.lower is None and
-                        m_sipopt.C_singleBnd.upper.type() is Param)
+                        m_sipopt.C_singleBnd.upper.ctype is Param)
         self.assertFalse(m_sipopt.C_singleBnd.active)
 
         self.assertTrue(m_sipopt._sipopt_data.constList[4].lower is None and
@@ -337,8 +337,8 @@ class TestSensitivityToolbox(unittest.TestCase):
                                  m_sipopt._sipopt_data.constList[4].body))) == 2)
        
         #verify substitutions in ranged inequality constraint
-        self.assertTrue(m_sipopt.C_rangedIn.lower.type() is Param and
-                        m_sipopt.C_rangedIn.upper.type() is Param)
+        self.assertTrue(m_sipopt.C_rangedIn.lower.ctype is Param and
+                        m_sipopt.C_rangedIn.upper.ctype is Param)
         self.assertFalse(m_sipopt.C_rangedIn.active)
 
         self.assertTrue(m_sipopt._sipopt_data.constList[1].lower is None and
@@ -351,6 +351,22 @@ class TestSensitivityToolbox(unittest.TestCase):
                        len(list(identify_variables(
                                 m_sipopt._sipopt_data.constList[2].body))) == 2)
 
+    # Test example `parameter.py`
+    @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
+    def test_parameter_example(self):
+    
+        from pyomo.contrib.sensitivity_toolbox.examples.parameter import run_example
+        d = run_example()
+        
+        d_correct = {'eta1':4.5, 'eta2':1.0, 'x1_init':0.15, 'x2_init':0.15, 'x3_init':0.0,
+            'cost_sln':0.5, 'x1_sln':0.5, 'x2_sln':0.5, 'x3_sln':0.0, 'eta1_pert':4.0,
+            'eta2_pert':1.0, 'x1_pert':0.3333333,'x2_pert':0.6666667,'x3_pert':0.0,
+            'cost_pert':0.55555556}
+        
+        for k in d_correct.keys():
+            # Check each element of the 'correct' dictionary against the returned 
+            # dictionary to 3 decimal places
+            self.assertAlmostEqual(d[k],d_correct[k],3)
 
 if __name__=="__main__":
     unittest.main()

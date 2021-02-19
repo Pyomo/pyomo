@@ -1,14 +1,18 @@
-import pickle
-import itertools
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import pyutilib.th as unittest
 import pyomo.kernel as pmo
 from pyomo.core.kernel.block import IBlock
 from pyomo.core.kernel.variable import IVariable
 from pyomo.core.kernel.constraint import IConstraint
-
-import six
-from six import StringIO
 
 
 class IJunk(IBlock):
@@ -182,18 +186,6 @@ class Test_kernel(unittest.TestCase):
         self.assertEqual(
             [str(obj) for obj in model.block_data_objects()],
             [str(model)]+[str(obj) for obj in model.components(ctype=IBlock)])
-    def test_type_hack(self):
-        for obj in [pmo.variable(),
-                    pmo.constraint(),
-                    pmo.objective(),
-                    pmo.expression(),
-                    pmo.parameter(),
-                    pmo.suffix(),
-                    pmo.sos([]),
-                    pmo.block()]:
-            ctype = obj.ctype
-            self.assertIs(obj.__class__._ctype, ctype)
-            self.assertIs(obj.type(), ctype)
 
 if __name__ == "__main__":
     unittest.main()

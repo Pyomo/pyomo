@@ -21,12 +21,24 @@ import six
 import sys
 import time
 import socket
-import gzip
 import base64
 import tempfile
 import logging
 
+from pyomo.common.dependencies import attempt_import
+
+def _xmlrpclib_importer():
+    if six.PY2:
+        import xmlrpclib
+    else:
+        import xmlrpc.client as xmlrpclib
+    return xmlrpclib
+xmlrpclib = attempt_import('xmlrpclib', importer=_xmlrpclib_importer)[0]
+gzip = attempt_import('gzip')[0]
+
 logger = logging.getLogger('pyomo.neos')
+
+_email_re = re.compile(r'([^@]+@[^@]+\.[a-zA-Z0-9]+)$')
 
 class NEOS(object):
     # NEOS currently only supports HTTPS access
@@ -37,80 +49,96 @@ class NEOS(object):
     #urlscheme = 'http'
     #port = '3332'
 
+def ProxiedTransport():
+    if six.PY2:
+        from urlparse import urlparse
+        import httplib
+        # ProxiedTransport from Python 2.x documentation
+        # (https://docs.python.org/2/library/xmlrpclib.html)
+        class ProxiedTransport_PY2(xmlrpclib.Transport):
+            def set_proxy(self, proxy):
+                self.proxy = urlparse(proxy)
+                if not self.proxy.hostname:
+                    # User omitted scheme from the proxy; assume http
+                    self.proxy = urlparse('http://'+proxy)
 
-if sys.version_info[0] < 3:
-    from urlparse import urlparse
-    import httplib
-    import xmlrpclib
-    # ProxiedTransport from Python 2.x documentation
-    # (https://docs.python.org/2/library/xmlrpclib.html)
-    class ProxiedTransport(xmlrpclib.Transport):
-        def set_proxy(self, proxy):
-            self.proxy = urlparse(proxy)
-            if not self.proxy.hostname:
-                # User omitted scheme from the proxy; assume http
-                self.proxy = urlparse('http://'+proxy)
+            def make_connection(self, host):
+                target = urlparse(host)
+                if target.scheme:
+                    self.realhost = target.geturl()
+                else:
+                    self.realhost = '%s://%s' % (NEOS.scheme, target.geturl())
 
-        def make_connection(self, host):
-            target = urlparse(host)
-            if target.scheme:
-                self.realhost = target.geturl()
-            else:
-                self.realhost = '%s://%s' % (NEOS.scheme, target.geturl())
-
-            # Empirically, the connection class in Python 2.7 needs to
-            # match the PROXY connection scheme, and the final endpoint
-            # scheme needs to be specified in the POST below.
-            if self.proxy.scheme == 'https':
-                connClass = httplib.HTTPSConnection
-            else:
-                connClass = httplib.HTTPConnection
-            return connClass(self.proxy.hostname, self.proxy.port)
-
-
-        def send_request(self, connection, handler, request_body):
-            connection.putrequest(
-                "POST", '%s%s' % (self.realhost, handler))
-
-        def send_host(self, connection, host):
-            connection.putheader('Host', self.realhost)
-
-else: # Python 3.x
-    from urllib.parse import urlparse
-    import http.client as httplib
-    import xmlrpc.client as xmlrpclib
-    # ProxiedTransport from Python 3.x documentation
-    # (https://docs.python.org/3/library/xmlrpc.client.html)
-    class ProxiedTransport(xmlrpclib.Transport):
-        def set_proxy(self, host):
-            self.proxy = urlparse(host)
-            if not self.proxy.hostname:
-                # User omitted scheme from the proxy; assume http
-                self.proxy = urlparse('http://'+host)
-
-        def make_connection(self, host):
-            scheme = urlparse(host).scheme
-            if not scheme:
-                scheme = NEOS.scheme
-
-            # Empirically, the connection class in Python 3.x needs to
-            # match the final endpoint connection scheme, NOT the proxy
-            # scheme.  The set_tunnel host then should NOT have a scheme
-            # attached to it.
-            if scheme == 'https':
-                connClass = httplib.HTTPSConnection
-            else:
-                connClass = httplib.HTTPConnection
-
-            connection = connClass(self.proxy.hostname, self.proxy.port)
-            connection.set_tunnel(host)
-            return connection
+                # Empirically, the connection class in Python 2.7 needs to
+                # match the PROXY connection scheme, and the final endpoint
+                # scheme needs to be specified in the POST below.
+                if self.proxy.scheme == 'https':
+                    connClass = httplib.HTTPSConnection
+                else:
+                    connClass = httplib.HTTPConnection
+                return connClass(self.proxy.hostname, self.proxy.port)
 
 
-class kestrelAMPL:
+            def send_request(self, connection, handler, request_body):
+                connection.putrequest(
+                    "POST", '%s%s' % (self.realhost, handler))
+
+            def send_host(self, connection, host):
+                connection.putheader('Host', self.realhost)
+
+        return ProxiedTransport_PY2()
+
+    else: # Python 3.x
+        from urllib.parse import urlparse
+        import http.client as httplib
+        # ProxiedTransport from Python 3.x documentation
+        # (https://docs.python.org/3/library/xmlrpc.client.html)
+        class ProxiedTransport_PY3(xmlrpclib.Transport):
+            def set_proxy(self, host):
+                self.proxy = urlparse(host)
+                if not self.proxy.hostname:
+                    # User omitted scheme from the proxy; assume http
+                    self.proxy = urlparse('http://'+host)
+
+            def make_connection(self, host):
+                scheme = urlparse(host).scheme
+                if not scheme:
+                    scheme = NEOS.scheme
+
+                # Empirically, the connection class in Python 3.x needs to
+                # match the final endpoint connection scheme, NOT the proxy
+                # scheme.  The set_tunnel host then should NOT have a scheme
+                # attached to it.
+                if scheme == 'https':
+                    connClass = httplib.HTTPSConnection
+                else:
+                    connClass = httplib.HTTPConnection
+
+                connection = connClass(self.proxy.hostname, self.proxy.port)
+                connection.set_tunnel(host)
+                return connection
+
+        return ProxiedTransport_PY3()
+
+
+class kestrelAMPL(object):
 
     def __init__(self):
         self.setup_connection()
+
+    def __del__(self):
+        # This is a hack to force the socket to close.  When running
+        # tests under unittest, unittest will report any underlying
+        # socket resources that have not been closed as warnings.  This
+        # will cause the socket to be closed when the kestrelAMPL object
+        # falls out of scope and will suppress the warnings from
+        # unittest.
+        #
+        # Note that this is only to suppress warnings, as __del__ is not
+        # guaranteed to be called (especially for any objects that still
+        # exist when the Python process terminates)
+        if self.neos is not None:
+            self.transport.close()
 
     def setup_connection(self):
         # on *NIX, the proxy can show up either upper or lowercase.
@@ -123,20 +151,24 @@ class kestrelAMPL:
             proxy = os.environ.get(
                 'https_proxy', os.environ.get(
                     'HTTPS_PROXY', proxy))
-        transport = None
         if proxy:
-            transport = ProxiedTransport()
-            transport.set_proxy(proxy)
+            self.transport = ProxiedTransport()
+            self.transport.set_proxy(proxy)
+        elif NEOS.scheme == 'https':
+            self.transport = xmlrpclib.SafeTransport()
+        else:
+            self.transport = xmlrpclib.Transport()
 
         self.neos = xmlrpclib.ServerProxy(
             "%s://%s:%s" % (NEOS.scheme, NEOS.host, NEOS.port),
-            transport=transport)
+            transport=self.transport)
 
         logger.info("Connecting to the NEOS server ... ")
         try:
             result = self.neos.ping()
             logger.info("OK.")
-        except (socket.error, xmlrpclib.ProtocolError):
+        except (socket.error, xmlrpclib.ProtocolError,
+                six.moves.http_client.BadStatusLine):
             e = sys.exc_info()[1]
             self.neos = None
             logger.info("Fail.")
@@ -150,17 +182,24 @@ class kestrelAMPL:
         logger.info(response)
 
     def solvers(self):
-        return self.neos.listSolversInCategory("kestrel") \
-                if not self.neos is None else []
+        if self.neos is None:
+            return []
+        else:
+            attempt = 0
+            while attempt < 3:
+                try:
+                    return self.neos.listSolversInCategory("kestrel")
+                except socket.timeout:
+                    attempt += 1
+            return []
 
     def retrieve(self,stub,jobNumber,password):
         # NEOS should return results as uu-encoded xmlrpclib.Binary data
         results = self.neos.getFinalResults(jobNumber,password)
         if isinstance(results,xmlrpclib.Binary):
             results = results.data
-        #decode results to kestrel.sol
-        # Well try to anyway, any errors will result in error strings in .sol file
-        #  instead of solution.
+        # decode results to kestrel.sol; well try to anyway, any errors
+        # will result in error strings in .sol file instead of solution.
         if stub[-4:] == '.sol':
             stub = stub[:-4]
         solfile = open(stub + ".sol","wb")
@@ -172,12 +211,7 @@ class kestrelAMPL:
         # one sudo-ed to), whereas USERNAME is the original user who ran
         # sudo.  We include USERNAME to cover Windows, where LOGNAME and
         # USER may not be defined.
-        for _ in ('LOGNAME','USER','USERNAME'):
-            uname = os.getenv(_)
-            if uname is not None:
-                break
-        hostname = socket.getfqdn(socket.gethostname())
-        user = "%s on %s" % (uname,hostname)
+        user = self.getEmailAddress()
         (jobNumber,password) = self.neos.submitJob(xml,user,"kestrel")
         if jobNumber == 0:
             raise RuntimeError("%s\n\tJob not submitted" % (password,))
@@ -190,6 +224,17 @@ class kestrelAMPL:
             "?admin=results&jobnumber=%d&pass=%s\n"
             % (NEOS.scheme, jobNumber,password))
         return (jobNumber,password)
+
+    def getEmailAddress(self):
+        # Note: the NEOS email address parser is more restrictive than
+        # the email.utils parser
+        email = os.environ.get('NEOS_EMAIL', '')
+        if _email_re.match(email):
+            return email
+
+        raise RuntimeError(
+            "NEOS requires a valid email address. "
+            "Please set the 'NEOS_EMAIL' environment variable.")
 
     def getJobAndPassword(self):
         """
@@ -294,16 +339,18 @@ class kestrelAMPL:
         if six.PY2:
             nl_string = base64.encodestring(zipped_nl_file.getvalue())
         else:
-            nl_string = (base64.encodestring(zipped_nl_file.getvalue())).decode('utf-8')
+            nl_string = (base64.encodebytes(zipped_nl_file.getvalue())).decode('utf-8')
         xml = """
               <document>
               <category>kestrel</category>
+              <email>%s</email>
               <solver>%s</solver>
               <inputType>AMPL</inputType>
               %s
               <solver_options>%s</solver_options>
               <nlfile><base64>%s</base64></nlfile>\n""" %\
-                                (solver,priority,
+                                (self.getEmailAddress(),
+                                 solver,priority,
                                  solver_options,
                                  nl_string)
         #

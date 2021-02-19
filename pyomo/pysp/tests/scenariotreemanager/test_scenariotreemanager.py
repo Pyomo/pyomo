@@ -13,23 +13,22 @@ import os
 import time
 import subprocess
 import sys
-import collections
-if sys.version_info[:2] >= (3,6):
+
+from pyomo.common.collections import OrderedDict
+if sys.version_info[:2] >= (3,7):
+    # dict became ordered in CPython 3.6 and added to the standard in 3.7
     _ordered_dict_ = dict
 else:
-    try:
-        _ordered_dict_ = collections.OrderedDict
-    except ImportError:                         #pragma:nocover
-        import ordereddict
-        _ordered_dict_ = ordereddict.OrderedDict
+    _ordered_dict_ = OrderedDict
 
 from pyutilib.pyro import using_pyro3, using_pyro4
+import pyutilib.th as unittest
+
+from pyomo.common.dependencies import dill, dill_available
 from pyomo.pysp.util.misc import (_get_test_nameserver,
                                   _get_test_dispatcher,
                                   _poll,
                                   _kill)
-import pyutilib.services
-import pyutilib.th as unittest
 from pyomo.pysp.util.config import PySPConfigBlock
 from pyomo.pysp.scenariotree.manager import (ScenarioTreeManager,
                                              ScenarioTreeManagerClient,
@@ -47,13 +46,7 @@ from pyomo.pysp.scenariotree.tree_structure_model import \
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
 
-from pyomo.environ import *
-
-try:
-    import dill
-    dill_available = True                         #pragma:nocover
-except ImportError:                               #pragma:nocover
-    dill_available = False
+from pyomo.environ import ConcreteModel, Var, Expression, Constraint, Objective, sum_product
 
 thisfile = os.path.abspath(__file__)
 thisdir = os.path.dirname(thisfile)

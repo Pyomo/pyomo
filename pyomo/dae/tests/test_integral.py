@@ -24,7 +24,6 @@ from pyomo.dae.diffvar import DAE_Error
 
 from pyomo.repn import generate_standard_repn
 
-from six import StringIO
 
 currdir = dirname(abspath(__file__)) + os.sep
 
@@ -73,10 +72,10 @@ class TestIntegral(unittest.TestCase):
         self.assertEqual(len(m.int2), 3)
         self.assertEqual(len(m.int3), 2)
         self.assertEqual(len(m.int4), 1)
-        self.assertTrue(m.int1.type() is Integral)
-        self.assertTrue(m.int2.type() is Integral)
-        self.assertTrue(m.int3.type() is Integral)
-        self.assertTrue(m.int4.type() is Integral)
+        self.assertTrue(m.int1.ctype is Integral)
+        self.assertTrue(m.int2.ctype is Integral)
+        self.assertTrue(m.int3.ctype is Integral)
+        self.assertTrue(m.int4.ctype is Integral)
 
         repn = generate_standard_repn(m.int1.expr)
         self.assertEqual(repn.linear_coefs, (0.5, 0.5))
@@ -185,20 +184,20 @@ class TestIntegral(unittest.TestCase):
             self.assertFalse(m.int3.is_fully_discretized())
             self.assertFalse(m.int4.is_fully_discretized())
 
-            self.assertTrue(m.int1.type() is Integral)
-            self.assertTrue(m.int2.type() is Integral)
-            self.assertTrue(m.int3.type() is Integral)
-            self.assertTrue(m.int4.type() is Integral)
+            self.assertTrue(m.int1.ctype is Integral)
+            self.assertTrue(m.int2.ctype is Integral)
+            self.assertTrue(m.int3.ctype is Integral)
+            self.assertTrue(m.int4.ctype is Integral)
 
             TransformationFactory('dae.finite_difference').apply_to(m, wrt=m.x)
 
             self.assertTrue(m.int3.is_fully_discretized())
             self.assertTrue(m.int4.is_fully_discretized())
 
-            self.assertTrue(m.int1.type() is Expression)
-            self.assertTrue(m.int2.type() is Expression)
-            self.assertTrue(m.int3.type() is Expression)
-            self.assertTrue(m.int4.type() is Expression)
+            self.assertTrue(m.int1.ctype is Expression)
+            self.assertTrue(m.int2.ctype is Expression)
+            self.assertTrue(m.int3.ctype is Expression)
+            self.assertTrue(m.int4.ctype is Expression)
 
     # test DerivativeVar reclassification after discretization
     def test_reclassification_collocation(self):
@@ -242,20 +241,20 @@ class TestIntegral(unittest.TestCase):
         self.assertFalse(m.int3.is_fully_discretized())
         self.assertFalse(m.int4.is_fully_discretized())
 
-        self.assertTrue(m.int1.type() is Integral)
-        self.assertTrue(m.int2.type() is Integral)
-        self.assertTrue(m.int3.type() is Integral)
-        self.assertTrue(m.int4.type() is Integral)
+        self.assertTrue(m.int1.ctype is Integral)
+        self.assertTrue(m.int2.ctype is Integral)
+        self.assertTrue(m.int3.ctype is Integral)
+        self.assertTrue(m.int4.ctype is Integral)
 
         TransformationFactory('dae.collocation').apply_to(m, wrt=m.x)
 
         self.assertTrue(m.int3.is_fully_discretized())
         self.assertTrue(m.int4.is_fully_discretized())
 
-        self.assertTrue(m.int1.type() is Expression)
-        self.assertTrue(m.int2.type() is Expression)
-        self.assertTrue(m.int3.type() is Expression)
-        self.assertTrue(m.int4.type() is Expression)
+        self.assertTrue(m.int1.ctype is Expression)
+        self.assertTrue(m.int2.ctype is Expression)
+        self.assertTrue(m.int3.ctype is Expression)
+        self.assertTrue(m.int4.ctype is Expression)
 
 
 if __name__ == "__main__":

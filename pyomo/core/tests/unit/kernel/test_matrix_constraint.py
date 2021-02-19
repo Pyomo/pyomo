@@ -1,13 +1,17 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import pickle
 
 import pyutilib.th as unittest
 import pyomo.kernel as pmo
-from pyomo.core.tests.unit.kernel.test_dict_container import \
-    _TestActiveDictContainerBase
-from pyomo.core.tests.unit.kernel.test_tuple_container import \
-    _TestActiveTupleContainerBase
-from pyomo.core.tests.unit.kernel.test_list_container import \
-    _TestActiveListContainerBase
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
      ICategorizedObjectContainer)
@@ -16,7 +20,6 @@ from pyomo.core.kernel.homogeneous_container import \
 from pyomo.core.kernel.tuple_container import TupleContainer
 from pyomo.core.kernel.constraint import (IConstraint,
                                           constraint,
-                                          linear_constraint,
                                           constraint_dict,
                                           constraint_tuple,
                                           constraint_list)
@@ -26,12 +29,9 @@ from pyomo.core.kernel.matrix_constraint import \
 from pyomo.core.kernel.variable import (variable,
                                         variable_list)
 from pyomo.core.kernel.parameter import parameter
-from pyomo.core.kernel.expression import (expression,
-                                          data_expression)
+from pyomo.core.kernel.expression import expression
 from pyomo.core.kernel.block import (block,
                                      block_list)
-from pyomo.core.kernel.set_types import (RealSet,
-                                         IntegerSet)
 
 try:
     import numpy
@@ -47,6 +47,7 @@ except:
     has_scipy = False
     _scipy_ver = (0,0)
 
+
 def _create_variable_list(size, **kwds):
     assert size > 0
     vlist = variable_list()
@@ -54,12 +55,12 @@ def _create_variable_list(size, **kwds):
         vlist.append(variable(**kwds))
     return vlist
 
+
 @unittest.skipUnless(has_numpy and has_scipy,
                      "NumPy or SciPy is not available")
 class Test_matrix_constraint(unittest.TestCase):
 
     def test_pprint(self):
-        import pyomo.kernel
         # Not really testing what the output is, just that
         # an error does not occur. The pprint functionality
         # is still in the early stages.

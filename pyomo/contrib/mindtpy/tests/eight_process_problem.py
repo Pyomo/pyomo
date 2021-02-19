@@ -32,7 +32,7 @@ from pyomo.environ import (Binary, ConcreteModel, Constraint, NonNegativeReals,
 class EightProcessFlowsheet(ConcreteModel):
     """Flowsheet for the 8 process problem."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, convex=True, *args, **kwargs):
         """Create the flowsheet."""
         kwargs.setdefault('name', 'DuranEx3')
         super(EightProcessFlowsheet, self).__init__(*args, **kwargs)
@@ -96,14 +96,21 @@ class EightProcessFlowsheet(ConcreteModel):
 
         """Constraint definitions"""
         # INPUT-OUTPUT RELATIONS FOR process units 1 through 8
-        m.inout1 = Constraint(expr=exp(m.X[3]) - 1 == m.X[2])
-        m.inout2 = Constraint(expr=exp(m.X[5] / 1.2) - 1 == m.X[4])
         m.inout3 = Constraint(expr=1.5 * m.X[9] + m.X[10] == m.X[8])
         m.inout4 = Constraint(expr=1.25 * (m.X[12] + m.X[14]) == m.X[13])
         m.inout5 = Constraint(expr=m.X[15] == 2 * m.X[16])
-        m.inout6 = Constraint(expr=exp(m.X[20] / 1.5) - 1 == m.X[19])
-        m.inout7 = Constraint(expr=exp(m.X[22]) - 1 == m.X[21])
-        m.inout8 = Constraint(expr=exp(m.X[18]) - 1 == m.X[10] + m.X[17])
+        if convex:
+            m.inout1 = Constraint(expr=exp(m.X[3]) - 1 <= m.X[2])
+            m.inout2 = Constraint(expr=exp(m.X[5] / 1.2) - 1 <= m.X[4])
+            m.inout7 = Constraint(expr=exp(m.X[22]) - 1 <= m.X[21])
+            m.inout8 = Constraint(expr=exp(m.X[18]) - 1 <= m.X[10] + m.X[17])
+            m.inout6 = Constraint(expr=exp(m.X[20] / 1.5) - 1 <= m.X[19])
+        else:
+            m.inout1 = Constraint(expr=exp(m.X[3]) - 1 == m.X[2])
+            m.inout2 = Constraint(expr=exp(m.X[5] / 1.2) - 1 == m.X[4])
+            m.inout7 = Constraint(expr=exp(m.X[22]) - 1 == m.X[21])
+            m.inout8 = Constraint(expr=exp(m.X[18]) - 1 == m.X[10] + m.X[17])
+            m.inout6 = Constraint(expr=exp(m.X[20] / 1.5) - 1 == m.X[19])
 
         # Mass balance equations
         m.massbal1 = Constraint(expr=m.X[13] == m.X[19] + m.X[21])
@@ -144,6 +151,8 @@ class EightProcessFlowsheet(ConcreteModel):
 
         """Bound definitions"""
         # x (flow) upper bounds
-        x_ubs = {3: 2, 5: 2, 9: 2, 10: 1, 14: 1, 17: 2, 19: 2, 21: 2, 25: 3}
+        # x_ubs = {3: 2, 5: 2, 9: 2, 10: 1, 14: 1, 17: 2, 19: 2, 21: 2, 25: 3}
+        x_ubs = {2: 10, 3: 2, 4: 10, 5: 2, 9: 2, 10: 1, 14: 1, 17: 2, 18: 10, 19: 2,
+                 20: 10, 21: 2, 22: 10, 25: 3}  # add bounds for variables in nonlinear constraints
         for i, x_ub in iteritems(x_ubs):
             X[i].setub(x_ub)

@@ -13,6 +13,8 @@ from six import iteritems
 from six.moves import xrange
 
 from pyomo.core import Block, ConstraintList, Set, Constraint
+from pyomo.core.base import Reference
+from pyomo.common.modeling import unique_component_name
 from pyomo.gdp.disjunct import Disjunct, Disjunction
 
 import logging
@@ -44,9 +46,9 @@ def apply_basic_step(disjunctions_or_constraints):
     # Basic steps only apply to XOR'd disjunctions
     #
     disjunctions = list(obj for obj in disjunctions_or_constraints
-                        if obj.type() == Disjunction)
+                        if obj.ctype == Disjunction)
     constraints = list(obj for obj in disjunctions_or_constraints
-                       if obj.type() == Constraint)
+                       if obj.ctype == Constraint)
     for d in disjunctions:
         if not d.xor:
             raise ValueError(
@@ -84,23 +86,38 @@ def apply_basic_step(disjunctions_or_constraints):
         # Copy in the constraints corresponding to the improper disjunctions
         ans.disjuncts[idx].improper_constraints = ConstraintList()
         for constr in constraints:
-            for indx in constr:
+            if constr.is_indexed():
+                for indx in constr:
+                    ans.disjuncts[idx].improper_constraints.add(
+                        (constr[indx].lower, constr[indx].body, constr[indx].upper)
+                    )
+                    constr[indx].deactivate()
+            # need this so that we can take an improper basic step with a
+            # ConstraintData
+            else:
                 ans.disjuncts[idx].improper_constraints.add(
-                    (constr[indx].lower, constr[indx].body, constr[indx].upper)
+                    (constr.lower, constr.body, constr.upper)
                 )
-                constr[indx].deactivate()
+                constr.deactivate()
 
     #
     # Link the new disjunct indicator_var's to the original
     # indicator_var's.  Since only one of the new
     #
+    NAME_BUFFER = {}
     ans.indicator_links = ConstraintList()
     for i in ans.DISJUNCTIONS:
         for j in xrange(len(disjunctions[i].disjuncts)):
+            orig_var = disjunctions[i].disjuncts[j].indicator_var
             ans.indicator_links.add(
-                disjunctions[i].disjuncts[j].indicator_var ==
+                orig_var ==
                 sum( ans.disjuncts[idx].indicator_var for idx in ans.INDEX
                      if (idx[i] if isinstance(idx, tuple) else idx) == j ))
+            # and throw on a Reference to original on the block
+            name_base = orig_var.getname(fully_qualified=True,
+                                         name_buffer=NAME_BUFFER)
+            ans.add_component(unique_component_name( ans, name_base),
+                              Reference(orig_var))
 
     # Form the new disjunction
     ans.disjunction = Disjunction(expr=[ans.disjuncts[i] for i in ans.INDEX])

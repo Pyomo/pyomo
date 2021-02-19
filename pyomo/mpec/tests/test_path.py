@@ -12,7 +12,6 @@
 # Test the path solver
 #
 
-import sys
 import os
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
@@ -20,18 +19,13 @@ exdir = normpath(join(currdir,'..','..','..','examples','mpec'))
 
 import six
 import pyutilib.th as unittest
+
+from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 import pyomo.opt
 import pyomo.scripting.pyomo_main as pyomo_main
 from pyomo.scripting.util import cleanup
-from pyomo.environ import *
 
 from six import iteritems
-
-try:
-    import yaml
-    yaml_available=True
-except ImportError:
-    yaml_available=False
 
 solvers = pyomo.opt.check_available_solvers('path')
 
@@ -80,7 +74,7 @@ class CommonTests:
 
     def getObjective(self, fname):
         FILE = open(fname,'r')
-        data = yaml.load(FILE)
+        data = yaml.load(FILE, **yaml_load_args)
         FILE.close()
         solutions = data.get('Solution', [])
         ans = []

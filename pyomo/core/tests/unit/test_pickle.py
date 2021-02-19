@@ -20,8 +20,7 @@ currdir = dirname(abspath(__file__))+os.sep
 import platform
 
 import pyutilib.th as unittest
-from pyomo.environ import *
-import pyomo.core.expr.current as EXPR
+from pyomo.environ import AbstractModel, ConcreteModel, Set, Param, Var, Constraint, Objective, Reals, NonNegativeReals, sum_product
 
 
 using_pypy = platform.python_implementation() == "PyPy"
@@ -290,7 +289,6 @@ class Test(unittest.TestCase):
 
     # verifies that the use of lambda expressions as rules yields model instances
     # that are not pickle'able.
-    @unittest.skipIf(sys.version_info[:2] < (2,6), "Skipping test because the sparse_dict repn is not supported")
     def test_pickle3(self):
         def rule1(model):
             return (1,model.x+model.y[1],2)

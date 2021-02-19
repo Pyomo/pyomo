@@ -15,46 +15,17 @@ detect variables inside of Disjuncts or deactivated Blocks.
 """
 
 import logging
-import textwrap
-from pyomo.common.plugin import alias
 from pyomo.core.base import Transformation, Block, Constraint
 from pyomo.gdp import Disjunct, GDP_Error, Disjunction
 from pyomo.core import TraversalStrategy, TransformationFactory
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
 from pyomo.common.deprecation import deprecated
+from pyomo.common.modeling import unique_component_name
 
 from six import itervalues
 
 logger = logging.getLogger('pyomo.gdp')
-
-
-
-@TransformationFactory.register('gdp.varmover', doc="Move indicator vars to top block.")
-class HACK_GDP_Var_Mover(Transformation):
-    """Move indicator vars to top block.
-
-    HACK: this will move all indicator variables on the model to the top block
-    so the writers can find them.
-
-    """
-
-    @deprecated(msg="The gdp.varmover transformation has been deprecated in "
-                "favor of the gdp.reclassify transformation.",
-                version='5.5.1')
-    def _apply_to(self, instance, **kwds):
-        assert not kwds
-        count = 0
-        disjunct_generator = instance.component_data_objects(
-            Disjunct, descend_into=(Block, Disjunct))
-        for disjunct in disjunct_generator:
-            count += 1
-            var = disjunct.indicator_var
-            var.doc = "%s(Moved from %s)" % (
-                var.doc + " " if var.doc else "", var.name, )
-            disjunct.del_component(var)
-            instance.add_component("_gdp_moved_IV_%s" % (count,), var)
-
-
+                
 @TransformationFactory.register('gdp.reclassify',
           doc="Reclassify Disjuncts to Blocks.")
 class HACK_GDP_Disjunct_Reclassifier(Transformation):
@@ -64,7 +35,13 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
     can find the variables
 
     """
-
+    @deprecated(msg="The gdp.reclasify transformation has been deprecated in "
+                "favor of the gdp transformations creating References to "
+                "variables local to each Disjunct during the transformation. "
+                "Validation that the model has been completely transformed "
+                "to an algebraic model has been moved to the "
+                "check_model_algebraic function in gdp.util.",
+                version='5.7')
     def _apply_to(self, instance, **kwds):
         assert not kwds  # no keywords expected to the transformation
         disjunct_generator = instance.component_objects(
@@ -152,18 +129,17 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
 
     def _disjunct_not_relaxed(self, disjunct):
         # Return True if the disjunct was not relaxed by a transformation.
-        return not getattr(
-            disjunct, '_gdp_transformation_info', {}).get('relaxed', False)
-
+        return disjunct.transformation_block is None
+        
     def _disjunct_on_active_block(self, disjunct):
         # Check first to make sure that the disjunct is not a
         # descendent of an inactive Block or fixed and deactivated
         # Disjunct, before raising a warning.
         parent_block = disjunct.parent_block()
         while parent_block is not None:
-            if parent_block.type() is Block and not parent_block.active:
+            if parent_block.ctype is Block and not parent_block.active:
                 return False
-            elif (parent_block.type() is Disjunct and not parent_block.active
+            elif (parent_block.ctype is Disjunct and not parent_block.active
                   and parent_block.indicator_var.value == 0
                   and parent_block.indicator_var.fixed):
                 return False

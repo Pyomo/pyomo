@@ -1,9 +1,20 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+
 # -*- coding: UTF-8 -*-
 """Tests disjunct fixing."""
 import pyutilib.th as unittest
 from pyomo.environ import (Block,
                            Constraint, ConcreteModel, TransformationFactory,
-                           RangeSet, NonNegativeReals)
+                           NonNegativeReals)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 
 
@@ -25,8 +36,8 @@ class TestFixDisjuncts(unittest.TestCase):
         self.assertTrue(m.d1.active)
         self.assertTrue(m.d2.indicator_var.fixed)
         self.assertFalse(m.d2.active)
-        self.assertEqual(m.d1.type(), Block)
-        self.assertEqual(m.d2.type(), Block)
+        self.assertEqual(m.d1.ctype, Block)
+        self.assertEqual(m.d2.ctype, Block)
         self.assertTrue(m.d2.c.active)
 
     def test_xor_not_sum_to_1(self):

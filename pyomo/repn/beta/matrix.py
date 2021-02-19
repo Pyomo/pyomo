@@ -16,10 +16,10 @@ import logging
 import array
 from weakref import ref as weakref_ref
 
+from pyomo.common.log import is_debug_set
 from pyomo.core.base.set_types import Any
 from pyomo.core.base import (SortComponents,
-                             Var,
-                             Constraint)
+                             Var)
 from pyomo.core.base.numvalue import (is_fixed,
                                       value,
                                       ZeroConstant)
@@ -511,7 +511,6 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
     def variables(self):
         """A tuple of variables comprising the constraint body."""
         comp = self.parent_component()
-        index = self.index()
         prows = comp._prows
         jcols = comp._jcols
         varmap = comp._varmap
@@ -528,7 +527,6 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
     def coefficients(self):
         """A tuple of coefficients associated with the variables."""
         comp = self.parent_component()
-        index = self.index()
         prows = comp._prows
         jcols = comp._jcols
         vals = comp._vals
@@ -548,7 +546,6 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
     def constant(self):
         """The constant value associated with the constraint body."""
         comp = self.parent_component()
-        index = self.index()
         prows = comp._prows
         jcols = comp._jcols
         vals = comp._vals
@@ -673,7 +670,7 @@ class MatrixConstraint(collections_Mapping,
         """
         Construct the expression(s) for this constraint.
         """
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing constraint %s"
                          % (self.name))
         if self._constructed:

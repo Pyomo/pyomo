@@ -26,7 +26,7 @@ except:
 
 import pyutilib.th as unittest
 from pyutilib.misc.comparison import open_possibly_compressed_file
-import pyutilib.services
+from pyomo.common.dependencies import yaml_available
 from pyomo.pysp.util.misc import (_get_test_nameserver,
                                   _get_test_dispatcher,
                                   _poll,
@@ -34,12 +34,6 @@ from pyomo.pysp.util.misc import (_get_test_nameserver,
 from pyomo.pysp.tests.examples.ph_checker import main as validate_ph_main
 from pyutilib.pyro import using_pyro3, using_pyro4
 
-has_yaml = False
-try:
-    import yaml
-    has_yaml = True
-except ImportError:
-    has_yaml = False
 
 # Global test configuration options
 _test_name_wildcard_include = ["*"]
@@ -620,7 +614,7 @@ class FarmerTester(PHTester):
 
     # Test the wwphextension plugin (it's best if this test involves
     # variable fixing)
-    @unittest.skipIf(not has_yaml, "PyYAML module is not available")
+    @unittest.skipIf(not yaml_available, "PyYAML module is not available")
     def test6(self):
         self._baseline_test(options_string=("--enable-ww-extensions "
                                             "--ww-extension-cfgfile="
@@ -630,7 +624,7 @@ class FarmerTester(PHTester):
 
     # Test the wwphextension plugin (it's best if this test involves
     # variable fixing) and solve ef
-    @unittest.skipIf(not has_yaml, "PyYAML module is not available")
+    @unittest.skipIf(not yaml_available, "PyYAML module is not available")
     def test6_withef(self):
         self._withef_compare_baseline_test("test6",
                                            options_string=("--enable-ww-extensions "
@@ -641,7 +635,7 @@ class FarmerTester(PHTester):
 
     # Test the phboundextension plugin and that it does not effect ph
     # convergence
-    @unittest.skipIf(not has_yaml, "PyYAML module is not available")
+    @unittest.skipIf(not yaml_available, "PyYAML module is not available")
     def test7(self):
         def check_baseline_func(self, class_name, test_name):
             prefix = class_name+"."+test_name
@@ -668,7 +662,7 @@ class FarmerTester(PHTester):
 
     # Test the convexhullboundextension plugin (which does affect ph
     # convergence)
-    @unittest.skipIf(not has_yaml, "PyYAML module is not available")
+    @unittest.skipIf(not yaml_available, "PyYAML module is not available")
     def test8(self):
         self._convexhullboundextension_baseline_test()
 
@@ -676,7 +670,7 @@ class FarmerTester(PHTester):
     # (wwphextension), which involves variable fixing. These plugins
     # should not interact with each other so we additionally test
     # their output files against test6
-    @unittest.skipIf(not has_yaml, "PyYAML module is not available")
+    @unittest.skipIf(not yaml_available, "PyYAML module is not available")
     def test9(self):
         def check_baseline_func(self, class_name, test_name):
             prefix = class_name+"."+test_name
@@ -712,7 +706,7 @@ class FarmerTester(PHTester):
     # (wwphextension), which involves variable fixing. These plugins
     # likely interact with each other.  Not sure I can perform any
     # additional tests here.
-    @unittest.skipIf(not has_yaml, "PyYAML module is not available")
+    @unittest.skipIf(not yaml_available, "PyYAML module is not available")
     def test10(self):
         self._convexhullboundextension_baseline_test(
             options_string=("--enable-ww-extensions "
@@ -722,7 +716,7 @@ class FarmerTester(PHTester):
                             +join(farmer_config_dir,'wwph.suffixes')))
 
     # This is test9 with the --preprocess-fixed-variables flag
-    @unittest.skipIf(not has_yaml, "PyYAML module is not available")
+    @unittest.skipIf(not yaml_available, "PyYAML module is not available")
     def test11(self):
         def cleanup_func(self, class_name, test_name):
             prefix = class_name+"."+test_name
@@ -789,7 +783,7 @@ class FarmerTester(PHTester):
             check_baseline_func=check_baseline_func)
 
     # This is test10 with the --preprocess-fixed-variables flag
-    @unittest.skipIf(not has_yaml, "PyYAML module is not available")
+    @unittest.skipIf(not yaml_available, "PyYAML module is not available")
     def test12(self):
         def cleanup_func(self, class_name, test_name):
             prefix = class_name+"."+test_name
@@ -859,7 +853,7 @@ class FarmerTester(PHTester):
             check_baseline_func=check_baseline_func)
 
     # This is test6 with the --preprocess-fixed-variables flag
-    @unittest.skipIf(not has_yaml, "PyYAML module is not available")
+    @unittest.skipIf(not yaml_available, "PyYAML module is not available")
     def test13(self):
         def cleanup_func(self, class_name, test_name):
             prefix = class_name+"."+test_name
@@ -1116,7 +1110,7 @@ class NetworkFlowTester(PHTester):
         cls.solver_io = 'nl'
         PHTester._setUpClass(cls)
 
-    @unittest.skipIf(not has_yaml, "PyYAML module is not available")
+    @unittest.skipIf(not yaml_available, "PyYAML module is not available")
     def test1(self):
         self._baseline_test(
             options_string=("--max-iterations=0 --verbose "
@@ -1212,7 +1206,7 @@ class SizesTester(PHTester):
         cls.solver_io = 'nl'
         PHTester._setUpClass(cls)
 
-    @unittest.skipIf(not has_yaml, "PyYAML module is not available")
+    @unittest.skipIf(not yaml_available, "PyYAML module is not available")
     def test1(self):
         self._baseline_test(
             options_string=("--max-iterations=0 "
@@ -1264,7 +1258,7 @@ class ForestryTester(PHTester):
         cls.solver_io = 'nl'
         PHTester._setUpClass(cls)
 
-    @unittest.skipIf(not has_yaml, "PyYAML module is not available")
+    @unittest.skipIf(not yaml_available, "PyYAML module is not available")
     def test1(self):
         self._baseline_test(
             options_string=("--max-iterations=0 "

@@ -16,8 +16,7 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 from six.moves import xrange
 import pyutilib.th as unittest
-from pyomo.core.base import IntegerSet
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, AbstractModel, SOSConstraint, Var, Set
 
 
 class TestErrors(unittest.TestCase):
@@ -59,7 +58,7 @@ class TestErrors(unittest.TestCase):
 
     def test_ordered(self):
         M = ConcreteModel()
-        M.v = Var([1,2,3])
+        M.v = Var({1,2,3})
         try:
             M.c = SOSConstraint(var=M.v, sos=2)
             self.fail("Expected ValueError")
