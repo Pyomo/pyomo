@@ -16,7 +16,7 @@ import time
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 
-@unittest.timeout(1)
+@unittest.timeout(10)
 def short_sleep():
     return 42
 
@@ -25,11 +25,11 @@ def long_sleep():
     time.sleep(1)
     return 42
 
-@unittest.timeout(1)
+@unittest.timeout(10)
 def raise_exception():
     foo.bar
 
-@unittest.timeout(1)
+@unittest.timeout(10)
 def fail():
     raise AssertionError("0 != 1")
 
@@ -162,7 +162,7 @@ class TestPyomoUnittest(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, r"^0 != 1$"):
             fail()
 
-    @unittest.timeout(1)
+    @unittest.timeout(10)
     def test_timeout(self):
         self.assertEqual(0, 0)
 
@@ -172,9 +172,9 @@ class TestPyomoUnittest(unittest.TestCase):
         time.sleep(1)
         self.assertEqual(0, 1)
 
-    @unittest.timeout(1)
+    @unittest.timeout(10)
     def test_timeout_skip(self):
-        if TestPyomoUnittest.test_timeout_skip.skip:
+        if not TestPyomoUnittest.test_timeout_skip.skip:
             self.skipTest("Skipping this test")
         self.assertEqual(0, 1)
 
@@ -191,7 +191,7 @@ class TestPyomoUnittest(unittest.TestCase):
         finally:
             TestPyomoUnittest.test_timeout_skip.skip = True
 
-    @unittest.timeout(1)
+    @unittest.timeout(10)
     def bound_function(self):
         self.assertEqual(0, 0)
 
@@ -205,7 +205,7 @@ class TestPyomoUnittest(unittest.TestCase):
                 self.bound_function()
         self.assertIn("platform that does not support 'fork'", LOG.getvalue())
 
-    @unittest.timeout(1, require_fork=True)
+    @unittest.timeout(10, require_fork=True)
     def bound_function_require_fork(self):
         self.assertEqual(0, 0)
 
