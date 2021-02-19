@@ -421,7 +421,7 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
         opt.options['mipgap'] = config.mip_solver_mipgap
         if regularization == True:
             if solver_name == 'cplex':
-                opt.options['mip limits populate'] = config.solution_limit
+                opt.options['mip limits solutions'] = config.solution_limit
                 opt.options['mip strategy presolvenode'] = 3
                 # TODO: need to discuss if this option should be added.
                 if config.add_regularization == 'hess_lag':
@@ -433,8 +433,8 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
         opt.options['timelimit'] = remaining
         opt._solver_model.parameters.mip.tolerances.mipgap.set(
             config.mip_solver_mipgap)
-        if regularization == True:
-            opt._solver_model.parameters.mip.limits.populate.set(
+        if regularization is True:
+            opt._solver_model.parameters.mip.limits.solutions.set(
                 config.solution_limit)
             opt._solver_model.parameters.mip.strategy.presolvenode.set(3)
             if config.add_regularization == 'hess_lag':
