@@ -15,10 +15,10 @@ import os
 from os.path import abspath, dirname
 pyomo_dir=dirname(dirname(abspath(__file__)))+os.sep+".."
 
-import pyutilib.misc
 import pyutilib.th as unittest
 
 from pyomo.common.errors import ApplicationError
+from pyomo.common.tee import capture_output
 from pyomo.dataportal.factory import DataManagerFactory
 from pyomo.environ import AbstractModel, ConcreteModel, Set, DataPortal, Param, Boolean, Any, value
 
@@ -1116,9 +1116,8 @@ class LoadTests(object):
     def test_tableA1(self):
         # Importing a single column of data
         self.check_skiplist('tableA1')
-        pyutilib.misc.setup_redirect(currdir+'loadA1.dat')
-        print("load "+self.filename('A')+" format=set : A;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadA1.dat'):
+            print("load "+self.filename('A')+" format=set : A;")
         model=AbstractModel()
         model.A = Set()
         instance = model.create_instance(currdir+'loadA1.dat')
@@ -1128,9 +1127,8 @@ class LoadTests(object):
     def test_tableA2(self):
         # Importing a single column of data
         self.check_skiplist('tableA2')
-        pyutilib.misc.setup_redirect(currdir+'loadA2.dat')
-        print("load "+self.filename('A')+" ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadA2.dat'):
+            print("load "+self.filename('A')+" ;")
         model=AbstractModel()
         model.A = Set()
         try:
@@ -1145,9 +1143,8 @@ class LoadTests(object):
     def test_tableA3(self):
         # Importing a single column of data
         self.check_skiplist('tableA3')
-        pyutilib.misc.setup_redirect(currdir+'loadA3.dat')
-        print("load "+self.filename('A')+" format=set : A ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadA3.dat'):
+            print("load "+self.filename('A')+" format=set : A ;")
         model=AbstractModel()
         model.A = Set()
         instance = model.create_instance(currdir+'loadA3.dat')
@@ -1157,9 +1154,8 @@ class LoadTests(object):
     def test_tableB1(self):
         # Same as test_tableA
         self.check_skiplist('tableB1')
-        pyutilib.misc.setup_redirect(currdir+'loadB.dat')
-        print("load "+self.filename('B')+" format=set : B;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadB.dat'):
+            print("load "+self.filename('B')+" format=set : B;")
         model=AbstractModel()
         model.B = Set()
         instance = model.create_instance(currdir+'loadB.dat')
@@ -1170,9 +1166,8 @@ class LoadTests(object):
         # Importing a multi-column table, where all columns are
         # treated as values for a set with tuple values.
         self.check_skiplist('tableC')
-        pyutilib.misc.setup_redirect(currdir+'loadC.dat')
-        print("load "+self.filename('C')+" format=set : C ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadC.dat'):
+            print("load "+self.filename('C')+" format=set : C ;")
         model=AbstractModel()
         model.C = Set(dimen=2)
         instance = model.create_instance(currdir+'loadC.dat')
@@ -1182,9 +1177,8 @@ class LoadTests(object):
     def test_tableD(self):
         # Importing a 2D array of data as a set.
         self.check_skiplist('tableD')
-        pyutilib.misc.setup_redirect(currdir+'loadD.dat')
-        print("load "+self.filename('D')+" format=set_array : C ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadD.dat'):
+            print("load "+self.filename('D')+" format=set_array : C ;")
         model=AbstractModel()
         model.C = Set(dimen=2)
         instance = model.create_instance(currdir+'loadD.dat')
@@ -1194,9 +1188,8 @@ class LoadTests(object):
     def test_tableZ(self):
         # Importing a single parameter
         self.check_skiplist('tableZ')
-        pyutilib.misc.setup_redirect(currdir+'loadZ.dat')
-        print("load "+self.filename('Z')+" : Z ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadZ.dat'):
+            print("load "+self.filename('Z')+" : Z ;")
         model=AbstractModel()
         model.Z = Param(default=99.0)
         instance = model.create_instance(currdir+'loadZ.dat')
@@ -1206,9 +1199,8 @@ class LoadTests(object):
     def test_tableY(self):
         # Same as tableXW.
         self.check_skiplist('tableY')
-        pyutilib.misc.setup_redirect(currdir+'loadY.dat')
-        print("load "+self.filename('Y')+" : [A] Y;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadY.dat'):
+            print("load "+self.filename('Y')+" : [A] Y;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.Y = Param(model.A)
@@ -1222,9 +1214,8 @@ class LoadTests(object):
         # parameter columns.  The first column is assumed to represent an
         # index column.
         self.check_skiplist('tableXW_1')
-        pyutilib.misc.setup_redirect(currdir+'loadXW.dat')
-        print("load "+self.filename('XW')+" : [A] X W;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadXW.dat'):
+            print("load "+self.filename('XW')+" : [A] X W;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.X = Param(model.A)
@@ -1238,9 +1229,8 @@ class LoadTests(object):
     def test_tableXW_2(self):
         # Like test_tableXW_1, except that set A is not defined.
         self.check_skiplist('tableXW_2')
-        pyutilib.misc.setup_redirect(currdir+'loadXW.dat')
-        print("load "+self.filename('XW')+" : [A] X W;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadXW.dat'):
+            print("load "+self.filename('XW')+" : [A] X W;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3'])
         model.X = Param(model.A)
@@ -1253,9 +1243,8 @@ class LoadTests(object):
     def test_tableXW_3(self):
         # Like test_tableXW_1, except that set A is defined in the load statment.
         self.check_skiplist('tableXW_3')
-        pyutilib.misc.setup_redirect(currdir+'loadXW.dat')
-        print("load "+self.filename('XW')+" : A=[A] X W;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadXW.dat'):
+            print("load "+self.filename('XW')+" : A=[A] X W;")
         model=AbstractModel()
         model.A = Set()
         model.X = Param(model.A)
@@ -1269,9 +1258,8 @@ class LoadTests(object):
     def test_tableXW_4(self):
         # Like test_tableXW_1, except that set A is defined in the load statment and all values are mapped.
         self.check_skiplist('tableXW_4')
-        pyutilib.misc.setup_redirect(currdir+'loadXW.dat')
-        print("load "+self.filename('XW')+" : B=[A] R=X S=W;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadXW.dat'):
+            print("load "+self.filename('XW')+" : B=[A] R=X S=W;")
         model=AbstractModel()
         model.B = Set()
         model.R = Param(model.B)
@@ -1285,9 +1273,8 @@ class LoadTests(object):
     def test_tableT(self):
         # Importing a 2D array of parameters that are transposed.
         self.check_skiplist('tableT')
-        pyutilib.misc.setup_redirect(currdir+'loadT.dat')
-        print("load "+self.filename('T')+" format=transposed_array : T;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadT.dat'):
+            print("load "+self.filename('T')+" format=transposed_array : T;")
         model=AbstractModel()
         model.B = Set(initialize=['I1','I2','I3','I4'])
         model.A = Set(initialize=['A1','A2','A3'])
@@ -1299,9 +1286,8 @@ class LoadTests(object):
     def test_tableU(self):
         # Importing a 2D array of parameters.
         self.check_skiplist('tableU')
-        pyutilib.misc.setup_redirect(currdir+'loadU.dat')
-        print("load "+self.filename('U')+" format=array : U;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadU.dat'):
+            print("load "+self.filename('U')+" format=array : U;")
         model=AbstractModel()
         model.A = Set(initialize=['I1','I2','I3','I4'])
         model.B = Set(initialize=['A1','A2','A3'])
@@ -1315,9 +1301,8 @@ class LoadTests(object):
         # parameter columns.  The first column is assumed to represent an
         # index column.  A missing value is represented in the column data.
         self.check_skiplist('tableS')
-        pyutilib.misc.setup_redirect(currdir+'loadS.dat')
-        print("load "+self.filename('S')+" : [A] S ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadS.dat'):
+            print("load "+self.filename('S')+" : [A] S ;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.S = Param(model.A)
@@ -1329,9 +1314,8 @@ class LoadTests(object):
     def test_tablePO(self):
         # Importing a table that has multiple indexing columns
         self.check_skiplist('tablePO')
-        pyutilib.misc.setup_redirect(currdir+'loadPO.dat')
-        print("load "+self.filename('PO')+" : J=[A,B] P O;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadPO.dat'):
+            print("load "+self.filename('PO')+" : J=[A,B] P O;")
         model=AbstractModel()
         model.J = Set(dimen=2)
         model.P = Param(model.J)
@@ -1363,9 +1347,8 @@ class TestXmlLoad(LoadTests, unittest.TestCase):
         # parameter columns.  The first column is assumed to represent an
         # index column.
         self.check_skiplist('tableXW_1')
-        pyutilib.misc.setup_redirect(currdir+'loadXW.dat')
-        print("load "+self.filename('XW_nested1')+" query='./bar/table/*' : [A] X W;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadXW.dat'):
+            print("load "+self.filename('XW_nested1')+" query='./bar/table/*' : [A] X W;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.X = Param(model.A)
@@ -1381,9 +1364,8 @@ class TestXmlLoad(LoadTests, unittest.TestCase):
         # parameter columns.  The first column is assumed to represent an
         # index column.
         self.check_skiplist('tableXW_1')
-        pyutilib.misc.setup_redirect(currdir+'loadXW.dat')
-        print("load "+self.filename('XW_nested2')+" query='./bar/table/row' : [A] X W;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadXW.dat'):
+            print("load "+self.filename('XW_nested2')+" query='./bar/table/row' : [A] X W;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.X = Param(model.A)
@@ -1433,9 +1415,8 @@ class TestTableCmd(unittest.TestCase):
 
     def test_tableA1_1(self):
         # Importing a single column of data as a set
-        pyutilib.misc.setup_redirect(currdir+'loadA1.dat')
-        print("table columns=1 A={1} := A1 A2 A3 ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadA1.dat'):
+            print("table columns=1 A={1} := A1 A2 A3 ;")
         model=AbstractModel()
         model.A = Set()
         instance = model.create_instance(currdir+'loadA1.dat')
@@ -1444,9 +1425,8 @@ class TestTableCmd(unittest.TestCase):
 
     def test_tableA1_2(self):
         # Importing a single column of data as a set
-        pyutilib.misc.setup_redirect(currdir+'loadA1.dat')
-        print("table A={A} : A := A1 A2 A3 ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadA1.dat'):
+            print("table A={A} : A := A1 A2 A3 ;")
         model=AbstractModel()
         model.A = Set()
         instance = model.create_instance(currdir+'loadA1.dat')
@@ -1455,9 +1435,8 @@ class TestTableCmd(unittest.TestCase):
 
     def test_tableB1_1(self):
         # Same as test_tableA
-        pyutilib.misc.setup_redirect(currdir+'loadB.dat')
-        print("table columns=1 B={1} := 1 2 3 ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadB.dat'):
+            print("table columns=1 B={1} := 1 2 3 ;")
         model=AbstractModel()
         model.B = Set()
         instance = model.create_instance(currdir+'loadB.dat')
@@ -1466,9 +1445,8 @@ class TestTableCmd(unittest.TestCase):
 
     def test_tableB1_2(self):
         # Same as test_tableA
-        pyutilib.misc.setup_redirect(currdir+'loadB.dat')
-        print("table B={B} : B := 1 2 3 ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadB.dat'):
+            print("table B={B} : B := 1 2 3 ;")
         model=AbstractModel()
         model.B = Set()
         instance = model.create_instance(currdir+'loadB.dat')
@@ -1478,9 +1456,8 @@ class TestTableCmd(unittest.TestCase):
     def test_tableC_1(self):
         # Importing a multi-column table, where all columns are
         # treated as values for a set with tuple values.
-        pyutilib.misc.setup_redirect(currdir+'loadC.dat')
-        print("table columns=2 C={1,2} := A1 1 A1 2 A1 3 A2 1 A2 2 A2 3 A3 1 A3 2 A3 3 ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadC.dat'):
+            print("table columns=2 C={1,2} := A1 1 A1 2 A1 3 A2 1 A2 2 A2 3 A3 1 A3 2 A3 3 ;")
         model=AbstractModel()
         model.C = Set(dimen=2)
         instance = model.create_instance(currdir+'loadC.dat')
@@ -1490,9 +1467,8 @@ class TestTableCmd(unittest.TestCase):
     def test_tableC_2(self):
         # Importing a multi-column table, where all columns are
         # treated as values for a set with tuple values.
-        pyutilib.misc.setup_redirect(currdir+'loadC.dat')
-        print("table C={a,b} : a b := A1 1 A1 2 A1 3 A2 1 A2 2 A2 3 A3 1 A3 2 A3 3 ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadC.dat'):
+            print("table C={a,b} : a b := A1 1 A1 2 A1 3 A2 1 A2 2 A2 3 A3 1 A3 2 A3 3 ;")
         model=AbstractModel()
         model.C = Set(dimen=2)
         instance = model.create_instance(currdir+'loadC.dat')
@@ -1501,9 +1477,8 @@ class TestTableCmd(unittest.TestCase):
 
     def test_tableZ(self):
         # Importing a single parameter
-        pyutilib.misc.setup_redirect(currdir+'loadZ.dat')
-        print("table Z := 1.01 ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadZ.dat'):
+            print("table Z := 1.01 ;")
         model=AbstractModel()
         model.Z = Param(default=99.0)
         instance = model.create_instance(currdir+'loadZ.dat')
@@ -1512,9 +1487,8 @@ class TestTableCmd(unittest.TestCase):
 
     def test_tableY_1(self):
         # Same as tableXW.
-        pyutilib.misc.setup_redirect(currdir+'loadY.dat')
-        print("table columns=2 Y(1)={2} := A1 3.3 A2 3.4 A3 3.5 ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadY.dat'):
+            print("table columns=2 Y(1)={2} := A1 3.3 A2 3.4 A3 3.5 ;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.Y = Param(model.A)
@@ -1525,9 +1499,8 @@ class TestTableCmd(unittest.TestCase):
 
     def test_tableY_2(self):
         # Same as tableXW.
-        pyutilib.misc.setup_redirect(currdir+'loadY.dat')
-        print("table Y(A) : A Y := A1 3.3 A2 3.4 A3 3.5 ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadY.dat'):
+            print("table Y(A) : A Y := A1 3.3 A2 3.4 A3 3.5 ;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.Y = Param(model.A)
@@ -1540,9 +1513,8 @@ class TestTableCmd(unittest.TestCase):
         # Importing a table, but only reporting the values for the non-index
         # parameter columns.  The first column is assumed to represent an
         # index column.
-        pyutilib.misc.setup_redirect(currdir+'loadXW.dat')
-        print("table columns=3 X(1)={2} W(1)={3} := A1 3.3 4.3 A2 3.4 4.4 A3 3.5 4.5 ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadXW.dat'):
+            print("table columns=3 X(1)={2} W(1)={3} := A1 3.3 4.3 A2 3.4 4.4 A3 3.5 4.5 ;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.X = Param(model.A)
@@ -1557,9 +1529,8 @@ class TestTableCmd(unittest.TestCase):
         # Importing a table, but only reporting the values for the non-index
         # parameter columns.  The first column is assumed to represent an
         # index column.
-        pyutilib.misc.setup_redirect(currdir+'loadXW.dat')
-        print("table X(A) W(A) : A X W := A1 3.3 4.3 A2 3.4 4.4 A3 3.5 4.5 ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadXW.dat'):
+            print("table X(A) W(A) : A X W := A1 3.3 4.3 A2 3.4 4.4 A3 3.5 4.5 ;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.X = Param(model.A)
@@ -1572,9 +1543,8 @@ class TestTableCmd(unittest.TestCase):
 
     def test_tableXW_3_1(self):
         # Like test_tableXW_1, except that set A is defined in the load statment.
-        pyutilib.misc.setup_redirect(currdir+'loadXW.dat')
-        print("table columns=3 A={1} X(A)={2} W(A)={3} := A1 3.3 4.3 A2 3.4 4.4 A3 3.5 4.5 ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadXW.dat'):
+            print("table columns=3 A={1} X(A)={2} W(A)={3} := A1 3.3 4.3 A2 3.4 4.4 A3 3.5 4.5 ;")
         model=AbstractModel()
         model.A = Set()
         model.X = Param(model.A)
@@ -1587,9 +1557,8 @@ class TestTableCmd(unittest.TestCase):
 
     def test_tableXW_3_2(self):
         # Like test_tableXW_1, except that set A is defined in the load statment.
-        pyutilib.misc.setup_redirect(currdir+'loadXW.dat')
-        print("table A={A} X(A) W(A) : A X W := A1 3.3 4.3 A2 3.4 4.4 A3 3.5 4.5 ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadXW.dat'):
+            print("table A={A} X(A) W(A) : A X W := A1 3.3 4.3 A2 3.4 4.4 A3 3.5 4.5 ;")
         model=AbstractModel()
         model.A = Set()
         model.X = Param(model.A)
@@ -1604,9 +1573,8 @@ class TestTableCmd(unittest.TestCase):
         # Importing a table, but only reporting the values for the non-index
         # parameter columns.  The first column is assumed to represent an
         # index column.  A missing value is represented in the column data.
-        pyutilib.misc.setup_redirect(currdir+'loadS.dat')
-        print("table columns=2 S(1)={2} := A1 3.3 A2 . A3 3.5 ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadS.dat'):
+            print("table columns=2 S(1)={2} := A1 3.3 A2 . A3 3.5 ;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.S = Param(model.A)
@@ -1619,9 +1587,8 @@ class TestTableCmd(unittest.TestCase):
         # Importing a table, but only reporting the values for the non-index
         # parameter columns.  The first column is assumed to represent an
         # index column.  A missing value is represented in the column data.
-        pyutilib.misc.setup_redirect(currdir+'loadS.dat')
-        print("table S(A) : A S := A1 3.3 A2 . A3 3.5 ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadS.dat'):
+            print("table S(A) : A S := A1 3.3 A2 . A3 3.5 ;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.S = Param(model.A)
@@ -1632,9 +1599,8 @@ class TestTableCmd(unittest.TestCase):
 
     def test_tablePO_1(self):
         # Importing a table that has multiple indexing columns
-        pyutilib.misc.setup_redirect(currdir+'loadPO.dat')
-        print("table columns=4 J={1,2} P(J)={3} O(J)={4} := A1 B1 4.3 5.3 A2 B2 4.4 5.4 A3 B3 4.5 5.5 ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadPO.dat'):
+            print("table columns=4 J={1,2} P(J)={3} O(J)={4} := A1 B1 4.3 5.3 A2 B2 4.4 5.4 A3 B3 4.5 5.5 ;")
         model=AbstractModel()
         model.J = Set(dimen=2)
         model.P = Param(model.J)
@@ -1647,9 +1613,8 @@ class TestTableCmd(unittest.TestCase):
 
     def test_tablePO_2(self):
         # Importing a table that has multiple indexing columns
-        pyutilib.misc.setup_redirect(currdir+'loadPO.dat')
-        print("table J={A,B} P(J) O(J) : A B P O := A1 B1 4.3 5.3 A2 B2 4.4 5.4 A3 B3 4.5 5.5 ;")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadPO.dat'):
+            print("table J={A,B} P(J) O(J) : A B P O := A1 B1 4.3 5.3 A2 B2 4.4 5.4 A3 B3 4.5 5.5 ;")
         model=AbstractModel()
         model.J = Set(dimen=2)
         model.P = Param(model.J)
@@ -1662,13 +1627,12 @@ class TestTableCmd(unittest.TestCase):
 
     def test_complex_1(self):
         # Importing a table with multiple indexing columns
-        pyutilib.misc.setup_redirect(currdir+'loadComplex.dat')
-        print("table columns=8 I={4} J={3,5} A(I)={1} B(J)={7} :=")
-        print("A1 x1 J311 I1 J321 y1 B1 z1")
-        print("A2 x2 J312 I2 J322 y2 B2 z2")
-        print("A3 x3 J313 I3 J323 y3 B3 z3")
-        print(";")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadComplex.dat'):
+            print("table columns=8 I={4} J={3,5} A(I)={1} B(J)={7} :=")
+            print("A1 x1 J311 I1 J321 y1 B1 z1")
+            print("A2 x2 J312 I2 J322 y2 B2 z2")
+            print("A3 x3 J313 I3 J323 y3 B3 z3")
+            print(";")
         model=AbstractModel()
         model.I = Set()
         model.J = Set(dimen=2)
@@ -1683,14 +1647,13 @@ class TestTableCmd(unittest.TestCase):
 
     def test_complex_2(self):
         # Importing a table with multiple indexing columns
-        pyutilib.misc.setup_redirect(currdir+'loadComplex.dat')
-        print("table I={I} J={J1,J2} A(J) B(I) :")
-        print("A  x  J1   I  J2   y  B  z :=")
-        print("A1 x1 J311 I1 J321 y1 B1 z1")
-        print("A2 x2 J312 I2 J322 y2 B2 z2")
-        print("A3 x3 J313 I3 J323 y3 B3 z3")
-        print(";")
-        pyutilib.misc.reset_redirect()
+        with capture_output(currdir+'loadComplex.dat'):
+            print("table I={I} J={J1,J2} A(J) B(I) :")
+            print("A  x  J1   I  J2   y  B  z :=")
+            print("A1 x1 J311 I1 J321 y1 B1 z1")
+            print("A2 x2 J312 I2 J322 y2 B2 z2")
+            print("A3 x3 J313 I3 J323 y3 B3 z3")
+            print(";")
         model=AbstractModel()
         model.I = Set()
         model.J = Set(dimen=2)

@@ -17,12 +17,12 @@ import re
 import sys
 import time
 import logging
+import shlex
 
 from pyomo.common.config import ConfigBlock, ConfigList, ConfigValue
 from pyomo.common import Factory
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Options
-from pyutilib.misc import quote_split
 
 from pyomo.opt.base.problem import ProblemConfigFactory
 from pyomo.opt.base.convert import convert_problem
@@ -399,7 +399,7 @@ class OptSolver(object):
             return ans
         if istr[0] == "'" or istr[0] == '"':
             istr = eval(istr)
-        tokens = quote_split('[ ]+',istr)
+        tokens = shlex.split(istr)
         for token in tokens:
             index = token.find('=')
             if index == -1:

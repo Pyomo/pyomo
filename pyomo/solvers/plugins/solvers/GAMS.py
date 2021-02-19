@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 from six import StringIO, iteritems
+import shlex
 from tempfile import mkdtemp
 import os, sys, math, logging, shutil, time, subprocess
 
@@ -20,7 +21,6 @@ from pyomo.common.collections import Options
 from pyomo.common.tee import TeeStream
 
 from pyomo.opt.base.solvers import _extract_version
-from pyutilib.misc import quote_split
 
 from pyomo.core.kernel.block import IBlock
 from pyomo.core.kernel.objective import IObjective
@@ -83,7 +83,7 @@ class _GAMSSolver(object):
             return ans
         if istr[0] == "'" or istr[0] == '"':
             istr = eval(istr)
-        tokens = quote_split('[ ]+',istr)
+        tokens = shlex.split(istr)
         for token in tokens:
             index = token.find('=')
             if index == -1:

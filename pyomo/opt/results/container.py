@@ -127,7 +127,7 @@ class ScalarData(object):
     def yaml_fix(self, val):
         if not isinstance(val, str):
             return val
-        return val.replace(':','\\x3a')
+        return val.replace(':', '\\x3a')
 
     def load(self, repn):
         if type(repn) is dict:

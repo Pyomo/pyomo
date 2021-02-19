@@ -12,7 +12,6 @@ __all__ = ['Block', 'TraversalStrategy', 'SortComponents',
            'active_components', 'components', 'active_components_data',
            'components_data', 'SimpleBlock']
 
-import collections
 import copy
 import logging
 import sys
@@ -24,10 +23,9 @@ from operator import itemgetter
 from six import iteritems, iterkeys, itervalues, StringIO, \
     advance_iterator, PY3
 
-from pyutilib.misc.indent_io import StreamIndenter
-
 from pyomo.common.collections import Mapping
 from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.fileutils import StreamIndenter
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import ModelComponentFactory

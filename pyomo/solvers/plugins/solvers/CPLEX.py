@@ -17,7 +17,6 @@ import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
-from pyutilib.misc import yaml_fix
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.common.collections import ComponentMap, Options, Bunch
@@ -620,7 +619,8 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 results.solver.termination_message = ' '.join(tokens)
 
         try:
-            results.solver.termination_message = yaml_fix(results.solver.termination_message)
+            if isinstance(results.solver.termination_message, basestring):
+                results.solver.termination_message = results.solver.termination_message.replace(':', '\\x3a')
         except:
             pass
         return results

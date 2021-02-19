@@ -21,6 +21,7 @@ import os
 import sys
 import threading
 import time
+from six import StringIO
 
 _mswindows = sys.platform.startswith('win')
 _poll_interval = 0.1
@@ -36,6 +37,58 @@ except ImportError:
     _peek_available = False
 
 logger = logging.getLogger(__name__)
+
+
+class capture_output(object):
+    """
+    Drop-in substitute for PyUtilib's capture_output.
+    Takes in a StringIO, file-like object, or filename and temporarily
+    redirects output to a string buffer.
+    """
+    def __init__(self, output=None):
+        if output is None:
+            output = StringIO()
+        self.output = output
+        self.output_file = None
+        self.old = None
+        self.tee = None
+
+    def __enter__(self):
+        if isinstance(self.output, str):
+            self.output_stream = open(self.output, 'w')
+        else:
+            self.output_stream = self.output
+        self.old = (sys.stdout, sys.stderr)
+        self.tee = TeeStream(self.output_stream)
+        self.tee.__enter__()
+        sys.stdout = self.tee.STDOUT
+        sys.stderr = self.tee.STDERR
+        return self.output_stream
+
+    def __exit__(self, et, ev, tb):
+        FAIL = self.tee.STDOUT is not sys.stdout
+        self.tee.__exit__(et, ev, tb)
+        if self.output_stream is not self.output:
+            self.output_stream.close()
+        sys.stdout, sys.stderr = self.old
+        self.old = None
+        self.tee = None
+        self.output_stream = None
+        if FAIL:
+            raise RuntimeError('Captured output does not match sys.stdout.')
+
+    def __del__(self):
+        if self.tee is not None:
+            self.__exit__(None, None, None)
+
+    def setup(self):
+        if self.old is not None:
+            raise RuntimeError('Duplicate call to capture_output.setup.')
+        return self.__enter__()
+
+    def reset(self):
+        return self.__exit__(None, None, None)
+
 
 class _StreamHandle(object):
     def __init__(self, mode, buffering, encoding, newline):

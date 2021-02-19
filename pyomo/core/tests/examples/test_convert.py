@@ -20,10 +20,10 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 scriptdir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))+os.sep
 
-from pyutilib.misc import setup_redirect, reset_redirect
 import pyutilib.th as unittest
 
 import pyomo.scripting.convert as main
+from pyomo.common.tee import capture_output
 
 from six import StringIO
 
@@ -49,13 +49,12 @@ class xTest(object):
             OUTPUT=kwds['file']
         else:
             OUTPUT=StringIO()
-        setup_redirect(OUTPUT)
-        os.chdir(currdir)
-        if type == 'lp':
-            output = main.pyomo2lp(list(args))
-        else:
-            output = main.pyomo2nl(list(args))
-        reset_redirect()
+        with capture_output(OUTPUT):
+            os.chdir(currdir)
+            if type == 'lp':
+                output = main.pyomo2lp(list(args))
+            else:
+                output = main.pyomo2nl(list(args))
         if not 'file' in kwds:
             return OUTPUT.getvalue()
         return output.retval, output.errorcode
