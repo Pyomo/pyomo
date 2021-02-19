@@ -105,14 +105,6 @@ def OSSolverService():
     with pyomo.opt.SolverFactory(solver) as opt:
         opt.solve(osilFile, rformat=pyomo.opt.ResultsFormat.osrl)
 
-@pyomo_command('readsol', "Read and print a *.sol file")
-def readsol():
-    import pyomo.opt
-
-    reader = pyomo.opt.ReaderFactory("sol")
-    soln = reader(sys.argv[1])
-    soln.write()
-
 @pyomo_command('pyomo_python', "Launch script using Pyomo's python installation")
 def pyomo_python(args=None):
     if args is None:
