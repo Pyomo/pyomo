@@ -18,8 +18,6 @@ import logging
 import socket
 import subprocess
 
-import pyutilib.misc
-
 import pyomo.common
 from pyomo.common.collections import Options
 import pyomo.scripting.pyomo_parser
@@ -400,7 +398,7 @@ def print_components(data):
     print("Pyomo Model Components:")
     print("----------------------------------------------------------------")
     components = pyomo.core.base._pyomo.model_components()
-    index = pyutilib.misc.sort_index(components)
+    index = list(idx for idx, item in sorted(enumerate(components), key=lambda item: item[1]))
     for i in index:
         print("")
         print(" "+components[i][0])
@@ -411,7 +409,7 @@ def print_components(data):
     print("Pyomo Virtual Sets:")
     print("----------------------------------------------------------------")
     pyomo_sets = pyomo.core.base._pyomo.predefined_sets()
-    index = pyutilib.misc.sort_index(pyomo_sets)
+    index = list(idx for idx, item in sorted(enumerate(pyomo_sets), key=lambda item: item[1]))
     for i in index:
         print("")
         print(" "+pyomo_sets[i][0])

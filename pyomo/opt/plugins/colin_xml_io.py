@@ -14,7 +14,7 @@ Define the plugin for COLIN XML IO
 
 from pyomo.opt.blackbox.problem_io import BlackBoxOptProblemIOFactory
 import xml.dom.minidom
-from pyutilib.misc import tostr
+import re
 
 try:
     unicode
@@ -79,6 +79,6 @@ class ColinXmlIO(object):
             elif type(response[key]) in intlist:
                 text_elt = doc.createTextNode( str(response[key]) )
             else:
-                text_elt = doc.createTextNode( tostr(response[key]) )
+                text_elt = doc.createTextNode(' '.join(repr(x) for x in response[key]))
             elt.appendChild(text_elt)
         return doc
