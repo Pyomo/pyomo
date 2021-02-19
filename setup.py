@@ -141,7 +141,6 @@ def run_setup():
         pyomo_nsc = pyomo.scripting.commands:pyomo_nsc
         kill_pyro_mip_servers = pyomo.scripting.commands:kill_pyro_mip_servers
         launch_pyro_mip_servers = pyomo.scripting.commands:launch_pyro_mip_servers
-        OSSolverService = pyomo.scripting.commands:OSSolverService
         pyomo_python = pyomo.scripting.commands:pyomo_python
 
         [pyomo.command]

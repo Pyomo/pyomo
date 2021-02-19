@@ -80,31 +80,6 @@ def launch_pyro_mip_servers():
 
     print("PIDs for launched servers recorded in file="+pid_output_filename)
 
-@pyomo_command('OSSolverService', "Launch an OS solver service")
-def OSSolverService():
-    import pyomo.opt
-
-    if len(sys.argv) == 1:
-        print("OSSolverService -osil <filename> -solver <name>")
-        sys.exit(1)
-
-    osilFile = None
-    solver = None
-    i=1
-    while i<len(sys.argv):
-        if sys.argv[i] == "-osil":
-            i=i+1
-            osilFile=sys.argv[i]
-        elif sys.argv[i] == "-solver":
-            i=i+1
-            solver=sys.argv[i]
-        i=i+1
-
-    print("osilFile",osilFile,"solver",solver)
-
-    with pyomo.opt.SolverFactory(solver) as opt:
-        opt.solve(osilFile, rformat=pyomo.opt.ResultsFormat.osrl)
-
 @pyomo_command('pyomo_python', "Launch script using Pyomo's python installation")
 def pyomo_python(args=None):
     if args is None:
