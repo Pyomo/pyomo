@@ -19,17 +19,33 @@ import pyutilib.pyro
 from pyomo.common.collections import Options
 from pyomo.opt import SolverResults
 from pyomo.common._command import pyomo_command
+from pyomo.common.deprecation import deprecated
 import pyomo.scripting.pyomo_parser
 
 @pyomo_command('pyomo_ns', "Launch a Pyro name server for Pyomo")
+@deprecated(
+    msg="The 'pyomo_ns' command has been deprecated and will be removed",
+    version="6.0",
+    remove_in="7.0",
+)
 def pyomo_ns():
     pyutilib.pyro.start_ns()
 
 @pyomo_command('pyomo_nsc', "Execute the Pyro name server control tool for Pyomo")
+@deprecated(
+    msg="The 'pyomo_nsc' command has been deprecated and will be removed",
+    version="6.0",
+    remove_in="7.0",
+)
 def pyomo_nsc():
     pyutilib.pyro.start_nsc()
 
 @pyomo_command('kill_pyro_mip_servers', "Terminate Pyomo's MIP solvers using Pyro")
+@deprecated(
+    msg="The 'kill_pyro_mip_servers' command has been deprecated and will be removed",
+    version="6.0",
+    remove_in="7.0",
+)
 def kill_pyro_mip_servers():
     if len(sys.argv) > 2:
         print("***Incorrect invocation - use: kill_pyro_mip_servers pid-filename")
@@ -49,6 +65,11 @@ def kill_pyro_mip_servers():
     pid_file.close()
 
 @pyomo_command('launch_pyro_mip_servers', "Launch Pyomo's MIP solvers using Pyro")
+@deprecated(
+    msg="The 'launch_pyro_mip_servers' command has been deprecated and will be removed",
+    version="6.0",
+    remove_in="7.0",
+)
 def launch_pyro_mip_servers():
     if len(sys.argv) != 2:
         print("***Incorrect invocation - use: launch_pyro_mip_servers num-servers")
@@ -81,6 +102,11 @@ def launch_pyro_mip_servers():
     print("PIDs for launched servers recorded in file="+pid_output_filename)
 
 @pyomo_command('pyomo_python', "Launch script using Pyomo's python installation")
+@deprecated(
+    msg="The 'pyomo_python' command has been deprecated and will be removed",
+    version="6.0",
+    remove_in="7.0",
+)
 def pyomo_python(args=None):
     if args is None:
         args = sys.argv[1:]
