@@ -174,7 +174,7 @@ class TestPyomoUnittest(unittest.TestCase):
 
     @unittest.timeout(10)
     def test_timeout_skip(self):
-        if not TestPyomoUnittest.test_timeout_skip.skip:
+        if TestPyomoUnittest.test_timeout_skip.skip:
             self.skipTest("Skipping this test")
         self.assertEqual(0, 1)
 
