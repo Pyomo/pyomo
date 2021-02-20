@@ -44,7 +44,7 @@ class Farmer(object):
         self.scenario_probabilities['AboveAverageScenario'] = 0.3333
 
 
-def create_master(farmer):
+def create_root(farmer):
     m = pyo.ConcreteModel()
 
     m.crops = pyo.Set(initialize=farmer.crops, ordered=True)
@@ -61,7 +61,7 @@ def create_master(farmer):
     return m
 
 
-def create_subproblem(master, farmer, scenario):
+def create_subproblem(root, farmer, scenario):
     m = pyo.ConcreteModel()
 
     m.crops = pyo.Set(initialize=farmer.crops, ordered=True)
@@ -91,7 +91,7 @@ def create_subproblem(master, farmer, scenario):
 
     complicating_vars_map = pyo.ComponentMap()
     for crop in m.crops:
-        complicating_vars_map[master.devoted_acreage[crop]] = m.devoted_acreage[crop]
+        complicating_vars_map[root.devoted_acreage[crop]] = m.devoted_acreage[crop]
 
     return m, complicating_vars_map
 
@@ -103,18 +103,18 @@ def main():
 
     t0 = time.time()
     farmer = Farmer()
-    m = create_master(farmer=farmer)
-    master_vars = list(m.devoted_acreage.values())
+    m = create_root(farmer=farmer)
+    root_vars = list(m.devoted_acreage.values())
     m.benders = BendersCutGenerator()
-    m.benders.set_input(master_vars=master_vars, tol=1e-8)
+    m.benders.set_input(root_vars=root_vars, tol=1e-8)
     for s in farmer.scenarios:
         subproblem_fn_kwargs = dict()
-        subproblem_fn_kwargs['master'] = m
+        subproblem_fn_kwargs['root'] = m
         subproblem_fn_kwargs['farmer'] = farmer
         subproblem_fn_kwargs['scenario'] = s
         m.benders.add_subproblem(subproblem_fn=create_subproblem,
                                  subproblem_fn_kwargs=subproblem_fn_kwargs,
-                                 master_eta=m.eta[s],
+                                 root_eta=m.eta[s],
                                  subproblem_solver='gurobi_persistent')
     opt = pyo.SolverFactory('gurobi_persistent')
     opt.set_instance(m)

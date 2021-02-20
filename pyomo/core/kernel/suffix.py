@@ -20,8 +20,6 @@ from pyomo.core.kernel.container_utils import (
     define_homogeneous_container_type
 )
 
-import six
-
 logger = logging.getLogger('pyomo.core')
 
 _noarg = object()
@@ -64,9 +62,8 @@ class suffix(ISuffix):
                  "_storage_key",
                  "_active",
                  "_direction",
-                 "_datatype")
-    if six.PY3:
-        __slots__ = list(__slots__) + ["__weakref__"]
+                 "_datatype",
+                 "__weakref__")
 
     # neither sent to solver or received from solver
     LOCAL  = 0

@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import collections.abc
 import pickle
 
 import pyutilib.th as unittest
@@ -20,13 +21,6 @@ from pyomo.core.kernel.homogeneous_container import \
 from pyomo.core.kernel.tuple_container import TupleContainer
 from pyomo.core.kernel.block import (block,
                                      block_list)
-
-import six
-
-if six.PY3:
-    from collections.abc import Sequence as collections_Sequence
-else:
-    from collections import Sequence as collections_Sequence
 
 #
 # There are no fully implemented test suites in this
@@ -74,8 +68,8 @@ class _TestTupleContainerBase(object):
         self.assertTrue(isinstance(ctuple, ICategorizedObjectContainer))
         self.assertTrue(isinstance(ctuple, IHomogeneousContainer))
         self.assertTrue(isinstance(ctuple, TupleContainer))
-        self.assertTrue(isinstance(ctuple, collections_Sequence))
-        self.assertTrue(issubclass(type(ctuple), collections_Sequence))
+        self.assertTrue(isinstance(ctuple, collections.abc.Sequence))
+        self.assertTrue(issubclass(type(ctuple), collections.abc.Sequence))
 
     def test_len1(self):
         c = self._container_type()
@@ -466,8 +460,8 @@ class _TestActiveTupleContainerBase(_TestTupleContainerBase):
         self.assertTrue(isinstance(ctuple, ICategorizedObjectContainer))
         self.assertTrue(isinstance(ctuple, IHomogeneousContainer))
         self.assertTrue(isinstance(ctuple, TupleContainer))
-        self.assertTrue(isinstance(ctuple, collections_Sequence))
-        self.assertTrue(issubclass(type(ctuple), collections_Sequence))
+        self.assertTrue(isinstance(ctuple, collections.abc.Sequence))
+        self.assertTrue(issubclass(type(ctuple), collections.abc.Sequence))
 
     def test_active(self):
         index = list(range(4))
