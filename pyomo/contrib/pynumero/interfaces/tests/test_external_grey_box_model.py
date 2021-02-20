@@ -21,10 +21,10 @@ if not (numpy_available and scipy_available):
 from pyomo.contrib.pynumero.asl import AmplInterface
 if not AmplInterface.available():
     raise unittest.SkipTest(
-        "Pynumero needs the ASL extension to run CyIpoptSolver tests")
+        "Pynumero needs the ASL extension to run cyipopt tests")
 
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    CyIpoptSolver, CyIpoptNLP, ipopt, ipopt_available,
+    ipopt, ipopt_available,
 )
 
 from ..external_grey_box import ExternalGreyBoxModel, ExternalGreyBoxBlock
@@ -1252,17 +1252,12 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         m.egb.outputs['Pout'].setlb(10)
         m.egb.outputs['Pout'].setub(70)
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout']-20)**2 + (m.egb.inputs['F']-3)**2)
-        pyomo_nlp = PyomoGreyBoxNLP(m)
 
-        if hessian_support:
-            options = {}
-        else:
-            options = {'hessian_approximation':'limited-memory'}
-        cyipopt_problem = CyIpoptNLP(pyomo_nlp)
-        solver = CyIpoptSolver(cyipopt_problem, options)
-        x, info = solver.solve(tee=False)
-        pyomo_nlp.set_primals(x)
-        pyomo_nlp.load_state_into_pyomo()
+        solver = pyo.SolverFactory('cyipopt')
+
+        if not hessian_support:
+            solver.config.options = {'hessian_approximation':'limited-memory'}
+        status = solver.solve(m, tee=False)
 
         self.assertAlmostEqual(pyo.value(m.egb.inputs['F']), 3.0, places=3)
         self.assertAlmostEqual(pyo.value(m.mu), 1.63542e-6, places=3)
@@ -1471,16 +1466,14 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         m.scaling_factor[m.egb.outputs['Pout']] = 1.7 # scale the variable
         m.scaling_factor[m.mu] = 1.9
         m.scaling_factor[m.pincon] = 2.2
-        pyomo_nlp = PyomoGreyBoxNLP(m)
 
-        options={'hessian_approximation':'limited-memory',
-                 'nlp_scaling_method': 'user-scaling',
-                 'output_file': '_cyipopt-external-greybox-scaling.log',
-                 'file_print_level':10,
-                 'max_iter': 0}
-        cyipopt_problem = CyIpoptNLP(pyomo_nlp)
-        solver = CyIpoptSolver(cyipopt_problem, options)
-        x, info = solver.solve(tee=False)
+        solver = pyo.SolverFactory('cyipopt')
+        solver.config.options = {'hessian_approximation':'limited-memory',
+                                 'nlp_scaling_method': 'user-scaling',
+                                 'output_file': '_cyipopt-external-greybox-scaling.log',
+                                 'file_print_level':10,
+                                 'max_iter': 0}
+        status = solver.solve(m, tee=False)
 
         with open('_cyipopt-external-greybox-scaling.log', 'r') as fd:
             solver_trace = fd.read()
@@ -1496,13 +1489,13 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         # c order: ['ccon', 'pcon', 'pincon', 'egb.pdrop1', 'egb.pdrop3', 'egb.P2_con', 'egb.Pout_con']
         self.assertIn('DenseVector "x scaling vector" with 8 elements:', solver_trace)
         self.assertIn('x scaling vector[    1]= 1.3000000000000000e+00', solver_trace) # F
-        self.assertIn('x scaling vector[    2]= 1.8999999999999999e+00', solver_trace) # mu
-        self.assertIn('x scaling vector[    3]= 1.7000000000000000e+00', solver_trace) # Pout
+        self.assertIn('x scaling vector[    8]= 1.8999999999999999e+00', solver_trace) # mu
+        self.assertIn('x scaling vector[    7]= 1.7000000000000000e+00', solver_trace) # Pout
         self.assertIn('x scaling vector[    4]= 1.1000000000000001e+00', solver_trace) # Pin
         self.assertIn('x scaling vector[    5]= 1.2000000000000000e+00', solver_trace) # c
-        self.assertIn('x scaling vector[    6]= 1.0000000000000000e+00', solver_trace) # P1
-        self.assertIn('x scaling vector[    7]= 1.5000000000000000e+00', solver_trace) # P3
-        self.assertIn('x scaling vector[    8]= 1.6000000000000001e+00', solver_trace) # P2 
+        self.assertIn('x scaling vector[    2]= 1.0000000000000000e+00', solver_trace) # P1
+        self.assertIn('x scaling vector[    3]= 1.5000000000000000e+00', solver_trace) # P3
+        self.assertIn('x scaling vector[    6]= 1.6000000000000001e+00', solver_trace) # P2 
         self.assertIn('DenseVector "c scaling vector" with 6 elements:', solver_trace) 
         self.assertIn('c scaling vector[    1]= 1.0000000000000000e+00', solver_trace) # ccon
         self.assertIn('c scaling vector[    2]= 2.2000000000000002e+00', solver_trace) # pincon

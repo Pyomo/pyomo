@@ -151,14 +151,14 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
                              ' primals_lb or primals_ub in _PyomoNLPWithGreyBoxBlocks.')
 
         self._init_duals = BlockVector(len(nlps))
-        self._dual_values = BlockVector(len(nlps))
+        self._dual_values_blockvector = BlockVector(len(nlps))
         self._constraints_lb = BlockVector(len(nlps))
         self._constraints_ub = BlockVector(len(nlps))
         for i,nlp in enumerate(nlps):
             self._init_duals.set_block(i, nlp.init_duals())
             self._constraints_lb.set_block(i, nlp.constraints_lb())
             self._constraints_ub.set_block(i, nlp.constraints_ub())
-            self._dual_values.set_block(i, np.nan*np.zeros(nlp.n_constraints()))
+            self._dual_values_blockvector.set_block(i, np.nan*np.zeros(nlp.n_constraints()))
         self._init_duals = self._init_duals.flatten()
         self._constraints_lb = self._constraints_lb.flatten()
         self._constraints_ub = self._constraints_ub.flatten()
@@ -176,7 +176,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
         self.set_primals(self._init_primals)
         self.set_duals(self._init_duals)
         assert not np.any(np.isnan(self._primal_values))
-        assert not np.any(np.isnan(self._dual_values))
+        assert not np.any(np.isnan(self._dual_values_blockvector))
 
         # if any of the problem is scaled (i.e., one or more of primals,
         # constraints, or objective), then we want scaling factors for
@@ -291,13 +291,13 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
 
     # overloaded from NLP
     def set_duals(self, duals):
-        self._dual_values.copyfrom(duals)
+        self._dual_values_blockvector.copyfrom(duals)
         for i,nlp in enumerate(self._nlps):
-            nlp.set_duals(self._dual_values.get_block(i))
+            nlp.set_duals(self._dual_values_blockvector.get_block(i))
 
     # overloaded from NLP
     def get_duals(self):
-        return self._dual_values.flatten()
+        return self._dual_values_blockvector.flatten()
 
     # overloaded from NLP
     def set_obj_factor(self, obj_factor):
@@ -384,23 +384,35 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
         model_suffixes = dict(
             pyo.suffix.active_import_suffix_generator(m))
 
+        # we need to correct the sign of the multipliers based on whether or
+        # not we are minimizing or maximizing - this is done in the ASL interface
+        # for ipopt, but does not appear to be done in cyipopt.
+        obj_sign = 1.0
+        objs = list(m.component_data_objects(ctype=pyo.Objective, descend_into=True))
+        assert len(objs) == 1
+        if objs[0].sense == pyo.maximize:
+            obj_sign = -1.0
+
         if 'dual' in model_suffixes:
-            for value,cdata in zip(self._dual_values, self._constraint_datas):
-                if type(cdata) is tuple:
-                    model_suffixes['dual'].setdefault(t[0], {})[t[1]] = value
+            model_suffixes['dual'].clear()
+            dual_values = self._dual_values_blockvector.flatten()
+            for value,t in zip(dual_values, self._constraint_datas):
+                if type(t) is tuple:
+                    model_suffixes['dual'].setdefault(t[0], {})[t[1]] = -obj_sign*value
                 else:
-                    model_suffixes['dual'][cdata] = value
+                    # t is a constraint data
+                    model_suffixes['dual'][t] = -obj_sign*value
 
         if 'ipopt_zL_out' in model_suffixes:
             model_suffixes['ipopt_zL_out'].clear()
             if bound_multipliers is not None:
                 model_suffixes['ipopt_zL_out'].update(
-                    zip(self._pyomo_model_var_datas, bound_multipliers[0]))
+                    zip(self._pyomo_model_var_datas, obj_sign*bound_multipliers[0]))
         if 'ipopt_zU_out' in model_suffixes:
             model_suffixes['ipopt_zU_out'].clear()
             if bound_multipliers is not None:
                 model_suffixes['ipopt_zU_out'].update(
-                    zip(self._pyomo_model_var_datas, bound_multipliers[1]))
+                    zip(self._pyomo_model_var_datas, -obj_sign*bound_multipliers[1]))
 
 def _default_if_none(value, default):
     if value is None:

@@ -21,10 +21,10 @@ if not (numpy_available and scipy_available):
 from pyomo.contrib.pynumero.asl import AmplInterface
 if not AmplInterface.available():
     raise unittest.SkipTest(
-        "Pynumero needs the ASL extension to run CyIpoptSolver tests")
+        "Pynumero needs the ASL extension to run cyipopt tests")
 
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    CyIpoptSolver, CyIpoptNLP, ipopt, ipopt_available,
+    ipopt, ipopt_available,
 )
 
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
@@ -697,8 +697,6 @@ class TestExternalGreyBoxAsNLP(unittest.TestCase):
         check_vectors_specific_order(self, cs, c_order, comparison_cs, comparison_c_order)
 
 class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
-    def test_add_test_for_duals(self):
-        assert False
 
     def test_error_no_variables(self):
         m = pyo.ConcreteModel()
@@ -1456,17 +1454,11 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         m.egb.outputs['Pout'].setlb(10)
         m.egb.outputs['Pout'].setub(70)
         m.obj = pyo.Objective(expr=(m.egb.outputs['Pout']-20)**2 + (m.egb.inputs['F']-3)**2)
-        pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m)
 
-        if hessian_support:
-            options = {}
-        else:
-            options = {'hessian_approximation':'limited-memory'}
-        cyipopt_problem = CyIpoptNLP(pyomo_nlp)
-        solver = CyIpoptSolver(cyipopt_problem, options)
-        x, info = solver.solve(tee=False)
-        pyomo_nlp.set_primals(x)
-        pyomo_nlp.load_state_into_pyomo()
+        solver = pyo.SolverFactory('cyipopt')
+        if not hessian_support:
+            solver.config.options = {'hessian_approximation':'limited-memory'}
+        status = solver.solve(m, tee=False)
 
         self.assertAlmostEqual(pyo.value(m.egb.inputs['F']), 3.0, places=3)
         self.assertAlmostEqual(pyo.value(m.mu), 1.63542e-6, places=3)
@@ -1476,7 +1468,6 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         self.assertAlmostEqual(pyo.value(m.egb.inputs['P1']), 82.0, places=3)
         self.assertAlmostEqual(pyo.value(m.egb.inputs['P3']), 46.0, places=3)
         self.assertAlmostEqual(pyo.value(m.egb.outputs['P2']), 64.0, places=3)
-        self.assertAlmostEqual(pyo.value(m.egb.inputs['F']), 3.0, places=3)
 
     def create_model_two_equalities_two_outputs(self, external_model):
         m = pyo.ConcreteModel()
@@ -1675,16 +1666,14 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         m.scaling_factor[m.egb.outputs['Pout']] = 1.7 # scale the variable
         m.scaling_factor[m.mu] = 1.9
         m.scaling_factor[m.pincon] = 2.2
-        pyomo_nlp = PyomoNLPWithGreyBoxBlocks(m)
 
-        options={'hessian_approximation':'limited-memory',
-                 'nlp_scaling_method': 'user-scaling',
-                 'output_file': '_cyipopt-external-greybox-scaling.log',
-                 'file_print_level':10,
-                 'max_iter': 0}
-        cyipopt_problem = CyIpoptNLP(pyomo_nlp)
-        solver = CyIpoptSolver(cyipopt_problem, options)
-        x, info = solver.solve(tee=False)
+        solver = pyo.SolverFactory('cyipopt')
+        solver.config.options = {'hessian_approximation':'limited-memory',
+                                 'nlp_scaling_method': 'user-scaling',
+                                 'output_file': '_cyipopt-external-greybox-scaling.log',
+                                 'file_print_level':10,
+                                 'max_iter': 0}
+        status = solver.solve(m, tee=False)
 
         with open('_cyipopt-external-greybox-scaling.log', 'r') as fd:
             solver_trace = fd.read()
@@ -1716,6 +1705,62 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         self.assertIn('c scaling vector[    6]= 4.2000000000000002e+00', solver_trace) # Pout_con
         self.assertIn('DenseVector "d scaling vector" with 1 elements:', solver_trace)
         self.assertIn('d scaling vector[    1]= 1.0000000000000000e+00', solver_trace) # pcon
+
+    def test_duals_after_solve(self):
+        m = pyo.ConcreteModel()
+        m.p = pyo.Var(initialize=1)
+        m.egb = ExternalGreyBoxBlock()
+        m.egb.set_external_model(ex_models.OneOutput())
+        m.con = pyo.Constraint(expr=4*m.p-2*m.egb.outputs['o'] == 0)
+        m.obj = pyo.Objective(expr=10*m.p**2)
+
+        # we want to check dual information so we need the suffixes
+        m.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
+        m.ipopt_zL_out = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
+        m.ipopt_zU_out = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
+
+        solver = pyo.SolverFactory('cyipopt')
+        status = solver.solve(m, tee=False)
+
+        self.assertAlmostEqual(pyo.value(m.p), 10.0, places=3)
+        self.assertAlmostEqual(pyo.value(m.egb.inputs['u']), 4.0, places=3)
+        self.assertAlmostEqual(pyo.value(m.egb.outputs['o']), 20.0, places=3)
+        self.assertAlmostEqual(pyo.value(m.dual[m.con]), 50.0, places=3)
+        self.assertAlmostEqual(m.dual[m.egb]['egb.output_constraints[o]'], -100.0, places=3)
+        self.assertAlmostEqual(pyo.value(m.ipopt_zL_out[m.egb.inputs['u']]), 500.0, places=3)
+        self.assertAlmostEqual(pyo.value(m.ipopt_zU_out[m.egb.inputs['u']]), 0.0, places=3)
+
+        del m.obj
+        m.obj = pyo.Objective(expr=-10*m.p**2)
+        status = solver.solve(m, tee=False)
+
+        self.assertAlmostEqual(pyo.value(m.p), 25.0, places=3)
+        self.assertAlmostEqual(pyo.value(m.egb.inputs['u']), 10.0, places=3)
+        self.assertAlmostEqual(pyo.value(m.egb.outputs['o']), 50.0, places=3)
+        self.assertAlmostEqual(pyo.value(m.dual[m.con]), -125.0, places=3)
+        self.assertAlmostEqual(m.dual[m.egb]['egb.output_constraints[o]'], 250.0, places=3)
+        self.assertAlmostEqual(pyo.value(m.ipopt_zL_out[m.egb.inputs['u']]), 0.0, places=3)
+        self.assertAlmostEqual(pyo.value(m.ipopt_zU_out[m.egb.inputs['u']]), -1250.0, places=3)
+
+        m = pyo.ConcreteModel()
+        m.p = pyo.Var(initialize=1)
+        m.egb = ExternalGreyBoxBlock()
+        m.egb.set_external_model(ex_models.OneOutputOneEquality())
+        m.con = pyo.Constraint(expr=4*m.p-2*m.egb.outputs['o'] == 0)
+        m.obj = pyo.Objective(expr=10*m.p**2)
+
+        # we want to check dual information so we need the suffixes
+        m.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
+
+        solver = pyo.SolverFactory('cyipopt')
+        status = solver.solve(m, tee=False)
+
+        self.assertAlmostEqual(pyo.value(m.p), 2.5, places=3)
+        self.assertAlmostEqual(pyo.value(m.egb.inputs['u']), 1.0, places=3)
+        self.assertAlmostEqual(pyo.value(m.egb.outputs['o']), 5.0, places=3)
+        self.assertAlmostEqual(pyo.value(m.dual[m.con]), 12.5, places=3)
+        self.assertAlmostEqual(m.dual[m.egb]['egb.output_constraints[o]'], -25.0, places=3)
+        self.assertAlmostEqual(m.dual[m.egb]['egb.u2_con'], 62.5, places=3)
 
 if __name__ == '__main__':
     TestExternalGreyBoxAsNLP().test_pressure_drop_single_equality()
