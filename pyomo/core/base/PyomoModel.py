@@ -824,22 +824,6 @@ arguments (which have been ignored):"""
                     continue
 
                 self._initialize_component(modeldata, namespaces, component_name, profile_memory)
-                if False:
-                    # !!THIS SEEMS LIKE A BUG!! - mrmundt
-                    # there is no start_time
-                    total_time = time.time() - start_time
-                    if isinstance(component, IndexedComponent):
-                        clen = len(component)
-                    else:
-                        assert isinstance(component, Component)
-                        clen = 1
-                    print("    %%6.%df seconds required to construct component=%s; %d indices total" \
-                              % (total_time>=0.005 and 2 or 0, component_name, clen) \
-                              % total_time)
-                    tmp_clone_counter = expr_common.clone_counter
-                    if clone_counter != tmp_clone_counter:
-                        clone_counter = tmp_clone_counter
-                        print("             Cloning detected! (clone count: %d)" % clone_counter)
 
             # Note: As is, connectors are expanded when using command-line pyomo but not calling model.create(...) in a Python script.
             # John says this has to do with extension points which are called from commandline but not when writing scripts.
