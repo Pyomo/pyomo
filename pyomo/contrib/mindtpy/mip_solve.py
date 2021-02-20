@@ -221,7 +221,8 @@ def handle_master_other_conditions(master_mip, master_mip_results, solve_data, c
         if temp_results.solver.termination_condition is tc.infeasible:
             handle_master_infeasible(master_mip, solve_data, config)
     elif master_mip_results.solver.termination_condition is tc.maxTimeLimit:
-        handle_master_max_timelimit(master_mip, solve_data, config)
+        handle_master_max_timelimit(
+            master_mip, master_mip_results, solve_data, config)
         solve_data.results.solver.termination_condition = tc.maxTimeLimit
     elif (master_mip_results.solver.termination_condition is tc.other and
           master_mip_results.solution.status is SolutionStatus.feasible):
@@ -237,11 +238,11 @@ def handle_master_other_conditions(master_mip, master_mip_results, solve_data, c
             config)
         if solve_data.objective_sense == minimize:
             solve_data.LB = max(
-                value(MindtPy.mip_obj.expr), solve_data.LB)
+                master_mip_results.problem.lower_bound, solve_data.LB)
             solve_data.LB_progress.append(solve_data.LB)
         else:
             solve_data.UB = min(
-                value(MindtPy.mip_obj.expr), solve_data.UB)
+                master_mip_results.problem.upper_bound, solve_data.UB)
             solve_data.UB_progress.append(solve_data.UB)
         config.logger.info(
             'MIP %s: OBJ: %s  LB: %s  UB: %s'
@@ -290,7 +291,7 @@ def handle_master_infeasible(master_mip, solve_data, config):
             solve_data.results.solver.termination_condition = tc.feasible
 
 
-def handle_master_max_timelimit(master_mip, solve_data, config):
+def handle_master_max_timelimit(master_mip, master_mip_results, solve_data, config):
     """
     This function handles the result of the latest iteration of solving the MIP problem given that solving the
     MIP takes too long.
@@ -316,11 +317,11 @@ def handle_master_max_timelimit(master_mip, solve_data, config):
         config)
     if solve_data.objective_sense == minimize:
         solve_data.LB = max(
-            value(MindtPy.mip_obj.expr), solve_data.LB)
+            master_mip_results.problem.lower_bound, solve_data.LB)
         solve_data.LB_progress.append(solve_data.LB)
     else:
         solve_data.UB = min(
-            value(MindtPy.mip_obj.expr), solve_data.UB)
+            master_mip_results.problem.upper_bound, solve_data.UB)
         solve_data.UB_progress.append(solve_data.UB)
     config.logger.info(
         'MIP %s: OBJ: %s  LB: %s  UB: %s'

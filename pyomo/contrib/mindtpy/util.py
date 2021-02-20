@@ -324,6 +324,7 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
         nlp.set_duals(lam)
         obj_grad = nlp.evaluate_grad_objective().reshape(-1, 1)
         jac = nlp.evaluate_jacobian().toarray()
+        # set jac to zero continuous to zero.
         jac_lag = obj_grad + jac.transpose().dot(np.array(lam).reshape(-1, 1))
         jac_lag[abs(jac_lag) < config.zero_tolerance] = 0
         nlp_var = set([i.name for i in nlp.get_pyomo_variables()])
