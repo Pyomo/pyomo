@@ -14,6 +14,7 @@ import pickle
 import random
 import collections
 import itertools
+from io import StringIO
 
 import pyutilib.th as unittest
 from pyomo.core.expr.numvalue import native_numeric_types
@@ -59,8 +60,6 @@ from pyomo.core.kernel.block import (IBlock,
                                      block_list)
 from pyomo.core.kernel.sos import sos
 from pyomo.opt.results import Solution
-
-from six import StringIO
 
 def _path_to_object_exists(obj, descendent):
     if descendent is obj:

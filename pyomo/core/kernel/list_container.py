@@ -9,21 +9,14 @@
 #  ___________________________________________________________________________
 
 import logging
+import collections.abc
 
 from pyomo.core.kernel.tuple_container import TupleContainer
-
-import six
-from six.moves import xrange as range
-
-if six.PY3:
-    from collections.abc import MutableSequence as collections_MutableSequence
-else:
-    from collections import MutableSequence as collections_MutableSequence
 
 logger = logging.getLogger('pyomo.core')
 
 class ListContainer(TupleContainer,
-                    collections_MutableSequence):
+                    collections.abc.MutableSequence):
     """
     A partial implementation of the IHomogeneousContainer
     interface that provides list-like storage functionality.

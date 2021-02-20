@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import collections.abc
 import pickle
 
 import pyutilib.th as unittest
@@ -28,15 +29,6 @@ from pyomo.core.kernel.block import (block,
                                      block_dict,
                                      block_list)
 from pyomo.core.kernel.suffix import suffix
-
-import six
-
-if six.PY3:
-    from collections.abc import Set as collections_Set
-    from collections.abc import MutableSet as collections_MutableSet
-else:
-    from collections import Set as collections_Set
-    from collections import MutableSet as collections_MutableSet
 
 
 class TestComponentSet(unittest.TestCase):
@@ -115,10 +107,10 @@ class TestComponentSet(unittest.TestCase):
 
     def test_type(self):
         cset = ComponentSet()
-        self.assertTrue(isinstance(cset, collections_Set))
-        self.assertTrue(isinstance(cset, collections_MutableSet))
-        self.assertTrue(issubclass(type(cset), collections_Set))
-        self.assertTrue(issubclass(type(cset), collections_MutableSet))
+        self.assertTrue(isinstance(cset, collections.abc.Set))
+        self.assertTrue(isinstance(cset, collections.abc.MutableSet))
+        self.assertTrue(issubclass(type(cset), collections.abc.Set))
+        self.assertTrue(issubclass(type(cset), collections.abc.MutableSet))
 
     def test_str(self):
         cset = ComponentSet()
