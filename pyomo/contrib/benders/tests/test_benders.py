@@ -56,7 +56,7 @@ class MPITestBenders(unittest.TestCase):
                 self.scenario_probabilities['AverageScenario'] = 0.3334
                 self.scenario_probabilities['AboveAverageScenario'] = 0.3333
 
-        def create_master(farmer):
+        def create_root(farmer):
             m = pyo.ConcreteModel()
 
             m.crops = pyo.Set(initialize=farmer.crops, ordered=True)
@@ -74,7 +74,7 @@ class MPITestBenders(unittest.TestCase):
                     m.eta.values()))
             return m
 
-        def create_subproblem(master, farmer, scenario):
+        def create_subproblem(root, farmer, scenario):
             m = pyo.ConcreteModel()
 
             m.crops = pyo.Set(initialize=farmer.crops, ordered=True)
@@ -108,23 +108,23 @@ class MPITestBenders(unittest.TestCase):
 
             complicating_vars_map = pyo.ComponentMap()
             for crop in m.crops:
-                complicating_vars_map[master.devoted_acreage[crop]] = m.devoted_acreage[crop]
+                complicating_vars_map[root.devoted_acreage[crop]] = m.devoted_acreage[crop]
 
             return m, complicating_vars_map
 
         farmer = Farmer()
-        m = create_master(farmer=farmer)
-        master_vars = list(m.devoted_acreage.values())
+        m = create_root(farmer=farmer)
+        root_vars = list(m.devoted_acreage.values())
         m.benders = BendersCutGenerator()
-        m.benders.set_input(master_vars=master_vars, tol=1e-8)
+        m.benders.set_input(root_vars=root_vars, tol=1e-8)
         for s in farmer.scenarios:
             subproblem_fn_kwargs = dict()
-            subproblem_fn_kwargs['master'] = m
+            subproblem_fn_kwargs['root'] = m
             subproblem_fn_kwargs['farmer'] = farmer
             subproblem_fn_kwargs['scenario'] = s
             m.benders.add_subproblem(subproblem_fn=create_subproblem,
                                      subproblem_fn_kwargs=subproblem_fn_kwargs,
-                                     master_eta=m.eta[s],
+                                     root_eta=m.eta[s],
                                      subproblem_solver='cplex_direct')
         opt = pyo.SolverFactory('cplex_direct')
 
@@ -142,14 +142,14 @@ class MPITestBenders(unittest.TestCase):
     @unittest.skipIf(not numpy_available, 'numpy is not available.')
     @unittest.skipIf(not ipopt_available, 'ipopt is not available.')
     def test_grothey(self):
-        def create_master():
+        def create_root():
             m = pyo.ConcreteModel()
             m.y = pyo.Var(bounds=(1, None))
             m.eta = pyo.Var(bounds=(-10, None))
             m.obj = pyo.Objective(expr=m.y ** 2 + m.eta)
             return m
 
-        def create_subproblem(master):
+        def create_subproblem(root):
             m = pyo.ConcreteModel()
             m.x1 = pyo.Var()
             m.x2 = pyo.Var()
@@ -159,17 +159,17 @@ class MPITestBenders(unittest.TestCase):
             m.c2 = pyo.Constraint(expr=(m.x1 + 1) ** 2 + m.x2 ** 2 <= pyo.log(m.y))
 
             complicating_vars_map = pyo.ComponentMap()
-            complicating_vars_map[master.y] = m.y
+            complicating_vars_map[root.y] = m.y
 
             return m, complicating_vars_map
 
-        m = create_master()
-        master_vars = [m.y]
+        m = create_root()
+        root_vars = [m.y]
         m.benders = BendersCutGenerator()
-        m.benders.set_input(master_vars=master_vars, tol=1e-8)
+        m.benders.set_input(root_vars=root_vars, tol=1e-8)
         m.benders.add_subproblem(subproblem_fn=create_subproblem,
-                                 subproblem_fn_kwargs={'master': m},
-                                 master_eta=m.eta,
+                                 subproblem_fn_kwargs={'root': m},
+                                 root_eta=m.eta,
                                  subproblem_solver='ipopt', )
         opt = pyo.SolverFactory('ipopt')
 
@@ -207,7 +207,7 @@ class MPITestBenders(unittest.TestCase):
                 self.scenario_probabilities['AboveAverageScenario'] = 0.25
                 self.scenario_probabilities['Scenario4'] = 0.25
 
-        def create_master(farmer):
+        def create_root(farmer):
             m = pyo.ConcreteModel()
 
             m.crops = pyo.Set(initialize=farmer.crops, ordered=True)
@@ -225,7 +225,7 @@ class MPITestBenders(unittest.TestCase):
                     m.eta.values()))
             return m
 
-        def create_subproblem(master, farmer, scenario):
+        def create_subproblem(root, farmer, scenario):
             m = pyo.ConcreteModel()
 
             m.crops = pyo.Set(initialize=farmer.crops, ordered=True)
@@ -259,23 +259,23 @@ class MPITestBenders(unittest.TestCase):
 
             complicating_vars_map = pyo.ComponentMap()
             for crop in m.crops:
-                complicating_vars_map[master.devoted_acreage[crop]] = m.devoted_acreage[crop]
+                complicating_vars_map[root.devoted_acreage[crop]] = m.devoted_acreage[crop]
 
             return m, complicating_vars_map
 
         farmer = FourScenFarmer()
-        m = create_master(farmer=farmer)
-        master_vars = list(m.devoted_acreage.values())
+        m = create_root(farmer=farmer)
+        root_vars = list(m.devoted_acreage.values())
         m.benders = BendersCutGenerator()
-        m.benders.set_input(master_vars=master_vars, tol=1e-8)
+        m.benders.set_input(root_vars=root_vars, tol=1e-8)
         for s in farmer.scenarios:
             subproblem_fn_kwargs = dict()
-            subproblem_fn_kwargs['master'] = m
+            subproblem_fn_kwargs['root'] = m
             subproblem_fn_kwargs['farmer'] = farmer
             subproblem_fn_kwargs['scenario'] = s
             m.benders.add_subproblem(subproblem_fn=create_subproblem,
                                      subproblem_fn_kwargs=subproblem_fn_kwargs,
-                                     master_eta=m.eta[s],
+                                     root_eta=m.eta[s],
                                      subproblem_solver='cplex_direct')
         opt = pyo.SolverFactory('cplex_direct')
 
