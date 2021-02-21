@@ -12,7 +12,7 @@
 #### Wrapping mpi-sppy functionality and local option Jan 2021, Feb 2021
 
 # False implies always use of the EF that is local to parmest
-use_mpisppy = False  # Use it if we can but use local if not.
+use_mpisppy = True  # Use it if we can but use local if not.
 if use_mpisppy:
     try:
         import mpisppy.utils.sputils as sputils
