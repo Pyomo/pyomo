@@ -32,6 +32,9 @@ import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()
 
+from pyomo.common.fileutils import find_library
+pynumero_ASL_available = False if find_library('pynumero_ASL') is None else True
+
 testdir = os.path.dirname(os.path.abspath(__file__))
 
 class Object_from_string_Tester(unittest.TestCase):
@@ -231,6 +234,7 @@ class parmest_object_Tester_RB_match_paper(unittest.TestCase):
         self.assertAlmostEqual(thetavals['asymptote'], 19.1426, places=2) # 19.1426 from the paper
         self.assertAlmostEqual(thetavals['rate_constant'], 0.5311, places=2) # 0.5311 from the paper
 
+    @unittest.skipIf(not pynumero_ASL_available, "pynumero ASL is not available")
     @unittest.skipIf(not parmest.inverse_reduced_hessian_available,
                      "Cannot test covariance matrix: required ASL dependency is missing")
     def test_theta_est_cov(self):
@@ -317,6 +321,7 @@ class Test_parmest_indexed_variables(unittest.TestCase):
         self.assertAlmostEqual(thetavals['theta[rate_constant]'], 0.5311, places=2) # 0.5311 from the paper
 
 
+    @unittest.skipIf(not pynumero_ASL_available, "pynumero ASL is not available")
     @unittest.skipIf(
         not parmest.inverse_reduced_hessian_available,
         "Cannot test covariance matrix: required ASL dependency is missing")

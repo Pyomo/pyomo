@@ -29,7 +29,8 @@ ipopt_available = SolverFactory('ipopt').available()
 
 testdir = os.path.dirname(os.path.abspath(__file__))
 
-
+print("parmest.parmest_available", parmest.parmest_available)
+print("ipopt_available",ipopt_available)
 @unittest.skipIf(not parmest.parmest_available, "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class pamest_Scenario_creator_reactor_design(unittest.TestCase):

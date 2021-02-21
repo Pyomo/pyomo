@@ -9,10 +9,10 @@
 #  ___________________________________________________________________________
 #### Using mpi-sppy instead of PySP; May 2020
 #### Adding option for "local" EF starting Sept 2020
-#### Wrapping mpi-sppy functionality and local option Jan 2021 ????????
+#### Wrapping mpi-sppy functionality and local option Jan 2021, Feb 2021
 
 # False implies always use of the EF that is local to parmest
-use_mpisppy = True  # Use it if we can but use local if not.
+use_mpisppy = False  # Use it if we can but use local if not.
 if use_mpisppy:
     try:
         import mpisppy.utils.sputils as sputils
@@ -50,15 +50,10 @@ import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
 import pyomo.contrib.parmest.graphics as graphics
 
-###pysp, pysp_available = attempt_import('pysp')
-
 parmest_available = numpy_available & pandas_available & scipy_available
 
 inverse_reduced_hessian, inverse_reduced_hessian_available = attempt_import(
     'pyomo.contrib.interior_point.inverse_reduced_hessian')
-
-st = attempt_import('pysp.util.rapper')[0]
-scenariotree = attempt_import('pysp.scenariotree')[0]
 
 logger = logging.getLogger(__name__)
 
@@ -110,18 +105,8 @@ def _object_from_string(instance, vstr):
             retval = getattr(retval, bname)[bindex]
     return retval
 
-#=============================================
-def _ef_ROOT_node_Object_from_string(efinstance, vstr):
-    """
-    Wrapper for _object_from_string for PySP extensive forms
-    but only for Vars at the node named RootNode.
-    DLW April 2018: needs work to be generalized.
-    """
-    efvstr = "MASTER_BLEND_VAR_RootNode["+vstr+"]"
-    return _object_from_string(efinstance, efvstr)
 
-
-def _pysp_instance_creation_callback(scenario_name, node_names=None, cb_data=None):
+def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_data=None):
     """
     This is going to be called by mpi-sppy or the local EF and it will call into
     the user's model's callback.
@@ -211,9 +196,9 @@ def _pysp_instance_creation_callback(scenario_name, node_names=None, cb_data=Non
             print("Failed to create instance using callback.")
             raise
         """
+    # delete this comment after _PySPnode_list is renamed in mpi-sppy (after Feb 2021)
     if hasattr(instance, "_PySPnode_list"):
-        raise RuntimeError ("scenario for experiment {} has _PySPnode_list".\
-                            format(exp_num))
+        raise RuntimeError (f"scenario for experiment {exp_num} has _PySPnode_list")
     nonant_list = [_object_from_string(instance, vstr) for vstr in\
                    outer_cb_data["theta_names"]]
     instance._PySPnode_list = [scenario_tree.ScenarioNode(
@@ -339,8 +324,7 @@ class Estimator(object):
         sum of squared error between measurements and model variables.  
         If no function is specified, the model is used 
         "as is" and should be defined with a "FirstStateCost" and 
-        "SecondStageCost" expression that are used to build an objective 
-        for pysp.
+        "SecondStageCost" expression that are used to build an objective.
     tee: bool, optional
         Indicates that ef solver output should be teed
     diagnostic_mode: bool, optional
@@ -396,8 +380,7 @@ class Estimator(object):
                     # in the 'except')
                     var_validate.fixed = False
                     # We want to standardize on the CUID string
-                    # representation (which is what PySP will use
-                    # internally)
+                    # representation
                     self.theta_names[i] = repr(var_cuid)
                 except:
                     logger.warning(theta + ' is not a variable')
@@ -478,13 +461,13 @@ class Estimator(object):
         scenario_creator_options = {"cb_data": outer_cb_data}
         if use_mpisppy:
             ef = sputils.create_EF(scen_names,
-                                    _pysp_instance_creation_callback,
+                                    _experiment_instance_creation_callback,
                                     EF_name = "_Q_opt",
                                    suppress_warnings=True,
                                     creator_options=scenario_creator_options)
         else:
             ef = local_ef.create_EF(scen_names,
-                                    _pysp_instance_creation_callback,
+                                    _experiment_instance_creation_callback,
                                     EF_name = "_Q_opt",
                                     creator_options=scenario_creator_options)
         self.ef_instance = ef
@@ -555,7 +538,7 @@ class Estimator(object):
                 (7-5-16) in "Nonlinear Parameter Estimation", Y. Bard, 1974.
                 
                 This formula is also applicable if the objective is scaled by a constant;
-                the constant cancels out. (PySP scaled by 1/n because it computes an
+                the constant cancels out. (was scaled by 1/n because it computes an
                 expected value.)
                 '''
                 cov = 2 * sse / (n - l) * inv_red_hes
@@ -623,7 +606,7 @@ class Estimator(object):
 
         # start block of code to deal with models with no constraints
         # (ipopt will crash or complain on such problems without special care)
-        instance = _pysp_instance_creation_callback("FOO1", None, dummy_cb)
+        instance = _experiment_instance_creation_callback("FOO1", None, dummy_cb)
         try: # deal with special problems so Ipopt will not crash
             first = next(instance.component_objects(pyo.Constraint, active=True))
         except:
@@ -636,7 +619,7 @@ class Estimator(object):
         totobj = 0
         for snum in self._numbers_list:
             sname = "scenario_NODE"+str(snum)
-            instance = _pysp_instance_creation_callback(sname, None, dummy_cb)
+            instance = _experiment_instance_creation_callback(sname, None, dummy_cb)
             if not sillylittle:
                 if self.diagnostic_mode:
                     print('      Experiment = ',snum)
