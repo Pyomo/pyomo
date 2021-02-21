@@ -1,12 +1,12 @@
-import setuptools
-from distutils.dist import Distribution
-import shutil
-import glob
-import os
 
 
 def build_appsi():
     print('\n\n**** Building APPSI ****')
+    import setuptools
+    from distutils.dist import Distribution
+    import shutil
+    import glob
+    import os
     from pybind11.setup_helpers import Pybind11Extension, build_ext
     import pybind11.setup_helpers
 
