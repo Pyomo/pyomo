@@ -57,7 +57,7 @@ def create_EF(scenario_names, scenario_creator, creator_options=None,
         raise RuntimeError("create_EF() received empty scenario list")
     elif (len(scen_dict) == 1):
         scenario_instance = list(scen_dict.values())[0]
-        print("WARNING: passed single scenario to create_EF()")
+        ###print("WARNING: passed single scenario to create_EF()")
         # special code to patch in ref_vars
         scenario_instance.ref_vars = dict()
         for node in scenario_instance._PySPnode_list:
@@ -82,8 +82,10 @@ def create_EF(scenario_names, scenario_creator, creator_options=None,
     probs_specified = \
         all([hasattr(scen, 'PySP_prob') for scen in scen_dict.values()])
     if (not probs_specified):
+        """
         print('WARNING: At least one scenario is missing PySP_prob attribute.',
             'Assuming equally-likely scenarios...')
+        """
         for scen in scen_dict.values():
             scen.PySP_prob = 1 / len(scen_dict)
 
@@ -282,5 +284,3 @@ def ef_nonants(ef):
     """
     for key, val in ef.ref_vars.items():
         yield (key[0], val, pyo.value(val))
-
-        

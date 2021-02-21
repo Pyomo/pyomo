@@ -11,8 +11,8 @@
 #### Adding option for "local" EF starting Sept 2020
 #### Wrapping mpi-sppy functionality and local option Jan 2021 ????????
 
-# False implies use of the EF that is local to parmest
-use_mpisppy = True  # use it if we can
+# False implies always use of the EF that is local to parmest
+use_mpisppy = True  # Use it if we can but use local if not.
 if use_mpisppy:
     try:
         import mpisppy.utils.sputils as sputils
@@ -50,10 +50,9 @@ import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
 import pyomo.contrib.parmest.graphics as graphics
 
-pysp, pysp_available = attempt_import('pysp')
+###pysp, pysp_available = attempt_import('pysp')
 
-parmest_available = numpy_available & pandas_available & scipy_available & \
-                    pysp_available
+parmest_available = numpy_available & pandas_available & scipy_available
 
 inverse_reduced_hessian, inverse_reduced_hessian_available = attempt_import(
     'pyomo.contrib.interior_point.inverse_reduced_hessian')
@@ -481,6 +480,7 @@ class Estimator(object):
             ef = sputils.create_EF(scen_names,
                                     _pysp_instance_creation_callback,
                                     EF_name = "_Q_opt",
+                                   suppress_warnings=True,
                                     creator_options=scenario_creator_options)
         else:
             ef = local_ef.create_EF(scen_names,
