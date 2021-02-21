@@ -29,7 +29,7 @@ class CbcConfig(SolverConfig):
         self.keepfiles = False
 
 
-@SolverFactory.register(name='appsi_cbc', doc='Automated persistent interface to CBC')
+# @SolverFactory.register(name='appsi_cbc', doc='Automated persistent interface to CBC')
 class Cbc(Solver):
     def __init__(self):
         self._config = CbcConfig()

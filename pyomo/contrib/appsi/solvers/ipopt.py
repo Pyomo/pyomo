@@ -31,7 +31,7 @@ class IpoptConfig(SolverConfig):
         self.keepfiles = False
 
 
-@SolverFactory.register(name='appsi_ipopt', doc='Automated persistent interface to Ipopt')
+# @SolverFactory.register(name='appsi_ipopt', doc='Automated persistent interface to Ipopt')
 class Ipopt(Solver):
     def __init__(self):
         self._config = IpoptConfig()

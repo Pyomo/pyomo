@@ -36,7 +36,7 @@ class CplexResults(Results):
         self.wallclock_time = None
 
 
-@SolverFactory.register(name='appsi_cplex', doc='Automated persistent interface to Cplex')
+# @SolverFactory.register(name='appsi_cplex', doc='Automated persistent interface to Cplex')
 class Cplex(Solver):
     def __init__(self):
         self._config = CplexConfig()

@@ -137,7 +137,7 @@ class _MutableQuadraticCoefficient(object):
         self.var2 = None
 
 
-@SolverFactory.register(name='appsi_gurobi', doc='Automated persistent interface to Gurobi')
+# @SolverFactory.register(name='appsi_gurobi', doc='Automated persistent interface to Gurobi')
 class Gurobi(PersistentBase, Solver):
     """
     Interface to Gurobi
