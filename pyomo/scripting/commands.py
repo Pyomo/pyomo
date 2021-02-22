@@ -84,8 +84,7 @@ def launch_pyro_mip_servers():
 @pyomo_command('pyomo_python', "Launch script using Pyomo's python installation")
 @deprecated(
     msg="The 'pyomo_python' command has been deprecated and will be removed",
-    version="6.0",
-    remove_in="7.0",
+    version="TBD",
 )
 def pyomo_python(args=None):
     if args is None:
