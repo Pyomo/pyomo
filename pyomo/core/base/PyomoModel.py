@@ -46,11 +46,8 @@ from pyomo.core.base.label import CNameLabeler, CuidLabeler
 
 from pyomo.opt.results import SolverResults, Solution, SolverStatus, UndefinedData
 
-from six import itervalues, iteritems, StringIO, string_types
-try:
-    unicode
-except:
-    basestring = unicode = str
+from io import StringIO
+
 
 logger = logging.getLogger('pyomo.core')
 id_func = id
@@ -129,7 +126,7 @@ class ModelSolution(object):
             '_metadata': self._metadata,
             '_entry': {}
         }
-        for (name, data) in iteritems(self._entry):
+        for (name, data) in self._entry.items():
             tmp = state['_entry'][name] = []
             # Note: We must convert all weakrefs to hard refs and
             # not indirect references like ComponentUIDs because
@@ -137,7 +134,7 @@ class ModelSolution(object):
             # model instance to have already been reconstructed --
             # so things like CUID.find_component will fail (return
             # None).
-            for obj, entry in itervalues(data):
+            for obj, entry in data.values():
                 if obj is None or obj() is None:
                     logger.warn(
                         "Solution component in '%s' no longer "
@@ -149,7 +146,7 @@ class ModelSolution(object):
     def __setstate__(self, state):
         self._metadata = state['_metadata']
         self._entry = {}
-        for name, data in iteritems(state['_entry']):
+        for name, data in state['_entry'].items():
             tmp = self._entry[name] = {}
             for obj, entry in data:
                 tmp[ id(obj) ] = ( weakref_ref(obj), entry )
@@ -177,7 +174,7 @@ class ModelSolutions(object):
         return state
 
     def __setstate__(self, state):
-        for key, val in iteritems(state):
+        for key, val in state.items():
             setattr(self, key, val)
         # Restore the instance weakref
         self._instance = weakref_ref(self._instance)
@@ -294,7 +291,7 @@ class ModelSolutions(object):
         for soln_ in self.solutions:
             soln = Solution()
             soln._cuid = cuid
-            for key, val in iteritems(soln_._metadata):
+            for key, val in soln_._metadata.items():
                 setattr(soln, key, val)
 
             if cuid:
@@ -372,7 +369,7 @@ class ModelSolutions(object):
 
                 for name in ['problem', 'objective', 'variable', 'constraint']:
                     tmp = soln._entry[name]
-                    for cuid, val in iteritems(getattr(solution, name)):
+                    for cuid, val in getattr(solution, name).items():
                         obj = cache.get(cuid, None)
                         if obj is None:
                             if ignore_invalid_labels:
@@ -394,7 +391,7 @@ class ModelSolutions(object):
 
                 for name in ['problem', 'objective', 'variable', 'constraint']:
                     tmp = soln._entry[name]
-                    for symb, val in iteritems(getattr(solution, name)):
+                    for symb, val in getattr(solution, name).items():
                         obj = cache.get(symb, None)
                         if obj is None:
                             if ignore_invalid_labels:
@@ -409,7 +406,7 @@ class ModelSolutions(object):
             smap = self.symbol_map[smap_id]
             for name in ['problem', 'objective', 'variable', 'constraint']:
                 tmp = soln._entry[name]
-                for symb, val in iteritems(getattr(solution, name)):
+                for symb, val in getattr(solution, name).items():
                     if symb in smap.bySymbol:
                         obj = smap.bySymbol[symb]
                     elif symb in smap.aliases:
@@ -488,30 +485,30 @@ class ModelSolutions(object):
         # sparse dual values exist in the results object) we clear all active
         # import suffixes.
         #
-        for suffix in itervalues(valid_import_suffixes):
+        for suffix in valid_import_suffixes.values():
             suffix.clear_all_values()
         #
         # Load problem (model) level suffixes. These would only come from ampl
         # interfaced solution suffixes at this point in time.
         #
-        for id_, (pobj,entry) in iteritems(soln._entry['problem']):
-            for _attr_key, attr_value in iteritems(entry):
+        for id_, (pobj,entry) in soln._entry['problem'].items():
+            for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:
                     valid_import_suffixes[attr_key][pobj] = attr_value
         #
         # Load objective data (suffixes)
         #
-        for id_, (odata, entry) in iteritems(soln._entry['objective']):
+        for id_, (odata, entry) in soln._entry['objective'].items():
             odata = odata()
-            for _attr_key, attr_value in iteritems(entry):
+            for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:
                     valid_import_suffixes[attr_key][odata] = attr_value
         #
         # Load variable data (suffixes and values)
         #
-        for id_, (vdata, entry) in iteritems(soln._entry['variable']):
+        for id_, (vdata, entry) in soln._entry['variable'].items():
             vdata = vdata()
             val = entry['Value']
             if vdata.fixed is True:
@@ -535,7 +532,7 @@ class ModelSolutions(object):
             vdata.value = val
             vdata.stale = False
 
-            for _attr_key, attr_value in iteritems(entry):
+            for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key == 'value':
                     continue
@@ -544,9 +541,9 @@ class ModelSolutions(object):
         #
         # Load constraint data (suffixes)
         #
-        for id_, (cdata, entry) in iteritems(soln._entry['constraint']):
+        for id_, (cdata, entry) in soln._entry['constraint'].items():
             cdata = cdata()
-            for _attr_key, attr_value in iteritems(entry):
+            for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:
                     valid_import_suffixes[attr_key][cdata] = attr_value
@@ -649,7 +646,7 @@ class Model(SimpleBlock):
         # filename is specified.  A concrete model is already
         # constructed, so passing in a data file is a waste of time.
         #
-        if self.is_constructed() and isinstance(filename, string_types):
+        if self.is_constructed() and isinstance(filename, str):
             msg = "The filename=%s will not be loaded - supplied as an " \
                   "argument to the create_instance() method of a "\
                   "concrete instance with name=%s." % (filename, name)
@@ -751,7 +748,7 @@ arguments (which have been ignored):"""
                 "The report_timing argument to Model.load() is deprecated.  "
                 "Use pyomo.common.timing.report_timing() to enable reporting "
                 "construction timing")
-        if arg is None or isinstance(arg, basestring):
+        if arg is None or isinstance(arg, str):
             dp = DataPortal(filename=arg, model=self)
         elif type(arg) is DataPortal:
             dp = arg
@@ -822,7 +819,7 @@ arguments (which have been ignored):"""
             # Initialize each component in order.
             #
 
-            for component_name, component in iteritems(self.component_map()):
+            for component_name, component in self.component_map().items():
 
                 if component.ctype is Model:
                     continue
@@ -841,7 +838,7 @@ arguments (which have been ignored):"""
                     tmp_clone_counter = expr_common.clone_counter
                     if clone_counter != tmp_clone_counter:
                         clone_counter = tmp_clone_counter
-                        print("             Cloning detected! (clone count: %d)" % clone_counters)
+                        print("             Cloning detected! (clone count: %d)" % clone_counter)
 
             # Note: As is, connectors are expanded when using command-line pyomo but not calling model.create(...) in a Python script.
             # John says this has to do with extension points which are called from commandline but not when writing scripts.

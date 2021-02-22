@@ -2721,9 +2721,7 @@ class TestSetsInPython3(unittest.TestCase):
         buf = StringIO()
         m3.pprint(ostream=buf)
         self.assertEqual(ref, buf.getvalue())
-        #
-        # six.iterkeys()
-        #
+
         m = ConcreteModel()
         v = {1:2,3:4,5:6}
         m.INDEX = Set(initialize=v.keys())

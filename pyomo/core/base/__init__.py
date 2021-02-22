@@ -11,7 +11,6 @@
 # TODO: this import is for historical backwards compatibility and should
 # probably be removed
 
-from six import iteritems, iterkeys
 import pyomo.core.expr.numvalue
 import pyomo.core.expr.logical_expr
 from pyomo.common.collections import ComponentMap

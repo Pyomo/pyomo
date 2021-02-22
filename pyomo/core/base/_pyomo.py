@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import iteritems
 from pyomo.core.base.plugin import (unique_component_name, Factory, implements,
                                     Interface, Plugin, CreatePluginFactory,
                                     ExtensionPoint, TransformationTimer,

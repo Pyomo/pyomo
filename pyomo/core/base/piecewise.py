@@ -57,11 +57,7 @@ from pyomo.core.base.set_types import PositiveReals, NonNegativeReals, Binary
 from pyomo.core.base.numvalue import value
 from pyomo.core.base.util import flatten_tuple
 
-from six import iterkeys, advance_iterator
-from six.moves import xrange, zip
-
 logger = logging.getLogger('pyomo.core')
-
 class PWRepn(str, enum.Enum):
     SOS2 =      'SOS2'
     BIGM_BIN =  'BIGM_BIN'
@@ -89,7 +85,7 @@ def _isNonDecreasing(vals):
     nondecreasing
     """
     it = iter(vals)
-    advance_iterator(it)
+    next(it)
     op = operator.ge
     return all(itertools.starmap(op, zip(it,vals)))
 
@@ -99,7 +95,7 @@ def _isNonIncreasing(vals):
     nonincreasing
     """
     it = iter(vals)
-    advance_iterator(it)
+    next(it)
     op = operator.le
     return all(itertools.starmap(op, zip(it,vals)))
 
@@ -117,13 +113,13 @@ def _GrayCode(nbits):
     Generates a GrayCode of nbits represented
     by a list of lists
     """
-    bitset = [0 for i in xrange(nbits)]
+    bitset = [0 for i in range(nbits)]
     # important that we copy bitset each time
     graycode = [list(bitset)]
 
-    for i in xrange(2,(1<<nbits)+1):
+    for i in range(2,(1<<nbits)+1):
         if i%2:
-            for j in xrange(-1,-nbits,-1):
+            for j in range(-1,-nbits,-1):
                 if bitset[j]:
                     bitset[j-1]=bitset[j-1]^1
                     break
@@ -166,11 +162,11 @@ def _characterize_function(name, tol, f_rule, model, points, *index):
     step = False
     try:
         slopes = [(values[i]-values[i-1])/(points[i]-points[i-1])
-                  for i in xrange(1,len(points))]
+                  for i in range(1,len(points))]
     except ZeroDivisionError:
         # we have a step function
         step = True
-        slopes = [(None) if (points[i]==points[i-1]) else ((values[i]-values[i-1])/(points[i]-points[i-1])) for i in xrange(1,len(points))]
+        slopes = [(None) if (points[i]==points[i-1]) else ((values[i]-values[i-1])/(points[i]-points[i-1])) for i in range(1,len(points))]
 
     # TODO: Warn when the slopes of two consecutive line
     #       segments are nearly equal since this is likely
@@ -239,7 +235,7 @@ class _PiecewiseData(_BlockData):
             raise ValueError("Piecewise component %s has not "
                              "been constructed yet" % self.name)
 
-        for i in xrange(len(self._domain_pts)-1):
+        for i in range(len(self._domain_pts)-1):
             xL = self._domain_pts[i]
             xU = self._domain_pts[i+1]
             if (xL <= x) and (x <= xU):
@@ -311,7 +307,7 @@ class _SimplifiedPiecewise(object):
         len_x_pts = len(x_pts)
 
         conlist = pblock.simplified_piecewise_constraint = ConstraintList()
-        for i in xrange(len_x_pts-1):
+        for i in range(len_x_pts-1):
             F_AT_XO = y_pts[i]
             dF_AT_XO = (y_pts[i+1]-y_pts[i])/(x_pts[i+1]-x_pts[i])
             XO = x_pts[i]
@@ -391,7 +387,7 @@ class _DCCPiecewise(object):
         polytopes = range(1,len_x_pts)
         vertices = range(1,len_x_pts+1)
         def polytope_verts(p):
-            return xrange(p,p+2)
+            return range(p,p+2)
 
         # create vars
         pblock.DCC_lambda = Var(polytopes,vertices,within=PositiveReals)
@@ -435,15 +431,15 @@ class _DLOGPiecewise(object):
         """
         MAX = 2**L
         mylists1 = {}
-        for i in xrange(1,L+1):
+        for i in range(1,L+1):
             mylists1[i] = []
             start = 1
             step = int(MAX/(2**i))
             while(start < MAX):
-                mylists1[i].extend([j for j in xrange(start,start+step)])
+                mylists1[i].extend([j for j in range(start,start+step)])
                 start += 2*step
 
-        biglist = xrange(1,MAX+1)
+        biglist = range(1,MAX+1)
         mylists2 = {}
         for i in sorted(mylists1.keys()):
             mylists2[i] = []
@@ -476,7 +472,7 @@ class _DLOGPiecewise(object):
         vertices = range(1,len_x_pts+1)
         bin_y_index = range(1,L_i+1)
         def polytope_verts(p):
-            return xrange(p,p+2)
+            return range(p,p+2)
 
         # create vars
         pblock.DLOG_lambda = Var(polytopes,vertices,within=PositiveReals)
@@ -585,10 +581,10 @@ class _LOGPiecewise(object):
         # starting at 1
         G = {k:v for k,v in enumerate(_GrayCode(n),start=1)}
 
-        L = {s:[k+1 for k in xrange(BIGL+1) \
+        L = {s:[k+1 for k in range(BIGL+1) \
                          if ((k == 0) or (G[k][s-1] == 1)) \
                          and ((k == BIGL) or (G[k+1][s-1] == 1))] for s in S}
-        R = {s:[k+1 for k in xrange(BIGL+1) \
+        R = {s:[k+1 for k in range(BIGL+1) \
                          if ((k == 0) or (G[k][s-1] == 0)) \
                          and ((k == BIGL) or (G[k+1][s-1] == 0))] for s in S}
 
@@ -793,7 +789,7 @@ class _BIGMPiecewise(object):
         if bound_type in [Bound.Lower,Bound.Equal]:
             OPT_M['LB'] = self._find_M(x_pts, y_pts, Bound.Lower)
 
-        all_keys = set(iterkeys(OPT_M['UB'])).union(iterkeys(OPT_M['LB']))
+        all_keys = set(OPT_M['UB'].keys()).union(OPT_M['LB'].keys())
         full_indices = []
         full_indices.extend(range(1,len_x_pts))
         bigm_y_index = None
@@ -832,7 +828,7 @@ class _BIGMPiecewise(object):
                 >= rhs
 
         def con2_rule(model):
-            expr = [bigm_y[i] for i in xrange(1,len_x_pts) if i in all_keys]
+            expr = [bigm_y[i] for i in range(1,len_x_pts) if i in all_keys]
             if len(expr) > 0:
                 return sum(expr) == 1
             else:
@@ -878,18 +874,18 @@ class _BIGMPiecewise(object):
         _self_M_func = self._M_func
 
         M_final = {}
-        for j in xrange(1,len_x_pts):
+        for j in range(1,len_x_pts):
             index = j
             if (bound_type == Bound.Lower):
                 M_final[index] = min( [0.0, min([_self_M_func(x_pts[k],y_pts[k],
                                                               x_pts[j-1],y_pts[j-1],
                                                               x_pts[j],y_pts[j]) \
-                                            for k in xrange(len_x_pts)])] )
+                                            for k in range(len_x_pts)])] )
             elif (bound_type == Bound.Upper):
                 M_final[index] = max( [0.0, max([_self_M_func(x_pts[k],y_pts[k],
                                                               x_pts[j-1],y_pts[j-1],
                                                               x_pts[j],y_pts[j]) \
-                                             for k in xrange(len_x_pts)])] )
+                                             for k in range(len_x_pts)])] )
             else:
                 raise ValueError("Invalid Bound passed to _find_M function")
             if M_final[index] == 0.0:

@@ -21,12 +21,8 @@ from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common import DeveloperError
 from pyomo.common.deprecation import deprecation_warning
 
-from six import PY3, itervalues, iteritems, string_types
+from collections.abc import Sequence as collections_Sequence
 
-if PY3:
-    from collections.abc import Sequence as collections_Sequence
-else:
-    from collections import Sequence as collections_Sequence
     
 logger = logging.getLogger('pyomo.core')
 
@@ -67,7 +63,7 @@ def normalize_index(x):
             # new object)
             x = x[:i] + tuple(x[i]) + x[i + 1:]
         elif issubclass(_xi_class, collections_Sequence):
-            if issubclass(_xi_class, string_types):
+            if issubclass(_xi_class, str):
                 # This is very difficult to get to: it would require a
                 # user creating a custom derived string type
                 native_types.add(_xi_class)
@@ -801,7 +797,7 @@ value() function.""" % ( self.name, i ))
         return ( [("Size", len(self)),
                   ("Index", self._index if self.is_indexed() else None),
                   ],
-                 iteritems(self._data),
+                 self._data.items(),
                  ( "Object",),
                  lambda k, v: [ type(v) ]
                  )
@@ -812,17 +808,14 @@ value() function.""" % ( self.name, i ))
         all ComponentData instances.
         """
         result = {}
-        for index, component_data in iteritems(self):
+        for index, component_data in self.items():
             result[id(component_data)] = index
         return result
 
 
-# In Python3, the items(), etc methods of dict-like things return
-# generator-like objects.
-if PY3:
-    IndexedComponent.keys   = IndexedComponent.iterkeys
-    IndexedComponent.values = IndexedComponent.itervalues
-    IndexedComponent.items  = IndexedComponent.iteritems
+IndexedComponent.keys   = IndexedComponent.iterkeys
+IndexedComponent.values = IndexedComponent.itervalues
+IndexedComponent.items  = IndexedComponent.iteritems
 
 class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
     """
@@ -847,13 +840,13 @@ class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
         """Set the active attribute to True"""
         super(ActiveIndexedComponent, self).activate()
         if self.is_indexed():
-            for component_data in itervalues(self):
+            for component_data in self.values():
                 component_data.activate()
 
     def deactivate(self):
         """Set the active attribute to False"""
         super(ActiveIndexedComponent, self).deactivate()
         if self.is_indexed():
-            for component_data in itervalues(self):
+            for component_data in self.values():
                 component_data.deactivate()
 

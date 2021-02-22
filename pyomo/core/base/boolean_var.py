@@ -1,5 +1,12 @@
-from six import itervalues, iteritems
-
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import logging
 from weakref import ref as weakref_ref
@@ -193,7 +200,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
         if hasattr(_base, '__setstate__'):
             _base.__setstate__(state)
         else:
-            for key, val in iteritems(state):
+            for key, val in state.items():
                 # Note: per the Python data model docs, we explicitly
                 # set the attribute using object.__setattr__() instead
                 # of setting self.__dict__[key] = val.
@@ -296,7 +303,7 @@ class BooleanVar(IndexedComponent):
         """
         Set the 'stale' attribute of every variable data object to True.
         """
-        for boolvar_data in itervalues(self._data):
+        for boolvar_data in self._data.values():
             boolvar_data.stale = True
 
     def get_values(self, include_fixed_values=True):
@@ -305,9 +312,9 @@ class BooleanVar(IndexedComponent):
         """
         if include_fixed_values:
             return dict((idx, vardata.value)
-                        for idx, vardata in iteritems(self._data))
+                        for idx, vardata in self._data.items())
         return dict((idx, vardata.value)
-                    for idx, vardata in iteritems(self._data)
+                    for idx, vardata in self._data.items()
                     if not vardata.fixed)
 
     extract_values = get_values
@@ -319,7 +326,7 @@ class BooleanVar(IndexedComponent):
         The default behavior is to validate the values in the
         dictionary.
         """
-        for index, new_value in iteritems(new_values):
+        for index, new_value in new_values.items():
             self[index].set_value(new_value, valid)
 
 
@@ -437,7 +444,7 @@ class BooleanVar(IndexedComponent):
         return ( [("Size", len(self)),
                   ("Index", self._index if self.is_indexed() else None),
                   ],
-                 iteritems(self._data),
+                 self._data.items(),
                  ( "Value","Fixed","Stale"),
                  lambda k, v: [ v.value,
                                 v.fixed,
@@ -531,12 +538,12 @@ class IndexedBooleanVar(BooleanVar):
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
         """
-        for boolean_vardata in itervalues(self):
+        for boolean_vardata in self.values():
             boolean_vardata.fix(*val)
 
     def unfix(self):
         """Sets the fixed indicator to False."""
-        for boolean_vardata in itervalues(self):
+        for boolean_vardata in self.values():
             boolean_vardata.unfix()
 
     @property
@@ -576,7 +583,7 @@ class BooleanVarList(IndexedBooleanVar):
         # VarList (so we get potential domain errors), we will re-set
         # everything.
         if self._value_init_value.__class__ is dict:
-            for k,v in iteritems(self._value_init_value):
+            for k,v in self._value_init_value.items():
                 self[k] = v
 
     def add(self):
