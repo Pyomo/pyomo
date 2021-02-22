@@ -24,12 +24,7 @@ from pyomo.core.base.objective import (IndexedObjective,
 from pyomo.core.base.expression import (IndexedExpression,
                                         _ExpressionData)
 
-import six
-
-if six.PY3:
-    from collections.abc import MutableSequence as collections_MutableSequence
-else:
-    from collections import MutableSequence as collections_MutableSequence
+from collections.abc import MutableSequence as collections_MutableSequence
 
 logger = logging.getLogger('pyomo.core')
 

@@ -12,16 +12,10 @@ from __future__ import division
 
 import inspect
 import logging
-import six
 from copy import deepcopy
 from collections import deque
 
-if six.PY2:
-    getargspec = inspect.getargspec
-else:
-    # For our needs, getfullargspec is a drop-in replacement for
-    # getargspec (which was removed in Python 3.x)
-    getargspec = inspect.getfullargspec
+getargspec = inspect.getfullargspec
 
 logger = logging.getLogger('pyomo.core')
 
@@ -29,11 +23,6 @@ from .symbol_map import SymbolMap
 from . import expr_common as common
 from .expr_errors import TemplateExpressionError
 from pyomo.common.deprecation import deprecation_warning
-
-from pyomo.core.expr.boolean_value import (
-    BooleanValue,)
-
-
 from pyomo.core.expr.numvalue import (
     nonpyomo_leaf_types,
     native_numeric_types,

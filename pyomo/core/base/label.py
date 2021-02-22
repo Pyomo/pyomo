@@ -13,12 +13,8 @@ __all__ = ['CounterLabeler', 'NumericLabeler', 'CNameLabeler', 'TextLabeler',
            'ShortNameLabeler']
 
 import re
-import six
-if six.PY3:
-    _translate = str.translate
-else:
-    import string
-    _translate = string.translate
+
+_translate = str.translate
 
 from pyomo.core.base.componentuid import ComponentUID
 
@@ -40,7 +36,7 @@ class _CharMapper(object):
                   preserve or translate
         """
         self.table = {k if isinstance(k, int) else ord(k): v
-            for k,v in six.iteritems(dict(translate)) }
+            for k,v in dict(translate).items() }
         for c in preserve:
             _c = ord(c)
             if _c in self.table and self.table[_c] != c:
@@ -164,7 +160,7 @@ class ShortNameLabeler(object):
         else:
             self.labeler = AlphaNumericTextLabeler()
         self.known_labels = set() if caseInsensitive else None
-        if isinstance(legalRegex, six.string_types):
+        if isinstance(legalRegex, str):
             self.legalRegex = re.compile(legalRegex)
         else:
             self.legalRegex = legalRegex

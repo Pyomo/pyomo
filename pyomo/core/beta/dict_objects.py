@@ -24,14 +24,8 @@ from pyomo.core.base.objective import (IndexedObjective,
 from pyomo.core.base.expression import (IndexedExpression,
                                         _ExpressionData)
 
-import six
-
-if six.PY3:
-    from collections.abc import MutableMapping as collections_MutableMapping
-    from collections.abc import Mapping as collections_Mapping
-else:
-    from collections import MutableMapping as collections_MutableMapping
-    from collections import Mapping as collections_Mapping
+from collections.abc import MutableMapping as collections_MutableMapping
+from collections.abc import Mapping as collections_Mapping
 
 logger = logging.getLogger('pyomo.core')
 

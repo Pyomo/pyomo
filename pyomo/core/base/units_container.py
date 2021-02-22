@@ -108,7 +108,6 @@ information.
 #    * Extend external function interface to support units for the arguments in addition to the function itself
 
 import logging
-import six
 import sys
 
 from pyomo.common.dependencies import attempt_import
@@ -370,10 +369,7 @@ class _PyomoUnit(NumericValue):
         retstr = u'{:!~C}'.format(self._pint_unit)
         if retstr == '':
             retstr = 'dimensionless'
-        if six.PY2:
-            return str(retstr.encode('utf8'))
-        else:
-            return retstr
+        return retstr
 
     def to_string(self, verbose=None, labeler=None, smap=None,
                   compute_values=False):

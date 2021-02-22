@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 #
 
-import six
 import pickle
 import base64
 import ast
@@ -86,11 +85,7 @@ class Test(unittest.TestCase):
             # avoid errors when transmitting the pickled
             # form of the results object with the default Pyro4
             # serializer (Serpent)
-            if six.PY3:
-                results = base64.decodebytes(
-                    ast.literal_eval(results))
-            else:
-                results = base64.decodestring(results)
+            results = base64.decodebytes(ast.literal_eval(results))
 
         results = pickle.loads(results)
 

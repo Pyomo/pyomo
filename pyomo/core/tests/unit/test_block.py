@@ -11,12 +11,10 @@
 # Unit Tests for Elements of a Block
 #
 
+import io
 import os
 import sys
-import six
 import types
-
-from six import StringIO, iterkeys
 
 from copy import deepcopy
 from os.path import abspath, dirname, join
@@ -770,7 +768,7 @@ class TestBlock(unittest.TestCase):
         b.clear()
         b.transfer_attributes_from(c)
         self.assertEqual(list(b.component_map()), ['y','x','z'])
-        self.assertEqual(sorted(list(iterkeys(c))), ['x','y','z'])
+        self.assertEqual(sorted(list(c.keys())), ['x','y','z'])
         self.assertIs(b.x, c['x'])
         self.assertIsNot(b.y, c['y'])
         self.assertIs(b.y, b_y)
@@ -1174,7 +1172,7 @@ class TestBlock(unittest.TestCase):
         self.assertEqual( [], list(m.component_map(Constraint)) )
 
     def test_replace_attribute_with_component(self):
-        OUTPUT = StringIO()
+        OUTPUT = io.StringIO()
         with LoggingIntercept(OUTPUT, 'pyomo.core'):
             self.block.x = 5
             self.block.x = Var()
@@ -1182,7 +1180,7 @@ class TestBlock(unittest.TestCase):
                       OUTPUT.getvalue())
 
     def test_replace_component_with_component(self):
-        OUTPUT = StringIO()
+        OUTPUT = io.StringIO()
         with LoggingIntercept(OUTPUT, 'pyomo.core'):
             self.block.x = Var()
             self.block.x = Var()
@@ -1362,7 +1360,7 @@ class TestBlock(unittest.TestCase):
         def assertWorks(self, key, pm):
             self.assertIs(pm[key.local_name], key)
         def assertFails(self, key, pm):
-            if not isinstance(key, six.string_types):
+            if not isinstance(key, str):
                 key = key.local_name
             self.assertRaises(KeyError, pm.__getitem__, key)
 
@@ -2063,7 +2061,7 @@ class TestBlock(unittest.TestCase):
         m.b.c = Constraint(expr=m.x**2 + m.y[1] + m.b.x**2 + m.b.y[1] <= 10)
 
         # Check the paranoid warning
-        OUTPUT = StringIO()
+        OUTPUT = io.StringIO()
         with LoggingIntercept(OUTPUT, 'pyomo.core'):
             nb = deepcopy(m.b)
         # without the scope, the whole model is cloned!
@@ -2076,7 +2074,7 @@ class TestBlock(unittest.TestCase):
         self.assertFalse(hasattr(nb, 'bad2'))
 
         # Simple tests for the subblock
-        OUTPUT = StringIO()
+        OUTPUT = io.StringIO()
         with LoggingIntercept(OUTPUT, 'pyomo.core'):
             nb = m.b.clone()
         self.assertNotIn("'unknown' contains an uncopyable field 'bad1'",
@@ -2088,7 +2086,7 @@ class TestBlock(unittest.TestCase):
         self.assertFalse(hasattr(nb, 'bad2'))
 
         # more involved tests for the model
-        OUTPUT = StringIO()
+        OUTPUT = io.StringIO()
         with LoggingIntercept(OUTPUT, 'pyomo.core'):
             n = m.clone()
         self.assertIn("'unknown' contains an uncopyable field 'bad1'",
@@ -2163,7 +2161,7 @@ class TestBlock(unittest.TestCase):
 
     def test_pprint(self):
         m = HierarchicalModel().model
-        buf = StringIO()
+        buf = io.StringIO()
         m.pprint(ostream=buf)
         ref = """3 Set Declarations
     a1_IDX : Size=1, Index=None, Ordered=Insertion
@@ -2435,7 +2433,7 @@ class TestBlock(unittest.TestCase):
 
         correct_s = 'Testing pprint of a custom block.'
         b = TempBlock(concrete=True)
-        stream = StringIO()
+        stream = io.StringIO()
         b.pprint(ostream=stream)
         self.assertEqual(correct_s, stream.getvalue())
 
@@ -2572,7 +2570,7 @@ class TestBlock(unittest.TestCase):
         m = ConcreteModel()
         def b_rule(b, a=None):
             b.p = Param(initialize=a)
-        OUTPUT = StringIO()
+        OUTPUT = io.StringIO()
         with LoggingIntercept(OUTPUT, 'pyomo.core'):
             m.b = Block(rule=b_rule, options={'a': 5})
         self.assertIn("The Block 'options=' keyword is deprecated.",
@@ -2582,7 +2580,7 @@ class TestBlock(unittest.TestCase):
         m = ConcreteModel()
         def b_rule(b, i, **kwds):
             b.p = Param(initialize=kwds.get('a', {}).get(i, 0))
-        OUTPUT = StringIO()
+        OUTPUT = io.StringIO()
         with LoggingIntercept(OUTPUT, 'pyomo.core'):
             m.b = Block([1,2,3], rule=b_rule, options={'a': {1:5, 2:10}})
         self.assertIn("The Block 'options=' keyword is deprecated.",

@@ -10,7 +10,6 @@
 
 import logging
 import os
-import six
 import types
 import weakref
 
@@ -177,7 +176,7 @@ class AMPLExternalFunction(ExternalFunction):
         def addfunc(name, f, _type, nargs, funcinfo, ae):
             # trap for Python 3, where the name comes in as bytes() and
             # not a string
-            if not isinstance(name, six.string_types):
+            if not isinstance(name, str):
                 name = name.decode()
             self._known_functions[str(name)] = (f, _type, nargs, funcinfo, ae)
         AE.Addfunc = _AMPLEXPORTS.ADDFUNC(addfunc)

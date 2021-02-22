@@ -12,7 +12,7 @@ __all__ = ['Constraint', '_ConstraintData', 'ConstraintList',
            'simple_constraint_rule', 'simple_constraintlist_rule']
 
 import inspect
-import six
+import io
 import sys
 import logging
 import math
@@ -38,16 +38,9 @@ from pyomo.core.base.util import (
     IndexedCallInitializer, CountedCallInitializer
 )
 
-from six import StringIO, iteritems
-
-if six.PY3:
-    from collections.abc import Sequence as collections_Sequence
-    def formatargspec(fn):
-        return str(inspect.signature(fn))
-else:
-    from collections import Sequence as collections_Sequence
-    def formatargspec(fn):
-        return str(inspect.formatargspec(*inspect.getargspec(fn)))
+from collections.abc import Sequence as collections_Sequence
+def formatargspec(fn):
+    return str(inspect.signature(fn))
 
 
 logger = logging.getLogger('pyomo.core')
@@ -526,7 +519,7 @@ class _GeneralConstraintData(_ConstraintData):
             if logical_expr._using_chained_inequality \
                and logical_expr._chainedInequality.prev is not None:
 
-                buf = StringIO()
+                buf = io.StringIO()
                 logical_expr._chainedInequality.prev.pprint(buf)
                 #
                 # We are about to raise an exception, so it's OK to
@@ -865,7 +858,7 @@ class Constraint(ActiveIndexedComponent):
              ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active),
              ],
-            iteritems(self),
+            self.items(),
             ( "Lower","Body","Upper","Active" ),
             lambda k, v: [ "-Inf" if v.lower is None else v.lower,
                            v.body,
@@ -890,7 +883,7 @@ class Constraint(ActiveIndexedComponent):
 
         ostream.write("\n")
         tabular_writer( ostream, prefix+tab,
-                        ((k,v) for k,v in iteritems(self._data) if v.active),
+                        ((k,v) for k,v in self._data.items() if v.active),
                         ( "Lower","Body","Upper" ),
                         lambda k, v: [ value(v.lower),
                                        v.body(),
