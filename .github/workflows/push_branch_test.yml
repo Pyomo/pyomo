@@ -194,6 +194,11 @@ jobs:
             install libopenblas-dev gfortran liblapack-dev glpk-utils
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
 
+    - name: Windows Build Patch
+      if: matrix.TARGET == 'windows'
+      run: |
+        echo "::add-path::C:\Program Files (x86)\Windows Kits\10\bin\10.0.18362.0\x64"
+
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
       uses: actions/setup-python@v2
