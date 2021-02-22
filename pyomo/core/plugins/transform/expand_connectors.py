@@ -230,7 +230,7 @@ class ExpandConnectors(Transformation):
 
         # as we are adding things to the model, sort by key so that
         # the order things are added is deterministic
-        sorted_refs = sorted(ref.item())
+        sorted_refs = sorted(ref.items())
         if len(empty_or_partial) > 1:
             # This is expensive (names aren't cheap), but does result in
             # a deterministic ordering
