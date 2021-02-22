@@ -665,7 +665,7 @@ def Reference(reference, ctype=_NotSpecified):
         if not slice_idx:
             index = SetOf(_ReferenceSet(reference))
         else:
-            wildcards = sum((sorted(lvl.items())) for lvl in slice_idx
+            wildcards = sum((sorted(lvl.items()) for lvl in slice_idx
                              if lvl is not None), [])
             # Wildcards is a list of (coordinate, set) tuples.  Coordinate
             # is that within the subsets list, and set is a wildcard set.
