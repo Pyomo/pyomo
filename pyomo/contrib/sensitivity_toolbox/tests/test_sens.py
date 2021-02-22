@@ -21,6 +21,7 @@ from pyomo.opt import SolverFactory
 from pyomo.dae import ContinuousSet
 from pyomo.common.dependencies import scipy_available
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.collections import ComponentMap
 from pyomo.core.expr.current import identify_variables
 from pyomo.contrib.sensitivity_toolbox.sens import sipopt, kaug, sensitivity_calculation
 import pyomo.contrib.sensitivity_toolbox.examples.parameter as param_ex
@@ -70,8 +71,8 @@ class FunctionDeprecationTest(unittest.TestCase):
                                 cloneModel=True)        
         out1 = StringIO()
         out2 = StringIO()
-        m11._sipopt_data.constList.pprint(ostream=out1)
-        m22._sipopt_data.constList.pprint(ostream=out2)
+        m11._SENSITIVITY_TOOLBOX_DATA.constList.pprint(ostream=out1)
+        m22._SENSITIVITY_TOOLBOX_DATA.constList.pprint(ostream=out2)
         self.assertMultiLineEqual(out1.getvalue(), out2.getvalue())
 
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
@@ -109,8 +110,8 @@ class FunctionDeprecationTest(unittest.TestCase):
                                       cloneModel=True)        
         out1 = StringIO()
         out2 = StringIO()
-        m11._kaug_data.constList.pprint(ostream=out1)
-        m22._kaug_data.constList.pprint(ostream=out2)
+        m11._SENSITIVITY_TOOLBOX_DATA.constList.pprint(ostream=out1)
+        m22._SENSITIVITY_TOOLBOX_DATA.constList.pprint(ostream=out2)
         self.assertMultiLineEqual(out1.getvalue(), out2.getvalue())
 
 
@@ -127,37 +128,29 @@ class TestSensitivityToolbox(unittest.TestCase):
 
         m.x = Var(m.t)
 
-        list_one = [m.a,m.b]
-        list_two = [m.a,m.b,m.c]
+        list_one = [m.a, m.b]
+        list_two = [m.a, m.b, m.c]
         list_three = [m.a, m.x]
-        list_four = [m.a,m.c]
+        list_four = [m.a, m.c]
 
         # verify ValueError thrown when param and perturb list are different
         # lengths
         with self.assertRaises(ValueError) as context:
-            Result = sensitivity_calculation('sipopt',m,list_one,list_two)
-        self.assertTrue("Length of paramSubList argument does not equal "
+            Result = sensitivity_calculation('sipopt', m, list_one, list_two)
+        self.assertTrue("Length of paramList argument does not equal "
                         "length of perturbList" in str(context.exception))
-
-        # verify ValueError thrown when param list has a Var in it
-        with self.assertRaises(ValueError) as context:
-            Result = sensitivity_calculation('sipopt',m,list_three,list_one)
-        self.assertTrue("paramSubList argument is expecting a list of Params" in str(context.exception))
-
-        # verify ValueError thrown when perturb list has Var in it
-        with self.assertRaises(ValueError) as context:
-            Result = sensitivity_calculation('sipopt',m,list_one,list_three)
-        self.assertTrue("perturbList argument is expecting a list of Params" in str(context.exception))
 
         # verify ValueError thrown when param list has an unmutable param
         with self.assertRaises(ValueError) as context:
-            Result = sensitivity_calculation('sipopt',m,list_four,list_one)
-        self.assertTrue("parameters within paramSubList must be mutable" in str(context.exception))
+            Result = sensitivity_calculation('sipopt', m, list_four, list_one)
+        self.assertTrue("Parameters within paramList must be mutable"
+                in str(context.exception))
 
-        # verify ValueError thrown when an invalid method is specified
+        # verify ValueError thrown when param list has an unfixed var.
         with self.assertRaises(ValueError) as context:
-            Result = sensitivity_calculation('foo',m,list_four,list_one)
-        self.assertTrue("method should be 'sipopt' or 'kaug'" in str(context.exception))
+            Result = sensitivity_calculation('sipopt', m, list_three, list_one)
+        self.assertTrue("Specified \"parameter\" variables must be fixed"
+                in str(context.exception))
 
     # test feedbackController Solution when the model gets cloned
     @unittest.skipIf(not scipy_available, "scipy is required for this test")
@@ -174,46 +167,46 @@ class TestSensitivityToolbox(unittest.TestCase):
                             [m_orig.perturbed_a,m_orig.perturbed_H],
                             cloneModel=True)        
   
-        # verify cloned model has _sipopt_data block
+        # verify cloned model has _SENSITIVITY_TOOLBOX_DATA block
         # and original model is untouched
         self.assertFalse(m_sipopt == m_orig)
 
-        self.assertTrue(hasattr(m_sipopt,'_sipopt_data') and
-                        m_sipopt._sipopt_data.ctype is Block)
+        self.assertTrue(hasattr(m_sipopt,'_SENSITIVITY_TOOLBOX_DATA') and
+                        m_sipopt._SENSITIVITY_TOOLBOX_DATA.ctype is Block)
 
-        self.assertFalse(hasattr(m_orig,'_sipopt_data'))
+        self.assertFalse(hasattr(m_orig,'_SENSITIVITY_TOOLBOX_DATA'))
         self.assertFalse(hasattr(m_orig,'b'))
 
         # verify variable declaration
-        self.assertTrue(hasattr(m_sipopt._sipopt_data,'a') and 
-                        m_sipopt._sipopt_data.a.ctype is Var)
-        self.assertTrue(hasattr(m_sipopt._sipopt_data,'H') and 
-                        m_sipopt._sipopt_data.H.ctype is Var)
+        self.assertTrue(hasattr(m_sipopt._SENSITIVITY_TOOLBOX_DATA,'a') and 
+                        m_sipopt._SENSITIVITY_TOOLBOX_DATA.a.ctype is Var)
+        self.assertTrue(hasattr(m_sipopt._SENSITIVITY_TOOLBOX_DATA,'H') and 
+                        m_sipopt._SENSITIVITY_TOOLBOX_DATA.H.ctype is Var)
    
         # verify suffixes
         self.assertTrue(hasattr(m_sipopt,'sens_state_0') and
                         m_sipopt.sens_state_0.ctype is Suffix and
-                        m_sipopt.sens_state_0[m_sipopt._sipopt_data.H]==2 and
-                        m_sipopt.sens_state_0[m_sipopt._sipopt_data.a]==1)
+                        m_sipopt.sens_state_0[m_sipopt._SENSITIVITY_TOOLBOX_DATA.H]==2 and
+                        m_sipopt.sens_state_0[m_sipopt._SENSITIVITY_TOOLBOX_DATA.a]==1)
   
         self.assertTrue(hasattr(m_sipopt,'sens_state_1') and
                         m_sipopt.sens_state_1.ctype is Suffix and
-                        m_sipopt.sens_state_1[m_sipopt._sipopt_data.H]==2 and
-                        m_sipopt.sens_state_1[m_sipopt._sipopt_data.a]==1)  
+                        m_sipopt.sens_state_1[m_sipopt._SENSITIVITY_TOOLBOX_DATA.H]==2 and
+                        m_sipopt.sens_state_1[m_sipopt._SENSITIVITY_TOOLBOX_DATA.a]==1)  
 
         self.assertTrue(hasattr(m_sipopt,'sens_state_value_1') and
                         m_sipopt.sens_state_value_1.ctype is Suffix and
                         m_sipopt.sens_state_value_1[
-                                        m_sipopt._sipopt_data.H]==0.55 and
+                                        m_sipopt._SENSITIVITY_TOOLBOX_DATA.H]==0.55 and
                         m_sipopt.sens_state_value_1[
-                                        m_sipopt._sipopt_data.a]==-0.25)
+                                        m_sipopt._SENSITIVITY_TOOLBOX_DATA.a]==-0.25)
   
         self.assertTrue(hasattr(m_sipopt,'sens_init_constr') and
                         m_sipopt.sens_init_constr.ctype is Suffix and
                         m_sipopt.sens_init_constr[
-                                     m_sipopt._sipopt_data.paramConst[1]]==1 and
+                                     m_sipopt._SENSITIVITY_TOOLBOX_DATA.paramConst[1]]==1 and
                         m_sipopt.sens_init_constr[
-                                     m_sipopt._sipopt_data.paramConst[2]]==2)
+                                     m_sipopt._SENSITIVITY_TOOLBOX_DATA.paramConst[2]]==2)
 
         self.assertTrue(hasattr(m_sipopt,'sens_sol_state_1') and
                         m_sipopt.sens_sol_state_1.ctype is Suffix)
@@ -221,6 +214,8 @@ class TestSensitivityToolbox(unittest.TestCase):
                         m_sipopt.sens_sol_state_1[
                            m_sipopt.F[15]],-0.00102016765,8)
 
+        # These tests require way too much precision for something that
+        # just needs to enforce that bounds are not active...
         self.assertTrue(hasattr(m_sipopt,'sens_sol_state_1_z_L') and
                         m_sipopt.sens_sol_state_1_z_L.ctype is Suffix)
         self.assertAlmostEqual(
@@ -271,40 +266,40 @@ class TestSensitivityToolbox(unittest.TestCase):
 
         self.assertTrue(m_sipopt == m_orig)
 
-        # test _sipopt_data block exists
-        self.assertTrue(hasattr(m_orig,'_sipopt_data') and
-                        m_orig._sipopt_data.ctype is Block)
+        # test _SENSITIVITY_TOOLBOX_DATA block exists
+        self.assertTrue(hasattr(m_orig,'_SENSITIVITY_TOOLBOX_DATA') and
+                        m_orig._SENSITIVITY_TOOLBOX_DATA.ctype is Block)
         
         # test variable declaration
-        self.assertTrue(hasattr(m_sipopt._sipopt_data,'a') and 
-                        m_sipopt._sipopt_data.a.ctype is Var)
-        self.assertTrue(hasattr(m_sipopt._sipopt_data,'H') and 
-                        m_sipopt._sipopt_data.H.ctype is Var)
+        self.assertTrue(hasattr(m_sipopt._SENSITIVITY_TOOLBOX_DATA,'a') and 
+                        m_sipopt._SENSITIVITY_TOOLBOX_DATA.a.ctype is Var)
+        self.assertTrue(hasattr(m_sipopt._SENSITIVITY_TOOLBOX_DATA,'H') and 
+                        m_sipopt._SENSITIVITY_TOOLBOX_DATA.H.ctype is Var)
 
         # test for suffixes
         self.assertTrue(hasattr(m_sipopt,'sens_state_0') and
                         m_sipopt.sens_state_0.ctype is Suffix and
-                        m_sipopt.sens_state_0[m_sipopt._sipopt_data.H]==2 and  
-                        m_sipopt.sens_state_0[m_sipopt._sipopt_data.a]==1)
+                        m_sipopt.sens_state_0[m_sipopt._SENSITIVITY_TOOLBOX_DATA.H]==2 and  
+                        m_sipopt.sens_state_0[m_sipopt._SENSITIVITY_TOOLBOX_DATA.a]==1)
   
         self.assertTrue(hasattr(m_sipopt,'sens_state_1') and
                         m_sipopt.sens_state_1.ctype is Suffix and
-                        m_sipopt.sens_state_1[m_sipopt._sipopt_data.H]==2 and
-                        m_sipopt.sens_state_1[m_sipopt._sipopt_data.a]==1)  
+                        m_sipopt.sens_state_1[m_sipopt._SENSITIVITY_TOOLBOX_DATA.H]==2 and
+                        m_sipopt.sens_state_1[m_sipopt._SENSITIVITY_TOOLBOX_DATA.a]==1)  
 
         self.assertTrue(hasattr(m_sipopt,'sens_state_value_1') and
                         m_sipopt.sens_state_value_1.ctype is Suffix and
                         m_sipopt.sens_state_value_1[
-                                        m_sipopt._sipopt_data.H]==0.55 and
+                                        m_sipopt._SENSITIVITY_TOOLBOX_DATA.H]==0.55 and
                         m_sipopt.sens_state_value_1[
-                                        m_sipopt._sipopt_data.a]==-0.25)
+                                        m_sipopt._SENSITIVITY_TOOLBOX_DATA.a]==-0.25)
   
         self.assertTrue(hasattr(m_sipopt,'sens_init_constr') and
                         m_sipopt.sens_init_constr.ctype is Suffix and
                         m_sipopt.sens_init_constr[
-                                     m_sipopt._sipopt_data.paramConst[1]]==1 and
+                                     m_sipopt._SENSITIVITY_TOOLBOX_DATA.paramConst[1]]==1 and
                         m_sipopt.sens_init_constr[
-                                     m_sipopt._sipopt_data.paramConst[2]]==2)
+                                     m_sipopt._SENSITIVITY_TOOLBOX_DATA.paramConst[2]]==2)
 
         self.assertTrue(hasattr(m_sipopt,'sens_sol_state_1') and
                         m_sipopt.sens_sol_state_1.ctype is Suffix)
@@ -363,26 +358,29 @@ class TestSensitivityToolbox(unittest.TestCase):
         m_sipopt = sensitivity_calculation('sipopt',m, [m.eps,m.qq,m.aa],
                              [m.epsDelta,m.qqDelta,m.aaDelta])
 
-        # param to var data
+        # Make sure Param constraints have the correct form, i.e.
+        # 0 <= _SENSITIVITY_TOOLBOX_DATA.PARAM_NAME - PARAM_NAME <= 0
         self.assertEqual(
-            m_sipopt._sipopt_data.paramConst[1].lower.local_name, 'eps')
+            m_sipopt._SENSITIVITY_TOOLBOX_DATA.paramConst[1].lower, 0.0)
         self.assertEqual(
-            m_sipopt._sipopt_data.paramConst[1].body.local_name, 'eps')
+            m_sipopt._SENSITIVITY_TOOLBOX_DATA.paramConst[1].upper, 0.0)
         self.assertEqual(
-            m_sipopt._sipopt_data.paramConst[1].upper.local_name, 'eps')
+            m_sipopt._SENSITIVITY_TOOLBOX_DATA.paramConst[1].body.to_string(),
+            '_SENSITIVITY_TOOLBOX_DATA.eps - eps')
         self.assertEqual(
-            m_sipopt._sipopt_data.paramConst[6].lower.local_name, 'qq[2,0]')
+            m_sipopt._SENSITIVITY_TOOLBOX_DATA.paramConst[6].lower, 0.0)
         self.assertEqual(
-            m_sipopt._sipopt_data.paramConst[6].body.local_name, 'qq[2,0]')
+            m_sipopt._SENSITIVITY_TOOLBOX_DATA.paramConst[6].upper, 0.0)
         self.assertEqual(
-            m_sipopt._sipopt_data.paramConst[6].upper.local_name, 'qq[2,0]')
+            m_sipopt._SENSITIVITY_TOOLBOX_DATA.paramConst[6].body.to_string(),
+            '_SENSITIVITY_TOOLBOX_DATA.qq[2,0] - qq[2,0]')
         self.assertEqual(
-            m_sipopt._sipopt_data.paramConst[10].lower.local_name, 'aa')
+            m_sipopt._SENSITIVITY_TOOLBOX_DATA.paramConst[10].lower, 0.0)
         self.assertEqual(
-            m_sipopt._sipopt_data.paramConst[10].body.local_name, 'aa')
+            m_sipopt._SENSITIVITY_TOOLBOX_DATA.paramConst[10].upper, 0.0)
         self.assertEqual(
-            m_sipopt._sipopt_data.paramConst[10].upper.local_name, 'aa')
-    
+            m_sipopt._SENSITIVITY_TOOLBOX_DATA.paramConst[10].body.to_string(),
+            '_SENSITIVITY_TOOLBOX_DATA.aa - aa')
 
 
     # test Constraint substitution
@@ -401,35 +399,35 @@ class TestSensitivityToolbox(unittest.TestCase):
                         m_sipopt.C_equal.upper.ctype is Param)
         self.assertFalse(m_sipopt.C_equal.active)
 
-        self.assertTrue(m_sipopt._sipopt_data.constList[3].lower == 0.0 and
-                       m_sipopt._sipopt_data.constList[3].upper == 0.0 and
+        self.assertTrue(m_sipopt._SENSITIVITY_TOOLBOX_DATA.constList[3].lower == 0.0 and
+                       m_sipopt._SENSITIVITY_TOOLBOX_DATA.constList[3].upper == 0.0 and
                        len(list(identify_variables(
-                                m_sipopt._sipopt_data.constList[3].body))) == 2)
+                                m_sipopt._SENSITIVITY_TOOLBOX_DATA.constList[3].body))) == 2)
 
         # verify substitutions in one-sided bounded constraint
         self.assertTrue(m_sipopt.C_singleBnd.lower is None and
                         m_sipopt.C_singleBnd.upper.ctype is Param)
         self.assertFalse(m_sipopt.C_singleBnd.active)
 
-        self.assertTrue(m_sipopt._sipopt_data.constList[4].lower is None and
-                        m_sipopt._sipopt_data.constList[4].upper == 0.0 and
+        self.assertTrue(m_sipopt._SENSITIVITY_TOOLBOX_DATA.constList[4].lower is None and
+                        m_sipopt._SENSITIVITY_TOOLBOX_DATA.constList[4].upper == 0.0 and
                         len(list(identify_variables(
-                                 m_sipopt._sipopt_data.constList[4].body))) == 2)
+                                 m_sipopt._SENSITIVITY_TOOLBOX_DATA.constList[4].body))) == 2)
        
         # verify substitutions in ranged inequality constraint
         self.assertTrue(m_sipopt.C_rangedIn.lower.ctype is Param and
                         m_sipopt.C_rangedIn.upper.ctype is Param)
         self.assertFalse(m_sipopt.C_rangedIn.active)
 
-        self.assertTrue(m_sipopt._sipopt_data.constList[1].lower is None and
-                       m_sipopt._sipopt_data.constList[1].upper == 0.0 and
+        self.assertTrue(m_sipopt._SENSITIVITY_TOOLBOX_DATA.constList[1].lower is None and
+                       m_sipopt._SENSITIVITY_TOOLBOX_DATA.constList[1].upper == 0.0 and
                        len(list(identify_variables(
-                                m_sipopt._sipopt_data.constList[1].body))) == 2)
+                                m_sipopt._SENSITIVITY_TOOLBOX_DATA.constList[1].body))) == 2)
 
-        self.assertTrue(m_sipopt._sipopt_data.constList[2].lower is None and
-                       m_sipopt._sipopt_data.constList[2].upper == 0.0 and
+        self.assertTrue(m_sipopt._SENSITIVITY_TOOLBOX_DATA.constList[2].lower is None and
+                       m_sipopt._SENSITIVITY_TOOLBOX_DATA.constList[2].upper == 0.0 and
                        len(list(identify_variables(
-                                m_sipopt._sipopt_data.constList[2].body))) == 2)
+                                m_sipopt._SENSITIVITY_TOOLBOX_DATA.constList[2].body))) == 2)
 
     # Test example `parameter.py`
     @unittest.skipIf(not opt.available(False), "ipopt_sens is not available")
@@ -465,54 +463,65 @@ class TestSensitivityToolbox(unittest.TestCase):
                                [m_orig.perturbed_a,m_orig.perturbed_H],
                                 cloneModel=True)
 
-        # verify cloned model has _kaug_data block
+        ptb_map = ComponentMap()
+        ptb_map[m_kaug.a] = value(m_orig.perturbed_a - m_orig.a)
+        ptb_map[m_kaug.H] = value(m_orig.perturbed_H - m_orig.H)
+
+        # verify cloned model has _SENSITIVITY_TOOLBOX_DATA block
         # and original model is untouched
-        self.assertFalse(m_kaug == m_orig)
+        self.assertIsNot(m_kaug, m_orig)
 
-        self.assertTrue(hasattr(m_kaug,'_kaug_data') and
-                        m_kaug._kaug_data.ctype is Block)
+        self.assertTrue(hasattr(m_kaug,'_SENSITIVITY_TOOLBOX_DATA') and
+                        m_kaug._SENSITIVITY_TOOLBOX_DATA.ctype is Block)
 
-        self.assertFalse(hasattr(m_orig,'_kaug_data'))
+        self.assertFalse(hasattr(m_orig,'_SENSITIVITY_TOOLBOX_DATA'))
         self.assertFalse(hasattr(m_orig,'b'))
 
         # verify variable declaration
-        self.assertTrue(hasattr(m_kaug._kaug_data,'a') and
-                        m_kaug._kaug_data.a.ctype is Var)
-        self.assertTrue(hasattr(m_kaug._kaug_data,'H') and
-                        m_kaug._kaug_data.H.ctype is Var)
+        self.assertTrue(hasattr(m_kaug._SENSITIVITY_TOOLBOX_DATA,'a') and
+                        m_kaug._SENSITIVITY_TOOLBOX_DATA.a.ctype is Var)
+        self.assertTrue(hasattr(m_kaug._SENSITIVITY_TOOLBOX_DATA,'H') and
+                        m_kaug._SENSITIVITY_TOOLBOX_DATA.H.ctype is Var)
 
         # verify suffixes
         self.assertTrue(hasattr(m_kaug,'sens_state_0') and
                         m_kaug.sens_state_0.ctype is Suffix and
-                        m_kaug.sens_state_0[m_kaug._kaug_data.H]==2 and
-                        m_kaug.sens_state_0[m_kaug._kaug_data.a]==1)
+                        m_kaug.sens_state_0[m_kaug._SENSITIVITY_TOOLBOX_DATA.H]==2 and
+                        m_kaug.sens_state_0[m_kaug._SENSITIVITY_TOOLBOX_DATA.a]==1)
         self.assertTrue(hasattr(m_kaug,'sens_state_1') and
                         m_kaug.sens_state_1.ctype is Suffix and
-                        m_kaug.sens_state_1[m_kaug._kaug_data.H]==2 and
-                        m_kaug.sens_state_1[m_kaug._kaug_data.a]==1)
+                        m_kaug.sens_state_1[m_kaug._SENSITIVITY_TOOLBOX_DATA.H]==2 and
+                        m_kaug.sens_state_1[m_kaug._SENSITIVITY_TOOLBOX_DATA.a]==1)
         self.assertTrue(hasattr(m_kaug,'sens_state_value_1') and
                         m_kaug.sens_state_value_1.ctype is Suffix and
                         m_kaug.sens_state_value_1[
-                                        m_kaug._kaug_data.H]==0.55 and
+                                        m_kaug._SENSITIVITY_TOOLBOX_DATA.H]==0.55 and
                         m_kaug.sens_state_value_1[
-                                        m_kaug._kaug_data.a]==-0.25)
+                                        m_kaug._SENSITIVITY_TOOLBOX_DATA.a]==-0.25)
         self.assertTrue(hasattr(m_kaug,'sens_init_constr') and
                         m_kaug.sens_init_constr.ctype is Suffix and
                         m_kaug.sens_init_constr[
-                                     m_kaug._kaug_data.paramConst[1]]==1 and
+                                     m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[1]]==1 and
                         m_kaug.sens_init_constr[
-                                     m_kaug._kaug_data.paramConst[2]]==2)
-        self.assertTrue(hasattr(m_kaug,'DeltaP') and
-                        m_kaug.DeltaP.ctype is Suffix and
-                        m_kaug.DeltaP[m_kaug._kaug_data.paramConst[1]]==0.04999999999999999 and
-                        m_kaug.DeltaP[m_kaug._kaug_data.paramConst[2]]==-0.050000000000000044)
+                                     m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[2]]==2)
+        self.assertTrue(hasattr(m_kaug,'DeltaP'))
+        self.assertTrue(m_kaug.DeltaP.ctype is Suffix)
+        self.assertEqual(
+                m_kaug.DeltaP[m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[1]],
+                ptb_map[m_kaug.a]
+                )
+        self.assertEqual(
+                m_kaug.DeltaP[m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[2]],
+                ptb_map[m_kaug.H]
+                )
         self.assertTrue(hasattr(m_kaug,'dcdp') and
                         m_kaug.dcdp.ctype is Suffix and
-                        m_kaug.dcdp[m_kaug._kaug_data.paramConst[1]]==1 and
-                        m_kaug.dcdp[m_kaug._kaug_data.paramConst[2]]==2)
+                        m_kaug.dcdp[m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[1]]==1 and
+                        m_kaug.dcdp[m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[2]]==2)
         self.assertTrue(hasattr(m_kaug,'sens_sol_state_1') and
                         m_kaug.sens_sol_state_1.ctype is Suffix)
 
+        # The precision we require on these multipliers seems unreasonable...
         self.assertTrue(hasattr(m_kaug,'ipopt_zL_in') and
                         m_kaug.ipopt_zL_in.ctype is Suffix)
         self.assertAlmostEqual(
@@ -560,37 +569,49 @@ class TestSensitivityToolbox(unittest.TestCase):
                              [m_orig.perturbed_a,m_orig.perturbed_H],
                              cloneModel=False)
 
+        ptb_map = ComponentMap()
+        ptb_map[m_kaug.a] = value(m_kaug.perturbed_a - m_kaug.a)
+        ptb_map[m_kaug.H] = value(m_kaug.perturbed_H - m_kaug.H)
+
         self.assertTrue(m_kaug == m_orig)
         
         # verify suffixes
         self.assertTrue(hasattr(m_kaug,'sens_state_0') and
                         m_kaug.sens_state_0.ctype is Suffix and
-                        m_kaug.sens_state_0[m_kaug._kaug_data.H]==2 and
-                        m_kaug.sens_state_0[m_kaug._kaug_data.a]==1)
+                        m_kaug.sens_state_0[m_kaug._SENSITIVITY_TOOLBOX_DATA.H]==2 and
+                        m_kaug.sens_state_0[m_kaug._SENSITIVITY_TOOLBOX_DATA.a]==1)
         self.assertTrue(hasattr(m_kaug,'sens_state_1') and
                         m_kaug.sens_state_1.ctype is Suffix and
-                        m_kaug.sens_state_1[m_kaug._kaug_data.H]==2 and
-                        m_kaug.sens_state_1[m_kaug._kaug_data.a]==1)
+                        m_kaug.sens_state_1[m_kaug._SENSITIVITY_TOOLBOX_DATA.H]==2 and
+                        m_kaug.sens_state_1[m_kaug._SENSITIVITY_TOOLBOX_DATA.a]==1)
         self.assertTrue(hasattr(m_kaug,'sens_state_value_1') and
                         m_kaug.sens_state_value_1.ctype is Suffix and
                         m_kaug.sens_state_value_1[
-                                        m_kaug._kaug_data.H]==0.55 and
+                                        m_kaug._SENSITIVITY_TOOLBOX_DATA.H]==0.55 and
                         m_kaug.sens_state_value_1[
-                                        m_kaug._kaug_data.a]==-0.25)
+                                        m_kaug._SENSITIVITY_TOOLBOX_DATA.a]==-0.25)
         self.assertTrue(hasattr(m_kaug,'sens_init_constr') and
                         m_kaug.sens_init_constr.ctype is Suffix and
                         m_kaug.sens_init_constr[
-                                     m_kaug._kaug_data.paramConst[1]]==1 and
+                                     m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[1]]==1 and
                         m_kaug.sens_init_constr[
-                                     m_kaug._kaug_data.paramConst[2]]==2)
-        self.assertTrue(hasattr(m_kaug,'DeltaP') and
-                        m_kaug.DeltaP.ctype is Suffix and
-                        m_kaug.DeltaP[m_kaug._kaug_data.paramConst[1]]==0.04999999999999999 and
-                        m_kaug.DeltaP[m_kaug._kaug_data.paramConst[2]]==-0.050000000000000044)
+                                     m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[2]]==2)
+        self.assertTrue(hasattr(m_kaug,'DeltaP'))
+        self.assertIs(m_kaug.DeltaP.ctype, Suffix)
+        self.assertEqual(
+                m_kaug.DeltaP[m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[1]],
+                ptb_map[m_kaug.a]
+                )
+        self.assertEqual(
+                m_kaug.DeltaP[m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[2]],
+                ptb_map[m_kaug.H]
+                )
+                        #m_kaug.DeltaP[m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[1]]==0.04999999999999999 and
+                        #m_kaug.DeltaP[m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[2]]==-0.050000000000000044)
         self.assertTrue(hasattr(m_kaug,'dcdp') and
                         m_kaug.dcdp.ctype is Suffix and
-                        m_kaug.dcdp[m_kaug._kaug_data.paramConst[1]]==1 and
-                        m_kaug.dcdp[m_kaug._kaug_data.paramConst[2]]==2)
+                        m_kaug.dcdp[m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[1]]==1 and
+                        m_kaug.dcdp[m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[2]]==2)
         self.assertTrue(hasattr(m_kaug,'sens_sol_state_1') and
                         m_kaug.sens_sol_state_1.ctype is Suffix)
 
@@ -646,41 +667,47 @@ class TestSensitivityToolbox(unittest.TestCase):
         m_kaug = sensitivity_calculation('kaug',m, [m.eps,m.qq,m.aa],
                          [m.epsDelta,m.qqDelta,m.aaDelta])
 
-        # param to var data
+        # Make sure Param constraints have the correct form, i.e.
+        # 0 <= _SENSITIVITY_TOOLBOX_DATA.PARAM_NAME - PARAM_NAME <= 0
         self.assertEqual(
-            m_kaug._kaug_data.paramConst[1].lower.local_name, 'eps')
+            m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[1].lower, 0.0)
         self.assertEqual(
-            m_kaug._kaug_data.paramConst[1].body.local_name, 'eps')
+            m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[1].upper, 0.0)
         self.assertEqual(
-            m_kaug._kaug_data.paramConst[1].upper.local_name, 'eps')
+            m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[1].body.to_string(),
+            '_SENSITIVITY_TOOLBOX_DATA.eps - eps')
         self.assertEqual(
-            m_kaug._kaug_data.paramConst[6].lower.local_name, 'qq[2,0]')
+            m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[6].lower, 0.0)
         self.assertEqual(
-            m_kaug._kaug_data.paramConst[6].body.local_name, 'qq[2,0]')
+            m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[6].upper, 0.0)
         self.assertEqual(
-            m_kaug._kaug_data.paramConst[6].upper.local_name, 'qq[2,0]')
+            m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[6].body.to_string(),
+            '_SENSITIVITY_TOOLBOX_DATA.qq[2,0] - qq[2,0]')
         self.assertEqual(
-            m_kaug._kaug_data.paramConst[10].lower.local_name, 'aa')
+            m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[10].lower, 0.0)
         self.assertEqual(
-            m_kaug._kaug_data.paramConst[10].body.local_name, 'aa')
+            m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[10].upper, 0.0)
         self.assertEqual(
-            m_kaug._kaug_data.paramConst[10].upper.local_name, 'aa')
+            m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[10].body.to_string(),
+            '_SENSITIVITY_TOOLBOX_DATA.aa - aa')
 
 
     # test Constraint substitution 
-    @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
-    @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")
-    def test_constraintSub_kaug(self):
-        m = ri.create_model()
-
-        m.pert_a = Param(initialize=0.01)
-        m.pert_b = Param(initialize=1.01)
-
-        # m_kaug = kaug(m,[m.a,m.b], [m.pert_a,m.pert_b])
-        # verify ValueError thrown when param list has an unmutable param
-        with self.assertRaises(Exception) as context:
-            m_kaug = sensitivity_calculation('kaug',m,[m.a,m.b], [m.pert_a,m.pert_b])
-        self.assertTrue('kaug does not support inequality constraints.' in str(context.exception))
+    # Constraint substitution should be performed regardless of whether k_aug
+    # is used. k_aug should have some internal check for inequality constraints
+    # if it does not support them.
+#    @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
+#    @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")
+#    def test_constraintSub_kaug(self):
+#        m = ri.create_model()
+#
+#        m.pert_a = Param(initialize=0.01)
+#        m.pert_b = Param(initialize=1.01)
+#
+#        with self.assertRaises(Exception) as context:
+#            m_kaug = sensitivity_calculation('kaug',m,[m.a,m.b], [m.pert_a,m.pert_b])
+#        self.assertTrue('kaug does not support inequality constraints.'
+#                in str(context.exception))
 
     # Test example `parameter_kaug.py`
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
@@ -692,6 +719,13 @@ class TestSensitivityToolbox(unittest.TestCase):
         d_correct = {'eta1':4.5, 'eta2':1.0, 'x1_init':0.15, 'x2_init':0.15, 'x3_init':0.0,
                      'eta1_pert':4.0, 'eta2_pert':1.0, 'x1_pert':0.3333333,'x2_pert':0.6666667,
                      'x3_pert':0.0, 'cost_pert':0.55555556}
+        # FIXME: I have the values of x1_pert and x2_pert swapped here...
+        # Why is this the case?
+        # What differentiates this test from that for sipopt?
+        # param_kaug_ex is being called...
+        # examples look like they have identical setup... Why are the 
+        # values getting swapped?
+        # Where are we relying on undefined behavior?
 
         for k in d_correct.keys():
             # Check each element of the 'correct' dictionary against the returned 
