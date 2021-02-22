@@ -82,7 +82,7 @@ class GetItemExpression(ExpressionBase):
         # storage scheme), but as of now [30 Apr 20], there are no known
         # Components where this assumption will cause problems.
         return any( getattr(x, 'is_potentially_variable', _false)()
-                    for x in getattr(base, '_data', {})).values() 
+                    for x in getattr(base, '_data', {}).values() )
 
     def _is_fixed(self, values):
         if not all(values[1:]):
