@@ -248,8 +248,13 @@ class TestSolvers(unittest.TestCase):
         opt.config.load_solution = False
         res = opt.solve(m)
         self.assertNotEqual(res.termination_condition, TerminationCondition.optimal)
-        self.assertIn(res.termination_condition, {TerminationCondition.infeasible,
-                                                  TerminationCondition.infeasibleOrUnbounded})
+        if opt_class is Ipopt:
+            acceptable_termination_conditions = {TerminationCondition.infeasible,
+                                                 TerminationCondition.unbounded}
+        else:
+            acceptable_termination_conditions = {TerminationCondition.infeasible,
+                                                 TerminationCondition.infeasibleOrUnbounded}
+        self.assertIn(res.termination_condition, acceptable_termination_conditions)
         self.assertAlmostEqual(m.x.value, None)
         self.assertAlmostEqual(m.y.value, None)
         self.assertTrue(res.best_feasible_objective is None)
