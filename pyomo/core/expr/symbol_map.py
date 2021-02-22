@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 from weakref import ref as weakref_ref
-from six import iteritems
+
 
 class SymbolMap(object):
     """
@@ -52,9 +52,9 @@ class SymbolMap(object):
         #
         return {
             'bySymbol': tuple(
-                (key, obj()) for key, obj in iteritems(self.bySymbol) ),
+                (key, obj()) for key, obj in self.bySymbol.items() ),
             'aliases': tuple(
-                (key, obj()) for key, obj in iteritems(self.aliases) ),
+                (key, obj()) for key, obj in self.aliases.items() ),
         }
 
     def __setstate__(self, state):

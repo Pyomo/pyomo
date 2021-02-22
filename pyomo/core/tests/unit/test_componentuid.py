@@ -11,7 +11,6 @@
 # Unit Tests for ComponentUID
 #
 import pickle
-import sys
 from collections import namedtuple
 from datetime import datetime
 from six import StringIO, itervalues
@@ -1266,6 +1265,7 @@ class TestComponentUID(unittest.TestCase):
                 "with argument \('foo',\)" % (
                     IndexedComponent_slice.del_attribute,)):
             cuid = ComponentUID(_slice)
+
 
 if __name__ == "__main__":
     unittest.main()

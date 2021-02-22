@@ -25,7 +25,7 @@ import pyutilib.th as unittest
 import pyomo.scripting.convert as main
 from pyomo.common.tee import capture_output
 
-from six import StringIO
+from io import StringIO
 
 if os.path.exists(sys.exec_prefix+os.sep+'bin'+os.sep+'coverage'):
     executable=sys.exec_prefix+os.sep+'bin'+os.sep+'coverage -x '
