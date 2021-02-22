@@ -8,8 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import io
 import logging
-import six
 import pyutilib.th as unittest
 
 from pyomo.common.log import LoggingIntercept
@@ -169,12 +169,9 @@ class Test_calc_var(unittest.TestCase):
         # Starting with an invalid guess (above TC) should raise an
         # exception
         m.x.set_value(600)
-        output = six.StringIO()
+        output = io.StringIO()
         with LoggingIntercept(output, 'pyomo', logging.WARNING):
-            if six.PY2:
-                expectedException = ValueError
-            else:
-                expectedException = TypeError
+            expectedException = TypeError
             with self.assertRaises(expectedException):
                 calculate_variable_from_constraint(m.x, m.f, linesearch=False)
         self.assertIn('Encountered an error evaluating the expression '
@@ -190,7 +187,7 @@ class Test_calc_var(unittest.TestCase):
         calculate_variable_from_constraint(m.x, m.c, linesearch=True)
         self.assertAlmostEqual(value(m.x), 0.046415888)
         m.x = .1
-        output = six.StringIO()
+        output = io.StringIO()
         with LoggingIntercept(output, 'pyomo', logging.WARNING):
             with self.assertRaises(ValueError):
                 # Note that the ValueError is different between Python 2
