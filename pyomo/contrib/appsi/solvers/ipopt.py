@@ -2,7 +2,7 @@ from pyutilib.services import TempfileManager
 from pyomo.common.fileutils import Executable
 from pyomo.contrib.appsi.base import Solver, Results, TerminationCondition, SolverConfig
 from pyomo.contrib.appsi.writers import NLWriter
-from pyomo.contrib.appsi.utils import TeeThread
+from pyomo.contrib.appsi.utils import LogStream
 import logging
 import subprocess
 from pyomo.core.kernel.objective import minimize
@@ -18,6 +18,8 @@ from pyomo.core.base.param import _ParamData
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.opt.base import SolverFactory
+from pyomo.common.tee import TeeStream
+import sys
 
 
 logger = logging.getLogger(__name__)
@@ -29,6 +31,8 @@ class IpoptConfig(SolverConfig):
         self.executable = Executable('ipopt')
         self.filename = None
         self.keepfiles = False
+        self.solver_output_logger = logger
+        self.log_level = logging.INFO
 
 
 # @SolverFactory.register(name='appsi_ipopt', doc='Automated persistent interface to Ipopt')
@@ -150,7 +154,6 @@ class Ipopt(Solver):
             TempfileManager.add_tempfile(self._filename + '.row', exists=False)
             TempfileManager.add_tempfile(self._filename + '.col', exists=False)
             TempfileManager.add_tempfile(self._filename + '.sol', exists=False)
-            TempfileManager.add_tempfile(self._filename + '.log', exists=False)
             TempfileManager.add_tempfile('ipopt.opt', exists=False)
             self._write_options_file()
             timer.start('write nl file')
@@ -277,31 +280,21 @@ class Ipopt(Solver):
         else:
             timeout = None
 
-        out = open(self._filename + '.log', 'wb')
-        err = out
-        capture_output = False
+        ostreams = [LogStream(level=self.config.log_level, logger=self.config.solver_output_logger)]
+        if self.config.stream_solver:
+            ostreams.append(sys.stdout)
 
-        thread = None
-        if config.stream_solver:
-            thread = TeeThread(self._filename + '.log', stream_to_flush=out)
-            thread.start()
-
-        timer.start('subprocess')
-        try:
+        with TeeStream(*ostreams) as t:
+            timer.start('subprocess')
             cp = subprocess.run([str(config.executable),
                                  self._filename + '.nl',
                                  '-AMPL',
                                  'halt_on_ampl_error=yes'],
                                 timeout=timeout,
-                                stdout=out,
-                                stderr=err,
-                                capture_output=capture_output)
-        finally:
-            if thread is not None:
-                thread.event.set()
-                thread.join()
-            out.close()
-        timer.stop('subprocess')
+                                stdout=t.STDOUT,
+                                stderr=t.STDERR,
+                                universal_newlines=True)
+            timer.stop('subprocess')
 
         if cp.returncode != 0:
             if self.config.load_solution:

@@ -1,11 +1,7 @@
 from pyutilib.services import TempfileManager
-from pyomo.common.fileutils import Executable
 from pyomo.contrib.appsi.base import Solver, Results, TerminationCondition, MIPSolverConfig
 from pyomo.contrib.appsi.writers import LPWriter
-from pyomo.contrib.appsi.utils import TeeThread
 import logging
-import subprocess
-from pyomo.core.kernel.objective import minimize
 import math
 from pyomo.common.collections import ComponentMap
 from typing import Optional, Sequence, NoReturn, List, Mapping, Dict
@@ -18,6 +14,7 @@ from pyomo.common.timing import HierarchicalTimer
 import sys
 import time
 from pyomo.opt.base import SolverFactory
+from pyomo.contrib.appsi.utils import LogStream
 
 
 logger = logging.getLogger(__name__)
@@ -28,6 +25,8 @@ class CplexConfig(MIPSolverConfig):
         super(CplexConfig, self).__init__()
         self.filename = None
         self.keepfiles = False
+        self.solver_output_logger = logger
+        self.log_level = logging.INFO
 
 
 class CplexResults(Results):
@@ -153,14 +152,14 @@ class Cplex(Solver):
         cplex_model.read(self._filename + '.lp')
         timer.stop('cplex read lp')
 
-        _log_file = open(self._filename + '.log', 'a')
+        log_stream = LogStream(level=self.config.log_level, logger=self.config.solver_output_logger)
         if config.stream_solver:
             def _process_stream(arg):
                 sys.stdout.write(arg)
                 return arg
-            cplex_model.set_results_stream(_log_file, _process_stream)
+            cplex_model.set_results_stream(log_stream, _process_stream)
         else:
-            cplex_model.set_results_stream(_log_file)
+            cplex_model.set_results_stream(log_stream)
 
         for key, option in self.solver_options.items():
             opt_cmd = cplex_model.parameters
@@ -179,7 +178,6 @@ class Cplex(Solver):
         cplex_model.solve()
         t1 = time.time()
         timer.stop('cplex solve')
-        _log_file.close()
 
         return self._postsolve(timer, t1-t0)
 

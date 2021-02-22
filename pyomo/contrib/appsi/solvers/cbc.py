@@ -2,7 +2,7 @@ from pyutilib.services import TempfileManager
 from pyomo.common.fileutils import Executable
 from pyomo.contrib.appsi.base import Solver, Results, TerminationCondition, SolverConfig
 from pyomo.contrib.appsi.writers import LPWriter
-from pyomo.contrib.appsi.utils import TeeThread
+from pyomo.contrib.appsi.utils import LogStream
 import logging
 import subprocess
 from pyomo.core.kernel.objective import minimize
@@ -16,6 +16,8 @@ from pyomo.core.base.param import _ParamData
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.opt.base import SolverFactory
+from pyomo.common.tee import TeeStream
+import sys
 
 
 logger = logging.getLogger(__name__)
@@ -27,6 +29,8 @@ class CbcConfig(SolverConfig):
         self.executable = Executable('cbc')
         self.filename = None
         self.keepfiles = False
+        self.solver_output_logger = logger
+        self.log_level = logging.INFO
 
 
 # @SolverFactory.register(name='appsi_cbc', doc='Automated persistent interface to CBC')
@@ -243,15 +247,6 @@ class Cbc(Solver):
         else:
             timeout = None
 
-        out = open(self._filename + '.log', 'wb')
-        err = out
-        capture_output = False
-
-        thread = None
-        if config.stream_solver:
-            thread = TeeThread(self._filename + '.log', stream_to_flush=out)
-            thread.start()
-
         def _check_and_escape_options():
             for key, val in self.solver_options.items():
                 tmp_k = str(key)
@@ -289,19 +284,18 @@ class Cbc(Solver):
         cmd.extend(['-solve'])
         cmd.extend(['-solu', self._filename + '.soln'])
 
-        timer.start('subprocess')
-        try:
+        ostreams = [LogStream(level=self.config.log_level, logger=self.config.solver_output_logger)]
+        if self.config.stream_solver:
+            ostreams.append(sys.stdout)
+
+        with TeeStream(*ostreams) as t:
+            timer.start('subprocess')
             cp = subprocess.run(cmd,
                                 timeout=timeout,
-                                stdout=out,
-                                stderr=err,
-                                capture_output=capture_output)
-        finally:
-            if thread is not None:
-                thread.event.set()
-                thread.join()
-            out.close()
-        timer.stop('subprocess')
+                                stdout=t.STDOUT,
+                                stderr=t.STDERR,
+                                universal_newlines=True)
+            timer.stop('subprocess')
 
         if cp.returncode != 0:
             if self.config.load_solution:
