@@ -12,6 +12,7 @@ import copy
 import itertools
 import logging
 import sys
+import builtins
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.expr.numvalue import (
