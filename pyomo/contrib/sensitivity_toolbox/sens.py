@@ -99,7 +99,7 @@ def _generate_component_items(components):
 
 def sensitivity_calculation(method, instance, paramList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None):
-    sens = SensitivityInterface(method, instance, cloneModel=cloneModel)
+    sens = SensitivityInterface(instance, cloneModel=cloneModel)
     sens.setup_sensitivity(paramList)
 
     m = sens.model_instance
@@ -133,10 +133,9 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
 
 class SensitivityInterface(object):
 
-    def __init__(self, method, instance, cloneModel=True):
+    def __init__(self, instance, cloneModel=True):
         """
         """
-        self.method = method
         self._original_model = instance
 
         if cloneModel:
@@ -147,8 +146,7 @@ class SensitivityInterface(object):
             self.model_instance = instance
 
     def get_default_block_name(self):
-        # return '_SENSITIVITY_TOOLBOX_DATA'
-        return '_'.join(('', self.method, 'data'))
+        return '_SENSITIVITY_TOOLBOX_DATA'
 
     def get_default_var_name(self, name):
         #return '_'.join(('sens_var', name))
@@ -206,7 +204,7 @@ class SensitivityInterface(object):
             if comp.ctype is Param:
                 if not comp.mutable:
                     raise ValueError(
-                            "Specified parameters must be mutable. "
+                            "Parameters within paramList must be mutable. "
                             "Got %s, which is not mutable." % comp.name
                             )
                 # Add a param:
@@ -352,6 +350,11 @@ class SensitivityInterface(object):
         sens_data_list = self.block._sens_data_list
         paramConst = self.block.paramConst
 
+        if len(self.block._paramList) != len(perturbList):
+            raise ValueError(
+                    "Length of paramList argument does not equal "
+                    "length of perturbList")
+
         for i, (var, param, list_idx, comp_idx) in enumerate(sens_data_list):
             con = paramConst[i+1]
             if comp_idx is _NotAnIndex:
@@ -368,7 +371,7 @@ class SensitivityInterface(object):
             instance.sens_state_value_1[var] = ptb
 
             # k_aug
-            #instance.DeltaP[con] = value(ptb - var)
-            instance.DeltaP[con] = value(var - ptb)
+            instance.DeltaP[con] = value(ptb - var)
+            #instance.DeltaP[con] = value(var - ptb)
             # FIXME: ^ This is incorrect. DeltaP should be (ptb - current).
             # But at least one test doesn't pass unless I use (current - ptb).
