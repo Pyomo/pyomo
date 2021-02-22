@@ -34,7 +34,6 @@ from pyomo.common import pyomo_command
 from pyomo.opt.base import SolverFactory, ConverterError
 from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
-from pyomo.common.deprecation import deprecated
 
 import six
 
@@ -140,11 +139,6 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
         return results
 
 @pyomo_command('pyro_mip_server', "Launch a Pyro server for Pyomo MIP solvers")
-@deprecated(
-    msg="The 'pyro_mip_server' command has been deprecated and will be removed",
-    version="6.0",
-    remove_in="7.0",
-)
 def main():
     #
     # Handle error when pyro is not installed
