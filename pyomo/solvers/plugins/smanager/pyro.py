@@ -31,18 +31,13 @@ import pyomo.core.base.suffix
 from pyomo.core.kernel.block import IBlock
 import pyomo.core.kernel.suffix
 from pyomo.common.collections import Bunch
-from pyomo.common.deprecation import deprecated
 
 import six
 
 @SolverManagerFactory.register('pyro', doc="Execute solvers remotely using pyro")
 class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManager):
 
-    @deprecated(
-        msg="The 'SolverManager_Pyro' class has been deprecated and will be removed",
-        version="6.0",
-        remove_in="7.0",
-    )
+
     def __init__(self, *args, **kwds):
         self._opt_data = {}
         self._args = {}
