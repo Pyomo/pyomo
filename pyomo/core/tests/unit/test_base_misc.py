@@ -11,7 +11,7 @@
 #
 # Unit Tests for pyomo.base.misc
 #
-from six import StringIO, iteritems
+from io import StringIO
 
 import pyutilib.th as unittest
 
@@ -23,7 +23,7 @@ class TestTabularWriter(unittest.TestCase):
         # table alignment
         os = StringIO()
         data = {1: ("a", 1), (2,3): ("∧", 2)}
-        tabular_writer(os, "", iteritems(data), ["s", "val"], lambda k,v: v)
+        tabular_writer(os, "", data.items(), ["s", "val"], lambda k,v: v)
         ref = u"""
 Key    : s : val
      1 : a :   1
