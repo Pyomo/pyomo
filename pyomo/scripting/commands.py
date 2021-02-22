@@ -19,6 +19,7 @@ import pyutilib.pyro
 from pyomo.common.collections import Options
 from pyomo.opt import SolverResults
 from pyomo.common._command import pyomo_command
+from pyomo.common.deprecation import deprecated
 import pyomo.scripting.pyomo_parser
 
 @pyomo_command('pyomo_ns', "Launch a Pyro name server for Pyomo")
@@ -81,6 +82,11 @@ def launch_pyro_mip_servers():
     print("PIDs for launched servers recorded in file="+pid_output_filename)
 
 @pyomo_command('pyomo_python', "Launch script using Pyomo's python installation")
+@deprecated(
+    msg="The 'pyomo_python' command has been deprecated and will be removed",
+    version="6.0",
+    remove_in="7.0",
+)
 def pyomo_python(args=None):
     if args is None:
         args = sys.argv[1:]
