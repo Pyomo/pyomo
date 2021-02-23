@@ -27,6 +27,7 @@ env:
       numpy scipy pyodbc pandas matplotlib seaborn numdifftools
   CACHE_VER: v3
   NEOS_EMAIL: tests@pyomo.org
+  SETUPTOOLS_USE_DISTUTILS: local
 
 jobs:
   build:
@@ -150,22 +151,6 @@ jobs:
         sudo apt-get -o Dir::Cache=${GITHUB_WORKSPACE}/cache/os \
             install libopenblas-dev gfortran liblapack-dev glpk-utils
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
-
-    - name: Windows build patch
-      if: matrix.TARGET == 'win'
-      run: |
-        function Invoke-VSDevEnvironment {
-          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          $installationPath = & $vswhere -prerelease -legacy -latest -property installationPath
-          $Command = Join-Path $installationPath "Common7\Tools\vsdevcmd.bat"
-          && "${env:COMSPEC}" /s /c "`"$Command`" -no_logo && set" | Foreach-Object {
-            if ($_ -match '^([^=]+)=(.*)') {
-              [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2])
-            }
-          }
-        }
-        Invoke-VSDevEnvironment
-        Get-Command rc.exe
 
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
