@@ -1401,11 +1401,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         generator recursively descends into sub-blocks.
         """
         if not descend_into:
-            for x in self.component_map(ctype, active, sort).itervalues():
+            for x in self.component_map(ctype, active, sort).values():
                 yield x
             return
         for _block in self.block_data_objects(active, sort, descend_into, descent_order):
-            for x in _block.component_map(ctype, active, sort).itervalues():
+            for x in _block.component_map(ctype, active, sort).values():
                 yield x
 
     def component_data_objects(self,
