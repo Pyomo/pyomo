@@ -13,7 +13,6 @@ from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
 import sys
 import time
-from pyomo.opt.base import SolverFactory
 from pyomo.contrib.appsi.utils import LogStream
 
 
@@ -35,7 +34,6 @@ class CplexResults(Results):
         self.wallclock_time = None
 
 
-# @SolverFactory.register(name='appsi_cplex', doc='Automated persistent interface to Cplex')
 class Cplex(Solver):
     def __init__(self):
         self._config = CplexConfig()
@@ -53,7 +51,9 @@ class Cplex(Solver):
             self._cplex_model = None
             self._cplex_available = False
 
-    def available(self):
+    def available(self, exception_flag=False):
+        if exception_flag and not self._cplex_available:
+            raise RuntimeError('Cplex is not available')
         return self._cplex_available
 
     def lp_filename(self):

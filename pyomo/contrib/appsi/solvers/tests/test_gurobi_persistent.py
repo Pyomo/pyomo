@@ -4,7 +4,6 @@ from pyomo.contrib.appsi.solvers.gurobi import Gurobi
 from pyomo.contrib.appsi.base import TerminationCondition
 from pyomo.core.expr.numeric_expr import LinearExpression
 from pyomo.core.expr.taylor_series import taylor_series_expansion
-import numpy as np
 
 
 opt = Gurobi()
@@ -28,6 +27,10 @@ class TestGurobiPersistentSimpleLPUpdates(unittest.TestCase):
         m.c2 = pe.Constraint(expr=m.y - m.p3 * m.x >= m.p4)
 
     def get_solution(self):
+        try:
+            import numpy as np
+        except:
+            raise unittest.SkipTest('numpy is not available')
         p1 = self.m.p1.value
         p2 = self.m.p2.value
         p3 = self.m.p3.value

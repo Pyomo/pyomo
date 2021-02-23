@@ -15,7 +15,6 @@ from pyomo.contrib.appsi.utils import OrderedSet
 import math
 from typing import List, Dict
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.opt.base import SolverFactory
 
 
 logger = logging.getLogger(__name__)
@@ -133,7 +132,6 @@ class _MutableQuadraticCoefficient(object):
         self.var2 = None
 
 
-# @SolverFactory.register(name='appsi_gurobi', doc='Automated persistent interface to Gurobi')
 class Gurobi(PersistentBase, Solver):
     """
     Interface to Gurobi
@@ -173,7 +171,9 @@ class Gurobi(PersistentBase, Solver):
                 # versions >= 7 and < 7.
                 raise ImportError('The persistent interface to Gurobi requires at least Gurobi version 7. ')
 
-    def available(self):
+    def available(self, exception_flag=False):
+        if exception_flag and not self._gurobipy_available:
+            raise RuntimeError('Gurobi is not available')
         return self._gurobipy_available
 
     @property

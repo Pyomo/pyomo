@@ -175,8 +175,12 @@ class Solver(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def available(self):
+    def available(self, exception_flag=False):
         pass
+
+    # compatability with old solver interfaces and Solver Factory
+    def license_is_valid(self):
+        return True
 
     @abc.abstractmethod
     def load_vars(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> NoReturn:
@@ -297,6 +301,12 @@ class Solver(abc.ABC):
 
     @abc.abstractmethod
     def update_params(self):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
         pass
 
 

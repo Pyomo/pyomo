@@ -15,7 +15,6 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.opt.base import SolverFactory
 from pyomo.common.tee import TeeStream
 import sys
 
@@ -33,7 +32,6 @@ class CbcConfig(SolverConfig):
         self.log_level = logging.INFO
 
 
-# @SolverFactory.register(name='appsi_cbc', doc='Automated persistent interface to CBC')
 class Cbc(Solver):
     def __init__(self):
         self._config = CbcConfig()
@@ -44,8 +42,10 @@ class Cbc(Solver):
         self._primal_sol = ComponentMap()
         self._reduced_costs = ComponentMap()
 
-    def available(self):
+    def available(self, exception_flag=False):
         if self.config.executable.path() is None:
+            if exception_flag:
+                raise RuntimeError('Cbc is not available')
             return False
         return True
 
