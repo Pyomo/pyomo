@@ -490,8 +490,8 @@ class OptSolver(object):
             Whether or not the solver has the specified capability.
         """
         if not isinstance(cap, str):
-            raise TypeError("""Expected argument to be of type '%s', not 
-                  '%s'.""" % (str(type(str())), str(type(cap))))
+            raise TypeError("Expected argument to be of type '%s', not "
+                "'%s'." % (type(str()), type(cap)))
         else:
             val = self._capabilities[str(cap)]
             if val is None:

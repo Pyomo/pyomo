@@ -237,12 +237,6 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         Results = ResultsWithQuadratics
     else:
         Results = ResultsWithoutQuadratics
-    #
-    # Use a custom isclose function
-    #
-    global isclose
-    if not compute_values:
-        isclose = isclose_const
 
     if True:
         #
