@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 import logging
-import six
 import sys
 from copy import deepcopy
 from pickle import PickleError
@@ -42,7 +41,7 @@ def _name_index_generator(idx):
             # requires escaping any single quotes in the string... which
             # in turn requires escaping the escape character.
             ans = "%s" % (val,)
-            if isinstance(val, six.string_types):
+            if isinstance(val, str):
                 ans = ans.replace("\\", "\\\\").replace("'", "\\'")
                 if ',' in ans or "'" in ans:
                     ans = "'"+ans+"'"
@@ -267,7 +266,7 @@ class _ComponentBase(PyomoObject):
         """
         comp = self.parent_component()
         _attr, _data, _header, _fcn = comp._pprint()
-        if isinstance(type(_data), six.string_types):
+        if isinstance(type(_data), str):
             # If the component _pprint only returned a pre-formatted
             # result, then we have no way to only emit the information
             # for this _data object.
@@ -607,7 +606,7 @@ class Component(_ComponentBase):
 
     def clear_suffix_value(self, suffix_or_name, expand=True):
         """Clear the suffix value for this component data"""
-        if isinstance(suffix_or_name, six.string_types):
+        if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
             for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
                 if suffix_or_name == name_:
@@ -618,7 +617,7 @@ class Component(_ComponentBase):
 
     def set_suffix_value(self, suffix_or_name, value, expand=True):
         """Set the suffix value for this component data"""
-        if isinstance(suffix_or_name, six.string_types):
+        if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
             for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
                 if suffix_or_name == name_:
@@ -629,7 +628,7 @@ class Component(_ComponentBase):
 
     def get_suffix_value(self, suffix_or_name, default=None):
         """Get the suffix value for this component data"""
-        if isinstance(suffix_or_name, six.string_types):
+        if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
             for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
                 if suffix_or_name == name_:
@@ -921,7 +920,7 @@ class ComponentData(_ComponentBase):
 
     def clear_suffix_value(self, suffix_or_name, expand=True):
         """Set the suffix value for this component data"""
-        if isinstance(suffix_or_name, six.string_types):
+        if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
             for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
                 if suffix_or_name == name_:
@@ -932,7 +931,7 @@ class ComponentData(_ComponentBase):
 
     def set_suffix_value(self, suffix_or_name, value, expand=True):
         """Set the suffix value for this component data"""
-        if isinstance(suffix_or_name, six.string_types):
+        if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
             for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
                 if suffix_or_name == name_:
@@ -943,7 +942,7 @@ class ComponentData(_ComponentBase):
 
     def get_suffix_value(self, suffix_or_name, default=None):
         """Get the suffix value for this component data"""
-        if isinstance(suffix_or_name, six.string_types):
+        if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
             for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
                 if suffix_or_name == name_:

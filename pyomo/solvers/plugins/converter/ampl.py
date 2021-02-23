@@ -17,11 +17,6 @@ from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt.base import ProblemFormat, ConverterError
 from pyomo.opt.base.convert import ProblemConverterFactory
 
-try:
-    unicode
-except:
-    basestring = unicode = str
-
 
 @ProblemConverterFactory.register('ampl')
 class AmplMIPConverter(object):
@@ -44,7 +39,7 @@ class AmplMIPConverter(object):
 
     def apply(self, *args, **kwargs):
         """Convert an instance of one type into another"""
-        if not isinstance(args[2],basestring):
+        if not isinstance(args[2], str):
             raise ConverterError("Can only apply ampl to convert file data")
         _exec = pyomo.common.Executable("ampl")
         if not _exec:

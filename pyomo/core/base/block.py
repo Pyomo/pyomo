@@ -20,7 +20,7 @@ import textwrap
 
 from inspect import isclass
 from operator import itemgetter
-from six import iteritems, iterkeys, itervalues, StringIO, string_types, \
+from six import iteritems, iterkeys, itervalues, StringIO, \
     advance_iterator, PY3
 
 from pyomo.common.collections import Mapping
@@ -1263,7 +1263,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         return that component IFF the component is a child of this
         block. Returns None on lookup failure.
         """
-        if isinstance(name_or_object, string_types):
+        if isinstance(name_or_object, str):
             if name_or_object in self._decl:
                 return self._decl_order[self._decl[name_or_object]][0]
         else:

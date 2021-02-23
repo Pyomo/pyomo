@@ -14,7 +14,7 @@ import logging
 import sys
 import types
 
-from six import itervalues, string_types
+from six import itervalues
 
 logger = logging.getLogger('pyomo.core')
 
@@ -179,7 +179,7 @@ def sorted_robust(arg):
 
 
 def _to_ustr(obj):
-    if not isinstance(obj, string_types):
+    if not isinstance(obj, str):
         try:
             obj = str(obj)
         except:

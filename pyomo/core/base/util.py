@@ -204,7 +204,7 @@ def Initializer(init,
     elif isinstance(init, collections_Mapping):
         return ItemInitializer(init)
     elif isinstance(init, collections_Sequence) \
-            and not isinstance(init, six.string_types):
+            and not isinstance(init, str):
         if treat_sequences_as_mappings:
             return ItemInitializer(init)
         else:

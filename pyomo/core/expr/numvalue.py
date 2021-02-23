@@ -15,7 +15,7 @@ __all__ = ('value', 'is_constant', 'is_fixed', 'is_variable_type',
 
 import sys
 import logging
-from six import iteritems, PY3
+from six import iteritems
 
 from pyomo.common.deprecation import deprecated
 from pyomo.core.expr.expr_common import \
@@ -99,12 +99,6 @@ native_integer_types = set([ int, bool ])
 native_boolean_types = set([ int, bool, str ])
 native_logical_types = {bool, }
 pyomo_constant_types = set()  # includes NumericConstant
-try:
-    native_numeric_types.add(long)
-    native_integer_types.add(long)
-    native_boolean_types.add(long)
-except:
-    pass
 
 #: Python set used to identify numeric constants and related native
 #: types.  This set includes
@@ -113,12 +107,8 @@ except:
 #:
 #: :data:`native_types` = :data:`native_numeric_types <pyomo.core.expr.numvalue.native_numeric_types>` + { str }
 native_types = set([ bool, str, type(None), slice ])
-if PY3:
-    native_types.add(bytes)
-    native_boolean_types.add(bytes)
-else:
-    native_types.add(unicode)
-    native_boolean_types.add(unicode)
+native_types.add(bytes)
+native_boolean_types.add(bytes)
 
 native_types.update( native_numeric_types )
 native_types.update( native_integer_types )

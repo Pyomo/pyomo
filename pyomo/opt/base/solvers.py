@@ -29,7 +29,6 @@ from pyomo.opt.base.convert import convert_problem
 from pyomo.opt.base.formats import ResultsFormat, ProblemFormat
 import pyomo.opt.base.results
 
-import six
 from six import iteritems
 from six.moves import xrange
 
@@ -491,8 +490,8 @@ class OptSolver(object):
             Whether or not the solver has the specified capability.
         """
         if not isinstance(cap, str):
-            raise TypeError("Expected argument to be of type '%s', not " + \
-                  "'%s'." % (str(type(str())), str(type(cap))))
+            raise TypeError("Expected argument to be of type '%s', not "
+                "'%s'." % (type(str()), type(cap)))
         else:
             val = self._capabilities[str(cap)]
             if val is None:
@@ -682,13 +681,8 @@ class OptSolver(object):
                     "Solver="+self.type+" passed unrecognized keywords: \n\t"
                     +("\n\t".join("%s = %s" % (k,v) for k,v in iteritems(kwds))))
 
-        if six.PY3:
-            compare_type = str
-        else:
-            compare_type = basestring
-
         if (type(self._problem_files) in (list,tuple)) and \
-           (not isinstance(self._problem_files[0], compare_type)):
+           (not isinstance(self._problem_files[0], str)):
             self._problem_files = self._problem_files[0]._problem_files()
         if self._results_format is None:
             self._results_format = self._default_results_format(self._problem_format)
@@ -763,14 +757,14 @@ class OptSolver(object):
         ans = []
         for key in options:
             val = options[key]
-            if isinstance(val, six.string_types) and ' ' in val:
+            if isinstance(val, str) and ' ' in val:
                 ans.append("%s=\"%s\"" % (str(key), str(val)))
             else:
                 ans.append("%s=%s" % (str(key), str(val)))
         return ' '.join(ans)
 
     def set_options(self, istr):
-        if isinstance(istr, six.string_types):
+        if isinstance(istr, str):
             istr = self._options_string_to_dict(istr)
         for key in istr:
             if not istr[key] is None:

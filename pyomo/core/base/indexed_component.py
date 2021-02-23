@@ -21,7 +21,7 @@ from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common import DeveloperError
 from pyomo.common.deprecation import deprecation_warning
 
-from six import PY3, itervalues, iteritems, string_types
+from six import PY3, itervalues, iteritems
 
 if PY3:
     from collections.abc import Sequence as collections_Sequence
@@ -67,7 +67,7 @@ def normalize_index(x):
             # new object)
             x = x[:i] + tuple(x[i]) + x[i + 1:]
         elif issubclass(_xi_class, collections_Sequence):
-            if issubclass(_xi_class, string_types):
+            if issubclass(_xi_class, str):
                 # This is very difficult to get to: it would require a
                 # user creating a custom derived string type
                 native_types.add(_xi_class)

@@ -17,7 +17,7 @@
 from pyomo.environ import *
 from pyomo.dae import *
 
-from six import itervalues, iteritems, string_types
+from six import itervalues, iteritems
 
 try:
     import matplotlib.pyplot as plt
@@ -63,7 +63,7 @@ class Reaction(object):
 
     def _parse(self, _in):
         ans = {}
-        if isinstance(_in, string_types):
+        if isinstance(_in, str):
             _in = _in.split('+')
         for x in _in:
             coef, species = self._parseTerm(x)
@@ -71,7 +71,7 @@ class Reaction(object):
         return ans
         
     def _parseTerm(self, x):
-        if isinstance(x, string_types):
+        if isinstance(x, str):
             if '*' in x:
                 coef, species = x.split('*',1)
                 coef = float(coef)

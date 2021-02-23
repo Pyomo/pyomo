@@ -13,7 +13,6 @@
 
 import os
 import sys
-import six
 import types
 
 from six import StringIO, iterkeys
@@ -1362,7 +1361,7 @@ class TestBlock(unittest.TestCase):
         def assertWorks(self, key, pm):
             self.assertIs(pm[key.local_name], key)
         def assertFails(self, key, pm):
-            if not isinstance(key, six.string_types):
+            if not isinstance(key, str):
                 key = key.local_name
             self.assertRaises(KeyError, pm.__getitem__, key)
 

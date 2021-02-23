@@ -8,12 +8,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import bisect
 import codecs
 import re
 import ply.lex
 
-from six import PY2, string_types, iteritems
+from six import PY2, iteritems
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import pickle
@@ -59,7 +58,7 @@ class ComponentUID(object):
 
     @staticmethod
     def _safe_str(x):
-        if not isinstance(x, string_types):
+        if not isinstance(x, str):
             return ComponentUID._repr_map.get(
                 x.__class__, ComponentUID._pickle)(x)
         else:
@@ -93,7 +92,7 @@ class ComponentUID(object):
     def __init__(self, component, cuid_buffer=None, context=None):
         # A CUID can be initialized from either a reference component or
         # the string representation.
-        if isinstance(component, string_types):
+        if isinstance(component, str):
             if context is not None:
                 raise ValueError("Context is not allowed when initializing a "
                                  "ComponentUID object from a string type")
