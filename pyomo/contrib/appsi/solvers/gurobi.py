@@ -45,10 +45,6 @@ class _MutableLinearCoefficient(object):
     def update(self):
         self.gurobi_model.chgCoeff(self.con, self.var, value(self.expr))
 
-    def __str__(self):
-        s = str(self.var) + ': ' + str(self.expr)
-        return s
-
 
 class _MutableRangeConstant(object):
     def __init__(self):
@@ -980,7 +976,7 @@ class Gurobi(PersistentBase, Solver):
 
     def _intermediate_callback(self):
         def f(gurobi_model, where):
-            self._callback_func(self._pyomo_model, self, where)
+            self._callback_func(self._model, self, where)
         return f
 
     def set_callback(self, func=None):
@@ -1062,7 +1058,10 @@ class Gurobi(PersistentBase, Solver):
         if is_fixed(con.body):
             raise ValueError('cbCut expected a non-trival constraint')
 
-        gurobi_expr = self._walker.walk_expression(con.body)
+        (gurobi_expr,
+         repn_constant,
+         mutable_linear_coefficients,
+         mutable_quadratic_coefficients) = self._get_expr_from_pyomo_expr(con.body)
 
         if con.has_lb():
             if con.has_ub():
@@ -1075,13 +1074,13 @@ class Gurobi(PersistentBase, Solver):
 
         if con.equality:
             self._solver_model.cbCut(lhs=gurobi_expr, sense=self._gurobipy.GRB.EQUAL,
-                                     rhs=value(con.lower))
+                                     rhs=value(con.lower - repn_constant))
         elif con.has_lb() and (value(con.lower) > -float('inf')):
             self._solver_model.cbCut(lhs=gurobi_expr, sense=self._gurobipy.GRB.GREATER_EQUAL,
-                                     rhs=value(con.lower))
+                                     rhs=value(con.lower - repn_constant))
         elif con.has_ub() and (value(con.upper) < float('inf')):
             self._solver_model.cbCut(lhs=gurobi_expr, sense=self._gurobipy.GRB.LESS_EQUAL,
-                                     rhs=value(con.upper))
+                                     rhs=value(con.upper - repn_constant))
         else:
             raise ValueError('Constraint does not have a lower or an upper bound {0} \n'.format(con))
 
@@ -1127,7 +1126,10 @@ class Gurobi(PersistentBase, Solver):
         if is_fixed(con.body):
             raise ValueError('cbLazy expected a non-trival constraint')
 
-        gurobi_expr = self._walker.walk_expression(con.body)
+        (gurobi_expr,
+         repn_constant,
+         mutable_linear_coefficients,
+         mutable_quadratic_coefficients) = self._get_expr_from_pyomo_expr(con.body)
 
         if con.has_lb():
             if con.has_ub():
@@ -1140,13 +1142,13 @@ class Gurobi(PersistentBase, Solver):
 
         if con.equality:
             self._solver_model.cbLazy(lhs=gurobi_expr, sense=self._gurobipy.GRB.EQUAL,
-                                      rhs=value(con.lower))
+                                      rhs=value(con.lower - repn_constant))
         elif con.has_lb() and (value(con.lower) > -float('inf')):
             self._solver_model.cbLazy(lhs=gurobi_expr, sense=self._gurobipy.GRB.GREATER_EQUAL,
-                                      rhs=value(con.lower))
+                                      rhs=value(con.lower - repn_constant))
         elif con.has_ub() and (value(con.upper) < float('inf')):
             self._solver_model.cbLazy(lhs=gurobi_expr, sense=self._gurobipy.GRB.LESS_EQUAL,
-                                      rhs=value(con.upper))
+                                      rhs=value(con.upper - repn_constant))
         else:
             raise ValueError('Constraint does not have a lower or an upper bound {0} \n'.format(con))
 

@@ -69,39 +69,6 @@ class SolverConfig(object):
         If True, the names given to the solver will reflect the names
         of the pyomo components. Cannot be changed after set_instance
         is called.
-    check_for_updated_mutable_params_in_constraints: bool
-        If True, the solver interface will look for constraint coefficients that depend on
-        mutable parameters, and automatically update the coefficients for each solve.
-        Cannot be changed after set_instance is called.
-    check_for_updated_mutable_params_in_objective: bool
-        If True, the solver interface will look for objective coefficients that depend on
-        mutable parameters, and automatically update the coefficients for each solve.
-        Cannot be changed after set_instance is called.
-    check_for_new_or_removed_constraints: bool
-        If True, the solver interface will check
-        for new or removed constraints when solve is called.
-    update_constraints: bool
-        If True, the solver interface will update
-        constraint bounds each time solve is called.
-    check_for_new_or_removed_vars: bool
-        If True, the solver interface will check
-        for new or removed vars each time solve is called.
-    update_vars: bool
-        If True, the solver interface will update
-        variable bounds each time solve is called.
-    update_named_expressions: bool
-        If True, the solver interface will update
-        Expressions each time solve is called.
-        Cannot be changed after set_instance is called.
-    check_for_fixed_vars: bool
-        If True, the solver interface will check for fixed
-        variables in each constraint that is added. If
-        The variable is fixed when the constraint gets
-        added and is later unfixed, the constraints will be
-        updated accordingly. If check_for_fixed_vars is False
-        and a variable is fixed when adding a constraint, the
-        constraint will not be updated correctly when the
-        variable is unfixed.
     """
     def __init__(self):
         self.time_limit: Optional[float] = None
