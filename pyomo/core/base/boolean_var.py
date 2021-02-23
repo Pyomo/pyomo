@@ -21,7 +21,6 @@ from pyomo.core.base.indexed_component import IndexedComponent, UnindexedCompone
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import Set, BooleanSet
 from pyomo.core.base.util import is_functor
-from six.moves import xrange
 
 
 logger = logging.getLogger('pyomo.core')
@@ -574,7 +573,7 @@ class BooleanVarList(IndexedBooleanVar):
         # OR we can just add the correct number of sequential integers and
         # then let _validate_index complain when we set the value.
         if self._value_init_value.__class__ is dict:
-            for i in xrange(len(self._value_init_value)):
+            for i in range(len(self._value_init_value)):
                 self._index.add(i+1)
         super(BooleanVarList,self).construct(data)
         # Note that the current Var initializer silently ignores
