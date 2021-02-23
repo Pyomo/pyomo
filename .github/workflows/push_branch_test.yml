@@ -154,18 +154,19 @@ jobs:
     - name: Windows build patch
       if: matrix.TARGET == 'win'
       run: |
-        function Invoke-VSDevEnvironment {
-          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          $installationPath = & $vswhere -prerelease -legacy -latest -property installationPath
-          $Command = Join-Path $installationPath "Common7\Tools\vsdevcmd.bat"
-          & "${env:COMSPEC}" /s /c "`"$Command`" -no_logo && set" | Foreach-Object {
-            if ($_ -match '^([^=]+)=(.*)') {
-              [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2])
-            }
-          }
-        }
-        Invoke-VSDevEnvironment
-        Get-Command rc.exe
+        echo "::add-path::C:\Program Files (x86)\Windows Kits\10\bin\10.0.18362.0\x64"
+      #  function Invoke-VSDevEnvironment {
+      #    $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+      #    $installationPath = & $vswhere -prerelease -legacy -latest -property installationPath
+      #    $Command = Join-Path $installationPath "Common7\Tools\vsdevcmd.bat"
+      #    & "${env:COMSPEC}" /s /c "`"$Command`" -no_logo && set" | Foreach-Object {
+      #      if ($_ -match '^([^=]+)=(.*)') {
+      #        [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2])
+      #      }
+      #    }
+      #  }
+      #  Invoke-VSDevEnvironment
+      #  Get-Command rc.exe
 
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
