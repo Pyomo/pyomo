@@ -8,207 +8,196 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import io
+from pyomo.core.expr.numvalue import native_numeric_types, value
+from pyomo.core.expr.calculus.derivatives import differentiate
+
 import logging
-import pyutilib.th as unittest
+logger = logging.getLogger(__name__)
 
-from pyomo.common.log import LoggingIntercept
-from pyomo.environ import ConcreteModel, Var, Constraint, value, exp
-from pyomo.util.calc_var_value import calculate_variable_from_constraint
-from pyomo.core.expr.calculus.diff_with_sympy import differentiate_available
+def calculate_variable_from_constraint(variable, constraint,
+                                       eps=1e-8, iterlim=1000,
+                                       linesearch=True, alpha_min=1e-8):
+    """Calculate the variable value given a specified equality constraint
 
-class Test_calc_var(unittest.TestCase):
-    def test_initialize_value(self):
-        m = ConcreteModel()
-        m.x = Var()
-        m.y = Var(initialize=0)
-        m.c = Constraint(expr=m.x == 5)
+    This function calculates the value of the specified variable
+    necessary to make the provided equality constraint feasible
+    (assuming any other variables values are fixed).  The method first
+    attempts to solve for the variable value assuming it appears
+    linearly in the constraint.  If that doesn't converge the constraint
+    residual, it falls back on Newton's method using exact (symbolic)
+    derivatives.
 
-        m.x.set_value(None)
-        calculate_variable_from_constraint(m.x, m.c)
-        self.assertEqual(value(m.x), 5)
+    Parameters:
+    -----------
+    variable: `pyomo.core.base.var._VarData`
+        The variable to solve for
+    constraint: `pyomo.core.base.constraint._ConstraintData`
+        The equality constraint to use to solve for the variable value
+    eps: `float`
+        The tolerance to use to determine equality [default=1e-8].
+    iterlim: `int`
+        The maximum number of iterations if this method has to fall back
+        on using Newton's method.  Raises RuntimeError on iteration
+        limit [default=1000]
+    linesearch: `bool`
+        Decides whether or not to use the linesearch (recommended).
+        [default=True]
+    alpha_min: `float`
+        The minimum fractional step to use in the linesearch [default=1e-8].
 
-        m.x.set_value(None)
-        m.x.setlb(3)
-        calculate_variable_from_constraint(m.x, m.c)
-        self.assertEqual(value(m.x), 5)
+    Returns:
+    --------
+    None
 
-        m.x.set_value(None)
-        m.x.setlb(-10)
-        calculate_variable_from_constraint(m.x, m.c)
-        self.assertEqual(value(m.x), 5)
+    Note: this is an unconstrained solver and is NOT guaranteed to
+    respect the variable bounds.
 
-        m.x.set_value(None)
-        m.x.setub(10)
-        calculate_variable_from_constraint(m.x, m.c)
-        self.assertEqual(value(m.x), 5)
+    """
+    upper = value(constraint.upper)
+    if value(constraint.lower) != upper:
+        raise ValueError("Constraint must be an equality constraint")
 
-        m.x.set_value(None)
-        m.x.setlb(3)
-        calculate_variable_from_constraint(m.x, m.c)
-        self.assertEqual(value(m.x), 5)
+    if variable.value is None:
+        if variable.lb is None:
+            if variable.ub is None:
+                # no variable values, and no lower or upper bound - set
+                # initial value to 0.0
+                variable.set_value(0)
+            else:
+                # no variable value or lower bound - set to 0 or upper
+                # bound whichever is lower
+                variable.set_value(min(0, variable.ub))
+        elif variable.ub is None:
+            # no variable value or upper bound - set to 0 or lower
+            # bound, whichever is higher
+            variable.set_value(max(0, variable.lb))
+        else:
+            # we have upper and lower bounds
+            if variable.lb <= 0 and variable.ub >= 0:
+                # set the initial value to 0 if bounds bracket 0
+                variable.set_value(0)
+            else:
+                # set the initial value to the midpoint of the bounds
+                variable.set_value((variable.lb+variable.ub)/2.0)
 
-        m.x.set_value(None)
-        m.x.setlb(None)
-        calculate_variable_from_constraint(m.x, m.c)
-        self.assertEqual(value(m.x), 5)
+    # store the initial value to use later if necessary
+    orig_initial_value = variable.value
 
-        m.x.set_value(None)
-        m.x.setub(-10)
-        calculate_variable_from_constraint(m.x, m.c)
-        self.assertEqual(value(m.x), 5)
+    # solve the common case where variable is linear with coefficient of 1.0
+    x1 = value(variable)
+    # Note: both the direct (linear) calculation and Newton's method
+    # below rely on a numerically feasible initial starting point.
+    # While we have strategies for dealing with hitting numerically
+    # invalid (e.g., sqrt(-1)) conditions below, if the initial point is
+    # not valid, we will allow that exception to propagate up
+    try:
+        residual_1 = value(constraint.body)
+    except:
+        logger.error(
+            "Encountered an error evaluating the expression at the "
+            "initial guess.\n\tPlease provide a different initial guess.")
+        raise
 
-        m.lt = Constraint(expr=m.x <= m.y)
-        with self.assertRaisesRegexp(
-                ValueError, "Constraint must be an equality constraint"):
-            calculate_variable_from_constraint(m.x, m.lt)
+    variable.set_value(x1 - (residual_1-upper))
+    residual_2 = value(constraint.body, exception=False)
 
+    # If we encounter an error while evaluating the expression at the
+    # linear intercept calculated assuming the derivative was 1.  This
+    # is most commonly due to nonlinear expressions (like sqrt())
+    # becoming invalid/complex.  We will skip the rest of the
+    # "shortcuts" that assume the expression is linear and move directly
+    # to using Newton's method.
 
-    def test_linear(self):
-        m = ConcreteModel()
-        m.x = Var()
-        m.c = Constraint(expr=5*m.x == 10)
+    if residual_2 is not None and type(residual_2) is not complex:
+        # if the variable appears linearly with a coefficient of 1, then we
+        # are done
+        if abs(residual_2-upper) < eps:
+            return
 
-        calculate_variable_from_constraint(m.x, m.c)
-        self.assertEqual(value(m.x), 2)
+        # Assume the variable appears linearly and calculate the coefficient
+        x2 = value(variable)
+        slope = float(residual_1 - residual_2) / (x1 - x2)
+        intercept = (residual_1-upper) - slope*x1
+        if slope:
+            variable.set_value(-intercept/slope)
+            body_val = value(constraint.body, exception=False)
+            if body_val is not None and abs(body_val-upper) < eps:
+                return
 
+    # Variable appears nonlinearly; solve using Newton's method
+    variable.set_value(orig_initial_value) # restore initial value
+    expr = constraint.body - constraint.upper
+    expr_deriv = differentiate(expr, wrt=variable, mode=differentiate.Modes.sympy)
 
-    @unittest.skipIf(not differentiate_available, "this test requires sympy")
-    def test_nonlinear(self):
-        m = ConcreteModel()
-        m.x = Var()
-        m.y = Var(initialize=0)
+    if type(expr_deriv) in native_numeric_types and expr_deriv == 0:
+        raise ValueError("Variable derivative == 0, cannot solve for variable")
 
-        m.c = Constraint(expr=m.x**2 == 16)
-        m.x.set_value(1.0) # set an initial value
-        calculate_variable_from_constraint(m.x, m.c, linesearch=False)
-        self.assertAlmostEqual(value(m.x), 4)
+    if abs(value(expr_deriv)) < 1e-12:
+        raise RuntimeError(
+            'Initial value for variable results in a derivative value that is '
+            'very close to zero.\n\tPlease provide a different initial guess.')
 
-        # test that infeasible constraint throws error
-        m.d = Constraint(expr=m.x**2 == -1)
-        m.x.set_value(1.25) # set the initial value
-        with self.assertRaisesRegexp(
-               RuntimeError, 'Iteration limit \(10\) reached'):
-           calculate_variable_from_constraint(
-               m.x, m.d, iterlim=10, linesearch=False)
+    iter_left = iterlim
+    fk = residual_1 - upper
+    while abs(fk) > eps and iter_left:
+        iter_left -= 1
+        if not iter_left:
+            raise RuntimeError(
+                "Iteration limit (%s) reached; remaining residual = %s"
+                % (iterlim, value(expr)) )
 
-        # same problem should throw a linesearch error if linesearch is on
-        m.x.set_value(1.25) # set the initial value
-        with self.assertRaisesRegexp(
-                RuntimeError, "Linesearch iteration limit reached"):
-           calculate_variable_from_constraint(
-               m.x, m.d, iterlim=10, linesearch=True)
+        # compute step
+        xk = value(variable)
+        try:
+            fk = value(expr)
+            if type(fk) is complex:
+                raise ValueError(
+                    "Complex numbers are not allowed in Newton's method.")
+        except:
+            # We hit numerical problems with the last step (possible if
+            # the line search is turned off)
+            logger.error(
+                "Newton's method encountered an error evaluating the "
+                "expression.\n\tPlease provide a different initial guess "
+                "or enable the linesearch if you have not.")
+            raise
+        fpk = value(expr_deriv)
+        if abs(fpk) < 1e-12:
+            raise RuntimeError(
+                "Newton's method encountered a derivative that was too "
+                "close to zero.\n\tPlease provide a different initial guess "
+                "or enable the linesearch if you have not.")
+        pk = -fk/fpk
+        alpha = 1.0
+        xkp1 = xk + alpha * pk
+        variable.set_value(xkp1)
 
-        # same problem should raise an error if initialized at 0
-        m.x = 0
-        with self.assertRaisesRegexp(
-                RuntimeError, "Initial value for variable results in a "
-                "derivative value that is very close to zero."):
-            calculate_variable_from_constraint(m.x, m.c)
+        # perform line search
+        if linesearch:
+            c1 = 0.999 # ensure sufficient progress
+            while alpha > alpha_min:
+                # check if the value at xkp1 has sufficient reduction in
+                # the residual
+                fkp1 = value(expr, exception=False)
+                # HACK for Python3 support, pending resolution of #879
+                # Issue #879 also pertains to other checks for "complex"
+                # in this method.
+                if type(fkp1) is complex:
+                    # We cannot perform computations on complex numbers
+                    fkp1 = None
+                if fkp1 is not None and fkp1**2 < c1*fk**2:
+                    # found an alpha value with sufficient reduction
+                    # continue to the next step
+                    fk = fkp1
+                    break
+                alpha /= 2.0
+                xkp1 = xk + alpha * pk
+                variable.set_value(xkp1)
 
-        # same problem should raise a value error if we are asked to
-        # solve for a variable that is not present
-        with self.assertRaisesRegexp(
-                ValueError, "Variable derivative == 0"):
-            calculate_variable_from_constraint(m.y, m.c)
-
-
-        # should succeed with or without a linesearch
-        m.e = Constraint(expr=(m.x - 2.0)**2 - 1 == 0)
-        m.x.set_value(3.1)
-        calculate_variable_from_constraint(m.x, m.e, linesearch=False)
-        self.assertAlmostEqual(value(m.x), 3)
-
-        m.x.set_value(3.1)
-        calculate_variable_from_constraint(m.x, m.e, linesearch=True)
-        self.assertAlmostEqual(value(m.x), 3)
-
-
-        # we expect this to succeed with the linesearch
-        m.f = Constraint(expr=1.0/(1.0+exp(-m.x))-0.5 == 0)
-        m.x.set_value(3.0)
-        calculate_variable_from_constraint(m.x, m.f, linesearch=True)
-        self.assertAlmostEqual(value(m.x), 0)
-
-        # we expect this to fail without a linesearch
-        m.x.set_value(3.0)
-        with self.assertRaisesRegexp(
-                RuntimeError, "Newton's method encountered a derivative "
-                "that was too close to zero"):
-            calculate_variable_from_constraint(m.x, m.f, linesearch=False)
-
-        # Calculate the bubble point of Benzene.  THe first step
-        # computed by calculate_variable_from_constraint will make the
-        # second term become complex, and the evaluation will fail.
-        # This tests that the algorithm cleanly continues
-        m = ConcreteModel()
-        m.x = Var()
-        m.pc = 48.9e5
-        m.tc = 562.2
-        m.psc = {'A': -6.98273,
-                 'B': 1.33213,
-                 'C': -2.62863,
-                 'D': -3.33399,
-        }
-        m.p = 101325
-        @m.Constraint()
-        def f(m):
-            return m.pc * \
-                exp((m.psc['A'] * (1 - m.x / m.tc) +
-                     m.psc['B'] * (1 - m.x / m.tc)**1.5 +
-                     m.psc['C'] * (1 - m.x / m.tc)**3 +
-                     m.psc['D'] * (1 - m.x / m.tc)**6
-                 ) / (1 - (1 - m.x / m.tc))) - m.p == 0
-        m.x.set_value(298.15)
-        calculate_variable_from_constraint(m.x, m.f, linesearch=False)
-        self.assertAlmostEqual(value(m.x), 353.31855602)
-        m.x.set_value(298.15)
-        calculate_variable_from_constraint(m.x, m.f, linesearch=True)
-        self.assertAlmostEqual(value(m.x), 353.31855602)
-
-        # Starting with an invalid guess (above TC) should raise an
-        # exception
-        m.x.set_value(600)
-        output = io.StringIO()
-        with LoggingIntercept(output, 'pyomo', logging.WARNING):
-            expectedException = TypeError
-            with self.assertRaises(expectedException):
-                calculate_variable_from_constraint(m.x, m.f, linesearch=False)
-        self.assertIn('Encountered an error evaluating the expression '
-                      'at the initial guess', output.getvalue())
-
-        # This example triggers an expression evaluation error if the
-        # linesearch is turned off because the first step in Newton's
-        # method will cause the LHS to become complex
-        m = ConcreteModel()
-        m.x = Var()
-        m.c = Constraint(expr=(1/m.x**3)**0.5 == 100)
-        m.x = .1
-        calculate_variable_from_constraint(m.x, m.c, linesearch=True)
-        self.assertAlmostEqual(value(m.x), 0.046415888)
-        m.x = .1
-        output = io.StringIO()
-        with LoggingIntercept(output, 'pyomo', logging.WARNING):
-            with self.assertRaises(ValueError):
-                # Note that the ValueError is different between Python 2
-                # and Python 3: in Python 2 it is a specific error
-                # "negative number cannot be raised to a fractional
-                # power", and We mock up that error in Python 3 by
-                # raising a generic ValueError in
-                # calculate_variable_from_constraint
-                calculate_variable_from_constraint(m.x, m.c, linesearch=False)
-        self.assertIn("Newton's method encountered an error evaluating "
-                      "the expression.", output.getvalue())
-
-        # This is a completely contrived example where the linesearch
-        # hits the iteration limit before Newton's method ever finds a
-        # feasible step
-        m = ConcreteModel()
-        m.x = Var()
-        m.c = Constraint(expr=m.x**0.5 == -1e-8)
-        m.x = 1e-8#197.932807183
-        with self.assertRaisesRegexp(
-                RuntimeError, "Linesearch iteration limit reached; "
-                "remaining residual = {function evaluation error}"):
-            calculate_variable_from_constraint(m.x, m.c, linesearch=True,
-                                               alpha_min=.5)
+            if alpha <= alpha_min:
+                residual = value(expr, exception=False)
+                if residual is None or type(residual) is complex:
+                    residual = "{function evaluation error}"
+                raise RuntimeError(
+                    "Linesearch iteration limit reached; remaining "
+                    "residual = %s." % (residual,))

@@ -35,6 +35,7 @@ from pyomo.opt.base import SolverFactory, ConverterError
 from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
 
+import six
 
 class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
 
@@ -130,7 +131,10 @@ class PyomoMIPWorker(pyutilib.pyro.TaskWorker):
             # wire with Pyro4. Also, the base64 bytes must be wrapped
             # in a str object to avoid a different set of Pyro4 errors
             # related to its default serializer (Serpent)
-            results = str(base64.encodebytes(results))
+            if six.PY3:
+                results = str(base64.encodebytes(results))
+            else:
+                results = base64.encodestring(results)
 
         return results
 
