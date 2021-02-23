@@ -112,10 +112,10 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
             self._constraint_datas.extend([(gbnlp._block, nm) for nm in gbnlp.constraint_names()])
         self._n_constraints = len(self._constraint_names)
 
-        self._hessian_support = True
+        self._has_hessian_support = True
         for nlp in greybox_nlps:
-            if not nlp.hessian_support():
-                self._hessian_support = False
+            if not nlp.has_hessian_support():
+                self._has_hessian_support = False
 
         # wrap all the nlp objects with projected nlp objects
         self._pyomo_nlp = ProjectedNLP(self._pyomo_nlp, primals_names)
@@ -218,7 +218,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
 
         self._sparse_hessian_summation = None
         self._nnz_hessian_lag = None
-        if self._hessian_support:
+        if self._has_hessian_support:
             hess = self.evaluate_hessian_lag()
             self._nnz_hessian_lag = len(hess.data)
 
@@ -512,13 +512,13 @@ class _ExternalGreyBoxAsNLP(NLP):
         self._constraints_ub = np.zeros(self.n_constraints(), dtype=np.float64)
 
         # do we have hessian support
-        self._hessian_support = True
+        self._has_hessian_support = True
         if self._ex_model.n_equality_constraints() > 0 \
            and not hasattr(self._ex_model, 'evaluate_hessian_equality_constraints'):
-            self._hessian_support = False
+            self._has_hessian_support = False
         if self._ex_model.n_outputs() > 0 \
            and not hasattr(self._ex_model, 'evaluate_hessian_outputs'):
-            self._hessian_support = False
+            self._has_hessian_support = False
 
         self._nnz_jacobian = None
         self._nnz_hessian_lag = None
@@ -746,11 +746,11 @@ class _ExternalGreyBoxAsNLP(NLP):
             hess.set_block(0,0,input_hess)
             self._cached_hessian = hess.tocoo()
 
-    def hessian_support(self):
-        return self._hessian_support
+    def has_hessian_support(self):
+        return self._has_hessian_support
 
     def evaluate_hessian_lag(self, out=None):
-        if not self._hessian_support:
+        if not self._has_hessian_support:
             raise NotImplementedError(
                 'Hessians not supported for all of the external grey box'
                 ' models. Therefore, Hessians are not supported overall.'

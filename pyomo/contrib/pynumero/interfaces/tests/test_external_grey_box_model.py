@@ -30,7 +30,7 @@ from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
 from ..external_grey_box import ExternalGreyBoxModel, ExternalGreyBoxBlock
 from ..pyomo_nlp import PyomoGreyBoxNLP
 from pyomo.contrib.pynumero.interfaces.tests.compare_utils import check_vectors_specific_order, check_sparse_matrix_specific_order
-import pyomo.contrib.pynumero.interfaces.tests._external_grey_box_models as ex_models
+import pyomo.contrib.pynumero.interfaces.tests.external_grey_box_models as ex_models
 
 class TestExternalGreyBoxModel(unittest.TestCase):
 

@@ -30,7 +30,7 @@ from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
 from pyomo.contrib.pynumero.interfaces.pyomo_grey_box_nlp import _ExternalGreyBoxAsNLP, PyomoNLPWithGreyBoxBlocks
 from pyomo.contrib.pynumero.interfaces.tests.compare_utils import check_vectors_specific_order, check_sparse_matrix_specific_order
-import pyomo.contrib.pynumero.interfaces.tests._external_grey_box_models as ex_models
+import pyomo.contrib.pynumero.interfaces.tests.external_grey_box_models as ex_models
 
 class TestExternalGreyBoxAsNLP(unittest.TestCase):
     def test_pressure_drop_single_output(self):
@@ -1764,10 +1764,4 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         self.assertAlmostEqual(m.dual[m.egb]['egb.u2_con'], 62.5, places=3)
 
 if __name__ == '__main__':
-    TestExternalGreyBoxAsNLP().test_pressure_drop_single_equality()
-    TestExternalGreyBoxAsNLP().test_pressure_drop_two_outputs()
-    TestExternalGreyBoxAsNLP().test_pressure_drop_two_equalities()
-    TestExternalGreyBoxAsNLP().test_pressure_drop_two_equalities_two_outputs()
-    TestExternalGreyBoxAsNLP().test_scaling_all_missing()
-    TestExternalGreyBoxAsNLP().test_scaling_pyomo_model_only()
-    TestExternalGreyBoxAsNLP().test_scaling_greybox_only()
+    unittest.main()

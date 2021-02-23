@@ -251,9 +251,10 @@ class ProjectedNLP(_BaseNLPDelegator):
 
     def evaluate_grad_objective(self, out=None):
         original_grad_objective = self._original_nlp.evaluate_grad_objective()
+        projected_objective = self._project_primals(0.0, original_grad_objective) 
         if out is None:
-            return self._project_primals(0.0, original_grad_objective)
-        out[self._projected_idxs] = original_grad_objective[self._original_idxs]
+            return projected_objective
+        np.copyto(out, projected_objective)
         return out
 
     def evaluate_jacobian(self, out=None):

@@ -1230,7 +1230,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
         if len(full_var_list) < 1:
             raise ValueError("No variables appear in the Pyomo model constraints or"
-                             " objective which is not supported by the NL file interface")
+                             " objective. This is not supported by the NL file interface")
 
         #
         # Print Header

@@ -170,7 +170,7 @@ class PyomoNLP(AslNLP):
                 six.iteritems(self._condata_to_ineq_idx)}
         return [idx_to_condata[i] for i in range(len(idx_to_condata))]
 
-    @deprecated(msg='This method has been replaced with primals_names', version='', remove_in='6.0')
+    @deprecated(msg='This method has been replaced with primals_names', version='6.0.0.dev0', remove_in='6.0')
     def variable_names(self):
         return self.primals_names()
 
@@ -1052,7 +1052,7 @@ class PyomoGreyBoxNLP(NLP):
     def report_solver_status(self, status_code, status_message):
         raise NotImplementedError('Todo: implement this')
 
-    @deprecated(msg='This method has been replaced with primals_names', version='', remove_in='6.0')
+    @deprecated(msg='This method has been replaced with primals_names', version='6.0.0.dev0', remove_in='6.0')
     def variable_names(self):
         return self.primals_names()
 

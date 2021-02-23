@@ -691,7 +691,7 @@ class AmplNLP(AslNLP):
         """Returns ordered list with names of primal variables"""
         return list(self._vidx_to_name)
 
-    @deprecated(msg='This method has been replaced with primals_names', version='', remove_in='6.0')
+    @deprecated(msg='This method has been replaced with primals_names', version='6.0.0.dev0', remove_in='6.0')
     def variable_names(self):
         """Returns ordered list with names of primal variables"""
         return self.primals_names()
@@ -711,7 +711,7 @@ class AmplNLP(AslNLP):
         (corresponding to evaluate_ineq_constraints)"""
         return list(self._con_ineq_idx_to_name)
 
-    @deprecated(msg='This method has been replaced with primal_idx', version='', remove_in='6.0')
+    @deprecated(msg='This method has been replaced with primal_idx', version='6.0.0.dev0', remove_in='6.0')
     def variable_idx(self, var_name):
         return self.primal_idx(var_name)
 

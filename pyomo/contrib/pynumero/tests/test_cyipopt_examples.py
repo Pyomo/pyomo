@@ -124,5 +124,9 @@ class TestExamples(unittest.TestCase):
     def test_parameter_estimation(self):
         ex = import_file(os.path.join(example_dir, 'external_grey_box', 'param_est', 'perform_estimation.py'))
         data_fname = os.path.join(example_dir, 'external_grey_box', 'param_est', 'smalldata.csv')
+        
         m = ex.perform_estimation_external(data_fname, solver_trace=False)
+        self.assertAlmostEqual(pyo.value(m.UA), 201.7877, places=3)
+
+        m = ex.perform_estimation_pyomo_only(data_fname, solver_trace=False)
         self.assertAlmostEqual(pyo.value(m.UA), 201.7877, places=3)

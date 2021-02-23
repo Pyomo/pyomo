@@ -449,6 +449,12 @@ class PyomoCyIpoptSolver(object):
         domain=bool,
         description="Store the final solution into the original Pyomo model",
     ))
+    CONFIG.declare("return_nlp", ConfigValue(
+        default=False,
+        domain=bool,
+        description="Return the results object and the underlying nlp"
+                    " NLP object from the solve call.",
+    ))
     CONFIG.declare("options", ConfigBlock(implicit=True))
 
 
@@ -589,6 +595,10 @@ class PyomoCyIpoptSolver(object):
         results.solver.termination_condition = _ipopt_term_cond[status_enum]
         results.solver.status = TerminationCondition.to_solver_status(
             results.solver.termination_condition)
+
+        if config.return_nlp:
+            return results, nlp
+
         return results
 
     #

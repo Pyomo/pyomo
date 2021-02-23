@@ -114,8 +114,7 @@ def make_lower_triangular_full(lower_triangular_matrix):
     This function takes a symmetric matrix that only has entries in the
     lower triangle and makes is a full matrix by duplicating the entries
     '''
-    diff = lower_triangular_matrix.row - lower_triangular_matrix.col
-    mask = np.where(diff != 0)
+    mask = lower_triangular_matrix.row != lower_triangular_matrix.col
 
     row = np.concatenate((lower_triangular_matrix.row, lower_triangular_matrix.col[mask]))
     col = np.concatenate((lower_triangular_matrix.col, lower_triangular_matrix.row[mask]))

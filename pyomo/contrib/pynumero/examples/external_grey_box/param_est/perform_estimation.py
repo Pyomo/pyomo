@@ -86,7 +86,14 @@ def perform_estimation_external(data_fname, solver_trace=False):
     m.obj = pyo.Objective(rule=_least_squares)
 
     solver = pyo.SolverFactory('cyipopt')
-    status = solver.solve(m, tee=solver_trace)
+    status, nlp = solver.solve(m, tee=solver_trace, return_nlp=True)
+
+    if solver_trace:
+        # use the NLP object to access additional information if so desired
+        # for example:
+        names = nlp.primals_names()
+        values = nlp.evaluate_grad_objective()
+        print({names[i]:values[i] for i in range(len(names))})
 
     return m
 

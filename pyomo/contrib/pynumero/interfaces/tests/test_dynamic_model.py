@@ -401,8 +401,34 @@ class TestGreyBoxModel(unittest.TestCase):
         x1_x2_map = dict(zip(x1list, x2list))
         x1idx_x2idx_map = {i: mex_x_order.index(x1_x2_map[m_x_order[i]]) for i in range(len(m_x_order))}
 
-        c1list = ['h1bal[1]', 'h1bal[2]', 'h1bal[3]', 'h1bal[4]', 'h1bal[5]', 'h2bal[1]', 'h2bal[2]', 'h2bal[3]', 'h2bal[4]', 'h2bal[5]', 'F12con[0]', 'F12con[1]', 'F12con[2]', 'F12con[3]', 'F12con[4]', 'F12con[5]', 'Focon[0]', 'Focon[1]', 'Focon[2]', 'Focon[3]', 'Focon[4]', 'Focon[5]', 'min_inflow[1]', 'min_inflow[2]', 'min_inflow[3]', 'min_inflow[4]', 'min_inflow[5]', 'max_outflow[0]', 'max_outflow[1]', 'max_outflow[2]', 'max_outflow[3]', 'max_outflow[4]', 'max_outflow[5]', 'h10', 'h20']
-        c2list = ['egb.h1bal_1', 'egb.h1bal_2', 'egb.h1bal_3', 'egb.h1bal_4', 'egb.h1bal_5', 'egb.h2bal_1', 'egb.h2bal_2', 'egb.h2bal_3', 'egb.h2bal_4', 'egb.h2bal_5', 'egb.output_constraints[F12_0]', 'egb.output_constraints[F12_1]', 'egb.output_constraints[F12_2]', 'egb.output_constraints[F12_3]', 'egb.output_constraints[F12_4]', 'egb.output_constraints[F12_5]', 'egb.output_constraints[Fo_0]', 'egb.output_constraints[Fo_1]', 'egb.output_constraints[Fo_2]', 'egb.output_constraints[Fo_3]', 'egb.output_constraints[Fo_4]', 'egb.output_constraints[Fo_5]', 'min_inflow[1]', 'min_inflow[2]', 'min_inflow[3]', 'min_inflow[4]', 'min_inflow[5]', 'max_outflow[0]', 'max_outflow[1]', 'max_outflow[2]', 'max_outflow[3]', 'max_outflow[4]', 'max_outflow[5]', 'h10', 'h20']
+        c1list = ['h1bal[1]', 'h1bal[2]', 'h1bal[3]', 'h1bal[4]',
+                  'h1bal[5]', 'h2bal[1]', 'h2bal[2]', 'h2bal[3]', 'h2bal[4]',
+                  'h2bal[5]', 'F12con[0]', 'F12con[1]', 'F12con[2]',
+                  'F12con[3]', 'F12con[4]', 'F12con[5]', 'Focon[0]', 'Focon[1]',
+                  'Focon[2]', 'Focon[3]', 'Focon[4]', 'Focon[5]',
+                  'min_inflow[1]', 'min_inflow[2]', 'min_inflow[3]',
+                  'min_inflow[4]', 'min_inflow[5]', 'max_outflow[0]',
+                  'max_outflow[1]', 'max_outflow[2]', 'max_outflow[3]',
+                  'max_outflow[4]', 'max_outflow[5]', 'h10', 'h20']
+        c2list = ['egb.h1bal_1', 'egb.h1bal_2', 'egb.h1bal_3',
+                  'egb.h1bal_4', 'egb.h1bal_5', 'egb.h2bal_1', 'egb.h2bal_2',
+                  'egb.h2bal_3', 'egb.h2bal_4', 'egb.h2bal_5',
+                  'egb.output_constraints[F12_0]',
+                  'egb.output_constraints[F12_1]',
+                  'egb.output_constraints[F12_2]',
+                  'egb.output_constraints[F12_3]',
+                  'egb.output_constraints[F12_4]',
+                  'egb.output_constraints[F12_5]',
+                  'egb.output_constraints[Fo_0]',
+                  'egb.output_constraints[Fo_1]',
+                  'egb.output_constraints[Fo_2]',
+                  'egb.output_constraints[Fo_3]',
+                  'egb.output_constraints[Fo_4]',
+                  'egb.output_constraints[Fo_5]', 'min_inflow[1]',
+                  'min_inflow[2]', 'min_inflow[3]', 'min_inflow[4]',
+                  'min_inflow[5]', 'max_outflow[0]', 'max_outflow[1]',
+                  'max_outflow[2]', 'max_outflow[3]', 'max_outflow[4]',
+                  'max_outflow[5]', 'h10', 'h20']
         c1_c2_map = dict(zip(c1list, c2list))
         c1idx_c2idx_map = {i: mex_c_order.index(c1_c2_map[m_c_order[i]]) for i in range(len(m_c_order))}
 
