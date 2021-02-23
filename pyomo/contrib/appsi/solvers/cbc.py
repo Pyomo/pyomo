@@ -49,10 +49,6 @@ class Cbc(Solver):
             return False
         return True
 
-    def version(self):
-        cp = subprocess.run([str(self.config.executable), '-help'],
-                            capture_output=True, text=True)
-
     def lp_filename(self):
         if self._filename is None:
             return None

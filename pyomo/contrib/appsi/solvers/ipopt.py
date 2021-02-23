@@ -51,10 +51,6 @@ class Ipopt(Solver):
             return False
         return True
 
-    def version(self):
-        cp = subprocess.run([str(self.config.executable), '--version'],
-                            capture_output=True, text=True)
-
     def nl_filename(self):
         if self._filename is None:
             return None
