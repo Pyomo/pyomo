@@ -4,7 +4,7 @@ import numpy.random as rnd
 import pandas as pd
 import pyomo.contrib.pynumero.examples.external_grey_box.param_est.models as po
 
-def perform_estimation_pyomo_only(data_fname):
+def perform_estimation_pyomo_only(data_fname, solver_trace=False):
     # read in our data file - careful with formats
     df = pd.read_csv(data_fname, skipinitialspace=True)
     npts = len(df)
@@ -42,11 +42,11 @@ def perform_estimation_pyomo_only(data_fname):
     m.obj = pyo.Objective(rule=_least_squares)
 
     solver = pyo.SolverFactory('ipopt')
-    status = solver.solve(m, tee=True)
+    status = solver.solve(m, tee=solver_trace)
 
-    return pyo.value(m.UA)
+    return m
 
-def perform_estimation_external(data_fname):
+def perform_estimation_external(data_fname, solver_trace=False):
     # read in our data file - careful with formats
     df = pd.read_csv(data_fname, skipinitialspace=True)
     npts = len(df)
@@ -86,13 +86,13 @@ def perform_estimation_external(data_fname):
     m.obj = pyo.Objective(rule=_least_squares)
 
     solver = pyo.SolverFactory('cyipopt')
-    status = solver.solve(m, tee=True)
+    status = solver.solve(m, tee=solver_trace)
 
-    return pyo.value(m.UA)
+    return m
 
 if __name__ == '__main__':
-    UA = perform_estimation_pyomo_only(sys.argv[1])
-    print(UA)
-    UA = perform_estimation_external(sys.argv[1])
-    print(UA)
+    m = perform_estimation_pyomo_only(sys.argv[1])
+    print(pyo.value(m.UA))
+    m = perform_estimation_external(sys.argv[1])
+    print(pyo.value(m.UA))
     

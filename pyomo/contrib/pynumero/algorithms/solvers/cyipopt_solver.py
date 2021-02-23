@@ -490,6 +490,7 @@ class PyomoCyIpoptSolver(object):
             nlp = pyomo_grey_box.PyomoNLPWithGreyBoxBlocks(model)
         else:
             nlp = pyomo_nlp.PyomoNLP(model)
+
         problem = CyIpoptNLP(nlp)
 
         xl = problem.x_lb()
