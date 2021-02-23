@@ -38,10 +38,6 @@ from pyomo.core.base.util import (
     IndexedCallInitializer, CountedCallInitializer
 )
 
-from collections.abc import Sequence as collections_Sequence
-def formatargspec(fn):
-    return str(inspect.signature(fn))
-
 
 logger = logging.getLogger('pyomo.core')
 
@@ -113,7 +109,7 @@ def simple_constraint_rule( fn ):
     # knowing the number of positional arguments, we will go to extra
     # effort here to preserve the original function signature.
     _funcdef = _map_constraint_funcdef % (
-        formatargspec(fn), 'ConstraintList.Skip'
+        str(inspect.signature(fn)), 'ConstraintList.Skip'
     )
     # Create the wrapper in a temporary environment that mimics this
     # function's environment.
@@ -144,7 +140,7 @@ def simple_constraintlist_rule( fn ):
     # knowing the number of positional arguments, we will go to extra
     # effort here to preserve the original function signature.
     _funcdef = _map_constraint_funcdef % (
-        formatargspec(fn), 'ConstraintList.End'
+        str(inspect.signature(fn)), 'ConstraintList.End'
     )
     # Create the wrapper in a temporary environment that mimics this
     # function's environment.

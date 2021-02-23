@@ -16,13 +16,6 @@ from pyomo.opt.blackbox.problem_io import BlackBoxOptProblemIOFactory
 import xml.dom.minidom
 import re
 
-try:
-    unicode
-    intlist = [int, long, float]
-except:
-    basestring = str
-    intlist = [int, float]
-
 
 @BlackBoxOptProblemIOFactory.register('colin')
 class ColinXmlIO(object):
@@ -74,9 +67,9 @@ class ColinXmlIO(object):
         for key in response:
             elt = doc.createElement(str(key))
             root.appendChild(elt)
-            if isinstance(response[key], basestring):
+            if isinstance(response[key], str):
                 text_elt = doc.createTextNode( response[key] )
-            elif type(response[key]) in intlist:
+            elif type(response[key]) in [int, float]:
                 text_elt = doc.createTextNode( str(response[key]) )
             else:
                 text_elt = doc.createTextNode(' '.join(repr(x) for x in response[key]))

@@ -22,7 +22,7 @@ from pyomo.core.base.constraint import (IndexedConstraint,
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import is_debug_set
 
-from collections.abc import Mapping as collections_Mapping
+from collections.abc import Mapping
 
 
 logger = logging.getLogger('pyomo.core')
@@ -282,8 +282,7 @@ class _MatrixConstraintData(_ConstraintData):
 
 @ModelComponentFactory.register(
                    "A set of constraint expressions in Ax=b form.")
-class MatrixConstraint(collections_Mapping,
-                       IndexedConstraint):
+class MatrixConstraint(Mapping, IndexedConstraint):
     """
     Defines a set of linear constraints of the form:
 

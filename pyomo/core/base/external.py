@@ -24,11 +24,6 @@ from pyomo.core.base.units_container import units
 
 __all__  = ( 'ExternalFunction', )
 
-try:
-    basestring
-except:
-    basestring = str
-
 logger = logging.getLogger('pyomo.core')
 
 

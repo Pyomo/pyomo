@@ -14,8 +14,6 @@ __all__ = ['CounterLabeler', 'NumericLabeler', 'CNameLabeler', 'TextLabeler',
 
 import re
 
-_translate = str.translate
-
 from pyomo.core.base.componentuid import ComponentUID
 
 # This module provides some basic functionality for generating labels
@@ -69,7 +67,7 @@ def cpxlp_label_from_name(name):
         raise RuntimeError("Illegal name=None supplied to "
                            "cpxlp_label_from_name function")
 
-    return _translate(name, _cpxlp_translation_table)
+    return str.translate(name, _cpxlp_translation_table)
 
 _alphanum_translation_table = _CharMapper( preserve=_alpha+_digit+'_',
                                        translate = {},
@@ -80,7 +78,7 @@ def alphanum_label_from_name(name):
         raise RuntimeError("Illegal name=None supplied to "
                            "alphanum_label_from_name function")
 
-    return _translate(name, _alphanum_translation_table)
+    return str.translate(name, _alphanum_translation_table)
 
 class CuidLabeler(object):
 

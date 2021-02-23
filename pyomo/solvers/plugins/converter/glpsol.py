@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 import os
-import six
 
 import subprocess
 import pyomo.common
@@ -44,7 +43,7 @@ class GlpsolMIPConverter(object):
 
     def apply(self, *args, **kwargs):
         """Convert an instance of one type into another"""
-        if not isinstance(args[2],six.string_types):
+        if not isinstance(args[2], str):
             raise ConverterError("Can only apply glpsol to convert file data")
         _exec = pyomo.common.Executable("glpsol")
         if not _exec:

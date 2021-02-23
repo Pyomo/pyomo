@@ -40,9 +40,7 @@ from pyomo.core.base.global_set import (
 )
 from pyomo.core.base.misc import sorted_robust
 
-from collections.abc import Sequence as collections_Sequence
-def formatargspec(fn):
-    return str(inspect.signature(fn))
+from collections.abc import Sequence
 
 
 logger = logging.getLogger('pyomo.core')
@@ -233,7 +231,7 @@ def simple_set_rule( fn ):
         if value is None:
             return Set.End
         return value
-""" % (formatargspec(fn),)
+""" % (str(inspect.signature(fn)),)
     # Create the wrapper in a temporary environment that mimics this
     # function's environment.
     _env = dict(globals())
@@ -354,7 +352,7 @@ class BoundsInitializer(InitializerBase):
 
     def __call__(self, parent, idx):
         val = self._init(parent, idx)
-        if not isinstance(val, collections_Sequence):
+        if not isinstance(val, Sequence):
             val = (1, val, self.default_step)
         else:
             val = tuple(val)
@@ -409,7 +407,7 @@ class TuplizeValuesInitializer(InitializerBase):
         elif _val is None:
             return _val
 
-        if not isinstance(_val, collections_Sequence):
+        if not isinstance(_val, Sequence):
             _val = tuple(_val)
         if len(_val) == 0:
             return _val

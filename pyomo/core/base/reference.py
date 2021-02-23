@@ -22,6 +22,7 @@ from pyomo.core.base.indexed_component_slice import (
     IndexedComponent_slice, _IndexedComponent_slice_iter
 )
 from pyomo.core.base.util import flatten_tuple
+from pyomo.common.deprecation import deprecated
 
 _NotSpecified = object()
 
@@ -290,7 +291,7 @@ class _ReferenceDict(MutableMapping):
         # is very slow (linear time).
         return sum(1 for i in self._slice)
 
-    def iteritems(self):
+    def items(self):
         """Return the wildcard, value tuples for this ReferenceDict
 
         This method is necessary because the default implementation
@@ -305,7 +306,7 @@ class _ReferenceDict(MutableMapping):
         """
         return self._slice.wildcard_items()
 
-    def itervalues(self):
+    def values(self):
         """Return the values for this ReferenceDict
 
         This method is necessary because the default implementation
@@ -320,6 +321,16 @@ class _ReferenceDict(MutableMapping):
         """
         return iter(self._slice)
 
+    @deprecated('The iteritems method is deprecated. Use dict.items().',
+                version='TBD')
+    def iteritems(self):
+        return self.items()
+
+    @deprecated('The itervalues method is deprecated. Use dict.values().',
+                version='TBD')
+    def itervalues(self):
+        return self.values()
+
     def _get_iter(self, _slice, key, get_if_not_present=False):
         # Construct a slice iter with `_fill_in_known_wildcards`
         # as `advance_iter`. This reuses all the logic from the slice
@@ -333,9 +344,6 @@ class _ReferenceDict(MutableMapping):
             _fill_in_known_wildcards(flatten_tuple(key),
                                      get_if_not_present=get_if_not_present)
         )
-
-_ReferenceDict.items = _ReferenceDict.iteritems
-_ReferenceDict.values = _ReferenceDict.itervalues
 
 
 class _ReferenceDict_mapping(UserDict):

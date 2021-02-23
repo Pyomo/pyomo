@@ -14,40 +14,32 @@ import logging
 import sys
 from weakref import ref as weakref_ref
 import gc
-import time
 import math
 
 from pyomo.common import timing, PyomoAPIFactory
-from pyomo.common.collections import Container, OrderedDict
+from pyomo.common.collections import Container
 from pyomo.common.dependencies import pympler, pympler_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import is_debug_set
 from pyomo.common.plugin import ExtensionPoint
-
-from pyomo.core.expr import expr_common
 from pyomo.core.expr.symbol_map import SymbolMap
-from pyomo.core.expr.numeric_expr import clone_counter
-
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.suffix import active_import_suffix_generator
-from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.dataportal.DataPortal import DataPortal
 from pyomo.core.base.plugin import IPyomoPresolver
 from pyomo.core.base.numvalue import value
 from pyomo.core.base.block import SimpleBlock
 from pyomo.core.base.set import Set
 from pyomo.core.base.componentuid import ComponentUID
-from pyomo.core.base.component import Component
 from pyomo.core.base.plugin import ModelComponentFactory, TransformationFactory
 from pyomo.core.base.label import CNameLabeler, CuidLabeler
 
 from pyomo.opt.results import SolverResults, Solution, SolverStatus, UndefinedData
 
 from io import StringIO
-
 
 logger = logging.getLogger('pyomo.core')
 id_func = id
@@ -825,20 +817,6 @@ arguments (which have been ignored):"""
                     continue
 
                 self._initialize_component(modeldata, namespaces, component_name, profile_memory)
-                if False:
-                    total_time = time.time() - start_time
-                    if isinstance(component, IndexedComponent):
-                        clen = len(component)
-                    else:
-                        assert isinstance(component, Component)
-                        clen = 1
-                    print("    %%6.%df seconds required to construct component=%s; %d indices total" \
-                              % (total_time>=0.005 and 2 or 0, component_name, clen) \
-                              % total_time)
-                    tmp_clone_counter = expr_common.clone_counter
-                    if clone_counter != tmp_clone_counter:
-                        clone_counter = tmp_clone_counter
-                        print("             Cloning detected! (clone count: %d)" % clone_counter)
 
             # Note: As is, connectors are expanded when using command-line pyomo but not calling model.create(...) in a Python script.
             # John says this has to do with extension points which are called from commandline but not when writing scripts.

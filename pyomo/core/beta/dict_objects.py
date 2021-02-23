@@ -24,8 +24,8 @@ from pyomo.core.base.objective import (IndexedObjective,
 from pyomo.core.base.expression import (IndexedExpression,
                                         _ExpressionData)
 
-from collections.abc import MutableMapping as collections_MutableMapping
-from collections.abc import Mapping as collections_Mapping
+from collections.abc import MutableMapping
+from collections.abc import Mapping
 
 logger = logging.getLogger('pyomo.core')
 
@@ -36,7 +36,7 @@ logger = logging.getLogger('pyomo.core')
 # be implemented on top of these classes.
 #
 
-class ComponentDict(collections_MutableMapping):
+class ComponentDict(MutableMapping):
 
     def __init__(self, interface_datatype, *args):
         self._interface_datatype = interface_datatype
@@ -161,7 +161,7 @@ class ComponentDict(collections_MutableMapping):
     # dictionary mapping key->(type(val), id(val)) and
     # compare that instead.
     def __eq__(self, other):
-        if not isinstance(other, collections_Mapping):
+        if not isinstance(other, Mapping):
             return False
         return dict((key, (type(val), id(val)))
                     for key,val in self.items()) == \

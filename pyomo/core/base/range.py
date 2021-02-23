@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import math
-from collections.abc import Sequence as collections_Sequence
+from collections.abc import Sequence
 
 try:
     from math import remainder
@@ -896,7 +896,7 @@ class RangeProduct(object):
         return not self.__eq__(other)
 
     def __contains__(self, value):
-        if not isinstance(value, collections_Sequence):
+        if not isinstance(value, Sequence):
             return False
         if len(value) != len(self.range_lists):
             return False

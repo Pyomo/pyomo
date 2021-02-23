@@ -23,11 +23,6 @@ from pyomo.opt.solver import SystemCallSolver
 import logging
 logger = logging.getLogger('pyomo.solvers')
 
-try:
-    unicode
-except:
-    basestring = str
-
 
 @SolverFactory.register('scip', doc='The SCIP LP/MIP solver')
 class SCIPAMPL(SystemCallSolver):
@@ -137,7 +132,7 @@ class SCIPAMPL(SystemCallSolver):
         for key in self.options:
             if key == 'solver':
                 continue
-            if isinstance(self.options[key], basestring) and ' ' in self.options[key]:
+            if isinstance(self.options[key], str) and ' ' in self.options[key]:
                 env_opt.append(key+"=\""+str(self.options[key])+"\"")
             else:
                 env_opt.append(key+"="+str(self.options[key]))

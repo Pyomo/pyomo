@@ -8,15 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import six
-
 from pyomo.core.base.indexed_component import normalize_index
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.global_set import UnindexedComponent_set
-from pyomo.common.collections import ComponentSet, ComponentMap
 
 def _to_iterable(source):
-    iterable_scalars = six.string_types + (six.binary_type, six.text_type)
+    iterable_scalars = (str, bytes)
     if hasattr(source, '__iter__'):
         if isinstance(source, iterable_scalars):
             yield source

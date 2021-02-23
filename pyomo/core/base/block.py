@@ -358,9 +358,9 @@ class PseudoMap(object):
                     _idx_list.sort(reverse=True)
                     break
 
-    def iterkeys(self):
+    def keys(self):
         """
-        TODO
+        Generator returning the component names defined on the Block
         """
         # Iterate over the PseudoMap keys (the component names) in
         # declaration order
@@ -371,9 +371,9 @@ class PseudoMap(object):
         for obj in self.itervalues():
             yield obj._name
 
-    def itervalues(self):
+    def values(self):
         """
-        TODO
+        Generator returning the components defined on the Block
         """
         # Iterate over the PseudoMap values (the component objects) in
         # declaration order
@@ -406,9 +406,10 @@ class PseudoMap(object):
         else:
             return walker
 
-    def iteritems(self):
+    def items(self):
         """
-        TODO
+        Generator returning (name, component) tuples for components
+        defined on the Block
         """
         # Ironically, the values are the fundamental thing that we
         # can (efficiently) iterate over in decl_order.  iteritems
@@ -416,28 +417,30 @@ class PseudoMap(object):
         for obj in self.itervalues():
             yield (obj._name, obj)
 
-    def keys(self):
+    @deprecated('The iterkeys method is deprecated. Use dict.keys().',
+                version='TBD')
+    def iterkeys(self):
         """
-        Return a list of dictionary keys
+        Generator returning the component names defined on the Block
         """
-        return list(self.iterkeys())
+        return self.keys()
 
-    def values(self):
+    @deprecated('The itervalues method is deprecated. Use dict.values().',
+                version='TBD')
+    def itervalues(self):
         """
-        Return a list of dictionary values
+        Generator returning the components defined on the Block
         """
-        return list(self.itervalues())
+        return self.values()
 
-    def items(self):
+    @deprecated('The iteritems method is deprecated. Use dict.items().',
+                version='TBD')
+    def iteritems(self):
         """
-        Return a list of (key, value) tuples
+        Generator returning (name, component) tuples for components
+        defined on the Block
         """
-        return list(self.iteritems())
-
-
-PseudoMap.keys = PseudoMap.iterkeys
-PseudoMap.values = PseudoMap.itervalues
-PseudoMap.items = PseudoMap.iteritems
+        return self.items()
 
 
 class _BlockData(ActiveComponentData):

@@ -10,7 +10,7 @@
 
 
 import os
-from six import iteritems, PY3
+from six import iteritems
 
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt.base import ProblemFormat
@@ -57,13 +57,7 @@ class PyomoMIPConverter(object):
             io_options[kwd] = value
         kwds.clear()
 
-        # basestring is gone in Python 3.x, merged with str.
-        if PY3:
-            compare_type = str
-        else:
-            compare_type = basestring
-
-        if isinstance(args[2], compare_type):
+        if isinstance(args[2], str):
             instance = None
         else:
             instance = args[2]

@@ -14,16 +14,15 @@
 import functools
 import inspect
 
-getargspec = inspect.getfullargspec
-from collections.abc import Sequence as collections_Sequence
-from collections.abc import Mapping as collections_Mapping
-
+from collections.abc import Sequence
+from collections.abc import Mapping
 
 from pyomo.common import DeveloperError
 from pyomo.core.expr.numvalue import (
     native_types,
 )
 from pyomo.core.base.indexed_component import normalize_index
+
 
 def is_functor(obj):
     """
@@ -177,7 +176,7 @@ def Initializer(init,
         # accepted rules that took only the parent block (even for
         # indexed components).  We will preserve that functionality
         # here.
-        _args = getargspec(init)
+        _args = inspect.getfullargspec(init)
         _nargs = len(_args.args)
         if inspect.ismethod(init) and init.__self__ is not None:
             # Ignore 'self' for bound instance methods and 'cls' for
@@ -187,9 +186,9 @@ def Initializer(init,
             return ScalarCallInitializer(init)
         else:
             return IndexedCallInitializer(init)
-    elif isinstance(init, collections_Mapping):
+    elif isinstance(init, Mapping):
         return ItemInitializer(init)
-    elif isinstance(init, collections_Sequence) \
+    elif isinstance(init, Sequence) \
             and not isinstance(init, str):
         if treat_sequences_as_mappings:
             return ItemInitializer(init)
@@ -208,7 +207,7 @@ def Initializer(init,
         # generator into a tuple and then store it as a constant.
         return ConstantInitializer(tuple(init))
     elif type(init) is functools.partial:
-        _args = getargspec(init.func)
+        _args = inspect.getfullargspec(init.func)
         if len(_args.args) - len(init.args) == 1 and _args.varargs is None:
             return ScalarCallInitializer(init)
         else:
@@ -402,7 +401,7 @@ class CountedCallInitializer(InitializerBase):
 
         # Note that this code will only be called once, and only if
         # the object is not a scalar.
-        _args = getargspec(self._fcn)
+        _args = inspect.getfullargspec(self._fcn)
         _nargs = len(_args.args)
         if inspect.ismethod(self._fcn) and self._fcn.__self__ is not None:
             _nargs -= 1

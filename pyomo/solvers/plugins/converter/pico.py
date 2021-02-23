@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import six
 import os.path
 import subprocess
 
@@ -60,7 +59,7 @@ class PicoMIPConverter(object):
             target="lp"
         # NOTE: if you have an extra "." in the suffix, the pico_convert program fails to output to the correct filename.
         output_filename = TempfileManager.create_tempfile(suffix = 'pico_convert.' + target)
-        if not isinstance(args[2],six.string_types):
+        if not isinstance(args[2], str):
             fname= TempfileManager.create_tempfile(suffix= 'pico_convert.' +str(args[0]))
             args[2].write(filename=fname, format=args[1])
             cmd = pico_convert_cmd +" --output="+output_filename+" "+target+" "+fname

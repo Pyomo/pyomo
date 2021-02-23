@@ -19,11 +19,10 @@ from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common import DeveloperError
-from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.deprecation import deprecated, deprecation_warning
 
-from collections.abc import Sequence as collections_Sequence
+from collections.abc import Sequence
 
-    
 logger = logging.getLogger('pyomo.core')
 
 sequence_types = {tuple, list}
@@ -62,7 +61,7 @@ def normalize_index(x):
             # Note that casting a tuple to a tuple is cheap (no copy, no
             # new object)
             x = x[:i] + tuple(x[i]) + x[i + 1:]
-        elif issubclass(_xi_class, collections_Sequence):
+        elif issubclass(_xi_class, Sequence):
             if issubclass(_xi_class, str):
                 # This is very difficult to get to: it would require a
                 # user creating a custom derived string type
@@ -341,31 +340,35 @@ You can silence this warning by one of three ways:
                             yield idx
                 return _sparse_iter_gen(self)
 
-    def keys(self):
+    @deprecated('The iterkeys method is deprecated. Use dict.keys().',
+                version='TBD')
+    def iterkeys(self):
         """Return a list of keys in the dictionary"""
+        return self.keys()
+
+    @deprecated('The itervalues method is deprecated. Use dict.values().',
+                version='TBD')
+    def itervalues(self):
+        """Return a list of the component data objects in the dictionary"""
+        return self.values()
+
+    @deprecated('The iteritems method is deprecated. Use dict.items().',
+                version='TBD')
+    def iteritems(self):
+        """Return a list (index,data) tuples from the dictionary"""
+        return self.items()
+
+    def keys(self):
+        """Return an iterator of the keys in the dictionary"""
         return [ x for x in self ]
 
     def values(self):
-        """Return a list of the component data objects in the dictionary"""
+        """Return an iterator of the component data objects in the dictionary"""
         return [ self[x] for x in self ]
 
     def items(self):
-        """Return a list (index,data) tuples from the dictionary"""
-        return [ (x, self[x]) for x in self ]
-
-    def iterkeys(self):
-        """Return an iterator of the keys in the dictionary"""
-        return self.__iter__()
-
-    def itervalues(self):
-        """Return an iterator of the component data objects in the dictionary"""
-        for key in self:
-            yield self[key]
-
-    def iteritems(self):
         """Return an iterator of (index,data) tuples from the dictionary"""
-        for key in self:
-            yield key, self[key]
+        return [ (x, self[x]) for x in self ]
 
     def __getitem__(self, index):
         """
@@ -812,10 +815,6 @@ value() function.""" % ( self.name, i ))
             result[id(component_data)] = index
         return result
 
-
-IndexedComponent.keys   = IndexedComponent.iterkeys
-IndexedComponent.values = IndexedComponent.itervalues
-IndexedComponent.items  = IndexedComponent.iteritems
 
 class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
     """

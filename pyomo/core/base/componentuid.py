@@ -18,12 +18,10 @@ from pyomo.common.deprecation import deprecated
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.reference import Reference
 
-class _PickleEllipsis(object):
-    "A work around for the non-picklability of Ellipsis in Python 2"
-    pass
 
 class _NotSpecified(object):
     pass
+
 
 class ComponentUID(object):
     """

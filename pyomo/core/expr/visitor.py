@@ -15,8 +15,6 @@ import logging
 from copy import deepcopy
 from collections import deque
 
-getargspec = inspect.getfullargspec
-
 logger = logging.getLogger('pyomo.core')
 
 from .symbol_map import SymbolMap
@@ -168,7 +166,7 @@ class StreamBasedExpressionVisitor(object):
             fcn = getattr(self, name)
             if fcn is None:
                 continue
-            _args = getargspec(fcn)
+            _args = inspect.getfullargspec(fcn)
             _self_arg = 1 if inspect.ismethod(fcn) else 0
             if len(_args.args) == nargs + _self_arg and _args.varargs is None:
                 deprecation_warning(
