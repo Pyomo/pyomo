@@ -6,7 +6,7 @@ import pyomo.contrib.pynumero.examples.external_grey_box.param_est.models as po
 
 def perform_estimation_pyomo_only(data_fname, solver_trace=False):
     # read in our data file - careful with formats
-    df = pd.read_csv(data_fname, skipinitialspace=True)
+    df = pd.read_csv(data_fname)
     npts = len(df)
 
     # create our parameter estimation formulation
@@ -48,7 +48,7 @@ def perform_estimation_pyomo_only(data_fname, solver_trace=False):
 
 def perform_estimation_external(data_fname, solver_trace=False):
     # read in our data file - careful with formats
-    df = pd.read_csv(data_fname, skipinitialspace=True)
+    df = pd.read_csv(data_fname)
     npts = len(df)
 
     # create our parameter estimation formulation

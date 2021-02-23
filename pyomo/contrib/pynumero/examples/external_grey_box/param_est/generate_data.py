@@ -1,8 +1,10 @@
 import pyomo.environ as pyo
 import numpy.random as rnd
 import pyomo.contrib.pynumero.examples.external_grey_box.param_est.models as pm
+import pandas as pd
 
-def generate_data(N, UA_mean, UA_std):
+def generate_data(N, UA_mean, UA_std, seed=42):
+    rnd.seed(seed)
     m = pyo.ConcreteModel()
     pm.build_single_point_model_pyomo_only(m)
 
@@ -12,7 +14,8 @@ def generate_data(N, UA_mean, UA_std):
     # create the ipopt solver
     solver = pyo.SolverFactory('ipopt')
 
-    print('run, Th_in, Tc_in, Th_out, Tc_out, UA')
+    data = {'run': [], 'Th_in': [], 'Tc_in': [], 'Th_out':[],
+            'Tc_out': []}
     for i in range(N):
         # draw a random value for the parameters
         ua = float(rnd.normal(UA_mean, UA_std))
@@ -23,22 +26,21 @@ def generate_data(N, UA_mean, UA_std):
         m.Th_in.fix(Th_in)
         m.Tc_in.fix(Tc_in)
 
-        #solver.options['halt_on_ampl_error'] = 'yes'
-        status = solver.solve(m, tee=True)
-        print('{}, {}, {}, {}, {}, {}'.format(
-            i,
-            pyo.value(m.Th_in),
-            pyo.value(m.Tc_in),
-            pyo.value(m.Th_out),
-            pyo.value(m.Tc_out),
-            pyo.value(m.UA))
-        )
+        status = solver.solve(m, tee=False)
+        data['run'].append(i)
+        data['Th_in'].append(pyo.value(m.Th_in))
+        data['Tc_in'].append(pyo.value(m.Tc_in))
+        data['Th_out'].append(pyo.value(m.Th_out))
+        data['Tc_out'].append(pyo.value(m.Tc_out))
 
-def generate_data_external(N, UA_mean, UA_std):
+    return pd.DataFrame(data)
+
+def generate_data_external(N, UA_mean, UA_std, seed=42):
+    rnd.seed(seed)
     m = pyo.ConcreteModel()
     pm.build_single_point_model_external(m)
 
-    # ADD MUTABLE PARAMETERS HERE FOR EQUALITIES
+    # Add mutable parameters for the rhs of the equalities
     m.UA_spec = pyo.Param(initialize=200, mutable=True)
     m.Th_in_spec = pyo.Param(initialize=100, mutable=True)
     m.Tc_in_spec = pyo.Param(initialize=30, mutable=True)
@@ -53,7 +55,8 @@ def generate_data_external(N, UA_mean, UA_std):
     # create the ipopt solver
     solver = pyo.SolverFactory('cyipopt')
 
-    print('run, Th_in, Tc_in, Th_out, Tc_out, UA')
+    data = {'run': [], 'Th_in': [], 'Tc_in': [], 'Th_out':[],
+            'Tc_out': []}
     for i in range(N):
         # draw a random value for the parameters
         UA = float(rnd.normal(UA_mean, UA_std))
@@ -64,20 +67,18 @@ def generate_data_external(N, UA_mean, UA_std):
         m.Th_in_spec.value = Th_in
         m.Tc_in_spec.value = Tc_in
 
-        #solver.options['halt_on_ampl_error'] = 'yes'
-        status = solver.solve(m, tee=True)
-        print('{}, {}, {}, {}, {}, {}'.format(
-            i,
-            pyo.value(m.egb.inputs['Th_in']),
-            pyo.value(m.egb.inputs['Tc_in']),
-            pyo.value(m.egb.inputs['Th_out']),
-            pyo.value(m.egb.inputs['Tc_out']),
-            pyo.value(m.egb.inputs['UA']))
-        )
+        status = solver.solve(m, tee=False)
+        data['run'].append(i)
+        data['Th_in'].append(pyo.value(m.egb.inputs['Th_in']))
+        data['Tc_in'].append(pyo.value(m.egb.inputs['Tc_in']))
+        data['Th_out'].append(pyo.value(m.egb.inputs['Th_out']))
+        data['Tc_out'].append(pyo.value(m.egb.inputs['Tc_out']))
+        
+    return pd.DataFrame(data)
 
 if __name__ == '__main__':
-    rnd.seed(42)
-    generate_data(50, 200, 5)
-    #generate_data_external(1, 200, 5)
+    #df = generate_data(50, 200, 5)
+    df = generate_data_external(50, 200, 5)
+    df.to_csv('data.csv', index=False)
 
     
