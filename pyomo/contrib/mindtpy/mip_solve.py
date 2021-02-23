@@ -191,9 +191,9 @@ def handle_master_optimal(master_mip, solve_data, config, update_bound=True):
                 value(MindtPy.mip_obj.expr), solve_data.UB)
             solve_data.UB_progress.append(solve_data.UB)
         config.logger.info(
-            'MIP %s: OBJ: %s  LB: %s  UB: %s'
+            'MIP %s: OBJ: %s  LB: %s  UB: %s  TIME: %ss'
             % (solve_data.mip_iter, value(MindtPy.mip_obj.expr),
-               solve_data.LB, solve_data.UB))
+               solve_data.LB, solve_data.UB, round(get_main_elapsed_time(solve_data.timing), 2)))
 
 
 def handle_master_other_conditions(master_mip, master_mip_results, solve_data, config):

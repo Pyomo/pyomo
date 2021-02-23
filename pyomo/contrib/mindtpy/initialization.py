@@ -155,8 +155,8 @@ def init_rNLP(solve_data, config):
             solve_data.UB_progress.append(results.problem.upper_bound)
         main_objective = MindtPy.objective_list[-1]
         config.logger.info(
-            'Relaxed NLP: OBJ: %s  LB: %s  UB: %s'
-            % (value(main_objective.expr), solve_data.LB, solve_data.UB))
+            'Relaxed NLP: OBJ: %s  LB: %s  UB: %s  TIME:%ss'
+            % (value(main_objective.expr), solve_data.LB, solve_data.UB, round(get_main_elapsed_time(solve_data.timing), 2)))
         if config.strategy in {'OA', 'GOA', 'FP'}:
             copy_var_list_values(m.MindtPy_utils.variable_list,
                                  solve_data.mip.MindtPy_utils.variable_list,

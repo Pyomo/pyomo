@@ -153,9 +153,9 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, fp=False):
         solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
         solve_data.LB_progress.append(solve_data.LB)
     config.logger.info(
-        'Fixed NLP {}: OBJ: {}  LB: {}  UB: {}'
+        'Fixed NLP {}: OBJ: {}  LB: {}  UB: {}  TIME: {}s'
         .format(solve_data.nlp_iter if not fp else solve_data.fp_iter, value(main_objective.expr),
-                solve_data.LB, solve_data.UB))
+                solve_data.LB, solve_data.UB, round(get_main_elapsed_time(solve_data.timing), 2)))
 
     if solve_data.solution_improved:
         solve_data.best_solution_found = fixed_nlp.clone()
