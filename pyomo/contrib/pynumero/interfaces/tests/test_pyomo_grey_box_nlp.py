@@ -1706,6 +1706,7 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         self.assertIn('DenseVector "d scaling vector" with 1 elements:', solver_trace)
         self.assertIn('d scaling vector[    1]= 1.0000000000000000e+00', solver_trace) # pcon
 
+    @unittest.skipIf(not ipopt_available, "CyIpopt needed to run tests with solve")
     def test_duals_after_solve(self):
         m = pyo.ConcreteModel()
         m.p = pyo.Var(initialize=1)
