@@ -368,7 +368,7 @@ class PseudoMap(object):
         # Ironically, the values are the fundamental thing that we
         # can (efficiently) iterate over in decl_order.  iterkeys
         # just wraps itervalues.
-        for obj in self.itervalues():
+        for obj in self.values():
             yield obj._name
 
     def values(self):
@@ -414,7 +414,7 @@ class PseudoMap(object):
         # Ironically, the values are the fundamental thing that we
         # can (efficiently) iterate over in decl_order.  iteritems
         # just wraps itervalues.
-        for obj in self.itervalues():
+        for obj in self.values():
             yield (obj._name, obj)
 
     @deprecated('The iterkeys method is deprecated. Use dict.keys().',
