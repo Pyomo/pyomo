@@ -559,7 +559,7 @@ class Var(IndexedComponent):
         """
         Set the 'stale' attribute of every variable data object to True.
         """
-        for var_data in self._data.items():
+        for var_data in self._data.values():
             var_data.stale = True
 
     def get_values(self, include_fixed_values=True):
