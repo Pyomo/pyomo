@@ -45,54 +45,11 @@ jobs:
         # https://github.com/Pyomo/pyomo/issues/1710
 
         include:
-        - os: ubuntu-18.04
-          TARGET: linux
-          PYENV: pip
-
-        - os: macos-latest
-          python: 3.6
-          TARGET: osx
-          PYENV: pip
-
         - os: windows-latest
           python: 3.7
           TARGET: win
           PYENV: conda
           PACKAGES: glpk
-
-        - os: ubuntu-18.04
-          python: 3.8
-          other: /mpi
-          mpi: 3
-          skip_doctest: 1
-          TARGET: linux
-          PYENV: conda
-          PACKAGES: mpi4py openmpi
-
-        - os: ubuntu-18.04
-          python: 3.7
-          other: /conda
-          skip_doctest: 1
-          TARGET: linux
-          PYENV: conda
-          PACKAGES: mpi4py openmpi
-
-        - os: ubuntu-18.04
-          python: 3.9
-          other: /slim
-          slim: 1
-          skip_doctest: 1
-          TARGET: linux
-          PYENV: pip
-
-        - os: ubuntu-18.04
-          python: 3.6
-          other: /cython
-          setup_options: --with-cython
-          skip_doctest: 1
-          TARGET: linux
-          PYENV: pip
-          PACKAGES: cython
 
     steps:
     - name: Checkout Pyomo source
@@ -201,11 +158,6 @@ jobs:
           $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
           $installationPath = & $vswhere -prerelease -legacy -latest -property installationPath
           $Command = Join-Path $installationPath "Common7\Tools\vsdevcmd.bat"
-          & "${env:COMSPEC}" /s /c "`"$Command`" -no_logo && set" | Foreach-Object {
-            if ($_ -match '^([^=]+)=(.*)') {
-              [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2])
-            }
-	  }
         }
         Invoke-VSDevEnvironment
         Get-Command rc.exe | Format-Table -AutoSize
