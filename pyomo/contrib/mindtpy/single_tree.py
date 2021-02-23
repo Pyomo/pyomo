@@ -537,8 +537,16 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                                 'Sometimes solving MIQP using cplex, unbounded means infeasible.')
                         elif master_mip_results.solver.termination_condition is tc.unknown:
                             config.logger.info(
-                                'Termination condition of the projection problem is unknown.'
-                                'The solution of the OA master problem will be adopted.')
+                                'Termination condition of the projection problem is unknown.')
+                            if master_mip_results.problem.lower_bound != float('-inf'):
+                                config.logger.info(
+                                    'Solution limit has been reached.')
+                                handle_master_optimal(
+                                    master_mip, solve_data, config, update_bound=False)
+                            else:
+                                config.logger.info('No solution obtained from the projection subproblem.'
+                                                   'Please set mip_solver_tee to True for more informations.'
+                                                   'The solution of the OA master problem will be adopted.')
                         else:
                             raise ValueError(
                                 'MindtPy unable to handle projection problem termination condition '

@@ -391,6 +391,11 @@ def setup_master(solve_data, config, fp, regularization_problem):
     if regularization_problem and config.single_tree:
         MindtPy.del_component('loa_proj_mip_obj')
         MindtPy.cuts.del_component('obj_reg_estimate')
+    if config.add_regularization is not None and config.add_no_good_cuts:
+        if regularization_problem:
+            MindtPy.cuts.no_good_cuts.activate()
+        else:
+            MindtPy.cuts.no_good_cuts.deactivate()
 
     if fp:
         MindtPy.del_component('fp_mip_obj')

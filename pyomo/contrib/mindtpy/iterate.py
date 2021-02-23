@@ -106,8 +106,15 @@ def MindtPy_iteration_loop(solve_data, config):
                         'Sometimes solving MIQP in cplex, unbounded means infeasible.')
                 elif master_mip_results.solver.termination_condition is tc.unknown:
                     config.logger.info(
-                        'Termination condition of the projection problem is unknown.'
-                        'The solution of the OA master problem will be adopted.')
+                        'Termination condition of the projection problem is unknown.')
+                    if master_mip_results.problem.lower_bound != float('-inf'):
+                        config.logger.info('Solution limit has been reached.')
+                        handle_master_optimal(
+                            master_mip, solve_data, config, update_bound=False)
+                    else:
+                        config.logger.info('No solution obtained from the projection subproblem.'
+                                           'Please set mip_solver_tee to True for more informations.'
+                                           'The solution of the OA master problem will be adopted.')
                 else:
                     raise ValueError(
                         'MindtPy unable to handle projection problem termination condition '
@@ -188,7 +195,7 @@ def MindtPy_iteration_loop(solve_data, config):
 
     # if add_no_good_cuts is True, the bound obtained in the last iteration is no reliable.
     # we correct it after the iteration.
-    if (config.add_no_good_cuts or config.use_tabu_list) and config.strategy is not 'FP' and not solve_data.should_terminate:
+    if (config.add_no_good_cuts or config.use_tabu_list) and config.strategy is not 'FP' and not solve_data.should_terminate and config.add_regularization is None:
         bound_fix(solve_data, config, last_iter_cuts)
 
 
@@ -350,7 +357,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
                 'The same combination is obtained in iteration {} '
                 'This issue happens when the NLP subproblem violates constraint qualification. '
                 'Convergence to optimal solution is not guaranteed.'
-                .format(solve_data.mip_iter, solve_data.integer_list.index(solve_data.curr_int_sol)))
+                .format(solve_data.mip_iter, solve_data.integer_list.index(solve_data.curr_int_sol)+1))
             config.logger.info(
                 'Final bound values: LB: {}  UB: {}'.
                 format(solve_data.LB, solve_data.UB))
@@ -452,17 +459,21 @@ def bound_fix(solve_data, config, last_iter_cuts):
         set_solver_options(masteropt, solve_data, config, solver_type='mip')
         master_mip_results = masteropt.solve(
             solve_data.mip, tee=config.mip_solver_tee, **mip_args)
-        if solve_data.objective_sense == minimize:
-            solve_data.LB = max(
-                [master_mip_results.problem.lower_bound] + solve_data.LB_progress[:-1])
-            solve_data.LB_progress.append(solve_data.LB)
+        if master_mip_results.solver.termination_condition is tc.infeasible:
+            config.logger.info(
+                'Bound fix failed. The bound fix problem is infeasible')
         else:
-            solve_data.UB = min(
-                [master_mip_results.problem.upper_bound] + solve_data.UB_progress[:-1])
-            solve_data.UB_progress.append(solve_data.UB)
-        config.logger.info(
-            'Fixed bound values: LB: {}  UB: {}'.
-            format(solve_data.LB, solve_data.UB))
+            if solve_data.objective_sense == minimize:
+                solve_data.LB = max(
+                    [master_mip_results.problem.lower_bound] + solve_data.LB_progress[:-1])
+                solve_data.LB_progress.append(solve_data.LB)
+            else:
+                solve_data.UB = min(
+                    [master_mip_results.problem.upper_bound] + solve_data.UB_progress[:-1])
+                solve_data.UB_progress.append(solve_data.UB)
+            config.logger.info(
+                'Fixed bound values: LB: {}  UB: {}'.
+                format(solve_data.LB, solve_data.UB))
         # Check bound convergence
         if solve_data.LB + config.bound_tolerance >= solve_data.UB:
             solve_data.results.solver.termination_condition = tc.optimal
