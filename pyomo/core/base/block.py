@@ -253,7 +253,7 @@ class PseudoMap(object):
         """
         TODO
         """
-        return self.iterkeys()
+        return self.keys()
 
     def __getitem__(self, key):
         """
