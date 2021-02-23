@@ -1339,7 +1339,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         """
         _sort_indices = SortComponents.sort_indices(sort)
         _subcomp = PseudoMap(self, ctype, active, sort)
-        for name, comp in _subcomp.iteritems():
+        for name, comp in _subcomp.items():
             # NOTE: Suffix has a dict interface (something other derived
             #   non-indexed Components may do as well), so we don't want
             #   to test the existence of iteritems as a check for
@@ -1348,7 +1348,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             #   processing for the scalar components to catch the case
             #   where there are "sparse scalar components"
             if comp.is_indexed():
-                _items = comp.iteritems()
+                _items = comp.items()
             elif hasattr(comp, '_data'):
                 # This may be an empty Scalar component (e.g., from
                 # Constraint.Skip on a scalar Constraint)
