@@ -15,8 +15,8 @@ from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
     UnindexedComponent_set)
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.plugin import (ModelComponentFactory,
-    IPyomoScriptModifyInstance, TransformationFactory)
+from pyomo.core.base.plugin import ModelComponentFactory
+from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from six import iteritems
 from weakref import ref as weakref_ref
@@ -211,7 +211,7 @@ class _ArcData(ActiveComponentData):
                     "containing exactly 2 Ports.")
             for p in ports:
                 try:
-                    if p.type() is not Port:
+                    if p.ctype is not Port:
                         raise ValueError(msg +
                             "found object '%s' in 'ports' not "
                             "of type Port." % p.name)
@@ -230,7 +230,7 @@ class _ArcData(ActiveComponentData):
                     "for directed Arc.")
             for p, side in [(source, "source"), (destination, "destination")]:
                 try:
-                    if p.type() is not Port:
+                    if p.ctype is not Port:
                         raise ValueError(msg +
                             "%s object '%s' not of type Port." % (p.name, side))
                     elif p.is_indexed():
@@ -291,7 +291,7 @@ class Arc(ActiveIndexedComponent):
 
     def construct(self, data=None):
         """Initialize the Arc"""
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing Arc %s" % self.name)
 
         if self._constructed:

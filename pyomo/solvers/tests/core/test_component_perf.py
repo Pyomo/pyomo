@@ -1,4 +1,13 @@
-import gc
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import os
 thisdir = os.path.dirname(os.path.abspath(__file__))
 
@@ -45,10 +54,10 @@ class ComponentPerformanceBase(object):
 
     def test_iteration(self):
         cnt = 0
-        for cdata in self.model.component_data_objects(self.model.test_component.type()):
+        for cdata in self.model.component_data_objects(self.model.test_component.ctype):
             cnt += 1
         self.assertTrue(cnt > 0)
-        if self.model.test_component.type() in (Set, Var):
+        if self.model.test_component.ctype in (Set, Var):
             self.assertEqual(cnt,
                              len(self.model.test_component) + 1)
         else:

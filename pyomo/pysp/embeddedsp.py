@@ -14,21 +14,18 @@ import itertools
 import random
 import math
 
+from pyomo.common.collections import ComponentMap
 from pyomo.core.expr import current as EXPR
-import pyomo.core.base.param
 from pyomo.core.base import ComponentUID
-from pyomo.core.base.numvalue import is_fixed, is_constant
 from pyomo.core.base.block import (Block,
-                                   SortComponents,
-                                   generate_cuid_names)
-from pyomo.core.base.var import Var, _VarData
+                                   SortComponents)
+from pyomo.core.base.var import Var
 from pyomo.core.base.objective import (Objective,
                                        _ObjectiveData)
 from pyomo.core.base.constraint import (Constraint,
                                         _ConstraintData)
 from pyomo.core.base.sos import SOSConstraint
 from pyomo.core.base.param import _ParamData
-from pyomo.core.base.suffix import ComponentMap
 from pyomo.pysp.annotations import (locate_annotations,
                                     StageCostAnnotation,
                                     VariableStageAnnotation,
@@ -37,7 +34,7 @@ from pyomo.pysp.annotations import (locate_annotations,
                                     StochasticConstraintBodyAnnotation,
                                     StochasticObjectiveAnnotation,
                                     StochasticVariableBoundsAnnotation)
-from pyomo.pysp.scenariotree.tree_structure import ScenarioTree
+from pyomo.pysp.scenariotree import tree_structure
 from pyomo.pysp.scenariotree.tree_structure_model import \
     CreateAbstractScenarioTreeModel
 from pyomo.pysp.scenariotree.manager import \
@@ -63,7 +60,7 @@ def _update_data(worker, scenario, data):
     instance = scenario.instance
     assert instance is not None
     for cuid, val in data:
-        cuid.find_component(instance).value = val
+        cuid.find_component_on(instance).value = val
 
 #
 # These distributions are documented by the SMPS format
@@ -402,12 +399,13 @@ class EmbeddedSP(object):
             _map_variable_stages(self.reference_model)
         self.time_stages = tuple(sorted(self.stage_to_variables_map))
         assert self.time_stages[0] == 1
-        self.variable_symbols = generate_cuid_names(self.reference_model,
-                                                    ctype=Var)
+        self.variable_symbols = ComponentUID.generate_cuid_string_map(
+            self.reference_model, ctype=Var,
+            repr_version=tree_structure.CUID_repr_version)
         # remove the parent blocks from this map
         keys_to_delete = []
         for var in self.variable_symbols:
-            if var.parent_component().type() is not Var:
+            if var.parent_component().ctype is not Var:
                 keys_to_delete.append(var)
         for key in keys_to_delete:
             del self.variable_symbols[key]
@@ -663,13 +661,17 @@ class EmbeddedSP(object):
     def _create_scenario_tree_model(self, size):
         assert size > 0
         stm = CreateAbstractScenarioTreeModel()
-        stm.Stages.add('t1')
-        stm.Stages.add('t2')
-        stm.Nodes.add('root')
+        _stages = ["t1", "t2"]
+        _nodes = ["root"]
+        _scenarios = []
         for i in xrange(1, size+1):
-            stm.Nodes.add('n'+str(i))
-            stm.Scenarios.add('s'+str(i))
-        stm = stm.create_instance()
+            _nodes.append('n'+str(i))
+            _scenarios.append('s'+str(i))
+        stm = stm.create_instance(
+            data={None: {"Stages": _stages,
+                         "Nodes": _nodes,
+                         "Scenarios": _scenarios}}
+        )
         stm.NodeStage['root'] = 't1'
         stm.ConditionalProbability['root'] = 1.0
         weight = 1.0/float(size)

@@ -14,33 +14,27 @@
 #
 
 import os
-import sys
 from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))
 import pickle
+
 import pyutilib.th as unittest
-import pyutilib.services
-import pyomo.opt
-from pyomo.opt import SolutionStatus
-from pyomo.opt.parallel.local import SolverManager_Serial
-from pyomo.environ import *
+
+from pyomo.common.dependencies import yaml_available
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.expr import current as EXPR
+from pyomo.environ import RangeSet, ConcreteModel, Var, Param, Block, AbstractModel, Set, Constraint, Objective, value, sum_product, SolverFactory, VarList, ObjectiveList, ConstraintList
+from pyomo.opt import check_available_solvers
+from pyomo.opt.parallel.local import SolverManager_Serial
 
-solvers = pyomo.opt.check_available_solvers('glpk')
-
-try:
-    import yaml
-    yaml_available=True
-except ImportError:
-    yaml_available=False
-
+solvers = check_available_solvers('glpk')
 
 class Test(unittest.TestCase):
 
     def tearDown(self):
         if os.path.exists("unknown.lp"):
             os.unlink("unknown.lp")
-        pyutilib.services.TempfileManager.clear_tempfiles()
+        TempfileManager.clear_tempfiles()
 
 
     def test_clone_concrete_model(self):
@@ -271,6 +265,35 @@ class Test(unittest.TestCase):
         self.assertMatchesJsonBaseline(
             join(currdir,"solve1b.out"), join(currdir,"solve1b.txt"),
             tolerance=1e-4)
+            
+    def test_store_to_skip_stale_vars(self):
+        # test store_to() function with skip_stale_vars=True
+        model = ConcreteModel()
+        model.A = RangeSet(1,4)
+        model.x = Var(model.A, bounds=(-1,1))
+        def obj_rule(model):
+            return sum_product(model.x)
+        model.obj = Objective(rule=obj_rule)
+        def c_rule(model):
+            expr = 0
+            for i in model.A:
+                expr += i*model.x[i]
+            return expr == 0
+        model.c = Constraint(rule=c_rule)
+        opt = SolverFactory('glpk')
+        results = opt.solve(model, symbolic_solver_labels=True)
+        model.x[1].fix()
+        results = opt.solve(model, symbolic_solver_labels=True)
+        model.solutions.store_to(results,skip_stale_vars=False)
+        for index in model.A:
+            self.assertIn(model.x[index].getname(), results.solution.variable.keys())
+        model.solutions.store_to(results,skip_stale_vars=True)
+        for index in model.A:
+            if index == 1:
+                self.assertNotIn(model.x[index].getname(), results.solution.variable.keys())
+            else:
+                self.assertIn(model.x[index].getname(), results.solution.variable.keys())
+
 
     def test_display(self):
         model = ConcreteModel()
@@ -436,6 +459,26 @@ class Test(unittest.TestCase):
         self.assertEqual(model.nvariables(), 4)
         self.assertEqual(model.nobjectives(), 4)
         self.assertEqual(model.nconstraints(), 4)
+
+    def test_stats4(self):
+        model = ConcreteModel()
+        model.x = Var([1])
+
+        model.B = Block()
+        model.B.x = Var([1, 2, 3])
+        model.B.o = ObjectiveList()
+        model.B.o.add(model.B.x[1])
+        model.B.c = ConstraintList()
+        model.B.c.add(model.B.x[1] == 0)
+        model.B.c.add(model.B.x[2] == 0)
+        model.B.c.add(model.B.x[3] == 0)
+        self.assertEqual(model.nvariables(), 4)
+        self.assertEqual(model.nobjectives(), 1)
+        self.assertEqual(model.nconstraints(), 3)
+        model.clear()
+        self.assertEqual(model.nvariables(), 0)
+        self.assertEqual(model.nobjectives(), 0)
+        self.assertEqual(model.nconstraints(), 0)
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve_with_pickle(self):
@@ -769,8 +812,10 @@ class Test(unittest.TestCase):
                 return sum(m.x[i] for i in m.I) >= 0
             m.c = Constraint( rule=c )
 
-        model = AbstractModel(rule=make_invalid)
-        self.assertRaises(RuntimeError, model.create_instance)
+        with self.assertRaisesRegexp(
+                ValueError, 'x\[1\]: The component has not been constructed.'):
+            model = AbstractModel(rule=make_invalid)
+            instance = model.create_instance()
 
         model = AbstractModel(rule=make)
         instance = model.create_instance()

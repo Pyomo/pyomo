@@ -2,34 +2,32 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import itertools
 import logging
 import os
 import subprocess
 import re
 import tempfile
 
-import pyomo.common
-import pyutilib
-from pyutilib.misc import Options
+from pyomo.common import Executable
+from pyomo.common.collections import Options, Bunch
+from pyomo.common.tempfiles import TempfileManager
+from pyutilib.subprocess import run
 
-from pyomo.opt.base import *
-from pyomo.opt.base.solvers import _extract_version
-from pyomo.opt.results import *
-from pyomo.opt.solver import *
-from pyomo.core.base import SortComponents
-from pyomo.core.base.objective import Objective
-from pyomo.core.base import Constraint
-from pyomo.core.base.set_types import *
-from pyomo.repn.plugins.baron_writer import ProblemWriter_bar
+from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
+from pyomo.opt.base.solvers import _extract_version, SolverFactory
+from pyomo.opt.results import (
+    SolverResults, Solution, SolverStatus, TerminationCondition,
+    SolutionStatus,
+)
+from pyomo.opt.solver import SystemCallSolver
 
-from six.moves import xrange, zip
+from six.moves import zip
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -37,7 +35,7 @@ logger = logging.getLogger('pyomo.solvers')
 class BARONSHELL(SystemCallSolver):
     """The BARON MINLP solver
     """
-
+    _solver_info_cache = {}
 
     def __init__(self, **kwds):
         #
@@ -76,8 +74,7 @@ class BARONSHELL(SystemCallSolver):
         #               the number's sign.
         self._precision_string = '.17g'
 
-    @staticmethod
-    def _get_dummy_input_files(check_license=False):
+    def _get_dummy_input_files(self, check_license=False):
         with tempfile.NamedTemporaryFile(mode='w',
                                          delete=False) as f:
             # For some reason, if results: 0 is added to the options
@@ -115,46 +112,51 @@ class BARONSHELL(SystemCallSolver):
             f.write("OBJ: minimize x1;")
         return (f.name, fr.name, fs.name, ft.name)
 
-    @staticmethod
-    def _remove_dummy_input_files(fnames):
+    def _remove_dummy_input_files(self, fnames):
         for name in fnames:
             try:
                 os.remove(name)
             except OSError:
                 pass
 
-    @staticmethod
-    def license_is_valid(executable='baron'):
+    def license_is_valid(self):
         """Runs a check for a valid Baron license using the
         given executable (default is 'baron'). All output is
         hidden. If the test fails for any reason (including
         the executable being invalid), then this function
         will return False."""
-        fnames= BARONSHELL._get_dummy_input_files(check_license=True)
-        try:
-            process = subprocess.Popen([executable, fnames[0]],
-                                       stdout=subprocess.PIPE,
-                                       stderr=subprocess.STDOUT)
-            stdout, stderr = process.communicate()
-            assert stderr is None
-            rc = 0
-            if process.returncode:
-                rc = 1
-            else:
-                stdout = stdout.decode()
-                if "Continuing in demo mode" in stdout:
-                    rc = 1
-        except OSError:
-            rc = 1
-        finally:
-            BARONSHELL._remove_dummy_input_files(fnames)
-        if rc:
-            return False
+        solver_exec = self.executable()
+        if (solver_exec, 'licensed') in self._solver_info_cache:
+            return self._solver_info_cache[(solver_exec, 'licensed')]
+
+        if not solver_exec:
+            licensed = False
         else:
-            return True
+            fnames= self._get_dummy_input_files(check_license=True)
+            try:
+                process = subprocess.Popen([solver_exec, fnames[0]],
+                                           stdout=subprocess.PIPE,
+                                           stderr=subprocess.STDOUT)
+                stdout, stderr = process.communicate()
+                assert stderr is None
+                rc = 0
+                if process.returncode:
+                    rc = 1
+                else:
+                    stdout = stdout.decode()
+                    if "Continuing in demo mode" in stdout:
+                        rc = 1
+            except OSError:
+                rc = 1
+            finally:
+                self._remove_dummy_input_files(fnames)
+            licensed = not rc
+
+        self._solver_info_cache[(solver_exec, 'licensed')] = licensed
+        return licensed
 
     def _default_executable(self):
-        executable = pyomo.common.Executable("baron")
+        executable = Executable("baron")
         if not executable:
             logger.warning("Could not locate the 'baron' executable, "
                            "which is required for solver %s" % self.name)
@@ -167,31 +169,36 @@ class BARONSHELL(SystemCallSolver):
         Returns a tuple describing the solver executable version.
         """
         solver_exec = self.executable()
+        if (solver_exec, 'version') in self._solver_info_cache:
+            return self._solver_info_cache[(solver_exec, 'version')]
 
         if solver_exec is None:
-            return _extract_version('')
+            ver = _extract_version('')
         else:
             fnames = self._get_dummy_input_files(check_license=False)
             try:
-                results = pyutilib.subprocess.run([solver_exec, fnames[0]])
-                return _extract_version(results[1])
+                results = run([solver_exec, fnames[0]])
+                ver = _extract_version(results[1])
             finally:
                 self._remove_dummy_input_files(fnames)
+
+        self._solver_info_cache[(solver_exec, 'version')] = ver
+        return ver
 
     def create_command_line(self, executable, problem_files):
 
         # The solution file is created in the _convert_problem function.
         # The bar file needs the solution filename in the OPTIONS section, but
         # this function is executed after the bar problem file writing.
-        #self._soln_file = pyutilib.services.TempfileManager.create_tempfile(suffix = '.baron.sol')
+        #self._soln_file = pyomo.common.tempfiles.TempfileManager.create_tempfile(suffix = '.baron.sol')
 
 
         cmd = [executable, problem_files[0]]
         if self._timer:
             cmd.insert(0, self._timer)
-        return pyutilib.misc.Bunch( cmd=cmd,
-                                    log_file=self._log_file,
-                                    env=None )
+        return Bunch( cmd=cmd,
+                      log_file=self._log_file,
+                      env=None )
 
     #
     # Assuming the variable values stored in the model will
@@ -215,17 +222,17 @@ class BARONSHELL(SystemCallSolver):
         # Define log file
         #
         if self._log_file is None:
-            self._log_file = pyutilib.services.TempfileManager.\
+            self._log_file = TempfileManager.\
                             create_tempfile(suffix = '.baron.log')
 
         #
         # Define solution file
         #
         if self._soln_file is None:
-            self._soln_file = pyutilib.services.TempfileManager.\
+            self._soln_file = TempfileManager.\
                               create_tempfile(suffix = '.baron.soln')
 
-        self._tim_file = pyutilib.services.TempfileManager.\
+        self._tim_file = TempfileManager.\
                          create_tempfile(suffix = '.baron.tim')
 
         #
@@ -238,13 +245,23 @@ class BARONSHELL(SystemCallSolver):
         for key in self.options:
             lower_key = key.lower()
             if lower_key == 'resname':
-                logger.warning('The ResName option is set to %s'
-                               % self._soln_file)
+                logger.warning(
+                    'Ignoring user-specified option "%s=%s".  This '
+                    'option is set to %s, and can be overridden using '
+                    'the "solnfile" argument to the solve() method.'
+                    % (key, self.options[key], self._soln_file))
             elif lower_key == 'timname':
-                logger.warning('The TimName option is set to %s'
-                               % self._tim_file)
+                logger.warning(
+                    'Ignoring user-specified option "%s=%s".  This '
+                    'option is set to %s.'
+                    % (key, self.options[key], self._tim_file))
             else:
                 solver_options[key] = self.options[key]
+
+        for suffix in self._suffixes:
+            if re.match(suffix, 'dual') or re.match(suffix, 'rc'):
+                solver_options['WantDual'] = 1
+                break
 
         if 'solver_options' in kwds:
             raise ValueError("Baron solver options should be set "
@@ -314,7 +331,7 @@ class BARONSHELL(SystemCallSolver):
         #         file will be excluded from the results object.
         #
 
-        # TODO: Is there a way to hanle non-zero return values from baron?
+        # TODO: Is there a way to handle non-zero return values from baron?
         #       Example: the "NonLinearity Error if POW expression"
         #       (caused by  x ^ y) when both x and y are variables
         #       causes an ugly python error and the solver log has a single

@@ -1,17 +1,27 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Tests for the GDPopt solver plugin."""
 import logging
 from math import fabs
-from os.path import abspath, dirname, join, normpath
+from os.path import join, normpath
 
 from six import StringIO
 
-import pyomo.core.base.symbolic
 import pyutilib.th as unittest
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.collections import Container
 from pyomo.contrib.gdpopt.GDPopt import GDPoptSolver
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
-from pyomo.contrib.gdpopt.util import is_feasible
+from pyomo.contrib.gdpopt.util import is_feasible, time_code
 from pyomo.environ import ConcreteModel, Objective, SolverFactory, Var, value, Integers, Block, Constraint, maximize
 from pyomo.gdp import Disjunct, Disjunction
 from pyutilib.misc import import_file
@@ -51,7 +61,10 @@ class TestGDPoptUnit(unittest.TestCase):
         m.GDPopt_utils.disjunct_list = [m.d._autodisjuncts[0], m.d._autodisjuncts[1]]
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
-            solve_linear_GDP(m, GDPoptSolveData(), GDPoptSolver.CONFIG(dict(mip_solver=mip_solver)))
+            solver_data = GDPoptSolveData()
+            solver_data.timing = Container()
+            with time_code(solver_data.timing, 'main', is_main_timer=True):
+                solve_linear_GDP(m, solver_data, GDPoptSolver.CONFIG(dict(mip_solver=mip_solver)))
             self.assertIn("Linear GDP was unbounded. Resolving with arbitrary bound values",
                           output.getvalue().strip())
 
@@ -145,8 +158,6 @@ class TestGDPoptUnit(unittest.TestCase):
 @unittest.skipIf(not LOA_solvers_available,
                  "Required subsolvers %s are not available"
                  % (LOA_solvers,))
-@unittest.skipIf(not pyomo.core.base.symbolic.differentiate_available,
-                 "Symbolic differentiation is not available")
 class TestGDPopt(unittest.TestCase):
     """Tests for the GDPopt solver plugin."""
 

@@ -1,3 +1,46 @@
+/* links and fixed-with literals should NOT be bold */
+.rst-content code {
+    font-weight: normal !important;
+}
+
+/* internal reference links should be purple (not grey) */
+code.xref.py {
+    color: #8C1AFF;
+}
+
+/* Fix to RTD theme to allow table cell content to wrap */
+@media screen and (min-width: 767px) {
+  .wy-table-responsive table td {
+    white-space: normal !important;
+  }
+  .wy-table-responsive {
+    overflow: visible !important;
+  }
+}
+
+/* Remove space after tables in definition lists (e.g., for function
+   "Parameters" lists*/
+.rst-content dl div.wy-table-responsive {
+   margin-bottom: 12px !important;
+}
+
+/* Define a new "tight-table" class that we can use to format tighter
+   simple banded tables */
+.rst-content table.tight-table {
+   border-style: solid;
+   border-collapse: separate !important;
+}
+.rst-content table.tight-table td {
+   border-style: hidden !important;
+   padding-top: 4px !important;
+   padding-bottom: 4px !important;
+   padding-left: 8px !important;
+   padding-right: 8px !important;
+}
+
+
+/* OLD theme overrides
+
 code.docutils.literal{
     color:#8C1AFF;
     border: 0px;
@@ -6,3 +49,13 @@ code.docutils.literal{
     font-size: 100%;
 }
 
+.wy-table-responsive table td, .wy-table-responsive table th {
+    white-space: normal;
+}
+
+.wy-table-responsive {
+    margin-bottom: 24px;
+    max-width: 100%;
+    overflow: visible;
+}
+*/

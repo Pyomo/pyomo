@@ -23,16 +23,12 @@ import pyutilib.subprocess
 from pyomo.core import ComponentUID
 from pyomo.opt import (ReaderFactory,
                        ResultsFormat,
-                       ProblemFormat,
                        UndefinedData)
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
                                     safe_register_common_option,
                                     safe_register_unique_option,
-                                    safe_declare_common_option,
-                                    safe_declare_unique_option,
-                                    _domain_must_be_str,
                                     _domain_tuple_of_str_or_dict)
 from pyomo.pysp.util.misc import (parse_command_line,
                                   launch_command)
@@ -52,9 +48,6 @@ from pyomo.pysp.convert.schuripopt import \
      _write_scenario_nl,
      _write_problem_list_file)
 
-from six.moves import xrange
-# use fast version of pickle (python 2 or 3)
-from six.moves import cPickle as pickle
 
 # generate an absolute path to this file
 thisfile = os.path.abspath(__file__)

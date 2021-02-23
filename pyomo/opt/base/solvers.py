@@ -14,16 +14,15 @@ __all__ = ('OptSolver',
            'check_available_solvers')
 
 import re
-import os
 import sys
 import time
 import logging
 
-from pyutilib.misc.config import ConfigBlock, ConfigList, ConfigValue
+from pyomo.common.config import ConfigBlock, ConfigList, ConfigValue
 from pyomo.common import Factory
-import pyutilib.common
-import pyutilib.misc
-import pyutilib.services
+from pyomo.common.errors import ApplicationError
+from pyomo.common.collections import Options
+from pyutilib.misc import quote_split
 
 from pyomo.opt.base.problem import ProblemConfigFactory
 from pyomo.opt.base.convert import convert_problem
@@ -95,8 +94,11 @@ class UnknownSolver(object):
     def available(self, exception_flag=True):
         """Determine if this optimizer is available."""
         if exception_flag:
-            from pyutilib.common import ApplicationError
-            raise pyutilib.common.ApplicationError("Solver (%s) not available" % str(self.name))
+            raise ApplicationError("Solver (%s) not available" % str(self.name))
+        return False
+
+    def license_is_valid(self):
+        "True if the solver is present and has a valid license (if applicable)"
         return False
 
     def warm_start_capable(self):
@@ -192,7 +194,7 @@ SolverFactory = SolverFactoryClass('solver type')
 def check_available_solvers(*args):
     from pyomo.solvers.plugins.solvers.GUROBI import GUROBISHELL
     from pyomo.solvers.plugins.solvers.BARON import BARONSHELL
-    from pyomo.solvers.plugins.solvers.mosek_direct import MosekDirect
+    from pyomo.solvers.plugins.solvers.mosek_direct import MOSEKDirect
 
     logging.disable(logging.WARNING)
 
@@ -205,23 +207,19 @@ def check_available_solvers(*args):
             name = arg[0]
         opt = SolverFactory(*arg)
         if opt is None or isinstance(opt, UnknownSolver):
-            available = False
-        elif (arg[0] == "gurobi") and \
-           (not GUROBISHELL.license_is_valid()):
-            available = False
-        elif (arg[0] == "baron") and \
-           (not BARONSHELL.license_is_valid()):
-            available = False
-        elif (arg[0] == "mosek") and \
-           (not MosekDirect.license_is_valid()):
-            available = False
-        else:
-            available = \
-                (opt.available(exception_flag=False)) and \
-                ((not hasattr(opt,'executable')) or \
-                (opt.executable() is not None))
-        if available:
-            ans.append(name)
+            continue # not available
+
+        if not opt.available(exception_flag=False):
+            continue # not available
+
+        if hasattr(opt, 'executable') and opt.executable() is None:
+            continue # not available
+
+        if not opt.license_is_valid():
+            continue # not available
+
+        # At this point, the solver is available (and licensed)
+        ans.append(name)
 
     logging.disable(logging.NOTSET)
 
@@ -343,7 +341,7 @@ class OptSolver(object):
         # through the solve command. Everything else is reset inside
         # presolve
         #
-        self.options = pyutilib.misc.Options()
+        self.options = Options()
         if 'options' in kwds and not kwds['options'] is None:
             for key in kwds['options']:
                 setattr(self.options, key, kwds['options'][key])
@@ -392,7 +390,7 @@ class OptSolver(object):
 
         # We define no capabilities for the generic solver; base
         # classes must override this
-        self._capabilities = pyutilib.misc.Options()
+        self._capabilities = Options()
 
     @staticmethod
     def _options_string_to_dict(istr):
@@ -402,7 +400,7 @@ class OptSolver(object):
             return ans
         if istr[0] == "'" or istr[0] == '"':
             istr = eval(istr)
-        tokens = pyutilib.misc.quote_split('[ ]+',istr)
+        tokens = quote_split('[ ]+',istr)
         for token in tokens:
             index = token.find('=')
             if index == -1:
@@ -506,6 +504,10 @@ class OptSolver(object):
         """ True if the solver is available """
         return True
 
+    def license_is_valid(self):
+        "True if the solver is present and has a valid license (if applicable)"
+        return True
+
     def warm_start_capable(self):
         """ True is the solver can accept a warm-start solution """
         return False
@@ -560,7 +562,7 @@ class OptSolver(object):
 
         orig_options = self.options
 
-        self.options = pyutilib.misc.Options()
+        self.options = Options()
         self.options.update(orig_options)
         self.options.update(kwds.pop('options', {}))
         self.options.update(
@@ -596,7 +598,7 @@ class OptSolver(object):
                         "See the solver log above for diagnostic information." )
                 elif hasattr(_status, 'log') and _status.log:
                     logger.error("Solver log:\n" + str(_status.log))
-                raise pyutilib.common.ApplicationError(
+                raise ApplicationError(
                     "Solver (%s) did not exit normally" % self.name)
             solve_completion_time = time.time()
             if self._report_timing:
@@ -787,7 +789,7 @@ class OptSolver(object):
         a Pyomo model instance object.
         """
         if not self._allow_callbacks:
-            raise pyutilib.common.ApplicationError(
+            raise ApplicationError(
                 "Callbacks disabled for solver %s" % self.name)
         if callback_fn is None:
             if name in self._callback:
@@ -928,10 +930,15 @@ def default_config_block(solver, init=False):
                 'Print the results object after optimization.',
                 None) ).declare_as_argument(dest="show_results")
     postsolve.declare('results format', ConfigValue(
-                None,
-                str,
-                'Specify the results format:  json or yaml.',
-                None) ).declare_as_argument('--results-format', dest="results_format", metavar="FORMAT").declare_as_argument('--json', dest="results_format", action="store_const", const="json", help="Store results in JSON format")
+        None,
+        str,
+        'Specify the results format:  json or yaml.',
+        None)
+    ).declare_as_argument(
+        '--results-format', dest="results_format", metavar="FORMAT"
+    ).declare_as_argument(
+        '--json', dest="results_format", action="store_const",
+        const="json", help="Store results in JSON format")
     postsolve.declare('summary', ConfigValue(
                 False,
                 bool,

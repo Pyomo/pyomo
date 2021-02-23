@@ -8,8 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.kernel as pmo
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, NonNegativeReals
+from pyomo.core import ConcreteModel, Var, Objective, Constraint, NonNegativeReals
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 # NOTE: We could test this problem on solvers that only handle

@@ -15,6 +15,8 @@ import types
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import ModelComponentFactory
@@ -23,7 +25,8 @@ from pyomo.core.base.indexed_component import IndexedComponent, \
     UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
 from pyomo.core.base.numvalue import NumericValue, native_types, value
-from pyomo.core.base.set_types import Any
+from pyomo.core.base.set_types import Any, Reals
+from pyomo.core.base.units_container import units
 
 from six import iteritems, iterkeys, next, itervalues
 
@@ -41,6 +44,46 @@ def _raise_modifying_immutable_error(obj, index):
         "declare the parameter as mutable [i.e., Param(mutable=True)]"
         % (name,))
 
+class _ImplicitAny(Any.__class__):
+    """An Any that issues a deprecation warning for non-Real values.
+
+    This is a helper class to implement the deprecation warnings for the
+    change of Param's implicit domain from Any to Reals.
+
+    """
+    def __new__(cls, **kwds):
+        return super(_ImplicitAny, cls).__new__(cls)
+
+    def __init__(self, owner, **kwds):
+        super(_ImplicitAny, self).__init__(**kwds)
+        self._owner = weakref_ref(owner)
+        self._component = weakref_ref(self)
+        self.construct()
+
+    def __getstate__(self):
+        state = super(_ImplicitAny, self).__getstate__()
+        state['_owner'] = None if self._owner is None else self._owner()
+        return state
+
+    def __setstate__(self, state):
+        _owner = state.pop('_owner')
+        super(_ImplicitAny, self).__setstate__(state)
+        self._owner = None if _owner is None else weakref_ref(_owner)
+
+    def __deepcopy__(self, memo):
+        return super(Any.__class__, self).__deepcopy__(memo)
+
+    def __contains__(self, val):
+        if val not in Reals:
+            deprecation_warning(
+                "The default domain for Param objects is 'Any'.  However, "
+                "we will be changing that default to 'Reals' in the "
+                "future.  If you really intend the domain of this Param (%s) "
+                "to be 'Any', you can suppress this warning by explicitly "
+                "specifying 'within=Any' to the Param constructor."
+                % ('Unknown' if self._owner is None else self._owner().name,),
+                version='5.6.9', remove_in='6.0')
+        return True
 
 class _NotValid(object):
     """A dummy type that is pickle-safe that we can use as the default
@@ -125,6 +168,9 @@ class _ParamData(ComponentData, NumericValue):
         """Set the value for this variable."""
         self.set_value(val)
 
+    def get_units(self):
+        """Return the units for this ParamData"""
+        return self.parent_component()._units
 
     def is_fixed(self):
         """
@@ -143,22 +189,6 @@ class _ParamData(ComponentData, NumericValue):
         Returns True because this is a parameter object.
         """
         return True
-
-    def is_variable_type(self):
-        """
-        Returns False because this is not a variable object.
-        """
-        return False
-
-    def is_expression_type(self):
-        """Returns False because this is not an expression"""
-        return False
-
-    def is_potentially_variable(self):
-        """
-        Returns False because this object can never reference variables.
-        """
-        return False
 
     def _compute_polynomial_degree(self, result):
         """
@@ -197,6 +227,11 @@ class Param(IndexedComponent):
         initialize  
             A dictionary or rule for setting up this parameter with existing 
             model data
+        unit: pyomo unit expression
+            An expression containing the units for the parameter
+        mutable: `boolean`
+            Flag indicating if the value of the parameter may change between
+            calls to a solver. Defaults to `False`
     """
 
     DefaultMutable = False
@@ -213,18 +248,22 @@ class Param(IndexedComponent):
         self._rule          = kwd.pop('rule', _NotValid )
         self._rule          = kwd.pop('initialize', self._rule )
         self._validate      = kwd.pop('validate', None )
-        self.domain         = kwd.pop('domain', Any )
+        self.domain         = kwd.pop('domain', None )
         self.domain         = kwd.pop('within', self.domain )
         self._mutable       = kwd.pop('mutable', Param.DefaultMutable )
         self._default_val   = kwd.pop('default', _NotValid )
         self._dense_initialize = kwd.pop('initialize_as_dense', False)
+        self._units         = kwd.pop('units', None)
+        if self._units is not None:
+            self._units = units.get_units(self._units)
+            self._mutable = True
         #
         if 'repn' in kwd:
             logger.error(
                 "The 'repn' keyword is not a validate keyword argument for Param")
         #
         if self.domain is None:
-            self.domain = Any
+            self.domain = _ImplicitAny(owner=self, name='Any')
         #
         kwd.setdefault('ctype', Param)
         IndexedComponent.__init__(self, *args, **kwd)
@@ -257,9 +296,13 @@ class Param(IndexedComponent):
             return self._data.__iter__()
         return self._index.__iter__()
 
-    def is_expression_type(self):
-        """Returns False because this is not an expression"""
-        return False
+    @property
+    def mutable(self):
+        return self._mutable
+
+    def get_units(self):
+        """Return the units for this ParamData"""
+        return self._units
 
     #
     # These are "sparse equivalent" access / iteration methods that
@@ -834,7 +877,7 @@ This has resulted in the conversion of the source to dense form.
         constructed.  We throw an exception if a user tries
         to use an uninitialized Param.
         """
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
+        if is_debug_set(logger):   #pragma:nocover
             logger.debug("Constructing Param, name=%s, from data=%s"
                          % ( self.name, str(data) ))
         #

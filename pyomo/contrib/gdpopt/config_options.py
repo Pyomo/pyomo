@@ -1,6 +1,16 @@
-from pyutilib.misc.config import ConfigBlock, ConfigList
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
-from pyomo.common.config import ConfigValue, NonNegativeInt, In, PositiveInt, NonNegativeFloat
+from pyomo.common.config import (ConfigValue, NonNegativeInt, 
+                                 In, PositiveInt, NonNegativeFloat,
+                                 ConfigBlock, ConfigList)
 from pyomo.contrib.gdpopt.master_initialize import valid_init_strategies
 from pyomo.contrib.gdpopt.util import _DoNothing, a_logger
 

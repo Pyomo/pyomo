@@ -66,9 +66,15 @@ def write_csv_soln(scenario_tree, output_file_prefix):
     cost_filename = output_file_prefix + "_StageCostDetail.csv"
     with open(cost_filename, "w") as f:
         for stage in scenario_tree.stages:
-            cost_name, cost_index = stage._cost_variable
+            # DLW March 2020 to pasting over a bug in handling
+            # of NetworkX by tree_structure.py
+            # (stage costs may be None but are OK at the node level)
+            scost = stage._cost_variable  # might be None
             for tree_node in sorted(stage.nodes,
                                     key=lambda x: x.name):
+                if scost is None:
+                    scost = tree_node._cost_variable
+                cost_name, cost_index = scost # moved into loop 3/2020 hack
                 for scenario in sorted(tree_node.scenarios,
                                        key=lambda x: x.name):
                     stage_cost = scenario._stage_costs[stage.name]

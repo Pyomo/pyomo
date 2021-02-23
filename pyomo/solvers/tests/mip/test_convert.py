@@ -19,10 +19,11 @@ pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-import pyutilib.services
-import pyutilib.common
+from pyomo.common.tempfiles import TempfileManager
+from pyomo.common.errors import ApplicationError
 
-import pyomo.opt
+from pyomo.opt import ProblemFormat, ConverterError, convert_problem
+from pyomo.common import Executable
 
 def filter(line):
     return 'Problem' in line or line.startswith('NAME')
@@ -30,11 +31,11 @@ def filter(line):
 old_tempdir = None
 def setUpModule():
     global old_tempdir
-    old_tempdir = pyutilib.services.TempfileManager.tempdir
-    pyutilib.services.TempfileManager.tempdir = currdir
+    old_tempdir = TempfileManager.tempdir
+    TempfileManager.tempdir = currdir
 
 def tearDownModule():
-    pyutilib.services.TempfileManager.tempdir = old_tempdir
+    TempfileManager.tempdir = old_tempdir
 
 class MockArg(object):
 
@@ -42,7 +43,7 @@ class MockArg(object):
         pass
 
     def valid_problem_types(self):
-        return [pyomo.opt.ProblemFormat.pyomo]
+        return [ProblemFormat.pyomo]
 
     def write(self,filename="", format=None, solver_capability=None, io_options={}):
         return (filename,None)
@@ -50,7 +51,7 @@ class MockArg(object):
 class MockArg2(MockArg):
 
     def valid_problem_types(self):
-        return [pyomo.opt.ProblemFormat.nl]
+        return [ProblemFormat.nl]
 
     def write(self,filename="", format=None, solver_capability=None, io_options={}):
         OUTPUT=open(filename,"w")
@@ -64,7 +65,7 @@ class MockArg2(MockArg):
 class MockArg3(MockArg):
 
     def valid_problem_types(self):
-        return [pyomo.opt.ProblemFormat.mod]
+        return [ProblemFormat.mod]
 
     def write(self,filename="", format=None, solver_capability=None, io_options={}):
         return (filename,None)
@@ -88,31 +89,31 @@ class Test(unittest.TestCase):
         import pyomo.environ
 
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
+        TempfileManager.clear_tempfiles()
 
     def test_nl_nl1(self):
         #""" Convert from NL to NL """
-        ans = pyomo.opt.convert_problem( ("test4.nl",), None, [pyomo.opt.ProblemFormat.nl])
+        ans = convert_problem( ("test4.nl",), None, [ProblemFormat.nl])
         self.assertEqual(ans[0],("test4.nl",))
 
     def test_nl_nl2(self):
         #""" Convert from NL to NL """
-        ans = pyomo.opt.convert_problem( ("test4.nl","tmp.nl"), None, [pyomo.opt.ProblemFormat.nl])
+        ans = convert_problem( ("test4.nl","tmp.nl"), None, [ProblemFormat.nl])
         self.assertEqual(ans[0],("test4.nl","tmp.nl"))
 
     def test_nl_lp1(self):
         #""" Convert from NL to LP """
         try:
-            ans = pyomo.opt.convert_problem( (currdir+"test4.nl",), None, [pyomo.opt.ProblemFormat.cpxlp])
-        except pyutilib.common.ApplicationError:
+            ans = convert_problem( (currdir+"test4.nl",), None, [ProblemFormat.cpxlp])
+        except ApplicationError:
             err = sys.exc_info()[1]
-            if pyomo.common.Executable("pico_convert").available():
+            if Executable("pico_convert").available():
                 self.fail("Unexpected ApplicationError - pico_convert is "
                           "enabled but not available: '%s'" % str(err))
             return
-        except pyomo.opt.ConverterError:
+        except ConverterError:
             err = sys.exc_info()[1]
-            if pyomo.common.Executable("pico_convert").available():
+            if Executable("pico_convert").available():
                 self.fail("Unexpected ConverterError - pico_convert is "
                           "enabled but not available: '%s'" % str(err))
             return
@@ -122,16 +123,16 @@ class Test(unittest.TestCase):
     def test_mod_lp1(self):
         #""" Convert from MOD to LP """
         try:
-            ans = pyomo.opt.convert_problem( (currdir+"test3.mod",), None, [pyomo.opt.ProblemFormat.cpxlp])
-        except pyutilib.common.ApplicationError:
+            ans = convert_problem( (currdir+"test3.mod",), None, [ProblemFormat.cpxlp])
+        except ApplicationError:
             err = sys.exc_info()[1]
-            if pyomo.common.Executable("glpsol").available():
+            if Executable("glpsol").available():
                 self.fail("Unexpected ApplicationError - glpsol is "
                           "enabled but not available: '%s'" % str(err))
             return
-        except pyomo.opt.ConverterError:
+        except ConverterError:
             err = sys.exc_info()[1]
-            if pyomo.common.Executable("glpsol").available():
+            if Executable("glpsol").available():
                 self.fail("Unexpected ConverterError - glpsol is "
                           "enabled but not available: '%s'" % str(err))
             return
@@ -141,16 +142,16 @@ class Test(unittest.TestCase):
     def test_mod_lp2(self):
         #""" Convert from MOD+DAT to LP """
         try:
-            ans = pyomo.opt.convert_problem( (currdir+"test5.mod",currdir+"test5.dat"), None, [pyomo.opt.ProblemFormat.cpxlp])
-        except pyutilib.common.ApplicationError:
+            ans = convert_problem( (currdir+"test5.mod",currdir+"test5.dat"), None, [ProblemFormat.cpxlp])
+        except ApplicationError:
             err = sys.exc_info()[1]
-            if pyomo.common.Executable("glpsol").available():
+            if Executable("glpsol").available():
                 self.fail("Unexpected ApplicationError - glpsol is "
                           "enabled but not available: '%s'" % str(err))
             return
-        except pyomo.opt.ConverterError:
+        except ConverterError:
             err = sys.exc_info()[1]
-            if pyomo.common.Executable("glpsol").available():
+            if Executable("glpsol").available():
                 self.fail("Unexpected ConverterError - glpsol is "
                           "enabled but not available: '%s'" % str(err))
             return
@@ -160,16 +161,16 @@ class Test(unittest.TestCase):
     def test_mod_nl1(self):
         #""" Convert from MOD to NL """
         try:
-            ans = pyomo.opt.convert_problem( (currdir+"test3.mod",), None, [pyomo.opt.ProblemFormat.nl])
-        except pyutilib.common.ApplicationError:
+            ans = convert_problem( (currdir+"test3.mod",), None, [ProblemFormat.nl])
+        except ApplicationError:
             err = sys.exc_info()[1]
-            if pyomo.common.Executable("ampl").available():
+            if Executable("ampl").available():
                 self.fail("Unexpected ApplicationError - ampl is "
                           "enabled but not available: '%s'" % str(err))
             return
-        except pyomo.opt.ConverterError:
+        except ConverterError:
             err = sys.exc_info()[1]
-            if pyomo.common.Executable("ampl").available():
+            if Executable("ampl").available():
                 self.fail("Unexpected ConverterError - ampl is "
                           "enabled but not available: '%s'" % str(err))
             return
@@ -179,16 +180,16 @@ class Test(unittest.TestCase):
     def test_mod_nl2(self):
         #""" Convert from MOD+DAT to NL """
         try:
-            ans = pyomo.opt.convert_problem( (currdir+"test5.mod",currdir+"test5.dat"), None, [pyomo.opt.ProblemFormat.nl])
-        except pyutilib.common.ApplicationError:
+            ans = convert_problem( (currdir+"test5.mod",currdir+"test5.dat"), None, [ProblemFormat.nl])
+        except ApplicationError:
             err = sys.exc_info()[1]
-            if pyomo.common.Executable("ampl").available():
+            if Executable("ampl").available():
                 self.fail("Unexpected ApplicationError - ampl is "
                           "enabled but not available: '%s'" % str(err))
             return
-        except pyomo.opt.ConverterError:
+        except ConverterError:
             err = sys.exc_info()[1]
-            if pyomo.common.Executable("ampl").available():
+            if Executable("ampl").available():
                 self.fail("Unexpected ConverterError - ampl is "
                           "enabled but not available: '%s'" % str(err))
             return
@@ -198,22 +199,22 @@ class Test(unittest.TestCase):
     def test_mock_lp1(self):
         #""" Convert from Pyomo to LP """
         arg=MockArg()
-        ans = pyomo.opt.convert_problem( (arg,pyomo.opt.ProblemFormat.cpxlp,arg), None, [pyomo.opt.ProblemFormat.cpxlp])
+        ans = convert_problem( (arg, ProblemFormat.cpxlp,arg), None, [ProblemFormat.cpxlp])
         self.assertNotEqual(re.match(".*tmp.*pyomo.lp$",ans[0][0]), None)
 
     def test_pyomo_lp1(self):
         #""" Convert from Pyomo to LP with file"""
-        ans = pyomo.opt.convert_problem( (currdir+'model.py',pyomo.opt.ProblemFormat.cpxlp,), None, [pyomo.opt.ProblemFormat.cpxlp])
+        ans = convert_problem( (currdir+'model.py', ProblemFormat.cpxlp,), None, [ProblemFormat.cpxlp])
         self.assertNotEqual(re.match(".*tmp.*pyomo.lp$",ans[0][0]), None)
 
     def test_mock_lp2(self):
         #""" Convert from NL to LP """
         arg=MockArg2()
         try:
-            ans = pyomo.opt.convert_problem( (arg,), None, [pyomo.opt.ProblemFormat.cpxlp])
-        except pyomo.opt.ConverterError:
+            ans = convert_problem( (arg,), None, [ProblemFormat.cpxlp])
+        except ConverterError:
             err = sys.exc_info()[1]
-            if not pyomo.common.Executable("pico_convert"):
+            if not Executable("pico_convert"):
                 return
             else:
                 self.fail("Expected ApplicationError because pico_convert "
@@ -227,10 +228,10 @@ class Test(unittest.TestCase):
         #""" Convert from Pyomo to MPS """
         arg=MockArg4()
         try:
-            ans = pyomo.opt.convert_problem( (arg,pyomo.opt.ProblemFormat.mps,arg), None, [pyomo.opt.ProblemFormat.mps])
-        except pyomo.opt.ConverterError:
+            ans = convert_problem((arg, ProblemFormat.mps,arg), None, [ProblemFormat.mps])
+        except ConverterError:
             err = sys.exc_info()[1]
-            if not pyomo.common.Executable("pico_convert"):
+            if not Executable("pico_convert"):
                 return
             else:
                 self.fail("Expected ApplicationError because pico_convert "
@@ -241,10 +242,10 @@ class Test(unittest.TestCase):
     def test_pyomo_mps1(self):
         #""" Convert from Pyomo to MPS with file"""
         try:
-            ans = pyomo.opt.convert_problem( (currdir+'model.py',pyomo.opt.ProblemFormat.mps,), None, [pyomo.opt.ProblemFormat.mps])
-        except pyomo.opt.ConverterError:
+            ans = convert_problem( (currdir+'model.py', ProblemFormat.mps,), None, [ProblemFormat.mps])
+        except ConverterError:
             err = sys.exc_info()[1]
-            if not pyomo.common.Executable("pico_convert"):
+            if not Executable("pico_convert"):
                 return
             else:
                 self.fail("Expected ApplicationError because pico_convert "
@@ -254,111 +255,111 @@ class Test(unittest.TestCase):
 
     def test_mock_nl1(self):
         #""" Convert from Pyomo to NL """
-        arg=MockArg4()
-        ans = pyomo.opt.convert_problem( (arg,pyomo.opt.ProblemFormat.nl,arg), None, [pyomo.opt.ProblemFormat.nl])
+        arg = MockArg4()
+        ans = convert_problem( (arg, ProblemFormat.nl,arg), None, [ProblemFormat.nl])
         self.assertNotEqual(re.match(".*tmp.*pyomo.nl$",ans[0][0]), None)
         os.remove(ans[0][0])
 
     def test_pyomo_nl1(self):
         #""" Convert from Pyomo to NL with file"""
-        ans = pyomo.opt.convert_problem( (currdir+'model.py',pyomo.opt.ProblemFormat.nl,), None, [pyomo.opt.ProblemFormat.nl])
+        ans = convert_problem( (currdir+'model.py', ProblemFormat.nl,), None, [ProblemFormat.nl])
         self.assertNotEqual(re.match(".*tmp.*pyomo.nl$",ans[0][0]), None)
         os.remove(ans[0][0])
 
     def test_error1(self):
         #""" No valid problem types """
         try:
-            pyomo.opt.convert_problem( ("test4.nl","tmp.nl"), pyomo.opt.ProblemFormat.nl, [])
+            convert_problem( ("test4.nl","tmp.nl"), ProblemFormat.nl, [])
             self.fail("Expected ConverterError exception")
-        except pyomo.opt.ConverterError:
+        except ConverterError:
             err = sys.exc_info()[1]
             pass
 
     def test_error2(self):
         #""" Target problem type is not valid """
         try:
-            pyomo.opt.convert_problem( ("test4.nl","tmp.nl"), pyomo.opt.ProblemFormat.nl, [pyomo.opt.ProblemFormat.mps])
+            convert_problem( ("test4.nl","tmp.nl"), ProblemFormat.nl, [ProblemFormat.mps])
             self.fail("Expected ConverterError exception")
-        except pyomo.opt.ConverterError:
+        except ConverterError:
             pass
 
     def test_error3(self):
         #""" Empty argument list """
         try:
-            pyomo.opt.convert_problem( (), None, [pyomo.opt.ProblemFormat.mps])
+            convert_problem( (), None, [ProblemFormat.mps])
             self.fail("Expected ConverterError exception")
-        except pyomo.opt.ConverterError:
+        except  ConverterError:
             pass
 
     def test_error4(self):
         #""" Unknown source type """
         try:
-            pyomo.opt.convert_problem( ("prob.foo",), None, [pyomo.opt.ProblemFormat.mps])
+            convert_problem( ("prob.foo",), None, [ProblemFormat.mps])
             self.fail("Expected ConverterError exception")
-        except pyomo.opt.ConverterError:
+        except  ConverterError:
             pass
 
     def test_error5(self):
         #""" Unknown source type """
         try:
-            pyomo.opt.convert_problem( ("prob.lp",), pyomo.opt.ProblemFormat.nl, [pyomo.opt.ProblemFormat.nl])
+            convert_problem( ("prob.lp",), ProblemFormat.nl, [ProblemFormat.nl])
             self.fail("Expected ConverterError exception")
-        except pyomo.opt.ConverterError:
+        except  ConverterError:
             pass
 
     def test_error6(self):
         #""" Cannot use pico_convert with more than one file """
         try:
-            ans = pyomo.opt.convert_problem( (currdir+"test4.nl","foo"), None, [pyomo.opt.ProblemFormat.cpxlp])
+            ans = convert_problem( (currdir+"test4.nl","foo"), None, [ProblemFormat.cpxlp])
             self.fail("Expected ConverterError exception")
-        except pyomo.opt.ConverterError:
+        except ConverterError:
             pass
 
     def test_error8(self):
         #""" Error when source file cannot be found """
         try:
-            ans = pyomo.opt.convert_problem( (currdir+"unknown.nl",), None, [pyomo.opt.ProblemFormat.cpxlp])
+            ans = convert_problem( (currdir+"unknown.nl",), None, [ProblemFormat.cpxlp])
             self.fail("Expected ConverterError exception")
-        except pyutilib.common.ApplicationError:
+        except ApplicationError:
             err = sys.exc_info()[1]
-            if not pyomo.common.Executable("pico_convert"):
+            if not Executable("pico_convert"):
                 self.fail("Expected ApplicationError because pico_convert "
                           "is not available: '%s'" % str(err))
             return
-        except pyomo.opt.ConverterError:
+        except ConverterError:
             pass
 
     def test_error9(self):
         #""" The Opt configuration has not been initialized """
-        cmd = pyomo.common.Executable("pico_convert").disable()
+        cmd = Executable("pico_convert").disable()
         try:
-            ans = pyomo.opt.convert_problem( (currdir+"test4.nl",), None, [pyomo.opt.ProblemFormat.cpxlp])
+            ans = convert_problem( (currdir+"test4.nl",), None, [ProblemFormat.cpxlp])
             self.fail("This test didn't fail, but pico_convert should not be defined.")
-        except pyomo.opt.ConverterError:
+        except ConverterError:
             pass
-        cmd = pyomo.common.Executable("pico_convert").rehash()
+        cmd = Executable("pico_convert").rehash()
 
     def test_error10(self):
         #""" GLPSOL can only convert file data """
         try:
             arg = MockArg3()
-            ans = pyomo.opt.convert_problem( (arg,pyomo.opt.ProblemFormat.cpxlp,arg), None, [pyomo.opt.ProblemFormat.cpxlp])
+            ans = convert_problem( (arg, ProblemFormat.cpxlp,arg), None, [ProblemFormat.cpxlp])
             self.fail("This test didn't fail, but glpsol cannot handle objects.")
-        except pyomo.opt.ConverterError:
+        except ConverterError:
             pass
 
     def test_error11(self):
         #""" Cannot convert MOD that contains data """
         try:
-            ans = pyomo.opt.convert_problem( (currdir+"test3.mod",currdir+"test5.dat"), None, [pyomo.opt.ProblemFormat.cpxlp])
+            ans = convert_problem( (currdir+"test3.mod",currdir+"test5.dat"), None, [ProblemFormat.cpxlp])
             self.fail("Expected ConverterError exception because we provided a MOD file with a 'data;' declaration")
-        except pyutilib.common.ApplicationError:
+        except ApplicationError:
             err = sys.exc_info()[1]
-            if pyomo.common.Executable("glpsol"):
+            if Executable("glpsol"):
                 self.fail("Expected ApplicationError because glpsol "
                           "is not available: '%s'" % str(err))
             return
-        except pyomo.opt.ConverterError:
+        except ConverterError:
             pass
 
 if __name__ == "__main__":

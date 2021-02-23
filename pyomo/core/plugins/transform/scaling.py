@@ -8,12 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.collections import ComponentMap
 from pyomo.core.base import Var, Constraint, Objective, _ConstraintData, _ObjectiveData, Suffix, value
 from pyomo.core.plugins.transform.hierarchy import Transformation
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.util.components import rename_components
 from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.current import replace_expressions
+from pyomo.util.components import rename_components
 
 
 @TransformationFactory.register('core.scale_model',
@@ -99,7 +99,7 @@ class ScaleModel(Transformation):
                 % (scaling_factor, component_data))
         return scaling_factor
 
-    def _apply_to(self, model, **kwds):
+    def _apply_to(self, model, rename=True):
         # create a map of component to scaling factor
         component_scaling_factor_map = ComponentMap()
 
@@ -117,19 +117,34 @@ class ScaleModel(Transformation):
             raise ValueError("ScaleModel transformation: unknown scaling_method found"
                              "-- supported values: 'user' ")
 
-        # rename all the Vars, Constraints, and Objectives from foo to scaled_foo
-        scaled_component_to_original_name_map = \
-            rename_components(model=model,
-                              component_list=list(model.component_objects(ctype=[Var, Constraint, Objective])),
-                              prefix='scaled_')
+        if rename:
+            # rename all the Vars, Constraints, and Objectives
+            # from foo to scaled_foo
+            component_list = list(model.component_objects(
+                ctype=[Var, Constraint, Objective]))
+            scaled_component_to_original_name_map = rename_components(
+                    model=model,
+                    component_list=component_list,
+                    prefix='scaled_',
+                    )
+        else:
+            scaled_component_to_original_name_map = ComponentMap(
+                    [(comp, comp.name) for comp in 
+                        model.component_objects(
+                            ctype=[Var,Constraint, Objective])]
+                    )
 
         # scale the variable bounds and values and build the variable substitution map
         # for scaling vars in constraints
         variable_substitution_map = ComponentMap()
+        already_scaled = set()
         for variable in [var for var in model.component_objects(ctype=Var, descend_into=True)]:
             # set the bounds/value for the scaled variable
             for k in variable:
                 v = variable[k]
+                if id(v) in already_scaled:
+                    continue
+                already_scaled.add(id(v))
                 scaling_factor = component_scaling_factor_map[v]
                 variable_substitution_map[v] = v / scaling_factor
 
@@ -156,9 +171,13 @@ class ScaleModel(Transformation):
         variable_substitution_dict = {id(k):variable_substitution_map[k]
                                       for k in variable_substitution_map}
 
+        already_scaled = set()
         for component in model.component_objects(ctype=(Constraint, Objective), descend_into=True):
             for k in component:
                 c = component[k]
+                if id(c) in already_scaled:
+                    continue
+                already_scaled.add(id(c))
                 # perform the constraint/objective scaling and variable sub
                 scaling_factor = component_scaling_factor_map[c]
                 if isinstance(c, _ConstraintData):
@@ -240,6 +259,7 @@ class ScaleModel(Transformation):
         for scaled_v in scaled_model.component_objects(ctype=Var, descend_into=True):
             # get the unscaled_v from the original model
             original_v_path = scaled_component_to_original_name_map[scaled_v]
+            # This will not work if decimal indices are present:
             original_v = original_model.find_component(original_v_path)
 
             for k in scaled_v:

@@ -14,9 +14,11 @@ from random import random, seed
 
 import pyutilib.th as unittest
 
-from pyomo.environ import *
-from pyomo.opt import *
-
+from pyomo.environ import (ConcreteModel, AbstractModel, Var, Objective,
+                           Block, Constraint, Suffix, NonNegativeIntegers,
+                           NonNegativeReals, Integers, Binary, is_fixed,
+                           value, Set, Param, sum_product, minimize, SolverStatus)
+from pyomo.opt import SolverFactory, TerminationCondition, SolutionStatus
 from pyomo.solvers.plugins.solvers.cplex_direct import (_CplexExpr,
                                                         _LinearConstraintData,
                                                         _VariableData)

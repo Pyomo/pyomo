@@ -17,12 +17,13 @@ pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-import pyutilib.services
-import pyutilib.common
+
+from pyomo.common.errors import ApplicationError
+from pyomo.common.tempfiles import TempfileManager
 
 import pyomo.opt
 
-old_tempdir = pyutilib.services.TempfileManager.tempdir
+old_tempdir = TempfileManager.tempdir
 
 class MockArg(object):
 
@@ -70,11 +71,11 @@ class MockArg4(MockArg):
 class OptConvertDebug(unittest.TestCase):
 
     def setUp(self):
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
 
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        TempfileManager.clear_tempfiles()
+        TempfileManager.tempdir = old_tempdir
 
     def test_nl_nl1(self):
         """ Convert from NL to NL """
@@ -139,7 +140,7 @@ class OptConvertDebug(unittest.TestCase):
         try:
             ans = pyomo.opt.convert_problem( (currdir+"unknown.nl",), None, [pyomo.opt.ProblemFormat.cpxlp])
             self.fail("Expected pyomo.opt.ConverterError exception")
-        except pyutilib.common.ApplicationError:
+        except ApplicationError:
             if pyomo.common.Executable("pico_convert"):
                 self.fail("Expected ApplicationError because pico_convert is not available")
             return
@@ -172,7 +173,7 @@ class OptConvertDebug(unittest.TestCase):
         try:
             ans = pyomo.opt.convert_problem( (currdir+"test3.mod",currdir+"test5.dat"), None, [pyomo.opt.ProblemFormat.cpxlp])
             self.fail("Expected pyomo.opt.ConverterError exception because we provided a MOD file with a 'data;' declaration")
-        except pyutilib.common.ApplicationError:
+        except ApplicationError:
             if pyomo.common.Executable("glpsol"):
                 self.fail("Expected ApplicationError because glpsol is not available")
             return

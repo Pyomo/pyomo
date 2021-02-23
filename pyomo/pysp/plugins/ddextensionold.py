@@ -16,16 +16,16 @@
 import os
 import csv
 import sys
-import itertools
 
 thisfile = os.path.abspath(__file__)
 
 
-from pyomo.core.base import *
-from pyomo.core.base.set_types import *
+from pyomo.core.base import Var, TextLabeler, Expression, Piecewise, _PiecewiseData, SOSConstraint, Constraint, components_data
 from pyomo.pysp.plugins.ddextensionnew import (MatrixEntriesClass,
                                                LPFileObjClass,
                                                LPFileConstraintClass)
+from pyomo.pysp.phutils import create_block_symbol_maps
+from pyomo.solvers.plugins.smanager.phpyro import SolverManager_PHPyro
 
 from six import iteritems
 
@@ -98,8 +98,7 @@ class ddextension_base(object):
 
         print(("\nUsing %s as reference scenario" % (scenario_name)))
 
-        if isinstance(ph._solver_manager,
-                      pyomo.solvers.plugins.smanager.phpyro.SolverManager_PHPyro):
+        if isinstance(ph._solver_manager, SolverManager_PHPyro):
             # If this is parallel ph, the instances do not exist on
             # this process, so let's construct the one we need
             singleton_tree = ph._scenario_tree._scenario_instance_factory.generate_scenario_tree()
@@ -277,7 +276,7 @@ class ddextension_base(object):
             stage_cost_component = \
                 self._reference_scenario_instance.\
                 find_component(cost_variable_name)
-            if stage_cost_component.type() is not Expression:
+            if stage_cost_component.ctype is not Expression:
                 LP_name = LP_byObject[id(stage_cost_component[cost_variable_index])]
                 assert LP_name not in self._FirstStageVars
                 if LP_name not in self._AllVars:
@@ -306,7 +305,7 @@ class ddextension_base(object):
                 stage_cost_component = \
                     self._reference_scenario_instance.\
                     find_component(cost_variable_name)
-                if stage_cost_component.type() is not Expression:
+                if stage_cost_component.ctype is not Expression:
                     cost_vars.add(stage_cost_component[cost_variable_index].name)
             print(("Number of Scenario Tree Variables (found ddsip LP file): "+str(len(tree_vars))))
             print(("Number of Scenario Tree Cost Variables (found ddsip LP file): "+str(len(cost_vars))))

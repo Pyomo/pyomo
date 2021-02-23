@@ -13,15 +13,12 @@
 
 import pyutilib.th as unittest
 
-from pyomo.environ import *
-from pyomo.network import *
+from pyomo.common.dependencies import numpy_available, networkx_available
+from pyomo.environ import SolverFactory, value, ConcreteModel, Set, Block, Var, TransformationFactory, Reference
+from pyomo.network import Port, SequentialDecomposition, Arc
 from types import MethodType
 
-try:
-    import numpy, networkx
-    import_available = True
-except ImportError:
-    import_available = False
+import_available = numpy_available and networkx_available
 
 gams_available = SolverFactory('gams').available(exception_flag=False)
 

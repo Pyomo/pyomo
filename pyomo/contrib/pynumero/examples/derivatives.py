@@ -7,7 +7,8 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from pyomo.contrib.pynumero.sparse import BlockSymMatrix
+
+from pyomo.contrib.pynumero.sparse import BlockMatrix
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 import matplotlib.pylab as plt
 import pyomo.environ as pyo
@@ -55,11 +56,15 @@ def create_problem(begin, end):
     m.init_condition_names = ['init_conditions']
     return m
 
+
 instance = create_problem(0.0, 10.0)
 # Discretize model using Orthogonal Collocation
 discretizer = pyo.TransformationFactory('dae.collocation')
 discretizer.apply_to(instance, nfe=100, ncp=3, scheme='LAGRANGE-RADAU')
-discretizer.reduce_collocation_points(instance, var=instance.u, ncp=1, contset=instance.t)
+discretizer.reduce_collocation_points(instance,
+                                      var=instance.u,
+                                      ncp=1,
+                                      contset=instance.t)
 
 # Interface pyomo model with nlp
 nlp = PyomoNLP(instance)
@@ -84,10 +89,10 @@ plt.title('Hessian of the Lagrangian function\n')
 plt.show()
 
 # Build KKT matrix
-kkt = BlockSymMatrix(2)
-kkt[0, 0] = hess_lag
-kkt[1, 0] = jac
+kkt = BlockMatrix(2, 2)
+kkt.set_block(0, 0, hess_lag)
+kkt.set_block(1, 0, jac)
+kkt.set_block(0, 1, jac.transpose())
 plt.spy(kkt.tocoo())
 plt.title('KKT system\n')
 plt.show()
-

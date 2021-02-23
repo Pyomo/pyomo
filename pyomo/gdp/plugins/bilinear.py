@@ -9,13 +9,9 @@
 #  ___________________________________________________________________________
 
 import logging
-from six import iteritems
 
-from pyomo.core.expr.current import ProductExpression
-from pyomo.core import *
-from pyomo.core.base.set_types import BooleanSet
-from pyomo.core.base.var import _VarData
-from pyomo.gdp import *
+from pyomo.core import TransformationFactory, Transformation, Block, VarList, Set, SortComponents, Objective, Constraint
+from pyomo.gdp import Disjunct, Disjunction
 from pyomo.repn import generate_standard_repn
 
 logger = logging.getLogger('pyomo.gdp')
@@ -28,7 +24,6 @@ class Bilinear_Transformation(Transformation):
         super(Bilinear_Transformation, self).__init__()
 
     def _apply_to(self, instance, **kwds):
-        options = kwds.pop('options', {})
         # TODO: This data should be stored differently.  We cannot nest this transformation with itself
         if getattr(instance, 'bilinear_data_', None) is None:
             instance.bilinear_data_ = Block()
@@ -84,7 +79,7 @@ class Bilinear_Transformation(Transformation):
         if len(terms.quadratic_coefs) > 0:
             for vars_, coef_ in zip(terms.quadratic_vars, terms.quadratic_coefs):
                 #
-                if isinstance(vars_[0].domain, BooleanSet):
+                if vars_[0].is_binary():
                     v = instance.bilinear_data_.cache.get( (id(vars_[0]),id(vars_[1])), None )
                     if v is None:
                         instance.bilinear_data_.vlist_boolean.append(vars_[0])
@@ -109,7 +104,7 @@ class Bilinear_Transformation(Transformation):
                     # The disjunctive variable is the expression
                     e += coef_*v
                 #
-                elif isinstance(vars_[1].domain, BooleanSet):
+                elif vars_[1].is_binary():
                     v = instance.bilinear_data_.cache.get( (id(vars_[1]),id(vars_[0])), None )
                     if v is None:
                         instance.bilinear_data_.vlist_boolean.append(vars_[1])

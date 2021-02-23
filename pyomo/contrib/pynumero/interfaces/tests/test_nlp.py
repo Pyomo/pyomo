@@ -7,31 +7,29 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 import pyutilib.th as unittest
 import os
 
-from pyomo.contrib.pynumero import numpy_available, scipy_available
+from pyomo.contrib.pynumero.dependencies import (
+    numpy as np, numpy_available, scipy_available
+)
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
-import scipy.sparse as sp
-import numpy as np
-
-from pyomo.contrib.pynumero.extensions.asl import AmplInterface
+from pyomo.contrib.pynumero.asl import AmplInterface
 if not AmplInterface.available():
     raise unittest.SkipTest(
         "Pynumero needs the ASL extension to run NLP tests")
 
 import pyomo.environ as pyo
-from pyomo.opt.base import WriterFactory
 from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP, AmplNLP
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 import tempfile
 
-from scipy.sparse import coo_matrix
-
 from pyomo.contrib.pynumero.interfaces.utils import build_bounds_mask, build_compression_matrix, \
     build_compression_mask_for_finite_values, full_to_compressed, compressed_to_full
+
 
 def create_pyomo_model1():
     m = pyo.ConcreteModel()
@@ -69,6 +67,15 @@ def create_pyomo_model1():
         m.dual.set_value(m.c[i], i)
 
     m.obj = pyo.Objective(expr=sum(i*j*m.x[i]*m.x[j] for i in m.S for j in m.S))
+
+    # add scaling parameters for testing
+    m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+    m.scaling_factor[m.obj] = 5
+    for i in m.S:
+        m.scaling_factor[m.x[i]] = 2*float(i)
+    for i in m.S:
+        m.scaling_factor[m.c[i]] = 3*float(i)
+
     return m
 
 def create_pyomo_model2():
@@ -362,6 +369,12 @@ class TestAslNLP(unittest.TestCase):
     def test_nlp_interface(self):
         anlp = AslNLP(self.filename)
         execute_extended_nlp_interface(self, anlp)
+        # AslNLP does not check suffixes for scaling parameters
+        self.assertIsNone(anlp.get_obj_scaling())
+        self.assertIsNone(anlp.get_primals_scaling())
+        self.assertIsNone(anlp.get_constraints_scaling())
+        self.assertIsNone(anlp.get_eq_constraints_scaling())
+        self.assertIsNone(anlp.get_ineq_constraints_scaling())
         
 class TestAmplNLP(unittest.TestCase):
     @classmethod
@@ -455,6 +468,25 @@ class TestPyomoNLP(unittest.TestCase):
         execute_extended_nlp_interface(self, nlp)
         self.assertTrue(nlp.pyomo_model() is self.pm)
 
+        self.assertEqual(float(nlp.get_obj_scaling()), 5.0)
+
+        xs = nlp.get_primals_scaling()
+        expected_xs = np.asarray([2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0])
+        self.assertTrue(np.array_equal(xs, expected_xs))
+
+        cs = nlp.get_constraints_scaling()
+        expected_cs = np.asarray([ 3.0,  6.0,  9.0, 12.0, 15.0, 18.0, 21.0, 24.0, 27.0 ])
+        self.assertTrue(np.array_equal(cs, expected_cs))
+
+        eqcs = nlp.get_eq_constraints_scaling()
+        expected_eqcs = np.asarray([ 6.0, 18.0 ])
+        self.assertTrue(np.array_equal(eqcs, expected_eqcs))
+
+        ineqcs = nlp.get_ineq_constraints_scaling()
+        expected_ineqcs = np.asarray([ 3.0,  9.0, 12.0, 15.0, 21.0, 24.0, 27.0 ])
+        self.assertTrue(np.array_equal(ineqcs, expected_ineqcs))
+
+
     def test_indices_methods(self):
         nlp = PyomoNLP(self.pm)
 
@@ -478,6 +510,27 @@ class TestPyomoNLP(unittest.TestCase):
         expected_names = [c.getname() for c in nlp.get_pyomo_constraints()]
         self.assertTrue(constraint_names == expected_names)
 
+        # get_pyomo_equality_constraints
+        eq_constraints = nlp.get_pyomo_equality_constraints()
+        # 2 and 6 are the equality constraints
+        eq_indices = [2, 6] # "indices" here is a bit overloaded
+        expected_eq_ids = [id(self.pm.c[i]) for i in eq_indices]
+        eq_ids = [id(con) for con in eq_constraints]
+        self.assertEqual(eq_ids, expected_eq_ids)
+
+        eq_constraint_names = nlp.equality_constraint_names()
+        expected_eq_names = [c.getname(fully_qualified=True)
+                for c in nlp.get_pyomo_equality_constraints()]
+        self.assertEqual(eq_constraint_names, expected_eq_names)
+
+        # get_pyomo_inequality_constraints
+        ineq_constraints = nlp.get_pyomo_inequality_constraints()
+        # 1, 3, 4, 5, 7, 8, and 9 are the inequality constraints
+        ineq_indices = [1, 3, 4, 5, 7, 8, 9]
+        expected_ineq_ids = [id(self.pm.c[i]) for i in ineq_indices]
+        ineq_ids = [id(con) for con in ineq_constraints]
+        self.assertEqual(eq_ids, expected_eq_ids)
+
         # get_primal_indices
         expected_primal_indices = [i for i in range(9)]
         self.assertTrue(expected_primal_indices == nlp.get_primal_indices([self.pm.x]))
@@ -491,6 +544,30 @@ class TestPyomoNLP(unittest.TestCase):
         expected_constraint_indices = [0, 3, 8, 4]
         constraints = [self.pm.c[1], self.pm.c[4], self.pm.c[9], self.pm.c[5]]
         self.assertTrue(expected_constraint_indices == nlp.get_constraint_indices(constraints))
+
+        # get_equality_constraint_indices
+        pyomo_eq_indices = [2, 6]
+        with self.assertRaises(KeyError):
+            # At least one data object in container is not an equality
+            nlp.get_equality_constraint_indices([self.pm.c])
+        eq_constraints = [self.pm.c[i] for i in pyomo_eq_indices]
+        expected_eq_indices = [0, 1]
+        # ^indices in the list of equality constraints
+        eq_constraint_indices = nlp.get_equality_constraint_indices(
+                eq_constraints)
+        self.assertEqual(expected_eq_indices, eq_constraint_indices)
+
+        # get_inequality_constraint_indices
+        pyomo_ineq_indices = [1, 3, 4, 5, 7, 9]
+        with self.assertRaises(KeyError):
+            # At least one data object in container is not an equality
+            nlp.get_inequality_constraint_indices([self.pm.c])
+        ineq_constraints = [self.pm.c[i] for i in pyomo_ineq_indices]
+        expected_ineq_indices = [0, 1, 2, 3, 4, 6]
+        # ^indices in the list of equality constraints; didn't include 8
+        ineq_constraint_indices = nlp.get_inequality_constraint_indices(
+                ineq_constraints)
+        self.assertEqual(expected_ineq_indices, ineq_constraint_indices)
 
         # extract_subvector_grad_objective
         expected_gradient = np.asarray([2*sum((i+1)*(j+1) for j in range(9)) for i in range(9)], dtype=np.float64)

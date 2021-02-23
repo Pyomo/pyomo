@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
@@ -6,14 +16,17 @@ from six import StringIO
 from pyomo.common.log import LoggingIntercept
 
 import pyutilib.th as unittest
-import pyutilib.services
 import random
 
-import pyomo.opt
-from pyomo.environ import *
+from pyomo.opt import check_available_solvers
+from pyomo.environ import (ConcreteModel, Set, Objective, 
+                           Constraint, Var, Block, Param,
+                           NonNegativeReals, TransformationFactory, ComponentUID, 
+                           inequality)
+
 import pyomo.core.expr.current as EXPR
 
-solvers = pyomo.opt.check_available_solvers('glpk')
+solvers = check_available_solvers('glpk')
 
 
 class TestAddSlacks(unittest.TestCase):
@@ -183,7 +196,7 @@ class TestAddSlacks(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
             m, 
-            targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
+            targets=[m.rule1, m.rule3])
         
         transBlock = m.component("_core_add_slack_variables")
         # check that we only made slack vars for targets
@@ -193,7 +206,7 @@ class TestAddSlacks(unittest.TestCase):
         m = self.makeModel()
         m2 = TransformationFactory('core.add_slack_variables').create_using(
             m, 
-            targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
+            targets=[m.rule1, m.rule3])
 
         transBlock = m2.component("_core_add_slack_variables")
         # check that we only made slack vars for targets
@@ -210,7 +223,7 @@ class TestAddSlacks(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
             m, 
-            targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
+            targets=[m.rule1, m.rule3])
         
         self.checkNonTargetCons(m)
 
@@ -218,7 +231,7 @@ class TestAddSlacks(unittest.TestCase):
         m = self.makeModel()
         m2 = TransformationFactory('core.add_slack_variables').create_using(
             m, 
-            targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
+            targets=[m.rule1, m.rule3])
         
         self.checkNonTargetCons(m2)
 
@@ -226,7 +239,7 @@ class TestAddSlacks(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
             m, 
-            targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
+            targets=[m.rule1, m.rule3])
 
         self.checkRule1(m)
         self.checkRule3(m)
@@ -235,7 +248,7 @@ class TestAddSlacks(unittest.TestCase):
         m = self.makeModel()
         m2 = TransformationFactory('core.add_slack_variables').create_using(
             m, 
-            targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
+            targets=[m.rule1, m.rule3])
 
         self.checkRule1(m2)
         self.checkRule3(m2)
@@ -251,7 +264,7 @@ class TestAddSlacks(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
             m, 
-            targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
+            targets=[m.rule1, m.rule3])
 
         self.assertFalse(m.obj.active)
         self.checkTargetsObj(m)
@@ -260,28 +273,72 @@ class TestAddSlacks(unittest.TestCase):
         m = self.makeModel()
         m2 = TransformationFactory('core.add_slack_variables').create_using(
             m, 
-            targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
+            targets=[m.rule1, m.rule3])
 
         self.assertFalse(m2.obj.active)
         self.checkTargetsObj(m2)
 
     def test_err_for_bogus_kwds(self):
         m = self.makeModel()
-        OUTPUT = StringIO()
-        with LoggingIntercept(OUTPUT, 'pyomo.core'):
+        self.assertRaisesRegexp(
+            ValueError,
+            "key 'notakwd' not defined for ConfigDict ''",
+            TransformationFactory('core.add_slack_variables').apply_to,
+            m,
+            notakwd="I want a feasible model"
+            )
+
+    def test_error_for_non_constraint_noniterable_target(self):
+        m = self.makeModel()
+        m.indexedVar = Var([1, 2])
+        self.assertRaisesRegexp(
+            ValueError,
+            "Expected Constraint or list of Constraints.\n\tRecieved "
+            "<class 'pyomo.core.base.var._GeneralVarData'>",
+            TransformationFactory('core.add_slack_variables').apply_to,
+            m,
+            targets=m.indexedVar[1]
+            )
+
+    def test_error_for_non_constraint_target_in_list(self):
+        m = self.makeModel()
+        self.assertRaisesRegexp(
+            ValueError,
+            "Expected Constraint or list of Constraints.\n\tRecieved "
+            "<class 'pyomo.core.base.var.SimpleVar'>",
+            TransformationFactory('core.add_slack_variables').apply_to,
+            m,
+            targets=[m.rule1, m.x]
+            )
+
+    def test_deprecation_warning_for_cuid_targets(self):
+        m = self.makeModel()
+        out = StringIO()
+        with LoggingIntercept(out, 'pyomo.core'):
             TransformationFactory('core.add_slack_variables').apply_to(
                 m,
-                notakwd="I want a feasible model")
-        self.assertIn("Unrecognized keyword arguments in add slack variable "
-                      "transformation:\nnotakwd",
-                      OUTPUT.getvalue())
+                targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
+        self.assertRegexpMatches(out.getvalue(), 
+                                 "DEPRECATED: In future releases ComponentUID "
+                                 "targets will no longer be\nsupported in the "
+                                 "core.add_slack_variables transformation. "
+                                 "Specify\ntargets as a Constraint or list of "
+                                 "Constraints.*")
+        # make sure that it still worked though
+        self.checkNonTargetCons(m)
+        self.checkRule1(m)
+        self.checkRule3(m)
+        self.assertFalse(m.obj.active)
+        self.checkTargetsObj(m)
+        transBlock = m.component("_core_add_slack_variables")
+        self.checkTargetSlackVars(transBlock)
 
     def test_transformed_constraints_sumexpression_body(self):
         m = self.makeModel()
         m.rule4 = Constraint(expr=inequality(5, m.x - 2*m.y, 9))
         TransformationFactory('core.add_slack_variables').apply_to(
             m,
-            targets=[ComponentUID(m.rule4)])
+            targets=m.rule4)
 
         transBlock = m._core_add_slack_variables
         c = m.rule4
@@ -304,7 +361,7 @@ class TestAddSlacks(unittest.TestCase):
         m.rule4 = Constraint(expr=m.p <= 9)
         TransformationFactory('core.add_slack_variables').apply_to(
             m,
-            targets=[ComponentUID(m.rule4)])
+            targets=[m.rule4])
         
         transBlock = m._core_add_slack_variables
         c = m.rule4
@@ -342,7 +399,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
             m,
-            targets=[ComponentUID(m.rule1)])
+            targets=[m.rule1])
 
         transBlock = m.component("_core_add_slack_variables")
         # TODO: So, right now indexed constraints don't result in indexed
@@ -354,7 +411,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m = self.makeModel()
         m2 = TransformationFactory('core.add_slack_variables').create_using(
             m,
-            targets=[ComponentUID(m.rule1)])
+            targets=[m.rule1])
 
         transBlock = m2.component("_core_add_slack_variables")
         self.checkSlackVars_indexedtarget(transBlock)
@@ -369,7 +426,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
             m,
-            targets=[ComponentUID(m.rule1)])
+            targets=[m.rule1])
 
         self.checkRule2(m)
 
@@ -377,7 +434,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m = self.makeModel()
         m2 = TransformationFactory('core.add_slack_variables').create_using(
             m,
-            targets=[ComponentUID(m.rule1)])
+            targets=[m.rule1])
 
         self.checkRule2(m2)
 
@@ -397,7 +454,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
             m,
-            targets=[ComponentUID(m.rule1)])
+            targets=[m.rule1])
         
         self.assertFalse(m.obj.active)
         self.checkTargetObj(m)
@@ -406,7 +463,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m = self.makeModel()
         m2 = TransformationFactory('core.add_slack_variables').create_using(
             m,
-            targets=[ComponentUID(m.rule1)])
+            targets=[m.rule1])
         
         self.assertFalse(m2.obj.active)
         self.checkTargetObj(m2)
@@ -428,7 +485,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
             m,
-            targets=[ComponentUID(m.rule1)])
+            targets=[m.rule1])
         
         for i in [1,2,3]:
             self.checkTransformedRule1(m, i)
@@ -437,7 +494,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m = self.makeModel()
         m2 = TransformationFactory('core.add_slack_variables').create_using(
             m,
-            targets=[ComponentUID(m.rule1)])
+            targets=m.rule1)
         
         for i in [1,2,3]:
             self.checkTransformedRule1(m2, i)
@@ -452,7 +509,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
             m,
-            targets=[ComponentUID(m.rule1[2])])
+            targets=[m.rule1[2]])
 
         transBlock = m._core_add_slack_variables
         self.checkSlackVars_constraintDataTarget(transBlock)
@@ -461,7 +518,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m = self.makeModel()
         m2 = TransformationFactory('core.add_slack_variables').create_using(
             m,
-            targets=[ComponentUID(m.rule1[2])])
+            targets=m.rule1[2])
 
         transBlock = m2._core_add_slack_variables
         self.checkSlackVars_constraintDataTarget(transBlock)
@@ -477,7 +534,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
             m,
-            targets=[ComponentUID(m.rule1[2])])
+            targets=[m.rule1[2]])
         
         self.checkUntransformedRule1(m, 1)
         self.checkUntransformedRule1(m, 3)
@@ -487,7 +544,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m = self.makeModel()
         m2 = TransformationFactory('core.add_slack_variables').create_using(
             m,
-            targets=[ComponentUID(m.rule1[2])])
+            targets=[m.rule1[2]])
         
         self.checkUntransformedRule1(m2, 1)
         self.checkUntransformedRule1(m2, 3)
@@ -497,7 +554,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
             m,
-            targets=[ComponentUID(m.rule1[2])])
+            targets=[m.rule1[2]])
 
         self.checkTransformedRule1(m, 2)
 
@@ -505,7 +562,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m = self.makeModel()
         m2 = TransformationFactory('core.add_slack_variables').create_using(
             m,
-            targets=[ComponentUID(m.rule1[2])])
+            targets=[m.rule1[2]])
 
         self.checkTransformedRule1(m2, 2)
 
@@ -519,7 +576,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
             m,
-            targets=[ComponentUID(m.rule1[2])])
+            targets=[m.rule1[2]])
 
         self.assertFalse(m.obj.active)
         self.checkConstraintDataObj(m)
@@ -528,7 +585,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m = self.makeModel()
         m2 = TransformationFactory('core.add_slack_variables').create_using(
             m,
-            targets=[ComponentUID(m.rule1[2])])
+            targets=[m.rule1[2]])
 
         self.assertFalse(m2.obj.active)
         self.checkConstraintDataObj(m2)

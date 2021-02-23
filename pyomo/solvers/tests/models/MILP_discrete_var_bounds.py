@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.kernel as pmo
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, Binary, Integers, NonNegativeReals
+from pyomo.core import ConcreteModel, Var, Objective, Constraint, Binary, Integers
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 @register_model
@@ -64,15 +64,15 @@ class MILP_discrete_var_bounds_kernel(MILP_discrete_var_bounds):
         model = self.model
         model._name = self.description
 
-        model.w2 = pmo.variable(domain=pmo.Binary)
+        model.w2 = pmo.variable(domain=pmo.BooleanSet)
         model.x2 = pmo.variable(domain_type=pmo.IntegerSet,
                                 lb=0, ub=1)
         model.yb = pmo.variable(domain_type=pmo.IntegerSet,
                                 lb=1, ub=1)
         model.zb = pmo.variable(domain_type=pmo.IntegerSet,
                                 lb=0, ub=0)
-        model.yi = pmo.variable(domain=pmo.Integers, lb=-1)
-        model.zi = pmo.variable(domain=pmo.Integers, ub=1)
+        model.yi = pmo.variable(domain=pmo.IntegerSet, lb=-1)
+        model.zi = pmo.variable(domain=pmo.IntegerSet, ub=1)
 
         model.obj = pmo.objective(model.w2 - model.x2 +\
                                   model.yb - model.zb +\

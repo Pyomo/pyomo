@@ -70,33 +70,30 @@ used by optimization software packages, and few formats are recognized
 by many optimizers.  Thus the application of multiple optimization
 solvers to analyze a model introduces additional complexities.
 
+
 Pyomo is an AML that extends Python to include objects for mathematical
 modeling. [PyomoBookI]_, [PyomoBookII]_, and [PyomoJournal]_ compare
 Pyomo with other AMLs.  Although many good AMLs have been developed for
 optimization models, the following are motivating factors for the
 development of Pyomo:
 
-Open Source
-***********
+- *Open Source*
 
     Pyomo is developed within Pyomo's open source project to promote
     transparency of the modeling framework and encourage community
     development of Pyomo capabilities.
 
-Customizable Capability
-***********************
+- *Customizable Capability*
  
     Pyomo supports a customizable capability through the extensive use
     of plug-ins to modularize software components.
 
-Solver Integration
-******************
+- *Solver Integration*
   
     Pyomo models can be optimized with solvers that are written either
     in Python or in compiled, low-level languages.
 
-Programming Language
-********************
+- *Programming Language*
   
     Pyomo leverages a high-level programming language, which has several
     advantages over custom AMLs: a very robust language, extensive

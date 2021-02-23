@@ -14,6 +14,10 @@ separated from functional changes. This simplifies the review process
 and ensures that functional changes aren't obscured by large amounts of
 non-functional changes.
 
+We do not squash and merge PRs so all commits in your branch will appear 
+in the master history. In addition to well-documented PR descriptions, 
+we encourage modular/targeted commits with descriptive commit messages.
+
 Coding Standards
 ++++++++++++++++
     
@@ -36,21 +40,252 @@ and contributions to ``pyomo.contrib``.
 Testing
 +++++++
 
-Pyomo uses ``unittest``, TravisCI, and Appveyor for testing and
-continuous integration. Submitted code should include tests to establish
-the validity of its results and/or effects. Unit tests are preferred but
-we also accept integration tests. When test are run on a PR, we require
-at least 70% coverage of the lines modified in the PR and prefer
-coverage closer to 90%. We also require that all tests pass before a PR
-will be merged.
+Pyomo uses `unittest <https://docs.python.org/3/library/unittest.html>`_,
+`nose <https://nose.readthedocs.io/>`_,
+`GitHub Actions <https://docs.github.com/en/free-pro-team@latest/actions>`_,
+and Jenkins
+for testing and continuous integration. Submitted code should include 
+tests to establish the validity of its results and/or effects. Unit 
+tests are preferred but we also accept integration tests. We require 
+at least 70% coverage of the lines modified in the PR and prefer coverage 
+closer to 90%. We also require that all tests pass before a PR will be 
+merged.
+
+The Pyomo master branch provides a Github Actions workflow (configured
+in the ``.github/`` directory) that will test any changes pushed to
+a branch with a subset of the complete test harness that includes
+multiple virtual machines (ubuntu, mac-os, windows)
+and multiple Python versions. For existing forks, fetch and merge
+your fork (and branches) with Pyomo's master. For new forks, you will
+need to enable GitHub Actions in the 'Actions' tab on your fork.
+This will enable the tests to run automatically with each push to your fork.
 
 At any point in the development cycle, a "work in progress" pull request
 may be opened by including '[WIP]' at the beginning of the PR
-title. This allows your code changes to be tested by Pyomo's automatic
+title. This allows your code changes to be tested by the full suite of
+Pyomo's automatic
 testing infrastructure. Any pull requests marked '[WIP]' will not be
 reviewed or merged by the core development team. In addition, any
 '[WIP]' pull request left open for an extended period of time without
 active development may be marked 'stale' and closed.
+
+Working on Forks and Branches
+-----------------------------
+
+All Pyomo development should be done on forks of the Pyomo
+repository. In order to fork the Pyomo repository, visit
+https://github.com/Pyomo/pyomo, click the "Fork" button in the
+upper right corner, and follow the instructions.
+
+This section discusses two recommended workflows for contributing
+pull-requests to Pyomo. The first workflow, labeled
+:ref:`Working with my fork and the GitHub Online UI <forksgithubui>`,
+does not require the use of 'remotes', and
+suggests updating your fork using the GitHub online UI. The second
+workflow, labeled
+:ref:`Working with remotes and the git command-line <forksremotes>`, outlines
+a process that defines separate remotes for your fork and the main
+Pyomo repository.
+
+More information on git can be found at
+https://git-scm.com/book/en/v2. Section 2.5 has information on working
+with remotes.
+
+
+.. _forksgithubui:
+
+Working with my fork and the GitHub Online UI
++++++++++++++++++++++++++++++++++++++++++++++
+
+After creating your fork (per the instructions above), you can
+then clone your fork of the repository with
+
+::
+
+   git clone https://github.com/<username>/pyomo.git
+
+For new development, we strongly recommend working on feature
+branches. When you have a new feature to implement, create
+the branch with the following.
+
+::
+
+   cd pyomo/     # to make sure you are in the folder managed by git
+   git branch <branch_name>
+   git checkout <branch_name>
+
+Development can now be performed. When you are ready, commit
+any changes you make to your local repository. This can be
+done multiple times with informative commit messages for
+different tasks in the feature development.
+
+::
+
+   git add <filename>
+   git status  # to check that you have added the correct files
+   git commit -m 'informative commit message to describe changes'
+
+In order to push the changes in your local branch to a branch on your fork, use
+
+::
+
+   git push origin <branch_name>
+
+
+When you have completed all the changes and are ready for a pull request, make
+sure all the changes have been pushed to the branch <branch_name> on your fork.
+
+    * visit https://github.com/<username>/pyomo.
+    * Just above the list of files and directories in the repository,
+      you should see a button that says "Branch: master". Click on
+      this button, and choose the correct branch.
+    * Click the "New pull request" button just to the right of the
+      "Branch: <branch_name>" button.
+    * Fill out the pull request template and click the green "Create
+      pull request" button.
+
+At times during your development, you may want to merge changes from
+the Pyomo master development branch into the feature branch on your
+fork and in your local clone of the repository.
+
+Using GitHub UI to merge Pyomo master into a branch on your fork
+****************************************************************
+
+To update your fork, you will actually be merging a pull-request from
+the main Pyomo repository into your fork.
+
+    * Visit https://github.com/Pyomo/pyomo.
+    * Click on the "New pull request" button just above the list of
+      files and directories.
+    * You will see the title "Compare changes" with some small text
+      below it which says "Compare changes across branches, commits,
+      tags, and more below. If you need to, you can also compare
+      across forks." Click the last part of this: "compare across
+      forks".
+    * You should now see four buttons just below this: "base
+      repository: Pyomo/pyomo", "base: master", "head repository:
+      Pyomo/pyomo", and "compare: master". Click the leftmost button
+      and choose "<username>/Pyomo".
+    * Then click the button which is second to the left, and choose
+      the branch which you want to merge Pyomo master into. The four
+      buttons should now read: "base repository: <username>/pyomo",
+      "base: <branch_name>", "head repository: Pyomo/pyomo", and
+      "compare: master". This is setting you up to merge a pull-request
+      from Pyomo's master branch into your fork's <branch_name> branch.
+    * You should also now see a pull request template. If you fill out
+      the pull request template and click "Create pull request", this
+      will create a pull request which will update your fork and
+      branch with any changes that have been made to the master branch
+      of Pyomo.
+    * You can then merge the pull request by clicking the green "Merge
+      pull request" button from your fork on GitHub.
+
+.. _forksremotes:
+
+Working with remotes and the git command-line
++++++++++++++++++++++++++++++++++++++++++++++
+
+After you have created your fork, you can clone the fork and setup
+git 'remotes' that allow you to merge changes from (and to) different
+remote repositories. Below, we have included a set of recommendations,
+but, of course, there are other valid GitHub workflows that you can
+adopt.
+
+The following commands show how to clone your fork and setup
+two remotes, one for your fork, and one for the main Pyomo repository.
+
+::
+   
+   git clone https://github.com/<username>/pyomo.git
+   git remote rename origin my-fork
+   git remote add main-pyomo https://github.com/pyomo/pyomo.git
+
+Note, you can see a list of your remotes with
+
+::
+
+   git remote -v
+
+The commands for creating a local branch and performing local commits
+are the same as those listed in the previous section above. Below are
+some common tasks based on this multi-remote setup.
+
+If you have changes that have been committed to a local feature branch
+(<branch_name>), you can push these changes to the branch on your fork
+with,
+
+::
+
+   git push my-fork <branch_name>
+
+In order to update a local branch with changes from a branch of the
+Pyomo repository,
+
+::
+
+   git checkout <branch_to_update>
+   git fetch main-pyomo
+   git merge main-pyomo/<branch_to_update_from> --ff-only
+
+The "--ff-only" only allows a merge if the merge can be done by a
+fast-forward. If you do not require a fast-forward, you can drop this
+option. The most common concrete example of this would be
+
+::
+
+   git checkout master
+   git fetch main-pyomo
+   git merge main-pyomo/master --ff-only
+
+The above commands pull changes from the master branch of the main
+Pyomo repository into the master branch of your local clone. To push
+these changes to the master branch on your fork,
+
+::
+
+   git push my-fork master
+
+
+Setting up your development environment
++++++++++++++++++++++++++++++++++++++++
+
+After cloning your fork, you will want to install Pyomo from source.
+
+Step 1 (recommended): Create a new conda environment.
+
+::
+
+   conda create --name pyomodev
+
+You may change the environment name from ``pyomodev`` as you see fit. Then activate the environment:
+
+::
+   
+   conda activate pyomodev
+
+Step 2: Install PyUtilib
+
+You will likely need the master branch of PyUtilib to contribute to Pyomo. Clone a copy of the repository in a new directory:
+
+::
+
+   git clone https://github.com/PyUtilib/pyutilib
+
+Then in the directory containing the clone of PyUtilib run:
+
+::
+
+   python setup.py develop
+   
+Step 3: Install Pyomo
+
+Finally, move to the directory containing the clone of your Pyomo fork and run:
+
+::
+
+  python setup.py develop
+
+These commands register the cloned code with the active python environment (``pyomodev``). This way, your changes to the source code for ``pyomo`` and ``pyutilib`` are automatically used by the active environment. You can create another conda environment to switch to alternate versions of pyomo (e.g., stable).
 
 Review Process
 --------------

@@ -8,23 +8,17 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import sys
-import socket
 import os
 from os.path import join, dirname, abspath
 import time
 import subprocess
 
-import pyutilib.services
 import pyutilib.th as unittest
 from pyutilib.pyro import using_pyro3, using_pyro4
 from pyomo.pysp.util.misc import (_get_test_nameserver,
                                   _get_test_dispatcher,
                                   _poll,
                                   _kill)
-from pyomo.environ import *
-
-from six import StringIO
 
 thisdir = dirname(abspath(__file__))
 baselineDir = join(thisdir, "baselines")

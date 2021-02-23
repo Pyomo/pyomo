@@ -11,17 +11,15 @@
 import logging
 import re
 import sys
-import pyomo.common
-from pyutilib.misc import Bunch
-from pyutilib.services import TempfileManager
+
+from pyomo.common.tempfiles import TempfileManager
+from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
 from pyomo.repn import generate_standard_repn
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
 from pyomo.core.kernel.objective import minimize, maximize
-from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
@@ -203,9 +201,10 @@ class GurobiDirect(DirectSolver):
 
         return gurobi_expr, referenced_vars
 
-    def _add_var(self, var):
-        varname = self._symbol_map.getSymbol(var, self._labeler)
-        vtype = self._gurobi_vtype_from_var(var)
+    def _gurobi_lb_ub_from_var(self, var):
+        if var.is_fixed():
+            val = var.value
+            return val, val
         if var.has_lb():
             lb = value(var.lb)
         else:
@@ -214,9 +213,12 @@ class GurobiDirect(DirectSolver):
             ub = value(var.ub)
         else:
             ub = self._gurobipy.GRB.INFINITY
-        if var.is_fixed():
-            lb = value(var.value)
-            ub = value(var.value)
+        return lb, ub
+
+    def _add_var(self, var):
+        varname = self._symbol_map.getSymbol(var, self._labeler)
+        vtype = self._gurobi_vtype_from_var(var)
+        lb, ub = self._gurobi_lb_ub_from_var(var)
 
         gurobipy_var = self._solver_model.addVar(lb=lb, ub=ub, vtype=vtype, name=varname)
 
@@ -242,7 +244,7 @@ class GurobiDirect(DirectSolver):
             e = sys.exc_info()[1]
             msg = ("Unable to create Gurobi model. "
                    "Have you installed the Python "
-                   "bindings for Gurboi?\n\n\t"+
+                   "bindings for Gurobi?\n\n\t"+
                    "Error message: {0}".format(e))
             raise Exception(msg)
 

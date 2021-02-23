@@ -19,19 +19,12 @@ exdir = normpath(join(currdir,'..','..','..','examples','pyomo','core'))
 
 import pyutilib.th as unittest
 
-import pyomo.opt
-from pyomo.environ import *
+from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 from pyomo.scripting.util import cleanup
 import pyomo.scripting.pyomo_main as main
 
 
 from six import iteritems
-
-try:
-    import yaml
-    yaml_available=True
-except ImportError:
-    yaml_available=False
 
 solver = None
 class CommonTests(object):
@@ -82,7 +75,7 @@ class CommonTests(object):
 
     def getObjective(self, fname):
         FILE = open(fname)
-        data = yaml.load(FILE)
+        data = yaml.load(FILE, **yaml_load_args)
         FILE.close()
         solutions = data.get('Solution', [])
         ans = []

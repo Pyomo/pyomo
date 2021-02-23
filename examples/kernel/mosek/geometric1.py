@@ -67,7 +67,7 @@ def solve_conic(Aw, Af, alpha, beta, gamma, delta):
     m.o = pmo.objective(m.x + m.y + m.z,
                         sense=pmo.maximize)
 
-    mosek = pmo.SolverFactory("mosek")
+    mosek = pmo.SolverFactory("mosek_direct")
     result = mosek.solve(m)
     assert str(result.solver.termination_condition) == "optimal"
     h, w, d = pmo.exp(m.x()), pmo.exp(m.y()), pmo.exp(m.z())

@@ -21,17 +21,12 @@ import pyutilib.subprocess
 import pyutilib.th as unittest
 from pyutilib.misc import setup_redirect, reset_redirect
 
+from pyomo.common.dependencies import yaml_available
 import pyomo.core
 import pyomo.scripting.pyomo_main as main
 from pyomo.opt import check_available_solvers
 
 from six import StringIO
-
-try:
-    import yaml
-    yaml_available=True
-except ImportError:
-    yaml_available=False
 
 if os.path.exists(sys.exec_prefix+os.sep+'bin'+os.sep+'coverage'):
     executable=sys.exec_prefix+os.sep+'bin'+os.sep+'coverage -x '
@@ -91,7 +86,9 @@ class BaseTester(unittest.TestCase):
             os.remove(currdir+'results.jsn')
 
     def run_pyomo(self, cmd, root=None):
-        return pyutilib.subprocess.run('pyomo solve --solver=glpk --results-format=json --save-results=%s.jsn ' % (root) +cmd, outfile=root+'.out')
+        cmd = 'pyomo solve --solver=glpk --results-format=json ' \
+              '--save-results=%s.jsn %s' % (root, cmd)
+        return pyutilib.subprocess.run(cmd, outfile=root+'.out')
 
 
 class TestJson(BaseTester):
@@ -104,7 +101,8 @@ class TestJson(BaseTester):
 
     def test1a_simple_pyomo_execution(self):
         # Simple execution of 'pyomo' in a subprocess
-        self.run_pyomo(currdir+'pmedian.py pmedian.dat', root=currdir+'test1a')
+        self.run_pyomo('%s/pmedian.py %s/pmedian.dat' % (currdir,currdir),
+                       root=currdir+'test1a')
         self.assertMatchesJsonBaseline(currdir+"test1a.jsn", currdir+"test1.txt",tolerance=_diff_tol)
         os.remove(currdir+'test1a.out')
 

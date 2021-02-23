@@ -1,16 +1,20 @@
-import appdirs
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import os
 import json
-try:
-    import yaml
-    yaml_available = True
-except ImportError:
-    yaml_available = False
 
-from pyutilib.misc.config import ConfigBase
 from pyomo.common.config import (
-    ConfigBlock, ConfigValue, ADVANCED_OPTION, PYOMO_CONFIG_DIR,
+    ConfigBase, ConfigBlock, ConfigValue, ADVANCED_OPTION, PYOMO_CONFIG_DIR,
 )
+from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 import logging
 logger = logging.getLogger('pyomo.core')
 
@@ -21,20 +25,26 @@ class _PyomoOptions(object):
         self._options_stack = [ default_pyomo_config() ]
 
         # Load the user's configuration
-        sources = [(json.load, 'json')]
-        if yaml_available:
-            sources.append( (yaml.load, 'yml') )
-            sources.append( (yaml.load, 'yaml') )
-        for parser, suffix in sources:
+        sources = [(json, 'json', True, 'json', {}),
+                   (json, 'jsn', True, 'json', {})]
+        sources.append((yaml, 'yml', yaml_available, 'yaml', yaml_load_args))
+        sources.append((yaml, 'yaml', yaml_available, 'yaml', yaml_load_args))
+        for parser, suffix, available, library, parser_args in sources:
             cfg_file = os.path.join( PYOMO_CONFIG_DIR, 'config.'+suffix)
-            if os.path.exists(cfg_file):
-                fp = open(cfg_file)
-                try:
-                    data = parser(fp)
-                except:
-                    logger.error("Error parsing the user's default "
-                                 "configuration file\n\t%s." % (cfg_file,))
-                self._options_stack[0].set_value(data)
+            if not os.path.exists(cfg_file):
+                continue
+            if not available:
+                logger.warning("Default configuration file (%s) cannot be "
+                               "loaded; %s is not available"
+                               % (cfg_file, library))
+                continue
+            fp = open(cfg_file)
+            try:
+                data = parser.load(fp, **parser_args)
+            except:
+                logger.error("Error parsing the user's default "
+                             "configuration file\n\t%s." % (cfg_file,))
+            self._options_stack[0].set_value(data)
 
     def active_config(self):
         return self._options_stack[-1]

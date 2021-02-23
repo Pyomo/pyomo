@@ -1,59 +1,65 @@
 Sets
 ====
 
+.. currentmodule:: pyomo.environ
+
 Declaration
 -----------
 
-Sets can be declared using the `Set` and `RangeSet` functions or by
+Sets can be declared using instances of the :class:`Set` and :class:`RangeSet`
+classes or by
 assigning set expressions.  The simplest set declaration creates a set
 and postpones creation of its members:
 
 .. doctest::
-    :hide:
+   :hide:
 
-    >>> from pyomo.environ import *
-    >>> model = ConcreteModel()
+   >>> import pyomo.environ as pyo
+   >>> model = pyo.ConcreteModel()
+
+.. testcode::
+
+   model.A = pyo.Set()
 
 .. doctest::
+   :hide:
 
-    >>> model.A = Set()
+   >>> # Add some data to the Set
+   >>> model.A.update([1,2,3])
 
-The ``Set`` function takes optional arguments such as:
+The :class:`Set` class takes optional arguments such as:
 
-- doc = String describing the set
-- dimen = Dimension of the members of the set
-- filter = A Boolean function used during construction to indicate if a
+- ``dimen`` = Dimension of the members of the set
+- ``doc`` = String describing the set
+- ``filter`` = A Boolean function used during construction to indicate if a
   potential new member should be assigned to the set
-- initialize = An iterable containing the initial members of the Set, or
+- ``initialize`` = An iterable containing the initial members of the Set, or
   function that returns an iterable of the initial members the set.
-- ordered = A Boolean indicator that the set is ordered; the default is ``False``
-- validate = A Boolean function that validates new member data
-- virtual = A Boolean indicator that the set will never have elements;
-  it is unusual for a modeler to create a virtual set; they are
-  typically used as domains for sets, parameters and variables
-- within = Set used for validation; it is a super-set of the set being declared.
+- ``ordered`` = A Boolean indicator that the set is ordered; the default is ``True``
+- ``validate`` = A Boolean function that validates new member data
+- ``within`` = Set used for validation; it is a super-set of the set being declared.
 
 In general, Pyomo attempts to infer the "dimensionality" of Set
 components (that is, the number of apparent indices) when they are
 constructed.  However, there are situations where Pyomo either cannot
-detect a dimensionality (e.g., a Set that was not initialized with any
+detect a dimensionality (e.g., a :class:`Set` that was not initialized with any
 members), or you the user may want to assert the dimensionality of the
 set.  This can be accomplished through the ``dimen`` keyword.  For
-example, to create a set whose members will be two dimensional, one
+example, to create a set whose members will be tuples with two items, one
 could write:
 
-.. doctest::
+.. testcode::
 
-    >>> model.B = Set(dimen=2)
+   model.B = pyo.Set(dimen=2)
 
 To create a set of all the numbers in set ``model.A`` doubled, one could
 use
 
-.. doctest::
+.. testcode::
 
-    >>> def DoubleA_init(model):
-    ...     return (i*2 for i in model.A)
-    >>> model.C = Set(initialize=DoubleA_init)
+   def DoubleA_init(model):
+       return (i*2 for i in model.A)
+   model.C = pyo.Set(initialize=DoubleA_init)
 
 As an aside we note that as always in Python, there are lot of ways to
 accomplish the same thing. Also, note that this will generate an error
@@ -64,56 +70,59 @@ The ``initialize`` option can accept any Python iterable, including a
 ``set``, ``list``, or ``tuple``.  This data may be returned from a
 function or specified directly as in
 
-.. doctest::
+.. testcode::
 
-    >>> model.D = Set(initialize=['red', 'green', 'blue'])
+   model.D = pyo.Set(initialize=['red', 'green', 'blue'])
 
 The ``initialize`` option can also specify either a generator or a
 function to specify the Set members.  In the case of a generator, all
 data yielded by the generator will become the initial set members:
 
-.. doctest::
+.. testcode::
 
-    >>> def X_init(m):
-    ...     for i in range(10):
-    ...         yield 2*i+1
-    >>> model.X = Set(initialize=X_init)
+   def X_init(m):
+       for i in range(10):
+           yield 2*i+1
+   model.X = pyo.Set(initialize=X_init)
 
 For initialization functions, Pyomo supports two signatures.  In the
 first, the function returns an iterable (``set``, ``list``, or
 ``tuple``) containing the data with which to initialize the Set:
 
-.. doctest::
+.. testcode::
 
-    >>> def Y_init(m):
-    ...     return [2*i+1 for i in range(10)]
-    >>> model.Y = Set(initialize=Y_init)
+   def Y_init(m):
+       return [2*i+1 for i in range(10)]
+   model.Y = pyo.Set(initialize=Y_init)
 
 In the second signature, the function is called for each element,
 passing the element number in as an extra argument.  This is repeated
 until the function returns the special value ``Set.End``:
 
-.. doctest::
+.. testcode::
 
-    >>> def Z_init(model, i):
-    ...     if i > 10:
-    ...         return Set.End
-    ...     return 2*i+1
-    >>> model.Z = Set(initialize=Z_init)
+   def Z_init(model, i):
+       if i > 10:
+           return pyo.Set.End
+       return 2*i+1
+   model.Z = pyo.Set(initialize=Z_init)
 
 Note that the element number starts with 1 and not 0:
 
 .. doctest::
 
-    >>> model.X.pprint()
-    X : Dim=0, Dimen=1, Size=10, Domain=None, Ordered=False, Bounds=(1, 19)
-        [1, 3, 5, 7, 9, 11, 13, 15, 17, 19]
-    >>> model.Y.pprint()
-    Y : Dim=0, Dimen=1, Size=10, Domain=None, Ordered=False, Bounds=(1, 19)
-        [1, 3, 5, 7, 9, 11, 13, 15, 17, 19]
-    >>> model.Z.pprint()
-    Z : Dim=0, Dimen=1, Size=10, Domain=None, Ordered=False, Bounds=(3, 21)
-        [3, 5, 7, 9, 11, 13, 15, 17, 19, 21]
+   >>> model.X.pprint()
+   X : Size=1, Index=None, Ordered=Insertion
+       Key  : Dimen : Domain : Size : Members
+       None :     1 :    Any :   10 : {1, 3, 5, 7, 9, 11, 13, 15, 17, 19}
+   >>> model.Y.pprint()
+   Y : Size=1, Index=None, Ordered=Insertion
+       Key  : Dimen : Domain : Size : Members
+       None :     1 :    Any :   10 : {1, 3, 5, 7, 9, 11, 13, 15, 17, 19}
+   >>> model.Z.pprint()
+   Z : Size=1, Index=None, Ordered=Insertion
+       Key  : Dimen : Domain : Size : Members
+       None :     1 :    Any :   10 : {3, 5, 7, 9, 11, 13, 15, 17, 19, 21}
 
 Additional information about iterators for set initialization is in the
 [PyomoBookII]_ book.
@@ -121,38 +130,47 @@ Additional information about iterators for set initialization is in the
 .. note::
 
    For Abstract models, data specified in an input file or through the
-   ``data`` argument to ``create_instance()`` will override the data
+   ``data`` argument to :meth:`AbstractModel.create_instance()` will
+   override the data
    specified by the initialize options.
 
-If sets are given as arguments to ``Set`` without keywords, they are
+If sets are given as arguments to :class:`Set` without keywords, they are
 interpreted as indexes for an array of sets. For example, to create an
 array of sets that is indexed by the members of the set ``model.A``, use:
 
-.. doctest::
+.. testcode::
 
-   >>> model.E = Set(model.A)
+   model.E = pyo.Set(model.A)
 
 Arguments can be combined. For example, to create an array of sets,
 indexed by set ``model.A`` where each set contains three dimensional
 members, use:
 
-.. doctest::
+.. testcode::
 
-   >>> model.F = Set(model.A, dimen=3)
+   model.F = pyo.Set(model.A, dimen=3)
 
 The ``initialize`` option can be used to create a set that contains a
-sequence of numbers, but the ``RangeSet`` function provides a concise
-mechanism for simple sequences. This function takes as its arguments a
-start value, a final value, and a step size. If the ``RangeSet`` has
+sequence of numbers, but the :class:`RangeSet` class provides a concise
+mechanism for simple sequences. This class takes as its arguments a
+start value, a final value, and a step size. If the :class:`RangeSet` has
 only a single argument, then that value defines the final value in the
 sequence; the first value and step size default to one. If two values
 given, they are the first and last value in the sequence and the step
 size defaults to one. For example, the following declaration creates a
 set with the numbers 1.5, 5 and 8.5:
 
-.. doctest::
+.. testcode::
 
-   >>> model.G = RangeSet(1.5, 10, 3.5)
+   model.G = pyo.RangeSet(1.5, 10, 3.5)
+
+.. doctest::
+   :hide:
+
+   >>> model.G.pprint()
+   G : Dimen=1, Size=3, Bounds=(1.5, 8.5)
+       Key  : Finite : Members
+       None :   True : [1.5], [5.0], [8.5]
 
 Operations
 -----------
@@ -161,20 +179,20 @@ Sets may also be created by storing the result of *set operations* using
 other Pyomo sets.  Pyomo supports set operations including union, intersection,
 difference, and symmetric difference:
 
-.. doctest::
+.. testcode::
 
-    >>> model.I = model.A | model.D # union
-    >>> model.J = model.A & model.D # intersection
-    >>> model.K = model.A - model.D # difference
-    >>> model.L = model.A ^ model.D # exclusive-or
+    model.I = model.A | model.D # union
+    model.J = model.A & model.D # intersection
+    model.K = model.A - model.D # difference
+    model.L = model.A ^ model.D # exclusive-or
 
 For example, the cross-product operator is the asterisk (*).  To define
 a new set ``M`` that is the cross product of sets ``B`` and ``C``, one
 could use
 
-.. doctest::
+.. testcode::
 
-    >>> model.M = model.B * model.C
+   model.M = model.B * model.C
 
 This creates a *virtual* set that holds references to the original sets,
 so any updates to the original sets (``B`` and ``C``) will be reflected
@@ -183,16 +201,16 @@ set, which directly stores the values of the cross product at the time
 of creation and will *not* reflect subsequent changes in the original
 sets with:
 
-.. doctest::
+.. testcode::
 
-    >>> model.M_concrete = Set(initialize=model.B * model.C)
+   model.M_concrete = pyo.Set(initialize=model.B * model.C)
 
 Finally, you can indicate that the members of a set are restricted to be in the
 cross product of two other sets, one can use the ``within`` keyword:
 
-.. doctest::
+.. testcode::
 
-    >>> model.N = Set(within=model.B * model.C)
+   model.N = pyo.Set(within=model.B * model.C)
 
 Predefined Virtual Sets
 -----------------------
@@ -200,29 +218,30 @@ Predefined Virtual Sets
 For use in specifying domains for sets, parameters and variables, Pyomo
 provides the following pre-defined virtual sets:
 
-- Any = all possible values
-- Reals = floating point values
-- PositiveReals = strictly positive floating point values
-- NonPositiveReals = non-positive floating point values
-- NegativeReals = strictly negative floating point values
-- NonNegativeReals = non-negative floating point values
-- PercentFraction = floating point values in the interval [0,1]
-- UnitInterval = alias for PercentFraction
-- Integers = integer values
-- PositiveIntegers = positive integer values
-- NonPositiveIntegers = non-positive integer values
-- NegativeIntegers = negative integer values
-- NonNegativeIntegers = non-negative integer values
-- Boolean = Boolean values, which can be represented as False/True, 0/1,
+- ``Any`` = all possible values
+- ``Reals`` = floating point values
+- ``PositiveReals`` = strictly positive floating point values
+- ``NonPositiveReals`` = non-positive floating point values
+- ``NegativeReals`` = strictly negative floating point values
+- ``NonNegativeReals`` = non-negative floating point values
+- ``PercentFraction`` = floating point values in the interval [0,1]
+- ``UnitInterval`` = alias for PercentFraction
+- ``Integers`` = integer values
+- ``PositiveIntegers`` = positive integer values
+- ``NonPositiveIntegers`` = non-positive integer values
+- ``NegativeIntegers`` = negative integer values
+- ``NonNegativeIntegers`` = non-negative integer values
+- ``Boolean`` = Boolean values, which can be represented as False/True, 0/1,
   ’False’/’True’ and ’F’/’T’
-- Binary = same as Boolean
+- ``Binary`` = the integers {0, 1}
 
-For example, if the set ``model.M`` is declared to be within the virtual
+For example, if the set ``model.O`` is declared to be within the virtual
 set ``NegativeIntegers`` then an attempt to add anything other than a
 negative integer will result in an error. Here is the declaration:
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Predefined_set_example.spy
-   :language: python
+.. testcode::
+
+   model.O = pyo.Set(within=pyo.NegativeIntegers)
 
 .. _Isinglecomm.py:
 
@@ -242,8 +261,14 @@ some of the options and issues, we will consider problems involving
 networks. In many network applications, it is useful to declare a set of
 nodes, such as
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Declare_nodes.spy
-   :language: python
+.. testcode::
+
+   model.Nodes = pyo.Set()
+
+.. doctest::
+   :hide:
+
+   >>> model.Nodes.update(['a','b','c'])
 
 and then a set of arcs can be created with reference to the nodes.
 
@@ -271,8 +296,9 @@ where
 In the simplest case, the arcs can just be the cross product of the
 nodes, which is accomplished by the definition
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Declare_arcs_crossproduct.spy
-   :language: python
+.. testcode::
+
+   model.Arcs = model.Nodes*model.Nodes
 
 that creates a set with two dimensional members.  For applications where
 all nodes are always connected to all other nodes this may
@@ -284,13 +310,25 @@ for those arcs.  Such a scheme is not very elegant or robust.
 For many network flow applications, it might be better to declare the
 arcs using
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Declare_arcs_within.spy
-   :language: python
+.. doctest::
+   :hide:
+
+   >>> del model.Arcs
+
+.. testcode::
+
+   model.Arcs = pyo.Set(dimen=2)
 
 or
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Declare_arcs_dimen.spy
-   :language: python
+.. doctest::
+   :hide:
+
+   >>> del model.Arcs
+
+.. testcode::
+
+   model.Arcs = pyo.Set(within=model.Nodes*model.Nodes)
 
 where the difference is that the first version will provide error
 checking as data is assigned to the set elements. This would enable
@@ -300,8 +338,23 @@ written in the simple example, it sums over the entire set of nodes for
 each node. One way to remedy this is to sum only over the members of the
 set ``model.arcs`` as in
 
-.. literalinclude:: ../script_spy_files/FlowBalance_rule.py
-   :language: python
+.. testcode::
+
+   def FlowBalance_rule(m, node):
+       return m.Supply[node] \
+           + sum(m.Flow[i, node] for i in m.Nodes if (i,node) in m.Arcs) \
+           - m.Demand[node] \
+           - sum(m.Flow[node, j] for j in m.Nodes if (j,node) in m.Arcs) \
+           == 0
+
+.. doctest::
+   :hide:
+
+   >>> model.Demand = pyo.Param(model.Nodes, default=1)
+   >>> model.Supply = pyo.Param(model.Nodes, default=2)
+   >>> model.Flow = pyo.Var(model.Nodes, model.Nodes)
+   >>> model.Arcs.update([('a','b'),('b','c'),('c','a')])
+   >>> model._flow_bal_1 = pyo.Constraint(model.Nodes, rule=FlowBalance_rule)
 
 This will be OK unless the number of nodes becomes very large for a
 sparse network, then the time to generate this constraint might become
@@ -314,8 +367,14 @@ going to the node at hand and another set giving the nodes on out-going
 arcs. If these sets are called ``model.NodesIn`` and ``model.NodesOut``
 respectively, then the flow balance rule can be re-written as
 
-.. literalinclude:: ../script_spy_files/FlowBalance_rule2.py
-   :language: python
+.. testcode::
+
+   def FlowBalance_rule(m, node):
+       return m.Supply[node] \
+           + sum(m.Flow[i, node] for i in m.NodesIn[node]) \
+           - m.Demand[node] \
+           - sum(m.Flow[node, j] for j in m.NodesOut[node]) \
+           == 0
 
 The data for ``NodesIn`` and ``NodesOut`` could be added to the input
 file, and this may be the most efficient option.
@@ -325,53 +384,136 @@ For all but the largest networks, rather than reading ``Arcs``,
 to read only ``Arcs`` from a data file and declare ``model.NodesIn``
 with an ``initialize`` option specifying the creation as follows:
 
-.. literalinclude:: ../script_spy_files/NodesIn_init.py
-   :language: python
+.. testcode::
+
+    def NodesIn_init(m, node):
+        for i, j in m.Arcs:
+            if j == node:
+                yield i
+    model.NodesIn = pyo.Set(model.Nodes, initialize=NodesIn_init)
+
+.. doctest::
+   :hide:
+
+    >>> model.NodesOut = pyo.Set(model.Nodes)
+    >>> model._flow_bal_2 = pyo.Constraint(model.Nodes, rule=FlowBalance_rule)
 
 with a similar definition for ``model.NodesOut``.  This code creates a
 list of sets for ``NodesIn``, one set of nodes for each node. The full
 model is:
 
-.. literalinclude:: ../script_spy_files/Isinglecomm.py
-   :language: python
+.. testcode::
 
-for this model, a toy data file would be:
+    import pyomo.environ as pyo
 
-.. literalinclude:: ../script_spy_files/Isinglecomm.dat
-   :language: python
+    model = pyo.AbstractModel()
 
-This can be done somewhat more efficiently, and perhaps more clearly,
-using a BuildAction as shown in Isinglebuild.py in :ref:Isinglebuild.py.
+    model.Nodes = pyo.Set()
+    model.Arcs = pyo.Set(dimen=2)
+
+    def NodesOut_init(m, node):
+        for i, j in m.Arcs:
+            if i == node:
+                yield j
+    model.NodesOut = pyo.Set(model.Nodes, initialize=NodesOut_init)
+
+    def NodesIn_init(m, node):
+        for i, j in m.Arcs:
+            if j == node:
+                yield i
+    model.NodesIn = pyo.Set(model.Nodes, initialize=NodesIn_init)
+
+    model.Flow = pyo.Var(model.Arcs, domain=pyo.NonNegativeReals)
+    model.FlowCost = pyo.Param(model.Arcs)
+
+    model.Demand = pyo.Param(model.Nodes)
+    model.Supply = pyo.Param(model.Nodes)
+
+    def Obj_rule(m):
+        return pyo.summation(m.FlowCost, m.Flow)
+    model.Obj = pyo.Objective(rule=Obj_rule, sense=pyo.minimize)
+
+    def FlowBalance_rule(m, node):
+        return m.Supply[node] \
+            + sum(m.Flow[i, node] for i in m.NodesIn[node]) \
+            - m.Demand[node] \
+            - sum(m.Flow[node, j] for j in m.NodesOut[node]) \
+            == 0
+    model.FlowBalance = pyo.Constraint(model.Nodes, rule=FlowBalance_rule)
+
+for this model, a toy data file (in AMPL "``.dat``" format) would be:
+
+.. literalinclude:: ../tests/scripting/Isinglecomm.dat
+   :language: text
+
+.. doctest::
+   :hide:
+
+   >>> inst = model.create_instance('tests/scripting/Isinglecomm.dat')
+
+This can also be done somewhat more efficiently, and perhaps more clearly,
+using a :class:`BuildAction` (for more information, see :ref:`BuildAction`):
+
+.. doctest::
+   :hide:
+
+   >>> model = inst
+   >>> del model.NodesIn
+   >>> del model.NodesOut
+
+.. testcode::
+
+   model.NodesOut = pyo.Set(model.Nodes, within=model.Nodes)
+   model.NodesIn = pyo.Set(model.Nodes, within=model.Nodes)
+
+   def Populate_In_and_Out(model):
+       # loop over the arcs and record the end points
+       for i, j in model.Arcs:
+           model.NodesIn[j].add(i)
+           model.NodesOut[i].add(j)
+
+   model.In_n_Out = pyo.BuildAction(rule=Populate_In_and_Out)
 
 Sparse Index Sets Example
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 One may want to have a constraint that holds
 
-.. doctest::
-
-   >>> for i in model.I, k in model.K, v in model.V[k] # doctest: +SKIP
+.. math::
+   \forall \; i \in I, k \in K, v \in V_k
 
 There are many ways to accomplish this, but one good way is to create a
-set of tuples composed of all of ``model.k, model.V[k]`` pairs.  This
+set of tuples composed of all ``model.k, model.V[k]`` pairs.  This
 can be done as follows:
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Define_constraint_tuples.spy
-   :language: python
+.. testcode::
+   :hide:
 
-So then if there was a constraint defining rule such as
+   model = pyo.ConcreteModel()
 
-.. doctest::
+   model.I = pyo.RangeSet(3)
+   model.K = pyo.RangeSet(5)
 
-   >>> def MyC_rule(model, i, k, v): # doctest: +SKIP
-   >>>    return ...                 # doctest: +SKIP
+   def V_init(m, k):
+       return range(0, k, 2)
+   model.V = pyo.Set(model.K, initialize=V_init)
 
-Then a constraint could be declared using
+.. testcode::
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Define_another_constraint.spy
-   :language: python
+   def kv_init(m):
+       return ((k,v) for k in m.K for v in m.V[k])
+   model.KV = pyo.Set(dimen=2, initialize=kv_init)
 
-Here is the first few lines of a model that illustrates this:
+We can now create the constraint :math:`x_{i,k,v} \leq a_{i,k}y_i
+\;\forall\; i \in I, k \in K, v \in V_k` with:
 
-.. literalinclude:: ../script_spy_files/Spy4Sets_Declare_constraints_example.spy
-   :language: python
+.. testcode::
+
+   model.a = pyo.Param(model.I, model.K, default=1)
+
+   model.y = pyo.Var(model.I)
+   model.x = pyo.Var(model.I, model.KV)
+
+   def c1_rule(m, i, k, v):
+       return m.x[i,k,v] <= m.a[i,k]*m.y[i]
+   model.c1 = pyo.Constraint(model.I, model.KV, rule=c1_rule)

@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Provides functions to compute and enforce disjunctive variable bounds.
 
 These are tighter variable bounds that are valid within the scope of a certain
@@ -9,14 +19,13 @@ to variable bounds preprocessing transformation is recommended for NLP problems
 processed with this transformation.
 
 """
+from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt, BoundsManager
 from pyomo.core.base.block import Block, TraversalStrategy
 from pyomo.core.expr.current import identify_variables
-from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core import (Constraint, Objective,
-                        TransformationFactory, maximize, minimize, value)
+                        TransformationFactory, minimize, value)
 from pyomo.opt import SolverFactory
 from pyomo.gdp.disjunct import Disjunct
 from pyomo.core.plugins.transform.hierarchy import Transformation
@@ -30,7 +39,7 @@ def disjunctive_obbt(model, solver):
     model._disjuncts_to_process = list(model.component_data_objects(
         ctype=Disjunct, active=True, descend_into=(Block, Disjunct),
         descent_order=TraversalStrategy.BreadthFirstSearch))
-    if model.type() == Disjunct:
+    if model.ctype == Disjunct:
         model._disjuncts_to_process.insert(0, model)
 
     linear_var_set = ComponentSet()
@@ -145,7 +154,7 @@ def fbbt_disjunct(disj, parent_bounds):
     try:
         new_bnds = fbbt(disj)
     except InfeasibleConstraintException as e:
-        if disj.type() == Disjunct:
+        if disj.ctype == Disjunct:
             disj.deactivate()  # simply prune the disjunct
         new_bnds = parent_bounds
     bnds_manager.pop_bounds()

@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Re-implementation of example 1 of Outer approximation and ECP.
 
 Re-implementation of Duran example 1 as written by Westerlund
@@ -28,8 +38,7 @@ from __future__ import division
 from six import iteritems
 
 from pyomo.environ import (Binary, ConcreteModel, Constraint, NonNegativeReals,
-                           Objective, Param, RangeSet, Var, exp, minimize,
-                           maximize, log)
+                           Objective, RangeSet, Var, minimize, log)
 
 
 class SimpleMINLP(ConcreteModel):
@@ -54,7 +63,7 @@ class SimpleMINLP(ConcreteModel):
         # DISCRETE VARIABLES
         Y = m.Y = Var(J, domain=Binary, initialize=initY)
         # CONTINUOUS VARIABLES
-        X = m.X = Var(I, domain=NonNegativeReals, initialize=initX)
+        X = m.X = Var(I, domain=NonNegativeReals, initialize=initX, bounds=(0, 2))
 
         """Constraint definitions"""
         # CONSTRAINTS

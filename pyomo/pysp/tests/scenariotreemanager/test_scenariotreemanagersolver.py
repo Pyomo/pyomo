@@ -14,37 +14,27 @@ import time
 import subprocess
 
 from pyutilib.pyro import using_pyro3, using_pyro4
+import pyutilib.th as unittest
+
+from pyomo.common.dependencies import dill, dill_available as has_dill
 from pyomo.pysp.util.misc import (_get_test_nameserver,
                                   _get_test_dispatcher,
                                   _poll,
                                   _kill)
-import pyutilib.services
-import pyutilib.th as unittest
-from pyomo.pysp.util.config import PySPConfigBlock
 from pyomo.pysp.scenariotree.manager import \
     (ScenarioTreeManagerClientSerial,
-     ScenarioTreeManagerClientPyro,
-     InvocationType)
+     ScenarioTreeManagerClientPyro)
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
 from pyomo.pysp.scenariotree.manager_solver import \
     (ScenarioTreeManagerSolverFactory,
      PySPFailedSolveStatus)
-from pyomo.opt import undefined
 
-import pyomo.environ as aml
+import pyomo.environ as pyo
 
-try:
-    import networkx
-    has_networkx = True                           #pragma:nocover
-except:                                           #pragma:nocover
-    has_networkx = False
-
-try:
-    import dill
-    has_dill = True                               #pragma:nocover
-except ImportError:                               #pragma:nocover
-    has_dill = False
+from pyomo.common.dependencies import (
+    networkx, networkx_available as has_networkx
+)
 
 thisfile = os.path.abspath(__file__)
 thisdir = os.path.dirname(thisfile)
@@ -150,17 +140,17 @@ class _SP_Feasible(object):
                           cost="t1_cost")
             tree.add_edge("r", "s"+str(i), weight=1.0/3)
 
-        model = aml.ConcreteModel()
-        model.x = aml.Var()
-        model.Y = aml.Var([1])
-        model.stale = aml.Var(initialize=0.0)
-        model.fixed = aml.Var(initialize=0.0)
+        model = pyo.ConcreteModel()
+        model.x = pyo.Var()
+        model.Y = pyo.Var([1])
+        model.stale = pyo.Var(initialize=0.0)
+        model.fixed = pyo.Var(initialize=0.0)
         model.fixed.fix()
-        model.p = aml.Param(mutable=True)
-        model.t0_cost = aml.Expression(expr=model.x)
-        model.t1_cost = aml.Expression(expr=model.Y[1])
-        model.o = aml.Objective(expr=model.t0_cost + model.t1_cost)
-        model.c = aml.ConstraintList()
+        model.p = pyo.Param(mutable=True)
+        model.t0_cost = pyo.Expression(expr=model.x)
+        model.t1_cost = pyo.Expression(expr=model.Y[1])
+        model.o = pyo.Objective(expr=model.t0_cost + model.t1_cost)
+        model.c = pyo.ConstraintList()
         model.c.add(model.x >= 1)
         model.c.add(model.Y[1] >= model.p)
 
@@ -234,17 +224,17 @@ class _SP_Infeasible(object):
                           cost="t1_cost")
             tree.add_edge("r", "s"+str(i), weight=1.0/3)
 
-        model = aml.ConcreteModel()
-        model.x = aml.Var()
-        model.Y = aml.Var([1], bounds=(None, 1))
-        model.stale = aml.Var(initialize=0.0)
-        model.fixed = aml.Var(initialize=0.0)
+        model = pyo.ConcreteModel()
+        model.x = pyo.Var()
+        model.Y = pyo.Var([1], bounds=(None, 1))
+        model.stale = pyo.Var(initialize=0.0)
+        model.fixed = pyo.Var(initialize=0.0)
         model.fixed.fix()
-        model.p = aml.Param(mutable=True)
-        model.t0_cost = aml.Expression(expr=model.x)
-        model.t1_cost = aml.Expression(expr=model.Y[1])
-        model.o = aml.Objective(expr=model.t0_cost + model.t1_cost)
-        model.c = aml.ConstraintList()
+        model.p = pyo.Param(mutable=True)
+        model.t0_cost = pyo.Expression(expr=model.x)
+        model.t1_cost = pyo.Expression(expr=model.Y[1])
+        model.o = pyo.Objective(expr=model.t0_cost + model.t1_cost)
+        model.c = pyo.ConstraintList()
         model.c.add(model.x >= 1)
         model.c.add(model.Y[1] >= model.p)
 
@@ -348,17 +338,17 @@ class _SP_Bundles_Feasible(object):
                           bundle="b"+str(i))
             tree.add_edge("r", "s"+str(i), weight=1.0/3)
 
-        model = aml.ConcreteModel()
-        model.x = aml.Var()
-        model.Y = aml.Var([1])
-        model.stale = aml.Var(initialize=0.0)
-        model.fixed = aml.Var(initialize=0.0)
+        model = pyo.ConcreteModel()
+        model.x = pyo.Var()
+        model.Y = pyo.Var([1])
+        model.stale = pyo.Var(initialize=0.0)
+        model.fixed = pyo.Var(initialize=0.0)
         model.fixed.fix()
-        model.p = aml.Param(mutable=True)
-        model.t0_cost = aml.Expression(expr=model.x)
-        model.t1_cost = aml.Expression(expr=model.Y[1])
-        model.o = aml.Objective(expr=model.t0_cost + model.t1_cost)
-        model.c = aml.ConstraintList()
+        model.p = pyo.Param(mutable=True)
+        model.t0_cost = pyo.Expression(expr=model.x)
+        model.t1_cost = pyo.Expression(expr=model.Y[1])
+        model.o = pyo.Objective(expr=model.t0_cost + model.t1_cost)
+        model.c = pyo.ConstraintList()
         model.c.add(model.x >= 1)
         model.c.add(model.Y[1] >= model.p)
 
@@ -442,17 +432,17 @@ class _SP_Bundles_Infeasible(object):
                           bundle="b"+str(i))
             tree.add_edge("r", "s"+str(i), weight=1.0/3)
 
-        model = aml.ConcreteModel()
-        model.x = aml.Var()
-        model.Y = aml.Var([1], bounds=(None, 1))
-        model.stale = aml.Var(initialize=0.0)
-        model.fixed = aml.Var(initialize=0.0)
+        model = pyo.ConcreteModel()
+        model.x = pyo.Var()
+        model.Y = pyo.Var([1], bounds=(None, 1))
+        model.stale = pyo.Var(initialize=0.0)
+        model.fixed = pyo.Var(initialize=0.0)
         model.fixed.fix()
-        model.p = aml.Param(mutable=True)
-        model.t0_cost = aml.Expression(expr=model.x)
-        model.t1_cost = aml.Expression(expr=model.Y[1])
-        model.o = aml.Objective(expr=model.t0_cost + model.t1_cost)
-        model.c = aml.ConstraintList()
+        model.p = pyo.Param(mutable=True)
+        model.t0_cost = pyo.Expression(expr=model.x)
+        model.t1_cost = pyo.Expression(expr=model.Y[1])
+        model.o = pyo.Objective(expr=model.t0_cost + model.t1_cost)
+        model.c = pyo.ConstraintList()
         model.c.add(model.x >= 1)
         model.c.add(model.Y[1] >= model.p)
 
@@ -719,7 +709,6 @@ class _ScenarioTreeManagerSolverTesterBase(object):
 # create the actual testing classes
 #
 
-@unittest.skipIf(not has_networkx, "Networkx is not available")
 @unittest.skipIf(not has_networkx, "Networkx is not available")
 @unittest.skipIf(not has_dill, "Dill is not available")
 class TestScenarioTreeManagerSolverSerial(

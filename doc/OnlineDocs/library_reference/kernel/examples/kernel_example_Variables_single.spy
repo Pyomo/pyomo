@@ -1,3 +1,0 @@
-m.v = pmo.variable(value=1,
-                   lb=1,
-                   ub=4)

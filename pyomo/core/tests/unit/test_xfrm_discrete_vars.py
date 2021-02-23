@@ -12,9 +12,10 @@
 
 import pyutilib.th as unittest
 
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, Var, Constraint, Objective, Suffix, Binary, TransformationFactory, SolverFactory, Reals
+from pyomo.opt import check_available_solvers
 
-solvers = pyomo.opt.check_available_solvers('cplex', 'gurobi', 'glpk')
+solvers = check_available_solvers('cplex', 'gurobi', 'glpk')
 
 def _generateModel():
     model = ConcreteModel()
@@ -39,7 +40,7 @@ class Test(unittest.TestCase):
         self.assertEqual(len(m.dual), 0)
 
         TransformationFactory('core.relax_discrete').apply_to(m)
-        self.assertIs(m.x.domain, NonNegativeReals)
+        self.assertIs(m.x.domain, Reals)
         self.assertEqual(m.x.lb, 0)
         self.assertEqual(m.x.ub, 1)
         s.solve(m)

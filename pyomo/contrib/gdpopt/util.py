@@ -1,22 +1,30 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 """Utility functions and classes for the GDPopt solver."""
+
 from __future__ import division
 
 import logging
-import timeit
 from contextlib import contextmanager
 from math import fabs
 
 import six
-from pyutilib.misc import Container
 
-from pyomo.common import deprecated
+from pyomo.common import deprecated, timing
+from pyomo.common.collections import ComponentSet, Container
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
 from pyomo.core import (Block, Constraint,
                         Objective, Reals, Var, minimize, value, ConstraintList)
 from pyomo.core.expr.current import identify_variables
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverFactory, SolverResults
 from pyomo.opt.results import ProblemSense
@@ -105,7 +113,7 @@ def presolve_lp_nlp(solve_data, config):
     return False, None
 
 
-def process_objective(solve_data, config, move_linear_objective=False):
+def process_objective(solve_data, config, move_linear_objective=False, use_mcpp=True):
     """Process model objective function.
 
     Check that the model has only 1 valid objective.
@@ -135,7 +143,7 @@ def process_objective(solve_data, config, move_linear_objective=False):
         raise ValueError('Model has multiple active objectives.')
     else:
         main_obj = active_objectives[0]
-    solve_data.results.problem.sense = main_obj.sense
+    solve_data.results.problem.sense = ProblemSense.minimize if main_obj.sense == 1 else ProblemSense.maximize
     solve_data.objective_sense = main_obj.sense
 
     # Move the objective to the constraints if it is nonlinear
@@ -144,27 +152,28 @@ def process_objective(solve_data, config, move_linear_objective=False):
         if move_linear_objective:
             config.logger.info("Moving objective to constraint set.")
         else:
-            config.logger.info("Objective is nonlinear. Moving it to constraint set.")
+            config.logger.info(
+                "Objective is nonlinear. Moving it to constraint set.")
 
         util_blk.objective_value = Var(domain=Reals, initialize=0)
-        if mcpp_available():
+        if mcpp_available() and use_mcpp:
             mc_obj = McCormick(main_obj.expr)
             util_blk.objective_value.setub(mc_obj.upper())
             util_blk.objective_value.setlb(mc_obj.lower())
         else:
             # Use Pyomo's contrib.fbbt package
             lb, ub = compute_bounds_on_expr(main_obj.expr)
-            util_blk.objective_value.setub(ub)
-            util_blk.objective_value.setlb(lb)
+            if solve_data.results.problem.sense == ProblemSense.minimize:
+                util_blk.objective_value.setlb(lb)
+            else:
+                util_blk.objective_value.setub(ub)
 
         if main_obj.sense == minimize:
             util_blk.objective_constr = Constraint(
                 expr=util_blk.objective_value >= main_obj.expr)
-            solve_data.results.problem.sense = ProblemSense.minimize
         else:
             util_blk.objective_constr = Constraint(
                 expr=util_blk.objective_value <= main_obj.expr)
-            solve_data.results.problem.sense = ProblemSense.maximize
         # Deactivate the original objective and add this new one.
         main_obj.deactivate()
         util_blk.objective = Objective(
@@ -205,18 +214,10 @@ def copy_var_list_values(from_list, to_list, config,
             rounded_val = int(round(var_val))
             # Check to see if this is just a tolerance issue
             if ignore_integrality \
-                and ('is not in domain Binary' in err_msg
-                or 'is not in domain Integers' in err_msg):
-               v_to.value = value(v_from, exception=False)
-            elif 'is not in domain Binary' in err_msg and (
-                    fabs(var_val - 1) <= config.integer_tolerance or
-                    fabs(var_val) <= config.integer_tolerance):
+                    and v_to.is_integer():  # not v_to.is_continuous()
+                v_to.value = value(v_from, exception=False)
+            elif v_to.is_integer() and (fabs(var_val - rounded_val) <= config.integer_tolerance):  # not v_to.is_continuous()
                 v_to.set_value(rounded_val)
-            # TODO What about PositiveIntegers etc?
-            elif 'is not in domain Integers' in err_msg and (
-                    fabs(var_val - rounded_val) <= config.integer_tolerance):
-                v_to.set_value(rounded_val)
-            # Value is zero, but shows up as slightly less than zero.
             elif 'is not in domain NonNegativeReals' in err_msg and (
                     fabs(var_val) <= config.zero_tolerance):
                 v_to.set_value(0)
@@ -409,18 +410,18 @@ def time_code(timing_data_obj, code_block_name, is_main_timer=False):
     allowing calculation of total elapsed time 'on the fly' (e.g. to enforce
     a time limit) using `get_main_elapsed_time(timing_data_obj)`.
     """
-    start_time = timeit.default_timer()
+    start_time = timing.default_timer()
     if is_main_timer:
         timing_data_obj.main_timer_start_time = start_time
     yield
-    elapsed_time = timeit.default_timer() - start_time
+    elapsed_time = timing.default_timer() - start_time
     prev_time = timing_data_obj.get(code_block_name, 0)
     timing_data_obj[code_block_name] = prev_time + elapsed_time
 
 
 def get_main_elapsed_time(timing_data_obj):
     """Returns the time since entering the main `time_code` context"""
-    current_time = timeit.default_timer()
+    current_time = timing.default_timer()
     try:
         return current_time - timing_data_obj.main_timer_start_time
     except AttributeError as e:
@@ -431,11 +432,12 @@ def get_main_elapsed_time(timing_data_obj):
 
 
 @deprecated(
-    "'restore_logger_level()' has been deprecated in favor of the more specific "
-    "'lower_logger_level_to()' function.", version='TBD', remove_in='TBD')
+    "'restore_logger_level()' has been deprecated in favor of the more "
+    "specific 'lower_logger_level_to()' function.",
+    version='5.6.9')
 @contextmanager
 def restore_logger_level(logger):
-    old_logger_level = logger.getEffectiveLevel()
+    old_logger_level = logger.level
     yield
     logger.setLevel(old_logger_level)
 
@@ -443,9 +445,9 @@ def restore_logger_level(logger):
 @contextmanager
 def lower_logger_level_to(logger, level=None):
     """Increases logger verbosity by lowering reporting level."""
-    old_logger_level = logger.getEffectiveLevel()
-    if level is not None and old_logger_level > level:
+    if level is not None and logger.getEffectiveLevel() > level:
         # If logger level is higher (less verbose), decrease it
+        old_logger_level = logger.level
         logger.setLevel(level)
         yield
         logger.setLevel(old_logger_level)

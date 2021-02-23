@@ -58,17 +58,21 @@ class ResultsReader_sol(results.AbstractResultsReader):
         if res is None:
             res = SolverResults()
         #
-        msg = ""
-        line = fin.readline()
-        if line.strip() == "":
+        # Some solvers (minto) do not write a message.  We will assume
+        # all non-blank lines up the 'Options' line is the message.
+        msg = []
+        while True:
             line = fin.readline()
-        while line:
-            if line[0] == '\n' or (line[0] == '\r' and line[1] == '\n'):
+            if not line:
+                # EOF
                 break
-            msg += line
-            line = fin.readline()
+            line = line.strip()
+            if line == 'Options':
+                break
+            if line:
+                msg.append(line)
+        msg = '\n'.join(msg)
         z = []
-        line = fin.readline()
         if line[:7] == "Options":
             line = fin.readline()
             nopts = int(line)
@@ -200,8 +204,8 @@ class ResultsReader_sol(results.AbstractResultsReader):
                 if (unmasked_kind & 4) == 4:
                     convert_function = float
                 nvalues = int(line[2])
-                namelen = int(line[3])
-                tablen = int(line[4])
+                # namelen = int(line[3])
+                # tablen = int(line[4])
                 tabline = int(line[5])
                 suffix_name = fin.readline().strip()
                 if any(re.match(suf,suffix_name) for suf in suffixes):

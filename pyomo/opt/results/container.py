@@ -11,20 +11,33 @@
 __all__ = ['UndefinedData', 'undefined', 'ignore', 'ScalarData', 'ListContainer', 'MapContainer', 'default_print_options', 'ScalarType']
 
 import copy
-import math
 
-import pyutilib.math
-from pyutilib.misc import Bunch
-from pyutilib.enum import EnumValue, Enum
-
-from six import iterkeys, itervalues, iteritems, advance_iterator, StringIO
+from pyutilib.math import infinity
+from pyomo.common.collections import Bunch
+import enum
+from six import StringIO
 from six.moves import xrange
+
 try:
     unicode
 except NameError:
     basestring = unicode = str
 
-ScalarType = Enum('int', 'time', 'string', 'float', 'enum', 'undefined')
+class ScalarType(str, enum.Enum):
+    int='int'
+    time='time'
+    string='string'
+    float='float'
+    enum='enum'
+    undefined='undefined'
+
+    # Overloading __str__ is needed to match the behavior of the old
+    # pyutilib.enum class (removed June 2020). There are spots in the
+    # code base that expect the string representation for items in the
+    # enum to not include the class name. New uses of enum shouldn't
+    # need to do this.
+    def __str__(self):
+        return self.value
 
 default_print_options = Bunch(schema=False, ignore_time=False)
 
@@ -50,7 +63,7 @@ class ScalarData(object):
         self._required=required
 
     def get_value(self):
-        if type(self.value) is EnumValue:
+        if isinstance(self.value, enum.Enum):
             value = str(self.value)
         elif type(self.value) is UndefinedData:
             value = '<undefined>'
@@ -93,9 +106,9 @@ class ScalarData(object):
 
         value = self.yaml_fix(self.get_value())
 
-        if value is pyutilib.math.infinity:
+        if value is infinity:
             value = '.inf'
-        elif value is - pyutilib.math.infinity:
+        elif value is - infinity:
             value = '-.inf'
 
         if not option.schema and self.description is None and self.units is None:

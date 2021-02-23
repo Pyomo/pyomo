@@ -15,7 +15,6 @@
 import os
 import sys
 import subprocess
-import time
 from os.path import abspath, dirname
 
 try:
@@ -38,7 +37,6 @@ baseline_dir = this_test_file_directory+"baselines"+os.sep
 #
 import pyutilib.misc
 import pyutilib.th as unittest
-import pyutilib.services
 from pyutilib.pyro import using_pyro3, using_pyro4
 
 from pyomo.pysp.util.misc import (_get_test_nameserver,
@@ -49,16 +47,10 @@ import pyomo.opt
 import pyomo.pysp
 import pyomo.pysp.phinit
 import pyomo.pysp.ef_writer_script
+import pyomo.environ
 
 _diff_tolerance = 1e-5
 _diff_tolerance_relaxed = 1e-3
-
-has_yaml = False
-try:
-    import yaml
-    has_yaml = True
-except:
-    has_yaml = False
 
 def _remove(filename):
     try:
@@ -1388,7 +1380,7 @@ class TestPHExpensive(unittest.TestCase):
             os.remove(log_output_file)
 
     def test_quadratic_sizes3_cplex(self):
-        if (not solver['cplex','lp']) or (not has_yaml):
+        if (not solver['cplex','lp']) or (not yaml_available):
             self.skipTest("Either the 'cplex' executable is not "
                           "available or PyYAML is not available")
         sizes_example_dir = pysp_examples_dir + "sizes"
@@ -1430,7 +1422,7 @@ class TestPHExpensive(unittest.TestCase):
         os.remove(log_output_file)
 
     def test_quadratic_sizes3_cplex_direct(self):
-        if (not solver['cplex','python']) or (not has_yaml):
+        if (not solver['cplex','python']) or (not yaml_available):
             self.skipTest("The 'cplex' python solver is not "
                           "available or PyYAML is not available")
         sizes_example_dir = pysp_examples_dir + "sizes"
@@ -1472,7 +1464,7 @@ class TestPHExpensive(unittest.TestCase):
         os.remove(log_output_file)
 
     def test_quadratic_sizes3_gurobi(self):
-        if (not solver['gurobi','lp']) or (not has_yaml):
+        if (not solver['gurobi','lp']) or (not yaml_available):
             self.skipTest("Either the 'gurobi' executable is not "
                           "available or PyYAML is not available")
 
@@ -1768,7 +1760,7 @@ class TestPHExpensive(unittest.TestCase):
             os.remove(log_output_file)
 
     def test_linearized_forestry_cplex(self):
-        if (not solver['cplex','lp']) or (not has_yaml):
+        if (not solver['cplex','lp']) or (not yaml_available):
             self.skipTest("Either the 'cplex' executable is not "
                           "available or PyYAML is not available")
 
@@ -1813,7 +1805,7 @@ class TestPHExpensive(unittest.TestCase):
             os.remove(log_output_file)
 
     def test_linearized_forestry_gurobi(self):
-        if (not solver['gurobi','lp']) or (not has_yaml):
+        if (not solver['gurobi','lp']) or (not yaml_available):
             self.skipTest("Either the 'gurobi' executable is not "
                           "available or PyYAML is not available")
 
@@ -2070,7 +2062,7 @@ class TestPHParallel(unittest.TestCase):
 
     @unittest.category('fragile')
     def test_quadratic_sizes3_cplex_with_phpyro(self):
-        if (not solver['cplex','lp']) or (not has_yaml):
+        if (not solver['cplex','lp']) or (not yaml_available):
             self.skipTest("The 'cplex' executable is not available "
                           "or PyYAML is not available")
 
@@ -2131,7 +2123,7 @@ class TestPHParallel(unittest.TestCase):
 
     @unittest.category('fragile')
     def test_linearized_sizes3_cplex_with_phpyro(self):
-        if (not solver['cplex','lp']) or (not has_yaml):
+        if (not solver['cplex','lp']) or (not yaml_available):
             self.skipTest("The 'cplex' executable is not available "
                           "or PyYAML is not available")
 
@@ -2173,7 +2165,7 @@ class TestPHParallel(unittest.TestCase):
             os.remove(log_output_file)
 
     def test_quadratic_sizes3_gurobi_with_phpyro(self):
-        if (not solver['gurobi','lp']) or (not has_yaml):
+        if (not solver['gurobi','lp']) or (not yaml_available):
             self.skipTest("The 'gurobi' executable is not available "
                           "or PyYAML is not available")
 
@@ -2386,7 +2378,7 @@ class TestPHParallel(unittest.TestCase):
                 filter=filter_pyro)
 
     def test_linearized_networkflow1ef10_gurobi_with_phpyro(self):
-        if (not solver['gurobi','lp']) or (not has_yaml):
+        if (not solver['gurobi','lp']) or (not yaml_available):
             self.skipTest("The 'gurobi' executable is not available "
                           "or PyYAML is not available")
 
@@ -2504,7 +2496,7 @@ class TestPHParallel(unittest.TestCase):
 
     @unittest.category('fragile')
     def test_advanced_linearized_networkflow1ef10_cplex_with_phpyro(self):
-        if (not solver['cplex','lp']) or (not has_yaml):
+        if (not solver['cplex','lp']) or (not yaml_available):
             self.skipTest("The 'cplex' executable is not available "
                           "or PyYAML is not available")
 
@@ -2547,7 +2539,7 @@ class TestPHParallel(unittest.TestCase):
 
     @unittest.category('fragile')
     def test_linearized_networkflow1ef10_cplex_with_bundles_with_phpyro(self):
-        if (not solver['cplex','lp']) or (not has_yaml):
+        if (not solver['cplex','lp']) or (not yaml_available):
             self.skipTest("The 'cplex' executable is not available "
                           "or PyYAML is not available")
 
