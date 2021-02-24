@@ -1,10 +1,11 @@
 import pyomo.environ as pe
 from pyomo.contrib import appsi
-import numpy as np
 from pyomo.common.timing import HierarchicalTimer
 
 
 def main(plot=True, n_points=200):
+    import numpy as np
+
     # create a Pyomo model
     m = pe.ConcreteModel()
     m.x = pe.Var()
