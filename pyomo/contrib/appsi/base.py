@@ -594,9 +594,10 @@ class PersistentBase(abc.ABC):
                     new_sos.append(c)
             for c in self._vars_referenced_by_con.keys():
                 if c not in current_cons_dict and c not in current_sos_dict:
-                    if c.ctype is Constraint:
+                    if (c.ctype is Constraint) or (c.ctype is None and isinstance(c, _GeneralConstraintData)):
                         old_cons.append(c)
                     else:
+                        assert (c.ctype is SOSConstraint) or (c.ctype is None and isinstance(c, _SOSConstraintData))
                         old_sos.append(c)
         self.remove_constraints(old_cons)
         self.remove_sos_constraints(old_sos)

@@ -1,5 +1,5 @@
 import logging
-from pyomo.core.expr.numvalue import value, is_constant, is_fixed
+from pyomo.core.expr.numvalue import value, is_constant, is_fixed, native_numeric_types
 from pyomo.repn import generate_standard_repn
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.common.collections import ComponentSet, ComponentMap
@@ -333,7 +333,8 @@ class Gurobi(PersistentBase, Solver):
              mutable_linear_coefficients,
              mutable_quadratic_coefficients) = self._get_expr_from_pyomo_expr(con.body)
 
-            if gurobi_expr.__class__ in {self._gurobipy.LinExpr, self._gurobipy.Var}:
+            if (gurobi_expr.__class__ in {self._gurobipy.LinExpr, self._gurobipy.Var} or
+                    gurobi_expr.__class__ in native_numeric_types):
                 if con.equality:
                     rhs_expr = con.lower - repn_constant
                     rhs_val = value(rhs_expr)
@@ -417,7 +418,7 @@ class Gurobi(PersistentBase, Solver):
                                                                                mutable_quadratic_coefficients)
                     self._mutable_quadratic_helpers[con] = mutable_quadratic_constraint
             else:
-                raise ValueError('Unrecognized Gurobi expression type')
+                raise ValueError('Unrecognized Gurobi expression type: ' + str(gurobi_expr.__class__))
 
             self._pyomo_con_to_solver_con_map[con] = gurobipy_con
             self._solver_con_to_pyomo_con_map[id(gurobipy_con)] = con
