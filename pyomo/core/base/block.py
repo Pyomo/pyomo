@@ -20,8 +20,7 @@ import textwrap
 
 from inspect import isclass
 from operator import itemgetter
-from six import iteritems, iterkeys, itervalues, StringIO, \
-    advance_iterator, PY3
+from io import StringIO
 
 from pyomo.common.collections import Mapping
 from pyomo.common.deprecation import deprecated, deprecation_warning
@@ -254,7 +253,7 @@ class PseudoMap(object):
         """
         TODO
         """
-        return self.iterkeys()
+        return self.keys()
 
     def __getitem__(self, key):
         """
@@ -289,7 +288,7 @@ class PseudoMap(object):
         sort_order = self._sorted
         try:
             self._sorted = False
-            for x in itervalues(self):
+            for x in self.values():
                 return True
             return False
         finally:
@@ -308,7 +307,7 @@ class PseudoMap(object):
         #
         if self._active is None:
             if self._ctypes is None:
-                return sum(x[2] for x in itervalues(self._block._ctypes))
+                return sum(x[2] for x in self._block._ctypes.values())
             else:
                 return sum(self._block._ctypes.get(x, (0, 0, 0))[2]
                            for x in self._block._ctypes
@@ -317,7 +316,7 @@ class PseudoMap(object):
         # If _active is True or False, then we have to count by brute force.
         #
         ans = 0
-        for x in itervalues(self):
+        for x in self.values():
             ans += 1
         return ans
 
@@ -359,9 +358,9 @@ class PseudoMap(object):
                     _idx_list.sort(reverse=True)
                     break
 
-    def iterkeys(self):
+    def keys(self):
         """
-        TODO
+        Generator returning the component names defined on the Block
         """
         # Iterate over the PseudoMap keys (the component names) in
         # declaration order
@@ -369,12 +368,12 @@ class PseudoMap(object):
         # Ironically, the values are the fundamental thing that we
         # can (efficiently) iterate over in decl_order.  iterkeys
         # just wraps itervalues.
-        for obj in self.itervalues():
+        for obj in self.values():
             yield obj._name
 
-    def itervalues(self):
+    def values(self):
         """
-        TODO
+        Generator returning the components defined on the Block
         """
         # Iterate over the PseudoMap values (the component objects) in
         # declaration order
@@ -407,40 +406,41 @@ class PseudoMap(object):
         else:
             return walker
 
-    def iteritems(self):
+    def items(self):
         """
-        TODO
+        Generator returning (name, component) tuples for components
+        defined on the Block
         """
         # Ironically, the values are the fundamental thing that we
         # can (efficiently) iterate over in decl_order.  iteritems
         # just wraps itervalues.
-        for obj in self.itervalues():
+        for obj in self.values():
             yield (obj._name, obj)
 
-    def keys(self):
+    @deprecated('The iterkeys method is deprecated. Use dict.keys().',
+                version='TBD')
+    def iterkeys(self):
         """
-        Return a list of dictionary keys
+        Generator returning the component names defined on the Block
         """
-        return list(self.iterkeys())
+        return self.keys()
 
-    def values(self):
+    @deprecated('The itervalues method is deprecated. Use dict.values().',
+                version='TBD')
+    def itervalues(self):
         """
-        Return a list of dictionary values
+        Generator returning the components defined on the Block
         """
-        return list(self.itervalues())
+        return self.values()
 
-    def items(self):
+    @deprecated('The iteritems method is deprecated. Use dict.items().',
+                version='TBD')
+    def iteritems(self):
         """
-        Return a list of (key, value) tuples
+        Generator returning (name, component) tuples for components
+        defined on the Block
         """
-        return list(self.iteritems())
-
-# In Python3, the items(), etc methods of dict-like things return
-# generator-like objects.
-if PY3:
-    PseudoMap.keys = PseudoMap.iterkeys
-    PseudoMap.values = PseudoMap.itervalues
-    PseudoMap.items = PseudoMap.iteritems
+        return self.items()
 
 
 class _BlockData(ActiveComponentData):
@@ -685,9 +685,9 @@ class _BlockData(ActiveComponentData):
                 j += 1
                 _new_decl_order.append(entry)
         # Update the _decl map
-        self._decl = {k:idxMap[idx] for k,idx in iteritems(self._decl)}
+        self._decl = {k:idxMap[idx] for k,idx in self._decl.items()}
         # Update the ctypes, _decl_order linked lists
-        for ctype, info in iteritems(self._ctypes):
+        for ctype, info in self._ctypes.items():
             idx = info[0]
             entry = self._decl_order[idx]
             while entry[0] is None:
@@ -715,7 +715,7 @@ class _BlockData(ActiveComponentData):
             """))
 
     def clear(self):
-        for name in iterkeys(self.component_map()):
+        for name in self.component_map().keys():
             if name not in self._Block_reserved_words:
                 self.del_component(name)
         for attr in tuple(self.__dict__):
@@ -761,7 +761,7 @@ class _BlockData(ActiveComponentData):
             # record the components and the non-component objects added
             # to the block
             src_comp_map = src.component_map()
-            src_raw_dict = {k:v for k,v in iteritems(src.__dict__)
+            src_raw_dict = {k:v for k,v in src.__dict__.items()
                             if k not in src_comp_map}
         elif isinstance(src, Mapping):
             src_comp_map = {}
@@ -772,7 +772,7 @@ class _BlockData(ActiveComponentData):
                 "Block or dict; received %s" % (type(src).__name__,))
 
         # Use component_map for the components to preserve decl_order
-        for k,v in iteritems(src_comp_map):
+        for k,v in src_comp_map.items():
             if k in self._decl:
                 self.del_component(k)
             src.del_component(k)
@@ -780,7 +780,7 @@ class _BlockData(ActiveComponentData):
         # Because Blocks are not slotized and we allow the
         # assignment of arbitrary data to Blocks, we will move over
         # any other unrecognized entries in the object's __dict__:
-        for k in sorted(iterkeys(src_raw_dict)):
+        for k in sorted(src_raw_dict.keys()):
             if k not in self._Block_reserved_words or not hasattr(self, k) \
                or k in self._decl:
                 setattr(self, k, src_raw_dict[k])
@@ -1339,7 +1339,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         """
         _sort_indices = SortComponents.sort_indices(sort)
         _subcomp = PseudoMap(self, ctype, active, sort)
-        for name, comp in _subcomp.iteritems():
+        for name, comp in _subcomp.items():
             # NOTE: Suffix has a dict interface (something other derived
             #   non-indexed Components may do as well), so we don't want
             #   to test the existence of iteritems as a check for
@@ -1348,12 +1348,12 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             #   processing for the scalar components to catch the case
             #   where there are "sparse scalar components"
             if comp.is_indexed():
-                _items = comp.iteritems()
+                _items = comp.items()
             elif hasattr(comp, '_data'):
                 # This may be an empty Scalar component (e.g., from
                 # Constraint.Skip on a scalar Constraint)
                 assert len(comp._data) <= 1
-                _items = iteritems(comp._data)
+                _items = comp._data.items()
             else:
                 _items = ((None, comp),)
 
@@ -1401,11 +1401,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         generator recursively descends into sub-blocks.
         """
         if not descend_into:
-            for x in self.component_map(ctype, active, sort).itervalues():
+            for x in self.component_map(ctype, active, sort).values():
                 yield x
             return
         for _block in self.block_data_objects(active, sort, descend_into, descent_order):
-            for x in _block.component_map(ctype, active, sort).itervalues():
+            for x in _block.component_map(ctype, active, sort).values():
                 yield x
 
     def component_data_objects(self,
@@ -1561,7 +1561,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         _stack = [(self,).__iter__(), ]
         while _stack:
             try:
-                PM._block = _block = advance_iterator(_stack[-1])
+                PM._block = _block = next(_stack[-1])
                 yield _block
                 if not PM:
                     continue
@@ -1585,7 +1585,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         _stack = [(self, self.component_data_iterindex(ctype, active, sort, False))]
         while _stack:
             try:
-                _sub = advance_iterator(_stack[-1][1])[-1]
+                _sub = next(_stack[-1][1])[-1]
                 _stack.append((_sub,
                                _sub.component_data_iterindex(ctype, active, sort, False)
                                ))
@@ -1639,16 +1639,16 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
 
     def fix_all_vars(self):
         # TODO: Simplify based on recursive logic
-        for var in itervalues(self.component_map(Var)):
+        for var in self.component_map(Var).values():
             var.fix()
-        for block in itervalues(self.component_map(Block)):
+        for block in self.component_map(Block).values():
             block.fix_all_vars()
 
     def unfix_all_vars(self):
         # TODO: Simplify based on recursive logic
-        for var in itervalues(self.component_map(Var)):
+        for var in self.component_map(Var).values():
             var.unfix()
-        for block in itervalues(self.component_map(Block)):
+        for block in self.component_map(Block).values():
             block.unfix_all_vars()
 
     def is_constructed(self):
@@ -1737,7 +1737,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             if not ACTIVE:
                 ostream.write(prefix + "    None\n")
             else:
-                for obj in itervalues(ACTIVE):
+                for obj in ACTIVE.values():
                     obj.display(prefix=prefix + "    ", ostream=ostream)
 
         item = Block
@@ -1747,7 +1747,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             ostream.write(
                 prefix + "  %s:\n" %
                 pyomo.core.base.component_order.display_name[item])
-            for obj in itervalues(ACTIVE):
+            for obj in ACTIVE.values():
                 obj.display(prefix=prefix + "    ", ostream=ostream)
 
     #
@@ -1977,7 +1977,7 @@ class Block(ActiveIndexedComponent):
                         data = data.get(_idx, None)
                     if data is None:
                         data = {}
-                    for name, obj in iteritems(_predefined_components):
+                    for name, obj in _predefined_components.items():
                         if not obj._constructed:
                             obj.construct(data.get(name, None))
                 # Trigger the (normal) initialization of the block
@@ -2007,9 +2007,9 @@ class Block(ActiveIndexedComponent):
         ]
         # HACK: suppress the top-level block header (for historical reasons)
         if self.parent_block() is None and not self.is_indexed():
-            return None, iteritems(self._data), None, self._pprint_callback
+            return None, self._data.items(), None, self._pprint_callback
         else:
-            return _attrs, iteritems(self._data), None, self._pprint_callback
+            return _attrs, self._data.items(), None, self._pprint_callback
 
     def display(self, filename=None, ostream=None, prefix=""):
         """

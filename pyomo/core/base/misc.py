@@ -14,8 +14,6 @@ import logging
 import sys
 import types
 
-from six import itervalues
-
 logger = logging.getLogger('pyomo.core')
 
 
@@ -259,7 +257,7 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
     _width = ["%"+str(i)+"s" for i in _width]
 
     if any( ' ' in r[-1]
-            for x in itervalues(_rows) if x is not None
+            for x in _rows.values() if x is not None
             for r in x  ):
         _width[-1] = '%s'
     for _key in sorted_robust(_rows):

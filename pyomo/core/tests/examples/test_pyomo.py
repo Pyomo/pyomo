@@ -26,7 +26,7 @@ import pyomo.core
 import pyomo.scripting.pyomo_main as main
 from pyomo.opt import check_available_solvers
 
-from six import StringIO
+from io import StringIO
 
 if os.path.exists(sys.exec_prefix+os.sep+'bin'+os.sep+'coverage'):
     executable=sys.exec_prefix+os.sep+'bin'+os.sep+'coverage -x '

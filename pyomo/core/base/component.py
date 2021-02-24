@@ -12,7 +12,6 @@ import logging
 import sys
 from copy import deepcopy
 from pickle import PickleError
-from six import iteritems
 from weakref import ref as weakref_ref
 
 import pyomo.common
@@ -199,7 +198,7 @@ class _ComponentBase(PyomoObject):
             elif paranoid is not None:
                 raise PickleError()
             new_state = {}
-            for k,v in iteritems(state):
+            for k, v in state.items():
                 try:
                     if paranoid:
                         saved_memo = dict(memo)
@@ -357,7 +356,7 @@ class _ComponentBase(PyomoObject):
         if _header is not None:
             if _fcn2 is not None:
                 _data_dict = dict(_data)
-                _data = iteritems(_data_dict)
+                _data = _data_dict.items()
             tabular_writer( ostream, '', _data, _header, _fcn )
             if _fcn2 is not None:
                 for _key in sorted_robust(_data_dict):
@@ -431,7 +430,7 @@ class Component(_ComponentBase):
         _base = super(Component,self)
         if hasattr(_base, '__getstate__'):
             state = _base.__getstate__()
-            for key,val in iteritems(self.__dict__):
+            for key,val in self.__dict__.items():
                 if key not in state:
                     state[key] = val
         else:
@@ -459,7 +458,7 @@ class Component(_ComponentBase):
         if hasattr(_base, '__setstate__'):
             _base.__setstate__(state)
         else:
-            for key, val in iteritems(state):
+            for key, val in state.items():
                 # Note: per the Python data model docs, we explicitly
                 # set the attribute using object.__setattr__() instead
                 # of setting self.__dict__[key] = val.
@@ -771,7 +770,7 @@ class ComponentData(_ComponentBase):
         if hasattr(_base, '__setstate__'):
             _base.__setstate__(state)
         else:
-            for key, val in iteritems(state):
+            for key, val in state.items():
                 # Note: per the Python data model docs, we explicitly
                 # set the attribute using object.__setattr__() instead
                 # of setting self.__dict__[key] = val.
@@ -896,7 +895,7 @@ class ComponentData(_ComponentBase):
         if name_buffer is not None:
             # Iterate through the dictionary and generate all names in
             # the buffer
-            for idx, obj in iteritems(c):
+            for idx, obj in c.items():
                 name_buffer[id(obj)] = base + _name_index_generator(idx)
             if id(self) in name_buffer:
                 # Return the name if it is in the buffer
@@ -907,7 +906,7 @@ class ComponentData(_ComponentBase):
             # dictionary until we find this object.  This can be much
             # more expensive than if a buffer is provided.
             #
-            for idx, obj in iteritems(c):
+            for idx, obj in c.items():
                 if obj is self:
                     return base + _name_index_generator(idx)
         #

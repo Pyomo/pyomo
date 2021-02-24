@@ -34,7 +34,7 @@ from pyomo.core.base.param import _ParamData, SimpleParam
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.common.log import LoggingIntercept
-from six import StringIO
+from io import StringIO
 
 
 class TestExpressionUtilities(unittest.TestCase):

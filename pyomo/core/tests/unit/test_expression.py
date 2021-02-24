@@ -10,7 +10,7 @@
 
 import copy
 
-from six import StringIO
+from io import StringIO
 from pyomo.core.expr import expr_common
 
 

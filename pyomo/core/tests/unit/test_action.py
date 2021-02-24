@@ -15,7 +15,7 @@
 # Array1                    Test arrays of parameters
 #
 
-from six import StringIO
+from io import StringIO
 import os
 
 import pyutilib.th as unittest

@@ -20,7 +20,6 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ActiveComponent
 
-from six import iteritems, itervalues
 from pyomo.common.deprecation import deprecated
 
 logger = logging.getLogger('pyomo.core')
@@ -40,11 +39,11 @@ logger = logging.getLogger('pyomo.core')
 
 def active_export_suffix_generator(a_block, datatype=False):
     if (datatype is False):
-        for name, suffix in iteritems(a_block.component_map(Suffix, active=True)):
+        for name, suffix in a_block.component_map(Suffix, active=True).items():
             if suffix.export_enabled() is True:
                 yield name, suffix
     else:
-        for name, suffix in iteritems(a_block.component_map(Suffix, active=True)):
+        for name, suffix in a_block.component_map(Suffix, active=True).items():
             if (suffix.export_enabled() is True) and \
                (suffix.get_datatype() is datatype):
                 yield name, suffix
@@ -52,11 +51,11 @@ def active_export_suffix_generator(a_block, datatype=False):
 
 def export_suffix_generator(a_block, datatype=False):
     if (datatype is False):
-        for name, suffix in iteritems(a_block.component_map(Suffix)):
+        for name, suffix in a_block.component_map(Suffix).items():
             if suffix.export_enabled() is True:
                 yield name, suffix
     else:
-        for name, suffix in iteritems(a_block.component_map(Suffix)):
+        for name, suffix in a_block.component_map(Suffix).items():
             if (suffix.export_enabled() is True) and \
                (suffix.get_datatype() is datatype):
                 yield name, suffix
@@ -64,11 +63,11 @@ def export_suffix_generator(a_block, datatype=False):
 
 def active_import_suffix_generator(a_block, datatype=False):
     if (datatype is False):
-        for name, suffix in iteritems(a_block.component_map(Suffix, active=True)):
+        for name, suffix in a_block.component_map(Suffix, active=True).items():
             if suffix.import_enabled() is True:
                 yield name, suffix
     else:
-        for name, suffix in iteritems(a_block.component_map(Suffix, active=True)):
+        for name, suffix in a_block.component_map(Suffix, active=True).items():
             if (suffix.import_enabled() is True) and \
                (suffix.get_datatype() is datatype):
                 yield name, suffix
@@ -76,11 +75,11 @@ def active_import_suffix_generator(a_block, datatype=False):
 
 def import_suffix_generator(a_block, datatype=False):
     if (datatype is False):
-        for name, suffix in iteritems(a_block.component_map(Suffix)):
+        for name, suffix in a_block.component_map(Suffix).items():
             if suffix.import_enabled() is True:
                 yield name, suffix
     else:
-        for name, suffix in iteritems(a_block.component_map(Suffix)):
+        for name, suffix in a_block.component_map(Suffix).items():
             if (suffix.import_enabled() is True) and \
                (suffix.get_datatype() is datatype):
                 yield name, suffix
@@ -88,11 +87,11 @@ def import_suffix_generator(a_block, datatype=False):
 
 def active_local_suffix_generator(a_block, datatype=False):
     if (datatype is False):
-        for name, suffix in iteritems(a_block.component_map(Suffix, active=True)):
+        for name, suffix in a_block.component_map(Suffix, active=True).items():
             if suffix.get_direction() is Suffix.LOCAL:
                 yield name, suffix
     else:
-        for name, suffix in iteritems(a_block.component_map(Suffix, active=True)):
+        for name, suffix in a_block.component_map(Suffix, active=True).items():
             if (suffix.get_direction() is Suffix.LOCAL) and \
                (suffix.get_datatype() is datatype):
                 yield name, suffix
@@ -100,11 +99,11 @@ def active_local_suffix_generator(a_block, datatype=False):
 
 def local_suffix_generator(a_block, datatype=False):
     if (datatype is False):
-        for name, suffix in iteritems(a_block.component_map(Suffix)):
+        for name, suffix in a_block.component_map(Suffix).items():
             if suffix.get_direction() is Suffix.LOCAL:
                 yield name, suffix
     else:
-        for name, suffix in iteritems(a_block.component_map(Suffix)):
+        for name, suffix in a_block.component_map(Suffix).items():
             if (suffix.get_direction() is Suffix.LOCAL) and \
                (suffix.get_datatype() is datatype):
                 yield name, suffix
@@ -112,20 +111,20 @@ def local_suffix_generator(a_block, datatype=False):
 
 def active_suffix_generator(a_block, datatype=False):
     if (datatype is False):
-        for name, suffix in iteritems(a_block.component_map(Suffix, active=True)):
+        for name, suffix in a_block.component_map(Suffix, active=True).items():
             yield name, suffix
     else:
-        for name, suffix in iteritems(a_block.component_map(Suffix, active=True)):
+        for name, suffix in a_block.component_map(Suffix, active=True).items():
             if suffix.get_datatype() is datatype:
                 yield name, suffix
 
 
 def suffix_generator(a_block, datatype=False):
     if (datatype is False):
-        for name, suffix in iteritems(a_block.component_map(Suffix)):
+        for name, suffix in a_block.component_map(Suffix).items():
             yield name, suffix
     else:
-        for name, suffix in iteritems(a_block.component_map(Suffix)):
+        for name, suffix in a_block.component_map(Suffix).items():
             if suffix.get_datatype() is datatype:
                 yield name, suffix
 
@@ -264,7 +263,7 @@ class Suffix(ComponentMap, ActiveComponent):
         if expand:
 
             try:
-                items = iteritems(data)
+                items = data.items()
             except AttributeError:
                 items = data
 
@@ -293,7 +292,7 @@ class Suffix(ComponentMap, ActiveComponent):
         itself is kept.
         """
         if expand and component.is_indexed():
-            for component_ in itervalues(component):
+            for component_ in component.values():
                 self[component_] = value
         else:
             self[component] = value
@@ -320,7 +319,7 @@ class Suffix(ComponentMap, ActiveComponent):
         Clears suffix information for a component.
         """
         if expand and component.is_indexed():
-            for component_ in itervalues(component):
+            for component_ in component.values():
                 try:
                     del self[component_]
                 except KeyError:
@@ -412,7 +411,7 @@ class Suffix(ComponentMap, ActiveComponent):
             [('Direction', self.SuffixDirectionToStr[self._direction]),
              ('Datatype', self.SuffixDatatypeToStr[self._datatype]),
              ],
-            ((str(k), v) for k, v in itervalues(self._dict)),
+            ((str(k), v) for k, v in self._dict.values()),
             ("Value",),
             lambda k, v: [v]
         )

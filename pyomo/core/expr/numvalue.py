@@ -15,7 +15,6 @@ __all__ = ('value', 'is_constant', 'is_fixed', 'is_variable_type',
 
 import sys
 import logging
-from six import iteritems
 
 from pyomo.common.deprecation import deprecated
 from pyomo.core.expr.expr_common import \
@@ -96,7 +95,7 @@ nonpyomo_leaf_types = set([NonNumericValue])
 #: like numpy, which may be registered by users.
 native_numeric_types = set([ int, float, bool ])
 native_integer_types = set([ int, bool ])
-native_boolean_types = set([ int, bool, str ])
+native_boolean_types = set([ int, bool, str, bytes ])
 native_logical_types = {bool, }
 pyomo_constant_types = set()  # includes NumericConstant
 
@@ -106,9 +105,7 @@ pyomo_constant_types = set()  # includes NumericConstant
 #: like numpy.
 #:
 #: :data:`native_types` = :data:`native_numeric_types <pyomo.core.expr.numvalue.native_numeric_types>` + { str }
-native_types = set([ bool, str, type(None), slice ])
-native_types.add(bytes)
-native_boolean_types.add(bytes)
+native_types = set([ bool, str, type(None), slice, bytes])
 
 native_types.update( native_numeric_types )
 native_types.update( native_integer_types )
@@ -579,7 +576,7 @@ class NumericValue(PyomoObject):
         if hasattr(_base, '__setstate__'):
             return _base.__setstate__(state)
         else:
-            for key, val in iteritems(state):
+            for key, val in state.items():
                 # Note: per the Python data model docs, we explicitly
                 # set the attribute using object.__setattr__() instead
                 # of setting self.__dict__[key] = val.
