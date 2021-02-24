@@ -1223,6 +1223,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
             subsection_timer.report("Write .col file")
             subsection_timer.reset()
 
+        if len(full_var_list) < 1:
+            raise ValueError("No variables appear in the Pyomo model constraints or"
+                             " objective. This is not supported by the NL file interface")
+
         #
         # Print Header
         #
