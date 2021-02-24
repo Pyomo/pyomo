@@ -325,6 +325,7 @@ class TestSolvers(unittest.TestCase):
         m.c.value = 3.5
         m.d.value = -1
         res = opt.solve(m)
+
         self.assertAlmostEqual(m.x.value, 0.6962249634573562, 4)
         self.assertAlmostEqual(m.y.value, 0.09227926676152151, 4)
 
@@ -458,3 +459,31 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, -1)
         with self.assertRaises(Exception):
             opt.load_vars([m.x])
+
+    @parameterized.expand(input=nlp_solvers)
+    def test_exp(self, name: str, opt_class: Type[Solver]):
+        opt = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.obj = pe.Objective(expr=m.x**2 + m.y**2)
+        m.c1 = pe.Constraint(expr=m.y >= pe.exp(m.x))
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, -0.42630274815985264)
+        self.assertAlmostEqual(m.y.value, 0.6529186341994245)
+
+    @parameterized.expand(input=nlp_solvers)
+    def test_log(self, name: str, opt_class: Type[Solver]):
+        opt = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.x = pe.Var(initialize=1)
+        m.y = pe.Var()
+        m.obj = pe.Objective(expr=m.x**2 + m.y**2)
+        m.c1 = pe.Constraint(expr=m.y <= pe.log(m.x))
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 0.6529186341994245)
+        self.assertAlmostEqual(m.y.value, -0.42630274815985264)

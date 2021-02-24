@@ -250,14 +250,14 @@ void NLWriter::write(std::string filename)
   // -5 means linear
   std::vector<std::shared_ptr<Var> > nl_vars_in_both;
   std::vector<std::shared_ptr<Var> > nl_vars_in_cons;
-  std::vector<std::shared_ptr<Var> > nl_vars_in_obj;
+  std::vector<std::shared_ptr<Var> > nl_vars_in_obj_or_cons;
   std::vector<std::shared_ptr<Var> > nl_vars_just_in_cons;
   std::vector<std::shared_ptr<Var> > nl_vars_just_in_obj;
   std::vector<std::shared_ptr<Var> > linear_vars;
   for (std::shared_ptr<Var> v : *(objective->nonlinear_vars))
     {
       v->index = -2;
-      nl_vars_in_obj.push_back(v);
+      nl_vars_in_obj_or_cons.push_back(v);
     }
 
   for (std::shared_ptr<NLConstraint> con : active_nonlinear_cons)
@@ -267,6 +267,7 @@ void NLWriter::write(std::string filename)
 	  if (v->index == -1)
 	    {
 	      v->index = -3;
+	      nl_vars_in_obj_or_cons.push_back(v);
 	      nl_vars_just_in_cons.push_back(v);
 	      nl_vars_in_cons.push_back(v);
 	    }
@@ -377,7 +378,7 @@ void NLWriter::write(std::string filename)
   f << "1 " << n_range_cons << " " << n_eq_cons << " 0\n";
   f << active_nonlinear_cons.size() << " 1\n";
   f << "0 0\n";
-  f << nl_vars_in_cons.size() << " " << nl_vars_in_cons.size() + nl_vars_in_obj.size() << " " << nl_vars_in_both.size() << "\n";
+  f << nl_vars_in_cons.size() << " " << nl_vars_in_obj_or_cons.size() << " " << nl_vars_in_both.size() << "\n";
   f << "0 0 0 1\n";
   f << "0 0 0 0 0\n";
   f << jac_nnz << " " << grad_obj_nnz << "\n";

@@ -4,7 +4,7 @@ import numpy as np
 from pyomo.common.timing import HierarchicalTimer
 
 
-def main(plot=True, n_points=1000):
+def main(plot=True, n_points=200):
     # create a Pyomo model
     m = pe.ConcreteModel()
     m.x = pe.Var()
