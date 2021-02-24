@@ -386,7 +386,14 @@ void NLWriter::write(std::string filename)
       f << "0\n";
     }
   f << "0 0\n";
-  f << nl_vars_in_cons.size() << " " << nl_vars_in_obj_or_cons.size() << " " << nl_vars_in_both.size() << "\n";
+  if (nl_vars_just_in_obj.size() == 0)
+    {
+      f << nl_vars_in_cons.size() << " " << nl_vars_in_both.size() << " " << nl_vars_in_both.size() << "\n";
+    }
+  else
+    {
+      f << nl_vars_in_cons.size() << " " << nl_vars_in_obj_or_cons.size() << " " << nl_vars_in_both.size() << "\n";
+    }
   f << "0 0 0 1\n";
   f << "0 0 0 0 0\n";
   f << jac_nnz << " " << grad_obj_nnz << "\n";
