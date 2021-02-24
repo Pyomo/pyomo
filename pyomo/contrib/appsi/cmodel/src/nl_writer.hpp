@@ -24,6 +24,7 @@ public:
   std::shared_ptr<std::vector<std::shared_ptr<Var> > > all_vars;
   std::shared_ptr<std::vector<std::shared_ptr<ExpressionBase> > > all_linear_coefficients;
   std::shared_ptr<std::vector<std::shared_ptr<Node> > > nonlinear_prefix_notation;
+  bool is_nonlinear();
 };
 
 
@@ -55,7 +56,6 @@ public:
   std::shared_ptr<ExpressionBase> ub = std::make_shared<Constant>(inf);
   bool active = true;
   int index = -1;
-  bool is_nonlinear();
 };
 
 

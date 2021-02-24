@@ -45,7 +45,7 @@ NLBase::NLBase(std::shared_ptr<ExpressionBase> _constant_expr,
 }
 
 
-bool NLConstraint::is_nonlinear()
+bool NLBase::is_nonlinear()
 {
   if (nonlinear_prefix_notation->size() == 1)
     {
@@ -376,7 +376,15 @@ void NLWriter::write(std::string filename)
   f << n_vars << " ";
   f << all_cons.size() << " ";
   f << "1 " << n_range_cons << " " << n_eq_cons << " 0\n";
-  f << active_nonlinear_cons.size() << " 1\n";
+  f << active_nonlinear_cons.size() << " ";
+  if (objective->is_nonlinear())
+    {
+      f << "1\n";
+    }
+  else
+    {
+      f << "0\n";
+    }
   f << "0 0\n";
   f << nl_vars_in_cons.size() << " " << nl_vars_in_obj_or_cons.size() << " " << nl_vars_in_both.size() << "\n";
   f << "0 0 0 1\n";
@@ -404,14 +412,23 @@ void NLWriter::write(std::string filename)
     }
 
   // now write the nonlinear part of the objective in prefix notation
-  f << "O0" << " " << objective->sense << "\no0\n";
-  for (std::shared_ptr<Node> &node : *(objective->nonlinear_prefix_notation))
+  f << "O0" << " " << objective->sense << "\n";
+  if (objective->is_nonlinear())
     {
-      node->write_nl_string(f);
+      f << "o0\n";
+      for (std::shared_ptr<Node> &node : *(objective->nonlinear_prefix_notation))
+	{
+	  node->write_nl_string(f);
+	}
+      f << "n";
+      f << objective->constant_expr->evaluate() << "\n";
     }
-  f << "n";
-  f << objective->constant_expr->evaluate() << "\n";
-
+  else
+    {
+      f << "n";
+      f << objective->constant_expr->evaluate() << "\n";
+    }
+  
   // now write initial variable values
   f << "x " << n_vars << "\n";
   for (std::shared_ptr<Var> v : all_vars)
