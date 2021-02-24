@@ -433,7 +433,6 @@ def setup_master(solve_data, config, fp, regularization_problem):
                                                                        config,
                                                                        solve_data,
                                                                        discrete_only=False)
-            MindtPy.loa_proj_mip_obj.pprint()
         if solve_data.objective_sense == minimize:
             MindtPy.cuts.obj_reg_estimate = Constraint(
                 expr=MindtPy.objective_value <= (1 - config.level_coef) * solve_data.UB + config.level_coef * solve_data.LB)
