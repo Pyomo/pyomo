@@ -18,7 +18,7 @@ from math import fabs
 import six
 
 from pyomo.common import deprecated, timing
-from pyomo.common.collections import ComponentSet, Container
+from pyomo.common.collections import ComponentSet, Bunch
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
@@ -484,7 +484,7 @@ def setup_solver_environment(model, config):
     solve_data = GDPoptSolveData()  # data object for storing solver state
     solve_data.config = config
     solve_data.results = SolverResults()
-    solve_data.timing = Container()
+    solve_data.timing = Bunch()
     min_logging_level = logging.INFO if config.tee else None
     with time_code(solve_data.timing, 'total', is_main_timer=True), \
             lower_logger_level_to(config.logger, min_logging_level), \
