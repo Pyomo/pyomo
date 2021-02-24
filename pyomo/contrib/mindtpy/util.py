@@ -344,6 +344,18 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
                                           for var_j, temp_var_j in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1])
                                           if (temp_var_i.name in nlp_var and temp_var_j.name in nlp_var))
             return Objective(expr=first_order_term + second_order_term, sense=minimize)
+        elif config.add_regularization == 'sqp_lag':
+            var_filter = (lambda v: v[1].is_integer()) if discrete_only \
+                else (lambda v: v[1].name != 'MindtPy_utils.objective_value' and
+                      'MindtPy_utils.feas_opt.slack_var' not in v[1].name)
+
+            model_vars, setpoint_vars = zip(*filter(var_filter,
+                                                    zip(model.component_data_objects(Var),
+                                                        setpoint_model.component_data_objects(Var))))
+            assert len(model_vars) == len(
+                setpoint_vars), 'Trying to generate Squared Norm2 objective function for models with different number of variables'
+
+            return Objective(expr=first_order_term + sum([(model_var - setpoint_var.value)**2 for (model_var, setpoint_var) in zip(model_vars, setpoint_vars)]))
 
 
 def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=True):

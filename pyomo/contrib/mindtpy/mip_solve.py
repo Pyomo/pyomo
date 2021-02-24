@@ -427,12 +427,13 @@ def setup_master(solve_data, config, fp, regularization_problem):
             MindtPy.loa_proj_mip_obj = generate_norm_inf_objective_function(solve_data.mip,
                                                                             solve_data.best_solution_found,
                                                                             discrete_only=False)
-        elif config.add_regularization in {'grad_lag', 'hess_lag'}:
+        elif config.add_regularization in {'grad_lag', 'hess_lag', 'sqp_lag'}:
             MindtPy.loa_proj_mip_obj = generate_lag_objective_function(solve_data.mip,
                                                                        solve_data.best_solution_found,
                                                                        config,
                                                                        solve_data,
                                                                        discrete_only=False)
+            MindtPy.loa_proj_mip_obj.pprint()
         if solve_data.objective_sense == minimize:
             MindtPy.cuts.obj_reg_estimate = Constraint(
                 expr=MindtPy.objective_value <= (1 - config.level_coef) * solve_data.UB + config.level_coef * solve_data.LB)
