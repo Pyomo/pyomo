@@ -733,7 +733,7 @@ class TestSensitivityToolbox(unittest.TestCase):
             self.assertAlmostEqual(d[k],d_correct[k],3)
 
 if __name__=="__main__":
-    #unittest.main()
-    test = TestSensitivityToolbox()
+    unittest.main()
+    #test = TestSensitivityToolbox()
     #test.test_parameter_example()
-    test.test_parameter_example_kaug()
+    #test.test_parameter_example_kaug()
