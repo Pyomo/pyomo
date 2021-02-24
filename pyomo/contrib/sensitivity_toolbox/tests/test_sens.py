@@ -464,8 +464,8 @@ class TestSensitivityToolbox(unittest.TestCase):
                                 cloneModel=True)
 
         ptb_map = ComponentMap()
-        ptb_map[m_kaug.a] = value(m_orig.perturbed_a - m_orig.a)
-        ptb_map[m_kaug.H] = value(m_orig.perturbed_H - m_orig.H)
+        ptb_map[m_kaug.a] = value((m_orig.perturbed_a - m_orig.a))
+        ptb_map[m_kaug.H] = value((m_orig.perturbed_H - m_orig.H))
 
         # verify cloned model has _SENSITIVITY_TOOLBOX_DATA block
         # and original model is untouched
@@ -570,8 +570,8 @@ class TestSensitivityToolbox(unittest.TestCase):
                              cloneModel=False)
 
         ptb_map = ComponentMap()
-        ptb_map[m_kaug.a] = value(m_kaug.perturbed_a - m_kaug.a)
-        ptb_map[m_kaug.H] = value(m_kaug.perturbed_H - m_kaug.H)
+        ptb_map[m_kaug.a] = value((m_kaug.perturbed_a - m_kaug.a))
+        ptb_map[m_kaug.H] = value((m_kaug.perturbed_H - m_kaug.H))
 
         self.assertTrue(m_kaug == m_orig)
         
@@ -721,11 +721,11 @@ class TestSensitivityToolbox(unittest.TestCase):
                      'x3_pert':0.0, 'cost_pert':0.55555556}
         # FIXME: I have the values of x1_pert and x2_pert swapped here...
         # Why is this the case?
-        # What differentiates this test from that for sipopt?
-        # param_kaug_ex is being called...
         # examples look like they have identical setup... Why are the 
         # values getting swapped?
-        # Where are we relying on undefined behavior?
+        # Relying on undefined behavior?
+
+        #import pdb; pdb.set_trace()
 
         for k in d_correct.keys():
             # Check each element of the 'correct' dictionary against the returned 
@@ -733,4 +733,7 @@ class TestSensitivityToolbox(unittest.TestCase):
             self.assertAlmostEqual(d[k],d_correct[k],3)
 
 if __name__=="__main__":
-    unittest.main()
+    #unittest.main()
+    test = TestSensitivityToolbox()
+    #test.test_parameter_example()
+    test.test_parameter_example_kaug()
