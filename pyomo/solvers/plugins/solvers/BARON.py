@@ -15,7 +15,7 @@ import re
 import tempfile
 
 from pyomo.common import Executable
-from pyomo.common.collections import Options, Bunch
+from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
@@ -50,7 +50,7 @@ class BARONSHELL(SystemCallSolver):
         self._valid_result_formats[ProblemFormat.bar] = [ResultsFormat.soln]
         self.set_problem_format(ProblemFormat.bar)
 
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True

@@ -17,7 +17,7 @@ import subprocess
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.common import Executable
-from pyomo.common.collections import Bunch, Options
+from pyomo.common.collections import Bunch
 from pyomo.opt import SolverFactory, OptSolver, ProblemFormat, ResultsFormat, SolverResults, TerminationCondition, SolutionStatus, ProblemSense
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.solver import SystemCallSolver
@@ -136,7 +136,7 @@ class GLPKSHELL(SystemCallSolver):
         self.set_problem_format(ProblemFormat.cpxlp)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.integer = True
 
