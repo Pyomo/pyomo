@@ -503,46 +503,14 @@ class _GeneralConstraintData(_ConstraintData):
             raise ValueError(_rule_returned_none_error % (self.name,))
 
         elif _expr_type is bool:
-            #
-            # There are cases where a user thinks they are generating
-            # a valid 2-sided inequality, but Python's internal
-            # systems for handling chained inequalities is doing
-            # something very different and resolving it to True /
-            # False.  In this case, chainedInequality will be
-            # non-None, but the expression will be a bool.  For
-            # example, model.a < 1 > 0.
-            #
-            if logical_expr._using_chained_inequality \
-               and logical_expr._chainedInequality.prev is not None:
-
-                buf = io.StringIO()
-                logical_expr._chainedInequality.prev.pprint(buf)
-                #
-                # We are about to raise an exception, so it's OK to
-                # reset chainedInequality
-                #
-                logical_expr._chainedInequality.prev = None
-                raise ValueError(
-                    "Invalid chained (2-sided) inequality detected. "
-                    "The expression is resolving to %s instead of a "
-                    "Pyomo Expression object. This can occur when "
-                    "the middle term of a chained inequality is a "
-                    "constant or immutable parameter, for example, "
-                    "'model.a <= 1 >= 0'.  The proper form for "
-                    "2-sided inequalities is '0 <= model.a <= 1'."
-                    "\n\nError thrown for Constraint '%s'"
-                    "\n\nUnresolved (dangling) inequality "
-                    "expression: %s"
-                    % (expr, self.name, buf))
-            else:
-                raise ValueError(
-                    "Invalid constraint expression. The constraint "
-                    "expression resolved to a trivial Boolean (%s) "
-                    "instead of a Pyomo object. Please modify your "
-                    "rule to return Constraint.%s instead of %s."
-                    "\n\nError thrown for Constraint '%s'"
-                    % ( expr, "Feasible" if expr else "Infeasible",
-                        expr, self.name ))
+            raise ValueError(
+                "Invalid constraint expression. The constraint "
+                "expression resolved to a trivial Boolean (%s) "
+                "instead of a Pyomo object. Please modify your "
+                "rule to return Constraint.%s instead of %s."
+                "\n\nError thrown for Constraint '%s'"
+                % (expr, "Feasible" if expr else "Infeasible",
+                   expr, self.name))
 
         else:
             msg = ("Constraint '%s' does not have a proper "
@@ -560,19 +528,7 @@ class _GeneralConstraintData(_ConstraintData):
                         "form for compound inequalities is "
                         "always 'lb <= expr <= ub'.")
             raise ValueError(msg)
-        #
-        # Special check for chainedInequality errors like "if var <
-        # 1:" within rules.  Catching them here allows us to provide
-        # the user with better (and more immediate) debugging
-        # information.  We don't want to check earlier because we
-        # want to provide a specific debugging message if the
-        # construction rule returned True/False; for example, if the
-        # user did ( var < 1 > 0 ) (which also results in a non-None
-        # chainedInequality value)
-        #
-        if logical_expr._using_chained_inequality \
-           and logical_expr._chainedInequality.prev is not None:
-            raise TypeError(logical_expr._chainedInequality.error_message())
+
         #
         # Process relational expressions
         # (i.e. explicit '==', '<', and '<=')

@@ -266,6 +266,7 @@ class Test(unittest.TestCase):
             join(currdir,"solve1b.out"), join(currdir,"solve1b.txt"),
             tolerance=1e-4)
             
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_store_to_skip_stale_vars(self):
         # test store_to() function with skip_stale_vars=True
         model = ConcreteModel()

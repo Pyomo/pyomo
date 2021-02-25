@@ -1489,19 +1489,6 @@ class Test_constraint(unittest.TestCase):
         with self.assertRaises(ValueError):
             c.expr = (True)
 
-    @unittest.skipIf(not logical_expr._using_chained_inequality, "Chained inequalities are not supported.")
-    def test_chainedInequalityError(self):
-        x = variable()
-        c = constraint()
-        a = x <= 0
-        if x <= 0:
-            pass
-        def f():
-            c.expr = a
-        self.assertRaisesRegexp(
-            TypeError, "Relational expression used in an unexpected "
-            "Boolean context.", f)
-
     def test_tuple_constraint_create(self):
         x = variable()
         y = variable()
