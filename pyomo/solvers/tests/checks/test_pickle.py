@@ -45,12 +45,17 @@ def create_test_method(model, solver, io,
         load_solutions = (not model_class.solve_should_fail) and \
                          (test_case.status != 'expected failure')
 
-        opt, status = model_class.solve(solver,
-                                        io,
-                                        test_case.testcase.io_options,
-                                        test_case.testcase.options,
-                                        symbolic_labels,
-                                        load_solutions)
+        try:
+            opt, status = model_class.solve(solver,
+                                            io,
+                                            test_case.testcase.io_options,
+                                            test_case.testcase.options,
+                                            symbolic_labels,
+                                            load_solutions)
+        except:
+            if test_case.status == 'expected failure':
+                return
+            raise
         m = pickle.loads(pickle.dumps(model_class.model))
 
         #

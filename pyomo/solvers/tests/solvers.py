@@ -97,7 +97,7 @@ def test_solver_cases(*args):
                                    'conic_constraints'])
     
         _test_solver_cases['mosek', 'python'] = initialize(
-            name='mosek_direct',
+            name='mosek',
             io='python',
             capabilities=_mosek_capabilities,
             import_suffixes=['dual', 'rc', 'slack'])
@@ -105,9 +105,9 @@ def test_solver_cases(*args):
         #
         # MOSEK Persistent
         #
-        _test_solver_cases['mosek_persistent','python'] = initialize(
-                name = 'mosek_persistent',
-                io = 'python',
+        _test_solver_cases['mosek','persistent'] = initialize(
+                name = 'mosek',
+                io = 'persistent',
                 capabilities=_mosek_capabilities,
                 import_suffixes=['dual','rc','slack'])
 
