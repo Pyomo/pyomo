@@ -15,7 +15,7 @@ and ensures that functional changes aren't obscured by large amounts of
 non-functional changes.
 
 We do not squash and merge PRs so all commits in your branch will appear 
-in the master history. In addition to well-documented PR descriptions, 
+in the main history. In addition to well-documented PR descriptions,
 we encourage modular/targeted commits with descriptive commit messages.
 
 Coding Standards
@@ -51,12 +51,12 @@ at least 70% coverage of the lines modified in the PR and prefer coverage
 closer to 90%. We also require that all tests pass before a PR will be 
 merged.
 
-The Pyomo master branch provides a Github Actions workflow (configured
+The Pyomo main branch provides a Github Actions workflow (configured
 in the ``.github/`` directory) that will test any changes pushed to
 a branch with a subset of the complete test harness that includes
 multiple virtual machines (ubuntu, mac-os, windows)
 and multiple Python versions. For existing forks, fetch and merge
-your fork (and branches) with Pyomo's master. For new forks, you will
+your fork (and branches) with Pyomo's main. For new forks, you will
 need to enable GitHub Actions in the 'Actions' tab on your fork.
 This will enable the tests to run automatically with each push to your fork.
 
@@ -137,7 +137,7 @@ sure all the changes have been pushed to the branch <branch_name> on your fork.
 
     * visit https://github.com/<username>/pyomo.
     * Just above the list of files and directories in the repository,
-      you should see a button that says "Branch: master". Click on
+      you should see a button that says "Branch: main". Click on
       this button, and choose the correct branch.
     * Click the "New pull request" button just to the right of the
       "Branch: <branch_name>" button.
@@ -145,14 +145,14 @@ sure all the changes have been pushed to the branch <branch_name> on your fork.
       pull request" button.
 
 At times during your development, you may want to merge changes from
-the Pyomo master development branch into the feature branch on your
+the Pyomo main development branch into the feature branch on your
 fork and in your local clone of the repository.
 
-Using GitHub UI to merge Pyomo master into a branch on your fork
+Using GitHub UI to merge Pyomo main into a branch on your fork
 ****************************************************************
 
 To update your fork, you will actually be merging a pull-request from
-the main Pyomo repository into your fork.
+the head Pyomo repository into your fork.
 
     * Visit https://github.com/Pyomo/pyomo.
     * Click on the "New pull request" button just above the list of
@@ -163,19 +163,19 @@ the main Pyomo repository into your fork.
       across forks." Click the last part of this: "compare across
       forks".
     * You should now see four buttons just below this: "base
-      repository: Pyomo/pyomo", "base: master", "head repository:
-      Pyomo/pyomo", and "compare: master". Click the leftmost button
+      repository: Pyomo/pyomo", "base: main", "head repository:
+      Pyomo/pyomo", and "compare: main". Click the leftmost button
       and choose "<username>/Pyomo".
     * Then click the button which is second to the left, and choose
-      the branch which you want to merge Pyomo master into. The four
+      the branch which you want to merge Pyomo main into. The four
       buttons should now read: "base repository: <username>/pyomo",
       "base: <branch_name>", "head repository: Pyomo/pyomo", and
-      "compare: master". This is setting you up to merge a pull-request
-      from Pyomo's master branch into your fork's <branch_name> branch.
+      "compare: main". This is setting you up to merge a pull-request
+      from Pyomo's main branch into your fork's <branch_name> branch.
     * You should also now see a pull request template. If you fill out
       the pull request template and click "Create pull request", this
       will create a pull request which will update your fork and
-      branch with any changes that have been made to the master branch
+      branch with any changes that have been made to the main branch
       of Pyomo.
     * You can then merge the pull request by clicking the green "Merge
       pull request" button from your fork on GitHub.
@@ -192,13 +192,13 @@ but, of course, there are other valid GitHub workflows that you can
 adopt.
 
 The following commands show how to clone your fork and setup
-two remotes, one for your fork, and one for the main Pyomo repository.
+two remotes, one for your fork, and one for the head Pyomo repository.
 
 ::
    
    git clone https://github.com/<username>/pyomo.git
    git remote rename origin my-fork
-   git remote add main-pyomo https://github.com/pyomo/pyomo.git
+   git remote add head-pyomo https://github.com/pyomo/pyomo.git
 
 Note, you can see a list of your remotes with
 
@@ -224,8 +224,8 @@ Pyomo repository,
 ::
 
    git checkout <branch_to_update>
-   git fetch main-pyomo
-   git merge main-pyomo/<branch_to_update_from> --ff-only
+   git fetch head-pyomo
+   git merge head-pyomo/<branch_to_update_from> --ff-only
 
 The "--ff-only" only allows a merge if the merge can be done by a
 fast-forward. If you do not require a fast-forward, you can drop this
@@ -233,17 +233,17 @@ option. The most common concrete example of this would be
 
 ::
 
-   git checkout master
-   git fetch main-pyomo
-   git merge main-pyomo/master --ff-only
+   git checkout main
+   git fetch head-pyomo
+   git merge head-pyomo/main --ff-only
 
-The above commands pull changes from the master branch of the main
-Pyomo repository into the master branch of your local clone. To push
-these changes to the master branch on your fork,
+The above commands pull changes from the main branch of the head
+Pyomo repository into the main branch of your local clone. To push
+these changes to the main branch on your fork,
 
 ::
 
-   git push my-fork master
+   git push my-fork main
 
 
 Setting up your development environment
@@ -265,7 +265,7 @@ You may change the environment name from ``pyomodev`` as you see fit. Then activ
 
 Step 2: Install PyUtilib
 
-You will likely need the master branch of PyUtilib to contribute to Pyomo. Clone a copy of the repository in a new directory:
+You will likely need the main branch of PyUtilib to contribute to Pyomo. Clone a copy of the repository in a new directory:
 
 ::
 
