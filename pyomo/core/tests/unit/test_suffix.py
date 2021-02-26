@@ -29,7 +29,7 @@ from pyomo.core.base.suffix import \
      suffix_generator)
 from pyomo.environ import ConcreteModel, Suffix, Var, Param, Set, Objective, Constraint, Block, sum_product
 
-from six import StringIO
+from io import StringIO
 
 def simple_con_rule(model,i):
     return model.x[i] == 1

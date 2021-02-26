@@ -26,10 +26,8 @@ from pyomo.core.base.set import Set, _SetDataBase
 from pyomo.core.base.units_container import units
 from pyomo.core.base.util import is_functor
 
-from six import iteritems, itervalues
-from six.moves import xrange
-
 logger = logging.getLogger('pyomo.core')
+
 
 class _VarData(ComponentData, NumericValue):
     """
@@ -561,7 +559,7 @@ class Var(IndexedComponent):
         """
         Set the 'stale' attribute of every variable data object to True.
         """
-        for var_data in itervalues(self._data):
+        for var_data in self._data.values():
             var_data.stale = True
 
     def get_values(self, include_fixed_values=True):
@@ -569,9 +567,9 @@ class Var(IndexedComponent):
         Return a dictionary of index-value pairs.
         """
         if include_fixed_values:
-            return {idx:vardata.value for idx,vardata in iteritems(self._data)}
+            return {idx:vardata.value for idx,vardata in self._data.items()}
         return {idx:vardata.value
-                            for idx, vardata in iteritems(self._data)
+                            for idx, vardata in self._data.items()
                                                 if not vardata.fixed}
 
     extract_values = get_values
@@ -583,7 +581,7 @@ class Var(IndexedComponent):
         The default behavior is to validate the values in the
         dictionary.
         """
-        for index, new_value in iteritems(new_values):
+        for index, new_value in new_values.items():
             self[index].set_value(new_value, valid)
 
     def get_units(self):
@@ -774,7 +772,7 @@ class Var(IndexedComponent):
         return ( [("Size", len(self)),
                   ("Index", self._index if self.is_indexed() else None),
                   ],
-                 iteritems(self._data),
+                 self._data.items(),
                  ( "Lower","Value","Upper","Fixed","Stale","Domain"),
                  lambda k, v: [ value(v.lb),
                                 v.value,
@@ -942,14 +940,14 @@ class IndexedVar(Var):
         """
         Set the lower bound for this variable.
         """
-        for vardata in itervalues(self):
+        for vardata in self.values():
             vardata.setlb(val)
 
     def setub(self, val):
         """
         Set the upper bound for this variable.
         """
-        for vardata in itervalues(self):
+        for vardata in self.values():
             vardata.setub(val)
 
     def fix(self, value=NoArgumentGiven):
@@ -957,12 +955,12 @@ class IndexedVar(Var):
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
         """
-        for vardata in itervalues(self):
+        for vardata in self.values():
             vardata.fix(value=value)
 
     def unfix(self):
         """Sets the fixed indicator to False."""
-        for vardata in itervalues(self):
+        for vardata in self.values():
             vardata.unfix()
 
     @property
@@ -974,7 +972,7 @@ class IndexedVar(Var):
     @domain.setter
     def domain(self, domain):
         """Sets the domain for all variables in this container."""
-        for vardata in itervalues(self):
+        for vardata in self.values():
             vardata.domain = domain
 
     free=unfix
@@ -1008,7 +1006,7 @@ class VarList(IndexedVar):
         # OR we can just add the correct number of sequential integers and
         # then let _validate_index complain when we set the value.
         if self._value_init_value.__class__ is dict:
-            for i in xrange(len(self._value_init_value)):
+            for i in range(len(self._value_init_value)):
                 self._index.add(i+1)
         super(VarList,self).construct(data)
         # Note that the current Var initializer silently ignores
@@ -1017,7 +1015,7 @@ class VarList(IndexedVar):
         # VarList (so we get potential domain errors), we will re-set
         # everything.
         if self._value_init_value.__class__ is dict:
-            for k,v in iteritems(self._value_init_value):
+            for k,v in self._value_init_value.items():
                 self[k] = v
 
     def add(self):

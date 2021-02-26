@@ -22,7 +22,7 @@ from pyomo.core import (AbstractModel, ConcreteModel, Block, Set, Param, Var,
                         Objective, Constraint, Reals, display)
 from pyomo.common.tee import capture_output
 
-from six import StringIO
+from io import StringIO
 
 def rule1(model):
     return (1,model.x+model.y[1],2)

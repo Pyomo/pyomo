@@ -10,7 +10,6 @@
 
 import enum
 import logging
-import math
 import six
 import sys
 
@@ -316,7 +315,7 @@ class TestCase(_pyunit.TestCase):
                             str(e), _unittest.case.safe_repr(key)))
             return # PASS!
 
-        elif any(isinstance(_, six.string_types) for _ in args):
+        elif any(isinstance(_, str) for _ in args):
             if first == second:
                 return # PASS!
 

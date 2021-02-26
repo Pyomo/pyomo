@@ -8,12 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import bisect
 import codecs
 import re
 import ply.lex
-
-from six import PY2, string_types, iteritems
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import pickle
@@ -21,12 +18,10 @@ from pyomo.common.deprecation import deprecated
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.reference import Reference
 
-class _PickleEllipsis(object):
-    "A work around for the non-picklability of Ellipsis in Python 2"
-    pass
 
 class _NotSpecified(object):
     pass
+
 
 class ComponentUID(object):
     """
@@ -59,7 +54,7 @@ class ComponentUID(object):
 
     @staticmethod
     def _safe_str(x):
-        if not isinstance(x, string_types):
+        if not isinstance(x, str):
             return ComponentUID._repr_map.get(
                 x.__class__, ComponentUID._pickle)(x)
         else:
@@ -93,7 +88,7 @@ class ComponentUID(object):
     def __init__(self, component, cuid_buffer=None, context=None):
         # A CUID can be initialized from either a reference component or
         # the string representation.
-        if isinstance(component, string_types):
+        if isinstance(component, str):
             if context is not None:
                 raise ValueError("Context is not allowed when initializing a "
                                  "ComponentUID object from a string type")
@@ -143,20 +138,10 @@ class ComponentUID(object):
 
     def __getstate__(self):
         ans = {x:getattr(self, x) for x in ComponentUID.__slots__}
-        if PY2:
-            # Ellipsis is not picklable
-            ans['_cids'] = tuple(
-                (k, tuple(_PickleEllipsis if i is Ellipsis else i
-                          for i in v)) for k,v in ans['_cids'])
         return ans
 
     def __setstate__(self, state):
-        if PY2:
-            # Ellipsis is not picklable
-            state['_cids'] = tuple(
-                (k, tuple(Ellipsis if i is _PickleEllipsis else i
-                          for i in v)) for k,v in state['_cids'])
-        for key, val in iteritems(state):
+        for key, val in state.items():
             setattr(self,key,val)
 
     def __hash__(self):
@@ -254,7 +239,7 @@ class ComponentUID(object):
                                  repr_version=2):
         def _record_indexed_object_cuid_strings_v1(obj, cuid_str):
             _unknown = lambda x: '?'+str(x)
-            for idx, data in iteritems(obj):
+            for idx, data in obj.items():
                 if idx.__class__ is tuple and len(idx) > 1:
                     cuid_strings[data] = cuid_str + ':' + ','.join(
                         ComponentUID._repr_v1_map.get(x.__class__, _unknown)(x)
@@ -265,7 +250,7 @@ class ComponentUID(object):
                             idx.__class__, _unknown)(idx)
 
         def _record_indexed_object_cuid_strings_v2(obj, cuid_str):
-            for idx, data in iteritems(obj):
+            for idx, data in obj.items():
                 if idx.__class__ is tuple and len(idx) > 1:
                     cuid_strings[data] = cuid_str + '[' + ','.join(
                         ComponentUID._safe_str(x) for x in idx) + ']'
@@ -439,7 +424,7 @@ class ComponentUID(object):
             elif cuid_buffer is not None:
                 if id(component) not in cuid_buffer:
                     c_local_name = c.local_name
-                    for idx, obj in iteritems(c):
+                    for idx, obj in c.items():
                         if idx.__class__ is not tuple or len(idx) == 1:
                             idx = (idx,)
                         cuid_buffer[id(obj)] = (c_local_name, idx)
@@ -698,10 +683,7 @@ def t_STAR(t):
 def t_PICKLE(t):
     start = 3 if t.value[1] == 'b' else 2
     unescaped = _re_escape_sequences.sub(_match_escape, t.value[start:-1])
-    if PY2:
-        rawstr = unescaped.encode('latin-1')
-    else:
-        rawstr = bytes(list(ord(_) for _ in unescaped))
+    rawstr = bytes(list(ord(_) for _ in unescaped))
     t.value = pickle.loads(rawstr)
     return t
 

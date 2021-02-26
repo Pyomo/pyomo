@@ -16,7 +16,7 @@
 #
 
 import os
-from six import StringIO
+from io import StringIO
 
 import pyutilib.th as unittest
 

@@ -15,7 +15,7 @@ import re
 import time
 import logging
 import subprocess
-from six import iteritems, string_types
+from six import iteritems
 
 from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
@@ -253,11 +253,11 @@ class CBCSHELL(SystemCallSolver):
         # create the temporary file - assuming that the user has already, via some external
         # mechanism, invoked warm_start() with a instance to create the warm start file.
         if self._warm_start_solve and \
-                isinstance(args[0], string_types):
+                isinstance(args[0], str):
             # we assume the user knows what they are doing...
             pass
         elif self._warm_start_solve and \
-                (not isinstance(args[0], string_types)):
+                (not isinstance(args[0], str)):
             # assign the name of the warm start file *before* calling the base class
             # presolve - the base class method ends up creating the command line,
             # and the warm start file-name is (obviously) needed there.
@@ -273,7 +273,7 @@ class CBCSHELL(SystemCallSolver):
         # NB: we must let the base class presolve run first so that the
         # symbol_map is actually constructed!
 
-        if (len(args) > 0) and (not isinstance(args[0], string_types)):
+        if (len(args) > 0) and (not isinstance(args[0], str)):
 
             if len(args) != 1:
                 raise ValueError(

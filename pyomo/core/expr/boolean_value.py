@@ -1,9 +1,7 @@
 import sys
 import logging
-from six import iteritems
 
 from pyomo.common.deprecation import deprecated
-from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.expr.numvalue import native_types, native_logical_types
 from pyomo.core.expr.expr_common import _and, _or, _equiv, _inv, _xor, _impl
 from pyomo.core.pyomoobject import PyomoObject
@@ -76,7 +74,7 @@ class BooleanValue(PyomoObject):
         if hasattr(_base, '__setstate__'):
             return _base.__setstate__(state)
         else:
-            for key, val in iteritems(state):
+            for key, val in state.items():
                 # Note: per the Python data model docs, we explicitly
                 # set the attribute using object.__setattr__() instead
                 # of setting self.__dict__[key] = val.

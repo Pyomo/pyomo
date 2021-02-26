@@ -17,14 +17,13 @@ Define the plugin for DAKOTA TEXT IO
 """
 
 import re
-import six
 from pyomo.opt.blackbox.problem_io import BlackBoxOptProblemIOFactory
 
 
 def as_number(value):
     if type(value) in [int, float]:
         return value
-    if isinstance(value, six.string_types):
+    if isinstance(value, str):
         try:
             tmp = int(value)
             return tmp

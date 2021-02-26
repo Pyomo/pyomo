@@ -25,15 +25,8 @@ from pyomo.core.base.set import UnknownSetDimen
 from pyomo.core.base.util import flatten_tuple
 
 from six.moves import xrange
-try:
-    unicode
-except:
-    unicode = str
-try:
-    long
-    numlist = {bool, int, float, long}
-except:
-    numlist = {bool, int, float}
+
+numlist = {bool, int, float}
 
 logger = logging.getLogger('pyomo.core')
 

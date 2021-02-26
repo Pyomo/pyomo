@@ -23,11 +23,6 @@ from pyomo.opt.solver import  SystemCallSolver
 import logging
 logger = logging.getLogger('pyomo.solvers')
 
-try:
-    unicode
-except:
-    basestring = str
-
 
 @SolverFactory.register('ipopt', doc='The Ipopt NLP solver')
 class IPOPT(SystemCallSolver):
@@ -141,7 +136,7 @@ class IPOPT(SystemCallSolver):
             else:
                 if key == "option_file_name":
                     ofn_option_used = True
-                if isinstance(self.options[key], basestring) and ' ' in self.options[key]:
+                if isinstance(self.options[key], str) and ' ' in self.options[key]:
                     env_opt.append(key+"=\""+str(self.options[key])+"\"")
                     cmd.append(str(key)+"="+str(self.options[key]))
                 else:

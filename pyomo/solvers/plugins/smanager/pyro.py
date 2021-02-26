@@ -70,7 +70,7 @@ class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManage
             raise ActionManagerError(
                 "No solver passed to %s, use keyword option 'solver'"
                 % (type(self).__name__) )
-        if isinstance(opt, six.string_types):
+        if isinstance(opt, str):
             opt = SolverFactory(opt, solver_io=kwds.pop('solver_io', None))
 
         #
