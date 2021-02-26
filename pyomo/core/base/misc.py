@@ -111,7 +111,7 @@ class _robust_sort_keyfcn(object):
 
     """
     def __init__(self):
-        self._typemap = {}
+        self._typemap = {tuple: (3, tuple.__name__)}
 
     def __call__(self, val):
         """Generate a tuple ( str(type_name), val ) for sorting the value.
@@ -147,6 +147,8 @@ class _robust_sort_keyfcn(object):
             self._typemap[_type] = i, _typename
         if i == 1:
             return _typename, val
+        elif i == 3:
+            return _typename, tuple(self(v) for v in val)
         elif i == 2:
             return _typename, str(val)
         else:
