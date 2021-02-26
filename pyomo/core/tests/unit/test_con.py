@@ -568,6 +568,27 @@ class TestConstraintCreation(unittest.TestCase):
         self.assertEqual(model.c.equality, True)
         model.del_component(model.c)
 
+    def test_inequality(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.c = Constraint(expr=inequality(lower=-1, body=m.x))
+        self.assertEqual(m.c.lower.value, -1)
+        self.assertIs(m.c.body, m.x)
+        self.assertIs(m.c.upper, None)
+
+        del m.c
+        m.c = Constraint(expr=inequality(body=m.x, upper=1))
+        self.assertIs(m.c.lower, None)
+        self.assertIs(m.c.body, m.x)
+        self.assertEqual(m.c.upper.value, 1)
+
+        del m.c
+        m.c = Constraint(expr=inequality(lower=-1, body=m.x, upper=1))
+        self.assertEqual(m.c.lower.value, -1)
+        self.assertIs(m.c.body, m.x)
+        self.assertEqual(m.c.upper.value, 1)
+
+
 class TestSimpleCon(unittest.TestCase):
 
     def test_set_expr_explicit_multivariate(self):

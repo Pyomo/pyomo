@@ -601,18 +601,20 @@ class _GeneralConstraintData(_ConstraintData):
                         "using '<=', '>=', or '=='."
                         % (self.name))
 
-                if not expr.arg(1).is_potentially_variable():
+                arg0 = as_numeric(expr.arg(0))
+                arg1 = as_numeric(expr.arg(1))
+                if not arg1.is_potentially_variable():
                     self._lower = None
-                    self._body  = expr.arg(0)
-                    self._upper = as_numeric(expr.arg(1))
-                elif not expr.arg(0).is_potentially_variable():
-                    self._lower = as_numeric(expr.arg(0))
-                    self._body  = expr.arg(1)
+                    self._body  = arg0
+                    self._upper = arg1
+                elif not arg0.is_potentially_variable():
+                    self._lower = arg0
+                    self._body  = arg1
                     self._upper = None
                 else:
                     self._lower = None
-                    self._body = expr.arg(0)
-                    self._body -= expr.arg(1)
+                    self._body = arg0
+                    self._body -= arg1
                     self._upper = ZeroConstant
 
 
