@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import six
 import logging
 
 from pyomo.core.base import Block, VarList, ConstraintList, Objective, Var, Constraint, maximize, ComponentUID, Set, TransformationFactory
@@ -287,7 +286,7 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
                         exp -= B2_[uid] * lb_dual
                     if not ub_dual is None:
                         exp += B2_[uid] * ub_dual
-            if type(exp) in six.integer_types or type(exp) is float:
+            if type(exp) in [int, float]:
                 # TODO: Annotate the model as unbounded
                 raise IOError("Unbounded variable without side constraints")
             else:

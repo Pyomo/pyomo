@@ -19,7 +19,7 @@ from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
 from pyomo.common.tempfiles import TempfileManager
 
-from pyomo.common.collections import ComponentMap, Options, Bunch
+from pyomo.common.collections import ComponentMap, Bunch
 from pyomo.opt.base import (
     ProblemFormat, ResultsFormat, OptSolver, BranchDirection,
 )
@@ -169,7 +169,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         self.set_problem_format(ProblemFormat.cpxlp)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -619,7 +619,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 results.solver.termination_message = ' '.join(tokens)
 
         try:
-            if isinstance(results.solver.termination_message, basestring):
+            if isinstance(results.solver.termination_message, str):
                 results.solver.termination_message = results.solver.termination_message.replace(':', '\\x3a')
         except:
             pass

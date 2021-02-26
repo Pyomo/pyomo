@@ -12,7 +12,7 @@ __all__ = ['TableData']
 
 from six.moves import xrange
 
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 from pyomo.dataportal.process_data import _process_data
 
 
@@ -28,7 +28,7 @@ class TableData(object):
         """
         self._info=None
         self._data=None
-        self.options = Options()
+        self.options = Bunch()
         self.options.ncolumns = 1
 
     def available(self):

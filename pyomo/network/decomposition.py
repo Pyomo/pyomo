@@ -14,7 +14,7 @@ from pyomo.network import Port, Arc
 from pyomo.network.foqus_graph import FOQUSGraph
 from pyomo.core import Constraint, value, Objective, Var, ConcreteModel, \
     Binary, minimize, Expression
-from pyomo.common.collections import ComponentSet, ComponentMap, Options
+from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
 from pyomo.core.expr.current import identify_variables
 from pyomo.repn import generate_standard_repn
 import logging, time
@@ -146,7 +146,7 @@ class SequentialDecomposition(FOQUSGraph):
     def __init__(self, **kwds):
         """Pass kwds to update the options attribute after setting defaults"""
         self.cache = {}
-        options = self.options = Options()
+        options = self.options = Bunch()
         # defaults
         options["graph"] = None
         options["tear_set"] = None

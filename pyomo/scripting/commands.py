@@ -16,7 +16,7 @@ import signal
 import subprocess
 
 import pyutilib.pyro
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 from pyomo.opt import SolverResults
 from pyomo.common._command import pyomo_command
 import pyomo.scripting.pyomo_parser
@@ -138,7 +138,7 @@ def pyomo(args=None):
 def results_schema():
     if len(sys.argv) > 1:
         print("results_schema  - Print the predefined schema in a SolverResults object")
-    options = Options(schema=True)
+    options = Bunch(schema=True)
     r=SolverResults()
     repn = r._repn_(options)
     r.pprint(sys.stdout, options, repn=repn)

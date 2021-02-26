@@ -13,7 +13,7 @@ __all__ = ['test_solver_cases', 'available_solvers']
 import six
 import logging
 
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 from pyomo.opt import SolverFactory
 from pyomo.opt.base.solvers import UnknownSolver
 
@@ -36,7 +36,7 @@ licensed_solvers_with_demo_mode = {'baron',}
 # interfaces may be used for the same "solver"
 #
 def initialize(**kwds):
-    obj = Options(**kwds)
+    obj = Bunch(**kwds)
     #
     # Set obj.available
     #

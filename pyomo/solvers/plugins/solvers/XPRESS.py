@@ -16,7 +16,7 @@ from six import string_types
 
 from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
-from pyomo.common.collections import Options, Bunch
+from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
@@ -99,7 +99,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         #
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True

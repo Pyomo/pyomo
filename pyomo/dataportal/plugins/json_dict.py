@@ -12,7 +12,7 @@ import os.path
 import json
 import six
 
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 from pyomo.dataportal.factory import DataManagerFactory
 
@@ -93,7 +93,7 @@ class JSONDictionary(object):
 
     def __init__(self):
         self._info = {}
-        self.options = Options()
+        self.options = Bunch()
 
     def available(self):
         return True
@@ -192,7 +192,7 @@ class YamlDictionary(object):
 
     def __init__(self):
         self._info = {}
-        self.options = Options()
+        self.options = Bunch()
 
     def available(self):
         return yaml_available

@@ -19,7 +19,7 @@ from os.path import abspath, dirname
 from pyutilib.pyro import using_pyro4
 import pyutilib.th as unittest
 
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
 import pyomo.opt
 from pyomo.environ import (ConcreteModel, RangeSet, Var,
@@ -63,7 +63,7 @@ class Test(unittest.TestCase):
         model.c = Constraint(rule=c_rule)
 
         #
-        data = Options()
+        data = Bunch()
         data.suffixes = {}
         data.solver_options = {}
         data.warmstart_filename = None
