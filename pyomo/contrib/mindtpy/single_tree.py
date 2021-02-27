@@ -555,6 +555,22 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     elif config.use_bb_tree_incumbent:
                         config.logger.info(
                             'Fixed subproblem will be generated based on the incumbent solution of the master problem.')
+                elif master_mip_results.solver.termination_condition is tc.maxTimeLimit:
+                    config.logger.info(
+                        'Regularization problem failed to converge within the time limit.')
+                    solve_data.results.solver.termination_condition = tc.maxTimeLimit
+                elif master_mip_results.solver.termination_condition is tc.unbounded:
+                    config.logger.info(
+                        'Regularization problem ubounded.'
+                        'Sometimes solving MIQP using cplex, unbounded means infeasible.')
+                elif master_mip_results.solver.termination_condition is tc.unknown:
+                    config.logger.info(
+                        'Termination condition of the projection problem is unknown.')
+                    if master_mip_results.problem.lower_bound != float('-inf'):
+                        config.logger.info(
+                            'Solution limit has been reached.')
+                        handle_master_optimal(
+                            master_mip, solve_data, config, update_bound=False)
                 else:
                     raise ValueError(
                         'MindtPy unable to handle projection problem termination condition '
