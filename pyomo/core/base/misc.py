@@ -14,8 +14,6 @@ import logging
 import sys
 import types
 
-from six import itervalues, string_types
-
 logger = logging.getLogger('pyomo.core')
 
 
@@ -113,7 +111,7 @@ class _robust_sort_keyfcn(object):
 
     """
     def __init__(self):
-        self._typemap = {}
+        self._typemap = {tuple: (3, tuple.__name__)}
 
     def __call__(self, val):
         """Generate a tuple ( str(type_name), val ) for sorting the value.
@@ -149,6 +147,8 @@ class _robust_sort_keyfcn(object):
             self._typemap[_type] = i, _typename
         if i == 1:
             return _typename, val
+        elif i == 3:
+            return _typename, tuple(self(v) for v in val)
         elif i == 2:
             return _typename, str(val)
         else:
@@ -179,7 +179,7 @@ def sorted_robust(arg):
 
 
 def _to_ustr(obj):
-    if not isinstance(obj, string_types):
+    if not isinstance(obj, str):
         try:
             obj = str(obj)
         except:
@@ -259,7 +259,7 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
     _width = ["%"+str(i)+"s" for i in _width]
 
     if any( ' ' in r[-1]
-            for x in itervalues(_rows) if x is not None
+            for x in _rows.values() if x is not None
             for r in x  ):
         _width[-1] = '%s'
     for _key in sorted_robust(_rows):

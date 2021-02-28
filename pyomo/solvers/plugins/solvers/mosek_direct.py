@@ -44,6 +44,7 @@ if six.PY2:
 else:
     from itertools import accumulate
 
+
 class DegreeError(ValueError):
     pass
 
@@ -250,7 +251,7 @@ class MOSEKDirect(DirectSolver):
                 self._pyomo_var_to_solver_var_map[j] for i, j in repn.quadratic_vars)
             qvals = tuple(v * 2 if qsubi[i] is qsubj[i] else v
                           for i, v in enumerate(repn.quadratic_coefs))
-            mosek_qexp = (qsubi, qsubj, qvals)
+            mosek_qexp = (qsubj, qsubi, qvals)
         return mosek_arow, mosek_qexp, referenced_vars
 
     def _get_expr_from_pyomo_expr(self, expr, max_degree=2):
@@ -292,10 +293,16 @@ class MOSEKDirect(DirectSolver):
         vnames = tuple(self._symbol_map.getSymbol(
             v, self._labeler) for v in var_seq)
         vtypes = tuple(map(self._mosek_vartype_from_var, var_seq))
-        lbs = tuple(-inf if value(v.lb) is None else value(v.lb)
-                    for v in var_seq)
-        ubs = tuple(inf if value(v.ub) is None else value(v.ub)
-                    for v in var_seq)
+        lbs = tuple( value(v) if v.fixed
+                     else -inf if value(v.lb) is None
+                     else value(v.lb)
+                     for v in var_seq
+        )
+        ubs = tuple( value(v) if v.fixed
+                     else inf if value(v.ub) is None
+                     else value(v.ub)
+                     for v in var_seq
+        )
         fxs = tuple(v.is_fixed() for v in var_seq)
         bound_types = tuple(map(self._mosek_bounds, lbs, ubs, fxs))
         self._solver_model.appendvars(len(var_seq))
@@ -355,7 +362,7 @@ class MOSEKDirect(DirectSolver):
             qcsubi = tuple(itertools.chain.from_iterable(q_is))
             qcsubj = tuple(itertools.chain.from_iterable(q_js))
             qcval = tuple(itertools.chain.from_iterable(q_vals))
-            qcsubk = tuple(i*len(q_is[i - con_num]) for i in sub)
+            qcsubk = tuple(i for i in sub for j in range(len(q_is[i-con_num])))
             self._solver_model.appendcons(num_lq)
             self._solver_model.putarowlist(sub, ptrb, ptre, asubs, avals)
             self._solver_model.putqcon(qcsubk, qcsubi, qcsubj, qcval)

@@ -30,8 +30,6 @@ from pyomo.core.base.misc import (apply_indexed_rule,
                                   tabular_writer)
 from pyomo.core.base.set import Set
 
-from six import iteritems
-
 logger = logging.getLogger('pyomo.core')
 
 _rule_returned_none_error = """LogicalConstraint '%s': rule returned None.
@@ -356,7 +354,7 @@ class LogicalConstraint(ActiveIndexedComponent):
              ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active),
              ],
-            iteritems(self),
+            self.items(),
             ("Body", "Active"),
             lambda k, v: [v.body, v.active, ]
         )
@@ -377,7 +375,7 @@ class LogicalConstraint(ActiveIndexedComponent):
 
         ostream.write("\n")
         tabular_writer(ostream, prefix + tab,
-                       ((k, v) for k, v in iteritems(self._data) if v.active),
+                       ((k, v) for k, v in self._data.items() if v.active),
                        ("Body",),
                        lambda k, v: [v.body(), ])
 

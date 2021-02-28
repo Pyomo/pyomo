@@ -12,8 +12,6 @@ from pyomo.core.kernel.dict_container import DictContainer
 from pyomo.core.kernel.tuple_container import TupleContainer
 from pyomo.core.kernel.list_container import ListContainer
 
-import six
-
 def define_homogeneous_container_type(namespace,
                                       name,
                                       container_class,
@@ -34,17 +32,11 @@ def define_homogeneous_container_type(namespace,
             _ctype = <ctype>
 
             ### if ### <use_slots>
-            __slots__ = ["_parent",
+            __slots__ = ("_parent",
                          "_storage_key",
                          "_active",
-                         "_data"]
-            if six.PY3:
-                # Prior to Python 3, the abc module does not
-                # use empty __slots__ declarations on the
-                # base classes. Therefore, we do not need a
-                # __weakref__ slot because there is already
-                # a __dict__ in the class hierarchy.
-                __slots__.append("__weakref__")
+                         "_data",
+                         "__weakref__")
             ### fi ###
 
             def __init__(self, *args, **kwds):
@@ -57,13 +49,11 @@ def define_homogeneous_container_type(namespace,
     cls_dict = {}
     cls_dict['_ctype'] = ctype
     if use_slots:
-        cls_dict['__slots__'] = ["_parent",
+        cls_dict['__slots__'] = ("_parent",
                                  "_storage_key",
                                  "_active",
-                                 "_data"]
-        if six.PY3:
-            cls_dict['__slots__'].append("__weakref__")
-        cls_dict['__slots__'] = tuple(cls_dict['__slots__'])
+                                 "_data",
+                                 "__weakref__")
 
     def _init(self, *args, **kwds):
         self._parent = None

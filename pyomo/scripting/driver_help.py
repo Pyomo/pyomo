@@ -19,7 +19,7 @@ import socket
 import subprocess
 
 import pyomo.common
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 import pyomo.scripting.pyomo_parser
 
 logger = logging.getLogger('pyomo.solvers')
@@ -221,9 +221,9 @@ def help_api(options):
                     print("    "+line)
 
 def help_environment():
-    info = Options()
+    info = Bunch()
     #
-    info.python = Options()
+    info.python = Bunch()
     info.python.version = '%d.%d.%d' % sys.version_info[:3]
     info.python.executable = sys.executable
     info.python.platform = sys.platform
@@ -231,13 +231,13 @@ def help_environment():
         packages = []
         import pip
         for package in pip.get_installed_distributions():
-            packages.append(Options(name=package.project_name,
+            packages.append(Bunch(name=package.project_name,
                                     version=package.version))
         info.python.packages = packages
     except:
         pass
     #
-    info.environment = Options()
+    info.environment = Bunch()
     path = os.environ.get('PATH', None)
     if not path is None:
         info.environment['shell path'] = path.split(os.pathsep)

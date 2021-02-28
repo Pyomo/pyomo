@@ -8,7 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import collections.abc
 import pickle
+from io import StringIO
 
 import pyutilib.th as unittest
 import pyomo.kernel as pmo
@@ -21,16 +23,6 @@ from pyomo.core.kernel.homogeneous_container import \
 from pyomo.core.kernel.list_container import ListContainer
 from pyomo.core.kernel.block import (block,
                                      block_list)
-
-import six
-from six import StringIO
-
-if six.PY3:
-    from collections.abc import Sequence as collections_Sequence
-    from collections.abc import MutableSequence as collections_MutableSequence
-else:
-    from collections import Sequence as collections_Sequence
-    from collections import MutableSequence as collections_MutableSequence
 
 #
 # There are no fully implemented test suites in this
@@ -97,10 +89,10 @@ class _TestListContainerBase(object):
         self.assertTrue(isinstance(clist, ICategorizedObjectContainer))
         self.assertTrue(isinstance(clist, IHomogeneousContainer))
         self.assertTrue(isinstance(clist, ListContainer))
-        self.assertTrue(isinstance(clist, collections_Sequence))
-        self.assertTrue(issubclass(type(clist), collections_Sequence))
-        self.assertTrue(isinstance(clist, collections_MutableSequence))
-        self.assertTrue(issubclass(type(clist), collections_MutableSequence))
+        self.assertTrue(isinstance(clist, collections.abc.Sequence))
+        self.assertTrue(issubclass(type(clist), collections.abc.Sequence))
+        self.assertTrue(isinstance(clist, collections.abc.MutableSequence))
+        self.assertTrue(issubclass(type(clist), collections.abc.MutableSequence))
 
     def test_len1(self):
         c = self._container_type()
@@ -652,10 +644,10 @@ class _TestActiveListContainerBase(_TestListContainerBase):
         self.assertTrue(isinstance(clist, ICategorizedObjectContainer))
         self.assertTrue(isinstance(clist, IHomogeneousContainer))
         self.assertTrue(isinstance(clist, ListContainer))
-        self.assertTrue(isinstance(clist, collections_Sequence))
-        self.assertTrue(issubclass(type(clist), collections_Sequence))
-        self.assertTrue(isinstance(clist, collections_MutableSequence))
-        self.assertTrue(issubclass(type(clist), collections_MutableSequence))
+        self.assertTrue(isinstance(clist, collections.abc.Sequence))
+        self.assertTrue(issubclass(type(clist), collections.abc.Sequence))
+        self.assertTrue(isinstance(clist, collections.abc.MutableSequence))
+        self.assertTrue(issubclass(type(clist), collections.abc.MutableSequence))
 
     def test_active(self):
         index = list(range(4))

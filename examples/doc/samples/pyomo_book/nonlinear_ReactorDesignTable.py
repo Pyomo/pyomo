@@ -1,6 +1,6 @@
 # nonlinear_ReactorDesignTable.py
 from pyomo.environ import *
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 
 # create the concrete model
 model = ConcreteModel()
@@ -36,7 +36,7 @@ model.cd_bal = Constraint(expr=(0 == -model.sv * model.cd \
                  + k3 * model.ca ** 2.0))
 
 # setup the solver options
-options = Options()
+options = Bunch()
 options.solver = 'ipopt'
 options.quiet = True
 

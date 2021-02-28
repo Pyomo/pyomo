@@ -3,7 +3,7 @@ name: GitHub Branch CI
 on:
   push:
     branches-ignore:
-      - master
+      - main
   workflow_dispatch:
     inputs:
       git-ref:

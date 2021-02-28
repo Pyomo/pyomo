@@ -16,7 +16,7 @@ import logging
 import subprocess
 
 from pyomo.common import Executable
-from pyomo.common.collections import Options, Bunch
+from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
@@ -28,11 +28,6 @@ from pyomo.core.kernel.block import IBlock
 logger = logging.getLogger('pyomo.solvers')
 
 from six import iteritems
-
-try:
-    unicode
-except:
-    basestring = str
 
 
 @SolverFactory.register('gurobi', doc='The GUROBI LP/MIP solver')
@@ -109,7 +104,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         self.set_problem_format(ProblemFormat.cpxlp)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -218,11 +213,11 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # create the temporary file - assuming that the user has already, via some external
         # mechanism, invoked warm_start() with a instance to create the warm start file.
         if self._warm_start_solve and \
-           isinstance(args[0], basestring):
+           isinstance(args[0], str):
             # we assume the user knows what they are doing...
             pass
         elif self._warm_start_solve and \
-             (not isinstance(args[0], basestring)):
+             (not isinstance(args[0], str)):
             # assign the name of the warm start file *before* calling the base class
             # presolve - the base class method ends up creating the command line,
             # and the warm start file-name is (obviously) needed there.
@@ -237,7 +232,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # NB: we must let the base class presolve run first so that the
         # symbol_map is actually constructed!
 
-        if (len(args) > 0) and (not isinstance(args[0], basestring)):
+        if (len(args) > 0) and (not isinstance(args[0], str)):
 
             if len(args) != 1:
                 raise ValueError(
@@ -390,13 +385,13 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         extract_rc = False
         for suffix in self._suffixes:
             flag=False
-            if re.match(suffix,"dual"):
+            if re.match(suffix, "dual"):
                 extract_duals = True
                 flag=True
-            if re.match(suffix,"slack"):
+            if re.match(suffix, "slack"):
                 extract_slacks = True
                 flag=True
-            if re.match(suffix,"rc"):
+            if re.match(suffix, "rc"):
                 extract_rc = True
                 flag=True
             if not flag:

@@ -1,15 +1,22 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+#
 # -*- coding: utf-8 -*-
 """
 Testing for the logical expression system
 """
 from __future__ import division
 import operator
-import platform
-import sys
 from itertools import product
 
 import pyutilib.th as unittest
-import six
 
 from pyomo.core.expr.cnf_walker import to_cnf
 from pyomo.core.expr.sympy_tools import sympy_available
@@ -277,17 +284,9 @@ class TestLogicalClasses(unittest.TestCase):
 
         # These errors differ between python versions, regrettably
         comparison_error_msg = "(?:(?:unorderable types)|(?:not supported between instances of))"
-        if six.PY3:
-            for invalid_expr_fcn in invalid_comparison_generator():
-                with self.assertRaisesRegex(TypeError, comparison_error_msg):
-                    _ = invalid_expr_fcn()
-        else:  # Python 2
-            pass
-            # Note: Python 2 behavior is weird, returning native type bool:
-            # m.Y1 >= 0  -> True
-            # m.Y1 <= 0  -> False
-            # m.Y1 > 0   -> True
-            # m.Y1 < 0   -> False
+        for invalid_expr_fcn in invalid_comparison_generator():
+            with self.assertRaisesRegex(TypeError, comparison_error_msg):
+                _ = invalid_expr_fcn()
 
     def test_invalid_conversion(self):
         m = ConcreteModel()

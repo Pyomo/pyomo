@@ -12,7 +12,6 @@
 #
 
 import pickle
-import six
 import os
 import sys
 from os.path import abspath, dirname
@@ -306,9 +305,7 @@ class Test(unittest.TestCase):
         model.con = Constraint(rule=rule1)
         model.con2 = Constraint(model.a, rule=rule2)
         instance = model.create_instance()
-        if (not six.PY3) and ('dill' in sys.modules):
-            pickle.dumps(instance)
-        elif using_pypy:
+        if using_pypy:
             str_ = pickle.dumps(instance)
             tmp_ = pickle.loads(str_)
         else:

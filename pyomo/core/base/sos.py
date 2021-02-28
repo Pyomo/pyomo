@@ -12,8 +12,6 @@ __all__ = ['SOSConstraint']
 
 import sys
 import logging
-import six
-from six.moves import zip, xrange
 
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
@@ -244,7 +242,7 @@ class SOSConstraint(ActiveIndexedComponent):
                 else:
                     _sosSet = self._sosSet
 
-                for index, sosSet in six.iteritems(_sosSet):
+                for index, sosSet in _sosSet.items():
                     if generate_debug_messages:     #pragma:nocover
                         logger.debug("  Constructing "+self.name+" index "+str(index))
 
@@ -306,7 +304,7 @@ class SOSConstraint(ActiveIndexedComponent):
         soscondata.level = self._sosLevel
 
         if weights is None:
-            soscondata.set_items(variables, list(xrange(1, len(variables)+1)))
+            soscondata.set_items(variables, list(range(1, len(variables)+1)))
         else:
             soscondata.set_items(variables, weights)
 

@@ -35,7 +35,7 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base.param import _NotValid, _ParamData 
 
-from six import iteritems, itervalues, StringIO
+from io import StringIO
 
 class ParamTester(object):
 
@@ -116,7 +116,7 @@ class ParamTester(object):
             pass
 
     def test_getitem(self):
-        for key, val in iteritems(self.data):
+        for key, val in self.data.items():
             try:
                 test = self.instance.A[key]
                 self.assertEqual( value(test), val )
@@ -340,7 +340,7 @@ class ParamTester(object):
         #                  not self.instance.A._default_val is None and \
         #                  not self.instance.A.mutable
         try:
-            test = itervalues(self.instance.A)
+            test = self.instance.A.values()
             test = zip(self.instance.A.keys(), test)
             if self.instance.A._default_val is _NotValid:
                 self.validateDict(self.sparse_data.items(), test)
@@ -357,7 +357,7 @@ class ParamTester(object):
         #                  not self.instance.A._default_val is None and \
         #                  not self.instance.A.mutable
         try:
-            test = iteritems(self.instance.A)
+            test = self.instance.A.items()
             if self.instance.A._default_val is _NotValid:
                 self.validateDict(self.sparse_data.items(), test)
             else:

@@ -46,18 +46,8 @@ class SolutionStatus(str, enum.Enum):
         return self.value
 
 
-try:
-    unicode
-except NameError:
-    basestring = unicode = str
-
-try:
-    long
-    intlist = (int, long)
-    numlist = (float, int, long)
-except:
-    intlist = (int, )
-    numlist = (float, int)
+intlist = (int, )
+numlist = (float, int)
 
 
 class Solution(MapContainer):

@@ -18,7 +18,7 @@ from os.path import abspath, dirname
 import logging
 from functools import reduce
 
-from pyomo.common.collections import Bunch, Options
+from pyomo.common.collections import Bunch
 import pyutilib.th as unittest
 import pyutilib.autotest
 import pyomo.misc.plugin
@@ -268,7 +268,7 @@ def test_solvers(options=None, argv=None):
     else:
         sys.argv=argv
     # Create the tests defined in the YAML configuration file
-    autotest_options = Options()
+    autotest_options = Bunch()
     autotest_options.testname_format = "%s_TEST_%s"
     pyutilib.autotest.create_test_suites(filename=currdir+'test_solvers.yml', _globals=globals(), options=autotest_options)
     # Execute the tests, using a custom test runner

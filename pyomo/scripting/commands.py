@@ -16,7 +16,7 @@ import signal
 import subprocess
 
 import pyutilib.pyro
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 from pyomo.opt import SolverResults
 from pyomo.common._command import pyomo_command
 from pyomo.common.deprecation import deprecated

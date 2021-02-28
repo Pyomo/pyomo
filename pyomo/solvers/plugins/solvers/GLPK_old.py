@@ -15,7 +15,7 @@ import sys
 import subprocess
 
 from pyomo.common.errors import ApplicationError
-from pyomo.common.collections import Bunch, Options
+from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.common import Executable
@@ -26,7 +26,7 @@ from pyomo.opt.solver import SystemCallSolver
 from pyomo.solvers.mockmip import MockMIP
 from pyomo.solvers.plugins.solvers.GLPK import _glpk_version, configure_glpk
 
-from six import iteritems, string_types
+from six import iteritems
 import logging
 logger = logging.getLogger('pyomo.solvers')
 
@@ -77,7 +77,7 @@ class GLPKSHELL_4_42(SystemCallSolver):
         self.set_problem_format(ProblemFormat.cpxlp)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.integer = True
 
@@ -124,16 +124,12 @@ class GLPKSHELL_4_42(SystemCallSolver):
             cmd.insert(0, self._timer)
         for key in self.options:
             opt = self.options[key]
-            if opt is None or (isinstance(opt, string_types) and opt.strip() == ''):
+            if opt is None or (isinstance(opt, str) and opt.strip() == ''):
                 # Handle the case for options that must be
                 # specified without a value
                 cmd.append("--%s" % key)
             else:
                 cmd.extend(["--%s" % key, str(opt)])
-            #if isinstance(opt, basestring) and ' ' in opt:
-            #    cmd.append('--%s "%s"' % (key, str(opt)))
-            #else:
-            #    cmd.append('--%s %s' % (key, str(opt)))
 
         if self._timelimit is not None and self._timelimit > 0.0:
             cmd.extend(['--tmlim', str(self._timelimit)])
@@ -431,7 +427,7 @@ class GLPKSHELL_old(SystemCallSolver):
         self.set_problem_format(ProblemFormat.cpxlp)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.integer = True
 
@@ -488,11 +484,6 @@ class GLPKSHELL_old(SystemCallSolver):
                 cmd.append("--%s" % key)
             else:
                 cmd.extend(["--%s" % key, str(opt)])
-            #if isinstance(self.options[key], basestring) \
-            #       and ' ' in self.options[key]:
-            #    cmd.append('--%s "%s"' % (key, str(self.options[key])))
-            #else:
-            #    cmd.append('--%s %s' % (key, str(self.options[key])))
 
         if self._timelimit is not None and self._timelimit > 0.0:
             cmd.extend(['--tmlim', str(self._timelimit)])
