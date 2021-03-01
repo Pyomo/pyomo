@@ -120,6 +120,8 @@ class MIPSolverConfig(SolverConfig):
     """
     def __init__(self):
         super(MIPSolverConfig, self).__init__()
+        self._acceptable_attributes.update(['mip_gap',
+                                            'relax_integrality'])
         self.mip_gap: Optional[float] = None
         self.relax_integrality: bool = False
 
