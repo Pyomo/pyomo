@@ -27,6 +27,11 @@ logger = logging.getLogger(__name__)
 class IpoptConfig(SolverConfig):
     def __init__(self):
         super(IpoptConfig, self).__init__()
+        self._acceptable_attributes.update(['executable',
+                                            'filename',
+                                            'keepfiles',
+                                            'solver_output_logger',
+                                            'log_level'])
         self.executable = Executable('ipopt')
         self.filename = None
         self.keepfiles = False

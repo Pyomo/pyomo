@@ -22,6 +22,10 @@ logger = logging.getLogger(__name__)
 class CplexConfig(MIPSolverConfig):
     def __init__(self):
         super(CplexConfig, self).__init__()
+        self._acceptable_attributes.update(['filename',
+                                            'keepfiles',
+                                            'solver_output_logger',
+                                            'log_level'])
         self.filename = None
         self.keepfiles = False
         self.solver_output_logger = logger

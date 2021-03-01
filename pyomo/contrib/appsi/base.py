@@ -7,7 +7,7 @@ from pyomo.core.base.var import _GeneralVarData, Var
 from pyomo.core.base.param import _ParamData, Param
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.objective import _GeneralObjectiveData
-from pyomo.common.collections import ComponentMap
+from pyomo.common.collections import ComponentMap, OrderedSet
 from .utils.get_objective import get_objective
 from .utils.identify_named_expressions import identify_named_expressions
 from pyomo.common.timing import HierarchicalTimer
@@ -54,7 +54,31 @@ class TerminationCondition(enum.Enum):
     """The solver exited due to licensing problems"""
 
 
-class SolverConfig(object):
+class ConfigBase(object):
+    def __init__(self):
+        self._acceptable_attributes = OrderedSet()
+        
+    def __getattr__(self, item):
+        if item != '_acceptable_attributes' and item not in self._acceptable_attributes:
+            raise ValueError('{0} does not have attribute {1}'.format(type(self), item))
+        return super(ConfigBase, self).__getattr__(item)
+
+    def __setattr__(self, key, value):
+        if key != '_acceptable_attributes' and key not in self._acceptable_attributes:
+            raise ValueError('{0} does not have attribute {1}'.format(type(self), key))
+        super(ConfigBase, self).__setattr__(key, value)
+
+    def __str__(self):
+        s = str(type(self)) + ': \n'
+        for k in self._acceptable_attributes:
+            s += '  {key:<40}: {val}\n'.format(key=k, val=getattr(self, k))
+        return s
+
+    def __repr__(self):
+        return self.__str__()
+
+
+class SolverConfig(ConfigBase):
     """
     Attributes
     ----------
@@ -71,6 +95,12 @@ class SolverConfig(object):
         is called.
     """
     def __init__(self):
+        super(SolverConfig, self).__init__()
+        self._acceptable_attributes.update(['time_limit',
+                                            'stream_solver',
+                                            'load_solution',
+                                            'symbolic_solver_labels',
+                                            'report_timing'])
         self.time_limit: Optional[float] = None
         self.stream_solver: bool = False
         self.load_solution: bool = True
@@ -149,8 +179,16 @@ class Results(object):
         return s
 
 
-class UpdateConfig(object):
+class UpdateConfig(ConfigBase):
     def __init__(self):
+        super(UpdateConfig, self).__init__()
+        self._acceptable_attributes.update(['check_for_new_or_removed_constraints',
+                                            'check_for_new_or_removed_vars',
+                                            'check_for_new_or_removed_params',
+                                            'update_constraints',
+                                            'update_vars',
+                                            'update_params',
+                                            'update_named_expressions'])
         self.check_for_new_or_removed_constraints: bool = True
         self.check_for_new_or_removed_vars: bool = True
         self.check_for_new_or_removed_params: bool = True

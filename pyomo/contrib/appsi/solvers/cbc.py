@@ -25,6 +25,11 @@ logger = logging.getLogger(__name__)
 class CbcConfig(SolverConfig):
     def __init__(self):
         super(CbcConfig, self).__init__()
+        self._acceptable_attributes.update(['executable',
+                                            'filename',
+                                            'keepfiles',
+                                            'solver_output_logger',
+                                            'log_level'])
         self.executable = Executable('cbc')
         self.filename = None
         self.keepfiles = False
