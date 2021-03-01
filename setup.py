@@ -134,24 +134,19 @@ def run_setup():
       ext_modules = ext_modules,
       entry_points="""
         [console_scripts]
-        results_schema=pyomo.scripting.commands:results_schema
-        pyro_mip_server = pyomo.scripting.pyro_mip_server:main
-        test.pyomo = pyomo.scripting.runtests:runPyomoTests
         pyomo = pyomo.scripting.pyomo_main:main_console_script
+        test.pyomo = pyomo.scripting.runtests:runPyomoTests
+        pyomo_python = pyomo.scripting.commands:pyomo_python
+        pyro_mip_server = pyomo.scripting.pyro_mip_server:main
         pyomo_ns = pyomo.scripting.commands:pyomo_ns
         pyomo_nsc = pyomo.scripting.commands:pyomo_nsc
         kill_pyro_mip_servers = pyomo.scripting.commands:kill_pyro_mip_servers
         launch_pyro_mip_servers = pyomo.scripting.commands:launch_pyro_mip_servers
-        readsol = pyomo.scripting.commands:readsol
-        OSSolverService = pyomo.scripting.commands:OSSolverService
-        pyomo_python = pyomo.scripting.commands:pyomo_python
-        pyomo_old=pyomo.scripting.pyomo_command:main
 
         [pyomo.command]
         pyomo.help = pyomo.scripting.driver_help
         pyomo.test.pyomo = pyomo.scripting.runtests
         pyomo.pyro_mip_server = pyomo.scripting.pyro_mip_server
-        pyomo.results_schema=pyomo.scripting.commands
         pyomo.viewer=pyomo.contrib.viewer.pyomo_viewer
       """
       )
