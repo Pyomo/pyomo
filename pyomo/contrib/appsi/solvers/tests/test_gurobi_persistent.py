@@ -74,16 +74,6 @@ class TestGurobiPersistentSimpleLPUpdates(unittest.TestCase):
         self.assertAlmostEqual(x, self.m.x.value)
         self.assertAlmostEqual(y, self.m.y.value)
 
-    def test_no_mutable_params(self):
-        self.set_params(-1, -2, 0.1, -2)
-        x, y = self.get_solution()
-        opt = Gurobi()
-        opt.config.check_for_updated_mutable_params_in_constraints = False
-        opt.config.check_for_updated_mutable_params_in_objective = False
-        res = opt.solve(self.m)
-        self.assertAlmostEqual(x, self.m.x.value)
-        self.assertAlmostEqual(y, self.m.y.value)
-
 
 class TestGurobiPersistent(unittest.TestCase):
     def test_range_constraints(self):
