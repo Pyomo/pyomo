@@ -149,9 +149,11 @@ def init_rNLP(solve_data, config):
         if solve_data.objective_sense == minimize:
             if not math.isnan(results.problem.lower_bound):
                 solve_data.LB = results.problem.lower_bound
+                solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
                 solve_data.LB_progress.append(results.problem.lower_bound)
         elif not math.isnan(results.problem.upper_bound):
             solve_data.UB = results.problem.upper_bound
+            solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
             solve_data.UB_progress.append(results.problem.upper_bound)
         main_objective = MindtPy.objective_list[-1]
         config.logger.info(

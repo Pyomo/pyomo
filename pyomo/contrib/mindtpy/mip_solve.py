@@ -124,10 +124,12 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
             if solve_data.objective_sense == minimize:
                 solve_data.LB = max(
                     master_mip_results.problem.lower_bound, solve_data.LB)
+                solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
                 solve_data.LB_progress.append(solve_data.LB)
             else:
                 solve_data.UB = min(
                     master_mip_results.problem.upper_bound, solve_data.UB)
+                solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
                 solve_data.UB_progress.append(solve_data.UB)
 
     elif master_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
@@ -185,10 +187,12 @@ def handle_master_optimal(master_mip, solve_data, config, update_bound=True):
         if solve_data.objective_sense == minimize:
             solve_data.LB = max(
                 value(MindtPy.mip_obj.expr), solve_data.LB)
+            solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
             solve_data.LB_progress.append(solve_data.LB)
         else:
             solve_data.UB = min(
                 value(MindtPy.mip_obj.expr), solve_data.UB)
+            solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
             solve_data.UB_progress.append(solve_data.UB)
         config.logger.info(
             'MIP %s: OBJ: %s  LB: %s  UB: %s  TIME: %ss'
@@ -239,10 +243,12 @@ def handle_master_other_conditions(master_mip, master_mip_results, solve_data, c
         if solve_data.objective_sense == minimize:
             solve_data.LB = max(
                 master_mip_results.problem.lower_bound, solve_data.LB)
+            solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
             solve_data.LB_progress.append(solve_data.LB)
         else:
             solve_data.UB = min(
                 master_mip_results.problem.upper_bound, solve_data.UB)
+            solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
             solve_data.UB_progress.append(solve_data.UB)
         config.logger.info(
             'MIP %s: OBJ: %s  LB: %s  UB: %s'
@@ -318,10 +324,12 @@ def handle_master_max_timelimit(master_mip, master_mip_results, solve_data, conf
     if solve_data.objective_sense == minimize:
         solve_data.LB = max(
             master_mip_results.problem.lower_bound, solve_data.LB)
+        solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
         solve_data.LB_progress.append(solve_data.LB)
     else:
         solve_data.UB = min(
             master_mip_results.problem.upper_bound, solve_data.UB)
+        solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
         solve_data.UB_progress.append(solve_data.UB)
     config.logger.info(
         'MIP %s: OBJ: %s  LB: %s  UB: %s'

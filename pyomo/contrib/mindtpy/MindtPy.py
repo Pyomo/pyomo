@@ -209,6 +209,7 @@ class MindtPySolver(object):
             # Flag indicating whether the solution improved in the past
             # iteration or not
             solve_data.solution_improved = False
+            solve_data.bound_improved = False
 
             if config.nlp_solver == 'ipopt':
                 if not hasattr(solve_data.working_model, 'ipopt_zL_out'):

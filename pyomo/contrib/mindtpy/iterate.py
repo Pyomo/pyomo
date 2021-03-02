@@ -344,11 +344,15 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         solve_data.results.solver.termination_condition = tc.optimal
         return True
     # Cycling check
+    # In cplex, negative zero is different from zero, so we use string to denote this
     if config.cycling_check and solve_data.mip_iter >= 1 and check_cycling:
         temp = []
         for var in solve_data.mip.component_data_objects(ctype=Var):
             if var.is_integer():
-                temp.append(int(round(var.value)))
+                if var.value == 0:
+                    temp.append(str(var.value))
+                else:
+                    temp.append(int(round(var.value)))
         solve_data.curr_int_sol = tuple(temp)
 
         if solve_data.curr_int_sol in set(solve_data.integer_list):
@@ -466,10 +470,12 @@ def bound_fix(solve_data, config, last_iter_cuts):
             if solve_data.objective_sense == minimize:
                 solve_data.LB = max(
                     [master_mip_results.problem.lower_bound] + solve_data.LB_progress[:-1])
+                solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
                 solve_data.LB_progress.append(solve_data.LB)
             else:
                 solve_data.UB = min(
                     [master_mip_results.problem.upper_bound] + solve_data.UB_progress[:-1])
+                solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
                 solve_data.UB_progress.append(solve_data.UB)
             config.logger.info(
                 'Fixed bound values: LB: {}  UB: {}'.

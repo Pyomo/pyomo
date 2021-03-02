@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 from __future__ import division
-from pyomo.core import Constraint, minimize, value, maximize
+from pyomo.core import Constraint, minimize, value, maximize, Var
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, solve_feasibility_subproblem
 from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables, get_main_elapsed_time, time_code
@@ -324,10 +324,12 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         if solve_data.objective_sense == minimize:
             solve_data.LB = max(
                 self.get_best_objective_value(), solve_data.LB)
+            solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
             solve_data.LB_progress.append(solve_data.LB)
         else:
             solve_data.UB = min(
                 self.get_best_objective_value(), solve_data.UB)
+            solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
             solve_data.UB_progress.append(solve_data.UB)
         config.logger.info(
             'MIP %s: OBJ (at current node): %s  Bound: %s  LB: %s  UB: %s'
@@ -445,6 +447,8 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         if config.strategy == 'OA':
             self.add_lazy_oa_cuts(
                 solve_data.mip, dual_values, solve_data, config, opt)
+            if config.add_regularization is not None:
+                add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
         elif config.strategy == 'GOA':
             self.add_lazy_affine_cuts(solve_data, config, opt)
         if config.add_no_good_cuts:
@@ -507,6 +511,10 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 if config.strategy == 'OA':
                     self.add_lazy_oa_cuts(
                         solve_data.mip, None, solve_data, config, opt)
+            if not solve_data.bound_improved and not solve_data.solution_improved:
+                config.logger.info('the bound and the best found solution have neither been improved.'
+                                   'We will skip solving the regularization problem and the fixed NLP subproblem')
+                return
 
             if ((solve_data.objective_sense == minimize and solve_data.LB != float('-inf'))
                     or (solve_data.objective_sense == maximize and solve_data.UB != float('inf'))):
@@ -585,6 +593,32 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             solve_data.results.solver.termination_condition = tc.optimal
             self.abort()
             return
+        # In cplex, negative zero is different from zero, so we use string to denote this
+        temp = []
+        for var in solve_data.working_model.component_data_objects(ctype=Var):
+            if var.is_integer():
+                if var.value == 0:
+                    temp.append(str(var.value))
+                else:
+                    temp.append(int(round(var.value)))
+        solve_data.curr_int_sol = tuple(temp)
+
+        if config.add_regularization is None:
+            if solve_data.curr_int_sol == solve_data.prev_int_sol:
+                config.logger.info(
+                    'Same integer combination is obtained, which means the current incumbent solution is a feasible solution to the original problem.'
+                    'We will skip solving the fixed NLP subproblem.')
+                return
+            else:
+                solve_data.prev_int_sol = solve_data.curr_int_sol
+        else:
+            if solve_data.curr_int_sol in set(solve_data.integer_list):
+                config.logger.info('This integer combination has been explored.'
+                                   'We will skip solving the fixed NLP subproblem.')
+                return
+            else:
+                solve_data.integer_list.append(solve_data.curr_int_sol)
+
         # solve subproblem
         # The constraint linearization happens in the handlers
         fixed_nlp, fixed_nlp_result = solve_subproblem(
