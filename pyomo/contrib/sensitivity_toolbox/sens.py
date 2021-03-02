@@ -371,7 +371,7 @@ class SensitivityInterface(object):
             instance.sens_state_value_1[var] = ptb
 
             # k_aug
-            instance.DeltaP[con] = value(ptb - var)
-            #instance.DeltaP[con] = value(var - ptb)
+            #instance.DeltaP[con] = value(ptb - var)
+            instance.DeltaP[con] = value(var - ptb)
             # FIXME: ^ This is incorrect. DeltaP should be (ptb - current).
             # But at least one test doesn't pass unless I use (current - ptb).

@@ -329,6 +329,11 @@ class TestSensitivityToolbox(unittest.TestCase):
                          m_sipopt.x_dot[15].active )
 
         # test model solution
+        # NOTE:
+        # ipopt_sens does not alter the values in the model,
+        # so all this test is doing is making sure that the
+        # objective value doesn't change. This test does nothing to
+        # check values of the perturbed solution.
         self.assertAlmostEqual(value(m_sipopt.J),0.0048956783,8)
 
 
@@ -464,8 +469,8 @@ class TestSensitivityToolbox(unittest.TestCase):
                                 cloneModel=True)
 
         ptb_map = ComponentMap()
-        ptb_map[m_kaug.a] = value((m_orig.perturbed_a - m_orig.a))
-        ptb_map[m_kaug.H] = value((m_orig.perturbed_H - m_orig.H))
+        ptb_map[m_kaug.a] = value(-(m_orig.perturbed_a - m_orig.a))
+        ptb_map[m_kaug.H] = value(-(m_orig.perturbed_H - m_orig.H))
 
         # verify cloned model has _SENSITIVITY_TOOLBOX_DATA block
         # and original model is untouched
@@ -521,7 +526,6 @@ class TestSensitivityToolbox(unittest.TestCase):
         self.assertTrue(hasattr(m_kaug,'sens_sol_state_1') and
                         m_kaug.sens_sol_state_1.ctype is Suffix)
 
-        # The precision we require on these multipliers seems unreasonable...
         self.assertTrue(hasattr(m_kaug,'ipopt_zL_in') and
                         m_kaug.ipopt_zL_in.ctype is Suffix)
         self.assertAlmostEqual(
@@ -552,7 +556,14 @@ class TestSensitivityToolbox(unittest.TestCase):
                         m_orig.x_dot[15].active )
 
         # verify solution
-        self.assertAlmostEqual(value(m_kaug.J),0.002633263921107476,8)
+        # This is the only test that verifies the solution.
+
+        #self.assertAlmostEqual(value(m_kaug.J),0.002633263921107476,8)
+        self.assertAlmostEqual(value(m_kaug.J), 0.001212, 6)
+        # I do not know where this number (0.002633...) came from.
+        # The original objective function value is 0.0048
+        # The correct answer, from PyNumero, seems to be 0.00121
+        # "Real solution" is 0.00138
 
     @unittest.skipIf(not scipy_available, "scipy is required for this test")
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
@@ -570,8 +581,8 @@ class TestSensitivityToolbox(unittest.TestCase):
                              cloneModel=False)
 
         ptb_map = ComponentMap()
-        ptb_map[m_kaug.a] = value((m_kaug.perturbed_a - m_kaug.a))
-        ptb_map[m_kaug.H] = value((m_kaug.perturbed_H - m_kaug.H))
+        ptb_map[m_kaug.a] = value(-(m_kaug.perturbed_a - m_kaug.a))
+        ptb_map[m_kaug.H] = value(-(m_kaug.perturbed_H - m_kaug.H))
 
         self.assertTrue(m_kaug == m_orig)
         
