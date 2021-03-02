@@ -17,7 +17,7 @@ import gc
 import math
 
 from pyomo.common import timing, PyomoAPIFactory
-from pyomo.common.collections import Container
+from pyomo.common.collections import Bunch
 from pyomo.common.dependencies import pympler, pympler_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.gc_manager import PauseGC
@@ -61,7 +61,7 @@ def global_option(function, name, value):
     return wrapper_function
 
 
-class PyomoConfig(Container):
+class PyomoConfig(Bunch):
     """
     This is a pyomo-specific configuration object, which is a subclass of Container.
     """
@@ -69,7 +69,7 @@ class PyomoConfig(Container):
     _option = {}
 
     def __init__(self, *args, **kw):
-        Container.__init__(self, *args, **kw)
+        Bunch.__init__(self, *args, **kw)
         self.set_name('PyomoConfig')
         #
         # Create the nested options specified by the the PyomoConfig._option
@@ -79,7 +79,7 @@ class PyomoConfig(Container):
             d = self
             for attr in item[:-1]:
                 if not attr in d:
-                    d[attr] = Container()
+                    d[attr] = Bunch()
                 d = d[attr]
             d[item[-1]] = PyomoConfig._option[item]
 
@@ -573,7 +573,7 @@ class Model(SimpleBlock):
         #
         SimpleBlock.__init__(self, **kwargs)
         self._name = name
-        self.statistics = Container()
+        self.statistics = Bunch()
         self.config = PyomoConfig()
         self.solutions = ModelSolutions(self)
         self.config.preprocessor = 'pyomo.model.simple_preprocessor'

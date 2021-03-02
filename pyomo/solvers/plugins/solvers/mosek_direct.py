@@ -293,10 +293,16 @@ class MOSEKDirect(DirectSolver):
         vnames = tuple(self._symbol_map.getSymbol(
             v, self._labeler) for v in var_seq)
         vtypes = tuple(map(self._mosek_vartype_from_var, var_seq))
-        lbs = tuple(-inf if value(v.lb) is None else value(v.lb)
-                    for v in var_seq)
-        ubs = tuple(inf if value(v.ub) is None else value(v.ub)
-                    for v in var_seq)
+        lbs = tuple( value(v) if v.fixed
+                     else -inf if value(v.lb) is None
+                     else value(v.lb)
+                     for v in var_seq
+        )
+        ubs = tuple( value(v) if v.fixed
+                     else inf if value(v.ub) is None
+                     else value(v.ub)
+                     for v in var_seq
+        )
         fxs = tuple(v.is_fixed() for v in var_seq)
         bound_types = tuple(map(self._mosek_bounds, lbs, ubs, fxs))
         self._solver_model.appendvars(len(var_seq))
