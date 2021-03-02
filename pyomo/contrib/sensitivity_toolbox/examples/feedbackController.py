@@ -29,16 +29,16 @@ def create_model():
     m.a = Param(initialize = -0.2, mutable=True)
     m.H = Param(initialize = 0.5, mutable=True)
     m.T = 15
-    
+
     m.t = ContinuousSet(bounds=(0,m.T))
-    
+
     m.x = Var(m.t)
     m.F = Var(m.t)
     m.u = Var(m.t,initialize=0, bounds=(-0.2,0))
-    
+
     m.dx = DerivativeVar(m.x, wrt=m.t)
     m.df0 = DerivativeVar(m.F, wrt=m.t)
-    
+
     m.x[0].fix(5)
     m.F[0].fix(0)
     
@@ -122,4 +122,21 @@ if __name__ == '__main__':
                       [m.perturbed_a,m.perturbed_H],
                       cloneModel=True,
                       tee=True)
+
+    for var, val in m_sipopt.sens_sol_state_1.items():
+        if var.ctype is not Var:
+            continue
+        print(var.name, var.value, val)
+        var.set_value(val)
+    #for var in m_sipopt.component_data_objects(Var):
+    #    print(var.name, var.value)
+
+    print(value(m_sipopt.J))
+
+    m_sipopt.a.set_value(value(m_sipopt.perturbed_a))
+    m_sipopt.H.set_value(value(m_sipopt.perturbed_H))
+    solver = SolverFactory('ipopt')
+    solver.solve(m_sipopt)
+
+    import pdb; pdb.set_trace()
 
