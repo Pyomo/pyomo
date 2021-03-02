@@ -107,6 +107,13 @@ class GDPoptSolver(object):
         """
         config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
         config.set_value(kwds)
+        if config.strategy is None:
+            msg = 'Please specify solution strategy. Options are: \n'
+            msg += '    LOA:  Logic-based Outer Approximation\n'
+            msg += '    GLOA: Global Logic-based Outer Approximation\n'
+            msg += '    LBB:  Logic-based Branch and Bound\n'
+            msg += '    RIC:  Relaxation with Integer Cuts'
+            raise ValueError(msg)
 
         with setup_solver_environment(model, config) as solve_data:
             self._log_solver_intro_message(config)
@@ -122,7 +129,7 @@ class GDPoptSolver(object):
                 # TODO merge the solver results
                 return presolve_results  # problem presolved
 
-            if solve_data.active_strategy in {'LOA', 'GLOA'}:
+            if solve_data.active_strategy in {'LOA', 'GLOA', 'RIC'}:
                 # Initialize the master problem
                 with time_code(solve_data.timing, 'initialization'):
                     GDPopt_initialize_master(solve_data, config)
@@ -132,6 +139,8 @@ class GDPoptSolver(object):
                     GDPopt_iteration_loop(solve_data, config)
             elif solve_data.active_strategy == 'LBB':
                 _perform_branch_and_bound(solve_data)
+            else:
+                raise ValueError('Unrecognized strategy: ' + config.strategy)
 
         return solve_data.results
 
