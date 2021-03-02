@@ -20,7 +20,7 @@ import os
 import json
 import os.path
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.scripting.pyomo_command as main
 from pyomo.scripting.util import cleanup

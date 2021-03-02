@@ -15,7 +15,7 @@ import os
 from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.opt import ProblemFormat
 from pyomo.core import ConcreteModel, Suffix, Var, Objective, Constraint, SOSConstraint, sum_product

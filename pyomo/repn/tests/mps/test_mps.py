@@ -14,7 +14,7 @@
 import os
 import random
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import ConcreteModel, Var, Objective, Constraint, ComponentMap
 

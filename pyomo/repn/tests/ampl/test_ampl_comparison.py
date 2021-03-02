@@ -18,7 +18,7 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.scripting.pyomo_main as main
 
@@ -67,7 +67,7 @@ class ASLTests(Tests):
 # The following test calls the gjh_asl_json executable to
 # generate JSON files corresponding to both the
 # AMPL-generated nl file and the Pyomo-generated nl
-# file. The JSON files are then diffed using the pyutilib.th
+# file. The JSON files are then diffed using the pyomo.common.unittest
 # test class method assertMatchesJsonBaseline()
 #
 @unittest.nottest

@@ -14,7 +14,7 @@ thisdir = os.path.dirname(os.path.abspath(__file__))
 import time
 from pyomo.common.dependencies import matplotlib, matplotlib_available
 from pyomo.core import ConcreteModel, RangeSet, Set, Param
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 plt = matplotlib.pyplot
 

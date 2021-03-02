@@ -21,7 +21,7 @@ from os.path import abspath, dirname, join
 
 currdir = dirname( abspath(__file__) )
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import (AbstractModel, ConcreteModel, Var, Set, 
                            Param, Block, Suffix, Constraint, Component,

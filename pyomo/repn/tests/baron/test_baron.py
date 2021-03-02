@@ -13,7 +13,7 @@
 
 import os
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import ConcreteModel, Var, Param,  Constraint, Objective,  Block, sin
 

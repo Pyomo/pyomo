@@ -15,7 +15,7 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyomo.core
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 try:
     import yaml

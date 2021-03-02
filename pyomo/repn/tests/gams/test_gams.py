@@ -15,7 +15,7 @@ import os
 
 from six import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.core.base import NumericLabeler, SymbolMap
 from pyomo.environ import (Block, ConcreteModel, Constraint,
                            Objective, TransformationFactory, Var, exp, log,

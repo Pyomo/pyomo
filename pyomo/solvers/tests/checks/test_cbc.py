@@ -10,7 +10,7 @@
 
 
 from pyomo.environ import SolverFactory, ConcreteModel, Var, Constraint, Objective, Integers, Boolean
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.tee import capture_output
 
 opt_cbc = SolverFactory('cbc')

@@ -56,7 +56,7 @@ packages = [
 'pyutilib.services',
 'pyutilib.subprocess',
 'pyutilib.svn',
-'pyutilib.th',
+'pyomo.common.unittest',
 'pyutilib.virtualenv',
 'pyutilib.workflow',
 ]

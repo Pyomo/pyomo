@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 """Tests the induced linearity module."""
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.contrib.preprocessing.plugins.induced_linearity import (
     _bilinear_expressions,
     detect_effectively_discrete_vars,

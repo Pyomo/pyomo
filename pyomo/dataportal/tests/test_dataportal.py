@@ -15,7 +15,7 @@ import os
 from os.path import abspath, dirname
 pyomo_dir=dirname(dirname(abspath(__file__)))+os.sep+".."
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.errors import ApplicationError
 from pyomo.common.tee import capture_output

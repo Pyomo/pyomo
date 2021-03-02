@@ -20,7 +20,7 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 scriptdir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))+os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.scripting.convert as main
 from pyomo.common.tee import capture_output

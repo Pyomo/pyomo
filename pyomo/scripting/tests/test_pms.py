@@ -17,7 +17,7 @@ import os
 from os.path import abspath, dirname
 
 from pyutilib.pyro import using_pyro4
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager

@@ -16,7 +16,7 @@ import shutil
 import subprocess
 import traceback
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 pyomo_install = abspath(join(dirname(dirname(dirname(dirname(currdir)))), 'scripts', 'pyomo_install'))
 vpy_install = abspath(join(dirname(sys.executable),'vpy_install'))

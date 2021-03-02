@@ -14,7 +14,7 @@ import os
 from os.path import abspath, dirname
 currdir= dirname(abspath(__file__))
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.opt import check_available_solvers
 import pyomo.scripting.pyomo_command as main

@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 from __future__ import print_function
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.core.expr import current as EXPR
 from pyomo.environ import (

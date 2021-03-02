@@ -24,7 +24,7 @@ try:
 except:
     import types as new
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 import pyomo.opt

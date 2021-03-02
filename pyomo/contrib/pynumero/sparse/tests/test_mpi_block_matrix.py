@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import warnings
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.contrib.pynumero.dependencies import (
     numpy_available, scipy_available, numpy as np

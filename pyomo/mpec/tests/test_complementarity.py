@@ -19,7 +19,7 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__)) + os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.opt import ProblemFormat
 from pyomo.core import ConcreteModel, Var, Constraint, TransformationFactory, Objective, Block, inequality

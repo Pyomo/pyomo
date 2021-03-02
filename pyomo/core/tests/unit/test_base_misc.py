@@ -13,7 +13,7 @@
 #
 from io import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.core.base.misc import tabular_writer, sorted_robust
 

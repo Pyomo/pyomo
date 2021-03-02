@@ -16,7 +16,7 @@ import shutil
 import tempfile
 import subprocess
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 
 from pyomo.common import DeveloperError

@@ -18,7 +18,7 @@ from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))
 import pickle
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.dependencies import yaml_available
 from pyomo.common.tempfiles import TempfileManager

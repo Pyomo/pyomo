@@ -18,7 +18,7 @@ currdir = dirname(abspath(__file__))+os.sep
 scriptdir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))+os.sep
 scriptdir = join(scriptdir,'examples','pyomo','piecewise')
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.scripting.convert as convert
 
