@@ -13,6 +13,7 @@ logger = logging.getLogger('pyomo.network')
 
 from six import iteritems, itervalues
 
+from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
 
 from pyomo.common.collections import ComponentMap, ComponentSet
@@ -31,7 +32,7 @@ obj_iter_kwds = dict(ctype=Arc, active=True, sort=SortComponents.deterministic)
 class ExpandArcs(Transformation):
 
     def _apply_to(self, instance, **kwds):
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Calling ArcExpander")
 
         # need to collect all ports to see every port each

@@ -7,7 +7,7 @@
 
 .. warning::
 
-   Models built with :python:`pyomo.kernel` components are not yet compatible with pyomo extension modules (e.g., :python:`pyomo.pysp`, :python:`pyomo.dae`, :python:`pyomo.gdp`).
+   Models built with :python:`pyomo.kernel` components are not yet compatible with pyomo extension modules (e.g., :python:`PySP`, :python:`pyomo.dae`, :python:`pyomo.gdp`).
 
 The Kernel Library
 ==================

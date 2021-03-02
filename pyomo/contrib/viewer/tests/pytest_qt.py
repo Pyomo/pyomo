@@ -11,7 +11,6 @@
 """
 UI Tests
 """
-import pyutilib.th as unittest
 
 from pyomo.environ import ConcreteModel, Var, Param, Constraint, Objective, Reals, Block, Expression, ExternalFunction, sin, sqrt, log
 from pyomo.contrib.viewer.qt import qt_available

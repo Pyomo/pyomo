@@ -11,12 +11,10 @@
 # Unit Tests for Elements of a Block
 #
 
+from io import StringIO
 import os
 import sys
-import six
 import types
-
-from six import StringIO, iterkeys
 
 from copy import deepcopy
 from os.path import abspath, dirname, join
@@ -770,7 +768,7 @@ class TestBlock(unittest.TestCase):
         b.clear()
         b.transfer_attributes_from(c)
         self.assertEqual(list(b.component_map()), ['y','x','z'])
-        self.assertEqual(sorted(list(iterkeys(c))), ['x','y','z'])
+        self.assertEqual(sorted(list(c.keys())), ['x','y','z'])
         self.assertIs(b.x, c['x'])
         self.assertIsNot(b.y, c['y'])
         self.assertIs(b.y, b_y)
@@ -1362,7 +1360,7 @@ class TestBlock(unittest.TestCase):
         def assertWorks(self, key, pm):
             self.assertIs(pm[key.local_name], key)
         def assertFails(self, key, pm):
-            if not isinstance(key, six.string_types):
+            if not isinstance(key, str):
                 key = key.local_name
             self.assertRaises(KeyError, pm.__getitem__, key)
 

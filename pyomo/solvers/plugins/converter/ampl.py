@@ -9,18 +9,13 @@
 #  ___________________________________________________________________________
 
 import os.path
-import pyutilib.subprocess
+import subprocess
 
 from pyomo.common.errors import ApplicationError
 import pyomo.common
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt.base import ProblemFormat, ConverterError
 from pyomo.opt.base.convert import ProblemConverterFactory
-
-try:
-    unicode
-except:
-    basestring = unicode = str
 
 
 @ProblemConverterFactory.register('ampl')
@@ -44,7 +39,7 @@ class AmplMIPConverter(object):
 
     def apply(self, *args, **kwargs):
         """Convert an instance of one type into another"""
-        if not isinstance(args[2],basestring):
+        if not isinstance(args[2], str):
             raise ConverterError("Can only apply ampl to convert file data")
         _exec = pyomo.common.Executable("ampl")
         if not _exec:
@@ -78,7 +73,9 @@ class AmplMIPConverter(object):
         #
         # Execute command and cleanup
         #
-        output = pyutilib.subprocess.run(cmd)
+        output = subprocess.run(cmd, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT,
+                                universal_newlines=True)
         if not os.path.exists(output_filename):       #pragma:nocover
-            raise ApplicationError("Problem launching 'ampl' to create '%s': %s" % (output_filename, output))
+            raise ApplicationError("Problem launching 'ampl' to create '%s': %s" % (output_filename, output.stdout))
         return (output_filename,),None # empty variable map

@@ -689,6 +689,7 @@ class CuttingPlane_Transformation(Transformation):
         super(CuttingPlane_Transformation, self).__init__()
 
     def _apply_to(self, instance, bigM=None, **kwds):
+        original_log_level = logger.level
         log_level = logger.getEffectiveLevel()
         try:
             assert not NAME_BUFFER
@@ -721,7 +722,7 @@ class CuttingPlane_Transformation(Transformation):
             # clear the global name buffer
             NAME_BUFFER.clear()
             # restore logging level
-            logger.setLevel(log_level)
+            logger.setLevel(original_log_level)
 
     def _setup_subproblems(self, instance, bigM, tighten_relaxation_callback):
         # create transformation block

@@ -11,10 +11,9 @@
 # Unit Tests for ComponentUID
 #
 import pickle
-import sys
 from collections import namedtuple
 from datetime import datetime
-from six import StringIO, itervalues
+from io import StringIO
 
 import pyutilib.th as unittest
 from pyomo.environ import (
@@ -276,14 +275,14 @@ class TestComponentUID(unittest.TestCase):
         cuid = ComponentUID('b:1,$2.c.a:*')
         comp = cuid.find_component_on(self.m)
         self.assertIs(comp.ctype, Param)
-        cList = list(itervalues(comp))
+        cList = list(comp.values())
         self.assertEqual(len(cList), 3)
         self.assertEqual(cList, list(self.m.b[1,'2'].c.a[:]))
 
         cuid = ComponentUID('b[*,*]')
         comp = cuid.find_component_on(self.m)
         self.assertIs(comp.ctype, Block)
-        cList = list(itervalues(comp))
+        cList = list(comp.values())
         self.assertEqual(len(cList), 9)
         self.assertEqual(cList, list(self.m.b.values()))
 
@@ -292,7 +291,7 @@ class TestComponentUID(unittest.TestCase):
         cuid = ComponentUID('b[*,*].c.a[**]')
         comp = cuid.find_component_on(self.m)
         self.assertIs(comp.ctype, Param)
-        cList = list(itervalues(comp))
+        cList = list(comp.values())
         self.assertEqual(len(cList), 3)
         self.assertEqual(cList, list(self.m.b[1,'2'].c.a[:]))
 
@@ -300,7 +299,7 @@ class TestComponentUID(unittest.TestCase):
         cuid = ComponentUID('b[*,*].c.a')
         comp = cuid.find_component_on(self.m)
         self.assertIs(comp.ctype, IndexedComponent)
-        cList = list(itervalues(comp))
+        cList = list(comp.values())
         self.assertEqual(len(cList), 1)
         self.assertIs(cList[0], self.m.b[1,'2'].c.a)
 
@@ -1266,6 +1265,7 @@ class TestComponentUID(unittest.TestCase):
                 "with argument \('foo',\)" % (
                     IndexedComponent_slice.del_attribute,)):
             cuid = ComponentUID(_slice)
+
 
 if __name__ == "__main__":
     unittest.main()

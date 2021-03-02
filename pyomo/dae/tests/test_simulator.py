@@ -33,10 +33,10 @@ from pyomo.core.expr.template_expr import (
     IndexTemplate, 
     _GetItemIndexer,
 )
+from pyomo.common.fileutils import import_file
+from pyomo.common.tee import capture_output
 
 import os
-from pyutilib.misc import setup_redirect, reset_redirect
-from pyutilib.misc import import_file
 
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
@@ -1222,31 +1222,29 @@ class TestSimulationInterface():
 
         ofile = join(currdir, tname + '.' + self.sim_mod + '.out')
         bfile = join(currdir, tname + '.' + self.sim_mod + '.txt')
-        setup_redirect(ofile)
+        with capture_output(ofile):
+            # create model
+            exmod = import_file(join(exdir, tname + '.py'))
+            m = exmod.create_model()
 
-        # create model
-        exmod = import_file(join(exdir, tname + '.py'))
-        m = exmod.create_model()
+            # Simulate model
+            sim = Simulator(m, package=self.sim_mod)
 
-        # Simulate model
-        sim = Simulator(m, package=self.sim_mod)
+            if hasattr(m, 'var_input'):
+                tsim, profiles = sim.simulate(numpoints=100,
+                                              varying_inputs=m.var_input)
+            else:
+                tsim, profiles = sim.simulate(numpoints=100)
 
-        if hasattr(m, 'var_input'):
-            tsim, profiles = sim.simulate(numpoints=100,
-                                          varying_inputs=m.var_input)
-        else:
-            tsim, profiles = sim.simulate(numpoints=100)
+            # Discretize model
+            discretizer = TransformationFactory('dae.collocation')
+            discretizer.apply_to(m, nfe=10, ncp=5)
 
-        # Discretize model
-        discretizer = TransformationFactory('dae.collocation')
-        discretizer.apply_to(m, nfe=10, ncp=5)
+            # Initialize model
+            sim.initialize_model()
 
-        # Initialize model
-        sim.initialize_model()
+            self._print(m, profiles)
 
-        self._print(m, profiles)
-
-        reset_redirect()
         if not os.path.exists(bfile):
             os.rename(ofile, bfile)
 
@@ -1257,31 +1255,29 @@ class TestSimulationInterface():
 
         ofile = join(currdir, tname + '.' + self.sim_mod + '.out')
         bfile = join(currdir, tname + '.' + self.sim_mod + '.txt')
-        setup_redirect(ofile)
+        with capture_output(ofile):
+            # create model
+            exmod = import_file(join(exdir, tname + '.py'))
+            m = exmod.create_model()
 
-        # create model
-        exmod = import_file(join(exdir, tname + '.py'))
-        m = exmod.create_model()
+            # Discretize model
+            discretizer = TransformationFactory('dae.collocation')
+            discretizer.apply_to(m, nfe=10, ncp=5)
 
-        # Discretize model
-        discretizer = TransformationFactory('dae.collocation')
-        discretizer.apply_to(m, nfe=10, ncp=5)
+            # Simulate model
+            sim = Simulator(m, package=self.sim_mod)
 
-        # Simulate model
-        sim = Simulator(m, package=self.sim_mod)
+            if hasattr(m, 'var_input'):
+                tsim, profiles = sim.simulate(numpoints=100,
+                                              varying_inputs=m.var_input)
+            else:
+                tsim, profiles = sim.simulate(numpoints=100)
 
-        if hasattr(m, 'var_input'):
-            tsim, profiles = sim.simulate(numpoints=100,
-                                          varying_inputs=m.var_input)
-        else:
-            tsim, profiles = sim.simulate(numpoints=100)
+            # Initialize model
+            sim.initialize_model()
 
-        # Initialize model
-        sim.initialize_model()
+            self._print(m, profiles)
 
-        self._print(m, profiles)
-
-        reset_redirect()
         if not os.path.exists(bfile):
             os.rename(ofile, bfile)
 

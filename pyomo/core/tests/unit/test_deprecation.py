@@ -12,7 +12,7 @@ import pyutilib.th as unittest
 import sys
 
 from importlib import import_module
-from six import StringIO
+from io import StringIO
 
 from pyomo.common.log import LoggingIntercept
 

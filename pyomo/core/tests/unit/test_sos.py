@@ -14,7 +14,6 @@
 import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
-from six.moves import xrange
 import pyutilib.th as unittest
 from pyomo.environ import ConcreteModel, AbstractModel, SOSConstraint, Var, Set
 
@@ -112,18 +111,18 @@ class TestExamples(unittest.TestCase):
 
     def test1(self):
         M = ConcreteModel()
-        M.x = Var(xrange(20))
+        M.x = Var(range(20))
         M.c = SOSConstraint(var=M.x, sos=1)
         self.assertEqual(set((v.name,w) for v,w in M.c.get_items()),
-                         set((M.x[i].name, i+1) for i in xrange(20)))
+                         set((M.x[i].name, i+1) for i in range(20)))
 
     def test2(self):
         # Use an index set, which is a subset of M.x.index_set()
         M = ConcreteModel()
-        M.x = Var(xrange(20))
-        M.c = SOSConstraint(var=M.x, index=list(xrange(10)), sos=1)
+        M.x = Var(range(20))
+        M.c = SOSConstraint(var=M.x, index=list(range(10)), sos=1)
         self.assertEqual(set((v.name,w) for v,w in M.c.get_items()),
-                         set((M.x[i].name, i+1) for i in xrange(10)))
+                         set((M.x[i].name, i+1) for i in range(10)))
 
     def test3(self):
         # User-specified weights

@@ -19,14 +19,10 @@ from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common import DeveloperError
+from pyomo.common.deprecation import deprecated, deprecation_warning
 
-from six import PY3, itervalues, iteritems, string_types
+from collections.abc import Sequence
 
-if PY3:
-    from collections.abc import Sequence as collections_Sequence
-else:
-    from collections import Sequence as collections_Sequence
-    
 logger = logging.getLogger('pyomo.core')
 
 sequence_types = {tuple, list}
@@ -65,8 +61,8 @@ def normalize_index(x):
             # Note that casting a tuple to a tuple is cheap (no copy, no
             # new object)
             x = x[:i] + tuple(x[i]) + x[i + 1:]
-        elif issubclass(_xi_class, collections_Sequence):
-            if issubclass(_xi_class, string_types):
+        elif issubclass(_xi_class, Sequence):
+            if issubclass(_xi_class, str):
                 # This is very difficult to get to: it would require a
                 # user creating a custom derived string type
                 native_types.add(_xi_class)
@@ -344,31 +340,35 @@ You can silence this warning by one of three ways:
                             yield idx
                 return _sparse_iter_gen(self)
 
-    def keys(self):
+    @deprecated('The iterkeys method is deprecated. Use dict.keys().',
+                version='TBD')
+    def iterkeys(self):
         """Return a list of keys in the dictionary"""
+        return self.keys()
+
+    @deprecated('The itervalues method is deprecated. Use dict.values().',
+                version='TBD')
+    def itervalues(self):
+        """Return a list of the component data objects in the dictionary"""
+        return self.values()
+
+    @deprecated('The iteritems method is deprecated. Use dict.items().',
+                version='TBD')
+    def iteritems(self):
+        """Return a list (index,data) tuples from the dictionary"""
+        return self.items()
+
+    def keys(self):
+        """Return an iterator of the keys in the dictionary"""
         return [ x for x in self ]
 
     def values(self):
-        """Return a list of the component data objects in the dictionary"""
+        """Return an iterator of the component data objects in the dictionary"""
         return [ self[x] for x in self ]
 
     def items(self):
-        """Return a list (index,data) tuples from the dictionary"""
-        return [ (x, self[x]) for x in self ]
-
-    def iterkeys(self):
-        """Return an iterator of the keys in the dictionary"""
-        return self.__iter__()
-
-    def itervalues(self):
-        """Return an iterator of the component data objects in the dictionary"""
-        for key in self:
-            yield self[key]
-
-    def iteritems(self):
         """Return an iterator of (index,data) tuples from the dictionary"""
-        for key in self:
-            yield key, self[key]
+        return [ (x, self[x]) for x in self ]
 
     def __getitem__(self, index):
         """
@@ -604,10 +604,10 @@ You can silence this warning by one of three ways:
                         "Indexed components can only be indexed with simple "
                         "slices: start and stop values are not allowed.")
                 if val.step is not None:
-                    logger.warning(
-                        "DEPRECATION WARNING: The special wildcard slice "
-                        "(::0) is deprecated.  Please use an ellipsis (...) "
-                        "to indicate '0 or more' indices")
+                    deprecation_warning(
+                        "The special wildcard slice (::0) is deprecated.  "
+                        "Please use an ellipsis (...) to indicate "
+                        "'0 or more' indices", version='4.4')
                     val = Ellipsis
                 else:
                     if ellipsis is None:
@@ -800,7 +800,7 @@ value() function.""" % ( self.name, i ))
         return ( [("Size", len(self)),
                   ("Index", self._index if self.is_indexed() else None),
                   ],
-                 iteritems(self._data),
+                 self._data.items(),
                  ( "Object",),
                  lambda k, v: [ type(v) ]
                  )
@@ -811,17 +811,10 @@ value() function.""" % ( self.name, i ))
         all ComponentData instances.
         """
         result = {}
-        for index, component_data in iteritems(self):
+        for index, component_data in self.items():
             result[id(component_data)] = index
         return result
 
-
-# In Python3, the items(), etc methods of dict-like things return
-# generator-like objects.
-if PY3:
-    IndexedComponent.keys   = IndexedComponent.iterkeys
-    IndexedComponent.values = IndexedComponent.itervalues
-    IndexedComponent.items  = IndexedComponent.iteritems
 
 class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
     """
@@ -846,13 +839,13 @@ class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
         """Set the active attribute to True"""
         super(ActiveIndexedComponent, self).activate()
         if self.is_indexed():
-            for component_data in itervalues(self):
+            for component_data in self.values():
                 component_data.activate()
 
     def deactivate(self):
         """Set the active attribute to False"""
         super(ActiveIndexedComponent, self).deactivate()
         if self.is_indexed():
-            for component_data in itervalues(self):
+            for component_data in self.values():
                 component_data.deactivate()
 

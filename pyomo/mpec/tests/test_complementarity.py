@@ -20,10 +20,10 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__)) + os.sep
 
 import pyutilib.th as unittest
-from pyutilib.misc import setup_redirect, reset_redirect
 
 from pyomo.opt import ProblemFormat
 from pyomo.core import ConcreteModel, Var, Constraint, TransformationFactory, Objective, Block, inequality
+from pyomo.common.tee import capture_output
 from pyomo.mpec import Complementarity, complements, ComplementarityList
 from pyomo.gdp import Disjunct, Disjunction
 
@@ -50,9 +50,8 @@ class CCTests(object):
         if self.xfrm is not None:
             xfrm = TransformationFactory(self.xfrm)
             xfrm.apply_to(M)
-        setup_redirect(ofile)
-        self._print(M)
-        reset_redirect()
+        with capture_output(ofile):
+            self._print(M)
         if not os.path.exists(bfile):
             os.rename(ofile, bfile)
         self.assertFileEqualsBaseline(ofile, bfile)
@@ -137,6 +136,9 @@ class CCTests(object):
         M = self._setup()
         M.cc = Complementarity(expr=complements(M.y + M.x3, M.x1 + 2*M.x2 == 1))
         M.cc.deactivate()
+        # AMPL needs at least one variable in the problem therefore
+        # we need to have a constraint that keeps them around
+        M.keep_var_con = Constraint(expr=M.x1 == 0.5)
         self._test("t9", M)
 
     def test_t10(self):
@@ -177,6 +179,9 @@ class CCTests(object):
         # Testing warning for no rule"""
         M = self._setup()
         M.cc = Complementarity([0,1,2])
+        # AMPL needs at least one variable in the problem therefore
+        # we need to have a constraint that keeps them around
+        M.keep_var_con = Constraint(expr=M.x1 == 0.5)        
         self._test("cov2", M)
 
     def test_cov4(self):

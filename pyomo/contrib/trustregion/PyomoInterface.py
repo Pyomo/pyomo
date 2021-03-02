@@ -11,7 +11,7 @@
 import logging
 
 import numpy as np
-from pyutilib.math import infinity
+from math import inf
 from pyomo.common.collections import ComponentSet
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import (
@@ -568,7 +568,7 @@ class PyomoInterface(object):
         else:
             print("Waring: Crticality check fails with solver Status: " + str(results.solver.status))
             print("And Termination Conditions: " + str(results.solver.termination_condition))
-            return False, infinity
+            return False, inf
 
 
 

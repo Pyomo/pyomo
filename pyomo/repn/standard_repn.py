@@ -21,8 +21,6 @@ from pyomo.core.base import (Constraint,
                              Objective,
                              ComponentMap)
 
-from pyutilib.math.util import isclose as isclose_default
-
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.objective import (_GeneralObjectiveData,
                                        SimpleObjective)
@@ -40,15 +38,10 @@ from pyomo.core.kernel.objective import objective
 
 from six import iteritems, StringIO, PY3
 from six.moves import zip
-try:
-    basestring
-except:
-    basestring = str
 
 logger = logging.getLogger('pyomo.core')
 
 using_py3 = PY3
-
 
 
 #
@@ -62,14 +55,7 @@ def isclose_const(a, b, rel_tol=1e-9, abs_tol=0.0):
             a = value(a)
         else:
             return False
-    # Copied from pyutilib.math.isclose
     return abs(a-b) <= max( rel_tol * max(abs(a), abs(b)), abs_tol )
-
-#
-# The global isclose() function used below.  This is either isclose_default
-# (defined in pyutilib) or isclose_const
-#
-isclose = isclose_default
 
 
 class StandardRepn(object):
@@ -251,14 +237,6 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         Results = ResultsWithQuadratics
     else:
         Results = ResultsWithoutQuadratics
-    #
-    # Use a custom isclose function
-    #
-    global isclose
-    if compute_values:
-        isclose = isclose_default
-    else:
-        isclose = isclose_const
 
     if True:
         #

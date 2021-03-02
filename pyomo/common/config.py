@@ -33,6 +33,8 @@ else:
 
 from six.moves import xrange
 
+from pyomo.common.deprecation import deprecated
+
 logger = logging.getLogger('pyomo.common.config')
 
 if 'PYOMO_CONFIG_DIR' in os.environ:
@@ -201,7 +203,7 @@ class Path(object):
 
 class PathList(Path):
     def __call__(self, data):
-        if hasattr(data, "__iter__") and not isinstance(data, six.string_types):
+        if hasattr(data, "__iter__") and not isinstance(data, str):
             return [ super(PathList, self).__call__(i) for i in data ]
         else:
             return [ super(PathList, self).__call__(data) ]
@@ -961,10 +963,10 @@ class ConfigBase(object):
             # well
             if isinstance(name, argparse._ActionsContainer):
                 #hasattr(_group, 'title') and \
-                #    isinstance(_group.title, six.string_types):
+                #    isinstance(_group.title, str):
                 return 2, name
 
-            if not isinstance(name, six.string_types):
+            if not isinstance(name, str):
                 raise RuntimeError(
                     'Unknown datatype (%s) for argparse group on '
                     'configuration definition %s' %
@@ -1464,9 +1466,9 @@ class ConfigList(ConfigBase):
         self._data[-1]._userSet = True
         self._userSet = True
 
+    @deprecated("ConfigList.add() has been deprecated.  Use append()",
+                version='5.7.2')
     def add(self, value=ConfigBase.NoArgument):
-        logger.warning(
-            "DEPRECATED: ConfigList.add() has been deprecated.  Use append()")
         return self.append(value)
 
     def _data_collector(self, level, prefix, visibility=None, docMode=False):

@@ -17,8 +17,17 @@ __all__ = ['MixedIntVars', 'RealVars']
 import sys
 import copy
 import re
+from xml.dom import Node
 
-from pyutilib.misc import get_xml_text
+
+def get_xml_text(node):
+    nodetext = ""
+    for child in node.childNodes:
+        if child.nodeType == Node.TEXT_NODE:
+            nodetext = nodetext + child.nodeValue
+    nodetext = str(nodetext)
+    return nodetext.strip()
+
 
 class MixedIntVars(object):
     """

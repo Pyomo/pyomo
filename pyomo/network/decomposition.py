@@ -14,7 +14,7 @@ from pyomo.network import Port, Arc
 from pyomo.network.foqus_graph import FOQUSGraph
 from pyomo.core import Constraint, value, Objective, Var, ConcreteModel, \
     Binary, minimize, Expression
-from pyomo.common.collections import ComponentSet, ComponentMap, Options
+from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
 from pyomo.core.expr.current import identify_variables
 from pyomo.repn import generate_standard_repn
 import logging, time
@@ -146,7 +146,7 @@ class SequentialDecomposition(FOQUSGraph):
     def __init__(self, **kwds):
         """Pass kwds to update the options attribute after setting defaults"""
         self.cache = {}
-        options = self.options = Options()
+        options = self.options = Bunch()
         # defaults
         options["graph"] = None
         options["tear_set"] = None
@@ -281,10 +281,21 @@ class SequentialDecomposition(FOQUSGraph):
             old_log_level = logger.level
             logger.setLevel(logging.INFO)
 
+        self.cache.clear()
+
+        try:
+            return self._run_impl(model, function)
+        finally:
+            # Cleanup
+            self.cache.clear()
+
+            if self.options["log_info"]:
+                logger.setLevel(old_log_level)
+
+
+    def _run_impl(self, model, function):
         start = time.time()
         logger.info("Starting Sequential Decomposition")
-
-        self.cache.clear()
 
         G = self.options["graph"]
         if G is None:
@@ -338,14 +349,9 @@ class SequentialDecomposition(FOQUSGraph):
                     raise ValueError(
                         "Invalid tear_method '%s'" % (tear_method,))
 
-        self.cache.clear()
-
         end = time.time()
         logger.info("Finished Sequential Decomposition in %.2f seconds" %
             (end - start))
-
-        if self.options["log_info"]:
-            logger.setLevel(old_log_level)
 
     def run_order(self, G, order, function, ignore=None, use_guesses=False):
         """

@@ -11,15 +11,11 @@
 __all__ = ['SolutionStatus', 'Solution']
 
 import math
-try:
-    from collections import OrderedDict
-except:
-    from ordereddict import OrderedDict
 from six import iterkeys, iteritems
 from six.moves import xrange
 import enum
 from pyomo.opt.results.container import MapContainer, ListContainer, ignore
-from pyomo.common.collections import Bunch
+from pyomo.common.collections import Bunch, OrderedDict
 
 default_print_options = Bunch(schema=False,
                               sparse=True,
@@ -50,18 +46,8 @@ class SolutionStatus(str, enum.Enum):
         return self.value
 
 
-try:
-    unicode
-except NameError:
-    basestring = unicode = str
-
-try:
-    long
-    intlist = (int, long)
-    numlist = (float, int, long)
-except:
-    intlist = (int, )
-    numlist = (float, int)
+intlist = (int, )
+numlist = (float, int)
 
 
 class Solution(MapContainer):

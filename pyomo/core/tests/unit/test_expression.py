@@ -10,15 +10,15 @@
 
 import copy
 
-from six import StringIO
+from io import StringIO
 from pyomo.core.expr import expr_common
 
 
 import pyutilib.th as unittest
-from pyutilib.misc.redirect_io import capture_output
 
 from pyomo.environ import ConcreteModel, AbstractModel, Expression, Var, Set, Param, Objective, value, sum_product
 from pyomo.core.base.expression import _GeneralExpressionData
+from pyomo.common.tee import capture_output
 
 class TestExpressionData(unittest.TestCase):
 

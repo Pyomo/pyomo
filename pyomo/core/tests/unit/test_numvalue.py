@@ -15,7 +15,7 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-from pyutilib.math import nan, infinity
+from math import nan, inf
 import pyutilib.th as unittest
 
 from pyomo.environ import (value, ConcreteModel, Param, Var, 
@@ -25,10 +25,6 @@ from pyomo.core.expr.numvalue import (NumericConstant,
                                       as_numeric,
                                       is_numeric_data)
 
-try:
-    unicode
-except:
-    long = int
 try:
     import numpy
     numpy_available=True
@@ -69,7 +65,7 @@ class Test_value(unittest.TestCase):
         self.assertEqual(val, value(val))
 
     def test_long(self):
-        val = long(1e10)
+        val = int(1e10)
         self.assertEqual(val, value(val))
 
     def test_string(self):
@@ -161,7 +157,7 @@ class Test_value(unittest.TestCase):
         self.assertEqual(val, value(val))
 
     def test_long(self):
-        val = long(1e10)
+        val = int(1e10)
         self.assertEqual(val, value(val))
 
     def test_nan(self):
@@ -169,7 +165,7 @@ class Test_value(unittest.TestCase):
         self.assertEqual(id(val), id(value(val)))
 
     def test_inf(self):
-        val = infinity
+        val = inf
         self.assertEqual(id(val), id(value(val)))
 
     def test_string(self):
@@ -185,8 +181,8 @@ class Test_value(unittest.TestCase):
         self.assertEqual(id(nan), id(value(val)))
 
     def test_const4(self):
-        val = NumericConstant(infinity)
-        self.assertEqual(id(infinity), id(value(val)))
+        val = NumericConstant(inf)
+        self.assertEqual(id(inf), id(value(val)))
 
     def test_param1(self):
         m = ConcreteModel()
@@ -253,7 +249,7 @@ class Test_polydegree(unittest.TestCase):
         self.assertEqual(0, polynomial_degree(val))
 
     def test_long(self):
-        val = long(1e10)
+        val = int(1e10)
         self.assertEqual(0, polynomial_degree(val))
 
     def test_nan(self):
@@ -261,7 +257,7 @@ class Test_polydegree(unittest.TestCase):
         self.assertEqual(0, polynomial_degree(val))
 
     def test_inf(self):
-        val = infinity
+        val = inf
         self.assertEqual(0, polynomial_degree(val))
 
     def test_string(self):
@@ -277,7 +273,7 @@ class Test_polydegree(unittest.TestCase):
         self.assertEqual(0, polynomial_degree(val))
 
     def test_const4(self):
-        val = NumericConstant(infinity)
+        val = NumericConstant(inf)
         self.assertEqual(0, polynomial_degree(val))
 
     def test_param1(self):
@@ -331,7 +327,7 @@ class Test_is_constant(unittest.TestCase):
         self.assertTrue(is_constant(1))
 
     def test_long(self):
-        val = long(1e10)
+        val = int(1e10)
         self.assertTrue(is_constant(val))
 
     def test_string(self):
@@ -379,7 +375,7 @@ class Test_is_fixed(unittest.TestCase):
         self.assertTrue(is_fixed(1))
 
     def test_long(self):
-        val = long(1e10)
+        val = int(1e10)
         self.assertTrue(is_fixed(val))
 
     def test_string(self):
@@ -423,7 +419,7 @@ class Test_is_variable_type(unittest.TestCase):
         self.assertFalse(is_variable_type(1))
 
     def test_long(self):
-        val = long(1e10)
+        val = int(1e10)
         self.assertFalse(is_variable_type(val))
 
     def test_string(self):
@@ -458,7 +454,7 @@ class Test_is_potentially_variable(unittest.TestCase):
         self.assertFalse(is_potentially_variable(1))
 
     def test_long(self):
-        val = long(1e10)
+        val = int(1e10)
         self.assertFalse(is_potentially_variable(val))
 
     def test_string(self):
@@ -516,7 +512,7 @@ class Test_as_numeric(unittest.TestCase):
         self.assertEqual(nval/2, 0.5)
 
     def test_long(self):
-        val = long(1e10)
+        val = int(1e10)
         nval = as_numeric(val)
         self.assertEqual(1.0e10, nval)
         #self.assertEqual(val, as_numeric(val))

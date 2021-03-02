@@ -14,14 +14,7 @@ Define the plugin for COLIN XML IO
 
 from pyomo.opt.blackbox.problem_io import BlackBoxOptProblemIOFactory
 import xml.dom.minidom
-from pyutilib.misc import tostr
-
-try:
-    unicode
-    intlist = [int, long, float]
-except:
-    basestring = str
-    intlist = [int, float]
+import re
 
 
 @BlackBoxOptProblemIOFactory.register('colin')
@@ -74,11 +67,11 @@ class ColinXmlIO(object):
         for key in response:
             elt = doc.createElement(str(key))
             root.appendChild(elt)
-            if isinstance(response[key], basestring):
+            if isinstance(response[key], str):
                 text_elt = doc.createTextNode( response[key] )
-            elif type(response[key]) in intlist:
+            elif type(response[key]) in [int, float]:
                 text_elt = doc.createTextNode( str(response[key]) )
             else:
-                text_elt = doc.createTextNode( tostr(response[key]) )
+                text_elt = doc.createTextNode(' '.join(repr(x) for x in response[key]))
             elt.appendChild(text_elt)
         return doc

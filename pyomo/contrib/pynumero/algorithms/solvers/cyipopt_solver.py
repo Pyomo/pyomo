@@ -39,6 +39,7 @@ ipopt, ipopt_available = attempt_import(
 # imports here so that the solver can be registered even when numpy is
 # not available.
 pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
+pyomo_grey_box = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_grey_box_nlp')[0]
 egb = attempt_import('pyomo.contrib.pynumero.interfaces.external_grey_box')[0]
 
 from pyomo.common.config import ConfigBlock, ConfigValue
@@ -241,7 +242,7 @@ class CyIpoptNLP(CyIpoptProblemInterface):
             self._hess_lag = nlp.evaluate_hessian_lag()
             self._hess_lower_mask = self._hess_lag.row >= self._hess_lag.col
             self._hessian_available = True
-        except NotImplementedError:
+        except (AttributeError, NotImplementedError):
             self._hessian_available = False
             self._hess_lag = None
             self._hess_lower_mask = None
@@ -448,6 +449,12 @@ class PyomoCyIpoptSolver(object):
         domain=bool,
         description="Store the final solution into the original Pyomo model",
     ))
+    CONFIG.declare("return_nlp", ConfigValue(
+        default=False,
+        domain=bool,
+        description="Return the results object and the underlying nlp"
+                    " NLP object from the solve call.",
+    ))
     CONFIG.declare("options", ConfigBlock(implicit=True))
 
 
@@ -485,9 +492,11 @@ class PyomoCyIpoptSolver(object):
         grey_box_blocks = list(model.component_data_objects(
             egb.ExternalGreyBoxBlock, active=True))
         if grey_box_blocks:
-            nlp = pyomo_nlp.PyomoGreyBoxNLP(model)
+            # nlp = pyomo_nlp.PyomoGreyBoxNLP(model)
+            nlp = pyomo_grey_box.PyomoNLPWithGreyBoxBlocks(model)
         else:
             nlp = pyomo_nlp.PyomoNLP(model)
+
         problem = CyIpoptNLP(nlp)
 
         xl = problem.x_lb()
@@ -538,7 +547,8 @@ class PyomoCyIpoptSolver(object):
             logger.error(msg, exc_info=sys.exc_info())
             solverStatus = SolverStatus.unknown
             raise
-        wall_time = timer.toc("")
+
+        wall_time = timer.toc(None)
 
         results = SolverResults()
 
@@ -585,6 +595,10 @@ class PyomoCyIpoptSolver(object):
         results.solver.termination_condition = _ipopt_term_cond[status_enum]
         results.solver.status = TerminationCondition.to_solver_status(
             results.solver.termination_condition)
+
+        if config.return_nlp:
+            return results, nlp
+
         return results
 
     #

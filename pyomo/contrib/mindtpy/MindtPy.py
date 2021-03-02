@@ -39,7 +39,7 @@ from pyomo.contrib.mindtpy.util import MindtPySolveData, model_is_valid
 from pyomo.core import (Block, ConstraintList, NonNegativeReals,
                         Set, Suffix, Var, VarList, TransformationFactory, Objective, RangeSet)
 from pyomo.opt import SolverFactory, SolverResults
-from pyomo.common.collections import Container
+from pyomo.common.collections import Bunch
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
 
@@ -87,7 +87,7 @@ class MindtPySolver(object):
 
         solve_data = MindtPySolveData()
         solve_data.results = SolverResults()
-        solve_data.timing = Container()
+        solve_data.timing = Bunch()
         solve_data.curr_int_sol = []
         solve_data.prev_int_sol = []
         solve_data.should_terminate = False

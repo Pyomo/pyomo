@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import collections.abc
 import pickle
 
 import pyutilib.th as unittest
@@ -28,15 +29,6 @@ from pyomo.core.kernel.block import (block,
                                      block_dict,
                                      block_list)
 from pyomo.core.kernel.suffix import suffix
-
-import six
-
-if six.PY3:
-    from collections.abc import Mapping as collections_Mapping
-    from collections.abc import MutableMapping as collections_MutableMapping
-else:
-    from collections import Mapping as collections_Mapping
-    from collections import MutableMapping as collections_MutableMapping
 
 
 class TestComponentMap(unittest.TestCase):
@@ -114,10 +106,10 @@ class TestComponentMap(unittest.TestCase):
 
     def test_type(self):
         cmap = ComponentMap()
-        self.assertTrue(isinstance(cmap, collections_Mapping))
-        self.assertTrue(isinstance(cmap, collections_MutableMapping))
-        self.assertTrue(issubclass(type(cmap), collections_Mapping))
-        self.assertTrue(issubclass(type(cmap), collections_MutableMapping))
+        self.assertTrue(isinstance(cmap, collections.abc.Mapping))
+        self.assertTrue(isinstance(cmap, collections.abc.MutableMapping))
+        self.assertTrue(issubclass(type(cmap), collections.abc.Mapping))
+        self.assertTrue(issubclass(type(cmap), collections.abc.MutableMapping))
 
     def test_str(self):
         cmap = ComponentMap()

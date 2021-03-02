@@ -183,6 +183,6 @@ def log_close_to_bounds(m, tol=1E-6, logger=logger):
 
 @deprecated("log_active_constraints is deprecated.  "
             "Please use pyomo.util.blockutil.log_model_constraints()",
-            version="TBD")
+            version="5.7.3")
 def log_active_constraints(m, logger=logger):
     log_model_constraints(m, logger)

@@ -14,47 +14,32 @@ import logging
 import sys
 from weakref import ref as weakref_ref
 import gc
-import time
 import math
 
-try:
-    from collections import OrderedDict
-except ImportError:                         #pragma:nocover
-    from ordereddict import OrderedDict
-
 from pyomo.common import timing, PyomoAPIFactory
-from pyomo.common.collections import Container
+from pyomo.common.collections import Bunch
 from pyomo.common.dependencies import pympler, pympler_available
-from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.gc_manager import PauseGC
+from pyomo.common.log import is_debug_set
 from pyomo.common.plugin import ExtensionPoint
-
-from pyomo.core.expr import expr_common
 from pyomo.core.expr.symbol_map import SymbolMap
-from pyomo.core.expr.numeric_expr import clone_counter
-
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.suffix import active_import_suffix_generator
-from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.dataportal.DataPortal import DataPortal
 from pyomo.core.base.plugin import IPyomoPresolver
 from pyomo.core.base.numvalue import value
 from pyomo.core.base.block import SimpleBlock
 from pyomo.core.base.set import Set
 from pyomo.core.base.componentuid import ComponentUID
-from pyomo.core.base.component import Component
 from pyomo.core.base.plugin import ModelComponentFactory, TransformationFactory
 from pyomo.core.base.label import CNameLabeler, CuidLabeler
 
 from pyomo.opt.results import SolverResults, Solution, SolverStatus, UndefinedData
 
-from six import itervalues, iteritems, StringIO, string_types
-try:
-    unicode
-except:
-    basestring = unicode = str
+from io import StringIO
 
 logger = logging.getLogger('pyomo.core')
 id_func = id
@@ -76,7 +61,7 @@ def global_option(function, name, value):
     return wrapper_function
 
 
-class PyomoConfig(Container):
+class PyomoConfig(Bunch):
     """
     This is a pyomo-specific configuration object, which is a subclass of Container.
     """
@@ -84,7 +69,7 @@ class PyomoConfig(Container):
     _option = {}
 
     def __init__(self, *args, **kw):
-        Container.__init__(self, *args, **kw)
+        Bunch.__init__(self, *args, **kw)
         self.set_name('PyomoConfig')
         #
         # Create the nested options specified by the the PyomoConfig._option
@@ -94,7 +79,7 @@ class PyomoConfig(Container):
             d = self
             for attr in item[:-1]:
                 if not attr in d:
-                    d[attr] = Container()
+                    d[attr] = Bunch()
                 d = d[attr]
             d[item[-1]] = PyomoConfig._option[item]
 
@@ -133,7 +118,7 @@ class ModelSolution(object):
             '_metadata': self._metadata,
             '_entry': {}
         }
-        for (name, data) in iteritems(self._entry):
+        for (name, data) in self._entry.items():
             tmp = state['_entry'][name] = []
             # Note: We must convert all weakrefs to hard refs and
             # not indirect references like ComponentUIDs because
@@ -141,7 +126,7 @@ class ModelSolution(object):
             # model instance to have already been reconstructed --
             # so things like CUID.find_component will fail (return
             # None).
-            for obj, entry in itervalues(data):
+            for obj, entry in data.values():
                 if obj is None or obj() is None:
                     logger.warn(
                         "Solution component in '%s' no longer "
@@ -153,7 +138,7 @@ class ModelSolution(object):
     def __setstate__(self, state):
         self._metadata = state['_metadata']
         self._entry = {}
-        for name, data in iteritems(state['_entry']):
+        for name, data in state['_entry'].items():
             tmp = self._entry[name] = {}
             for obj, entry in data:
                 tmp[ id(obj) ] = ( weakref_ref(obj), entry )
@@ -181,7 +166,7 @@ class ModelSolutions(object):
         return state
 
     def __setstate__(self, state):
-        for key, val in iteritems(state):
+        for key, val in state.items():
             setattr(self, key, val)
         # Restore the instance weakref
         self._instance = weakref_ref(self._instance)
@@ -298,7 +283,7 @@ class ModelSolutions(object):
         for soln_ in self.solutions:
             soln = Solution()
             soln._cuid = cuid
-            for key, val in iteritems(soln_._metadata):
+            for key, val in soln_._metadata.items():
                 setattr(soln, key, val)
 
             if cuid:
@@ -376,7 +361,7 @@ class ModelSolutions(object):
 
                 for name in ['problem', 'objective', 'variable', 'constraint']:
                     tmp = soln._entry[name]
-                    for cuid, val in iteritems(getattr(solution, name)):
+                    for cuid, val in getattr(solution, name).items():
                         obj = cache.get(cuid, None)
                         if obj is None:
                             if ignore_invalid_labels:
@@ -398,7 +383,7 @@ class ModelSolutions(object):
 
                 for name in ['problem', 'objective', 'variable', 'constraint']:
                     tmp = soln._entry[name]
-                    for symb, val in iteritems(getattr(solution, name)):
+                    for symb, val in getattr(solution, name).items():
                         obj = cache.get(symb, None)
                         if obj is None:
                             if ignore_invalid_labels:
@@ -413,7 +398,7 @@ class ModelSolutions(object):
             smap = self.symbol_map[smap_id]
             for name in ['problem', 'objective', 'variable', 'constraint']:
                 tmp = soln._entry[name]
-                for symb, val in iteritems(getattr(solution, name)):
+                for symb, val in getattr(solution, name).items():
                     if symb in smap.bySymbol:
                         obj = smap.bySymbol[symb]
                     elif symb in smap.aliases:
@@ -492,30 +477,30 @@ class ModelSolutions(object):
         # sparse dual values exist in the results object) we clear all active
         # import suffixes.
         #
-        for suffix in itervalues(valid_import_suffixes):
+        for suffix in valid_import_suffixes.values():
             suffix.clear_all_values()
         #
         # Load problem (model) level suffixes. These would only come from ampl
         # interfaced solution suffixes at this point in time.
         #
-        for id_, (pobj,entry) in iteritems(soln._entry['problem']):
-            for _attr_key, attr_value in iteritems(entry):
+        for id_, (pobj,entry) in soln._entry['problem'].items():
+            for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:
                     valid_import_suffixes[attr_key][pobj] = attr_value
         #
         # Load objective data (suffixes)
         #
-        for id_, (odata, entry) in iteritems(soln._entry['objective']):
+        for id_, (odata, entry) in soln._entry['objective'].items():
             odata = odata()
-            for _attr_key, attr_value in iteritems(entry):
+            for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:
                     valid_import_suffixes[attr_key][odata] = attr_value
         #
         # Load variable data (suffixes and values)
         #
-        for id_, (vdata, entry) in iteritems(soln._entry['variable']):
+        for id_, (vdata, entry) in soln._entry['variable'].items():
             vdata = vdata()
             val = entry['Value']
             if vdata.fixed is True:
@@ -539,7 +524,7 @@ class ModelSolutions(object):
             vdata.value = val
             vdata.stale = False
 
-            for _attr_key, attr_value in iteritems(entry):
+            for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key == 'value':
                     continue
@@ -548,9 +533,9 @@ class ModelSolutions(object):
         #
         # Load constraint data (suffixes)
         #
-        for id_, (cdata, entry) in iteritems(soln._entry['constraint']):
+        for id_, (cdata, entry) in soln._entry['constraint'].items():
             cdata = cdata()
-            for _attr_key, attr_value in iteritems(entry):
+            for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:
                     valid_import_suffixes[attr_key][cdata] = attr_value
@@ -571,9 +556,10 @@ class Model(SimpleBlock):
         if cls != Model:
             return super(Model, cls).__new__(cls)
 
-        logger.warning(
-"""DEPRECATION WARNING: Using the 'Model' class is deprecated.  Please
-use the AbstractModel or ConcreteModel class instead.""")
+        deprecation_warning(
+            "Using the 'Model' class is deprecated.  Please use the "
+            "AbstractModel or ConcreteModel class instead.",
+            version='4.3.11323')
         return AbstractModel.__new__(AbstractModel)
 
     def __init__(self, name='unknown', **kwargs):
@@ -587,7 +573,7 @@ use the AbstractModel or ConcreteModel class instead.""")
         #
         SimpleBlock.__init__(self, **kwargs)
         self._name = name
-        self.statistics = Container()
+        self.statistics = Bunch()
         self.config = PyomoConfig()
         self.solutions = ModelSolutions(self)
         self.config.preprocessor = 'pyomo.model.simple_preprocessor'
@@ -652,7 +638,7 @@ use the AbstractModel or ConcreteModel class instead.""")
         # filename is specified.  A concrete model is already
         # constructed, so passing in a data file is a waste of time.
         #
-        if self.is_constructed() and isinstance(filename, string_types):
+        if self.is_constructed() and isinstance(filename, str):
             msg = "The filename=%s will not be loaded - supplied as an " \
                   "argument to the create_instance() method of a "\
                   "concrete instance with name=%s." % (filename, name)
@@ -754,7 +740,7 @@ arguments (which have been ignored):"""
                 "The report_timing argument to Model.load() is deprecated.  "
                 "Use pyomo.common.timing.report_timing() to enable reporting "
                 "construction timing")
-        if arg is None or isinstance(arg, basestring):
+        if arg is None or isinstance(arg, str):
             dp = DataPortal(filename=arg, model=self)
         elif type(arg) is DataPortal:
             dp = arg
@@ -762,16 +748,17 @@ arguments (which have been ignored):"""
             dp = DataPortal(data_dict=arg, model=self)
         elif isinstance(arg, SolverResults):
             if len(arg.solution):
-                logger.warning(
-"""DEPRECATION WARNING: the Model.load() method is deprecated for
-loading solutions stored in SolverResults objects.  Call
-Model.solutions.load_from().""")
+                deprecation_warning(
+                    "The Model.load() method is deprecated for loading "
+                    "solutions stored in SolverResults objects.  Call"
+                    "Model.solutions.load_from().", version='4.3.11323')
                 self.solutions.load_from(arg)
             else:
-                logger.warning(
-"""DEPRECATION WARNING: the Model.load() method is deprecated for
-loading solutions stored in SolverResults objects.  By default, results
-from solvers are immediately loaded into the original model instance.""")
+                deprecation_warning(
+                    "The Model.load() method is deprecated for loading "
+                    "solutions stored in SolverResults objects.  By default, "
+                    "results from solvers are immediately loaded into "
+                    "the original model instance.", version='4.3.11323')
             return
         else:
             msg = "Cannot load model model data from with object of type '%s'"
@@ -824,26 +811,12 @@ from solvers are immediately loaded into the original model instance.""")
             # Initialize each component in order.
             #
 
-            for component_name, component in iteritems(self.component_map()):
+            for component_name, component in self.component_map().items():
 
                 if component.ctype is Model:
                     continue
 
                 self._initialize_component(modeldata, namespaces, component_name, profile_memory)
-                if False:
-                    total_time = time.time() - start_time
-                    if isinstance(component, IndexedComponent):
-                        clen = len(component)
-                    else:
-                        assert isinstance(component, Component)
-                        clen = 1
-                    print("    %%6.%df seconds required to construct component=%s; %d indices total" \
-                              % (total_time>=0.005 and 2 or 0, component_name, clen) \
-                              % total_time)
-                    tmp_clone_counter = expr_common.clone_counter
-                    if clone_counter != tmp_clone_counter:
-                        clone_counter = tmp_clone_counter
-                        print("             Cloning detected! (clone count: %d)" % clone_counters)
 
             # Note: As is, connectors are expanded when using command-line pyomo but not calling model.create(...) in a Python script.
             # John says this has to do with extension points which are called from commandline but not when writing scripts.
@@ -873,7 +846,8 @@ from solvers are immediately loaded into the original model instance.""")
             if data is not None:
                 break
 
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        generate_debug_messages = is_debug_set(logger)
+        if generate_debug_messages:
             _blockName = "Model" if self.parent_block() is None \
                 else "Block '%s'" % self.name
             logger.debug( "Constructing %s '%s' on %s from data=%s",
@@ -889,11 +863,11 @@ from solvers are immediately loaded into the original model instance.""")
                 type(err).__name__, err )
             raise
 
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
-                _out = StringIO()
-                declaration.pprint(ostream=_out)
-                logger.debug("Constructed component '%s':\n    %s"
-                             % ( declaration.name, _out.getvalue()))
+        if generate_debug_messages:
+            _out = StringIO()
+            declaration.pprint(ostream=_out)
+            logger.debug("Constructed component '%s':\n    %s"
+                         % ( declaration.name, _out.getvalue()))
 
         if profile_memory >= 2 and pympler_available:
             mem_used = pympler.muppy.get_size(pympler.muppy.get_objects())
@@ -905,30 +879,30 @@ from solvers are immediately loaded into the original model instance.""")
                 print("      Total memory = %d bytes following construction of component=%s (after garbage collection)" % (mem_used, component_name))
 
 
+    @deprecated("The Model.create() method is deprecated.  Call "
+                "Model.create_instance() to create a concrete instance "
+                "from an abstract model.  You do not need to call "
+                "Model.create() for a concrete model.", version='4.3.11323')
     def create(self, filename=None, **kwargs):
         """
         Create a concrete instance of this Model, possibly using data
         read in from a file.
         """
-        logger.warning(
-"""DEPRECATION WARNING: the Model.create() method is deprecated.  Call
-Model.create_instance() to create a concrete instance from an abstract
-model.  You do not need to call Model.create() for a concrete model.""")
         return self.create_instance(filename=filename, **kwargs)
 
+    @deprecated("Model.transform() is deprecated.", version='4.3.11323')
     def transform(self, name=None, **kwds):
         if name is None:
-            logger.warning(
-"""DEPRECATION WARNING: Model.transform() is deprecated.  Use
-the TransformationFactory iterator to get the list of known
-transformations.""")
+            deprecation_warning(
+                "Use the TransformationFactory iterator to get the list "
+                "of known transformations.", version='4.3.11323')
             return list(TransformationFactory)
 
-        logger.warning(
-"""DEPRECATION WARNING: Model.transform() is deprecated.  Use
-TransformationFactory('%s') to construct a transformation object, or
-TransformationFactory('%s').apply_to(model) to directly apply the
-transformation to the model instance.""" % (name,name,) )
+        deprecation_warning(
+            "Use TransformationFactory('%s') to construct a transformation "
+            "object, or TransformationFactory('%s').apply_to(model) to "
+            "directly apply the transformation to the model instance." % (
+                name,name,), version='4.3.11323')
 
         xfrm = TransformationFactory(name)
         if xfrm is None:

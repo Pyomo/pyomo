@@ -1,3 +1,0 @@
-#
-# Examples for pyomo.pysp
-#

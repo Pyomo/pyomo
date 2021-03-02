@@ -17,14 +17,14 @@ from six import StringIO
 
 import pyutilib.th as unittest
 from pyomo.common.log import LoggingIntercept
-from pyomo.common.collections import Container
+from pyomo.common.collections import Bunch
+from pyomo.common.fileutils import import_file
 from pyomo.contrib.gdpopt.GDPopt import GDPoptSolver
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
 from pyomo.contrib.gdpopt.util import is_feasible, time_code
 from pyomo.environ import ConcreteModel, Objective, SolverFactory, Var, value, Integers, Block, Constraint, maximize
 from pyomo.gdp import Disjunct, Disjunction
-from pyutilib.misc import import_file
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
 from pyomo.opt import TerminationCondition
 
@@ -62,7 +62,7 @@ class TestGDPoptUnit(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
             solver_data = GDPoptSolveData()
-            solver_data.timing = Container()
+            solver_data.timing = Bunch()
             with time_code(solver_data.timing, 'main', is_main_timer=True):
                 solve_linear_GDP(m, solver_data, GDPoptSolver.CONFIG(dict(mip_solver=mip_solver)))
             self.assertIn("Linear GDP was unbounded. Resolving with arbitrary bound values",

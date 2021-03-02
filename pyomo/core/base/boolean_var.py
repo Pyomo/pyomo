@@ -1,9 +1,17 @@
-from six import itervalues, iteritems
-
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.boolean_value import BooleanValue
 from pyomo.core.expr.numvalue import value
@@ -13,7 +21,6 @@ from pyomo.core.base.indexed_component import IndexedComponent, UnindexedCompone
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import Set, BooleanSet
 from pyomo.core.base.util import is_functor
-from six.moves import xrange
 
 
 logger = logging.getLogger('pyomo.core')
@@ -192,7 +199,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
         if hasattr(_base, '__setstate__'):
             _base.__setstate__(state)
         else:
-            for key, val in iteritems(state):
+            for key, val in state.items():
                 # Note: per the Python data model docs, we explicitly
                 # set the attribute using object.__setattr__() instead
                 # of setting self.__dict__[key] = val.
@@ -295,7 +302,7 @@ class BooleanVar(IndexedComponent):
         """
         Set the 'stale' attribute of every variable data object to True.
         """
-        for boolvar_data in itervalues(self._data):
+        for boolvar_data in self._data.values():
             boolvar_data.stale = True
 
     def get_values(self, include_fixed_values=True):
@@ -304,9 +311,9 @@ class BooleanVar(IndexedComponent):
         """
         if include_fixed_values:
             return dict((idx, vardata.value)
-                        for idx, vardata in iteritems(self._data))
+                        for idx, vardata in self._data.items())
         return dict((idx, vardata.value)
-                    for idx, vardata in iteritems(self._data)
+                    for idx, vardata in self._data.items()
                     if not vardata.fixed)
 
     extract_values = get_values
@@ -318,21 +325,20 @@ class BooleanVar(IndexedComponent):
         The default behavior is to validate the values in the
         dictionary.
         """
-        for index, new_value in iteritems(new_values):
+        for index, new_value in new_values.items():
             self[index].set_value(new_value, valid)
 
 
     def construct(self, data=None):
         """Construct this component."""
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
+        if is_debug_set(logger):   #pragma:nocover
             try:
                 name = str(self.name)
             except:
                 name = type(self)
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(
-                    "Constructing Variable, name=%s, from data=%s"
-                    % (name, str(data)))
+            logger.debug(
+                "Constructing Variable, name=%s, from data=%s"
+                % (name, str(data)))
 
         if self._constructed:
             return
@@ -437,7 +443,7 @@ class BooleanVar(IndexedComponent):
         return ( [("Size", len(self)),
                   ("Index", self._index if self.is_indexed() else None),
                   ],
-                 iteritems(self._data),
+                 self._data.items(),
                  ( "Value","Fixed","Stale"),
                  lambda k, v: [ v.value,
                                 v.fixed,
@@ -531,12 +537,12 @@ class IndexedBooleanVar(BooleanVar):
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
         """
-        for boolean_vardata in itervalues(self):
+        for boolean_vardata in self.values():
             boolean_vardata.fix(*val)
 
     def unfix(self):
         """Sets the fixed indicator to False."""
-        for boolean_vardata in itervalues(self):
+        for boolean_vardata in self.values():
             boolean_vardata.unfix()
 
     @property
@@ -558,7 +564,7 @@ class BooleanVarList(IndexedBooleanVar):
 
     def construct(self, data=None):
         """Construct this component."""
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing variable list %s", self.name)
 
         # We need to ensure that the indices needed for initialization are
@@ -567,7 +573,7 @@ class BooleanVarList(IndexedBooleanVar):
         # OR we can just add the correct number of sequential integers and
         # then let _validate_index complain when we set the value.
         if self._value_init_value.__class__ is dict:
-            for i in xrange(len(self._value_init_value)):
+            for i in range(len(self._value_init_value)):
                 self._index.add(i+1)
         super(BooleanVarList,self).construct(data)
         # Note that the current Var initializer silently ignores
@@ -576,7 +582,7 @@ class BooleanVarList(IndexedBooleanVar):
         # VarList (so we get potential domain errors), we will re-set
         # everything.
         if self._value_init_value.__class__ is dict:
-            for k,v in iteritems(self._value_init_value):
+            for k,v in self._value_init_value.items():
                 self[k] = v
 
     def add(self):

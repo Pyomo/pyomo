@@ -18,17 +18,16 @@ currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir,'..','..','..','examples','bilevel'))
 
 import pyutilib.th as unittest
-import pyutilib.misc
 
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
+from pyomo.common.fileutils import import_file
 import pyomo.opt
 import pyomo.scripting.pyomo_main as pyomo_main
 from pyomo.scripting.util import cleanup
 from pyomo.environ import TransformationFactory
 
-from six import iteritems
-
 solvers = pyomo.opt.check_available_solvers('cplex', 'glpk', 'ipopt')
+
 
 class CommonTests:
 
@@ -116,7 +115,7 @@ class Reformulate(unittest.TestCase, CommonTests):
             os.remove(os.path.join(currdir,'result.yml'))
 
     def run_bilevel(self,  *args, **kwds):
-        module = pyutilib.misc.import_file(args[0])
+        module = import_file(args[0])
         instance = module.pyomo_create_model(None, None)
         xfrm = TransformationFactory('bilevel.linear_mpec')
         xfrm.apply_to(instance, deterministic=True)
@@ -148,7 +147,7 @@ class Solver(unittest.TestCase):
         self.assertEqual(len(refObj), len(ansObj))
         for i in range(len(refObj)):
             self.assertEqual(len(refObj[i]), len(ansObj[i]))
-            for key,val in iteritems(refObj[i]):
+            for key,val in refObj[i].items():
                 #self.assertEqual(val['Id'], ansObj[i].get(key,None)['Id'])
                 self.assertAlmostEqual(val['Value'], ansObj[i].get(key,None)['Value'], places=3)
 

@@ -14,14 +14,13 @@ import os
 import re
 import time
 import logging
-
-from six import iteritems, string_types
+import subprocess
+from six import iteritems
 
 from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
-from pyomo.common.collections import Options, Bunch
+from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
-from pyutilib.subprocess import run
 
 from pyomo.core.kernel.block import IBlock
 from pyomo.core import Var
@@ -53,11 +52,15 @@ def configure_cbc():
     if not executable:
         return
     cbc_exec = executable.path()
-    results = run( [cbc_exec,"-stop"], timelimit=1 )
-    _cbc_version = _extract_version(results[1])
-    results = run(
-        [cbc_exec,"dummy","-AMPL","-stop"], timelimit=1 )
-    _cbc_compiled_with_asl = not ('No match for AMPL' in results[1])
+    results = subprocess.run([cbc_exec,"-stop"], timeout=1,
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             universal_newlines=True)
+    _cbc_version = _extract_version(results.stdout)
+    results = subprocess.run([cbc_exec, "dummy", "-AMPL", "-stop"], timeout=1,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             universal_newlines=True)
+    _cbc_compiled_with_asl = not ('No match for AMPL' in results.stdout)
     if _cbc_version is not None:
         _cbc_old_version = _cbc_version < (2,7,0,0)
 
@@ -158,7 +161,7 @@ class CBCSHELL(SystemCallSolver):
         self._valid_result_formats[ProblemFormat.mps] = [ResultsFormat.soln]
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.integer = True
         # The quadratic capabilities may be true but there is
@@ -250,11 +253,11 @@ class CBCSHELL(SystemCallSolver):
         # create the temporary file - assuming that the user has already, via some external
         # mechanism, invoked warm_start() with a instance to create the warm start file.
         if self._warm_start_solve and \
-                isinstance(args[0], string_types):
+                isinstance(args[0], str):
             # we assume the user knows what they are doing...
             pass
         elif self._warm_start_solve and \
-                (not isinstance(args[0], string_types)):
+                (not isinstance(args[0], str)):
             # assign the name of the warm start file *before* calling the base class
             # presolve - the base class method ends up creating the command line,
             # and the warm start file-name is (obviously) needed there.
@@ -270,7 +273,7 @@ class CBCSHELL(SystemCallSolver):
         # NB: we must let the base class presolve run first so that the
         # symbol_map is actually constructed!
 
-        if (len(args) > 0) and (not isinstance(args[0], string_types)):
+        if (len(args) > 0) and (not isinstance(args[0], str)):
 
             if len(args) != 1:
                 raise ValueError(

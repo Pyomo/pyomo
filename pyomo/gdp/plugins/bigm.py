@@ -14,8 +14,9 @@ import logging
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.config import ConfigBlock, ConfigValue
+from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
-from pyomo.common.deprecation import deprecated
+from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import (
     Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
@@ -162,6 +163,7 @@ class BigM_Transformation(Transformation):
             LogicalConstraint: self._warn_for_active_logical_statement,
             ExternalFunction: False,
         }
+        self._generate_debug_messages = False
 
     def _get_bigm_suffix_list(self, block, stopping_block=None):
         # Note that you can only specify suffixes on BlockData objects or
@@ -196,6 +198,7 @@ class BigM_Transformation(Transformation):
 
     def _apply_to(self, instance, **kwds):
         assert not NAME_BUFFER
+        self._generate_debug_messages = is_debug_set(logger)
         self.used_args = ComponentMap() # If everything was sure to go well,
                                         # this could be a dictionary. But if
                                         # someone messes up and gives us a Var
@@ -218,8 +221,8 @@ class BigM_Transformation(Transformation):
         # the tree. Suffixes lower down in the tree override ones higher
         # up.
         if 'default_bigM' in kwds:
-            logger.warn("DEPRECATED: the 'default_bigM=' argument has been "
-                        "replaced by 'bigM='")
+            deprecation_warning("the 'default_bigM=' argument has been "
+                                "replaced by 'bigM='", version='5.4')
             config.bigM = kwds.pop('default_bigM')
 
         config.set_value(kwds)
@@ -636,7 +639,7 @@ class BigM_Transformation(Transformation):
                                                  upper)
             M = (lower[0], upper[0])
             
-            if __debug__ and logger.isEnabledFor(logging.DEBUG):
+            if self._generate_debug_messages:
                 _name = obj.getname(
                     fully_qualified=True, name_buffer=NAME_BUFFER)
                 logger.debug("GDP(BigM): The value for M for constraint '%s' "
@@ -655,7 +658,7 @@ class BigM_Transformation(Transformation):
                                                             lower, upper)
                 M = (lower[0], upper[0])
 
-            if __debug__ and logger.isEnabledFor(logging.DEBUG):
+            if self._generate_debug_messages:
                 _name = obj.getname(
                     fully_qualified=True, name_buffer=NAME_BUFFER)
                 logger.debug("GDP(BigM): The value for M for constraint '%s' "
@@ -669,7 +672,7 @@ class BigM_Transformation(Transformation):
                 M = (M[0], self._estimate_M(c.body, name)[1] - c.upper)
                 upper = (M[1], None, None)
 
-            if __debug__ and logger.isEnabledFor(logging.DEBUG):
+            if self._generate_debug_messages:
                 _name = obj.getname(
                     fully_qualified=True, name_buffer=NAME_BUFFER)
                 logger.debug("GDP(BigM): The value for M for constraint '%s' "

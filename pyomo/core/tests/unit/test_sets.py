@@ -30,16 +30,17 @@ import copy
 import itertools
 import os
 from os.path import abspath, dirname
-from six import StringIO, iterkeys
+from io import StringIO
 
 currdir = dirname(abspath(__file__))+os.sep
 
-from pyutilib.misc import flatten_tuple as pyutilib_misc_flatten_tuple
 import pyutilib.th as unittest
 
 import pyomo.core.base
+from pyomo.core.base.util import flatten_tuple
 from pyomo.environ import (Set, SetOf, RangeSet, Param, ConcreteModel, 
-                           AbstractModel, Expression, EmptySet, NonPositiveIntegers,
+                           AbstractModel, Expression, EmptySet,
+                           NonPositiveIntegers,
                            NonPositiveReals, PositiveReals, NegativeReals, 
                            IntegerSet, NegativeIntegers, 
                            PositiveIntegers, RealSet, BooleanSet, 
@@ -2720,12 +2721,10 @@ class TestSetsInPython3(unittest.TestCase):
         buf = StringIO()
         m3.pprint(ostream=buf)
         self.assertEqual(ref, buf.getvalue())
-        #
-        # six.iterkeys()
-        #
+
         m = ConcreteModel()
         v = {1:2,3:4,5:6}
-        m.INDEX = Set(initialize=iterkeys(v))
+        m.INDEX = Set(initialize=v.keys())
         m.p = Param(m.INDEX, initialize=v)
         buf = StringIO()
         m.pprint(ostream=buf)
@@ -3631,19 +3630,19 @@ class TestNestedSetOperations(unittest.TestCase):
 
         self.assertTrue(isinstance(inst.product1,
                                    pyomo.core.base.set.SetProduct))
-        prod1 = set([pyutilib_misc_flatten_tuple(i) \
+        prod1 = set([flatten_tuple(i) \
                      for i in set( p(s1,p(s2,p(s3,p(s3,s2)))) )])
         self.assertEqual(sorted(inst.product1),
                          sorted(prod1))
         self.assertTrue(isinstance(inst.product2,
                                    pyomo.core.base.set.SetProduct))
-        prod2 = set([pyutilib_misc_flatten_tuple(i) \
+        prod2 = set([flatten_tuple(i) \
                      for i in  set( p(s1,p(s2,p(s3,p(s3,s2)))) )])
         self.assertEqual(sorted(inst.product2),
                          sorted(prod2))
         self.assertTrue(isinstance(inst.product3,
                                    pyomo.core.base.set.SetProduct))
-        prod3 = set([pyutilib_misc_flatten_tuple(i) \
+        prod3 = set([flatten_tuple(i) \
                      for i in set( p(p(p(p(s1,s2),s3),s3),s2) )])
         self.assertEqual(sorted(inst.product3),
                          sorted(prod3))

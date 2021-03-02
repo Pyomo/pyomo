@@ -20,7 +20,7 @@ from pyomo.core.base.var import Var
 from pyomo.core.base.sos import SOSConstraint
 
 from pyomo.common.errors import ApplicationError
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 
 import time
 import logging
@@ -449,7 +449,7 @@ class PersistentSolver(DirectOrPersistentSolver):
 
         orig_options = self.options
 
-        self.options = Options()
+        self.options = Bunch()
         self.options.update(orig_options)
         self.options.update(kwds.pop('options', {}))
         self.options.update(self._options_string_to_dict(kwds.pop('options_string', '')))

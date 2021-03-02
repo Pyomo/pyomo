@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyutilib.misc.redirect_io import capture_output
+from pyomo.common.tee import capture_output
 
 from six import StringIO
 import sys

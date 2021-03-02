@@ -13,19 +13,19 @@
 
 import os
 import sys
+import subprocess
 import re
 from os.path import abspath, dirname
 
 currdir = dirname(abspath(__file__))+os.sep
 scriptdir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))+os.sep
 
-from pyutilib.misc import setup_redirect, reset_redirect
-import pyutilib.subprocess
 import pyutilib.th as unittest
 
 import pyomo.scripting.convert as main
+from pyomo.common.tee import capture_output
 
-from six import StringIO
+from io import StringIO
 
 if os.path.exists(sys.exec_prefix+os.sep+'bin'+os.sep+'coverage'):
     executable=sys.exec_prefix+os.sep+'bin'+os.sep+'coverage -x '
@@ -49,23 +49,28 @@ class xTest(object):
             OUTPUT=kwds['file']
         else:
             OUTPUT=StringIO()
-        setup_redirect(OUTPUT)
-        os.chdir(currdir)
-        if type == 'lp':
-            output = main.pyomo2lp(list(args))
-        else:
-            output = main.pyomo2nl(list(args))
-        reset_redirect()
+        with capture_output(OUTPUT):
+            os.chdir(currdir)
+            if type == 'lp':
+                output = main.pyomo2lp(list(args))
+            else:
+                output = main.pyomo2nl(list(args))
         if not 'file' in kwds:
             return OUTPUT.getvalue()
         return output.retval, output.errorcode
 
     # in the convert tests, make sure everything is generating symbolic solver labels - aids debugging.
     def run_convert2nl(self, cmd, file=None):
-        return pyutilib.subprocess.run('pyomo convert --format=nl --symbolic-solver-labels '+cmd, outfile=file)
+        cmd = ('pyomo convert --format=nl --symbolic-solver-labels '+cmd).split(' ')
+        with open(file, 'w') as f:
+            result = subprocess.run(cmd, stdout=f, stderr=f)
+        return result
 
     def run_convert2lp(self, cmd, file=None):
-        return pyutilib.subprocess.run('pyomo convert --format=lp --symbolic-solver-labels '+cmd, outfile=file)
+        cmd = ('pyomo convert --format=lp --symbolic-solver-labels '+cmd).split(' ')
+        with open(file, 'w') as f:
+            result = subprocess.run(cmd, stdout=f, stderr=f)
+        return result
 
     def test1a(self):
         """Simple execution of 'convert2nl'"""

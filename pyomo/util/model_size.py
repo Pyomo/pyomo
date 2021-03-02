@@ -11,7 +11,7 @@
 """This module contains functions to interrogate the size of a Pyomo model."""
 import logging
 
-from pyomo.common.collections import ComponentSet, Container
+from pyomo.common.collections import ComponentSet, Bunch
 from pyomo.core import Block, Constraint, Var
 from pyomo.core.expr import current as EXPR
 from pyomo.gdp import Disjunct, Disjunction
@@ -21,7 +21,7 @@ default_logger = logging.getLogger('pyomo.util.model_size')
 default_logger.setLevel(logging.INFO)
 
 
-class ModelSizeReport(Container):
+class ModelSizeReport(Bunch):
     """Stores model size information.
 
     Activated blocks are those who have an active flag of True and whose
@@ -86,7 +86,7 @@ def build_model_size_report(model):
     activated_vars.update(
         disj.indicator_var for disj in activated_disjuncts)
 
-    report.activated = Container()
+    report.activated = Bunch()
     report.activated.variables = len(activated_vars)
     report.activated.binary_variables = sum(
         1 for v in activated_vars if v.is_binary())
@@ -101,7 +101,7 @@ def build_model_size_report(model):
         1 for c in activated_constraints
         if c.body.polynomial_degree() not in (1, 0))
 
-    report.overall = Container()
+    report.overall = Bunch()
     block_like = (Block, Disjunct)
     all_vars = ComponentSet(
         model.component_data_objects(Var, descend_into=block_like))
@@ -125,7 +125,7 @@ def build_model_size_report(model):
             Constraint, descend_into=block_like)
         if c.body.polynomial_degree() not in (1, 0))
 
-    report.warning = Container()
+    report.warning = Bunch()
     report.warning.unassociated_disjuncts = sum(
         1 for d in model.component_data_objects(
             Disjunct, descend_into=block_like)

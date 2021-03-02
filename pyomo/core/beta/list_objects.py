@@ -13,6 +13,7 @@ __all__ = ()
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.log import is_debug_set
 from pyomo.core.base.set_types import Any
 from pyomo.core.base.var import (IndexedVar,
                                  _VarData)
@@ -23,12 +24,7 @@ from pyomo.core.base.objective import (IndexedObjective,
 from pyomo.core.base.expression import (IndexedExpression,
                                         _ExpressionData)
 
-import six
-
-if six.PY3:
-    from collections.abc import MutableSequence as collections_MutableSequence
-else:
-    from collections import MutableSequence as collections_MutableSequence
+from collections.abc import MutableSequence
 
 logger = logging.getLogger('pyomo.core')
 
@@ -39,7 +35,7 @@ logger = logging.getLogger('pyomo.core')
 # be implemented on top of these classes.
 #
 
-class ComponentList(collections_MutableSequence):
+class ComponentList(MutableSequence):
 
     def __init__(self, interface_datatype, *args):
         self._interface_datatype = interface_datatype
@@ -53,7 +49,7 @@ class ComponentList(collections_MutableSequence):
                 self.append(item)
 
     def construct(self, data=None):
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug(   #pragma:nocover
                 "Constructing ComponentList object, name=%s, from data=%s"
                 % (self.name, str(data)))
