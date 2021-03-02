@@ -22,7 +22,14 @@ from pyomo.common.collections import Mapping, Sequence
 from pyomo.common.tee import capture_output
 
 # This augments the unittest exports with two additional decorators
-__all__ = _unittest.__all__ + ['category', 'nottest']
+__all__ = _unittest.__all__ + ['category', 'nottest', 'mock_available']
+
+mock_available = False
+try:
+    from unittest import mock
+    mock_available = True
+except ImportError:
+    pass
 
 def _category_to_tuple(_cat):
     _cat = str(_cat).lower().strip()

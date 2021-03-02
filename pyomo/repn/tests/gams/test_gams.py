@@ -15,6 +15,7 @@ import os
 
 from six import StringIO
 
+from filecmp import cmp
 import pyomo.common.unittest as unittest
 from pyomo.core.base import NumericLabeler, SymbolMap
 from pyomo.environ import (Block, ConcreteModel, Constraint,
@@ -51,10 +52,10 @@ class Test(unittest.TestCase):
         model.write(test_fname,
                     format="gams",
                     io_options=io_options)
-        self.assertFileEqualsBaseline(
+        self.assertTrue(cmp(
             test_fname,
-            baseline_fname,
-            delete=True)
+            baseline_fname))
+        self._cleanup(test_fname)
 
     def _gen_expression(self, terms):
         terms = list(terms)

@@ -12,6 +12,7 @@
 # Test transformations for linear duality
 #
 
+from filecmp import cmp
 import os
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
@@ -136,8 +137,8 @@ class Reformulate(unittest.TestCase, CommonTests):
         return join(currdir, problem+"_"+solver+'.lp')
 
     def check(self, problem, solver):
-        self.assertFileEqualsBaseline( join(currdir,self.problem+'_result.lp'),
-                                           self.referenceFile(problem,solver), tolerance=1e-5 )
+        self.assertTrue(cmp(join(currdir,self.problem+'_result.lp'),
+                             self.referenceFile(problem,solver)))
 
 
 class Solver(unittest.TestCase):

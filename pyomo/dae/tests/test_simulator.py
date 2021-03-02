@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 from __future__ import print_function
+from filecmp import cmp
 import pyomo.common.unittest as unittest
 
 from pyomo.core.expr import current as EXPR
@@ -1249,7 +1250,7 @@ class TestSimulationInterface():
             os.rename(ofile, bfile)
 
         # os.system('diff ' + ofile + ' ' + bfile)
-        self.assertFileEqualsBaseline(ofile, bfile, tolerance=0.01)
+        self.assertTrue(cmp(ofile, bfile))
 
     def _test_disc_first(self, tname):
 
@@ -1282,7 +1283,7 @@ class TestSimulationInterface():
             os.rename(ofile, bfile)
 
         # os.system('diff ' + ofile + ' ' + bfile)
-        self.assertFileEqualsBaseline(ofile, bfile, tolerance=0.01)
+        self.assertTrue(cmp(ofile, bfile))
 
 
 @unittest.skipIf(not scipy_available, "Scipy is not available")

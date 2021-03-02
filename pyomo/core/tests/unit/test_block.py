@@ -15,6 +15,7 @@ from io import StringIO
 import os
 import sys
 import types
+import json
 
 from copy import deepcopy
 from os.path import abspath, dirname, join
@@ -2228,9 +2229,11 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1.out"), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve1.out"), join(currdir,"solve1.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve1.out"), 'r') as out, \
+            open(join(currdir,"solve1.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
         #
         def d_rule(model):
             return model.x[1] >= 0
@@ -2239,17 +2242,21 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1x.out"), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve1x.out"), join(currdir,"solve1.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve1x.out"), 'r') as out, \
+            open(join(currdir,"solve1.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
         #
         model.d.activate()
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1a.out"), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve1a.out"), join(currdir,"solve1a.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve1a.out"), 'r') as out, \
+            open(join(currdir,"solve1a.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
         #
         model.d.deactivate()
         def e_rule(model, i):
@@ -2260,17 +2267,21 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1y.out"), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve1y.out"), join(currdir,"solve1.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve1y.out"), 'r') as out, \
+            open(join(currdir,"solve1.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
         #
         model.e.activate()
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1b.out"), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve1b.out"), join(currdir,"solve1b.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve1b.out"), 'r') as out, \
+            open(join(currdir,"solve1b.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve4(self):
@@ -2290,9 +2301,11 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,'solve4.out'), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve4.out"), join(currdir,"solve1.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve4.out"), 'r') as out, \
+            open(join(currdir,"solve1.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve6(self):
@@ -2319,9 +2332,11 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,'solve6.out'), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve6.out"), join(currdir,"solve6.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve6.out"), 'r') as out, \
+            open(join(currdir,"solve6.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve7(self):
@@ -2349,9 +2364,11 @@ class TestBlock(unittest.TestCase):
         #model.display()
         model.solutions.store_to(results)
         results.write(filename=join(currdir,'solve7.out'), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve7.out"), join(currdir,"solve7.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve7.out"), 'r') as out, \
+            open(join(currdir,"solve7.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
 
 
     def test_abstract_index(self):

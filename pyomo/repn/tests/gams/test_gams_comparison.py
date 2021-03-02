@@ -18,6 +18,7 @@ from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))+os.sep
 datadir = abspath(join(currdir, "..", "ampl"))+os.sep
 
+from filecmp import cmp
 import pyomo.common.unittest as unittest
 
 import pyomo.scripting.pyomo_main as main
@@ -49,9 +50,7 @@ def gams_writer_baseline_test(self, name, targetdir):
                     targetdir+name+'_testCase.py'])
 
     # Check that the pyomo nl file matches its own baseline
-    self.assertFileEqualsBaseline(
-        currdir+name+'.test.gms', currdir+name+'.pyomo.gms',
-        tolerance=(1e-7, False))
+    self.assertTrue(cmp(currdir+name+'.test.gms', currdir+name+'.pyomo.gms'))
 
 @unittest.nottest
 def gams_writer_test_invalid(self, name, targetdir):

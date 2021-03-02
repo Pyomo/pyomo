@@ -13,6 +13,7 @@
 
 import os
 
+from filecmp import cmp
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import ConcreteModel, Var, Param,  Constraint, Objective,  Block, sin
@@ -41,10 +42,9 @@ class Test(unittest.TestCase):
         model.write(test_fname,
                     format="bar",
                     io_options=io_options)
-        self.assertFileEqualsBaseline(
+        self.assertTrue(cmp(
             test_fname,
-            baseline_fname,
-            delete=True)
+            baseline_fname))
         self._cleanup(test_fname)
 
     def _gen_expression(self, terms):

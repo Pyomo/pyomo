@@ -12,6 +12,7 @@
 # Test the Pyomo command-line interface
 #
 
+from filecmp import cmp
 import os
 from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))+os.sep
@@ -39,57 +40,58 @@ class Test(unittest.TestCase):
     def test_step_lp(self):
         """Test examples/pyomo/piecewise/step.py"""
         self.run_convert2lp('step.py')
-        self.assertFileEqualsBaseline(join(currdir,'unknown.lp'), currdir+'step.lp', tolerance=_LP_diff_tol)
+        self.assertTrue(cmp(join(currdir,'unknown.lp'), currdir+'step.lp'))
 
     def test_step_nl(self):
         """Test examples/pyomo/piecewise/step.py"""
         self.run_convert2nl('step.py')
-        self.assertFileEqualsBaseline(join(currdir,'unknown.nl'), currdir+'step.nl', tolerance=_NL_diff_tol)
+        self.assertTrue(cmp(join(currdir,'unknown.nl'), currdir+'step.nl'))
         os.remove(join(currdir,'unknown.row'))
         os.remove(join(currdir,'unknown.col'))
 
     def test_nonconvex_lp(self):
         """Test examples/pyomo/piecewise/nonconvex.py"""
         self.run_convert2lp('nonconvex.py')
-        self.assertFileEqualsBaseline(join(currdir,'unknown.lp'), currdir+'nonconvex.lp', tolerance=_LP_diff_tol)
+        self.assertTrue(cmp(join(currdir,'unknown.lp'), currdir+'nonconvex.lp'))
 
     def test_nonconvex_nl(self):
         """Test examples/pyomo/piecewise/nonconvex.py"""
         self.run_convert2nl('nonconvex.py')
-        self.assertFileEqualsBaseline(join(currdir,'unknown.nl'), currdir+'nonconvex.nl', tolerance=_NL_diff_tol)
+        self.assertTrue(cmp(join(currdir,'unknown.nl'), currdir+'nonconvex.nl'))
         os.remove(join(currdir,'unknown.row'))
         os.remove(join(currdir,'unknown.col'))
 
     def test_convex_lp(self):
         """Test examples/pyomo/piecewise/convex.py"""
         self.run_convert2lp('convex.py')
-        self.assertFileEqualsBaseline(join(currdir,'unknown.lp'), currdir+'convex.lp', tolerance=_LP_diff_tol)
+        self.assertTrue(cmp(join(currdir,'unknown.lp'), currdir+'convex.lp'))
 
     def test_convex_nl(self):
         """Test examples/pyomo/piecewise/convex.py"""
         self.run_convert2nl('convex.py')
-        self.assertFileEqualsBaseline(join(currdir,'unknown.nl'), currdir+'convex.nl', tolerance=_NL_diff_tol)
+        self.assertTrue(cmp(join(currdir,'unknown.nl'), currdir+'convex.nl'))
         os.remove(join(currdir,'unknown.row'))
         os.remove(join(currdir,'unknown.col'))
 
     def test_indexed_lp(self):
         """Test examples/pyomo/piecewise/indexed.py"""
         self.run_convert2lp('indexed.py')
-        self.assertFileEqualsBaseline(join(currdir,'unknown.lp'), currdir+'indexed.lp', tolerance=_LP_diff_tol)
+        self.assertTrue(cmp(join(currdir,'unknown.lp'), currdir+'indexed.lp'))
 
     def test_indexed_nl(self):
         """Test examples/pyomo/piecewise/indexed.py"""
         self.run_convert2nl('indexed.py')
-        self.assertFileEqualsBaseline(join(currdir,'unknown.nl'), currdir+'indexed.nl', tolerance=_NL_diff_tol)
+        self.assertTrue(cmp(join(currdir,'unknown.nl'), currdir+'indexed.nl'))
         os.remove(join(currdir,'unknown.row'))
         os.remove(join(currdir,'unknown.col'))
 
     def test_indexed_nonlinear_nl(self):
         """Test examples/pyomo/piecewise/indexed_nonlinear.py"""
         self.run_convert2nl('indexed_nonlinear.py')
-        self.assertFileEqualsBaseline(join(currdir,'unknown.nl'), currdir+'indexed_nonlinear.nl', tolerance=_NL_diff_tol)
+        self.assertTrue(cmp(join(currdir,'unknown.nl'), currdir+'indexed_nonlinear.nl'))
         os.remove(join(currdir,'unknown.row'))
         os.remove(join(currdir,'unknown.col'))
+
 
 if __name__ == "__main__":
     unittest.main()

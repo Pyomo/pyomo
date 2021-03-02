@@ -17,6 +17,7 @@ from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir,'..','..','..','examples','pyomo','core'))
 
+from filecmp import cmp
 import pyomo.common.unittest as unittest
 
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
@@ -121,8 +122,8 @@ class Reformulate(unittest.TestCase, CommonTests):
         return join(currdir, problem+"_"+solver+'.lp')
 
     def check(self, problem, solver):
-        self.assertFileEqualsBaseline( join(currdir,self.problem+'_result.lp'),
-                                           self.referenceFile(problem,solver), tolerance=1e-5 )
+        self.assertTrue(cmp(join(currdir,self.problem+'_result.lp'),
+                            self.referenceFile(problem,solver)))
 
 
 class Solver(unittest.TestCase):

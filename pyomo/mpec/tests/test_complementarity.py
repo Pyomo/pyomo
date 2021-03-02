@@ -19,6 +19,7 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__)) + os.sep
 
+from filecmp import cmp
 import pyomo.common.unittest as unittest
 
 from pyomo.opt import ProblemFormat
@@ -54,7 +55,7 @@ class CCTests(object):
             self._print(M)
         if not os.path.exists(bfile):
             os.rename(ofile, bfile)
-        self.assertFileEqualsBaseline(ofile, bfile)
+        self.assertTrue(cmp(ofile, bfile))
 
     def test_t1a(self):
         # y + x1 >= 0  _|_  x1 + 2*x2 + 3*x3 >= 1
@@ -387,7 +388,7 @@ class CCTests_nl_nlxfrm(CCTests, unittest.TestCase):
         M.write(ofile, format=ProblemFormat.nl)
         if not os.path.exists(bfile):
             os.rename(ofile, bfile)
-        self.assertFileEqualsBaseline(ofile, bfile)
+        self.assertTrue(cmp(ofile, bfile))
 
 class DescendIntoDisjunct(unittest.TestCase):
     def get_model(self):

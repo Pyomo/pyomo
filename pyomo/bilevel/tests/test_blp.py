@@ -12,6 +12,7 @@
 # Test transformations for bilevel linear programs
 #
 
+from filecmp import cmp
 import os
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
@@ -125,8 +126,8 @@ class Reformulate(unittest.TestCase, CommonTests):
         return join(currdir, 'test_'+problem+"_linear_mpec.txt")
 
     def check(self, problem, solver):
-        self.assertFileEqualsBaseline( join(currdir,self.problem+'_linear_mpec.out'),
-                                           self.referenceFile(problem,solver), tolerance=1e-5 )
+        self.assertTrue(cmp(join(currdir,self.problem+'_linear_mpec.out'),
+                            self.referenceFile(problem,solver)))
 
     @unittest.category('fragile')
     def test_bqp(self):

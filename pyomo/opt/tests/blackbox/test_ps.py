@@ -11,6 +11,7 @@
 # Unit Tests for pyomo.opt.blackbox.ps
 #
 
+import json
 import os
 from os.path import abspath, dirname
 pyomodir = dirname(dirname(dirname(dirname(abspath(__file__)))))
@@ -25,6 +26,7 @@ from pyomo.common.tempfiles import TempfileManager
 
 old_tempdir = TempfileManager.tempdir
 
+
 class TestProblem1(pyomo.opt.blackbox.MixedIntOptProblem):
 
     def __init__(self):
@@ -36,8 +38,6 @@ class TestProblem1(pyomo.opt.blackbox.MixedIntOptProblem):
     def function_value(self, point):
         self.validate(point)
         return point.reals[0] - point.reals[1] + (point.reals[2]-1.5)**2 + (point.reals[3]+2)**4
-
-
 
 
 class OptPatternSearchDebug(unittest.TestCase):
@@ -66,7 +66,10 @@ class OptPatternSearchDebug(unittest.TestCase):
         self.ps.reset()
         results = self.ps.solve(logfile=currdir+"test_solve1.log")
         results.write(filename=currdir+"test_solve1.txt", times=False, format='json')
-        self.assertMatchesJsonBaseline(currdir+"test_solve1.txt", currdir+"test1_ps.txt")
+        with open(currdir+"test_solve1.txt", 'r') as out, \
+            open(currdir+"test1_ps.txt", 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             allow_second_superset=True)
         if os.path.exists(currdir+"test_solve1.log"):
             os.remove(currdir+"test_solve1.log")
 
@@ -79,7 +82,10 @@ class OptPatternSearchDebug(unittest.TestCase):
         self.ps.min_function_value = 1e-1
         results = self.ps.solve(logfile=currdir+"test_solve2.log")
         results.write(filename=currdir+"test_solve2.txt", times=False, format='json')
-        self.assertMatchesJsonBaseline(currdir+"test_solve2.txt", currdir+"test2_ps.txt")
+        with open(currdir+"test_solve2.txt", 'r') as out, \
+            open(currdir+"test2_ps.txt", 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             allow_second_superset=True)
         if os.path.exists(currdir+"test_solve2.log"):
             os.remove(currdir+"test_solve2.log")
 

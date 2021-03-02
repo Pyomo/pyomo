@@ -18,6 +18,7 @@ from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))+os.sep
 datadir = abspath(join(currdir, "..", "ampl"))+os.sep
 
+from filecmp import cmp
 import pyomo.common.unittest as unittest
 
 import pyomo.scripting.pyomo_main as main
@@ -60,8 +61,7 @@ def barwriter_baseline_test(self, name):
                     testCase])
 
     # Check that the pyomo BAR file matches its own baseline
-    self.assertFileEqualsBaseline(
-        output, baseline, tolerance=(1e-7, False))
+    self.assertTrue(cmp(output, baseline))
 
 
 class ASLTests(Tests):

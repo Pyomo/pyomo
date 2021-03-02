@@ -13,11 +13,11 @@
 
 import pickle
 import os
-import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 import platform
 
+from filecmp import cmp
 import pyomo.common.unittest as unittest
 from pyomo.environ import AbstractModel, ConcreteModel, Set, Param, Var, Constraint, Objective, Reals, NonNegativeReals, sum_product
 
@@ -333,14 +333,16 @@ class Test(unittest.TestCase):
         OUTPUT=open(currdir+"test_pickle4_baseline.out","w")
         model.pprint(ostream=OUTPUT)
         OUTPUT.close()
-        self.assertFileEqualsBaseline(currdir+"test_pickle4_baseline.out",currdir+"test_pickle4_baseline.txt")
+        self.assertTrue(cmp(currdir+"test_pickle4_baseline.out",
+                            currdir+"test_pickle4_baseline.txt"))
 
         str = pickle.dumps(model)
 
         OUTPUT=open(currdir+"test_pickle4_after.out","w")
         model.pprint(ostream=OUTPUT)
         OUTPUT.close()
-        self.assertFileEqualsBaseline(currdir+"test_pickle4_after.out",currdir+"test_pickle4_baseline.txt")
+        self.assertTrue(cmp(currdir+"test_pickle4_after.out",
+                            currdir+"test_pickle4_baseline.txt"))
 
 if __name__ == "__main__":
     unittest.main()

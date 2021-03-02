@@ -20,8 +20,8 @@ from collections import defaultdict
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
+from filecmp import cmp
 import pyomo.common.unittest as unittest
-from pyomo.common.unittest import nottest
 
 from pyomo.environ import ConcreteModel, AbstractModel, RangeSet, Var, Param, Set, Constraint, ConstraintList, Expression, Objective, Reals, ExternalFunction, PositiveReals, log10, exp, floor, ceil, log, cos, sin, tan, acos, asin, atan, sinh, cosh, tanh, acosh, asinh, atanh, sqrt, value, quicksum, sum_product, is_fixed, is_constant
 from pyomo.kernel import variable, expression, objective
@@ -61,7 +61,7 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         # Create the type of expression term that we are testing
         return NumericConstant(val)
 
-    @nottest
+    @unittest.nottest
     def value_test(self, exp, val, expectExpression=None):
         """ Test the value of the expression. """
         #
@@ -78,7 +78,7 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         #
         self.assertEqual(value(exp), val)
 
-    @nottest
+    @unittest.nottest
     def relation_test(self, exp, val, expectConstExpression=None):
         """ Test a relationship expression. """
         #
@@ -2456,8 +2456,8 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         OUTPUT=open(currdir+"varpprint.out","w")
         instance.pprint(ostream=OUTPUT)
         OUTPUT.close()
-        self.assertFileEqualsBaseline( currdir+"varpprint.out",
-                                       currdir+"varpprint.txt" )
+        self.assertTrue(cmp(currdir+"varpprint.out",
+                                       currdir+"varpprint.txt"))
 
     def test_labeler(self):
         M = ConcreteModel()

@@ -358,7 +358,7 @@ class Param(IndexedComponent):
             # The parameter is not mutable, so iteritems() can be
             # converted into a dictionary containing parameter values.
             #
-            return dict( self.iteritems() )
+            return dict( self.items() )
 
     def extract_values_sparse(self):
         """

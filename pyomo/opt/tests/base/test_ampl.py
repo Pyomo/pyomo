@@ -11,11 +11,13 @@
 # Unit Tests for pyomo.opt.problem.ampl
 #
 
+import json
 import os
 import sys
-from os.path import abspath, dirname
+from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))+os.sep
 
+from filecmp import cmp
 import pyomo.common.unittest as unittest
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.errors import ApplicationError
@@ -64,7 +66,7 @@ class Test(unittest.TestCase):
                 self.fail("Unexpected ConverterError - ampl is enabled "
                           "but not available: '%s'" % str(err))
             return
-        self.assertFileEqualsBaseline(currdir+'test3.nl', currdir+'test3.baseline.nl', filter=filter_nl, tolerance=1e-6)
+        self.assertTrue(cmp(currdir+'test3.nl', currdir+'test3.baseline.nl'))
 
     def test3_write_lp(self):
         """ Convert from AMPL to LP """
@@ -83,7 +85,11 @@ class Test(unittest.TestCase):
                 self.fail("Unexpected ConverterError - glpsol is enabled "
                           "but not available: '%s'" % str(err))
             return
-        self.assertFileEqualsBaseline(currdir+'test3.lp', currdir+'test3.baseline.lp', filter=filter, tolerance=1e-6)
+        with open(currdir+'test3.lp', 'r') as run, \
+            open(currdir+'test3.baseline.lp', 'r') as baseline:
+                for line1, line2 in zip(run, baseline):
+                    if 'Problem' not in line1:
+                        self.assertEqual(line1, line2)
 
     def test3_write_mps(self):
         """ Convert from AMPL to MPS """
@@ -104,7 +110,7 @@ class Test(unittest.TestCase):
                 self.fail("Unexpected ConverterError - ampl is enabled "
                           "but not available: '%s'" % str(err))
             return
-        self.assertFileEqualsBaseline(currdir+'test3.mps', currdir+'test3.baseline.mps', filter=filter, tolerance=1e-6)
+        self.assertTrue(cmp(currdir+'test3.mps', currdir+'test3.baseline.mps'))
 
     def test3a_write_nl(self):
         """ Convert from AMPL to NL """
@@ -123,7 +129,7 @@ class Test(unittest.TestCase):
                 self.fail("Unexpected ConverterError - ampl is enabled "
                           "but not available: '%s'" % str(err))
             return
-        self.assertFileEqualsBaseline(currdir+'test3a.nl', currdir+'test3.baseline.nl', filter=filter_nl, tolerance=1e-6)
+        self.assertTrue(cmp(currdir+'test3a.nl', currdir+'test3.baseline.nl'))
 
     def test3a_write_lp(self):
         """ Convert from AMPL to LP """
@@ -142,7 +148,11 @@ class Test(unittest.TestCase):
                 self.fail("Unexpected ConverterError - glpsol is enabled "
                           "but not available: '%s'" % str(err))
             return
-        self.assertFileEqualsBaseline(currdir+'test3a.lp', currdir+'test3.baseline.lp', filter=filter, tolerance=1e-6)
+        with open(currdir+'test3a.lp', 'r') as run, \
+            open(currdir+'test3.baseline.lp', 'r') as baseline:
+                for line1, line2 in zip(run, baseline):
+                    if 'Problem' not in line1:
+                        self.assertEqual(line1, line2)
 
     def test3a_write_mps(self):
         """ Convert from AMPL to MPS """
@@ -163,7 +173,7 @@ class Test(unittest.TestCase):
                 self.fail("Unexpected ConverterError - ampl is enabled "
                           "but not available: '%s'" % str(err))
             return
-        self.assertFileEqualsBaseline(currdir+'test3a.mps', currdir+'test3.baseline.mps', filter=filter, tolerance=1e-6)
+        self.assertTrue(cmp(currdir+'test3a.mps', currdir+'test3.baseline.mps'))
 
     def test3_solve(self):
         if not 'glpk' in solvers:
@@ -172,7 +182,11 @@ class Test(unittest.TestCase):
         opt = pyomo.opt.SolverFactory('glpk')
         results = opt.solve(self.model, keepfiles=False)
         results.write(filename=currdir+'test3.out', format='json')
-        self.assertMatchesJsonBaseline(currdir+'test3.out', currdir+'test3.baseline.out', tolerance=1e-6)
+        with open(join(currdir,"test3.out"), 'r') as out, \
+            open(join(currdir,"test3.baseline.out"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-6,
+                                             allow_second_superset=True)
 
     def test3a_solve(self):
         if not 'glpk' in solvers:
@@ -181,7 +195,11 @@ class Test(unittest.TestCase):
         opt = pyomo.opt.SolverFactory('glpk')
         results = opt.solve(self.model, keepfiles=False)
         results.write(filename=currdir+'test3a.out', format='json')
-        self.assertMatchesJsonBaseline(currdir+'test3a.out', currdir+'test3.baseline.out', tolerance=1e-6)
+        with open(join(currdir,"test3a.out"), 'r') as out, \
+            open(join(currdir,"test3.baseline.out"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-6,
+                                             allow_second_superset=True)
 
 
 if __name__ == "__main__":

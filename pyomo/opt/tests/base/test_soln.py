@@ -11,17 +11,22 @@
 # Unit Tests for pyomo.opt.base.solution
 #
 
+import json
 import pickle
 import os
 from os.path import abspath, dirname
 pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
+from filecmp import cmp
 import pyomo.common.unittest as unittest
 
-from pyomo.common.dependencies import yaml_available
 from pyomo.common.tempfiles import TempfileManager
 import pyomo.opt
+
+from pyomo.common.dependencies import yaml_available
+if yaml_available:
+    import yaml
 
 from six import iterkeys
 
@@ -47,14 +52,16 @@ class Test(unittest.TestCase):
         self.results.write(filename=currdir+"write_solution1.txt")
         if not os.path.exists(currdir+"write_solution1.txt"):
             self.fail("test_write_solution - failed to write write_solution1.txt")
-        self.assertFileEqualsBaseline(currdir+"write_solution1.txt", currdir+"test1_soln.txt")
+        self.assertTrue(cmp(currdir+"write_solution1.txt",
+                            currdir+"test1_soln.txt"))
 
     def test_write_solution2(self):
         """ Write a SolverResults Object without solutions """
         self.results.write(num=None,filename=currdir+"write_solution2.txt")
         if not os.path.exists(currdir+"write_solution2.txt"):
             self.fail("test_write_solution - failed to write write_solution2.txt")
-        self.assertFileEqualsBaseline(currdir+"write_solution2.txt", currdir+"test2_soln.txt")
+        self.assertTrue(cmp(currdir+"write_solution2.txt",
+                            currdir+"test2_soln.txt"))
 
     @unittest.skipIf(not yaml_available, "Cannot import 'yaml'")
     def test_read_solution1(self):
@@ -64,7 +71,11 @@ class Test(unittest.TestCase):
         self.results.write(filename=currdir+"read_solution1.out")
         if not os.path.exists(currdir+"read_solution1.out"):
             self.fail("test_read_solution1 - failed to write read_solution1.out")
-        self.assertMatchesYamlBaseline(currdir+"read_solution1.out", currdir+"test4_sol.txt")
+        with open(currdir+"read_solution1.out", 'r') as out, \
+            open(currdir+"test4_sol.txt", 'r') as txt:
+            self.assertStructuredAlmostEqual(yaml.full_load(txt),
+                                             yaml.full_load(out),
+                                             allow_second_superset=True)
 
     @unittest.skipIf(not yaml_available, "Cannot import 'yaml'")
     def test_pickle_solution1(self):
@@ -76,7 +87,11 @@ class Test(unittest.TestCase):
         self.results.write(filename=currdir+"read_solution1.out")
         if not os.path.exists(currdir+"read_solution1.out"):
             self.fail("test_read_solution1 - failed to write read_solution1.out")
-        self.assertMatchesYamlBaseline(currdir+"read_solution1.out", currdir+"test4_sol.txt")
+        with open(currdir+"read_solution1.out", 'r') as out, \
+            open(currdir+"test4_sol.txt", 'r') as txt:
+            self.assertStructuredAlmostEqual(yaml.full_load(txt),
+                                             yaml.full_load(out),
+                                             allow_second_superset=True)
 
     def test_read_solution2(self):
         """ Read a SolverResults Object"""
@@ -85,7 +100,10 @@ class Test(unittest.TestCase):
         self.results.write(filename=currdir+"read_solution2.out", format='json')
         if not os.path.exists(currdir+"read_solution2.out"):
             self.fail("test_read_solution2 - failed to write read_solution2.out")
-        self.assertMatchesJsonBaseline(currdir+"read_solution2.out", currdir+"test4_sol.jsn")
+        with open(currdir+"read_solution2.out", 'r') as out, \
+            open(currdir+"test4_sol.jsn", 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             allow_second_superset=True)
 
     def test_pickle_solution2(self):
         """ Read a SolverResults Object"""
@@ -96,7 +114,10 @@ class Test(unittest.TestCase):
         self.results.write(filename=currdir+"read_solution2.out", format='json')
         if not os.path.exists(currdir+"read_solution2.out"):
             self.fail("test_read_solution2 - failed to write read_solution2.out")
-        self.assertMatchesJsonBaseline(currdir+"read_solution2.out", currdir+"test4_sol.jsn")
+        with open(currdir+"read_solution2.out", 'r') as out, \
+            open(currdir+"test4_sol.jsn", 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             allow_second_superset=True)
 
     #
     # deleting is not supported right now
@@ -107,7 +128,8 @@ class Test(unittest.TestCase):
         self.results.write(filename=currdir+"delete_solution.txt")
         if not os.path.exists(currdir+"delete_solution.txt"):
             self.fail("test_write_solution - failed to write delete_solution.txt")
-        self.assertFileEqualsBaseline(currdir+"delete_solution.txt", currdir+"test4_soln.txt")
+        self.assertTrue(cmp(currdir+"delete_solution.txt",
+                            currdir+"test4_soln.txt"))
 
     def test_get_solution(self):
         """ Get a solution from a SolverResults object """
@@ -142,7 +164,8 @@ class Test(unittest.TestCase):
         self.results.write(filename=currdir+"soln_pprint.txt")
         if not os.path.exists(currdir+"soln_pprint.txt"):
             self.fail("test_write_solution - failed to write soln_pprint.txt")
-        self.assertFileEqualsBaseline(currdir+"soln_pprint.txt", currdir+"test3_soln.txt")
+        self.assertTrue(cmp(currdir+"soln_pprint.txt",
+                            currdir+"test3_soln.txt"))
 
     def test_soln_pprint2(self):
         """ Write a solution with only zero values, using the Solution.pprint() method """
@@ -151,7 +174,10 @@ class Test(unittest.TestCase):
         self.soln.variable[4]["Value"]=0.0
         with open(currdir+'soln_pprint2.out', 'w') as f:
             f.write(str(self.soln))
-        self.assertFileEqualsBaseline(currdir+"soln_pprint2.out", currdir+"soln_pprint2.txt")
+        with open(currdir+"soln_pprint2.out", 'r') as f1, \
+            open(currdir+"soln_pprint2.txt", 'r') as f2:
+                self.assertEqual(f1.read().strip(),
+                                 f2.read().strip())
 
     def test_soln_suffix_getiter(self):
         self.soln.variable[1]["Value"]=0.0

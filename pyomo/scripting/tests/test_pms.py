@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 #
 
+import json
 import six
 import pickle
 import base64
@@ -96,7 +97,12 @@ class Test(unittest.TestCase):
 
         #
         results.write(filename=currdir+"t1.out", format='json')
-        self.assertMatchesJsonBaseline(currdir+"t1.out",currdir+"t1.txt", tolerance=1e-4)
+        with open(currdir+"t1.out", 'r') as out, \
+            open(currdir+"t1.txt", 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
+
         self.assertEqual(results._smap_id, None)
         os.remove(data['filename'])
 

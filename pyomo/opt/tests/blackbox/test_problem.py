@@ -17,6 +17,8 @@ pyomodir = dirname(dirname(dirname(dirname(abspath(__file__)))))
 pyomodir += os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
+from filecmp import cmp
+import xml.etree.ElementTree as ET
 import pyomo.common.unittest as unittest
 
 import pyomo.opt
@@ -120,8 +122,11 @@ class TestDakotaMain(unittest.TestCase):
 
     def test_main(self):
         self.problem.main(['test_main', currdir+'request1.din', currdir+'results1.out'], format='dakota')
-        self.assertFileEqualsBaseline(currdir+'results1.out', currdir+'results1.dout', tolerance=1e-2)
-
+        with open(currdir+'results1.out', 'r') as f1, \
+            open(currdir+'results1.dout', 'r') as f2:
+                result = float(f1.read().strip().replace(' ASV_1', ''))
+                baseline = float(f2.read().strip().replace(' ASV_1', ''))
+        self.assertAlmostEqual(result, baseline)
 
 class TestColinMain(unittest.TestCase):
 
@@ -139,26 +144,34 @@ class TestColinMain(unittest.TestCase):
         self.problem=TestProblem1()
         self.rproblem=RealProblem3()
 
+    def compare_xml(self, file1, file2):
+        tree1 = ET.parse(file1)
+        root1 = tree1.getroot()
+        tree2 = ET.parse(file2)
+        root2 = tree2.getroot()
+        self.assertAlmostEqual(float(root1[0].text.strip()),
+                               float(root2[0].text.strip()))
+
     def tearDown(self):
         TempfileManager.clear_tempfiles()
         TempfileManager.tempdir = old_tempdir
 
     def test_main(self):
         self.problem.main(['test_main', currdir+'request1.xml', currdir+'results1.out'])
-        self.assertMatchesXmlBaseline(currdir+'results1.out', currdir+'results1.xml', tolerance=0.01, exact=True)
+        self.compare_xml(currdir+'results1.out', currdir+'results1.xml')
 
     def test_main_a(self):
         self.problem.main(['test_main', currdir+'request1a.xml', currdir+'results1a.out'])
-        self.assertMatchesXmlBaseline(currdir+'results1a.out', currdir+'results1.xml', tolerance=0.01, exact=True)
+        self.compare_xml(currdir+'results1a.out', currdir+'results1.xml')
 
     def Xtest_rmain(self):
         self.rproblem.main(['test_main', currdir+'request3.xml', currdir+'results3.out'])
-        self.assertFileEqualsBaseline(currdir+'results3.out', currdir+'results3.xml', tolerance=0.01)
+        self.assertTrue(cmp(currdir+'results3.out', currdir+'results3.xml'))
 
     def test_main_2(self):
         self.problem=TestProblem2()
         self.problem.main(['test_main', currdir+'request4.xml', currdir+'results4.out'])
-        self.assertMatchesXmlBaseline(currdir+'results4.out', currdir+'results4.xml', tolerance=0.01, exact=True)
+        self.compare_xml(currdir+'results4.out', currdir+'results4.xml')
 
     def test_error2(self):
         try:
@@ -169,8 +182,7 @@ class TestColinMain(unittest.TestCase):
 
     def Xtest_error4(self):
         self.problem.main(['test_main', currdir+'request2.xml', currdir+'results2.out'])
-        self.assertMatchesXmlBaseline(currdir+'results2.out', currdir+'results2.xml', tolerance=0.01, exact=True)
-
+        self.compare_xml(currdir+'results2.out', currdir+'results2.xml')
 
 
 class TestOptProblem(unittest.TestCase):
@@ -287,14 +299,15 @@ class TestPoint(unittest.TestCase):
         point.bits = [0]
         with capture_output(currdir+'mi_point.out'):
             point.display()
-        self.assertFileEqualsBaseline(currdir+'mi_point.out', currdir+'mi_point.txt')
+        self.assertTrue(cmp(currdir+'mi_point.out', currdir+'mi_point.txt'))
 
     def test_reals(self):
         point = pyomo.opt.blackbox.RealVars()
         point.vars = [1.0]
         with capture_output(currdir+'real_point.out'):
             point.display()
-        self.assertFileEqualsBaseline(currdir+'real_point.out', currdir+'real_point.txt')
+        self.assertTrue(cmp(currdir+'real_point.out',
+                            currdir+'real_point.txt'))
 
 
 

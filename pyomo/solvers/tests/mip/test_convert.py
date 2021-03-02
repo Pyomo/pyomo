@@ -18,6 +18,7 @@ from os.path import abspath, dirname
 pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
+from filecmp import cmp
 import pyomo.common.unittest as unittest
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.errors import ApplicationError
@@ -118,7 +119,7 @@ class Test(unittest.TestCase):
                           "enabled but not available: '%s'" % str(err))
             return
         self.assertEqual(ans[0][0][-15:],"pico_convert.lp")
-        self.assertFileEqualsBaseline(ans[0][0], currdir+"test1_convert.lp")
+        self.assertTrue(cmp(ans[0][0], currdir+"test1_convert.lp"))
 
     def test_mod_lp1(self):
         #""" Convert from MOD to LP """
@@ -137,7 +138,7 @@ class Test(unittest.TestCase):
                           "enabled but not available: '%s'" % str(err))
             return
         self.assertTrue(ans[0][0].endswith("glpsol.lp"))
-        self.assertFileEqualsBaseline(ans[0][0], currdir+"test2_convert.lp", filter=filter)
+        self.assertTrue(cmp(ans[0][0], currdir+"test2_convert.lp"))
 
     def test_mod_lp2(self):
         #""" Convert from MOD+DAT to LP """
@@ -156,7 +157,7 @@ class Test(unittest.TestCase):
                           "enabled but not available: '%s'" % str(err))
             return
         self.assertTrue(ans[0][0].endswith("glpsol.lp"))
-        self.assertFileEqualsBaseline(ans[0][0], currdir+"test3_convert.lp", filter=filter)
+        self.assertTrue(cmp(ans[0][0], currdir+"test3_convert.lp"))
 
     def test_mod_nl1(self):
         #""" Convert from MOD to NL """
@@ -194,7 +195,7 @@ class Test(unittest.TestCase):
                           "enabled but not available: '%s'" % str(err))
             return
         self.assertTrue(ans[0][0].endswith('.nl'))
-        #self.assertFileEqualsBaseline(ans[0][0], currdir+"test_mod_nl2.nl")
+        #self.assertTrue(cmp(ans[0][0], currdir+"test_mod_nl2.nl")
 
     def test_mock_lp1(self):
         #""" Convert from Pyomo to LP """

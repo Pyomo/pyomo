@@ -15,6 +15,7 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
+from filecmp import cmp
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import AbstractModel, ConcreteModel, ConstraintList, Set, Param, Var, Constraint, Objective, sum_product, quicksum, sequence, prod
@@ -112,7 +113,8 @@ class Test(unittest.TestCase):
         OUTPUT=open(currdir+"test_expr5.out","w")
         model.pprint(ostream=OUTPUT)
         OUTPUT.close()
-        self.assertFileEqualsBaseline(currdir+"test_expr5.out",currdir+"test_expr5.txt")
+        self.assertTrue(cmp(currdir+"test_expr5.out",
+                            currdir+"test_expr5.txt"))
 
     def test_prod1(self):
         self.assertEqual(prod([1,2,3,5]),30)

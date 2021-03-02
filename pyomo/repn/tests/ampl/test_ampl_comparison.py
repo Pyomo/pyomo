@@ -11,6 +11,7 @@
 # Test the Pyomo NL writer against the AMPL NL writer
 #
 
+import json
 import re
 import glob
 import subprocess
@@ -18,6 +19,7 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
+from filecmp import cmp
 import pyomo.common.unittest as unittest
 
 import pyomo.scripting.pyomo_main as main
@@ -53,9 +55,7 @@ def nlwriter_baseline_test(self, name):
                     currdir+name+'_testCase.py'])
 
     # Check that the pyomo nl file matches its own baseline
-    self.assertFileEqualsBaseline(
-        currdir+name+'.test.nl', currdir+name+'.pyomo.nl',
-        tolerance=(1e-7, False))
+    self.assertTrue(cmp(currdir+name+'.test.nl', currdir+name+'.pyomo.nl'))
 
 
 class ASLTests(Tests):
@@ -68,7 +68,7 @@ class ASLTests(Tests):
 # generate JSON files corresponding to both the
 # AMPL-generated nl file and the Pyomo-generated nl
 # file. The JSON files are then diffed using the pyomo.common.unittest
-# test class method assertMatchesJsonBaseline()
+# test class method assertStructuredAlmostEqual()
 #
 @unittest.nottest
 def nlwriter_asl_test(self, name):
@@ -115,10 +115,11 @@ def nlwriter_asl_test(self, name):
                        universal_newlines=True)
     self.assertTrue(p.returncode == 0, msg=p.stdout)
 
-    self.assertMatchesJsonBaseline(
-        currdir+name+'.test.json',
-        currdir+name+'.ampl.json',
-        tolerance=1e-8)
+    with open(currdir+name+'.test.json', 'r') as out, \
+            open(currdir+name+'.ampl.json', 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-8,
+                                             allow_second_superset=True)
 
     os.remove(currdir+name+'.ampl.json')
 

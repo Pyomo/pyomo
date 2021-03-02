@@ -13,6 +13,7 @@
 
 import os
 
+from filecmp import cmp
 import pyomo.common.unittest as unittest
 
 from pyomo.common.getGSL import find_GSL
@@ -65,10 +66,10 @@ class TestNLWriter(unittest.TestCase):
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
         model.write(test_fname, format='nl')
-        self.assertFileEqualsBaseline(
+        self.assertTrue(cmp(
             test_fname,
-            baseline_fname,
-            delete=True)
+            baseline_fname))
+        self._cleanup(test_fname)
 
     def test_var_on_nonblock(self):
         class Foo(Block().__class__):
@@ -114,10 +115,9 @@ class TestNLWriter(unittest.TestCase):
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True})
-        self.assertFileEqualsBaseline(
+        self.assertTrue(cmp(
             test_fname,
-            baseline_fname,
-            delete=True)
+            baseline_fname))
         self._cleanup(test_fname)
 
     def test_external_expression_partial_fixed(self):
@@ -128,10 +128,9 @@ class TestNLWriter(unittest.TestCase):
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True})
-        self.assertFileEqualsBaseline(
+        self.assertTrue(cmp(
             test_fname,
-            baseline_fname,
-            delete=True)
+            baseline_fname))
         self._cleanup(test_fname)
 
     def test_external_expression_fixed(self):
@@ -143,10 +142,9 @@ class TestNLWriter(unittest.TestCase):
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True})
-        self.assertFileEqualsBaseline(
+        self.assertTrue(cmp(
             test_fname,
-            baseline_fname,
-            delete=True)
+            baseline_fname))
         self._cleanup(test_fname)
 
     def test_external_expression_rewrite_fixed(self):
@@ -157,10 +155,9 @@ class TestNLWriter(unittest.TestCase):
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True})
-        self.assertFileEqualsBaseline(
+        self.assertTrue(cmp(
             test_fname,
-            variable_baseline,
-            delete=True)
+            variable_baseline))
 
         self.assertIsNot(m._repn, None)
 
@@ -170,20 +167,18 @@ class TestNLWriter(unittest.TestCase):
                 io_options={'symbolic_solver_labels':True})
         partial_baseline = baseline_fname.replace(
             'rewrite_fixed','partial_fixed')
-        self.assertFileEqualsBaseline(
+        self.assertTrue(cmp(
             test_fname,
-            partial_baseline,
-            delete=True)
+            partial_baseline))
 
         m.y.fix()
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                 io_options={'symbolic_solver_labels':True})
         fixed_baseline = baseline_fname.replace('rewrite_fixed','fixed')
-        self.assertFileEqualsBaseline(
+        self.assertTrue(cmp(
             test_fname,
-            fixed_baseline,
-            delete=True)
+            fixed_baseline))
         self._cleanup(test_fname)
 
 

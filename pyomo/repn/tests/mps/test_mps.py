@@ -14,6 +14,7 @@
 import os
 import random
 
+from filecmp import cmp
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import ConcreteModel, Var, Objective, Constraint, ComponentMap
@@ -41,10 +42,10 @@ class TestMPSOrdering(unittest.TestCase):
         model.write(test_fname,
                     format="mps",
                     io_options=io_options)
-        self.assertFileEqualsBaseline(
+        self.assertTrue(cmp(
             test_fname,
-            baseline_fname,
-            delete=True)
+            baseline_fname))
+        self._cleanup(test_fname)
 
     # generates an expression in a randomized way so that
     # we can test for consistent ordering of expressions

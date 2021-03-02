@@ -11,8 +11,9 @@
 # Test behavior of concrete classes.
 #
 
+import json
 import os
-from os.path import abspath, dirname
+from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyomo.common.unittest as unittest
@@ -43,7 +44,11 @@ class Test(unittest.TestCase):
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=currdir+"blend.out", format='json')
-        self.assertMatchesJsonBaseline(currdir+"blend.out",currdir+"blend.txt", tolerance=1e-2)
+        with open(join(currdir,"blend.out"), 'r') as out, \
+            open(join(currdir,"blend.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-2,
+                                             allow_second_superset=True)
 
 
 if __name__ == "__main__":
