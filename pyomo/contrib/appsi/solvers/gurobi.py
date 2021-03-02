@@ -165,16 +165,25 @@ class Gurobi(PersistentBase, Solver):
             self._gurobipy = None
             self._gurobipy_available = False
 
-        if self._gurobipy_available:
-            if self._gurobipy.GRB.VERSION_MAJOR < 7:
-                # The reason for this is that it is too difficult to manage the gurobi lazy updates both for
-                # versions >= 7 and < 7.
-                raise ImportError('The persistent interface to Gurobi requires at least Gurobi version 7. ')
-
     def available(self, exception_flag=False):
-        if exception_flag and not self._gurobipy_available:
-            raise RuntimeError('Gurobi is not available')
-        return self._gurobipy_available
+        res = None
+        if self._gurobipy_available and self.version() >= (7, 0, 0):
+            res = True
+        elif self._gurobipy_available:
+            if exception_flag:
+                raise RuntimeError('The APPSI interface to Gurobi requires Gurobi version 7 or greater.')
+            res = False
+        else:
+            if exception_flag:
+                raise RuntimeError('gurobipy is not available')
+            res = False
+        return res
+
+    def version(self):
+        version = (self._gurobipy.GRB.VERSION_MAJOR,
+                   self._gurobipy.GRB.VERSION_MINOR,
+                   self._gurobipy.GRB.VERSION_TECHNICAL)
+        return version
 
     @property
     def config(self):
@@ -213,6 +222,7 @@ class Gurobi(PersistentBase, Solver):
         return self._postsolve(timer)
 
     def solve(self, model, timer: HierarchicalTimer = None) -> Results:
+        self.available(exception_flag=True)
         if timer is None:
             timer = HierarchicalTimer()
         if model is not self._model:

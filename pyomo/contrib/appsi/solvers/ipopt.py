@@ -52,9 +52,21 @@ class Ipopt(Solver):
     def available(self, exception_flag=False):
         if self.config.executable.path() is None:
             if exception_flag:
-                raise RuntimeError('Ipopt is not available')
+                raise RuntimeError('Could not find Ipopt executable')
             return False
         return True
+
+    def version(self):
+        results = subprocess.run([str(self.config.executable), '--version'],
+                                 timeout=1,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT,
+                                 universal_newlines=True)
+        version = results.stdout.splitlines()[0]
+        version = version.split(' ')[1]
+        version = version.strip()
+        version = tuple(int(i) for i in version.split('.'))
+        return version
 
     def nl_filename(self):
         if self._filename is None:
@@ -141,8 +153,7 @@ class Ipopt(Solver):
         f.close()
 
     def solve(self, model, timer: HierarchicalTimer = None):
-        if not self.available():
-            raise RuntimeError('Could not find Ipopt executable')
+        self.available(exception_flag=True)
         if timer is None:
             timer = HierarchicalTimer()
         try:

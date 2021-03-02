@@ -1,6 +1,6 @@
 import abc
 import enum
-from typing import Sequence, Dict, Optional, Mapping, NoReturn, List
+from typing import Sequence, Dict, Optional, Mapping, NoReturn, List, Tuple
 from pyomo.core.base.constraint import _GeneralConstraintData, Constraint
 from pyomo.core.base.sos import _SOSConstraintData, SOSConstraint
 from pyomo.core.base.var import _GeneralVarData, Var
@@ -216,6 +216,10 @@ class Solver(abc.ABC):
 
     @abc.abstractmethod
     def available(self, exception_flag=False):
+        pass
+
+    @abc.abstractmethod
+    def version(self) -> Tuple:
         pass
 
     # compatability with old solver interfaces and Solver Factory

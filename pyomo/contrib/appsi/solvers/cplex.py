@@ -60,6 +60,9 @@ class Cplex(Solver):
             raise RuntimeError('Cplex is not available')
         return self._cplex_available
 
+    def version(self):
+        return tuple(int(k) for k in self._cplex.Cplex().get_version().split('.'))
+
     def lp_filename(self):
         if self._filename is None:
             return None
@@ -121,8 +124,7 @@ class Cplex(Solver):
         self._writer.update_params()
 
     def solve(self, model, timer: HierarchicalTimer = None):
-        if not self.available():
-            raise ImportError('Could not import cplex')
+        self.available(exception_flag=True)
         if timer is None:
             timer = HierarchicalTimer()
         try:

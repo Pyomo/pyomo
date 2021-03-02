@@ -5,7 +5,7 @@ from pyomo.contrib.appsi.writers import LPWriter
 from pyomo.contrib.appsi.utils import LogStream
 import logging
 import subprocess
-from pyomo.core.kernel.objective import minimize
+from pyomo.core.kernel.objective import minimize, maximize
 import math
 from pyomo.common.collections import ComponentMap
 from typing import Optional, Sequence, NoReturn, List, Mapping
@@ -53,6 +53,18 @@ class Cbc(Solver):
                 raise RuntimeError('Cbc is not available')
             return False
         return True
+
+    def version(self):
+        results = subprocess.run([str(self.config.executable), '-stop'],
+                                 timeout=1,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT,
+                                 universal_newlines=True)
+        version = results.stdout.splitlines()[1]
+        version = version.split(':')[1]
+        version = version.strip()
+        version = tuple(int(i) for i in version.split('.'))
+        return version
 
     def lp_filename(self):
         if self._filename is None:
@@ -121,8 +133,7 @@ class Cbc(Solver):
         self._writer.update_params()
 
     def solve(self, model, timer: HierarchicalTimer = None):
-        if not self.available():
-            raise RuntimeError('Could not find CBC executable')
+        self.available(exception_flag=True)
         if timer is None:
             timer = HierarchicalTimer()
         try:
@@ -219,6 +230,15 @@ class Cbc(Solver):
             var = symbol_map.bySymbol[name]()
             self._primal_sol[var] = val
             self._reduced_costs[var] = rc
+
+        if (self.version() < (2, 10, 2) and
+                self._writer.get_active_objective() is not None and
+                self._writer.get_active_objective().sense == maximize):
+            obj_val = -obj_val
+            for con, dual_val in self._dual_sol.items():
+                self._dual_sol[con] = -dual_val
+            for v, rc_val in self._reduced_costs.items():
+                self._reduced_costs[v] = -rc_val
 
         if results.termination_condition == TerminationCondition.optimal and self.config.load_solution:
             for v, val in self._primal_sol.items():

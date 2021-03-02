@@ -88,6 +88,26 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(rc[m.y], 4)
 
     @parameterized.expand(input=all_solvers)
+    def test_reduced_costs2(self, name: str, opt_class: Type[Solver]):
+        opt: Solver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.x = pe.Var(bounds=(-1, 1))
+        m.obj = pe.Objective(expr=m.x)
+        res = opt.solve(m)
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertAlmostEqual(m.x.value, -1)
+        rc = opt.get_reduced_costs()
+        self.assertAlmostEqual(rc[m.x], 1)
+        m.obj.sense = pe.maximize
+        res = opt.solve(m)
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertAlmostEqual(m.x.value, 1)
+        rc = opt.get_reduced_costs()
+        self.assertAlmostEqual(rc[m.x], 1)
+
+    @parameterized.expand(input=all_solvers)
     def test_param_changes(self, name: str, opt_class: Type[Solver]):
         opt: Solver = opt_class()
         if not opt.available():
