@@ -138,7 +138,11 @@ class Test(unittest.TestCase):
                           "enabled but not available: '%s'" % str(err))
             return
         self.assertTrue(ans[0][0].endswith("glpsol.lp"))
-        self.assertTrue(cmp(ans[0][0], currdir+"test2_convert.lp"))
+        with open(ans[0][0], 'r') as f1, open(currdir+"test2_convert.lp") as f2:
+            for line1, line2 in zip(f1, f2):
+                if 'Problem' in line1:
+                    continue
+                self.assertEqual(line1, line2)
 
     def test_mod_lp2(self):
         #""" Convert from MOD+DAT to LP """
@@ -157,7 +161,11 @@ class Test(unittest.TestCase):
                           "enabled but not available: '%s'" % str(err))
             return
         self.assertTrue(ans[0][0].endswith("glpsol.lp"))
-        self.assertTrue(cmp(ans[0][0], currdir+"test3_convert.lp"))
+        with open(ans[0][0], 'r') as f1, open(currdir+"test3_convert.lp") as f2:
+            for line1, line2 in zip(f1, f2):
+                if 'Problem' in line1:
+                    continue
+                self.assertEqual(line1, line2)
 
     def test_mod_nl1(self):
         #""" Convert from MOD to NL """

@@ -55,7 +55,13 @@ class CCTests(object):
             self._print(M)
         if not os.path.exists(bfile):
             os.rename(ofile, bfile)
-        self.assertTrue(cmp(ofile, bfile))
+        try:
+            self.assertTrue(cmp(ofile, bfile))
+        except:
+            with open(ofile, 'r') as f1, open(bfile, 'r') as f2:
+                f1_contents = list(filter(None, f1.read().split()))
+                f2_contents = list(filter(None, f2.read().split()))
+                self.assertEqual(f1_contents, f2_contents)
 
     def test_t1a(self):
         # y + x1 >= 0  _|_  x1 + 2*x2 + 3*x3 >= 1

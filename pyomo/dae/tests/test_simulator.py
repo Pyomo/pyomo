@@ -1250,7 +1250,19 @@ class TestSimulationInterface():
             os.rename(ofile, bfile)
 
         # os.system('diff ' + ofile + ' ' + bfile)
-        self.assertTrue(cmp(ofile, bfile))
+        try:
+            self.assertTrue(cmp(ofile, bfile))
+        except:
+            with open(ofile, 'r') as f1, open(bfile, 'r') as f2:
+                f1_contents = list(filter(None, f1.read().split()))
+                f2_contents = list(filter(None, f2.read().split()))
+                for item1 in f1_contents:
+                    for item2 in f2_contents:
+                        try:
+                            self.assertEqual(item1.strip(), item2.strip())
+                        except:
+                            print(item1, item2)
+                            self.assertTrue(False)
 
     def _test_disc_first(self, tname):
 
