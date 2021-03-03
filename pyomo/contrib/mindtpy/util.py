@@ -19,11 +19,11 @@ from pyomo.core.expr import current as EXPR
 from pyomo.opt import SolverFactory
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
-import numpy as np
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.common.dependencies import attempt_import
 
 pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
+numpy = attempt_import('numpy')[0]
 logger = logging.getLogger('pyomo.contrib')
 
 
@@ -324,7 +324,7 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
         nlp.set_duals(lam)
         obj_grad = nlp.evaluate_grad_objective().reshape(-1, 1)
         jac = nlp.evaluate_jacobian().toarray()
-        jac_lag = obj_grad + jac.transpose().dot(np.array(lam).reshape(-1, 1))
+        jac_lag = obj_grad + jac.transpose().dot(numpy.array(lam).reshape(-1, 1))
         jac_lag[abs(jac_lag) < config.zero_tolerance] = 0
         # jac_lag of continuous variables should be zero
         for var in temp_model.MindtPy_utils.continuous_variable_list[:-1]:
