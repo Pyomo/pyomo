@@ -658,7 +658,7 @@ class TestDecomposition(unittest.TestCase):
                              len(list(structured_model.component_data_objects(ctype=Block, descend_into=True))))
 
             # Test what components have been created
-            self.assertEqual(all_components, correct_components)
+            self.assertEqual(correct_components, all_components)
 
             # Basic test for the replacement of variables
             for objective in structured_model.component_data_objects(ctype=Objective, descend_into=True):

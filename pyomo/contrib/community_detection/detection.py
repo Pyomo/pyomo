@@ -10,7 +10,7 @@ Original implementation developed by Rahul Joglekar in the Grossmann research gr
 from logging import getLogger
 
 from pyomo.common.dependencies import attempt_import
-from pyomo.core import ConcreteModel, ComponentMap, Block, Var, Constraint, Objective, ConstraintList
+from pyomo.core import ConcreteModel, ComponentMap, Block, Var, Constraint, Objective, ConstraintList, Reference
 from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.expr.visitor import replace_expressions
@@ -144,14 +144,14 @@ def detect_communities(model, type_of_community_map='constraint', with_objective
         # separate the nodes into their two groups; thus, we create a list of constraints and a list of variables
 
         for community_key in community_map:
-            constraint_node_list, variable_node_list = [], []
+            constraint_list, variable_list = [], []
             node_community_list = community_map[community_key]
             for numbered_node in node_community_list:
                 if numbered_node in constraint_variable_map:
-                    constraint_node_list.append(number_component_map[numbered_node])
+                    constraint_list.append(number_component_map[numbered_node])
                 else:
-                    variable_node_list.append(number_component_map[numbered_node])
-            community_map[community_key] = (constraint_node_list, variable_node_list)
+                    variable_list.append(number_component_map[numbered_node])
+            community_map[community_key] = (constraint_list, variable_list)
 
     elif type_of_community_map == 'constraint':
         # If the community map was created for a constraint node graph, then for a given community, we want to create a
@@ -481,6 +481,32 @@ class CommunityMap(object):
         return fig, pos
 
     def generate_structured_model(self):
+        """
+        Using the community map and the original model used to create this community map, we will create
+        structured_model, which will be based on the original model but will place variables, constraints, and
+        objectives into or outside of various blocks (communities) based on the community map.
+
+        Returns
+        -------
+        structured_model: Block
+            a Pyomo model that reflects the nature of the community map
+        """
+
+        # Initialize a new model (structured_model) which will contain variables and constraints in blocks based on
+        # their respective communities within the CommunityMap
+        structured_model = ConcreteModel()
+
+        structured_model.b = Block(self.keys())
+
+        for community_number, community_members in self.items():
+            structured_model.b[community_number].vars = Reference(community_members[0], ctype=Constraint)
+            structured_model.b[community_number].cons = Reference(community_members[1], ctype=Var)
+
+        return structured_model
+
+    # Old code for generate_structured_model:
+
+    def generate_structured_model_old(self):
         """
         Using the community map and the original model used to create this community map, we will create
         structured_model, which will be based on the original model but will place variables, constraints, and
