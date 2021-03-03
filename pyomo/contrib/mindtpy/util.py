@@ -13,17 +13,17 @@ from __future__ import division
 import logging
 from pyomo.common.collections import ComponentMap
 from pyomo.core import (Block, Constraint,
-                        Objective, Reals, Suffix, Var, minimize, maximize, RangeSet, ConstraintList, TransformationFactory)
+                        Objective, Reals, Suffix, Var, minimize, RangeSet, ConstraintList, TransformationFactory)
 from pyomo.core.expr import differentiate
 from pyomo.core.expr import current as EXPR
 from pyomo.opt import SolverFactory
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
-from pyomo.contrib.gdpopt.util import copy_var_list_values, get_main_elapsed_time, time_code
+from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 import numpy as np
-from pyomo.core.expr.taylor_series import taylor_series_expansion
 from pyomo.core.expr.calculus.derivatives import differentiate
+from pyomo.common.dependencies import attempt_import
 
+pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 logger = logging.getLogger('pyomo.contrib')
 
 
@@ -318,7 +318,7 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
     # Implementation 1
     # First calculate jacobin and hessian without assigning variable and constraint sequence, then use get_primal_indices to get the indices.
     with time_code(solve_data.timing, 'PyomoNLP'):
-        nlp = PyomoNLP(temp_model)
+        nlp = pyomo_nlp.PyomoNLP(temp_model)
         lam = [-temp_model.dual[constr] if abs(temp_model.dual[constr]) > config.zero_tolerance else 0
                for constr in nlp.get_pyomo_constraints()]
         nlp.set_duals(lam)
