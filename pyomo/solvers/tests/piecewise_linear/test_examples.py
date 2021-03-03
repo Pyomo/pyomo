@@ -78,14 +78,18 @@ class Test(unittest.TestCase):
         self.run_convert2lp('indexed.py')
         with open(join(currdir,'unknown.lp'), 'r') as f1, \
             open(currdir+'indexed.lp', 'r') as f2:
-                print(f1.read())
-                print(f2.read())
-        self.assertTrue(cmp(join(currdir,'unknown.lp'), currdir+'indexed.lp'))
+                f1_contents = list(filter(None, f1.read().split()))
+                f2_contents = list(filter(None, f2.read().split()))
+                self.assertEqual(f1_contents, f2_contents)
 
     def test_indexed_nl(self):
         """Test examples/pyomo/piecewise/indexed.py"""
         self.run_convert2nl('indexed.py')
-        self.assertTrue(cmp(join(currdir,'unknown.nl'), currdir+'indexed.nl'))
+        with open(join(currdir,'unknown.nl'), 'r') as f1, \
+            open(currdir+'indexed.nl', 'r') as f2:
+                f1_contents = list(filter(None, f1.read().split()))
+                f2_contents = list(filter(None, f2.read().split()))
+                self.assertEqual(f1_contents, f2_contents)
         os.remove(join(currdir,'unknown.row'))
         os.remove(join(currdir,'unknown.col'))
 
