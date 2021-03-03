@@ -603,15 +603,17 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     temp.append(int(round(var.value)))
         solve_data.curr_int_sol = tuple(temp)
 
-        if config.add_regularization is None:
-            if solve_data.curr_int_sol == solve_data.prev_int_sol:
-                config.logger.info(
-                    'Same integer combination is obtained, which means the current incumbent solution is a feasible solution to the original problem.'
-                    'We will skip solving the fixed NLP subproblem.')
-                return
-            else:
-                solve_data.prev_int_sol = solve_data.curr_int_sol
-        else:
+        # TODO: This is not working that well with GOA, needs to be checked (test_GOA_Nonconvex2)
+        if config.strategy == 'OA':
+            # if config.add_regularization is None:
+            #     if solve_data.curr_int_sol == solve_data.prev_int_sol:
+            #         config.logger.info(
+            #             'Same integer combination is obtained, which means the current incumbent solution is a feasible solution to the original problem.'
+            #             'We will skip solving the fixed NLP subproblem.')
+            #         return
+            #     else:
+            #         solve_data.prev_int_sol = solve_data.curr_int_sol
+            # else:
             if solve_data.curr_int_sol in set(solve_data.integer_list):
                 config.logger.info('This integer combination has been explored.'
                                    'We will skip solving the fixed NLP subproblem.')
