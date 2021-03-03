@@ -337,7 +337,7 @@ class TestCase(_unittest.TestCase):
         reltol: float
             the relative tolerance.  `first` and `second` are considered
             equivalent if their absolute difference divided by the
-            larget of `first` and `second` is less than `reltol`
+            largest of `first` and `second` is less than `reltol`
         allow_second_superset: bool
             If True, then extra entries in containers found on second
             will not trigger a failure.

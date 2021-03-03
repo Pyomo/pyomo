@@ -76,6 +76,10 @@ class Test(unittest.TestCase):
     def test_indexed_lp(self):
         """Test examples/pyomo/piecewise/indexed.py"""
         self.run_convert2lp('indexed.py')
+        with open(join(currdir,'unknown.lp'), 'r') as f1, \
+            open(currdir+'indexed.lp', 'r') as f2:
+                print(f1.read())
+                print(f2.read())
         self.assertTrue(cmp(join(currdir,'unknown.lp'), currdir+'indexed.lp'))
 
     def test_indexed_nl(self):
