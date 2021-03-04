@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 from __future__ import print_function
-from filecmp import cmp
 import json
 import pyomo.common.unittest as unittest
 
@@ -36,10 +35,9 @@ from pyomo.core.expr.template_expr import (
     _GetItemIndexer,
 )
 from pyomo.common.fileutils import import_file
-from pyomo.common.tee import capture_output
 
+from sys import platform
 import os
-
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'dae'))
@@ -1258,7 +1256,10 @@ class TestSimulationInterface():
         # Compare results to baseline
         with open(bfile, 'r') as f2:
             baseline = json.load(f2)
-            self.assertStructuredAlmostEqual(results, baseline, abstol=1e-4)
+            if platform == "darwin":
+                self.assertStructuredAlmostEqual(results, baseline, reltol=1e-3)
+            else:
+                self.assertStructuredAlmostEqual(results, baseline, reltol=1e-5)
 
     def _test_disc_first(self, tname):
 
@@ -1294,7 +1295,10 @@ class TestSimulationInterface():
         # Compare results to baseline
         with open(bfile, 'r') as f2:
             baseline = json.load(f2)
-            self.assertStructuredAlmostEqual(results, baseline, abstol=1e-4)
+            if platform == "darwin":
+                self.assertStructuredAlmostEqual(results, baseline, reltol=1e-3)
+            else:
+                self.assertStructuredAlmostEqual(results, baseline, reltol=1e-5)
 
 
 @unittest.skipIf(not scipy_available, "Scipy is not available")
