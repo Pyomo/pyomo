@@ -80,7 +80,11 @@ class Test(unittest.TestCase):
             open(currdir+'indexed.lp', 'r') as f2:
                 f1_contents = list(filter(None, f1.read().split()))
                 f2_contents = list(filter(None, f2.read().split()))
-                self.assertEqual(f1_contents, f2_contents)
+                for item1, item2 in zip(f1_contents, f2_contents):
+                    try:
+                        self.assertEqual(item1, item2)
+                    except:
+                        self.assertEqual(float(item1), float(item2))
 
     def test_indexed_nl(self):
         """Test examples/pyomo/piecewise/indexed.py"""
@@ -89,7 +93,11 @@ class Test(unittest.TestCase):
             open(currdir+'indexed.nl', 'r') as f2:
                 f1_contents = list(filter(None, f1.read().split()))
                 f2_contents = list(filter(None, f2.read().split()))
-                self.assertEqual(f1_contents, f2_contents)
+                for item1, item2 in zip(f1_contents, f2_contents):
+                    try:
+                        self.assertEqual(item1, item2)
+                    except:
+                        self.assertEqual(float(item1), float(item2))
         os.remove(join(currdir,'unknown.row'))
         os.remove(join(currdir,'unknown.col'))
 
