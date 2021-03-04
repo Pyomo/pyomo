@@ -46,6 +46,7 @@ for f in glob.glob(currdir+'*_testCase.py'):
     validlist.append((name, currdir))
 
 
+@unittest.skipIf(not param_available, "Parameterized is not available")
 class Tests(unittest.TestCase):
 
     def pyomo(self, cmd):
@@ -53,7 +54,7 @@ class Tests(unittest.TestCase):
         output = main.main(['convert', '--logging=quiet', '-c']+cmd)
         return output
 
-@unittest.skipIf(not param_available, "Parameterized is not available")
+
 class BaselineTests(Tests):
     def __init__(self, *args, **kwds):
         Tests.__init__(self, *args, **kwds)

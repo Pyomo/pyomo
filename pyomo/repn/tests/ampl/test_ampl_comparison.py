@@ -39,6 +39,7 @@ for f in glob.glob(currdir+'*_testCase.py'):
     names.append(re.split('[._]',os.path.basename(f))[0])
 
 
+@unittest.skipIf(not param_available, "Parameterized is not available")
 class Tests(unittest.TestCase):
 
     def pyomo(self, cmd):
@@ -47,7 +48,6 @@ class Tests(unittest.TestCase):
         return output
 
 
-@unittest.skipIf(not param_available, "Parameterized is not available")
 class BaselineTests(Tests):
     def __init__(self, *args, **kwds):
         Tests.__init__(self, *args, **kwds)
@@ -80,7 +80,7 @@ class BaselineTests(Tests):
                             self.assertEqual(float(item1), float(item2))
         os.remove(currdir+name+'.test.nl')
 
-@unittest.skipIf(not param_available, "Parameterized is not available")
+
 class ASLTests(Tests):
 
     def __init__(self, *args, **kwds):
@@ -90,8 +90,8 @@ class ASLTests(Tests):
     # The following test calls the gjh_asl_json executable to
     # generate JSON files corresponding to both the
     # AMPL-generated nl file and the Pyomo-generated nl
-    # file. The JSON files are then diffed using the pyutilib.th
-    # test class method assertMatchesJsonBaseline()
+    # file. The JSON files are then diffed using the pyomo.common.unittest
+    # test class method assertStructuredAlmostEqual
     #
     @parameterized.expand(input=names)
     def nlwriter_asl_test(self, name):

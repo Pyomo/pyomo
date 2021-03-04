@@ -18,11 +18,13 @@ from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))+os.sep
 datadir = abspath(join(currdir, "..", "ampl"))+os.sep
 
+param_available = False
 try:
     from parameterized import parameterized
     param_available = True
 except ImportError:
-    param_available = False
+    pass
+
 import pyomo.common.unittest as unittest
 
 import pyomo.scripting.pyomo_main as main
@@ -34,6 +36,7 @@ for f in itertools.chain(glob.glob(datadir+'*_testCase.py'),
     names.append(re.split('[._]',os.path.basename(f))[0])
 
 
+@unittest.skipIf(not param_available, "Parameterized is not available")
 class Tests(unittest.TestCase):
 
     def pyomo(self, cmd):
@@ -41,7 +44,7 @@ class Tests(unittest.TestCase):
         output = main.main(['convert', '--logging=quiet', '-c']+cmd)
         return output
 
-@unittest.skipIf(not param_available, "Parameterized is not available")
+
 class BaselineTests(Tests):
     def __init__(self, *args, **kwds):
         Tests.__init__(self, *args, **kwds)
