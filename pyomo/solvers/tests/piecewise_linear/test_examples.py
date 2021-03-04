@@ -84,7 +84,7 @@ class Test(unittest.TestCase):
                     try:
                         self.assertEqual(item1, item2)
                     except:
-                        self.assertEqual(float(item1), float(item2))
+                        self.assertAlmostEqual(float(item1), float(item2))
 
     def test_indexed_nl(self):
         """Test examples/pyomo/piecewise/indexed.py"""
@@ -97,7 +97,7 @@ class Test(unittest.TestCase):
                     try:
                         self.assertEqual(item1, item2)
                     except:
-                        self.assertEqual(float(item1), float(item2))
+                        self.assertAlmostEqual(float(item1), float(item2))
         os.remove(join(currdir,'unknown.row'))
         os.remove(join(currdir,'unknown.col'))
 
