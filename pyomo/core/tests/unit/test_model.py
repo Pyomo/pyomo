@@ -18,7 +18,6 @@ import os
 from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))
 import pickle
-import yaml
 
 from filecmp import cmp
 import pyomo.common.unittest as unittest
@@ -29,6 +28,9 @@ from pyomo.core.expr import current as EXPR
 from pyomo.environ import RangeSet, ConcreteModel, Var, Param, Block, AbstractModel, Set, Constraint, Objective, value, sum_product, SolverFactory, VarList, ObjectiveList, ConstraintList
 from pyomo.opt import check_available_solvers
 from pyomo.opt.parallel.local import SolverManager_Serial
+
+if yaml_available:
+    import yaml
 
 solvers = check_available_solvers('glpk')
 

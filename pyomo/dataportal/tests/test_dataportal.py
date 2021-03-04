@@ -12,7 +12,6 @@
 #
 
 import json
-import yaml
 import os
 from os.path import abspath, dirname
 pyomo_dir=dirname(dirname(abspath(__file__)))+os.sep+".."
@@ -47,6 +46,7 @@ except:
     xlsm_interface = False
 try:
     yaml_interface = DataManagerFactory('yaml').available()
+    import yaml
 except:
     yaml_interface = False
 
