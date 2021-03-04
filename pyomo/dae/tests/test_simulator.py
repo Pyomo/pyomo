@@ -1296,7 +1296,7 @@ class TestSimulationInterface():
         with open(bfile, 'r') as f2:
             baseline = json.load(f2)
             if platform == "darwin":
-                self.assertStructuredAlmostEqual(results, baseline, reltol=1e-3)
+                self.assertStructuredAlmostEqual(results, baseline, reltol=1e-2)
             else:
                 self.assertStructuredAlmostEqual(results, baseline, reltol=1e-5)
 

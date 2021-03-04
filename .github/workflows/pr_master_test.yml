@@ -27,7 +27,7 @@ env:
       pint pyro4 pyyaml sphinx_rtd_theme sympy xlrd
       python-louvain
   PYTHON_NUMPY_PKGS: >
-      numpy scipy pyodbc pandas matplotlib seaborn numdifftools
+      numpy scipy pyodbc pandas matplotlib seaborn numdifftools parameterized
   CACHE_VER: v3
   NEOS_EMAIL: tests@pyomo.org
 
