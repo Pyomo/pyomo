@@ -19,7 +19,11 @@ currdir = dirname(abspath(__file__))+os.sep
 datadir = abspath(join(currdir, "..", "ampl"))+os.sep
 
 from filecmp import cmp
-from parameterized import parameterized
+try:
+    from parameterized import parameterized
+    param_available = True
+except ImportError:
+    param_available = False
 import pyomo.common.unittest as unittest
 
 import pyomo.scripting.pyomo_main as main
@@ -49,6 +53,7 @@ class Tests(unittest.TestCase):
         output = main.main(['convert', '--logging=quiet', '-c']+cmd)
         return output
 
+@unittest.skipIf(not param_available, "Parameterized is not available")
 class BaselineTests(Tests):
     def __init__(self, *args, **kwds):
         Tests.__init__(self, *args, **kwds)

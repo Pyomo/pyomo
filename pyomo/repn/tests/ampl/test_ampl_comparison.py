@@ -19,7 +19,11 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-from parameterized import parameterized
+try:
+    from parameterized import parameterized
+    param_available = True
+except ImportError:
+    param_available = False
 import pyomo.common.unittest as unittest
 
 import pyomo.scripting.pyomo_main as main
@@ -43,6 +47,7 @@ class Tests(unittest.TestCase):
         return output
 
 
+@unittest.skipIf(not param_available, "Parameterized is not available")
 class BaselineTests(Tests):
     def __init__(self, *args, **kwds):
         Tests.__init__(self, *args, **kwds)
@@ -75,6 +80,7 @@ class BaselineTests(Tests):
                             self.assertEqual(float(item1), float(item2))
         os.remove(currdir+name+'.test.nl')
 
+@unittest.skipIf(not param_available, "Parameterized is not available")
 class ASLTests(Tests):
 
     def __init__(self, *args, **kwds):
