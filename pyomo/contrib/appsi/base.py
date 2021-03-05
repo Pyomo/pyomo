@@ -150,24 +150,21 @@ class Results(object):
         >>> m = pe.ConcreteModel()
         >>> m.x = pe.Var()
         >>> m.obj = pe.Objective(expr=m.x**2)
-        >>> opt = appsi.solvers.Gurobi()
+        >>> opt = appsi.solvers.Ipopt()
         >>> opt.config.load_solution = False
-        >>> results = opt.solve(m)
-        >>> if results.termination_condition == TerminationCondition.optimal:
-        >>>     print('optimal solution found: ', results.best_feasible_objective)
-        >>>     opt.load_vars()
-        >>>     print('the optimal value of x is ', m.x.value)
-        >>> elif results.best_feasible_objective is not None:
-        >>>     print('sub-optimal but feasible solution found: ', results.best_feasible_objective)
-        >>>     opt.load_vars(vars_to_load=[m.x])
-        >>>     print('The value of x in the feasible solution is ', m.x.value)
-        >>> elif results.termination_condition in {TerminationCondition.maxIterations,
-        ...                                        TerminationCondition.maxTimeLimit}:
-        >>>     print('No feasible solution was found. The best lower bound found was ',
-        ...           results.best_objective_bound)
-        >>> else:
-        >>>     print('The following termination condition was encountered: ',
-        ...           results.termination_condition)
+        >>> results = opt.solve(m) # doctest:+ELLIPSIS
+        >>> if results.termination_condition == appsi.base.TerminationCondition.optimal:
+        ...     print('optimal solution found: ', results.best_feasible_objective) #doctest:+SKIP
+        ...     opt.load_vars()
+        ...     print('the optimal value of x is ', m.x.value) #doctest:+SKIP
+        ... elif results.best_feasible_objective is not None:
+        ...     print('sub-optimal but feasible solution found: ', results.best_feasible_objective)
+        ...     opt.load_vars(vars_to_load=[m.x])
+        ...     print('The value of x in the feasible solution is ', m.x.value)
+        ... elif results.termination_condition in {appsi.base.TerminationCondition.maxIterations, appsi.base.TerminationCondition.maxTimeLimit}:
+        ...     print('No feasible solution was found. The best lower bound found was ', results.best_objective_bound)
+        ... else:
+        ...     print('The following termination condition was encountered: ', results.termination_condition)
     """
     def __init__(self):
         self.termination_condition: TerminationCondition = TerminationCondition.unknown
