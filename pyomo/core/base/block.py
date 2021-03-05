@@ -41,6 +41,7 @@ from pyomo.core.base.util import Initializer
 from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent, UnindexedComponent_set,
 )
+from pyomo.core.base.misc import sorted_robust
 
 from pyomo.opt.base import ProblemFormat, guess_format
 from pyomo.opt import WriterFactory
@@ -1360,7 +1361,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 _items = ((None, comp),)
 
             if _sort_indices:
-                _items = sorted(_items, key=itemgetter(0))
+                _items = sorted_robust(_items)
             if active is None or not isinstance(comp, ActiveIndexedComponent):
                 for idx, compData in _items:
                     yield (name, idx), compData
