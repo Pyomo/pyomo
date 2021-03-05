@@ -150,7 +150,7 @@ class Results(object):
         >>> m = pe.ConcreteModel()
         >>> m.x = pe.Var()
         >>> m.obj = pe.Objective(expr=m.x**2)
-        >>> opt = appsi.solvers.Ipopt()
+        >>> opt = appsi.solvers.Cplex()
         >>> opt.config.load_solution = False
         >>> results = opt.solve(m) # doctest:+ELLIPSIS
         >>> if results.termination_condition == appsi.base.TerminationCondition.optimal:
