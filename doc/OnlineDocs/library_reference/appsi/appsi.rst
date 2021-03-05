@@ -78,3 +78,11 @@ attribute. For example:
 .. code-block:: python
 
     >>> opt.solver_options['max_iter'] = 20
+
+Installation
+------------
+
+.. code-block::
+
+   cd pyomo/contrib/appsi/
+   python build.py
