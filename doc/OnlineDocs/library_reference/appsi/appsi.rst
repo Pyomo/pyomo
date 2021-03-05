@@ -63,3 +63,18 @@ does not check for changes in variables or constraints.
     >>>     print(res.best_feasible_objective)
     >>> print(timer)
 
+Solver independent options can be specified with the
+:py:class:`~pyomo.contrib.appsi.base.SolverConfig` or derived
+classes. For example:
+
+.. code-block:: python
+
+    >>> opt.config.stream_solver = True
+
+Solver specific options can be specified with the
+:py:meth:`~pyomo.contrib.appsi.base.Solver.solver_options`
+attribute. For example:
+
+.. code-block:: python
+
+    >>> opt.solver_options['max_iter'] = 20
