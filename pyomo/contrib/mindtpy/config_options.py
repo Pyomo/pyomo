@@ -409,6 +409,12 @@ def _add_loa_configs(CONFIG):
         description='Whether to use the incumbent solution of branch & bound tree in LOA single tree when projection problem is infeasible',
         domain=bool
     ))
+    CONFIG.declare('sqp_lag_scaling_coef', ConfigValue(
+        default=None,
+        domain=In(['fixed', 'variable_dependent']),
+        description='the coefficient used to scale the L2 norm in sqp_lag'
+    ))
+
 
 
 def check_config(config):

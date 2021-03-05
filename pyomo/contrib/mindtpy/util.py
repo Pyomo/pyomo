@@ -354,8 +354,15 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
                                                         setpoint_model.component_data_objects(Var))))
             assert len(model_vars) == len(
                 setpoint_vars), 'Trying to generate Squared Norm2 objective function for models with different number of variables'
+            if config.sqp_lag_scaling_coef is None:
+                pass
+            elif config.sqp_lag_scaling_coef == 'fixed':
+                r = 1
+            elif config.sqp_lag_scaling_coef == 'variable_dependent':
+                r = numpy.sqrt(len(temp_model.MindtPy_utils.discrete_variable_list))
+            rho = numpy.linalg.norm(jac_lag/(2*r))
 
-            return Objective(expr=first_order_term + sum([(model_var - setpoint_var.value)**2 for (model_var, setpoint_var) in zip(model_vars, setpoint_vars)]))
+            return Objective(expr=first_order_term + rho*sum([(model_var - setpoint_var.value)**2 for (model_var, setpoint_var) in zip(model_vars, setpoint_vars)]))
 
 
 def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=True):
