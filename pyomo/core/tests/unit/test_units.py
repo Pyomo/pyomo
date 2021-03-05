@@ -26,7 +26,7 @@ import pyomo.core.expr.current as EXPR
 from pyomo.core.base.units_container import (
     pint_available, InconsistentUnitsError, UnitsError, PyomoUnitsContainer,
 )
-from six import StringIO
+from io import StringIO
 
 def python_callback_function(arg1, arg2):
     return 42.0

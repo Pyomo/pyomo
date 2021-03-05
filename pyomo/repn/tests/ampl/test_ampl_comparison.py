@@ -13,12 +13,12 @@
 
 import re
 import glob
+import subprocess
 import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-import pyutilib.subprocess
 
 import pyomo.scripting.pyomo_main as main
 
@@ -98,16 +98,22 @@ def nlwriter_asl_test(self, name):
         pass
 
     # obtain the nl file summary information for comparison with ampl
-    p = pyutilib.subprocess.run(
-        'gjh_asl_json '+currdir+name+'.test.nl rows='
-        +currdir+name+'.test.row cols='+currdir+name+'.test.col')
-    self.assertTrue(p[0] == 0, msg=p[1])
+    p = subprocess.run(['gjh_asl_json',
+                        currdir+name+'.test.nl',
+                        'rows='+currdir+name+'.test.row',
+                        'cols='+currdir+name+'.test.col'],
+                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                       universal_newlines=True)
+    self.assertTrue(p.returncode == 0, msg=p.stdout)
 
     # obtain the nl file summary information for comparison with pyomo
-    p = pyutilib.subprocess.run(
-        'gjh_asl_json '+currdir+name+'.ampl.nl rows='
-        +currdir+name+'.ampl.row cols='+currdir+name+'.ampl.col')
-    self.assertTrue(p[0] == 0, msg=p[1])
+    p = subprocess.run(['gjh_asl_json',
+                        currdir+name+'.ampl.nl',
+                        'rows='+currdir+name+'.ampl.row',
+                        'cols='+currdir+name+'.ampl.col'],
+                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                       universal_newlines=True)
+    self.assertTrue(p.returncode == 0, msg=p.stdout)
 
     self.assertMatchesJsonBaseline(
         currdir+name+'.test.json',

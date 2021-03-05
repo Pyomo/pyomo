@@ -3,10 +3,10 @@ name: GitHub CI
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
   workflow_dispatch:
     inputs:
       git-ref:
@@ -27,7 +27,7 @@ env:
       pint pyro4 pyyaml sphinx_rtd_theme sympy xlrd
       python-louvain
   PYTHON_NUMPY_PKGS: >
-      numpy scipy pyodbc pandas matplotlib seaborn numdifftools
+      numpy scipy pyodbc pandas matplotlib seaborn numdifftools casadi
   CACHE_VER: v3
   NEOS_EMAIL: tests@pyomo.org
 
@@ -62,7 +62,7 @@ jobs:
           PACKAGES: glpk
 
         - os: ubuntu-18.04
-          python: 3.7
+          python: 3.8
           other: /mpi
           mpi: 3
           skip_doctest: 1
@@ -88,11 +88,12 @@ jobs:
 
         - os: ubuntu-18.04
           python: 3.6
-          other: /parallel
-          category: parallel
+          other: /cython
+          setup_options: --with-cython
           skip_doctest: 1
           TARGET: linux
           PYENV: pip
+          PACKAGES: cython
 
         - os: ubuntu-18.04
           python: 3.7
@@ -101,15 +102,6 @@ jobs:
           skip_doctest: 1
           TARGET: linux
           PYENV: pip
-
-        - os: ubuntu-18.04
-          python: 3.6
-          other: /cython
-          setup_options: --with-cython
-          skip_doctest: 1
-          TARGET: linux
-          PYENV: pip
-          PACKAGES: cython
 
         exclude:
         - {os: macos-latest, python: pypy3}
@@ -203,7 +195,6 @@ jobs:
         for pkg in bash pkg-config unixodbc freetds glpk; do
             brew list $pkg || brew install $pkg
         done
-        #brew link --overwrite gcc
 
     - name: Update Linux
       if: matrix.TARGET == 'linux'
@@ -649,6 +640,11 @@ jobs:
     - name: Upload codecov reports
       run: |
         set +e
+        if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
+            SHA=$(jq --raw-output .pull_request.head.sha "$GITHUB_EVENT_PATH")
+        else
+            SHA=$GITHUB_SHA
+        fi
         function upload {
             echo ""
             echo "Build group: $1"
@@ -667,17 +663,22 @@ jobs:
             i=0
             while : ; do
                 ((i+=1))
+                rm -f codecov.log
                 echo "Uploading coverage to codecov (attempt ${i})"
                 bash $CODECOV -Z -e TAG,GHA_OS_NAME -X gcov -X s3 \
-                    -f coverage.xml
+                    -f coverage.xml -C $SHA | tee codecov.log
                 if test $? == 0; then
                     echo "PASS $CODECOV_NAME" >> codecov.result
                     break
                 elif test $i -ge 2; then
-                    # Do not fail the build (yet) just because the codecov
-                    # upload fails
-                    echo "FAIL $CODECOV_NAME" >> codecov.result
-                    break
+                    if test `grep successfully codecov.log | wc -l` -gt 0; then
+                        echo "PASS $CODECOV_NAME (implied)" >> codecov.result
+                    else
+                        # Do not fail the build (yet) just because the
+                        # codecov upload fails
+                        echo "FAIL $CODECOV_NAME" >> codecov.result
+                        break
+                    fi
                 fi
                 DELAY=$(( RANDOM % 30 + 30))
                 echo "Pausing $DELAY seconds before re-attempting upload"

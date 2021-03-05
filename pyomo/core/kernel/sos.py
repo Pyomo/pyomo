@@ -15,7 +15,6 @@ from pyomo.core.kernel.base import \
 from pyomo.core.kernel.container_utils import \
     define_simple_containers
 
-from six.moves import zip
 
 class ISOS(ICategorizedObject):
     """

@@ -17,7 +17,6 @@ import pyutilib.th as unittest
 
 from pyomo.core.base.misc import tabular_writer, sorted_robust
 
-
 class TestTabularWriter(unittest.TestCase):
     def test_unicode_table(self):
         # Test that an embedded unicode character does not foul up the

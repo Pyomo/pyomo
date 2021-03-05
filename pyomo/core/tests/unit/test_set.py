@@ -12,8 +12,7 @@ import copy
 import itertools
 import logging
 import pickle
-from six import StringIO, PY2
-from six.moves import xrange
+from io import StringIO
 from collections import namedtuple as NamedTuple
 
 try:
@@ -3487,7 +3486,7 @@ def _init_set(m, *args):
     n = 1
     for i in args:
         n *= i
-    return xrange(n)
+    return range(n)
 
 
 class TestSet(unittest.TestCase):
@@ -4188,7 +4187,7 @@ class TestSet(unittest.TestCase):
 
         m = ConcreteModel()
         m.I_index = RangeSet(3)
-        m.I = Set(m.I_index, initialize=lambda m,i: xrange(i+1),
+        m.I = Set(m.I_index, initialize=lambda m,i: range(i+1),
                   domain=Integers)
         m.J = Set(ordered=False)
         m.K = Set(initialize=[(1,2), (3,4)], ordered=Set.SortedOrder)
@@ -4303,8 +4302,8 @@ class TestSet(unittest.TestCase):
         m.I = Set(initialize=[1,2,3])
         m.J = Set(initialize=[4,5,6])
         m.K = Set(initialize=[(1,4),(2,6),(3,5)], within=m.I*m.J)
-        m.II = Set([1,2,3], initialize={1:[0], 2:[1,2], 3: xrange(3)})
-        m.JJ = Set([1,2,3], initialize={1:[0], 2:[1,2], 3: xrange(3)})
+        m.II = Set([1,2,3], initialize={1:[0], 2:[1,2], 3: range(3)})
+        m.JJ = Set([1,2,3], initialize={1:[0], 2:[1,2], 3: range(3)})
         m.KK = Set([1,2], initialize=[], dimen=lambda m,i: i)
 
         output = StringIO()
@@ -5596,18 +5595,13 @@ class TestIssues(unittest.TestCase):
             "Testing for set subsets with 'a in b' is deprecated.",
             output.getvalue()
         )
-        if PY2:
+        # Note that pypy raises a different exception from cpython
+        err = "((unhashable type: 'OrderedSimpleSet')" \
+            "|('OrderedSimpleSet' objects are unhashable))"
+        with self.assertRaisesRegexp(TypeError, err):
             self.assertFalse(m.s in m.t)
-            with self.assertRaisesRegexp(KeyError, "Index 's' is not valid"):
-                m.x[m.s].display()
-        else:
-            # Note that pypy raises a different exception from cpython
-            err = "((unhashable type: 'OrderedSimpleSet')" \
-                "|('OrderedSimpleSet' objects are unhashable))"
-            with self.assertRaisesRegexp(TypeError, err):
-                self.assertFalse(m.s in m.t)
-            with self.assertRaisesRegexp(TypeError, err):
-                m.x[m.s].display()
+        with self.assertRaisesRegexp(TypeError, err):
+            m.x[m.s].display()
 
         self.assertEqual(list(m.x), ['one'])
 

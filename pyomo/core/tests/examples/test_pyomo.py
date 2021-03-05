@@ -17,16 +17,16 @@ import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.subprocess
+import subprocess
 import pyutilib.th as unittest
-from pyutilib.misc import setup_redirect, reset_redirect
 
 from pyomo.common.dependencies import yaml_available
+from pyomo.common.tee import capture_output
 import pyomo.core
 import pyomo.scripting.pyomo_main as main
 from pyomo.opt import check_available_solvers
 
-from six import StringIO
+from io import StringIO
 
 if os.path.exists(sys.exec_prefix+os.sep+'bin'+os.sep+'coverage'):
     executable=sys.exec_prefix+os.sep+'bin'+os.sep+'coverage -x '
@@ -57,16 +57,15 @@ class BaseTester(unittest.TestCase):
         else:
             OUTPUT=StringIO()
             results='results.jsn'
-        setup_redirect(OUTPUT)
-        os.chdir(currdir)
-        if type(cmd) is list:
-            output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + cmd)
-        elif cmd.endswith('json') or cmd.endswith('yaml'):
-            output = main.main(['solve', '--results-format=json', '--save-results=%s' % results] + [cmd])
-        else:
-            args=re.split('[ ]+',cmd)
-            output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + list(args))
-        reset_redirect()
+        with capture_output(OUTPUT):
+            os.chdir(currdir)
+            if type(cmd) is list:
+                output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + cmd)
+            elif cmd.endswith('json') or cmd.endswith('yaml'):
+                output = main.main(['solve', '--results-format=json', '--save-results=%s' % results] + [cmd])
+            else:
+                args=re.split('[ ]+',cmd)
+                output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + list(args))
         if not 'root' in kwds:
             return OUTPUT.getvalue()
         return output
@@ -86,9 +85,11 @@ class BaseTester(unittest.TestCase):
             os.remove(currdir+'results.jsn')
 
     def run_pyomo(self, cmd, root=None):
-        cmd = 'pyomo solve --solver=glpk --results-format=json ' \
-              '--save-results=%s.jsn %s' % (root, cmd)
-        return pyutilib.subprocess.run(cmd, outfile=root+'.out')
+        cmd = ('pyomo solve --solver=glpk --results-format=json ' \
+              '--save-results=%s.jsn %s' % (root, cmd)).split(' ')
+        with open(root+'.out', 'w') as f:
+            result = subprocess.run(cmd, stdout=f, stderr=f)
+        return result
 
 
 class TestJson(BaseTester):
@@ -97,20 +98,19 @@ class TestJson(BaseTester):
         # Simple execution of 'pyomo'
         self.pyomo([currdir+'pmedian.py',currdir+'pmedian.dat'], root=currdir+'test1')
         self.assertMatchesJsonBaseline(currdir+"test1.jsn", currdir+"test1.txt",tolerance=_diff_tol)
-        os.remove(currdir+'test1.out')
+        os.remove(os.path.join(currdir, 'test1.out'))
 
     def test1a_simple_pyomo_execution(self):
         # Simple execution of 'pyomo' in a subprocess
-        self.run_pyomo('%s/pmedian.py %s/pmedian.dat' % (currdir,currdir),
-                       root=currdir+'test1a')
+        files = os.path.join(currdir, 'pmedian.py') + ' ' + os.path.join(currdir, 'pmedian.dat')
+        self.run_pyomo(files, root=os.path.join(currdir, 'test1a'))
         self.assertMatchesJsonBaseline(currdir+"test1a.jsn", currdir+"test1.txt",tolerance=_diff_tol)
-        os.remove(currdir+'test1a.out')
 
     def test1b_simple_pyomo_execution(self):
         # Simple execution of 'pyomo' with a configuration file
         self.pyomo(currdir+'test1b.json', root=currdir+'test1')
         self.assertMatchesJsonBaseline(currdir+"test1.jsn", currdir+"test1.txt",tolerance=_diff_tol)
-        os.remove(currdir+'test1.out')
+        os.remove(os.path.join(currdir, 'test1.out'))
 
     def test2_bad_model_name(self):
         # Run pyomo with bad --model-name option value
@@ -132,19 +132,19 @@ class TestJson(BaseTester):
         def filter3(line):
             return line.startswith('[') or line.startswith('DEPRECATION')
         self.assertMatchesJsonBaseline(currdir+"test3.jsn", currdir+"test1.txt",tolerance=_diff_tol)
-        os.remove(currdir+'test3.out')
+        os.remove(os.path.join(currdir, 'test3.out'))
 
     def test4_valid_modelname_option(self):
         # Run pyomo with good --model-name option value
         self.pyomo('--model-name=MODEL '+currdir+'pmedian1.py pmedian.dat', root=currdir+'test4')
         self.assertMatchesJsonBaseline(currdir+"test4.jsn", currdir+"test1.txt",tolerance=_diff_tol)
-        os.remove(currdir+'test4.out')
+        os.remove(os.path.join(currdir, 'test4.out'))
 
     def test4b_valid_modelname_option(self):
         # Run pyomo with good 'object name' option value (configfile)
         self.pyomo(currdir+'test4b.json', root=currdir+'test4b')
         self.assertMatchesJsonBaseline(currdir+"test4b.jsn", currdir+"test1.txt",tolerance=_diff_tol)
-        os.remove(currdir+'test4b.out')
+        os.remove(os.path.join(currdir, 'test4b.out'))
 
     def test5_create_model_fcn(self):
         #"""Run pyomo with create_model function"""
@@ -153,7 +153,7 @@ class TestJson(BaseTester):
             return ("Writing model " in line) or ("Solver results file" in line) or \
                    line.startswith('[') or line.startswith('DEPRECATION')
         self.assertFileEqualsBaseline(currdir+"test5.out", currdir+"test5.txt",filter=filter5,tolerance=_diff_tol)
-        os.remove(currdir+'test5.jsn')
+        os.remove(os.path.join(currdir, 'test5.jsn'))
 
     def test5b_create_model_fcn(self):
         # Run pyomo with create_model function (configfile)
@@ -162,7 +162,7 @@ class TestJson(BaseTester):
             return ("Writing model " in line) or ("Solver results file" in line) or \
                    line.startswith('[') or line.startswith('DEPRECATION')
         self.assertFileEqualsBaseline(currdir+"test5.out", currdir+"test5.txt",filter=filter5,tolerance=_diff_tol)
-        os.remove(currdir+'test5.jsn')
+        os.remove(os.path.join(currdir, 'test5.jsn'))
 
     def test8_instanceonly_option(self):
         #"""Run pyomo with --instance-only option"""
@@ -170,7 +170,7 @@ class TestJson(BaseTester):
         self.assertEqual(type(output.retval.instance), pyomo.core.ConcreteModel)
         # Check that the results file was NOT created
         self.assertRaises(OSError, lambda: os.remove(currdir+'test8.jsn'))
-        os.remove(currdir+'test8.out')
+        os.remove(os.path.join(currdir, 'test8.out'))
 
     def test8b_instanceonly_option(self):
         # Run pyomo with --instance-only option (configfile)
@@ -178,65 +178,65 @@ class TestJson(BaseTester):
         self.assertEqual(type(output.retval.instance), pyomo.core.ConcreteModel)
         # Check that the results file was NOT created
         self.assertRaises(OSError, lambda: os.remove(currdir+'test8.jsn'))
-        os.remove(currdir+'test8.out')
+        os.remove(os.path.join(currdir, 'test8.out'))
 
     def test9_disablegc_option(self):
         #"""Run pyomo with --disable-gc option"""
         output = self.pyomo('--disable-gc pmedian.py pmedian.dat', root=currdir+'test9')
         self.assertEqual(type(output.retval.instance), pyomo.core.ConcreteModel)
-        os.remove(currdir+'test9.jsn')
-        os.remove(currdir+'test9.out')
+        os.remove(os.path.join(currdir, 'test9.jsn'))
+        os.remove(os.path.join(currdir, 'test9.out'))
 
     def test9b_disablegc_option(self):
         # Run pyomo with --disable-gc option (configfile)
         output = self.pyomo(currdir+'test9b.json', root=currdir+'test9')
         self.assertEqual(type(output.retval.instance), pyomo.core.ConcreteModel)
-        os.remove(currdir+'test9.jsn')
-        os.remove(currdir+'test9.out')
+        os.remove(os.path.join(currdir, 'test9.jsn'))
+        os.remove(os.path.join(currdir, 'test9.out'))
 
     def test12_output_option(self):
         #"""Run pyomo with --output option"""
         self.pyomo('--logfile=%s pmedian.py pmedian.dat' % (currdir+'test12.log'), root=currdir+'test12')
         self.assertMatchesJsonBaseline(currdir+"test12.jsn", currdir+"test12.txt",tolerance=_diff_tol)
-        os.remove(currdir+'test12.log')
-        os.remove(currdir+'test12.out')
+        os.remove(os.path.join(currdir, 'test12.log'))
+        os.remove(os.path.join(currdir, 'test12.out'))
 
     def test12b_output_option(self):
         # Run pyomo with --output option (configfile)
         self.pyomo(currdir+'test12b.json', root=currdir+'test12')
-        self.assertMatchesJsonBaseline(currdir+"test12.jsn", currdir+"test12.txt",tolerance=_diff_tol)
+        self.assertMatchesJsonBaseline(currdir+"test12.jsn", currdir+"test12.txt", tolerance=_diff_tol)
         os.remove('test12b.log')
-        os.remove(currdir+'test12.out')
+        os.remove(os.path.join(currdir, 'test12.out'))
 
     def test14_concrete_model_with_constraintlist(self):
         # Simple execution of 'pyomo' with a concrete model and constraint lists
         self.pyomo('pmedian4.py', root=currdir+'test14')
         self.assertMatchesJsonBaseline(currdir+"test14.jsn", currdir+"test14.txt",tolerance=_diff_tol)
-        os.remove(currdir+'test14.out')
+        os.remove(os.path.join(currdir, 'test14.out'))
 
     def test14b_concrete_model_with_constraintlist(self):
         # Simple execution of 'pyomo' with a concrete model and constraint lists (configfile)
         self.pyomo('pmedian4.py', root=currdir+'test14')
         self.assertMatchesJsonBaseline(currdir+"test14.jsn", currdir+"test14.txt",tolerance=_diff_tol)
-        os.remove(currdir+'test14.out')
+        os.remove(os.path.join(currdir, 'test14.out'))
 
     def test15_simple_pyomo_execution(self):
         # Simple execution of 'pyomo' with options
         self.pyomo(['--solver-options="mipgap=0.02 cuts="', currdir+'pmedian.py', 'pmedian.dat'], root=currdir+'test15')
         self.assertMatchesJsonBaseline(currdir+"test15.jsn", currdir+"test1.txt",tolerance=_diff_tol)
-        os.remove(currdir+'test15.out')
+        os.remove(os.path.join(currdir, 'test15.out'))
 
     def test15b_simple_pyomo_execution(self):
         # Simple execution of 'pyomo' with options
         self.pyomo(currdir+'test15b.json', root=currdir+'test15b')
         self.assertMatchesJsonBaseline(currdir+"test15b.jsn", currdir+"test1.txt",tolerance=_diff_tol)
-        os.remove(currdir+'test15b.out')
+        os.remove(os.path.join(currdir, 'test15b.out'))
 
     def test15c_simple_pyomo_execution(self):
         # Simple execution of 'pyomo' with options
         self.pyomo(currdir+'test15c.json', root=currdir+'test15c')
         self.assertMatchesJsonBaseline(currdir+"test15c.jsn", currdir+"test1.txt",tolerance=_diff_tol)
-        os.remove(currdir+'test15c.out')
+        os.remove(os.path.join(currdir, 'test15c.out'))
 
 
 @unittest.skipIf(not yaml_available, "YAML not available available")
@@ -246,13 +246,13 @@ class TestWithYaml(BaseTester):
         # Simple execution of 'pyomo' with options
         self.pyomo(currdir+'test15b.yaml', root=currdir+'test15b')
         self.assertMatchesJsonBaseline(currdir+"test15b.jsn", currdir+"test1.txt",tolerance=_diff_tol)
-        os.remove(currdir+'test15b.out')
+        os.remove(os.path.join(currdir, 'test15b.out'))
 
     def test15c_simple_pyomo_execution(self):
         # Simple execution of 'pyomo' with options
         self.pyomo(currdir+'test15c.yaml', root=currdir+'test15c')
         self.assertMatchesJsonBaseline(currdir+"test15c.jsn", currdir+"test1.txt",tolerance=_diff_tol)
-        os.remove(currdir+'test15c.out')
+        os.remove(os.path.join(currdir, 'test15c.out'))
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@
 
 import pickle
 import os
-import six
+import io
 import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
@@ -676,7 +676,7 @@ class TestMultiArgumentExpressions(unittest.TestCase):
             return inequality(m.vmin[i]**2, m.v[i], m.vmax[i]**2)
         m.con = Constraint(m.s, rule=_con)
 
-        OUT = six.StringIO()
+        OUT = io.StringIO()
         for i in m.s:
             OUT.write(str(_con(m,i)))
             OUT.write("\n")

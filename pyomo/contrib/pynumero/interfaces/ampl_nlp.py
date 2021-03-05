@@ -21,6 +21,7 @@ except ImportError as e:
 from scipy.sparse import coo_matrix
 import os
 import numpy as np
+from pyomo.common.deprecation import deprecated
 from pyomo.contrib.pynumero.interfaces.nlp import ExtendedNLP
 
 __all__ = ['AslNLP', 'AmplNLP']
@@ -603,8 +604,12 @@ class AslNLP(ExtendedNLP):
             self._asl.eval_hes_lag(self._primals, self._duals_full,
                                    data, obj_factor=self._obj_factor)
             values = np.concatenate((data, data[self._lower_hess_mask]))
-            #TODO: find out why this is done
-            values += 1e-16 # this is to deal with scipy bug temporarily
+            # note: this was done to ensure that scipy did not change
+            # the structure of a sparse matrix if one of the nonzeros
+            # happened to be zero.
+            # CDL: I am removing this for now to see if it is necessary
+            # values += 1e-16 # this is to deal with scipy bug temporarily
+            # CDL
             np.copyto(self._cached_hessian_lag.data, values)
             self._hessian_lag_is_cached = True
 
@@ -682,10 +687,14 @@ class AmplNLP(AslNLP):
             self._name_to_con_eq_idx = {name:idx for idx,name in enumerate(self._con_eq_idx_to_name)}
             self._name_to_con_ineq_idx = {name:idx for idx,name in enumerate(self._con_ineq_idx_to_name)}
 
-            
-    def variable_names(self):
+    def primals_names(self):
         """Returns ordered list with names of primal variables"""
         return list(self._vidx_to_name)
+
+    @deprecated(msg='This method has been replaced with primals_names', version='6.0.0.dev0', remove_in='6.0')
+    def variable_names(self):
+        """Returns ordered list with names of primal variables"""
+        return self.primals_names()
 
     def constraint_names(self):
         """Returns an ordered list with the names of all the constraints
@@ -702,14 +711,18 @@ class AmplNLP(AslNLP):
         (corresponding to evaluate_ineq_constraints)"""
         return list(self._con_ineq_idx_to_name)
 
+    @deprecated(msg='This method has been replaced with primal_idx', version='6.0.0.dev0', remove_in='6.0')
     def variable_idx(self, var_name):
+        return self.primal_idx(var_name)
+
+    def primal_idx(self, var_name):
         """
-        Returns the index of the variable named var_name
+        Returns the index of the primal variable named var_name
 
         Parameters
         ----------
         var_name: str
-            Name of variable
+            Name of primal variable
 
         Returns
         -------

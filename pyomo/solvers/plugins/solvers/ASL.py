@@ -10,13 +10,12 @@
 
 
 import os
-import six
+import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
-from pyomo.common.collections import Options, Bunch
+from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
-from pyutilib.subprocess import run
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
@@ -54,7 +53,7 @@ class ASL(SystemCallSolver):
         #
         # Note: Undefined capabilities default to 'None'
         #
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.integer = True
         self._capabilities.quadratic_objective = True
@@ -93,8 +92,14 @@ class ASL(SystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = run( [solver_exec,"-v"], timelimit=1 )
-        return _extract_version(results[1])
+        try:
+            results = subprocess.run([solver_exec,"-v"], timeout=1,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT,
+                                 universal_newlines=True)
+            return _extract_version(results.stdout)
+        except OSError:
+            pass
 
     def create_command_line(self, executable, problem_files):
         assert(self._problem_format == ProblemFormat.nl)
@@ -157,7 +162,7 @@ class ASL(SystemCallSolver):
         for key in self.options:
             if key == 'solver':
                 continue
-            if isinstance(self.options[key],six.string_types) and \
+            if isinstance(self.options[key], str) and \
                (' ' in self.options[key]):
                 opt.append(key+"=\""+str(self.options[key])+"\"")
                 cmd.append(str(key)+"="+str(self.options[key]))
@@ -175,7 +180,7 @@ class ASL(SystemCallSolver):
         return Bunch(cmd=cmd, log_file=self._log_file, env=env)
 
     def _presolve(self, *args, **kwds):
-        if (not isinstance(args[0], six.string_types)) and \
+        if (not isinstance(args[0], str)) and \
            (not isinstance(args[0], IBlock)):
             self._instance = args[0]
             xfrm = TransformationFactory('mpec.nl')

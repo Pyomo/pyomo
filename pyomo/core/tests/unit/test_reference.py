@@ -16,12 +16,12 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-from six import itervalues, StringIO, iterkeys, iteritems
+from io import StringIO
 
 from pyomo.environ import (
     ConcreteModel, Block, Var, Set, RangeSet, Param, value,
 )
-from pyomo.common.collections import OrderedDict, ComponentSet
+from pyomo.common.collections import ComponentSet
 from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.set import SetProduct, UnorderedSetOf
 from pyomo.core.base.indexed_component import (
@@ -124,16 +124,16 @@ class TestReferenceDict(unittest.TestCase):
         rd = _ReferenceDict(m.b[:,4].x[8,:])
 
         self.assertEqual(
-            list(iterkeys(rd)),
+            list(rd.keys()),
             [(1,10), (1,11), (2,10), (2,11)]
         )
         self.assertEqual(
-            list(itervalues(rd)),
+            list(rd.values()),
             [m.b[1,4].x[8,10], m.b[1,4].x[8,11],
              m.b[2,4].x[8,10], m.b[2,4].x[8,11]]
         )
         self.assertEqual(
-            list(iteritems(rd)),
+            list(rd.items()),
             [((1,10), m.b[1,4].x[8,10]),
              ((1,11), m.b[1,4].x[8,11]),
              ((2,10), m.b[2,4].x[8,10]),
@@ -144,86 +144,86 @@ class TestReferenceDict(unittest.TestCase):
         m = self.m
 
         rd = _ReferenceDict(m.b[:,:].x[:,:])
-        self.assertEqual( sum(x.value for x in itervalues(rd)), 0 )
+        self.assertEqual( sum(x.value for x in rd.values()), 0 )
         rd[1,5,7,10] = 10
         self.assertEqual( m.b[1,5].x[7,10].value, 10 )
-        self.assertEqual( sum(x.value for x in itervalues(rd)), 10 )
+        self.assertEqual( sum(x.value for x in rd.values()), 10 )
 
         rd = _ReferenceDict(m.b[:,4].x[8,:])
-        self.assertEqual( sum(x.value for x in itervalues(rd)), 0 )
+        self.assertEqual( sum(x.value for x in rd.values()), 0 )
         rd[1,10] = 20
         self.assertEqual( m.b[1,4].x[8,10].value, 20 )
-        self.assertEqual( sum(x.value for x in itervalues(rd)), 20 )
+        self.assertEqual( sum(x.value for x in rd.values()), 20 )
 
     def test_attribute_assignment(self):
         m = self.m
 
         rd = _ReferenceDict(m.b[:,:].x[:,:].value)
-        self.assertEqual( sum(x for x in itervalues(rd)), 0 )
+        self.assertEqual( sum(x for x in rd.values()), 0 )
         rd[1,5,7,10] = 10
         self.assertEqual( m.b[1,5].x[7,10].value, 10 )
-        self.assertEqual( sum(x for x in itervalues(rd)), 10 )
+        self.assertEqual( sum(x for x in rd.values()), 10 )
 
         rd = _ReferenceDict(m.b[:,4].x[8,:].value)
-        self.assertEqual( sum(x for x in itervalues(rd)), 0 )
+        self.assertEqual( sum(x for x in rd.values()), 0 )
         rd[1,10] = 20
         self.assertEqual( m.b[1,4].x[8,10].value, 20 )
-        self.assertEqual( sum(x for x in itervalues(rd)), 20 )
+        self.assertEqual( sum(x for x in rd.values()), 20 )
 
         m.x = Var([1,2], initialize=0)
         rd = _ReferenceDict(m.x[:])
-        self.assertEqual( sum(x.value for x in itervalues(rd)), 0 )
+        self.assertEqual( sum(x.value for x in rd.values()), 0 )
         rd[2] = 10
         self.assertEqual( m.x[1].value, 0 )
         self.assertEqual( m.x[2].value, 10 )
-        self.assertEqual( sum(x.value for x in itervalues(rd)), 10 )
+        self.assertEqual( sum(x.value for x in rd.values()), 10 )
 
     def test_single_attribute_assignment(self):
         m = self.m
 
         rd = _ReferenceDict(m.b[1,5].x[:,:])
-        self.assertEqual( sum(x.value for x in itervalues(rd)), 0 )
+        self.assertEqual( sum(x.value for x in rd.values()), 0 )
         rd[7,10].value = 10
         self.assertEqual( m.b[1,5].x[7,10].value, 10 )
-        self.assertEqual( sum(x.value for x in itervalues(rd)), 10 )
+        self.assertEqual( sum(x.value for x in rd.values()), 10 )
 
         rd = _ReferenceDict(m.b[1,4].x[8,:])
-        self.assertEqual( sum(x.value for x in itervalues(rd)), 0 )
+        self.assertEqual( sum(x.value for x in rd.values()), 0 )
         rd[10].value = 20
         self.assertEqual( m.b[1,4].x[8,10].value, 20 )
-        self.assertEqual( sum(x.value for x in itervalues(rd)), 20 )
+        self.assertEqual( sum(x.value for x in rd.values()), 20 )
 
     def test_nested_attribute_assignment(self):
         m = self.m
 
         rd = _ReferenceDict(m.b[:,:].x[:,:])
-        self.assertEqual( sum(x.value for x in itervalues(rd)), 0 )
+        self.assertEqual( sum(x.value for x in rd.values()), 0 )
         rd[1,5,7,10].value = 10
         self.assertEqual( m.b[1,5].x[7,10].value, 10 )
-        self.assertEqual( sum(x.value for x in itervalues(rd)), 10 )
+        self.assertEqual( sum(x.value for x in rd.values()), 10 )
 
         rd = _ReferenceDict(m.b[:,4].x[8,:])
-        self.assertEqual( sum(x.value for x in itervalues(rd)), 0 )
+        self.assertEqual( sum(x.value for x in rd.values()), 0 )
         rd[1,10].value = 20
         self.assertEqual( m.b[1,4].x[8,10].value, 20 )
-        self.assertEqual( sum(x.value for x in itervalues(rd)), 20 )
+        self.assertEqual( sum(x.value for x in rd.values()), 20 )
 
     def test_single_deletion(self):
         m = self.m
 
         rd = _ReferenceDict(m.b[1,5].x[:,:])
-        self.assertEqual(len(list(x.value for x in itervalues(rd))), 2*2)
+        self.assertEqual(len(list(x.value for x in rd.values())), 2*2)
         self.assertTrue((7,10) in rd)
         del rd[7,10]
         self.assertFalse((7,10) in rd)
-        self.assertEqual(len(list(x.value for x in itervalues(rd))), 3)
+        self.assertEqual(len(list(x.value for x in rd.values())), 3)
 
         rd = _ReferenceDict(m.b[1,4].x[8,:])
-        self.assertEqual(len(list(x.value for x in itervalues(rd))), 2)
+        self.assertEqual(len(list(x.value for x in rd.values())), 2)
         self.assertTrue((10) in rd)
         del rd[10]
         self.assertFalse(10 in rd)
-        self.assertEqual(len(list(x.value for x in itervalues(rd))), 2-1)
+        self.assertEqual(len(list(x.value for x in rd.values())), 2-1)
 
         with self.assertRaisesRegexp(
                 KeyError,
@@ -241,25 +241,25 @@ class TestReferenceDict(unittest.TestCase):
         m = self.m
 
         rd = _ReferenceDict(m.b[:,:].x[:,:])
-        self.assertEqual(len(list(x.value for x in itervalues(rd))), 2*2*2*2)
+        self.assertEqual(len(list(x.value for x in rd.values())), 2*2*2*2)
         self.assertTrue((1,5,7,10) in rd)
         del rd[1,5,7,10]
         self.assertFalse((1,5,7,10) in rd)
-        self.assertEqual(len(list(x.value for x in itervalues(rd))), 2*2*2*2-1)
+        self.assertEqual(len(list(x.value for x in rd.values())), 2*2*2*2-1)
 
         rd = _ReferenceDict(m.b[:,4].x[8,:])
-        self.assertEqual(len(list(x.value for x in itervalues(rd))), 2*2)
+        self.assertEqual(len(list(x.value for x in rd.values())), 2*2)
         self.assertTrue((1,10) in rd)
         del rd[1,10]
         self.assertFalse((1,10) in rd)
-        self.assertEqual(len(list(x.value for x in itervalues(rd))), 2*2-1)
+        self.assertEqual(len(list(x.value for x in rd.values())), 2*2-1)
 
     def test_attribute_deletion(self):
         m = self.m
 
         rd = _ReferenceDict(m.b[:,:].z)
         rd._slice.attribute_errors_generate_exceptions = False
-        self.assertEqual(len(list(x.value for x in itervalues(rd))), 2*2)
+        self.assertEqual(len(list(x.value for x in rd.values())), 2*2)
         self.assertTrue((1,5) in rd)
         self.assertTrue( hasattr(m.b[1,5], 'z') )
         self.assertTrue( hasattr(m.b[2,5], 'z') )
@@ -267,11 +267,11 @@ class TestReferenceDict(unittest.TestCase):
         self.assertFalse((1,5) in rd)
         self.assertFalse( hasattr(m.b[1,5], 'z') )
         self.assertTrue( hasattr(m.b[2,5], 'z') )
-        self.assertEqual(len(list(x.value for x in itervalues(rd))), 3)
+        self.assertEqual(len(list(x.value for x in rd.values())), 3)
 
         rd = _ReferenceDict(m.b[2,:].z)
         rd._slice.attribute_errors_generate_exceptions = False
-        self.assertEqual(len(list(x.value for x in itervalues(rd))), 2)
+        self.assertEqual(len(list(x.value for x in rd.values())), 2)
         self.assertTrue(5 in rd)
         self.assertTrue( hasattr(m.b[2,4], 'z') )
         self.assertTrue( hasattr(m.b[2,5], 'z') )
@@ -279,7 +279,7 @@ class TestReferenceDict(unittest.TestCase):
         self.assertFalse(5 in rd)
         self.assertTrue( hasattr(m.b[2,4], 'z') )
         self.assertFalse( hasattr(m.b[2,5], 'z') )
-        self.assertEqual(len(list(x.value for x in itervalues(rd))), 2-1)
+        self.assertEqual(len(list(x.value for x in rd.values())), 2-1)
 
 class TestReferenceSet(unittest.TestCase):
     def test_lookup_and_iter_dense_data(self):

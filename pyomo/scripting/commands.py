@@ -14,12 +14,12 @@ import os
 import string
 import signal
 import subprocess
-import pyutilib.subprocess
 
 import pyutilib.pyro
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 from pyomo.opt import SolverResults
 from pyomo.common._command import pyomo_command
+from pyomo.common.deprecation import deprecated
 import pyomo.scripting.pyomo_parser
 
 @pyomo_command('pyomo_ns', "Launch a Pyro name server for Pyomo")
@@ -81,40 +81,11 @@ def launch_pyro_mip_servers():
 
     print("PIDs for launched servers recorded in file="+pid_output_filename)
 
-@pyomo_command('OSSolverService', "Launch an OS solver service")
-def OSSolverService():
-    import pyomo.opt
-
-    if len(sys.argv) == 1:
-        print("OSSolverService -osil <filename> -solver <name>")
-        sys.exit(1)
-
-    osilFile = None
-    solver = None
-    i=1
-    while i<len(sys.argv):
-        if sys.argv[i] == "-osil":
-            i=i+1
-            osilFile=sys.argv[i]
-        elif sys.argv[i] == "-solver":
-            i=i+1
-            solver=sys.argv[i]
-        i=i+1
-
-    print("osilFile",osilFile,"solver",solver)
-
-    with pyomo.opt.SolverFactory(solver) as opt:
-        opt.solve(osilFile, rformat=pyomo.opt.ResultsFormat.osrl)
-
-@pyomo_command('readsol', "Read and print a *.sol file")
-def readsol():
-    import pyomo.opt
-
-    reader = pyomo.opt.ReaderFactory("sol")
-    soln = reader(sys.argv[1])
-    soln.write()
-
 @pyomo_command('pyomo_python', "Launch script using Pyomo's python installation")
+@deprecated(
+    msg="The 'pyomo_python' command has been deprecated and will be removed",
+    version="TBD",
+)
 def pyomo_python(args=None):
     if args is None:
         args = sys.argv[1:]
@@ -123,7 +94,7 @@ def pyomo_python(args=None):
         console.interact('Pyomo Python Console\n'+sys.version)
     else:
         cmd = sys.executable+' '+ ' '.join(args)
-        pyutilib.subprocess.run(cmd, stdout=sys.stdout, stderr=sys.stderr)
+        subprocess.run(cmd)
 
 @pyomo_command('pyomo', "The main command interface for Pyomo")
 def pyomo(args=None):
@@ -133,14 +104,3 @@ def pyomo(args=None):
     else:
         ret = parser.parse_args(args)
     ret.func(ret)
-
-
-@pyomo_command('results_schema', "Print the predefined schema for a results object")
-def results_schema():
-    if len(sys.argv) > 1:
-        print("results_schema  - Print the predefined schema in a SolverResults object")
-    options = Options(schema=True)
-    r=SolverResults()
-    repn = r._repn_(options)
-    r.pprint(sys.stdout, options, repn=repn)
-

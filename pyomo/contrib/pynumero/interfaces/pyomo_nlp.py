@@ -18,7 +18,7 @@ import six
 from six.moves import xrange
 
 from scipy.sparse import coo_matrix
-
+from pyomo.common.deprecation import deprecated
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt import WriterFactory
 import pyomo.core.base as pyo
@@ -170,7 +170,11 @@ class PyomoNLP(AslNLP):
                 six.iteritems(self._condata_to_ineq_idx)}
         return [idx_to_condata[i] for i in range(len(idx_to_condata))]
 
+    @deprecated(msg='This method has been replaced with primals_names', version='6.0.0.dev0', remove_in='6.0')
     def variable_names(self):
+        return self.primals_names()
+
+    def primals_names(self):
         """
         Return an ordered list of the Pyomo variable
         names in the order corresponding to the primals
@@ -1048,7 +1052,11 @@ class PyomoGreyBoxNLP(NLP):
     def report_solver_status(self, status_code, status_message):
         raise NotImplementedError('Todo: implement this')
 
+    @deprecated(msg='This method has been replaced with primals_names', version='6.0.0.dev0', remove_in='6.0')
     def variable_names(self):
+        return self.primals_names()
+
+    def primals_names(self):
         names = list(self._pyomo_nlp.variable_names())
         names.extend(self._greybox_primals_names)
         return names

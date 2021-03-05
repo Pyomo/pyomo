@@ -14,26 +14,19 @@ import copy
 import logging
 
 from pyomo.common.log import is_debug_set
-from pyomo.common.collections import Options, OrderedDict
+from pyomo.common.collections import Bunch, OrderedDict
 from pyomo.common.errors import ApplicationError
-from pyutilib.misc import flatten
 
 from pyomo.dataportal.parse_datacmds import (
     parse_data_commands, _re_number
 )
 from pyomo.dataportal.factory import DataManagerFactory, UnknownDataManager
 from pyomo.core.base.set import UnknownSetDimen
+from pyomo.core.base.util import flatten_tuple
 
 from six.moves import xrange
-try:
-    unicode
-except:
-    unicode = str
-try:
-    long
-    numlist = {bool, int, float, long}
-except:
-    numlist = {bool, int, float}
+
+numlist = {bool, int, float}
 
 logger = logging.getLogger('pyomo.core')
 
@@ -701,7 +694,7 @@ def _process_table(cmd, _model, _data, _default, options=None):
     #print("_param %s" % _param)
     #print("_labels %s" % _labels)
 #
-    options = Options(**_options)
+    options = Bunch(**_options)
     for key in options:
         if not key in ['columns']:
             raise ValueError("Unknown table option '%s'" % key)
@@ -749,7 +742,7 @@ def _process_table(cmd, _model, _data, _default, options=None):
             tmp.append(cmap[col])
         if not sname in cmap:
             cmap[sname] = tmp
-        cols = flatten(tmp)
+        cols = list(flatten_tuple(tmp))
         #
         _cmd = ['set', sname, ':=']
         i = 0
@@ -782,7 +775,7 @@ def _process_table(cmd, _model, _data, _default, options=None):
                 raise IOError("Unexpected table column '%s' for table value '%s'" % (col, vname))
             tmp.append(cmap[col])
         #print("X %s %s" % (len(cols), tmp))
-        cols = flatten(tmp)
+        cols = list(flatten_tuple(tmp))
         #print("X %s" % len(cols))
         #print("VNAME %s %s" % (vname, cmap[vname]))
         if vname in cmap:
@@ -834,7 +827,7 @@ def _process_load(cmd, _model, _data, _default, options=None):
     if len(cmd) < 2:
         raise IOError("The 'load' command must specify a filename")
 
-    options = Options(**_options)
+    options = Bunch(**_options)
     for key in options:
         if not key in ['range','filename','format','using','driver','query','table','user','password','database']:
             raise ValueError("Unknown load option '%s'" % key)

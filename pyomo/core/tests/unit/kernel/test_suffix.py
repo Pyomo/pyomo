@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import collections.abc
 import pickle
 
 import pyutilib.th as unittest
@@ -27,16 +28,6 @@ from pyomo.core.kernel.constraint import (constraint,
                                           constraint_list)
 from pyomo.core.kernel.block import (block,
                                      block_dict)
-
-import six
-
-if six.PY3:
-    from collections.abc import Mapping as collections_Mapping
-    from collections.abc import MutableMapping as collections_MutableMapping
-else:
-    from collections import Mapping as collections_Mapping
-    from collections import MutableMapping as collections_MutableMapping
-
 
 class Test_suffix(unittest.TestCase):
 
@@ -113,10 +104,10 @@ class Test_suffix(unittest.TestCase):
     def test_type(self):
         s = suffix()
         self.assertTrue(isinstance(s, ICategorizedObject))
-        self.assertTrue(isinstance(s, collections_Mapping))
-        self.assertTrue(isinstance(s, collections_MutableMapping))
-        self.assertTrue(issubclass(type(s), collections_Mapping))
-        self.assertTrue(issubclass(type(s), collections_MutableMapping))
+        self.assertTrue(isinstance(s, collections.abc.Mapping))
+        self.assertTrue(isinstance(s, collections.abc.MutableMapping))
+        self.assertTrue(issubclass(type(s), collections.abc.Mapping))
+        self.assertTrue(issubclass(type(s), collections.abc.MutableMapping))
 
     def test_import_export_enabled(self):
         s = suffix()

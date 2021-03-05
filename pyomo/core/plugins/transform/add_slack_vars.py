@@ -10,8 +10,6 @@
 
 from pyomo.core import TransformationFactory, Var, NonNegativeReals, Constraint, Objective, Block, value
 
-from six import iterkeys
-
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
 from pyomo.common.config import ConfigBlock, ConfigValue

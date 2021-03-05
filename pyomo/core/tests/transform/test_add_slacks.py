@@ -12,7 +12,7 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-from six import StringIO
+from io import StringIO
 from pyomo.common.log import LoggingIntercept
 
 import pyutilib.th as unittest
