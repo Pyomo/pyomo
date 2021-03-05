@@ -183,6 +183,17 @@ class Results(object):
 
 
 class UpdateConfig(ConfigBase):
+    """
+    Attributes
+    ----------
+    check_for_new_or_removed_constraints: bool
+    check_for_new_or_removed_vars: bool
+    check_for_new_or_removed_params: bool
+    update_constraints: bool
+    update_vars: bool
+    update_params: bool
+    update_named_expressions: bool
+    """
     def __init__(self):
         super(UpdateConfig, self).__init__()
         self._acceptable_attributes.update(['check_for_new_or_removed_constraints',
