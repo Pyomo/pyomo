@@ -8,10 +8,10 @@ from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.sos import _SOSConstraintData
 from pyomo.core.base.param import _ParamData
 from pyomo.common.errors import PyomoException
-from pyomo.contrib.appsi.base import Solver, Results, TerminationCondition, MIPSolverConfig, PersistentBase
+from pyomo.contrib.appsi.base import PersistentSolver, Results, TerminationCondition, MIPSolverConfig, PersistentBase
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 import collections
-from pyomo.contrib.appsi.utils import OrderedSet
+from pyomo.common.collections.orderedset import OrderedSet
 import math
 from typing import List, Dict
 from pyomo.common.timing import HierarchicalTimer
@@ -132,7 +132,7 @@ class _MutableQuadraticCoefficient(object):
         self.var2 = None
 
 
-class Gurobi(PersistentBase, Solver):
+class Gurobi(PersistentBase, PersistentSolver):
     """
     Interface to Gurobi
     """

@@ -1,6 +1,6 @@
 from pyutilib.services import TempfileManager
 from pyomo.common.fileutils import Executable
-from pyomo.contrib.appsi.base import Solver, Results, TerminationCondition, SolverConfig
+from pyomo.contrib.appsi.base import PersistentSolver, Results, TerminationCondition, SolverConfig
 from pyomo.contrib.appsi.writers import NLWriter
 from pyomo.contrib.appsi.utils import LogStream
 import logging
@@ -39,7 +39,7 @@ class IpoptConfig(SolverConfig):
         self.log_level = logging.INFO
 
 
-class Ipopt(Solver):
+class Ipopt(PersistentSolver):
     def __init__(self):
         self._config = IpoptConfig()
         self._solver_options = dict()

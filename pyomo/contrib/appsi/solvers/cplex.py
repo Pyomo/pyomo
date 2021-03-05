@@ -1,5 +1,5 @@
 from pyutilib.services import TempfileManager
-from pyomo.contrib.appsi.base import Solver, Results, TerminationCondition, MIPSolverConfig
+from pyomo.contrib.appsi.base import PersistentSolver, Results, TerminationCondition, MIPSolverConfig
 from pyomo.contrib.appsi.writers import LPWriter
 import logging
 import math
@@ -38,7 +38,7 @@ class CplexResults(Results):
         self.wallclock_time = None
 
 
-class Cplex(Solver):
+class Cplex(PersistentSolver):
     def __init__(self):
         self._config = CplexConfig()
         self._solver_options = dict()

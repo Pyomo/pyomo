@@ -1,6 +1,6 @@
 from pyutilib.services import TempfileManager
 from pyomo.common.fileutils import Executable
-from pyomo.contrib.appsi.base import Solver, Results, TerminationCondition, SolverConfig
+from pyomo.contrib.appsi.base import PersistentSolver, Results, TerminationCondition, SolverConfig
 from pyomo.contrib.appsi.writers import LPWriter
 from pyomo.contrib.appsi.utils import LogStream
 import logging
@@ -37,7 +37,7 @@ class CbcConfig(SolverConfig):
         self.log_level = logging.INFO
 
 
-class Cbc(Solver):
+class Cbc(PersistentSolver):
     def __init__(self):
         self._config = CbcConfig()
         self._solver_options = dict()

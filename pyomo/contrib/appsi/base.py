@@ -201,15 +201,6 @@ class UpdateConfig(ConfigBase):
 
 
 class Solver(abc.ABC):
-    """
-    Base class for solver interfaces
-
-    Attributes
-    ----------
-    config: SolverConfig
-    options: dict
-    """
-
     @abc.abstractmethod
     def solve(self, model: _BlockData, timer: HierarchicalTimer = None) -> Results:
         pass
@@ -223,6 +214,7 @@ class Solver(abc.ABC):
         pass
 
     # compatability with old solver interfaces and Solver Factory
+    # this should really be taken care of in available
     def license_is_valid(self):
         return True
 
@@ -294,6 +286,20 @@ class Solver(abc.ABC):
     def solver_options(self):
         pass
 
+    def is_persistent(self):
+        return False
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
+
+
+class PersistentSolver(Solver):
+    def is_persistent(self):
+        return True
+
     @property
     @abc.abstractmethod
     def update_config(self) -> UpdateConfig:
@@ -345,12 +351,6 @@ class Solver(abc.ABC):
 
     @abc.abstractmethod
     def update_params(self):
-        pass
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, t, v, traceback):
         pass
 
 
