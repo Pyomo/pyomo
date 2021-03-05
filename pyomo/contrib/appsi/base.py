@@ -150,21 +150,21 @@ class Results(object):
         >>> m = pe.ConcreteModel()
         >>> m.x = pe.Var()
         >>> m.obj = pe.Objective(expr=m.x**2)
-        >>> opt = appsi.solvers.Cplex()
+        >>> opt = appsi.solvers.Ipopt()
         >>> opt.config.load_solution = False
-        >>> results = opt.solve(m) # doctest:+ELLIPSIS
-        >>> if results.termination_condition == appsi.base.TerminationCondition.optimal:
+        >>> results = opt.solve(m) #doctest:+SKIP
+        >>> if results.termination_condition == appsi.base.TerminationCondition.optimal: #doctest:+SKIP
         ...     print('optimal solution found: ', results.best_feasible_objective) #doctest:+SKIP
-        ...     opt.load_vars()
+        ...     opt.load_vars() #doctest:+SKIP
         ...     print('the optimal value of x is ', m.x.value) #doctest:+SKIP
-        ... elif results.best_feasible_objective is not None:
-        ...     print('sub-optimal but feasible solution found: ', results.best_feasible_objective)
-        ...     opt.load_vars(vars_to_load=[m.x])
-        ...     print('The value of x in the feasible solution is ', m.x.value)
-        ... elif results.termination_condition in {appsi.base.TerminationCondition.maxIterations, appsi.base.TerminationCondition.maxTimeLimit}:
-        ...     print('No feasible solution was found. The best lower bound found was ', results.best_objective_bound)
-        ... else:
-        ...     print('The following termination condition was encountered: ', results.termination_condition)
+        ... elif results.best_feasible_objective is not None: #doctest:+SKIP
+        ...     print('sub-optimal but feasible solution found: ', results.best_feasible_objective) #doctest:+SKIP
+        ...     opt.load_vars(vars_to_load=[m.x]) #doctest:+SKIP
+        ...     print('The value of x in the feasible solution is ', m.x.value) #doctest:+SKIP
+        ... elif results.termination_condition in {appsi.base.TerminationCondition.maxIterations, appsi.base.TerminationCondition.maxTimeLimit}: #doctest:+SKIP
+        ...     print('No feasible solution was found. The best lower bound found was ', results.best_objective_bound) #doctest:+SKIP
+        ... else: #doctest:+SKIP
+        ...     print('The following termination condition was encountered: ', results.termination_condition) #doctest:+SKIP
     """
     def __init__(self):
         self.termination_condition: TerminationCondition = TerminationCondition.unknown
