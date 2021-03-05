@@ -144,29 +144,30 @@ class Results(object):
         (minimization) or inf (maximization)
 
     Here is an example workflow:
-    >>> import pyomo.environ as pe
-    >>> from pyomo.contrib import appsi
-    >>> m = pe.ConcreteModel()
-    >>> m.x = pe.Var()
-    >>> m.obj = pe.Objective(expr=m.x**2)
-    >>> opt = appsi.solvers.Gurobi()
-    >>> opt.config.load_solution = False
-    >>> results = opt.solve(m)
-    >>> if results.termination_condition == TerminationCondition.optimal:
-    >>>     print('optimal solution found: ', results.best_feasible_objective)
-    >>>     opt.load_vars()
-    >>>     print('the optimal value of x is ', m.x.value)
-    >>> elif results.best_feasible_objective is not None:
-    >>>     print('sub-optimal but feasible solution found: ', results.best_feasible_objective)
-    >>>     opt.load_vars(vars_to_load=[m.x])
-    >>>     print('The value of x in the feasible solution is ', m.x.value)
-    >>> elif results.termination_condition in {TerminationCondition.maxIterations,
-    ...                                        TerminationCondition.maxTimeLimit}:
-    >>>     print('No feasible solution was found. The best lower bound found was ',
-    ...           results.best_objective_bound)
-    >>> else:
-    >>>     print('The following termination condition was encountered: ',
-    ...           results.termination_condition)
+
+        >>> import pyomo.environ as pe
+        >>> from pyomo.contrib import appsi
+        >>> m = pe.ConcreteModel()
+        >>> m.x = pe.Var()
+        >>> m.obj = pe.Objective(expr=m.x**2)
+        >>> opt = appsi.solvers.Gurobi()
+        >>> opt.config.load_solution = False
+        >>> results = opt.solve(m)
+        >>> if results.termination_condition == TerminationCondition.optimal:
+        >>>     print('optimal solution found: ', results.best_feasible_objective)
+        >>>     opt.load_vars()
+        >>>     print('the optimal value of x is ', m.x.value)
+        >>> elif results.best_feasible_objective is not None:
+        >>>     print('sub-optimal but feasible solution found: ', results.best_feasible_objective)
+        >>>     opt.load_vars(vars_to_load=[m.x])
+        >>>     print('The value of x in the feasible solution is ', m.x.value)
+        >>> elif results.termination_condition in {TerminationCondition.maxIterations,
+        ...                                        TerminationCondition.maxTimeLimit}:
+        >>>     print('No feasible solution was found. The best lower bound found was ',
+        ...           results.best_objective_bound)
+        >>> else:
+        >>>     print('The following termination condition was encountered: ',
+        ...           results.termination_condition)
     """
     def __init__(self):
         self.termination_condition: TerminationCondition = TerminationCondition.unknown
@@ -203,15 +204,45 @@ class UpdateConfig(ConfigBase):
 class Solver(abc.ABC):
     @abc.abstractmethod
     def solve(self, model: _BlockData, timer: HierarchicalTimer = None) -> Results:
-        pass
+        """
+        Solve a Pyomo model.
+
+        Parameters
+        ----------
+        model: _BlockData
+            The Pyomo model to be solved
+        timer: HierarchicalTimer
+            An option timer for reporting timing
+
+        Returns
+        -------
+        results: Results
+            A results object
+        """
 
     @abc.abstractmethod
     def available(self, exception_flag=False):
-        pass
+        """
+
+        Parameters
+        ----------
+        exception_flag: bool
+            If True, then an exception will be raised if the solver is not available.
+
+        Returns
+        -------
+        available: bool
+            True if the solver is available. Otherwise, False.
+        """
 
     @abc.abstractmethod
     def version(self) -> Tuple:
-        pass
+        """
+        Returns
+        -------
+        version: tuple
+            A tuple representing the version
+        """
 
     # compatability with old solver interfaces and Solver Factory
     # this should really be taken care of in available
@@ -279,14 +310,36 @@ class Solver(abc.ABC):
     @property
     @abc.abstractmethod
     def config(self):
+        """
+        An object for configuring solve options.
+
+        Returns
+        -------
+        SolverConfig
+            An object for configuring pyomo solve options such as the time limit.
+            These options are mostly independent of the solver.
+        """
         pass
 
     @property
     @abc.abstractmethod
     def solver_options(self):
+        """
+        Returns
+        -------
+        solver_options: dict
+            A dictionary mapping solver options to values for those options. These
+            are solver specific.
+        """
         pass
 
     def is_persistent(self):
+        """
+        Returns
+        -------
+        is_persistent: bool
+            True if the solver is a persistent solver.
+        """
         return False
 
     def __enter__(self):

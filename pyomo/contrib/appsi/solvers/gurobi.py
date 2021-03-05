@@ -1011,40 +1011,39 @@ class Gurobi(PersistentBase, PersistentSolver):
 
             as an MILP using exteneded cutting planes in callbacks.
 
-            >>>
-            >> from gurobipy import GRB
-            >> import pyomo.environ as pe
-            >> from pyomo.core.expr.taylor_series import taylor_series_expansion
-            >>
-            >> m = pe.ConcreteModel()
-            >> m.x = pe.Var(bounds=(0, 4))
-            >> m.y = pe.Var(within=pe.Integers, bounds=(0, None))
-            >> m.obj = pe.Objective(expr=2*m.x + m.y)
-            >> m.cons = pe.ConstraintList()  # for the cutting planes
-            >>
-            >> def _add_cut(xval):
-            >>     # a function to generate the cut
-            >>     m.x.value = xval
-            >>     return m.cons.add(m.y >= taylor_series_expansion((m.x - 2)**2))
-            >>
-            >> _add_cut(0)  # start with 2 cuts at the bounds of x
-            >> _add_cut(4)  # this is an arbitrary choice
-            >>
-            >> opt = pe.SolverFactory('gurobi_persistent')
-            >> opt.set_instance(m)
-            >> opt.set_gurobi_param('PreCrush', 1)
-            >> opt.set_gurobi_param('LazyConstraints', 1)
-            >>
-            >> def my_callback(cb_m, cb_opt, cb_where):
-            >>     if cb_where == GRB.Callback.MIPSOL:
-            >>         cb_opt.cbGetSolution(vars=[m.x, m.y])
-            >>         if m.y.value < (m.x.value - 2)**2 - 1e-6:
-            >>             cb_opt.cbLazy(_add_cut(m.x.value))
-            >>
-            >> opt.set_callback(my_callback)
-            >> opt.solve()
-            >> assert abs(m.x.value - 1) <= 1e-6
-            >> assert abs(m.y.value - 1) <= 1e-6
+                >>> from gurobipy import GRB
+                >>> import pyomo.environ as pe
+                >>> from pyomo.core.expr.taylor_series import taylor_series_expansion
+                >>>
+                >>> m = pe.ConcreteModel()
+                >>> m.x = pe.Var(bounds=(0, 4))
+                >>> m.y = pe.Var(within=pe.Integers, bounds=(0, None))
+                >>> m.obj = pe.Objective(expr=2*m.x + m.y)
+                >>> m.cons = pe.ConstraintList()  # for the cutting planes
+                >>>
+                >>> def _add_cut(xval):
+                >>>     # a function to generate the cut
+                >>>     m.x.value = xval
+                >>>     return m.cons.add(m.y >= taylor_series_expansion((m.x - 2)**2))
+                >>>
+                >>> _add_cut(0)  # start with 2 cuts at the bounds of x
+                >>> _add_cut(4)  # this is an arbitrary choice
+                >>>
+                >>> opt = pe.SolverFactory('gurobi_persistent')
+                >>> opt.set_instance(m)
+                >>> opt.set_gurobi_param('PreCrush', 1)
+                >>> opt.set_gurobi_param('LazyConstraints', 1)
+                >>>
+                >>> def my_callback(cb_m, cb_opt, cb_where):
+                >>>     if cb_where == GRB.Callback.MIPSOL:
+                >>>         cb_opt.cbGetSolution(vars=[m.x, m.y])
+                >>>         if m.y.value < (m.x.value - 2)**2 - 1e-6:
+                >>>             cb_opt.cbLazy(_add_cut(m.x.value))
+                >>>
+                >>> opt.set_callback(my_callback)
+                >>> opt.solve()
+                >>> assert abs(m.x.value - 1) <= 1e-6
+                >>> assert abs(m.y.value - 1) <= 1e-6
 
         """
         if func is not None:
