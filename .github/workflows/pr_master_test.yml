@@ -283,7 +283,7 @@ jobs:
         conda install -q -y -c conda-forge pybind11
         if test -z "${{matrix.slim}}"; then
             conda install -q -y -c gurobi gurobi \
-	        || echo "WARNING: Gurobi is not available"
+                || echo "WARNING: Gurobi is not available"
             conda install -q -y -c ibmdecisionoptimization 'cplex>=12.10' \
                 || echo "WARNING: CPLEX Community Edition is not available"
             conda install -q -y -c fico-xpress xpress \
