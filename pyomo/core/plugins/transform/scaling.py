@@ -200,8 +200,11 @@ class ScaleModel(Transformation):
                         dual_value = model.dual[c]
                         if dual_value is not None:
                             model.dual[c] = dual_value / scaling_factor
-
-                    c.set_value((c._lower, body, c._upper))
+                    
+                    if c._lower == c._upper:
+                        c.set_value((c._lower, body))
+                    else:
+                        c.set_value((c._lower, body, c._upper))
 
                 elif isinstance(c, _ObjectiveData):
                     c.expr = scaling_factor * \
