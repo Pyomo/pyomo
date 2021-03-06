@@ -1011,7 +1011,7 @@ class Gurobi(PersistentBase, PersistentSolver):
 
             as an MILP using exteneded cutting planes in callbacks.
 
-                >>> from gurobipy import GRB
+                >>> from gurobipy import GRB # doctest:+SKIP
                 >>> import pyomo.environ as pe
                 >>> from pyomo.core.expr.taylor_series import taylor_series_expansion
                 >>> from pyomo.contrib import appsi
