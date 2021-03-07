@@ -21,18 +21,18 @@ def create_model():
     ''' Create a concrete Pyomo model for this example
     '''
     m = ConcreteModel()
-    
+
     m.x1 = Var(initialize = 0.15, within=NonNegativeReals)
     m.x2 = Var(initialize = 0.15, within=NonNegativeReals)
     m.x3 = Var(initialize = 0.0, within=NonNegativeReals)
-    
+
     m.eta1 = Param(initialize=4.5, mutable=True)
     m.eta2 = Param(initialize=1.0, mutable=True)
-    
+
     m.const1 = Constraint(expr=6*m.x1+3*m.x2+2*m.x3-m.eta1 ==0)
     m.const2 = Constraint(expr=m.eta2*m.x1+m.x2-m.x3-1 ==0)
     m.cost = Objective(expr=m.x1**2+m.x2**2+m.x3**2)
-    
+
     return m 
 
 def run_example(print_flag=True):
@@ -55,18 +55,18 @@ def run_example(print_flag=True):
     m_kaug_dsdp = sensitivity_calculation('kaug',m,[m.eta1,m.eta2],
                                           [m.perturbed_eta1,m.perturbed_eta2],
                                           tee=True)    
-    
+
     if print_flag:
         print("\nOriginal parameter values:")
         print("\teta1 =",m.eta1())
         print("\teta2 =",m.eta2())
-    
+
         print("Initial point:")
         print("\tObjective =",value(m.cost))
         print("\tx1 =",m.x1())
         print("\tx2 =",m.x2())
         print("\tx3 =",m.x3())
-        
+
         # Kaug saves only approximated solutions not original solutions
         print("\nNew parameter values:")
         print("\teta1 =",m_kaug_dsdp.perturbed_eta1())
@@ -77,7 +77,7 @@ def run_example(print_flag=True):
         print("\tx1 =",m_kaug_dsdp.x1())
         print("\tx2 =",m_kaug_dsdp.x2())
         print("\tx3 =",m_kaug_dsdp.x3())
-    
+
     # Save the results in a dictionary.
     # This is optional and makes automated testing convenient.
     # This code is not required for a Minimum Working Example (MWE)
