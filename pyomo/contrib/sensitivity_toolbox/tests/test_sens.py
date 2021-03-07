@@ -558,8 +558,8 @@ class TestSensitivityToolbox(unittest.TestCase):
         # verify solution
         # This is the only test that verifies the solution.
 
-        #self.assertAlmostEqual(value(m_kaug.J),0.002633263921107476,8)
-        self.assertAlmostEqual(value(m_kaug.J), 0.001212, 6)
+        self.assertAlmostEqual(value(m_kaug.J),0.002633263921107476,8)
+        #self.assertAlmostEqual(value(m_kaug.J), 0.001212, 6)
         # I do not know where this number (0.002633...) came from.
         # The original objective function value is 0.0048
         # The correct answer, from PyNumero, seems to be 0.00121
@@ -617,8 +617,6 @@ class TestSensitivityToolbox(unittest.TestCase):
                 m_kaug.DeltaP[m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[2]],
                 ptb_map[m_kaug.H]
                 )
-                        #m_kaug.DeltaP[m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[1]]==0.04999999999999999 and
-                        #m_kaug.DeltaP[m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[2]]==-0.050000000000000044)
         self.assertTrue(hasattr(m_kaug,'dcdp') and
                         m_kaug.dcdp.ctype is Suffix and
                         m_kaug.dcdp[m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[1]]==1 and
@@ -730,13 +728,6 @@ class TestSensitivityToolbox(unittest.TestCase):
         d_correct = {'eta1':4.5, 'eta2':1.0, 'x1_init':0.15, 'x2_init':0.15, 'x3_init':0.0,
                      'eta1_pert':4.0, 'eta2_pert':1.0, 'x1_pert':0.3333333,'x2_pert':0.6666667,
                      'x3_pert':0.0, 'cost_pert':0.55555556}
-        # FIXME: I have the values of x1_pert and x2_pert swapped here...
-        # Why is this the case?
-        # examples look like they have identical setup... Why are the 
-        # values getting swapped?
-        # Relying on undefined behavior?
-
-        #import pdb; pdb.set_trace()
 
         for k in d_correct.keys():
             # Check each element of the 'correct' dictionary against the returned 
