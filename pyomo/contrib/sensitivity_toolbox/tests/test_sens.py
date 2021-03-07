@@ -247,6 +247,8 @@ class TestSensitivityToolbox(unittest.TestCase):
                         m_orig.x_dot[15].active )
 
         # verify solution
+        # NOTE: This is the solution to the original problem,
+        # not the result of any sensitivity update.
         self.assertAlmostEqual(value(m_sipopt.J),0.0048956783,8)
          
 
@@ -556,14 +558,15 @@ class TestSensitivityToolbox(unittest.TestCase):
                         m_orig.x_dot[15].active )
 
         # verify solution
-        # This is the only test that verifies the solution.
-
-        self.assertAlmostEqual(value(m_kaug.J),0.002633263921107476,8)
-        #self.assertAlmostEqual(value(m_kaug.J), 0.001212, 6)
-        # I do not know where this number (0.002633...) came from.
-        # The original objective function value is 0.0048
-        # The correct answer, from PyNumero, seems to be 0.00121
-        # "Real solution" is 0.00138
+        # This is the only test that verifies the solution. Here we
+        # verify the objective function value, which is a weak test.
+        self.assertAlmostEqual(value(m_kaug.J), 0.002633263921107476, 8)
+        # The original objective function value is 0.0048.
+        # The answer from an attempt to reproduce this calculation with
+        # PyNumero, with no inertia correction, seems to be 0.00047.
+        # "Real solution" with the full nonlinear problem is 0.00138.
+        # 0.00263 is the value we get after sensitivity update with k_aug
+        # using MA57 and k_aug's default regularization strategy.
 
     @unittest.skipIf(not scipy_available, "scipy is required for this test")
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
@@ -646,7 +649,15 @@ class TestSensitivityToolbox(unittest.TestCase):
 
 
         # verify solution
-        self.assertAlmostEqual(value(m_kaug.J),0.002633263921107476,8)
+        # This is the only test that verifies the solution. Here we
+        # verify the objective function value, which is a weak test.
+        self.assertAlmostEqual(value(m_kaug.J), 0.002633263921107476, 8)
+        # The original objective function value is 0.0048.
+        # The answer from an attempt to reproduce this calculation with
+        # PyNumero, with no inertia correction, seems to be 0.00047.
+        # "Real solution" with the full nonlinear problem is 0.00138.
+        # 0.00263 is the value we get after sensitivity update with k_aug
+        # using MA57 and k_aug's default regularization strategy.
 
 
     # test indexed param mapping to var and perturbed values
