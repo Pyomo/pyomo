@@ -41,37 +41,36 @@ def create_model():
 
     m.x[0].fix(5)
     m.F[0].fix(0)
-    
+
     def _x(m,t):
         return m.dx[t]==m.a*m.x[t]+m.u[t]
     m.x_dot = Constraint(m.t, rule=_x)
-    
+
     def _f0(m,t):
         return m.df0[t]==0.25*m.u[t]**2
     m.FDiffCon = Constraint(m.t, rule=_f0)
-  
-     
+
     def _Cost(m):
         return 0.5*m.H*m.x[m.T]**2+m.F[m.T]
     m.J = Objective(rule=_Cost)
-    
+
     return m
 
 
 def initialize_model(m,nfe):
     u_profile = {0:-0.06}
-    
+
     m.u_input = Suffix(direction=Suffix.LOCAL)
     m.u_input[m.u]=u_profile
-    
+
     sim = Simulator(m,package='scipy')
     tsim, profiles = sim.simulate(numpoints=100, varying_inputs=m.u_input)
-    
+
     discretizer = TransformationFactory('dae.collocation')
     discretizer.apply_to(m, nfe=nfe, ncp=1, scheme='LAGRANGE-RADAU')
-    
+
     sim.initialize_model()
-    
+
 
 def plot_optimal_solution(m):
     import matplotlib.pyplot as plt
@@ -81,28 +80,27 @@ def plot_optimal_solution(m):
     x=[]
     u=[]
     F=[]
-    
+
     for ii in m.t:
         x.append(value(m.x[ii]))
         u.append(value(m.u[ii]))
         F.append(value(m.F[ii]))
-    
-    
+
     plt.subplot(131)
     plt.plot(m.t.value,x,'ro',label='x')
     plt.title('State Soln')
     plt.xlabel('time')
-    
+
     plt.subplot(132)
     plt.plot(m.t.value,u,'ro',label='u')
     plt.title('Control Soln')
     plt.xlabel('time')
-    
+
     plt.subplot(133)
     plt.plot(m.t.value,F,'ro',label='Cost Integrand')
     plt.title('Anti-derivative of \n Cost Integrand')
     plt.xlabel('time')
-    
+
     #plt.show()
     return plt
 
@@ -124,19 +122,15 @@ if __name__ == '__main__':
                       tee=True)
 
     for var, val in m_sipopt.sens_sol_state_1.items():
+        # To load updated variable values back into the model:
         if var.ctype is not Var:
             continue
-        print(var.name, var.value, val)
         var.set_value(val)
-    #for var in m_sipopt.component_data_objects(Var):
-    #    print(var.name, var.value)
-
-    print(value(m_sipopt.J))
 
     m_sipopt.a.set_value(value(m_sipopt.perturbed_a))
     m_sipopt.H.set_value(value(m_sipopt.perturbed_H))
+
+    # To solve for the "true solution" (with the full nonlinear
+    # model) after perturbing parameters:
     solver = SolverFactory('ipopt')
     solver.solve(m_sipopt)
-
-    import pdb; pdb.set_trace()
-
