@@ -69,6 +69,7 @@ _K_AUG_SUFFIXES = {
         'ipopt_zU_out': Suffix.IMPORT,
         'ipopt_zL_in': Suffix.EXPORT,
         'ipopt_zU_in': Suffix.EXPORT,
+        'dual': Suffix.IMPORT_EXPORT,
         'dcdp': Suffix.EXPORT,
         'DeltaP': Suffix.EXPORT,
         }
@@ -323,6 +324,7 @@ class SensitivityInterface(object):
 
         block.paramConst = ConstraintList()
         for var, param, _, _ in sens_data_list:
+            #block.paramConst.add(param - var == 0)
             block.paramConst.add(var - param == 0)
 
         # Declare Suffixes
