@@ -29,12 +29,11 @@ def _get_MindtPy_config():
     ))
     CONFIG.declare('strategy', ConfigValue(
         default='OA',
-        domain=In(['OA', 'GBD', 'ECP', 'PSC', 'GOA', 'FP']),
+        domain=In(['OA', 'ECP' ,'GOA', 'FP']),
         description='Decomposition strategy',
         doc='MINLP Decomposition strategy to be applied to the method. '
             'Currently available Outer Approximation (OA), Extended Cutting '
-            'Plane (ECP), Partial Surrogate Cuts (PSC), and Generalized '
-            'Benders Decomposition (GBD).'
+            'Plane (ECP), Global Outer Approximation (GOA) and Feasibility Pump (FP).'
     ))
     CONFIG.declare('add_regularization', ConfigValue(
         default=None,
