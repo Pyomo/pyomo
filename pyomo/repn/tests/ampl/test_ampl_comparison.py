@@ -19,14 +19,14 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-try:
-    from parameterized import parameterized
-    param_available = True
-except ImportError:
-    param_available = False
 import pyomo.common.unittest as unittest
+import pyomo.common
 
 import pyomo.scripting.pyomo_main as main
+
+parameterized, param_available = pyomo.common.dependencied.attempt_import('parameterized')
+if not param_available:
+    raise unittest.SkipTest('Parameterized is not available.')
 
 # https://github.com/ghackebeil/gjh_asl_json
 has_gjh_asl_json = False
@@ -39,7 +39,6 @@ for f in glob.glob(currdir+'*_testCase.py'):
     names.append(re.split('[._]',os.path.basename(f))[0])
 
 
-@unittest.skipIf(not param_available, "Parameterized is not available")
 class Tests(unittest.TestCase):
 
     def pyomo(self, cmd):

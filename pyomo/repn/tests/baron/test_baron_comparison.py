@@ -18,16 +18,14 @@ from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))+os.sep
 datadir = abspath(join(currdir, "..", "ampl"))+os.sep
 
-param_available = False
-try:
-    from parameterized import parameterized
-    param_available = True
-except ImportError:
-    pass
-
 import pyomo.common.unittest as unittest
+import pyomo.common
 
 import pyomo.scripting.pyomo_main as main
+
+parameterized, param_available = pyomo.common.dependencied.attempt_import('parameterized')
+if not param_available:
+    raise unittest.SkipTest('Parameterized is not available.')
 
 names = []
 # add test methods to classes
@@ -36,7 +34,6 @@ for f in itertools.chain(glob.glob(datadir+'*_testCase.py'),
     names.append(re.split('[._]',os.path.basename(f))[0])
 
 
-@unittest.skipIf(not param_available, "Parameterized is not available")
 class Tests(unittest.TestCase):
 
     def pyomo(self, cmd):

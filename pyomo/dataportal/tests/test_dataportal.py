@@ -686,8 +686,13 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
                                                  yaml.full_load(out),
                                                  allow_second_superset=True)
         else:
-            self.assertTrue(cmp(currdir+name+file_suffix,
-                                currdir+name+'.baseline'+file_suffix))
+            with open(currdir+name+file_suffix, 'r') as f1, \
+                open(currdir+name+'.baseline'+file_suffix, 'r') as f2:
+                    f1_contents = list(filter(None, f1.read().split()))
+                    f2_contents = list(filter(None, f2.read().split()))
+                    for item1, item2 in zip(f1_contents, f2_contents):
+                        self.assertEqual(item1, item2)
+        os.remove(currdir+name+file_suffix)
 
     def test_store_set1(self):
         # Write 1-D set
@@ -789,13 +794,18 @@ class TestTextPortal(unittest.TestCase):
                                                  allow_second_superset=True)
         else:
             try:
-                self.assertTrue(cmp(currdir+name+file_suffix,
-                                currdir+name+'.baseline'+file_suffix))
+                with open(currdir+name+file_suffix, 'r') as f1, \
+                open(currdir+name+'.baseline'+file_suffix, 'r') as f2:
+                    f1_contents = list(filter(None, f1.read().split()))
+                    f2_contents = list(filter(None, f2.read().split()))
+                    for item1, item2 in zip(f1_contents, f2_contents):
+                        self.assertEqual(item1, item2)
             except:
                 with open(currdir+name+file_suffix, 'r') as out, \
                 open(currdir+name+'.baseline'+file_suffix, 'r') as txt:
                     self.assertEqual(out.read().strip().replace(' ',''),
                                      txt.read().strip().replace(' ',''))
+        os.remove(currdir+name+file_suffix)
 
     def test_tableA(self):
         # Importing an unordered set of arbitrary data
