@@ -42,7 +42,7 @@ def _name_index_generator(idx):
             ans = "%s" % (val,)
             if isinstance(val, str):
                 ans = ans.replace("\\", "\\\\").replace("'", "\\'")
-                if ',' in ans or "'" in ans:
+                if ',' in ans or "'" in ans or "." in ans:
                     ans = "'"+ans+"'"
         return ans
     if idx.__class__ is tuple:
