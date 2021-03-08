@@ -329,7 +329,7 @@ class SensitivityInterface(object):
 
         # Declare Suffixes
         _add_sensitivity_suffixes(instance)
-        
+
         for i, (var, _, _, _) in enumerate(sens_data_list):
             idx = i + 1
             con = block.paramConst[idx]
