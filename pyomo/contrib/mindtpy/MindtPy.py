@@ -58,8 +58,6 @@ class MindtPySolver(object):
 
     def available(self, exception_flag=True):
         """Check if solver is available.
-        TODO: For now, it is always available. However, sub-solvers may not
-        always be available, and so this should reflect that possibility.
         """
         return True
 
@@ -72,13 +70,10 @@ class MindtPySolver(object):
 
     def solve(self, model, **kwds):
         """Solve the model.
+
         Warning: this solver is still in beta. Keyword arguments subject to
         change. Undocumented keyword arguments definitely subject to change.
-        Warning: at this point in time, if you try to use PSC or GBD with
-        anything other than IPOPT as the NLP solver, bad things will happen.
-        This is because the suffixes are not in place to extract dual values
-        from the variable bounds for any other solver.
-        TODO: fix needed with the GBD implementation.
+        
         Args:
             model (Block): a Pyomo model or block to be solved
         """
