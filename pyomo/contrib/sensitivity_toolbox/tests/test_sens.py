@@ -747,6 +747,3 @@ class TestSensitivityToolbox(unittest.TestCase):
 
 if __name__=="__main__":
     unittest.main()
-    #test = TestSensitivityToolbox()
-    #test.test_parameter_example()
-    #test.test_parameter_example_kaug()
