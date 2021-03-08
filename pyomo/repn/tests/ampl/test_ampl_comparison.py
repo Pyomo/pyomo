@@ -55,7 +55,7 @@ class BaselineTests(Tests):
     #The following test generates an nl file for the test case
     #and checks that it matches the current pyomo baseline nl file
     #
-    @parameterized.expand(input=names)
+    @parameterized.parameterized.expand(input=names)
     def nlwriter_baseline_test(self, name):
         if os.path.exists(currdir+name+'.dat'):
             self.pyomo(['--output='+currdir+name+'.test.nl',
@@ -92,7 +92,7 @@ class ASLTests(Tests):
     # file. The JSON files are then diffed using the pyomo.common.unittest
     # test class method assertStructuredAlmostEqual
     #
-    @parameterized.expand(input=names)
+    @parameterized.parameterized.expand(input=names)
     def nlwriter_asl_test(self, name):
         if not has_gjh_asl_json:
             self.skipTest("'gjh_asl_json' executable not available")

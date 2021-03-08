@@ -50,7 +50,7 @@ class BaselineTests(Tests):
     #The following test generates an BAR file for the test case
     #and checks that it matches the current pyomo baseline BAR file
     #
-    @parameterized.expand(input=names)
+    @parameterized.parameterized.expand(input=names)
     def barwriter_baseline_test(self, name):
         baseline = currdir+name+'.pyomo.bar'
         output = currdir+name+'.test.bar'

@@ -63,7 +63,7 @@ class BaselineTests(Tests):
     # and checks that it matches the current pyomo baseline GMS file
     #
 
-    @parameterized.expand(input=validlist)
+    @parameterized.parameterized.expand(input=validlist)
     def gams_writer_baseline_test(self, name, targetdir):
         if os.path.exists(targetdir+name+'.dat'):
             self.pyomo(['--output='+currdir+name+'.test.gms',
@@ -85,7 +85,7 @@ class BaselineTests(Tests):
                     self.assertEqual(f1_contents, f2_contents)
 
 
-    @parameterized.expand(input=invalidlist)
+    @parameterized.parameterized.expand(input=invalidlist)
     def gams_writer_test_invalid(self, name, targetdir):
         with self.assertRaisesRegexp(
                 RuntimeError, "GAMS files cannot represent the unary function"):
