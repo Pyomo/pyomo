@@ -24,7 +24,7 @@ import pyomo.common
 
 import pyomo.scripting.pyomo_main as main
 
-parameterized, param_available = pyomo.common.dependencied.attempt_import('parameterized')
+parameterized, param_available = pyomo.common.dependencies.attempt_import('parameterized')
 if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 
