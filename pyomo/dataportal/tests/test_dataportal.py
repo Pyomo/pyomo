@@ -16,7 +16,6 @@ import os
 from os.path import abspath, dirname
 pyomo_dir=dirname(dirname(abspath(__file__)))+os.sep+".."
 
-from filecmp import cmp
 import pyomo.common.unittest as unittest
 
 from pyomo.common.errors import ApplicationError

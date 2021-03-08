@@ -835,7 +835,7 @@ class ComponentData(_ComponentBase):
         self_component = self.parent_component()
         if self_component is None:
             return None
-        for idx, component_data in self_component.iteritems():
+        for idx, component_data in self_component.items():
             if component_data is self:
                 return idx
         return None

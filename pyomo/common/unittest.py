@@ -270,8 +270,10 @@ class TestCase(_unittest.TestCase):
     nightly = 1
     expensive = 0
     fragile = 0
+    _default_categories = True
     unspecified_categories = {
         'smoke':0, 'nightly':0, 'expensive':0, 'fragile':0 }
+
 
     @staticmethod
     def parse_categories(category_string):
