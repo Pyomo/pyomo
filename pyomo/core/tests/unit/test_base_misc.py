@@ -38,6 +38,10 @@ class TestSortedRobust(unittest.TestCase):
         a = sorted_robust([3, 2, 1])
         self.assertEqual(a, [1, 2, 3])
 
+        # Testthat ints and floats are sorted as "numbers"
+        a = sorted_robust([3, 2.1, 1])
+        self.assertEqual(a, [1, 2.1, 3])
+
         a = sorted_robust([3, '2', 1])
         self.assertEqual(a, [1, 3, '2'])
 

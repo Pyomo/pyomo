@@ -342,6 +342,15 @@ class TestGenerators(unittest.TestCase):
         self.assertEqual(sorted([id(comp) for comp in model.block_data_objects(sort=False)]),
                          sorted([id(comp) for comp in [model,]+model.component_data_lists[Block]]))
 
+    def test_mixed_index_type(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,'1',3.5,4])
+        m.x = Var(m.I)
+        v = list(m.component_data_objects(Var, sort=True))
+        self.assertEqual(len(v), 4)
+        for a,b in zip([m.x[1], m.x[3.5], m.x[4], m.x['1']], v):
+            self.assertIs(a, b)
+
 
 class HierarchicalModel(object):
     def __init__(self):

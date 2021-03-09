@@ -1359,7 +1359,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 _items = ((None, comp),)
 
             if _sort_indices:
-                _items = sorted_robust(_items)
+                _items = sorted_robust(_items, key=itemgetter(0))
             if active is None or not isinstance(comp, ActiveIndexedComponent):
                 for idx, compData in _items:
                     yield (name, idx), compData
