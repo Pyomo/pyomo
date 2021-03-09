@@ -133,6 +133,17 @@ def add_solver_group(parser):
         action='store',
         dest='smanager_type',
         default='serial')
+    group.add_argument('--solver-manager-pyro-host',
+      help="The hostname to bind on when searching for a Pyro nameserver.",
+      action="store",
+      dest="pyro_host",
+      default=None)
+    group.add_argument('--solver-manager-pyro-port',
+      help="The port to bind on when searching for a Pyro nameserver.",
+      action="store",
+      dest="pyro_port",
+      type="int",
+      default=None)
     group.add_argument('--solver-options',
         help='Options passed into the solver.',
         action='append',

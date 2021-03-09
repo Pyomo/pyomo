@@ -26,7 +26,10 @@ def get_packages():
         #'FuncDesigner', 
         #'DerApproximator', 
         ('ipython[notebook]', 'IPython'),
+        ('pyro4', 'Pyro4'),
     ]
+    if six.PY2:
+        packages.append(('pyro','Pyro'))
     return packages
 
 @deprecated(
