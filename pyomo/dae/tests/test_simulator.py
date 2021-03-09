@@ -1257,7 +1257,7 @@ class TestSimulationInterface():
         # Compare results to baseline
         with open(bfile, 'r') as f2:
             baseline = json.load(f2)
-            self.assertStructuredAlmostEqual(results, baseline, reltol=1e-5)
+            self.assertStructuredAlmostEqual(results, baseline, reltol=1e-3)
 
     def _test_disc_first(self, tname):
 
@@ -1293,7 +1293,7 @@ class TestSimulationInterface():
         # Compare results to baseline
         with open(bfile, 'r') as f2:
             baseline = json.load(f2)
-            self.assertStructuredAlmostEqual(results, baseline, reltol=1e-5)
+            self.assertStructuredAlmostEqual(results, baseline, reltol=1e-3)
 
 
 @unittest.skipIf(not scipy_available, "Scipy is not available")
