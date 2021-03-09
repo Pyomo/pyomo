@@ -17,7 +17,7 @@ from pyomo.core.kernel.block import IBlock
 from pyomo.core.base.suffix import active_import_suffix_generator
 from pyomo.core.kernel.suffix import import_suffix_generator
 from pyomo.common.errors import ApplicationError
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -106,7 +106,7 @@ class DirectSolver(DirectOrPersistentSolver):
 
         orig_options = self.options
 
-        self.options = Options()
+        self.options = Bunch()
         self.options.update(orig_options)
         self.options.update(kwds.pop('options', {}))
         self.options.update(

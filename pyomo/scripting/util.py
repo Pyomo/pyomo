@@ -30,7 +30,7 @@ from pyomo.common.dependencies import (
     pympler, pympler_available,
 )
 from pyomo.common.plugin import ExtensionPoint, Plugin, implements
-from pyomo.common.collections import Container, Options
+from pyomo.common.collections import Bunch
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
@@ -38,7 +38,7 @@ from pyomo.dataportal import DataPortal
 from pyomo.core import IPyomoScriptCreateModel, IPyomoScriptCreateDataPortal, IPyomoScriptPrintModel, IPyomoScriptModifyInstance, IPyomoScriptPrintInstance, IPyomoScriptSaveInstance, IPyomoScriptPrintResults, IPyomoScriptSaveResults, IPyomoScriptPostprocess, IPyomoScriptPreprocess, Model, TransformationFactory, Suffix, display
 
 
-memory_data = Options()
+memory_data = Bunch()
 # Importing IPython is slow; defer the import to the point that it is
 # actually needed.
 IPython_available = None
@@ -156,7 +156,7 @@ def apply_preprocessing(data, parser=None):
     Returned:
         error: This is true if an error has occurred.
     """
-    data.local = Options()
+    data.local = Bunch()
     #
     if not data.options.runtime.logging == 'quiet':
         sys.stdout.write('[%8.2f] Applying Pyomo preprocessing actions\n' % (time.time()-start_time))
@@ -274,8 +274,8 @@ def create_model(data):
         else:
             model_options = data.options.model.options.value()
             tick = time.time()
-            model = ep.service().apply( options = Container(*data.options),
-                                       model_options=Container(*model_options) )
+            model = ep.service().apply( options = Bunch(*data.options),
+                                       model_options=Bunch(*model_options) )
             if data.options.runtime.report_timing is True:
                 print("      %6.2f seconds required to construct instance" % (time.time() - tick))
                 data.local.time_initial_import = None
@@ -474,8 +474,8 @@ def create_model(data):
             data.local.max_memory = mem_used
         print("   Total memory = %d bytes following Pyomo instance creation" % mem_used)
 
-    return Options(model=model, instance=instance,
-                   smap_id=smap_id, filename=fname, local=data.local )
+    return Bunch(model=model, instance=instance,
+                 smap_id=smap_id, filename=fname, local=data.local )
 
 @pyomo_api(namespace='pyomo.script')
 def apply_optimizer(data, instance=None):
@@ -620,7 +620,7 @@ def apply_optimizer(data, instance=None):
             data.local.max_memory = mem_used
         print("   Total memory = %d bytes following optimization" % mem_used)
 
-    return Options(results=results, opt=solver, local=data.local)
+    return Bunch(results=results, opt=solver, local=data.local)
 
 
 @pyomo_api(namespace='pyomo.script')
@@ -826,9 +826,9 @@ class PyomoCommandLogContext(object):
 
     def __init__(self, options):
         if options is None:
-            options = Options()
+            options = Bunch()
         if options.runtime is None:
-            options.runtime = Options()
+            options.runtime = Bunch()
         self.options = options
         self.fileLogger = None
         self.original = None
@@ -927,7 +927,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
                 _options = parser.parse_args(args=args)
             # Replace the parser options object with a
             # pyomo.common.collections.Options object
-            options = Options()
+            options = Bunch()
             for key in dir(_options):
                 if key[0] != '_':
                     val = getattr(_options, key)
@@ -936,7 +936,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
         except SystemExit:
             # the parser throws a system exit if "-h" is specified - catch
             # it to exit gracefully.
-            return Container(retval=None, errorcode=0)
+            return Bunch(retval=None, errorcode=0)
     #
     # Configure loggers
     #
@@ -950,7 +950,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             gc.enable()
         TempfileManager.pop(remove=not options.runtime.keep_files)
 
-    return Container(retval=retval, errorcode=errorcode)
+    return Bunch(retval=retval, errorcode=errorcode)
 
 
 def _run_command_impl(command, parser, args, name, data, options):

@@ -46,6 +46,11 @@ def GDPopt_iteration_loop(solve_data, config):
                 nlp_result = solve_global_subproblem(mip_result, solve_data, config)
             if nlp_result.feasible:
                 add_affine_cuts(nlp_result, solve_data, config)
+        elif solve_data.active_strategy == 'RIC':
+            with time_code(solve_data.timing, 'nlp'):
+                nlp_result = solve_local_subproblem(mip_result, solve_data, config)
+        else:
+            raise ValueError('Unrecognized strategy: ' + solve_data.active_strategy)
 
         # Add integer cut
         add_integer_cut(

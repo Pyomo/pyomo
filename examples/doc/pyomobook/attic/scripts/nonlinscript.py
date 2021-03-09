@@ -1,7 +1,7 @@
 import sys
 import pyomo.environ
 from pyomo.opt import SolverFactory
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 
 from nonlin import model
 
@@ -12,7 +12,7 @@ model.skip_canonical_repn = True # for nonlinear models
 instance=model.create()
 
 SolverName = "asl"
-so = Options()
+so = Bunch()
 so.solver = "ipopt"
 opt=SolverFactory(SolverName, options=so)
 
