@@ -186,7 +186,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         return version
 
     @property
-    def config(self):
+    def config(self) -> MIPSolverConfig:
         return self._config
 
     @config.setter
@@ -652,7 +652,10 @@ class Gurobi(PersistentBase, PersistentSolver):
             except (self._gurobipy.GurobiError, AttributeError):
                 results.best_feasible_objective = None
             try:
-                results.best_objective_bound = gprob.ObjBound
+                if gprob.NumBinVars + gprob.NumIntVars == 0:
+                    results.best_objective_bound = gprob.ObjVal
+                else:
+                    results.best_objective_bound = gprob.ObjBound
             except (self._gurobipy.GurobiError, AttributeError):
                 if self._objective.sense == minimize:
                     results.best_objective_bound = -math.inf
