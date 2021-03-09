@@ -499,8 +499,21 @@ class CommunityMap(object):
         structured_model.b = Block(self.keys())
 
         for community_number, community_members in self.items():
-            structured_model.b[community_number].vars = Reference(community_members[0], ctype=Constraint)
-            structured_model.b[community_number].cons = Reference(community_members[1], ctype=Var)
+            if self.with_objective:
+                # The objectives will be included in the constraint list, so we will separate them into another list
+                constraints, objectives = [], []
+                for con in community_members[0]:
+                    if con.ctype == Constraint:
+                        constraints.append(con)
+                    else:
+                        objectives.append(con)
+
+                structured_model.b[community_number].obj = Reference(objectives, ctype=Objective)
+                structured_model.b[community_number].cons = Reference(constraints, ctype=Constraint)
+                structured_model.b[community_number].vars = Reference(community_members[1], ctype=Var)
+            else:
+                structured_model.b[community_number].cons = Reference(community_members[0], ctype=Constraint)
+                structured_model.b[community_number].vars = Reference(community_members[1], ctype=Var)
 
         return structured_model
 
