@@ -1217,7 +1217,8 @@ class TestSimulationInterface():
         for v in model.component_objects(Var):
             # Can't just use extract_values here because when writing to json
             # all keys are converted to strings
-            results[v.name] = list(v.extract_values().items())
+            temp = v.extract_values()
+            results[v.name] = [[k, temp[k]] for k in v.keys()]
 
         results['sim_profiles'] = profiles.tolist()
         return results
@@ -1256,10 +1257,7 @@ class TestSimulationInterface():
         # Compare results to baseline
         with open(bfile, 'r') as f2:
             baseline = json.load(f2)
-            if platform == "darwin":
-                self.assertStructuredAlmostEqual(results, baseline, reltol=1e-3)
-            else:
-                self.assertStructuredAlmostEqual(results, baseline, reltol=1e-5)
+            self.assertStructuredAlmostEqual(results, baseline, reltol=1e-5)
 
     def _test_disc_first(self, tname):
 
@@ -1295,10 +1293,7 @@ class TestSimulationInterface():
         # Compare results to baseline
         with open(bfile, 'r') as f2:
             baseline = json.load(f2)
-            if platform == "darwin":
-                self.assertStructuredAlmostEqual(results, baseline, reltol=1e-2)
-            else:
-                self.assertStructuredAlmostEqual(results, baseline, reltol=1e-5)
+            self.assertStructuredAlmostEqual(results, baseline, reltol=1e-5)
 
 
 @unittest.skipIf(not scipy_available, "Scipy is not available")
