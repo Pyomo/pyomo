@@ -828,16 +828,6 @@ def default_config_block(solver, init=False):
                 str,
                 'The technique that is used to manage solver executions.',
                 None) )
-    solver.declare('pyro host', ConfigValue(
-                None,
-                str,
-                "The hostname to bind on when searching for a Pyro nameserver.",
-                None) )
-    solver.declare('pyro port', ConfigValue(
-                None,
-                int,
-                "The port to bind on when searching for a Pyro nameserver.",
-                None) )
     solver.declare('options', ConfigBlock(
                 implicit=True,
                 implicit_domain=ConfigValue(
@@ -885,10 +875,6 @@ def default_config_block(solver, init=False):
     solver_list[0].get('manager').\
         declare_as_argument('--solver-manager', dest="smanager_type",
                             metavar="TYPE")
-    solver_list[0].get('pyro host').\
-        declare_as_argument('--pyro-host', dest="pyro_host")
-    solver_list[0].get('pyro port').\
-        declare_as_argument('--pyro-port', dest="pyro_port")
     solver_list[0].get('options string').\
         declare_as_argument('--solver-options', dest='options_string',
                             metavar="STRING")

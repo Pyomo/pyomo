@@ -11,10 +11,9 @@ action_handle_map = {} # maps action handles to instances
 optsolver = SolverFactory('cplex')
 
 # create a solver manager
-# 'pyro' could be replaced with 'serial'
-solver_manager = SolverManagerFactory('pyro')
+solver_manager = SolverManagerFactory('serial')
 if solver_manager is None:
-    print "Failed to create solver manager."
+    print("Failed to create solver manager.")
     sys.exit(1)
 
 #
@@ -47,6 +46,5 @@ for i in range(2): # we know there are two instances
     this_action_handle = solver_manager.wait_any()
     solved_name = action_handle_map[this_action_handle]
     results = solver_manager.get_results(this_action_handle)
-    print "Results for",solved_name
-    print results
-
+    print("Results for", solved_name)
+    print(results)
