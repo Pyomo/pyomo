@@ -853,7 +853,7 @@ Pyomo 5.3     21 Oct 2017
 - Deprecated BigM piecewise representations (#216)
 - Added GAMS solver interface (#164, #215, #221, #240)
 - Updates to testing configuration on Travis and Appveyor
-- Tracking changes in pyomo.common.unittest
+- Tracking changes in pyutilib.th
 
 -------------------------------------------------------------------------------
 Pyomo 5.2     14 May 2017
