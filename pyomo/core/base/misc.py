@@ -14,6 +14,8 @@ import logging
 import sys
 import types
 
+from pyomo.core.expr import native_numeric_types
+
 logger = logging.getLogger('pyomo.core')
 
 
@@ -111,7 +113,9 @@ class _robust_sort_keyfcn(object):
 
     """
     def __init__(self, key=None):
-        self._typemap = {tuple: (3, tuple.__name__)}
+        # sort all native numeric types as if they were floats
+        self._typemap = {t: (1, float.__name__) for t in native_numeric_types}
+        self._typemap[tuple] =(3, tuple.__name__)
         self._key = key
 
     def __call__(self, val):
