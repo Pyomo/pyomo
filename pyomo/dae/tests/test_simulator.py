@@ -36,7 +36,6 @@ from pyomo.core.expr.template_expr import (
 )
 from pyomo.common.fileutils import import_file
 
-from sys import platform
 import os
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
@@ -1257,7 +1256,7 @@ class TestSimulationInterface():
         # Compare results to baseline
         with open(bfile, 'r') as f2:
             baseline = json.load(f2)
-            self.assertStructuredAlmostEqual(results, baseline, reltol=1e-3)
+            self.assertStructuredAlmostEqual(results, baseline, reltol=1e-2)
 
     def _test_disc_first(self, tname):
 
@@ -1293,7 +1292,7 @@ class TestSimulationInterface():
         # Compare results to baseline
         with open(bfile, 'r') as f2:
             baseline = json.load(f2)
-            self.assertStructuredAlmostEqual(results, baseline, reltol=1e-3)
+            self.assertStructuredAlmostEqual(results, baseline, reltol=1e-2)
 
 
 @unittest.skipIf(not scipy_available, "Scipy is not available")
