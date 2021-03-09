@@ -286,6 +286,10 @@ class TestCase(_unittest.TestCase):
     def categories_to_string(categories):
         return ' '.join(','.join("%s=%s" % y for y in x) for x in categories)
 
+    def shortDescription(self):
+        # Disable nose's use of test docstrings for the test description.
+        return None
+
     def assertStructuredAlmostEqual(self, first, second,
                                     places=None, msg=None, delta=None,
                                     reltol=None, abstol=None,
