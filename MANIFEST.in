@@ -1,7 +1,4 @@
 include README.md
 include LICENSE.txt
-include pyomo/contrib/mcpp/mcppInterface.cpp
-include pyomo/contrib/pynumero/src/ma27Interface.cpp
-include pyomo/contrib/pynumero/src/ma57Interface.cpp
-include pyomo/contrib/pynumero/src/AmplInterface.cpp
-include pyomo/contrib/pynumero/src/tests/simple_test.cpp
+include pyomo/contrib/mcpp/*.cpp
+include pyomo/contrib/pynumero/src/*.cpp
