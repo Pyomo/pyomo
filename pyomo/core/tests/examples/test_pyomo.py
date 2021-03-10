@@ -126,7 +126,7 @@ class TestJson(BaseTester):
                                 except:
                                     f1_filtered.append(i)
                         for i in items2:
-                            if not i.startswith('/') or not i.startswith(':\', 1):
+                            if not i.startswith('/') or not i.startswith(":\\", 1):
                                 try:
                                     f2_filtered.append(float(i))
                                 except:
