@@ -622,6 +622,7 @@ jobs:
         set +e
         CODECOV="${GITHUB_WORKSPACE}/codecov.sh"
         echo "CODECOV=$CODECOV" >> $GITHUB_ENV
+        echo "BRANCH=${GITHUB_REF##*/}" >> $GITHUB_ENV
         for i in `seq 3`; do
             echo "Downloading current codecov script (attempt ${i})"
             curl -L https://codecov.io/bash -o $CODECOV
@@ -638,7 +639,7 @@ jobs:
         fi
 
     - name: Upload codecov reports
-      if: github.repository_owner == 'Pyomo' || ${GITHUB_REF##*/} != 'main'
+      if: github.repository_owner == 'Pyomo' || ${BRANCH} != 'main'
       run: |
         set +e
         if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
