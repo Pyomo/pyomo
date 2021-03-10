@@ -48,11 +48,13 @@ class Test(unittest.TestCase):
                 with open(cwd+'script.out', 'r') as f2:
                     baseline = yaml.full_load(f1)
                     output = yaml.full_load(f2)
-                    for key in baseline:
-                        if 'Time' not in baseline[key][0].keys():
-                            self.assertListEqual(baseline[key], output[key])
+                    self.assertStructuredAlmostEqual(output, baseline,
+                                                     allow_second_superset=True)
         else:
-            self.assertTrue(cmp(cwd+'script.log', cwd+'script.out'))
+            _log = os.path.join(cwd, 'script.log')
+            _out = os.path.join(cwd, 'script.out')
+            self.assertTrue(cmp(cwd+'script.log', cwd+'script.out'),
+                            msg="Files %s and %s differ" % (_log, _out))
 
     def test_s1(self):
         self.run_script('s1', True)

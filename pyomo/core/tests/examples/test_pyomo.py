@@ -106,7 +106,33 @@ class TestJson(BaseTester):
                                              allow_second_superset=True)
 
     def compare_files(self, file1, file2):
-        self.assertTrue(file1, file2)
+        try:
+            self.assertTrue(cmp(file1, file2),
+                        msg="Files %s and %s differ" % (file1, file2))
+        except:
+            with open(file1, 'r') as f1, open(file2, 'r') as f2:
+                f1_contents = f1.read().strip().split('\n')
+                f2_contents = f2.read().strip().split('\n')
+                f1_filtered = []
+                f2_filtered = []
+                for item1, item2 in zip(f1_contents, f2_contents):
+                    if not item1.startswith('['):
+                        items1 = item1.strip().split()
+                        items2 = item2.strip().split()
+                        for i in items1:
+                            if not i.startswith('/'):
+                                try:
+                                    f1_filtered.append(float(i))
+                                except:
+                                    f1_filtered.append(i)
+                        for i in items2:
+                            if not i.startswith('/'):
+                                try:
+                                    f2_filtered.append(float(i))
+                                except:
+                                    f2_filtered.append(i)
+                self.assertStructuredAlmostEqual(f1_filtered, f2_filtered,
+                                                 abstol=1e-6)
 
     def test1_simple_pyomo_execution(self):
         # Simple execution of 'pyomo'
@@ -163,9 +189,6 @@ class TestJson(BaseTester):
     def test5b_create_model_fcn(self):
         # Run pyomo with create_model function (configfile)
         self.pyomo(currdir+'test5b.json', root=currdir+'test5')
-        def filter5(line):
-            return ("Writing model " in line) or ("Solver results file" in line) or \
-                    line.startswith('[') or line.startswith('DEPRECATION')
         self.compare_files(currdir+"test5.out", currdir+"test5.txt")
         os.remove(os.path.join(currdir, 'test5.jsn'))
 

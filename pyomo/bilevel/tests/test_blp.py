@@ -126,8 +126,11 @@ class Reformulate(unittest.TestCase, CommonTests):
         return join(currdir, 'test_'+problem+"_linear_mpec.txt")
 
     def check(self, problem, solver):
+        _log = join(currdir,self.problem+'_linear_mpec.out')
+        _out = self.referenceFile(problem,solver)
         self.assertTrue(cmp(join(currdir,self.problem+'_linear_mpec.out'),
-                            self.referenceFile(problem,solver)))
+                            self.referenceFile(problem,solver)),
+                        msg="Files %s and %s differ" % (_log, _out))
 
     @unittest.category('fragile')
     def test_bqp(self):
