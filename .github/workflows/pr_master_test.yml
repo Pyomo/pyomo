@@ -638,7 +638,7 @@ jobs:
         fi
 
     - name: Upload codecov reports
-      if: github.repository_owner == 'Pyomo'
+      if: github.repository_owner == 'Pyomo' || ${GITHUB_REF##*/} != 'main'
       run: |
         set +e
         if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
