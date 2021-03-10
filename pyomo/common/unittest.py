@@ -24,6 +24,7 @@ from pyomo.common.tee import capture_output
 # This augments the unittest exports with two additional decorators
 __all__ = _unittest.__all__ + ['category', 'nottest']
 
+from unittest import mock
 
 def _category_to_tuple(_cat):
     _cat = str(_cat).lower().strip()
