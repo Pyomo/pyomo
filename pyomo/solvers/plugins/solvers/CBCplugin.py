@@ -920,3 +920,5 @@ class MockCBC(CBCSHELL,MockMIP):
         else:
             return (args, ProblemFormat.mps, None)
 
+    def _get_version(self):
+        return 2, 9, 9
