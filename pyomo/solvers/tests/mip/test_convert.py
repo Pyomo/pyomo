@@ -119,7 +119,9 @@ class Test(unittest.TestCase):
                           "enabled but not available: '%s'" % str(err))
             return
         self.assertEqual(ans[0][0][-15:],"pico_convert.lp")
-        self.assertTrue(cmp(ans[0][0], currdir+"test1_convert.lp"))
+        _out, _log = ans[0][0], currdir+"test1_convert.lp"
+        self.assertTrue(cmp(_out, _log),
+                        msg="Files %s and %s differ" % (_out, _log))
 
     def test_mod_lp1(self):
         #""" Convert from MOD to LP """

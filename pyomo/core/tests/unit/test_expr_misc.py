@@ -113,8 +113,9 @@ class Test(unittest.TestCase):
         OUTPUT=open(currdir+"test_expr5.out","w")
         model.pprint(ostream=OUTPUT)
         OUTPUT.close()
-        self.assertTrue(cmp(currdir+"test_expr5.out",
-                            currdir+"test_expr5.txt"))
+        _out, _txt = currdir+"test_expr5.out", currdir+"test_expr5.txt"
+        self.assertTrue(cmp(_out, _txt), 
+                        msg="Files %s and %s differ" % (_out, _txt))
 
     def test_prod1(self):
         self.assertEqual(prod([1,2,3,5]),30)

@@ -66,7 +66,9 @@ class Test(unittest.TestCase):
                 self.fail("Unexpected ConverterError - ampl is enabled "
                           "but not available: '%s'" % str(err))
             return
-        self.assertTrue(cmp(currdir+'test3.nl', currdir+'test3.baseline.nl'))
+        _out, _log = currdir+'test3.nl', currdir+'test3.baseline.nl'
+        self.assertTrue(cmp(_out, _log),
+                        msg="Files %s and %s differ" % (_out, _log))
 
     def test3_write_lp(self):
         """ Convert from AMPL to LP """
@@ -110,7 +112,9 @@ class Test(unittest.TestCase):
                 self.fail("Unexpected ConverterError - ampl is enabled "
                           "but not available: '%s'" % str(err))
             return
-        self.assertTrue(cmp(currdir+'test3.mps', currdir+'test3.baseline.mps'))
+        _out, _log = currdir+'test3.mps', currdir+'test3.baseline.mps'
+        self.assertTrue(cmp(_out, _log),
+                        msg="Files %s and %s differ" % (_out, _log))
 
     def test3a_write_nl(self):
         """ Convert from AMPL to NL """
@@ -129,7 +133,9 @@ class Test(unittest.TestCase):
                 self.fail("Unexpected ConverterError - ampl is enabled "
                           "but not available: '%s'" % str(err))
             return
-        self.assertTrue(cmp(currdir+'test3a.nl', currdir+'test3.baseline.nl'))
+        _out, _log = currdir+'test3a.nl', currdir+'test3.baseline.nl'
+        self.assertTrue(cmp(_out, _log),
+                        msg="Files %s and %s differ" % (_out, _log))
 
     def test3a_write_lp(self):
         """ Convert from AMPL to LP """
@@ -173,7 +179,9 @@ class Test(unittest.TestCase):
                 self.fail("Unexpected ConverterError - ampl is enabled "
                           "but not available: '%s'" % str(err))
             return
-        self.assertTrue(cmp(currdir+'test3a.mps', currdir+'test3.baseline.mps'))
+        _out, _log = currdir+'test3a.mps', currdir+'test3.baseline.mps'
+        self.assertTrue(cmp(_out, _log),
+                        msg="Files %s and %s differ" % (_out, _log))
 
     def test3_solve(self):
         if not 'glpk' in solvers:

@@ -68,7 +68,8 @@ class TestNLWriter(unittest.TestCase):
         model.write(test_fname, format='nl')
         self.assertTrue(cmp(
             test_fname,
-            baseline_fname))
+            baseline_fname),
+            msg="Files %s and %s differ" % (test_fname, baseline_fname))
         self._cleanup(test_fname)
 
     def test_var_on_nonblock(self):
@@ -117,7 +118,8 @@ class TestNLWriter(unittest.TestCase):
                     io_options={'symbolic_solver_labels':True})
         self.assertTrue(cmp(
             test_fname,
-            baseline_fname))
+            baseline_fname),
+            msg="Files %s and %s differ" % (test_fname, baseline_fname))
         self._cleanup(test_fname)
 
     def test_external_expression_partial_fixed(self):
@@ -130,7 +132,8 @@ class TestNLWriter(unittest.TestCase):
                     io_options={'symbolic_solver_labels':True})
         self.assertTrue(cmp(
             test_fname,
-            baseline_fname))
+            baseline_fname),
+            msg="Files %s and %s differ" % (test_fname, baseline_fname))
         self._cleanup(test_fname)
 
     def test_external_expression_fixed(self):
@@ -144,7 +147,8 @@ class TestNLWriter(unittest.TestCase):
                     io_options={'symbolic_solver_labels':True})
         self.assertTrue(cmp(
             test_fname,
-            baseline_fname))
+            baseline_fname),
+            msg="Files %s and %s differ" % (test_fname, baseline_fname))
         self._cleanup(test_fname)
 
     def test_external_expression_rewrite_fixed(self):
@@ -157,7 +161,8 @@ class TestNLWriter(unittest.TestCase):
                     io_options={'symbolic_solver_labels':True})
         self.assertTrue(cmp(
             test_fname,
-            variable_baseline))
+            variable_baseline),
+            msg="Files %s and %s differ" % (test_fname, baseline_fname))
 
         self.assertIsNot(m._repn, None)
 
@@ -169,7 +174,8 @@ class TestNLWriter(unittest.TestCase):
             'rewrite_fixed','partial_fixed')
         self.assertTrue(cmp(
             test_fname,
-            partial_baseline))
+            partial_baseline),
+            msg="Files %s and %s differ" % (test_fname, baseline_fname))
 
         m.y.fix()
         self._cleanup(test_fname)
@@ -178,7 +184,8 @@ class TestNLWriter(unittest.TestCase):
         fixed_baseline = baseline_fname.replace('rewrite_fixed','fixed')
         self.assertTrue(cmp(
             test_fname,
-            fixed_baseline))
+            fixed_baseline),
+            msg="Files %s and %s differ" % (test_fname, baseline_fname))
         self._cleanup(test_fname)
 
 

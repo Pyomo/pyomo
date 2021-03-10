@@ -145,12 +145,14 @@ class TestColinMain(unittest.TestCase):
         self.rproblem=RealProblem3()
 
     def compare_xml(self, file1, file2):
-        tree1 = ET.parse(file1)
-        root1 = tree1.getroot()
-        tree2 = ET.parse(file2)
-        root2 = tree2.getroot()
-        self.assertAlmostEqual(float(root1[0].text.strip()),
-                               float(root2[0].text.strip()))
+        with open(file1, 'r') as f1, open(file2, 'r') as f2:
+            f1_contents = f1.read().replace('>', '> ').replace('</', ' </').split()
+            f2_contents = f2.read().replace('>', '> ').replace('</', ' </').split()
+            for item1, item2 in zip(f1_contents, f2_contents):
+                try:
+                    self.assertAlmostEqual(float(item1), float(item2))
+                except:
+                    self.assertEqual(item1, item2)
 
     def tearDown(self):
         TempfileManager.clear_tempfiles()
@@ -299,15 +301,18 @@ class TestPoint(unittest.TestCase):
         point.bits = [0]
         with capture_output(currdir+'mi_point.out'):
             point.display()
-        self.assertTrue(cmp(currdir+'mi_point.out', currdir+'mi_point.txt'))
+        _out, _txt = currdir+'mi_point.out', currdir+'mi_point.txt'
+        self.assertTrue(cmp(_out, _txt),
+                        msg="Files %s and %s differ" % (_out, _txt))
 
     def test_reals(self):
         point = pyomo.opt.blackbox.RealVars()
         point.vars = [1.0]
         with capture_output(currdir+'real_point.out'):
             point.display()
-        self.assertTrue(cmp(currdir+'real_point.out',
-                            currdir+'real_point.txt'))
+        _out, _txt = currdir+'real_point.out', currdir+'real_point.txt'
+        self.assertTrue(cmp(_out, _txt),
+                        msg="Files %s and %s differ" % (_out, _txt))
 
 
 

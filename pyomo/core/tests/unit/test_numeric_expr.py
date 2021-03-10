@@ -2456,8 +2456,9 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         OUTPUT=open(currdir+"varpprint.out","w")
         instance.pprint(ostream=OUTPUT)
         OUTPUT.close()
-        self.assertTrue(cmp(currdir+"varpprint.out",
-                                       currdir+"varpprint.txt"))
+        _out, _txt = currdir+"varpprint.out", currdir+"varpprint.txt"
+        self.assertTrue(cmp(_out, _txt),
+                        msg="Files %s and %s differ" % (_txt, _out))
 
     def test_labeler(self):
         M = ConcreteModel()

@@ -77,9 +77,9 @@ class BaselineTests(Tests):
             f2_contents = list(filter(None, f2.read().split()))
             for item1, item2 in zip(f1_contents, f2_contents):
                 try:
-                    self.assertEqual(item1, item2)
-                except:
                     self.assertAlmostEqual(float(item1), float(item2))
+                except:
+                    self.assertEqual(item1, item2)
         os.remove(currdir+name+'.test.bar')
 
 

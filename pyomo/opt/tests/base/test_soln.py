@@ -24,9 +24,7 @@ import pyomo.common.unittest as unittest
 from pyomo.common.tempfiles import TempfileManager
 import pyomo.opt
 
-from pyomo.common.dependencies import yaml_available
-if yaml_available:
-    import yaml
+from pyomo.common.dependencies import yaml, yaml_available
 
 from six import iterkeys
 
@@ -52,16 +50,18 @@ class Test(unittest.TestCase):
         self.results.write(filename=currdir+"write_solution1.txt")
         if not os.path.exists(currdir+"write_solution1.txt"):
             self.fail("test_write_solution - failed to write write_solution1.txt")
-        self.assertTrue(cmp(currdir+"write_solution1.txt",
-                            currdir+"test1_soln.txt"))
+        _log, _out = currdir+"write_solution1.txt", currdir+"test1_soln.txt"
+        self.assertTrue(cmp(_out, _log),
+                        msg="Files %s and %s differ" % (_out, _log))
 
     def test_write_solution2(self):
         """ Write a SolverResults Object without solutions """
         self.results.write(num=None,filename=currdir+"write_solution2.txt")
         if not os.path.exists(currdir+"write_solution2.txt"):
             self.fail("test_write_solution - failed to write write_solution2.txt")
-        self.assertTrue(cmp(currdir+"write_solution2.txt",
-                            currdir+"test2_soln.txt"))
+        _out, _log = currdir+"write_solution2.txt", currdir+"test2_soln.txt"
+        self.assertTrue(cmp(_out, _log),
+                        msg="Files %s and %s differ" % (_out, _log))
 
     @unittest.skipIf(not yaml_available, "Cannot import 'yaml'")
     def test_read_solution1(self):
@@ -128,8 +128,9 @@ class Test(unittest.TestCase):
         self.results.write(filename=currdir+"delete_solution.txt")
         if not os.path.exists(currdir+"delete_solution.txt"):
             self.fail("test_write_solution - failed to write delete_solution.txt")
-        self.assertTrue(cmp(currdir+"delete_solution.txt",
-                            currdir+"test4_soln.txt"))
+        _out, _log = currdir+"delete_solution.txt", currdir+"test4_soln.txt"
+        self.assertTrue(cmp(_out, _log),
+                        msg="Files %s and %s differ" % (_out, _log))
 
     def test_get_solution(self):
         """ Get a solution from a SolverResults object """
@@ -164,8 +165,9 @@ class Test(unittest.TestCase):
         self.results.write(filename=currdir+"soln_pprint.txt")
         if not os.path.exists(currdir+"soln_pprint.txt"):
             self.fail("test_write_solution - failed to write soln_pprint.txt")
-        self.assertTrue(cmp(currdir+"soln_pprint.txt",
-                            currdir+"test3_soln.txt"))
+        _out, _log = currdir+"soln_pprint.txt", currdir+"test3_soln.txt"
+        self.assertTrue(cmp(_out, _log),
+                        msg="Files %s and %s differ" % (_out, _log))
 
     def test_soln_pprint2(self):
         """ Write a solution with only zero values, using the Solution.pprint() method """

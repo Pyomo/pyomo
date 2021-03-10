@@ -40,36 +40,48 @@ class Test(unittest.TestCase):
     def test_step_lp(self):
         """Test examples/pyomo/piecewise/step.py"""
         self.run_convert2lp('step.py')
-        self.assertTrue(cmp(join(currdir,'unknown.lp'), currdir+'step.lp'))
+        _out, _log = join(currdir,'unknown.lp'), currdir+'step.lp'
+        self.assertTrue(cmp(_out, _log),
+                        msg="Files %s and %s differ" % (_out, _log))
 
     def test_step_nl(self):
         """Test examples/pyomo/piecewise/step.py"""
         self.run_convert2nl('step.py')
-        self.assertTrue(cmp(join(currdir,'unknown.nl'), currdir+'step.nl'))
+        _out, _log = join(currdir,'unknown.nl'), currdir+'step.nl'
+        self.assertTrue(cmp(_out, _log),
+                        msg="Files %s and %s differ" % (_out, _log))
         os.remove(join(currdir,'unknown.row'))
         os.remove(join(currdir,'unknown.col'))
 
     def test_nonconvex_lp(self):
         """Test examples/pyomo/piecewise/nonconvex.py"""
         self.run_convert2lp('nonconvex.py')
-        self.assertTrue(cmp(join(currdir,'unknown.lp'), currdir+'nonconvex.lp'))
+        _out, _log = join(currdir,'unknown.lp'), currdir+'nonconvex.lp'
+        self.assertTrue(cmp(_out, _log),
+                        msg="Files %s and %s differ" % (_out, _log))
 
     def test_nonconvex_nl(self):
         """Test examples/pyomo/piecewise/nonconvex.py"""
         self.run_convert2nl('nonconvex.py')
-        self.assertTrue(cmp(join(currdir,'unknown.nl'), currdir+'nonconvex.nl'))
+        _out, _log = join(currdir,'unknown.nl'), currdir+'nonconvex.nl'
+        self.assertTrue(cmp(_out, _log),
+                        msg="Files %s and %s differ" % (_out, _log))
         os.remove(join(currdir,'unknown.row'))
         os.remove(join(currdir,'unknown.col'))
 
     def test_convex_lp(self):
         """Test examples/pyomo/piecewise/convex.py"""
         self.run_convert2lp('convex.py')
-        self.assertTrue(cmp(join(currdir,'unknown.lp'), currdir+'convex.lp'))
+        _out, _log = join(currdir,'unknown.lp'), currdir+'convex.lp'
+        self.assertTrue(cmp(_out, _log),
+                        msg="Files %s and %s differ" % (_out, _log))
 
     def test_convex_nl(self):
         """Test examples/pyomo/piecewise/convex.py"""
         self.run_convert2nl('convex.py')
-        self.assertTrue(cmp(join(currdir,'unknown.nl'), currdir+'convex.nl'))
+        _out, _log = join(currdir,'unknown.nl'), currdir+'convex.nl'
+        self.assertTrue(cmp(_out, _log),
+                        msg="Files %s and %s differ" % (_out, _log))
         os.remove(join(currdir,'unknown.row'))
         os.remove(join(currdir,'unknown.col'))
 
@@ -82,9 +94,9 @@ class Test(unittest.TestCase):
                 f2_contents = list(filter(None, f2.read().split()))
                 for item1, item2 in zip(f1_contents, f2_contents):
                     try:
-                        self.assertEqual(item1, item2)
-                    except:
                         self.assertAlmostEqual(float(item1), float(item2))
+                    except:
+                        self.assertEqual(item1, item2)
 
     def test_indexed_nl(self):
         """Test examples/pyomo/piecewise/indexed.py"""
@@ -95,16 +107,18 @@ class Test(unittest.TestCase):
                 f2_contents = list(filter(None, f2.read().split()))
                 for item1, item2 in zip(f1_contents, f2_contents):
                     try:
-                        self.assertEqual(item1, item2)
-                    except:
                         self.assertAlmostEqual(float(item1), float(item2))
+                    except:
+                        self.assertEqual(item1, item2)
         os.remove(join(currdir,'unknown.row'))
         os.remove(join(currdir,'unknown.col'))
 
     def test_indexed_nonlinear_nl(self):
         """Test examples/pyomo/piecewise/indexed_nonlinear.py"""
         self.run_convert2nl('indexed_nonlinear.py')
-        self.assertTrue(cmp(join(currdir,'unknown.nl'), currdir+'indexed_nonlinear.nl'))
+        _out, _log = join(currdir,'unknown.nl'), currdir+'indexed_nonlinear.nl'
+        self.assertTrue(cmp(_out, _log),
+                        msg="Files %s and %s differ" % (_out, _log))
         os.remove(join(currdir,'unknown.row'))
         os.remove(join(currdir,'unknown.col'))
 

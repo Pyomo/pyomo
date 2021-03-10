@@ -104,8 +104,9 @@ class mock_all(unittest.TestCase):
                                  suffixes=['.*'])
         results.write(filename=currdir+"test_options.txt",
                       times=False)
-        self.assertTrue(cmp(currdir+"test_options.txt",
-                            currdir+  "test4_asl.txt"))
+        _out, _log = currdir+"test_options.txt", currdir+  "test4_asl.txt"
+        self.assertTrue(cmp(_out, _log),
+                        msg="Files %s and %s differ" % (_out, _log))
         #os.remove(currdir+"test4.sol")
         #os.remove(currdir+"test_solve4.log")
 

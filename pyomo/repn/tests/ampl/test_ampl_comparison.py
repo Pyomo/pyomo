@@ -68,15 +68,13 @@ class BaselineTests(Tests):
         # Check that the pyomo nl file matches its own baseline
         with open(currdir+name+'.test.nl', 'r') as f1, \
                 open(currdir+name+'.pyomo.nl', 'r') as f2:
-                    f1_contents = list(filter(None, f1.read().split()))
-                    f2_contents = list(filter(None, f2.read().split()))
+                    f1_contents = list(filter(None, f1.read().replace('n', 'n ').split()))
+                    f2_contents = list(filter(None, f2.read().replace('n', 'n ').split()))
                     for item1, item2 in zip(f1_contents, f2_contents):
-                        if item1.startswith('n'):
-                            continue
                         try:
-                            self.assertEqual(item1, item2)
-                        except:
                             self.assertEqual(float(item1), float(item2))
+                        except:
+                            self.assertEqual(item1, item2)
         os.remove(currdir+name+'.test.nl')
 
 

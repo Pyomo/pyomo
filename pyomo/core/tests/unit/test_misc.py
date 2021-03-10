@@ -69,8 +69,9 @@ class PyomoModel(unittest.TestCase):
             self.fail("test_construct - expected TypeError")
         except TypeError:
             pass
-        self.assertTrue(cmp(currdir+"/display.out",
-                            currdir+"/display.txt"))
+        _out, _txt = currdir+"/display.out", currdir+"/display.txt"
+        self.assertTrue(cmp(_out, _txt), 
+                        msg="Files %s and %s differ" % (_out, _txt))
 
     def test_construct2(self):
         model = AbstractModel()

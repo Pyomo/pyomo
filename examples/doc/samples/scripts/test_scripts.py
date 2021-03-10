@@ -53,7 +53,7 @@ class Test(unittest.TestCase):
         else:
             _log = os.path.join(cwd, 'script.log')
             _out = os.path.join(cwd, 'script.out')
-            self.assertTrue(cmp(cwd+'script.log', cwd+'script.out'),
+            self.assertTrue(cmp(_log, _out),
                             msg="Files %s and %s differ" % (_log, _out))
 
     def test_s1(self):

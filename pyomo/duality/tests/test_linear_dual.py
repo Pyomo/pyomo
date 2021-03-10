@@ -122,8 +122,9 @@ class Reformulate(unittest.TestCase, CommonTests):
         return join(currdir, problem+"_"+solver+'.lp')
 
     def check(self, problem, solver):
-        self.assertTrue(cmp(join(currdir,self.problem+'_result.lp'),
-                            self.referenceFile(problem,solver)))
+        _prob, _solv = join(currdir,self.problem+'_result.lp'), self.referenceFile(problem,solver)
+        self.assertTrue(cmp(_prob, _solv),
+                        msg="Files %s and %s differ" % (_prob, _solv))
 
 
 class Solver(unittest.TestCase):

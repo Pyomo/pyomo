@@ -333,16 +333,18 @@ class Test(unittest.TestCase):
         OUTPUT=open(currdir+"test_pickle4_baseline.out","w")
         model.pprint(ostream=OUTPUT)
         OUTPUT.close()
-        self.assertTrue(cmp(currdir+"test_pickle4_baseline.out",
-                            currdir+"test_pickle4_baseline.txt"))
+        _out, _txt = currdir+"test_pickle4_baseline.out", currdir+"test_pickle4_baseline.txt"
+        self.assertTrue(cmp(_out, _txt),
+                        msg="Files %s and %s differ" % (_out, _txt))
 
         str = pickle.dumps(model)
 
         OUTPUT=open(currdir+"test_pickle4_after.out","w")
         model.pprint(ostream=OUTPUT)
         OUTPUT.close()
-        self.assertTrue(cmp(currdir+"test_pickle4_after.out",
-                            currdir+"test_pickle4_baseline.txt"))
+        _out, _txt = currdir+"test_pickle4_after.out", currdir+"test_pickle4_baseline.txt"
+        self.assertTrue(cmp(_out, _txt),
+                        msg="Files %s and %s differ" % (_out, _txt))
 
 if __name__ == "__main__":
     unittest.main()

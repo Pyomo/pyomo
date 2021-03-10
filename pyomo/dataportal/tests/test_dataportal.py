@@ -677,13 +677,15 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
             with open(currdir+name+file_suffix, 'r') as out, \
                 open(currdir+name+'.baseline'+file_suffix, 'r') as txt:
                 self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
-                                                 allow_second_superset=True)
+                                                 allow_second_superset=True,
+                                                 abstol=0)
         elif file_suffix == '.yaml':
             with open(currdir+name+file_suffix, 'r') as out, \
                 open(currdir+name+'.baseline'+file_suffix, 'r') as txt:
                 self.assertStructuredAlmostEqual(yaml.full_load(txt),
                                                  yaml.full_load(out),
-                                                 allow_second_superset=True)
+                                                 allow_second_superset=True,
+                                                 abstol=0)
         else:
             with open(currdir+name+file_suffix, 'r') as f1, \
                 open(currdir+name+'.baseline'+file_suffix, 'r') as f2:
@@ -784,13 +786,15 @@ class TestTextPortal(unittest.TestCase):
             with open(currdir+name+file_suffix, 'r') as out, \
                 open(currdir+name+'.baseline'+file_suffix, 'r') as txt:
                 self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
-                                                 allow_second_superset=True)
+                                                 allow_second_superset=True,
+                                                 abstol=0)
         elif file_suffix == '.yaml':
             with open(currdir+name+file_suffix, 'r') as out, \
                 open(currdir+name+'.baseline'+file_suffix, 'r') as txt:
                 self.assertStructuredAlmostEqual(yaml.full_load(txt),
                                                  yaml.full_load(out),
-                                                 allow_second_superset=True)
+                                                 allow_second_superset=True,
+                                                 abstol=0)
         else:
             try:
                 with open(currdir+name+file_suffix, 'r') as f1, \

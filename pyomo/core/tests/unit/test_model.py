@@ -321,8 +321,9 @@ class Test(unittest.TestCase):
             return expr
         model.obj = Objective(rule=obj_rule)
         model.display(join(currdir,"solve3.out"))
-        self.assertTrue(cmp(join(currdir,"solve3.out"),
-                            join(currdir,"solve3.txt")))
+        _out, _txt = join(currdir,"solve3.out"), join(currdir,"solve3.txt")
+        self.assertTrue(cmp(_out, _txt),
+                        msg="Files %s and %s differ" % (_txt, _out))
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve4(self):

@@ -56,7 +56,8 @@ class CCTests(object):
         if not os.path.exists(bfile):
             os.rename(ofile, bfile)
         try:
-            self.assertTrue(cmp(ofile, bfile))
+            self.assertTrue(cmp(ofile, bfile),
+                            msg="Files %s and %s differ" % (ofile, bfile))
         except:
             with open(ofile, 'r') as f1, open(bfile, 'r') as f2:
                 f1_contents = list(filter(None, f1.read().split()))

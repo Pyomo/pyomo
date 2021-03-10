@@ -44,7 +44,8 @@ class TestCPXLPOrdering(unittest.TestCase):
                     io_options=io_options)
         self.assertTrue(cmp(
             test_fname,
-            baseline_fname))
+            baseline_fname),
+            msg="Files %s and %s differ" % (test_fname, baseline_fname))
         self._cleanup(test_fname)
 
     # generates an expression in a randomized way so that
@@ -212,7 +213,8 @@ class TestCPXLP_writer(unittest.TestCase):
         model.write(test_fname, format='lp')
         self.assertTrue(cmp(
             test_fname,
-            baseline_fname))
+            baseline_fname),
+            msg="Files %s and %s differ" % (test_fname, baseline_fname))
 
     def test_var_on_nonblock(self):
         class Foo(Block().__class__):
