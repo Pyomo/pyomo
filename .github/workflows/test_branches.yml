@@ -1,11 +1,8 @@
-name: GitHub CI
+name: GitHub Branch CI
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    branches:
+    branches-ignore:
       - main
   workflow_dispatch:
     inputs:
@@ -40,8 +37,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-18.04, macos-latest, windows-latest]
-        python: [3.6, 3.7, 3.8, 3.9, pypy3]
+        os: [ubuntu-18.04]
+        python: [3.8]
         other: [""]
         category: ["nightly"]
         # Ubuntu-18.04 should be replaced with ubuntu-latest once PyNumero
@@ -54,10 +51,12 @@ jobs:
           PYENV: pip
 
         - os: macos-latest
+          python: 3.6
           TARGET: osx
           PYENV: pip
 
         - os: windows-latest
+          python: 3.7
           TARGET: win
           PYENV: conda
           PACKAGES: glpk
@@ -95,18 +94,6 @@ jobs:
           TARGET: linux
           PYENV: pip
           PACKAGES: cython
-
-        - os: ubuntu-18.04
-          python: 3.7
-          other: /singletest
-          category: neos
-          skip_doctest: 1
-          TARGET: linux
-          PYENV: pip
-
-        exclude:
-        - {os: macos-latest, python: pypy3}
-        - {os: windows-latest, python: pypy3}
 
     steps:
     - name: Checkout Pyomo source
@@ -639,6 +626,7 @@ jobs:
         fi
 
     - name: Upload codecov reports
+      if: github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main'
       run: |
         set +e
         if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
