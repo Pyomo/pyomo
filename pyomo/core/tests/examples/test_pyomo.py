@@ -131,8 +131,9 @@ class TestJson(BaseTester):
                                     f2_filtered.append(float(i))
                                 except:
                                     f2_filtered.append(i)
-                self.assertStructuredAlmostEqual(f1_filtered, f2_filtered,
-                                                 abstol=1e-6)
+                self.assertStructuredAlmostEqual(f2_filtered, f1_filtered,
+                                                 abstol=1e-6,
+                                                 allow_second_superset=True)
 
     def test1_simple_pyomo_execution(self):
         # Simple execution of 'pyomo'
