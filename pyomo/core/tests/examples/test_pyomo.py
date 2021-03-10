@@ -120,7 +120,7 @@ class TestJson(BaseTester):
                         items1 = item1.strip().split()
                         items2 = item2.strip().split()
                         for i in items1:
-                            if not i.startswith('/'):
+                            if not (i.startswith('/') or i.startswith(":\\", 1)):
                                 try:
                                     f1_filtered.append(float(i))
                                 except:
