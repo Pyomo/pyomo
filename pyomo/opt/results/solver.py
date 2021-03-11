@@ -220,3 +220,5 @@ class SolverInformation(MapContainer):
         self.declare('tree_processing_time', type=ScalarType.time)
         # Semantics: The number of feasible solutions found.
         self.declare('n_solutions_found', type=ScalarType.int)
+        # Semantics: If mip start was attempted but failed to provide a feasible solution.
+        self.declare('mip_start_failed', type=bool)

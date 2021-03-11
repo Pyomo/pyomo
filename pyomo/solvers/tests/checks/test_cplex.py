@@ -459,6 +459,16 @@ MIP start 'm1' defined initial solution with objective 25210.5363.
         results = CPLEXSHELL.process_logfile(self.solver)
         self.assertEqual(results.solver.warm_start_objective_value, 25210.5363)
 
+    def test_log_file_shows_warm_start_failure(self):
+        log_file_text = """
+Warning:  No solution found from 1 MIP starts.
+"""
+        with open(self.solver._log_file, "w") as f:
+            f.write(log_file_text)
+
+        results = CPLEXSHELL.process_logfile(self.solver)
+        self.assertEqual(results.solver.mip_start_failed, True)
+
     def test_log_file_shows_root_node_processing_time(self):
         log_file_text = """
 Presolve time = 0.14 sec. (181.11 ticks)

@@ -27,6 +27,7 @@ from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
 from pyomo.opt.base import SolverFactory
+from pyomo.solvers.plugins.solvers.CPLEX import did_mip_start_fail_from_logs
 import time
 
 
@@ -858,6 +859,18 @@ class CPLEXDirect(DirectSolver):
                     self._load_slacks()
 
         self.results.solution.insert(soln)
+
+        # Get additional solver information from log file
+        if self.version() >= (12, 5, 1) \
+           and isinstance(self._log_file, six.string_types):
+            _log_file = (open(self._log_file, 'a'),)
+            _close_log_file = True
+        else:
+            _log_file = (self._log_file,)
+            _close_log_file = False
+        self.results.solver.mip_start_failed = did_mip_start_fail_from_logs(_log_file)
+        if _close_log_file:
+            _log_file[0].close()
 
         # finally, clean any temporary files registered with the temp file
         # manager, created populated *directly* by this plugin.
