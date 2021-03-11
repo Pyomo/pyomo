@@ -603,14 +603,19 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     temp.append(int(round(var.value)))
         solve_data.curr_int_sol = tuple(temp)
 
-        # TODO: This is not working that well with GOA, needs to be checked (test_GOA_Nonconvex2)
-        if config.strategy == 'OA':
-            if solve_data.curr_int_sol in set(solve_data.integer_list):
-                config.logger.info('This integer combination has been explored.'
-                                   'We will skip solving the fixed NLP subproblem.')
+        if solve_data.curr_int_sol in set(solve_data.integer_list):
+            config.logger.info('This integer combination has been explored.'
+                                'We will skip solving the fixed NLP subproblem.')
+            if config.strategy == 'GOA':
+                if config.add_no_good_cuts:
+                    var_values = list(
+                        v.value for v in solve_data.working_model.MindtPy_utils.variable_list)
+                    self.add_lazy_no_good_cuts(var_values, solve_data, config, opt)
                 return
-            else:
-                solve_data.integer_list.append(solve_data.curr_int_sol)
+            elif config.strategy == 'OA':
+                return
+        else:
+            solve_data.integer_list.append(solve_data.curr_int_sol)
 
         # solve subproblem
         # The constraint linearization happens in the handlers
