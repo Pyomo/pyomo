@@ -10,7 +10,7 @@
 
 import json
 import os
-from os.path import abspath, dirname
+from os.path import abspath, dirname, join
 pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
@@ -82,8 +82,8 @@ class mock_all(unittest.TestCase):
         results.write(filename=currdir+"test_solve4.txt",
                       times=False,
                       format='json')
-        with open(currdir+"test_solve4.txt", 'r') as out, \
-            open(currdir+"test4_asl.txt", 'r') as txt:
+        with open(join(currdir, "test_solve4.txt"), 'r') as out, \
+            open(join(currdir, "test4_asl.txt"), 'r') as txt:
             self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
                                              abstol=1e-4,
                                              allow_second_superset=True)
@@ -104,7 +104,7 @@ class mock_all(unittest.TestCase):
                                  suffixes=['.*'])
         results.write(filename=currdir+"test_options.txt",
                       times=False)
-        _out, _log = currdir+"test_options.txt", currdir+  "test4_asl.txt"
+        _out, _log = join(currdir, "test_options.txt"), join(currdir, "test4_asl.txt")
         self.assertTrue(cmp(_out, _log),
                         msg="Files %s and %s differ" % (_out, _log))
         #os.remove(currdir+"test4.sol")
