@@ -526,7 +526,8 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             results.solver.tree_processing_time = float(tree_processing_time.group(1))
 
         # Check if a mip start was attempted but failed
-        results.solver.mip_start_failed = did_mip_start_fail_from_logs(output)
+        mip_start_warning = re.search(r'Warning:\s+No solution found from \d+ MIP starts', output)
+        results.solver.mip_start_failed = bool(mip_start_warning)
 
         for line in output.split("\n"):
             tokens = re.split('[ \t]+',line.strip())
@@ -1007,9 +1008,3 @@ class MockCPLEX(CPLEXSHELL,MockMIP):
 
     def _execute_command(self, cmd):
         return MockMIP._execute_command(self, cmd)
-
-
-def did_mip_start_fail_from_logs(log_output) -> bool:
-    mip_start_warning = re.search(r'Warning:\s+No solution found from \d+ MIP starts', log_output)
-    return bool(mip_start_warning)
-
