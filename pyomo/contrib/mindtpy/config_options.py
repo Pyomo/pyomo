@@ -445,13 +445,15 @@ def check_config(config):
         config.add_slack = False
 
     if config.strategy == 'GOA':
-        config.add_no_good_cuts = True
-        config.use_tabu_list = False
         config.add_slack = False
         config.use_mcpp = True
-        config.integer_to_binary = True
+        # config.integer_to_binary = True
         config.equality_relaxation = False
         config.use_fbbt = True
+        # add_no_good_cuts is Ture by default in GOA
+        if not config.add_no_good_cuts and not config.use_tabu_list:
+            config.add_no_good_cuts = True
+            config.use_tabu_list = False
     elif config.strategy == 'FP':  # feasibility pump alone
         config.init_strategy = 'FP'
         config.iteration_limit = 0

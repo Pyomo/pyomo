@@ -11,6 +11,7 @@ class IncumbentCallback_cplex(IncumbentCallback):
         https://www.ibm.com/support/knowledgecenter/SSSA5P_12.10.0/ilog.odms.cplex.help/refpythoncplex/html/cplex.callbacks.IncumbentCallback-class.html
         IncumbentCallback will be activated after Lazyconstraint callback, when the potential incumbent solution is satisfies the lazyconstraints.
         TODO: need to handle GOA same integer combination check in lazyconstraint callback in single_tree.py
+        TODO: combine integer_list and tabu_list
         """
         solve_data = self.solve_data
         opt = self.opt
