@@ -483,6 +483,74 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 'MindtPy unable to handle NLP subproblem termination '
                 'condition of {}'.format(termination_condition))
 
+    def handle_lazy_regularization_problem(self,master_mip, master_mip_results,solve_data, config):
+        if master_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
+            handle_master_optimal(
+                master_mip, solve_data, config, update_bound=False)
+        elif master_mip_results.solver.termination_condition in {tc.infeasible, tc.infeasibleOrUnbounded}:
+            config.logger.info('Projection problem infeasible.')
+            if config.reduce_level_coef:
+                config.level_coef = config.level_coef / 2
+                master_mip, master_mip_results = solve_master(
+                    solve_data, config, regularization_problem=True)
+                if master_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
+                    handle_master_optimal(
+                        master_mip, solve_data, config, update_bound=False)
+                elif master_mip_results.solver.termination_condition is tc.infeasible:
+                    config.logger.info('Projection problem still infeasible with reduced level_coef. '
+                                        'NLP subproblem is generated based on the incumbent solution of the master problem.')
+                elif master_mip_results.solver.termination_condition is tc.maxTimeLimit:
+                    config.logger.info(
+                        'Regularization problem failed to converge within the time limit.')
+                    solve_data.results.solver.termination_condition = tc.maxTimeLimit
+                elif master_mip_results.solver.termination_condition is tc.unbounded:
+                    config.logger.info(
+                        'Regularization problem ubounded.'
+                        'Sometimes solving MIQP using cplex, unbounded means infeasible.')
+                elif master_mip_results.solver.termination_condition is tc.unknown:
+                    config.logger.info(
+                        'Termination condition of the projection problem is unknown.')
+                    if master_mip_results.problem.lower_bound != float('-inf'):
+                        config.logger.info(
+                            'Solution limit has been reached.')
+                        handle_master_optimal(
+                            master_mip, solve_data, config, update_bound=False)
+                    else:
+                        config.logger.info('No solution obtained from the projection subproblem.'
+                                            'Please set mip_solver_tee to True for more informations.'
+                                            'The solution of the OA master problem will be adopted.')
+                else:
+                    raise ValueError(
+                        'MindtPy unable to handle projection problem termination condition '
+                        'of %s. Solver message: %s' %
+                        (master_mip_results.solver.termination_condition, master_mip_results.solver.message))
+            elif config.use_bb_tree_incumbent:
+                config.logger.info(
+                    'Fixed subproblem will be generated based on the incumbent solution of the master problem.')
+        elif master_mip_results.solver.termination_condition is tc.maxTimeLimit:
+            config.logger.info(
+                'Regularization problem failed to converge within the time limit.')
+            solve_data.results.solver.termination_condition = tc.maxTimeLimit
+        elif master_mip_results.solver.termination_condition is tc.unbounded:
+            config.logger.info(
+                'Regularization problem ubounded.'
+                'Sometimes solving MIQP using cplex, unbounded means infeasible.')
+        elif master_mip_results.solver.termination_condition is tc.unknown:
+            config.logger.info(
+                'Termination condition of the projection problem is unknown.')
+            if master_mip_results.problem.lower_bound != float('-inf'):
+                config.logger.info(
+                    'Solution limit has been reached.')
+                handle_master_optimal(
+                    master_mip, solve_data, config, update_bound=False)
+        else:
+            raise ValueError(
+                'MindtPy unable to handle projection problem termination condition '
+                'of %s. Solver message: %s' %
+                (master_mip_results.solver.termination_condition, master_mip_results.solver.message))
+
+
+
     def __call__(self):
         """
         This is an inherent function in LazyConstraintCallback in cplex. 
@@ -515,75 +583,12 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 config.logger.info('the bound and the best found solution have neither been improved.'
                                    'We will skip solving the regularization problem and the fixed NLP subproblem')
                 return
-
             if ((solve_data.objective_sense == minimize and solve_data.LB != float('-inf'))
                     or (solve_data.objective_sense == maximize and solve_data.UB != float('inf'))):
                 master_mip, master_mip_results = solve_master(
                     solve_data, config, regularization_problem=True)
-                if master_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
-                    handle_master_optimal(
-                        master_mip, solve_data, config, update_bound=False)
-                elif master_mip_results.solver.termination_condition in {tc.infeasible, tc.infeasibleOrUnbounded}:
-                    config.logger.info('Projection problem infeasible.')
-                    if config.reduce_level_coef:
-                        config.level_coef = config.level_coef / 2
-                        master_mip, master_mip_results = solve_master(
-                            solve_data, config, regularization_problem=True)
-                        if master_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
-                            handle_master_optimal(
-                                master_mip, solve_data, config, update_bound=False)
-                        elif master_mip_results.solver.termination_condition is tc.infeasible:
-                            config.logger.info('Projection problem still infeasible with reduced level_coef. '
-                                               'NLP subproblem is generated based on the incumbent solution of the master problem.')
-                        elif master_mip_results.solver.termination_condition is tc.maxTimeLimit:
-                            config.logger.info(
-                                'Regularization problem failed to converge within the time limit.')
-                            solve_data.results.solver.termination_condition = tc.maxTimeLimit
-                        elif master_mip_results.solver.termination_condition is tc.unbounded:
-                            config.logger.info(
-                                'Regularization problem ubounded.'
-                                'Sometimes solving MIQP using cplex, unbounded means infeasible.')
-                        elif master_mip_results.solver.termination_condition is tc.unknown:
-                            config.logger.info(
-                                'Termination condition of the projection problem is unknown.')
-                            if master_mip_results.problem.lower_bound != float('-inf'):
-                                config.logger.info(
-                                    'Solution limit has been reached.')
-                                handle_master_optimal(
-                                    master_mip, solve_data, config, update_bound=False)
-                            else:
-                                config.logger.info('No solution obtained from the projection subproblem.'
-                                                   'Please set mip_solver_tee to True for more informations.'
-                                                   'The solution of the OA master problem will be adopted.')
-                        else:
-                            raise ValueError(
-                                'MindtPy unable to handle projection problem termination condition '
-                                'of %s. Solver message: %s' %
-                                (master_mip_results.solver.termination_condition, master_mip_results.solver.message))
-                    elif config.use_bb_tree_incumbent:
-                        config.logger.info(
-                            'Fixed subproblem will be generated based on the incumbent solution of the master problem.')
-                elif master_mip_results.solver.termination_condition is tc.maxTimeLimit:
-                    config.logger.info(
-                        'Regularization problem failed to converge within the time limit.')
-                    solve_data.results.solver.termination_condition = tc.maxTimeLimit
-                elif master_mip_results.solver.termination_condition is tc.unbounded:
-                    config.logger.info(
-                        'Regularization problem ubounded.'
-                        'Sometimes solving MIQP using cplex, unbounded means infeasible.')
-                elif master_mip_results.solver.termination_condition is tc.unknown:
-                    config.logger.info(
-                        'Termination condition of the projection problem is unknown.')
-                    if master_mip_results.problem.lower_bound != float('-inf'):
-                        config.logger.info(
-                            'Solution limit has been reached.')
-                        handle_master_optimal(
-                            master_mip, solve_data, config, update_bound=False)
-                else:
-                    raise ValueError(
-                        'MindtPy unable to handle projection problem termination condition '
-                        'of %s. Solver message: %s' %
-                        (master_mip_results.solver.termination_condition, master_mip_results.solver.message))
+                self.handle_lazy_regularization_problem(
+                    master_mip, master_mip_results, solve_data, config)
 
         if solve_data.LB + config.bound_tolerance >= solve_data.UB:
             config.logger.info(
@@ -593,6 +598,8 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             solve_data.results.solver.termination_condition = tc.optimal
             self.abort()
             return
+
+        # check if the same integer combination is obtained.
         # In cplex, negative zero is different from zero, so we use string to denote this
         temp = []
         for var in solve_data.working_model.component_data_objects(ctype=Var):
