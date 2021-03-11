@@ -14,7 +14,7 @@ from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning, _DoNothing,
                                        copy_var_list_values, get_main_elapsed_time)
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_affine_cuts
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem
-from pyomo.contrib.mindtpy.util import calc_jacobians, set_solver_options, var_bound_add
+from pyomo.contrib.mindtpy.util import calc_jacobians, set_solver_options, var_bound_add, get_integer_solution
 from pyomo.core import (ConstraintList, Objective,
                         TransformationFactory, maximize, minimize,
                         value, Var)
@@ -99,6 +99,9 @@ def MindtPy_initialize_master(solve_data, config):
     elif config.init_strategy == 'max_binary':
         init_max_binaries(solve_data, config)
     elif config.init_strategy == 'initial_binary':
+        solve_data.curr_int_sol = get_integer_solution(
+            solve_data.working_model)
+        solve_data.integer_list.append(solve_data.curr_int_sol)
         if config.strategy != 'ECP':
             fixed_nlp, fixed_nlp_result = solve_subproblem(
                 solve_data, config)

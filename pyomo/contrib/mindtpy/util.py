@@ -510,3 +510,21 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
                             'AbsConFeasTol ' + str(config.zero_tolerance))
                     opt.options['add_options'].append('$offecho')
                     opt.options['add_options'].append('GAMS_MODEL.optfile=1')
+
+
+def get_integer_solution(model):
+    """ obtain the value of integer variables from the provided model.
+
+    Args:
+        model: Pyomo model
+            the model to extract value of integer variables
+    """
+    temp = []
+    for var in model.component_data_objects(ctype=Var):
+        if var.is_integer():
+            if var.value == 0:
+                # In cplex, negative zero is different from zero, so we use string to denote this
+                temp.append(str(var.value))
+            else:
+                temp.append(int(round(var.value)))
+    return tuple(temp)

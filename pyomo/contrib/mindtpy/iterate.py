@@ -11,7 +11,7 @@
 """Iteration loop for MindtPy."""
 from __future__ import division
 import logging
-from pyomo.contrib.mindtpy.util import set_solver_options
+from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 
 from pyomo.contrib.mindtpy.mip_solve import (solve_master,
@@ -346,14 +346,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
     # Cycling check
     # In cplex, negative zero is different from zero, so we use string to denote this
     if config.cycling_check and solve_data.mip_iter >= 1 and check_cycling:
-        temp = []
-        for var in solve_data.mip.component_data_objects(ctype=Var):
-            if var.is_integer():
-                if var.value == 0:
-                    temp.append(str(var.value))
-                else:
-                    temp.append(int(round(var.value)))
-        solve_data.curr_int_sol = tuple(temp)
+        solve_data.curr_int_sol = get_integer_solution(solve_data.mip)
 
         if solve_data.curr_int_sol in set(solve_data.integer_list):
             config.logger.info(

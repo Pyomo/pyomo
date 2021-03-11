@@ -84,7 +84,6 @@ class MindtPySolver(object):
         solve_data.results = SolverResults()
         solve_data.timing = Bunch()
         solve_data.curr_int_sol = []
-        solve_data.prev_int_sol = []
         solve_data.should_terminate = False
         solve_data.integer_list = []
 

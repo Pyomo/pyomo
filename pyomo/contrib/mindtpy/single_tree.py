@@ -13,6 +13,7 @@ from pyomo.core import Constraint, minimize, value, maximize, Var
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, solve_feasibility_subproblem
 from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables, get_main_elapsed_time, time_code
+from pyomo.contrib.mindtpy.util import get_integer_solution
 from math import copysign
 import pyomo.environ as pyo
 from pyomo.core.expr import current as EXPR
@@ -600,15 +601,8 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             return
 
         # check if the same integer combination is obtained.
-        # In cplex, negative zero is different from zero, so we use string to denote this
-        temp = []
-        for var in solve_data.working_model.component_data_objects(ctype=Var):
-            if var.is_integer():
-                if var.value == 0:
-                    temp.append(str(var.value))
-                else:
-                    temp.append(int(round(var.value)))
-        solve_data.curr_int_sol = tuple(temp)
+        solve_data.curr_int_sol = get_integer_solution(
+            solve_data.working_model)
 
         if solve_data.curr_int_sol in set(solve_data.integer_list):
             config.logger.info('This integer combination has been explored.'
