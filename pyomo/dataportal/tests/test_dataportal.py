@@ -11,9 +11,10 @@
 # Unit Tests for DataPortal objects
 #
 
+from itertools import zip_longest
 import json
 import os
-from os.path import abspath, dirname
+from os.path import abspath, dirname, join
 pyomo_dir=dirname(dirname(abspath(__file__)))+os.sep+".."
 
 import pyomo.common.unittest as unittest
@@ -62,7 +63,7 @@ class PyomoTableData(unittest.TestCase):
 
     def test_read_set(self):
         td = DataManagerFactory('xls')
-        td.initialize(filename=currdir+"Book1.xls", range="TheRange", format='set', set="X")
+        td.initialize(filename=join(currdir, "Book1.xls"), range="TheRange", format='set', set="X")
         try:
             td.open()
             td.read()
@@ -73,7 +74,7 @@ class PyomoTableData(unittest.TestCase):
 
     def test_read_param1(self):
         td = DataManagerFactory('xls')
-        td.initialize(filename=currdir+"Book1.xls", range="TheRange", param=['bb','cc','dd'])
+        td.initialize(filename=join(currdir, "Book1.xls"), range="TheRange", param=['bb','cc','dd'])
         try:
             td.open()
             td.read()
@@ -84,7 +85,7 @@ class PyomoTableData(unittest.TestCase):
 
     def test_read_param2(self):
         td = DataManagerFactory('xls')
-        td.initialize(filename=currdir+"Book1.xls",range="TheRange", index="X", param=['bb','cc','dd'])
+        td.initialize(filename=join(currdir, "Book1.xls"),range="TheRange", index="X", param=['bb','cc','dd'])
         try:
             td.open()
             td.read()
@@ -95,7 +96,7 @@ class PyomoTableData(unittest.TestCase):
 
     def test_read_param3(self):
         td = DataManagerFactory('xls')
-        td.initialize(filename=currdir+"Book1.xls",range="TheRange", index="X", param=["a"])
+        td.initialize(filename=join(currdir, "Book1.xls"),range="TheRange", index="X", param=["a"])
         try:
             td.open()
             td.read()
@@ -106,7 +107,7 @@ class PyomoTableData(unittest.TestCase):
 
     def test_read_param4(self):
         td = DataManagerFactory('xls')
-        td.initialize(filename=currdir+"Book1.xls", range="TheRange", index="X", param=['a','b'],)
+        td.initialize(filename=join(currdir, "Book1.xls"), range="TheRange", index="X", param=['a','b'],)
         try:
             td.open()
             td.read()
@@ -117,7 +118,7 @@ class PyomoTableData(unittest.TestCase):
 
     def test_read_array1(self):
         td = DataManagerFactory('xls')
-        td.initialize(filename=currdir+"Book1.xls",range="TheRange", param="X", format="array")
+        td.initialize(filename=join(currdir, "Book1.xls"),range="TheRange", param="X", format="array")
         try:
             td.open()
             td.read()
@@ -128,7 +129,7 @@ class PyomoTableData(unittest.TestCase):
 
     def test_read_array2(self):
         td = DataManagerFactory('xls')
-        td.initialize(filename=currdir+"Book1.xls",range="TheRange",param="X",format="transposed_array")
+        td.initialize(filename=join(currdir, "Book1.xls"),range="TheRange", param="X", format="transposed_array")
         try:
             td.open()
             td.read()
@@ -157,7 +158,7 @@ class PyomoTableData(unittest.TestCase):
     def test_error3(self):
         td = DataManagerFactory('txt')
         try:
-            td.initialize(filename=currdir+"display.txt")
+            td.initialize(filename=join(currdir, "display.txt"))
             td.open()
             self.fail("Expected IOError because of bad file type")
         except (IOError, AttributeError):
@@ -166,7 +167,7 @@ class PyomoTableData(unittest.TestCase):
     def test_error4(self):
         td = DataManagerFactory('txt')
         try:
-            td.initialize(filename=currdir+"dummy")
+            td.initialize(filename=join(currdir, "dummy"))
             td.open()
             self.fail("Expected IOError because of bad file type")
         except (IOError, AttributeError):
@@ -174,7 +175,7 @@ class PyomoTableData(unittest.TestCase):
 
     def test_error5(self):
         td = DataManagerFactory('tab')
-        td.initialize(filename=example_dir+"D.tab", param="D", format="foo")
+        td.initialize(filename=join(example_dir, "D.tab"), param="D", format="foo")
         td.open()
         try:
             td.read()
@@ -236,7 +237,7 @@ class PyomoDataPortal(unittest.TestCase):
         md = DataPortal()
         model=AbstractModel()
         model.A=Set()
-        md.load(model=model, filename=currdir+"data1.dat")
+        md.load(model=model, filename=join(currdir, "data1.dat"))
         self.assertEqual(set(md['A']), set([1,2,3]))
 
     def test_md3(self):
@@ -244,7 +245,7 @@ class PyomoDataPortal(unittest.TestCase):
         model=AbstractModel()
         model.A=Set()
         try:
-            md.load(model=model, filename=currdir+"data2.dat")
+            md.load(model=model, filename=join(currdir, "data2.dat"))
             self.fail("Expected error because of extraneous text")
         except IOError:
             pass
@@ -255,7 +256,7 @@ class PyomoDataPortal(unittest.TestCase):
         model.A=Set()
         model.B=Set()
         model.C=Set()
-        md.load(model=model, filename=currdir+"data3.dat")
+        md.load(model=model, filename=join(currdir, "data3.dat"))
         self.assertEqual(set(md['A']), set([]))
         self.assertEqual(set(md['B']), set([(1,2)]))
         self.assertEqual(set(md['C']), set([('a','b','c')]))
@@ -265,7 +266,7 @@ class PyomoDataPortal(unittest.TestCase):
         model=AbstractModel()
         model.A=Set()
         try:
-            md.load(model=model, filename=currdir+"data4.dat")
+            md.load(model=model, filename=join(currdir, "data4.dat"))
         except (ValueError,IOError):
             pass
 
@@ -274,7 +275,7 @@ class PyomoDataPortal(unittest.TestCase):
         model=AbstractModel()
         model.A=Set()
         try:
-            md.load(model=model, filename=currdir+"data5.dat")
+            md.load(model=model, filename=join(currdir, "data5.dat"))
         except ValueError:
             pass
 
@@ -282,7 +283,7 @@ class PyomoDataPortal(unittest.TestCase):
         md = DataPortal()
         model=AbstractModel()
         try:
-            md.load(model=model, filename=currdir+"data1.tab")
+            md.load(model=model, filename=join(currdir, "data1.tab"))
             self.fail("Expected IOError")
         except IOError:
             pass
@@ -292,7 +293,7 @@ class PyomoDataPortal(unittest.TestCase):
         model=AbstractModel()
         model.A=Set()
         try:
-            md.load(model=model, filename=currdir+"data6.dat")
+            md.load(model=model, filename=join(currdir, "data6.dat"))
             self.fail("Expected IOError")
         except IOError:
             pass
@@ -302,7 +303,7 @@ class PyomoDataPortal(unittest.TestCase):
         model=AbstractModel()
         model.A=Set()
         model.B=Param(model.A)
-        md.load(model=model, filename=currdir+"data7.dat")
+        md.load(model=model, filename=join(currdir, "data7.dat"))
         self.assertEqual(set(md['A']), set(['a','b','c']))
         self.assertEqual(md['B'], {'a':1.0, 'c':3.0})
 
@@ -313,7 +314,7 @@ class PyomoDataPortal(unittest.TestCase):
         model.B=Param(within=Boolean)
         model.Z=Set()
         model.Y=Set(model.Z)
-        md.load(model=model, filename=currdir+"data8.dat")
+        md.load(model=model, filename=join(currdir, "data8.dat"))
         self.assertEqual(md['A'], False)
         self.assertEqual(md['B'], True)
         self.assertEqual(md['Z'], ['foo[*]', 'bar[ * ]', 'bar[1,*,a,*]', 'foo-bar', 'hello-goodbye'])
@@ -329,7 +330,7 @@ class PyomoDataPortal(unittest.TestCase):
         model.B=Set()
         model.C=Set()
         model.D=Set()
-        md.load(model=model, filename=currdir+"data11.dat")
+        md.load(model=model, filename=join(currdir, "data11.dat"))
         self.assertEqual(set(md['A']), set([]))
         self.assertEqual(set(md['B']), set([(1,2)]))
         self.assertEqual(set(md['C']), set([('a','b','c')]))
@@ -345,19 +346,19 @@ class PyomoDataPortal(unittest.TestCase):
         model.c=Param()
         model.d=Param()
         # Test 1
-        instance = model.create_instance(currdir+'data14.dat', namespaces=['ns1','ns2'])
+        instance = model.create_instance(join(currdir, 'data14.dat'), namespaces=['ns1','ns2'])
         self.assertEqual( value(instance.a), 1)
         self.assertEqual( value(instance.b), 2)
         self.assertEqual( value(instance.c), 2)
         self.assertEqual( value(instance.d), 2)
         # Test 2
-        instance = model.create_instance(currdir+'data14.dat', namespaces=['ns1','ns3','nsX'])
+        instance = model.create_instance(join(currdir, 'data14.dat'), namespaces=['ns1','ns3','nsX'])
         self.assertEqual( value(instance.a), 1)
         self.assertEqual( value(instance.b), 100)
         self.assertEqual( value(instance.c), 3)
         self.assertEqual( value(instance.d), 100)
         # Test None
-        instance = model.create_instance(currdir+'data14.dat')
+        instance = model.create_instance(join(currdir, 'data14.dat'))
         self.assertEqual( value(instance.a), -1)
         self.assertEqual( value(instance.b), -2)
         self.assertEqual( value(instance.c), -3)
@@ -385,10 +386,10 @@ class PyomoDataPortal(unittest.TestCase):
         md = DataPortal()
         model=AbstractModel()
         model.p=Param()
-        instance = model.create_instance(currdir+"data15.dat")
-        md.load(model=model, filename=currdir+"data15.dat")
+        instance = model.create_instance(join(currdir, "data15.dat"))
+        md.load(model=model, filename=join(currdir, "data15.dat"))
         try:
-            md.load(model=model, filename=currdir+"data15.dat")
+            md.load(model=model, filename=join(currdir, "data15.dat"))
             self.fail("Expected IOError")
         except IOError:
             pass
@@ -435,7 +436,7 @@ class PyomoDataPortal(unittest.TestCase):
         model = AbstractModel()
         model.I = Set()
         model.p = Param(model.I, domain=Any)
-        i = model.create_instance(currdir+"data_types.dat")
+        i = model.create_instance(join(currdir, "data_types.dat"))
         ref = {
             50:  (int, 2),
             55: (int, -2),
@@ -492,7 +493,7 @@ class PyomoDataPortal(unittest.TestCase):
         model.A=Set()
         model.e=Param(model.A)
         md = DataPortal()
-        md.load(model=model, filename=currdir+"data16.dat")
+        md.load(model=model, filename=join(currdir, "data16.dat"))
         # data()
         self.assertEqual(md.data(namespace='ns1'), {'a': {None: 1}, 'A': {None:[7,9,11]}, 'e': {9:90, 7:70, 11:110}})
         # __getitem__
@@ -523,14 +524,14 @@ class TestOnlyTextPortal(unittest.TestCase):
         return {'filename':os.path.abspath(tutorial_dir+os.sep+'tab'+os.sep+name+self.suffix)}
 
     def create_write_options(self, name):
-        return {'filename':os.path.abspath(currdir+os.sep+name+self.suffix), 'sort':True}
+        return {'filename':os.path.abspath(join(currdir, os.sep+name+self.suffix)), 'sort':True}
 
     def test_empty(self):
         # Importing an empty file
         self.check_skiplist('empty')
         dp = DataPortal()
         try:
-            dp.load(set='A', filename=os.path.abspath(currdir+os.sep+'empty'+self.suffix))
+            dp.load(set='A', filename=os.path.abspath(join(currdir, os.sep+'empty'+self.suffix)))
             self.fail("Expected IOError")
         except IOError:
             pass
@@ -674,26 +675,26 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
 
     def compare_data(self, name, file_suffix):
         if file_suffix == '.json':
-            with open(currdir+name+file_suffix, 'r') as out, \
-                open(currdir+name+'.baseline'+file_suffix, 'r') as txt:
+            with open(join(currdir, name+file_suffix), 'r') as out, \
+                open(join(currdir, name+'.baseline'+file_suffix), 'r') as txt:
                 self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
                                                  allow_second_superset=True,
                                                  abstol=0)
         elif file_suffix == '.yaml':
-            with open(currdir+name+file_suffix, 'r') as out, \
-                open(currdir+name+'.baseline'+file_suffix, 'r') as txt:
+            with open(join(currdir, name+file_suffix), 'r') as out, \
+                open(join(currdir, name+'.baseline'+file_suffix), 'r') as txt:
                 self.assertStructuredAlmostEqual(yaml.full_load(txt),
                                                  yaml.full_load(out),
                                                  allow_second_superset=True,
                                                  abstol=0)
         else:
-            with open(currdir+name+file_suffix, 'r') as f1, \
-                open(currdir+name+'.baseline'+file_suffix, 'r') as f2:
+            with open(join(currdir, name+file_suffix), 'r') as f1, \
+                open(join(currdir, name+'.baseline'+file_suffix), 'r') as f2:
                     f1_contents = list(filter(None, f1.read().split()))
                     f2_contents = list(filter(None, f2.read().split()))
-                    for item1, item2 in zip(f1_contents, f2_contents):
+                    for item1, item2 in zip_longest(f1_contents, f2_contents):
                         self.assertEqual(item1, item2)
-        os.remove(currdir+name+file_suffix)
+        os.remove(join(currdir, name+file_suffix))
 
     def test_store_set1(self):
         # Write 1-D set
@@ -779,36 +780,36 @@ class TestTextPortal(unittest.TestCase):
         return {'filename':os.path.abspath(tutorial_dir+os.sep+'tab'+os.sep+name+self.suffix)}
 
     def create_write_options(self, name):
-        return {'filename':os.path.abspath(currdir+os.sep+name+self.suffix), 'sort':True}
+        return {'filename':os.path.abspath(join(currdir, os.sep+name+self.suffix)), 'sort':True}
 
     def compare_data(self, name, file_suffix):
         if file_suffix == '.json':
-            with open(currdir+name+file_suffix, 'r') as out, \
-                open(currdir+name+'.baseline'+file_suffix, 'r') as txt:
+            with open(join(currdir, name+file_suffix), 'r') as out, \
+                open(join(currdir, name+'.baseline'+file_suffix), 'r') as txt:
                 self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
                                                  allow_second_superset=True,
                                                  abstol=0)
         elif file_suffix == '.yaml':
-            with open(currdir+name+file_suffix, 'r') as out, \
-                open(currdir+name+'.baseline'+file_suffix, 'r') as txt:
+            with open(join(currdir, name+file_suffix), 'r') as out, \
+                open(join(currdir, name+'.baseline'+file_suffix), 'r') as txt:
                 self.assertStructuredAlmostEqual(yaml.full_load(txt),
                                                  yaml.full_load(out),
                                                  allow_second_superset=True,
                                                  abstol=0)
         else:
             try:
-                with open(currdir+name+file_suffix, 'r') as f1, \
-                open(currdir+name+'.baseline'+file_suffix, 'r') as f2:
+                with open(join(currdir, name+file_suffix), 'r') as f1, \
+                open(join(currdir, name+'.baseline'+file_suffix), 'r') as f2:
                     f1_contents = list(filter(None, f1.read().split()))
                     f2_contents = list(filter(None, f2.read().split()))
-                    for item1, item2 in zip(f1_contents, f2_contents):
+                    for item1, item2 in zip_longest(f1_contents, f2_contents):
                         self.assertEqual(item1, item2)
             except:
-                with open(currdir+name+file_suffix, 'r') as out, \
-                open(currdir+name+'.baseline'+file_suffix, 'r') as txt:
+                with open(join(currdir, name+file_suffix), 'r') as out, \
+                open(join(currdir, name+'.baseline'+file_suffix), 'r') as txt:
                     self.assertEqual(out.read().strip().replace(' ',''),
                                      txt.read().strip().replace(' ',''))
-        os.remove(currdir+name+file_suffix)
+        os.remove(join(currdir, name+file_suffix))
 
     def test_tableA(self):
         # Importing an unordered set of arbitrary data
@@ -1105,215 +1106,215 @@ class LoadTests(object):
     def test_tableA1(self):
         # Importing a single column of data
         self.check_skiplist('tableA1')
-        with capture_output(currdir+'loadA1.dat'):
+        with capture_output(join(currdir, 'loadA1.dat')):
             print("load "+self.filename('A')+" format=set : A;")
         model=AbstractModel()
         model.A = Set()
-        instance = model.create_instance(currdir+'loadA1.dat')
+        instance = model.create_instance(join(currdir, 'loadA1.dat'))
         self.assertEqual(set(instance.A.data()), set(['A1', 'A2', 'A3']))
-        os.remove(currdir+'loadA1.dat')
+        os.remove(join(currdir, 'loadA1.dat'))
 
     def test_tableA2(self):
         # Importing a single column of data
         self.check_skiplist('tableA2')
-        with capture_output(currdir+'loadA2.dat'):
+        with capture_output(join(currdir, 'loadA2.dat')):
             print("load "+self.filename('A')+" ;")
         model=AbstractModel()
         model.A = Set()
         try:
-            instance = model.create_instance(currdir+'loadA2.dat')
+            instance = model.create_instance(join(currdir, 'loadA2.dat'))
             self.fail("Should fail because no set name is specified")
         except IOError:
             pass
         except IndexError:
             pass
-        os.remove(currdir+'loadA2.dat')
+        os.remove(join(currdir, 'loadA2.dat'))
 
     def test_tableA3(self):
         # Importing a single column of data
         self.check_skiplist('tableA3')
-        with capture_output(currdir+'loadA3.dat'):
+        with capture_output(join(currdir, 'loadA3.dat')):
             print("load "+self.filename('A')+" format=set : A ;")
         model=AbstractModel()
         model.A = Set()
-        instance = model.create_instance(currdir+'loadA3.dat')
+        instance = model.create_instance(join(currdir, 'loadA3.dat'))
         self.assertEqual(set(instance.A.data()), set(['A1', 'A2', 'A3']))
-        os.remove(currdir+'loadA3.dat')
+        os.remove(join(currdir, 'loadA3.dat'))
 
     def test_tableB1(self):
         # Same as test_tableA
         self.check_skiplist('tableB1')
-        with capture_output(currdir+'loadB.dat'):
+        with capture_output(join(currdir, 'loadB.dat')):
             print("load "+self.filename('B')+" format=set : B;")
         model=AbstractModel()
         model.B = Set()
-        instance = model.create_instance(currdir+'loadB.dat')
+        instance = model.create_instance(join(currdir, 'loadB.dat'))
         self.assertEqual(set(instance.B.data()), set([1, 2, 3]))
-        os.remove(currdir+'loadB.dat')
+        os.remove(join(currdir, 'loadB.dat'))
 
     def test_tableC(self):
         # Importing a multi-column table, where all columns are
         # treated as values for a set with tuple values.
         self.check_skiplist('tableC')
-        with capture_output(currdir+'loadC.dat'):
+        with capture_output(join(currdir, 'loadC.dat')):
             print("load "+self.filename('C')+" format=set : C ;")
         model=AbstractModel()
         model.C = Set(dimen=2)
-        instance = model.create_instance(currdir+'loadC.dat')
+        instance = model.create_instance(join(currdir, 'loadC.dat'))
         self.assertEqual(set(instance.C.data()), set([('A1',1), ('A1',2), ('A1',3), ('A2',1), ('A2',2), ('A2',3), ('A3',1), ('A3',2), ('A3',3)]))
-        os.remove(currdir+'loadC.dat')
+        os.remove(join(currdir, 'loadC.dat'))
 
     def test_tableD(self):
         # Importing a 2D array of data as a set.
         self.check_skiplist('tableD')
-        with capture_output(currdir+'loadD.dat'):
+        with capture_output(join(currdir, 'loadD.dat')):
             print("load "+self.filename('D')+" format=set_array : C ;")
         model=AbstractModel()
         model.C = Set(dimen=2)
-        instance = model.create_instance(currdir+'loadD.dat')
+        instance = model.create_instance(join(currdir, 'loadD.dat'))
         self.assertEqual(set(instance.C.data()), set([('A1',1), ('A2',2), ('A3',3)]))
-        os.remove(currdir+'loadD.dat')
+        os.remove(join(currdir, 'loadD.dat'))
 
     def test_tableZ(self):
         # Importing a single parameter
         self.check_skiplist('tableZ')
-        with capture_output(currdir+'loadZ.dat'):
+        with capture_output(join(currdir, 'loadZ.dat')):
             print("load "+self.filename('Z')+" : Z ;")
         model=AbstractModel()
         model.Z = Param(default=99.0)
-        instance = model.create_instance(currdir+'loadZ.dat')
+        instance = model.create_instance(join(currdir, 'loadZ.dat'))
         self.assertEqual(instance.Z, 1.01)
-        os.remove(currdir+'loadZ.dat')
+        os.remove(join(currdir, 'loadZ.dat'))
 
     def test_tableY(self):
         # Same as tableXW.
         self.check_skiplist('tableY')
-        with capture_output(currdir+'loadY.dat'):
+        with capture_output(join(currdir, 'loadY.dat')):
             print("load "+self.filename('Y')+" : [A] Y;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.Y = Param(model.A)
-        instance = model.create_instance(currdir+'loadY.dat')
+        instance = model.create_instance(join(currdir, 'loadY.dat'))
         self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.Y.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
-        os.remove(currdir+'loadY.dat')
+        os.remove(join(currdir, 'loadY.dat'))
 
     def test_tableXW_1(self):
         # Importing a table, but only reporting the values for the non-index
         # parameter columns.  The first column is assumed to represent an
         # index column.
         self.check_skiplist('tableXW_1')
-        with capture_output(currdir+'loadXW.dat'):
+        with capture_output(join(currdir, 'loadXW.dat')):
             print("load "+self.filename('XW')+" : [A] X W;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.X = Param(model.A)
         model.W = Param(model.A)
-        instance = model.create_instance(currdir+'loadXW.dat')
+        instance = model.create_instance(join(currdir, 'loadXW.dat'))
         self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.X.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.W.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
-        os.remove(currdir+'loadXW.dat')
+        os.remove(join(currdir, 'loadXW.dat'))
 
     def test_tableXW_2(self):
         # Like test_tableXW_1, except that set A is not defined.
         self.check_skiplist('tableXW_2')
-        with capture_output(currdir+'loadXW.dat'):
+        with capture_output(join(currdir, 'loadXW.dat')):
             print("load "+self.filename('XW')+" : [A] X W;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3'])
         model.X = Param(model.A)
         model.W = Param(model.A)
-        instance = model.create_instance(currdir+'loadXW.dat')
+        instance = model.create_instance(join(currdir, 'loadXW.dat'))
         self.assertEqual(instance.X.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.W.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
-        os.remove(currdir+'loadXW.dat')
+        os.remove(join(currdir, 'loadXW.dat'))
 
     def test_tableXW_3(self):
         # Like test_tableXW_1, except that set A is defined in the load statment.
         self.check_skiplist('tableXW_3')
-        with capture_output(currdir+'loadXW.dat'):
+        with capture_output(join(currdir, 'loadXW.dat')):
             print("load "+self.filename('XW')+" : A=[A] X W;")
         model=AbstractModel()
         model.A = Set()
         model.X = Param(model.A)
         model.W = Param(model.A)
-        instance = model.create_instance(currdir+'loadXW.dat')
+        instance = model.create_instance(join(currdir, 'loadXW.dat'))
         self.assertEqual(set(instance.A.data()), set(['A1','A2','A3']))
         self.assertEqual(instance.X.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.W.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
-        os.remove(currdir+'loadXW.dat')
+        os.remove(join(currdir, 'loadXW.dat'))
 
     def test_tableXW_4(self):
         # Like test_tableXW_1, except that set A is defined in the load statment and all values are mapped.
         self.check_skiplist('tableXW_4')
-        with capture_output(currdir+'loadXW.dat'):
+        with capture_output(join(currdir, 'loadXW.dat')):
             print("load "+self.filename('XW')+" : B=[A] R=X S=W;")
         model=AbstractModel()
         model.B = Set()
         model.R = Param(model.B)
         model.S = Param(model.B)
-        instance = model.create_instance(currdir+'loadXW.dat')
+        instance = model.create_instance(join(currdir, 'loadXW.dat'))
         self.assertEqual(set(instance.B.data()), set(['A1','A2','A3']))
         self.assertEqual(instance.R.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.S.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
-        os.remove(currdir+'loadXW.dat')
+        os.remove(join(currdir, 'loadXW.dat'))
 
     def test_tableT(self):
         # Importing a 2D array of parameters that are transposed.
         self.check_skiplist('tableT')
-        with capture_output(currdir+'loadT.dat'):
+        with capture_output(join(currdir, 'loadT.dat')):
             print("load "+self.filename('T')+" format=transposed_array : T;")
         model=AbstractModel()
         model.B = Set(initialize=['I1','I2','I3','I4'])
         model.A = Set(initialize=['A1','A2','A3'])
         model.T = Param(model.A, model.B)
-        instance = model.create_instance(currdir+'loadT.dat')
+        instance = model.create_instance(join(currdir, 'loadT.dat'))
         self.assertEqual(instance.T.extract_values(), {('A2', 'I1'): 2.3, ('A1', 'I2'): 1.4, ('A1', 'I3'): 1.5, ('A1', 'I4'): 1.6, ('A1', 'I1'): 1.3, ('A3', 'I4'): 3.6, ('A2', 'I4'): 2.6, ('A3', 'I1'): 3.3, ('A2', 'I3'): 2.5, ('A3', 'I2'): 3.4, ('A2', 'I2'): 2.4, ('A3', 'I3'): 3.5})
-        os.remove(currdir+'loadT.dat')
+        os.remove(join(currdir, 'loadT.dat'))
 
     def test_tableU(self):
         # Importing a 2D array of parameters.
         self.check_skiplist('tableU')
-        with capture_output(currdir+'loadU.dat'):
+        with capture_output(join(currdir, 'loadU.dat')):
             print("load "+self.filename('U')+" format=array : U;")
         model=AbstractModel()
         model.A = Set(initialize=['I1','I2','I3','I4'])
         model.B = Set(initialize=['A1','A2','A3'])
         model.U = Param(model.A, model.B)
-        instance = model.create_instance(currdir+'loadU.dat')
+        instance = model.create_instance(join(currdir, 'loadU.dat'))
         self.assertEqual(instance.U.extract_values(), {('I2', 'A1'): 1.4, ('I3', 'A1'): 1.5, ('I3', 'A2'): 2.5, ('I4', 'A1'): 1.6, ('I3', 'A3'): 3.5, ('I1', 'A2'): 2.3, ('I4', 'A3'): 3.6, ('I1', 'A3'): 3.3, ('I4', 'A2'): 2.6, ('I2', 'A3'): 3.4, ('I1', 'A1'): 1.3, ('I2', 'A2'): 2.4})
-        os.remove(currdir+'loadU.dat')
+        os.remove(join(currdir, 'loadU.dat'))
 
     def test_tableS(self):
         # Importing a table, but only reporting the values for the non-index
         # parameter columns.  The first column is assumed to represent an
         # index column.  A missing value is represented in the column data.
         self.check_skiplist('tableS')
-        with capture_output(currdir+'loadS.dat'):
+        with capture_output(join(currdir, 'loadS.dat')):
             print("load "+self.filename('S')+" : [A] S ;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.S = Param(model.A)
-        instance = model.create_instance(currdir+'loadS.dat')
+        instance = model.create_instance(join(currdir, 'loadS.dat'))
         self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.S.extract_values(), {'A1':3.3,'A3':3.5})
-        os.remove(currdir+'loadS.dat')
+        os.remove(join(currdir, 'loadS.dat'))
 
     def test_tablePO(self):
         # Importing a table that has multiple indexing columns
         self.check_skiplist('tablePO')
-        with capture_output(currdir+'loadPO.dat'):
+        with capture_output(join(currdir, 'loadPO.dat')):
             print("load "+self.filename('PO')+" : J=[A,B] P O;")
         model=AbstractModel()
         model.J = Set(dimen=2)
         model.P = Param(model.J)
         model.O = Param(model.J)
-        instance = model.create_instance(currdir+'loadPO.dat')
+        instance = model.create_instance(join(currdir, 'loadPO.dat'))
         self.assertEqual(set(instance.J.data()), set([('A3', 'B3'), ('A1', 'B1'), ('A2', 'B2')]) )
         self.assertEqual(instance.P.extract_values(), {('A3', 'B3'): 4.5, ('A1', 'B1'): 4.3, ('A2', 'B2'): 4.4} )
         self.assertEqual(instance.O.extract_values(), {('A3', 'B3'): 5.5, ('A1', 'B1'): 5.3, ('A2', 'B2'): 5.4})
-        os.remove(currdir+'loadPO.dat')
+        os.remove(join(currdir, 'loadPO.dat'))
 
 
 class TestTextLoad(LoadTests, unittest.TestCase):
@@ -1336,34 +1337,34 @@ class TestXmlLoad(LoadTests, unittest.TestCase):
         # parameter columns.  The first column is assumed to represent an
         # index column.
         self.check_skiplist('tableXW_1')
-        with capture_output(currdir+'loadXW.dat'):
+        with capture_output(join(currdir, 'loadXW.dat')):
             print("load "+self.filename('XW_nested1')+" query='./bar/table/*' : [A] X W;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.X = Param(model.A)
         model.W = Param(model.A)
-        instance = model.create_instance(currdir+'loadXW.dat')
+        instance = model.create_instance(join(currdir, 'loadXW.dat'))
         self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.X.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.W.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
-        os.remove(currdir+'loadXW.dat')
+        os.remove(join(currdir, 'loadXW.dat'))
 
     def test_tableXW_nested2(self):
         # Importing a table, but only reporting the values for the non-index
         # parameter columns.  The first column is assumed to represent an
         # index column.
         self.check_skiplist('tableXW_1')
-        with capture_output(currdir+'loadXW.dat'):
+        with capture_output(join(currdir, 'loadXW.dat')):
             print("load "+self.filename('XW_nested2')+" query='./bar/table/row' : [A] X W;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.X = Param(model.A)
         model.W = Param(model.A)
-        instance = model.create_instance(currdir+'loadXW.dat')
+        instance = model.create_instance(join(currdir, 'loadXW.dat'))
         self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.X.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.W.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
-        os.remove(currdir+'loadXW.dat')
+        os.remove(join(currdir, 'loadXW.dat'))
 
 
 class Spreadsheet(LoadTests):
@@ -1404,219 +1405,219 @@ class TestTableCmd(unittest.TestCase):
 
     def test_tableA1_1(self):
         # Importing a single column of data as a set
-        with capture_output(currdir+'loadA1.dat'):
+        with capture_output(join(currdir, 'loadA1.dat')):
             print("table columns=1 A={1} := A1 A2 A3 ;")
         model=AbstractModel()
         model.A = Set()
-        instance = model.create_instance(currdir+'loadA1.dat')
+        instance = model.create_instance(join(currdir, 'loadA1.dat'))
         self.assertEqual(set(instance.A.data()), set(['A1', 'A2', 'A3']))
-        os.remove(currdir+'loadA1.dat')
+        os.remove(join(currdir, 'loadA1.dat'))
 
     def test_tableA1_2(self):
         # Importing a single column of data as a set
-        with capture_output(currdir+'loadA1.dat'):
+        with capture_output(join(currdir, 'loadA1.dat')):
             print("table A={A} : A := A1 A2 A3 ;")
         model=AbstractModel()
         model.A = Set()
-        instance = model.create_instance(currdir+'loadA1.dat')
+        instance = model.create_instance(join(currdir, 'loadA1.dat'))
         self.assertEqual(set(instance.A.data()), set(['A1', 'A2', 'A3']))
-        os.remove(currdir+'loadA1.dat')
+        os.remove(join(currdir, 'loadA1.dat'))
 
     def test_tableB1_1(self):
         # Same as test_tableA
-        with capture_output(currdir+'loadB.dat'):
+        with capture_output(join(currdir, 'loadB.dat')):
             print("table columns=1 B={1} := 1 2 3 ;")
         model=AbstractModel()
         model.B = Set()
-        instance = model.create_instance(currdir+'loadB.dat')
+        instance = model.create_instance(join(currdir, 'loadB.dat'))
         self.assertEqual(set(instance.B.data()), set([1, 2, 3]))
-        os.remove(currdir+'loadB.dat')
+        os.remove(join(currdir, 'loadB.dat'))
 
     def test_tableB1_2(self):
         # Same as test_tableA
-        with capture_output(currdir+'loadB.dat'):
+        with capture_output(join(currdir, 'loadB.dat')):
             print("table B={B} : B := 1 2 3 ;")
         model=AbstractModel()
         model.B = Set()
-        instance = model.create_instance(currdir+'loadB.dat')
+        instance = model.create_instance(join(currdir, 'loadB.dat'))
         self.assertEqual(set(instance.B.data()), set([1, 2, 3]))
-        os.remove(currdir+'loadB.dat')
+        os.remove(join(currdir, 'loadB.dat'))
 
     def test_tableC_1(self):
         # Importing a multi-column table, where all columns are
         # treated as values for a set with tuple values.
-        with capture_output(currdir+'loadC.dat'):
+        with capture_output(join(currdir, 'loadC.dat')):
             print("table columns=2 C={1,2} := A1 1 A1 2 A1 3 A2 1 A2 2 A2 3 A3 1 A3 2 A3 3 ;")
         model=AbstractModel()
         model.C = Set(dimen=2)
-        instance = model.create_instance(currdir+'loadC.dat')
+        instance = model.create_instance(join(currdir, 'loadC.dat'))
         self.assertEqual(set(instance.C.data()), set([('A1',1), ('A1',2), ('A1',3), ('A2',1), ('A2',2), ('A2',3), ('A3',1), ('A3',2), ('A3',3)]))
-        os.remove(currdir+'loadC.dat')
+        os.remove(join(currdir, 'loadC.dat'))
 
     def test_tableC_2(self):
         # Importing a multi-column table, where all columns are
         # treated as values for a set with tuple values.
-        with capture_output(currdir+'loadC.dat'):
+        with capture_output(join(currdir, 'loadC.dat')):
             print("table C={a,b} : a b := A1 1 A1 2 A1 3 A2 1 A2 2 A2 3 A3 1 A3 2 A3 3 ;")
         model=AbstractModel()
         model.C = Set(dimen=2)
-        instance = model.create_instance(currdir+'loadC.dat')
+        instance = model.create_instance(join(currdir, 'loadC.dat'))
         self.assertEqual(set(instance.C.data()), set([('A1',1), ('A1',2), ('A1',3), ('A2',1), ('A2',2), ('A2',3), ('A3',1), ('A3',2), ('A3',3)]))
-        os.remove(currdir+'loadC.dat')
+        os.remove(join(currdir, 'loadC.dat'))
 
     def test_tableZ(self):
         # Importing a single parameter
-        with capture_output(currdir+'loadZ.dat'):
+        with capture_output(join(currdir, 'loadZ.dat')):
             print("table Z := 1.01 ;")
         model=AbstractModel()
         model.Z = Param(default=99.0)
-        instance = model.create_instance(currdir+'loadZ.dat')
+        instance = model.create_instance(join(currdir, 'loadZ.dat'))
         self.assertEqual(instance.Z, 1.01)
-        os.remove(currdir+'loadZ.dat')
+        os.remove(join(currdir, 'loadZ.dat'))
 
     def test_tableY_1(self):
         # Same as tableXW.
-        with capture_output(currdir+'loadY.dat'):
+        with capture_output(join(currdir, 'loadY.dat')):
             print("table columns=2 Y(1)={2} := A1 3.3 A2 3.4 A3 3.5 ;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.Y = Param(model.A)
-        instance = model.create_instance(currdir+'loadY.dat')
+        instance = model.create_instance(join(currdir, 'loadY.dat'))
         self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.Y.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
-        os.remove(currdir+'loadY.dat')
+        os.remove(join(currdir, 'loadY.dat'))
 
     def test_tableY_2(self):
         # Same as tableXW.
-        with capture_output(currdir+'loadY.dat'):
+        with capture_output(join(currdir, 'loadY.dat')):
             print("table Y(A) : A Y := A1 3.3 A2 3.4 A3 3.5 ;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.Y = Param(model.A)
-        instance = model.create_instance(currdir+'loadY.dat')
+        instance = model.create_instance(join(currdir, 'loadY.dat'))
         self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.Y.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
-        os.remove(currdir+'loadY.dat')
+        os.remove(join(currdir, 'loadY.dat'))
 
     def test_tableXW_1_1(self):
         # Importing a table, but only reporting the values for the non-index
         # parameter columns.  The first column is assumed to represent an
         # index column.
-        with capture_output(currdir+'loadXW.dat'):
+        with capture_output(join(currdir, 'loadXW.dat')):
             print("table columns=3 X(1)={2} W(1)={3} := A1 3.3 4.3 A2 3.4 4.4 A3 3.5 4.5 ;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.X = Param(model.A)
         model.W = Param(model.A)
-        instance = model.create_instance(currdir+'loadXW.dat')
+        instance = model.create_instance(join(currdir, 'loadXW.dat'))
         self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.X.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.W.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
-        os.remove(currdir+'loadXW.dat')
+        os.remove(join(currdir, 'loadXW.dat'))
 
     def test_tableXW_1_2(self):
         # Importing a table, but only reporting the values for the non-index
         # parameter columns.  The first column is assumed to represent an
         # index column.
-        with capture_output(currdir+'loadXW.dat'):
+        with capture_output(join(currdir, 'loadXW.dat')):
             print("table X(A) W(A) : A X W := A1 3.3 4.3 A2 3.4 4.4 A3 3.5 4.5 ;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.X = Param(model.A)
         model.W = Param(model.A)
-        instance = model.create_instance(currdir+'loadXW.dat')
+        instance = model.create_instance(join(currdir, 'loadXW.dat'))
         self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.X.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.W.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
-        os.remove(currdir+'loadXW.dat')
+        os.remove(join(currdir, 'loadXW.dat'))
 
     def test_tableXW_3_1(self):
         # Like test_tableXW_1, except that set A is defined in the load statment.
-        with capture_output(currdir+'loadXW.dat'):
+        with capture_output(join(currdir, 'loadXW.dat')):
             print("table columns=3 A={1} X(A)={2} W(A)={3} := A1 3.3 4.3 A2 3.4 4.4 A3 3.5 4.5 ;")
         model=AbstractModel()
         model.A = Set()
         model.X = Param(model.A)
         model.W = Param(model.A)
-        instance = model.create_instance(currdir+'loadXW.dat')
+        instance = model.create_instance(join(currdir, 'loadXW.dat'))
         self.assertEqual(set(instance.A.data()), set(['A1','A2','A3']))
         self.assertEqual(instance.X.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.W.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
-        os.remove(currdir+'loadXW.dat')
+        os.remove(join(currdir, 'loadXW.dat'))
 
     def test_tableXW_3_2(self):
         # Like test_tableXW_1, except that set A is defined in the load statment.
-        with capture_output(currdir+'loadXW.dat'):
+        with capture_output(join(currdir, 'loadXW.dat')):
             print("table A={A} X(A) W(A) : A X W := A1 3.3 4.3 A2 3.4 4.4 A3 3.5 4.5 ;")
         model=AbstractModel()
         model.A = Set()
         model.X = Param(model.A)
         model.W = Param(model.A)
-        instance = model.create_instance(currdir+'loadXW.dat')
+        instance = model.create_instance(join(currdir, 'loadXW.dat'))
         self.assertEqual(set(instance.A.data()), set(['A1','A2','A3']))
         self.assertEqual(instance.X.extract_values(), {'A1':3.3,'A2':3.4,'A3':3.5})
         self.assertEqual(instance.W.extract_values(), {'A1':4.3,'A2':4.4,'A3':4.5})
-        os.remove(currdir+'loadXW.dat')
+        os.remove(join(currdir, 'loadXW.dat'))
 
     def test_tableS_1(self):
         # Importing a table, but only reporting the values for the non-index
         # parameter columns.  The first column is assumed to represent an
         # index column.  A missing value is represented in the column data.
-        with capture_output(currdir+'loadS.dat'):
+        with capture_output(join(currdir, 'loadS.dat')):
             print("table columns=2 S(1)={2} := A1 3.3 A2 . A3 3.5 ;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.S = Param(model.A)
-        instance = model.create_instance(currdir+'loadS.dat')
+        instance = model.create_instance(join(currdir, 'loadS.dat'))
         self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.S.extract_values(), {'A1':3.3,'A3':3.5})
-        os.remove(currdir+'loadS.dat')
+        os.remove(join(currdir, 'loadS.dat'))
 
     def test_tableS_2(self):
         # Importing a table, but only reporting the values for the non-index
         # parameter columns.  The first column is assumed to represent an
         # index column.  A missing value is represented in the column data.
-        with capture_output(currdir+'loadS.dat'):
+        with capture_output(join(currdir, 'loadS.dat')):
             print("table S(A) : A S := A1 3.3 A2 . A3 3.5 ;")
         model=AbstractModel()
         model.A = Set(initialize=['A1','A2','A3','A4'])
         model.S = Param(model.A)
-        instance = model.create_instance(currdir+'loadS.dat')
+        instance = model.create_instance(join(currdir, 'loadS.dat'))
         self.assertEqual(set(instance.A.data()), set(['A1','A2','A3','A4']))
         self.assertEqual(instance.S.extract_values(), {'A1':3.3,'A3':3.5})
-        os.remove(currdir+'loadS.dat')
+        os.remove(join(currdir, 'loadS.dat'))
 
     def test_tablePO_1(self):
         # Importing a table that has multiple indexing columns
-        with capture_output(currdir+'loadPO.dat'):
+        with capture_output(join(currdir, 'loadPO.dat')):
             print("table columns=4 J={1,2} P(J)={3} O(J)={4} := A1 B1 4.3 5.3 A2 B2 4.4 5.4 A3 B3 4.5 5.5 ;")
         model=AbstractModel()
         model.J = Set(dimen=2)
         model.P = Param(model.J)
         model.O = Param(model.J)
-        instance = model.create_instance(currdir+'loadPO.dat')
+        instance = model.create_instance(join(currdir, 'loadPO.dat'))
         self.assertEqual(set(instance.J.data()), set([('A3', 'B3'), ('A1', 'B1'), ('A2', 'B2')]) )
         self.assertEqual(instance.P.extract_values(), {('A3', 'B3'): 4.5, ('A1', 'B1'): 4.3, ('A2', 'B2'): 4.4} )
         self.assertEqual(instance.O.extract_values(), {('A3', 'B3'): 5.5, ('A1', 'B1'): 5.3, ('A2', 'B2'): 5.4})
-        os.remove(currdir+'loadPO.dat')
+        os.remove(join(currdir, 'loadPO.dat'))
 
     def test_tablePO_2(self):
         # Importing a table that has multiple indexing columns
-        with capture_output(currdir+'loadPO.dat'):
+        with capture_output(join(currdir, 'loadPO.dat')):
             print("table J={A,B} P(J) O(J) : A B P O := A1 B1 4.3 5.3 A2 B2 4.4 5.4 A3 B3 4.5 5.5 ;")
         model=AbstractModel()
         model.J = Set(dimen=2)
         model.P = Param(model.J)
         model.O = Param(model.J)
-        instance = model.create_instance(currdir+'loadPO.dat')
+        instance = model.create_instance(join(currdir, 'loadPO.dat'))
         self.assertEqual(set(instance.J.data()), set([('A3', 'B3'), ('A1', 'B1'), ('A2', 'B2')]) )
         self.assertEqual(instance.P.extract_values(), {('A3', 'B3'): 4.5, ('A1', 'B1'): 4.3, ('A2', 'B2'): 4.4} )
         self.assertEqual(instance.O.extract_values(), {('A3', 'B3'): 5.5, ('A1', 'B1'): 5.3, ('A2', 'B2'): 5.4})
-        os.remove(currdir+'loadPO.dat')
+        os.remove(join(currdir, 'loadPO.dat'))
 
     def test_complex_1(self):
         # Importing a table with multiple indexing columns
-        with capture_output(currdir+'loadComplex.dat'):
+        with capture_output(join(currdir, 'loadComplex.dat')):
             print("table columns=8 I={4} J={3,5} A(I)={1} B(J)={7} :=")
             print("A1 x1 J311 I1 J321 y1 B1 z1")
             print("A2 x2 J312 I2 J322 y2 B2 z2")
@@ -1627,16 +1628,16 @@ class TestTableCmd(unittest.TestCase):
         model.J = Set(dimen=2)
         model.A = Param(model.I)
         model.B = Param(model.J)
-        instance = model.create_instance(currdir+'loadComplex.dat')
+        instance = model.create_instance(join(currdir, 'loadComplex.dat'))
         self.assertEqual(set(instance.J.data()), set([('J311', 'J321'), ('J312', 'J322'), ('J313', 'J323')]) )
         self.assertEqual(set(instance.I.data()), set(['I1', 'I2', 'I3']))
         self.assertEqual(instance.B.extract_values(), {('J311', 'J321'): 'B1', ('J312', 'J322'): 'B2', ('J313', 'J323'): 'B3'} )
         self.assertEqual(instance.A.extract_values(), {'I1': 'A1', 'I2': 'A2', 'I3': 'A3'})
-        os.remove(currdir+'loadComplex.dat')
+        os.remove(join(currdir, 'loadComplex.dat'))
 
     def test_complex_2(self):
         # Importing a table with multiple indexing columns
-        with capture_output(currdir+'loadComplex.dat'):
+        with capture_output(join(currdir, 'loadComplex.dat')):
             print("table I={I} J={J1,J2} A(J) B(I) :")
             print("A  x  J1   I  J2   y  B  z :=")
             print("A1 x1 J311 I1 J321 y1 B1 z1")
@@ -1648,12 +1649,12 @@ class TestTableCmd(unittest.TestCase):
         model.J = Set(dimen=2)
         model.A = Param(model.J)
         model.B = Param(model.I)
-        instance = model.create_instance(currdir+'loadComplex.dat')
+        instance = model.create_instance(join(currdir, 'loadComplex.dat'))
         self.assertEqual(set(instance.J.data()), set([('J311', 'J321'), ('J312', 'J322'), ('J313', 'J323')]) )
         self.assertEqual(set(instance.I.data()), set(['I1', 'I2', 'I3']))
         self.assertEqual(instance.A.extract_values(), {('J311', 'J321'): 'A1', ('J312', 'J322'): 'A2', ('J313', 'J323'): 'A3'} )
         self.assertEqual(instance.B.extract_values(), {'I1': 'B1', 'I2': 'B2', 'I3': 'B3'})
-        os.remove(currdir+'loadComplex.dat')
+        os.remove(join(currdir, 'loadComplex.dat'))
 
 
 if __name__ == "__main__":

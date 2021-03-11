@@ -11,11 +11,12 @@
 # Test the Pyomo command-line interface
 #
 
+from itertools import zip_longest
 import json
 import re
 import os
 import sys
-from os.path import abspath, dirname
+from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))+os.sep
 
 from filecmp import cmp
@@ -82,14 +83,14 @@ class BaseTester(unittest.TestCase):
         if self.ofile and os.path.exists(self.ofile):
             return
             os.remove(self.ofile)
-        if os.path.exists(currdir+'results.jsn'):
+        if os.path.exists(join(currdir, 'results.jsn')):
             return
-            os.remove(currdir+'results.jsn')
+            os.remove(join(currdir, 'results.jsn'))
 
     def run_pyomo(self, cmd, root=None):
         cmd = ('pyomo solve --solver=glpk --results-format=json ' \
               '--save-results=%s.jsn %s' % (root, cmd)).split(' ')
-        with open(root+'.out', 'w') as f:
+        with open(join(root, '.out'), 'w') as f:
             result = subprocess.run(cmd, stdout=f, stderr=f)
         return result
 
@@ -104,6 +105,15 @@ class TestJson(BaseTester):
                                              f1_contents,
                                              abstol=_diff_tol,
                                              allow_second_superset=True)
+    def filter_items(self, items):
+        filtered = []
+        for i in items:
+            if not (i.startswith('/') or i.startswith(":\\", 1)):
+                try:
+                    filtered.append(float(i))
+                except:
+                    filtered.append(i)
+        return filtered
 
     def compare_files(self, file1, file2):
         try:
@@ -115,156 +125,146 @@ class TestJson(BaseTester):
                 f2_contents = f2.read().strip().split('\n')
                 f1_filtered = []
                 f2_filtered = []
-                for item1, item2 in zip(f1_contents, f2_contents):
+                for item1, item2 in zip_longest(f1_contents, f2_contents):
                     if not item1.startswith('['):
                         items1 = item1.strip().split()
                         items2 = item2.strip().split()
-                        for i in items1:
-                            if not (i.startswith('/') or i.startswith(":\\", 1)):
-                                try:
-                                    f1_filtered.append(float(i))
-                                except:
-                                    f1_filtered.append(i)
-                        for i in items2:
-                            if not (i.startswith('/') or i.startswith(":\\", 1)):
-                                try:
-                                    f2_filtered.append(float(i))
-                                except:
-                                    f2_filtered.append(i)
+                        f1_filtered.append(self.filter_items(items1))
+                        f2_filtered.append(self.filter_items(items2))
                 self.assertStructuredAlmostEqual(f2_filtered, f1_filtered,
                                                  abstol=1e-6,
                                                  allow_second_superset=True)
 
     def test1_simple_pyomo_execution(self):
         # Simple execution of 'pyomo'
-        self.pyomo([currdir+'pmedian.py',currdir+'pmedian.dat'], root=currdir+'test1')
-        self.compare_json(currdir+'test1.jsn', currdir+'test1.txt')
+        self.pyomo([join(currdir, 'pmedian.py'),join(currdir, 'pmedian.dat')], root=join(currdir, 'test1'))
+        self.compare_json(join(currdir, 'test1.jsn'), join(currdir, 'test1.txt'))
         os.remove(os.path.join(currdir, 'test1.out'))
 
     def test1a_simple_pyomo_execution(self):
         # Simple execution of 'pyomo' in a subprocess
         files = os.path.join(currdir, 'pmedian.py') + ' ' + os.path.join(currdir, 'pmedian.dat')
         self.run_pyomo(files, root=os.path.join(currdir, 'test1a'))
-        self.compare_json(currdir+'test1a.jsn', currdir+'test1.txt')
+        self.compare_json(join(currdir, 'test1a.jsn'), join(currdir, 'test1.txt'))
 
     def test1b_simple_pyomo_execution(self):
         # Simple execution of 'pyomo' with a configuration file
-        self.pyomo(currdir+'test1b.json', root=currdir+'test1')
-        self.compare_json(currdir+'test1.jsn', currdir+'test1.txt')
+        self.pyomo(join(currdir, 'test1b.json'), root=join(currdir, 'test1'))
+        self.compare_json(join(currdir, 'test1.jsn'), join(currdir, 'test1.txt'))
         os.remove(os.path.join(currdir, 'test1.out'))
 
     def test2_bad_model_name(self):
         # Run pyomo with bad --model-name option value
-        self.pyomo('--model-name=dummy pmedian.py pmedian.dat', root=currdir+'test2')
-        self.compare_files(currdir+"test2.out", currdir+"test2.txt")
+        self.pyomo('--model-name=dummy pmedian.py pmedian.dat', root=join(currdir, 'test2'))
+        self.compare_files(join(currdir, "test2.out"), join(currdir, "test2.txt"))
 
     def test2b_bad_model_name(self):
         # Run pyomo with bad --model-name option value (configfile)
-        self.pyomo(currdir+'test2b.json', root=currdir+'test2')
-        self.compare_files(currdir+"test2.out", currdir+"test2.txt")
+        self.pyomo(join(currdir, 'test2b.json'), root=join(currdir, 'test2'))
+        self.compare_files(join(currdir, "test2.out"), join(currdir, "test2.txt"))
 
     def test3_missing_model_object(self):
         # Run pyomo with model that does not define model object
-        self.pyomo('pmedian1.py pmedian.dat', root=currdir+'test3')
-        self.compare_json(currdir+"test3.jsn", currdir+"test1.txt")
+        self.pyomo('pmedian1.py pmedian.dat', root=join(currdir, 'test3'))
+        self.compare_json(join(currdir, "test3.jsn"), join(currdir, "test1.txt"))
         os.remove(os.path.join(currdir, 'test3.out'))
 
     def test4_valid_modelname_option(self):
         # Run pyomo with good --model-name option value
-        self.pyomo('--model-name=MODEL '+currdir+'pmedian1.py pmedian.dat', root=currdir+'test4')
-        self.compare_json(currdir+"test4.jsn", currdir+"test1.txt")
+        self.pyomo('--model-name=MODEL '+join(currdir, 'pmedian1.py pmedian.dat'), root=join(currdir, 'test4'))
+        self.compare_json(join(currdir, "test4.jsn"), join(currdir, "test1.txt"))
         os.remove(os.path.join(currdir, 'test4.out'))
 
     def test4b_valid_modelname_option(self):
         # Run pyomo with good 'object name' option value (configfile)
-        self.pyomo(currdir+'test4b.json', root=currdir+'test4b')
-        self.compare_json(currdir+"test4b.jsn", currdir+"test1.txt")
+        self.pyomo(join(currdir, 'test4b.json'), root=join(currdir, 'test4b'))
+        self.compare_json(join(currdir, "test4b.jsn"), join(currdir, "test1.txt"))
         os.remove(os.path.join(currdir, 'test4b.out'))
 
     def test5_create_model_fcn(self):
         #"""Run pyomo with create_model function"""
-        self.pyomo('pmedian2.py pmedian.dat', root=currdir+'test5')
-        self.compare_files(currdir+"test5.out", currdir+"test5.txt")
+        self.pyomo('pmedian2.py pmedian.dat', root=join(currdir, 'test5'))
+        self.compare_files(join(currdir, "test5.out"), join(currdir, "test5.txt"))
         os.remove(os.path.join(currdir, 'test5.jsn'))
 
     def test5b_create_model_fcn(self):
         # Run pyomo with create_model function (configfile)
-        self.pyomo(currdir+'test5b.json', root=currdir+'test5')
-        self.compare_files(currdir+"test5.out", currdir+"test5.txt")
+        self.pyomo(join(currdir, 'test5b.json'), root=join(currdir, 'test5'))
+        self.compare_files(join(currdir, "test5.out"), join(currdir, "test5.txt"))
         os.remove(os.path.join(currdir, 'test5.jsn'))
 
     def test8_instanceonly_option(self):
         #"""Run pyomo with --instance-only option"""
-        output = self.pyomo('--instance-only pmedian.py pmedian.dat', root=currdir+'test8')
+        output = self.pyomo('--instance-only pmedian.py pmedian.dat', root=join(currdir, 'test8'))
         self.assertEqual(type(output.retval.instance), pyomo.core.ConcreteModel)
         # Check that the results file was NOT created
-        self.assertRaises(OSError, lambda: os.remove(currdir+'test8.jsn'))
+        self.assertRaises(OSError, lambda: os.remove(join(currdir, 'test8.jsn')))
         os.remove(os.path.join(currdir, 'test8.out'))
 
     def test8b_instanceonly_option(self):
         # Run pyomo with --instance-only option (configfile)
-        output = self.pyomo(currdir+'test8b.json', root=currdir+'test8')
+        output = self.pyomo(join(currdir, 'test8b.json'), root=join(currdir, 'test8'))
         self.assertEqual(type(output.retval.instance), pyomo.core.ConcreteModel)
         # Check that the results file was NOT created
-        self.assertRaises(OSError, lambda: os.remove(currdir+'test8.jsn'))
+        self.assertRaises(OSError, lambda: os.remove(join(currdir, 'test8.jsn')))
         os.remove(os.path.join(currdir, 'test8.out'))
 
     def test9_disablegc_option(self):
         #"""Run pyomo with --disable-gc option"""
-        output = self.pyomo('--disable-gc pmedian.py pmedian.dat', root=currdir+'test9')
+        output = self.pyomo('--disable-gc pmedian.py pmedian.dat', root=join(currdir, 'test9'))
         self.assertEqual(type(output.retval.instance), pyomo.core.ConcreteModel)
         os.remove(os.path.join(currdir, 'test9.jsn'))
         os.remove(os.path.join(currdir, 'test9.out'))
 
     def test9b_disablegc_option(self):
         # Run pyomo with --disable-gc option (configfile)
-        output = self.pyomo(currdir+'test9b.json', root=currdir+'test9')
+        output = self.pyomo(join(currdir, 'test9b.json'), root=join(currdir, 'test9'))
         self.assertEqual(type(output.retval.instance), pyomo.core.ConcreteModel)
         os.remove(os.path.join(currdir, 'test9.jsn'))
         os.remove(os.path.join(currdir, 'test9.out'))
 
     def test12_output_option(self):
         #"""Run pyomo with --output option"""
-        self.pyomo('--logfile=%s pmedian.py pmedian.dat' % (currdir+'test12.log'), root=currdir+'test12')
-        self.compare_json(currdir+"test12.jsn", currdir+"test12.txt")
+        self.pyomo('--logfile=%s pmedian.py pmedian.dat' % (join(currdir, 'test12.log')), root=join(currdir, 'test12'))
+        self.compare_json(join(currdir, "test12.jsn"), join(currdir, "test12.txt"))
         os.remove(os.path.join(currdir, 'test12.log'))
         os.remove(os.path.join(currdir, 'test12.out'))
 
     def test12b_output_option(self):
         # Run pyomo with --output option (configfile)
-        self.pyomo(currdir+'test12b.json', root=currdir+'test12')
-        self.compare_json(currdir+"test12.jsn", currdir+"test12.txt")
+        self.pyomo(join(currdir, 'test12b.json'), root=join(currdir, 'test12'))
+        self.compare_json(join(currdir, "test12.jsn"), join(currdir, "test12.txt"))
         os.remove('test12b.log')
         os.remove(os.path.join(currdir, 'test12.out'))
 
     def test14_concrete_model_with_constraintlist(self):
         # Simple execution of 'pyomo' with a concrete model and constraint lists
-        self.pyomo('pmedian4.py', root=currdir+'test14')
-        self.compare_json(currdir+"test14.jsn", currdir+"test14.txt")
+        self.pyomo('pmedian4.py', root=join(currdir, 'test14'))
+        self.compare_json(join(currdir, "test14.jsn"), join(currdir, "test14.txt"))
         os.remove(os.path.join(currdir, 'test14.out'))
 
     def test14b_concrete_model_with_constraintlist(self):
         # Simple execution of 'pyomo' with a concrete model and constraint lists (configfile)
-        self.pyomo('pmedian4.py', root=currdir+'test14')
-        self.compare_json(currdir+"test14.jsn", currdir+"test14.txt")
+        self.pyomo('pmedian4.py', root=join(currdir, 'test14'))
+        self.compare_json(join(currdir, "test14.jsn"), join(currdir, "test14.txt"))
         os.remove(os.path.join(currdir, 'test14.out'))
 
     def test15_simple_pyomo_execution(self):
         # Simple execution of 'pyomo' with options
-        self.pyomo(['--solver-options="mipgap=0.02 cuts="', currdir+'pmedian.py', 'pmedian.dat'], root=currdir+'test15')
-        self.compare_json(currdir+"test15.jsn", currdir+"test1.txt")
+        self.pyomo(['--solver-options="mipgap=0.02 cuts="', join(currdir, 'pmedian.py'), 'pmedian.dat'], root=join(currdir, 'test15'))
+        self.compare_json(join(currdir, "test15.jsn"), join(currdir, "test1.txt"))
         os.remove(os.path.join(currdir, 'test15.out'))
 
     def test15b_simple_pyomo_execution(self):
         # Simple execution of 'pyomo' with options
-        self.pyomo(currdir+'test15b.json', root=currdir+'test15b')
-        self.compare_json(currdir+"test15b.jsn", currdir+"test1.txt")
+        self.pyomo(join(currdir, 'test15b.json'), root=join(currdir, 'test15b'))
+        self.compare_json(join(currdir, "test15b.jsn"), join(currdir, "test1.txt"))
         os.remove(os.path.join(currdir, 'test15b.out'))
 
     def test15c_simple_pyomo_execution(self):
         # Simple execution of 'pyomo' with options
-        self.pyomo(currdir+'test15c.json', root=currdir+'test15c')
-        self.compare_json(currdir+"test15c.jsn", currdir+"test1.txt")
+        self.pyomo(join(currdir, 'test15c.json'), root=join(currdir, 'test15c'))
+        self.compare_json(join(currdir, "test15c.jsn"), join(currdir, "test1.txt"))
         os.remove(os.path.join(currdir, 'test15c.out'))
 
 
@@ -282,14 +282,14 @@ class TestWithYaml(BaseTester):
 
     def test15b_simple_pyomo_execution(self):
         # Simple execution of 'pyomo' with options
-        self.pyomo(currdir+'test15b.yaml', root=currdir+'test15b')
-        self.compare_json(currdir+"test15b.jsn", currdir+"test1.txt")
+        self.pyomo(join(currdir, 'test15b.yaml'), root=join(currdir, 'test15b'))
+        self.compare_json(join(currdir, "test15b.jsn"), join(currdir, "test1.txt"))
         os.remove(os.path.join(currdir, 'test15b.out'))
 
     def test15c_simple_pyomo_execution(self):
         # Simple execution of 'pyomo' with options
-        self.pyomo(currdir+'test15c.yaml', root=currdir+'test15c')
-        self.compare_json(currdir+"test15c.jsn", currdir+"test1.txt")
+        self.pyomo(join(currdir, 'test15c.yaml'), root=join(currdir, 'test15c'))
+        self.compare_json(join(currdir, "test15c.jsn"), join(currdir, "test1.txt"))
         os.remove(os.path.join(currdir, 'test15c.out'))
 
 

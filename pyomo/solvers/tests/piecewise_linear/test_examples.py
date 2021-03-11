@@ -12,6 +12,7 @@
 # Test the Pyomo command-line interface
 #
 
+from itertools import zip_longest
 from filecmp import cmp
 import os
 from os.path import abspath, dirname, join
@@ -40,14 +41,14 @@ class Test(unittest.TestCase):
     def test_step_lp(self):
         """Test examples/pyomo/piecewise/step.py"""
         self.run_convert2lp('step.py')
-        _out, _log = join(currdir,'unknown.lp'), currdir+'step.lp'
+        _out, _log = join(currdir,'unknown.lp'), join(currdir, 'step.lp')
         self.assertTrue(cmp(_out, _log),
                         msg="Files %s and %s differ" % (_out, _log))
 
     def test_step_nl(self):
         """Test examples/pyomo/piecewise/step.py"""
         self.run_convert2nl('step.py')
-        _out, _log = join(currdir,'unknown.nl'), currdir+'step.nl'
+        _out, _log = join(currdir,'unknown.nl'), join(currdir, 'step.nl')
         self.assertTrue(cmp(_out, _log),
                         msg="Files %s and %s differ" % (_out, _log))
         os.remove(join(currdir,'unknown.row'))
@@ -56,14 +57,14 @@ class Test(unittest.TestCase):
     def test_nonconvex_lp(self):
         """Test examples/pyomo/piecewise/nonconvex.py"""
         self.run_convert2lp('nonconvex.py')
-        _out, _log = join(currdir,'unknown.lp'), currdir+'nonconvex.lp'
+        _out, _log = join(currdir,'unknown.lp'), join(currdir, 'nonconvex.lp')
         self.assertTrue(cmp(_out, _log),
                         msg="Files %s and %s differ" % (_out, _log))
 
     def test_nonconvex_nl(self):
         """Test examples/pyomo/piecewise/nonconvex.py"""
         self.run_convert2nl('nonconvex.py')
-        _out, _log = join(currdir,'unknown.nl'), currdir+'nonconvex.nl'
+        _out, _log = join(currdir,'unknown.nl'), join(currdir, 'nonconvex.nl')
         self.assertTrue(cmp(_out, _log),
                         msg="Files %s and %s differ" % (_out, _log))
         os.remove(join(currdir,'unknown.row'))
@@ -72,14 +73,14 @@ class Test(unittest.TestCase):
     def test_convex_lp(self):
         """Test examples/pyomo/piecewise/convex.py"""
         self.run_convert2lp('convex.py')
-        _out, _log = join(currdir,'unknown.lp'), currdir+'convex.lp'
+        _out, _log = join(currdir,'unknown.lp'), join(currdir, 'convex.lp')
         self.assertTrue(cmp(_out, _log),
                         msg="Files %s and %s differ" % (_out, _log))
 
     def test_convex_nl(self):
         """Test examples/pyomo/piecewise/convex.py"""
         self.run_convert2nl('convex.py')
-        _out, _log = join(currdir,'unknown.nl'), currdir+'convex.nl'
+        _out, _log = join(currdir,'unknown.nl'), join(currdir, 'convex.nl')
         self.assertTrue(cmp(_out, _log),
                         msg="Files %s and %s differ" % (_out, _log))
         os.remove(join(currdir,'unknown.row'))
@@ -89,10 +90,10 @@ class Test(unittest.TestCase):
         """Test examples/pyomo/piecewise/indexed.py"""
         self.run_convert2lp('indexed.py')
         with open(join(currdir,'unknown.lp'), 'r') as f1, \
-            open(currdir+'indexed.lp', 'r') as f2:
+            open(join(currdir, 'indexed.lp'), 'r') as f2:
                 f1_contents = list(filter(None, f1.read().split()))
                 f2_contents = list(filter(None, f2.read().split()))
-                for item1, item2 in zip(f1_contents, f2_contents):
+                for item1, item2 in zip_longest(f1_contents, f2_contents):
                     try:
                         self.assertAlmostEqual(float(item1), float(item2))
                     except:
@@ -102,10 +103,10 @@ class Test(unittest.TestCase):
         """Test examples/pyomo/piecewise/indexed.py"""
         self.run_convert2nl('indexed.py')
         with open(join(currdir,'unknown.nl'), 'r') as f1, \
-            open(currdir+'indexed.nl', 'r') as f2:
+            open(join(currdir, 'indexed.nl'), 'r') as f2:
                 f1_contents = list(filter(None, f1.read().split()))
                 f2_contents = list(filter(None, f2.read().split()))
-                for item1, item2 in zip(f1_contents, f2_contents):
+                for item1, item2 in zip_longest(f1_contents, f2_contents):
                     try:
                         self.assertAlmostEqual(float(item1), float(item2))
                     except:
@@ -116,7 +117,7 @@ class Test(unittest.TestCase):
     def test_indexed_nonlinear_nl(self):
         """Test examples/pyomo/piecewise/indexed_nonlinear.py"""
         self.run_convert2nl('indexed_nonlinear.py')
-        _out, _log = join(currdir,'unknown.nl'), currdir+'indexed_nonlinear.nl'
+        _out, _log = join(currdir,'unknown.nl'), join(currdir, 'indexed_nonlinear.nl')
         self.assertTrue(cmp(_out, _log),
                         msg="Files %s and %s differ" % (_out, _log))
         os.remove(join(currdir,'unknown.row'))

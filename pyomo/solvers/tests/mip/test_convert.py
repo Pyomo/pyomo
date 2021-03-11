@@ -11,10 +11,11 @@
 # Unit Tests for pyomo.opt.base.convert
 #
 
+from itertools import zip_longest
 import re
 import sys
 import os
-from os.path import abspath, dirname
+from os.path import abspath, dirname, join
 pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
@@ -56,7 +57,7 @@ class MockArg2(MockArg):
 
     def write(self,filename="", format=None, solver_capability=None, io_options={}):
         OUTPUT=open(filename,"w")
-        INPUT=open(currdir+"test4.nl")
+        INPUT=open(join(currdir, "test4.nl"))
         for line in INPUT:
             OUTPUT.write(line)
         OUTPUT.close()
@@ -75,7 +76,7 @@ class MockArg4(MockArg):
 
     def write(self,filename="", format=None, solver_capability=None, io_options={}):
         OUTPUT=open(filename,"w")
-        INPUT=open(currdir+"test4.nl")
+        INPUT=open(join(currdir, "test4.nl"))
         for line in INPUT:
             OUTPUT.write(line)
         OUTPUT.close()
@@ -105,7 +106,7 @@ class Test(unittest.TestCase):
     def test_nl_lp1(self):
         #""" Convert from NL to LP """
         try:
-            ans = convert_problem( (currdir+"test4.nl",), None, [ProblemFormat.cpxlp])
+            ans = convert_problem( (join(currdir, "test4.nl"),), None, [ProblemFormat.cpxlp])
         except ApplicationError:
             err = sys.exc_info()[1]
             if Executable("pico_convert").available():
@@ -119,14 +120,14 @@ class Test(unittest.TestCase):
                           "enabled but not available: '%s'" % str(err))
             return
         self.assertEqual(ans[0][0][-15:],"pico_convert.lp")
-        _out, _log = ans[0][0], currdir+"test1_convert.lp"
+        _out, _log = ans[0][0], join(currdir, "test1_convert.lp")
         self.assertTrue(cmp(_out, _log),
                         msg="Files %s and %s differ" % (_out, _log))
 
     def test_mod_lp1(self):
         #""" Convert from MOD to LP """
         try:
-            ans = convert_problem( (currdir+"test3.mod",), None, [ProblemFormat.cpxlp])
+            ans = convert_problem( (join(currdir, "test3.mod"),), None, [ProblemFormat.cpxlp])
         except ApplicationError:
             err = sys.exc_info()[1]
             if Executable("glpsol").available():
@@ -140,8 +141,8 @@ class Test(unittest.TestCase):
                           "enabled but not available: '%s'" % str(err))
             return
         self.assertTrue(ans[0][0].endswith("glpsol.lp"))
-        with open(ans[0][0], 'r') as f1, open(currdir+"test2_convert.lp") as f2:
-            for line1, line2 in zip(f1, f2):
+        with open(ans[0][0], 'r') as f1, open(join(currdir, "test2_convert.lp"), 'r') as f2:
+            for line1, line2 in zip_longest(f1, f2):
                 if 'Problem' in line1:
                     continue
                 self.assertEqual(line1, line2)
@@ -149,7 +150,7 @@ class Test(unittest.TestCase):
     def test_mod_lp2(self):
         #""" Convert from MOD+DAT to LP """
         try:
-            ans = convert_problem( (currdir+"test5.mod",currdir+"test5.dat"), None, [ProblemFormat.cpxlp])
+            ans = convert_problem((join(currdir, "test5.mod"), join(currdir, "test5.dat")), None, [ProblemFormat.cpxlp])
         except ApplicationError:
             err = sys.exc_info()[1]
             if Executable("glpsol").available():
@@ -163,8 +164,8 @@ class Test(unittest.TestCase):
                           "enabled but not available: '%s'" % str(err))
             return
         self.assertTrue(ans[0][0].endswith("glpsol.lp"))
-        with open(ans[0][0], 'r') as f1, open(currdir+"test3_convert.lp") as f2:
-            for line1, line2 in zip(f1, f2):
+        with open(ans[0][0], 'r') as f1, open(join(currdir, "test3_convert.lp"), 'r') as f2:
+            for line1, line2 in zip_longest(f1, f2):
                 if 'Problem' in line1:
                     continue
                 self.assertEqual(line1, line2)
@@ -172,7 +173,7 @@ class Test(unittest.TestCase):
     def test_mod_nl1(self):
         #""" Convert from MOD to NL """
         try:
-            ans = convert_problem( (currdir+"test3.mod",), None, [ProblemFormat.nl])
+            ans = convert_problem( (join(currdir, "test3.mod"),), None, [ProblemFormat.nl])
         except ApplicationError:
             err = sys.exc_info()[1]
             if Executable("ampl").available():
@@ -186,12 +187,12 @@ class Test(unittest.TestCase):
                           "enabled but not available: '%s'" % str(err))
             return
         self.assertTrue(ans[0][0].endswith('.nl'))
-        #self.assertFileEqualsBinaryFile(ans[0][0], currdir+"test_mod_nl1.nl")
+        #self.assertFileEqualsBinaryFile(ans[0][0], join(currdir, "test_mod_nl1.nl")
 
     def test_mod_nl2(self):
         #""" Convert from MOD+DAT to NL """
         try:
-            ans = convert_problem( (currdir+"test5.mod",currdir+"test5.dat"), None, [ProblemFormat.nl])
+            ans = convert_problem( (join(currdir, "test5.mod"), join(currdir, "test5.dat")), None, [ProblemFormat.nl])
         except ApplicationError:
             err = sys.exc_info()[1]
             if Executable("ampl").available():
@@ -205,7 +206,7 @@ class Test(unittest.TestCase):
                           "enabled but not available: '%s'" % str(err))
             return
         self.assertTrue(ans[0][0].endswith('.nl'))
-        #self.assertTrue(cmp(ans[0][0], currdir+"test_mod_nl2.nl")
+        #self.assertTrue(cmp(ans[0][0], join(currdir, "test_mod_nl2.nl")
 
     def test_mock_lp1(self):
         #""" Convert from Pyomo to LP """
@@ -215,7 +216,7 @@ class Test(unittest.TestCase):
 
     def test_pyomo_lp1(self):
         #""" Convert from Pyomo to LP with file"""
-        ans = convert_problem( (currdir+'model.py', ProblemFormat.cpxlp,), None, [ProblemFormat.cpxlp])
+        ans = convert_problem( (join(currdir, 'model.py'), ProblemFormat.cpxlp,), None, [ProblemFormat.cpxlp])
         self.assertNotEqual(re.match(".*tmp.*pyomo.lp$",ans[0][0]), None)
 
     def test_mock_lp2(self):
@@ -253,7 +254,7 @@ class Test(unittest.TestCase):
     def test_pyomo_mps1(self):
         #""" Convert from Pyomo to MPS with file"""
         try:
-            ans = convert_problem( (currdir+'model.py', ProblemFormat.mps,), None, [ProblemFormat.mps])
+            ans = convert_problem( (join(currdir, 'model.py'), ProblemFormat.mps,), None, [ProblemFormat.mps])
         except ConverterError:
             err = sys.exc_info()[1]
             if not Executable("pico_convert"):
@@ -273,7 +274,7 @@ class Test(unittest.TestCase):
 
     def test_pyomo_nl1(self):
         #""" Convert from Pyomo to NL with file"""
-        ans = convert_problem( (currdir+'model.py', ProblemFormat.nl,), None, [ProblemFormat.nl])
+        ans = convert_problem( (join(currdir, 'model.py'), ProblemFormat.nl,), None, [ProblemFormat.nl])
         self.assertNotEqual(re.match(".*tmp.*pyomo.nl$",ans[0][0]), None)
         os.remove(ans[0][0])
 
@@ -321,7 +322,7 @@ class Test(unittest.TestCase):
     def test_error6(self):
         #""" Cannot use pico_convert with more than one file """
         try:
-            ans = convert_problem( (currdir+"test4.nl","foo"), None, [ProblemFormat.cpxlp])
+            ans = convert_problem( (join(currdir, "test4.nl"), "foo"), None, [ProblemFormat.cpxlp])
             self.fail("Expected ConverterError exception")
         except ConverterError:
             pass
@@ -329,7 +330,7 @@ class Test(unittest.TestCase):
     def test_error8(self):
         #""" Error when source file cannot be found """
         try:
-            ans = convert_problem( (currdir+"unknown.nl",), None, [ProblemFormat.cpxlp])
+            ans = convert_problem( (join(currdir, "unknown.nl"),), None, [ProblemFormat.cpxlp])
             self.fail("Expected ConverterError exception")
         except ApplicationError:
             err = sys.exc_info()[1]
@@ -344,7 +345,7 @@ class Test(unittest.TestCase):
         #""" The Opt configuration has not been initialized """
         cmd = Executable("pico_convert").disable()
         try:
-            ans = convert_problem( (currdir+"test4.nl",), None, [ProblemFormat.cpxlp])
+            ans = convert_problem( (join(currdir, "test4.nl"),), None, [ProblemFormat.cpxlp])
             self.fail("This test didn't fail, but pico_convert should not be defined.")
         except ConverterError:
             pass
@@ -362,7 +363,7 @@ class Test(unittest.TestCase):
     def test_error11(self):
         #""" Cannot convert MOD that contains data """
         try:
-            ans = convert_problem( (currdir+"test3.mod",currdir+"test5.dat"), None, [ProblemFormat.cpxlp])
+            ans = convert_problem( (join(currdir, "test3.mod"),join(currdir, "test5.dat")), None, [ProblemFormat.cpxlp])
             self.fail("Expected ConverterError exception because we provided a MOD file with a 'data;' declaration")
         except ApplicationError:
             err = sys.exc_info()[1]

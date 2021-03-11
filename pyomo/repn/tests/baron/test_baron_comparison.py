@@ -29,8 +29,8 @@ if not param_available:
 
 names = []
 # add test methods to classes
-for f in itertools.chain(glob.glob(datadir+'*_testCase.py'),
-                         glob.glob(currdir+'*_testCase.py')):
+for f in itertools.chain(glob.glob(join(datadir,'*_testCase.py')),
+                         glob.glob(join(currdir, '*_testCase.py'))):
     names.append(re.split('[._]',os.path.basename(f))[0])
 
 
@@ -52,8 +52,8 @@ class BaselineTests(Tests):
     #
     @parameterized.parameterized.expand(input=names)
     def barwriter_baseline_test(self, name):
-        baseline = currdir+name+'.pyomo.bar'
-        output = currdir+name+'.test.bar'
+        baseline = join(currdir, name+'.pyomo.bar')
+        output = join(currdir, name+'.test.bar')
         if not os.path.exists(baseline):
             self.skipTest("baseline file (%s) not found" % (baseline,))
 
@@ -75,12 +75,12 @@ class BaselineTests(Tests):
         with open(output, 'r') as f1, open(baseline, 'r') as f2:
             f1_contents = list(filter(None, f1.read().split()))
             f2_contents = list(filter(None, f2.read().split()))
-            for item1, item2 in zip(f1_contents, f2_contents):
+            for item1, item2 in itertools.zip_longest(f1_contents, f2_contents):
                 try:
                     self.assertAlmostEqual(float(item1), float(item2))
                 except:
                     self.assertEqual(item1, item2)
-        os.remove(currdir+name+'.test.bar')
+        os.remove(join(currdir, name+'.test.bar'))
 
 
 if __name__ == "__main__":

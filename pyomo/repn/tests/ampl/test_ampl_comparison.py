@@ -11,12 +11,13 @@
 # Test the Pyomo NL writer against the AMPL NL writer
 #
 
+from itertools import zip_longest
 import json
 import re
 import glob
 import subprocess
 import os
-from os.path import abspath, dirname
+from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyomo.common.unittest as unittest
@@ -35,7 +36,7 @@ if os.system('gjh_asl_json -v') == 0:
 
 names = []
 # add test methods to classes
-for f in glob.glob(currdir+'*_testCase.py'):
+for f in glob.glob(join(currdir, '*_testCase.py')):
     names.append(re.split('[._]',os.path.basename(f))[0])
 
 
@@ -57,25 +58,25 @@ class BaselineTests(Tests):
     #
     @parameterized.parameterized.expand(input=names)
     def nlwriter_baseline_test(self, name):
-        if os.path.exists(currdir+name+'.dat'):
-            self.pyomo(['--output='+currdir+name+'.test.nl',
-                        currdir+name+'_testCase.py',
-                        currdir+name+'.dat'])
+        if os.path.exists(join(currdir, name+'.dat')):
+            self.pyomo(['--output='+join(currdir, name+'.test.nl'),
+                        join(currdir, name+'_testCase.py'),
+                        join(currdir, name+'.dat')])
         else:
-            self.pyomo(['--output='+currdir+name+'.test.nl',
-                        currdir+name+'_testCase.py'])
+            self.pyomo(['--output='+join(currdir, name+'.test.nl'),
+                        join(currdir, name+'_testCase.py')])
 
         # Check that the pyomo nl file matches its own baseline
-        with open(currdir+name+'.test.nl', 'r') as f1, \
-                open(currdir+name+'.pyomo.nl', 'r') as f2:
+        with open(join(currdir, name+'.test.nl'), 'r') as f1, \
+                open(join(currdir, name+'.pyomo.nl'), 'r') as f2:
                     f1_contents = list(filter(None, f1.read().replace('n', 'n ').split()))
                     f2_contents = list(filter(None, f2.read().replace('n', 'n ').split()))
-                    for item1, item2 in zip(f1_contents, f2_contents):
+                    for item1, item2 in zip_longest(f1_contents, f2_contents):
                         try:
                             self.assertEqual(float(item1), float(item2))
                         except:
                             self.assertEqual(item1, item2)
-        os.remove(currdir+name+'.test.nl')
+        os.remove(join(currdir, name+'.test.nl'))
 
 
 class ASLTests(Tests):
@@ -95,58 +96,58 @@ class ASLTests(Tests):
         if not has_gjh_asl_json:
             self.skipTest("'gjh_asl_json' executable not available")
             return
-        if os.path.exists(currdir+name+'.dat'):
-            self.pyomo(['--output='+currdir+name+'.test.nl',
+        if os.path.exists(join(currdir, name+'.dat')):
+            self.pyomo(['--output='+join(currdir, name+'.test.nl'),
                         '--file-determinism=3',
                         '--symbolic-solver-labels',
-                        currdir+name+'_testCase.py',
-                        currdir+name+'.dat'])
+                        join(currdir, name+'_testCase.py'),
+                        join(currdir, name+'.dat')])
         else:
-            self.pyomo(['--output='+currdir+name+'.test.nl',
+            self.pyomo(['--output='+join(currdir, name+'.test.nl'),
                         '--file-determinism=3',
                         '--symbolic-solver-labels',
-                        currdir+name+'_testCase.py'])
+                        join(currdir, name+'_testCase.py')])
 
         # compare AMPL and Pyomo nl file structure
         try:
-            os.remove(currdir+name+'.ampl.json')
+            os.remove(join(currdir, name+'.ampl.json'))
         except Exception:
             pass
         try:
-            os.remove(currdir+name+'.test.json')
+            os.remove(join(currdir, name+'.test.json'))
         except Exception:
             pass
 
         # obtain the nl file summary information for comparison with ampl
         p = subprocess.run(['gjh_asl_json',
-                            currdir+name+'.test.nl',
-                            'rows='+currdir+name+'.test.row',
-                            'cols='+currdir+name+'.test.col'],
+                            join(currdir, name+'.test.nl'),
+                            'rows='+join(currdir, name+'.test.row'),
+                            'cols='+join(currdir, name+'.test.col')],
                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                            universal_newlines=True)
         self.assertTrue(p.returncode == 0, msg=p.stdout)
 
         # obtain the nl file summary information for comparison with pyomo
         p = subprocess.run(['gjh_asl_json',
-                            currdir+name+'.ampl.nl',
-                            'rows='+currdir+name+'.ampl.row',
-                            'cols='+currdir+name+'.ampl.col'],
+                            join(currdir, name+'.ampl.nl'),
+                            'rows='+join(currdir, name+'.ampl.row'),
+                            'cols='+join(currdir, name+'.ampl.col')],
                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                            universal_newlines=True)
         self.assertTrue(p.returncode == 0, msg=p.stdout)
 
-        with open(currdir+name+'.test.json', 'r') as f1, \
-            open(currdir+name+'.ampl.json', 'r') as f2:
+        with open(join(currdir, name+'.test.json'), 'r') as f1, \
+            open(join(currdir, name+'.ampl.json'), 'r') as f2:
                 self.assertStructuredAlmostEqual(json.load(f1),
                                                  json.load(f2),
                                                  abstol=1e-8)
 
-        os.remove(currdir+name+'.ampl.json')
+        os.remove(join(currdir, name+'.ampl.json'))
 
         # delete temporary test files
-        os.remove(currdir+name+'.test.col')
-        os.remove(currdir+name+'.test.row')
-        os.remove(currdir+name+'.test.nl')
+        os.remove(join(currdir, name+'.test.col'))
+        os.remove(join(currdir, name+'.test.row'))
+        os.remove(join(currdir, name+'.test.nl'))
 
 
 if __name__ == "__main__":

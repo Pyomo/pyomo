@@ -11,7 +11,7 @@
 
 import re
 import os
-from os.path import abspath, dirname
+from os.path import abspath, dirname, join
 currdir= dirname(abspath(__file__))
 
 from filecmp import cmp
@@ -54,7 +54,7 @@ class PyomoModel(unittest.TestCase):
         instance = model.create_instance()
         expr = instance.x + 1
 
-        OUTPUT = open(currdir+"/display.out","w")
+        OUTPUT = open(join(currdir, "/display.out"), "w")
         display(instance,ostream=OUTPUT)
         display(instance.obj,ostream=OUTPUT)
         display(instance.x,ostream=OUTPUT)
@@ -69,7 +69,7 @@ class PyomoModel(unittest.TestCase):
             self.fail("test_construct - expected TypeError")
         except TypeError:
             pass
-        _out, _txt = currdir+"/display.out", currdir+"/display.txt"
+        _out, _txt = join(currdir, "/display.out"), join(currdir, "/display.txt")
         self.assertTrue(cmp(_out, _txt), 
                         msg="Files %s and %s differ" % (_out, _txt))
 
@@ -87,7 +87,7 @@ class PyomoModel(unittest.TestCase):
         instance = model.create_instance()
         expr = instance.x + 1
 
-        OUTPUT = open(currdir+"/display2.out","w")
+        OUTPUT = open(join(currdir, "/display2.out"), "w")
         display(instance,ostream=OUTPUT)
         display(instance.obj,ostream=OUTPUT)
         display(instance.x,ostream=OUTPUT)
@@ -102,8 +102,9 @@ class PyomoModel(unittest.TestCase):
             self.fail("test_construct - expected TypeError")
         except TypeError:
             pass
-        self.assertTrue(cmp(currdir+"/display2.out",
-                            currdir+"/display2.txt"))
+        _out, _txt = join(currdir, "/display2.out"), join(currdir, "/display2.txt")
+        self.assertTrue(cmp(_out, _txt),
+                        msg="Files %s and %s differ" % (_out, _txt))
 
 
 class PyomoBadModels ( unittest.TestCase ):
@@ -133,9 +134,10 @@ class PyomoBadModels ( unittest.TestCase ):
             self.skipTest("glpk solver is not available")
         return # ignore for now
         base = '%s/test_uninstantiated_model' % currdir
-        fout, fbase = (base + '_linear.out', base + '.txt')
+        fout, fbase = join(base, '_linear.out'), join(base, '.txt')
         self.pyomo('uninstantiated_model_linear.py', file=fout )
-        self.assertTrue(cmp(fout, fbase))
+        self.assertTrue(cmp(fout, fbase),
+                        msg="Files %s and %s differ" % (fout, fbase))
 
     def test_uninstantiated_model_quadratic ( self ):
         """Run pyomo with "bad" model file.  Should fail gracefully, with
@@ -144,9 +146,10 @@ class PyomoBadModels ( unittest.TestCase ):
             self.skipTest("The 'cplex' executable is not available")
         return # ignore for now
         base = '%s/test_uninstantiated_model' % currdir
-        fout, fbase = (base + '_quadratic.out', base + '.txt')
+        fout, fbase = join(base, '_quadratic.out'), join(base, '.txt')
         self.pyomo('uninstantiated_model_quadratic.py --solver=cplex', file=fout )
-        self.assertTrue(cmp(fout, fbase))
+        self.assertTrue(cmp(fout, fbase),
+                        msg="Files %s and %s differ" % (fout, fbase))
 
 
 class TestApplyIndexedRule(unittest.TestCase):

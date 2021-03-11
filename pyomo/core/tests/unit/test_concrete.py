@@ -43,7 +43,7 @@ class Test(unittest.TestCase):
         opt = SolverFactory('glpk')
         results = opt.solve(model)
         model.solutions.store_to(results)
-        results.write(filename=currdir+"blend.out", format='json')
+        results.write(filename=join(currdir, "blend.out"), format='json')
         with open(join(currdir,"blend.out"), 'r') as out, \
             open(join(currdir,"blend.txt"), 'r') as txt:
             self.assertStructuredAlmostEqual(json.load(txt), json.load(out),

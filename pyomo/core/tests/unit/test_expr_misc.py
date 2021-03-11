@@ -12,7 +12,7 @@
 #
 
 import os
-from os.path import abspath, dirname
+from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))+os.sep
 
 from filecmp import cmp
@@ -110,10 +110,10 @@ class Test(unittest.TestCase):
         model.c3 = ConstraintList(doc='con c3')
         model.c3.add(model.y <= 0)
         #
-        OUTPUT=open(currdir+"test_expr5.out","w")
+        OUTPUT=open(join(currdir, "test_expr5.out"), "w")
         model.pprint(ostream=OUTPUT)
         OUTPUT.close()
-        _out, _txt = currdir+"test_expr5.out", currdir+"test_expr5.txt"
+        _out, _txt = join(currdir, "test_expr5.out"), join(currdir, "test_expr5.txt")
         self.assertTrue(cmp(_out, _txt), 
                         msg="Files %s and %s differ" % (_out, _txt))
 

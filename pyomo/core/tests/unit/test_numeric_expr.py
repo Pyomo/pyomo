@@ -17,7 +17,7 @@ import math
 import os
 from collections import defaultdict
 
-from os.path import abspath, dirname
+from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))+os.sep
 
 from filecmp import cmp
@@ -2453,10 +2453,10 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         model.cl = ConstraintList(rule=cl_rule)
 
         instance=model.create_instance()
-        OUTPUT=open(currdir+"varpprint.out","w")
+        OUTPUT=open(join(currdir, "varpprint.out"), "w")
         instance.pprint(ostream=OUTPUT)
         OUTPUT.close()
-        _out, _txt = currdir+"varpprint.out", currdir+"varpprint.txt"
+        _out, _txt = join(currdir, "varpprint.out"), join(currdir, "varpprint.txt")
         self.assertTrue(cmp(_out, _txt),
                         msg="Files %s and %s differ" % (_txt, _out))
 
