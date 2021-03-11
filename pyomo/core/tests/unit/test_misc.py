@@ -54,7 +54,7 @@ class PyomoModel(unittest.TestCase):
         instance = model.create_instance()
         expr = instance.x + 1
 
-        OUTPUT = open(join(currdir, "/display.out"), "w")
+        OUTPUT = open(join(currdir, "display.out"), "w")
         display(instance,ostream=OUTPUT)
         display(instance.obj,ostream=OUTPUT)
         display(instance.x,ostream=OUTPUT)
@@ -69,7 +69,7 @@ class PyomoModel(unittest.TestCase):
             self.fail("test_construct - expected TypeError")
         except TypeError:
             pass
-        _out, _txt = join(currdir, "/display.out"), join(currdir, "/display.txt")
+        _out, _txt = join(currdir, "display.out"), join(currdir, "display.txt")
         self.assertTrue(cmp(_out, _txt), 
                         msg="Files %s and %s differ" % (_out, _txt))
 
@@ -87,7 +87,7 @@ class PyomoModel(unittest.TestCase):
         instance = model.create_instance()
         expr = instance.x + 1
 
-        OUTPUT = open(join(currdir, "/display2.out"), "w")
+        OUTPUT = open(join(currdir, "display2.out"), "w")
         display(instance,ostream=OUTPUT)
         display(instance.obj,ostream=OUTPUT)
         display(instance.x,ostream=OUTPUT)
@@ -102,7 +102,7 @@ class PyomoModel(unittest.TestCase):
             self.fail("test_construct - expected TypeError")
         except TypeError:
             pass
-        _out, _txt = join(currdir, "/display2.out"), join(currdir, "/display2.txt")
+        _out, _txt = join(currdir, "display2.out"), join(currdir, "display2.txt")
         self.assertTrue(cmp(_out, _txt),
                         msg="Files %s and %s differ" % (_out, _txt))
 
