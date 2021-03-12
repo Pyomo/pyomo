@@ -36,7 +36,6 @@ class TestCPXLPOrdering(unittest.TestCase):
 
     def _check_baseline(self, model, **kwds):
         baseline_fname, test_fname = self._get_fnames()
-        self._cleanup(test_fname)
         io_options = {"symbolic_solver_labels": True}
         io_options.update(kwds)
         model.write(test_fname,

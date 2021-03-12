@@ -395,7 +395,8 @@ class CCTests_nl_nlxfrm(CCTests, unittest.TestCase):
         M.write(ofile, format=ProblemFormat.nl)
         if not os.path.exists(bfile):
             os.rename(ofile, bfile)
-        self.assertTrue(cmp(ofile, bfile))
+        self.assertTrue(cmp(ofile, bfile),
+                        msg="Files %s and %s differ" % (ofile, bfile))
 
 class DescendIntoDisjunct(unittest.TestCase):
     def get_model(self):
