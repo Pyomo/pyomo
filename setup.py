@@ -132,6 +132,7 @@ def run_setup():
       packages=find_packages(exclude=("scripts",)),
       package_data={"pyomo.contrib.viewer":["*.ui"]},
       ext_modules = ext_modules,
+      include_package_data=True,
       entry_points="""
         [console_scripts]
         pyomo = pyomo.scripting.pyomo_main:main_console_script
