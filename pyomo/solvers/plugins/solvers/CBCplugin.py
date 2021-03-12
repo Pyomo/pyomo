@@ -647,8 +647,11 @@ class CBCSHELL(SystemCallSolver):
         if results.problem.sense == ProblemSense.minimize:
             upper_bound = optim_value
         elif results.problem.sense == ProblemSense.maximize:
-            optim_value *= -1
-            upper_bound = None if lower_bound is None else -lower_bound
+            if self.version() < (2, 10, 2):
+                optim_value *= -1
+                upper_bound = None if lower_bound is None else -lower_bound
+            else:
+                upper_bound = None if lower_bound is None else lower_bound
             lower_bound = optim_value
         soln.objective['__default_objective__'] = {'Value': optim_value}
         results.problem.lower_bound = lower_bound
@@ -799,7 +802,7 @@ class CBCSHELL(SystemCallSolver):
             except ValueError:
                 if tokens[0] in ("Optimal", "Infeasible", "Unbounded", "Stopped", "Integer", "Status"):
                     if optim_value is not None:
-                        if results.problem.sense == ProblemSense.maximize:
+                        if results.problem.sense == ProblemSense.maximize and self.version() < (2, 10, 2):
                             optim_value *= -1
                         solution.objective['__default_objective__'] = {'Value': optim_value}
                     header_processed = True
@@ -815,6 +818,8 @@ class CBCSHELL(SystemCallSolver):
                 constraint = tokens[1]
                 constraint_ax = float(tokens[2]) # CBC reports the constraint row times the solution vector - not the slack.
                 constraint_dual = float(tokens[3])
+                if results.problem.sense == ProblemSense.maximize and self.version() < (2, 10, 2):
+                    constraint_dual *= -1
                 if constraint[:2] == 'c_':
                     solution.constraint[constraint] = {"Dual" : constraint_dual}
                 elif constraint[:2] == 'r_':
@@ -846,6 +851,8 @@ class CBCSHELL(SystemCallSolver):
                 variable = solution.variable[variable_name] = {"Value" : variable_value}
                 if extract_reduced_costs is True:
                     variable_reduced_cost = float(tokens[3]) # currently ignored.
+                    if results.problem.sense == ProblemSense.maximize and self.version() < (2, 10, 2):
+                        variable_reduced_cost *= -1
                     variable["Rc"] = variable_reduced_cost
 
             elif header_processed is True:
@@ -913,3 +920,5 @@ class MockCBC(CBCSHELL,MockMIP):
         else:
             return (args, ProblemFormat.mps, None)
 
+    def _get_version(self):
+        return 2, 9, 9
