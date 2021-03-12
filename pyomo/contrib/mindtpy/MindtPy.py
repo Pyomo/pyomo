@@ -177,8 +177,6 @@ class MindtPySolver(object):
                 solve_data.stored_bound = {}
             if config.strategy == 'GOA' and (config.add_no_good_cuts or config.use_tabu_list):
                 solve_data.num_no_good_cuts_added = {}
-            if config.use_tabu_list:
-                solve_data.tabu_list = []
 
             # Set of NLP iterations for which cuts were generated
             lin.nlp_iters = Set(dimen=1)

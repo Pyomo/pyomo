@@ -91,6 +91,7 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
             tabu_list.IncumbentCallback_cplex)
         tabulist.solve_data = solve_data
         tabulist.opt = masteropt
+        tabulist.config = config
         masteropt._solver_model.parameters.preprocessing.reduce.set(1)
         # If the callback is used to reject incumbents, the user must set the
         # parameter c.parameters.preprocessing.reduce either to the value 1 (one)

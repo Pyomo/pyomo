@@ -404,9 +404,6 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             var_values = list(
                 v.value for v in fixed_nlp.MindtPy_utils.variable_list)
             self.add_lazy_no_good_cuts(var_values, solve_data, config, opt)
-        if config.use_tabu_list:
-            solve_data.tabu_list.append(
-                tuple(round(v.value) for v in fixed_nlp.MindtPy_utils.discrete_variable_list))
 
     def handle_lazy_subproblem_infeasible(self, fixed_nlp, solve_data, config, opt):
         """
@@ -602,7 +599,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
 
         # check if the same integer combination is obtained.
         solve_data.curr_int_sol = get_integer_solution(
-            solve_data.working_model)
+            solve_data.working_model,string_zero=True)
 
         if solve_data.curr_int_sol in set(solve_data.integer_list):
             config.logger.info('This integer combination has been explored.'

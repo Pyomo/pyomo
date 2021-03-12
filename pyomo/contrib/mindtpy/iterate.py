@@ -343,26 +343,26 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         solve_data.best_solution_found = solve_data.working_model.clone()
         solve_data.results.solver.termination_condition = tc.optimal
         return True
+
     # Cycling check
-    # In cplex, negative zero is different from zero, so we use string to denote this
-    if config.cycling_check and solve_data.mip_iter >= 1 and check_cycling:
-        solve_data.curr_int_sol = get_integer_solution(solve_data.mip)
-
-        if solve_data.curr_int_sol in set(solve_data.integer_list):
-            config.logger.info(
-                'Cycling happens after {} master iterations. '
-                'The same combination is obtained in iteration {} '
-                'This issue happens when the NLP subproblem violates constraint qualification. '
-                'Convergence to optimal solution is not guaranteed.'
-                .format(solve_data.mip_iter, solve_data.integer_list.index(solve_data.curr_int_sol)+1))
-            config.logger.info(
-                'Final bound values: LB: {}  UB: {}'.
-                format(solve_data.LB, solve_data.UB))
-            # TODO determine solve_data.LB, solve_data.UB is inf or -inf.
-            solve_data.results.solver.termination_condition = tc.feasible
-            return True
-
-        solve_data.integer_list.append(solve_data.curr_int_sol)
+    if check_cycling:
+        if config.cycling_check or config.use_tabu_list:
+            solve_data.curr_int_sol = get_integer_solution(solve_data.mip)
+            if config.cycling_check and solve_data.mip_iter >= 1:
+                if solve_data.curr_int_sol in set(solve_data.integer_list):
+                    config.logger.info(
+                        'Cycling happens after {} master iterations. '
+                        'The same combination is obtained in iteration {} '
+                        'This issue happens when the NLP subproblem violates constraint qualification. '
+                        'Convergence to optimal solution is not guaranteed.'
+                        .format(solve_data.mip_iter, solve_data.integer_list.index(solve_data.curr_int_sol)+1))
+                    config.logger.info(
+                        'Final bound values: LB: {}  UB: {}'.
+                        format(solve_data.LB, solve_data.UB))
+                    # TODO determine solve_data.LB, solve_data.UB is inf or -inf.
+                    solve_data.results.solver.termination_condition = tc.feasible
+                    return True
+            solve_data.integer_list.append(solve_data.curr_int_sol)
 
     # if not algorithm_is_making_progress(solve_data, config):
     #     config.logger.debug(
@@ -423,7 +423,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
                         MindtPy.cuts.no_good_cuts[i].deactivate(
                         )
                 if config.use_tabu_list:
-                    solve_data.tabu_list = solve_data.tabu_list[:valid_no_good_cuts_num]
+                    solve_data.integer_list = solve_data.integer_list[:valid_no_good_cuts_num]
             except KeyError:
                 config.logger.info('No-good cut deactivate failed.')
         elif config.strategy == 'OA':
@@ -433,7 +433,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
                 MindtPy.cuts.no_good_cuts[len(
                     MindtPy.cuts.no_good_cuts)].deactivate()
             if config.use_tabu_list:
-                solve_data.tabu_list = solve_data.tabu_list[:-1]
+                solve_data.integer_list = solve_data.integer_list[:-1]
         if config.add_regularization is not None and MindtPy.find_component('mip_obj') is None:
             MindtPy.objective_list[-1].activate()
         masteropt = SolverFactory(config.mip_solver)
@@ -445,6 +445,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
                 tabu_list.IncumbentCallback_cplex)
             tabulist.solve_data = solve_data
             tabulist.opt = masteropt
+            tabulist.config = config
             masteropt._solver_model.parameters.preprocessing.reduce.set(1)
             # If the callback is used to reject incumbents, the user must set the
             # parameter c.parameters.preprocessing.reduce either to the value 1 (one)

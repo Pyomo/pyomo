@@ -512,19 +512,24 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
                     opt.options['add_options'].append('GAMS_MODEL.optfile=1')
 
 
-def get_integer_solution(model):
+def get_integer_solution(model,string_zero=False):
     """ obtain the value of integer variables from the provided model.
 
     Args:
         model: Pyomo model
             the model to extract value of integer variables
+        string_zero: Boolean
+            whether to store zero as string
     """
     temp = []
     for var in model.component_data_objects(ctype=Var):
         if var.is_integer():
-            if var.value == 0:
-                # In cplex, negative zero is different from zero, so we use string to denote this
-                temp.append(str(var.value))
+            if string_zero:
+                if var.value == 0:
+                    # In cplex, negative zero is different from zero, so we use string to denote this(Only in singletree)
+                    temp.append(str(var.value))
+                else:
+                    temp.append(int(round(var.value)))
             else:
                 temp.append(int(round(var.value)))
     return tuple(temp)
