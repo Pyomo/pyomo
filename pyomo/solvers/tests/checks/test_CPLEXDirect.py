@@ -228,6 +228,28 @@ class CPLEXDirectTests(unittest.TestCase):
 
     @unittest.skipIf(not cplexpy_available,
                      "The 'cplex' python bindings are not available")
+    def test_failed_mip_start(self):
+        with SolverFactory("cplex", solver_io="python") as opt:
+            opt.options["dettimelimit"] = 1
+
+            nodes = list(range(15))
+            links = list((i, j) for i, j in product(nodes, nodes) if i != j)
+
+            seed(0)
+            distances = {link: random() for link in links}
+
+            model = self.build_mtz_tsp_model(nodes, links, distances)
+
+            # Add an invalid warm start
+            for var in model.Z.values():
+                var.value = 0
+
+            results = opt.solve(model, warmstart=True)
+
+            self.assertTrue(results.solver.mip_start_failed)
+
+    @unittest.skipIf(not cplexpy_available,
+                     "The 'cplex' python bindings are not available")
     def test_unbounded_mip(self):
         with SolverFactory("cplex", solver_io="python") as opt:
 
