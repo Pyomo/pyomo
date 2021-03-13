@@ -139,6 +139,12 @@ class Ipopt(PersistentSolver):
         else:
             return self._filename + '.sol'
 
+    def options_filename(self):
+        if self._filename is None:
+            return None
+        else:
+            return self._filename + '.opt'
+
     @property
     def config(self):
         return self._config
@@ -188,7 +194,7 @@ class Ipopt(PersistentSolver):
         self._writer.update_params()
 
     def _write_options_file(self):
-        f = open('ipopt.opt', 'w')
+        f = open(self._filename + '.opt', 'w')
         for k, val in self.solver_options.items():
             if k not in ipopt_command_line_options:
                 f.write(str(k) + ' ' + str(val) + '\n')
@@ -207,16 +213,8 @@ class Ipopt(PersistentSolver):
                 self._filename = self.config.filename
                 TempfileManager.add_tempfile(self._filename + '.nl', exists=False)
             TempfileManager.add_tempfile(self._filename + '.sol', exists=False)
-            need_opt_file = False
-            for k in self.solver_options.keys():
-                if k not in ipopt_command_line_options:
-                    need_opt_file = True
-            if need_opt_file:
-                if os.path.exists('ipopt.opt'):
-                    raise FileExistsError('Some options specified are only available through the ipopt.opt '
-                                          'options file. However, ipopt.opt already exists.')
-                TempfileManager.add_tempfile('ipopt.opt', exists=False)
-                self._write_options_file()
+            TempfileManager.add_tempfile(self._filename + '.opt', exists=False)
+            self._write_options_file()
             timer.start('write nl file')
             self._writer.write(model, self._filename+'.nl', timer=timer)
             timer.stop('write nl file')
@@ -347,7 +345,11 @@ class Ipopt(PersistentSolver):
 
         cmd = [str(config.executable),
                self._filename + '.nl',
-               '-AMPL']
+               '-AMPL',
+               'option_file_name=' + self._filename + '.opt']
+        if 'option_file_name' in self.solver_options:
+            raise ValueError('Use Ipopt.config.filename to specify the name of the options file. '
+                             'Do not use Ipopt.solver_options["option_file_name"].')
         for k, v in self.solver_options.items():
             cmd.append(str(k) + '=' + str(v))
 
