@@ -19,6 +19,7 @@ from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.tee import TeeStream
 import sys
+import os
 
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,64 @@ class IpoptConfig(SolverConfig):
         self.keepfiles = False
         self.solver_output_logger = logger
         self.log_level = logging.INFO
+
+
+ipopt_command_line_options = {'acceptable_compl_inf_tol',
+                              'acceptable_constr_viol_tol',
+                              'acceptable_dual_inf_tol',
+                              'acceptable_tol',
+                              'alpha_for_y',
+                              'bound_frac',
+                              'bound_mult_init_val',
+                              'bound_push',
+                              'bound_relax_factor',
+                              'compl_inf_tol',
+                              'constr_mult_init_max',
+                              'constr_viol_tol',
+                              'diverging_iterates_tol',
+                              'dual_inf_tol',
+                              'expect_infeasible_problem',
+                              'file_print_level',
+                              'halt_on_ampl_error',
+                              'hessian_approximation',
+                              'honor_original_bounds',
+                              'linear_scaling_on_demand',
+                              'linear_solver',
+                              'linear_system_scaling',
+                              'ma27_pivtol',
+                              'ma27_pivtolmax',
+                              'ma57_pivot_order',
+                              'ma57_pivtol',
+                              'ma57_pivtolmax',
+                              'max_cpu_time',
+                              'max_iter',
+                              'max_refinement_steps',
+                              'max_soc',
+                              'maxit',
+                              'min_refinement_steps',
+                              'mu_init',
+                              'mu_max',
+                              'mu_oracle',
+                              'mu_strategy',
+                              'nlp_scaling_max_gradient',
+                              'nlp_scaling_method',
+                              'obj_scaling_factor',
+                              'option_file_name',
+                              'outlev',
+                              'output_file',
+                              'pardiso_matching_strategy',
+                              'print_level',
+                              'print_options_documentation',
+                              'print_user_options',
+                              'required_infeasibility_reduction',
+                              'slack_bound_frac',
+                              'slack_bound_push',
+                              'tol',
+                              'wantsol',
+                              'warm_start_bound_push',
+                              'warm_start_init_point',
+                              'warm_start_mult_bound_push',
+                              'watchdog_shortened_iter_trigger'}
 
 
 class Ipopt(PersistentSolver):
@@ -73,24 +132,6 @@ class Ipopt(PersistentSolver):
             return None
         else:
             return self._filename + '.nl'
-
-    def row_filename(self):
-        if self._filename is None:
-            return None
-        else:
-            return self._filename + '.row'
-
-    def col_filename(self):
-        if self._filename is None:
-            return None
-        else:
-            return self._filename + '.col'
-
-    def log_filename(self):
-        if self._filename is None:
-            return None
-        else:
-            return self._filename + '.log'
 
     def sol_filename(self):
         if self._filename is None:
@@ -149,7 +190,8 @@ class Ipopt(PersistentSolver):
     def _write_options_file(self):
         f = open('ipopt.opt', 'w')
         for k, val in self.solver_options.items():
-            f.write(str(k) + ' ' + str(val) + '\n')
+            if k not in ipopt_command_line_options:
+                f.write(str(k) + ' ' + str(val) + '\n')
         f.close()
 
     def solve(self, model, timer: HierarchicalTimer = None):
@@ -159,15 +201,22 @@ class Ipopt(PersistentSolver):
         try:
             TempfileManager.push()
             if self.config.filename is None:
-                self._filename = TempfileManager.create_tempfile()
+                nl_filename = TempfileManager.create_tempfile(suffix='.nl')
+                self._filename = nl_filename.split('.')[0]
             else:
                 self._filename = self.config.filename
-            TempfileManager.add_tempfile(self._filename + '.nl', exists=False)
-            TempfileManager.add_tempfile(self._filename + '.row', exists=False)
-            TempfileManager.add_tempfile(self._filename + '.col', exists=False)
+                TempfileManager.add_tempfile(self._filename + '.nl', exists=False)
             TempfileManager.add_tempfile(self._filename + '.sol', exists=False)
-            TempfileManager.add_tempfile('ipopt.opt', exists=False)
-            self._write_options_file()
+            need_opt_file = False
+            for k in self.solver_options.keys():
+                if k not in ipopt_command_line_options:
+                    need_opt_file = True
+            if need_opt_file:
+                if os.path.exists('ipopt.opt'):
+                    raise FileExistsError('Some options specified are only available through the ipopt.opt '
+                                          'options file. However, ipopt.opt already exists.')
+                TempfileManager.add_tempfile('ipopt.opt', exists=False)
+                self._write_options_file()
             timer.start('write nl file')
             self._writer.write(model, self._filename+'.nl', timer=timer)
             timer.stop('write nl file')
@@ -296,12 +345,15 @@ class Ipopt(PersistentSolver):
         if self.config.stream_solver:
             ostreams.append(sys.stdout)
 
+        cmd = [str(config.executable),
+               self._filename + '.nl',
+               '-AMPL']
+        for k, v in self.solver_options.items():
+            cmd.append(str(k) + '=' + str(v))
+
         with TeeStream(*ostreams) as t:
             timer.start('subprocess')
-            cp = subprocess.run([str(config.executable),
-                                 self._filename + '.nl',
-                                 '-AMPL',
-                                 'halt_on_ampl_error=yes'],
+            cp = subprocess.run(cmd,
                                 timeout=timeout,
                                 stdout=t.STDOUT,
                                 stderr=t.STDERR,
