@@ -13,7 +13,7 @@ from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
 import sys
 import time
-from pyomo.contrib.appsi.utils import LogStream
+from pyomo.common.log import LogStream
 from pyomo.common.config import ConfigValue, NonNegativeInt
 
 

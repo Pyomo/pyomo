@@ -2,7 +2,7 @@ from pyutilib.services import TempfileManager
 from pyomo.common.fileutils import Executable
 from pyomo.contrib.appsi.base import PersistentSolver, Results, TerminationCondition, SolverConfig
 from pyomo.contrib.appsi.writers import LPWriter
-from pyomo.contrib.appsi.utils import LogStream
+from pyomo.common.log import LogStream
 import logging
 import subprocess
 from pyomo.core.kernel.objective import minimize, maximize
