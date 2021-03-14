@@ -14,6 +14,7 @@ from pyomo.common.timing import HierarchicalTimer
 import sys
 import time
 from pyomo.contrib.appsi.utils import LogStream
+from pyomo.common.config import ConfigValue, NonNegativeInt
 
 
 logger = logging.getLogger(__name__)
@@ -22,10 +23,12 @@ logger = logging.getLogger(__name__)
 class CplexConfig(MIPSolverConfig):
     def __init__(self):
         super(CplexConfig, self).__init__()
-        self._acceptable_attributes.update(['filename',
-                                            'keepfiles',
-                                            'solver_output_logger',
-                                            'log_level'])
+
+        self.declare('filename', ConfigValue(domain=str))
+        self.declare('keepfiles', ConfigValue(domain=bool))
+        self.declare('solver_output_logger', ConfigValue())
+        self.declare('log_level', ConfigValue(domain=NonNegativeInt))
+
         self.filename = None
         self.keepfiles = False
         self.solver_output_logger = logger

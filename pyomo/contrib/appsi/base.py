@@ -11,6 +11,7 @@ from pyomo.common.collections import ComponentMap, OrderedSet
 from .utils.get_objective import get_objective
 from .utils.identify_named_expressions import identify_named_expressions
 from pyomo.common.timing import HierarchicalTimer
+from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat
 
 
 class TerminationCondition(enum.Enum):
@@ -54,31 +55,7 @@ class TerminationCondition(enum.Enum):
     """The solver exited due to licensing problems"""
 
 
-class ConfigBase(object):
-    def __init__(self):
-        self._acceptable_attributes = OrderedSet()
-        
-    def __getattr__(self, item):
-        if item != '_acceptable_attributes' and item not in self._acceptable_attributes:
-            raise ValueError('{0} does not have attribute {1}'.format(type(self), item))
-        return super(ConfigBase, self).__getattr__(item)
-
-    def __setattr__(self, key, value):
-        if key != '_acceptable_attributes' and key not in self._acceptable_attributes:
-            raise ValueError('{0} does not have attribute {1}'.format(type(self), key))
-        super(ConfigBase, self).__setattr__(key, value)
-
-    def __str__(self):
-        s = str(type(self)) + ': \n'
-        for k in self._acceptable_attributes:
-            s += '  {key:<40}: {val}\n'.format(key=k, val=getattr(self, k))
-        return s
-
-    def __repr__(self):
-        return self.__str__()
-
-
-class SolverConfig(ConfigBase):
+class SolverConfig(ConfigDict):
     """
     Attributes
     ----------
@@ -93,14 +70,19 @@ class SolverConfig(ConfigBase):
         If True, the names given to the solver will reflect the names
         of the pyomo components. Cannot be changed after set_instance
         is called.
+    report_timing: bool
+        If True, then some timing information will be printed at the
+        end of the solve.
     """
     def __init__(self):
         super(SolverConfig, self).__init__()
-        self._acceptable_attributes.update(['time_limit',
-                                            'stream_solver',
-                                            'load_solution',
-                                            'symbolic_solver_labels',
-                                            'report_timing'])
+
+        self.declare('time_limit', ConfigValue(domain=NonNegativeFloat))
+        self.declare('stream_solver', ConfigValue(domain=bool))
+        self.declare('load_solution', ConfigValue(domain=bool))
+        self.declare('symbolic_solver_labels', ConfigValue(domain=bool))
+        self.declare('report_timing', ConfigValue(domain=bool))
+
         self.time_limit: Optional[float] = None
         self.stream_solver: bool = False
         self.load_solution: bool = True
@@ -120,8 +102,10 @@ class MIPSolverConfig(SolverConfig):
     """
     def __init__(self):
         super(MIPSolverConfig, self).__init__()
-        self._acceptable_attributes.update(['mip_gap',
-                                            'relax_integrality'])
+
+        self.declare('mip_gap', ConfigValue(domain=NonNegativeFloat))
+        self.declare('relax_integrality', ConfigValue(domain=bool))
+
         self.mip_gap: Optional[float] = None
         self.relax_integrality: bool = False
 
@@ -179,7 +163,7 @@ class Results(object):
         return s
 
 
-class UpdateConfig(ConfigBase):
+class UpdateConfig(ConfigDict):
     """
     Attributes
     ----------
@@ -193,13 +177,15 @@ class UpdateConfig(ConfigBase):
     """
     def __init__(self):
         super(UpdateConfig, self).__init__()
-        self._acceptable_attributes.update(['check_for_new_or_removed_constraints',
-                                            'check_for_new_or_removed_vars',
-                                            'check_for_new_or_removed_params',
-                                            'update_constraints',
-                                            'update_vars',
-                                            'update_params',
-                                            'update_named_expressions'])
+
+        self.declare('check_for_new_or_removed_constraints', ConfigValue(domain=bool))
+        self.declare('check_for_new_or_removed_vars', ConfigValue(domain=bool))
+        self.declare('check_for_new_or_removed_params', ConfigValue(domain=bool))
+        self.declare('update_constraints', ConfigValue(domain=bool))
+        self.declare('update_vars', ConfigValue(domain=bool))
+        self.declare('update_params', ConfigValue(domain=bool))
+        self.declare('update_named_expressions', ConfigValue(domain=bool))
+
         self.check_for_new_or_removed_constraints: bool = True
         self.check_for_new_or_removed_vars: bool = True
         self.check_for_new_or_removed_params: bool = True

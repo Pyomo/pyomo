@@ -17,6 +17,7 @@ from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.tee import TeeStream
 import sys
+from pyomo.common.config import ConfigValue, NonNegativeInt
 
 
 logger = logging.getLogger(__name__)
@@ -25,11 +26,13 @@ logger = logging.getLogger(__name__)
 class CbcConfig(SolverConfig):
     def __init__(self):
         super(CbcConfig, self).__init__()
-        self._acceptable_attributes.update(['executable',
-                                            'filename',
-                                            'keepfiles',
-                                            'solver_output_logger',
-                                            'log_level'])
+
+        self.declare('executable', ConfigValue())
+        self.declare('filename', ConfigValue(domain=str))
+        self.declare('keepfiles', ConfigValue(domain=bool))
+        self.declare('solver_output_logger', ConfigValue())
+        self.declare('log_level', ConfigValue(domain=NonNegativeInt))
+
         self.executable = Executable('cbc')
         self.filename = None
         self.keepfiles = False

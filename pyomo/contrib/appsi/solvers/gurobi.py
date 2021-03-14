@@ -20,10 +20,6 @@ from pyomo.common.timing import HierarchicalTimer
 logger = logging.getLogger(__name__)
 
 
-class ConfigurationError(PyomoException):
-    pass
-
-
 class DegreeError(PyomoException):
     pass
 
