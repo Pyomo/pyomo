@@ -164,7 +164,7 @@ if test -z "$MODE" -o "$MODE" == test; then
     echo "#"
     echo "# Running Pyomo tests"
     echo "#"
-    test.pyomo -v --cat=$CATEGORY $TEST_SUITES
+    python -m pyomo.common.unittests $TEST_SUITES -v --cat=$CATEGORY --xunit
 
     # Combine the coverage results and upload
     if test -z "$DISABLE_COVERAGE"; then
