@@ -22,7 +22,7 @@ import os
 import platform
 import argparse
 import subprocess
-import six
+from io import StringIO
 
 # Import base classes privately (so that we have handles on them)
 import pyutilib.th.pyunit as _pyunit
@@ -57,7 +57,7 @@ def _runner(q, qualname):
     else:
         qualname, fcn, args, kwargs = qualname
     _runner.data[qualname] = None
-    OUT = six.StringIO()
+    OUT = StringIO()
     try:
         with capture_output(OUT):
             result = fcn(*args, **kwargs)
