@@ -218,5 +218,19 @@ class TestPyomoUnittest(unittest.TestCase):
                 "timeout requires unavailable fork interface"):
             self.bound_function_require_fork()
 
+    def test_build_parser(self):
+        cmd_opts = 'bogus target names --cat not-real --cat whatever'.split()
+        parser = unittest.buildParser()
+        arguments = parser.parse_args(cmd_opts)
+        self.assertEqual(arguments.cat, ['not-real', 'whatever'])
+        self.assertEqual(arguments.targets, ['bogus', 'target', 'names'])
+        self.assertFalse(arguments.verbose)
+        self.assertFalse(arguments.xunit)
+        cmd_opts.extend(['-v', '--xunit'])
+        arguments = parser.parse_args(cmd_opts)
+        self.assertTrue(arguments.verbose)
+        self.assertTrue(arguments.xunit)
+
+
 if __name__ == '__main__':
     unittest.main()
