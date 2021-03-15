@@ -96,6 +96,7 @@ class MindtPySolver(object):
 
         if config.use_fbbt:
             fbbt(model)
+            # TODO: logging_level is not logging.INFO here
             config.logger.info(
                 'Use the fbbt to tighten the bounds of variables')
 

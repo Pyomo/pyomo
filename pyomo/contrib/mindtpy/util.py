@@ -493,6 +493,13 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
                             '$onecho > ipopth.opt')
                         opt.options['add_options'].append(
                             'constr_viol_tol ' + str(config.zero_tolerance))
+                        # TODO: Ipopt warmstart option
+                        # opt.options['add_options'].append('warm_start_init_point       yes\n'
+                        #                                   'warm_start_bound_push       1e-9\n'
+                        #                                   'warm_start_bound_frac       1e-9\n'
+                        #                                   'warm_start_slack_bound_frac 1e-9\n'
+                        #                                   'warm_start_slack_bound_push 1e-9\n'
+                        #                                   'warm_start_mult_bound_push  1e-9\n')
                     elif config.nlp_solver_args['solver'] == 'conopt':
                         opt.options['add_options'].append(
                             '$onecho > conopt.opt')
