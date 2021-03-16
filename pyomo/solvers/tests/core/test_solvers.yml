@@ -6,9 +6,6 @@ solvers:
         name: cbc
         solver_io: nl
     #
-    coliny:
-        name: 'asl:coliny'
-    #
     mosek_direct:
             name: mosek
             solver_io: python
