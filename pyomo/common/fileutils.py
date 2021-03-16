@@ -412,11 +412,14 @@ def import_file(path, clear_cache=False):
     clear_cache: bool
         Remove module if already loaded. The default is False.
     """
-    path = os.path.expanduser(os.path.expandvars(path))
+    path = os.path.normpath(os.path.expanduser(os.path.expandvars(path)))
     if not os.path.exists(path):
         raise FileNotFoundError('File does not exist. Check path.')
     module_dir, module_file = os.path.split(path)
     module_name, module_ext = os.path.splitext(module_file)
+    while os.path.exists(os.path.join(module_dir, '__init__.py')):
+        module_dir, mod = os.path.split(module_dir)
+        module_name = mod + '.' + module_name
     if clear_cache and module_name in sys.modules:
         del sys.modules[module_name]
     spec = importlib.util.spec_from_file_location(module_name, path)
