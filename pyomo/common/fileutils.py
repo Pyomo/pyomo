@@ -419,6 +419,8 @@ def import_file(path, clear_cache=False, infer_package=True):
     module_name, module_ext = os.path.splitext(module_file)
     if infer_package:
         while os.path.exists(os.path.join(module_dir, '__init__.py')):
+            if not module_dir:
+                break
             module_dir, mod = os.path.split(module_dir)
             module_name = mod + '.' + module_name
     if clear_cache and module_name in sys.modules:
