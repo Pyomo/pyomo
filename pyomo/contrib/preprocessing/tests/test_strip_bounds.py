@@ -1,5 +1,5 @@
 """Tests stripping of variable bounds."""
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import (Binary, ConcreteModel, Integers, NonNegativeReals,
                            PositiveReals, Reals, TransformationFactory, Var)

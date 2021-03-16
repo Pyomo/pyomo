@@ -15,7 +15,7 @@ from os.path import join, normpath
 
 from six import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import Bunch
 from pyomo.common.fileutils import import_file

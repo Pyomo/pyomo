@@ -16,7 +16,7 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 from math import nan, inf
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import (value, ConcreteModel, Param, Var, 
                            polynomial_degree, is_constant, is_fixed,

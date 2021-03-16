@@ -27,7 +27,8 @@ env:
       pint pyro4 pyyaml sphinx_rtd_theme sympy xlrd
       python-louvain
   PYTHON_NUMPY_PKGS: >
-      numpy scipy pyodbc pandas matplotlib seaborn numdifftools casadi
+      numpy scipy pyodbc pandas matplotlib seaborn numdifftools 
+      parameterized casadi
   CACHE_VER: v3
   NEOS_EMAIL: tests@pyomo.org
 
@@ -279,7 +280,7 @@ jobs:
                 || echo "WARNING: CPLEX Community Edition is not available"
             conda install -q -y -c fico-xpress xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
-            for PKG in casadi cyipopt pymumps; do
+            for PKG in cyipopt pymumps; do
                 conda install -q -y -c conda-forge $PKG \
                     || echo "WARNING: $PKG is not available"
             done

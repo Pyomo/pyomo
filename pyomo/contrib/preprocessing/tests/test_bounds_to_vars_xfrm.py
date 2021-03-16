@@ -1,5 +1,5 @@
 """Tests explicit bound to variable bound transformation module."""
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.environ import (ConcreteModel, Constraint, TransformationFactory,
                            Var, value, Integers)
 

@@ -346,7 +346,7 @@ class Param(IndexedComponent):
             # Thus, we need to create a temporary dictionary that contains the
             # values from the ParamData objects.
             #
-            return {key:param_value() for key,param_value in self.iteritems()}
+            return {key:param_value() for key,param_value in self.items()}
         elif not self.is_indexed():
             #
             # The parameter is a scalar, so we need to create a temporary
@@ -358,7 +358,7 @@ class Param(IndexedComponent):
             # The parameter is not mutable, so iteritems() can be
             # converted into a dictionary containing parameter values.
             #
-            return dict( self.iteritems() )
+            return dict( self.items() )
 
     def extract_values_sparse(self):
         """

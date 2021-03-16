@@ -11,7 +11,7 @@
 # Unit Tests for Port
 #
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from six import StringIO
 
 from pyomo.environ import ConcreteModel, AbstractModel, Var, Set, NonNegativeReals, Binary, Reals, Integers, RangeSet

@@ -10,7 +10,7 @@
 
 from six.moves import zip_longest
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.environ as pyo
 import pyomo.kernel as pmo

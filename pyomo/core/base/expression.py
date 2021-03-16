@@ -297,7 +297,7 @@ class Expression(IndexedComponent):
              ('Index', None if (not self.is_indexed())
                   else self._index)
              ],
-            self.iteritems(),
+            self.items(),
             ("Expression",),
             lambda k,v: \
                ["Undefined" if v.expr is None else v.expr]

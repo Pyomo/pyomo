@@ -11,7 +11,7 @@
 # Unit Tests for components
 #
 from io import StringIO
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common import DeveloperError
 import pyomo.core.base._pyomo

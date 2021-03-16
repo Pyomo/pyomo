@@ -20,7 +20,7 @@ if __name__ == "__main__":
     from os.path import abspath, dirname
     currdir = dirname(abspath(__file__))+os.sep
 
-    import pyutilib.th as unittest
+    import pyomo.common.unittest as unittest
     from pyutilib.autotest import create_test_suites
 
     create_test_suites(filename=currdir+'test_solvers.yml', _globals=globals())

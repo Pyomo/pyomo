@@ -12,7 +12,7 @@
 import os
 import time
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.dataportal.parse_datacmds as parser
 

@@ -16,7 +16,7 @@ import collections
 import itertools
 from io import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.expr.symbol_map import SymbolMap
 import pyomo.kernel as pmo

@@ -11,7 +11,7 @@
 import collections.abc
 import pickle
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import pyomo.kernel as pmo
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
