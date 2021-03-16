@@ -14,6 +14,7 @@ import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.log import LoggingIntercept
+from pyomo.opt import TerminationCondition
 from six import StringIO
 import logging
 
@@ -172,3 +173,8 @@ class TestExamples(unittest.TestCase):
         s = df['ca_bal']
         self.assertAlmostEqual(s.iloc[6], 0, places=3)
 
+    def test_cyipopt_callback_halt(self):
+        ex = import_file(os.path.join(example_dir, 'callback', 'cyipopt_callback_halt.py'))
+        status = ex.main()
+        self.assertTrue(status.solver.termination_condition == TerminationCondition.userInterrupt)
+        
