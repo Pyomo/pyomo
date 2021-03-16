@@ -4,7 +4,7 @@ from itertools import product
 from six import StringIO
 from six.moves import range
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.multistart.high_conf_stop import should_stop
 from pyomo.contrib.multistart.reinit import strategies

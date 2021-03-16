@@ -11,13 +11,14 @@
 # Unit Tests for pyomo.opt.parallel (using the COLIN optimizers)
 #
 
+import json
 import os
 from os.path import abspath, dirname
 pyomodir = dirname(dirname(dirname(dirname(abspath(__file__)))))
 pyomodir += os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.opt
 import pyomo.opt.blackbox
@@ -137,7 +138,10 @@ class Test(unittest.TestCase):
         self.ps.reset()
         results = self.ps.solve(logfile=currdir+"test_solve1.log")
         results.write(filename=currdir+"test_solve1.txt", times=False, format='json')
-        self.assertMatchesJsonBaseline(currdir+"test_solve1.txt", currdir+"test1_ps.txt")
+        with open(currdir+"test_solve1.txt", 'r') as out, \
+            open(currdir+"test1_ps.txt", 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             allow_second_superset=True)
         if os.path.exists(currdir+"test_solve1.log"):
             os.remove(currdir+"test_solve1.log")
 
@@ -150,7 +154,10 @@ class Test(unittest.TestCase):
         mngr = pyomo.opt.parallel.SolverManagerFactory("serial")
         results = mngr.solve(opt=self.ps, logfile=currdir+"test_solve2.log")
         results.write(filename=currdir+"test_solve2.txt", times=False, format='json')
-        self.assertMatchesJsonBaseline(currdir+"test_solve2.txt", currdir+"test1_ps.txt")
+        with open(currdir+"test_solve2.txt", 'r') as out, \
+            open(currdir+"test1_ps.txt", 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             allow_second_superset=True)
         if os.path.exists(currdir+"test_solve2.log"):
             os.remove(currdir+"test_solve2.log")
 
@@ -221,8 +228,10 @@ class Test(unittest.TestCase):
         mngr = SolverManager_DelayedSerial()
         results = mngr.solve(opt=self.ps, logfile=currdir+"test_solve4.log")
         results.write(filename=currdir+"test_solve4.txt", times=False, format='json')
-        self.assertMatchesJsonBaseline(currdir+"test_solve4.txt", currdir+
-"test1_ps.txt")
+        with open(currdir+"test_solve4.txt", 'r') as out, \
+            open(currdir+"test1_ps.txt", 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             allow_second_superset=True)
         if os.path.exists(currdir+"test_solve4.log"):
             os.remove(currdir+"test_solve4.log")
 

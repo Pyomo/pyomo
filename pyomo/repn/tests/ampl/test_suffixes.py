@@ -15,7 +15,8 @@ import os
 from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))
 
-import pyutilib.th as unittest
+from filecmp import cmp
+import pyomo.common.unittest as unittest
 
 from pyomo.opt import ProblemFormat
 from pyomo.core import ConcreteModel, Suffix, Var, Objective, Constraint, SOSConstraint, sum_product
@@ -64,8 +65,9 @@ class TestSuffix(unittest.TestCase):
                     format=ProblemFormat.nl,
                     io_options={"symbolic_solver_labels" : False})
 
-        self.assertFileEqualsBaseline(join(currdir,"EXPORT_suffixes.test.nl"),
-                                      join(currdir,"EXPORT_suffixes_int.baseline.nl"))
+        _test, _base = join(currdir,"EXPORT_suffixes.test.nl"), join(currdir,"EXPORT_suffixes_int.baseline.nl")
+        self.assertTrue(cmp(_test, _base),
+                        msg="Files %s and %s differ" % (_test, _base))
 
     # test that EXPORT suffixes on variables,
     # constraints, objectives, and models
@@ -105,8 +107,9 @@ class TestSuffix(unittest.TestCase):
                     format=ProblemFormat.nl,
                     io_options={"symbolic_solver_labels" : False})
 
-        self.assertFileEqualsBaseline(join(currdir,"EXPORT_suffixes.test.nl"),
-                                      join(currdir,"EXPORT_suffixes_float.baseline.nl"))
+        _test, _base = join(currdir,"EXPORT_suffixes.test.nl"), join(currdir,"EXPORT_suffixes_float.baseline.nl")
+        self.assertTrue(cmp(_test, _base),
+                        msg="Files %s and %s differ" % (_test, _base))
 
     # Test that user defined ref suffixes fail to
     # merge with those created from translating the SOSConstraint

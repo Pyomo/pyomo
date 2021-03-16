@@ -15,7 +15,7 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.opt import check_available_solvers
 from pyomo.environ import ConcreteModel, RangeSet, Var, Set, Objective, Constraint, SolverFactory, AbstractModel

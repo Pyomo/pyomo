@@ -1,4 +1,4 @@
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import pyomo.environ as pe
 from pyomo.core.expr.taylor_series import taylor_series_expansion
 try:

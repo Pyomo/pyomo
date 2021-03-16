@@ -10,7 +10,7 @@
 
 import os.path
 from pyomo.common.fileutils import this_file_dir, import_file
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.common.dependencies import attempt_import
 
