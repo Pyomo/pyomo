@@ -1,5 +1,5 @@
 """Tests the variable aggregation module."""
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.collections import ComponentSet
 from pyomo.contrib.preprocessing.plugins.var_aggregator import (
     _build_equality_set,

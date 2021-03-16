@@ -15,7 +15,8 @@ import os
 
 from six import StringIO
 
-import pyutilib.th as unittest
+from filecmp import cmp
+import pyomo.common.unittest as unittest
 from pyomo.core.base import NumericLabeler, SymbolMap
 from pyomo.environ import (Block, ConcreteModel, Constraint,
                            Objective, TransformationFactory, Var, exp, log,
@@ -51,10 +52,14 @@ class Test(unittest.TestCase):
         model.write(test_fname,
                     format="gams",
                     io_options=io_options)
-        self.assertFileEqualsBaseline(
-            test_fname,
-            baseline_fname,
-            delete=True)
+        try:
+            self.assertTrue(cmp(test_fname, baseline_fname))
+        except:
+            with open(test_fname, 'r') as f1, open(baseline_fname, 'r') as f2:
+                f1_contents = list(filter(None, f1.read().split()))
+                f2_contents = list(filter(None, f2.read().split()))
+                self.assertEqual(f1_contents, f2_contents)
+        self._cleanup(test_fname)
 
     def _gen_expression(self, terms):
         terms = list(terms)

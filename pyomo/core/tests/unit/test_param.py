@@ -22,7 +22,7 @@ import math
 import os
 import sys
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import (Set, RangeSet, Param, ConcreteModel,
                            AbstractModel, Constraint, Var,

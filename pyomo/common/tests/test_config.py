@@ -28,7 +28,7 @@ import os
 import sys
 import os.path
 import re
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from six import PY3, StringIO
 

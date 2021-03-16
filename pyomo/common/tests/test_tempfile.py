@@ -26,7 +26,7 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__)) + os.sep
 tempdir = dirname(abspath(__file__)) + os.sep + 'tempdir' + os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.common.tempfiles as tempfiles
 

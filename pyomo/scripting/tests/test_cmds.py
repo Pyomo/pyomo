@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 #
 import re
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.tee import capture_output
 
 from pyomo.environ import SolverFactory

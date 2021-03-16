@@ -1,5 +1,5 @@
 # Imports
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import glob
 import os
 import os.path

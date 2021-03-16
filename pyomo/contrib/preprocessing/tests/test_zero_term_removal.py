@@ -1,5 +1,5 @@
 """Tests detection of zero terms."""
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.environ import (ConcreteModel, Constraint, TransformationFactory,
                            Var)
 from pyomo.core.expr import current as EXPR
