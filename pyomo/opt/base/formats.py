@@ -23,7 +23,6 @@ import enum
 # mod - AMPL *.mod file
 # lpxlp - A LPSolve LP file
 # osil - An XML file defined by the COIN-OR OS project: Instance
-# FuncDesigner - A FuncDesigner problem
 # bar - A Baron input file
 # gams - A GAMS input file
 #
@@ -35,7 +34,6 @@ class ProblemFormat(str, enum.Enum):
     mod='mod'
     lpxlp='lpxlp'
     osil='osil'
-    FuncDesigner='FuncDesigner'
     bar='bar'
     gams='gams'
     
