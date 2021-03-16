@@ -19,7 +19,6 @@ import enum
 import logging
 import sys
 import os
-import platform
 import argparse
 import subprocess
 from io import StringIO
@@ -500,7 +499,7 @@ def runtests(options):
 
     print("Running tests in directory %s" % (basedir,))
 
-    if platform == 'win':
+    if sys.platform.startswith('win'):
         binDir = os.path.join(sys.exec_prefix, 'Scripts')
         nosetests = os.path.join(binDir, 'nosetests.exe')
     else:
@@ -512,7 +511,7 @@ def runtests(options):
     else:
         cmd = ['nosetests']
 
-    if (platform == 'win' and sys.version_info[0:2] >= (3, 8)):
+    if (sys.platform.startswith('win') and sys.version_info[0:2] >= (3, 8)):
         #######################################################
         # This option is required due to a (likely) bug within nosetests.
         # Nose is no longer maintained, but this workaround is based on a public forum suggestion:
