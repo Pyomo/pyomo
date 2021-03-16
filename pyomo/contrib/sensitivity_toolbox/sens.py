@@ -100,7 +100,7 @@ def _generate_component_items(components):
 
 def sensitivity_calculation(method, instance, paramList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None):
-    sens = SensitivityInterface(instance, cloneModel=cloneModel)
+    sens = SensitivityInterface(instance, clone_model=cloneModel)
     sens.setup_sensitivity(paramList)
 
     m = sens.model_instance
@@ -134,28 +134,82 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
 
 class SensitivityInterface(object):
 
-    def __init__(self, instance, cloneModel=True):
-        """
+    def __init__(self, instance, clone_model=True):
+        """ Constructor clones model if necessary and attaches
+        to this object.
         """
         self._original_model = instance
 
-        if cloneModel:
+        if clone_model:
             # Note that we are not "cloning" the user's parameters
             # or perturbations.
             self.model_instance = instance.clone()
         else:
             self.model_instance = instance
 
+    @classmethod
     def get_default_block_name(self):
         return '_SENSITIVITY_TOOLBOX_DATA'
 
-    def get_default_var_name(self, name):
+    @staticmethod
+    def get_default_var_name(name):
         #return '_'.join(('sens_var', name))
         return name
 
-    def get_default_param_name(self, name):
+    @staticmethod
+    def get_default_param_name(name):
         #return '_'.join(('sens_param', name))
         return name
+
+    def _add_data_block(self, existing_block=None):
+        # If a sensitivity block already exists, and we have not done
+        # any expression replacement, we delete the old block, re-fix the
+        # sensitivity variables, and start again.
+        #
+        # Don't do this in the constructor as we could want to call
+        # the constructor once, then perform multiple sensitivity
+        # calculations with the same model instance.
+        if existing_block is not None:
+            if (hasattr(existing_block, '_has_replaced_expressions') and
+                    not existing_block._has_replaced_expressions):
+                for var, _, _, _ in existing_block._sens_data_list:
+                    # Re-fix variables that the previous block was
+                    # treating as parameters.
+                    var.fix()
+                instance.del_component(existing_block)
+            else:
+                msg = ("Re-using sensitivity interface is not supported "
+                        "when calculating sensitivity for mutable parameters. "
+                        "Used fixed vars instead if you want to do this."
+                        )
+                raise RuntimeError(msg)
+
+        # Add a block to keep track of model components necessary for this
+        # sensitivity calculation.
+        block = Block()
+        self.model_instance.add_component(self.get_default_block_name(), block)
+        self.block = block
+
+        # If the user tells us they will perturb a set of parameters, we will
+        # need to replace these parameters in the user's model's constraints.
+        # This affects what we can do with the model later, so we add a flag.
+        block._has_replaced_expressions = False
+
+        # This is the main data structure for keeping track of "sensitivity
+        # vars" and their associated params. It will be a list of tuples:
+        # vardata, paramdata, list_index, comp_index
+        # where:
+        #     vardata is the "sensitivity variable" data object,
+        #     paramdata is the associated parameter,
+        #     list_index is its index in the user-provided list, and
+        #     comp_index is its index in the component provided by the user.
+        block._sens_data_list = None
+
+        # This will hold the user-provided list of
+        # variables and/or parameters to perturb
+        block._paramList = None
+
+        return block
 
     def setup_sensitivity(self, paramList):
         """
@@ -170,37 +224,12 @@ class SensitivityInterface(object):
                 for param in paramList
                 )
 
-        # If a sensitivity block already exists, and we have not done
-        # any expression replacement, we delete the old block, re-fix the
-        # sensitivity variables, and start again.
         existing_block = instance.component(self.get_default_block_name())
-        if existing_block is not None:
-            if (hasattr(existing_block, 'has_replaced_expressions') and
-                    not existing_block.has_replaced_expressions):
-                for var, _, _, _ in existing_block._sens_data_list:
-                    # Re-fix variables that the previous block was
-                    # treating as parameters.
-                    var.fix()
-                instance.del_component(existing_block)
-            else:
-                msg = ("Re-using sensitivity interface is not supported "
-                        "when calculating sensitivity for mutable parameters. "
-                        "Used fixed vars instead if you want to do this."
-                        )
-                raise RuntimeError(msg)
-
-        block = Block()
-        instance.add_component(self.get_default_block_name(), block)
-        self.block = block
-        block._has_replaced_expressions = False
+        block = self._add_data_block(existing_block=existing_block)
         block._sens_data_list = []
         block._paramList = paramList
 
         sens_data_list = block._sens_data_list
-        # This is a list of (vardata, paramdata, list_idx, comp_idx) tuples.
-        # Its purpose is to match corresponding vars and params and
-        # to map these to a component or value in the user-provided
-        # lists.
         for i, comp in enumerate(paramList):
             if comp.ctype is Param:
                 if not comp.mutable:
