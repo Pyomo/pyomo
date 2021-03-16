@@ -14,7 +14,7 @@ Unit Tests for pyomo.dae.set_utils
 import os
 from os.path import abspath, dirname
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.core.base import (
     Block, Constraint, ConcreteModel, Var, Set, TransformationFactory

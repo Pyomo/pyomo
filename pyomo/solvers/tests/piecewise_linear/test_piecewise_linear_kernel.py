@@ -13,7 +13,7 @@ import os
 from os.path import dirname, abspath, join
 thisDir = dirname( abspath(__file__) )
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.fileutils import import_file
 from pyomo.kernel import SolverFactory, variable, maximize, minimize

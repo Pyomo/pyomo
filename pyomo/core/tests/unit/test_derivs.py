@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.core.expr.calculus.diff_with_pyomo import reverse_ad, reverse_sd
 from pyomo.common.getGSL import find_GSL

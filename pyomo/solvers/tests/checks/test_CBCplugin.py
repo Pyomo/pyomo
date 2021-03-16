@@ -12,7 +12,7 @@ import os
 import sys
 from os.path import dirname, abspath
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import (ConcreteModel, Var, Objective, RangeSet,
                            Constraint, Reals, NonNegativeIntegers,

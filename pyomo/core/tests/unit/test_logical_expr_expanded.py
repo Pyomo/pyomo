@@ -16,7 +16,7 @@ from __future__ import division
 import operator
 from itertools import product
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.core.expr.cnf_walker import to_cnf
 from pyomo.core.expr.sympy_tools import sympy_available

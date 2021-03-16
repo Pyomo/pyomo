@@ -16,7 +16,7 @@ from os.path import abspath, dirname
 
 from six import StringIO, iterkeys
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import (
     ConcreteModel, Set, Param, Var, Constraint, Expression, Block,

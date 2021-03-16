@@ -20,7 +20,7 @@ try:
 except ImportError:
     NamedTuple = None
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common import DeveloperError
 from pyomo.common.dependencies import numpy as np, numpy_available
