@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.kernel.variable import variable
 

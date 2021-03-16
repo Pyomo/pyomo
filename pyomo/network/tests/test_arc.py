@@ -11,7 +11,7 @@
 # Unit Tests for Arc
 #
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from six import StringIO
 import logging
 

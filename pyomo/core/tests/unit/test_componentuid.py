@@ -15,7 +15,7 @@ from collections import namedtuple
 from datetime import datetime
 from io import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.environ import (
     ConcreteModel, Block, Var, Set, Param, Constraint, Any, ComponentUID,
     Reference,

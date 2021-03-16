@@ -12,12 +12,13 @@
 # Test transformations for linear duality
 #
 
+from filecmp import cmp
 import os
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'bilevel'))
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 import pyomo.opt
@@ -136,8 +137,10 @@ class Reformulate(unittest.TestCase, CommonTests):
         return join(currdir, problem+"_"+solver+'.lp')
 
     def check(self, problem, solver):
-        self.assertFileEqualsBaseline( join(currdir,self.problem+'_result.lp'),
-                                           self.referenceFile(problem,solver), tolerance=1e-5 )
+        _out = join(currdir,self.problem+'_result.lp')
+        _log = self.referenceFile(problem,solver)
+        self.assertTrue(cmp(_out, _log),
+                        msg="Files %s and %s differ" % (_log, _out))
 
 
 class Solver(unittest.TestCase):

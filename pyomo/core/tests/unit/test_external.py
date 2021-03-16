@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 #
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.getGSL import find_GSL
 from pyomo.environ import ConcreteModel, Var, Objective, SolverFactory, value

@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.contrib.fbbt.fbbt import fbbt, compute_bounds_on_expr
 from pyomo.common.dependencies import numpy as np, numpy_available

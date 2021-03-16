@@ -11,7 +11,7 @@
 import collections.abc
 import pickle
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.kernel import pprint
 from pyomo.core.tests.unit.kernel.test_dict_container import \
     _TestActiveDictContainerBase

@@ -15,7 +15,7 @@ currdir = dirname(abspath(__file__))+os.sep
 # Need solvers/writers registered.
 import pyomo.environ as pyo
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import ComponentSet
 from pyomo.core import (Var, Constraint, Param, ConcreteModel, NonNegativeReals,

@@ -23,7 +23,7 @@ currdir = dirname(abspath(getfile(currentframe())))
 datadir = os.path.normpath(join(
     currdir, '..', '..', '..', '..', 'examples', 'pyomo', 'p-median'))
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import pyomo.scripting.convert
 import pyomo.scripting.pyomo_command as main
 import pyomo.opt

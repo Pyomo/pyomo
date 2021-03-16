@@ -16,7 +16,7 @@ try:
 except:
     new_available=False
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.testcases import test_scenarios
 

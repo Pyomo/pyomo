@@ -15,7 +15,7 @@ from __future__ import division
 
 import logging
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from six import StringIO
 
 from pyomo.common.dependencies import networkx_available

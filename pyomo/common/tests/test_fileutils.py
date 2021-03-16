@@ -20,7 +20,7 @@ import subprocess
 
 from six import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.common.config as config
 from pyomo.common.log import LoggingIntercept

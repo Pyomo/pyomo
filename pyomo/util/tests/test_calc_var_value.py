@@ -10,7 +10,7 @@
 
 import logging
 import six
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import ConcreteModel, Var, Constraint, value, exp

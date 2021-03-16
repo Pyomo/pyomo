@@ -11,7 +11,7 @@
 import sys
 import logging
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.collections import Bunch
 from pyomo.opt import TerminationCondition
