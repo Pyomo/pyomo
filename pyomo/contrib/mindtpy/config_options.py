@@ -38,7 +38,7 @@ def _get_MindtPy_config():
     CONFIG.declare('add_regularization', ConfigValue(
         default=None,
         domain=In(['level_L1', 'level_L2', 'level_L_infinity',
-                   'grad_lag', 'hess_lag', 'sqp_lag']),
+                   'grad_lag', 'hess_lag', 'hess_only_lag', 'sqp_lag']),
         description='add regularization',
         doc='solving a projection problem before solve the fixed subproblem'
             'the objective function of the projection problem.'
@@ -418,7 +418,7 @@ def _add_loa_configs(CONFIG):
 
 def check_config(config):
     # configuration confirmation
-    if config.add_regularization in {'grad_lag', 'hess_lag', 'sqp_lag'}:
+    if config.add_regularization in {'grad_lag', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
         config.calculate_dual = True
     if config.add_regularization is not None:
         if config.projection_mip_threads == 0 and config.threads > 0:

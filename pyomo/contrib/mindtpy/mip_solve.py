@@ -436,7 +436,7 @@ def setup_master(solve_data, config, fp, regularization_problem):
             MindtPy.loa_proj_mip_obj = generate_norm_inf_objective_function(solve_data.mip,
                                                                             solve_data.best_solution_found,
                                                                             discrete_only=False)
-        elif config.add_regularization in {'grad_lag', 'hess_lag', 'sqp_lag'}:
+        elif config.add_regularization in {'grad_lag', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
             MindtPy.loa_proj_mip_obj = generate_lag_objective_function(solve_data.mip,
                                                                        solve_data.best_solution_found,
                                                                        config,

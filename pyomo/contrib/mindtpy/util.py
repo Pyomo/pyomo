@@ -335,7 +335,7 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
 
         if config.add_regularization == 'grad_lag':
             return Objective(expr=first_order_term, sense=minimize)
-        elif config.add_regularization == 'hess_lag':
+        elif config.add_regularization in {'hess_lag', 'hess_only_lag'}:
             # Implementation 1
             hess_lag = nlp.evaluate_hessian_lag().toarray()
             hess_lag[abs(hess_lag) < config.zero_tolerance] = 0
@@ -343,7 +343,10 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
                                           for var_i, temp_var_i in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1])
                                           for var_j, temp_var_j in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1])
                                           if (temp_var_i.name in nlp_var and temp_var_j.name in nlp_var))
-            return Objective(expr=first_order_term + second_order_term, sense=minimize)
+            if config.add_regularization == 'hess_lag':
+                return Objective(expr=first_order_term + second_order_term, sense=minimize)
+            elif config.add_regularization =='hess_only_lag':
+                return Objective(expr=first_order_term + second_order_term, sense=minimize)
         elif config.add_regularization == 'sqp_lag':
             var_filter = (lambda v: v[1].is_integer()) if discrete_only \
                 else (lambda v: v[1].name != 'MindtPy_utils.objective_value' and
@@ -448,7 +451,7 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
                     opt.options['mip limits solutions'] = config.solution_limit
                 opt.options['mip strategy presolvenode'] = 3
                 # TODO: need to discuss if this option should be added.
-                if config.add_regularization == 'hess_lag':
+                if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
                     opt.options['optimalitytarget'] = 3
             elif solver_name == 'gurobi':
                 if config.solution_limit is not None:
@@ -463,7 +466,7 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
                 opt._solver_model.parameters.mip.limits.solutions.set(
                     config.solution_limit)
             opt._solver_model.parameters.mip.strategy.presolvenode.set(3)
-            if config.add_regularization == 'hess_lag':
+            if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
                 opt._solver_model.parameters.optimalitytarget.set(3)
     elif solver_name == 'glpk':
         opt.options['tmlim'] = remaining
