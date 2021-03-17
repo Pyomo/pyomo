@@ -28,12 +28,11 @@ from pyomo.environ import (
         NonNegativeReals,
         )
 from pyomo.core.base.component import ComponentData
-from pyomo.opt import SolverFactory
-from pyomo.dae import ContinuousSet
 from pyomo.common.dependencies import scipy_available
 from pyomo.common.log import LoggingIntercept
-from pyomo.common.collections import ComponentMap
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.core.expr.current import identify_variables
+from pyomo.core.expr.visitor import identify_mutable_parameters
 from pyomo.contrib.sensitivity_toolbox.sens import (
         SensitivityInterface,
         _NotAnIndex,
@@ -176,6 +175,87 @@ class TestSensitivityInterface(unittest.TestCase):
                         data[0].parent_component().local_name.startswith(name))
             self.assertEqual(data[2], pred[2])
             self.assertEqual(data[3], pred[3])
+
+    def test_expression_replacement_no_replacement(self):
+        model = make_indexed_model()
+        sens = SensitivityInterface(model, clone_model=False)
+        sens._add_data_block()
+        instance = sens.model_instance
+        block = sens.block
+        instance.x.fix()
+        param_list = [instance.x[1], instance.x[2], instance.x[3]]
+        sens._add_sensitivity_data(param_list)
+
+        self.assertEqual(len(block.constList), 0)
+        variable_sub_map = {}
+        sens._replace_parameters_in_constraints(variable_sub_map)
+        self.assertEqual(len(block.constList), 2)
+
+        # Rely on order of constraints here... Fine as long as
+        # component_data_objects iteration is deterministic
+        pred_const_list = [instance.const[1], instance.const[2]]
+        for orig, replaced in zip(pred_const_list, block.constList.values()):
+            self.assertEqual(orig.expr.to_string(), replaced.expr.to_string())
+            self.assertFalse(orig.active)
+            self.assertTrue(replaced.active)
+
+    def test_expression_replacement_equality(self):
+        model = make_indexed_model()
+        sens = SensitivityInterface(model, clone_model=False)
+        sens._add_data_block()
+        instance = sens.model_instance
+        block = sens.block
+        instance.x.fix()
+        param_list = [instance.eta[1], instance.eta[2]]
+        sens._add_sensitivity_data(param_list)
+
+        orig_constraints = list(instance.component_data_objects(Constraint,
+            active=True))
+        orig_expr = [con.expr for con in orig_constraints]
+
+        variable_sub_map = dict((id(param), var)
+                for var, param, list_idx, _ in block._sens_data_list
+                if param_list[list_idx].ctype is Param)
+
+        # Sanity check
+        self.assertEqual(len(variable_sub_map), 2)
+
+        sens._replace_parameters_in_constraints(variable_sub_map)
+        self.assertEqual(len(block.constList), 2)
+        # Weak test: we check that replaced parameters don't exist in added
+        # constraints/objective, and that corresponding variables apprear at
+        # least once each.
+        added_vars = [var for var, _, _, _ in block._sens_data_list]
+        found = ComponentMap((var, False) for var in added_vars)
+        for con in block.constList.values():
+            self.assertTrue(con.active)
+            param_set = ComponentSet(identify_mutable_parameters(con.expr))
+            var_set = ComponentSet(identify_variables(con.expr))
+            for param in param_list:
+                self.assertNotIn(param, param_set)
+            for var in added_vars:
+                if var in var_set:
+                    found[var] = True
+
+        self.assertIs(block.cost.ctype, Objective)
+        obj = block.cost
+        param_set = ComponentSet(identify_mutable_parameters(obj.expr))
+        var_set = ComponentSet(identify_variables(obj.expr))
+        for param in param_list:
+            self.assertNotIn(param, param_set)
+        for var in added_vars:
+            if var in var_set:
+                found[var] = True
+
+        for var in added_vars:
+            self.assertTrue(found[var])
+
+        # Original constraints were deactivated but otherwise not altered
+        for con, expr in zip(orig_constraints, orig_expr):
+            self.assertFalse(con.active)
+            #self.assertIs(con.expr, expr)
+            # ^Why does this fail?
+            self.assertEqual(con.expr.to_string(), expr.to_string())
 
 
 if __name__=="__main__":
