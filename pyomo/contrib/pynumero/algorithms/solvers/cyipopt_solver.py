@@ -214,7 +214,7 @@ class CyIpoptProblemInterface(object):
 
 
 class CyIpoptNLP(CyIpoptProblemInterface):
-    def __init__(self, nlp):
+    def __init__(self, nlp, intermediate_callback=None):
         """This class provides a CyIpoptProblemInterface for use
         with the CyIpoptSolver class that can take in an NLP
         as long as it provides vectors as numpy ndarrays and
@@ -223,6 +223,8 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         and the CyIpoptSolver
         """
         self._nlp = nlp
+        self._intermediate_callback = intermediate_callback
+
         x = nlp.init_primals()
         y = nlp.init_duals()
         if np.any(np.isnan(y)):
@@ -337,7 +339,11 @@ class CyIpoptNLP(CyIpoptProblemInterface):
             alpha_pr,
             ls_trials
     ):
-        pass
+        if self._intermediate_callback is not None:
+            return self._intermediate_callback(self._nlp, alg_mod, iter_count, obj_value,
+                                               inf_pr, inf_du, mu, d_norm, regularization_size,
+                                               alpha_du, alpha_pr, ls_trials)
+        return True
 
 
 def _redirect_stdout():
@@ -456,7 +462,11 @@ class PyomoCyIpoptSolver(object):
                     " NLP object from the solve call.",
     ))
     CONFIG.declare("options", ConfigBlock(implicit=True))
-
+    CONFIG.declare("intermediate_callback", ConfigValue(
+        default=None,
+        description="Set the function that will be called each"
+                    " iteration."
+    ))
 
     def __init__(self, **kwds):
         """Create an instance of the CyIpoptSolver. You must
@@ -497,7 +507,7 @@ class PyomoCyIpoptSolver(object):
         else:
             nlp = pyomo_nlp.PyomoNLP(model)
 
-        problem = CyIpoptNLP(nlp)
+        problem = CyIpoptNLP(nlp, intermediate_callback=config.intermediate_callback)
 
         xl = problem.x_lb()
         xu = problem.x_ub()
