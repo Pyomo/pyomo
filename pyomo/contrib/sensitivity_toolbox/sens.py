@@ -243,19 +243,10 @@ class SensitivityInterface(object):
 
         return block
 
-    def setup_sensitivity(self, paramList):
-        """
-        """
-        instance = self.model_instance
-        paramList = self._process_param_list(paramList)
-
-        existing_block = instance.component(self.get_default_block_name())
-        block = self._add_data_block(existing_block=existing_block)
-        block._sens_data_list = []
-        block._paramList = paramList
-
+    def _add_sensitivity_data(self, param_list):
+        block = self.block
         sens_data_list = block._sens_data_list
-        for i, comp in enumerate(paramList):
+        for i, comp in enumerate(param_list):
             if comp.ctype is Param:
                 if not comp.mutable:
                     raise ValueError(
@@ -307,6 +298,20 @@ class SensitivityInterface(object):
                             )
                 else:
                     sens_data_list.append((comp, param, i, _NotAnIndex))
+
+    def setup_sensitivity(self, paramList):
+        """
+        """
+        instance = self.model_instance
+        paramList = self._process_param_list(paramList)
+
+        existing_block = instance.component(self.get_default_block_name())
+        block = self._add_data_block(existing_block=existing_block)
+        block._sens_data_list = []
+        block._paramList = paramList
+
+        self._add_sensitivity_data(paramList)
+        sens_data_list = block._sens_data_list
 
         for var, _, _, _ in sens_data_list:
             # This unfixes all variables, not just those the user added.
