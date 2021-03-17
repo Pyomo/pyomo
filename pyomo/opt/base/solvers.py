@@ -719,20 +719,6 @@ class OptSolver(object):
                          problem_format,
                          valid_problem_formats,
                          **kwds):
-        #
-        # If the problem is not None, then we assume that it has
-        # already been appropriately defined.  Either it's a string
-        # name of the problem we want to solve, or its a functor
-        # object that we can evaluate directly.
-        #
-        if self._problem is not None:
-            return (self._problem,
-                    ProblemFormat.colin_optproblem,
-                    None)
-
-        #
-        # Otherwise, we try to convert the object explicitly.
-        #
         return convert_problem(args,
                                problem_format,
                                valid_problem_formats,

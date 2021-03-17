@@ -27,8 +27,8 @@ class Test(unittest.TestCase):
         # Test known solvers and metasolver flags
         # ASL is a metasolver
         self.assertTrue(re.search('\n   \*asl ', OUT))
-        # PS is bundles with Pyomo so should always be available
-        self.assertTrue(re.search('\n   \+ps ', OUT))
+        # MindtPY is bundled with Pyomo so should always be available
+        self.assertTrue(re.search('\n   \+mindtpy ', OUT))
         for solver in ('ipopt','cbc','glpk'):
             s = SolverFactory(solver)
             if s.available():
