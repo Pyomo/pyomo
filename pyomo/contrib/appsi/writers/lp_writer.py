@@ -83,15 +83,14 @@ class LPWriter(PersistentBase):
             else:
                 assert v.is_continuous(), 'LP writer only supports continuous, binary, and integer variables'
                 cv.domain = 'continuous'
-            lb = value(v.lb)
-            ub = value(v.ub)
+            _, lb, ub, v_is_fixed, v_domain, v_value = self._vars[id(v)]
             if lb is not None:
                 cv.lb = lb
             if ub is not None:
                 cv.ub = ub
-            if v.value is not None:
-                cv.value = v.value
-            if v.is_fixed():
+            if v_value is not None:
+                cv.value = v_value
+            if v_is_fixed:
                 cv.fixed = True
             self._pyomo_var_to_solver_var_map[id(v)] = cv
             self._solver_var_to_pyomo_var_map[cv] = v

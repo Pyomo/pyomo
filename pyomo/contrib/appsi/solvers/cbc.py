@@ -162,6 +162,8 @@ class Cbc(PersistentSolver):
             TempfileManager.pop(remove=not self.config.keepfiles)
             if not self.config.keepfiles:
                 self._filename = None
+            if self.config.report_timing:
+                print(timer)
 
     def _parse_soln(self):
         results = Results()
@@ -224,7 +226,8 @@ class Cbc(PersistentSolver):
                 self._dual_sol[con] = dual_val
 
         for line in all_lines[first_var_line:last_var_line+1]:
-            split_line = line.split()
+            split_line = line.strip('*')
+            split_line = split_line.split()
             name = split_line[1]
             if name == 'obj_const':
                 continue

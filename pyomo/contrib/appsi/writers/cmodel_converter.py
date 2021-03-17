@@ -21,7 +21,6 @@ class PyomoToCModelWalker(ExpressionValueVisitor):
         if isinstance(ans, cmodel.Node):
             return ans
         else:
-            assert is_constant(ans)
             if len(self._constant_pool) == 0:
                 self._constant_pool = set(cmodel.create_constants(100))
             const = self._constant_pool.pop()
