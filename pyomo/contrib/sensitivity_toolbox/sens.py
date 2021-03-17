@@ -27,6 +27,8 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecated
 from pyomo.opt import SolverFactory
 import logging
+import os
+import shutil
 
 logger = logging.getLogger('pyomo.contrib.sensitivity_toolbox')
 
@@ -116,6 +118,7 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
 
         kaug.options['dsdp_mode'] = ""  #: sensitivity mode!
         kaug.solve(m, tee=tee)
+        m.write('col_row.nl', format='nl', io_options={'symbolic_solver_labels':True})
 
     sens.perturb_parameters(perturbList)
 
@@ -128,7 +131,24 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
 
     elif method == 'kaug':
         dotsens.options["dsdp_mode"] = ""
-        dotsens.solve(m, tee=tee) 
+        dotsens.solve(m, tee=tee)
+        try:
+            os.makedirs("dsdp")
+        except FileExistsError:
+            # directory already exists
+            pass
+        try:
+            shutil.move("dsdp_in_.in","./dsdp/")
+            shutil.move("col_row.nl","./dsdp/")
+            shutil.move("col_row.col","./dsdp/")
+            shutil.move("col_row.row","./dsdp/")
+            shutil.move("conorder.txt","./dsdp/")
+            shutil.move("delta_p.out","./dsdp/")
+            shutil.move("dot_out.out","./dsdp/")
+            shutil.move("timings_dot_driver_dsdp.txt", "./dsdp/")
+            shutil.move("timings_k_aug_dsdp.txt", "./dsdp/")
+        except OSError:
+            pass
 
     return m
 
