@@ -241,6 +241,10 @@ class SensitivityInterface(object):
         # variables and/or parameters to perturb
         block._paramList = None
 
+        # This will hold any constraints where we have replaced
+        # parameters with vairables.
+        block.constList = ConstraintList()
+
         return block
 
     def _add_sensitivity_data(self, param_list):
@@ -301,6 +305,57 @@ class SensitivityInterface(object):
                 else:
                     sens_data_list.append((comp, param, i, _NotAnIndex))
 
+    def _replace_parameters_in_constraints(self, variableSubMap):
+        instance = self.model_instance
+        block = self.block
+        # Visitor that we will use to replace user-provided parameters
+        # in the objective and the constraints.
+        param_replacer = ExpressionReplacementVisitor(
+                substitute=variableSubMap,
+                remove_named_expressions=True,
+                )
+        # TODO: Flag to ExpressionReplacementVisitor to only replace
+        # named expressions if a node has been replaced within that
+        # expression.
+
+        # clone Objective, add to Block, and update any Expressions
+        for obj in list(instance.component_data_objects(Objective,
+                                                active=True,
+                                                descend_into=True)):
+            tempName = unique_component_name(block, obj.local_name)
+            new_expr = param_replacer.dfs_postorder_stack(obj.expr)
+            block.add_component(tempName, Objective(expr=new_expr))
+            obj.deactivate()
+
+        # clone Constraints, add to Block, and update any Expressions
+        #
+        # Unfortunate that this deactivates and replaces constraints
+        # even if they don't contain the parameters.
+        # 
+        for con in list(instance.component_data_objects(Constraint, 
+                                       active=True,
+                                       descend_into=True)):
+            if con.equality:
+                new_expr = param_replacer.dfs_postorder_stack(con.expr)
+                block.constList.add(expr=new_expr)
+            else:
+                if con.lower is None or con.upper is None:
+                    new_expr = param_replacer.dfs_postorder_stack(con.expr)
+                    block.constList.add(expr=new_expr)
+                else:
+                    # Constraint must be a ranged inequality, break into
+                    # separate constraints
+                    new_body = param_replacer.dfs_postorder_stack(con.body)
+                    new_lower = param_replacer.dfs_postorder_stack(con.lower)
+                    new_upper = param_replacer.dfs_postorder_stack(con.upper)
+
+                    # Add constraint for lower bound
+                    block.constList.add(expr=(new_lower <= new_upper))
+
+                    # Add constraint for upper bound
+                    block.constList.add(expr=(new_upper >= new_body))
+            con.deactivate()
+
     def setup_sensitivity(self, paramList):
         """
         """
@@ -328,57 +383,7 @@ class SensitivityInterface(object):
             # We now replace the provided parameters in the user's
             # expressions. Only do this if we have to, i.e. the
             # user provided some parameters rather than all vars.
-
-            # Visitor that we will use to replace user-provided parameters
-            # in the objective and the constraints.
-            param_replacer = ExpressionReplacementVisitor(
-                    substitute=variableSubMap,
-                    remove_named_expressions=True,
-                    )
-            # TODO: Flag to ExpressionReplacementVisitor to only replace
-            # named expressions if a node has been replaced within that
-            # expression.
-
-            # clone Objective, add to Block, and update any Expressions
-            for obj in list(instance.component_data_objects(Objective,
-                                                    active=True,
-                                                    descend_into=True)):
-                tempName = unique_component_name(block, obj.local_name)
-                new_expr = param_replacer.dfs_postorder_stack(obj.expr)
-                block.add_component(tempName, Objective(expr=new_expr))
-                obj.deactivate()
-
-            # clone Constraints, add to Block, and update any Expressions
-            #
-            # Unfortunate that this deactivates and replaces constraints
-            # even if they don't contain the parameters.
-            # In fact it will do this even if the user only specified fixed
-            # variables.
-            # 
-            block.constList = ConstraintList()
-            for con in list(instance.component_data_objects(Constraint, 
-                                           active=True,
-                                           descend_into=True)):
-                if con.equality:
-                    new_expr = param_replacer.dfs_postorder_stack(con.expr)
-                    block.constList.add(expr=new_expr)
-                else:
-                    if con.lower is None or con.upper is None:
-                        new_expr = param_replacer.dfs_postorder_stack(con.expr)
-                        block.constList.add(expr=new_expr)
-                    else:
-                        # Constraint must be a ranged inequality, break into
-                        # separate constraints
-                        new_body = param_replacer.dfs_postorder_stack(con.body)
-                        new_lower = param_replacer.dfs_postorder_stack(con.lower)
-                        new_upper = param_replacer.dfs_postorder_stack(con.upper)
-
-                        # Add constraint for lower bound
-                        block.constList.add(expr=(new_lower <= new_upper))
-
-                        # Add constraint for upper bound
-                        block.constList.add(expr=(new_upper >= new_body))
-                con.deactivate()
+            self._replace_parameters_in_constraints(variableSubMap)
 
             # Assume that we just replaced some params
             block._has_replaced_expressions = True
