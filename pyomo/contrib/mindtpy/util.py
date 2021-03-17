@@ -345,8 +345,8 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
                                           if (temp_var_i.name in nlp_var and temp_var_j.name in nlp_var))
             if config.add_regularization == 'hess_lag':
                 return Objective(expr=first_order_term + second_order_term, sense=minimize)
-            elif config.add_regularization =='hess_only_lag':
-                return Objective(expr=first_order_term + second_order_term, sense=minimize)
+            elif config.add_regularization == 'hess_only_lag':
+                return Objective(expr=second_order_term, sense=minimize)
         elif config.add_regularization == 'sqp_lag':
             var_filter = (lambda v: v[1].is_integer()) if discrete_only \
                 else (lambda v: v[1].name != 'MindtPy_utils.objective_value' and
@@ -363,7 +363,8 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
                 r = 1
                 rho = numpy.linalg.norm(jac_lag/(2*r))
             elif config.sqp_lag_scaling_coef == 'variable_dependent':
-                r = numpy.sqrt(len(temp_model.MindtPy_utils.discrete_variable_list))
+                r = numpy.sqrt(
+                    len(temp_model.MindtPy_utils.discrete_variable_list))
                 rho = numpy.linalg.norm(jac_lag/(2*r))
 
             return Objective(expr=first_order_term + rho*sum([(model_var - setpoint_var.value)**2 for (model_var, setpoint_var) in zip(model_vars, setpoint_vars)]))
@@ -522,7 +523,7 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
                     opt.options['add_options'].append('GAMS_MODEL.optfile=1')
 
 
-def get_integer_solution(model,string_zero=False):
+def get_integer_solution(model, string_zero=False):
     """ obtain the value of integer variables from the provided model.
 
     Args:
