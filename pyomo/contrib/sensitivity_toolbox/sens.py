@@ -161,6 +161,18 @@ class SensitivityInterface(object):
         #return '_'.join(('sens_param', name))
         return name
 
+    def _process_param_list(self, paramList):
+        # We need to translate the components in paramList into
+        # components in our possibly cloned model.
+        orig = self._original_model
+        instance = self.model_instance
+        if orig is not instance:
+            paramList = list(
+                ComponentUID(param, context=orig).find_component_on(instance)
+                for param in paramList
+                )
+        return paramList
+
     def _add_data_block(self, existing_block=None):
         # If a sensitivity block already exists, and we have not done
         # any expression replacement, we delete the old block, re-fix the
@@ -176,7 +188,7 @@ class SensitivityInterface(object):
                     # Re-fix variables that the previous block was
                     # treating as parameters.
                     var.fix()
-                instance.del_component(existing_block)
+                self.model_instance.del_component(existing_block)
             else:
                 msg = ("Re-using sensitivity interface is not supported "
                         "when calculating sensitivity for mutable parameters. "
@@ -196,14 +208,14 @@ class SensitivityInterface(object):
         block._has_replaced_expressions = False
 
         # This is the main data structure for keeping track of "sensitivity
-        # vars" and their associated params. It will be a list of tuples:
-        # vardata, paramdata, list_index, comp_index
+        # vars" and their associated params. It will be a list of tuples of
+        # (vardata, paramdata, list_index, comp_index)
         # where:
         #     vardata is the "sensitivity variable" data object,
         #     paramdata is the associated parameter,
         #     list_index is its index in the user-provided list, and
         #     comp_index is its index in the component provided by the user.
-        block._sens_data_list = None
+        block._sens_data_list = []
 
         # This will hold the user-provided list of
         # variables and/or parameters to perturb
@@ -214,15 +226,8 @@ class SensitivityInterface(object):
     def setup_sensitivity(self, paramList):
         """
         """
-        # We need to translate the components in paramList into
-        # components in our possibly cloned model.
-        orig = self._original_model
         instance = self.model_instance
-        if orig is not instance:
-            paramList = list(
-                ComponentUID(param, context=orig).find_component_on(instance)
-                for param in paramList
-                )
+        paramList = self._process_param_list(paramList)
 
         existing_block = instance.component(self.get_default_block_name())
         block = self._add_data_block(existing_block=existing_block)
