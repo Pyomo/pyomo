@@ -10,7 +10,7 @@
 #
 # The parametric.mod example from sIPOPT
 #
-# Original implmentation by Hans Pirany is in pyomo/examples/pyomo/suffixes
+# Original implementation by Hans Pirany is in pyomo/examples/pyomo/suffixes
 #
 
 from __future__ import print_function
