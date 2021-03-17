@@ -15,7 +15,7 @@ import pyomo.environ as pyo
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.log import LoggingIntercept
 from pyomo.opt import TerminationCondition
-from six import StringIO
+from io import StringIO
 import logging
 
 from pyomo.contrib.pynumero.dependencies import (
@@ -168,7 +168,7 @@ class TestExamples(unittest.TestCase):
     def test_cyipopt_functor(self):
         ex = import_file(os.path.join(example_dir, 'callback', 'cyipopt_functor_callback.py'))
         df = ex.main()
-        self.assertTrue(df.shape == (7, 5))
+        self.assertEqual(df.shape, (7, 5))
         # check one of the residuals
         s = df['ca_bal']
         self.assertAlmostEqual(s.iloc[6], 0, places=3)
@@ -176,5 +176,5 @@ class TestExamples(unittest.TestCase):
     def test_cyipopt_callback_halt(self):
         ex = import_file(os.path.join(example_dir, 'callback', 'cyipopt_callback_halt.py'))
         status = ex.main()
-        self.assertTrue(status.solver.termination_condition == TerminationCondition.userInterrupt)
-        
+        self.assertEqual(status.solver.termination_condition, TerminationCondition.userInterrupt)
+
