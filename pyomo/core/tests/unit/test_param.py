@@ -22,14 +22,20 @@ import math
 import os
 import sys
 
-from pyutilib.services import TempfileManager
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
-from pyomo.environ import Set, RangeSet, Param, ConcreteModel, AbstractModel, Constraint, Var, NonNegativeIntegers, Integers, NonNegativeReals, Boolean, Reals, Any, display, value, set_options, sin, cos, tan, log, log10, exp, sqrt, ceil, floor, asin, acos, atan, sinh, cosh, tanh, asinh, acosh, atanh
+from pyomo.environ import (Set, RangeSet, Param, ConcreteModel,
+                           AbstractModel, Constraint, Var,
+                           NonNegativeIntegers, Integers,
+                           NonNegativeReals, Boolean, Reals, Any, display,
+                           value, set_options, sin, cos, tan, log, log10,
+                           exp, sqrt, ceil, floor, asin, acos, atan, sinh,
+                           cosh, tanh, asinh, acosh, atanh)
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base.param import _NotValid, _ParamData 
 
-from six import iteritems, itervalues, StringIO
+from io import StringIO
 
 class ParamTester(object):
 
@@ -110,7 +116,7 @@ class ParamTester(object):
             pass
 
     def test_getitem(self):
-        for key, val in iteritems(self.data):
+        for key, val in self.data.items():
             try:
                 test = self.instance.A[key]
                 self.assertEqual( value(test), val )
@@ -334,7 +340,7 @@ class ParamTester(object):
         #                  not self.instance.A._default_val is None and \
         #                  not self.instance.A.mutable
         try:
-            test = itervalues(self.instance.A)
+            test = self.instance.A.values()
             test = zip(self.instance.A.keys(), test)
             if self.instance.A._default_val is _NotValid:
                 self.validateDict(self.sparse_data.items(), test)
@@ -351,7 +357,7 @@ class ParamTester(object):
         #                  not self.instance.A._default_val is None and \
         #                  not self.instance.A.mutable
         try:
-            test = iteritems(self.instance.A)
+            test = self.instance.A.items()
             if self.instance.A._default_val is _NotValid:
                 self.validateDict(self.sparse_data.items(), test)
             else:

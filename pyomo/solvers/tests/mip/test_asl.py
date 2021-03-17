@@ -8,13 +8,16 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import json
 import os
-from os.path import abspath, dirname
+from os.path import abspath, dirname, join
 pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
-from pyutilib.services import TempfileManager
+from filecmp import cmp
+import pyomo.common.unittest as unittest
+import pyomo.common
+from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.core import ConcreteModel
 from pyomo.opt import ResultsFormat, SolverResults, SolverFactory
@@ -79,9 +82,12 @@ class mock_all(unittest.TestCase):
         results.write(filename=currdir+"test_solve4.txt",
                       times=False,
                       format='json')
-        self.assertMatchesJsonBaseline(currdir+"test_solve4.txt",
-                                       currdir+"test4_asl.txt",
-                                       tolerance=1e-4)
+        with open(join(currdir, "test_solve4.txt"), 'r') as out, \
+            open(join(currdir, "test4_asl.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
+
         os.remove(currdir+"test_solve4.log")
         if os.path.exists(currdir+"test4.soln"):
             os.remove(currdir+"test4.soln")
@@ -98,8 +104,9 @@ class mock_all(unittest.TestCase):
                                  suffixes=['.*'])
         results.write(filename=currdir+"test_options.txt",
                       times=False)
-        self.assertFileEqualsBaseline(currdir+"test_options.txt",
-                                      currdir+  "test4_asl.txt")
+        _out, _log = join(currdir, "test_options.txt"), join(currdir, "test4_asl.txt")
+        self.assertTrue(cmp(_out, _log),
+                        msg="Files %s and %s differ" % (_out, _log))
         #os.remove(currdir+"test4.sol")
         #os.remove(currdir+"test_solve4.log")
 

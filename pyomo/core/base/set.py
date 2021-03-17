@@ -12,15 +12,12 @@ import inspect
 import itertools
 import logging
 import math
-import six
 import sys
 import weakref
 
-from six import iteritems
-from six.moves import xrange
-
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.errors import DeveloperError, PyomoException
+from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import (
     native_types, native_numeric_types, as_numeric, value,
@@ -43,14 +40,7 @@ from pyomo.core.base.global_set import (
 )
 from pyomo.core.base.misc import sorted_robust
 
-if six.PY3:
-    from collections.abc import Sequence as collections_Sequence
-    def formatargspec(fn):
-        return str(inspect.signature(fn))
-else:
-    from collections import Sequence as collections_Sequence
-    def formatargspec(fn):
-        return str(inspect.formatargspec(*inspect.getargspec(fn)))
+from collections.abc import Sequence
 
 
 logger = logging.getLogger('pyomo.core')
@@ -129,6 +119,9 @@ def process_setarg(arg):
     # DEPRECATED: This functionality has never been documented,
     # and I don't know of a use of it in the wild.
     if hasattr(arg, 'set_options'):
+        deprecation_warning("The set_options set attribute is deprecated.  "
+                            "Please explicitly construct complex sets",
+                            version='5.7.3')
         # If the argument has a set_options attribute, then use
         # it to initialize a set
         args = arg.set_options
@@ -238,7 +231,7 @@ def simple_set_rule( fn ):
         if value is None:
             return Set.End
         return value
-""" % (formatargspec(fn),)
+""" % (str(inspect.signature(fn)),)
     # Create the wrapper in a temporary environment that mimics this
     # function's environment.
     _env = dict(globals())
@@ -359,7 +352,7 @@ class BoundsInitializer(InitializerBase):
 
     def __call__(self, parent, idx):
         val = self._init(parent, idx)
-        if not isinstance(val, collections_Sequence):
+        if not isinstance(val, Sequence):
             val = (1, val, self.default_step)
         else:
             val = tuple(val)
@@ -414,7 +407,7 @@ class TuplizeValuesInitializer(InitializerBase):
         elif _val is None:
             return _val
 
-        if not isinstance(_val, collections_Sequence):
+        if not isinstance(_val, Sequence):
             _val = tuple(_val)
         if len(_val) == 0:
             return _val
@@ -438,7 +431,7 @@ class TuplizeValuesInitializer(InitializerBase):
                 "Cannot tuplize list data for set %%s%%s because its "
                 "length %s is not a multiple of dimen=%s" % (len(_val), d))
 
-        return list(tuple(_val[d*i:d*(i+1)]) for i in xrange(len(_val)//d))
+        return list(tuple(_val[d*i:d*(i+1)]) for i in range(len(_val)//d))
 
 
 class _NotFound(object):
@@ -649,7 +642,7 @@ class _SetData(_SetDataBase):
             if len(vals) < 2:
                 return (vals[0], vals[0], 0)
             step = vals[1]-vals[0]
-            for i in xrange(2, len(vals)):
+            for i in range(2, len(vals)):
                 if step != vals[i] - vals[i-1]:
                     return self.bounds() + (None,)
             return (vals[0], vals[-1], step)
@@ -1545,7 +1538,7 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
     def remove(self, val):
         idx = self._values.pop(val)
         self._ordered_values.pop(idx)
-        for i in xrange(idx, len(self._ordered_values)):
+        for i in range(idx, len(self._ordered_values)):
             self._values[self._ordered_values[i]] -= 1
 
     def discard(self, val):
@@ -1974,7 +1967,7 @@ class Set(IndexedComponent):
         if self._constructed:
             return
         timer = ConstructionTimer(self)
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
                 logger.debug("Constructing Set, name=%s, from data=%r"
                              % (self.name, data))
         self._constructed = True
@@ -2192,7 +2185,7 @@ class Set(IndexedComponent):
             [("Size", len(self._data)),
              ("Index", self._index if self.is_indexed() else None),
              ("Ordered", _ordered),],
-            iteritems(self._data),
+            self._data.items(),
             ("Dimen","Domain","Size","Members",),
             lambda k, v: [
                 Set._pprint_dimen(v),
@@ -2205,7 +2198,7 @@ class Set(IndexedComponent):
 class IndexedSet(Set):
     def data(self):
         "Return a dict containing the data() of each Set in this IndexedSet"
-        return {k: v.data() for k,v in iteritems(self)}
+        return {k: v.data() for k,v in self.items()}
 
 
 class FiniteSimpleSet(_FiniteSetData, Set):
@@ -2290,7 +2283,7 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
         if self._constructed:
             return
         timer = ConstructionTimer(self)
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
                 logger.debug("Constructing SetOf, name=%s, from data=%r"
                              % (self.name, data))
         self._constructed = True
@@ -2325,7 +2318,7 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
             [("Dimen", self.dimen),
              ("Size", len(self)),
              ("Bounds", self.bounds())],
-            iteritems( {None: self} ),
+            {None: self}.items() ,
             ("Ordered", "Members",),
             lambda k, v: [
                 v.isordered(),
@@ -2703,7 +2696,7 @@ class RangeSet(Component):
         if self._constructed:
             return
         timer = ConstructionTimer(self)
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
                 logger.debug("Constructing RangeSet, name=%s, from data=%r"
                              % (self.name, data))
         if data is not None:
@@ -2885,7 +2878,7 @@ class RangeSet(Component):
             [("Dimen", self.dimen),
              ("Size", len(self) if self.isfinite() else 'Inf'),
              ("Bounds", self.bounds())],
-            iteritems( {None: self} ),
+            {None: self}.items(),
             ("Finite","Members",),
             lambda k, v: [
                 v.isfinite(),#isinstance(v, _FiniteSetMixin),
@@ -2956,7 +2949,7 @@ class SetOperator(_SetData, Set):
         if self._constructed:
             return
         timer = ConstructionTimer(self)
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
                 logger.debug("Constructing SetOperator, name=%s, from data=%r"
                              % (self.name, data))
         for s in self._sets:
@@ -3613,7 +3606,7 @@ class SetProduct(SetOperator):
         nested tuples (so this only needs to check the top-level terms)
 
         """
-        for i in xrange(len(val)-1, -1, -1):
+        for i in range(len(val)-1, -1, -1):
             if val[i].__class__ is tuple:
                 val = val[:i] + val[i] + val[i+1:]
         return val
@@ -3735,7 +3728,7 @@ class SetProduct_InfiniteSet(SetProduct):
         for cuts in self._cutPointGenerator(subsets, len(_val)):
             if all(_val[cuts[i]:cuts[i+1]] in s for i,s in enumerate(subsets)):
                 offset = index[firstNonDimSet]
-                for i in xrange(1,len(subsets)):
+                for i in range(1,len(subsets)):
                     index[firstNonDimSet+i] = offset + cuts[i]
                 return val, index
         return None
@@ -3759,7 +3752,7 @@ class SetProduct_InfiniteSet(SetProduct):
         cutIters = [None] * (len(subsets)+1)
         cutPoints = [0] * (len(subsets)+1)
         i = 1
-        cutIters[i] = iter(xrange(val_len+1))
+        cutIters[i] = iter(range(val_len+1))
         cutPoints[-1] = val_len
         while i > 0:
             try:
@@ -3768,7 +3761,7 @@ class SetProduct_InfiniteSet(SetProduct):
                     if setDims[i] is not None:
                         cutIters[i+1] = iter((cutPoints[i]+setDims[i],))
                     else:
-                        cutIters[i+1] = iter(xrange(cutPoints[i], val_len+1))
+                        cutIters[i+1] = iter(range(cutPoints[i], val_len+1))
                     i += 1
                 elif cutPoints[i] > val_len:
                     i -= 1
@@ -3835,7 +3828,7 @@ class SetProduct_OrderedSet(_OrderedSetMixin, SetProduct_FiniteSet):
         val, cutPoints = found
         if cutPoints is not None:
             val = tuple( val[cutPoints[i]:cutPoints[i+1]]
-                          for i in xrange(len(self._sets)) )
+                          for i in range(len(self._sets)) )
         _idx = tuple(s.ord(val[i])-1 for i,s in enumerate(self._sets))
         _len = list(len(_) for _ in self._sets)
         _len.append(1)

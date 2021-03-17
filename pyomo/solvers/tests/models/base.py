@@ -12,7 +12,7 @@ from os.path import join, dirname, abspath
 import json
 import six
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.kernel as pmo
 from pyomo.core.kernel.block import IBlock
@@ -85,6 +85,11 @@ class _BaseTestModel(object):
               load_solutions):
         """ Optimize the model """
         assert self.model is not None
+
+        if not io_options:
+            io_options = {}
+        if not solver_options:
+            solver_options = {}
 
         opt = SolverFactory(solver, solver_io=io)
         opt.options.update(solver_options)

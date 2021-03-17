@@ -12,16 +12,13 @@ __all__ = ['UndefinedData', 'undefined', 'ignore', 'ScalarData', 'ListContainer'
 
 import copy
 
-from pyutilib.math import infinity
+from math import inf
 from pyomo.common.collections import Bunch
+
 import enum
 from six import StringIO
 from six.moves import xrange
 
-try:
-    unicode
-except NameError:
-    basestring = unicode = str
 
 class ScalarType(str, enum.Enum):
     int='int'
@@ -106,9 +103,9 @@ class ScalarData(object):
 
         value = self.yaml_fix(self.get_value())
 
-        if value is infinity:
+        if value is inf:
             value = '.inf'
-        elif value is - infinity:
+        elif value is - inf:
             value = '-.inf'
 
         if not option.schema and self.description is None and self.units is None:
@@ -128,9 +125,9 @@ class ScalarData(object):
                     ostream.write(prefix+'Type: '+self.yaml_fix(self.scalar_type)+'\n')
 
     def yaml_fix(self, val):
-        if not isinstance(val,basestring):
+        if not isinstance(val, str):
             return val
-        return val.replace(':','\\x3a')
+        return val.replace(':', '\\x3a')
 
     def load(self, repn):
         if type(repn) is dict:
@@ -369,7 +366,7 @@ class MapContainer(dict):
         return tmp
 
     def _convert(self, name):
-        if not isinstance(name,basestring):
+        if not isinstance(name, str):
             return name
         tmp = name.replace('_',' ')
         return tmp[0].upper() + tmp[1:]

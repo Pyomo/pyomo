@@ -1,5 +1,5 @@
 """Tests the equality set propagation module."""
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import (ConcreteModel, Constraint, RangeSet,
                            TransformationFactory, Var, value)

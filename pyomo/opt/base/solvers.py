@@ -17,19 +17,18 @@ import re
 import sys
 import time
 import logging
+import shlex
 
 from pyomo.common.config import ConfigBlock, ConfigList, ConfigValue
 from pyomo.common import Factory
 from pyomo.common.errors import ApplicationError
-from pyomo.common.collections import Options
-from pyutilib.misc import quote_split
+from pyomo.common.collections import Bunch
 
 from pyomo.opt.base.problem import ProblemConfigFactory
 from pyomo.opt.base.convert import convert_problem
 from pyomo.opt.base.formats import ResultsFormat, ProblemFormat
 import pyomo.opt.base.results
 
-import six
 from six import iteritems
 from six.moves import xrange
 
@@ -95,6 +94,10 @@ class UnknownSolver(object):
         """Determine if this optimizer is available."""
         if exception_flag:
             raise ApplicationError("Solver (%s) not available" % str(self.name))
+        return False
+
+    def license_is_valid(self):
+        "True if the solver is present and has a valid license (if applicable)"
         return False
 
     def warm_start_capable(self):
@@ -167,9 +170,9 @@ class SolverFactoryClass(Factory):
                     if opt is not None:
                         opt.set_options('solver='+_name)
         except:
-            err = sys.exc_info()[1]
+            err = sys.exc_info()
             logger.warning("Failed to create solver with name '%s':\n%s"
-                         % (_name, err))
+                           % (_name, err[1]), exc_info=err)
             opt = None
         if opt is not None and _name != "py" and subsolver is not None:
             # py just creates instance of its subsolver, no need for this option
@@ -203,23 +206,19 @@ def check_available_solvers(*args):
             name = arg[0]
         opt = SolverFactory(*arg)
         if opt is None or isinstance(opt, UnknownSolver):
-            available = False
-        elif (arg[0] == "gurobi") and \
-           (not GUROBISHELL.license_is_valid()):
-            available = False
-        elif (arg[0] == "baron") and \
-           (not BARONSHELL.license_is_valid()):
-            available = False
-        elif (arg[0] == "mosek_direct" or arg[0] == "mosek_persistent") and \
-                (not MOSEKDirect.license_is_valid()):
-            available = False
-        else:
-            available = \
-                (opt.available(exception_flag=False)) and \
-                ((not hasattr(opt,'executable')) or \
-                (opt.executable() is not None))
-        if available:
-            ans.append(name)
+            continue # not available
+
+        if not opt.available(exception_flag=False):
+            continue # not available
+
+        if hasattr(opt, 'executable') and opt.executable() is None:
+            continue # not available
+
+        if not opt.license_is_valid():
+            continue # not available
+
+        # At this point, the solver is available (and licensed)
+        ans.append(name)
 
     logging.disable(logging.NOTSET)
 
@@ -341,7 +340,7 @@ class OptSolver(object):
         # through the solve command. Everything else is reset inside
         # presolve
         #
-        self.options = Options()
+        self.options = Bunch()
         if 'options' in kwds and not kwds['options'] is None:
             for key in kwds['options']:
                 setattr(self.options, key, kwds['options'][key])
@@ -390,7 +389,7 @@ class OptSolver(object):
 
         # We define no capabilities for the generic solver; base
         # classes must override this
-        self._capabilities = Options()
+        self._capabilities = Bunch()
 
     @staticmethod
     def _options_string_to_dict(istr):
@@ -400,7 +399,7 @@ class OptSolver(object):
             return ans
         if istr[0] == "'" or istr[0] == '"':
             istr = eval(istr)
-        tokens = quote_split('[ ]+',istr)
+        tokens = shlex.split(istr)
         for token in tokens:
             index = token.find('=')
             if index == -1:
@@ -491,8 +490,8 @@ class OptSolver(object):
             Whether or not the solver has the specified capability.
         """
         if not isinstance(cap, str):
-            raise TypeError("Expected argument to be of type '%s', not " + \
-                  "'%s'." % (str(type(str())), str(type(cap))))
+            raise TypeError("Expected argument to be of type '%s', not "
+                "'%s'." % (type(str()), type(cap)))
         else:
             val = self._capabilities[str(cap)]
             if val is None:
@@ -502,6 +501,10 @@ class OptSolver(object):
 
     def available(self, exception_flag=True):
         """ True if the solver is available """
+        return True
+
+    def license_is_valid(self):
+        "True if the solver is present and has a valid license (if applicable)"
         return True
 
     def warm_start_capable(self):
@@ -558,7 +561,7 @@ class OptSolver(object):
 
         orig_options = self.options
 
-        self.options = Options()
+        self.options = Bunch()
         self.options.update(orig_options)
         self.options.update(kwds.pop('options', {}))
         self.options.update(
@@ -678,13 +681,8 @@ class OptSolver(object):
                     "Solver="+self.type+" passed unrecognized keywords: \n\t"
                     +("\n\t".join("%s = %s" % (k,v) for k,v in iteritems(kwds))))
 
-        if six.PY3:
-            compare_type = str
-        else:
-            compare_type = basestring
-
         if (type(self._problem_files) in (list,tuple)) and \
-           (not isinstance(self._problem_files[0], compare_type)):
+           (not isinstance(self._problem_files[0], str)):
             self._problem_files = self._problem_files[0]._problem_files()
         if self._results_format is None:
             self._results_format = self._default_results_format(self._problem_format)
@@ -759,14 +757,14 @@ class OptSolver(object):
         ans = []
         for key in options:
             val = options[key]
-            if isinstance(val, six.string_types) and ' ' in val:
+            if isinstance(val, str) and ' ' in val:
                 ans.append("%s=\"%s\"" % (str(key), str(val)))
             else:
                 ans.append("%s=%s" % (str(key), str(val)))
         return ' '.join(ans)
 
     def set_options(self, istr):
-        if isinstance(istr, six.string_types):
+        if isinstance(istr, str):
             istr = self._options_string_to_dict(istr)
         for key in istr:
             if not istr[key] is None:
@@ -926,10 +924,15 @@ def default_config_block(solver, init=False):
                 'Print the results object after optimization.',
                 None) ).declare_as_argument(dest="show_results")
     postsolve.declare('results format', ConfigValue(
-                None,
-                str,
-                'Specify the results format:  json or yaml.',
-                None) ).declare_as_argument('--results-format', dest="results_format", metavar="FORMAT").declare_as_argument('--json', dest="results_format", action="store_const", const="json", help="Store results in JSON format")
+        None,
+        str,
+        'Specify the results format:  json or yaml.',
+        None)
+    ).declare_as_argument(
+        '--results-format', dest="results_format", metavar="FORMAT"
+    ).declare_as_argument(
+        '--json', dest="results_format", action="store_const",
+        const="json", help="Store results in JSON format")
     postsolve.declare('summary', ConfigValue(
                 False,
                 bool,

@@ -1,9 +1,9 @@
 # Mimic the pyomo script
 from pyomo.environ import *
-from pyutilib.misc import Options
+from pyomo.common.collections import Bunch
 
 # set high level options that mimic pyomo comand line
-options = Options()
+options = Bunch()
 options.model_file = 'DiseaseEstimation.py'
 options.data_files = ['DiseaseEstimation.dat']
 options.solver = 'ipopt'

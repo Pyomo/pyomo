@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 #
 
+import json
 import six
 import pickle
 import base64
@@ -17,9 +18,10 @@ import os
 from os.path import abspath, dirname
 
 from pyutilib.pyro import using_pyro4
-import pyutilib.th as unittest
-import pyutilib.services
-from pyomo.common.collections import Options
+import pyomo.common.unittest as unittest
+
+from pyomo.common.collections import Bunch
+from pyomo.common.tempfiles import TempfileManager
 import pyomo.opt
 from pyomo.environ import (ConcreteModel, RangeSet, Var,
                            Objective, Constraint, sum_product)
@@ -42,7 +44,7 @@ class Test(unittest.TestCase):
         self.worker = TestWorker()
 
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
+        TempfileManager.clear_tempfiles()
         del self.worker
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
@@ -62,7 +64,7 @@ class Test(unittest.TestCase):
         model.c = Constraint(rule=c_rule)
 
         #
-        data = Options()
+        data = Bunch()
         data.suffixes = {}
         data.solver_options = {}
         data.warmstart_filename = None
@@ -95,7 +97,12 @@ class Test(unittest.TestCase):
 
         #
         results.write(filename=currdir+"t1.out", format='json')
-        self.assertMatchesJsonBaseline(currdir+"t1.out",currdir+"t1.txt", tolerance=1e-4)
+        with open(currdir+"t1.out", 'r') as out, \
+            open(currdir+"t1.txt", 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
+
         self.assertEqual(results._smap_id, None)
         os.remove(data['filename'])
 

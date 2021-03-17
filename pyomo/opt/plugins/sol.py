@@ -14,8 +14,6 @@
 
 import re
 
-import pyutilib.misc
-
 from pyomo.opt.base import results
 from pyomo.opt.base.formats import ResultsFormat
 from pyomo.opt import (SolverResults,
@@ -24,6 +22,7 @@ from pyomo.opt import (SolverResults,
                        TerminationCondition)
 
 from six.moves import xrange
+from six import string_types
 
 
 @results.ReaderFactory.register(str(ResultsFormat.sol))
@@ -58,17 +57,21 @@ class ResultsReader_sol(results.AbstractResultsReader):
         if res is None:
             res = SolverResults()
         #
-        msg = ""
-        line = fin.readline()
-        if line.strip() == "":
+        # Some solvers (minto) do not write a message.  We will assume
+        # all non-blank lines up the 'Options' line is the message.
+        msg = []
+        while True:
             line = fin.readline()
-        while line:
-            if line[0] == '\n' or (line[0] == '\r' and line[1] == '\n'):
+            if not line:
+                # EOF
                 break
-            msg += line
-            line = fin.readline()
+            line = line.strip()
+            if line == 'Options':
+                break
+            if line:
+                msg.append(line)
+        msg = '\n'.join(msg)
         z = []
-        line = fin.readline()
         if line[:7] == "Options":
             line = fin.readline()
             nopts = int(line)
@@ -110,7 +113,8 @@ class ResultsReader_sol(results.AbstractResultsReader):
             objno = [int(t[1]), int(t[2])]
         res.solver.message = msg.strip()
         res.solver.message = res.solver.message.replace("\n","; ")
-        res.solver.message = pyutilib.misc.yaml_fix(res.solver.message)
+        if isinstance(res.solver.message, string_types):
+            res.solver.message = res.solver.message.replace(':', '\\x3a')
         ##res.solver.instanceName = osrl.header.instanceName
         ##res.solver.systime = osrl.header.time
         res.solver.status = SolverStatus.ok

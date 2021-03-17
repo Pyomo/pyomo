@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import iteritems
 from pyomo.core.base.plugin import (unique_component_name, Factory, implements,
                                     Interface, Plugin, CreatePluginFactory,
                                     ExtensionPoint, TransformationTimer,
@@ -35,7 +34,7 @@ from pyomo.core.base.plugin import (unique_component_name, Factory, implements,
 
 def predefined_sets():
     from pyomo.core.base.set import GlobalSets
-    return list((name, obj.doc) for name,obj in iteritems(GlobalSets))
+    return list((name, obj.doc) for name,obj in GlobalSets.items())
 
 
 def model_components():

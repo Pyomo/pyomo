@@ -12,9 +12,9 @@
 Unit Tests for interfacing with sIPOPT and k_aug
 """
 
-import pyutilib.th as unittest
 from six import StringIO
 import logging
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import ConcreteModel, Param, Var, Block,  Suffix, value
 from pyomo.opt import SolverFactory

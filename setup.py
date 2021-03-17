@@ -94,8 +94,8 @@ def run_setup():
       # Note: the release number is set in pyomo/version/info.py
       #
       version=get_version(),
-      maintainer='William E. Hart',
-      maintainer_email='wehart@sandia.gov',
+      maintainer='Pyomo Developer Team',
+      maintainer_email='pyomo-developers@googlegroups.com',
       url='http://pyomo.org',
       license='BSD',
       platforms=["any"],
@@ -113,65 +113,41 @@ def run_setup():
         'Operating System :: Microsoft :: Windows',
         'Operating System :: Unix',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: Jython',
         'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Software Development :: Libraries :: Python Modules' ],
-      python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
+      python_requires='>=3.6',
       install_requires=[
           'PyUtilib>=6.0.1.dev0',
-          'enum34;python_version<"3.4"',
           'ply',
           'six>=1.4',
       ],
       packages=find_packages(exclude=("scripts",)),
       package_data={"pyomo.contrib.viewer":["*.ui"]},
       ext_modules = ext_modules,
+      include_package_data=True,
       entry_points="""
         [console_scripts]
-        runbenders=pyomo.pysp.benders:Benders_main
-        evaluate_xhat=pyomo.pysp.evaluate_xhat:EvaluateXhat_main
-        runph=pyomo.pysp.phinit:PH_main
-        runef=pyomo.pysp.ef_writer_script:main
-        phsolverserver=pyomo.pysp.phsolverserver:main
-        scenariotreeserver=pyomo.pysp.scenariotree.server_pyro:main
-        computeconf=pyomo.pysp.computeconf:main
-
-        results_schema=pyomo.scripting.commands:results_schema
-        pyro_mip_server = pyomo.scripting.pyro_mip_server:main
-        test.pyomo = pyomo.scripting.runtests:runPyomoTests
         pyomo = pyomo.scripting.pyomo_main:main_console_script
+        test.pyomo = pyomo.scripting.runtests:runPyomoTests
+        pyomo_python = pyomo.scripting.commands:pyomo_python
+        pyro_mip_server = pyomo.scripting.pyro_mip_server:main
         pyomo_ns = pyomo.scripting.commands:pyomo_ns
         pyomo_nsc = pyomo.scripting.commands:pyomo_nsc
         kill_pyro_mip_servers = pyomo.scripting.commands:kill_pyro_mip_servers
         launch_pyro_mip_servers = pyomo.scripting.commands:launch_pyro_mip_servers
-        readsol = pyomo.scripting.commands:readsol
-        OSSolverService = pyomo.scripting.commands:OSSolverService
-        pyomo_python = pyomo.scripting.commands:pyomo_python
-        pyomo_old=pyomo.scripting.pyomo_command:main
 
         [pyomo.command]
-        pyomo.runbenders=pyomo.pysp.benders
-        pyomo.evaluate_xhat=pyomo.pysp.evaluate_xhat
-        pyomo.runph=pyomo.pysp.phinit
-        pyomo.runef=pyomo.pysp.ef_writer_script
-        pyomo.phsolverserver=pyomo.pysp.phsolverserver
-        pyomo.scenariotreeserver=pyomo.pysp.scenariotree.server_pyro
-        pyomo.computeconf=pyomo.pysp.computeconf
-
         pyomo.help = pyomo.scripting.driver_help
         pyomo.test.pyomo = pyomo.scripting.runtests
         pyomo.pyro_mip_server = pyomo.scripting.pyro_mip_server
-        pyomo.results_schema=pyomo.scripting.commands
         pyomo.viewer=pyomo.contrib.viewer.pyomo_viewer
       """
       )

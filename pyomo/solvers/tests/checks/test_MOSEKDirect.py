@@ -8,26 +8,20 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
-from pyomo.opt import (TerminationCondition,
-                       SolutionStatus)
+from pyomo.opt import (
+    TerminationCondition, SolutionStatus, check_available_solvers,
+)
 import pyomo.environ as pyo
 import pyomo.kernel as pmo
 import sys
 
-try:
-    import mosek
-    mosek_available = True
-    mosek_version = mosek.Env().getversion()
-except ImportError:
-    mosek_available = False
-    modek_version = None
-
 diff_tol = 1e-3
 
+mosek_available = check_available_solvers('mosek_direct')
 
-@unittest.skipIf(not mosek_available,
+@unittest.skipIf(not mosek_available ,
                  "MOSEK's python bindings are not available")
 class MOSEKDirectTests(unittest.TestCase):
 
@@ -178,7 +172,8 @@ class MOSEKDirectTests(unittest.TestCase):
         model.c.body += b.r1 + b.r2
         del b
 
-        if mosek_version >= (9, 0, 0):
+        import mosek
+        if mosek.Env().getversion() >= (9, 0, 0):
             b = model.primal_exponential = pmo.block()
             b.x1 = pmo.variable(lb=0)
             b.x2 = pmo.variable()

@@ -1,6 +1,6 @@
 # nonlinear_ReactorDesignTable.py
 from pyomo.environ import *
-from pyutilib.misc import Options
+from pyomo.common.collections import Bunch
 
 # create the concrete model
 model = ConcreteModel()
@@ -36,7 +36,7 @@ model.cd_bal = Constraint(expr=(0 == -model.sv * model.cd \
                  + k3 * model.ca ** 2.0))
 
 # setup the solver options
-options = Options()
+options = Bunch()
 options.solver = 'ipopt'
 options.quiet = True
 
@@ -44,11 +44,11 @@ options.quiet = True
 instance = model.create()
 instance.sv.fixed = True
 sv_values = [1.0 + v * 0.05 for v in range(1, 20)]
-print "   ", 'sv'.rjust(10), 'cb'.rjust(10)
+print("   ", 'sv'.rjust(10), 'cb'.rjust(10))
 for sv_value in sv_values:
     instance.sv = sv_value
     results, opt = \
         scripting.util.apply_optimizer(options, instance)
     instance.load(results)
-    print "   ", str(instance.sv.value).rjust(10),\
-        str(instance.cb.value).rjust(15)
+    print("   ", str(instance.sv.value).rjust(10),\
+        str(instance.cb.value).rjust(15))

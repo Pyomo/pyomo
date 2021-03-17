@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyutilib.misc import Options
+from pyomo.common.collections import Bunch
 from pyomo.core import *
 import math
 import random
@@ -45,7 +45,7 @@ def print_model_stats(options,model):
 
 def pyomo_create_model(options=None, model_options=None):
     if model_options is None:
-        model_options = Options()
+        model_options = Bunch()
     if model_options.type is None:
         model_options.type = 'fixed_set_size'
     #
@@ -185,24 +185,24 @@ def test_model(options=None):
 if __name__ == '__main__':
     test_model()
     #
-    options = Options()
+    options = Bunch()
     options.type = 'fixed_set_size'
     options.m = 11
     options.n = 21
     options.rho = 0.3
     test_model(options)
     #
-    options = Options()
+    options = Bunch()
     options.type = 'fixed_element_coverage'
     test_model(options)
     #
-    options = Options()
+    options = Bunch()
     options.m = 100
     options.n = 200
     options.type = 'fixed_probability'
     test_model(options)
     #
-    options = Options()
+    options = Bunch()
     options.type = 'fixed_element_coverage'
     options.m = 10
     options.n = 100

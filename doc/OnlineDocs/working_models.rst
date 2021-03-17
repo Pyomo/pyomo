@@ -675,9 +675,6 @@ instance and pass ``warmstart=True`` to the ``solve()`` method. E.g.,
 Solving Multiple Instances in Parallel
 --------------------------------------
 
-Use of parallel solvers for PySP is discussed in the section on parallel
-PySP :ref:`ParallelPySP`.
-
 Solvers are controlled by solver servers. The pyro mip solver server is
 launched with the command ``pyro_mip_server``. This command may be
 repeated to launch as many solvers as are desired. A name server and a

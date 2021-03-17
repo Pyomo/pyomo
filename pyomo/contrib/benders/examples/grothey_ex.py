@@ -12,7 +12,7 @@ from pyomo.contrib.benders.benders_cuts import BendersCutGenerator
 import pyomo.environ as pyo
 
 
-def create_master():
+def create_root():
     m = pyo.ConcreteModel()
     m.y = pyo.Var(bounds=(1, None))
     m.eta = pyo.Var(bounds=(-10, None))
@@ -20,7 +20,7 @@ def create_master():
     return m
 
 
-def create_subproblem(master):
+def create_subproblem(root):
     m = pyo.ConcreteModel()
     m.x1 = pyo.Var()
     m.x2 = pyo.Var()
@@ -30,19 +30,19 @@ def create_subproblem(master):
     m.c2 = pyo.Constraint(expr=(m.x1 + 1)**2 + m.x2**2 <= pyo.log(m.y))
 
     complicating_vars_map = pyo.ComponentMap()
-    complicating_vars_map[master.y] = m.y
+    complicating_vars_map[root.y] = m.y
 
     return m, complicating_vars_map
 
 
 def main():
-    m = create_master()
-    master_vars = [m.y]
+    m = create_root()
+    root_vars = [m.y]
     m.benders = BendersCutGenerator()
-    m.benders.set_input(master_vars=master_vars, tol=1e-8)
+    m.benders.set_input(root_vars=root_vars, tol=1e-8)
     m.benders.add_subproblem(subproblem_fn=create_subproblem,
-                             subproblem_fn_kwargs={'master': m},
-                             master_eta=m.eta,
+                             subproblem_fn_kwargs={'root': m},
+                             root_eta=m.eta,
                              subproblem_solver='ipopt', )
     opt = pyo.SolverFactory('gurobi_direct')
 

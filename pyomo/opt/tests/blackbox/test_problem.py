@@ -11,19 +11,22 @@
 # Unit Tests for pyomo.opt.blackbox.problem
 #
 
+from itertools import zip_longest
 import os
-from os.path import abspath, dirname
+from os.path import abspath, dirname, join
 pyomodir = dirname(dirname(dirname(dirname(abspath(__file__)))))
 pyomodir += os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
-import pyutilib.services
+from filecmp import cmp
+import pyomo.common.unittest as unittest
 
 import pyomo.opt
 import pyomo.opt.blackbox
+from pyomo.common.tempfiles import TempfileManager
+from pyomo.common.tee import capture_output
 
-old_tempdir = pyutilib.services.TempfileManager.tempdir
+old_tempdir = TempfileManager.tempdir
 
 class TestProblem1(pyomo.opt.blackbox.MixedIntOptProblem):
 
@@ -106,21 +109,24 @@ class TestDakotaMain(unittest.TestCase):
 
     def setUp(self):
         self.do_setup(False)
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
 
     def do_setup(self,flag):
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
         self.problem=TestProblem1()
         self.rproblem=RealProblem3()
 
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        TempfileManager.clear_tempfiles()
+        TempfileManager.tempdir = old_tempdir
 
     def test_main(self):
-        self.problem.main(['test_main', currdir+'request1.din', currdir+'results1.out'], format='dakota')
-        self.assertFileEqualsBaseline(currdir+'results1.out', currdir+'results1.dout', tolerance=1e-2)
-
+        self.problem.main(['test_main', join(currdir, 'request1.din'), join(currdir, 'results1.out')], format='dakota')
+        with open(join(currdir, 'results1.out'), 'r') as f1, \
+            open(join(currdir, 'results1.dout'), 'r') as f2:
+                result = float(f1.read().strip().replace(' ASV_1', ''))
+                baseline = float(f2.read().strip().replace(' ASV_1', ''))
+        self.assertAlmostEqual(result, baseline)
 
 class TestColinMain(unittest.TestCase):
 
@@ -130,46 +136,55 @@ class TestColinMain(unittest.TestCase):
 
     def setUp(self):
         self.do_setup(False)
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
 
     def do_setup(self,flag):
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
         self.ps = pyomo.opt.SolverFactory('ps')
         self.problem=TestProblem1()
         self.rproblem=RealProblem3()
 
+    def compare_xml(self, file1, file2):
+        with open(file1, 'r') as f1, open(file2, 'r') as f2:
+            f1_contents = f1.read().replace('>', '> ').replace('</', ' </').split()
+            f2_contents = f2.read().replace('>', '> ').replace('</', ' </').split()
+            for item1, item2 in zip_longest(f1_contents, f2_contents):
+                try:
+                    self.assertAlmostEqual(float(item1), float(item2))
+                except:
+                    self.assertEqual(item1, item2)
+
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        TempfileManager.clear_tempfiles()
+        TempfileManager.tempdir = old_tempdir
 
     def test_main(self):
-        self.problem.main(['test_main', currdir+'request1.xml', currdir+'results1.out'])
-        self.assertMatchesXmlBaseline(currdir+'results1.out', currdir+'results1.xml', tolerance=0.01, exact=True)
+        self.problem.main(['test_main', join(currdir, 'request1.xml'), join(currdir, 'results1.out')])
+        self.compare_xml(join(currdir, 'results1.out'), join(currdir, 'results1.xml'))
 
     def test_main_a(self):
-        self.problem.main(['test_main', currdir+'request1a.xml', currdir+'results1a.out'])
-        self.assertMatchesXmlBaseline(currdir+'results1a.out', currdir+'results1.xml', tolerance=0.01, exact=True)
+        self.problem.main(['test_main', join(currdir, 'request1a.xml'), join(currdir, 'results1a.out')])
+        self.compare_xml(join(currdir, 'results1a.out'), join(currdir, 'results1.xml'))
 
     def Xtest_rmain(self):
-        self.rproblem.main(['test_main', currdir+'request3.xml', currdir+'results3.out'])
-        self.assertFileEqualsBaseline(currdir+'results3.out', currdir+'results3.xml', tolerance=0.01)
+        self.rproblem.main(['test_main', join(currdir, 'request3.xml'), join(currdir, 'results3.out')])
+        self.assertTrue(cmp(join(currdir, 'results3.out'), join(currdir, 'results3.xml')))
 
     def test_main_2(self):
         self.problem=TestProblem2()
-        self.problem.main(['test_main', currdir+'request4.xml', currdir+'results4.out'])
-        self.assertMatchesXmlBaseline(currdir+'results4.out', currdir+'results4.xml', tolerance=0.01, exact=True)
+        self.problem.main(['test_main', join(currdir, 'request4.xml'), join(currdir, 'results4.out')])
+        self.compare_xml(join(currdir, 'results4.out'), join(currdir, 'results4.xml'))
 
     def test_error2(self):
         try:
-            self.problem.main(['test_main', currdir+'request1.xml', currdir+'results1.out'], 'foo')
+            self.problem.main(['test_main', join(currdir, 'request1.xml'), join(currdir, 'results1.out')], 'foo')
             self.fail("Expected ValueError")
         except ValueError:
             pass
 
     def Xtest_error4(self):
-        self.problem.main(['test_main', currdir+'request2.xml', currdir+'results2.out'])
-        self.assertMatchesXmlBaseline(currdir+'results2.out', currdir+'results2.xml', tolerance=0.01, exact=True)
-
+        self.problem.main(['test_main', join(currdir, 'request2.xml'), join(currdir, 'results2.out')])
+        self.compare_xml(join(currdir, 'results2.out'), join(currdir, 'results2.xml'))
 
 
 class TestOptProblem(unittest.TestCase):
@@ -180,17 +195,17 @@ class TestOptProblem(unittest.TestCase):
 
     def setUp(self):
         self.do_setup(False)
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
 
     def do_setup(self,flag):
-        pyutilib.services.TempfileManager.tempdir = currdir
+        TempfileManager.tempdir = currdir
         self.ps = pyomo.opt.SolverFactory('ps')
         self.problem=TestProblem1()
         self.rproblem=RealProblem3()
 
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        TempfileManager.clear_tempfiles()
+        TempfileManager.tempdir = old_tempdir
 
     def test_error1(self):
         point = pyomo.opt.blackbox.MixedIntVars()
@@ -217,7 +232,7 @@ class TestOptProblem(unittest.TestCase):
 
     def test_error3(self):
         try:
-            self.problem.main(['test_main', currdir+'request0.xml', currdir+'results0.out'])
+            self.problem.main(['test_main', join(currdir, 'request0.xml'), join(currdir, 'results0.out')])
             self.fail("Expected IOError")
         except IOError:
             pass
@@ -284,18 +299,20 @@ class TestPoint(unittest.TestCase):
         point.reals = [1.0]
         point.ints = [1.0]
         point.bits = [0]
-        pyutilib.misc.setup_redirect(currdir+'mi_point.out')
-        point.display()
-        pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(currdir+'mi_point.out', currdir+'mi_point.txt')
+        with capture_output(join(currdir, 'mi_point.out')):
+            point.display()
+        _out, _txt = join(currdir, 'mi_point.out'), join(currdir, 'mi_point.txt')
+        self.assertTrue(cmp(_out, _txt),
+                        msg="Files %s and %s differ" % (_out, _txt))
 
     def test_reals(self):
         point = pyomo.opt.blackbox.RealVars()
         point.vars = [1.0]
-        pyutilib.misc.setup_redirect(currdir+'real_point.out')
-        point.display()
-        pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(currdir+'real_point.out', currdir+'real_point.txt')
+        with capture_output(join(currdir, 'real_point.out')):
+            point.display()
+        _out, _txt = join(currdir, 'real_point.out'), join(currdir, 'real_point.txt')
+        self.assertTrue(cmp(_out, _txt),
+                        msg="Files %s and %s differ" % (_out, _txt))
 
 
 

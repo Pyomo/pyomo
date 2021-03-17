@@ -10,13 +10,13 @@
 
 import logging
 import re
+import six
 import sys
 import itertools
 import operator
 import pyomo.core.base.var
 import pyomo.core.base.constraint
-from pyutilib.misc import Bunch
-from pyutilib.services import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.core import is_fixed, value, minimize, maximize
 from pyomo.repn import generate_standard_repn
 from pyomo.core.base.suffix import Suffix
@@ -24,7 +24,7 @@ from pyomo.opt.base.solvers import OptSolver
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import \
     DirectOrPersistentSolver
-from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.collections import ComponentMap, ComponentSet, Bunch
 from pyomo.opt import SolverFactory
 from pyomo.core.kernel.conic import (_ConicBase, quadratic, rotated_quadratic,
                                      primal_exponential, primal_power,
@@ -34,6 +34,15 @@ from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
 logger = logging.getLogger('pyomo.solvers')
 inf = float('inf')
+
+if six.PY2:
+    def accumulate(it):
+        total = 0
+        for x in it:
+            total += x
+            yield total
+else:
+    from itertools import accumulate
 
 
 class DegreeError(ValueError):
@@ -115,8 +124,7 @@ class MOSEKDirect(DirectSolver):
         self._capabilities.sos1 = False
         self._capabilities.sos2 = False
 
-    @staticmethod
-    def license_is_valid():
+    def license_is_valid(self):
         """
         Runs a check for a valid MOSEK license. Returns False if MOSEK fails
         to run on a trivial test case.
@@ -243,7 +251,7 @@ class MOSEKDirect(DirectSolver):
                 self._pyomo_var_to_solver_var_map[j] for i, j in repn.quadratic_vars)
             qvals = tuple(v * 2 if qsubi[i] is qsubj[i] else v
                           for i, v in enumerate(repn.quadratic_coefs))
-            mosek_qexp = (qsubi, qsubj, qvals)
+            mosek_qexp = (qsubj, qsubi, qvals)
         return mosek_arow, mosek_qexp, referenced_vars
 
     def _get_expr_from_pyomo_expr(self, expr, max_degree=2):
@@ -285,10 +293,16 @@ class MOSEKDirect(DirectSolver):
         vnames = tuple(self._symbol_map.getSymbol(
             v, self._labeler) for v in var_seq)
         vtypes = tuple(map(self._mosek_vartype_from_var, var_seq))
-        lbs = tuple(-inf if value(v.lb) is None else value(v.lb)
-                    for v in var_seq)
-        ubs = tuple(inf if value(v.ub) is None else value(v.ub)
-                    for v in var_seq)
+        lbs = tuple( value(v) if v.fixed
+                     else -inf if value(v.lb) is None
+                     else value(v.lb)
+                     for v in var_seq
+        )
+        ubs = tuple( value(v) if v.fixed
+                     else inf if value(v.ub) is None
+                     else value(v.ub)
+                     for v in var_seq
+        )
         fxs = tuple(v.is_fixed() for v in var_seq)
         bound_types = tuple(map(self._mosek_bounds, lbs, ubs, fxs))
         self._solver_model.appendvars(len(var_seq))
@@ -318,7 +332,7 @@ class MOSEKDirect(DirectSolver):
         lq = tuple(filter(operator.attrgetter("_linear_canonical_form"),
                           con_seq))
         conic = tuple(filter(lambda x: isinstance(x, _ConicBase), con_seq))
-        lq_ex = tuple(itertools.filterfalse(lambda x: isinstance(
+        lq_ex = tuple(six.moves.filterfalse(lambda x: isinstance(
             x, _ConicBase) or (x._linear_canonical_form), con_seq))
         lq_all = lq + lq_ex
         num_lq = len(lq) + len(lq_ex)
@@ -341,14 +355,14 @@ class MOSEKDirect(DirectSolver):
             sub = range(con_num, con_num + num_lq)
             sub_names = tuple(self._symbol_map.getSymbol(c, self._labeler)
                               for c in lq_all)
-            ptre = tuple(itertools.accumulate(list(map(len, l_ids))))
+            ptre = tuple(accumulate(list(map(len, l_ids))))
             ptrb = (0,) + ptre[:-1]
             asubs = tuple(itertools.chain.from_iterable(l_ids))
             avals = tuple(itertools.chain.from_iterable(l_coefs))
             qcsubi = tuple(itertools.chain.from_iterable(q_is))
             qcsubj = tuple(itertools.chain.from_iterable(q_js))
             qcval = tuple(itertools.chain.from_iterable(q_vals))
-            qcsubk = tuple(i*len(q_is[i - con_num]) for i in sub)
+            qcsubk = tuple(i for i in sub for j in range(len(q_is[i-con_num])))
             self._solver_model.appendcons(num_lq)
             self._solver_model.putarowlist(sub, ptrb, ptre, asubs, avals)
             self._solver_model.putqcon(qcsubk, qcsubi, qcsubj, qcval)

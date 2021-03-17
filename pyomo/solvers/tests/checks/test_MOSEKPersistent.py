@@ -1,22 +1,16 @@
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
-from pyomo.opt import (TerminationCondition,
-                       SolutionStatus,
-                       SolverStatus)
+from pyomo.opt import (
+    TerminationCondition, SolutionStatus, SolverStatus,
+    check_available_solvers,
+)
 import pyomo.environ as pyo
 import pyomo.kernel as pmo
 import sys
 
-try:
-    import mosek
-    mosek_available = True
-    mosek_version = mosek.Env().getversion()
-except ImportError:
-    mosek_available = False
-    modek_version = None
-
 diff_tol = 1e-3
 
+mosek_available = check_available_solvers('mosek_direct')
 
 @unittest.skipIf(not mosek_available, "MOSEK's python bindings are missing.")
 class MOSEKPersistentTests(unittest.TestCase):

@@ -8,12 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import json
 import os
 from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))
 
-import pyutilib.th as unittest
-import pyutilib.services
+import pyomo.common.unittest as unittest
+from pyomo.common.tempfiles import TempfileManager
 
 import pyomo.opt
 from pyomo.core import ConcreteModel, RangeSet, Var, Param, Objective, ConstraintList, value, minimize
@@ -21,11 +22,11 @@ from pyomo.core import ConcreteModel, RangeSet, Var, Param, Objective, Constrain
 old_tempdir = None
 def setUpModule():
     global old_tempdir
-    old_tempdir = pyutilib.services.TempfileManager.tempdir
-    pyutilib.services.TempfileManager.tempdir = currdir
+    old_tempdir = TempfileManager.tempdir
+    TempfileManager.tempdir = currdir
 
 def tearDownModule():
-    pyutilib.services.TempfileManager.tempdir = old_tempdir
+    TempfileManager.tempdir = old_tempdir
 
 ipopt_available = False
 class Test(unittest.TestCase):
@@ -46,7 +47,7 @@ class Test(unittest.TestCase):
         global tmpdir
         tmpdir = os.getcwd()
         os.chdir(currdir)
-        pyutilib.services.TempfileManager.sequential_files(0)
+        TempfileManager.sequential_files(0)
 
         self.asl = pyomo.opt.SolverFactory('asl:ipopt', keepfiles=True)
         self.ipopt = pyomo.opt.SolverFactory('ipopt', keepfiles=True)
@@ -82,10 +83,17 @@ class Test(unittest.TestCase):
 
         self.sisser_instance = sisser_instance
 
+    def compare_json(self, file1, file2):
+        with open(file1, 'r') as out, \
+            open(file2, 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-7,
+                                             allow_second_superset=True)
+
     def tearDown(self):
         global tmpdir
-        pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.unique_files()
+        TempfileManager.clear_tempfiles()
+        TempfileManager.unique_files()
         os.chdir(tmpdir)
 
     def test_version_asl(self):
@@ -109,9 +117,8 @@ class Test(unittest.TestCase):
         results.write(filename=join(currdir, "test_asl_solve_from_nl.txt"),
                       times=False,
                       format='json')
-        self.assertMatchesJsonBaseline(join(currdir, "test_asl_solve_from_nl.txt"),
-                                       join(currdir, "test_solve_from_nl.baseline"),
-                                       tolerance=1e-7)
+        self.compare_json(join(currdir, "test_asl_solve_from_nl.txt"),
+                          join(currdir, "test_solve_from_nl.baseline"))
         os.remove(join(currdir, "test_asl_solve_from_nl.log"))
 
     def test_ipopt_solve_from_nl(self):
@@ -125,9 +132,8 @@ class Test(unittest.TestCase):
         results.write(filename=join(currdir, "test_ipopt_solve_from_nl.txt"),
                       times=False,
                       format='json')
-        self.assertMatchesJsonBaseline(join(currdir, "test_ipopt_solve_from_nl.txt"),
-                                       join(currdir, "test_solve_from_nl.baseline"),
-                                       tolerance=1e-7)
+        self.compare_json(join(currdir, "test_ipopt_solve_from_nl.txt"),
+                          join(currdir, "test_solve_from_nl.baseline"))
         os.remove(join(currdir, "test_ipopt_solve_from_nl.log"))
 
     def test_asl_solve_from_instance(self):
@@ -141,9 +147,8 @@ class Test(unittest.TestCase):
         results.write(filename=join(currdir, "test_asl_solve_from_instance.txt"),
                       times=False,
                       format='json')
-        self.assertMatchesJsonBaseline(join(currdir, "test_asl_solve_from_instance.txt"),
-                                       join(currdir, "test_solve_from_instance.baseline"),
-                                       tolerance=1e-7)
+        self.compare_json(join(currdir, "test_asl_solve_from_instance.txt"),
+                          join(currdir, "test_solve_from_instance.baseline"))
         #self.sisser_instance.load_solutions(results)
 
     def test_ipopt_solve_from_instance(self):
@@ -157,9 +162,8 @@ class Test(unittest.TestCase):
         results.write(filename=join(currdir, "test_ipopt_solve_from_instance.txt"),
                       times=False,
                       format='json')
-        self.assertMatchesJsonBaseline(join(currdir, "test_ipopt_solve_from_instance.txt"),
-                                       join(currdir, "test_solve_from_instance.baseline"),
-                                       tolerance=1e-7)
+        self.compare_json(join(currdir, "test_ipopt_solve_from_instance.txt"),
+                          join(currdir, "test_solve_from_instance.baseline"))
         #self.sisser_instance.load_solutions(results)
 
     def test_ipopt_solve_from_instance_OF_options(self):
@@ -188,9 +192,8 @@ class Test(unittest.TestCase):
         results.write(filename=join(currdir, "test_ipopt_solve_from_instance.txt"),
                       times=False,
                       format='json')
-        self.assertMatchesJsonBaseline(join(currdir, "test_ipopt_solve_from_instance.txt"),
-                                       join(currdir, "test_solve_from_instance.baseline"),
-                                       tolerance=1e-7)
+        self.compare_json(join(currdir, "test_ipopt_solve_from_instance.txt"),
+                          join(currdir, "test_solve_from_instance.baseline"))
         #self.sisser_instance.load_solutions(results)
 
     def test_bad_dof(self):

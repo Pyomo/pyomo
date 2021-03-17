@@ -1,6 +1,6 @@
 import pyomo.environ
 from pyomo.opt import SolverFactory
-from pyutilib.misc import Options
+from pyomo.common.collections import Bunch
 
 import sys
 import math
@@ -39,7 +39,7 @@ model.skip_canonical_repn = True # for nonlinear models
 instance=model.create()
 
 SolverName = "asl"
-so = Options()
+so = Bunch()
 so.solver = "ipopt"
 opt=SolverFactory(SolverName, options=so)
 

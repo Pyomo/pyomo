@@ -9,8 +9,8 @@
 #  ___________________________________________________________________________
 #
 import re
-import pyutilib.th as unittest
-from pyutilib.misc.redirect_io import capture_output
+import pyomo.common.unittest as unittest
+from pyomo.common.tee import capture_output
 
 from pyomo.environ import SolverFactory
 from pyomo.scripting.driver_help import help_solvers, help_transformations

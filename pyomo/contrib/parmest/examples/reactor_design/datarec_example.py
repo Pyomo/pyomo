@@ -10,11 +10,8 @@
 
 import numpy as np
 import pandas as pd
-import matplotlib.pylab as plt
 import pyomo.contrib.parmest.parmest as parmest
-from reactor_design import reactor_design_model
-
-plt.close('all')
+from pyomo.contrib.parmest.examples.reactor_design.reactor_design import reactor_design_model 
 
 np.random.seed(1234)
 
@@ -70,7 +67,7 @@ obj, theta, data_rec = pest.theta_est(return_values=['ca', 'cb', 'cc', 'cd', 'ca
 print(obj)
 print(theta)
 
-parmest.grouped_boxplot(data[['ca', 'cb', 'cc', 'cd']], 
+parmest.graphics.grouped_boxplot(data[['ca', 'cb', 'cc', 'cd']], 
                         data_rec[['ca', 'cb', 'cc', 'cd']], 
                         group_names=['Data', 'Data Rec'])
 

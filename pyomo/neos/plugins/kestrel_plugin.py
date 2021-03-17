@@ -12,6 +12,7 @@ import logging
 import os
 import re
 import six
+import sys
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.opt import SolverFactory, SolverManagerFactory, OptSolver
@@ -31,7 +32,8 @@ def _neos_error(msg, results, current_message):
     error_re = re.compile('error', flags=re.I)
     warn_re = re.compile('warn', flags=re.I)
 
-    logger.error("%s  NEOS log:\n%s" % ( msg, current_message, ))
+    logger.error("%s  NEOS log:\n%s" % ( msg, current_message, ),
+                 exc_info=sys.exc_info())
     soln_data = results.data
     if six.PY3:
         soln_data = soln_data.decode('utf-8')
@@ -77,7 +79,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
             raise ActionManagerError(
                 "No solver passed to %s, use keyword option 'solver'"
                 % (type(self).__name__) )
-        if not isinstance(solver, six.string_types):
+        if not isinstance(solver, str):
             solver_name = solver.name
             if solver_name == 'asl':
                 solver_name = \
@@ -100,7 +102,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         if solver is not None:
             user_solver_options.update(solver.options)
         _options = kwds.pop('options', {})
-        if isinstance(_options, six.string_types):
+        if isinstance(_options, str):
             _options = OptSolver._options_string_to_dict(_options)
         user_solver_options.update(_options)
         user_solver_options.update(

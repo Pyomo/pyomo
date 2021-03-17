@@ -10,41 +10,22 @@
 
 import sys
 import logging
-import collections
-if sys.version_info[:2] >= (3,6):
-    _ordered_dict_ = dict
-else:
-    try:
-        _ordered_dict_ = collections.OrderedDict
-    except ImportError:                           #pragma:nocover
-        import ordereddict
-        _ordered_dict_ = ordereddict.OrderedDict
+import collections.abc
 
 from pyomo.core.kernel.homogeneous_container import \
     IHomogeneousContainer
 
-import six
-from six import itervalues
-
-if six.PY3:
-    from collections.abc import MutableMapping as collections_MutableMapping
-    from collections.abc import Mapping as collections_Mapping
+if sys.version_info[:2] >= (3,7):
+    # dict became ordered in CPython 3.6 and added to the standard in 3.7
+    _ordered_dict_ = dict
 else:
-    from collections import MutableMapping as collections_MutableMapping
-    from collections import Mapping as collections_Mapping
+    _ordered_dict_ = collections.OrderedDict
 
 logger = logging.getLogger('pyomo.core')
 
-# Note that prior to Python 3, collections
-# is not defined with an empty __slots__
-# attribute. Therefore, in Python 2, all implementations of
-# this class will have a __dict__ member whether or not they
-# declare __slots__. I don't believe it is worth trying to
-# code a work around for the Python 2 case as we are moving
-# closer to a Python 3-only world these types of objects are
-# not memory bottlenecks.
+
 class DictContainer(IHomogeneousContainer,
-                    collections_MutableMapping):
+                    collections.abc.MutableMapping):
     """
     A partial implementation of the IHomogeneousContainer
     interface that provides dict-like storage functionality.
@@ -94,7 +75,7 @@ class DictContainer(IHomogeneousContainer,
 
     def children(self):
         """A generator over the children of this container."""
-        return itervalues(self._data)
+        return self._data.values()
 
     #
     # Define the MutableMapping abstract methods
@@ -168,7 +149,7 @@ class DictContainer(IHomogeneousContainer,
     # plain dictionary mapping key->(type(val), id(val)) and
     # compare that instead.
     def __eq__(self, other):
-        if not isinstance(other, collections_Mapping):
+        if not isinstance(other, collections.abc.Mapping):
             return False
         return {key:(type(val), id(val))
                     for key, val in self.items()} == \

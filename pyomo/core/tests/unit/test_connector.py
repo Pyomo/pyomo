@@ -18,8 +18,8 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
-from six import StringIO
+import pyomo.common.unittest as unittest
+from io import StringIO
 
 from pyomo.environ import ConcreteModel, AbstractModel, Connector, Var, NonNegativeReals, Set, Constraint, TransformationFactory, Binary, Reals, VarList
 

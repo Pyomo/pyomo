@@ -14,7 +14,6 @@
 
 __all__ = ['sum_product', 'summation', 'dot_product', 'sequence', 'prod', 'quicksum']
 
-from six.moves import xrange
 from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.expr.numeric_expr import decompose_term
 from pyomo.core.expr import current as EXPR
@@ -269,10 +268,10 @@ def sequence(*args):
     if len(args) > 3:
         raise ValueError('sequence expected at most 3 arguments, got %d' % len(args))
     if len(args) == 1:
-        return xrange(1,args[0]+1)
+        return range(1,args[0]+1)
     if len(args) == 2:
-        return xrange(args[0],args[1]+1)
-    return xrange(args[0],args[1]+1,args[2])
+        return range(args[0],args[1]+1)
+    return range(args[0],args[1]+1,args[2])
 
 
 def xsequence(*args):

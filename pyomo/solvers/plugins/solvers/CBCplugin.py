@@ -14,14 +14,13 @@ import os
 import re
 import time
 import logging
-
-from six import iteritems, string_types
+import subprocess
+from six import iteritems
 
 from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
-from pyomo.common.collections import Options, Bunch
-from pyutilib.services import TempfileManager
-from pyutilib.subprocess import run
+from pyomo.common.collections import Bunch
+from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.core.kernel.block import IBlock
 from pyomo.core import Var
@@ -53,11 +52,15 @@ def configure_cbc():
     if not executable:
         return
     cbc_exec = executable.path()
-    results = run( [cbc_exec,"-stop"], timelimit=1 )
-    _cbc_version = _extract_version(results[1])
-    results = run(
-        [cbc_exec,"dummy","-AMPL","-stop"], timelimit=1 )
-    _cbc_compiled_with_asl = not ('No match for AMPL' in results[1])
+    results = subprocess.run([cbc_exec,"-stop"], timeout=1,
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             universal_newlines=True)
+    _cbc_version = _extract_version(results.stdout)
+    results = subprocess.run([cbc_exec, "dummy", "-AMPL", "-stop"], timeout=1,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             universal_newlines=True)
+    _cbc_compiled_with_asl = not ('No match for AMPL' in results.stdout)
     if _cbc_version is not None:
         _cbc_old_version = _cbc_version < (2,7,0,0)
 
@@ -158,7 +161,7 @@ class CBCSHELL(SystemCallSolver):
         self._valid_result_formats[ProblemFormat.mps] = [ResultsFormat.soln]
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.integer = True
         # The quadratic capabilities may be true but there is
@@ -250,11 +253,11 @@ class CBCSHELL(SystemCallSolver):
         # create the temporary file - assuming that the user has already, via some external
         # mechanism, invoked warm_start() with a instance to create the warm start file.
         if self._warm_start_solve and \
-                isinstance(args[0], string_types):
+                isinstance(args[0], str):
             # we assume the user knows what they are doing...
             pass
         elif self._warm_start_solve and \
-                (not isinstance(args[0], string_types)):
+                (not isinstance(args[0], str)):
             # assign the name of the warm start file *before* calling the base class
             # presolve - the base class method ends up creating the command line,
             # and the warm start file-name is (obviously) needed there.
@@ -270,7 +273,7 @@ class CBCSHELL(SystemCallSolver):
         # NB: we must let the base class presolve run first so that the
         # symbol_map is actually constructed!
 
-        if (len(args) > 0) and (not isinstance(args[0], string_types)):
+        if (len(args) > 0) and (not isinstance(args[0], str)):
 
             if len(args) != 1:
                 raise ValueError(
@@ -644,8 +647,11 @@ class CBCSHELL(SystemCallSolver):
         if results.problem.sense == ProblemSense.minimize:
             upper_bound = optim_value
         elif results.problem.sense == ProblemSense.maximize:
-            optim_value *= -1
-            upper_bound = None if lower_bound is None else -lower_bound
+            if self.version() < (2, 10, 2):
+                optim_value *= -1
+                upper_bound = None if lower_bound is None else -lower_bound
+            else:
+                upper_bound = None if lower_bound is None else lower_bound
             lower_bound = optim_value
         soln.objective['__default_objective__'] = {'Value': optim_value}
         results.problem.lower_bound = lower_bound
@@ -796,7 +802,7 @@ class CBCSHELL(SystemCallSolver):
             except ValueError:
                 if tokens[0] in ("Optimal", "Infeasible", "Unbounded", "Stopped", "Integer", "Status"):
                     if optim_value is not None:
-                        if results.problem.sense == ProblemSense.maximize:
+                        if results.problem.sense == ProblemSense.maximize and self.version() < (2, 10, 2):
                             optim_value *= -1
                         solution.objective['__default_objective__'] = {'Value': optim_value}
                     header_processed = True
@@ -812,6 +818,8 @@ class CBCSHELL(SystemCallSolver):
                 constraint = tokens[1]
                 constraint_ax = float(tokens[2]) # CBC reports the constraint row times the solution vector - not the slack.
                 constraint_dual = float(tokens[3])
+                if results.problem.sense == ProblemSense.maximize and self.version() < (2, 10, 2):
+                    constraint_dual *= -1
                 if constraint[:2] == 'c_':
                     solution.constraint[constraint] = {"Dual" : constraint_dual}
                 elif constraint[:2] == 'r_':
@@ -843,6 +851,8 @@ class CBCSHELL(SystemCallSolver):
                 variable = solution.variable[variable_name] = {"Value" : variable_value}
                 if extract_reduced_costs is True:
                     variable_reduced_cost = float(tokens[3]) # currently ignored.
+                    if results.problem.sense == ProblemSense.maximize and self.version() < (2, 10, 2):
+                        variable_reduced_cost *= -1
                     variable["Rc"] = variable_reduced_cost
 
             elif header_processed is True:
@@ -910,3 +920,5 @@ class MockCBC(CBCSHELL,MockMIP):
         else:
             return (args, ProblemFormat.mps, None)
 
+    def _get_version(self):
+        return 2, 9, 9

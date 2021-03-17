@@ -9,8 +9,30 @@
 #  ___________________________________________________________________________
 
 import datetime
+import multiprocessing
+import six
+import time
 
 import pyomo.common.unittest as unittest
+from pyomo.common.log import LoggingIntercept
+
+@unittest.timeout(10)
+def short_sleep():
+    return 42
+
+@unittest.timeout(0.01)
+def long_sleep():
+    time.sleep(1)
+    return 42
+
+@unittest.timeout(10)
+def raise_exception():
+    foo.bar
+
+@unittest.timeout(10)
+def fail():
+    raise AssertionError("0 != 1")
+
 
 class TestPyomoUnittest(unittest.TestCase):
     def test_assertStructuredAlmostEqual_comparison(self):
@@ -127,3 +149,74 @@ class TestPyomoUnittest(unittest.TestCase):
         with self.assertRaisesRegex(self.failureException,
                                     '3 !~= 2.999'):
             self.assertStructuredAlmostEqual(a, b)
+
+    def test_timeout_fcn_call(self):
+        self.assertEqual(short_sleep(), 42)
+        with self.assertRaisesRegex(
+                TimeoutError, 'test timed out after 0.01 seconds'):
+            long_sleep()
+        with self.assertRaisesRegex(
+                NameError,
+                f"name 'foo' is not defined\s+Original traceback:"):
+            raise_exception()
+        with self.assertRaisesRegex(AssertionError, r"^0 != 1$"):
+            fail()
+
+    @unittest.timeout(10)
+    def test_timeout(self):
+        self.assertEqual(0, 0)
+
+    @unittest.expectedFailure
+    @unittest.timeout(0.01)
+    def test_timeout_timeout(self):
+        time.sleep(1)
+        self.assertEqual(0, 1)
+
+    @unittest.timeout(10)
+    def test_timeout_skip(self):
+        if TestPyomoUnittest.test_timeout_skip.skip:
+            self.skipTest("Skipping this test")
+        self.assertEqual(0, 1)
+
+    test_timeout_skip.skip = True
+
+    def test_timeout_skip_fails(self):
+        try:
+            with self.assertRaisesRegex(
+                    unittest.SkipTest, r"Skipping this test"):
+                self.test_timeout_skip()
+            TestPyomoUnittest.test_timeout_skip.skip = False
+            with self.assertRaisesRegex(AssertionError, r"0 != 1"):
+                self.test_timeout_skip()
+        finally:
+            TestPyomoUnittest.test_timeout_skip.skip = True
+
+    @unittest.timeout(10)
+    def bound_function(self):
+        self.assertEqual(0, 0)
+
+    def test_bound_function(self):
+        if multiprocessing.get_start_method() == 'fork':
+            self.bound_function()
+            return
+        LOG = six.StringIO()
+        with LoggingIntercept(LOG):
+            with self.assertRaises(TypeError):
+                self.bound_function()
+        self.assertIn("platform that does not support 'fork'", LOG.getvalue())
+
+    @unittest.timeout(10, require_fork=True)
+    def bound_function_require_fork(self):
+        self.assertEqual(0, 0)
+
+    def test_bound_function_require_fork(self):
+        if multiprocessing.get_start_method() == 'fork':
+            self.bound_function_require_fork()
+            return
+        with self.assertRaisesRegex(
+                unittest.SkipTest,
+                "timeout requires unavailable fork interface"):
+            self.bound_function_require_fork()
+
+if __name__ == '__main__':
+    unittest.main()

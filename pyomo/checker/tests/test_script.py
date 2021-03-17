@@ -11,7 +11,7 @@
 import os
 import tempfile
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.checker import ModelScript
 

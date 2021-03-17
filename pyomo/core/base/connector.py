@@ -12,12 +12,12 @@ __all__ = [ 'Connector' ]
 
 import logging
 import sys
-from six import iteritems, itervalues
 from weakref import ref as weakref_ref
 
 from pyomo.common import deprecated
-from pyomo.common.timing import ConstructionTimer
+from pyomo.common.log import is_debug_set
 from pyomo.common.plugin import Plugin, implements
+from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent
@@ -109,11 +109,11 @@ class _ConnectorData(ComponentData, NumericValue):
 
 
     def _iter_vars(self):
-        for var in itervalues(self.vars):
+        for var in self.vars.values():
             if not hasattr(var, 'is_indexed') or not var.is_indexed():
                 yield var
             else:
-                for v in itervalues(var):
+                for v in var.values():
                     yield v
 
 
@@ -171,7 +171,7 @@ class Connector(IndexedComponent):
 
 
     def construct(self, data=None):
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):  #pragma:nocover
+        if is_debug_set(logger):  #pragma:nocover
             logger.debug( "Constructing Connector, name=%s, from data=%s"
                           % (self.name, data) )
         if self._constructed:
@@ -194,21 +194,21 @@ class Connector(IndexedComponent):
             for key in self._implicit:
                 tmp.add(None,key)
             if self._extends:
-                for key, val in iteritems(self._extends.vars):
+                for key, val in self._extends.vars.items():
                     tmp.add(val,key)
-            for key, val in iteritems(self._initialize):
+            for key, val in self._initialize.items():
                 tmp.add(val,key)
             if self._rule:
                 items = apply_indexed_rule(
                     self, self._rule, self._parent(), idx)
-                for key, val in iteritems(items):
+                for key, val in items.items():
                     tmp.add(val,key)
 
 
     def _pprint(self, ostream=None, verbose=False):
         """Print component information."""
         def _line_generator(k,v):
-            for _k, _v in sorted(iteritems(v.vars)):
+            for _k, _v in sorted(v.vars.items()):
                 if _v is None:
                     _len = '-'
                 elif _k in v.aggregators:
@@ -221,7 +221,7 @@ class Connector(IndexedComponent):
         return ( [("Size", len(self)),
                   ("Index", self._index if self.is_indexed() else None),
                   ],
-                 iteritems(self._data),
+                 self._data.items(),
                  ( "Name","Size", "Variable", ),
                  _line_generator
              )
@@ -243,7 +243,7 @@ class Connector(IndexedComponent):
 
         ostream.write("\n")
         def _line_generator(k,v):
-            for _k, _v in sorted(iteritems(v.vars)):
+            for _k, _v in sorted(v.vars.items()):
                 if _v is None:
                     _val = '-'
                 elif not hasattr(_v, 'is_indexed') or not _v.is_indexed():
@@ -253,7 +253,7 @@ class Connector(IndexedComponent):
                         x, value(_v[x])) for x in sorted(_v._data) ),)
                 yield _k, _val
         tabular_writer( ostream, prefix+tab,
-                        ((k,v) for k,v in iteritems(self._data)),
+                        ((k,v) for k,v in self._data.items()),
                         ( "Name","Value" ), _line_generator )
 
 

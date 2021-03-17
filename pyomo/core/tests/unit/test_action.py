@@ -15,10 +15,10 @@
 # Array1                    Test arrays of parameters
 #
 
-from six import StringIO
+from io import StringIO
 import os
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import AbstractModel, Param, Set, BuildAction, value
 

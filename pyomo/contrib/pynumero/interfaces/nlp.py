@@ -66,12 +66,24 @@ class NLP(object):
         """
         pass
 
+    def primals_names(self):
+        """
+        Override this to provide string names for the primal variables
+        """
+        return [str(i) for i in range(self.n_primals())]
+
     @abc.abstractmethod
     def n_constraints(self):
         """
         Returns number of constraints
         """
         pass
+
+    def constraint_names(self):
+        """
+        Override this to provide string names for the constraints
+        """
+        return [str(i) for i in range(self.n_constraints())]
     
     @abc.abstractmethod
     def nnz_jacobian(self):

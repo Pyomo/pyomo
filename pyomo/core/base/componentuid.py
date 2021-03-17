@@ -8,12 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import bisect
 import codecs
 import re
 import ply.lex
-
-from six import PY2, string_types, iteritems
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import pickle
@@ -21,9 +18,10 @@ from pyomo.common.deprecation import deprecated
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.reference import Reference
 
-class _PickleEllipsis(object):
-    "A work around for the non-picklability of Ellipsis in Python 2"
+
+class _NotSpecified(object):
     pass
+
 
 class ComponentUID(object):
     """
@@ -56,7 +54,7 @@ class ComponentUID(object):
 
     @staticmethod
     def _safe_str(x):
-        if not isinstance(x, string_types):
+        if not isinstance(x, str):
             return ComponentUID._repr_map.get(
                 x.__class__, ComponentUID._pickle)(x)
         else:
@@ -90,7 +88,7 @@ class ComponentUID(object):
     def __init__(self, component, cuid_buffer=None, context=None):
         # A CUID can be initialized from either a reference component or
         # the string representation.
-        if isinstance(component, string_types):
+        if isinstance(component, str):
             if context is not None:
                 raise ValueError("Context is not allowed when initializing a "
                                  "ComponentUID object from a string type")
@@ -98,6 +96,12 @@ class ComponentUID(object):
                 self._cids = tuple(self._parse_cuid_v2(component))
             except (OSError, IOError):
                 self._cids = tuple(self._parse_cuid_v1(component))
+
+        elif type(component) is IndexedComponent_slice:
+            self._cids = tuple(self._generate_cuid_from_slice(
+                component,
+                context=context,
+                ))
         else:
             self._cids = tuple(self._generate_cuid(
                 component, cuid_buffer=cuid_buffer, context=context))
@@ -134,20 +138,10 @@ class ComponentUID(object):
 
     def __getstate__(self):
         ans = {x:getattr(self, x) for x in ComponentUID.__slots__}
-        if PY2:
-            # Ellipsis is not picklable
-            ans['_cids'] = tuple(
-                (k, tuple(_PickleEllipsis if i is Ellipsis else i
-                          for i in v)) for k,v in ans['_cids'])
         return ans
 
     def __setstate__(self, state):
-        if PY2:
-            # Ellipsis is not picklable
-            state['_cids'] = tuple(
-                (k, tuple(Ellipsis if i is _PickleEllipsis else i
-                          for i in v)) for k,v in state['_cids'])
-        for key, val in iteritems(state):
+        for key, val in state.items():
             setattr(self,key,val)
 
     def __hash__(self):
@@ -245,7 +239,7 @@ class ComponentUID(object):
                                  repr_version=2):
         def _record_indexed_object_cuid_strings_v1(obj, cuid_str):
             _unknown = lambda x: '?'+str(x)
-            for idx, data in iteritems(obj):
+            for idx, data in obj.items():
                 if idx.__class__ is tuple and len(idx) > 1:
                     cuid_strings[data] = cuid_str + ':' + ','.join(
                         ComponentUID._repr_v1_map.get(x.__class__, _unknown)(x)
@@ -256,7 +250,7 @@ class ComponentUID(object):
                             idx.__class__, _unknown)(idx)
 
         def _record_indexed_object_cuid_strings_v2(obj, cuid_str):
-            for idx, data in iteritems(obj):
+            for idx, data in obj.items():
                 if idx.__class__ is tuple and len(idx) > 1:
                     cuid_strings[data] = cuid_str + '[' + ','.join(
                         ComponentUID._safe_str(x) for x in idx) + ']'
@@ -295,6 +289,123 @@ class ComponentUID(object):
                     _record_indexed_object_cuid_strings(obj, cuid_str)
         return cuid_strings
 
+    def _index_from_slice_info(self, slice_info):
+        """
+        Constructs an index from the slice_info entry in a slice's
+        call stack. The index may then be processed just as any
+        other slice index, e.g. from a __getitem__ call in a slice's
+        call stack.
+        """
+        fixed, sliced, ellipsis = slice_info
+
+        if ellipsis is None:
+            ellipsis = {}
+        else:
+            ellipsis = {ellipsis: Ellipsis}
+
+        value_map = {}
+        value_map.update(fixed)
+        value_map.update(sliced)
+        value_map.update(ellipsis)
+
+        # Assume that the keys of fixed, sliced, and ellipsis
+        # partition the index we're describing.
+        return tuple( value_map[i] for i in range(len(value_map)) )
+
+    def _generate_cuid_from_slice(self, _slice, cuid_buffer=None, context=None):
+        """
+        Pop the slice's call stack, generating a cuid entry whenever a
+        `__getattr__` call is encountered.
+        """
+        # Copy the slice's call stack
+        call_stack = list(_slice._call_stack)
+        # Create a list to hold the reversed cuid, generated by
+        # popping the call stack.
+        rcuid = []
+        # We only append to `rcuid` when we find a `get_attr` call, so
+        # we need to cache any index we encounter in a `get_item` call.
+        index = _NotSpecified
+        # We'd like to support slices that contain a call to `component`,
+        # in which case we will cache the `__call__` argument to treat as
+        # an attribute.
+        name = None
+        while call_stack:
+            call_stack_entry = call_stack.pop()
+            try:
+                call, arg = call_stack_entry
+            except ValueError:
+                call, arg, kwds = call_stack_entry
+
+            if name is not None:
+                if call != IndexedComponent_slice.get_attribute:
+                    raise ValueError(
+                        "Cannot create a CUID with a __call__ of anything "
+                        "other than a 'component' attribute")
+                if arg != 'component':
+                    raise ValueError(
+                        "Cannot create a CUID from a slice with a "
+                        "call to any method other than 'component': "
+                        "got '%s'." % arg)
+                arg, name = name, None
+
+            if call & ( IndexedComponent_slice.SET_MASK
+                        | IndexedComponent_slice.DEL_MASK ):
+                raise ValueError(
+                    "Cannot create a CUID from a slice that "
+                    "contains `set` or `del` calls: got call %s "
+                    "with argument %s" % (call, arg)
+                    )
+            elif call == IndexedComponent_slice.slice_info:
+                comp = arg[0]
+                slice_info = arg[1:]
+
+                idx = self._index_from_slice_info(slice_info)
+                rcuid.append((comp.local_name, idx))
+
+                parent = comp.parent_block()
+                base_cuid = self._generate_cuid(
+                        parent,
+                        cuid_buffer=cuid_buffer,
+                        context=context,
+                        )
+                base_cuid.reverse()
+                rcuid.extend(base_cuid)
+                # We assume slice_info will only occur at the top of the
+                # call stack.
+                assert not call_stack
+            elif call == IndexedComponent_slice.get_item:
+                if index is not _NotSpecified:
+                    raise ValueError(
+                    "Two `get_item` calls, %s and %s, were detected before a"
+                    "`get_attr` call. This is not supported by 'ComponentUID'."
+                    % (index, arg))
+                # Cache `get_item` arg until a `get_attr` is encountered.
+                index = arg
+            elif call == IndexedComponent_slice.call:
+                if len(arg) != 1:
+                    raise ValueError(
+                            "Cannot create a CUID from a slice with a "
+                            "call that has multiple arguments: got "
+                            "arguments %s." % (arg,)
+                            )
+                # Cache argument of a call to `component`
+                name = arg[0]
+                if kwds != {}:
+                    raise ValueError(
+                            "Cannot create a CUID from a slice with a "
+                            "call that contains keywords: got keyword "
+                            "dict %s." % (kwds,)
+                            )
+            elif call == IndexedComponent_slice.get_attribute:
+                if index is _NotSpecified:
+                    index = ()
+                elif type(index) is not tuple or len(index) == 1:
+                    index = (index,)
+                rcuid.append((arg, index))
+                index = _NotSpecified
+        rcuid.reverse()
+        return rcuid
+
     def _generate_cuid(self, component, cuid_buffer=None, context=None):
         "Return the list of (name, idx) pairs for the specified component"
         model = component.model()
@@ -313,7 +424,7 @@ class ComponentUID(object):
             elif cuid_buffer is not None:
                 if id(component) not in cuid_buffer:
                     c_local_name = c.local_name
-                    for idx, obj in iteritems(c):
+                    for idx, obj in c.items():
                         if idx.__class__ is not tuple or len(idx) == 1:
                             idx = (idx,)
                         cuid_buffer[id(obj)] = (c_local_name, idx)
@@ -376,7 +487,7 @@ class ComponentUID(object):
                 name = tok.value
         assert not idx_stack
         yield (name, idx)
-            
+
     def _parse_cuid_v1(self, label):
         """Parse a string (v1 repr format) and yield name, idx pairs
 
@@ -430,7 +541,7 @@ class ComponentUID(object):
         return obj
 
     @deprecated("ComponentUID.find_component() is deprecated. "
-                "Use ComponentUID.find_component_on()", version='TBD')
+                "Use ComponentUID.find_component_on()", version='5.7.2')
     def find_component(self, block):
         return self.find_component_on(block)
 
@@ -572,10 +683,7 @@ def t_STAR(t):
 def t_PICKLE(t):
     start = 3 if t.value[1] == 'b' else 2
     unescaped = _re_escape_sequences.sub(_match_escape, t.value[start:-1])
-    if PY2:
-        rawstr = unescaped.encode('latin-1')
-    else:
-        rawstr = bytes(list(ord(_) for _ in unescaped))
+    rawstr = bytes(list(ord(_) for _ in unescaped))
     t.value = pickle.loads(rawstr)
     return t
 

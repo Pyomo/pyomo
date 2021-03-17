@@ -13,6 +13,7 @@ __all__ = ()
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.log import is_debug_set
 from pyomo.core.base.set_types import Any
 from pyomo.core.base.var import (IndexedVar,
                                  _VarData)
@@ -23,14 +24,8 @@ from pyomo.core.base.objective import (IndexedObjective,
 from pyomo.core.base.expression import (IndexedExpression,
                                         _ExpressionData)
 
-import six
-
-if six.PY3:
-    from collections.abc import MutableMapping as collections_MutableMapping
-    from collections.abc import Mapping as collections_Mapping
-else:
-    from collections import MutableMapping as collections_MutableMapping
-    from collections import Mapping as collections_Mapping
+from collections.abc import MutableMapping
+from collections.abc import Mapping
 
 logger = logging.getLogger('pyomo.core')
 
@@ -41,7 +36,7 @@ logger = logging.getLogger('pyomo.core')
 # be implemented on top of these classes.
 #
 
-class ComponentDict(collections_MutableMapping):
+class ComponentDict(MutableMapping):
 
     def __init__(self, interface_datatype, *args):
         self._interface_datatype = interface_datatype
@@ -54,7 +49,7 @@ class ComponentDict(collections_MutableMapping):
             self.update(args[0])
 
     def construct(self, data=None):
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug(   #pragma:nocover
                 "Constructing ComponentDict object, name=%s, from data=%s"
                 % (self.name, str(data)))
@@ -166,7 +161,7 @@ class ComponentDict(collections_MutableMapping):
     # dictionary mapping key->(type(val), id(val)) and
     # compare that instead.
     def __eq__(self, other):
-        if not isinstance(other, collections_Mapping):
+        if not isinstance(other, Mapping):
             return False
         return dict((key, (type(val), id(val)))
                     for key,val in self.items()) == \

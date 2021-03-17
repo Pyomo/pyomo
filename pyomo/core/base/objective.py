@@ -21,6 +21,8 @@ import logging
 from weakref import ref as weakref_ref
 import inspect
 
+from pyomo.common.log import is_debug_set
+from pyomo.common.deprecation import deprecated
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.plugin import ModelComponentFactory
@@ -33,8 +35,6 @@ from pyomo.core.base.expression import (_ExpressionData,
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.set import Set
 from pyomo.core.base import minimize, maximize
-
-from six import iteritems
 
 logger = logging.getLogger('pyomo.core')
 
@@ -319,7 +319,7 @@ class Objective(ActiveIndexedComponent):
         """
         Construct the expression(s) for this objective.
         """
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug(
                 "Constructing objective %s" % (self.name))
         if self._constructed:
@@ -400,7 +400,7 @@ class Objective(ActiveIndexedComponent):
              ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active)
              ],
-            iteritems(self._data),
+            self._data.items(),
             ( "Active","Sense","Expression"),
             lambda k, v: [ v.active,
                            ("minimize" if (v.sense == minimize) else "maximize"),
@@ -424,7 +424,7 @@ class Objective(ActiveIndexedComponent):
 
         ostream.write("\n")
         tabular_writer( ostream, prefix+tab,
-                        ((k,v) for k,v in iteritems(self._data) if v.active),
+                        ((k,v) for k,v in self._data.items() if v.active),
                         ( "Active","Value" ),
                         lambda k, v: [ v.active, value(v), ] )
 
@@ -502,16 +502,15 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
 
     # for backwards compatibility reasons
     @property
+    @deprecated("The .value property getter on SimpleObjective is deprecated. "
+                "Use the .expr property getter instead", version='4.3.11323')
     def value(self):
-        logger.warning("DEPRECATED: The .value property getter on "
-                       "SimpleObjective is deprecated. Use "
-                       "the .expr property getter instead")
         return self.expr
+
     @value.setter
+    @deprecated("The .value property setter on SimpleObjective is deprecated. "
+                "Use the set_value(expr) method instead", version='4.3.11323')
     def value(self, expr):
-        logger.warning("DEPRECATED: The .value property setter on "
-                       "SimpleObjective is deprecated. Use the "
-                       "set_value(expr) method instead")
         self.set_value(expr)
 
     @property
@@ -624,8 +623,7 @@ class ObjectiveList(IndexedObjective):
         """
         Construct the expression(s) for this objective.
         """
-        generate_debug_messages = \
-            __debug__ and logger.isEnabledFor(logging.DEBUG)
+        generate_debug_messages = is_debug_set(logger)
         if generate_debug_messages:
             logger.debug(
                 "Constructing objective %s" % (self.name))

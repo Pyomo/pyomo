@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.errors import DeveloperError, NondifferentiableError
 from pyomo.environ import (ConcreteModel, Var, Param, Set, NonNegativeReals,

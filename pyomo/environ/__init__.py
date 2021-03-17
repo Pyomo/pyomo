@@ -9,8 +9,10 @@
 #  ___________________________________________________________________________
 
 import sys as _sys
+
 if _sys.version_info[0] >= 3:
     import importlib
+
 
     def _do_import(pkg_name):
         importlib.import_module(pkg_name)
@@ -29,7 +31,6 @@ _packages = [
     'pyomo.duality',
     'pyomo.checker',
     'pyomo.repn',
-    'pyomo.pysp',
     'pyomo.neos',
     'pyomo.solvers',
     'pyomo.gdp',
@@ -45,7 +46,7 @@ _packages = [
 # we silently ignore any import errors because these
 # packages are optional and/or under development.
 #
-_optional_packages = set([
+_optional_packages = {
     'pyomo.contrib.example',
     'pyomo.contrib.fme',
     'pyomo.contrib.gdpbb',
@@ -58,7 +59,8 @@ _optional_packages = set([
     'pyomo.contrib.preprocessing',
     'pyomo.contrib.pynumero',
     'pyomo.contrib.trustregion',
-])
+    'pyomo.contrib.community_detection',
+}
 
 
 def _import_packages():
@@ -72,7 +74,7 @@ def _import_packages():
         except ImportError:
             exctype, err, tb = _sys.exc_info()  # BUG?
             import traceback
-            msg = "pyomo.environ failed to import %s:\nOriginal %s: %s\n"\
+            msg = "pyomo.environ failed to import %s:\nOriginal %s: %s\n" \
                   "Traceback:\n%s" \
                   % (pname, exctype.__name__, err,
                      ''.join(traceback.format_tb(tb)),)
@@ -95,6 +97,7 @@ def _import_packages():
             continue
         pkg = _sys.modules[pname]
         pkg.load()
+
 
 _import_packages()
 

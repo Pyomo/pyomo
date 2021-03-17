@@ -15,8 +15,8 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
-from pyutilib.th import nottest
+import pyomo.common.unittest as unittest
+from pyomo.common.unittest import nottest
 
 from pyomo.environ import ConcreteModel, RangeSet, Param, Var, Expression, ExternalFunction, VarList, sum_product, inequality, quicksum, sin, tanh
 from pyomo.core.expr.numvalue import nonpyomo_leaf_types
@@ -34,7 +34,7 @@ from pyomo.core.base.param import _ParamData, SimpleParam
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.common.log import LoggingIntercept
-from six import StringIO
+from io import StringIO
 
 
 class TestExpressionUtilities(unittest.TestCase):

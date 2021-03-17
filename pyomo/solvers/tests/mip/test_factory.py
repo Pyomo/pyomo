@@ -16,10 +16,12 @@ from os.path import abspath, dirname
 pyomodir = dirname(abspath(__file__))+"/../.."
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
-from pyutilib.services import TempfileManager
+import pyomo.common.unittest as unittest
+from pyomo.common.tempfiles import TempfileManager
 
-from pyomo.opt import AbstractProblemWriter, AbstractResultsReader, OptSolver, ReaderFactory, SolverFactory, WriterFactory
+from pyomo.opt import (AbstractProblemWriter, AbstractResultsReader,
+                       OptSolver, ReaderFactory,
+                       SolverFactory, WriterFactory)
 from pyomo.opt.base.solvers import UnknownSolver
 from pyomo.opt.plugins.sol import ResultsReader_sol
 from pyomo.solvers.plugins.solvers import PICO

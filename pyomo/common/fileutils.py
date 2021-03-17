@@ -7,6 +7,14 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+#
+#  This module was originally developed as part of the PyUtilib project
+#  Copyright (c) 2008 Sandia Corporation.
+#  This software is distributed under the BSD License.
+#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+#  the U.S. Government retains certain rights in this software.
+#  ___________________________________________________________________________
+
 
 import ctypes.util
 import glob
@@ -14,7 +22,9 @@ import inspect
 import logging
 import os
 import platform
-import six
+from six import itervalues
+import importlib.util
+import sys
 
 from .deprecation import deprecated
 from . import config
@@ -108,14 +118,14 @@ def find_path(name, validate, cwd=True, mode=os.R_OK, ext=None,
         locations.append(os.getcwd())
 
     if allow_pathlist_deep_references or os.path.basename(name) == name:
-        if isinstance(pathlist, six.string_types):
+        if isinstance(pathlist, str):
             locations.extend( pathlist.split(os.pathsep) )
         else:
             locations.extend(pathlist)
 
     extlist = ['']
     if ext:
-        if isinstance(ext, six.string_types):
+        if isinstance(ext, str):
             extlist.append(ext)
         else:
             extlist.extend(ext)
@@ -140,6 +150,7 @@ def find_file(filename, cwd=True, mode=os.R_OK, ext=None, pathlist=[],
     Parameters
     ----------
     filename : str
+    
         The file name to locate.  The file name may contain references
         to a user's home directory (``~user``), environment variables
         (``${HOME}/bin``), and shell wildcards (``?`` and ``*``); all of
@@ -310,7 +321,7 @@ def find_library(libname, cwd=True, include_PATH=True, pathlist=None):
         pathlist.extend(os.environ.get('LD_LIBRARY_PATH','').split(os.pathsep))
         if include_PATH:
             pathlist.append( os.path.join(config.PYOMO_CONFIG_DIR, 'bin') )
-    elif isinstance(pathlist, six.string_types):
+    elif isinstance(pathlist, str):
         pathlist = pathlist.split(os.pathsep)
     else:
         pathlist = list(pathlist)
@@ -377,7 +388,7 @@ def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):
     """
     if pathlist is None:
         pathlist = [ os.path.join(config.PYOMO_CONFIG_DIR, 'bin') ]
-    elif isinstance(pathlist, six.string_types):
+    elif isinstance(pathlist, str):
         pathlist = pathlist.split(os.pathsep)
     else:
         pathlist = list(pathlist)
@@ -386,6 +397,79 @@ def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):
     ext = _exeExt.get(_system(), None)
     return find_file(exename, cwd=cwd, ext=ext, mode=os.R_OK|os.X_OK,
                      pathlist=pathlist, allow_pathlist_deep_references=False)
+
+
+def import_file(path, clear_cache=False):
+    """
+    Import a module given the full path/filename of the file.
+    Replaces import_file from pyutilib (Pyomo 6.0.0).
+    
+    This function returns the module object that is created.
+    Parameters
+    ----------
+    path : str
+        Full path to .py file.
+    clear_cache: bool
+        Remove module if already loaded. The default is False.
+    """
+    path = os.path.expanduser(os.path.expandvars(path))
+    if not os.path.exists(path):
+        raise FileNotFoundError('File does not exist. Check path.')
+    module_dir, module_file = os.path.split(path)
+    module_name, module_ext = os.path.splitext(module_file)
+    if clear_cache and module_name in sys.modules:
+        del sys.modules[module_name]
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    module = spec.loader.load_module()
+    return module
+
+
+class StreamIndenter(object):
+    """
+    Mock-up of a file-like object that wraps another file-like object
+    and indents all data using the specified string before passing it to
+    the underlying file.  Since this presents a full file interface,
+    StreamIndenter objects may be arbitrarily nested.
+    """
+
+    def __init__(self, ostream, indent=' '*4):
+        self.os = ostream
+        self.indent = indent
+        self.stripped_indent = indent.rstrip()
+        self.newline = True
+
+    def __getattr__(self, name):
+        return getattr(self.os, name)
+
+    def write(self, data):
+        if not len(data):
+            return
+        lines = data.split('\n')
+        if self.newline:
+            if lines[0]:
+                self.os.write(self.indent+lines[0])
+            else:
+                self.os.write(self.stripped_indent)
+        else:
+            self.os.write(lines[0])
+        if len(lines) < 2:
+            self.newline = False
+            return
+        for line in lines[1:-1]:
+            if line:
+                self.os.write("\n"+self.indent+line)
+            else:
+                self.os.write("\n"+self.stripped_indent)
+        if lines[-1]:
+            self.os.write("\n"+self.indent+lines[-1])
+            self.newline = False
+        else:
+            self.os.write("\n")
+            self.newline = True
+
+    def writelines(self, sequence):
+        for x in sequence:
+            self.write(x)
 
 
 class _PathData(object):
@@ -626,7 +710,7 @@ class PathManager(object):
         through the PATH.
 
         """
-        for _path in six.itervalues(self._pathTo):
+        for _path in itervalues(self._pathTo):
             _path.rehash()
 
 #
