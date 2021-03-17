@@ -19,7 +19,7 @@ import logging
 from functools import reduce
 
 from pyomo.common.collections import Bunch
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import pyutilib.autotest
 import pyomo.misc.plugin
 

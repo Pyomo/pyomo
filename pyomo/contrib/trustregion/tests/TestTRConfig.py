@@ -10,7 +10,7 @@
 
 #!/usr/python/env python
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.dependencies import numpy_available
 

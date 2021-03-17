@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 # TODO: Disabled until we can confirm application to Pyomo models
-import pyomo.solvers.plugins.solvers.ps
 import pyomo.solvers.plugins.solvers.PICO
 import pyomo.solvers.plugins.solvers.CBCplugin
 import pyomo.solvers.plugins.solvers.GLPK

@@ -12,7 +12,7 @@
 Unit Tests for interfacing with sIPOPT 
 """
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import ConcreteModel, Param, Var, Block,  Suffix, value
 from pyomo.opt import SolverFactory

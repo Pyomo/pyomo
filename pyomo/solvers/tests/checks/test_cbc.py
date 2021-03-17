@@ -8,9 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-
 from pyomo.environ import SolverFactory, ConcreteModel, Var, Constraint, Objective, Integers, Boolean, Suffix, maximize
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
+
 from pyomo.common.tee import capture_output
 
 opt_cbc = SolverFactory('cbc')

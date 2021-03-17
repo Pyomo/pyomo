@@ -20,7 +20,7 @@ import subprocess
 
 from six import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.common.config as config
 from pyomo.common.log import LoggingIntercept
@@ -106,15 +106,8 @@ class TestFileUtils(unittest.TestCase):
 
     def test_import_file(self):
         import_ex = import_file(os.path.join(_this_file_dir, 'import_ex.py'))
-        if not "import_ex" in sys.modules.keys():
-            self.fail("test_import_file - failed to import the import_ex.py file")
-
-    def test_import_vars(self):
-        import_ex = import_file(os.path.join(_this_file_dir, 'import_ex.py'))
-        try:
-            importvar = import_ex.a
-        except:
-            self.fail('test_import_vars - failed to access data in import_ex.py file.')
+        self.assertIn("pyomo.common.tests.import_ex", sys.modules)
+        self.assertEqual(import_ex.b, 2)
 
     def test_import_file_no_extension(self):
         with self.assertRaises(FileNotFoundError) as context:

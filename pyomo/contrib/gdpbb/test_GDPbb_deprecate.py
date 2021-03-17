@@ -1,6 +1,6 @@
 import logging
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from six import StringIO
 
 from pyomo.common.log import LoggingIntercept

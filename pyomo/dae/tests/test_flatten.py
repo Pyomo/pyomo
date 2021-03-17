@@ -7,7 +7,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import ConcreteModel, Block, Var, Reference, Set, Constraint
 from pyomo.dae import ContinuousSet

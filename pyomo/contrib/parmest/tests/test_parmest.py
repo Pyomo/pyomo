@@ -18,7 +18,7 @@ from pyomo.common.dependencies import (
 import platform
 is_osx = platform.mac_ver()[0] != ''
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import sys
 import os
 import subprocess

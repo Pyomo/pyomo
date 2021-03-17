@@ -12,7 +12,7 @@
 #
 import pickle
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.environ import (
     ConcreteModel, Var, Param, Set, Constraint, Objective, Expression,
     ExternalFunction, value, sum_product, maximize, units,
