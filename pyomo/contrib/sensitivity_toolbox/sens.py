@@ -248,19 +248,20 @@ class SensitivityInterface(object):
         sens_data_list = block._sens_data_list
         for i, comp in enumerate(param_list):
             if comp.ctype is Param:
-                if not comp.mutable:
+                parent = comp.parent_component()
+                if not parent.mutable:
                     raise ValueError(
                             "Parameters within paramList must be mutable. "
                             "Got %s, which is not mutable." % comp.name
                             )
-                # Add a param:
+                # Add a Var:
                 if comp.is_indexed():
                     d = {k: value(comp[k]) for k in comp.index_set()}
                     var = Var(comp.index_set(), initialize=d)
                 else:
                     d = value(comp)
                     var = Var(initialize=d)
-                name = self.get_default_var_name(comp.local_name)
+                name = self.get_default_var_name(parent.local_name)
                 name = unique_component_name(block, name)
                 block.add_component(name, var)
 
@@ -273,6 +274,7 @@ class SensitivityInterface(object):
                     sens_data_list.append((var, comp, i, _NotAnIndex))
 
             elif comp.ctype is Var:
+                parent = comp.parent_component()
                 for _, data in _generate_component_items(comp):
                     if not data.fixed:
                         raise ValueError(
@@ -280,14 +282,14 @@ class SensitivityInterface(object):
                                 "fixed. Got %s, which is not fixed."
                                 % comp.name
                                 )
-                # Add a var:
+                # Add a Param:
                 if comp.is_indexed():
                     d = {k: value(comp[k]) for k in comp.index_set()}
                     param = Param(comp.index_set(), mutable=True, initialize=d)
                 else:
                     d = value(comp)
                     param = Param(mutable=True, initialize=d)
-                name = self.get_default_param_name(comp.local_name)
+                name = self.get_default_param_name(parent.local_name)
                 name = unique_component_name(block, name)
                 block.add_component(name, param)
 
