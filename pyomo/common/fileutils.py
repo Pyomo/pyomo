@@ -425,8 +425,12 @@ def import_file(path, clear_cache=False, infer_package=True):
             module_name = mod + '.' + module_name
     if clear_cache and module_name in sys.modules:
         del sys.modules[module_name]
-    spec = importlib.util.spec_from_file_location(module_name, path)
-    module = spec.loader.load_module()
+    sys.path.insert(0, module_dir)
+    try:
+        spec = importlib.util.spec_from_file_location(module_name, path)
+        module = spec.loader.load_module()
+    finally:
+        sys.path.pop(0)
     return module
 
 
