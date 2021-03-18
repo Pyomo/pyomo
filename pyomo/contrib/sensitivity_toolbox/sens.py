@@ -318,6 +318,8 @@ class SensitivityInterface(object):
         # named expressions if a node has been replaced within that
         # expression.
 
+        new_old_comp_map = ComponentMap()
+
         # clone Objective, add to Block, and update any Expressions
         for obj in list(instance.component_data_objects(Objective,
                                                 active=True,
@@ -325,6 +327,7 @@ class SensitivityInterface(object):
             tempName = unique_component_name(block, obj.local_name)
             new_expr = param_replacer.dfs_postorder_stack(obj.expr)
             block.add_component(tempName, Objective(expr=new_expr))
+            new_old_comp_map[block.component(tempName)] = obj
             obj.deactivate()
 
         # clone Constraints, add to Block, and update any Expressions
@@ -332,29 +335,34 @@ class SensitivityInterface(object):
         # Unfortunate that this deactivates and replaces constraints
         # even if they don't contain the parameters.
         # 
-        for con in list(instance.component_data_objects(Constraint, 
-                                       active=True,
-                                       descend_into=True)):
-            if con.equality:
+        old_con_list = list(instance.component_data_objects(Constraint,
+            active=True, descend_into=True))
+        last_idx = 0
+        for con in old_con_list:
+            if (con.equality or con.lower is None or con.upper is None):
                 new_expr = param_replacer.dfs_postorder_stack(con.expr)
                 block.constList.add(expr=new_expr)
+                last_idx += 1
+                new_old_comp_map[block.constList[last_idx]] = con
             else:
-                if con.lower is None or con.upper is None:
-                    new_expr = param_replacer.dfs_postorder_stack(con.expr)
-                    block.constList.add(expr=new_expr)
-                else:
-                    # Constraint must be a ranged inequality, break into
-                    # separate constraints
-                    new_body = param_replacer.dfs_postorder_stack(con.body)
-                    new_lower = param_replacer.dfs_postorder_stack(con.lower)
-                    new_upper = param_replacer.dfs_postorder_stack(con.upper)
+                # Constraint must be a ranged inequality, break into
+                # separate constraints
+                new_body = param_replacer.dfs_postorder_stack(con.body)
+                new_lower = param_replacer.dfs_postorder_stack(con.lower)
+                new_upper = param_replacer.dfs_postorder_stack(con.upper)
 
-                    # Add constraint for lower bound
-                    block.constList.add(expr=(new_lower <= new_upper))
+                # Add constraint for lower bound
+                block.constList.add(expr=(new_lower <= new_upper))
+                last_idx += 1
+                new_old_comp_map[block.constList[last_idx]] = con
 
-                    # Add constraint for upper bound
-                    block.constList.add(expr=(new_upper >= new_body))
+                # Add constraint for upper bound
+                block.constList.add(expr=(new_upper >= new_body))
+                last_idx += 1
+                new_old_comp_map[block.constList[last_idx]] = con
             con.deactivate()
+
+        return new_old_comp_map
 
     def setup_sensitivity(self, paramList):
         """
