@@ -352,12 +352,12 @@ class SensitivityInterface(object):
                 new_upper = param_replacer.dfs_postorder_stack(con.upper)
 
                 # Add constraint for lower bound
-                block.constList.add(expr=(new_lower <= new_upper))
+                block.constList.add(expr=(new_lower <= new_body))
                 last_idx += 1
                 new_old_comp_map[block.constList[last_idx]] = con
 
                 # Add constraint for upper bound
-                block.constList.add(expr=(new_upper >= new_body))
+                block.constList.add(expr=(new_body <= new_upper))
                 last_idx += 1
                 new_old_comp_map[block.constList[last_idx]] = con
             con.deactivate()
