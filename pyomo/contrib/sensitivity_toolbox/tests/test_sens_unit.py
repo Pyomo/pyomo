@@ -25,6 +25,7 @@ from pyomo.environ import (
         Suffix,
         value,
         Constraint,
+        inequality,
         NonNegativeReals,
         )
 from pyomo.core.base.component import ComponentData
@@ -61,7 +62,59 @@ def make_indexed_model():
 
     return m
 
+def make_model_with_inequalities():
+    """
+    Creates a modified version of the model used in the "parameter.py"
+    example, now with simple (one-sided) inequalities.
+    """
+    m = ConcreteModel()
+
+    m.x = Var([1, 2, 3], initialize={1: 0.15, 2: 0.15, 3: 0.0},
+            domain=NonNegativeReals)
+
+    m.eta = Param([1, 2], initialize={1: 4.5, 2: 1.0}, mutable=True)
+
+    m.const = Constraint([1, 2], rule={
+        1: 6*m.x[1] + 3*m.x[2] + 2*m.x[3] >= m.eta[1],
+        2: m.eta[2]*m.x[1] + m.x[2] - m.x[3] - 1 <= 0,
+        })
+
+    m.cost = Objective(expr=m.x[1]**2 + m.x[2]**2 + m.x[3]**2)
+
+    return m
+
+def make_model_with_ranged_inequalities():
+    """
+    Creates a modified version of the model used in the "parameter.py"
+    example, now with simple (one-sided) inequalities.
+    """
+    m = ConcreteModel()
+
+    m.x = Var([1, 2, 3], initialize={1: 0.15, 2: 0.15, 3: 0.0},
+            domain=NonNegativeReals)
+
+    m.p = Param(initialize=10.0, mutable=True)
+
+    m.eta = Param([1, 2], initialize={1: 4.5, 2: 1.0}, mutable=True)
+
+    m.const = Constraint([1, 2], rule={
+        1: inequality(
+            lower=-m.eta[1],
+            body=6*m.x[1] + 3*m.x[2] + 2*m.x[3],
+            upper=m.p + m.eta[1],
+            ),
+        2: m.eta[2]*m.x[1] + m.x[2] - m.x[3] - 1 <= 0,
+        })
+
+    m.cost = Objective(expr=m.x[1]**2 + m.x[2]**2 + m.x[3]**2)
+
+    return m
+
 class TestSensitivityInterface(unittest.TestCase):
+
+    def assertIsSubset(self, s1, s2):
+        for item in s1:
+            self.assertIn(item, s2)
     
     def test_get_names(self):
         block_name = SensitivityInterface.get_default_block_name()
@@ -209,49 +262,210 @@ class TestSensitivityInterface(unittest.TestCase):
         param_list = [instance.eta[1], instance.eta[2]]
         sens._add_sensitivity_data(param_list)
 
-        orig_constraints = list(instance.component_data_objects(Constraint,
-            active=True))
-        orig_expr = [con.expr for con in orig_constraints]
+        orig_components = (list(instance.component_data_objects(Constraint,
+            active=True)) + list(instance.component_data_objects(Objective,
+                active=True)))
+        orig_expr = [con.expr for con in orig_components]
 
+        # These will be modified to account for expected replacements
+        expected_variables = ComponentMap((con,
+            ComponentSet(identify_variables(con.expr)))
+            for con in orig_components)
+        expected_parameters = ComponentMap((con,
+            ComponentSet(identify_mutable_parameters(con.expr)))
+            for con in orig_components)
+
+        # As constructed by the `setup_sensitivity` method:
         variable_sub_map = dict((id(param), var)
                 for var, param, list_idx, _ in block._sens_data_list
                 if param_list[list_idx].ctype is Param)
-
         # Sanity check
         self.assertEqual(len(variable_sub_map), 2)
 
-        sens._replace_parameters_in_constraints(variable_sub_map)
+        # Map each param to the var that should replace it
+        param_var_map = ComponentMap((param, var)
+                for var, param, _, _ in block._sens_data_list)
+
+        # Remove parameters we expect to replace and add vars
+        # we expect to replace with.
+        for con in orig_components:
+            for param in param_var_map:
+                if param in expected_parameters[con]:
+                    expected_variables[con].add(param_var_map[param])
+                    expected_parameters[con].remove(param)
+
+        # We check that the new components (Constraints and Objectives) contain
+        # the expected parameters and variables.
+        replaced = sens._replace_parameters_in_constraints(variable_sub_map)
         self.assertEqual(len(block.constList), 2)
-        # Weak test: we check that replaced parameters don't exist in added
-        # constraints/objective, and that corresponding variables apprear at
-        # least once each.
-        added_vars = [var for var, _, _, _ in block._sens_data_list]
-        found = ComponentMap((var, False) for var in added_vars)
         for con in block.constList.values():
             self.assertTrue(con.active)
             param_set = ComponentSet(identify_mutable_parameters(con.expr))
             var_set = ComponentSet(identify_variables(con.expr))
-            for param in param_list:
-                self.assertNotIn(param, param_set)
-            for var in added_vars:
-                if var in var_set:
-                    found[var] = True
+            orig_con = replaced[con]
+            self.assertIsNot(orig_con, con)
+            self.assertEqual(param_set, expected_parameters[orig_con])
+            self.assertEqual(var_set, expected_variables[orig_con])
 
         self.assertIs(block.cost.ctype, Objective)
         obj = block.cost
         param_set = ComponentSet(identify_mutable_parameters(obj.expr))
         var_set = ComponentSet(identify_variables(obj.expr))
-        for param in param_list:
-            self.assertNotIn(param, param_set)
-        for var in added_vars:
-            if var in var_set:
-                found[var] = True
+        orig_obj = replaced[obj]
+        self.assertIsNot(orig_obj, obj)
+        self.assertEqual(param_set, expected_parameters[orig_obj])
+        self.assertEqual(var_set, expected_variables[orig_obj])
 
-        for var in added_vars:
-            self.assertTrue(found[var])
+        # Original components were deactivated but otherwise not altered
+        for con, expr in zip(orig_components, orig_expr):
+            self.assertFalse(con.active)
+            #self.assertIs(con.expr, expr)
+            # ^Why does this fail?
+            self.assertEqual(con.expr.to_string(), expr.to_string())
 
-        # Original constraints were deactivated but otherwise not altered
-        for con, expr in zip(orig_constraints, orig_expr):
+    def test_expression_replacement_inequality(self):
+        model = make_model_with_inequalities()
+        sens = SensitivityInterface(model, clone_model=False)
+        sens._add_data_block()
+        instance = sens.model_instance
+        block = sens.block
+        instance.x.fix()
+        param_list = [instance.eta[1], instance.eta[2]]
+        sens._add_sensitivity_data(param_list)
+
+        orig_components = (list(instance.component_data_objects(Constraint,
+            active=True)) + list(instance.component_data_objects(Objective,
+                active=True)))
+        orig_expr = [con.expr for con in orig_components]
+
+        # These will be modified to account for expected replacements
+        expected_variables = ComponentMap((con,
+            ComponentSet(identify_variables(con.expr)))
+            for con in orig_components)
+        expected_parameters = ComponentMap((con,
+            ComponentSet(identify_mutable_parameters(con.expr)))
+            for con in orig_components)
+
+        # As constructed by the `setup_sensitivity` method:
+        variable_sub_map = dict((id(param), var)
+                for var, param, list_idx, _ in block._sens_data_list
+                if param_list[list_idx].ctype is Param)
+        # Sanity check
+        self.assertEqual(len(variable_sub_map), 2)
+
+        # Map each param to the var that should replace it
+        param_var_map = ComponentMap((param, var)
+                for var, param, _, _ in block._sens_data_list)
+
+        # Remove parameters we expect to replace and add vars
+        # we expect to replace with.
+        for con in orig_components:
+            for param in param_var_map:
+                if param in expected_parameters[con]:
+                    expected_variables[con].add(param_var_map[param])
+                    expected_parameters[con].remove(param)
+
+        # We check that the new components (Constraints and Objectives) contain
+        # the expected parameters and variables.
+        replaced = sens._replace_parameters_in_constraints(variable_sub_map)
+        self.assertEqual(len(block.constList), 2)
+        for con in block.constList.values():
+            self.assertTrue(con.active)
+            param_set = ComponentSet(identify_mutable_parameters(con.expr))
+            var_set = ComponentSet(identify_variables(con.expr))
+            orig_con = replaced[con]
+            self.assertIsNot(orig_con, con)
+            #self.assertEqual(param_set, expected_parameters[orig_con])
+            self.assertEqual(var_set, expected_variables[orig_con])
+
+        self.assertIs(block.cost.ctype, Objective)
+        obj = block.cost
+        param_set = ComponentSet(identify_mutable_parameters(obj.expr))
+        var_set = ComponentSet(identify_variables(obj.expr))
+        orig_obj = replaced[obj]
+        self.assertIsNot(orig_obj, obj)
+        self.assertEqual(param_set, expected_parameters[orig_obj])
+        self.assertEqual(var_set, expected_variables[orig_obj])
+
+        # Original components were deactivated but otherwise not altered
+        for con, expr in zip(orig_components, orig_expr):
+            self.assertFalse(con.active)
+            #self.assertIs(con.expr, expr)
+            # ^Why does this fail?
+            self.assertEqual(con.expr.to_string(), expr.to_string())
+
+    def test_expression_replacement_ranged_inequality(self):
+        model = make_model_with_ranged_inequalities()
+        sens = SensitivityInterface(model, clone_model=False)
+        sens._add_data_block()
+        instance = sens.model_instance
+        block = sens.block
+        instance.x.fix()
+        param_list = [instance.eta[1], instance.eta[2]]
+        sens._add_sensitivity_data(param_list)
+
+        orig_components = (list(instance.component_data_objects(Constraint,
+            active=True)) + list(instance.component_data_objects(Objective,
+                active=True)))
+        orig_expr = [con.expr for con in orig_components]
+
+        # These will be modified to account for expected replacements
+        expected_variables = ComponentMap((con,
+            ComponentSet(identify_variables(con.expr)))
+            for con in orig_components)
+        expected_parameters = ComponentMap((con,
+            ComponentSet(identify_mutable_parameters(con.expr)))
+            for con in orig_components)
+
+        # As constructed by the `setup_sensitivity` method:
+        variable_sub_map = dict((id(param), var)
+                for var, param, list_idx, _ in block._sens_data_list
+                if param_list[list_idx].ctype is Param)
+        # Sanity check
+        self.assertEqual(len(variable_sub_map), 2)
+
+        # Map each param to the var that should replace it
+        param_var_map = ComponentMap((param, var)
+                for var, param, _, _ in block._sens_data_list)
+
+        # Remove parameters we expect to replace and add vars
+        # we expect to replace with.
+        for con in orig_components:
+            for param in param_var_map:
+                if param in expected_parameters[con]:
+                    expected_variables[con].add(param_var_map[param])
+                    expected_parameters[con].remove(param)
+
+        # We check that the new components (Constraints and Objectives) contain
+        # the expected parameters and variables.
+        replaced = sens._replace_parameters_in_constraints(variable_sub_map)
+        # With ranged inequalities, we end up with more constraints than we
+        # started with:
+        self.assertEqual(len(block.constList), 3)
+
+        for con in block.constList.values():
+            self.assertTrue(con.active)
+            param_set = ComponentSet(identify_mutable_parameters(con.expr))
+            var_set = ComponentSet(identify_variables(con.expr))
+            orig_con = replaced[con]
+            self.assertIsNot(orig_con, con)
+            # Note that for ranged inequalities, it is not valid to check
+            # that the two sets are equal as a mutable parameter could be
+            # contained in only one "sub-inequality"
+            self.assertIsSubset(param_set, expected_parameters[orig_con])
+            self.assertEqual(var_set, expected_variables[orig_con])
+
+        self.assertIs(block.cost.ctype, Objective)
+        obj = block.cost
+        param_set = ComponentSet(identify_mutable_parameters(obj.expr))
+        var_set = ComponentSet(identify_variables(obj.expr))
+        orig_obj = replaced[obj]
+        self.assertIsNot(orig_obj, obj)
+        self.assertEqual(param_set, expected_parameters[orig_obj])
+        self.assertEqual(var_set, expected_variables[orig_obj])
+
+        # Original components were deactivated but otherwise not altered
+        for con, expr in zip(orig_components, orig_expr):
             self.assertFalse(con.active)
             #self.assertIs(con.expr, expr)
             # ^Why does this fail?
