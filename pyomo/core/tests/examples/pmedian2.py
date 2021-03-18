@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pmedian
+from . import pmedian
 
 def pyomo_preprocess(**kwds):
     print( "PREPROCESSING %s"%(sorted(list(kwds.keys()))) )

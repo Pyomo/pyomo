@@ -33,6 +33,7 @@ from pyomo.core.expr.visitor import (
 from pyomo.core.base.param import _ParamData, SimpleParam
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.expr_errors import TemplateExpressionError
+from pyomo.common.collections import ComponentSet
 from pyomo.common.log import LoggingIntercept
 from io import StringIO
 
@@ -76,7 +77,7 @@ class TestExpressionUtilities(unittest.TestCase):
 
     def test_identify_vars_expr(self):
         #
-        # Identify variables when there are duplicates
+        # Identify variables in named expressions
         #
         m = ConcreteModel()
         m.a = Var(initialize=1)
@@ -156,7 +157,7 @@ class TestIdentifyParams(unittest.TestCase):
         m.a = Var(initialize=1)
         m.b = Var(m.I, initialize=1)
         #
-        # There are no variables in expressions with only vars
+        # There are no parameters in expressions with only vars
         #
         self.assertEqual( list(identify_mutable_parameters(m.a)), [] )
         self.assertEqual( list(identify_mutable_parameters(m.b[1])), [] )
@@ -179,7 +180,7 @@ class TestIdentifyParams(unittest.TestCase):
 
     def test_identify_mutable_parameters_expr(self):
         #
-        # Identify variables when there are duplicates
+        # Identify mutable params in named expressions
         #
         m = ConcreteModel()
         m.a = Param(initialize=1, mutable=True)
@@ -190,6 +191,17 @@ class TestIdentifyParams(unittest.TestCase):
         self.assertEqual( list(identify_mutable_parameters(m.b+m.e)), [ m.b, m.a ] )
         self.assertEqual( list(identify_mutable_parameters(m.E[0])), [ m.a ] )
         self.assertEqual( list(identify_mutable_parameters(m.E[1])), [ m.b ] )
+
+    def test_identify_mutable_parameters_logical_expr(self):
+        #
+        # Identify mutable params in logical expressions
+        #
+        m = ConcreteModel()
+        m.a = Param(initialize=0, mutable=True)
+        expr = m.a+1 == 0
+        param_set = ComponentSet(identify_mutable_parameters(expr))
+        self.assertEqual(len(param_set), 1)
+        self.assertIn(m.a, param_set)
 
     def test_identify_mutable_parameters_params(self):
         m = ConcreteModel()

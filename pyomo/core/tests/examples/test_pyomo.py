@@ -17,19 +17,20 @@ import re
 import os
 import sys
 from os.path import abspath, dirname, join
-currdir = dirname(abspath(__file__))+os.sep
-
 from filecmp import cmp
 import subprocess
 import pyomo.common.unittest as unittest
 
 from pyomo.common.dependencies import yaml_available
+from pyomo.common.fileutils import this_file_dir
 from pyomo.common.tee import capture_output
 import pyomo.core
 import pyomo.scripting.pyomo_main as main
 from pyomo.opt import check_available_solvers
 
 from io import StringIO
+
+currdir = this_file_dir()
 
 if os.path.exists(sys.exec_prefix+os.sep+'bin'+os.sep+'coverage'):
     executable=sys.exec_prefix+os.sep+'bin'+os.sep+'coverage -x '
@@ -61,14 +62,20 @@ class BaseTester(unittest.TestCase):
             OUTPUT=StringIO()
             results='results.jsn'
         with capture_output(OUTPUT):
-            os.chdir(currdir)
-            if type(cmd) is list:
-                output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + cmd)
-            elif cmd.endswith('json') or cmd.endswith('yaml'):
-                output = main.main(['solve', '--results-format=json', '--save-results=%s' % results] + [cmd])
-            else:
-                args=re.split('[ ]+',cmd)
-                output = main.main(['solve', '--solver=glpk', '--results-format=json', '--save-results=%s' % results] + list(args))
+            try:
+                _dir = os.getcwd()
+                os.chdir(currdir)
+                args = ['solve', '--solver=glpk', '--results-format=json',
+                        '--save-results=%s' % results]
+                if type(cmd) is list:
+                    args.extend(cmd)
+                elif cmd.endswith('json') or cmd.endswith('yaml'):
+                    args.append(cmd)
+                else:
+                    args.extend(re.split('[ ]+', cmd))
+                output = main.main(args)
+            finally:
+                os.chdir(_dir)
         if not 'root' in kwds:
             return OUTPUT.getvalue()
         return output
@@ -234,7 +241,7 @@ class TestJson(BaseTester):
         # Run pyomo with --output option (configfile)
         self.pyomo(join(currdir, 'test12b.json'), root=join(currdir, 'test12'))
         self.compare_json(join(currdir, "test12.jsn"), join(currdir, "test12.txt"))
-        os.remove('test12b.log')
+        os.remove(os.path.join(currdir, 'test12b.log'))
         os.remove(os.path.join(currdir, 'test12.out'))
 
     def test14_concrete_model_with_constraintlist(self):
