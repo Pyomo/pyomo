@@ -77,7 +77,7 @@ class TestExpressionUtilities(unittest.TestCase):
 
     def test_identify_vars_expr(self):
         #
-        # Identify variables when there are duplicates
+        # Identify variables in named expressions
         #
         m = ConcreteModel()
         m.a = Var(initialize=1)
@@ -157,7 +157,7 @@ class TestIdentifyParams(unittest.TestCase):
         m.a = Var(initialize=1)
         m.b = Var(m.I, initialize=1)
         #
-        # There are no variables in expressions with only vars
+        # There are no parameters in expressions with only vars
         #
         self.assertEqual( list(identify_mutable_parameters(m.a)), [] )
         self.assertEqual( list(identify_mutable_parameters(m.b[1])), [] )
@@ -180,7 +180,7 @@ class TestIdentifyParams(unittest.TestCase):
 
     def test_identify_mutable_parameters_expr(self):
         #
-        # Identify variables when there are duplicates
+        # Identify mutable params in named expressions
         #
         m = ConcreteModel()
         m.a = Param(initialize=1, mutable=True)
