@@ -375,7 +375,7 @@ class TestSensitivityInterface(unittest.TestCase):
             var_set = ComponentSet(identify_variables(con.expr))
             orig_con = replaced[con]
             self.assertIsNot(orig_con, con)
-            #self.assertEqual(param_set, expected_parameters[orig_con])
+            self.assertEqual(param_set, expected_parameters[orig_con])
             self.assertEqual(var_set, expected_variables[orig_con])
 
         self.assertIs(block.cost.ctype, Objective)
