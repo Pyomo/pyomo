@@ -108,7 +108,6 @@ information.
 #    * Extend external function interface to support units for the arguments in addition to the function itself
 
 import logging
-import six
 import sys
 
 from pyomo.common.dependencies import attempt_import
@@ -370,10 +369,7 @@ class _PyomoUnit(NumericValue):
         retstr = u'{:!~C}'.format(self._pint_unit)
         if retstr == '':
             retstr = 'dimensionless'
-        if six.PY2:
-            return str(retstr.encode('utf8'))
-        else:
-            return retstr
+        return retstr
 
     def to_string(self, verbose=None, labeler=None, smap=None,
                   compute_values=False):
@@ -1114,7 +1110,7 @@ external
                 # check if the unit is an offset unit and throw an exception if necessary
                 # TODO: should we prevent delta versions: delta_degC and delta_degF as well?
                 pint_unit_container = pint_module.util.to_units_container(pint_unit, pint_registry)
-                for (u, e) in six.iteritems(pint_unit_container):
+                for (u, e) in pint_unit_container.items():
                     if not pint_registry._units[u].is_multiplicative:
                         raise UnitsError('Pyomo units system does not support the offset units "{}".'
                                          ' Use absolute units (e.g. kelvin instead of degC) instead.'

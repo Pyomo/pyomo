@@ -16,14 +16,14 @@ import shutil
 import tempfile
 import subprocess
 
-import pyutilib.th as unittest
-from pyutilib.misc import capture_output
+import pyomo.common.unittest as unittest
 
 
 from pyomo.common import DeveloperError
 from pyomo.common.config import PYOMO_CONFIG_DIR
 from pyomo.common.fileutils import this_file
 from pyomo.common.download import FileDownloader, distro_available
+from pyomo.common.tee import capture_output
 
 class Test_FileDownloader(unittest.TestCase):
     def setUp(self):
@@ -84,14 +84,14 @@ class Test_FileDownloader(unittest.TestCase):
         with capture_output() as io:
             with self.assertRaises(SystemExit):
                 f.parse_args(['--cacert'])
-            self.assertIn('argument --cacert: expected one argument',
+        self.assertIn('argument --cacert: expected one argument',
                           io.getvalue())
 
         f = FileDownloader()
         with capture_output() as io:
             with self.assertRaises(SystemExit):
                 f.parse_args(['--cacert', '--insecure'])
-            self.assertIn('argument --cacert: expected one argument',
+        self.assertIn('argument --cacert: expected one argument',
                           io.getvalue())
 
         f = FileDownloader()
@@ -104,7 +104,7 @@ class Test_FileDownloader(unittest.TestCase):
         with capture_output() as io:
             with self.assertRaises(SystemExit):
                 f.parse_args(['--foo'])
-            self.assertIn('error: unrecognized arguments: --foo',
+        self.assertIn('error: unrecognized arguments: --foo',
                           io.getvalue())
 
     def test_set_destination_filename(self):

@@ -10,7 +10,7 @@
 
 #!/usr/bin/env python
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.config import ConfigBlock
 
 from pyomo.core.expr.current import identify_variables

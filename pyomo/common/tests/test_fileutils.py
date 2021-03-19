@@ -20,14 +20,14 @@ import subprocess
 
 from six import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.common.config as config
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.fileutils import (
     this_file, this_file_dir, find_file, find_library, find_executable, 
     PathManager, _system, _path, _exeExt, _libExt, _ExecutableData,
-    import_file
+    import_file, StreamIndenter
 )
 from pyomo.common.download import FileDownloader
 
@@ -106,20 +106,27 @@ class TestFileUtils(unittest.TestCase):
 
     def test_import_file(self):
         import_ex = import_file(os.path.join(_this_file_dir, 'import_ex.py'))
-        if not "import_ex" in sys.modules.keys():
-            self.fail("test_import_file - failed to import the import_ex.py file")
-
-    def test_import_vars(self):
-        import_ex = import_file(os.path.join(_this_file_dir, 'import_ex.py'))
-        try:
-            importvar = import_ex.a
-        except:
-            self.fail('test_import_vars - failed to access data in import_ex.py file.')
+        self.assertIn("pyomo.common.tests.import_ex", sys.modules)
+        self.assertEqual(import_ex.b, 2)
 
     def test_import_file_no_extension(self):
         with self.assertRaises(FileNotFoundError) as context:
             import_file(os.path.join(_this_file_dir, 'import_ex'))
         self.assertTrue('File does not exist' in str(context.exception))
+
+    def test_StreamIndenter_noprefix(self):
+        OUT1 = StringIO()
+        OUT2 = StreamIndenter(OUT1)
+        OUT2.write('Hello?\nHello, world!')
+        self.assertEqual('    Hello?\n    Hello, world!',
+                         OUT2.getvalue())
+
+    def test_StreamIndenter_prefix(self):
+        prefix = 'foo:'
+        OUT1 = StringIO()
+        OUT2 = StreamIndenter(OUT1, prefix)
+        OUT2.write('Hello?\nHello, world!')
+        self.assertEqual('foo:Hello?\nfoo:Hello, world!', OUT2.getvalue())
 
     def test_system(self):
         self.assertTrue(platform.system().lower().startswith(_system()))

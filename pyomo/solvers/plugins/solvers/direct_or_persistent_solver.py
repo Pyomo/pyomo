@@ -15,7 +15,7 @@ from pyomo.opt.base.solvers import OptSolver
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 import pyomo.common
 from pyomo.common.errors import ApplicationError
-from pyomo.common.collections import ComponentMap, ComponentSet, Options
+from pyomo.common.collections import ComponentMap, ComponentSet, Bunch
 from pyomo.common.tempfiles import TempfileManager
 import pyomo.opt.base.solvers
 from pyomo.opt.base.formats import ResultsFormat
@@ -101,7 +101,7 @@ class DirectOrPersistentSolver(OptSolver):
         self._symbolic_solver_labels = False
         """A bool. If true then the solver components will be given names corresponding to the pyomo component names."""
 
-        self._capabilites = Options()
+        self._capabilites = Bunch()
 
         self._referenced_variables = ComponentMap()
         """dict: {var: count} where count is the number of constraints/objective referencing the var"""

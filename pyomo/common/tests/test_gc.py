@@ -11,7 +11,7 @@
 from pyomo.common.gc_manager import PauseGC
 import gc
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 class TestPauseGC(unittest.TestCase):
     def test_gc_disable(self):

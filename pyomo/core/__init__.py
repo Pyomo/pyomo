@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import iteritems, iterkeys
 from pyomo.core.expr.numvalue import (
     value, is_constant, is_fixed, is_variable_type,
     is_potentially_variable, NumericValue, ZeroConstant,

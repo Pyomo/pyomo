@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import os
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 
 from pyomo.contrib.pynumero.dependencies import (

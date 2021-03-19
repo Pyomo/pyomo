@@ -15,7 +15,7 @@
 import os
 from os.path import abspath, dirname
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import ConcreteModel, AbstractModel, Set
 from pyomo.dae import ContinuousSet

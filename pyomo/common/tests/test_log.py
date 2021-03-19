@@ -21,7 +21,7 @@ import os
 from inspect import currentframe, getframeinfo
 from six import StringIO, PY2
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.log import (
     LoggingIntercept, WrappingFormatter, LegacyPyomoFormatter, LogHandler,

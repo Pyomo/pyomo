@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 import ctypes
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.contrib.pynumero.dependencies import numpy as np, numpy_available
 if not numpy_available:
     raise unittest.SkipTest('pynumero MA27 tests require numpy')

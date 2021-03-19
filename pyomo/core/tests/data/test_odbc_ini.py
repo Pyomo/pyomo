@@ -12,7 +12,7 @@
 #
 
 import os
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 try:
     import pyodbc

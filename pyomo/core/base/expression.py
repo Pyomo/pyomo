@@ -29,8 +29,6 @@ from pyomo.core.base.numvalue import (NumericValue,
                                       as_numeric)
 from pyomo.core.base.util import is_functor
 
-from six import iteritems
-
 logger = logging.getLogger('pyomo.core')
 
 
@@ -299,7 +297,7 @@ class Expression(IndexedComponent):
              ('Index', None if (not self.is_indexed())
                   else self._index)
              ],
-            self.iteritems(),
+            self.items(),
             ("Expression",),
             lambda k,v: \
                ["Undefined" if v.expr is None else v.expr]
@@ -319,7 +317,7 @@ class Expression(IndexedComponent):
         tabular_writer(
             ostream,
             prefix+tab,
-            ((k,v) for k,v in iteritems(self._data)),
+            ((k,v) for k,v in self._data.items()),
             ( "Value", ),
             lambda k, v: \
                ["Undefined" if v.expr is None else v()])
@@ -332,7 +330,7 @@ class Expression(IndexedComponent):
     #
     def extract_values(self):
         return {key:expression_data.expr
-                for key, expression_data in iteritems(self)}
+                for key, expression_data in self.items()}
 
     #
     # takes as input a (index, value) dictionary for updating this
@@ -348,7 +346,7 @@ class Expression(IndexedComponent):
                 "="+self.name+"; no value with index "
                 "None in input new values map.")
 
-        for index, new_value in iteritems(new_values):
+        for index, new_value in new_values.items():
             self._data[index].set_value(new_value)
 
     def _getitem_when_not_present(self, index):

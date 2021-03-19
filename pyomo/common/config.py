@@ -203,7 +203,7 @@ class Path(object):
 
 class PathList(Path):
     def __call__(self, data):
-        if hasattr(data, "__iter__") and not isinstance(data, six.string_types):
+        if hasattr(data, "__iter__") and not isinstance(data, str):
             return [ super(PathList, self).__call__(i) for i in data ]
         else:
             return [ super(PathList, self).__call__(data) ]
@@ -963,10 +963,10 @@ class ConfigBase(object):
             # well
             if isinstance(name, argparse._ActionsContainer):
                 #hasattr(_group, 'title') and \
-                #    isinstance(_group.title, six.string_types):
+                #    isinstance(_group.title, str):
                 return 2, name
 
-            if not isinstance(name, six.string_types):
+            if not isinstance(name, str):
                 raise RuntimeError(
                     'Unknown datatype (%s) for argparse group on '
                     'configuration definition %s' %

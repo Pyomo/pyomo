@@ -11,8 +11,6 @@
 import logging
 logger = logging.getLogger('pyomo.core')
 
-from six import itervalues
-
 from pyomo.common import deprecated
 from pyomo.core.base import (
     Transformation,
@@ -37,7 +35,7 @@ class RelaxIntegerVars(Transformation):
     def _apply_to(self, model, **kwds):
         options = kwds.pop('options', {})
         if kwds.get('undo', options.get('undo', False)):
-            for v, d in itervalues(model._relaxed_integer_vars[None]):
+            for v, d in model._relaxed_integer_vars[None].values():
                 bounds = v.bounds
                 v.domain = d
                 v.setlb(bounds[0])

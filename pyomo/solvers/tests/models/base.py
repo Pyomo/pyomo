@@ -12,7 +12,7 @@ from os.path import join, dirname, abspath
 import json
 import six
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.kernel as pmo
 from pyomo.core.kernel.block import IBlock

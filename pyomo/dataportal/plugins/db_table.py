@@ -8,12 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-try:
-    unicode
-except:
-    basestring = str
-    long = int
-
 import os.path
 import re
 import sys
@@ -110,7 +104,7 @@ or that there is a bug in the ODBC connector.
                     ttmp.append(float(data))
                 elif data is None:
                     ttmp.append('.')
-                elif isinstance(data, str) or isinstance(data, basestring):
+                elif isinstance(data, str):
                     nulidx = data.find('\x00')
                     if nulidx > -1:
                         data = data[:nulidx]
@@ -122,7 +116,7 @@ or that there is a bug in the ODBC connector.
         #
         # Process data from the table
         #
-        if type(tmp) in (int,long,float):
+        if type(tmp) in (int, float):
             if not self.options.param is None:
                 self._info = ["param", self.options.param.local_name, ":=", tmp]
             elif len(self.options.symbol_map) == 1:

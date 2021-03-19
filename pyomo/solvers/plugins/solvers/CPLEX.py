@@ -17,10 +17,9 @@ import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
-from pyutilib.misc import yaml_fix
 from pyomo.common.tempfiles import TempfileManager
 
-from pyomo.common.collections import ComponentMap, Options, Bunch
+from pyomo.common.collections import ComponentMap, Bunch
 from pyomo.opt.base import (
     ProblemFormat, ResultsFormat, OptSolver, BranchDirection,
 )
@@ -41,10 +40,6 @@ logger = logging.getLogger('pyomo.solvers')
 from six import iteritems
 from six.moves import xrange
 
-try:
-    unicode
-except:
-    basestring = unicode = str
 
 def _validate_file_name(cplex, filename, description):
     """Validate filenames against the set of allowable chaacters in CPLEX.
@@ -174,7 +169,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         self.set_problem_format(ProblemFormat.cpxlp)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -317,11 +312,11 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # create the temporary file - assuming that the user has already, via some external
         # mechanism, invoked warm_start() with a instance to create the warm start file.
         if self._warm_start_solve and \
-           isinstance(args[0], basestring):
+           isinstance(args[0], str):
             # we assume the user knows what they are doing...
             pass
         elif self._warm_start_solve and \
-             (not isinstance(args[0], basestring)):
+             (not isinstance(args[0], str)):
             # assign the name of the warm start file *before* calling the base class
             # presolve - the base class method ends up creating the command line,
             # and the warm start file-name is (obviously) needed there.
@@ -338,7 +333,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
         if (
             self._priorities_solve
-            and not isinstance(args[0], basestring)
+            and not isinstance(args[0], str)
             and not user_priorities
         ):
             self._priorities_file_name = TempfileManager.create_tempfile(
@@ -351,7 +346,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # NB: we must let the base class presolve run first so that the
         # symbol_map is actually constructed!
 
-        if (len(args) > 0) and (not isinstance(args[0], basestring)):
+        if (len(args) > 0) and (not isinstance(args[0], str)):
 
             if len(args) != 1:
                 raise ValueError(
@@ -437,7 +432,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         for key in self.options:
             if key == 'relax_integrality' or key == 'mipgap':
                 continue
-            elif isinstance(self.options[key], basestring) and \
+            elif isinstance(self.options[key], str) and \
                  (' ' in self.options[key]):
                 opt = ' '.join(key.split('_'))+' '+str(self.options[key])
             else:
@@ -624,7 +619,8 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 results.solver.termination_message = ' '.join(tokens)
 
         try:
-            results.solver.termination_message = yaml_fix(results.solver.termination_message)
+            if isinstance(results.solver.termination_message, str):
+                results.solver.termination_message = results.solver.termination_message.replace(':', '\\x3a')
         except:
             pass
         return results

@@ -48,7 +48,7 @@ s.t.
     f(x, y) <= eta
     h(y) <= 0
     
-Master problem must be of the form
+Root problem must be of the form
 
 min h0(y) + eta
 s.t.
@@ -109,9 +109,9 @@ def _any_common_elements(a, b):
     return False
 
 
-def _setup_subproblem(b, master_vars, relax_subproblem_cons):
+def _setup_subproblem(b, root_vars, relax_subproblem_cons):
     # first get the objective and turn it into a constraint
-    master_vars = ComponentSet(master_vars)
+    root_vars = ComponentSet(root_vars)
 
     objs = list(b.component_data_objects(pyo.Objective, descend_into=False, active=True))
     if len(objs) != 1:
@@ -129,7 +129,7 @@ def _setup_subproblem(b, master_vars, relax_subproblem_cons):
     for c in list(b.component_data_objects(pyo.Constraint, descend_into=True, active=True, sort=True)):
         if not relax_subproblem_cons:
             c_vars = ComponentSet(identify_variables(c.body, include_fixed=False))
-            if not _any_common_elements(master_vars, c_vars):
+            if not _any_common_elements(root_vars, c_vars):
                 continue
         if c.equality:
             body = c.body
@@ -167,13 +167,13 @@ class BendersCutGeneratorData(_BlockData):
         self.num_subproblems_by_rank = 0 #np.zeros(self.comm.Get_size())
         self.subproblems = list()
         self.complicating_vars_maps = list()
-        self.master_vars = list()
-        self.master_vars_indices = pyo.ComponentMap()
-        self.master_etas = list()
+        self.root_vars = list()
+        self.root_vars_indices = pyo.ComponentMap()
+        self.root_etas = list()
         self.cuts = None
         self.subproblem_solvers = list()
         self.tol = None
-        self.all_master_etas = list()
+        self.all_root_etas = list()
         self._subproblem_ndx_map = dict()  # map from ndx in self.subproblems (local) to the global subproblem ndx
 
 
@@ -183,13 +183,13 @@ class BendersCutGeneratorData(_BlockData):
     def local_num_subproblems(self):
         return len(self.subproblems)
 
-    def set_input(self, master_vars, tol=1e-6, comm = None):
+    def set_input(self, root_vars, tol=1e-6, comm = None):
         """
-        It is very important for master_vars to be in the same order for every process.
+        It is very important for root_vars to be in the same order for every process.
 
         Parameters
         ----------
-        master_vars
+        root_vars
         tol
         """
         self.comm = None
@@ -202,27 +202,27 @@ class BendersCutGeneratorData(_BlockData):
         del self.cuts
         self.cuts = pyo.ConstraintList()
         self.subproblems = list()
-        self.master_etas = list()
+        self.root_etas = list()
         self.complicating_vars_maps = list()
-        self.master_vars = list(master_vars)
-        self.master_vars_indices = pyo.ComponentMap()
-        for i, v in enumerate(self.master_vars):
-            self.master_vars_indices[v] = i
+        self.root_vars = list(root_vars)
+        self.root_vars_indices = pyo.ComponentMap()
+        for i, v in enumerate(self.root_vars):
+            self.root_vars_indices[v] = i
         self.tol = tol
         self.subproblem_solvers = list()
-        self.all_master_etas = list()
+        self.all_root_etas = list()
         self._subproblem_ndx_map = dict()
 
-    def add_subproblem(self, subproblem_fn, subproblem_fn_kwargs, master_eta, subproblem_solver='gurobi_persistent', relax_subproblem_cons=False):
+    def add_subproblem(self, subproblem_fn, subproblem_fn_kwargs, root_eta, subproblem_solver='gurobi_persistent', relax_subproblem_cons=False):
         _rank = np.argmin(self.num_subproblems_by_rank)
         self.num_subproblems_by_rank[_rank] += 1
-        self.all_master_etas.append(master_eta)
+        self.all_root_etas.append(root_eta)
         if _rank == self.comm.Get_rank():
-            self.master_etas.append(master_eta)
+            self.root_etas.append(root_eta)
             subproblem, complicating_vars_map = subproblem_fn(**subproblem_fn_kwargs)
             self.subproblems.append(subproblem)
             self.complicating_vars_maps.append(complicating_vars_map)
-            _setup_subproblem(subproblem, master_vars=[complicating_vars_map[i] for i in self.master_vars if i in complicating_vars_map], relax_subproblem_cons=relax_subproblem_cons)
+            _setup_subproblem(subproblem, root_vars=[complicating_vars_map[i] for i in self.root_vars if i in complicating_vars_map], relax_subproblem_cons=relax_subproblem_cons)
             self._subproblem_ndx_map[len(self.subproblems) - 1] = self.global_num_subproblems() - 1
 
             if isinstance(subproblem_solver, str):
@@ -232,7 +232,7 @@ class BendersCutGeneratorData(_BlockData):
                 subproblem_solver.set_instance(subproblem)
 
     def generate_cut(self):
-        coefficients = np.zeros(self.global_num_subproblems() * len(self.master_vars), dtype='d')
+        coefficients = np.zeros(self.global_num_subproblems() * len(self.root_vars), dtype='d')
         constants = np.zeros(self.global_num_subproblems(), dtype='d')
         eta_coeffs = np.zeros(self.global_num_subproblems(), dtype='d')
 
@@ -240,19 +240,19 @@ class BendersCutGeneratorData(_BlockData):
             subproblem = self.subproblems[local_subproblem_ndx]
             global_subproblem_ndx = self._subproblem_ndx_map[local_subproblem_ndx]
             complicating_vars_map = self.complicating_vars_maps[local_subproblem_ndx]
-            master_eta = self.master_etas[local_subproblem_ndx]
-            coeff_ndx = global_subproblem_ndx * len(self.master_vars)
+            root_eta = self.root_etas[local_subproblem_ndx]
+            coeff_ndx = global_subproblem_ndx * len(self.root_vars)
 
             subproblem.fix_complicating_vars = pyo.ConstraintList()
             var_to_con_map = pyo.ComponentMap()
-            for master_var in self.master_vars:
-                if master_var in complicating_vars_map:
-                    sub_var = complicating_vars_map[master_var]
-                    sub_var.value = master_var.value
-                    new_con = subproblem.fix_complicating_vars.add(sub_var - master_var.value == 0)
-                    var_to_con_map[master_var] = new_con
-            subproblem.fix_eta = pyo.Constraint(expr=subproblem._eta - master_eta.value == 0)
-            subproblem._eta.value = master_eta.value
+            for root_var in self.root_vars:
+                if root_var in complicating_vars_map:
+                    sub_var = complicating_vars_map[root_var]
+                    sub_var.value = root_var.value
+                    new_con = subproblem.fix_complicating_vars.add(sub_var - root_var.value == 0)
+                    var_to_con_map[root_var] = new_con
+            subproblem.fix_eta = pyo.Constraint(expr=subproblem._eta - root_eta.value == 0)
+            subproblem._eta.value = root_eta.value
 
             subproblem_solver = self.subproblem_solvers[local_subproblem_ndx]
             if subproblem_solver.name not in solver_dual_sign_convention:
@@ -276,9 +276,9 @@ class BendersCutGeneratorData(_BlockData):
 
             constants[global_subproblem_ndx] = pyo.value(subproblem._z)
             eta_coeffs[global_subproblem_ndx] = sign_convention * pyo.value(subproblem.dual[subproblem.obj_con])
-            for master_var in self.master_vars:
-                if master_var in complicating_vars_map:
-                    c = var_to_con_map[master_var]
+            for root_var in self.root_vars:
+                if root_var in complicating_vars_map:
+                    c = var_to_con_map[root_var]
                     coefficients[coeff_ndx] = sign_convention * pyo.value(subproblem.dual[c])
                 coeff_ndx += 1
 
@@ -292,7 +292,7 @@ class BendersCutGeneratorData(_BlockData):
 
         total_num_subproblems = self.global_num_subproblems()
         global_constants = np.zeros(total_num_subproblems, dtype='d')
-        global_coeffs = np.zeros(total_num_subproblems*len(self.master_vars), dtype='d')
+        global_coeffs = np.zeros(total_num_subproblems*len(self.root_vars), dtype='d')
         global_eta_coeffs = np.zeros(total_num_subproblems, dtype='d')
 
         comm = self.comm
@@ -309,15 +309,15 @@ class BendersCutGeneratorData(_BlockData):
         for global_subproblem_ndx in range(total_num_subproblems):
             cut_expr = global_constants[global_subproblem_ndx]
             if cut_expr > self.tol:
-                master_eta = self.all_master_etas[global_subproblem_ndx]
-                cut_expr -= global_eta_coeffs[global_subproblem_ndx] * (master_eta - master_eta.value)
-                for master_var in self.master_vars:
+                root_eta = self.all_root_etas[global_subproblem_ndx]
+                cut_expr -= global_eta_coeffs[global_subproblem_ndx] * (root_eta - root_eta.value)
+                for root_var in self.root_vars:
                     coeff = global_coeffs[coeff_ndx]
-                    cut_expr -= coeff * (master_var - master_var.value)
+                    cut_expr -= coeff * (root_var - root_var.value)
                     coeff_ndx += 1
                 new_cut = self.cuts.add(cut_expr <= 0)
                 cuts_added.append(new_cut)
             else:
-                coeff_ndx += len(self.master_vars)
+                coeff_ndx += len(self.root_vars)
 
         return cuts_added

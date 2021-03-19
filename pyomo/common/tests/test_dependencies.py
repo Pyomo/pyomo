@@ -11,7 +11,7 @@
 import inspect
 from six import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.dependencies import (

@@ -19,7 +19,7 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import ConcreteModel, AbstractModel, Var, Constraint, \
     ConstraintList, Param, RangeSet, Set, Expression, value, \
@@ -567,6 +567,27 @@ class TestConstraintCreation(unittest.TestCase):
         self.assertTrue(model.c.upper is model.p)
         self.assertEqual(model.c.equality, True)
         model.del_component(model.c)
+
+    def test_inequality(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.c = Constraint(expr=inequality(lower=-1, body=m.x))
+        self.assertEqual(m.c.lower.value, -1)
+        self.assertIs(m.c.body, m.x)
+        self.assertIs(m.c.upper, None)
+
+        del m.c
+        m.c = Constraint(expr=inequality(body=m.x, upper=1))
+        self.assertIs(m.c.lower, None)
+        self.assertIs(m.c.body, m.x)
+        self.assertEqual(m.c.upper.value, 1)
+
+        del m.c
+        m.c = Constraint(expr=inequality(lower=-1, body=m.x, upper=1))
+        self.assertEqual(m.c.lower.value, -1)
+        self.assertIs(m.c.body, m.x)
+        self.assertEqual(m.c.upper.value, 1)
+
 
 class TestSimpleCon(unittest.TestCase):
 

@@ -18,10 +18,8 @@ import logging
 import socket
 import subprocess
 
-import pyutilib.misc
-
 import pyomo.common
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 import pyomo.scripting.pyomo_parser
 
 logger = logging.getLogger('pyomo.solvers')
@@ -223,9 +221,9 @@ def help_api(options):
                     print("    "+line)
 
 def help_environment():
-    info = Options()
+    info = Bunch()
     #
-    info.python = Options()
+    info.python = Bunch()
     info.python.version = '%d.%d.%d' % sys.version_info[:3]
     info.python.executable = sys.executable
     info.python.platform = sys.platform
@@ -233,13 +231,13 @@ def help_environment():
         packages = []
         import pip
         for package in pip.get_installed_distributions():
-            packages.append(Options(name=package.project_name,
+            packages.append(Bunch(name=package.project_name,
                                     version=package.version))
         info.python.packages = packages
     except:
         pass
     #
-    info.environment = Options()
+    info.environment = Bunch()
     path = os.environ.get('PATH', None)
     if not path is None:
         info.environment['shell path'] = path.split(os.pathsep)
@@ -400,7 +398,7 @@ def print_components(data):
     print("Pyomo Model Components:")
     print("----------------------------------------------------------------")
     components = pyomo.core.base._pyomo.model_components()
-    index = pyutilib.misc.sort_index(components)
+    index = list(idx for idx, item in sorted(enumerate(components), key=lambda item: item[1]))
     for i in index:
         print("")
         print(" "+components[i][0])
@@ -411,7 +409,7 @@ def print_components(data):
     print("Pyomo Virtual Sets:")
     print("----------------------------------------------------------------")
     pyomo_sets = pyomo.core.base._pyomo.predefined_sets()
-    index = pyutilib.misc.sort_index(pyomo_sets)
+    index = list(idx for idx, item in sorted(enumerate(pyomo_sets), key=lambda item: item[1]))
     for i in index:
         print("")
         print(" "+pyomo_sets[i][0])

@@ -79,7 +79,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
             raise ActionManagerError(
                 "No solver passed to %s, use keyword option 'solver'"
                 % (type(self).__name__) )
-        if not isinstance(solver, six.string_types):
+        if not isinstance(solver, str):
             solver_name = solver.name
             if solver_name == 'asl':
                 solver_name = \
@@ -102,7 +102,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         if solver is not None:
             user_solver_options.update(solver.options)
         _options = kwds.pop('options', {})
-        if isinstance(_options, six.string_types):
+        if isinstance(_options, str):
             _options = OptSolver._options_string_to_dict(_options)
         user_solver_options.update(_options)
         user_solver_options.update(

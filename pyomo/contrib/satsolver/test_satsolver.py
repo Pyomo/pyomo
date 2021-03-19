@@ -10,7 +10,7 @@
 
 from os.path import abspath, dirname, join, normpath
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.fileutils import import_file
 from pyomo.contrib.satsolver.satsolver import satisfiable, z3_available

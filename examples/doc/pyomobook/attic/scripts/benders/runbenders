@@ -7,7 +7,7 @@
 
 # Python imports
 # @imports:
-from pyutilib.misc import import_file
+from pyomo.common.fileutils import import_file
 from pyomo.environ import *
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
