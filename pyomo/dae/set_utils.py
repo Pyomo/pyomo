@@ -99,16 +99,17 @@ def is_in_block_indexed_by(comp, s, stop_at=None):
 
 def get_indices_of_projection(index_set, *sets):
     """
-    We want to project our indexing set onto some coordinates.
-    We return the parameterization of this projection and a function
-    to recover the original index from an element of the parameterization
-    and the coordinates projected on.
+    We want to project certain sets out of our indexing set.
+    We return the parameterization of this projection (the product
+    of remaining sets) and a function to recover the original index
+    from an element of the parameterization and coordinates of the
+    sets projected out.
     """
     s_set = ComponentSet(sets)
     try:
         total_s_dim = sum([s.dimen for s in sets])
     except TypeError:
-        msg = ('get_index_set_except does not support sets with '
+        msg = ('get_indices_of_projection does not support sets with '
               'dimen == None, including those with inconsistent dimen')
         raise TypeError(msg)
 
