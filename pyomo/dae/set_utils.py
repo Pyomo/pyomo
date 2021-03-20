@@ -201,86 +201,12 @@ def get_index_set_except(comp, *sets):
         and a value for each set excluded. These values must be provided
         in the same order their Sets were provided in the sets argument.
     """
-#    s_set = ComponentSet(sets)
-#    try:
-#        total_s_dim = sum([s.dimen for s in sets])
-#    except TypeError:
-#        msg = ('get_index_set_except does not support sets with '
-#              'dimen == None, including those with inconsistent dimen')
-#        raise TypeError(msg)
-#
-#    info = {}
-#
     if not is_explicitly_indexed_by(comp, *sets):
         msg = (comp.name + ' is not indexed by at least one of ' +
                 str([s.name for s in sets]))
         raise ValueError(msg)
 
     return get_indices_of_projection(comp.index_set(), *sets)
-#
-#    index_set = comp.index_set()
-#    if isinstance(index_set, SetProduct):
-#        projection_sets = list(index_set.subsets())
-#        counter = Counter([id(_) for _ in projection_sets])
-#        for s in sets:
-#            if counter[id(s)] != 1:
-#                msg = 'Cannot omit sets that appear multiple times'
-#                raise ValueError(msg)
-#        # Need to know the location of each set within comp's index_set
-#        # location will map:
-#        #     location in comp's subsets() -> location in input sets
-#        location = {}
-#        # location should be well defined even for higher dimension sets
-#        # because this maps between lists of sets, not lists of indices
-#        other_ind_sets = []
-#        for ind_loc, ind_set in enumerate(projection_sets):
-#            found_set = False
-#            for s_loc, s_set in enumerate(sets):
-#                if ind_set is s_set:
-#                    location[ind_loc] = s_loc
-#                    found_set = True
-#                    break
-#            if not found_set:
-#                other_ind_sets.append(ind_set)
-#    else:
-#        # If index_set is not a SetProduct, only one set must have been
-#        # provided, so len(sets) == 1
-#        # Location in sets and in comp's indexing set are the same.
-#        location = {0: 0}
-#        other_ind_sets = []
-#
-#    if comp.dim() == total_s_dim: 
-#        # comp indexed by all sets and having this dimension
-#        # is sufficient to know that comp is only indexed by 
-#        # Sets in *sets
-#
-#        # In this case, return the trivial set_except and index_getter
-#
-#        # Problem: cannot construct location without a set tuple
-#        #          is that a problem with this syntax?
-#        #          Here len(newvals) should == 1
-#        info['set_except'] = [None]
-#        # index_getter returns an index corresponding to the values passed to
-#        # it, re-ordered according to order of indexing sets in component.
-#        info['index_getter'] = (lambda incomplete_index, *newvals:
-#                newvals[0] if len(newvals) <= 1 else
-#                tuple([newvals[location[i]] for i in location]))
-#        return info
-#
-#    # Now may assume other_ind_sets is nonempty.
-#    if len(other_ind_sets) == 1:
-#        set_except = other_ind_sets[0]
-#    elif len(other_ind_sets) >= 2:
-#        set_except = other_ind_sets[0].cross(*other_ind_sets[1:])
-#    else:
-#        raise ValueError('Did not expect this to happen')
-#
-#    index_getter = (lambda incomplete_index, *newvals:
-#            _complete_index(location, incomplete_index, *newvals))
-#
-#    info['set_except'] = set_except
-#    info['index_getter'] = index_getter
-#    return info
 
 
 def _complete_index(loc, index, *newvals):
