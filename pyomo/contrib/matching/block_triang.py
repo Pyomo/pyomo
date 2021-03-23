@@ -23,7 +23,7 @@ def block_triangularize(matrix, matching=None):
     Arguments
     ---------
     matrix: A SciPy sparse matrix
-    matching: A perfect matching of rows and columsn, in the form of a dict
+    matching: A perfect matching of rows and columns, in the form of a dict
               mapping row indices to column indices
     """
 
@@ -31,7 +31,7 @@ def block_triangularize(matrix, matching=None):
     if M != N:
         raise ValueError("block_triangularize does not currently "
            "support non-square matrices. Got matrix with shape %s."
-           % matrix.shape
+           % (matrix.shape,)
            )
     bg = from_biadjacency_matrix(matrix)
 
