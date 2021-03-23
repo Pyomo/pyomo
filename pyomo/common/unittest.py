@@ -458,13 +458,13 @@ class TestCase(_unittest.TestCase):
 
 
 def buildParser():
-    parser = argparse.ArgumentParser(usage='python -m pyomo.common.unittest [TARGETS] [OPTIONS] <dirs>')
+    parser = argparse.ArgumentParser(usage='python -m pyomo.common.unittest [TARGETS] [OPTIONS]')
 
     parser.add_argument(
         'targets',
         action='store',
         nargs='*',
-        default='pyomo',
+        default=['pyomo'],
         help='Packages to test')
     parser.add_argument(
         '-v',
@@ -478,7 +478,9 @@ def buildParser():
         action='append',
         dest='cat',
         default=[],
-        help='Specify the test category')
+        help='Specify the test category. \
+            Can be used several times for multiple categories (e.g., \
+            --cat=nightly --cat=smoke).')
     parser.add_argument('--xunit',
         action='store_true',
         dest='xunit',
