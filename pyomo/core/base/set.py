@@ -2701,7 +2701,10 @@ class RangeSet(Component):
                              % (self.name, data))
         if data is not None:
             raise ValueError(
-                "RangeSet.construct() does not support the data= argument.")
+                "RangeSet.construct() does not support the data= argument.\n"
+                "Initialization data (range endpoints) can only be supplied "
+                "as numbers, constants, or Params to the RangeSet() "
+                "declaration")
         self._constructed = True
 
         args, ranges = self._init_data

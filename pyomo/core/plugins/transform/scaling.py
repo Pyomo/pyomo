@@ -188,20 +188,25 @@ class ScaleModel(Transformation):
                                                remove_named_expressions=True)
 
                     # scale the rhs
-                    if c._lower is not None:
-                        c._lower = c._lower * scaling_factor
-                    if c._upper is not None:
-                        c._upper = c._upper * scaling_factor
+                    lower = c.lower
+                    upper = c.upper
+                    if lower is not None:
+                        lower = lower * scaling_factor
+                    if upper is not None:
+                        upper = upper * scaling_factor
 
                     if scaling_factor < 0:
-                        c._lower, c._upper = c._upper, c._lower
+                        lower, upper = upper, lower
 
                     if scale_constraint_dual and c in model.dual:
                         dual_value = model.dual[c]
                         if dual_value is not None:
                             model.dual[c] = dual_value / scaling_factor
-
-                    c.set_value((c._lower, body, c._upper))
+                    
+                    if c.equality:
+                        c.set_value((lower, body))
+                    else:
+                        c.set_value((lower, body, upper))
 
                 elif isinstance(c, _ObjectiveData):
                     c.expr = scaling_factor * \
