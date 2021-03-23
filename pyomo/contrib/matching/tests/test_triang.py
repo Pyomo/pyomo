@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import random
 from pyomo.contrib.matching.maximum_matching import maximum_matching
 from pyomo.contrib.matching.block_triang import block_triangularize
 # TODO: Check if scipy is available
@@ -17,6 +18,30 @@ import pyomo.common.unittest as unittest
 
 
 class TestTriangularize(unittest.TestCase):
+    def test_low_rank_exception(self):
+        N = 5
+        row = list(range(N-1))
+        col = list(range(N-1))
+        data = [1 for _ in range(N-1)]
+
+        matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
+
+        with self.assertRaises(ValueError) as exc:
+            row_block_map, col_block_map = block_triangularize(matrix)
+        self.assertIn('perfect matching', str(exc.exception))
+
+    def test_non_square_exception(self):
+        N = 5
+        row = list(range(N-1))
+        col = list(range(N-1))
+        data = [1 for _ in range(N-1)]
+
+        matrix = sps.coo_matrix((data, (row, col)), shape=(N, N-1))
+
+        with self.assertRaises(ValueError) as exc:
+            row_block_map, col_block_map = block_triangularize(matrix)
+        self.assertIn('non-square matrices', str(exc.exception))
+
     def test_identity(self):
         N = 5
         matrix = sps.identity(N).tocoo()
@@ -121,11 +146,198 @@ class TestTriangularize(unittest.TestCase):
             self.assertEqual(row_block_map[i], N-1-i)
             self.assertEqual(col_block_map[i], N-1-i)
 
-    # TODO:
-    # - Test non-decomposable matrix
-    # - Test partially decomposable matrices
-    # - Test exceptions
+    def test_bordered(self):
+        """
+        This matrix is non-decomposable
+        |x       x|
+        |  x     x|
+        |    x   x|
+        |      x x|
+        |x x x x  |
+        """
+        N = 5
+        row = []
+        col = []
+        data = []
+        # Diagonal
+        row.extend(range(N-1))
+        col.extend(range(N-1))
+        data.extend(1 for _ in range(N-1))
 
+        # Bottom row
+        row.extend(N-1 for _ in range(N-1))
+        col.extend(range(N-1))
+        data.extend(1 for _ in range(N-1))
+
+        # Right column
+        row.extend(range(N-1))
+        col.extend(N-1 for _ in range(N-1))
+        data.extend(1 for _ in range(N-1))
+
+        matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
+
+        row_block_map, col_block_map = block_triangularize(matrix)
+        row_values = set(row_block_map.values())
+        col_values = set(row_block_map.values())
+
+        self.assertEqual(len(row_values), 1)
+        self.assertEqual(len(col_values), 1)
+
+        for i in range(N):
+            self.assertEqual(row_block_map[i], 0)
+            self.assertEqual(col_block_map[i], 0)
+
+    def test_decomposable_bordered(self):
+        """
+        This matrix decomposes
+        |x        |
+        |  x      |
+        |    x   x|
+        |      x x|
+        |x x x x  |
+        """
+        N = 5
+        half = N//2
+        row = []
+        col = []
+        data = []
+
+        # Diagonal
+        row.extend(range(N-1))
+        col.extend(range(N-1))
+        data.extend(1 for _ in range(N-1))
+
+        # Bottom row
+        row.extend(N-1 for _ in range(N-1))
+        col.extend(range(N-1))
+        data.extend(1 for _ in range(N-1))
+
+        # Right column
+        row.extend(range(half, N-1))
+        col.extend(N-1 for _ in range(half, N-1))
+        data.extend(1 for _ in range(half, N-1))
+
+        matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
+
+        row_block_map, col_block_map = block_triangularize(matrix)
+        row_values = set(row_block_map.values())
+        col_values = set(row_block_map.values())
+
+        self.assertEqual(len(row_values), half+1)
+        self.assertEqual(len(col_values), half+1)
+
+        first_half_set = set(range(half))
+        for i in range(N):
+            if i < half:
+                # The first N//2 diagonal blocks are unordered
+                self.assertIn(row_block_map[i], first_half_set)
+                self.assertIn(col_block_map[i], first_half_set)
+            else:
+                self.assertEqual(row_block_map[i], half)
+                self.assertEqual(col_block_map[i], half)
+
+    def test_decomposable_tridiagonal(self):
+        """
+        This matrix decomposes into 2x2 blocks
+        |x x      |
+        |x x      |
+        |  x x x  |
+        |    x x  |
+        |      x x|
+        """
+        N = 5
+        row = []
+        col = []
+        data = []
+
+        # Diagonal
+        row.extend(range(N))
+        col.extend(range(N))
+        data.extend(1 for _ in range(N))
+
+        # Below diagonal
+        row.extend(range(1, N))
+        col.extend(range(N-1))
+        data.extend(1 for _ in range(N-1))
+
+        # Above diagonal
+        row.extend(i for i in range(N-1) if not i%2)
+        col.extend(i+1 for i in range(N-1) if not i%2)
+        data.extend(1 for i in range(N-1) if not i%2)
+
+        matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
+
+        row_block_map, col_block_map = block_triangularize(matrix)
+        row_values = set(row_block_map.values())
+        col_values = set(row_block_map.values())
+
+        self.assertEqual(len(row_values), (N+1)//2)
+        self.assertEqual(len(col_values), (N+1)//2)
+
+        for i in range((N+1)//2):
+            self.assertEqual(row_block_map[2*i], i)
+            self.assertEqual(col_block_map[2*i], i)
+
+            if 2*i+1 < N:
+                self.assertEqual(row_block_map[2*i+1], i)
+                self.assertEqual(col_block_map[2*i+1], i)
+
+    def test_decomposable_tridiagonal_shuffled(self):
+        """
+        This matrix decomposes into 2x2 blocks
+        |x x      |
+        |x x      |
+        |  x x x  |
+        |    x x  |
+        |      x x|
+        """
+        N = 5
+        row = []
+        col = []
+        data = []
+
+        # Diagonal
+        row.extend(range(N))
+        col.extend(range(N))
+        data.extend(1 for _ in range(N))
+
+        # Below diagonal
+        row.extend(range(1, N))
+        col.extend(range(N-1))
+        data.extend(1 for _ in range(N-1))
+
+        # Above diagonal
+        row.extend(i for i in range(N-1) if not i%2)
+        col.extend(i+1 for i in range(N-1) if not i%2)
+        data.extend(1 for i in range(N-1) if not i%2)
+
+        # Same results should hold after applying a random
+        # symmetric permutation.
+        random.seed(100)
+        perm = list(range(N))
+        random.shuffle(perm)
+
+        row = [perm[i] for i in row]
+        col = [perm[j] for j in col]
+
+        matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
+
+        row_block_map, col_block_map = block_triangularize(matrix)
+        row_values = set(row_block_map.values())
+        col_values = set(row_block_map.values())
+
+        self.assertEqual(len(row_values), (N+1)//2)
+        self.assertEqual(len(col_values), (N+1)//2)
+
+        for i in range((N+1)//2):
+            idx = perm[2*i]
+            self.assertEqual(row_block_map[idx], i)
+            self.assertEqual(col_block_map[idx], i)
+
+            if 2*i+1 < N:
+                idx = perm[2*i+1]
+                self.assertEqual(row_block_map[idx], i)
+                self.assertEqual(col_block_map[idx], i)
 
 if __name__ == "__main__":
     unittest.main()
