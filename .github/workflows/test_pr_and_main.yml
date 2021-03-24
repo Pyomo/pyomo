@@ -303,6 +303,7 @@ jobs:
       run: |
         IPOPT_DIR=$TPL_DIR/ipopt
         echo "$IPOPT_DIR" >> $GITHUB_PATH
+        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$IPOPT_DIR" >> $GITHUB_ENV
         mkdir -p $IPOPT_DIR
         IPOPT_TAR=${DOWNLOAD_DIR}/ipopt.tar.gz
         if test ! -e $IPOPT_TAR; then
