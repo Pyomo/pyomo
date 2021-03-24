@@ -471,6 +471,188 @@ class TestSensitivityInterface(unittest.TestCase):
             # ^Why does this fail?
             self.assertEqual(con.expr.to_string(), expr.to_string())
 
+    def test_param_const(self):
+        model = make_indexed_model()
+        param_list = [model.eta[1], model.eta[2]]
+        sens = SensitivityInterface(model, clone_model=False)
+        sens.setup_sensitivity(param_list)
 
-if __name__=="__main__":
+        block = sens.block
+        param_const = block.paramConst
+        self.assertEqual(len(param_list), len(block.paramConst))
+
+        param_var_map = ComponentMap((param, var)
+                for var, param, _, _ in block._sens_data_list)
+        var_list = [param_var_map[param] for param in param_list]
+
+        # Here we rely on the order of paramConst
+        for param, var, con in zip(param_list, var_list, param_const.values()):
+            self.assertEqual(con.body.to_string(), (var - param).to_string())
+
+    def test_param_const_indexed(self):
+        model = make_indexed_model()
+        param_list = [model.eta]
+        sens = SensitivityInterface(model, clone_model=False)
+        sens.setup_sensitivity(param_list)
+
+        block = sens.block
+        param_const = block.paramConst
+
+        param_var_map = ComponentMap((param, var)
+                for var, param, _, _ in block._sens_data_list)
+
+        for con in param_const.values():
+            var_list = list(identify_variables(con.expr))
+            mut_param_list = list(identify_mutable_parameters(con.expr))
+            self.assertEqual(len(var_list), 1)
+            self.assertEqual(len(mut_param_list), 1)
+            self.assertIs(var_list[0], param_var_map[mut_param_list[0]])
+            self.assertEqual(con.body.to_string(),
+                    (var_list[0]-mut_param_list[0]).to_string())
+
+    def test_param_const_vars(self):
+        model = make_indexed_model()
+        model.x.fix()
+        var_list = [model.x[2], model.x[1]]
+        sens = SensitivityInterface(model, clone_model=False)
+        sens.setup_sensitivity(var_list)
+
+        block = sens.block
+        param_const = block.paramConst
+        self.assertEqual(len(var_list), len(block.paramConst))
+
+        var_param_map = ComponentMap((var, param)
+                for var, param, _, _ in block._sens_data_list)
+        param_list = [var_param_map[var] for var in var_list]
+
+        # Here we rely on the order of paramConst
+        for param, var, con in zip(param_list, var_list, param_const.values()):
+            self.assertEqual(con.body.to_string(), (var - param).to_string())
+
+    def test_suffixes_setup(self):
+        model = make_indexed_model()
+        param_list = [model.eta[2], model.eta[1]]
+        sens = SensitivityInterface(model, clone_model=False)
+        sens.setup_sensitivity(param_list)
+
+        for i, (var, _, _, _) in enumerate(sens.block._sens_data_list):
+            con = sens.block.paramConst[i+1]
+            self.assertEqual(model.sens_state_0[var], i+1)
+            self.assertEqual(model.sens_state_1[var], i+1)
+            self.assertEqual(model.sens_init_constr[con], i+1)
+            self.assertEqual(model.dcdp[con], i+1)
+
+        self.assertTrue(type(model.sens_sol_state_1_z_L) is Suffix)
+        self.assertTrue(type(model.sens_sol_state_1_z_U) is Suffix)
+        self.assertTrue(type(model.ipopt_zL_out) is Suffix)
+        self.assertTrue(type(model.ipopt_zU_out) is Suffix)
+        self.assertTrue(type(model.ipopt_zL_in) is Suffix)
+        self.assertTrue(type(model.ipopt_zU_in) is Suffix)
+        self.assertTrue(type(model.dual) is Suffix)
+        self.assertTrue(type(model.DeltaP) is Suffix)
+
+    def test_perturb_parameters_unindexed(self):
+        delta = 1.0
+        model = make_indexed_model()
+        param_list = [model.eta[1], model.eta[2]]
+        model.perturbed_eta = Param([1,2], mutable=True,
+                initialize={i: p.value+delta for i, p in model.eta.items()})
+        ptb_list = [model.perturbed_eta[1], model.perturbed_eta[2]]
+
+        sens = SensitivityInterface(model, clone_model=False)
+        sens.setup_sensitivity(param_list)
+        sens.perturb_parameters(ptb_list)
+        instance = sens.model_instance
+        block = sens.block
+
+        param_var_map = ComponentMap((param, var)
+                for var, param, _, _ in sens.block._sens_data_list)
+        param_con_map = ComponentMap((param, block.paramConst[i+1])
+                for i, (_, param, _, _) in
+                enumerate(sens.block._sens_data_list))
+        for param, ptb in zip(param_list, ptb_list):
+            var = param_var_map[param]
+            con = param_con_map[param]
+            self.assertEqual(instance.sens_state_value_1[var], ptb.value)
+            self.assertEqual(instance.DeltaP[con], -delta)
+
+    def test_perturb_parameters_scalar(self):
+        delta = 1.0
+        model = make_indexed_model()
+        param_list = [model.eta[1], model.eta[2]]
+        model.perturbed_eta = Param([1,2], mutable=True,
+                initialize={i: p.value+delta for i, p in model.eta.items()})
+        ptb_list = [model.perturbed_eta[1].value, model.perturbed_eta[2].value]
+
+        sens = SensitivityInterface(model, clone_model=False)
+        sens.setup_sensitivity(param_list)
+        sens.perturb_parameters(ptb_list)
+        instance = sens.model_instance
+        block = sens.block
+
+        param_var_map = ComponentMap((param, var)
+                for var, param, _, _ in sens.block._sens_data_list)
+        param_con_map = ComponentMap((param, block.paramConst[i+1])
+                for i, (_, param, _, _) in
+                enumerate(sens.block._sens_data_list))
+        for param, ptb in zip(param_list, ptb_list):
+            var = param_var_map[param]
+            con = param_con_map[param]
+            self.assertEqual(instance.sens_state_value_1[var], ptb)
+            self.assertEqual(instance.DeltaP[con], -delta)
+
+    def test_perturb_parameters_indexed(self):
+        delta = 1.0
+        model = make_indexed_model()
+        param_list = [model.eta]
+        model.perturbed_eta = Param([1,2], mutable=True,
+                initialize={i: p.value+delta for i, p in model.eta.items()})
+        ptb_list = [model.perturbed_eta]
+
+        sens = SensitivityInterface(model, clone_model=False)
+        sens.setup_sensitivity(param_list)
+        sens.perturb_parameters(ptb_list)
+        instance = sens.model_instance
+        block = sens.block
+
+        param_var_map = ComponentMap((param, var)
+                for var, param, _, _ in sens.block._sens_data_list)
+        param_con_map = ComponentMap((param, block.paramConst[i+1])
+                for i, (_, param, _, _) in
+                enumerate(sens.block._sens_data_list))
+        for param, ptb in zip(param_list, ptb_list):
+            for idx in param:
+                obj = param[idx]
+                ptb_data = ptb[idx]
+                var = param_var_map[obj]
+                con = param_con_map[obj]
+                self.assertEqual(instance.sens_state_value_1[var],
+                        ptb_data.value)
+                self.assertEqual(instance.DeltaP[con], -delta)
+
+    def test_perturb_indexed_parameters_with_scalar(self):
+        model = make_indexed_model()
+        param_list = [model.eta]
+        ptb_list = [10.0]
+
+        sens = SensitivityInterface(model, clone_model=False)
+        sens.setup_sensitivity(param_list)
+        sens.perturb_parameters(ptb_list)
+        instance = sens.model_instance
+        block = sens.block
+
+        param_var_map = ComponentMap((param, var)
+                for var, param, _, _ in sens.block._sens_data_list)
+        param_con_map = ComponentMap((param, block.paramConst[i+1])
+                for i, (_, param, _, _) in
+                enumerate(sens.block._sens_data_list))
+        for param, ptb in zip(param_list, ptb_list):
+            for idx in param:
+                obj = param[idx]
+                var = param_var_map[obj]
+                con = param_con_map[obj]
+                self.assertEqual(instance.sens_state_value_1[var], ptb)
+                self.assertEqual(instance.DeltaP[con], obj.value-ptb)
+
+if __name__ == "__main__":
     unittest.main()
