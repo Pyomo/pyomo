@@ -21,7 +21,7 @@ env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
   PYTHON_REQUIRED_PKGS: >
-      nose coverage parameterized
+      nose coverage parameterized pybind11
   PYTHON_BASE_PKGS: >
       ply six dill ipython networkx openpyxl pathos
       pint pyro4 pyyaml sphinx_rtd_theme sympy xlrd
@@ -249,7 +249,6 @@ jobs:
         python -m pip install --cache-dir cache/pip --upgrade pip
         pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS}
         pip install --cache-dir cache/pip ${PYTHON_PACKAGES}
-        pip install --cache-dir cache/pip pybind11
         # pymysql 1.0.0: No longer supports Python 2 or pypy2
         pip install --cache-dir cache/pip pymysql || \
             pip install --cache-dir cache/pip pymysql==0.10.1
@@ -280,12 +279,11 @@ jobs:
         conda list --show-channel-urls
         conda install -q -y -c conda-forge ${PYTHON_CORE_PKGS}
         conda install -q -y -c conda-forge ${PYTHON_PACKAGES}
-        conda install -q -y -c conda-forge pybind11
         if test -z "${{matrix.slim}}"; then
-            conda install -q -y -c gurobi gurobi \
-                || echo "WARNING: Gurobi is not available"
             conda install -q -y -c ibmdecisionoptimization 'cplex>=12.10' \
                 || echo "WARNING: CPLEX Community Edition is not available"
+            conda install -q -y -c gurobi gurobi \
+                || echo "WARNING: Gurobi is not available"
             conda install -q -y -c fico-xpress xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
             for PKG in casadi cyipopt pymumps; do

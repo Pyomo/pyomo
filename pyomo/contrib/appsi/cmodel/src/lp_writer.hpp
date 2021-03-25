@@ -84,3 +84,5 @@ public:
   std::vector<std::shared_ptr<Var> > get_solve_vars();
   int current_cons_index = 0;
 };
+
+void process_lp_constraints(py::list, py::object);

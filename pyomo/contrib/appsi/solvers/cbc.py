@@ -47,8 +47,8 @@ class Cbc(PersistentSolver):
         self._writer = LPWriter()
         self._filename = None
         self._dual_sol = dict()
-        self._primal_sol = ComponentMap()
-        self._reduced_costs = ComponentMap()
+        self._primal_sol = dict()
+        self._reduced_costs = dict()
 
     def available(self, exception_flag=False):
         if self.config.executable.path() is None:
@@ -205,8 +205,8 @@ class Cbc(PersistentSolver):
         last_var_line = len(all_lines) - 1
 
         self._dual_sol = dict()
-        self._primal_sol = ComponentMap()
-        self._reduced_costs = ComponentMap()
+        self._primal_sol = dict()
+        self._reduced_costs = dict()
 
         symbol_map = self._writer.symbol_map
 
@@ -234,8 +234,8 @@ class Cbc(PersistentSolver):
             val = float(split_line[2])
             rc = float(split_line[3])
             var = symbol_map.bySymbol[name]()
-            self._primal_sol[var] = val
-            self._reduced_costs[var] = rc
+            self._primal_sol[id(var)] = (var, val)
+            self._reduced_costs[id(var)] = (var, rc)
 
         if (self.version() < (2, 10, 2) and
                 self._writer.get_active_objective() is not None and
@@ -243,11 +243,11 @@ class Cbc(PersistentSolver):
             obj_val = -obj_val
             for con, dual_val in self._dual_sol.items():
                 self._dual_sol[con] = -dual_val
-            for v, rc_val in self._reduced_costs.items():
-                self._reduced_costs[v] = -rc_val
+            for v_id, (v, rc_val) in self._reduced_costs.items():
+                self._reduced_costs[v_id] = (v, -rc_val)
 
         if results.termination_condition == TerminationCondition.optimal and self.config.load_solution:
-            for v, val in self._primal_sol.items():
+            for v_id, (v, val) in self._primal_sol.items():
                 v.value = val
             if self._writer.get_active_objective() is None:
                 results.best_feasible_objective = None
@@ -354,11 +354,11 @@ class Cbc(PersistentSolver):
 
     def load_vars(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> NoReturn:
         if vars_to_load is None:
-            for v, val in self._primal_sol.items():
+            for v_id, (v, val) in self._primal_sol.items():
                 v.value = val
         else:
             for v in vars_to_load:
-                v.value = self._primal_sol[v]
+                v.value = self._primal_sol[id(v)][1]
 
     def get_duals(self, cons_to_load = None):
         if cons_to_load is None:
@@ -368,6 +368,6 @@ class Cbc(PersistentSolver):
 
     def get_reduced_costs(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
         if vars_to_load is None:
-            return ComponentMap((k, v) for k, v in self._reduced_costs.items())
+            return ComponentMap((k, v) for k, v in self._reduced_costs.values())
         else:
-            return ComponentMap((v, self._reduced_costs[v]) for v in vars_to_load)
+            return ComponentMap((v, self._reduced_costs[id(v)][1]) for v in vars_to_load)

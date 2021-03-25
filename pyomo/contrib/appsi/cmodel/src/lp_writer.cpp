@@ -356,3 +356,171 @@ std::vector<std::shared_ptr<LPConstraint> > LPWriter::get_solve_cons()
 {
   return solve_cons;
 }
+
+
+void process_lp_constraints(py::list cons, py::object writer)
+{
+  py::object generate_standard_repn = py::module_::import("pyomo.repn.standard_repn").attr("generate_standard_repn");
+  py::object id = py::module_::import("pyomo.contrib.appsi.writers.lp_writer").attr("id");
+  py::object SimpleParam = py::module_::import("pyomo.core.base.param").attr("SimpleParam");
+  py::object _ParamData = py::module_::import("pyomo.core.base.param").attr("_ParamData");
+  py::object NumericConstant = py::module_::import("pyomo.core.expr.numvalue").attr("NumericConstant");
+  py::str cname;
+  py::object repn;
+  py::object getSymbol = writer.attr("_symbol_map").attr("getSymbol");
+  py::object labeler = writer.attr("_con_labeler");
+  py::object dfs_postorder_stack = writer.attr("_walker").attr("dfs_postorder_stack");
+  LPWriter* c_writer = writer.attr("_writer").cast<LPWriter*>();
+  py::dict var_map = writer.attr("_pyomo_var_to_solver_var_map");
+  py::dict param_map = writer.attr("_pyomo_param_to_solver_param_map");
+  py::dict pyomo_con_to_solver_con_map = writer.attr("_pyomo_con_to_solver_con_map");
+  py::dict solver_con_to_pyomo_con_map = writer.attr("_solver_con_to_pyomo_con_map");
+  py::int_ ione = 1;
+  py::float_ fone = 1.0;
+  py::type int_ = py::type::of(ione);
+  py::type float_ = py::type::of(fone);
+  py::type tmp_type = py::type::of(ione);
+  std::shared_ptr<ExpressionBase> _const;
+  py::object repn_constant;
+  std::vector<std::shared_ptr<ExpressionBase> > lin_coef;
+  std::vector<std::shared_ptr<Var> > lin_vars;
+  py::list repn_linear_coefs;
+  py::list repn_linear_vars;
+  std::vector<std::shared_ptr<ExpressionBase> > quad_coef;
+  std::vector<std::shared_ptr<Var> > quad_vars_1;
+  std::vector<std::shared_ptr<Var> > quad_vars_2;
+  py::list repn_quad_coefs;
+  py::list repn_quad_vars;
+  std::shared_ptr<LPConstraint> lp_con;
+  py::tuple v_tuple;
+  py::handle lb;
+  py::handle ub;
+  py::tuple lower_body_upper;
+  py::dict active_constraints = writer.attr("_active_constraints");
+  py::object nonlinear_expr;
+  for (py::handle c : cons)
+    {
+      lower_body_upper = active_constraints[c];
+      cname = getSymbol(c, labeler);
+      repn = generate_standard_repn(lower_body_upper[1], "compute_values"_a=false, "quadratic"_a=true);
+      nonlinear_expr = repn.attr("nonlinear_expr");
+      if (!(nonlinear_expr.is(py::none())))
+        {
+          throw py::value_error("cannot write an LP file with a nonlinear constraint");
+        }
+      repn_constant = repn.attr("constant");
+      tmp_type = py::type::of(repn_constant);
+      if (tmp_type.is(int_) || tmp_type.is(float_))
+        {
+          _const = std::make_shared<Constant>(repn_constant.cast<double>());
+        }
+      else if(tmp_type.is(SimpleParam) || tmp_type.is(_ParamData))
+        {
+          _const = param_map[id(repn_constant)].cast<std::shared_ptr<ExpressionBase> >();
+        }
+      else
+        {
+          _const = dfs_postorder_stack(repn_constant).cast<std::shared_ptr<ExpressionBase> >();
+        }
+      lin_coef.clear();
+      repn_linear_coefs = repn.attr("linear_coefs");
+      for (py::handle coef : repn_linear_coefs)
+        {
+          tmp_type = py::type::of(coef);
+          if (tmp_type.is(int_) || tmp_type.is(float_))
+            {
+              lin_coef.push_back(std::make_shared<Constant>(coef.cast<double>()));
+            }
+          else if(tmp_type.is(SimpleParam) || tmp_type.is(_ParamData))
+            {
+              lin_coef.push_back(param_map[id(coef)].cast<std::shared_ptr<ExpressionBase> >());
+            }
+          else
+            {
+              lin_coef.push_back(dfs_postorder_stack(coef).cast<std::shared_ptr<ExpressionBase> >());
+            }
+        }
+      lin_vars.clear();
+      repn_linear_vars = repn.attr("linear_vars");
+      for (py::handle v : repn_linear_vars)
+        {
+          lin_vars.push_back(var_map[id(v)].cast<std::shared_ptr<Var> >());
+        }
+      quad_coef.clear();
+      repn_quad_coefs = repn.attr("quadratic_coefs");
+      for (py::handle coef : repn_quad_coefs)
+        {
+          tmp_type = py::type::of(coef);
+          if (tmp_type.is(int_) || tmp_type.is(float_))
+            {
+              quad_coef.push_back(std::make_shared<Constant>(coef.cast<double>()));
+            }
+          else if(tmp_type.is(SimpleParam) || tmp_type.is(_ParamData))
+            {
+              quad_coef.push_back(param_map[id(coef)].cast<std::shared_ptr<ExpressionBase> >());
+            }
+          else
+            {
+              quad_coef.push_back(dfs_postorder_stack(coef).cast<std::shared_ptr<ExpressionBase> >());
+            }
+        }
+      quad_vars_1.clear();
+      quad_vars_2.clear();
+      repn_quad_vars = repn.attr("quadratic_vars");
+      for (py::handle v_tuple_handle : repn_quad_vars)
+        {
+          v_tuple = v_tuple_handle.cast<py::tuple>();
+          quad_vars_1.push_back(var_map[id(v_tuple[0])].cast<std::shared_ptr<Var> >());
+          quad_vars_2.push_back(var_map[id(v_tuple[1])].cast<std::shared_ptr<Var> >());
+        }
+
+      lp_con = std::make_shared<LPConstraint>(_const, lin_coef, lin_vars, quad_coef, quad_vars_1, quad_vars_2);
+      lp_con->name = cname;
+
+      lb = lower_body_upper[0];
+      ub = lower_body_upper[2];
+      if (!lb.is(py::none()))
+        {
+          tmp_type = py::type::of(lb);
+          if (tmp_type.is(NumericConstant))
+            {
+              lp_con->lb = std::make_shared<Constant>(lb.attr("value").cast<double>());
+            }
+          else if (tmp_type.is(int_) || tmp_type.is(float_))
+            {
+              lp_con->lb = std::make_shared<Constant>(lb.cast<double>());
+            }
+          else if(tmp_type.is(SimpleParam) || tmp_type.is(_ParamData))
+            {
+              lp_con->lb = param_map[id(lb)].cast<std::shared_ptr<ExpressionBase> >();
+            }
+          else
+            {
+              lp_con->lb = dfs_postorder_stack(lb).cast<std::shared_ptr<ExpressionBase> >();
+            }
+        }
+      if (!ub.is(py::none()))
+        {
+          tmp_type = py::type::of(ub);
+          if (tmp_type.is(NumericConstant))
+            {
+              lp_con->ub = std::make_shared<Constant>(ub.attr("value").cast<double>());
+            }
+          else if (tmp_type.is(int_) || tmp_type.is(float_))
+            {
+              lp_con->ub = std::make_shared<Constant>(ub.cast<double>());
+            }
+          else if(tmp_type.is(SimpleParam) || tmp_type.is(_ParamData))
+            {
+              lp_con->ub = param_map[id(ub)].cast<std::shared_ptr<ExpressionBase> >();
+            }
+          else
+            {
+              lp_con->ub = dfs_postorder_stack(ub).cast<std::shared_ptr<ExpressionBase> >();
+            }
+        }
+      c_writer->add_constraint(lp_con);
+      pyomo_con_to_solver_con_map[c] = py::cast(lp_con);
+      solver_con_to_pyomo_con_map[py::cast(lp_con)] = c;
+    }
+}

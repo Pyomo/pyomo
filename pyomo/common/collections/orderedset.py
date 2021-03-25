@@ -88,3 +88,4 @@ class OrderedSet(MutableSet):
     def union(self, other):
         res = OrderedSet(self)
         res.update(other)
+        return res

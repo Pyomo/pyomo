@@ -1,12 +1,10 @@
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
 #include "lp_writer.hpp"
 
-namespace py = pybind11;
 
 PYBIND11_MODULE(cmodel, m)
 {
   m.attr("inf") = inf;
+  m.def("process_lp_constraints", &process_lp_constraints);
   m.def("appsi_exp", &appsi_exp);
   m.def("appsi_log", &appsi_log);
   m.def("create_vars", &create_vars);

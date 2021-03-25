@@ -21,6 +21,9 @@ cmodel, cmodel_available = attempt_import('pyomo.contrib.appsi.cmodel.cmodel',
                                           'Please use thye "pyomo build-extensions" command')
 
 
+id = id
+
+
 class LPWriter(PersistentBase):
     def __init__(self):
         super(LPWriter, self).__init__()
@@ -104,28 +107,7 @@ class LPWriter(PersistentBase):
             self._pyomo_param_to_solver_param_map[id(p)] = cp
 
     def _add_constraints(self, cons: List[_GeneralConstraintData]):
-        for c in cons:
-            cname = self._symbol_map.getSymbol(c, self._con_labeler)
-            repn = generate_standard_repn(c.body, compute_values=False, quadratic=True)
-            if repn.nonlinear_expr is not None:
-                raise ValueError("Cannot write an LP file with a nonlinear constraint: " + c.name)
-            const = self._walker.dfs_postorder_stack(repn.constant)
-            lin_coef = [self._walker.dfs_postorder_stack(i) for i in repn.linear_coefs]
-            lin_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in repn.linear_vars]
-            quad_coef = [self._walker.dfs_postorder_stack(i) for i in repn.quadratic_coefs]
-            quad_vars_1 = [self._pyomo_var_to_solver_var_map[id(i[0])] for i in repn.quadratic_vars]
-            quad_vars_2 = [self._pyomo_var_to_solver_var_map[id(i[1])] for i in repn.quadratic_vars]
-            cc = cmodel.LPConstraint(const, lin_coef, lin_vars, quad_coef, quad_vars_1, quad_vars_2)
-            cc.name = cname
-            lb = c.lower
-            ub = c.upper
-            if lb is not None:
-                cc.lb = self._walker.dfs_postorder_stack(lb)
-            if ub is not None:
-                cc.ub = self._walker.dfs_postorder_stack(ub)
-            self._writer.add_constraint(cc)
-            self._pyomo_con_to_solver_con_map[c] = cc
-            self._solver_con_to_pyomo_con_map[cc] = c
+        cmodel.process_lp_constraints(cons, self)
 
     def _add_sos_constraints(self, cons: List[_SOSConstraintData]):
         if len(cons) != 0:
