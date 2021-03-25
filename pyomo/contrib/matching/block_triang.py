@@ -82,7 +82,7 @@ def block_triangularize(matrix, matching=None):
     # ^ This maps row indices to the blocks they belong to
     # Invert the matching to map row indices to column indices
 
-    col_row_map = {c: r for r, c in enumerate(matching)}
+    col_row_map = {c: r for r, c in matching.items()}
     assert len(col_row_map) == M
 
     col_block_map = {c: row_block_map[col_row_map[c]] for c in range(N)}
