@@ -15,8 +15,8 @@ from_biadjacency_matrix = nxb.matrix.from_biadjacency_matrix
 
 def maximum_matching(matrix):
     """
-    Returns a maximum matching of the matrix as a dict
-    from row indices to column indices.
+    Returns a maximum matching of the rows and columns of the 
+    matrix as a dict from row indices to column indices.
     """
     M, N = matrix.shape
     bg = from_biadjacency_matrix(matrix)
