@@ -9,6 +9,8 @@
 #  ___________________________________________________________________________
 
 import pyomo.environ as pyo
+from pyomo.common.dependencies import networkx_available
+from pyomo.common.dependencies import scipy_available
 from pyomo.common.collections import ComponentSet
 from pyomo.contrib.matching.interface import IncidenceGraphInterface
 import pyomo.common.unittest as unittest
@@ -63,6 +65,8 @@ def make_gas_expansion_model(N=2):
     return m
 
 
+@unittest.skipUnless(networkx_available, "networkx is not available.")
+@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestGasExpansionModel(unittest.TestCase):
     def test_imperfect_matching(self):
         model = make_gas_expansion_model()

@@ -11,12 +11,18 @@
 import random
 from pyomo.contrib.matching.maximum_matching import maximum_matching
 from pyomo.contrib.matching.block_triangularize import block_triangularize
-from pyomo.common.dependencies import scipy
+from pyomo.common.dependencies import (
+        scipy,
+        scipy_available,
+        networkx_available,
+        )
 sps = scipy.sparse
 
 import pyomo.common.unittest as unittest
 
 
+@unittest.skipUnless(networkx_available, "networkx is not available")
+@unittest.skipUnless(scipy_available, "scipy is not available")
 class TestTriangularize(unittest.TestCase):
     def test_low_rank_exception(self):
         N = 5
