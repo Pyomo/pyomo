@@ -144,5 +144,22 @@ class TestGasExpansionModel(unittest.TestCase):
                 self.assertEqual(con_block_map[model.mbal[i]], i)
                 self.assertEqual(con_block_map[model.ebal[i]], i)
 
+    def test_exception(self):
+        model = make_gas_expansion_model()
+        model.obj = pyo.Objective(expr=0)
+        igraph = IncidenceGraphInterface(model)
+
+        with self.assertRaises(ValueError) as exc:
+            variables = [model.P]
+            constraints = [model.ideal_gas]
+            igraph.maximum_matching(variables, constraints)
+        self.assertIn('must be unindexed', str(exc.exception))
+
+        with self.assertRaises(ValueError) as exc:
+            variables = [model.P]
+            constraints = [model.ideal_gas]
+            igraph.block_triangularize(variables, constraints)
+        self.assertIn('must be unindexed', str(exc.exception))
+
 if __name__ == "__main__":
     unittest.main()
