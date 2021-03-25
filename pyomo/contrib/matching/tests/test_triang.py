@@ -311,14 +311,14 @@ class TestTriangularize(unittest.TestCase):
         col.extend(i+1 for i in range(N-1) if not i%2)
         data.extend(1 for i in range(N-1) if not i%2)
 
-        # Same results should hold after applying a random
-        # symmetric permutation.
-        random.seed(100)
-        perm = list(range(N))
-        random.shuffle(perm)
+        # Same results hold after applying a random permutation.
+        row_perm = list(range(N))
+        col_perm = list(range(N))
+        random.shuffle(row_perm)
+        random.shuffle(col_perm)
 
-        row = [perm[i] for i in row]
-        col = [perm[j] for j in col]
+        row = [row_perm[i] for i in row]
+        col = [col_perm[j] for j in col]
 
         matrix = sps.coo_matrix((data, (row, col)), shape=(N, N))
 
@@ -330,14 +330,16 @@ class TestTriangularize(unittest.TestCase):
         self.assertEqual(len(col_values), (N+1)//2)
 
         for i in range((N+1)//2):
-            idx = perm[2*i]
-            self.assertEqual(row_block_map[idx], i)
-            self.assertEqual(col_block_map[idx], i)
+            row_idx = row_perm[2*i]
+            col_idx = col_perm[2*i]
+            self.assertEqual(row_block_map[row_idx], i)
+            self.assertEqual(col_block_map[col_idx], i)
 
             if 2*i+1 < N:
-                idx = perm[2*i+1]
-                self.assertEqual(row_block_map[idx], i)
-                self.assertEqual(col_block_map[idx], i)
+                row_idx = row_perm[2*i+1]
+                col_idx = col_perm[2*i+1]
+                self.assertEqual(row_block_map[row_idx], i)
+                self.assertEqual(col_block_map[col_idx], i)
 
 if __name__ == "__main__":
     unittest.main()
