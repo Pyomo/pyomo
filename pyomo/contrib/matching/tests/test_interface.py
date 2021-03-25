@@ -29,7 +29,7 @@ def make_gas_expansion_model(N=2):
 
     m.R = pyo.Param(initialize=8.31)
     m.Q = pyo.Param(m.streams, initialize=1)
-    m.gamma = pyo.Param(initialize=1.4)
+    m.gamma = pyo.Param(initialize=1.4*m.R.value)
 
     def mbal(m, i):
         if i == 0:
@@ -105,7 +105,7 @@ class TestGasExpansionModel(unittest.TestCase):
         self.assertIs(matching[model.ideal_gas[0]], model.P[0])
 
     def test_triangularize(self):
-        N = 2
+        N = 5
         model = make_gas_expansion_model(N)
         model.obj = pyo.Objective(expr=0)
         igraph = IncidenceGraphInterface(model)
@@ -132,6 +132,17 @@ class TestGasExpansionModel(unittest.TestCase):
 
         self.assertEqual(var_block_map[model.P[0]], 0)
 
+        for i in model.streams:
+            if i != model.streams.first():
+                self.assertEqual(var_block_map[model.rho[i]], i)
+                self.assertEqual(var_block_map[model.T[i]], i)
+                self.assertEqual(var_block_map[model.P[i]], i)
+                self.assertEqual(var_block_map[model.F[i]], i)
+
+                self.assertEqual(con_block_map[model.ideal_gas[i]], i)
+                self.assertEqual(con_block_map[model.expansion[i]], i)
+                self.assertEqual(con_block_map[model.mbal[i]], i)
+                self.assertEqual(con_block_map[model.ebal[i]], i)
 
 if __name__ == "__main__":
     unittest.main()
