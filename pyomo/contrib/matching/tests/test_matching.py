@@ -9,8 +9,8 @@
 #  ___________________________________________________________________________
 
 from pyomo.contrib.matching.maximum_matching import maximum_matching
-# TODO: Check if scipy is available
-import scipy.sparse as sps
+from pyomo.common.dependencies import scipy
+sps = scipy.sparse
 
 import pyomo.common.unittest as unittest
 

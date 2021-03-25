@@ -8,15 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import networkx as nx
-import networkx.algorithms.bipartite as nxb
-import networkx.algorithms.components as nxc
-import networkx.algorithms.dag as nxd
-from networkx.algorithms.bipartite.matrix import (
-        from_biadjacency_matrix,
-        )
-
 from pyomo.contrib.matching.maximum_matching import maximum_matching
+from pyomo.common.dependencies import networkx as nx
+nxb = nx.algorithms.bipartite
+nxc = nx.algorithms.components
+nxd = nx.algorithms.dag
+from_biadjacency_matrix = nxb.matrix.from_biadjacency_matrix
 
 def block_triangularize(matrix, matching=None):
     """
