@@ -17,11 +17,22 @@ from_biadjacency_matrix = nxb.matrix.from_biadjacency_matrix
 
 def block_triangularize(matrix, matching=None):
     """
+    Computes the necessary information to permute a matrix to block-lower
+    triangular form, i.e. a partition of rows and columns an ordered set
+    of diagonal blocks in such a permutation.
+
     Arguments
     ---------
     matrix: A SciPy sparse matrix
     matching: A perfect matching of rows and columns, in the form of a dict
               mapping row indices to column indices
+
+    Returns
+    -------
+    Two dicts. The first maps each row index to the index of its block in a
+    block-lower triangular permutation of the matrix. The second maps each
+    column index to the index of its block in a block-lower triangular
+    permutation of the matrix.
     """
 
     M, N = matrix.shape
@@ -76,7 +87,7 @@ def block_triangularize(matrix, matching=None):
 
     scc_block_map = {c: i for i, c in enumerate(scc_order)}
     row_block_map = {n: scc_block_map[c] for n, c in node_scc_map.items()}
-    # ^ This maps row indices to the blocks they belong to
+    # ^ This maps row indices to the blocks they belong to.
     # Invert the matching to map row indices to column indices
 
     col_row_map = {c: r for r, c in matching.items()}
