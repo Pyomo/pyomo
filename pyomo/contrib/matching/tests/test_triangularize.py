@@ -10,7 +10,7 @@
 
 import random
 from pyomo.contrib.matching.maximum_matching import maximum_matching
-from pyomo.contrib.matching.block_triang import block_triangularize
+from pyomo.contrib.matching.block_triangularize import block_triangularize
 # TODO: Check if scipy is available
 import scipy.sparse as sps
 

@@ -10,7 +10,7 @@
 
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.matching.maximum_matching import maximum_matching
-from pyomo.contrib.matching.block_triang import block_triangularize
+from pyomo.contrib.matching.block_triangularize import block_triangularize
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 
 class IncidenceGraphInterface(object):
