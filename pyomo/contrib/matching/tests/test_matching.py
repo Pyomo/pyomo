@@ -15,7 +15,7 @@ sps = scipy.sparse
 import pyomo.common.unittest as unittest
 
 
-class TestMatchingScipy(unittest.TestCase):
+class TestMatching(unittest.TestCase):
     def test_identity(self):
         N = 5
         matrix = sps.identity(N)
