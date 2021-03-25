@@ -36,8 +36,8 @@ class IncidenceGraphInterface(object):
         for comp in variables+constraints:
             if comp.is_indexed():
                 raise ValueError(
-                        "Variables and constraints must be unindexed
-                        ComponentData objects. Got %s, which is indexed."
+                        "Variables and constraints must be unindexed "
+                        "ComponentData objects. Got %s, which is indexed."
                         % comp.name
                         )
 
@@ -63,8 +63,8 @@ class IncidenceGraphInterface(object):
         for comp in variables+constraints:
             if comp.is_indexed():
                 raise ValueError(
-                        "Variables and constraints must be unindexed
-                        ComponentData objects. Got %s, which is indexed."
+                        "Variables and constraints must be unindexed "
+                        "ComponentData objects. Got %s, which is indexed."
                         % comp.name
                         )
 
