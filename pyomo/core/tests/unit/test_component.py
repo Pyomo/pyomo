@@ -10,13 +10,13 @@
 #
 # Unit Tests for components
 #
-from six import StringIO
-import pyutilib.th as unittest
+from io import StringIO
+import pyomo.common.unittest as unittest
 
 from pyomo.common import DeveloperError
 import pyomo.core.base._pyomo
 from pyomo.environ import (
-    ConcreteModel, Component, Block, Var, Set, Param,
+    ConcreteModel, Component, Block, Var, Set,
 )
 
 class TestComponent(unittest.TestCase):

@@ -10,7 +10,7 @@
 
 import os
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.checker import  ModelCheckRunner, ModelScript
 from pyomo.checker.plugins.checker import IModelChecker, ImmediateDataChecker, ImmediateTreeChecker, IterativeDataChecker, IterativeTreeChecker

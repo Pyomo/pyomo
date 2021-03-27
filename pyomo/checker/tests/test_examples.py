@@ -11,7 +11,7 @@
 import sys
 import os
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.checker import ModelCheckRunner
 from pyomo.checker.plugins.checker import PyomoModelChecker

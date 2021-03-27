@@ -12,7 +12,7 @@ import os
 import sys
 from os.path import dirname, abspath
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import (ConcreteModel, Var, Objective, RangeSet,
                            Constraint, Reals, NonNegativeIntegers,
@@ -326,8 +326,12 @@ class TestCBCUsingMock(unittest.TestCase):
         lp_file = 'fix_parsing_bug.out.lp'
         results = self.opt.solve(os.path.join(data_dir, lp_file))
 
-        self.assertEqual(3.0, results.problem.lower_bound)
-        self.assertEqual(3.0, results.problem.upper_bound)
+        if self.opt.version() < (2, 10, 2):
+            self.assertEqual(3.0, results.problem.lower_bound)
+            self.assertEqual(3.0, results.problem.upper_bound)
+        else:
+            self.assertEqual(-3.0, results.problem.lower_bound)
+            self.assertEqual(-3.0, results.problem.upper_bound)
         self.assertEqual(SolverStatus.aborted, results.solver.status)
         self.assertEqual(0.08, results.solver.system_time)
         self.assertEqual(0.09, results.solver.wallclock_time)

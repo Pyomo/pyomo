@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 """Tests the integer to binary variable reformulation."""
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.environ import ConcreteModel, Var, Integers, value
 from pyomo.environ import TransformationFactory as xfrm
 from pyomo.common.log import LoggingIntercept

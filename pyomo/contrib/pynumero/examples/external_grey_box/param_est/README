@@ -1,0 +1,18 @@
+This folder shows how an external model (e.g., external compiled code)
+can be coupled with Pyomo using the ExternalGreyBoxModel and the
+ExternalGreyBoxBlock component.
+
+The example includes a purely Pyomo version and a version with the
+external grey box model.
+- models.py: Contains the vanilla Pyomo model and a version
+  using the external grey box interface
+- generate_data.py: This file was used to generate the data files
+  data.csv and smalldata.csv. This can mostly be ignored, but it
+  does show how to solve a "square" version of both models. This
+  can be a helpful example since the external grey box model interface
+  does not support "fix"-ing of variables.
+- perform_estimation.py: This file shows how to create a parameter
+  estimation formulation that has an instance of an ExternalGreyBoxBlock
+  (and ExternalGreyBoxModel) for every data run in the parameter
+  estimation. It builds the least-squares objective function and solves
+  the problems with ipopt (pure Pyomo) and cyipopt (Pyomo with external)

@@ -18,7 +18,7 @@ import subprocess
 from collections import namedtuple
 from six import iteritems, itervalues
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.dependencies import numpy_available, attempt_import
 pyro4, pyro4_available = attempt_import('Pyro4')
@@ -142,6 +142,7 @@ class TestPyomoEnviron(unittest.TestCase):
             'textwrap',
             'tempfile',
             'xml',
+            'typing',
             # From PySP
             'filecmp',
             'optparse',

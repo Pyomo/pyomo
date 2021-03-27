@@ -22,7 +22,7 @@ import inspect
 import logging
 import os
 import platform
-import six
+from six import itervalues
 import importlib.util
 import sys
 
@@ -118,14 +118,14 @@ def find_path(name, validate, cwd=True, mode=os.R_OK, ext=None,
         locations.append(os.getcwd())
 
     if allow_pathlist_deep_references or os.path.basename(name) == name:
-        if isinstance(pathlist, six.string_types):
+        if isinstance(pathlist, str):
             locations.extend( pathlist.split(os.pathsep) )
         else:
             locations.extend(pathlist)
 
     extlist = ['']
     if ext:
-        if isinstance(ext, six.string_types):
+        if isinstance(ext, str):
             extlist.append(ext)
         else:
             extlist.extend(ext)
@@ -150,6 +150,7 @@ def find_file(filename, cwd=True, mode=os.R_OK, ext=None, pathlist=[],
     Parameters
     ----------
     filename : str
+    
         The file name to locate.  The file name may contain references
         to a user's home directory (``~user``), environment variables
         (``${HOME}/bin``), and shell wildcards (``?`` and ``*``); all of
@@ -320,7 +321,7 @@ def find_library(libname, cwd=True, include_PATH=True, pathlist=None):
         pathlist.extend(os.environ.get('LD_LIBRARY_PATH','').split(os.pathsep))
         if include_PATH:
             pathlist.append( os.path.join(config.PYOMO_CONFIG_DIR, 'bin') )
-    elif isinstance(pathlist, six.string_types):
+    elif isinstance(pathlist, str):
         pathlist = pathlist.split(os.pathsep)
     else:
         pathlist = list(pathlist)
@@ -387,7 +388,7 @@ def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):
     """
     if pathlist is None:
         pathlist = [ os.path.join(config.PYOMO_CONFIG_DIR, 'bin') ]
-    elif isinstance(pathlist, six.string_types):
+    elif isinstance(pathlist, str):
         pathlist = pathlist.split(os.pathsep)
     else:
         pathlist = list(pathlist)
@@ -398,7 +399,7 @@ def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):
                      pathlist=pathlist, allow_pathlist_deep_references=False)
 
 
-def import_file(path, clear_cache=False):
+def import_file(path, clear_cache=False, infer_package=True):
     """
     Import a module given the full path/filename of the file.
     Replaces import_file from pyutilib (Pyomo 6.0.0).
@@ -411,11 +412,17 @@ def import_file(path, clear_cache=False):
     clear_cache: bool
         Remove module if already loaded. The default is False.
     """
-    path = os.path.expanduser(os.path.expandvars(path))
+    path = os.path.normpath(os.path.abspath(os.path.expanduser(
+        os.path.expandvars(path))))
     if not os.path.exists(path):
         raise FileNotFoundError('File does not exist. Check path.')
     module_dir, module_file = os.path.split(path)
     module_name, module_ext = os.path.splitext(module_file)
+    if infer_package:
+        while module_dir and os.path.exists(
+                os.path.join(module_dir, '__init__.py')):
+            module_dir, mod = os.path.split(module_dir)
+            module_name = mod + '.' + module_name
     if clear_cache and module_name in sys.modules:
         del sys.modules[module_name]
     spec = importlib.util.spec_from_file_location(module_name, path)
@@ -709,7 +716,7 @@ class PathManager(object):
         through the PATH.
 
         """
-        for _path in six.itervalues(self._pathTo):
+        for _path in itervalues(self._pathTo):
             _path.rehash()
 
 #

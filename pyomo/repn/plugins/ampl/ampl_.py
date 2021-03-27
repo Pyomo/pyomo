@@ -14,11 +14,6 @@
 
 __all__ = ['ProblemWriter_nl']
 
-try:
-    basestring
-except:
-    basestring = str
-
 import itertools
 import logging
 import operator
@@ -562,7 +557,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                     exp.nargs(),
                                     exp.name))
                 for arg in exp.args:
-                    if isinstance(arg, basestring):
+                    if isinstance(arg, str):
                         OUTPUT.write(string_arg_str % (len(arg), arg))
                     elif arg.is_fixed():
                         self._print_nonlinear_terms_NL(arg())
@@ -1227,6 +1222,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
         if show_section_timing:
             subsection_timer.report("Write .col file")
             subsection_timer.reset()
+
+        if len(full_var_list) < 1:
+            raise ValueError("No variables appear in the Pyomo model constraints or"
+                             " objective. This is not supported by the NL file interface")
 
         #
         # Print Header

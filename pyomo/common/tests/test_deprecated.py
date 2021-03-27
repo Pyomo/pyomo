@@ -13,7 +13,7 @@ import sys
 import types
 import weakref
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common import DeveloperError
 from pyomo.common.deprecation import (

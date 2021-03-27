@@ -10,12 +10,11 @@
 
 
 import os
-import six
 import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
-from pyomo.common.collections import Options, Bunch
+from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat
@@ -54,7 +53,7 @@ class ASL(SystemCallSolver):
         #
         # Note: Undefined capabilities default to 'None'
         #
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.integer = True
         self._capabilities.quadratic_objective = True
@@ -163,7 +162,7 @@ class ASL(SystemCallSolver):
         for key in self.options:
             if key == 'solver':
                 continue
-            if isinstance(self.options[key],six.string_types) and \
+            if isinstance(self.options[key], str) and \
                (' ' in self.options[key]):
                 opt.append(key+"=\""+str(self.options[key])+"\"")
                 cmd.append(str(key)+"="+str(self.options[key]))
@@ -181,7 +180,7 @@ class ASL(SystemCallSolver):
         return Bunch(cmd=cmd, log_file=self._log_file, env=env)
 
     def _presolve(self, *args, **kwds):
-        if (not isinstance(args[0], six.string_types)) and \
+        if (not isinstance(args[0], str)) and \
            (not isinstance(args[0], IBlock)):
             self._instance = args[0]
             xfrm = TransformationFactory('mpec.nl')

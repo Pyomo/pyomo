@@ -71,6 +71,7 @@ And finally we call sIPOPT:
     This program contains Ipopt, a library for large-scale nonlinear optimization.
      Ipopt is released as open source code under the Eclipse Public License (EPL).
              For more information visit http://projects.coin-or.org/Ipopt
+    ...
     ******************************************************************************
     ...
     EXIT: Optimal Solution Found.

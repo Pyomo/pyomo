@@ -18,7 +18,7 @@ try:
 except:
     uuid_available = False
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import os
 import pyomo.contrib.parmest.parmest as parmest
 import pyomo.contrib.parmest.scenariocreator as sc

@@ -20,6 +20,7 @@ def _get_GDPopt_config():
         'LOA',  # Logic-based outer approximation
         'GLOA',  # Global logic-based outer approximation
         'LBB',  # Logic-based branch-and-bound
+        'RIC',  # Relaxation with Integer Cuts
     }
     CONFIG = ConfigBlock("GDPopt")
     CONFIG.declare("iterlim", ConfigValue(
@@ -35,7 +36,7 @@ def _get_GDPopt_config():
             "need to set subsolver time limits as well."
     ))
     CONFIG.declare("strategy", ConfigValue(
-        default="LOA", domain=In(_supported_strategies),
+        default=None, domain=In(_supported_strategies),
         description="Decomposition strategy to use."
     ))
     CONFIG.declare("tee", ConfigValue(

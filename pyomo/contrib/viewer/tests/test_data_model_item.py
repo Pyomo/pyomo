@@ -12,7 +12,7 @@
 Test data model items for QTreeView. These tests should work even without PyQt.
 """
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import ConcreteModel, Var, Block, Param, Expression, Constraint, Objective,  ExternalFunction, Reals, log, sin, sqrt, expr
 from pyomo.contrib.viewer.model_browser import ComponentDataItem

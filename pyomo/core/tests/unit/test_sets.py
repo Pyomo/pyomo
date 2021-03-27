@@ -30,11 +30,11 @@ import copy
 import itertools
 import os
 from os.path import abspath, dirname
-from six import StringIO, iterkeys
+from io import StringIO
 
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.core.base
 from pyomo.core.base.util import flatten_tuple
@@ -2721,12 +2721,10 @@ class TestSetsInPython3(unittest.TestCase):
         buf = StringIO()
         m3.pprint(ostream=buf)
         self.assertEqual(ref, buf.getvalue())
-        #
-        # six.iterkeys()
-        #
+
         m = ConcreteModel()
         v = {1:2,3:4,5:6}
-        m.INDEX = Set(initialize=iterkeys(v))
+        m.INDEX = Set(initialize=v.keys())
         m.p = Param(m.INDEX, initialize=v)
         buf = StringIO()
         m.pprint(ostream=buf)

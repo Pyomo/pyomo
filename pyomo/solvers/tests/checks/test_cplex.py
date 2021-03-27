@@ -11,7 +11,7 @@
 import os
 
 from pyomo.common.tempfiles import TempfileManager
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.kernel as pmo
 from pyomo.core import Binary, ConcreteModel, Constraint, Objective, Var, Integers, RangeSet, minimize, quicksum, Suffix

@@ -11,19 +11,18 @@
 # Unit Tests for Elements of a Block
 #
 
+from io import StringIO
 import os
 import sys
-import six
 import types
-
-from six import StringIO, iterkeys
+import json
 
 from copy import deepcopy
 from os.path import abspath, dirname, join
 
 currdir = dirname( abspath(__file__) )
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import (AbstractModel, ConcreteModel, Var, Set, 
                            Param, Block, Suffix, Constraint, Component,
@@ -343,6 +342,15 @@ class TestGenerators(unittest.TestCase):
         # unsorted all_blocks
         self.assertEqual(sorted([id(comp) for comp in model.block_data_objects(sort=False)]),
                          sorted([id(comp) for comp in [model,]+model.component_data_lists[Block]]))
+
+    def test_mixed_index_type(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,'1',3.5,4])
+        m.x = Var(m.I)
+        v = list(m.component_data_objects(Var, sort=True))
+        self.assertEqual(len(v), 4)
+        for a,b in zip([m.x[1], m.x[3.5], m.x[4], m.x['1']], v):
+            self.assertIs(a, b)
 
 
 class HierarchicalModel(object):
@@ -770,7 +778,7 @@ class TestBlock(unittest.TestCase):
         b.clear()
         b.transfer_attributes_from(c)
         self.assertEqual(list(b.component_map()), ['y','x','z'])
-        self.assertEqual(sorted(list(iterkeys(c))), ['x','y','z'])
+        self.assertEqual(sorted(list(c.keys())), ['x','y','z'])
         self.assertIs(b.x, c['x'])
         self.assertIsNot(b.y, c['y'])
         self.assertIs(b.y, b_y)
@@ -1362,7 +1370,7 @@ class TestBlock(unittest.TestCase):
         def assertWorks(self, key, pm):
             self.assertIs(pm[key.local_name], key)
         def assertFails(self, key, pm):
-            if not isinstance(key, six.string_types):
+            if not isinstance(key, str):
                 key = key.local_name
             self.assertRaises(KeyError, pm.__getitem__, key)
 
@@ -2230,9 +2238,11 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1.out"), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve1.out"), join(currdir,"solve1.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve1.out"), 'r') as out, \
+            open(join(currdir,"solve1.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
         #
         def d_rule(model):
             return model.x[1] >= 0
@@ -2241,17 +2251,21 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1x.out"), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve1x.out"), join(currdir,"solve1.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve1x.out"), 'r') as out, \
+            open(join(currdir,"solve1.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
         #
         model.d.activate()
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1a.out"), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve1a.out"), join(currdir,"solve1a.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve1a.out"), 'r') as out, \
+            open(join(currdir,"solve1a.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
         #
         model.d.deactivate()
         def e_rule(model, i):
@@ -2262,17 +2276,21 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1y.out"), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve1y.out"), join(currdir,"solve1.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve1y.out"), 'r') as out, \
+            open(join(currdir,"solve1.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
         #
         model.e.activate()
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1b.out"), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve1b.out"), join(currdir,"solve1b.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve1b.out"), 'r') as out, \
+            open(join(currdir,"solve1b.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve4(self):
@@ -2292,9 +2310,11 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,'solve4.out'), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve4.out"), join(currdir,"solve1.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve4.out"), 'r') as out, \
+            open(join(currdir,"solve1.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve6(self):
@@ -2321,9 +2341,11 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,'solve6.out'), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve6.out"), join(currdir,"solve6.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve6.out"), 'r') as out, \
+            open(join(currdir,"solve6.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve7(self):
@@ -2351,9 +2373,11 @@ class TestBlock(unittest.TestCase):
         #model.display()
         model.solutions.store_to(results)
         results.write(filename=join(currdir,'solve7.out'), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve7.out"), join(currdir,"solve7.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve7.out"), 'r') as out, \
+            open(join(currdir,"solve7.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
 
 
     def test_abstract_index(self):

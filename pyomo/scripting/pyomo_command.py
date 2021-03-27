@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.dependencies import pympler_available
-from pyomo.common.collections import Options, Container
+from pyomo.common.collections import Bunch
 import pyomo.scripting.util
 from pyomo.core import ConcreteModel
 
@@ -273,12 +273,12 @@ def add_misc_group(parser):
     return group
 
 
-def run_pyomo(options=Options(), parser=None):
-    data = Options(options=options)
+def run_pyomo(options=Bunch(), parser=None):
+    data = Bunch(options=options)
 
     if options.model.filename == '':
         parser.print_help()
-        return Container()
+        return Bunch()
 
     try:
         pyomo.scripting.util.setup_environment(data)
@@ -307,7 +307,7 @@ def run_pyomo(options=Options(), parser=None):
                                           model=ConcreteModel(),
                                           instance=None,
                                           results=None)
-            return Container()                                   #pragma:nocover
+            return Bunch()                                   #pragma:nocover
 
     try:
         model_data = pyomo.scripting.util.create_model(data)
@@ -330,7 +330,7 @@ def run_pyomo(options=Options(), parser=None):
                                           model=model_data.model,
                                           instance=model_data.instance,
                                           results=None)
-            return Container(instance=model_data.instance)
+            return Bunch(instance=model_data.instance)
 
     try:
         opt_data = pyomo.scripting.util.apply_optimizer(data,
@@ -361,7 +361,7 @@ def run_pyomo(options=Options(), parser=None):
                                       instance=model_data.instance,
                                       results=opt_data.results)
 
-        return Container(options=options,
+        return Bunch(options=options,
                          instance=model_data.instance,
                          results=opt_data.results,
                          local=opt_data.local)

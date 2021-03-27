@@ -10,7 +10,7 @@
 
 """Tests for the MindtPy solver."""
 import pyomo.core.base.symbolic
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.contrib.mindtpy.tests.eight_process_problem import \
     EightProcessFlowsheet
 from pyomo.contrib.mindtpy.tests.MINLP_simple import SimpleMINLP as SimpleMINLP

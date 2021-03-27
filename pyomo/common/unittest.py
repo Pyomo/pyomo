@@ -10,24 +10,88 @@
 
 import enum
 import logging
-import math
-import six
 import sys
-
-# Import base classes privately (so that we have handles on them)
-import pyutilib.th.pyunit as _pyunit
-from pyutilib.th.pyunit import unittest as _unittest
+from io import StringIO
 
 # Now, import the base unittest environment.  We will override things
 # specifically later
 from unittest import *
-from pyutilib.th import *
+import unittest as _unittest
 
 from pyomo.common.collections import Mapping, Sequence
 from pyomo.common.tee import capture_output
 
 # This augments the unittest exports with two additional decorators
 __all__ = _unittest.__all__ + ['category', 'nottest']
+
+from unittest import mock
+
+def _category_to_tuple(_cat):
+    _cat = str(_cat).lower().strip()
+    if _cat.endswith('=0') or _cat.endswith('=1'):
+        _val = int(_cat[-1])
+        _cat = _cat[:-2]
+    else:
+        _val = 1
+    if _cat and _cat[0] in '!~-':
+        _val = 1 - _val
+        _cat = _cat[1:]
+    return _cat, _val
+
+def category(*args, **kwargs):
+    # Get the set of categories for this test
+    _categories = {}
+    for cat in args:
+        _cat, _val = _category_to_tuple(cat)
+        if not _cat:
+            continue
+        _categories[_cat] = _val
+
+    # Note: we used to try and short-circuit the nosetest test selection
+    # and return test skips for tests that couldn't/wouldn't be run.
+    # However, this code was unreliable, as categories could be set by
+    # both decorating the TestCase (class) and the function.  As a
+    # result, we will just rely on nosetest to do the right thing.
+
+    def _id(func):
+        if hasattr(func, '__mro__') and TestCase in func.__mro__:
+            # @category() called on a TestCase class
+            if len(_categories) > (1 if 'fragile' in _categories else 0):
+                for c,v in func.unspecified_categories.items():
+                    setattr(func, c, v)
+                    _categories.setdefault(c, v)
+            default_updates = {}
+            for c,v in _categories.items():
+                if c in func.unspecified_categories:
+                    default_updates[c] = v
+                setattr(func, c, v)
+            if default_updates:
+                for fcn in func.__dict__.values():
+                    if hasattr(fcn, '_categories'):
+                        for c,v in default_updates.items():
+                            if c not in fcn._categories:
+                                setattr(fcn, c, v)
+        else:
+            # This is a (currently unbound) method definition
+            if len(_categories) > (1 if 'fragile' in _categories else 0):
+                for c,v in TestCase.unspecified_categories.items():
+                    setattr(func, c, v)
+            for c,v in _categories.items():
+                setattr(func, c, v)
+            setattr(func, '_categories', _categories)
+        return func
+    return _id
+
+
+try:
+    from nose.tools import nottest
+except ImportError:
+
+    def nottest(func):
+        """Decorator to mark a function or method as *not* a test"""
+        func.__test__ = False
+        return func
+
 
 def _runner(q, qualname):
     "Utility wrapper for running functions, used by timeout()"
@@ -47,7 +111,7 @@ def _runner(q, qualname):
     else:
         qualname, fcn, args, kwargs = qualname
     _runner.data[qualname] = None
-    OUT = six.StringIO()
+    OUT = StringIO()
     try:
         with capture_output(OUT):
             result = fcn(*args, **kwargs)
@@ -184,7 +248,7 @@ def timeout(seconds, require_fork=False):
     return timeout_decorator
 
 
-class TestCase(_pyunit.TestCase):
+class TestCase(_unittest.TestCase):
     """A Pyomo-specific class whose instances are single test cases.
 
     This class derives from unittest.TestCase and provides the following
@@ -197,6 +261,32 @@ class TestCase(_pyunit.TestCase):
     -------------------------------
     """
     __doc__ += _unittest.TestCase.__doc__
+    smoke = 1
+    nightly = 1
+    expensive = 0
+    fragile = 0
+    # pyutilib_th will need to be changed to pyomo_unittest after
+    # rewriting the test driver
+    pyutilib_th = 1
+    _default_categories = True
+    unspecified_categories = {
+        'smoke':0, 'nightly':0, 'expensive':0, 'fragile':0 }
+
+
+    @staticmethod
+    def parse_categories(category_string):
+        return tuple(
+            tuple(_category_to_tuple(_cat) for _cat in _set.split(','))
+            for _set in category_string.split()
+        )
+
+    @staticmethod
+    def categories_to_string(categories):
+        return ' '.join(','.join("%s=%s" % y for y in x) for x in categories)
+
+    def shortDescription(self):
+        # Disable nose's use of test docstrings for the test description.
+        return None
 
     def assertStructuredAlmostEqual(self, first, second,
                                     places=None, msg=None, delta=None,
@@ -251,7 +341,7 @@ class TestCase(_pyunit.TestCase):
         reltol: float
             the relative tolerance.  `first` and `second` are considered
             equivalent if their absolute difference divided by the
-            larget of `first` and `second` is less than `reltol`
+            largest of `first` and `second` is less than `reltol`
         allow_second_superset: bool
             If True, then extra entries in containers found on second
             will not trigger a failure.
@@ -316,7 +406,7 @@ class TestCase(_pyunit.TestCase):
                             str(e), _unittest.case.safe_repr(key)))
             return # PASS!
 
-        elif any(isinstance(_, six.string_types) for _ in args):
+        elif any(isinstance(_, str) for _ in args):
             if first == second:
                 return # PASS!
 
