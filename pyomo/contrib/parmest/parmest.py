@@ -12,7 +12,7 @@
 #### Wrapping mpi-sppy functionality and local option Jan 2021, Feb 2021
 
 # False implies always use of the EF that is local to parmest
-use_mpisppy = True  # Use it if we can but use local if not.
+use_mpisppy = False  # Use it if we can but use local if not.
 if use_mpisppy:
     try:
         import mpisppy.utils.sputils as sputils
@@ -65,46 +65,6 @@ def ef_nonants(ef):
     else:
         return local_ef.ef_nonants(ef)
 
-#=============================================
-def _object_from_string(instance, vstr):
-    """
-    Create a Pyomo object from a string; it is attached to instance
-    args:
-        instance: a concrete pyomo model
-        vstr: a particular Var or Param (e.g. "pp.Keq_a[2]")
-    output:
-        the object 
-    NOTE: We need to deal with blocks 
-          and with indexes that might really be strings or ints.
-          There can be blocks within blocks and the Var might not be indexed...
-    TBD: do a better job with indexes (e.g., tuples of integers)
-    """
-
-    def ni(s):
-        l = s.find('[')
-        if l == -1:
-            indexstr = None
-            basestr = s
-        else:
-            r = s.find(']')
-            indexstr = s[l+1:r]
-            basestr = s[:l]
-        return basestr, indexstr
-
-    retval = instance
-    parts = vstr.split('.')
-    for i in range(len(parts)):
-        bname, bindex = ni(parts[i])
-        if bindex is None:
-            retval = getattr(retval, bname)
-        else:
-            try:
-                bindex = int(bindex)  # TBD: improve
-            except:
-                pass
-            retval = getattr(retval, bname)[bindex]
-    return retval
-
 
 def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_data=None):
     """
@@ -115,12 +75,12 @@ def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_da
     -----------
     scenario_name: `str` Scenario name should end with a number
     node_names: `None` ( Not used here )
-    outer_cb_data : dict with ["callback"], ["BootList"], 
-                     ["theta_names"], ["cb_data"], etc.
-                    "cb_data" is passed through to user's callback function
-                    that is the "callback" value.
-                    "BootList" is None or bootstrap experiment number list.
-                    (called cb_data by mpisppy)
+    cb_data : dict with ["callback"], ["BootList"], 
+              ["theta_names"], ["cb_data"], etc.
+              "cb_data" is passed through to user's callback function
+                        that is the "callback" value.
+              "BootList" is None or bootstrap experiment number list.
+                       (called cb_data by mpisppy)
  
 
     Returns:
@@ -199,7 +159,7 @@ def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_da
     # delete this comment after _PySPnode_list is renamed in mpi-sppy (after Feb 2021)
     if hasattr(instance, "_PySPnode_list"):
         raise RuntimeError (f"scenario for experiment {exp_num} has _PySPnode_list")
-    nonant_list = [_object_from_string(instance, vstr) for vstr in\
+    nonant_list = [instance.find_component(vstr) for vstr in\
                    outer_cb_data["theta_names"]]
     instance._PySPnode_list = [scenario_tree.ScenarioNode(
                                                 name="ROOT",
@@ -216,7 +176,7 @@ def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_da
 
         # dlw august 2018: see mea code for more general theta
         for vstr in thetavals:
-            object = _object_from_string(instance, vstr)
+            object = instance.find_component(vstr)
             if thetavals[vstr] is not None:
                 #print("Fixing",vstr,"at",str(thetavals[vstr]))
                 object.fix(thetavals[vstr])

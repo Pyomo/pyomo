@@ -3,7 +3,7 @@
 # Copy-pasted with very minor modification from create_EF in mpisppy/utils/sputils.py.
 """
 Note: parmest can make use of mpi-sppy to form the EF so that it could, if it
-needed to, solve using a decomposition. To guard against loss of mpi-sspy,
+needed to, solve using a decomposition. To guard against loss of mpi-sppy,
 we also have this "local" ability to form the EF.
 """
 
@@ -108,7 +108,7 @@ def _create_EF_from_scen_dict(scen_dict, EF_name=None,
 
         Returns:
             EF_instance (ConcreteModel): ConcreteModel of extensive form with
-                explicity non-anticipativity constraints.
+                explicit non-anticipativity constraints.
 
         Notes:
             The non-anticipativity constraints are enforced by creating
