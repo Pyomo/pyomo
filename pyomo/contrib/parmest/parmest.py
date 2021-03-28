@@ -12,7 +12,7 @@
 #### Wrapping mpi-sppy functionality and local option Jan 2021, Feb 2021
 
 # False implies always use of the EF that is local to parmest
-use_mpisppy = True  # Use it if we can but use local if not.
+use_mpisppy = False  # Use it if we can but use local if not.
 if use_mpisppy:
     try:
         import mpisppy.utils.sputils as sputils
@@ -156,12 +156,11 @@ def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_da
             print("Failed to create instance using callback.")
             raise
         """
-    # delete this comment after _PySPnode_list is renamed in mpi-sppy (after Feb 2021)
-    if hasattr(instance, "_PySPnode_list"):
-        raise RuntimeError (f"scenario for experiment {exp_num} has _PySPnode_list")
+    if hasattr(instance, "_mpisppy_node_list"):
+        raise RuntimeError (f"scenario for experiment {exp_num} has _mpisppy_node_list")
     nonant_list = [instance.find_component(vstr) for vstr in\
                    outer_cb_data["theta_names"]]
-    instance._PySPnode_list = [scenario_tree.ScenarioNode(
+    instance._mpisppy_node_list = [scenario_tree.ScenarioNode(
                                                 name="ROOT",
                                                 cond_prob=1.0,
                                                 stage=1,
@@ -421,15 +420,16 @@ class Estimator(object):
         scenario_creator_options = {"cb_data": outer_cb_data}
         if use_mpisppy:
             ef = sputils.create_EF(scen_names,
-                                    _experiment_instance_creation_callback,
-                                    EF_name = "_Q_opt",
-                                   suppress_warnings=True,
-                                    creator_options=scenario_creator_options)
+                              _experiment_instance_creation_callback,
+                              EF_name = "_Q_opt",
+                              suppress_warnings=True,
+                              scenario_creator_kwargs=scenario_creator_options)
         else:
             ef = local_ef.create_EF(scen_names,
                                     _experiment_instance_creation_callback,
                                     EF_name = "_Q_opt",
-                                    creator_options=scenario_creator_options)
+                                    suppress_warnings=True,
+                                    scenario_creator_kwargs=scenario_creator_options)
         self.ef_instance = ef
         
         # Solve the extensive form with ipopt
