@@ -37,24 +37,6 @@ pynumero_ASL_available = False if find_library('pynumero_ASL') is None else True
 
 testdir = os.path.dirname(os.path.abspath(__file__))
 
-class Object_from_string_Tester(unittest.TestCase):
-    def setUp(self):
-        self.instance = pyo.ConcreteModel()
-        self.instance.IDX = pyo.Set(initialize=['a', 'b', 'c'])
-        self.instance.x = pyo.Var(self.instance.IDX, initialize=1134)
-        # TBD add a block
-        if parmest.parmest_available:
-            np.random.seed(1134)
-
-    def tearDown(self):
-        pass
-
-    def test_Var(self):
-        # just making sure it executes
-        pyo_Var_obj = parmest._object_from_string(self.instance, "x[b]")
-        fixstatus = pyo_Var_obj.fixed
-        self.assertEqual(fixstatus, False)
-
 
 @unittest.skipIf(not parmest.parmest_available,
                  "Cannot test parmest: required dependencies are missing")
