@@ -295,7 +295,7 @@ class CommunityMap(object):
             return self.community_map == other
         elif isinstance(other, CommunityMap):
             return self.community_map == other.community_map
-            # Should you check anything else for equality between instances?
+            # Should we check anything else for equality between instances?
         return False
 
     def __iter__(self):
@@ -494,9 +494,20 @@ class CommunityMap(object):
 
         # Initialize a new model (structured_model) which will contain variables and constraints in blocks based on
         # their respective communities within the CommunityMap
+
+        original_model = self.model
         structured_model = ConcreteModel()
 
         structured_model.b = Block(self.keys())
+
+        for variable in original_model.component_data_objects(ctype=Var, descend_into=True):
+            # Construct a new_variable whose attributes are determined by querying the variable from the
+            # original model
+            # new_variable = Var(domain=variable.domain, bounds=variable.bounds)
+            # structured_model.add_component(str(variable), new_variable)
+
+            original_model.del_component(variable)
+            structured_model.add_component(str(variable), variable)
 
         for community_number, community_members in self.items():
             if self.with_objective:
