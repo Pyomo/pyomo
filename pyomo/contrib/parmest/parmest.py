@@ -515,8 +515,9 @@ class Estimator(object):
                         if len(temp) == 1:
                             vals[var] = temp[0]
                         else:
-                            vals[var] = temp                    
-                    var_values.append(vals)                    
+                            vals[var] = temp
+                    if len(vals) > 0:
+                        var_values.append(vals)                    
                 var_values = pd.DataFrame(var_values)
                 if calc_cov:
                     return objval, thetavals, var_values, cov
