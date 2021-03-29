@@ -13,7 +13,6 @@
 # Original implementation by Hans Pirnay is in pyomo/examples/pyomo/suffixes
 #
 
-
 from pyomo.environ import * 
 from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation
 
