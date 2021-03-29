@@ -37,7 +37,8 @@ logger = logging.getLogger('pyomo.contrib.sensitivity_toolbox')
             logger='pyomo.contrib.sensitivity_toolbox',
             version='TBD')
 def sipopt(instance, paramSubList, perturbList,
-           cloneModel=True, tee=False, keepfiles=False):    
+           cloneModel=True, tee=False, keepfiles=False,
+           streamSoln=False):
     m = sensitivity_calculation('sipopt', instance, paramSubList, perturbList,
          cloneModel, tee, keepfiles, solver_options=None)
 
@@ -48,7 +49,8 @@ def sipopt(instance, paramSubList, perturbList,
             logger='pyomo.contrib.sensitivity_toolbox',
             version='TBD')
 def kaug(instance, paramSubList, perturbList,
-         cloneModel=True, tee=False, keepfiles=False, solver_options=None):
+         cloneModel=True, tee=False, keepfiles=False, solver_options=None,
+         streamSoln=False):
     m = sensitivity_calculation('kaug', instance, paramSubList, perturbList,
          cloneModel, tee, keepfiles, solver_options)
 
