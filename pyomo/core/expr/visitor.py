@@ -1181,7 +1181,8 @@ class _MutableParamVisitor(SimpleExpressionVisitor):
             return
 
         # TODO: Confirm that this has the right semantics
-        if not node.is_variable_type() and not node.is_constant():
+        if (not node.is_variable_type() and node.is_fixed()
+                and not node.is_constant()):
             if id(node) in self.seen:
                 return
             self.seen.add(id(node))
