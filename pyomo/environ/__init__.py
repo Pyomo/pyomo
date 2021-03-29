@@ -47,6 +47,7 @@ _packages = [
 # packages are optional and/or under development.
 #
 _optional_packages = {
+    'pyomo.contrib.appsi',
     'pyomo.contrib.example',
     'pyomo.contrib.fme',
     'pyomo.contrib.gdpbb',

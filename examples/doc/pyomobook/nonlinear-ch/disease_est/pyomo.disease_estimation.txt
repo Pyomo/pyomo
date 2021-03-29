@@ -1,4 +1,0 @@
- ***
- *** Optimal beta Value: 1.99
- *** Optimal alpha Value: 1.00
- ***

@@ -22,6 +22,7 @@ import logging
 import re
 import sys
 import textwrap
+from io import TextIOBase
 
 from pyomo.common.deprecation import deprecated
 from pyomo.common.fileutils import PYOMO_ROOT_DIR
@@ -315,3 +316,21 @@ class LoggingIntercept(object):
         logger.propagate = self._save[1]
         for h in self._save[2]:
             logger.handlers.append(h)
+
+
+class LogStream(TextIOBase):
+    """
+    This class logs whatever gets sent to the write method.
+    This is useful for logging solver output (a LogStream
+    instance can be handed to TeeStream from pyomo.common.tee).
+    """
+    def __init__(self, level, logger):
+        self._level = level
+        self._logger = logger
+
+    def write(self, s: str) -> int:
+        res = len(s)
+        s = s.rstrip('\n')
+        for line in s.split('\n'):
+            self._logger.log(self._level, line)
+        return res
