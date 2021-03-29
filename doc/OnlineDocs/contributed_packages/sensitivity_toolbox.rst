@@ -64,7 +64,10 @@ And finally we call sIPOPT:
 .. doctest::
     :skipif: not sipopt_available
 
-    >>> m_sipopt = sipopt(m,[m.eta1,m.eta2], [m.perturbed_eta1,m.perturbed_eta2], streamSoln=True)
+    >>> m_sipopt = sensitivity_calculation(
+                'sipopt', m, [m.eta1, m.eta2],
+                [m.perturbed_eta1, m.perturbed_eta2]
+                )
     Ipopt ...: run_sens=yes
     ...
     ******************************************************************************
