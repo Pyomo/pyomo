@@ -19,7 +19,7 @@ import pyomo.common.unittest as unittest
 from pyomo.common.unittest import nottest
 
 from pyomo.environ import ConcreteModel, RangeSet, Param, Var, Expression, ExternalFunction, VarList, sum_product, inequality, quicksum, sin, tanh
-from pyomo.core.expr.numvalue import nonpyomo_leaf_types
+from pyomo.core.expr.numvalue import nonpyomo_leaf_types, NumericConstant
 from pyomo.core.expr.numeric_expr import (
     SumExpression, ProductExpression, 
     MonomialTermExpression, LinearExpression)
@@ -177,10 +177,10 @@ class TestIdentifyParams(unittest.TestCase):
         m.x.fix()
         m.p = Param(initialize=2, mutable=False)
         m.p_m = Param(initialize=3, mutable=True)
-        e1 = (m.x + m.p + 5)
+        e1 = (m.x + m.p + NumericConstant(5))
         self.assertEqual(list(identify_mutable_parameters(e1)), [])
 
-        e2 = (5*m.x + 3*m.p_m + m.p == 0)
+        e2 = (5*m.x + NumericConstant(3)*m.p_m + m.p == 0)
         mut_params = list(identify_mutable_parameters(e2))
         self.assertEqual(len(mut_params), 1)
         self.assertIs(mut_params[0], m.p_m)
