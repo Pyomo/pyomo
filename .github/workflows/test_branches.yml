@@ -18,7 +18,7 @@ env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
   PYTHON_REQUIRED_PKGS: >
-      nose coverage
+      nose coverage parameterized pybind11
   PYTHON_BASE_PKGS: >
       ply six dill ipython networkx openpyxl pathos
       pint pyro4 pyyaml sphinx_rtd_theme sympy xlrd
@@ -195,6 +195,11 @@ jobs:
             install libopenblas-dev gfortran liblapack-dev glpk-utils
         sudo chmod -R 777 ${GITHUB_WORKSPACE}/cache/os
 
+    - name: Update Windows
+      if: matrix.TARGET == 'win'
+      run: |
+        echo "SETUPTOOLS_USE_DISTUTILS=local" >> $GITHUB_ENV
+
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
       uses: actions/setup-python@v2
@@ -265,6 +270,8 @@ jobs:
         if test -z "${{matrix.slim}}"; then
             conda install -q -y -c ibmdecisionoptimization 'cplex>=12.10' \
                 || echo "WARNING: CPLEX Community Edition is not available"
+            conda install -q -y -c gurobi gurobi \
+                || echo "WARNING: Gurobi is not available"
             conda install -q -y -c fico-xpress xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
             for PKG in cyipopt pymumps; do
