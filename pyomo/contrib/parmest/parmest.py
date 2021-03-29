@@ -12,7 +12,7 @@
 #### Wrapping mpi-sppy functionality and local option Jan 2021, Feb 2021
 
 # False implies always use of the EF that is local to parmest
-use_mpisppy = False  # Use it if we can but use local if not.
+use_mpisppy = True  # Use it if we can but use local if not.
 if use_mpisppy:
     try:
         import mpisppy.utils.sputils as sputils
@@ -379,11 +379,9 @@ class Estimator(object):
                     with open(exp_data,'r') as infile:
                         exp_data = json.load(infile)
                 except:
-                    print('Unexpected data format')
-                    return
+                    raise RuntimeError(f'Could not read {exp_data} as json')
         else:
-            print('Unexpected data format')
-            return
+            raise RuntimeError(f'Unexpected data format for cb_data={cb_data}')
         model = self._create_parmest_model(exp_data)
         
         return model
@@ -511,6 +509,8 @@ class Estimator(object):
                     vals = {}
                     for var in return_values:
                         exp_i_var = exp_i.find_component(str(var))
+                        if exp_i_var is None:  # we might have a block such as _mpisppy_data
+                            continue
                         temp = [pyo.value(_) for _ in exp_i_var.values()]
                         if len(temp) == 1:
                             vals[var] = temp[0]
