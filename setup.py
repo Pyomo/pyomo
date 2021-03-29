@@ -136,12 +136,10 @@ def run_setup():
       entry_points="""
         [console_scripts]
         pyomo = pyomo.scripting.pyomo_main:main_console_script
-        test.pyomo = pyomo.scripting.runtests:runPyomoTests
         pyomo_python = pyomo.scripting.commands:pyomo_python
 
         [pyomo.command]
         pyomo.help = pyomo.scripting.driver_help
-        pyomo.test.pyomo = pyomo.scripting.runtests
         pyomo.viewer=pyomo.contrib.viewer.pyomo_viewer
       """
       )
