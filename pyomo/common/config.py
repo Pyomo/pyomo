@@ -253,6 +253,16 @@ def add_docstring_list(docstring, configdict, indent_by=4):
 
 
 class ConfigEnum(enum.Enum):
+    @deprecated("The ConfigEnum base class is deprecated.  "
+                "Directly inherit from enum.Enum and then use "
+                "In() or InEnum() as the ConfigValue 'domain' for "
+                "validation and int/string type conversions.", version='TBD')
+    def __new__(cls, value, *args):
+        member = object.__new__(cls)
+        member._value_ = value
+        member._args = args
+        return member
+
     @classmethod
     def from_enum_or_string(cls, arg):
         if type(arg) is str:

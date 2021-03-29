@@ -24,6 +24,7 @@
 #  ___________________________________________________________________________
 
 import argparse
+import enum
 import os
 import sys
 import os.path
@@ -43,7 +44,7 @@ from pyomo.common.config import (
     PositiveFloat, NegativeFloat, NonPositiveFloat, NonNegativeFloat,
     In, Path, PathList, ConfigEnum
 )
-
+from pyomo.common.log import LoggingIntercept
 
 # Utility to redirect display() to a string
 def _display(obj, *args):
@@ -374,10 +375,12 @@ class TestConfigDomains(unittest.TestCase):
         self.assertIs(type(c.a), list)
 
     def test_ConfigEnum(self):
-        class TestEnum(ConfigEnum):
-            ITEM_ONE = 1
-            ITEM_TWO = 2
-
+        out = StringIO()
+        with LoggingIntercept(out):
+            class TestEnum(ConfigEnum):
+                ITEM_ONE = 1
+                ITEM_TWO = 2
+        self.assertIn('The ConfigEnum base class is deprecated', out.getvalue())
         self.assertEqual(TestEnum.from_enum_or_string(1),
                 TestEnum.ITEM_ONE)
         self.assertEqual(TestEnum.from_enum_or_string(
