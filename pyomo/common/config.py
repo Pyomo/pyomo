@@ -16,15 +16,16 @@
 #  ___________________________________________________________________________
 
 import argparse
-import os
-import platform
 import enum
-import six
+import inspect
+import logging
+import os
+import pickle
+import platform
 import re
+import six
 import sys
 from textwrap import wrap
-import logging
-import pickle
 
 if six.PY3:
     import builtins as _builtins
@@ -178,6 +179,15 @@ class In(object):
     before looking them up in `domain`.
 
     """
+    def __new__(cls, domain, cast=None):
+        # Convenience: enum.Enum supported __contains__ through Python
+        # 3.7.  If the domain is an Enum and cast is not specified,
+        # automatically return an InEnum to handle casting and validation
+        if cast is None and inspect.isclass(domain) \
+           and issubclass(domain, enum.Enum):
+            return InEnum(domain)
+        return super(In, cls).__new__(cls)
+
     def __init__(self, domain, cast=None):
         self._domain = domain
         self._cast = cast
@@ -190,6 +200,37 @@ class In(object):
         if v in self._domain:
             return v
         raise ValueError("value %s not in domain %s" % (value, self._domain))
+
+
+class InEnum(object):
+    """Domain validation function admitting an enum value/name.
+
+    This will admit any value that is in the specified Enum, including
+    Enum members, values, and string names.  The incoming value will be
+    automatically cast to an Enum member.
+
+    """
+    def __init__(self, domain):
+        self._domain = domain
+
+    def __call__(self, value):
+        v = self._cast_to_enum_domain(value)
+        if v in self._domain:
+            return v
+        raise ValueError("value %s not in domain %s" % (value, self._domain))
+
+    def _cast_to_enum_domain(self, arg):
+        try:
+            # First check if the arg is a valid enum value
+            return self._domain(arg)
+        except ValueError:
+            # Assume this is a string and look it up
+            try:
+                return self._domain[arg]
+            except KeyError:
+                pass
+        raise ValueError("%r is not a valid %s" % (
+            arg, self._domain.__name__))
 
 
 class Path(object):
