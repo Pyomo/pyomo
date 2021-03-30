@@ -1,10 +1,14 @@
 # Imports
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import glob
 import os
 import os.path
 import sys
-import pyomo.environ
+from pyomo.opt import check_available_solvers
+from pyomo.common.dependencies import attempt_import
+parameterized, param_available = attempt_import('parameterized')
+if not param_available:
+    raise unittest.SkipTest('Parameterized is not available.')
 
 try:
     import yaml
@@ -18,125 +22,140 @@ datadir = currdir
 testdirs = [currdir, ]
 
 solver_dependencies =   {
-    'Test_nonlinear_ch': {
-        'test_rosen_pyomo_rosen': 'ipopt',
-        'test_react_design_run_pyomo_reactor_table': 'ipopt',
-        'test_react_design_run_pyomo_reactor': 'ipopt',
-        'test_multimodal_pyomo_multimodal_init1': 'ipopt',
-        'test_multimodal_pyomo_multimodal_init2': 'ipopt',
-        'test_disease_est_run_disease_summary': 'ipopt',
-        'test_disease_est_run_disease_callback': 'ipopt',
-        'test_deer_run_deer': 'ipopt',
-    },
-    'Test_mpec_ch': {
-        'test_mpec_ch_path1': 'path',
-    },
-    'Test_dae_ch': {
-        'test_run_path_constraint_tester': 'ipopt',
-    },
+    # abstract_ch
+    'test_abstract_ch_wl_abstract_script': 'glpk',
+    'test_abstract_ch_pyomo_wl_abstract': 'glpk',
+    'test_abstract_ch_pyomo_solve1': 'glpk',
+    'test_abstract_ch_pyomo_solve2': 'glpk',
+    'test_abstract_ch_pyomo_solve3': 'glpk',
+    'test_abstract_ch_pyomo_solve4': 'glpk',
+    'test_abstract_ch_pyomo_solve5': 'glpk',
+    'test_abstract_ch_pyomo_diet1': 'glpk',
+    'test_abstract_ch_pyomo_buildactions_works': 'glpk',
+    'test_abstract_ch_pyomo_abstract5_ns1': 'glpk',
+    'test_abstract_ch_pyomo_abstract5_ns2': 'glpk',
+    'test_abstract_ch_pyomo_abstract5_ns3': 'glpk',
+    'test_abstract_ch_pyomo_abstract6': 'glpk',
+    'test_abstract_ch_pyomo_abstract7': 'glpk',
+    'test_abstract_ch_pyomo_AbstractH': 'glpk',
+    'test_abstract_ch_AbstHLinScript': 'glpk',
+    'test_abstract_ch_pyomo_AbstractHLinear': 'glpk',
+    
+    # blocks_ch
+    'test_blocks_ch_lotsizing': 'glpk',
+    'test_blocks_ch_blocks_lotsizing': 'glpk',
+    
+    # dae_ch
+    'test_dae_ch_run_path_constraint_tester': 'ipopt',
+    
+    # gdp_ch
+    'test_gdp_ch_scont': 'glpk',
+    'test_gdp_ch_scont2': 'glpk',
+    'test_gdp_ch_scont_script': 'glpk',
+    
+    # intro_ch'
+    'test_intro_ch_pyomo_concrete1_generic': 'glpk',
+    'test_intro_ch_pyomo_concrete1': 'glpk',
+    'test_intro_ch_pyomo_coloring_concrete': 'glpk',
+    'test_intro_ch_pyomo_abstract5': 'glpk',
+    
+    # mpec_ch
+    'test_mpec_ch_path1': 'path',
+    'test_mpec_ch_nlp_ex1b': 'ipopt',
+    'test_mpec_ch_nlp_ex1c': 'ipopt',
+    'test_mpec_ch_nlp_ex1d': 'ipopt',
+    'test_mpec_ch_nlp_ex1e': 'ipopt',
+    'test_mpec_ch_nlp_ex2': 'ipopt',
+    'test_mpec_ch_nlp1': 'ipopt',
+    'test_mpec_ch_nlp2': 'ipopt',
+    'test_mpec_ch_nlp3': 'ipopt',
+    'test_mpec_ch_mip1': 'glpk',
+    
+    # nonlinear_ch
+    'test_rosen_rosenbrock': 'ipopt',
+    'test_react_design_ReactorDesign': 'ipopt',
+    'test_react_design_ReactorDesignTable': 'ipopt',
+    'test_multimodal_multimodal_init1': 'ipopt',
+    'test_multimodal_multimodal_init2': 'ipopt',
+    'test_disease_est_disease_estimation': 'ipopt',
+    'test_deer_DeerProblem': 'ipopt',
+    
+    # scripts_ch
+    'test_sudoku_sudoku_run': 'glpk',
+    'test_scripts_ch_warehouse_script': 'glpk',
+    'test_scripts_ch_warehouse_print': 'glpk',
+    'test_scripts_ch_warehouse_cuts': 'glpk',
+    'test_scripts_ch_prob_mod_ex': 'glpk',
+    'test_scripts_ch_attributes': 'glpk',
+    
+    # optimization_ch
+    'test_optimization_ch_ConcHLinScript': 'glpk',
+    
+    # overview_ch
+    'test_overview_ch_wl_mutable_excel': 'glpk',
+    'test_overview_ch_wl_excel': 'glpk',
+    'test_overview_ch_wl_concrete_script': 'glpk',
+    'test_overview_ch_wl_abstract_script': 'glpk',
+    'test_overview_ch_pyomo_wl_abstract': 'glpk',
+    
+    # performance_ch
+    'test_performance_ch_wl': 'gurobi',
+    'test_performance_ch_persistent': 'gurobi_persistent',
 }
 package_dependencies =  {
-    'Test_data_abstract_ch': {
-        'test_data_abstract_ch_ABCD9': ['pyodbc',],
-        'test_data_abstract_ch_ABCD8': ['pyodbc',],
-        'test_data_abstract_ch_ABCD7': ['win32com',],
-    },
-    'Test_overview_ch': {
-        'test_overview_ch_pyomo_wl_excel': ['numpy','pandas','xlrd',],
-    },
-    'Test_scripts_ch': {
-        'test_scripts_ch_warehouse_function_cuts': ['numpy','matplotlib',],
-    },
+    # overview_ch'
+    'test_overview_ch_wl_excel': ['pandas', 'xlrd'],
+    'test_overview_ch_wl_mutable_excel': ['pandas', 'xlrd'],
+    
+    # scripts_ch'
+    'test_scripts_ch_warehouse_cuts': ['matplotlib'],
+    
+    # performance_ch'
+    'test_performance_ch_wl': ['numpy','matplotlib'],
 }
-solver_available = {}
-package_available = {}
 
-only_book_tests = set(['Test_nonlinear_ch', 'Test_scripts_ch'])
 
-def _check_available(name):
-    from pyomo.opt.base import (UnknownSolver, SolverFactory)
-    try:
-        opt = SolverFactory(name)
-    except:
-        return False
-    if opt is None or isinstance(opt, UnknownSolver):
-        return False
-    elif (name == "gurobi") and \
-       (not GUROBISHELL.license_is_valid()):
-        return False
-    elif (name == "baron") and \
-       (not BARONSHELL.license_is_valid()):
-        return False
-    else:
-        return (opt.available(exception_flag=False)) and \
-            ((not hasattr(opt,'executable')) or \
-             (opt.executable() is not None))
+#
+# Initialize the availability data
+#
+solvers_used = set(solver_dependencies.values())
+available_solvers = check_available_solvers(*solvers_used)
+solver_available = {solver_:solver_ in available_solvers for solver_ in solvers_used}
 
-def check_skip(tfname_, name):
-    #
-    # Skip if YAML isn't installed
-    #
-    if not yaml_available:
-        return "YAML is not available"
-    #
-    # Initialize the availability data
-    #
-    if len(solver_available) == 0:
-        for tf_ in solver_dependencies:
-            for n_ in solver_dependencies[tf_]:
-                solver_ = solver_dependencies[tf_][n_]
-                if not solver_ in solver_available:
-                    solver_available[solver_] = _check_available(solver_)
-        for tf_ in package_dependencies:
-            for n_ in package_dependencies[tf_]:
-                packages_ = package_dependencies[tf_][n_]
-                for package_ in packages_:
-                    if not package_ in package_available:
-                        try:
-                            __import__(package_)
-                            package_available[package_] = True
-                        except:
-                            package_available[package_] = False
+package_available = {}        
+packages_used = set(sum(list(package_dependencies.values()), []))
+for package_ in packages_used:
+    pack, pack_avail = attempt_import(package_)
+    package_available[package_] = pack_avail
+
+
+def check_skip(name):
+
     #
     # Return a boolean if the test should be skipped
     #
-    if tfname_ in solver_dependencies:
-        if name in solver_dependencies[tfname_] and \
-           not solver_available[solver_dependencies[tfname_][name]]:
-            # Skip the test because a solver is not available
-            # print('Skipping %s because of missing solver' %(name)) 
-            return 'Solver "%s" is not available' % (
-                solver_dependencies[tfname_][name], )
-    if tfname_ in package_dependencies:
-        if name in package_dependencies[tfname_]:
-            packages_ = package_dependencies[tfname_][name]
-            if not all([package_available[i] for i in packages_]):
-                # Skip the test because a package is not available
-                # print('Skipping %s because of missing package' %(name))
-                _missing = []
-                for i in packages_:
-                    if not package_available[i]:
-                        _missing.append(i)
-                return "Package%s %s %s not available" % (
-                    's' if len(_missing) > 1 else '',
-                    ", ".join(_missing),
-                    'are' if len(_missing) > 1 else 'is',)
-    return False
 
-_DEPRECATION_MESSAGES = """
-WARNING: DEPRECATED: Chained inequalities are deprecated. Use the inequality()
-    function to express ranged inequality expressions.
-WARNING: DEPRECATED: Use of the pyomo.bilevel package is deprecated. There are
-    known bugs in pyomo.bilevel, and we do not recommend the use of this code.
-    Development of bilevel optimization capabilities has been shifted to the
-    Pyomo Adversarial Optimization (PAO) library. Please contact William Hart
-    for further details (wehart@sandia.gov). (deprecated in 5.6.2)
-WARNING: DEPRECATED: Use of the pyomo.duality package is deprecated. There are
-    known bugs in pyomo.duality, and we do not recommend the use of this code.
-    Development of dualization capabilities has been shifted to the Pyomo
-    Adversarial Optimization (PAO) library. Please contact William Hart for
-    further details (wehart@sandia.gov).  (deprecated in 5.6.2)
-""".strip()
+    if name in solver_dependencies and \
+       not solver_available[solver_dependencies[name]]:
+        # Skip the test because a solver is not available
+        # print('Skipping %s because of missing solver' %(name)) 
+        return 'Solver "%s" is not available' % (
+            solver_dependencies[name], )
+
+    if name in package_dependencies:
+        packages_ = package_dependencies[name]
+        if not all([package_available[i] for i in packages_]):
+            # Skip the test because a package is not available
+            # print('Skipping %s because of missing package' %(name))
+            _missing = []
+            for i in packages_:
+                if not package_available[i]:
+                    _missing.append(i)
+            return "Package%s %s %s not available" % (
+                's' if len(_missing) > 1 else '',
+                ", ".join(_missing),
+                'are' if len(_missing) > 1 else 'is',)
+    return False
 
 def filter(line):
     # Ignore certain text when comparing output with baseline
@@ -167,11 +186,10 @@ def filter(line):
                    'Solver results file:' ):
         if field in line:
             return True
-    for field in _DEPRECATION_MESSAGES.splitlines():
-        strip_field = field.strip()
-        if strip_field and strip_field in line:
-            return True
     return False
+
+py_test_tuples=[]
+sh_test_tuples=[]
 
 for tdir in testdirs:
 
@@ -190,16 +208,14 @@ for tdir in testdirs:
     # JDS: This is crazy fragile.  If testdirs is ever anything BUT
     # "pyomobook" you will be creating invalid class names
     #
-    #testdir_ = testdir.replace('-','_')
-    #testClassName = 'Test_'+testdir_.split("pyomobook"+os.sep)[1]
     testClassName = 'Test_'+os.path.basename(testdir).replace('-','_')
-    assert '.' not in testClassName
-    Test = globals()[testClassName] = type(
-        testClassName, (unittest.TestCase,), {})
-    if testClassName in only_book_tests:
-        Test = unittest.category("book")(Test)
-    else:
-        Test = unittest.category("book","smoke","nightly")(Test)
+    # assert '.' not in testClassName
+    # Test = globals()[testClassName] = type(
+    #     testClassName, (unittest.TestCase,), {})
+    # if testClassName in only_book_tests:
+    #     Test = unittest.category("book")(Test)
+    # else:
+    #     Test = unittest.category("book","smoke","nightly")(Test)
     
     # Find all .py files in the test directory
     for file in list(glob.glob(os.path.join(testdir,'*.py'))) \
@@ -218,33 +234,30 @@ for tdir in testdirs:
             if os.path.exists(os.path.join(dir_,name+suffix_)):
                 suffix = suffix_
                 break
-            elif os.path.exists(os.path.join(dir_,name+'.py2'+suffix_)) \
-                 and sys.version_info[0] == 2:
-                suffix = '.py2'+suffix_
-                break
-            elif os.path.exists(os.path.join(dir_, name+'.py3'+suffix_)) \
-                 and sys.version_info[0] == 3:
-                suffix = '.py3'+suffix_
-                break
         if not suffix is None:
-            cwd = os.getcwd()
+            # cwd = os.getcwd()
             tname = tname.replace('-','_')
             tname = tname.replace('.','_')
-            # print(tname)
-            forceskip = check_skip(testClassName, 'test_'+tname)
-            Test.add_baseline_test(
-                cmd=(sys.executable, test_file),
-                cwd = dir_,
-                baseline=os.path.join(dir_,name+suffix),
-                name=tname,
-                filter=filter,
-                tolerance=1e-3,
-                forceskip=forceskip)
-            os.chdir(cwd)
+        
+            # # print(tname)
+            # forceskip = check_skip(testClassName, 'test_'+tname)
+            # Test.add_baseline_test(
+            #     cmd=(sys.executable, test_file),
+            #     cwd = dir_,
+            #     baseline=os.path.join(dir_,name+suffix),
+            #     name=tname,
+            #     filter=filter,
+            #     tolerance=1e-3,
+            #     forceskip=forceskip)
+            # os.chdir(cwd)
+            
+            # Create list of tuples with (test_file, baseline_file)
+            py_test_tuples.append((tname, test_file, os.path.join(dir_,name+suffix)))
 
     # Find all .sh files in the test directory
     for file in list(glob.glob(os.path.join(testdir,'*.sh'))) \
             + list(glob.glob(os.path.join(testdir,'*','*.sh'))):
+        test_file = os.path.abspath(file)
         bname = os.path.basename(file)
         dir_ = os.path.dirname(os.path.abspath(file))+os.sep
         name='.'.join(bname.split('.')[:-1])
@@ -256,28 +269,56 @@ for tdir in testdirs:
             if os.path.exists(dir_+name+suffix_):
                 suffix = suffix_
                 break
-            elif os.path.exists(dir_+name+'.py2'+suffix_) and sys.version_info[0] == 2:
-                suffix = '.py2'+suffix_
-                break
-            elif os.path.exists(dir_+name+'.py3'+suffix_) and sys.version_info[0] == 3:
-                suffix = '.py3'+suffix_
-                break
         if not suffix is None:
-            cwd = os.getcwd()
-            os.chdir(dir_)
+            # cwd = os.getcwd()
+            # os.chdir(dir_)
             tname = tname.replace('-','_')
             tname = tname.replace('.','_')
-            # For now, skip all shell tests on Windows.
-            if os.name == 'nt':
-                forceskip = "Shell tests are not runnable on Windows"
-            else:
-                forceskip = check_skip(testClassName, 'test_'+tname)
-            Test.add_baseline_test(cmd='cd %s; %s' % (dir_,
-                                                      os.path.abspath(bname)), baseline=dir_+name+suffix,
-                                   name=tname, filter=filter, tolerance=1e-3,
-                                   forceskip=forceskip)
-            os.chdir(cwd)
-    Test = None
+            # # For now, skip all shell tests on Windows.
+            # if os.name == 'nt':
+            #     forceskip = "Shell tests are not runnable on Windows"
+            # else:
+            #     forceskip = check_skip(testClassName, 'test_'+tname)
+            # Test.add_baseline_test(cmd='cd %s; %s' % (dir_,
+            #                                           os.path.abspath(bname)),
+            #                        baseline=dir_+name+suffix,
+            #                        name=tname,
+            #                        filter=filter,
+            #                        tolerance=1e-3,
+            #                        forceskip=forceskip)
+            # os.chdir(cwd)
+
+            # Create list of tuples with (test_file, baseline_file)
+            sh_test_tuples.append((tname, test_file, os.path.join(dir_,name+suffix)))
+
+
+def custom_name_func(test_func, test_num, test_params):
+    return "Test_%s" %(test_params.args[0])
+
+class BookTests(unittest.TestCase):
+
+    @parameterized.parameterized.expand(py_test_tuples, name_func=custom_name_func)
+    def py_book_test(self, tname, test_file, base_file):
+        bname = os.path.basename(test_file)
+        dir_ = os.path.dirname(test_file)
+
+
+        skip_msg = check_skip('test_'+tname)
+        if skip_msg:
+            raise unittest.SkipTest(skip_msg)
+
+        self.assertTrue(True)
+
+    @parameterized.parameterized.expand(sh_test_tuples, name_func=custom_name_func)
+    def sh_book_test(self, tname, test_file, base_file):
+        print("sending ", tname)
+
+        skip_msg = check_skip('test_'+tname)
+        if skip_msg:
+            raise unittest.SkipTest(skip_msg)
+
+        self.assertTrue(True)
+
 
 # Execute the tests
 if __name__ == '__main__':
