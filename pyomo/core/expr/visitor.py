@@ -544,7 +544,7 @@ class ExpressionValueVisitor(object):
         """
         flag, value = self.visiting_potential_leaf(node)
         if flag:
-            return value
+            return self.finalize(value)
         #_stack = [ (node, self.children(node), 0, len(self.children(node)), [])]
         _stack = [ (node, node._args_, 0, node.nargs(), [])]
         #
@@ -1181,7 +1181,8 @@ class _MutableParamVisitor(SimpleExpressionVisitor):
             return
 
         # TODO: Confirm that this has the right semantics
-        if not node.is_variable_type() and node.is_fixed():
+        if (not node.is_variable_type() and node.is_fixed()
+                and not node.is_constant()):
             if id(node) in self.seen:
                 return
             self.seen.add(id(node))

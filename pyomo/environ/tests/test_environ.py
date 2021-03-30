@@ -142,6 +142,7 @@ class TestPyomoEnviron(unittest.TestCase):
             'textwrap',
             'tempfile',
             'xml',
+            'typing',
             # From PySP
             'filecmp',
             'optparse',

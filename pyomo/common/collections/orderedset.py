@@ -80,3 +80,12 @@ class OrderedSet(MutableSet):
     def remove(self, val):
         """Remove an element. If not a member, raise a KeyError."""
         del self._dict[val]
+
+    def intersection(self, other):
+        res = OrderedSet([i for i in self if i in other])
+        return res
+
+    def union(self, other):
+        res = OrderedSet(self)
+        res.update(other)
+        return res

@@ -9,7 +9,7 @@
 #     virtualenv) and config (the local Pyomo configuration/cache
 #     directory)
 #
-# CATEGORY: the category to pass to test.pyomo (defaults to nightly)
+# CATEGORY: the category to pass to pyomo.common.unittest (defaults to nightly)
 #
 # TEST_SUITES: Paths (module or directory) to be passed to nosetests to
 #     run. (defaults to "pyomo '$WORKSPACE/pyomo-model-libraries'")
@@ -164,7 +164,7 @@ if test -z "$MODE" -o "$MODE" == test; then
     echo "#"
     echo "# Running Pyomo tests"
     echo "#"
-    test.pyomo -v --cat=$CATEGORY $TEST_SUITES
+    python -m pyomo.common.unittest $TEST_SUITES -v --cat=$CATEGORY --xunit
 
     # Combine the coverage results and upload
     if test -z "$DISABLE_COVERAGE"; then

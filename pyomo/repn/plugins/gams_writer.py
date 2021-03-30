@@ -870,6 +870,7 @@ valid_solvers = {
 'SBB': {'MINLP','MIQCP'},
 'SCENSOLVER': {'LP','MIP','RMIP','NLP','MCP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
 'SCIP': {'MIP','NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
+'SHOT': {'MINLP','MIQCP'},
 'SNOPT': {'LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'},
 'SOPLEX': {'LP','RMIP'},
 'XA': {'LP','MIP','RMIP'},

@@ -136,18 +136,10 @@ def run_setup():
       entry_points="""
         [console_scripts]
         pyomo = pyomo.scripting.pyomo_main:main_console_script
-        test.pyomo = pyomo.scripting.runtests:runPyomoTests
         pyomo_python = pyomo.scripting.commands:pyomo_python
-        pyro_mip_server = pyomo.scripting.pyro_mip_server:main
-        pyomo_ns = pyomo.scripting.commands:pyomo_ns
-        pyomo_nsc = pyomo.scripting.commands:pyomo_nsc
-        kill_pyro_mip_servers = pyomo.scripting.commands:kill_pyro_mip_servers
-        launch_pyro_mip_servers = pyomo.scripting.commands:launch_pyro_mip_servers
 
         [pyomo.command]
         pyomo.help = pyomo.scripting.driver_help
-        pyomo.test.pyomo = pyomo.scripting.runtests
-        pyomo.pyro_mip_server = pyomo.scripting.pyro_mip_server
         pyomo.viewer=pyomo.contrib.viewer.pyomo_viewer
       """
       )
