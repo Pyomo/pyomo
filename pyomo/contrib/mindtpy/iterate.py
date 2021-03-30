@@ -171,7 +171,7 @@ def MindtPy_iteration_loop(solve_data, config):
         #     # bound does not improve before switching to OA
         #     max_nonimprove_iter = 5
         #     making_progress = True
-        #     # TODO-romeo Unneccesary for OA and LOA, right?
+        #     # TODO-romeo Unneccesary for OA and ROA, right?
         #     for i in range(1, max_nonimprove_iter + 1):
         #         try:
         #             if (sign_adjust * log[-i]

@@ -47,13 +47,13 @@ def solve_master(solve_data, config, fp=False, regularization_problem=False):
     fp: Bool
         generate the feasibility pump projection master problem
     regularization_problem: Bool
-        generate the LOA projection master problem
+        generate the ROA projection master problem
     """
     if fp:
         config.logger.info('FP-MIP %s: Solve master problem.' %
                            (solve_data.fp_iter,))
     elif regularization_problem:
-        config.logger.info('LOA-Projection-MIP %s: Solve master projection problem.' %
+        config.logger.info('ROA-Regularization-MIP %s: Solve master projection problem.' %
                            (solve_data.mip_iter,))
     else:
         solve_data.mip_iter += 1
@@ -374,7 +374,7 @@ def handle_master_unbounded(master_mip, solve_data, config):
 
 def setup_master(solve_data, config, fp, regularization_problem):
     """
-    Set up master problem/master projection problem for OA, ECP, Feasibility Pump and LOA methods.
+    Set up master problem/master projection problem for OA, ECP, Feasibility Pump and ROA methods.
 
     Parameters
     ----------
@@ -385,7 +385,7 @@ def setup_master(solve_data, config, fp, regularization_problem):
     fp: Bool
         generate the feasibility pump projection master problem
     regularization_problem: Bool
-        generate the LOA projection master problem
+        generate the ROA projection master problem
     """
     MindtPy = solve_data.mip.MindtPy_utils
 

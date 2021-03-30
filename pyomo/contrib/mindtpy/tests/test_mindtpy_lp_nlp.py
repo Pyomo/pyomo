@@ -173,11 +173,11 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
-    def test_lazy_OA_8PP_LOA_L1(self):
+    def test_lazy_OA_8PP_ROA_L1(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
-            print('\n Solving 8PP problem with LP/NLP (LOA L1)')
+            print('\n Solving 8PP problem with LP/NLP (ROA L1)')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='rNLP',
                                 mip_solver=required_solvers[1],
@@ -190,11 +190,11 @@ class TestMindtPy(unittest.TestCase):
                           [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
-    def test_lazy_OA_8PP_init_max_binary_LOA_L1(self):
+    def test_lazy_OA_8PP_init_max_binary_ROA_L1(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
-            print('\n Solving 8PP_init_max_binary problem with LP/NLP (LOA L1)')
+            print('\n Solving 8PP_init_max_binary problem with LP/NLP (ROA L1)')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='max_binary',
                                 mip_solver=required_solvers[1],
@@ -206,11 +206,11 @@ class TestMindtPy(unittest.TestCase):
                           [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
-    def test_lazy_OA_MINLP_simple_LOA_L1(self):
+    def test_lazy_OA_MINLP_simple_ROA_L1(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
-            print('\n Solving MINLP_simple problem with LP/NLP (LOA L1)')
+            print('\n Solving MINLP_simple problem with LP/NLP (ROA L1)')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
@@ -223,11 +223,11 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 3.5, places=2)
 
-    def test_lazy_OA_MINLP2_simple_LOA_L1(self):
+    def test_lazy_OA_MINLP2_simple_ROA_L1(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP2()
-            print('\n Solving MINLP2_simple problem with LP/NLP (LOA L1)')
+            print('\n Solving MINLP2_simple problem with LP/NLP (ROA L1)')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
@@ -239,11 +239,11 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 6.00976, places=2)
 
-    def test_lazy_OA_MINLP3_simple_LOA_L1(self):
+    def test_lazy_OA_MINLP3_simple_ROA_L1(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP3()
-            print('\n Solving MINLP3_simple problem with LP/NLP (LOA L1)')
+            print('\n Solving MINLP3_simple problem with LP/NLP (ROA L1)')
             results = opt.solve(model, strategy='OA', init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -254,11 +254,11 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
 
-    def test_lazy_OA_Proposal_LOA_L1(self):
+    def test_lazy_OA_Proposal_ROA_L1(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
-            print('\n Solving Proposal problem with LP/NLP (LOA L1)')
+            print('\n Solving Proposal problem with LP/NLP (ROA L1)')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -269,10 +269,10 @@ class TestMindtPy(unittest.TestCase):
                           [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
-    def test_lazy_OA_ConstraintQualificationExample_LOA_L1(self):
+    def test_lazy_OA_ConstraintQualificationExample_ROA_L1(self):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
-            print('\n Solving ConstraintQualificationExample with LP/NLP (LOA L1)')
+            print('\n Solving ConstraintQualificationExample with LP/NLP (ROA L1)')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -283,10 +283,10 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
-    def test_OA_OnlineDocExample_LOA_L1(self):
+    def test_OA_OnlineDocExample_ROA_L1(self):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
-            print('\n Solving OnlineDocExample with LP/NLP (LOA L1)')
+            print('\n Solving OnlineDocExample with LP/NLP (ROA L1)')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -298,11 +298,11 @@ class TestMindtPy(unittest.TestCase):
             self.assertAlmostEqual(
                 value(model.objective.expr), 2.438447, places=2)
 
-    def test_OA_Proposal_with_int_cuts_LOA_L1(self):
+    def test_OA_Proposal_with_int_cuts_ROA_L1(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
-            print('\n Solving problem with Outer Approximation (LOA L1)')
+            print('\n Solving problem with Outer Approximation (ROA L1)')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -316,11 +316,11 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
-    def test_lazy_OA_8PP_LOA_L2(self):
+    def test_lazy_OA_8PP_ROA_L2(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
-            print('\n Solving 8PP problem with LP/NLP (LOA L2)')
+            print('\n Solving 8PP problem with LP/NLP (ROA L2)')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='rNLP',
                                 mip_solver=required_solvers[1],
@@ -333,11 +333,11 @@ class TestMindtPy(unittest.TestCase):
                           [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
-    def test_lazy_OA_8PP_init_max_binary_LOA_L2(self):
+    def test_lazy_OA_8PP_init_max_binary_ROA_L2(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
-            print('\n Solving 8PP_init_max_binary problem with LP/NLP (LOA L2)')
+            print('\n Solving 8PP_init_max_binary problem with LP/NLP (ROA L2)')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='max_binary',
                                 mip_solver=required_solvers[1],
@@ -349,11 +349,11 @@ class TestMindtPy(unittest.TestCase):
                           [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
-    def test_lazy_OA_MINLP_simple_LOA_L2(self):
+    def test_lazy_OA_MINLP_simple_ROA_L2(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
-            print('\n Solving MINLP_simple problem with LP/NLP (LOA L2)')
+            print('\n Solving MINLP_simple problem with LP/NLP (ROA L2)')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
@@ -366,11 +366,11 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 3.5, places=2)
 
-    def test_lazy_OA_MINLP2_simple_LOA_L2(self):
+    def test_lazy_OA_MINLP2_simple_ROA_L2(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP2()
-            print('\n Solving MINLP2_simple problem with LP/NLP (LOA L2)')
+            print('\n Solving MINLP2_simple problem with LP/NLP (ROA L2)')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
@@ -382,11 +382,11 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 6.00976, places=2)
 
-    def test_lazy_OA_MINLP3_simple_LOA_L2(self):
+    def test_lazy_OA_MINLP3_simple_ROA_L2(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP3()
-            print('\n Solving MINLP3_simple problem with LP/NLP (LOA L2)')
+            print('\n Solving MINLP3_simple problem with LP/NLP (ROA L2)')
             results = opt.solve(model, strategy='OA', init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -397,11 +397,11 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
 
-    def test_lazy_OA_Proposal_LOA_L2(self):
+    def test_lazy_OA_Proposal_ROA_L2(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
-            print('\n Solving Proposal problem with LP/NLP (LOA L2)')
+            print('\n Solving Proposal problem with LP/NLP (ROA L2)')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -412,10 +412,10 @@ class TestMindtPy(unittest.TestCase):
                           [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
-    def test_lazy_OA_ConstraintQualificationExample_LOA_L2(self):
+    def test_lazy_OA_ConstraintQualificationExample_ROA_L2(self):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
-            print('\n Solving ConstraintQualificationExample with LP/NLP (LOA L2)')
+            print('\n Solving ConstraintQualificationExample with LP/NLP (ROA L2)')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -426,10 +426,10 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
-    def test_OA_OnlineDocExample_LOA_L2(self):
+    def test_OA_OnlineDocExample_ROA_L2(self):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
-            print('\n Solving OnlineDocExample with LP/NLP (LOA L2)')
+            print('\n Solving OnlineDocExample with LP/NLP (ROA L2)')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -441,11 +441,11 @@ class TestMindtPy(unittest.TestCase):
             self.assertAlmostEqual(
                 value(model.objective.expr), 2.438447, places=2)
 
-    def test_OA_Proposal_with_int_cuts_LOA_L2(self):
+    def test_OA_Proposal_with_int_cuts_ROA_L2(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
-            print('\n Solving problem with Outer Approximation (LOA L2)')
+            print('\n Solving problem with Outer Approximation (ROA L2)')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -459,11 +459,11 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
-    def test_lazy_OA_8PP_LOA_L_inf(self):
+    def test_lazy_OA_8PP_ROA_L_inf(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
-            print('\n Solving 8PP problem with LP/NLP (LOA L infinity)')
+            print('\n Solving 8PP problem with LP/NLP (ROA L infinity)')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='rNLP',
                                 mip_solver=required_solvers[1],
@@ -476,11 +476,11 @@ class TestMindtPy(unittest.TestCase):
                           [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
-    def test_lazy_OA_8PP_init_max_binary_LOA_L_inf(self):
+    def test_lazy_OA_8PP_init_max_binary_ROA_L_inf(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
-            print('\n Solving 8PP_init_max_binary problem with LP/NLP (LOA L infinity)')
+            print('\n Solving 8PP_init_max_binary problem with LP/NLP (ROA L infinity)')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='max_binary',
                                 mip_solver=required_solvers[1],
@@ -492,11 +492,11 @@ class TestMindtPy(unittest.TestCase):
                           [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
 
-    def test_lazy_OA_MINLP_simple_LOA_L_inf(self):
+    def test_lazy_OA_MINLP_simple_ROA_L_inf(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
-            print('\n Solving MINLP_simple problem with LP/NLP (LOA L infinity)')
+            print('\n Solving MINLP_simple problem with LP/NLP (ROA L infinity)')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
@@ -509,11 +509,11 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 3.5, places=2)
 
-    def test_lazy_OA_MINLP2_simple_LOA_L_inf(self):
+    def test_lazy_OA_MINLP2_simple_ROA_L_inf(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP2()
-            print('\n Solving MINLP2_simple problem with LP/NLP (LOA L infinity)')
+            print('\n Solving MINLP2_simple problem with LP/NLP (ROA L infinity)')
             results = opt.solve(model, strategy='OA',
                                 init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
@@ -525,11 +525,11 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 6.00976, places=2)
 
-    def test_lazy_OA_MINLP3_simple_LOA_L_inf(self):
+    def test_lazy_OA_MINLP3_simple_ROA_L_inf(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP3()
-            print('\n Solving MINLP3_simple problem with LP/NLP (LOA L infinity)')
+            print('\n Solving MINLP3_simple problem with LP/NLP (ROA L infinity)')
             results = opt.solve(model, strategy='OA', init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -540,11 +540,11 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
 
-    def test_lazy_OA_Proposal_LOA_L_inf(self):
+    def test_lazy_OA_Proposal_ROA_L_inf(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
-            print('\n Solving Proposal problem with LP/NLP (LOA L infinity)')
+            print('\n Solving Proposal problem with LP/NLP (ROA L infinity)')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -555,11 +555,11 @@ class TestMindtPy(unittest.TestCase):
                           [TerminationCondition.optimal, TerminationCondition.feasible])
             self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
-    def test_lazy_OA_ConstraintQualificationExample_LOA_L_inf(self):
+    def test_lazy_OA_ConstraintQualificationExample_ROA_L_inf(self):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print(
-                '\n Solving ConstraintQualificationExample with LP/NLP (LOA L infinity)')
+                '\n Solving ConstraintQualificationExample with LP/NLP (ROA L infinity)')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -570,10 +570,10 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
 
-    def test_OA_OnlineDocExample_LOA_L_inf(self):
+    def test_OA_OnlineDocExample_ROA_L_inf(self):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
-            print('\n Solving OnlineDocExample with LP/NLP (LOA L infinity)')
+            print('\n Solving OnlineDocExample with LP/NLP (ROA L infinity)')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -585,11 +585,11 @@ class TestMindtPy(unittest.TestCase):
             self.assertAlmostEqual(
                 value(model.objective.expr), 2.438447, places=2)
 
-    def test_OA_Proposal_with_int_cuts_LOA_L_inf(self):
+    def test_OA_Proposal_with_int_cuts_ROA_L_inf(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
-            print('\n Solving problem with Outer Approximation (LOA L infinity)')
+            print('\n Solving problem with Outer Approximation (ROA L infinity)')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
