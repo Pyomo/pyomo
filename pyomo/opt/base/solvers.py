@@ -719,20 +719,6 @@ class OptSolver(object):
                          problem_format,
                          valid_problem_formats,
                          **kwds):
-        #
-        # If the problem is not None, then we assume that it has
-        # already been appropriately defined.  Either it's a string
-        # name of the problem we want to solve, or its a functor
-        # object that we can evaluate directly.
-        #
-        if self._problem is not None:
-            return (self._problem,
-                    ProblemFormat.colin_optproblem,
-                    None)
-
-        #
-        # Otherwise, we try to convert the object explicitly.
-        #
         return convert_problem(args,
                                problem_format,
                                valid_problem_formats,
@@ -828,16 +814,6 @@ def default_config_block(solver, init=False):
                 str,
                 'The technique that is used to manage solver executions.',
                 None) )
-    solver.declare('pyro host', ConfigValue(
-                None,
-                str,
-                "The hostname to bind on when searching for a Pyro nameserver.",
-                None) )
-    solver.declare('pyro port', ConfigValue(
-                None,
-                int,
-                "The port to bind on when searching for a Pyro nameserver.",
-                None) )
     solver.declare('options', ConfigBlock(
                 implicit=True,
                 implicit_domain=ConfigValue(
@@ -885,10 +861,6 @@ def default_config_block(solver, init=False):
     solver_list[0].get('manager').\
         declare_as_argument('--solver-manager', dest="smanager_type",
                             metavar="TYPE")
-    solver_list[0].get('pyro host').\
-        declare_as_argument('--pyro-host', dest="pyro_host")
-    solver_list[0].get('pyro port').\
-        declare_as_argument('--pyro-port', dest="pyro_port")
     solver_list[0].get('options string').\
         declare_as_argument('--solver-options', dest='options_string',
                             metavar="STRING")

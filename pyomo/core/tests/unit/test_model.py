@@ -13,12 +13,14 @@
 # Test             Class to test the Model class
 #
 
+import json
 import os
 from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))
 import pickle
 
-import pyutilib.th as unittest
+from filecmp import cmp
+import pyomo.common.unittest as unittest
 
 from pyomo.common.dependencies import yaml_available
 from pyomo.common.tempfiles import TempfileManager
@@ -26,6 +28,9 @@ from pyomo.core.expr import current as EXPR
 from pyomo.environ import RangeSet, ConcreteModel, Var, Param, Block, AbstractModel, Set, Constraint, Objective, value, sum_product, SolverFactory, VarList, ObjectiveList, ConstraintList
 from pyomo.opt import check_available_solvers
 from pyomo.opt.parallel.local import SolverManager_Serial
+
+if yaml_available:
+    import yaml
 
 solvers = check_available_solvers('glpk')
 
@@ -222,9 +227,11 @@ class Test(unittest.TestCase):
         results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1.out"), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve1.out"), join(currdir,"solve1.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve1.out"), 'r') as out, \
+            open(join(currdir,"solve1.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
         #
         def d_rule(model):
             return model.x[1] >= 0
@@ -233,17 +240,21 @@ class Test(unittest.TestCase):
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1x.out"), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve1x.out"), join(currdir,"solve1.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve1x.out"), 'r') as out, \
+            open(join(currdir,"solve1.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
         #
         model.d.activate()
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1a.out"), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve1a.out"), join(currdir,"solve1a.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve1a.out"), 'r') as out, \
+            open(join(currdir,"solve1a.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
         #
         model.d.deactivate()
         def e_rule(model, i):
@@ -254,17 +265,21 @@ class Test(unittest.TestCase):
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1y.out"), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve1y.out"), join(currdir,"solve1.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve1y.out"), 'r') as out, \
+            open(join(currdir,"solve1.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
         #
         model.e.activate()
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1b.out"), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve1b.out"), join(currdir,"solve1b.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve1b.out"), 'r') as out, \
+            open(join(currdir,"solve1b.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
             
     def test_store_to_skip_stale_vars(self):
         # test store_to() function with skip_stale_vars=True
@@ -306,8 +321,9 @@ class Test(unittest.TestCase):
             return expr
         model.obj = Objective(rule=obj_rule)
         model.display(join(currdir,"solve3.out"))
-        self.assertFileEqualsBaseline(
-            join(currdir,"solve3.out"), join(currdir,"solve3.txt"))
+        _out, _txt = join(currdir,"solve3.out"), join(currdir,"solve3.txt")
+        self.assertTrue(cmp(_out, _txt),
+                        msg="Files %s and %s differ" % (_txt, _out))
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve4(self):
@@ -327,9 +343,11 @@ class Test(unittest.TestCase):
         results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,'solve4.out'), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve4.out"), join(currdir,"solve1.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve4.out"), 'r') as out, \
+            open(join(currdir,"solve1.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve6(self):
@@ -356,9 +374,11 @@ class Test(unittest.TestCase):
         results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,'solve6.out'), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve6.out"), join(currdir,"solve6.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve6.out"), 'r') as out, \
+            open(join(currdir,"solve6.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve7(self):
@@ -386,9 +406,11 @@ class Test(unittest.TestCase):
         #model.display()
         model.solutions.store_to(results)
         results.write(filename=join(currdir,'solve7.out'), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve7.out"), join(currdir,"solve7.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve7.out"), 'r') as out, \
+            open(join(currdir,"solve7.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
 
     def test_stats1(self):
         model = ConcreteModel()
@@ -581,16 +603,20 @@ class Test(unittest.TestCase):
         #
         results.write(filename=join(currdir,'solve_with_store1.out'),
                       format='yaml')
-        self.assertMatchesYamlBaseline(
-            join(currdir,"solve_with_store1.out"),
-            join(currdir,"solve_with_store1.txt"))
+        with open(join(currdir,"solve_with_store1.out"), 'r') as out, \
+            open(join(currdir,"solve_with_store1.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(yaml.full_load(txt),
+                                             yaml.full_load(out),
+                                             allow_second_superset=True)
         model.solutions.store_to(results)
         #
         results.write(filename=join(currdir,'solve_with_store2.out'),
                       format='yaml')
-        self.assertMatchesYamlBaseline(
-            join(currdir,"solve_with_store2.out"),
-            join(currdir,"solve_with_store2.txt"))
+        with open(join(currdir,"solve_with_store2.out"), 'r') as out, \
+            open(join(currdir,"solve_with_store2.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(yaml.full_load(txt),
+                                             yaml.full_load(out),
+                                             allow_second_superset=True)
         #
         # Load results with string indices
         #
@@ -619,16 +645,20 @@ class Test(unittest.TestCase):
         #
         results.write(filename=join(currdir,'solve_with_store1.out'),
                       format='yaml')
-        self.assertMatchesYamlBaseline(
-            join(currdir,"solve_with_store1.out"),
-            join(currdir,"solve_with_store1.txt"))
+        with open(join(currdir,"solve_with_store1.out"), 'r') as out, \
+            open(join(currdir,"solve_with_store1.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(yaml.full_load(txt),
+                                             yaml.full_load(out),
+                                             allow_second_superset=True)
         model.solutions.store_to(results)
         #
         results.write(filename=join(currdir,'solve_with_store2.out'),
                       format='yaml')
-        self.assertMatchesYamlBaseline(
-            join(currdir,"solve_with_store2.out"),
-            join(currdir,"solve_with_store2.txt"))
+        with open(join(currdir,"solve_with_store2.out"), 'r') as out, \
+            open(join(currdir,"solve_with_store2.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(yaml.full_load(txt),
+                                             yaml.full_load(out),
+                                             allow_second_superset=True)
         #
         # Load results with string indices
         #
@@ -656,16 +686,20 @@ class Test(unittest.TestCase):
         #
         results.write(filename=join(currdir,'solve_with_store3.out'),
                       format='json')
-        self.assertMatchesYamlBaseline(
-            join(currdir,"solve_with_store3.out"),
-            join(currdir,"solve_with_store3.txt"))
+        with open(join(currdir,"solve_with_store3.out"), 'r') as out, \
+            open(join(currdir,"solve_with_store3.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(yaml.full_load(txt),
+                                             yaml.full_load(out),
+                                             allow_second_superset=True)
         #
         model.solutions.store_to(results)
         results.write(filename=join(currdir,'solve_with_store4.out'),
                       format='json')
-        self.assertMatchesYamlBaseline(
-            join(currdir,"solve_with_store4.out"),
-            join(currdir,"solve_with_store4.txt"))
+        with open(join(currdir,"solve_with_store4.out"), 'r') as out, \
+            open(join(currdir,"solve_with_store4.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(yaml.full_load(txt),
+                                             yaml.full_load(out),
+                                             allow_second_superset=True)
         #
         # Test that we can pickle the results object
         #
@@ -673,9 +707,11 @@ class Test(unittest.TestCase):
         results_ = pickle.loads(buf)
         results.write(filename=join(currdir,'solve_with_store4.out'),
                       format='json')
-        self.assertMatchesYamlBaseline(
-            join(currdir,"solve_with_store4.out"),
-            join(currdir,"solve_with_store4.txt"))
+        with open(join(currdir,"solve_with_store4.out"), 'r') as out, \
+            open(join(currdir,"solve_with_store4.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(yaml.full_load(txt),
+                                             yaml.full_load(out),
+                                             allow_second_superset=True)
         #
         # Load results with string indices
         #
@@ -704,9 +740,11 @@ class Test(unittest.TestCase):
         model.solutions.store_to(results)
         results.write(filename=join(currdir,'solve_with_store5.out'),
                       format='json')
-        self.assertMatchesYamlBaseline(
-            join(currdir,"solve_with_store5.out"),
-            join(currdir,"solve_with_store4.txt"))
+        with open(join(currdir,"solve_with_store5.out"), 'r') as out, \
+            open(join(currdir,"solve_with_store4.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(yaml.full_load(txt),
+                                             yaml.full_load(out),
+                                             allow_second_superset=True)
         #
         model.solutions.store_to(results, cuid=True)
         buf = pickle.dumps(results)
@@ -715,9 +753,11 @@ class Test(unittest.TestCase):
         model.solutions.store_to(results_)
         results_.write(filename=join(currdir,'solve_with_store6.out'),
                        format='json')
-        self.assertMatchesYamlBaseline(
-            join(currdir,"solve_with_store6.out"),
-            join(currdir,"solve_with_store4.txt"))
+        with open(join(currdir,"solve_with_store6.out"), 'r') as out, \
+            open(join(currdir,"solve_with_store4.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(yaml.full_load(txt),
+                                             yaml.full_load(out),
+                                             allow_second_superset=True)
         #
         # Load results with string indices
         #
@@ -733,9 +773,11 @@ class Test(unittest.TestCase):
         tmodel.solutions.store_to(results)
         results.write(filename=join(currdir,'solve_with_store7.out'),
                       format='json')
-        self.assertMatchesYamlBaseline(
-            join(currdir,"solve_with_store7.out"),
-            join(currdir,"solve_with_store4.txt"))
+        with open(join(currdir,"solve_with_store7.out"), 'r') as out, \
+            open(join(currdir,"solve_with_store4.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(yaml.full_load(txt),
+                                             yaml.full_load(out),
+                                             allow_second_superset=True)
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     @unittest.skipIf(not yaml_available, "YAML not available available")
@@ -757,9 +799,11 @@ class Test(unittest.TestCase):
         model.solutions.store_to(results)
         results.write(filename=join(currdir,'solve_with_store8.out'),
                       format='json')
-        self.assertMatchesYamlBaseline(
-            join(currdir,"solve_with_store8.out"),
-            join(currdir,"solve_with_store4.txt"))
+        with open(join(currdir,"solve_with_store8.out"), 'r') as out, \
+            open(join(currdir,"solve_with_store4.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(yaml.full_load(txt),
+                                             yaml.full_load(out),
+                                             allow_second_superset=True)
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     @unittest.skipIf(not yaml_available, "YAML not available available")
@@ -783,9 +827,11 @@ class Test(unittest.TestCase):
         model.solutions.store_to(results)
         results.write(filename=join(currdir,'solve_with_store8.out'),
                       format='json')
-        self.assertMatchesYamlBaseline(
-            join(currdir,"solve_with_store8.out"),
-            join(currdir,"solve_with_store4.txt"))
+        with open(join(currdir,"solve_with_store8.out"), 'r') as out, \
+            open(join(currdir,"solve_with_store4.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(yaml.full_load(txt),
+                                             yaml.full_load(out),
+                                             allow_second_superset=True)
 
 
     def test_create_concrete_from_rule(self):

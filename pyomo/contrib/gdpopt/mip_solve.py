@@ -206,8 +206,10 @@ def solve_LOA_master(solve_data, config):
 
         obj_expr = GDPopt.oa_obj.expr
         base_obj_expr = main_objective.expr
-    elif solve_data.active_strategy == 'GLOA':
+    elif solve_data.active_strategy in {'GLOA', 'RIC'}:
         obj_expr = base_obj_expr = main_objective.expr
+    else:
+        raise ValueError('Unrecognized strategy: ' + solve_data.active_strategy)
 
     mip_result = solve_linear_GDP(m, solve_data, config)
     if mip_result.feasible:

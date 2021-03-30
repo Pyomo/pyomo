@@ -132,21 +132,14 @@ def run_setup():
       packages=find_packages(exclude=("scripts",)),
       package_data={"pyomo.contrib.viewer":["*.ui"]},
       ext_modules = ext_modules,
+      include_package_data=True,
       entry_points="""
         [console_scripts]
         pyomo = pyomo.scripting.pyomo_main:main_console_script
-        test.pyomo = pyomo.scripting.runtests:runPyomoTests
         pyomo_python = pyomo.scripting.commands:pyomo_python
-        pyro_mip_server = pyomo.scripting.pyro_mip_server:main
-        pyomo_ns = pyomo.scripting.commands:pyomo_ns
-        pyomo_nsc = pyomo.scripting.commands:pyomo_nsc
-        kill_pyro_mip_servers = pyomo.scripting.commands:kill_pyro_mip_servers
-        launch_pyro_mip_servers = pyomo.scripting.commands:launch_pyro_mip_servers
 
         [pyomo.command]
         pyomo.help = pyomo.scripting.driver_help
-        pyomo.test.pyomo = pyomo.scripting.runtests
-        pyomo.pyro_mip_server = pyomo.scripting.pyro_mip_server
         pyomo.viewer=pyomo.contrib.viewer.pyomo_viewer
       """
       )

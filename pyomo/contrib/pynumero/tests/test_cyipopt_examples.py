@@ -10,9 +10,13 @@
 
 import os.path
 from pyomo.common.fileutils import this_file_dir, import_file
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.common.dependencies import attempt_import
+from pyomo.common.log import LoggingIntercept
+from pyomo.opt import TerminationCondition
+from io import StringIO
+import logging
 
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np, numpy_available, scipy_sparse as spa, scipy_available
@@ -149,3 +153,28 @@ class TestExamples(unittest.TestCase):
 
         m = ex.perform_estimation_pyomo_only(data_fname, solver_trace=False)
         self.assertAlmostEqual(pyo.value(m.UA), 204.43761, places=3)
+
+    def test_cyipopt_callbacks(self):
+        ex = import_file(os.path.join(example_dir, 'callback', 'cyipopt_callback.py'))
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo', logging.INFO):
+            ex.main()
+
+        self.assertIn("Residuals for iteration 2",
+                          output.getvalue().strip())
+
+    @unittest.skipIf(not pandas_available, "pandas needed to run this example")
+    def test_cyipopt_functor(self):
+        ex = import_file(os.path.join(example_dir, 'callback', 'cyipopt_functor_callback.py'))
+        df = ex.main()
+        self.assertEqual(df.shape, (7, 5))
+        # check one of the residuals
+        s = df['ca_bal']
+        self.assertAlmostEqual(s.iloc[6], 0, places=3)
+
+    def test_cyipopt_callback_halt(self):
+        ex = import_file(os.path.join(example_dir, 'callback', 'cyipopt_callback_halt.py'))
+        status = ex.main()
+        self.assertEqual(status.solver.termination_condition, TerminationCondition.userInterrupt)
+

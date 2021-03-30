@@ -11,7 +11,7 @@
 import sys
 import logging
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.collections import Bunch
 from pyomo.opt import TerminationCondition
@@ -103,13 +103,6 @@ ExpectedFailures['glpk', 'mps', 'LP_duals_maximize'] = \
 #
 # CBC
 #
-
-ExpectedFailures['cbc', 'lp', 'LP_duals_maximize'] = \
-    (lambda v: v <= (2,10,1,0),
-    "For a maximization problem where a variable is pushed to its "
-    "lower bound, Cbc reports the reduced cost as a positive number. In "
-    "practice this should be reported as a negative number. A ticket has "
-    "been filed at:\nhttps://projects.coin-or.org/Cbc/ticket/125")
 
 ExpectedFailures['cbc', 'nl', 'MILP_unbounded'] = \
     (lambda v: v <= _trunk_version,

@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import pickle
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.collections import OrderedSet
 
@@ -68,3 +68,19 @@ class testOrderedSet(unittest.TestCase):
         self.assertEqual(a, b)
         self.assertIsNot(a, b)
         self.assertIsNot(a._dict, b._dict)
+
+    def test_union(self):
+        a = OrderedSet([1, 2, 3, 'a', 'b', 'c'])
+        b = OrderedSet([3, 4, 'c', 'd'])
+        c = a.union(b)
+        self.assertEqual(list(c), [1, 2, 3, 'a', 'b', 'c', 4, 'd'])
+        self.assertEqual(list(a), [1, 2, 3, 'a', 'b', 'c'])
+        self.assertEqual(list(b), [3, 4, 'c', 'd'])
+
+    def test_intersection(self):
+        a = OrderedSet([1, 2, 3, 'a', 'b', 'c'])
+        b = OrderedSet([3, 4, 'c', 'd'])
+        c = a.intersection(b)
+        self.assertEqual(list(c), [3, 'c'])
+        self.assertEqual(list(a), [1, 2, 3, 'a', 'b', 'c'])
+        self.assertEqual(list(b), [3, 4, 'c', 'd'])

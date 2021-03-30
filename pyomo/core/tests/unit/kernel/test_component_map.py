@@ -11,7 +11,7 @@
 import collections.abc
 import pickle
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.collections import ComponentMap
 from pyomo.core.kernel.variable import (variable,
                                         variable_dict,

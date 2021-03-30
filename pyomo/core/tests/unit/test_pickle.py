@@ -13,12 +13,12 @@
 
 import pickle
 import os
-import sys
-from os.path import abspath, dirname
+from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))+os.sep
 import platform
 
-import pyutilib.th as unittest
+from filecmp import cmp
+import pyomo.common.unittest as unittest
 from pyomo.environ import AbstractModel, ConcreteModel, Set, Param, Var, Constraint, Objective, Reals, NonNegativeReals, sum_product
 
 
@@ -330,17 +330,21 @@ class Test(unittest.TestCase):
         model.con = Constraint(expr=model.x >= 1)
         model.con2 = Constraint(expr=model.x_indexed[1] + model.x_indexed[2] >= 4)
 
-        OUTPUT=open(currdir+"test_pickle4_baseline.out","w")
+        OUTPUT=open(join(currdir, "test_pickle4_baseline.out"), "w")
         model.pprint(ostream=OUTPUT)
         OUTPUT.close()
-        self.assertFileEqualsBaseline(currdir+"test_pickle4_baseline.out",currdir+"test_pickle4_baseline.txt")
+        _out, _txt = join(currdir, "test_pickle4_baseline.out"), join(currdir, "test_pickle4_baseline.txt")
+        self.assertTrue(cmp(_out, _txt),
+                        msg="Files %s and %s differ" % (_out, _txt))
 
         str = pickle.dumps(model)
 
-        OUTPUT=open(currdir+"test_pickle4_after.out","w")
+        OUTPUT=open(join(currdir, "test_pickle4_after.out"), "w")
         model.pprint(ostream=OUTPUT)
         OUTPUT.close()
-        self.assertFileEqualsBaseline(currdir+"test_pickle4_after.out",currdir+"test_pickle4_baseline.txt")
+        _out, _txt = join(currdir, "test_pickle4_after.out"), join(currdir, "test_pickle4_baseline.txt")
+        self.assertTrue(cmp(_out, _txt),
+                        msg="Files %s and %s differ" % (_out, _txt))
 
 if __name__ == "__main__":
     unittest.main()

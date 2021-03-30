@@ -15,7 +15,7 @@ from os.path import join, normpath
 
 from six import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import Bunch
 from pyomo.common.fileutils import import_file
@@ -64,7 +64,7 @@ class TestGDPoptUnit(unittest.TestCase):
             solver_data = GDPoptSolveData()
             solver_data.timing = Bunch()
             with time_code(solver_data.timing, 'main', is_main_timer=True):
-                solve_linear_GDP(m, solver_data, GDPoptSolver.CONFIG(dict(mip_solver=mip_solver)))
+                solve_linear_GDP(m, solver_data, GDPoptSolver.CONFIG(dict(mip_solver=mip_solver, strategy='LOA')))
             self.assertIn("Linear GDP was unbounded. Resolving with arbitrary bound values",
                           output.getvalue().strip())
 
@@ -76,7 +76,7 @@ class TestGDPoptUnit(unittest.TestCase):
         m.o = Objective(expr=m.x)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
-            SolverFactory('gdpopt').solve(m, mip_solver=mip_solver)
+            SolverFactory('gdpopt').solve(m, mip_solver=mip_solver, strategy='LOA')
             self.assertIn("Your model is an LP (linear program).",
                           output.getvalue().strip())
             self.assertAlmostEqual(value(m.o.expr), 1)
@@ -89,7 +89,7 @@ class TestGDPoptUnit(unittest.TestCase):
         m.o = Objective(expr=m.x ** 2)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
-            SolverFactory('gdpopt').solve(m, nlp_solver=nlp_solver)
+            SolverFactory('gdpopt').solve(m, nlp_solver=nlp_solver, strategy='LOA')
             self.assertIn("Your model is an NLP (nonlinear program).",
                           output.getvalue().strip())
             self.assertAlmostEqual(value(m.o.expr), 1)
@@ -102,7 +102,7 @@ class TestGDPoptUnit(unittest.TestCase):
         m.o = Objective(expr=1)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
-            SolverFactory('gdpopt').solve(m, mip_solver=mip_solver)
+            SolverFactory('gdpopt').solve(m, mip_solver=mip_solver, strategy='LOA')
             self.assertIn("Your model is an LP (linear program).",
                           output.getvalue().strip())
             self.assertAlmostEqual(value(m.o.expr), 1)
@@ -114,7 +114,7 @@ class TestGDPoptUnit(unittest.TestCase):
         m.c = Constraint(expr=m.x ** 2 >= 1)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
-            SolverFactory('gdpopt').solve(m, nlp_solver=nlp_solver)
+            SolverFactory('gdpopt').solve(m, nlp_solver=nlp_solver, strategy='LOA')
             self.assertIn("Model has no active objectives. Adding dummy objective.",
                           output.getvalue().strip())
 
@@ -124,35 +124,35 @@ class TestGDPoptUnit(unittest.TestCase):
         m.o = Objective(expr=m.x)
         m.o2 = Objective(expr=m.x + 1)
         with self.assertRaisesRegexp(ValueError, "Model has multiple active objectives"):
-            SolverFactory('gdpopt').solve(m)
+            SolverFactory('gdpopt').solve(m, strategy='LOA')
 
     def test_is_feasible_function(self):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 3), initialize=2)
         m.c = Constraint(expr=m.x == 2)
-        self.assertTrue(is_feasible(m, GDPoptSolver.CONFIG()))
+        self.assertTrue(is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA'))))
 
         m.c2 = Constraint(expr=m.x <= 1)
-        self.assertFalse(is_feasible(m, GDPoptSolver.CONFIG()))
+        self.assertFalse(is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA'))))
 
         m = ConcreteModel()
         m.x = Var(bounds=(0, 3), initialize=2)
         m.c = Constraint(expr=m.x >= 5)
-        self.assertFalse(is_feasible(m, GDPoptSolver.CONFIG()))
+        self.assertFalse(is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA'))))
 
         m = ConcreteModel()
         m.x = Var(bounds=(3, 3), initialize=2)
-        self.assertFalse(is_feasible(m, GDPoptSolver.CONFIG()))
+        self.assertFalse(is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA'))))
 
         m = ConcreteModel()
         m.x = Var(bounds=(0, 1), initialize=2)
-        self.assertFalse(is_feasible(m, GDPoptSolver.CONFIG()))
+        self.assertFalse(is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA'))))
 
         m = ConcreteModel()
         m.x = Var(bounds=(0, 1), initialize=2)
         m.d = Disjunct()
         with self.assertRaisesRegexp(NotImplementedError, "Found active disjunct"):
-            is_feasible(m, GDPoptSolver.CONFIG())
+            is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA')))
 
 
 @unittest.skipIf(not LOA_solvers_available,
@@ -357,6 +357,216 @@ class TestGDPopt(unittest.TestCase):
 
         SolverFactory('gdpopt').solve(
             eight_process, strategy='LOA', init_strategy='custom_disjuncts',
+            custom_init_disjuncts=initialize,
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver,
+            call_after_subproblem_feasible=assert_correct_disjuncts_active)
+
+        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+
+
+@unittest.skipIf(not LOA_solvers_available,
+                 "Required subsolvers %s are not available"
+                 % (LOA_solvers,))
+class TestGDPoptRIC(unittest.TestCase):
+    """Tests for the GDPopt solver plugin."""
+
+    def test_infeasible_GDP(self):
+        """Test for infeasible GDP."""
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 2))
+        m.d = Disjunction(expr=[
+            [m.x ** 2 >= 3, m.x >= 3],
+            [m.x ** 2 <= -1, m.x <= -1]])
+        m.o = Objective(expr=m.x)
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
+            SolverFactory('gdpopt').solve(
+                m, strategy='RIC',
+                mip_solver=mip_solver,
+                nlp_solver=nlp_solver)
+            self.assertIn("Set covering problem was infeasible.",
+                          output.getvalue().strip())
+
+    def test_GDP_nonlinear_objective(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(-1, 10))
+        m.y = Var(bounds=(2, 3))
+        m.d = Disjunction(expr=[
+            [m.x + m.y >= 5], [m.x - m.y <= 3]
+        ])
+        m.o = Objective(expr=m.x ** 2)
+        SolverFactory('gdpopt').solve(
+            m, strategy='RIC',
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver
+        )
+        self.assertAlmostEqual(value(m.o), 0)
+
+        m = ConcreteModel()
+        m.x = Var(bounds=(-1, 10))
+        m.y = Var(bounds=(2, 3))
+        m.d = Disjunction(expr=[
+            [m.x + m.y >= 5], [m.x - m.y <= 3]
+        ])
+        m.o = Objective(expr=-m.x ** 2, sense=maximize)
+        SolverFactory('gdpopt').solve(
+            m, strategy='RIC',
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver
+        )
+        self.assertAlmostEqual(value(m.o), 0)
+
+    def test_RIC_8PP_default_init(self):
+        """Test logic-based outer approximation with 8PP."""
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+        SolverFactory('gdpopt').solve(
+            eight_process, strategy='RIC',
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver,
+            tee=False)
+        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+
+    @unittest.skipUnless(SolverFactory('gams').available(exception_flag=False), 'GAMS solver not available')
+    def test_RIC_8PP_gams_solver(self):
+        # Make sure that the duals are still correct
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+        SolverFactory('gdpopt').solve(
+            eight_process, strategy='RIC',
+            mip_solver=mip_solver,
+            nlp_solver='gams',
+            max_slack=0,
+            tee=False)
+        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+
+    def test_RIC_8PP_force_NLP(self):
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+        SolverFactory('gdpopt').solve(
+            eight_process, strategy='RIC',
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver,
+            force_subproblem_nlp=True,
+            tee=False)
+        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+
+    def test_RIC_strip_pack_default_init(self):
+        """Test logic-based outer approximation with strip packing."""
+        exfile = import_file(
+            join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
+        strip_pack = exfile.build_rect_strip_packing_model()
+        SolverFactory('gdpopt').solve(
+            strip_pack, strategy='RIC',
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver)
+        self.assertTrue(
+            fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
+
+    def test_RIC_constrained_layout_default_init(self):
+        """Test RIC with constrained layout."""
+        exfile = import_file(
+            join(exdir, 'constrained_layout', 'cons_layout_model.py'))
+        cons_layout = exfile.build_constrained_layout_model()
+        SolverFactory('gdpopt').solve(
+            cons_layout, strategy='RIC',
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver,
+            iterlim=120,
+            max_slack=5,  # problem is convex, so can decrease slack
+        )
+        objective_value = value(cons_layout.min_dist_cost.expr)
+        self.assertTrue(
+            fabs(objective_value - 41573) <= 200,
+            "Objective value of %s instead of 41573" % objective_value)
+
+    def test_RIC_8PP_maxBinary(self):
+        """Test logic-based OA with max_binary initialization."""
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+        SolverFactory('gdpopt').solve(
+            eight_process, strategy='RIC', init_strategy='max_binary',
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver)
+
+        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+
+    def test_RIC_strip_pack_maxBinary(self):
+        """Test RIC with strip packing using max_binary initialization."""
+        exfile = import_file(
+            join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
+        strip_pack = exfile.build_rect_strip_packing_model()
+        SolverFactory('gdpopt').solve(
+            strip_pack, strategy='RIC', init_strategy='max_binary',
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver)
+        self.assertTrue(
+            fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
+
+    def test_RIC_8PP_fixed_disjuncts(self):
+        """Test RIC with 8PP using fixed disjuncts initialization."""
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+        initialize = [
+            # Use units 1, 4, 7, 8
+            eight_process.use_unit_1or2.disjuncts[0],
+            eight_process.use_unit_3ornot.disjuncts[1],
+            eight_process.use_unit_4or5ornot.disjuncts[0],
+            eight_process.use_unit_6or7ornot.disjuncts[1],
+            eight_process.use_unit_8ornot.disjuncts[0]
+        ]
+        for disj in eight_process.component_data_objects(Disjunct):
+            if disj in initialize:
+                disj.indicator_var.set_value(1)
+            else:
+                disj.indicator_var.set_value(0)
+        SolverFactory('gdpopt').solve(
+            eight_process, strategy='RIC', init_strategy='fix_disjuncts',
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver)
+
+        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+
+    def test_RIC_custom_disjuncts(self):
+        """Test logic-based OA with custom disjuncts initialization."""
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+        initialize = [
+            # Use units 1, 4, 7, 8
+            [eight_process.use_unit_1or2.disjuncts[0],
+             eight_process.use_unit_3ornot.disjuncts[1],
+             eight_process.use_unit_4or5ornot.disjuncts[0],
+             eight_process.use_unit_6or7ornot.disjuncts[1],
+             eight_process.use_unit_8ornot.disjuncts[0]],
+            # Use units 2, 4, 6, 8
+            [eight_process.use_unit_1or2.disjuncts[1],
+             eight_process.use_unit_3ornot.disjuncts[1],
+             eight_process.use_unit_4or5ornot.disjuncts[0],
+             eight_process.use_unit_6or7ornot.disjuncts[0],
+             eight_process.use_unit_8ornot.disjuncts[0]]
+        ]
+
+        def assert_correct_disjuncts_active(nlp_model, solve_data):
+            if solve_data.master_iteration >= 1:
+                return  # only checking initialization
+            iter_num = solve_data.nlp_iteration
+            disjs_should_be_active = initialize[iter_num - 1]
+            for orig_disj, soln_disj in zip(
+                solve_data.original_model.GDPopt_utils.disjunct_list,
+                nlp_model.GDPopt_utils.disjunct_list
+            ):
+                if orig_disj in disjs_should_be_active:
+                    self.assertTrue(soln_disj.indicator_var.value == 1)
+
+        SolverFactory('gdpopt').solve(
+            eight_process, strategy='RIC', init_strategy='custom_disjuncts',
             custom_init_disjuncts=initialize,
             mip_solver=mip_solver,
             nlp_solver=nlp_solver,

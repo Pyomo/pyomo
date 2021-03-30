@@ -8,9 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.environ import SolverFactory, ConcreteModel, Var, Constraint, Objective, Integers, Boolean, Suffix, maximize
+import pyomo.common.unittest as unittest
 
-from pyomo.environ import SolverFactory, ConcreteModel, Var, Constraint, Objective, Integers, Boolean
-import pyutilib.th as unittest
 from pyomo.common.tee import capture_output
 
 opt_cbc = SolverFactory('cbc')
@@ -45,6 +45,43 @@ class CBCTests(unittest.TestCase):
                 self.assertIn('MIPStart values read for 2 variables.', output.getvalue())
                 # m.x is ignored because it is continuous, so cost should be 5+1
                 self.assertIn('MIPStart provided solution with cost 6', output.getvalue())
+
+    @unittest.skipIf(not cbc_available,
+                     "The CBC solver is not available")
+    def test_duals_signs(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.obj = Objective(expr=m.x)
+        m.c = Constraint(expr=(-1, m.x, 1))
+        m.dual = Suffix(direction=Suffix.IMPORT)
+        opt = SolverFactory('cbc')
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.problem.lower_bound, -1)
+        self.assertAlmostEqual(res.problem.upper_bound, -1)
+        self.assertAlmostEqual(m.dual[m.c], 1)
+        m.obj.sense = maximize
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.problem.lower_bound, 1)
+        self.assertAlmostEqual(res.problem.upper_bound, 1)
+        self.assertAlmostEqual(m.dual[m.c], 1)
+
+    @unittest.skipIf(not cbc_available,
+                     "The CBC solver is not available")
+    def test_rc_signs(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(-1, 1))
+        m.obj = Objective(expr=m.x)
+        m.rc = Suffix(direction=Suffix.IMPORT)
+        opt = SolverFactory('cbc')
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.problem.lower_bound, -1)
+        self.assertAlmostEqual(res.problem.upper_bound, -1)
+        self.assertAlmostEqual(m.rc[m.x], 1)
+        m.obj.sense = maximize
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.problem.lower_bound, 1)
+        self.assertAlmostEqual(res.problem.upper_bound, 1)
+        self.assertAlmostEqual(m.rc[m.x], 1)
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@
 #
 # Unit Tests for Discrete Variable Transformations
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import ConcreteModel, Var, Constraint, Objective, Suffix, Binary, TransformationFactory, SolverFactory, Reals
 from pyomo.opt import check_available_solvers

@@ -16,7 +16,7 @@ import os
 import re
 from inspect import getfile
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import subprocess
 
 def _failIfPyomoResultsDiffer(self, cmd=None, baseline=None, cwd=None):

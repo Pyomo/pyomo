@@ -16,7 +16,7 @@ from os.path import abspath, dirname
 pyomodir = dirname(abspath(__file__))+"/../.."
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.opt import (AbstractProblemWriter, AbstractResultsReader,
