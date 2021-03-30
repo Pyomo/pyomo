@@ -208,7 +208,7 @@ for tdir in testdirs:
     # JDS: This is crazy fragile.  If testdirs is ever anything BUT
     # "pyomobook" you will be creating invalid class names
     #
-    testClassName = 'Test_'+os.path.basename(testdir).replace('-','_')
+    # testClassName = 'Test_'+os.path.basename(testdir).replace('-','_')
     # assert '.' not in testClassName
     # Test = globals()[testClassName] = type(
     #     testClassName, (unittest.TestCase,), {})
@@ -295,10 +295,10 @@ for tdir in testdirs:
 def custom_name_func(test_func, test_num, test_params):
     return "Test_%s" %(test_params.args[0])
 
-class BookTests(unittest.TestCase):
+class TestBookExamples(unittest.TestCase):
 
     @parameterized.parameterized.expand(py_test_tuples, name_func=custom_name_func)
-    def py_book_test(self, tname, test_file, base_file):
+    def test_book_py(self, tname, test_file, base_file):
         bname = os.path.basename(test_file)
         dir_ = os.path.dirname(test_file)
 
@@ -310,8 +310,7 @@ class BookTests(unittest.TestCase):
         self.assertTrue(True)
 
     @parameterized.parameterized.expand(sh_test_tuples, name_func=custom_name_func)
-    def sh_book_test(self, tname, test_file, base_file):
-        print("sending ", tname)
+    def test_book_sh(self, tname, test_file, base_file):
 
         skip_msg = check_skip('test_'+tname)
         if skip_msg:
