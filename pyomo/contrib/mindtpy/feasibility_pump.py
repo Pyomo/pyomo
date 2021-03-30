@@ -15,7 +15,7 @@ from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, copy_var_list_v
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, handle_subproblem_optimal
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.util import generate_norm2sq_objective_function, set_solver_options
-from pyomo.contrib.mindtpy.mip_solve import solve_master
+from pyomo.contrib.mindtpy.mip_solve import solve_main
 from pyomo.contrib.mindtpy.util import generate_norm1_norm_constraint
 
 
@@ -68,16 +68,16 @@ def solve_fp_subproblem(solve_data, config):
 
     # Add norm_constraint, which guarantees the monotonicity of the norm objective value sequence of all iterations
     # Ref: Paper 'A storm of feasibility pumps for nonconvex MINLP'
-    # the norm type is consistant with the norm obj of the FP-master problem.
+    # the norm type is consistant with the norm obj of the FP-main problem.
     if config.fp_norm_constraint:
-        if config.fp_master_norm == 'L1':
-            # TODO: check if we can access the block defined in FP-master probelm
+        if config.fp_main_norm == 'L1':
+            # TODO: check if we can access the block defined in FP-main probelm
             generate_norm1_norm_constraint(
                 fp_nlp, solve_data.mip, config, discrete_only=True)
-        elif config.fp_master_norm == 'L2':
+        elif config.fp_main_norm == 'L2':
             fp_nlp.norm_constraint = Constraint(expr=sum((nlp_var - mip_var.value)**2 - config.fp_norm_constraint_coef*(nlp_var.value - mip_var.value)**2
                                                          for nlp_var, mip_var in zip(fp_nlp.MindtPy_utils.discrete_variable_list, solve_data.mip.MindtPy_utils.discrete_variable_list)) <= 0)
-        elif config.fp_master_norm == 'L_infinity':
+        elif config.fp_main_norm == 'L_infinity':
             fp_nlp.norm_constraint = ConstraintList()
             rhs = config.fp_norm_constraint_coef * max(nlp_var.value - mip_var.value for nlp_var, mip_var in zip(
                 fp_nlp.MindtPy_utils.discrete_variable_list, solve_data.mip.MindtPy_utils.discrete_variable_list))
@@ -158,27 +158,27 @@ def fp_loop(solve_data, config):
             % solve_data.fp_iter)
 
         solve_data.mip_subiter = 0
-        # solve MILP master problem
-        feas_master, feas_master_results = solve_master(
+        # solve MILP main problem
+        feas_main, feas_main_results = solve_main(
             solve_data, config, fp=True)
-        if feas_master_results.solver.termination_condition is tc.optimal:
+        if feas_main_results.solver.termination_condition is tc.optimal:
             config.logger.info(
                 'FP-MIP %s: Distance-OBJ: %s'
                 % (solve_data.fp_iter, value(solve_data.mip.MindtPy_utils.fp_mip_obj)))
-        elif feas_master_results.solver.termination_condition is tc.maxTimeLimit:
+        elif feas_main_results.solver.termination_condition is tc.maxTimeLimit:
             config.logger.warning('FP-MIP reaches max TimeLimit')
             solve_data.results.solver.termination_condition = tc.maxTimeLimit
-        elif feas_master_results.solver.termination_condition is tc.infeasible:
+        elif feas_main_results.solver.termination_condition is tc.infeasible:
             config.logger.warning('FP-MIP infeasible')
             no_good_cuts = solve_data.mip.MindtPy_utils.cuts.no_good_cuts
             if no_good_cuts.__len__() > 0:
                 no_good_cuts[no_good_cuts.__len__()].deactivate()
             break
-        elif feas_master_results.solver.termination_condition is tc.unbounded:
+        elif feas_main_results.solver.termination_condition is tc.unbounded:
             config.logger.warning('FP-MIP unbounded')
             break
-        elif (feas_master_results.solver.termination_condition is tc.other and
-              feas_master_results.solution.status is SolutionStatus.feasible):
+        elif (feas_main_results.solver.termination_condition is tc.other and
+              feas_main_results.solution.status is SolutionStatus.feasible):
             config.logger.warning('MILP solver reported feasible solution of FP-MIP, '
                                   'but not guaranteed to be optimal.')
         else:
@@ -214,9 +214,9 @@ def fp_loop(solve_data, config):
         solve_data.fp_iter += 1
     solve_data.mip.MindtPy_utils.del_component('fp_mip_obj')
 
-    if config.fp_master_norm == 'L1':
+    if config.fp_main_norm == 'L1':
         solve_data.mip.MindtPy_utils.del_component('L1_obj')
-    elif config.fp_master_norm == 'L_infinity':
+    elif config.fp_main_norm == 'L_infinity':
         solve_data.mip.MindtPy_utils.del_component(
             'L_infinity_obj')
 

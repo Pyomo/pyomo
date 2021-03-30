@@ -31,12 +31,12 @@ import logging
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 
-def MindtPy_initialize_master(solve_data, config):
+def MindtPy_initialize_main(solve_data, config):
     """
-    Initializes the decomposition algorithm and creates the master MIP/MILP problem.
+    Initializes the decomposition algorithm and creates the main MIP/MILP problem.
 
     This function initializes the decomposition problem, which includes generating the initial cuts required to
-    build the master MIP/MILP
+    build the main MIP/MILP
 
     Parameters
     ----------
@@ -45,7 +45,7 @@ def MindtPy_initialize_master(solve_data, config):
     config: ConfigBlock
         contains the specific configurations for the algorithm
     """
-    # if single tree is activated, we need to add bounds for unbounded variables in nonlinear constraints to avoid unbounded master problem.
+    # if single tree is activated, we need to add bounds for unbounded variables in nonlinear constraints to avoid unbounded main problem.
     if config.single_tree:
         var_bound_add(solve_data, config)
 
@@ -248,7 +248,7 @@ def init_max_binaries(solve_data, config):
         pass  # good
     elif solve_terminate_cond is tc.infeasible:
         raise ValueError(
-            'MILP master problem is infeasible. '
+            'MILP main problem is infeasible. '
             'Problem may have no more feasible '
             'binary configurations.')
     elif solve_terminate_cond is tc.maxTimeLimit:
@@ -260,6 +260,6 @@ def init_max_binaries(solve_data, config):
             'NLP subproblem failed to converge within iteration limit.')
     else:
         raise ValueError(
-            'MindtPy unable to handle MILP master termination condition '
+            'MindtPy unable to handle MILP main termination condition '
             'of %s. Solver message: %s' %
             (solve_terminate_cond, results.solver.message))

@@ -67,11 +67,11 @@ def _get_MindtPy_config():
             'slack variables corresponding to all the constraints get '
             'multiplied by this number and added to the objective.'
     ))
-    CONFIG.declare('call_after_master_solve', ConfigValue(
+    CONFIG.declare('call_after_main_solve', ConfigValue(
         default=_DoNothing(),
         domain=None,
-        description='Function to be executed after every master problem',
-        doc='Callback hook after a solution of the master problem.'
+        description='Function to be executed after every main problem',
+        doc='Callback hook after a solution of the main problem.'
     ))
     CONFIG.declare('call_after_subproblem_solve', ConfigValue(
         default=_DoNothing(),
@@ -119,12 +119,12 @@ def _get_MindtPy_config():
     ))
     CONFIG.declare('single_tree', ConfigValue(
         default=False,
-        description='Use single tree implementation in solving the MILP master problem.',
+        description='Use single tree implementation in solving the MILP main problem.',
         domain=bool
     ))
     CONFIG.declare('solution_pool', ConfigValue(
         default=False,
-        description='Use solution pool in solving the MILP master problem.',
+        description='Use solution pool in solving the MILP main problem.',
         domain=bool
     ))
     CONFIG.declare('add_slack', ConfigValue(
@@ -213,13 +213,13 @@ def _add_subsolver_configs(CONFIG):
                    'gurobi_persistent', 'cplex_persistent']),
         description='MIP subsolver name',
         doc='Which MIP subsolver is going to be used for solving the mixed-'
-            'integer master problems.'
+            'integer main problems.'
     ))
     CONFIG.declare('mip_solver_args', ConfigBlock(
         implicit=True,
         description='MIP subsolver options',
         doc='Which MIP subsolver options to be passed to the solver while '
-            'solving the mixed-integer master problems.'
+            'solving the mixed-integer main problems.'
     ))
     CONFIG.declare('mip_solver_mipgap', ConfigValue(
         default=1E-4,
@@ -236,7 +236,7 @@ def _add_subsolver_configs(CONFIG):
         default=0,
         domain=NonNegativeInt,
         description='projection mip threads',
-        doc='Threads used by milp solver to solve projection master problem.'
+        doc='Threads used by milp solver to solve projection main problem.'
     ))
     CONFIG.declare('solver_tee', ConfigValue(
         default=False,
@@ -312,7 +312,7 @@ def _add_bound_configs(CONFIG):
     CONFIG.declare('obj_bound', ConfigValue(
         default=1E15,
         domain=PositiveFloat,
-        description='Bound applied to the linearization of the objective function if master MILP is unbounded.'
+        description='Bound applied to the linearization of the objective function if main MILP is unbounded.'
     ))
     CONFIG.declare('continuous_var_bound', ConfigValue(
         default=1e10,
@@ -346,7 +346,7 @@ def _add_fp_configs(CONFIG):
     ))
     CONFIG.declare('fp_transfercuts', ConfigValue(
         default=True,
-        description='Whether to transfer cuts from the Feasibility Pump MIP to master MIP in selected strategy (all except from the round in which the FP MIP became infeasible)',
+        description='Whether to transfer cuts from the Feasibility Pump MIP to main MIP in selected strategy (all except from the round in which the FP MIP became infeasible)',
         domain=bool
     ))
     CONFIG.declare('fp_projzerotol', ConfigValue(
@@ -364,7 +364,7 @@ def _add_fp_configs(CONFIG):
         description='Only calculate the distance among discrete variables in projection problems.',
         domain=bool
     ))
-    CONFIG.declare('fp_master_norm', ConfigValue(
+    CONFIG.declare('fp_main_norm', ConfigValue(
         default='L1',
         domain=In(['L1', 'L2', 'L_infinity']),
         description='different forms of objective function MIP projection problem.'
@@ -385,7 +385,7 @@ def _add_loa_configs(CONFIG):
     CONFIG.declare('level_coef', ConfigValue(
         default=0.5,
         domain=PositiveFloat,
-        description='the coefficient in the projection master problem'
+        description='the coefficient in the projection main problem'
         'represents how much the linear approximation of the MINLP problem is trusted.'
     ))
     CONFIG.declare('solution_limit', ConfigValue(
@@ -395,7 +395,7 @@ def _add_loa_configs(CONFIG):
     ))
     CONFIG.declare('add_cuts_at_incumbent', ConfigValue(
         default=True,
-        description='Whether to add lazy cuts to the master problem at the incumbent solution found in the branch & bound tree',
+        description='Whether to add lazy cuts to the main problem at the incumbent solution found in the branch & bound tree',
         domain=bool
     ))
     CONFIG.declare('reduce_level_coef', ConfigValue(

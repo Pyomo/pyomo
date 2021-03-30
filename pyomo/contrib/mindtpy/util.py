@@ -76,12 +76,12 @@ def model_is_valid(solve_data, config):
             config.logger.info(
                 'Your model is an LP (linear program). '
                 'Using LP solver %s to solve.' % config.mip_solver)
-            masteropt = SolverFactory(config.mip_solver)
-            if isinstance(masteropt, PersistentSolver):
-                masteropt.set_instance(solve_data.original_model)
-            set_solver_options(masteropt, solve_data,
+            mainopt = SolverFactory(config.mip_solver)
+            if isinstance(mainopt, PersistentSolver):
+                mainopt.set_instance(solve_data.original_model)
+            set_solver_options(mainopt, solve_data,
                                config, solver_type='mip')
-            masteropt.solve(solve_data.original_model,
+            mainopt.solve(solve_data.original_model,
                             tee=config.mip_solver_tee, **config.mip_solver_args)
             return False
 
@@ -160,7 +160,7 @@ def add_feas_slacks(m, config):
 def var_bound_add(solve_data, config):
     """
     This function will add bounds for variables in nonlinear constraints if they are not bounded. (This is to avoid
-    an unbounded master problem in the LP/NLP algorithm.) Thus, the model will be updated to include bounds for the
+    an unbounded main problem in the LP/NLP algorithm.) Thus, the model will be updated to include bounds for the
     unbounded variables in nonlinear constraints.
 
     Parameters
@@ -222,7 +222,7 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
 
 def generate_norm1_objective_function(model, setpoint_model, discrete_only=False):
     """
-    This function generates objective (PF-OA master problem) for minimum Norm1 distance to setpoint_model
+    This function generates objective (PF-OA main problem) for minimum Norm1 distance to setpoint_model
     Norm1 distance of (x,y) = \sum_i |x_i - y_i|
 
     Parameters
@@ -261,7 +261,7 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
 
 def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=False):
     """
-    This function generates objective (PF-OA master problem) for minimum Norm Infinity distance to setpoint_model
+    This function generates objective (PF-OA main problem) for minimum Norm Infinity distance to setpoint_model
     Norm-Infinity distance of (x,y) = \max_i |x_i - y_i|
 
     Parameters
@@ -372,7 +372,7 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
 
 def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=True):
     """
-    This function generates constraint (PF-OA master problem) for minimum Norm1 distance to setpoint_model
+    This function generates constraint (PF-OA main problem) for minimum Norm1 distance to setpoint_model
     Norm constraint is used to guarantees the monotonicity of the norm objective value sequence of all iterations
     Norm1 distance of (x,y) = \sum_i |x_i - y_i|
     Ref: Paper 'A storm of feasibility pumps for nonconvex MINLP' Eq. (16)

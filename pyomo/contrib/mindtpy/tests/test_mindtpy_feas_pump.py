@@ -66,7 +66,7 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[2],
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-5,
-                                fp_master_norm='L2')
+                                fp_main_norm='L2')
             log_infeasible_constraints(model)
             self.assertTrue(is_feasible(model, self.get_config(opt)))
 
@@ -80,7 +80,7 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-5,
-                                fp_master_norm='L_infinity')
+                                fp_main_norm='L_infinity')
             log_infeasible_constraints(model)
             self.assertTrue(is_feasible(model, self.get_config(opt)))
 
@@ -94,7 +94,7 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 bound_tolerance=1E-5,
-                                fp_master_norm='L_infinity',
+                                fp_main_norm='L_infinity',
                                 fp_norm_constraint=False)
             log_infeasible_constraints(model)
             self.assertTrue(is_feasible(model, self.get_config(opt)))

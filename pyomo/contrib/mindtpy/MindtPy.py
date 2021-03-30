@@ -33,7 +33,7 @@ from __future__ import division
 import logging
 from pyomo.contrib.gdpopt.util import (copy_var_list_values, create_utility_block,
                                        time_code, setup_results_object, process_objective, lower_logger_level_to)
-from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_master
+from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
 from pyomo.contrib.mindtpy.util import MindtPySolveData, model_is_valid
 from pyomo.core import (Block, ConstraintList, NonNegativeReals,
@@ -212,9 +212,9 @@ class MindtPySolver(object):
                     solve_data.working_model.ipopt_zU_out = Suffix(
                         direction=Suffix.IMPORT)
 
-            # Initialize the master problem
+            # Initialize the main problem
             with time_code(solve_data.timing, 'initialization'):
-                MindtPy_initialize_master(solve_data, config)
+                MindtPy_initialize_main(solve_data, config)
 
             # Algorithm main loop
             with time_code(solve_data.timing, 'main loop'):
