@@ -16,15 +16,16 @@
 #  ___________________________________________________________________________
 
 import argparse
-import os
-import platform
 import enum
-import six
+import inspect
+import logging
+import os
+import pickle
+import platform
 import re
+import six
 import sys
 from textwrap import wrap
-import logging
-import pickle
 
 if six.PY3:
     import builtins as _builtins
@@ -61,7 +62,9 @@ DEVELOPER_OPTION = 2
 def PositiveInt(val):
     """Domain validation function admitting strictly positive integers
 
-    This domain will admit positive integers, as well as any types that are convertible to positive integers.
+    This domain will admit positive integers (n > 0), as well as any
+    types that are convertible to positive integers.
+
     """
     ans = int(val)
     # We want to give an error for floating point numbers...
@@ -73,7 +76,9 @@ def PositiveInt(val):
 def NegativeInt(val):
     """Domain validation function admitting strictly negative integers
 
-    This domain will admit negative integers, as well as any types that are convertible to negative integers.
+    This domain will admit negative integers (n < 0), as well as any
+    types that are convertible to negative integers.
+
     """
     ans = int(val)
     if ans != float(val) or ans >= 0:
@@ -82,9 +87,11 @@ def NegativeInt(val):
     return ans
 
 def NonPositiveInt(val):
-    """Domain validation function admitting non-positive integers (smaller than or equal to zero)
+    """Domain validation function admitting integers <= 0
 
-    This domain will admit non-positive integers, as well as any types that are convertible to non-positive integers.
+    This domain will admit non-positive integers (n <= 0), as well as
+    any types that are convertible to non-positive integers.
+
     """
     ans = int(val)
     if ans != float(val) or ans > 0:
@@ -93,9 +100,11 @@ def NonPositiveInt(val):
     return ans
 
 def NonNegativeInt(val):
-    """Domain validation function admitting non-negative integers (greater than or equal to zero)
+    """Domain validation function admitting integers >= 0
 
-    This domain will admit non-negative integers, as well as any types that are convertible to non-negative integers.
+    This domain will admit non-negative integers (n >= 0), as well as
+    any types that are convertible to non-negative integers.
+
     """
     ans = int(val)
     if ans != float(val) or ans < 0:
@@ -104,9 +113,12 @@ def NonNegativeInt(val):
     return ans
 
 def PositiveFloat(val):
-    """Domain validation function admitting strictly positive floating point numbers
+    """Domain validation function admitting strictly positive numbers
 
-    This domain will admit positive floating point numbers, as well as any types that are convertible to positive floating point numbers.
+    This domain will admit positive floating point numbers (n > 0), as
+    well as any types that are convertible to positive floating point
+    numbers.
+
     """
     ans = float(val)
     if ans <= 0:
@@ -115,9 +127,12 @@ def PositiveFloat(val):
     return ans
 
 def NegativeFloat(val):
-    """Domain validation function admitting strictly negative floating point numbers
+    """Domain validation function admitting strictly negative numbers
 
-    This domain will admit negative floating point numbers, as well as any types that are convertible to negative floating point numbers.
+    This domain will admit negative floating point numbers (n < 0), as
+    well as any types that are convertible to negative floating point
+    numbers.
+
     """
     ans = float(val)
     if ans >= 0:
@@ -126,9 +141,12 @@ def NegativeFloat(val):
     return ans
 
 def NonPositiveFloat(val):
-    """Domain validation function admitting strictly non-positive floating point numbers (smaller than or equal to zero)
+    """Domain validation function admitting numbers less than or equal to 0
 
-    This domain will admit non-positive floating point numbers, as well as any types that are convertible to non-positive floating point numbers.
+    This domain will admit non-positive floating point numbers (n <= 0),
+    as well as any types that are convertible to non-positive floating
+    point numbers.
+
     """
     ans = float(val)
     if ans > 0:
@@ -137,9 +155,12 @@ def NonPositiveFloat(val):
     return ans
 
 def NonNegativeFloat(val):
-    """Domain validation function admitting strictly non-negative floating point numbers (greater than or equal to zero)
+    """Domain validation function admitting numbers greater than or equal to 0
 
-    This domain will admit non-negative floating point numbers, as well as any types that are convertible to non-negative floating point numbers.
+    This domain will admit non-negative floating point numbers (n >= 0),
+    as well as any types that are convertible to non-negative floating
+    point numbers.
+
     """
     ans = float(val)
     if ans < 0:
@@ -149,7 +170,24 @@ def NonNegativeFloat(val):
 
 
 class In(object):
-    """Domain validation function admitting a list of possible values that a variable can be assigned to."""
+    """Domain validation function admitting a Container of possible values
+
+    This will admit any value that is in the `domain` Container (i.e.,
+    Container.__contains__() returns True).  Most common domains are
+    list, set, and dict objects.  If specified, incoming values are
+    first passed to `cast()` to convert them to the appropriate type
+    before looking them up in `domain`.
+
+    """
+    def __new__(cls, domain=None, cast=None):
+        # Convenience: enum.Enum supported __contains__ through Python
+        # 3.7.  If the domain is an Enum and cast is not specified,
+        # automatically return an InEnum to handle casting and validation
+        if cls is In and cast is None and inspect.isclass(domain) \
+           and issubclass(domain, enum.Enum):
+            return InEnum(domain)
+        return super(In, cls).__new__(cls)
+
     def __init__(self, domain, cast=None):
         self._domain = domain
         self._cast = cast
@@ -162,6 +200,37 @@ class In(object):
         if v in self._domain:
             return v
         raise ValueError("value %s not in domain %s" % (value, self._domain))
+
+
+class InEnum(object):
+    """Domain validation function admitting an enum value/name.
+
+    This will admit any value that is in the specified Enum, including
+    Enum members, values, and string names.  The incoming value will be
+    automatically cast to an Enum member.
+
+    """
+    def __init__(self, domain):
+        self._domain = domain
+
+    def __call__(self, value):
+        v = self._cast_to_enum_domain(value)
+        if v in self._domain:
+            return v
+        raise ValueError("value %s not in domain %s" % (value, self._domain))
+
+    def _cast_to_enum_domain(self, arg):
+        try:
+            # First check if the arg is a valid enum value
+            return self._domain(arg)
+        except ValueError:
+            # Assume this is a string and look it up
+            try:
+                return self._domain[arg]
+            except KeyError:
+                pass
+        raise ValueError("%r is not a valid %s" % (
+            arg, self._domain.__name__))
 
 
 class Path(object):
@@ -201,6 +270,7 @@ class Path(object):
         #print "to '%s'" % (ans,)
         return ans
 
+
 class PathList(Path):
     def __call__(self, data):
         if hasattr(data, "__iter__") and not isinstance(data, str):
@@ -224,6 +294,16 @@ def add_docstring_list(docstring, configdict, indent_by=4):
 
 
 class ConfigEnum(enum.Enum):
+    @deprecated("The ConfigEnum base class is deprecated.  "
+                "Directly inherit from enum.Enum and then use "
+                "In() or InEnum() as the ConfigValue 'domain' for "
+                "validation and int/string type conversions.", version='TBD')
+    def __new__(cls, value, *args):
+        member = object.__new__(cls)
+        member._value_ = value
+        member._args = args
+        return member
+
     @classmethod
     def from_enum_or_string(cls, arg):
         if type(arg) is str:
