@@ -179,11 +179,11 @@ class In(object):
     before looking them up in `domain`.
 
     """
-    def __new__(cls, domain, cast=None):
+    def __new__(cls, domain=None, cast=None):
         # Convenience: enum.Enum supported __contains__ through Python
         # 3.7.  If the domain is an Enum and cast is not specified,
         # automatically return an InEnum to handle casting and validation
-        if cast is None and inspect.isclass(domain) \
+        if cls is In and cast is None and inspect.isclass(domain) \
            and issubclass(domain, enum.Enum):
             return InEnum(domain)
         return super(In, cls).__new__(cls)
