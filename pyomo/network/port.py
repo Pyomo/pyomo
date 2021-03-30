@@ -65,9 +65,21 @@ class _PortData(ComponentData):
 
     def __getstate__(self):
         state = super(_PortData, self).__getstate__()
+        state['_arcs'] = [i() for i in self._arcs]
+        state['_sources'] = [i() for i in self._sources]
+        state['_dests'] = [i() for i in self._dests]
+
         for i in _PortData.__slots__:
+            if i in {'_arcs', '_sources', '_dests'}:
+                continue
             state[i] = getattr(self, i)
         return state
+
+    def __setstate__(self, state):
+        state['_arcs'] = [weakref_ref(i) for i in state['_arcs']]
+        state['_sources'] = [weakref_ref(i) for i in state['_sources']]
+        state['_dests'] = [weakref_ref(i) for i in state['_dests']]
+        super(_PortData, self).__setstate__(state)
 
     # Note: None of the slots on this class need to be edited, so we
     # don't need to implement a specialized __setstate__ method, and
