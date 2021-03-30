@@ -119,7 +119,7 @@ def MindtPy_initialize_master(solve_data, config):
 
 def init_rNLP(solve_data, config):
     """
-    Initialize the problem by solving the relaxed NLP (fixed binary variables) and then store the optimal variable
+    Initialize the problem by solving the relaxed NLP and then store the optimal variable
     values obtained from solving the rNLP
 
     Parameters

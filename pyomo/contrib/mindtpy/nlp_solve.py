@@ -27,7 +27,7 @@ logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 def solve_subproblem(solve_data, config):
     """
-    Solves the fixed NLP (with fixed binaries)
+    Solves the fixed NLP (with fixed integers)
 
     This function sets up the 'fixed_nlp' by fixing binaries, sets continuous variables to their intial var values,
     precomputes dual values, deactivates trivial constraints, and then solves NLP model.
@@ -50,7 +50,7 @@ def solve_subproblem(solve_data, config):
     fixed_nlp = solve_data.working_model.clone()
     MindtPy = fixed_nlp.MindtPy_utils
     solve_data.nlp_iter += 1
-    config.logger.info('Fixed-NLP %s: Solve subproblem for fixed binaries.'
+    config.logger.info('Fixed-NLP %s: Solve subproblem for fixed integers.'
                        % (solve_data.nlp_iter,))
 
     # Set up NLP
@@ -153,7 +153,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, fp=False):
         solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
         solve_data.LB_progress.append(solve_data.LB)
     config.logger.info(
-        'Fixed NLP {}: OBJ: {}  LB: {}  UB: {}  TIME: {}s'
+        'Fixed-NLP {}: OBJ: {}  LB: {}  UB: {}  TIME: {}s'
         .format(solve_data.nlp_iter if not fp else solve_data.fp_iter, value(main_objective.expr),
                 solve_data.LB, solve_data.UB, round(get_main_elapsed_time(solve_data.timing), 2)))
 

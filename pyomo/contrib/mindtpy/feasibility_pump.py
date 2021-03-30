@@ -133,7 +133,7 @@ def handle_fp_subproblem_optimal(fp_nlp, solve_data, config):
             handle_subproblem_optimal(
                 fixed_nlp, solve_data, config, fp=True)
         else:
-            config.logger.error('Feasibility pump fixed nlp is infeasible, something might be wrong. '
+            config.logger.error('Feasibility pump Fixed-NLP is infeasible, something might be wrong. '
                                 'There might be a problem with the precisions - the feasibility pump seems to have converged')
 
 

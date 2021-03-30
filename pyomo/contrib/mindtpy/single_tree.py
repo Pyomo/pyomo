@@ -579,7 +579,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                         solve_data.mip, None, solve_data, config, opt)
             if not solve_data.bound_improved and not solve_data.solution_improved:
                 config.logger.info('the bound and the best found solution have neither been improved.'
-                                   'We will skip solving the regularization problem and the fixed NLP subproblem')
+                                   'We will skip solving the regularization problem and the Fixed-NLP subproblem')
                 return
             if ((solve_data.objective_sense == minimize and solve_data.LB != float('-inf'))
                     or (solve_data.objective_sense == maximize and solve_data.UB != float('inf'))):
