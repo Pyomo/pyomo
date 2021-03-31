@@ -59,14 +59,22 @@ def flatten_tuple(x):
 # environment (which would require some thought when managing any
 # potential name collisions)
 #
+_disabled_error = (
+    "Cannot %s %s '%s' before it has been constructed (initialized): "
+    "'%s' is an attribute on an Abstract component and cannot be "
+    "accessed until the component has been fully constructed (converted "
+    "to a Concrete component) using AbstractModel.create_instance() or "
+    "%s.construct()."
+)
+
 def _disable_method(fcn, msg=None):
     _name = fcn.__name__
     if msg is None:
-        msg = 'access %s on' % (_name,)
+        msg = "access '%s' on" % (_name,)
 
     # functools.wraps doesn't preserve the function signature until
     # Python 3.4, and even then, does not preserve it accurately (e.g.,
-    # calling with the incorreect number of arguments does not generate
+    # calling with the incorrect number of arguments does not generate
     # an error).  For backwards compatability with Python 2.x, we will
     # create a temporary (local) function using exec that matches the
     # function signature passed in and raises an exception
@@ -76,34 +84,32 @@ def _disable_method(fcn, msg=None):
     # lambda comes through with a function name "<lambda>".  We will
     # use exec here to create a function (in a private namespace)
     # that will have the correct name.
-    _env = {}
+    _env = {'_msg': msg, '_name': _name}
     _funcdef = """def %s%s:
-        raise RuntimeError(
-            "Cannot %s %%s '%%s' before it has been constructed (initialized)."
-            %% (type(self).__name__, self.name))
-""" % (_name, args, msg,)
+        raise RuntimeError("%s" %% (_msg, type(self).__name__,
+            self.name, _name, self.name))
+""" % (_name, args, _disabled_error)
     exec(_funcdef, _env)
     return functools.wraps(fcn)(_env[_name])
 
 
 def _disable_property(fcn, msg=None):
+    _name = fcn.fget.__name__
     if msg is None:
-        _gmsg = 'access property %s on' % (fcn.fget.__name__,)
+        _gmsg = "access property '%s' on" % (_name,)
     else:
         _gmsg = msg
     def getter(self, *args, **kwds):
-        raise RuntimeError(
-            "Cannot %s %s '%s' before it has been constructed (initialized)."
-            % (_gmsg, type(self).__name__, self.name))
+        raise RuntimeError(_disabled_error % (
+            _gmsg, type(self).__name__, self.name, _name, self.name))
 
     if msg is None:
-        _smsg = 'set property %s on' % (fcn.fget.__name__,)
+        _smsg = "set property '%s' on" % (_name,)
     else:
         _smsg = msg
     def setter(self, *args, **kwds):
-        raise RuntimeError(
-            "Cannot %s %s '%s' before it has been constructed (initialized)."
-            % (_smsg, type(self).__name__, self.name))
+        raise RuntimeError(_disabled_error % (
+            _smsg, type(self).__name__, self.name, _name, self.name))
 
     return property(fget=getter, fset=setter, doc=fcn.__doc__)
 

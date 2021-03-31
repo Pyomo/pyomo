@@ -18,7 +18,6 @@ f(x) = |
 """
 
 from pyomo.core import *
-from six.moves import xrange
 
 model = ConcreteModel()
 
@@ -32,11 +31,11 @@ F = {1:[1,4,9],2:[1,4,9]}
 
 # Indexing set required for the SOSConstraint declaration
 def SOS_indices_init(model,t):
-    return [(t,i) for i in xrange(len(DOMAIN_PTS[t]))]
+    return [(t,i) for i in range(len(DOMAIN_PTS[t]))]
 model.SOS_indices = Set(model.index_set,dimen=2, ordered=True, initialize=SOS_indices_init)
 
 def sos_var_indices_init(model):
-    return [(t,i) for t in model.index_set for i in xrange(len(DOMAIN_PTS[t]))]
+    return [(t,i) for t in model.index_set for i in range(len(DOMAIN_PTS[t]))]
 model.sos_var_indices = Set(ordered=True, dimen=2,initialize=sos_var_indices_init)
 
 model.x = Var(model.index_set) # domain variable
@@ -46,14 +45,14 @@ model.y = Var(model.sos_var_indices,within=NonNegativeReals) # SOS2 variable
 model.obj = Objective(expr=sum_product(model.Fx), sense=maximize)
 
 def constraint1_rule(model,t):
-    return model.x[t] == sum(model.y[t,i]*DOMAIN_PTS[t][i] for i in xrange(len(DOMAIN_PTS[t])) )
+    return model.x[t] == sum(model.y[t,i]*DOMAIN_PTS[t][i] for i in range(len(DOMAIN_PTS[t])) )
 def constraint2_rule(model,t):
     # Uncomment below for F defined as dictionary
-    return model.Fx[t] == sum(model.y[t,i]*F[t][i] for i in xrange(len(DOMAIN_PTS[t])) )
+    return model.Fx[t] == sum(model.y[t,i]*F[t][i] for i in range(len(DOMAIN_PTS[t])) )
     # Uncomment below for F defined as lambda function
-    #return model.Fx[t] == sum(model.y[t,i]*F(DOMAIN_PTS[t][i]) for i in xrange(len(DOMAIN_PTS[t])) )
+    #return model.Fx[t] == sum(model.y[t,i]*F(DOMAIN_PTS[t][i]) for i in range(len(DOMAIN_PTS[t])) )
 def constraint3_rule(model,t):
-    return sum(model.y[t,j] for j in xrange(len(DOMAIN_PTS[t]))) == 1
+    return sum(model.y[t,j] for j in range(len(DOMAIN_PTS[t]))) == 1
 
 model.constraint1 = Constraint(model.index_set,rule=constraint1_rule)
 model.constraint2 = Constraint(model.index_set,rule=constraint2_rule)

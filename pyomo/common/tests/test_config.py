@@ -24,6 +24,7 @@
 #  ___________________________________________________________________________
 
 import argparse
+import enum
 import os
 import sys
 import os.path
@@ -43,7 +44,7 @@ from pyomo.common.config import (
     PositiveFloat, NegativeFloat, NonPositiveFloat, NonNegativeFloat,
     In, Path, PathList, ConfigEnum
 )
-
+from pyomo.common.log import LoggingIntercept
 
 # Utility to redirect display() to a string
 def _display(obj, *args):
@@ -242,6 +243,30 @@ class TestConfigDomains(unittest.TestCase):
         c.b = '1'
         self.assertEqual(c.b, 1)
 
+    def test_In_enum(self):
+        class TestEnum(enum.Enum):
+            ITEM_ONE = 1
+            ITEM_TWO = 'two'
+
+        cfg = ConfigDict()
+        cfg.declare('enum', ConfigValue(
+            default=TestEnum.ITEM_TWO,
+            domain=In(TestEnum)
+        ))
+        self.assertEqual(cfg.enum, TestEnum.ITEM_TWO)
+        cfg.enum = 'ITEM_ONE'
+        self.assertEqual(cfg.enum, TestEnum.ITEM_ONE)
+        cfg.enum = TestEnum.ITEM_TWO
+        self.assertEqual(cfg.enum, TestEnum.ITEM_TWO)
+        cfg.enum = 1
+        self.assertEqual(cfg.enum, TestEnum.ITEM_ONE)
+        cfg.enum = 'two'
+        self.assertEqual(cfg.enum, TestEnum.ITEM_TWO)
+        with self.assertRaisesRegex(ValueError, '.*3 is not a valid'):
+            cfg.enum = 3
+        with self.assertRaisesRegex(ValueError, '.*invalid value'):
+            cfg.enum ='ITEM_THREE'
+
 
     def test_Path(self):
         def norm(x):
@@ -374,10 +399,12 @@ class TestConfigDomains(unittest.TestCase):
         self.assertIs(type(c.a), list)
 
     def test_ConfigEnum(self):
-        class TestEnum(ConfigEnum):
-            ITEM_ONE = 1
-            ITEM_TWO = 2
-
+        out = StringIO()
+        with LoggingIntercept(out):
+            class TestEnum(ConfigEnum):
+                ITEM_ONE = 1
+                ITEM_TWO = 2
+        self.assertIn('The ConfigEnum base class is deprecated', out.getvalue())
         self.assertEqual(TestEnum.from_enum_or_string(1),
                 TestEnum.ITEM_ONE)
         self.assertEqual(TestEnum.from_enum_or_string(
@@ -385,6 +412,22 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(TestEnum.from_enum_or_string('ITEM_ONE'),
                 TestEnum.ITEM_ONE)
 
+        cfg = ConfigDict()
+        cfg.declare('enum', ConfigValue(
+            default=2,
+            domain=TestEnum.from_enum_or_string
+        ))
+        self.assertEqual(cfg.enum, TestEnum.ITEM_TWO)
+        cfg.enum = 'ITEM_ONE'
+        self.assertEqual(cfg.enum, TestEnum.ITEM_ONE)
+        cfg.enum = TestEnum.ITEM_TWO
+        self.assertEqual(cfg.enum, TestEnum.ITEM_TWO)
+        cfg.enum = 1
+        self.assertEqual(cfg.enum, TestEnum.ITEM_ONE)
+        with self.assertRaisesRegex(ValueError, '.*3 is not a valid'):
+            cfg.enum = 3
+        with self.assertRaisesRegex(ValueError, '.*invalid value'):
+            cfg.enum ='ITEM_THREE'
 
 class TestImmutableConfigValue(unittest.TestCase):
     def test_immutable_config_value(self):

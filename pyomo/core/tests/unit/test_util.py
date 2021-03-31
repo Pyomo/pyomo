@@ -59,7 +59,7 @@ class TestDisableMethods(unittest.TestCase):
         self.assertIs(type(x), _abstract_simple)
         self.assertIsInstance(x, _simple)
         with self.assertRaisesRegexp(
-                RuntimeError, "Cannot access a on _abstract_simple "
+                RuntimeError, "Cannot access 'a' on _abstract_simple "
                 "'foo' before it has been constructed"):
             x.a()
         with self.assertRaisesRegexp(
@@ -68,11 +68,11 @@ class TestDisableMethods(unittest.TestCase):
             x.b()
         self.assertEqual(x.c(), 'c')
         with self.assertRaisesRegexp(
-                RuntimeError, "Cannot access property d on _abstract_simple "
+                RuntimeError, "Cannot access property 'd' on _abstract_simple "
                 "'foo' before it has been constructed"):
             x.d
         with self.assertRaisesRegexp(
-                RuntimeError, "Cannot set property d on _abstract_simple "
+                RuntimeError, "Cannot set property 'd' on _abstract_simple "
                 "'foo' before it has been constructed"):
             x.d = 1
         with self.assertRaisesRegexp(
@@ -90,7 +90,7 @@ class TestDisableMethods(unittest.TestCase):
                 TypeError, "f\(\) takes "):
             x.f(1,2,3)
         with self.assertRaisesRegexp(
-                RuntimeError, "Cannot access f on _abstract_simple "
+                RuntimeError, "Cannot access 'f' on _abstract_simple "
                 "'foo' before it has been constructed"):
             x.f(1,2)
 
