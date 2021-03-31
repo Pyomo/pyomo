@@ -190,7 +190,8 @@ if test -z "$MODE" -o "$MODE" == test; then
                     -t $CODECOV_TOKEN --root `pwd` -e OS,python \
                     --name $CODECOV_JOB_NAME $CODECOV_ARGS \
                     | tee .cover.upload
-                if test $? == 0 -a `grep -i error .cover.upload | wc -l` -eq 0; then
+                if test $? == 0 -a `grep -i error .cover.upload \
+                        | grep -v branch= | wc -l` -eq 0; then
                     break
                 elif test $i -ge 4; then
                     exit 1
