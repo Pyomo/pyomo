@@ -373,7 +373,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             solve_data.LB_progress.append(solve_data.LB)
 
         config.logger.info(
-            'NLP {}: OBJ: {}  LB: {}  UB: {}  TIME: {}'
+            'Fixed-NLP {}: OBJ: {}  LB: {}  UB: {}  TIME: {}'
             .format(solve_data.nlp_iter, value(main_objective.expr), solve_data.LB, solve_data.UB, round(get_main_elapsed_time(solve_data.timing),2)))
 
         if solve_data.solution_improved:
