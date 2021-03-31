@@ -333,9 +333,10 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
             solve_data.UB_progress.append(solve_data.UB)
         config.logger.info(
-            'MIP %s: OBJ (at current node): %s  Bound: %s  LB: %s  UB: %s'
+            'MIP %s: OBJ (at current node): %s  Bound: %s  LB: %s  UB: %s  TIME: %s'
             % (solve_data.mip_iter, self.get_objective_value(), self.get_best_objective_value(),
-                solve_data.LB, solve_data.UB))
+                solve_data.LB, solve_data.UB, round(get_main_elapsed_time(
+                solve_data.timing),2)))
 
     def handle_lazy_subproblem_optimal(self, fixed_nlp, solve_data, config, opt):
         """
@@ -372,8 +373,8 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             solve_data.LB_progress.append(solve_data.LB)
 
         config.logger.info(
-            'NLP {}: OBJ: {}  LB: {}  UB: {}'
-            .format(solve_data.nlp_iter, value(main_objective.expr), solve_data.LB, solve_data.UB))
+            'NLP {}: OBJ: {}  LB: {}  UB: {}  TIME: {}'
+            .format(solve_data.nlp_iter, value(main_objective.expr), solve_data.LB, solve_data.UB, round(get_main_elapsed_time(solve_data.timing),2)))
 
         if solve_data.solution_improved:
             solve_data.best_solution_found = fixed_nlp.clone()
