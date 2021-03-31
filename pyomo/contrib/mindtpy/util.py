@@ -433,9 +433,9 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
     remaining = int(max(config.time_limit - elapsed, 1))
     if solver_type == 'mip':
         if regularization:
-            solver_name = config.mip_projection_solver
-            if config.projection_mip_threads > 0:
-                opt.options['threads'] = config.projection_mip_threads
+            solver_name = config.mip_regularization_solver
+            if config.regularization_mip_threads > 0:
+                opt.options['threads'] = config.regularization_mip_threads
         else:
             solver_name = config.mip_solver
             if config.threads > 0:

@@ -47,9 +47,9 @@ def solve_fp_subproblem(solve_data, config):
     Returns
     -------
     fp_nlp: Pyomo model
-        fixed NLP from the model
+        Fixed-NLP from the model
     results: Pyomo results object
-        result from solving the fixed NLP
+        result from solving the Fixed-NLP
     """
 
     fp_nlp = solve_data.working_model.clone()

@@ -38,7 +38,7 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_8PP_level_L1(self):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
-            print('\n Solving 8PP problem with Level-based Outer Approximation(L1)')
+            print('\n Solving 8PP problem with Regularization Outer Approximation(L1)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L1',
                                 init_strategy='rNLP',
@@ -55,7 +55,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
             print(
-                '\n Solving 8PP problem with Level-based Outer Approximation(max_binary, L1)')
+                '\n Solving 8PP problem with Regularization Outer Approximation(max_binary, L1)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L1',
                                 init_strategy='max_binary',
@@ -70,7 +70,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
             print(
-                '\n Solving MINLP_simple problem with Level-based Outer Approximation(L1)')
+                '\n Solving MINLP_simple problem with Regularization Outer Approximation(L1)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L1',
                                 init_strategy='initial_binary',
@@ -85,7 +85,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP2()
             print(
-                '\n Solving MINLP2_simple problem with Level-based Outer Approximation(L1)')
+                '\n Solving MINLP2_simple problem with Regularization Outer Approximation(L1)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L1',
                                 init_strategy='initial_binary',
@@ -100,7 +100,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP3()
             print(
-                '\n Solving MINLP3_simple problem with Level-based Outer Approximation(L1)')
+                '\n Solving MINLP3_simple problem with Regularization Outer Approximation(L1)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L1',
                                 init_strategy='initial_binary',
@@ -115,7 +115,7 @@ class TestMindtPy(unittest.TestCase):
         # A little difference from the proposal slides
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
-            print('\n Solving Proposal problem with Level-based Outer Approximation(L1)')
+            print('\n Solving Proposal problem with Regularization Outer Approximation(L1)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L1',
                                 mip_solver=required_solvers[1],
@@ -131,7 +131,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             print(
-                '\n Solving Proposal problem with Level-based Outer Approximation(no-good cuts, L1)')
+                '\n Solving Proposal problem with Regularization Outer Approximation(no-good cuts, L1)')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -147,7 +147,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print(
-                '\n Solving Constraint Qualification Example with Level-based Outer Approximation(L1)')
+                '\n Solving Constraint Qualification Example with Regularization Outer Approximation(L1)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L1',
                                 mip_solver=required_solvers[1],
@@ -161,7 +161,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print(
-                '\n Solving Constraint Qualification Example with Level-based Outer Approximation(no-good cuts, L1)')
+                '\n Solving Constraint Qualification Example with Regularization Outer Approximation(no-good cuts, L1)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L1',
                                 mip_solver=required_solvers[1],
@@ -176,7 +176,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
             print(
-                '\n Solving Online Doc Example with Level-based Outer Approximation(L1)')
+                '\n Solving Online Doc Example with Regularization Outer Approximation(L1)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L1',
                                 mip_solver=required_solvers[1],
@@ -191,7 +191,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
             print(
-                '\n Solving Online Doc Example with Level-based Outer Approximation(L1)')
+                '\n Solving Online Doc Example with Regularization Outer Approximation(L1)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L1',
                                 mip_solver=required_solvers[1],
@@ -207,7 +207,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP4()
             print(
-                '\n Solving Online Doc Example with Level-based Outer Approximation(L1)')
+                '\n Solving Online Doc Example with Regularization Outer Approximation(L1)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L1',
                                 mip_solver=required_solvers[1],
@@ -223,7 +223,7 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_8PP_level_L2(self):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
-            print('\n Solving 8PP problem with Level-based Outer Approximation(L2)')
+            print('\n Solving 8PP problem with Regularization Outer Approximation(L2)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L2',
                                 init_strategy='rNLP',
@@ -240,7 +240,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
             print(
-                '\n Solving 8PP problem with Level-based Outer Approximation(max_binary, L2)')
+                '\n Solving 8PP problem with Regularization Outer Approximation(max_binary, L2)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L2',
                                 init_strategy='max_binary',
@@ -255,7 +255,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
             print(
-                '\n Solving MINLP_simple problem with Level-based Outer Approximation(L2)')
+                '\n Solving MINLP_simple problem with Regularization Outer Approximation(L2)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L2',
                                 init_strategy='initial_binary',
@@ -270,7 +270,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP2()
             print(
-                '\n Solving MINLP2_simple problem with Level-based Outer Approximation(L2)')
+                '\n Solving MINLP2_simple problem with Regularization Outer Approximation(L2)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L2',
                                 init_strategy='initial_binary',
@@ -285,7 +285,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP3()
             print(
-                '\n Solving MINLP3_simple problem with Level-based Outer Approximation(L2)')
+                '\n Solving MINLP3_simple problem with Regularization Outer Approximation(L2)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L2',
                                 init_strategy='initial_binary',
@@ -300,7 +300,7 @@ class TestMindtPy(unittest.TestCase):
         # A little difference from the proposal slides
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
-            print('\n Solving Proposal problem with Level-based Outer Approximation(L2)')
+            print('\n Solving Proposal problem with Regularization Outer Approximation(L2)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L2',
                                 mip_solver=required_solvers[1],
@@ -316,7 +316,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             print(
-                '\n Solving Proposal problem with Level-based Outer Approximation(no-good cuts, L2)')
+                '\n Solving Proposal problem with Regularization Outer Approximation(no-good cuts, L2)')
             results = opt.solve(model, strategy='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
@@ -332,7 +332,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print(
-                '\n Solving Constraint Qualification Example with Level-based Outer Approximation(L2)')
+                '\n Solving Constraint Qualification Example with Regularization Outer Approximation(L2)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L2',
                                 mip_solver=required_solvers[1],
@@ -346,7 +346,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print(
-                '\n Solving Constraint Qualification Example with Level-based Outer Approximation(no-good cuts, L2)')
+                '\n Solving Constraint Qualification Example with Regularization Outer Approximation(no-good cuts, L2)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L2',
                                 mip_solver=required_solvers[1],
@@ -361,7 +361,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
             print(
-                '\n Solving Online Doc Example with Level-based Outer Approximation(L2)')
+                '\n Solving Online Doc Example with Regularization Outer Approximation(L2)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L2',
                                 mip_solver=required_solvers[1],
@@ -376,7 +376,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
             print(
-                '\n Solving Online Doc Example with Level-based Outer Approximation(L2)')
+                '\n Solving Online Doc Example with Regularization Outer Approximation(L2)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L2',
                                 mip_solver=required_solvers[1],
@@ -392,7 +392,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP4()
             print(
-                '\n Solving Online Doc Example with Level-based Outer Approximation(L2)')
+                '\n Solving Online Doc Example with Regularization Outer Approximation(L2)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L2',
                                 mip_solver=required_solvers[1],
@@ -409,7 +409,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
             print(
-                '\n Solving 8PP problem with Level-based Outer Approximation(L_infinity)')
+                '\n Solving 8PP problem with Regularization Outer Approximation(L_infinity)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L_infinity',
                                 init_strategy='rNLP',
@@ -426,7 +426,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
             print(
-                '\n Solving 8PP problem with Level-based Outer Approximation(max_binary, L_infinity)')
+                '\n Solving 8PP problem with Regularization Outer Approximation(max_binary, L_infinity)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L_infinity',
                                 init_strategy='max_binary',
@@ -441,7 +441,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
             print(
-                '\n Solving MINLP_simple problem with Level-based Outer Approximation(L_infinity)')
+                '\n Solving MINLP_simple problem with Regularization Outer Approximation(L_infinity)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L_infinity',
                                 init_strategy='initial_binary',
@@ -456,7 +456,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP2()
             print(
-                '\n Solving MINLP2_simple problem with Level-based Outer Approximation(L_infinity)')
+                '\n Solving MINLP2_simple problem with Regularization Outer Approximation(L_infinity)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L_infinity',
                                 init_strategy='initial_binary',
@@ -471,7 +471,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP3()
             print(
-                '\n Solving MINLP3_simple problem with Level-based Outer Approximation(L_infinity)')
+                '\n Solving MINLP3_simple problem with Regularization Outer Approximation(L_infinity)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L_infinity',
                                 init_strategy='initial_binary',
@@ -487,7 +487,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             print(
-                '\n Solving Proposal problem with Level-based Outer Approximation(L_infinity)')
+                '\n Solving Proposal problem with Regularization Outer Approximation(L_infinity)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L_infinity',
                                 mip_solver=required_solvers[1],
@@ -503,7 +503,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             print(
-                '\n Solving Proposal problem with Level-based Outer Approximation(no-good cuts, L_infinity)')
+                '\n Solving Proposal problem with Regularization Outer Approximation(no-good cuts, L_infinity)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L_infinity',
                                 mip_solver=required_solvers[1],
@@ -520,7 +520,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print(
-                '\n Solving Constraint Qualification Example with Level-based Outer Approximation(L_infinity)')
+                '\n Solving Constraint Qualification Example with Regularization Outer Approximation(L_infinity)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L_infinity',
                                 mip_solver=required_solvers[1],
@@ -534,7 +534,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print(
-                '\n Solving Constraint Qualification Example with Level-based Outer Approximation(no-good cuts, L_infinity)')
+                '\n Solving Constraint Qualification Example with Regularization Outer Approximation(no-good cuts, L_infinity)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L_infinity',
                                 mip_solver=required_solvers[1],
@@ -549,7 +549,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
             print(
-                '\n Solving Online Doc Example with Level-based Outer Approximation(L_infinity)')
+                '\n Solving Online Doc Example with Regularization Outer Approximation(L_infinity)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L_infinity',
                                 mip_solver=required_solvers[1],
@@ -564,7 +564,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
             print(
-                '\n Solving Online Doc Example with Level-based Outer Approximation(L_infinity)')
+                '\n Solving Online Doc Example with Regularization Outer Approximation(L_infinity)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L_infinity',
                                 mip_solver=required_solvers[1],
@@ -580,7 +580,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP4()
             print(
-                '\n Solving Online Doc Example with Level-based Outer Approximation(L_infinity)')
+                '\n Solving Online Doc Example with Regularization Outer Approximation(L_infinity)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='level_L_infinity',
                                 mip_solver=required_solvers[1],
@@ -597,7 +597,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
             print(
-                '\n Solving 8PP problem with Level-based Outer Approximation(grad_lag)')
+                '\n Solving 8PP problem with Regularization Outer Approximation(grad_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='grad_lag',
                                 equality_relaxation=True,
@@ -615,7 +615,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
             print(
-                '\n Solving 8PP problem with Level-based Outer Approximation(max_binary, grad_lag)')
+                '\n Solving 8PP problem with Regularization Outer Approximation(max_binary, grad_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='grad_lag',
                                 equality_relaxation=True,
@@ -631,7 +631,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
             print(
-                '\n Solving MINLP_simple problem with Level-based Outer Approximation(grad_lag)')
+                '\n Solving MINLP_simple problem with Regularization Outer Approximation(grad_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='grad_lag',
                                 equality_relaxation=True,
@@ -647,7 +647,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP2()
             print(
-                '\n Solving MINLP2_simple problem with Level-based Outer Approximation(grad_lag)')
+                '\n Solving MINLP2_simple problem with Regularization Outer Approximation(grad_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='grad_lag',
                                 equality_relaxation=True,
@@ -663,7 +663,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP3()
             print(
-                '\n Solving MINLP3_simple problem with Level-based Outer Approximation(grad_lag)')
+                '\n Solving MINLP3_simple problem with Regularization Outer Approximation(grad_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='grad_lag',
                                 equality_relaxation=True,
@@ -680,7 +680,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             print(
-                '\n Solving Proposal problem with Level-based Outer Approximation(grad_lag)')
+                '\n Solving Proposal problem with Regularization Outer Approximation(grad_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='grad_lag',
                                 equality_relaxation=True,
@@ -697,7 +697,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             print(
-                '\n Solving Proposal problem with Level-based Outer Approximation(no-good cuts, grad_lag)')
+                '\n Solving Proposal problem with Regularization Outer Approximation(no-good cuts, grad_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='grad_lag',
                                 equality_relaxation=True,
@@ -715,7 +715,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print(
-                '\n Solving Constraint Qualification Example with Level-based Outer Approximation(grad_lag)')
+                '\n Solving Constraint Qualification Example with Regularization Outer Approximation(grad_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='grad_lag',
                                 equality_relaxation=True,
@@ -730,7 +730,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print(
-                '\n Solving Constraint Qualification Example with Level-based Outer Approximation(no-good cuts, grad_lag)')
+                '\n Solving Constraint Qualification Example with Regularization Outer Approximation(no-good cuts, grad_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='grad_lag',
                                 equality_relaxation=True,
@@ -746,7 +746,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
             print(
-                '\n Solving Online Doc Example with Level-based Outer Approximation(grad_lag)')
+                '\n Solving Online Doc Example with Regularization Outer Approximation(grad_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='grad_lag',
                                 equality_relaxation=True,
@@ -762,7 +762,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP4()
             print(
-                '\n Solving Online Doc Example with Level-based Outer Approximation(grad_lag)')
+                '\n Solving Online Doc Example with Regularization Outer Approximation(grad_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='grad_lag',
                                 equality_relaxation=True,
@@ -780,7 +780,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
             print(
-                '\n Solving 8PP problem with Level-based Outer Approximation(hess_lag)')
+                '\n Solving 8PP problem with Regularization Outer Approximation(hess_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_lag',
                                 equality_relaxation=True,
@@ -798,7 +798,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
             print(
-                '\n Solving 8PP problem with Level-based Outer Approximation(max_binary, hess_lag)')
+                '\n Solving 8PP problem with Regularization Outer Approximation(max_binary, hess_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_lag',
                                 equality_relaxation=True,
@@ -814,7 +814,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
             print(
-                '\n Solving MINLP_simple problem with Level-based Outer Approximation(hess_lag)')
+                '\n Solving MINLP_simple problem with Regularization Outer Approximation(hess_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_lag',
                                 equality_relaxation=True,
@@ -830,7 +830,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP2()
             print(
-                '\n Solving MINLP2_simple problem with Level-based Outer Approximation(hess_lag)')
+                '\n Solving MINLP2_simple problem with Regularization Outer Approximation(hess_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_lag',
                                 equality_relaxation=True,
@@ -846,7 +846,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP3()
             print(
-                '\n Solving MINLP3_simple problem with Level-based Outer Approximation(hess_lag)')
+                '\n Solving MINLP3_simple problem with Regularization Outer Approximation(hess_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_lag',
                                 equality_relaxation=True,
@@ -863,7 +863,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             print(
-                '\n Solving Proposal problem with Level-based Outer Approximation(hess_lag)')
+                '\n Solving Proposal problem with Regularization Outer Approximation(hess_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_lag',
                                 equality_relaxation=True,
@@ -880,7 +880,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             print(
-                '\n Solving Proposal problem with Level-based Outer Approximation(no-good cuts, hess_lag)')
+                '\n Solving Proposal problem with Regularization Outer Approximation(no-good cuts, hess_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_lag',
                                 equality_relaxation=True,
@@ -898,7 +898,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print(
-                '\n Solving Constraint Qualification Example with Level-based Outer Approximation(hess_lag)')
+                '\n Solving Constraint Qualification Example with Regularization Outer Approximation(hess_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_lag',
                                 equality_relaxation=True,
@@ -913,7 +913,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print(
-                '\n Solving Constraint Qualification Example with Level-based Outer Approximation(no-good cuts, hess_lag)')
+                '\n Solving Constraint Qualification Example with Regularization Outer Approximation(no-good cuts, hess_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_lag',
                                 equality_relaxation=True,
@@ -929,7 +929,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
             print(
-                '\n Solving Online Doc Example with Level-based Outer Approximation(hess_lag)')
+                '\n Solving Online Doc Example with Regularization Outer Approximation(hess_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_lag',
                                 equality_relaxation=True,
@@ -945,7 +945,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP4()
             print(
-                '\n Solving Online Doc Example with Level-based Outer Approximation(hess_lag)')
+                '\n Solving Online Doc Example with Regularization Outer Approximation(hess_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_lag',
                                 equality_relaxation=True,
@@ -963,7 +963,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
             print(
-                '\n Solving 8PP problem with Level-based Outer Approximation(hess_only_lag)')
+                '\n Solving 8PP problem with Regularization Outer Approximation(hess_only_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_only_lag',
                                 equality_relaxation=True,
@@ -981,7 +981,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
             print(
-                '\n Solving 8PP problem with Level-based Outer Approximation(max_binary, hess_only_lag)')
+                '\n Solving 8PP problem with Regularization Outer Approximation(max_binary, hess_only_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_only_lag',
                                 equality_relaxation=True,
@@ -997,7 +997,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
             print(
-                '\n Solving MINLP_simple problem with Level-based Outer Approximation(hess_only_lag)')
+                '\n Solving MINLP_simple problem with Regularization Outer Approximation(hess_only_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_only_lag',
                                 equality_relaxation=True,
@@ -1013,7 +1013,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP2()
             print(
-                '\n Solving MINLP2_simple problem with Level-based Outer Approximation(hess_only_lag)')
+                '\n Solving MINLP2_simple problem with Regularization Outer Approximation(hess_only_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_only_lag',
                                 equality_relaxation=True,
@@ -1029,7 +1029,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP3()
             print(
-                '\n Solving MINLP3_simple problem with Level-based Outer Approximation(hess_only_lag)')
+                '\n Solving MINLP3_simple problem with Regularization Outer Approximation(hess_only_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_only_lag',
                                 equality_relaxation=True,
@@ -1046,7 +1046,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             print(
-                '\n Solving Proposal problem with Level-based Outer Approximation(hess_only_lag)')
+                '\n Solving Proposal problem with Regularization Outer Approximation(hess_only_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_only_lag',
                                 equality_relaxation=True,
@@ -1063,7 +1063,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             print(
-                '\n Solving Proposal problem with Level-based Outer Approximation(no-good cuts, hess_only_lag)')
+                '\n Solving Proposal problem with Regularization Outer Approximation(no-good cuts, hess_only_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_only_lag',
                                 equality_relaxation=True,
@@ -1081,7 +1081,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print(
-                '\n Solving Constraint Qualification Example with Level-based Outer Approximation(hess_only_lag)')
+                '\n Solving Constraint Qualification Example with Regularization Outer Approximation(hess_only_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_only_lag',
                                 equality_relaxation=True,
@@ -1096,7 +1096,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print(
-                '\n Solving Constraint Qualification Example with Level-based Outer Approximation(no-good cuts, hess_only_lag)')
+                '\n Solving Constraint Qualification Example with Regularization Outer Approximation(no-good cuts, hess_only_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_only_lag',
                                 equality_relaxation=True,
@@ -1112,7 +1112,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
             print(
-                '\n Solving Online Doc Example with Level-based Outer Approximation(hess_only_lag)')
+                '\n Solving Online Doc Example with Regularization Outer Approximation(hess_only_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_only_lag',
                                 equality_relaxation=True,
@@ -1128,7 +1128,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP4()
             print(
-                '\n Solving Online Doc Example with Level-based Outer Approximation(hess_only_lag)')
+                '\n Solving Online Doc Example with Regularization Outer Approximation(hess_only_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='hess_only_lag',
                                 equality_relaxation=True,
@@ -1146,7 +1146,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
             print(
-                '\n Solving 8PP problem with Level-based Outer Approximation(sqp_lag)')
+                '\n Solving 8PP problem with Regularization Outer Approximation(sqp_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='sqp_lag',
                                 equality_relaxation=True,
@@ -1164,7 +1164,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
             print(
-                '\n Solving 8PP problem with Level-based Outer Approximation(max_binary, sqp_lag)')
+                '\n Solving 8PP problem with Regularization Outer Approximation(max_binary, sqp_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='sqp_lag',
                                 equality_relaxation=True,
@@ -1180,7 +1180,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP()
             print(
-                '\n Solving MINLP_simple problem with Level-based Outer Approximation(sqp_lag)')
+                '\n Solving MINLP_simple problem with Regularization Outer Approximation(sqp_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='sqp_lag',
                                 equality_relaxation=True,
@@ -1196,7 +1196,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP2()
             print(
-                '\n Solving MINLP2_simple problem with Level-based Outer Approximation(sqp_lag)')
+                '\n Solving MINLP2_simple problem with Regularization Outer Approximation(sqp_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='sqp_lag',
                                 equality_relaxation=True,
@@ -1212,7 +1212,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP3()
             print(
-                '\n Solving MINLP3_simple problem with Level-based Outer Approximation(sqp_lag)')
+                '\n Solving MINLP3_simple problem with Regularization Outer Approximation(sqp_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='sqp_lag',
                                 equality_relaxation=True,
@@ -1229,7 +1229,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             print(
-                '\n Solving Proposal problem with Level-based Outer Approximation(sqp_lag)')
+                '\n Solving Proposal problem with Regularization Outer Approximation(sqp_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='sqp_lag',
                                 equality_relaxation=True,
@@ -1246,7 +1246,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             print(
-                '\n Solving Proposal problem with Level-based Outer Approximation(no-good cuts, sqp_lag)')
+                '\n Solving Proposal problem with Regularization Outer Approximation(no-good cuts, sqp_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='sqp_lag',
                                 equality_relaxation=True,
@@ -1264,7 +1264,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print(
-                '\n Solving Constraint Qualification Example with Level-based Outer Approximation(sqp_lag)')
+                '\n Solving Constraint Qualification Example with Regularization Outer Approximation(sqp_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='sqp_lag',
                                 equality_relaxation=True,
@@ -1279,7 +1279,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print(
-                '\n Solving Constraint Qualification Example with Level-based Outer Approximation(no-good cuts, sqp_lag)')
+                '\n Solving Constraint Qualification Example with Regularization Outer Approximation(no-good cuts, sqp_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='sqp_lag',
                                 equality_relaxation=True,
@@ -1295,7 +1295,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = OnlineDocExample()
             print(
-                '\n Solving Online Doc Example with Level-based Outer Approximation(sqp_lag)')
+                '\n Solving Online Doc Example with Regularization Outer Approximation(sqp_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='sqp_lag',
                                 equality_relaxation=True,
@@ -1311,7 +1311,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = SimpleMINLP4()
             print(
-                '\n Solving Online Doc Example with Level-based Outer Approximation(sqp_lag)')
+                '\n Solving Online Doc Example with Regularization Outer Approximation(sqp_lag)')
             results = opt.solve(model, strategy='OA',
                                 add_regularization='sqp_lag',
                                 equality_relaxation=True,

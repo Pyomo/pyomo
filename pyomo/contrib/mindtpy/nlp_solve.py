@@ -27,7 +27,7 @@ logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 def solve_subproblem(solve_data, config):
     """
-    Solves the fixed NLP (with fixed integers)
+    Solves the Fixed-NLP (with fixed integers)
 
     This function sets up the 'fixed_nlp' by fixing binaries, sets continuous variables to their intial var values,
     precomputes dual values, deactivates trivial constraints, and then solves NLP model.
@@ -42,9 +42,9 @@ def solve_subproblem(solve_data, config):
     Returns
     -------
     fixed_nlp: Pyomo model
-        fixed NLP from the model
+        Fixed-NLP from the model
     results: Pyomo results object
-        result from solving the fixed NLP
+        result from solving the Fixed-NLP
     """
 
     fixed_nlp = solve_data.working_model.clone()
@@ -125,7 +125,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, fp=False):
     Parameters
     ----------
     fixed_nlp: Pyomo model
-        fixed NLP from the model
+        Fixed-NLP from the model
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
     config: ConfigBlock

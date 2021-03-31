@@ -346,7 +346,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         Parameters
         ----------
         fixed_nlp: Pyomo model
-            fixed NLP from the model
+            Fixed-NLP from the model
         solve_data: MindtPy Data Container
             data container that holds solve-instance data
         config: ConfigBlock
@@ -487,7 +487,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             handle_main_optimal(
                 main_mip, solve_data, config, update_bound=False)
         elif main_mip_results.solver.termination_condition in {tc.infeasible, tc.infeasibleOrUnbounded}:
-            config.logger.info('Projection problem infeasible.')
+            config.logger.info('regularization problem infeasible.')
             if config.reduce_level_coef:
                 config.level_coef = config.level_coef / 2
                 main_mip, main_mip_results = solve_main(
@@ -496,7 +496,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     handle_main_optimal(
                         main_mip, solve_data, config, update_bound=False)
                 elif main_mip_results.solver.termination_condition is tc.infeasible:
-                    config.logger.info('Projection problem still infeasible with reduced level_coef. '
+                    config.logger.info('regularization problem still infeasible with reduced level_coef. '
                                         'NLP subproblem is generated based on the incumbent solution of the main problem.')
                 elif main_mip_results.solver.termination_condition is tc.maxTimeLimit:
                     config.logger.info(
@@ -508,19 +508,19 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                         'Sometimes solving MIQP using cplex, unbounded means infeasible.')
                 elif main_mip_results.solver.termination_condition is tc.unknown:
                     config.logger.info(
-                        'Termination condition of the projection problem is unknown.')
+                        'Termination condition of the regularization problem is unknown.')
                     if main_mip_results.problem.lower_bound != float('-inf'):
                         config.logger.info(
                             'Solution limit has been reached.')
                         handle_main_optimal(
                             main_mip, solve_data, config, update_bound=False)
                     else:
-                        config.logger.info('No solution obtained from the projection subproblem.'
+                        config.logger.info('No solution obtained from the regularization subproblem.'
                                             'Please set mip_solver_tee to True for more informations.'
                                             'The solution of the OA main problem will be adopted.')
                 else:
                     raise ValueError(
-                        'MindtPy unable to handle projection problem termination condition '
+                        'MindtPy unable to handle regularization problem termination condition '
                         'of %s. Solver message: %s' %
                         (main_mip_results.solver.termination_condition, main_mip_results.solver.message))
             elif config.use_bb_tree_incumbent:
@@ -536,7 +536,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 'Sometimes solving MIQP using cplex, unbounded means infeasible.')
         elif main_mip_results.solver.termination_condition is tc.unknown:
             config.logger.info(
-                'Termination condition of the projection problem is unknown.')
+                'Termination condition of the regularization problem is unknown.')
             if main_mip_results.problem.lower_bound != float('-inf'):
                 config.logger.info(
                     'Solution limit has been reached.')
@@ -544,7 +544,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     main_mip, solve_data, config, update_bound=False)
         else:
             raise ValueError(
-                'MindtPy unable to handle projection problem termination condition '
+                'MindtPy unable to handle regularization problem termination condition '
                 'of %s. Solver message: %s' %
                 (main_mip_results.solver.termination_condition, main_mip_results.solver.message))
 
@@ -581,6 +581,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             if not solve_data.bound_improved and not solve_data.solution_improved:
                 config.logger.info('the bound and the best found solution have neither been improved.'
                                    'We will skip solving the regularization problem and the Fixed-NLP subproblem')
+                solve_data.solution_improved = False
                 return
             if ((solve_data.objective_sense == minimize and solve_data.LB != float('-inf'))
                     or (solve_data.objective_sense == maximize and solve_data.UB != float('inf'))):
@@ -604,7 +605,8 @@ class LazyOACallback_cplex(LazyConstraintCallback):
 
         if solve_data.curr_int_sol in set(solve_data.integer_list):
             config.logger.info('This integer combination has been explored.'
-                                'We will skip solving the fixed NLP subproblem.')
+                                'We will skip solving the Fixed-NLP subproblem.')
+            solve_data.solution_improved = False
             if config.strategy == 'GOA':
                 if config.add_no_good_cuts:
                     var_values = list(

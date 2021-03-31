@@ -45,15 +45,15 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
     main_mip_results: Pyomo results object
         result from solving the main MIP
     fp: Bool
-        generate the feasibility pump projection main problem
+        generate the feasibility pump regularization main problem
     regularization_problem: Bool
-        generate the ROA projection main problem
+        generate the ROA regularization main problem
     """
     if fp:
         config.logger.info('FP-MIP %s: Solve main problem.' %
                            (solve_data.fp_iter,))
     elif regularization_problem:
-        config.logger.info('ROA-Regularization-MIP %s: Solve main projection problem.' %
+        config.logger.info('ROA-Regularization-MIP %s: Solve main regularization problem.' %
                            (solve_data.mip_iter,))
     else:
         solve_data.mip_iter += 1
@@ -68,7 +68,7 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
         getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
         getattr(solve_data.mip, 'ipopt_zU_out', _DoNothing()).deactivate()
     if regularization_problem:
-        mainopt = SolverFactory(config.mip_projection_solver)
+        mainopt = SolverFactory(config.mip_regularization_solver)
     else:
         mainopt = SolverFactory(config.mip_solver)
     # determine if persistent solver is called.
@@ -374,7 +374,7 @@ def handle_main_unbounded(main_mip, solve_data, config):
 
 def setup_main(solve_data, config, fp, regularization_problem):
     """
-    Set up main problem/main projection problem for OA, ECP, Feasibility Pump and ROA methods.
+    Set up main problem/main regularization problem for OA, ECP, Feasibility Pump and ROA methods.
 
     Parameters
     ----------
@@ -383,9 +383,9 @@ def setup_main(solve_data, config, fp, regularization_problem):
     config: ConfigBlock
         contains the specific configurations for the algorithm
     fp: Bool
-        generate the feasibility pump projection main problem
+        generate the feasibility pump regularization main problem
     regularization_problem: Bool
-        generate the ROA projection main problem
+        generate the ROA regularization main problem
     """
     MindtPy = solve_data.mip.MindtPy_utils
 

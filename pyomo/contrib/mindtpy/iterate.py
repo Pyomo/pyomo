@@ -87,7 +87,7 @@ def MindtPy_iteration_loop(solve_data, config):
                     solve_data, config, regularization_problem=True)
                 if main_mip_results is None:
                     config.logger.info(
-                        'Failed to solve the projection problem.'
+                        'Failed to solve the regularization problem.'
                         'The solution of the OA main problem will be adopted.')
                 elif main_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
                     handle_main_optimal(
@@ -106,18 +106,18 @@ def MindtPy_iteration_loop(solve_data, config):
                         'Sometimes solving MIQP in cplex, unbounded means infeasible.')
                 elif main_mip_results.solver.termination_condition is tc.unknown:
                     config.logger.info(
-                        'Termination condition of the projection problem is unknown.')
+                        'Termination condition of the regularization problem is unknown.')
                     if main_mip_results.problem.lower_bound != float('-inf'):
                         config.logger.info('Solution limit has been reached.')
                         handle_main_optimal(
                             main_mip, solve_data, config, update_bound=False)
                     else:
-                        config.logger.info('No solution obtained from the projection subproblem.'
+                        config.logger.info('No solution obtained from the regularization subproblem.'
                                            'Please set mip_solver_tee to True for more informations.'
                                            'The solution of the OA main problem will be adopted.')
                 else:
                     raise ValueError(
-                        'MindtPy unable to handle projection problem termination condition '
+                        'MindtPy unable to handle regularization problem termination condition '
                         'of %s. Solver message: %s' %
                         (main_mip_results.solver.termination_condition, main_mip_results.solver.message))
 
