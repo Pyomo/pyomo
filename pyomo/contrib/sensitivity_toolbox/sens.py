@@ -312,7 +312,7 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     results = ipopt.solve(model,tee=tee)
 
     # Rasie Exception if ipopt fails 
-    if (results.solver.status == pyomo.opt.SolverStatus.warning):
+    if (results.solver.status == SolverStatus.warning):
         raise Exception(results.solver.Message)
 
     for o in model.component_objects(Objective, active=True):

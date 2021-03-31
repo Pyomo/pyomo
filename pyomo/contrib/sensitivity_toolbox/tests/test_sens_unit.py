@@ -27,6 +27,8 @@ from pyomo.environ import (
         Constraint,
         inequality,
         NonNegativeReals,
+        minimize,
+        exp
         )
 from pyomo.core.base.component import ComponentData
 from pyomo.common.dependencies import scipy_available
@@ -37,8 +39,12 @@ from pyomo.core.expr.visitor import identify_mutable_parameters
 from pyomo.contrib.sensitivity_toolbox.sens import (
         SensitivityInterface,
         _NotAnIndex,
+        get_dsdp,
+        get_dfds_dcds
         )
-
+import pyomo.contrib.parmest.parmest as parmest
+import numpy as np
+import pandas as pd
 import pyomo.contrib.sensitivity_toolbox.examples.parameter as param_example
 
 def make_indexed_model():
@@ -653,6 +659,136 @@ class TestSensitivityInterface(unittest.TestCase):
                 con = param_con_map[obj]
                 self.assertEqual(instance.sens_state_value_1[var], ptb)
                 self.assertEqual(instance.DeltaP[con], obj.value-ptb)
+
+    def test_get_dsdp1(self):
+        '''
+        It tests the function get_dsdp with a simple nonlinear programming example.
+        
+        min f: p1*x1+ p2*(x2^2) + p1*p2 
+         s.t c1: x1 = p1
+             c2: x2 = p2
+             c3: 10 <= p1 <= 10
+             c4: 5 <= p2 <= 5  
+        '''
+        variable_name = ['p1', 'p2']
+
+        m= ConcreteModel()
+        m.x1 = Var(initialize = 0)
+        m.x2 = Var(initialize = 0)
+        m.p1 = Var(initialize = 0)
+        m.p2 = Var(initialize = 0)
+        m.obj = Objective(expr = m.x1*m.p1+m.x2*m.x2*m.p2 + m.p1*m.p2 , sense=minimize)
+        m.c1 = Constraint(expr = m.x1 == m.p1)
+        m.c2 = Constraint(expr = m.x2 == m.p2)
+        theta= {'p1': 10.0, 'p2': 5.0}
+        for v in variable_name:
+            getattr(m, v).setlb(theta[v])
+            getattr(m, v).setub(theta[v])
+        dsdp_dic, col = get_dsdp(m, variable_name, theta)
+        np.testing.assert_almost_equal(dsdp_dic['d(x1)/d(p1)'], 1.0)
+        np.testing.assert_almost_equal(dsdp_dic['d(x2)/d(p1)'], 0.0)
+        np.testing.assert_almost_equal(dsdp_dic['d(p1)/d(p1)'], 1.0)
+        np.testing.assert_almost_equal(dsdp_dic['d(p2)/d(p1)'], 0.0)
+        np.testing.assert_almost_equal(dsdp_dic['d(x1)/d(p2)'], 0.0)
+        np.testing.assert_almost_equal(dsdp_dic['d(x2)/d(p2)'], 1.0)
+        np.testing.assert_almost_equal(dsdp_dic['d(p1)/d(p2)'], 0.0)
+        np.testing.assert_almost_equal(dsdp_dic['d(p2)/d(p2)'], 1.0)
+
+    def test_get_dsdp2(self):
+        '''
+        It tests the function get_dsdp with rooney & biegler's model.
+        '''
+        from pyomo.contrib.sensitivity_toolbox.examples.rooney_biegler import rooney_biegler_model
+        variable_name = ['asymptote', 'rate_constant']
+        data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
+                                  [4,16.0],[5,15.6],[7,19.8]],
+                            columns=['hour', 'y'])
+        def SSE(model, data):
+            expr = sum((data.y[i] - model.response_function[data.hour[i]])**2 for i in data.index)
+            return expr
+        parmest_class = parmest.Estimator(rooney_biegler_model, data,variable_name,SSE)
+        obj, theta, cov = parmest_class.theta_est(calc_cov=True)
+        model_uncertain= ConcreteModel()
+        model_uncertain.asymptote = Var(initialize = 15)
+        model_uncertain.rate_constant = Var(initialize = 0.5)
+        model_uncertain.obj = Objective(expr = model_uncertain.asymptote*( 1 - exp(-model_uncertain.rate_constant*10  )  ), sense=minimize)
+        theta= {'asymptote': 19.142575284617866, 'rate_constant': 0.53109137696521}
+        for v in variable_name:
+            getattr(model_uncertain, v).setlb(theta[v])
+            getattr(model_uncertain, v).setub(theta[v])
+        dsdp_dic, col =  get_dsdp(model_uncertain, variable_name, theta, {})
+        np.testing.assert_almost_equal( dsdp_dic['d(asymptote)/d(asymptote)'] , 1.0)
+        np.testing.assert_almost_equal( dsdp_dic['d(rate_constant)/d(asymptote)'] , 0.0)
+        np.testing.assert_almost_equal( dsdp_dic['d(asymptote)/d(rate_constant)'] , 0.0)
+        np.testing.assert_almost_equal( dsdp_dic['d(rate_constant)/d(rate_constant)'] , 1.0)
+
+    def test_get_dfds_dcds(self):
+        '''
+        It tests the function get_sensitivity with a simple nonlinear programming example.
+        
+        min f: p1*x1+ p2*(x2^2) + p1*p2 
+         s.t c1: x1 = p1
+             c2: x2 = p2
+             c3: 10 <= p1 <= 10
+             c4: 5 <= p2 <= 5  
+        '''
+        variable_name = ['p1', 'p2']
+
+        m= ConcreteModel()
+        m.x1 = Var(initialize = 0)
+        m.x2 = Var(initialize = 0)
+        m.p1 = Var(initialize = 0)
+        m.p2 = Var(initialize = 0)
+        m.obj = Objective(expr = m.x1*m.p1+m.x2*m.x2*m.p2 + m.p1*m.p2 , sense=minimize)
+        m.c1 = Constraint(expr = m.x1 == m.p1)
+        m.c2 = Constraint(expr = m.x2 == m.p2)
+        theta= {'p1': 10.0, 'p2': 5.0}
+        for v in variable_name:
+            getattr(m, v).setlb(theta[v])
+            getattr(m, v).setub(theta[v])
+        gradient_f,gradient_f_dic, gradient_c,gradient_c_dic, line_dic =  get_dfds_dcds(m, variable_name)
+        np.testing.assert_almost_equal( gradient_f_dic['d(f)/d(x1)'] , 10.0)
+        np.testing.assert_almost_equal( gradient_f_dic['d(f)/d(x2)'] , 50.0)
+        np.testing.assert_almost_equal( gradient_f_dic['d(f)/d(p1)'] , 15.0)
+        np.testing.assert_almost_equal( gradient_f_dic['d(f)/d(p2)'] , 35.0)
+        np.testing.assert_almost_equal( gradient_c_dic['d(c1)/d(x1)'] , 1.0)
+        np.testing.assert_almost_equal( gradient_c_dic['d(c1)/d(p1)'] , -1.0)
+        np.testing.assert_almost_equal( gradient_c_dic['d(c2)/d(x2)'] , 1.0)
+        np.testing.assert_almost_equal( gradient_c_dic['d(c2)/d(p2)'] , -1.0)
+        np.testing.assert_almost_equal( gradient_f , np.array([10., 50., 15., 35.]))
+        np.testing.assert_almost_equal( gradient_c , np.array([[ 1.,  1.,  1.],[ 3.,  1., -1.],[ 2.,  2.,  1.],[ 4.,  2., -1.]]))
+        np.testing.assert_almost_equal( line_dic['p1'] , 3)
+        np.testing.assert_almost_equal( line_dic['p2'] , 4)
+
+    def test_get_dfds_dcds2(self):
+        '''
+        It tests the function get_sensitivity with rooney & biegler's model.
+        '''
+        from pyomo.contrib.sensitivity_toolbox.examples.rooney_biegler import rooney_biegler_model
+        variable_name = ['asymptote', 'rate_constant']
+        data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
+                                  [4,16.0],[5,15.6],[7,19.8]],
+                            columns=['hour', 'y'])
+        def SSE(model, data):
+            expr = sum((data.y[i] - model.response_function[data.hour[i]])**2 for i in data.index)
+            return expr
+        parmest_class = parmest.Estimator(rooney_biegler_model, data,variable_name,SSE)
+        obj, theta, cov = parmest_class.theta_est(calc_cov=True)
+        model_uncertain= ConcreteModel()
+        model_uncertain.asymptote = Var(initialize = 15)
+        model_uncertain.rate_constant = Var(initialize = 0.5)
+        model_uncertain.obj = Objective(expr = model_uncertain.asymptote*( 1 - exp(-model_uncertain.rate_constant*10  )  ), sense=minimize)
+        theta= {'asymptote': 19.142575284617866, 'rate_constant': 0.53109137696521}
+        for v in variable_name:
+            getattr(model_uncertain, v).setlb(theta[v])
+            getattr(model_uncertain, v).setub(theta[v])
+        gradient_f,gradient_f_dic, gradient_c,gradient_c_dic, line_dic =  get_dfds_dcds(model_uncertain, variable_name)
+        np.testing.assert_almost_equal( gradient_f_dic['d(f)/d(asymptote)'] , 0.99506259)
+        np.testing.assert_almost_equal( gradient_f_dic['d(f)/d(rate_constant)'] , 0.945148)
+        np.testing.assert_almost_equal( gradient_f , np.array([0.99506259, 0.945148]))
+        np.testing.assert_almost_equal( gradient_c , np.array([]))
+        np.testing.assert_almost_equal( line_dic['asymptote'] , 1)
+        np.testing.assert_almost_equal( line_dic['rate_constant'] , 2)
 
 if __name__ == "__main__":
     unittest.main()
