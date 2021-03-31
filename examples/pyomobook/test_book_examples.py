@@ -1,20 +1,32 @@
-# Imports
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import pyomo.common.unittest as unittest
 import glob
 import os
 import os.path
+import subprocess
 import sys
+from itertools import zip_longest
 from pyomo.opt import check_available_solvers
 from pyomo.common.dependencies import attempt_import
+from filecmp import cmp
 parameterized, param_available = attempt_import('parameterized')
 if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 
-try:
-    import yaml
-    yaml_available=True
-except:
-    yaml_available=False
+# try:
+#     import yaml
+#     yaml_available=True
+# except:
+#     yaml_available=False
 
 # Find all *.txt files, and use them to define baseline tests
 currdir = os.path.dirname(os.path.abspath(__file__))
@@ -130,10 +142,9 @@ for package_ in packages_used:
 
 
 def check_skip(name):
-
-    #
-    # Return a boolean if the test should be skipped
-    #
+    """
+    Return a boolean if the test should be skipped
+    """
 
     if name in solver_dependencies and \
        not solver_available[solver_dependencies[name]]:
@@ -158,11 +169,13 @@ def check_skip(name):
     return False
 
 def filter(line):
-    # Ignore certain text when comparing output with baseline
-
+    """
+    Ignore certain text when comparing output with baseline
+    """
     # Ipopt 3.12.4 puts BACKSPACE (chr(8) / ^H) into the output.
-    line = line.strip(" \n\t"+chr(8))
+    # line = line.strip(" \n\t"+chr(8))
 
+    
     if not line:
         return True
     for field in ( '[',
@@ -187,6 +200,20 @@ def filter(line):
         if field in line:
             return True
     return False
+
+
+def filter_items(items):
+    filtered = []
+    for i in items:
+        if not i:
+            continue
+        if not (i.startswith('/') or i.startswith(":\\", 1)):
+            try:
+                filtered.append(float(i))
+            except:
+                filtered.append(i)
+    return filtered
+
 
 py_test_tuples=[]
 sh_test_tuples=[]
@@ -251,7 +278,7 @@ for tdir in testdirs:
             #     forceskip=forceskip)
             # os.chdir(cwd)
             
-            # Create list of tuples with (test_file, baseline_file)
+            # Create list of tuples with (test_name, test_file, baseline_file)
             py_test_tuples.append((tname, test_file, os.path.join(dir_,name+suffix)))
 
     # Find all .sh files in the test directory
@@ -288,7 +315,7 @@ for tdir in testdirs:
             #                        forceskip=forceskip)
             # os.chdir(cwd)
 
-            # Create list of tuples with (test_file, baseline_file)
+            # Create list of tuples with (test_name, test_file, baseline_file)
             sh_test_tuples.append((tname, test_file, os.path.join(dir_,name+suffix)))
 
 
@@ -297,28 +324,72 @@ def custom_name_func(test_func, test_num, test_params):
 
 class TestBookExamples(unittest.TestCase):
 
+    def compare_files(self, file1, file2):
+        try:
+            self.assertTrue(cmp(file1, file2),
+                            msg="Files %s and %s differ" % (file1, file2))
+        except:
+            with open(file1, 'r') as f1, open(file2, 'r') as f2:
+                f1_contents = f1.read().strip().split('\n')
+                f2_contents = f2.read().strip().split('\n')
+                f1_filtered = []
+                f2_filtered = []
+                for item1, item2 in zip_longest(f1_contents, f2_contents):
+                    if not item1.startswith('['):
+                        items1 = item1.strip().split()
+                        items2 = item2.strip().split()
+                        f1_filtered.append(filter_items(items1))
+                        f2_filtered.append(filter_items(items2))
+                self.assertStructuredAlmostEqual(f2_filtered, f1_filtered,
+                                                 abstol=1e-6,
+                                                 allow_second_superset=True)
+
     @parameterized.parameterized.expand(py_test_tuples, name_func=custom_name_func)
     def test_book_py(self, tname, test_file, base_file):
         bname = os.path.basename(test_file)
-        dir_ = os.path.dirname(test_file)
-
+        dir_ = os.path.dirname(test_file)      
 
         skip_msg = check_skip('test_'+tname)
         if skip_msg:
             raise unittest.SkipTest(skip_msg)
 
-        self.assertTrue(True)
+        cwd = os.getcwd()
+        os.chdir(dir_)
+        out_file = os.path.splitext(test_file)[0]+'.out'
+        with open(out_file, 'w') as f:
+            subprocess.run([sys.executable, bname], stdout=f, stderr=f, cwd=dir_)
+        os.chdir(cwd)
+        # output = subprocess.run([sys.executable, test_file],
+        #                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd,
+        #                         universal_newlines=True)
+        self.compare_files(out_file, base_file)
+        os.remove(out_file)
 
     @parameterized.parameterized.expand(sh_test_tuples, name_func=custom_name_func)
     def test_book_sh(self, tname, test_file, base_file):
+        bname = os.path.basename(test_file)
+        dir_ = os.path.dirname(test_file)
 
         skip_msg = check_skip('test_'+tname)
         if skip_msg:
             raise unittest.SkipTest(skip_msg)
 
-        self.assertTrue(True)
+        # Skip all shell tests on Windows.
+        if os.name == 'nt':
+           raise unittest.SkipTest("Shell tests are not runnable on Windows")
+    
+        cwd = os.getcwd()
+        os.chdir(dir_)
+        out_file = os.path.splitext(test_file)[0]+'.out'
+        with open(out_file, 'w') as f:
+            subprocess.run([bname,], stdout=f, stderr=f, cwd=dir_)
+        os.chdir(cwd)
+
+        self.compare_files(out_file, base_file)
+        # os.remove(out_file)
 
 
-# Execute the tests
-if __name__ == '__main__':
-    unittest.main()
+
+# # Execute the tests
+# if __name__ == '__main__':
+#     unittest.main()
