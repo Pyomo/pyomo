@@ -409,7 +409,7 @@ def _add_loa_configs(CONFIG):
         domain=bool
     ))
     CONFIG.declare('sqp_lag_scaling_coef', ConfigValue(
-        default=None,
+        default='fixed',
         domain=In(['fixed', 'variable_dependent']),
         description='the coefficient used to scale the L2 norm in sqp_lag'
     ))
