@@ -1,4 +1,4 @@
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import pyomo.environ as pe
 from pyomo.contrib.appsi.solvers.gurobi import Gurobi
 from pyomo.contrib.appsi.base import TerminationCondition
