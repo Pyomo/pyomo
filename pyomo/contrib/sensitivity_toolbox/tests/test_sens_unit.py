@@ -40,7 +40,8 @@ from pyomo.contrib.sensitivity_toolbox.sens import (
         SensitivityInterface,
         _NotAnIndex,
         get_dsdp,
-        get_dfds_dcds
+        get_dfds_dcds,
+        line_num
         )
 import pyomo.contrib.parmest.parmest as parmest
 import numpy as np
@@ -789,6 +790,33 @@ class TestSensitivityInterface(unittest.TestCase):
         np.testing.assert_almost_equal( gradient_c , np.array([]))
         np.testing.assert_almost_equal( line_dic['asymptote'] , 1)
         np.testing.assert_almost_equal( line_dic['rate_constant'] , 2)
+
+    def test_line_num1(self):
+        '''
+        It tests the function line_num
+        '''
+        import os
+        file_name = "test_col.col"
+        with open(file_name, "w") as file:
+            file.write("var1\n")
+            file.write("var3\n")
+        i= line_num(file_name,'var1')
+        j= line_num(file_name,'var3')
+        self.assertEqual(i, 1)
+        self.assertEqual(j, 2)
+
+    def test_line_num1(self):
+        '''
+        It tests an exception error when file does not include target
+        '''
+        import os
+        file_name = "test_col.col"
+        with open(file_name, "w") as file:
+            file.write("var1\n")
+            file.write("var3\n")
+        with self.assertRaises(Exception) as context:
+            i= line_num(file_name,'var2')
+        self.assertTrue('test_col.col does not include var2' in str(context.exception))
 
 if __name__ == "__main__":
     unittest.main()

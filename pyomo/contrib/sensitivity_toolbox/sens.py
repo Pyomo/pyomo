@@ -379,7 +379,7 @@ def line_num(file_name, target):
     Raises
     ------
     Exception
-        When col_row.col doesnot include target
+        When col_row.col does not include target
     """
     with open(file_name) as f:
         count = int(1)
@@ -387,7 +387,7 @@ def line_num(file_name, target):
             if line.strip() == target:
                 return int(count)
             count += 1
-    raise Exception("col_row.col should includes target")
+    raise Exception(file_name + " does not include "+target)
 
 class SensitivityInterface(object):
 
