@@ -22,12 +22,6 @@ parameterized, param_available = attempt_import('parameterized')
 if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 
-# try:
-#     import yaml
-#     yaml_available=True
-# except:
-#     yaml_available=False
-
 # Find all *.txt files, and use them to define baseline tests
 currdir = os.path.dirname(os.path.abspath(__file__))
 datadir = currdir
@@ -149,7 +143,6 @@ def check_skip(name):
     if name in solver_dependencies and \
        not solver_available[solver_dependencies[name]]:
         # Skip the test because a solver is not available
-        # print('Skipping %s because of missing solver' %(name)) 
         return 'Solver "%s" is not available' % (
             solver_dependencies[name], )
 
@@ -157,7 +150,6 @@ def check_skip(name):
         packages_ = package_dependencies[name]
         if not all([package_available[i] for i in packages_]):
             # Skip the test because a package is not available
-            # print('Skipping %s because of missing package' %(name))
             _missing = []
             for i in packages_:
                 if not package_available[i]:
@@ -172,10 +164,6 @@ def filter(line):
     """
     Ignore certain text when comparing output with baseline
     """
-    # Ipopt 3.12.4 puts BACKSPACE (chr(8) / ^H) into the output.
-    # line = line.strip(" \n\t"+chr(8))
-
-    
     if not line:
         return True
     for field in ( '[',
@@ -228,22 +216,7 @@ for tdir in testdirs:
     # each chapter in the book.
     if '-ch' not in testdir:
         continue
-
-    # print("Testing ",testdir)
-
-    #
-    # JDS: This is crazy fragile.  If testdirs is ever anything BUT
-    # "pyomobook" you will be creating invalid class names
-    #
-    # testClassName = 'Test_'+os.path.basename(testdir).replace('-','_')
-    # assert '.' not in testClassName
-    # Test = globals()[testClassName] = type(
-    #     testClassName, (unittest.TestCase,), {})
-    # if testClassName in only_book_tests:
-    #     Test = unittest.category("book")(Test)
-    # else:
-    #     Test = unittest.category("book","smoke","nightly")(Test)
-    
+   
     # Find all .py files in the test directory
     for file in list(glob.glob(os.path.join(testdir,'*.py'))) \
         + list(glob.glob(os.path.join(testdir,'*','*.py'))):
@@ -266,18 +239,6 @@ for tdir in testdirs:
             tname = tname.replace('-','_')
             tname = tname.replace('.','_')
         
-            # # print(tname)
-            # forceskip = check_skip(testClassName, 'test_'+tname)
-            # Test.add_baseline_test(
-            #     cmd=(sys.executable, test_file),
-            #     cwd = dir_,
-            #     baseline=os.path.join(dir_,name+suffix),
-            #     name=tname,
-            #     filter=filter,
-            #     tolerance=1e-3,
-            #     forceskip=forceskip)
-            # os.chdir(cwd)
-            
             # Create list of tuples with (test_name, test_file, baseline_file)
             py_test_tuples.append((tname, test_file, os.path.join(dir_,name+suffix)))
 
@@ -297,23 +258,8 @@ for tdir in testdirs:
                 suffix = suffix_
                 break
         if not suffix is None:
-            # cwd = os.getcwd()
-            # os.chdir(dir_)
             tname = tname.replace('-','_')
             tname = tname.replace('.','_')
-            # # For now, skip all shell tests on Windows.
-            # if os.name == 'nt':
-            #     forceskip = "Shell tests are not runnable on Windows"
-            # else:
-            #     forceskip = check_skip(testClassName, 'test_'+tname)
-            # Test.add_baseline_test(cmd='cd %s; %s' % (dir_,
-            #                                           os.path.abspath(bname)),
-            #                        baseline=dir_+name+suffix,
-            #                        name=tname,
-            #                        filter=filter,
-            #                        tolerance=1e-3,
-            #                        forceskip=forceskip)
-            # os.chdir(cwd)
 
             # Create list of tuples with (test_name, test_file, baseline_file)
             sh_test_tuples.append((tname, test_file, os.path.join(dir_,name+suffix)))
@@ -335,7 +281,7 @@ class TestBookExamples(unittest.TestCase):
                 f1_filtered = []
                 f2_filtered = []
                 for item1, item2 in zip_longest(f1_contents, f2_contents):
-                    if not item1.startswith('['):
+                    if not filter(item1):
                         items1 = item1.strip().split()
                         items2 = item2.strip().split()
                         f1_filtered.append(filter_items(items1))
@@ -359,9 +305,7 @@ class TestBookExamples(unittest.TestCase):
         with open(out_file, 'w') as f:
             subprocess.run([sys.executable, bname], stdout=f, stderr=f, cwd=dir_)
         os.chdir(cwd)
-        # output = subprocess.run([sys.executable, test_file],
-        #                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd,
-        #                         universal_newlines=True)
+
         self.compare_files(out_file, base_file)
         os.remove(out_file)
 
@@ -386,10 +330,4 @@ class TestBookExamples(unittest.TestCase):
         os.chdir(cwd)
 
         self.compare_files(out_file, base_file)
-        # os.remove(out_file)
-
-
-
-# # Execute the tests
-# if __name__ == '__main__':
-#     unittest.main()
+        os.remove(out_file)
