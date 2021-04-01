@@ -266,7 +266,8 @@ for tdir in testdirs:
 
 
 def custom_name_func(test_func, test_num, test_params):
-    return "Test_%s" %(test_params.args[0])
+    func_name = test_func.__name__
+    return "test_%s_%s" %(test_params.args[0], func_name[-2:])
 
 class TestBookExamples(unittest.TestCase):
 
