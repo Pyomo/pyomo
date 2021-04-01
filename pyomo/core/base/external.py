@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -55,7 +55,7 @@ class ExternalFunction(Component):
         # block._add_temporary_set assumes ALL components define an
         # index.  Sigh.
         self._index = None
-        
+
     def get_units(self):
         """Return the units for this ExternalFunction"""
         return self._units
@@ -85,7 +85,7 @@ class ExternalFunction(Component):
                     pass
                 if not arg.__class__ in native_types and arg.is_potentially_variable():
                     pv = True
-            except AttributeError:    
+            except AttributeError:
                 args_[i] = NonNumericValue(arg)
         #
         if pv:
@@ -287,18 +287,28 @@ class _ARGLIST(Structure):
     def __init__(self, args, fgh=0, fixed=None):
         super(_ARGLIST, self).__init__()
         N = len(args)
-        self.n = self.nr = N
+        NS = len([a for a in args if isinstance(a, str)])
+        self.n = N
+        self.nr = N - NS
         self.at = (c_int*N)()
-        self.ra = (c_double*N)()
-        self.sa = None
+        self.ra = (c_double*self.nr)()
+        self.sa = (c_char_p*NS)()
         if fgh > 0:
             self.derivs = (c_double*N)(0.)
         if fgh > 1:
             self.hes = (c_double*((N+N*N)//2))(0.)
 
+        sloc = -1
+        rloc = 0
         for i,v in enumerate(args):
-            self.at[i] = i
-            self.ra[i] = v
+            if isinstance(v, str):
+                self.at[i] = sloc
+                self.sa[-(sloc + 1)] = v.encode("ascii")
+                sloc -= 1
+            else:
+                self.at[i] = rloc
+                self.ra[rloc] = v
+                rloc += 1
 
         if fixed:
             self.dig = (c_byte*N)(0)
