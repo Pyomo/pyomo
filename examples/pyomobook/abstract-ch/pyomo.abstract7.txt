@@ -36,8 +36,6 @@ solvers:
     solver executable: None
     io format: None
     manager: serial
-    pyro host: None
-    pyro port: None
     options:
     options string: None
     suffixes: []
@@ -50,7 +48,7 @@ postsolve:
   summary: false
 [    0.00] Creating model
 [    0.02] Applying solver
-[    0.04] Processing results
+[    0.03] Processing results
     Number of solutions: 1
     Solution Information
       Gap: 0.0
@@ -75,7 +73,7 @@ Solver:
       Number of bounded subproblems: 0
       Number of created subproblems: 0
   Error rc: 0
-  Time: 0.006841182708740234
+  Time: 0.0051555633544921875
 Solution: 
 - number of solutions: 1
   number of solutions displayed: 1
@@ -90,6 +88,6 @@ Solution:
       Value: 0.4
   Constraint: No values
 
-[    0.04] Applying Pyomo postprocessing actions
+[    0.03] Applying Pyomo postprocessing actions
 Solution value 0.8
-[    0.04] Pyomo Finished
+[    0.03] Pyomo Finished
