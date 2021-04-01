@@ -1340,6 +1340,9 @@ class ConfigValue(ConfigBase):
         return self._data
 
     def set_value(self, value):
+        # Trap self-assignment (useful for providing editor completion)
+        if value is self:
+            return
         self._data = self._cast(value)
         self._userSet = True
 
@@ -1645,6 +1648,9 @@ class ConfigDict(ConfigBase):
         state = super(ConfigDict, self).__setstate__(state)
         for x in six.itervalues(self._data):
             x._parent = self
+
+    def __dir__(self):
+        return sorted(super(ConfigDict, self).__dir__() + list(self._data))
 
     def __getitem__(self, key):
         self._userAccessed = True
