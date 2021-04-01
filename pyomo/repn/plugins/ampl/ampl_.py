@@ -560,7 +560,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     if isinstance(arg, str):
                         # add one to lenght of end-of-string character.
                         OUTPUT.write(string_arg_str % (len(arg) + 1, arg))
-                    elif isinstace(arg, (float, int))
+                    elif isinstance(arg, (float, int)):
                         self._print_nonlinear_terms_NL(arg)
                     elif arg.is_fixed():
                         self._print_nonlinear_terms_NL(arg())
