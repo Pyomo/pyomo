@@ -338,3 +338,7 @@ class TestBookExamples(unittest.TestCase):
 
         self.compare_files(out_file, base_file)
         os.remove(out_file)
+
+
+if __name__ == "__main__":
+    return unittest.main()
