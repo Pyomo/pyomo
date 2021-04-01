@@ -1613,11 +1613,11 @@ class ConfigDict(ConfigBase):
 
     """
 
-    content_filters = (None, 'all', 'userdata')
+    content_filters = {None, 'all', 'userdata'}
 
     __slots__ = ('_decl_order', '_declared', '_implicit_declaration',
                  '_implicit_domain')
-    _all_slots = __slots__ + ConfigBase.__slots__
+    _all_slots = set(__slots__ + ConfigBase.__slots__)
 
     def __init__(self,
                  description=None,
