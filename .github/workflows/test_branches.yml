@@ -501,9 +501,8 @@ jobs:
         for cat in ${{matrix.category}}; do
             CATEGORY+=" --cat $cat"
         done
-#        $PYTHON_EXE -m pyomo.common.unittest pyomo `pwd`/pyomo-model-libraries \
-#        `pwd`/examples/pyomobook -v $CATEGORY
-
+        # $PYTHON_EXE -m pyomo.common.unittest pyomo `pwd`/pyomo-model-libraries \
+        # `pwd`/examples/pyomobook -v $CATEGORY
         $PYTHON_EXE -m pyomo.common.unittest `pwd`/examples/pyomobook -v $CATEGORY
 
 
