@@ -291,24 +291,24 @@ class TestBookExamples(unittest.TestCase):
                                                  abstol=1e-6,
                                                  allow_second_superset=True)
 
-    @parameterized.parameterized.expand(py_test_tuples, name_func=custom_name_func)
-    def test_book_py(self, tname, test_file, base_file):
-        bname = os.path.basename(test_file)
-        dir_ = os.path.dirname(test_file)      
+    # @parameterized.parameterized.expand(py_test_tuples, name_func=custom_name_func)
+    # def test_book_py(self, tname, test_file, base_file):
+    #     bname = os.path.basename(test_file)
+    #     dir_ = os.path.dirname(test_file)      
 
-        skip_msg = check_skip('test_'+tname)
-        if skip_msg:
-            raise unittest.SkipTest(skip_msg)
+    #     skip_msg = check_skip('test_'+tname)
+    #     if skip_msg:
+    #         raise unittest.SkipTest(skip_msg)
 
-        cwd = os.getcwd()
-        os.chdir(dir_)
-        out_file = os.path.splitext(test_file)[0]+'.out'
-        with open(out_file, 'w') as f:
-            subprocess.run([sys.executable, bname], stdout=f, stderr=f, cwd=dir_)
-        os.chdir(cwd)
+    #     cwd = os.getcwd()
+    #     os.chdir(dir_)
+    #     out_file = os.path.splitext(test_file)[0]+'.out'
+    #     with open(out_file, 'w') as f:
+    #         subprocess.run([sys.executable, bname], stdout=f, stderr=f, cwd=dir_)
+    #     os.chdir(cwd)
 
-        self.compare_files(out_file, base_file)
-        os.remove(out_file)
+    #     self.compare_files(out_file, base_file)
+    #     os.remove(out_file)
 
     @parameterized.parameterized.expand(sh_test_tuples, name_func=custom_name_func)
     def test_book_sh(self, tname, test_file, base_file):
@@ -327,7 +327,7 @@ class TestBookExamples(unittest.TestCase):
         os.chdir(dir_)
         out_file = os.path.splitext(test_file)[0]+'.out'
         with open(out_file, 'w') as f:
-            subprocess.run([bname,], stdout=f, stderr=f, cwd=dir_)
+            subprocess.run(['sh', bname], stdout=f, stderr=f, cwd=dir_)
         os.chdir(cwd)
 
         self.compare_files(out_file, base_file)
