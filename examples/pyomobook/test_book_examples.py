@@ -55,8 +55,8 @@ solver_dependencies =   {
     'test_dae_ch_run_path_constraint_tester': 'ipopt',
     
     # gdp_ch
-    'test_gdp_ch_scont': 'glpk',
-    'test_gdp_ch_scont2': 'glpk',
+    'test_gdp_ch_pyomo_scont': 'glpk',
+    'test_gdp_ch_pyomo_scont2': 'glpk',
     'test_gdp_ch_scont_script': 'glpk',
     
     # intro_ch'
@@ -109,6 +109,14 @@ solver_dependencies =   {
     'test_performance_ch_persistent': 'gurobi_persistent',
 }
 package_dependencies =  {
+    # abstract_ch'
+    'test_abstract_ch_pyomo_solve4': ['yaml'],
+    'test_abstract_ch_pyomo_solve5': ['yaml'],
+
+    # gdp_ch
+    'test_gdp_ch_pyomo_scont': ['yaml'],
+    'test_gdp_ch_pyomo_scont2': ['yaml'],
+
     # overview_ch'
     'test_overview_ch_wl_excel': ['pandas', 'xlrd'],
     'test_overview_ch_wl_mutable_excel': ['pandas', 'xlrd'],
