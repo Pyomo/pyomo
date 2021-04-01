@@ -341,4 +341,4 @@ class TestBookExamples(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    return unittest.main()
+    unittest.main()
