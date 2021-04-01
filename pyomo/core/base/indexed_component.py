@@ -19,6 +19,7 @@ from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common import DeveloperError
+from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
 
 from collections.abc import Sequence
@@ -132,6 +133,41 @@ def _get_indexed_component_data_name(component, index):
             del component._data[index]
     return ans
 
+class pyomo_ndarray(np.lib.mixins.NDArrayOperatorsMixin,
+                    np.ndarray if numpy_available else object):
+    __array_priority__ = 11
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        print('In __array_ufunc__:')
+        #raise RuntimeError(str((type(ufunc), ufunc, method, inputs, kwargs)))
+
+        if method == '__call__':
+            args = [i.__array__() if i is self else i for i in inputs]
+            return pyomo_ndarray(ufunc(*args, **kwargs))
+        else:
+            return NotImplemented
+
+    def __array_finalize__(self, obj):
+        print('In __array_finalize__:')
+        print('   self is %s' % repr(self))
+        print('   obj is %s' % repr(obj))
+        if obj is None:
+            return
+        return obj
+
+    def __array_wrap__(self, out_arr, context=None):
+        print('In __array_wrap__:')
+        print('   self is %s' % repr(self))
+        print('   arr is %s' % repr(out_arr))
+        # then just call the parent
+        return super(MySubClass, self).__array_wrap__(self, out_arr, context)
+
+    def __eq__(self, other):
+        raise RuntimeError("YAY!")
+
+    def __bool__(self, other):
+        raise RuntimeError("YAY!")
+
 
 class IndexedComponent(Component):
     """
@@ -230,6 +266,31 @@ class IndexedComponent(Component):
         if state['_index'] is None:
             state['_index'] = UnindexedComponent_set
         super(IndexedComponent, self).__setstate__(state)
+
+    def __array__(self, dtype=None):
+        if not self.is_indexed():
+            ans = pyomo_ndarray(shape=(1,), dtype=object)
+            ans[0] = self
+            return ans
+
+        _dim = self.dim()
+        if _dim is None:
+            raise TypeError(
+                "Cannot convert a non-dimensioned Pyomo IndexedComponent "
+                "(%s) into a numpy array" % (self,))
+        bounds = self.index_set().bounds()
+        if not isinstance(bounds[0], Sequence):
+            bounds = ((bounds[0],), (bounds[1],))
+        if any(b != 0 for b in bounds[0]):
+            raise TypeError(
+                "Cannot convert a Pyomo IndexedComponent "
+                "(%s) with bounds [%s, %s] into a numpy array" % (
+                    self, bounds[0], bounds[1]))
+        shape = tuple(b+1 for b in bounds[1])
+        ans = pyomo_ndarray(shape=shape, dtype=object)
+        for k, v in self.items():
+            ans[k] = v
+        return ans
 
     def to_dense_data(self):
         """TODO"""
@@ -708,7 +769,7 @@ value() function.""" % ( self.name, i ))
             if not structurally_valid:
                 raise IndexError(
                     "Index %s contains an invalid number of entries for "
-                    "component %s. Expected %s, got %s." 
+                    "component %s. Expected %s, got %s."
                     % (idx, self.name, set_dim, slice_dim))
             return IndexedComponent_slice(self, fixed, sliced, ellipsis)
         elif _found_numeric:

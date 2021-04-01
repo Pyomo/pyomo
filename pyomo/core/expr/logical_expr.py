@@ -461,12 +461,16 @@ else:
         if lhs.__class__ in native_numeric_types:
             # TODO: Why do we need this?
             lhs = as_numeric(lhs)
+        elif lhs.__class__ in native_types:
+            lhs_is_relational = False
         elif lhs.is_relational():
             lhs_is_relational = True
 
         if rhs.__class__ in native_numeric_types:
             # TODO: Why do we need this?
             rhs = as_numeric(rhs)
+        elif rhs.__class__ in native_types:
+            rhs_is_relational = False
         elif rhs.is_relational():
             rhs_is_relational = True
 
