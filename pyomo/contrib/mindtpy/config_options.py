@@ -394,7 +394,7 @@ def _add_loa_configs(CONFIG):
         description='The solution limit for the regularization problem since it does not need to be solved to optimality'
     ))
     CONFIG.declare('add_cuts_at_incumbent', ConfigValue(
-        default=True,
+        default=False,
         description='Whether to add lazy cuts to the main problem at the incumbent solution found in the branch & bound tree',
         domain=bool
     ))
@@ -425,6 +425,7 @@ def check_config(config):
             config.regularization_mip_threads = config.threads
             config.logger.info('Set regularization_mip_threads equal to threads')
         if config.single_tree:
+            config.add_cuts_at_incumbent = True
             # if no method is activated by users, we will use use_bb_tree_incumbent by default
             if not (config.reduce_level_coef or config.use_bb_tree_incumbent):
                 config.use_bb_tree_incumbent = True

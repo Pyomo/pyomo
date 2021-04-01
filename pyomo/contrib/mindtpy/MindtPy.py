@@ -117,7 +117,15 @@ class MindtPySolver(object):
             process_objective(solve_data, config,
                               move_linear_objective=(config.init_strategy == 'FP'
                                                      or config.add_regularization is not None),
-                              use_mcpp=config.use_mcpp)
+                              use_mcpp=config.use_mcpp,
+                              updata_var_con_list=config.add_regularization is None
+                              )
+            # The epigraph constraint is very "flat" for brnaching rules,
+            # we want to use to original model for the main mip.
+            if MindtPy.objective_list[0].expr.polynomial_degree() in (1, 0) and config.add_regularization is not None:
+                MindtPy.objective_list[0].activate()
+                MindtPy.objective_constr.deactivate()
+                MindtPy.objective.deactivate()
 
             # Save model initial values.
             solve_data.initial_var_values = list(

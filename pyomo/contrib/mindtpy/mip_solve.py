@@ -142,6 +142,7 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
         return solve_data.mip, main_mip_results
 
     if regularization_problem:
+        solve_data.mip.MindtPy_utils.objective_constr.deactivate()
         solve_data.mip.MindtPy_utils.del_component('loa_proj_mip_obj')
         solve_data.mip.MindtPy_utils.cuts.del_component('obj_reg_estimate')
         if config.add_regularization == 'level_L1':
@@ -424,6 +425,7 @@ def setup_main(solve_data, config, fp, regularization_problem):
                 solve_data.working_model,
                 discrete_only=config.fp_discrete_only)
     elif regularization_problem:
+        MindtPy.objective_constr.activate()
         if config.add_regularization == 'level_L1':
             MindtPy.loa_proj_mip_obj = generate_norm1_objective_function(solve_data.mip,
                                                                          solve_data.best_solution_found,

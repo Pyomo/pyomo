@@ -65,9 +65,9 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     v_to.stale = False
             except ValueError:
                 # Snap the value to the bounds
-                if v_to.has_lb() and v_val < v_to.lb and v_to.lb - v_val <= config.bound_tolerance:
+                if v_to.has_lb() and v_val < v_to.lb and v_to.lb - v_val <= config.variable_tolerance:
                     v_to.set_value(v_to.lb)
-                elif v_to.has_ub() and v_val > v_to.ub and v_val - v_to.ub <= config.bound_tolerance:
+                elif v_to.has_ub() and v_val > v_to.ub and v_val - v_to.ub <= config.variable_tolerance:
                     v_to.set_value(v_to.ub)
                 # ... or the nearest integer
                 elif v_to.is_integer():
@@ -128,7 +128,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                              rhs=cplex_rhs)
                 else:  # Inequality constraint (possibly two-sided)
                     if (constr.has_ub()
-                        and (linearize_active and abs(constr.uslack()) < config.bound_tolerance)
+                        and (linearize_active and abs(constr.uslack()) < config.zero_tolerance)
                             or (linearize_violated and constr.uslack() < 0)
                             or (config.linearize_inactive and constr.uslack() > 0)) or (constr.name == 'MindtPy_utils.objective_constr' and constr.has_ub()):
 
@@ -142,7 +142,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                                  sense='L',
                                  rhs=constr.upper.value + cplex_rhs)
                     if (constr.has_lb()
-                        and (linearize_active and abs(constr.lslack()) < config.bound_tolerance)
+                        and (linearize_active and abs(constr.lslack()) < config.zero_tolerance)
                             or (linearize_violated and constr.lslack() < 0)
                             or (config.linearize_inactive and constr.lslack() > 0)) or (constr.name == 'MindtPy_utils.objective_constr' and constr.has_lb()):
                         pyomo_expr = sum(value(jacs[constr][var]) * (var - self.get_values(
@@ -567,17 +567,18 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         self.handle_lazy_main_feasible_solution(
             main_mip, solve_data, config, opt)
 
+        if config.add_cuts_at_incumbent:
+            self.copy_lazy_var_list_values(opt,
+                                            main_mip.MindtPy_utils.variable_list,
+                                            solve_data.mip.MindtPy_utils.variable_list,
+                                            config)
+            if config.strategy == 'OA':
+                self.add_lazy_oa_cuts(
+                    solve_data.mip, None, solve_data, config, opt)
+
         # regularization is activated after the first feasible solution is found.
         if config.add_regularization is not None and solve_data.best_solution_found is not None:
             # the main problem might be unbounded, regularization is activated only when a valid bound is provided.
-            if config.add_cuts_at_incumbent:
-                self.copy_lazy_var_list_values(opt,
-                                               main_mip.MindtPy_utils.variable_list,
-                                               solve_data.mip.MindtPy_utils.variable_list,
-                                               config)
-                if config.strategy == 'OA':
-                    self.add_lazy_oa_cuts(
-                        solve_data.mip, None, solve_data, config, opt)
             if not solve_data.bound_improved and not solve_data.solution_improved:
                 config.logger.info('the bound and the best found solution have neither been improved.'
                                    'We will skip solving the regularization problem and the Fixed-NLP subproblem')
