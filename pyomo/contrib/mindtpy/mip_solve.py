@@ -425,7 +425,8 @@ def setup_main(solve_data, config, fp, regularization_problem):
                 solve_data.working_model,
                 discrete_only=config.fp_discrete_only)
     elif regularization_problem:
-        MindtPy.objective_constr.activate()
+        if MindtPy.objective_list[0].expr.polynomial_degree() in (1, 0):
+            MindtPy.objective_constr.activate()
         if config.add_regularization == 'level_L1':
             MindtPy.loa_proj_mip_obj = generate_norm1_objective_function(solve_data.mip,
                                                                          solve_data.best_solution_found,
