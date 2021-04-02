@@ -64,8 +64,9 @@ class TestDeprecated(unittest.TestCase):
         def foo(bar='yeah'):
             logger.warning(bar)
 
-        self.assertIn('DEPRECATION WARNING: This function has been deprecated',
-                      foo.__doc__)
+        self.assertIn(
+            '.. deprecated:: test\n   This function has been deprecated',
+            foo.__doc__)
 
         # Test the default argument
         DEP_OUT = StringIO()
@@ -105,8 +106,9 @@ class TestDeprecated(unittest.TestCase):
             """
             logger.warning(bar)
 
-        self.assertIn('DEPRECATION WARNING: This function has been deprecated',
-                      foo.__doc__)
+        self.assertIn(
+            '.. deprecated:: test\n   This function has been deprecated',
+            foo.__doc__)
         self.assertIn('I am a good person.', foo.__doc__)
 
         # Test the default argument
@@ -147,8 +149,9 @@ class TestDeprecated(unittest.TestCase):
             """
             logger.warning(bar)
 
-        self.assertIn('DEPRECATION WARNING: This is a custom message',
-                      foo.__doc__)
+        self.assertIn(
+            '.. deprecated:: test\n   This is a custom message',
+            foo.__doc__)
         self.assertIn('I am a good person.', foo.__doc__)
 
         # Test the default argument
@@ -178,6 +181,7 @@ class TestDeprecated(unittest.TestCase):
         self.assertIn('DEPRECATED: This is a custom message',
                       DEP_OUT.getvalue())
 
+
     def test_with_custom_logger(self):
         @deprecated('This is a custom message', logger='pyomo.common',
                     version='test')
@@ -189,8 +193,9 @@ class TestDeprecated(unittest.TestCase):
             """
             logger.warning(bar)
 
-        self.assertIn('DEPRECATION WARNING: This is a custom message',
-                      foo.__doc__)
+        self.assertIn(
+            '.. deprecated:: test\n   This is a custom message',
+            foo.__doc__)
         self.assertIn('I am a good person.', foo.__doc__)
 
         # Test the default argument
@@ -221,14 +226,17 @@ class TestDeprecated(unittest.TestCase):
         # Test that the deprecation warning was logged
         self.assertNotIn('DEPRECATED:', DEP_OUT.getvalue())
 
+
     def test_with_class(self):
         @deprecated(version='test')
         class foo(object):
             def __init__(self):
                 logger.warning('yeah')
 
-        self.assertIn('DEPRECATION WARNING: This class has been deprecated',
-                      foo.__doc__)
+        self.assertIs(type(foo), type)
+        self.assertIn(
+            '.. deprecated:: test\n   This class has been deprecated',
+            foo.__doc__)
 
         # Test the default argument
         DEP_OUT = StringIO()
@@ -252,8 +260,9 @@ class TestDeprecated(unittest.TestCase):
             def bar(self):
                 logger.warning('yeah')
 
-        self.assertIn('DEPRECATION WARNING: This function has been deprecated',
-                      foo.bar.__doc__)
+        self.assertIn(
+            '.. deprecated:: test\n   This function has been deprecated',
+            foo.bar.__doc__)
 
         # Test the default argument
         DEP_OUT = StringIO()
@@ -276,9 +285,10 @@ class TestDeprecated(unittest.TestCase):
             def bar(self):
                 logger.warning('yeah')
 
-        self.assertIn('DEPRECATION WARNING: This function has been deprecated',
-                      foo.bar.__doc__)
-        self.assertIn('(deprecated in 1.2, will be removed in 3.4)',
+        self.assertIn(
+            '.. deprecated:: 1.2\n   This function has been deprecated',
+            foo.bar.__doc__)
+        self.assertIn('(will be removed in 3.4)',
                       foo.bar.__doc__.replace('\n',' '))
 
         # Test the default argument
