@@ -83,8 +83,8 @@ def _wrap_class(cls, msg, logger, version, remove_in):
     cls.__doc__ = 'DEPRECATED.\n\n%s\n\n%s' % (cls.__doc__ or '', _doc)
 
     if _flagIdx < 0: # No deprecation message on __init__ or __new__
-        cls.__new__ = _wrap_func(
-            cls.__new__, msg, logger, version, remove_in)
+        cls.__init__ = _wrap_func(
+            cls.__init__, msg, logger, version, remove_in)
     return cls
 
 
