@@ -19,6 +19,8 @@ import types
 
 from pyomo.common.errors import DeveloperError
 
+_doc_flag = '.. deprecated::'
+
 
 def _default_msg(obj, user_msg, version, remove_in):
     """Generate the default deprecation message.
@@ -26,8 +28,6 @@ def _default_msg(obj, user_msg, version, remove_in):
     See deprecated() function for argument details.
     """
     if user_msg is None:
-        print(obj, type(obj), inspect.isclass(obj), inspect.isfunction(obj),
-              inspect.ismethod(obj), inspect.isbuiltin(obj))
         if inspect.isclass(obj):
             _obj = ' class'
         elif inspect.ismethod(obj):
@@ -35,6 +35,8 @@ def _default_msg(obj, user_msg, version, remove_in):
         elif inspect.isfunction(obj) or inspect.isbuiltin(obj):
             _obj = ' function'
         else:
+            # either @deprecated() an unknown type or called from
+            # deprecation_warning()
             _obj = ''
 
         _qual = getattr(obj, '__qualname__', '') or ''
@@ -53,7 +55,6 @@ def _default_msg(obj, user_msg, version, remove_in):
     else:
         return user_msg
 
-_doc_flag = '.. deprecated::'
 
 def _deprecation_docstring(obj, msg, version, remove_in):
     return (
