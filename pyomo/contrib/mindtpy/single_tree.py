@@ -605,7 +605,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             solve_data.working_model,string_zero=True)
 
         if solve_data.curr_int_sol in set(solve_data.integer_list):
-            config.logger.info('This integer combination has been explored.'
+            config.logger.info('This integer combination has been explored. '
                                 'We will skip solving the Fixed-NLP subproblem.')
             solve_data.solution_improved = False
             if config.strategy == 'GOA':

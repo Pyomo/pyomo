@@ -120,6 +120,29 @@ def MindtPy_iteration_loop(solve_data, config):
                         'MindtPy unable to handle regularization problem termination condition '
                         'of %s. Solver message: %s' %
                         (main_mip_results.solver.termination_condition, main_mip_results.solver.message))
+        if config.add_regularization is not None and config.single_tree:
+            solve_data.curr_int_sol = get_integer_solution(
+                solve_data.mip, string_zero=True)
+            if solve_data.curr_int_sol not in set(solve_data.integer_list):
+                fixed_nlp, fixed_nlp_result = solve_subproblem(
+                    solve_data, config)
+                if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
+                    handle_subproblem_optimal(fixed_nlp, solve_data, config)
+                elif fixed_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
+                    handle_subproblem_infeasible(fixed_nlp, solve_data, config)
+                elif fixed_nlp_result.solver.termination_condition is tc.maxTimeLimit:
+                    config.logger.info(
+                        'NLP subproblem failed to converge within the time limit.')
+                    solve_data.results.solver.termination_condition = tc.maxTimeLimit
+                    break
+                elif fixed_nlp_result.solver.termination_condition is tc.maxEvaluations:
+                    config.logger.info(
+                        'NLP subproblem failed due to maxEvaluations.')
+                    solve_data.results.solver.termination_condition = tc.maxEvaluations
+                    break
+                else:
+                    handle_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
+                                                        solve_data, config)
 
         if algorithm_should_terminate(solve_data, config, check_cycling=True):
             last_iter_cuts = False

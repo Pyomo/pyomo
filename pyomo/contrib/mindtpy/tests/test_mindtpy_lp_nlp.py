@@ -16,6 +16,7 @@ from pyomo.contrib.mindtpy.tests.eight_process_problem import \
 from pyomo.contrib.mindtpy.tests.MINLP_simple import SimpleMINLP as SimpleMINLP
 from pyomo.contrib.mindtpy.tests.MINLP2_simple import SimpleMINLP as SimpleMINLP2
 from pyomo.contrib.mindtpy.tests.MINLP3_simple import SimpleMINLP as SimpleMINLP3
+from pyomo.contrib.mindtpy.tests.MINLP5_simple import SimpleMINLP5
 from pyomo.contrib.mindtpy.tests.from_proposal import ProposalModel
 from pyomo.contrib.mindtpy.tests.constraint_qualification_example import ConstraintQualificationExample
 from pyomo.contrib.mindtpy.tests.online_doc_example import OnlineDocExample
@@ -365,6 +366,23 @@ class TestMindtPy(unittest.TestCase):
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 3.5, places=2)
+
+    def test_lazy_OA_MINLP5_simple_ROA_L2(self):
+        """Test the LP/NLP decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = SimpleMINLP5()
+            print('\n Solving MINLP_simple problem with LP/NLP (ROA L2)')
+            results = opt.solve(model, strategy='OA',
+                                init_strategy='initial_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                obj_bound=10,
+                                single_tree=True,
+                                add_regularization='level_L2')
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.obj.expr), 3.6572, places=2)
 
     def test_lazy_OA_MINLP2_simple_ROA_L2(self):
         """Test the LP/NLP decomposition algorithm."""

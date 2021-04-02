@@ -18,6 +18,7 @@ from pyomo.solvers.tests.models.QCP_simple import QCP_simple
 from pyomo.solvers.tests.models.MIQCP_simple import MIQCP_simple
 from pyomo.opt import TerminationCondition
 from pyomo.contrib.mindtpy.tests.MINLP4_simple import SimpleMINLP4
+from pyomo.contrib.mindtpy.tests.MINLP5_simple import SimpleMINLP5
 
 required_solvers = ('ipopt', 'cplex')
 # required_solvers = ('gams', 'gams')
@@ -220,6 +221,23 @@ class TestMindtPy(unittest.TestCase):
             self.assertAlmostEqual(
                 value(model.obj.expr), -56.981, places=2)
 
+    def test_OA_MINLP5_simple_level_L1(self):
+        with SolverFactory('mindtpy') as opt:
+            model = SimpleMINLP5()
+            print(
+                '\n Solving Online Doc Example with Regularization Outer Approximation(L1)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization='level_L1',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                init_strategy='initial_binary',
+                                level_coef=0.4
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(
+                value(model.obj.expr), 3.6572, places=2)
+
     def test_OA_8PP_level_L2(self):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
@@ -404,6 +422,23 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(
                 value(model.obj.expr), -56.981, places=2)
+
+    def test_OA_MINLP5_simple_level_L2(self):
+        with SolverFactory('mindtpy') as opt:
+            model = SimpleMINLP5()
+            print(
+                '\n Solving Online Doc Example with Regularization Outer Approximation(L2)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization='level_L2',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                init_strategy='initial_binary',
+                                level_coef=0.4
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(
+                value(model.obj.expr), 3.6572, places=2)
 
     def test_OA_8PP_level_L_infinity(self):
         with SolverFactory('mindtpy') as opt:
@@ -593,6 +628,24 @@ class TestMindtPy(unittest.TestCase):
             self.assertAlmostEqual(
                 value(model.obj.expr), -56.981, places=2)
 
+    def test_OA_MINLP5_simple_level_L_infinity(self):
+        with SolverFactory('mindtpy') as opt:
+            model = SimpleMINLP5()
+            print(
+                '\n Solving Online Doc Example with Regularization Outer Approximation(L_infinity)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization='level_L_infinity',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                init_strategy='initial_binary',
+                                level_coef=0.4
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(
+                value(model.obj.expr), 3.6572, places=2)
+
+
     def test_OA_8PP_grad_lag(self):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
@@ -775,6 +828,24 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(
                 value(model.obj.expr), -56.981, places=2)
+
+    def test_OA_MINLP5_simple_grad_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = SimpleMINLP5()
+            print(
+                '\n Solving Online Doc Example with Regularization Outer Approximation(grad_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization='grad_lag',
+                                equality_relaxation=True,
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                init_strategy='initial_binary',
+                                level_coef=0.4
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(
+                value(model.obj.expr), 3.6572, places=2)
 
     def test_OA_8PP_hess_lag(self):
         with SolverFactory('mindtpy') as opt:
@@ -959,6 +1030,24 @@ class TestMindtPy(unittest.TestCase):
             self.assertAlmostEqual(
                 value(model.obj.expr), -56.981, places=2)
 
+    def test_OA_MINLP5_simple_hess_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = SimpleMINLP5()
+            print(
+                '\n Solving Online Doc Example with Regularization Outer Approximation(hess_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization='hess_lag',
+                                equality_relaxation=True,
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                init_strategy='initial_binary',
+                                level_coef=0.4
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(
+                value(model.obj.expr), 3.6572, places=2)
+
     def test_OA_8PP_hess_only_lag(self):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
@@ -1142,6 +1231,25 @@ class TestMindtPy(unittest.TestCase):
             self.assertAlmostEqual(
                 value(model.obj.expr), -56.981, places=2)
 
+    def test_OA_MINLP5_simple_hess_only_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = SimpleMINLP5()
+            print(
+                '\n Solving Online Doc Example with Regularization Outer Approximation(hess_only_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization='hess_only_lag',
+                                equality_relaxation=True,
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                init_strategy='initial_binary',
+                                level_coef=0.4
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(
+                value(model.obj.expr), 3.6572, places=2)
+
+
     def test_OA_8PP_sqp_lag(self):
         with SolverFactory('mindtpy') as opt:
             model = EightProcessFlowsheet(convex=True)
@@ -1324,6 +1432,24 @@ class TestMindtPy(unittest.TestCase):
                           TerminationCondition.optimal)
             self.assertAlmostEqual(
                 value(model.obj.expr), -56.981, places=2)
+
+    def test_OA_MINLP5_simple_sqp_lag(self):
+        with SolverFactory('mindtpy') as opt:
+            model = SimpleMINLP5()
+            print(
+                '\n Solving Online Doc Example with Regularization Outer Approximation(sqp_lag)')
+            results = opt.solve(model, strategy='OA',
+                                add_regularization='sqp_lag',
+                                equality_relaxation=True,
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                init_strategy='initial_binary',
+                                level_coef=0.4
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(
+                value(model.obj.expr), 3.6572, places=2)
 
 
 if __name__ == '__main__':
