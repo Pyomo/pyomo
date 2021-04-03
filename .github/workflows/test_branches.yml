@@ -119,7 +119,7 @@ jobs:
             PYTHON_PACKAGES="$PYTHON_PACKAGES ${PYTHON_NUMPY_PKGS}"
         fi
         PYTHON_PACKAGES="$PYTHON_PACKAGES ${{matrix.PACKAGES}}"
-        echo "PYTHON_PACKAGES=\"$PYTHON_PACKAGES\"" \
+        echo "PYTHON_PACKAGES=$PYTHON_PACKAGES" \
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
 
     # Ideally we would cache the conda downloads; however, each cache is
