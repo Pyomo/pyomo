@@ -22,7 +22,7 @@ env:
   PYTHON_BASE_PKGS: >
       ply six dill ipython networkx openpyxl pathos
       pint pyro4 pyyaml sphinx_rtd_theme sympy xlrd
-      python-louvain
+      python-louvain 'decorator<5.0.0'
   PYTHON_NUMPY_PKGS: >
       numpy scipy pyodbc pandas matplotlib seaborn numdifftools 
       parameterized casadi
@@ -119,7 +119,7 @@ jobs:
             PYTHON_PACKAGES="$PYTHON_PACKAGES ${PYTHON_NUMPY_PKGS}"
         fi
         PYTHON_PACKAGES="$PYTHON_PACKAGES ${{matrix.PACKAGES}}"
-        echo "PYTHON_PACKAGES=$PYTHON_PACKAGES" \
+        echo "PYTHON_PACKAGES=\"$PYTHON_PACKAGES\"" \
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
 
     # Ideally we would cache the conda downloads; however, each cache is
