@@ -58,7 +58,7 @@ def _default_msg(obj, user_msg, version, remove_in):
 
 def _deprecation_docstring(obj, msg, version, remove_in):
     return (
-        '%s %s\n   %s\n\n'
+        '%s %s\n   %s\n'
         % (_doc_flag, version, _default_msg(obj, msg, None, remove_in))
     )
 
@@ -80,11 +80,21 @@ def _wrap_class(cls, msg, logger, version, remove_in):
         if version is None: # or version in ('','tbd','TBD'):
             raise DeveloperError("@deprecated missing initial version")
         _doc = _deprecation_docstring(cls, msg, version, remove_in)
-    cls.__doc__ = 'DEPRECATED.\n\n%s\n\n%s' % (cls.__doc__ or '', _doc)
+    if cls.__doc__:
+        _doc = cls.__doc__ + '\n\n' + _doc
+    cls.__doc__ = 'DEPRECATED.\n\n' + _doc
 
-    if _flagIdx < 0: # No deprecation message on __init__ or __new__
-        cls.__init__ = _wrap_func(
-            cls.__init__, msg, logger, version, remove_in)
+    if _flagIdx < 0:
+        # No deprecation message on __init__ or __new__: go through and
+        # find the "most derived" implementation of either __new__ or
+        # __init__ and wrap that (breaking ties in favor of __init__)
+        field = '__init__'
+        for c in cls.__mro__:
+            for f in ('__init__', '__new__'):
+                if getattr(c, f, None) is not getattr(cls, f, None):
+                    field = f
+        setattr(cls, field, _wrap_func(
+            getattr(cls, field), msg, logger, version, remove_in))
     return cls
 
 
@@ -94,16 +104,17 @@ def _wrap_func(func, msg, logger, version, remove_in):
 
     message = _default_msg(func, msg, version, remove_in)
 
-    @functools.wraps(func, assigned=('__module__', '__name__'))
+    @functools.wraps(func, assigned=(
+        '__module__', '__name__', '__qualname__', '__annotations__'))
     def wrapper(*args, **kwargs):
         deprecation_warning(message, logger)
         return func(*args, **kwargs)
 
+    wrapper.__doc__ = 'DEPRECATED.\n\n'
     _doc = func.__doc__ or ''
-    wrapper.__doc__ = (
-        'DEPRECATED.\n\n%s\n\n%s'
-        % (_doc, _deprecation_docstring(func, msg, version, remove_in))
-    )
+    if _doc:
+        wrapper.__doc__ += _doc + '\n\n'
+    wrapper.__doc__ += _deprecation_docstring(func, msg, version, remove_in)
     return wrapper
 
 
