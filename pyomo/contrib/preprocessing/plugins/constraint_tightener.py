@@ -13,6 +13,11 @@ logger = logging.getLogger('pyomo.contrib.preprocessing')
 @TransformationFactory.register(
     'core.tighten_constraints_from_vars',
     doc="Tightens upper and lower bound on linear constraints.")
+@deprecated(
+    "Use of the constraint tightener transformation is deprecated. "
+    "Its functionality may be partially replicated using "
+    "`pyomo.contrib.fbbt.compute_bounds_on_expr(constraint.body)`.",
+    version='5.7')
 class TightenContraintFromVars(IsomorphicTransformation):
     """Tightens upper and lower bound on constraints based on variable bounds.
 
@@ -23,11 +28,6 @@ class TightenContraintFromVars(IsomorphicTransformation):
 
     """
 
-    @deprecated(
-        "Use of the constraint tightener transformation is deprecated. "
-        "Its functionality may be partially replicated using "
-        "`pyomo.contrib.fbbt.compute_bounds_on_expr(constraint.body)`.",
-        version='5.7')
     def __init__(self):
         super(TightenContraintFromVars, self).__init__()
 

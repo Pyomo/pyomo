@@ -30,8 +30,11 @@ class GDPbbSolveData(object):
     pass
 
 
-@SolverFactory.register('gdpbb',
-                        doc='Branch and Bound based GDP Solver')
+@SolverFactory.register('gdpbb', doc='Branch and Bound based GDP Solver')
+@deprecated("GDPbb has been merged into GDPopt. "
+            "You can use the algorithm using GDPopt with strategy='LBB'.",
+            logger="pyomo.solvers",
+            version='5.6.9')
 class GDPbbSolver(object):
     """
     A branch and bound-based solver for Generalized Disjunctive Programming (GDP) problems
@@ -76,10 +79,6 @@ class GDPbbSolver(object):
             "need to set subsolver time limits as well."
     ))
 
-    @deprecated("GDPbb has been merged into GDPopt. "
-                "You can use the algorithm using GDPopt with strategy='LBB'.",
-                logger="pyomo.solvers",
-                version='5.6.9')
     def __init__(self, *args, **kwargs):
         super(GDPbbSolver, self).__init__(*args, **kwargs)
 
