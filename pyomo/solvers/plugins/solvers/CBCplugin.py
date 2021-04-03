@@ -448,12 +448,12 @@ class CBCSHELL(SystemCallSolver):
             if n_tokens > 1:
                 # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L3769
                 if n_tokens > 4 and tokens[:4] == ('Continuous', 'objective', 'value', 'is'):
-                    lower_bound = float(tokens[4])
+                    lower_bound = _float(tokens[4])
                 # Search completed - best objective %g, took %d iterations and %d nodes
                 elif n_tokens > 12 and tokens[1:3] == ('Search', 'completed') \
                         and tokens[4:6] == ('best', 'objective') and tokens[9] == 'iterations' \
                         and tokens[12] == 'nodes':
-                    optim_value = float(tokens[6][:-1])
+                    optim_value = _float(tokens[6][:-1])
                     results.solver.statistics.black_box.number_of_iterations = int(tokens[8])
                     nodes = int(tokens[11])
                 elif tokens[1] == 'Exiting' and n_tokens > 4:
@@ -467,7 +467,7 @@ class CBCSHELL(SystemCallSolver):
                     #     # We might want to handle this case
                 # Integer solution of %g found...
                 elif n_tokens >= 4 and tokens[1:4] == ('Integer', 'solution', 'of'):
-                    optim_value = float(tokens[4])
+                    optim_value = _float(tokens[4])
                     try:
                         results.solver.statistics.black_box.number_of_iterations = \
                             int(tokens[tokens.index('iterations') - 1])
@@ -478,15 +478,15 @@ class CBCSHELL(SystemCallSolver):
                 elif n_tokens > 15 and tokens[1:3] == ('Partial', 'search') \
                         and tokens[4:6] == ('best', 'objective') and tokens[7:9] == ('(best', 'possible') \
                         and tokens[12] == 'iterations' and tokens[15] == 'nodes':
-                    optim_value = float(tokens[6])
-                    lower_bound = float(tokens[9][:-2])
+                    optim_value = _float(tokens[6])
+                    lower_bound = _float(tokens[9][:-2])
                     results.solver.statistics.black_box.number_of_iterations = int(tokens[11])
                     nodes = int(tokens[14])
                 elif n_tokens > 12 and tokens[1] == 'After' and tokens[3] == 'nodes,' \
                         and tokens[8:10] == ('best', 'solution,') and tokens[10:12] == ('best', 'possible'):
                     nodes = int(tokens[2])
-                    optim_value = float(tokens[7])
-                    lower_bound = float(tokens[12])
+                    optim_value = _float(tokens[7])
+                    lower_bound = _float(tokens[12])
                 elif tokens[0] == "Current" and n_tokens == 10 and tokens[1] == "default" and tokens[2] == "(if" \
                         and results.problem.name is None:
                     results.problem.name = tokens[-1]
@@ -548,21 +548,21 @@ class CBCSHELL(SystemCallSolver):
                     # perhaps from https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L12318
                     elif n_tokens > 3 and tokens[2] == "Finished":
                         soln.status = SolutionStatus.optimal
-                        optim_value = float(tokens[4])
+                        optim_value = _float(tokens[4])
                 # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L7904
                 elif n_tokens >= 3 and tokens[:2] == ('Objective', 'value:'):
                     # parser for log file generetated with discrete variable
-                    optim_value = float(tokens[2])
+                    optim_value = _float(tokens[2])
                 # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L7904
                 elif n_tokens >= 4 and tokens[:4] == ('No', 'feasible', 'solution', 'found'):
                     soln.status = SolutionStatus.infeasible
                 elif n_tokens > 2 and tokens[:2] == ('Lower', 'bound:'):
                     if lower_bound is None:  # Only use if not already found since this is to less decimal places
-                        results.problem.lower_bound = float(tokens[2])
+                        results.problem.lower_bound = _float(tokens[2])
                 # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L7918
                 elif tokens[0] == 'Gap:':
                     # This is relative and only to 2 decimal places - could calculate explicitly using lower bound
-                    gap = float(tokens[1])
+                    gap = _float(tokens[1])
                 # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L7923
                 elif n_tokens > 2 and tokens[:2] == ('Enumerated', 'nodes:'):
                     nodes = int(tokens[2])
@@ -571,34 +571,34 @@ class CBCSHELL(SystemCallSolver):
                     results.solver.statistics.black_box.number_of_iterations = int(tokens[2])
                 # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L7930
                 elif n_tokens > 3 and tokens[:3] == ('Time', '(CPU', 'seconds):'):
-                    results.solver.system_time = float(tokens[3])
+                    results.solver.system_time = _float(tokens[3])
                 # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L7933
                 elif n_tokens > 3 and tokens[:3] == ('Time', '(Wallclock', 'Seconds):'):
-                    results.solver.wallclock_time = float(tokens[3])
+                    results.solver.wallclock_time = _float(tokens[3])
                 # https://projects.coin-or.org/Cbc/browser/trunk/Cbc/src/CbcSolver.cpp?rev=2497#L10477
                 elif n_tokens > 4 and tokens[:4] == ('Total', 'time', '(CPU', 'seconds):'):
-                    results.solver.system_time = float(tokens[4])
+                    results.solver.system_time = _float(tokens[4])
                     if n_tokens > 7 and tokens[5:7] == ('(Wallclock', 'seconds):'):
-                        results.solver.wallclock_time = float(tokens[7])
+                        results.solver.wallclock_time = _float(tokens[7])
                 elif tokens[0] == "Optimal":
                     if n_tokens > 4 and tokens[2] == "objective" and tokens[4] != "and":
                         # parser for log file generetated without discrete variable
                         # see pull request #339: last check avoids lines like "Optimal - objective gap and
                         # complementarity gap both smallish and small steps"
                         soln.status = SolutionStatus.optimal
-                        optim_value = float(tokens[4])
+                        optim_value = _float(tokens[4])
                     elif n_tokens > 5 and tokens[1] == 'objective' and tokens[5] == 'iterations':
                         soln.status = SolutionStatus.optimal
-                        optim_value = float(tokens[2])
+                        optim_value = _float(tokens[2])
                         results.solver.statistics.black_box.number_of_iterations = int(tokens[4])
                 elif tokens[0] == "sys" and n_tokens == 2:
-                    results.solver.system_time = float(tokens[1])
+                    results.solver.system_time = _float(tokens[1])
                 elif tokens[0] == "user" and n_tokens == 2:
-                    results.solver.user_time = float(tokens[1])
+                    results.solver.user_time = _float(tokens[1])
                 elif n_tokens == 10 and "Presolve" in tokens and \
                         "iterations" in tokens and tokens[0] == "Optimal" and "objective" == tokens[1]:
                     soln.status = SolutionStatus.optimal
-                    optim_value = float(tokens[2])
+                    optim_value = _float(tokens[2])
                 results.solver.user_time = -1.0  # Why is this set to -1?
 
         if results.problem.name is None:
@@ -724,7 +724,7 @@ class CBCSHELL(SystemCallSolver):
                     results.solver.termination_message = "Model was solved to optimality (subject to tolerances), " \
                                                          "and an optimal solution is available."
                     solution.status = SolutionStatus.optimal
-                    optim_value = float(tokens[-1])
+                    optim_value = _float(tokens[-1])
                 elif tokens[0] in ('Infeasible', 'PrimalInfeasible') or (
                         n_tokens > 1 and tokens[0:2] == ('Integer', 'infeasible')):
                     results.solver.termination_message = "Model was proven to be infeasible."
@@ -743,7 +743,7 @@ class CBCSHELL(SystemCallSolver):
                     INPUT.close()
                     return
                 elif n_tokens > 2 and tokens[0:2] == ('Stopped', 'on'):
-                    optim_value = float(tokens[-1])
+                    optim_value = _float(tokens[-1])
                     solution.gap = None
                     results.solver.status = SolverStatus.aborted
                     solution.status = SolutionStatus.stoppedByLimit
@@ -815,8 +815,8 @@ class CBCSHELL(SystemCallSolver):
                     raise RuntimeError("Unexpected line format encountered in CBC solution file - line="+line)
 
                 constraint = tokens[1]
-                constraint_ax = float(tokens[2]) # CBC reports the constraint row times the solution vector - not the slack.
-                constraint_dual = float(tokens[3])
+                constraint_ax = _float(tokens[2]) # CBC reports the constraint row times the solution vector - not the slack.
+                constraint_dual = _float(tokens[3])
                 if results.problem.sense == ProblemSense.maximize and self.version() < (2, 10, 2):
                     constraint_dual *= -1
                 if constraint[:2] == 'c_':
@@ -846,10 +846,10 @@ class CBCSHELL(SystemCallSolver):
                                        "in CBC solution file - line="+line)
 
                 variable_name = tokens[1]
-                variable_value = float(tokens[2])
+                variable_value = _float(tokens[2])
                 variable = solution.variable[variable_name] = {"Value" : variable_value}
                 if extract_reduced_costs is True:
-                    variable_reduced_cost = float(tokens[3]) # currently ignored.
+                    variable_reduced_cost = _float(tokens[3]) # currently ignored.
                     if results.problem.sense == ProblemSense.maximize and self.version() < (2, 10, 2):
                         variable_reduced_cost *= -1
                     variable["Rc"] = variable_reduced_cost
@@ -885,6 +885,10 @@ class CBCSHELL(SystemCallSolver):
         TempfileManager.pop(remove=not self._keepfiles)
 
         return results
+
+
+def _float(x):
+    return float(x) if x != '1.#J' else float('inf')
 
 
 @SolverFactory.register('_mock_cbc')
