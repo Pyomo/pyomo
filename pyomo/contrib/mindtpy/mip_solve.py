@@ -53,7 +53,7 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
         config.logger.info('FP-MIP %s: Solve main problem.' %
                            (solve_data.fp_iter,))
     elif regularization_problem:
-        config.logger.info('ROA-Regularization-MIP %s: Solve main regularization problem.' %
+        config.logger.info('Regularization-MIP %s: Solve main regularization problem.' %
                            (solve_data.mip_iter,))
     else:
         solve_data.mip_iter += 1
@@ -107,7 +107,7 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
     try:
         with time_code(solve_data.timing, 'regularization main' if regularization_problem else ('fp main' if fp else 'main')):
             main_mip_results = mainopt.solve(solve_data.mip,
-                                                 tee=config.mip_solver_tee, **mip_args)
+                                             tee=config.mip_solver_tee, **mip_args)
     except (ValueError, AttributeError):
         if config.single_tree:
             config.logger.warning('Single tree terminate.')

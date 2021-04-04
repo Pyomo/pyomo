@@ -25,6 +25,7 @@ from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt import SolverFactory
 from pyomo.common.dependencies import attempt_import
+from pyomo.contrib.gdpopt.util import copy_var_list_values
 
 tabu_list, tabu_list_available = attempt_import(
     'pyomo.contrib.mindtpy.tabu_list')
@@ -69,7 +70,7 @@ def MindtPy_iteration_loop(solve_data, config):
                         break
                     else:
                         handle_main_other_conditions(main_mip, main_mip_results,
-                                                       solve_data, config)
+                                                     solve_data, config)
                     # Call the MILP post-solve callback
                     with time_code(solve_data.timing, 'Call after main solve'):
                         config.call_after_main_solve(main_mip, solve_data)
@@ -123,6 +124,10 @@ def MindtPy_iteration_loop(solve_data, config):
         if config.add_regularization is not None and config.single_tree:
             solve_data.curr_int_sol = get_integer_solution(
                 solve_data.mip, string_zero=True)
+            copy_var_list_values(
+                main_mip.MindtPy_utils.variable_list,
+                solve_data.working_model.MindtPy_utils.variable_list,
+                config)
             if solve_data.curr_int_sol not in set(solve_data.integer_list):
                 fixed_nlp, fixed_nlp_result = solve_subproblem(
                     solve_data, config)
