@@ -22,7 +22,7 @@ env:
   PYTHON_BASE_PKGS: >
       ply six dill ipython networkx openpyxl pathos
       pint pyro4 pyyaml sphinx_rtd_theme sympy xlrd
-      python-louvain decorator<5.0.0
+      python-louvain
   PYTHON_NUMPY_PKGS: >
       numpy scipy pyodbc pandas matplotlib seaborn numdifftools 
       parameterized casadi
