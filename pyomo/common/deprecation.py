@@ -57,6 +57,8 @@ def _default_msg(obj, user_msg, version, remove_in):
 
 
 def _deprecation_docstring(obj, msg, version, remove_in):
+    if version is None: # or version in ('','tbd','TBD'):
+        raise DeveloperError("@deprecated missing initial version")
     return (
         '%s %s\n   %s\n'
         % (_doc_flag, version, _default_msg(obj, msg, None, remove_in))
@@ -77,8 +79,6 @@ def _wrap_class(cls, msg, logger, version, remove_in):
     # message.  Checking the fields is still useful as it lets us know
     # if there is already a deprecation message on either new or init.
     if msg is not None or _doc is None:
-        if version is None: # or version in ('','tbd','TBD'):
-            raise DeveloperError("@deprecated missing initial version")
         _doc = _deprecation_docstring(cls, msg, version, remove_in)
     if cls.__doc__:
         _doc = cls.__doc__ + '\n\n' + _doc
@@ -99,9 +99,6 @@ def _wrap_class(cls, msg, logger, version, remove_in):
 
 
 def _wrap_func(func, msg, logger, version, remove_in):
-    if version is None: # or version in ('','tbd','TBD'):
-        raise DeveloperError("@deprecated missing initial version")
-
     message = _default_msg(func, msg, version, remove_in)
 
     @functools.wraps(func, assigned=(

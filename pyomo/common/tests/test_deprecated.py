@@ -51,10 +51,26 @@ class TestDeprecated(unittest.TestCase):
 
 
     def test_no_version_exception(self):
-        with self.assertRaises(DeveloperError):
+        with self.assertRaisesRegex(
+                DeveloperError, "@deprecated missing initial version"):
             @deprecated()
             def foo():
                 pass
+
+        with self.assertRaisesRegex(
+                DeveloperError, "@deprecated missing initial version"):
+            @deprecated()
+            class foo(object):
+                pass
+
+        # But no exception if the class can infer a version from the
+        # __init__ (or __new__ or __new_member__)
+        @deprecated()
+        class foo(object):
+            @deprecated(version="1.2")
+            def __init__(self):
+                pass
+        self.assertIn('.. deprecated:: 1.2', foo.__doc__)
 
     def test_no_doc_string(self):
         # Note: No docstring, else nose replaces the function name with
