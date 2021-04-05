@@ -18,21 +18,15 @@
 import argparse
 import enum
 import inspect
+import io
 import logging
 import os
 import pickle
 import platform
 import re
-import six
 import sys
 from textwrap import wrap
-
-if six.PY3:
-    import builtins as _builtins
-else:
-    import __builtin__ as _builtins
-
-from six.moves import xrange
+import builtins
 
 from pyomo.common.deprecation import deprecated
 
@@ -742,7 +736,7 @@ def _value2string(prefix, value, obj):
     if value is not None:
         try:
             _data = value._data if value is obj else value
-            if getattr(_builtins, _data.__class__.__name__, None
+            if getattr(builtins, _data.__class__.__name__, None
                    ) is not None:
                 _str += _dump(_data, default_flow_style=True).rstrip()
                 if _str.endswith("..."):
@@ -865,7 +859,7 @@ class ConfigBase(object):
         return state
 
     def __setstate__(self, state):
-        for key, val in six.iteritems(state):
+        for key, val in state.items():
             # Note: per the Python data model docs, we explicitly
             # set the attribute using object.__setattr__() instead
             # of setting self.__dict__[key] = val.
@@ -1181,7 +1175,7 @@ class ConfigBase(object):
             if _doc > maxDoc:
                 maxDoc = _doc
             maxLvl = lvl
-        os = six.StringIO()
+        os = io.StringIO()
         if self._description:
             os.write(comment.lstrip() + self._description + "\n")
         for lvl, pre, val, obj in data:
@@ -1217,7 +1211,7 @@ class ConfigBase(object):
               width=78,
               visibility=0
               ):
-        os = six.StringIO()
+        os = io.StringIO()
         level = []
         lastObj = self
         indent = ''
@@ -1499,7 +1493,7 @@ class ConfigList(ConfigBase):
 
     def __iter__(self):
         self._userAccessed = True
-        return iter(self[i] for i in xrange(len(self._data)))
+        return iter(self[i] for i in range(len(self._data)))
 
     def value(self, accessValue=True):
         if accessValue:
@@ -1565,7 +1559,7 @@ class ConfigList(ConfigBase):
             subDomain = self._domain._data_collector(level + 1, '- ',
                                                      visibility, docMode)
             # Pop off the (empty) block entry
-            six.next(subDomain)
+            next(subDomain)
             for v in subDomain:
                 yield v
             return
@@ -1643,7 +1637,7 @@ class ConfigDict(ConfigBase):
 
     def __setstate__(self, state):
         state = super(ConfigDict, self).__setstate__(state)
-        for x in six.itervalues(self._data):
+        for x in self._data.values():
             x._parent = self
 
     def __getitem__(self, key):
@@ -1805,7 +1799,7 @@ class ConfigDict(ConfigBase):
         if accessValue:
             self._userAccessed = True
         return dict((name, config.value(accessValue))
-                    for name, config in six.iteritems(self._data))
+                    for name, config in self._data.items())
 
     def set_value(self, value, skip_implicit=False):
         if value is None:
@@ -1891,10 +1885,3 @@ class ConfigDict(ConfigBase):
 
 # Backwards compatibility: ConfigDict was originally named ConfigBlock.
 ConfigBlock = ConfigDict
-
-# In Python3, the items(), etc methods of dict-like things return
-# generator-like objects.
-if six.PY3:
-    ConfigDict.keys = ConfigDict.iterkeys
-    ConfigDict.values = ConfigDict.itervalues
-    ConfigDict.items = ConfigDict.iteritems
