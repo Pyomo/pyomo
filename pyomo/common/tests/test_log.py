@@ -19,7 +19,7 @@
 import logging
 import os
 from inspect import currentframe, getframeinfo
-from six import StringIO, PY2
+from io import StringIO
 
 import pyomo.common.unittest as unittest
 
@@ -91,7 +91,6 @@ class TestWrappingFormatter(unittest.TestCase):
     def tearDown(self):
         logger.removeHandler(self.handler)
 
-    @unittest.skipIf(PY2, "style added in Python 3.2")
     def test_style_options(self):
         ans = ''
 

@@ -21,7 +21,7 @@ from pyomo.common.deprecation import (
 )
 from pyomo.common.log import LoggingIntercept
 
-from six import StringIO
+from io import StringIO
 
 import logging
 logger = logging.getLogger('pyomo.common')
