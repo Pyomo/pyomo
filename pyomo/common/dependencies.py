@@ -12,7 +12,6 @@ import inspect
 import importlib
 import logging
 import sys
-from six import iteritems
 
 from pyomo.common.deprecation import deprecation_warning
 
@@ -191,7 +190,7 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
                     _globals[flag_name] = self._available
         if not self._deferred_submodules:
             return
-        for submod, alt_names in iteritems(self._deferred_submodules):
+        for submod, alt_names in self._deferred_submodules.items():
             _mod_path = submod.split('.')[1:]
             _names = [_mod_path[-1]]
             if alt_names:
@@ -362,7 +361,7 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
             # provides {'foo.bar.baz': ['bz']}, then expand the dict to
             # {'.foo': None, '.foo.bar': None, '.foo.bar.baz': ['bz']}
             deferred = {}
-            for _submod, _alt in iteritems(deferred_submodules):
+            for _submod, _alt in deferred_submodules.items():
                 if _submod[0] != '.':
                     _submod = '.' + _submod
                 _mod_path = _submod.split('.')
