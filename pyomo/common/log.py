@@ -286,9 +286,9 @@ class LoggingIntercept(object):
         level (int): the logging level to intercept
 
     Examples:
-        >>> import six, logging
+        >>> import io, logging
         >>> from pyomo.common.log import LoggingIntercept
-        >>> buf = six.StringIO()
+        >>> buf = io.StringIO()
         >>> with LoggingIntercept(buf, 'pyomo.core', logging.WARNING):
         ...     logging.getLogger('pyomo.core').warning('a simple message')
         >>> buf.getvalue()
