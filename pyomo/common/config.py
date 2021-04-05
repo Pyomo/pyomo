@@ -286,12 +286,22 @@ def add_docstring_list(docstring, configdict, indent_by=4):
             width=256
         ).splitlines(True))
 
-
+# Note: Enum uses a metaclass to work its magic.  To get a deprecation
+# warning when creating a subclass of ConfigEnum, we need to decorate
+# the __new__ method here (doing the normal trick of letting the class
+# decorator automatically wrap the class __new__ or __init__ methods
+# does not behave the way one would think because those methods are
+# actually created by the metaclass).  The "empty" class "@deprecated()"
+# here will look into the resulting class and extract the docstring from
+# the original __new__ to generate the class docstring.
+@deprecated()
 class ConfigEnum(enum.Enum):
+
     @deprecated("The ConfigEnum base class is deprecated.  "
                 "Directly inherit from enum.Enum and then use "
                 "In() or InEnum() as the ConfigValue 'domain' for "
-                "validation and int/string type conversions.", version='TBD')
+                "validation and int/string type conversions.",
+                version='TBD')
     def __new__(cls, value, *args):
         member = object.__new__(cls)
         member._value_ = value
