@@ -170,7 +170,8 @@ def NonNegativeFloat(val):
 
 
 class In(object):
-    """Domain validation function admitting a Container of possible values
+    """In(domain, cast=None)
+    Domain validation class admitting a Container of possible values
 
     This will admit any value that is in the `domain` Container (i.e.,
     Container.__contains__() returns True).  Most common domains are
@@ -178,7 +179,26 @@ class In(object):
     first passed to `cast()` to convert them to the appropriate type
     before looking them up in `domain`.
 
+    Parameters
+    ----------
+    domain: Container
+        The container that specifies the allowable values.  Incoming
+        values are passed to ``domain.__contains__()``, and if ``True``
+        is returned, the value is accepted and returned.
+
+    cast: callable, optional
+        A callable object.  If specified, incoming values are first
+        passed to `cast`, and the resulting object is checked for
+        membership in `domain`
+
+    Note
+    ----
+    For backwards compatibility, `In` accepts `enum.Enum` classes as
+    `domain` Containers.  If the domain is an Enum, then the constructor
+    returns an instance of `InEnum`.
+
     """
+
     def __new__(cls, domain=None, cast=None):
         # Convenience: enum.Enum supported __contains__ through Python
         # 3.7.  If the domain is an Enum and cast is not specified,
@@ -192,6 +212,7 @@ class In(object):
         self._domain = domain
         self._cast = cast
 
+
     def __call__(self, value):
         if self._cast is not None:
             v = self._cast(value)
@@ -203,11 +224,16 @@ class In(object):
 
 
 class InEnum(object):
-    """Domain validation function admitting an enum value/name.
+    """Domain validation class admitting an enum value/name.
 
     This will admit any value that is in the specified Enum, including
     Enum members, values, and string names.  The incoming value will be
     automatically cast to an Enum member.
+
+    Parameters
+    ----------
+    domain: enum.Enum
+        The enum that incoming values should be mapped to
 
     """
     def __init__(self, domain):
@@ -234,6 +260,27 @@ class InEnum(object):
 
 
 class Path(object):
+    """Domain validator for path-like options.
+
+    This will admit any object and convert it to a string.  It will then
+    expand any environment variables and leading usernames (e.g.,
+    "~myuser" or "~/") appearing in either the value or the base path
+    before concatenating the base path and value, expanding the path to
+    an absolute path, and normalizing the path.
+
+    Parameters
+    ----------
+    basePath: None, str, ConfigValue
+        The base path that will be prepended to any non-absolute path
+        values provided.  If None, defaults to :py:attr:`Path.BasePath`.
+
+    expandPath: bool
+        If True, then the value will be expanded and normalized.  If
+        False, the string representation of the value will be returned
+        unchanged.  If None, expandPath will defer to the (negated)
+        value of :py:attr:`Path.SuppressPathExpansion`
+
+    """
     BasePath = None
     SuppressPathExpansion = False
 
@@ -272,6 +319,27 @@ class Path(object):
 
 
 class PathList(Path):
+    """Domain validator for a list of path-like objects.
+
+    This will admit any iterable or object convertable to a string.
+    Iterable objects (other than strings) will have each member
+    normalized using :py:class:`Path`.  Other types will be passed to
+    :py:class:`Path`, returning a list with the single resulting path.
+
+    Parameters
+    ----------
+    basePath: Union[None, str, ConfigValue]
+        The base path that will be prepended to any non-absolute path
+        values provided.  If None, defaults to :py:attr:`Path.BasePath`.
+
+    expandPath: bool
+        If True, then the value will be expanded and normalized.  If
+        False, the string representation of the value will be returned
+        unchanged.  If None, expandPath will defer to the (negated)
+        value of :py:attr:`Path.SuppressPathExpansion`
+
+    """
+
     def __call__(self, data):
         if hasattr(data, "__iter__") and not isinstance(data, str):
             return [ super(PathList, self).__call__(i) for i in data ]
@@ -313,7 +381,8 @@ class ConfigEnum(enum.Enum):
             return cls(arg)
 
 
-"""=================================
+__doc__ = """
+=================================
 The Pyomo Configuration System
 =================================
 
@@ -331,15 +400,10 @@ dictionary of documented configuration entries, allow users to provide
 values for those entries, and retrieve the current values:
 
 .. doctest::
-    :hide:
 
-    >>> import argparse
     >>> from pyomo.common.config import (
     ...     ConfigDict, ConfigList, ConfigValue, In,
     ... )
-
-.. doctest::
-
     >>> config = ConfigDict()
     >>> config.declare('filename', ConfigValue(
     ...     default=None,
@@ -381,6 +445,9 @@ underscores):
     >>> print(config.iteration_limit)
     20
 
+Domain validation
+=================
+
 All Config objects support a ``domain`` keyword that accepts a callable
 object (type, function, or callable instance).  The domain callable
 should take data and map it onto the desired domain, optionally
@@ -396,6 +463,26 @@ inputs without "cluttering" the code with input validation:
     35
     >>> print(type(config.iteration_limit).__name__)
     int
+
+In addition to common types (like ``int``, ``float``, ``bool``, and
+``str``), The config system profides a number of custom domain
+validators for common use cases:
+
+.. autosummary::
+
+   PositiveInt
+   NegativeInt
+   NonNegativeInt
+   NonPositiveInt
+   PositiveFloat
+   NegativeFloat
+   NonPositiveFloat
+   NonNegativeFloat
+   In
+   InEnum
+   Path
+   PathList
+
 
 Configuring class hierarchies
 =============================
@@ -482,12 +569,14 @@ Interacting with argparse
 
 In addition to basic storage and retrieval, the Config system provides
 hooks to the argparse command-line argument parsing system.  Individual
-Config entries can be declared as argparse arguments.  To make
-declaration simpler, the :py:meth:`declare` method returns the declared Config
+Config entries can be declared as argparse arguments using the
+:py:meth:`~ConfigBase.declare_as_argument` method.  To make declaration
+simpler, the :py:meth:`declare` method returns the declared Config
 object so that the argument declaration can be done inline:
 
 .. doctest::
 
+    >>> import argparse
     >>> config = ConfigDict()
     >>> config.declare('iterlim', ConfigValue(
     ...     domain=int,
@@ -565,8 +654,8 @@ Accessing user-specified values
 ===============================
 
 It is frequently useful to know which values a user explicitly set, and
-which values a user explicitly set, but have never been retrieved.  The
-configuration system provides two gemerator methods to return the items
+which values a user explicitly set but have never been retrieved.  The
+configuration system provides two generator methods to return the items
 that a user explicitly set (:py:meth:`user_values`) and the items that
 were set but never retrieved (:py:meth:`unused_user_values`):
 
@@ -671,23 +760,23 @@ The defaults generate LaTeX documentation:
 
     >>> print(config.generate_documentation())
     \\begin{description}[topsep=0pt,parsep=0.5em,itemsep=-0.4em]
-      \\item[{output}]\hfill
+      \\item[{output}]\\hfill
         \\\\output results filename
-      \\item[{verbose}]\hfill
+      \\item[{verbose}]\\hfill
         \\\\This sets the system verbosity.  The default (0) only logs warnings and
         errors.  Larger integer values will produce additional log messages.
-      \\item[{solvers}]\hfill
+      \\item[{solvers}]\\hfill
         \\\\list of solvers to apply
       \\begin{description}[topsep=0pt,parsep=0.5em,itemsep=-0.4em]
-        \\item[{iterlim}]\hfill
+        \\item[{iterlim}]\\hfill
           \\\\iteration limit
-        \\item[{lbfgs}]\hfill
+        \\item[{lbfgs}]\\hfill
           \\\\use limited memory BFGS update
-        \\item[{linesearch}]\hfill
+        \\item[{linesearch}]\\hfill
           \\\\use line search
-        \\item[{relative tolerance}]\hfill
+        \\item[{relative tolerance}]\\hfill
           \\\\relative convergence tolerance
-        \\item[{absolute tolerance}]\hfill
+        \\item[{absolute tolerance}]\\hfill
           \\\\absolute convergence tolerance
       \\end{description}
     \\end{description}
@@ -1001,10 +1090,9 @@ class ConfigBase(object):
 
         Valid arguments include all valid arguments to argparse's
         ArgumentParser.add_argument() with the exception of 'default'.
-        In addition, you may provide a group keyword argument can be
-        used to either pass in a pre-defined option group or subparser,
-        or else pass in the title of a group, subparser, or (subparser,
-        group).
+        In addition, you may provide a group keyword argument to either
+        pass in a pre-defined option group or subparser, or else pass in
+        the string name of a group, subparser, or (subparser, group).
 
         """
 
@@ -1552,6 +1640,7 @@ class ConfigList(ConfigBase):
     @deprecated("ConfigList.add() has been deprecated.  Use append()",
                 version='5.7.2')
     def add(self, value=ConfigBase.NoArgument):
+        "Append the specified value to the list, casting as necessary."
         return self.append(value)
 
     def _data_collector(self, level, prefix, visibility=None, docMode=False):
