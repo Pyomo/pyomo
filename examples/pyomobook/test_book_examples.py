@@ -277,14 +277,16 @@ def custom_name_func(test_func, test_num, test_params):
 
 class TestBookExamples(unittest.TestCase):
 
-    def compare_files(self, file1, file2):
+    def compare_files(self, out_file, base_file):
         try:
-            self.assertTrue(cmp(file1, file2),
-                            msg="Files %s and %s differ" % (file1, file2))
+            self.assertTrue(cmp(out_file, base_file),
+                            msg="Files %s and %s differ" % (out_file, base_file))
         except:
-            with open(file1, 'r') as f1, open(file2, 'r') as f2:
-                f1_contents = f1.read().strip().split('\n')
-                f2_contents = f2.read().strip().split('\n')
+            with open(out_file, 'r') as f1, open(base_file, 'r') as f2:
+                out_file_contents = f1.read()
+                base_file_contents = f2.read()
+                f1_contents = out_file_contents.strip().split('\n')
+                f2_contents = base_file_contents.strip().split('\n')
                 f1_filtered = []
                 f2_filtered = []
                 for item1, item2 in zip_longest(f1_contents, f2_contents):
@@ -301,9 +303,21 @@ class TestBookExamples(unittest.TestCase):
                         items2 = item2.strip().split()
                         f1_filtered.append(filter_items(items1))
                         f2_filtered.append(filter_items(items2))
-                self.assertStructuredAlmostEqual(f2_filtered, f1_filtered,
+                try:
+                    self.assertStructuredAlmostEqual(f2_filtered, f1_filtered,
                                                  abstol=1e-6,
                                                  allow_second_superset=False)
+                except AssertionError as m:
+                    print('---------------------------------')
+                    print('BASELINE FILE')
+                    print('---------------------------------')
+                    print(base_file_contents)
+                    print('=================================')
+                    print('---------------------------------')
+                    print('TEST OUTPUT FILE')
+                    print('---------------------------------')
+                    print(out_file_contents)
+                    raise(m)
 
     @parameterized.parameterized.expand(py_test_tuples, name_func=custom_name_func)
     def test_book_py(self, tname, test_file, base_file):
