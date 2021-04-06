@@ -18,7 +18,7 @@ from pyomo.dae.diffvar import DAE_Error
 
 from pyomo.repn import generate_standard_repn
 
-from six import StringIO
+from io import StringIO
 
 from pyomo.common.log import  LoggingIntercept
 
