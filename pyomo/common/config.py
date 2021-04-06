@@ -1520,6 +1520,12 @@ class MarkImmutable(object):
             arg.__class__ = ConfigValue
         self._locked = list()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, tb):
+        self.release_lock()
+
 
 class ConfigList(ConfigBase):
     """Store and manipulate a list of configuration values.

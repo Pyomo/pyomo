@@ -430,6 +430,7 @@ class TestConfigDomains(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, '.*invalid value'):
             cfg.enum ='ITEM_THREE'
 
+
 class TestImmutableConfigValue(unittest.TestCase):
     def test_immutable_config_value(self):
         config = ConfigDict()
@@ -440,9 +441,9 @@ class TestImmutableConfigValue(unittest.TestCase):
         self.assertEqual(config.a, 2)
         self.assertEqual(config.b, 3)
         locker = MarkImmutable(config.get('a'), config.get('b'))
-        with self.assertRaises(Exception):
+        with self.assertRaisesRegex(RuntimeError, 'is currently immutable'):
             config.a = 4
-        with self.assertRaises(Exception):
+        with self.assertRaisesRegex(RuntimeError, 'is currently immutable'):
             config.b = 5
         config.a = 2
         config.b = 3
@@ -453,7 +454,9 @@ class TestImmutableConfigValue(unittest.TestCase):
         config.b = 5
         self.assertEqual(config.a, 4)
         self.assertEqual(config.b, 5)
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(
+                ValueError,
+                'Only ConfigValue instances can be marked immutable'):
             locker = MarkImmutable(config.get('a'), config.b)
         self.assertEqual(type(config.get('a')), ConfigValue)
         config.a = 6
@@ -465,11 +468,24 @@ class TestImmutableConfigValue(unittest.TestCase):
         self.assertEqual(config2.a, 6)
         self.assertEqual(config2.b, 5)
         self.assertEqual(config2.c, -2)
-        with self.assertRaises(Exception):
+        with self.assertRaisesRegex(RuntimeError, 'is currently immutable'):
             config3 = config({'a': 1})
         locker.release_lock()
         config3 = config({'a': 1})
         self.assertEqual(config3.a, 1)
+
+        # test reset
+        config.reset()
+        self.assertEqual(config.a, 1)
+        self.assertEqual(config.b, 1)
+        with MarkImmutable(config.get('a'), config.get('b')):
+            config.reset()
+            self.assertEqual(config.a, 1)
+            self.assertEqual(config.b, 1)
+        config.a = 2
+        with MarkImmutable(config.get('a'), config.get('b')):
+            with self.assertRaisesRegex(RuntimeError, 'is currently immutable'):
+                config.reset()
 
 
 class TestConfig(unittest.TestCase):
