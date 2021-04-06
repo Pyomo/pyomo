@@ -15,7 +15,7 @@ from pyomo.environ import TransformationFactory as xfrm
 from pyomo.common.log import LoggingIntercept
 
 import logging
-from six import StringIO
+from io import StringIO
 
 class TestIntToBinary(unittest.TestCase):
     """Tests integer to binary variable reformulation."""
