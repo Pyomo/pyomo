@@ -131,7 +131,7 @@ class DerivativeVar(Var):
                     "The variable %s is indexed by multiple ContinuousSets. "
                     "The desired ContinuousSet must be specified using the "
                     "keyword argument 'wrt'" % sVar)
-            wrt = [next(sVar._contset.keys()), ]
+            wrt = [next(iter(sVar._contset.keys())), ]
         elif type(wrt) is ContinuousSet:
             if wrt not in sVar._contset:
                 raise DAE_Error(
