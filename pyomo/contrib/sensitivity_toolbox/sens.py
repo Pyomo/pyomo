@@ -179,7 +179,7 @@ def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=Non
         Provides options to the solver (also the name of an attribute)
     var_dic: dictionary
         If any original variable contains "'", need an auxiliary dictionary 
-        with keys theta_namess without "'", values with "'".
+        with keys theta_names without "'", values with "'".
         e.g) var_dic: {'fs.properties.tau[benzene,toluene]': "fs.properties.tau['benzene','toluene']",
                        'fs.properties.tau[toluene,benzene]': "fs.properties.tau['toluene','benzene']"}
 
@@ -225,13 +225,13 @@ def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=Non
     dsdp_dic = {}
     for i in range(len(theta_names)):
         for j in range(len(col)):
-            if "_SENSITIVITY_TOOLBOX_DATA" not in col[j]:
+            if SensitivityInterface.get_default_block_name() not in col[j]:
                 dsdp_dic["d("+col[j] +")/d("+theta_names[i]+")"] =  -dsdp[i, j]
     try:
         shutil.rmtree('dsdp', ignore_errors=True)
     except OSError:
         pass
-    col = [i for i in col if "_SENSITIVITY_TOOLBOX_DATA" not in i]
+    col = [i for i in col if SensitivityInterface.get_default_block_name() not in i]
     return dsdp_dic, col
 
 def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
@@ -301,11 +301,7 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
         raise RuntimeError('dotsens is not available')
 
     # Declare Suffixes
-    model.dual = Suffix(direction = Suffix.IMPORT)
-    model.ipopt_zL_out = Suffix(direction=Suffix.IMPORT)
-    model.ipopt_zU_out = Suffix(direction=Suffix.IMPORT)
-    model.ipopt_zL_in = Suffix(direction=Suffix.EXPORT)
-    model.ipopt_zU_in = Suffix(direction=Suffix.EXPORT)
+    _add_sensitivity_suffixes(model)
 
     # K_AUG SUFFIXES
     model.dof_v = Suffix(direction=Suffix.EXPORT)  #: SUFFIX FOR K_AUG
