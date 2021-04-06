@@ -333,6 +333,7 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
             col = myfile.read().splitlines()
     except Exception as e:
         print('File not found.')
+        raise e
     gradient_f_dic = {}
     for i in range(len(col)):
         gradient_f_dic["d(f)/d("+col[i]+")"] = gradient_f[i]
