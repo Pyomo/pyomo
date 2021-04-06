@@ -284,13 +284,19 @@ class Path(object):
     BasePath = None
     SuppressPathExpansion = False
 
-    def __init__(self, basePath=None):
+    def __init__(self, basePath=None, expandPath=None):
         self.basePath = basePath
+        self.expandPath = expandPath
 
     def __call__(self, path):
         #print "normalizing path '%s' " % (path,),
         path = str(path)
-        if path is None or Path.SuppressPathExpansion:
+        if path is None:
+            return path
+        if self.expandPath is None:
+            if Path.SuppressPathExpansion:
+                return path
+        elif not self.expandPath:
             return path
 
         if self.basePath:
@@ -312,8 +318,8 @@ class Path(object):
             path = os.getcwd() + path[6:]
 
         ans = os.path.normpath(os.path.abspath(os.path.join(
-            os.path.expandvars(os.path.expanduser(base)),
-            os.path.expandvars(os.path.expanduser(path)))))
+            os.path.expanduser(os.path.expandvars(base)),
+            os.path.expanduser(os.path.expandvars(path)))))
         #print "to '%s'" % (ans,)
         return ans
 
