@@ -240,23 +240,17 @@ class InEnum(object):
         self._domain = domain
 
     def __call__(self, value):
-        v = self._cast_to_enum_domain(value)
-        if v in self._domain:
-            return v
-        raise ValueError("value %s not in domain %s" % (value, self._domain))
-
-    def _cast_to_enum_domain(self, arg):
         try:
-            # First check if the arg is a valid enum value
-            return self._domain(arg)
+            # First check if this is a valid enum value
+            return self._domain(value)
         except ValueError:
             # Assume this is a string and look it up
             try:
-                return self._domain[arg]
+                return self._domain[value]
             except KeyError:
                 pass
         raise ValueError("%r is not a valid %s" % (
-            arg, self._domain.__name__))
+            value, self._domain.__name__))
 
 
 class Path(object):
@@ -291,12 +285,10 @@ class Path(object):
     def __call__(self, path):
         #print "normalizing path '%s' " % (path,),
         path = str(path)
-        if path is None:
-            return path
-        if self.expandPath is None:
-            if Path.SuppressPathExpansion:
-                return path
-        elif not self.expandPath:
+        _expand = self.expandPath
+        if _expand is None:
+            _expand = not Path.SuppressPathExpansion
+        if not _expand:
             return path
 
         if self.basePath:
@@ -347,9 +339,7 @@ class PathList(Path):
     """
 
     def __call__(self, data):
-        if data is None:
-            return []
-        elif hasattr(data, "__iter__") and not isinstance(data, str):
+        if hasattr(data, "__iter__") and not isinstance(data, str):
             return [ super(PathList, self).__call__(i) for i in data ]
         else:
             return [ super(PathList, self).__call__(data) ]
@@ -1907,7 +1897,7 @@ class ConfigDict(ConfigBase):
                 continue
             if key in self:
                 raise ValueError("ConfigDict.declare_from passed a block "
-                                 "with a duplicate field, %s" % (key,))
+                                 "with a duplicate field, '%s'" % (key,))
             self.declare(key, other._data[key]())
 
     def add(self, name, config):

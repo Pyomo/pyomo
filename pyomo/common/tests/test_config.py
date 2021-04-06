@@ -385,6 +385,8 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(len(c.a), 1)
         self.assertTrue(os.path.sep in c.a[0])
         self.assertEqual(c.a[0], norm('/a/b/c'))
+        c.a = None
+        self.assertIsNone(c.a)
 
         c.a = ["a/b/c", "/a/b/c", "${CWD}/a/b/c"]
         self.assertEqual(len(c.a), 3)
@@ -1253,6 +1255,18 @@ scenario.foo""")
                 ValueError, 'invalid value for configuration'):
             c = ConfigValue('a', domain=int)
 
+    def test_set_default(self):
+        c = ConfigValue()
+        self.assertIsNone(c.value())
+        c.set_default_value(10.5)
+        self.assertIsNone(c.value())
+        c.reset()
+        self.assertIs(type(c.value()), float)
+        self.assertEqual(c.value(), 10.5)
+        c.set_domain(int)
+        self.assertIs(type(c.value()), int)
+        self.assertEqual(c.value(), 10)
+
     def test_getItem_setItem(self):
         # a freshly-initialized object should not be accessed
         self.assertFalse(self.config._userAccessed)
@@ -1603,25 +1617,32 @@ endBlock{}
     def test_list_manipulation(self):
         self.assertEqual(len(self.config['scenarios']), 0)
         self.config['scenarios'].append()
-        self.assertEqual(len(self.config['scenarios']), 1)
-        self.config['scenarios'].append({'merlion': True, 'detection': []})
+        os = StringIO()
+        with LoggingIntercept(os):
+            self.config['scenarios'].add()
+        self.assertIn("ConfigList.add() has been deprecated.  Use append()",
+                      os.getvalue())
         self.assertEqual(len(self.config['scenarios']), 2)
+        self.config['scenarios'].append({'merlion': True, 'detection': []})
+        self.assertEqual(len(self.config['scenarios']), 3)
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
         self.assertEqual(test, """scenarios:
+  -
   -
   -
     merlion: true
     detection: []
 """)
         self.config['scenarios'][0] = {'merlion': True, 'detection': []}
-        self.assertEqual(len(self.config['scenarios']), 2)
+        self.assertEqual(len(self.config['scenarios']), 3)
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
         self.assertEqual(test, """scenarios:
   -
     merlion: true
     detection: []
+  -
   -
     merlion: true
     detection: []
@@ -1632,6 +1653,10 @@ endBlock{}
   scenario file: Net3.tsg
   merlion: true
   detection: []
+-
+  scenario file: Net3.tsg
+  merlion: false
+  detection: [1, 2, 3]
 -
   scenario file: Net3.tsg
   merlion: true
@@ -2001,6 +2026,59 @@ c: 1.0
             "ConfigValue lambda was pickled with an unpicklable domain",
             out.getvalue()
         )
+
+
+    def test_self_assignment(self):
+        cfg = ConfigDict()
+        self.assertNotIn('d', dir(cfg))
+        cfg.d = cfg.declare('d', ConfigValue(10, int))
+        self.assertIn('d', dir(cfg))
+        cfg.aa = cfg.declare('aa', ConfigValue(1, int))
+        self.assertIn('aa', dir(cfg))
+        # test that dir is sorted
+        self.assertEqual(dir(cfg), sorted(dir(cfg)))
+        # check that inconsistent name is flagged
+        with self.assertRaisesRegexp(
+                ValueError, "Key 'b' not defined in ConfigDict ''"):
+            cfg.b = cfg.declare('bb', ConfigValue(2, int))
+
+
+    def test_declaration_errors(self):
+        cfg = ConfigDict()
+        cfg.b = cfg.declare('b', ConfigValue(2, int))
+        with self.assertRaisesRegexp(
+                ValueError, "duplicate config 'b' defined for ConfigDict ''"):
+            cfg.b = cfg.declare('b', ConfigValue(2, int))
+        with self.assertRaisesRegexp(
+                ValueError, "config 'dd' is already assigned to ConfigDict ''"):
+            cfg.declare('dd', cfg.get('b'))
+        with self.assertRaisesRegexp(
+                ValueError, "Illegal character in config 'd\[1\]'"):
+            cfg.declare('d[1]', ConfigValue(1))
+
+
+    def test_declare_from(self):
+        cfg = ConfigDict()
+        cfg.declare('a', ConfigValue(default=1, domain=int))
+        cfg.declare('b', ConfigValue(default=2, domain=int))
+        cfg2 = ConfigDict()
+        cfg2.declare_from(cfg)
+        self.assertEqual(cfg.value(), cfg2.value())
+        self.assertIsNot(cfg.get('a'), cfg2.get('a'))
+        self.assertIsNot(cfg.get('b'), cfg2.get('b'))
+
+        cfg2 = ConfigDict()
+        cfg2.declare_from(cfg, skip={'a'})
+        self.assertEqual(cfg.value()['b'], cfg2.value()['b'])
+        self.assertNotIn('a', cfg2)
+
+        with self.assertRaisesRegex(
+                ValueError, "passed a block with a duplicate field, 'b'"):
+            cfg2.declare_from(cfg)
+
+        with self.assertRaisesRegex(
+                ValueError, "only accepts other ConfigDicts"):
+            cfg2.declare_from({})
 
 
 if __name__ == "__main__":
