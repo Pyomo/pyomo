@@ -1727,27 +1727,33 @@ class ConfigDict(ConfigBase):
                 name = name.replace('_', ' ')
             ConfigDict.__setitem__(self, name, value)
 
-    def iterkeys(self):
+    def keys(self):
         return self._decl_order.__iter__()
 
-    def itervalues(self):
+    def values(self):
         self._userAccessed = True
         for key in self._decl_order:
             yield self[key]
 
-    def iteritems(self):
+    def items(self):
         self._userAccessed = True
         for key in self._decl_order:
             yield (key, self[key])
 
-    def keys(self):
-        return list(self.iterkeys())
+    @deprecated('The iterkeys method is deprecated. Use dict.keys().',
+                version='TBD')
+    def iterkeys(self):
+        return self.keys()
 
-    def values(self):
-        return list(self.itervalues())
+    @deprecated('The itervalues method is deprecated. Use dict.keys().',
+                version='TBD')
+    def itervalues(self):
+        return self.values()
 
-    def items(self):
-        return list(self.iteritems())
+    @deprecated('The iteritems method is deprecated. Use dict.keys().',
+                version='TBD')
+    def iteritems(self):
+        return self.items()
 
     def _add(self, name, config):
         name = str(name)
@@ -1781,7 +1787,7 @@ class ConfigDict(ConfigBase):
                 "ConfigDict.declare_from() only accepts other ConfigDicts")
         # Note that we duplicate ["other()"] other so that this
         # ConfigDict's entries are independent of the other's
-        for key in other.iterkeys():
+        for key in other.keys():
             if skip and key in skip:
                 continue
             if key in self:

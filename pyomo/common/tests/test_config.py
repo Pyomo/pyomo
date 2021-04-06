@@ -1479,7 +1479,7 @@ endBlock{}
         keys = self.config['scenario'].keys()
         # lists are independent
         self.assertFalse(keys is self.config['scenario'].keys())
-        self.assertIs(type(keys), list)
+        self.assertIsNot(type(keys), list)
         self.assertEqual(list(keys), ref)
 
         # keys iterator
@@ -1501,7 +1501,7 @@ endBlock{}
 
         # list of values
         values = self.config['scenario'].values()
-        self.assertIs(type(values), list)
+        self.assertIsNot(type(values), list)
         self.assertEqual(list(values), ref)
         # lists are independent
         self.assertFalse(values is self.config['scenario'].values())
@@ -1519,7 +1519,7 @@ endBlock{}
 
         # list of items
         items = self.config['scenario'].items()
-        self.assertIs(type(items), list)
+        self.assertIsNot(type(items), list)
         self.assertEqual(list(items), ref)
         # lists are independent
         self.assertFalse(items is self.config['scenario'].items())
