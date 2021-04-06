@@ -26,9 +26,10 @@
 import argparse
 import enum
 import os
-import sys
 import os.path
+import pickle
 import re
+import sys
 import pyomo.common.unittest as unittest
 
 from six import PY3, StringIO
@@ -1909,6 +1910,43 @@ c: 1.0
         self.assertEqual(mod_copy._doc, "new doc")
         self.assertEqual(mod_copy._description, "new description")
         self.assertEqual(mod_copy._visibility, 0)
+
+    def test_pickle(self):
+        cfg = ConfigDict()
+        cfg.declare('int', ConfigValue(domain=int, default=10))
+        cfg.declare('in', ConfigValue(domain=In([1,3,5]), default=1))
+        cfg.declare('lambda', ConfigValue(domain=lambda x: int(x), default=1))
+        cfg.declare('list', ConfigList(domain=str))
+
+        out = StringIO()
+        with LoggingIntercept(out):
+            cfg.set_value(
+                {'int': 100, 'in': 3, 'lambda': 2.5, 'list': [2, 'a']}
+            )
+            self.assertEqual(
+                cfg.value(),
+                {'int': 100, 'in': 3, 'lambda': 2, 'list': ['2', 'a']}
+            )
+
+            cfg2 = pickle.loads(pickle.dumps(cfg))
+            self.assertEqual(
+                cfg2.value(),
+                {'int': 100, 'in': 3, 'lambda': 2, 'list': ['2', 'a']}
+            )
+
+            cfg2.list.append(10)
+            self.assertEqual(
+                cfg2.value(),
+                {'int': 100, 'in': 3, 'lambda': 2, 'list': ['2', 'a', '10']}
+            )
+        self.assertEqual(out.getvalue(), "")
+
+        with LoggingIntercept(out):
+            cfg2['lambda'] = 5.5
+        self.assertIn(
+            "ConfigValue lambda was pickled with an unpicklable domain",
+            out.getvalue()
+        )
 
 
 if __name__ == "__main__":
