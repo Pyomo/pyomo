@@ -65,14 +65,12 @@ class _PortData(ComponentData):
 
     def __getstate__(self):
         state = super(_PortData, self).__getstate__()
-        state['_arcs'] = [i() for i in self._arcs]
-        state['_sources'] = [i() for i in self._sources]
-        state['_dests'] = [i() for i in self._dests]
-
         for i in _PortData.__slots__:
-            if i in {'_arcs', '_sources', '_dests'}:
-                continue
             state[i] = getattr(self, i)
+
+        # Remove/resolve weak references
+        for i in ('_arcs', '_sources', '_dests'):
+            state[i] = [ref() for ref in state[i]]
         return state
 
     def __setstate__(self, state):
