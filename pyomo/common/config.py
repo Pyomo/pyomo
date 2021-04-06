@@ -1302,17 +1302,23 @@ class ConfigBase(object):
             os.write('\n')
         return os.getvalue()
 
-    def generate_documentation\
-            ( self,
-              block_start= "\\begin{description}[topsep=0pt,parsep=0.5em,itemsep=-0.4em]\n",
-              block_end=   "\\end{description}\n",
-              item_start=  "\\item[{%s}]\\hfill\n",
-              item_body=   "\\\\%s",
-              item_end=    "",
-              indent_spacing=2,
-              width=78,
-              visibility=0
-              ):
+    def generate_documentation(
+            self, block_start=None, block_end=None,
+            item_start=None, item_body=None, item_end=None,
+            indent_spacing=2, width=78, visibility=0,
+            format='latex'):
+        _formats = ConfigBase.generate_documentation.formats
+        if block_start is None:
+            block_start = _formats.get(format, {}).get('block_start','')
+        if block_end is None:
+            block_end = _formats.get(format, {}).get('block_end','')
+        if item_start is None:
+            item_start = _formats.get(format, {}).get('item_start','')
+        if item_body is None:
+            item_body = _formats.get(format, {}).get('item_body','')
+        if item_end is None:
+            item_end = _formats.get(format, {}).get('item_end','')
+
         os = six.StringIO()
         level = []
         lastObj = self
@@ -1389,6 +1395,16 @@ class ConfigBase(object):
             if obj._userSet and not obj._userAccessed:
                 yield obj
 
+ConfigBase.generate_documentation.formats = {
+    'latex': {
+        'block_start': "\\begin{description}["
+            "topsep=0pt,parsep=0.5em,itemsep=-0.4em]\n",
+        'block_end': "\\end{description}\n",
+        'item_start': "\\item[{%s}]\\hfill\n",
+        'item_body': "\\\\%s",
+        'item_end': "",
+    }
+}
 
 class ConfigValue(ConfigBase):
     """Store and manipulate a single configuration value.
