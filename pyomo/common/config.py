@@ -347,7 +347,9 @@ class PathList(Path):
     """
 
     def __call__(self, data):
-        if hasattr(data, "__iter__") and not isinstance(data, str):
+        if data is None:
+            return []
+        elif hasattr(data, "__iter__") and not isinstance(data, str):
             return [ super(PathList, self).__call__(i) for i in data ]
         else:
             return [ super(PathList, self).__call__(data) ]
