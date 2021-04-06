@@ -29,84 +29,84 @@ testdirs = [currdir, ]
 
 solver_dependencies =   {
     # abstract_ch
-    'test_abstract_ch_wl_abstract_script': 'glpk',
-    'test_abstract_ch_pyomo_wl_abstract': 'glpk',
-    'test_abstract_ch_pyomo_solve1': 'glpk',
-    'test_abstract_ch_pyomo_solve2': 'glpk',
-    'test_abstract_ch_pyomo_solve3': 'glpk',
-    'test_abstract_ch_pyomo_solve4': 'glpk',
-    'test_abstract_ch_pyomo_solve5': 'glpk',
-    'test_abstract_ch_pyomo_diet1': 'glpk',
-    'test_abstract_ch_pyomo_buildactions_works': 'glpk',
-    'test_abstract_ch_pyomo_abstract5_ns1': 'glpk',
-    'test_abstract_ch_pyomo_abstract5_ns2': 'glpk',
-    'test_abstract_ch_pyomo_abstract5_ns3': 'glpk',
-    'test_abstract_ch_pyomo_abstract6': 'glpk',
-    'test_abstract_ch_pyomo_abstract7': 'glpk',
-    'test_abstract_ch_pyomo_AbstractH': 'ipopt',
-    'test_abstract_ch_AbstHLinScript': 'glpk',
-    'test_abstract_ch_pyomo_AbstractHLinear': 'glpk',
+    'test_abstract_ch_wl_abstract_script': ['glpk'],
+    'test_abstract_ch_pyomo_wl_abstract': ['glpk'],
+    'test_abstract_ch_pyomo_solve1': ['glpk'],
+    'test_abstract_ch_pyomo_solve2': ['glpk'],
+    'test_abstract_ch_pyomo_solve3': ['glpk'],
+    'test_abstract_ch_pyomo_solve4': ['glpk'],
+    'test_abstract_ch_pyomo_solve5': ['glpk'],
+    'test_abstract_ch_pyomo_diet1': ['glpk'],
+    'test_abstract_ch_pyomo_buildactions_works': ['glpk'],
+    'test_abstract_ch_pyomo_abstract5_ns1': ['glpk'],
+    'test_abstract_ch_pyomo_abstract5_ns2': ['glpk'],
+    'test_abstract_ch_pyomo_abstract5_ns3': ['glpk'],
+    'test_abstract_ch_pyomo_abstract6': ['glpk'],
+    'test_abstract_ch_pyomo_abstract7': ['glpk'],
+    'test_abstract_ch_pyomo_AbstractH': ['ipopt'],
+    'test_abstract_ch_AbstHLinScript': ['glpk'],
+    'test_abstract_ch_pyomo_AbstractHLinear': ['glpk'],
     
     # blocks_ch
-    'test_blocks_ch_lotsizing': 'glpk',
-    'test_blocks_ch_blocks_lotsizing': 'glpk',
+    'test_blocks_ch_lotsizing': ['glpk'],
+    'test_blocks_ch_blocks_lotsizing': ['glpk'],
     
     # dae_ch
-    'test_dae_ch_run_path_constraint_tester': 'ipopt',
+    'test_dae_ch_run_path_constraint_tester': ['ipopt'],
     
     # gdp_ch
-    'test_gdp_ch_pyomo_scont': 'glpk',
-    'test_gdp_ch_pyomo_scont2': 'glpk',
-    'test_gdp_ch_scont_script': 'glpk',
+    'test_gdp_ch_pyomo_scont': ['glpk'],
+    'test_gdp_ch_pyomo_scont2': ['glpk'],
+    'test_gdp_ch_scont_script': ['glpk'],
     
     # intro_ch'
-    'test_intro_ch_pyomo_concrete1_generic': 'glpk',
-    'test_intro_ch_pyomo_concrete1': 'glpk',
-    'test_intro_ch_pyomo_coloring_concrete': 'glpk',
-    'test_intro_ch_pyomo_abstract5': 'glpk',
+    'test_intro_ch_pyomo_concrete1_generic': ['glpk'],
+    'test_intro_ch_pyomo_concrete1': ['glpk'],
+    'test_intro_ch_pyomo_coloring_concrete': ['glpk'],
+    'test_intro_ch_pyomo_abstract5': ['glpk'],
     
     # mpec_ch
-    'test_mpec_ch_path1': 'path',
-    'test_mpec_ch_nlp_ex1b': 'ipopt',
-    'test_mpec_ch_nlp_ex1c': 'ipopt',
-    'test_mpec_ch_nlp_ex1d': 'ipopt',
-    'test_mpec_ch_nlp_ex1e': 'ipopt',
-    'test_mpec_ch_nlp_ex2': 'ipopt',
-    'test_mpec_ch_nlp1': 'ipopt',
-    'test_mpec_ch_nlp2': 'ipopt',
-    'test_mpec_ch_nlp3': 'ipopt',
-    'test_mpec_ch_mip1': 'glpk',
+    'test_mpec_ch_path1': ['path'],
+    'test_mpec_ch_nlp_ex1b': ['ipopt'],
+    'test_mpec_ch_nlp_ex1c': ['ipopt'],
+    'test_mpec_ch_nlp_ex1d': ['ipopt'],
+    'test_mpec_ch_nlp_ex1e': ['ipopt'],
+    'test_mpec_ch_nlp_ex2': ['ipopt'],
+    'test_mpec_ch_nlp1': ['ipopt'],
+    'test_mpec_ch_nlp2': ['ipopt'],
+    'test_mpec_ch_nlp3': ['ipopt'],
+    'test_mpec_ch_mip1': ['glpk'],
     
     # nonlinear_ch
-    'test_rosen_rosenbrock': 'ipopt',
-    'test_react_design_ReactorDesign': 'ipopt',
-    'test_react_design_ReactorDesignTable': 'ipopt',
-    'test_multimodal_multimodal_init1': 'ipopt',
-    'test_multimodal_multimodal_init2': 'ipopt',
-    'test_disease_est_disease_estimation': 'ipopt',
-    'test_deer_DeerProblem': 'ipopt',
+    'test_rosen_rosenbrock': ['ipopt'],
+    'test_react_design_ReactorDesign': ['ipopt'],
+    'test_react_design_ReactorDesignTable': ['ipopt'],
+    'test_multimodal_multimodal_init1': ['ipopt'],
+    'test_multimodal_multimodal_init2': ['ipopt'],
+    'test_disease_est_disease_estimation': ['ipopt'],
+    'test_deer_DeerProblem': ['ipopt'],
     
     # scripts_ch
-    'test_sudoku_sudoku_run': 'glpk',
-    'test_scripts_ch_warehouse_script': 'glpk',
-    'test_scripts_ch_warehouse_print': 'glpk',
-    'test_scripts_ch_warehouse_cuts': 'glpk',
-    'test_scripts_ch_prob_mod_ex': 'glpk',
-    'test_scripts_ch_attributes': 'glpk',
+    'test_sudoku_sudoku_run': ['glpk'],
+    'test_scripts_ch_warehouse_script': ['glpk'],
+    'test_scripts_ch_warehouse_print': ['glpk'],
+    'test_scripts_ch_warehouse_cuts': ['glpk'],
+    'test_scripts_ch_prob_mod_ex': ['glpk'],
+    'test_scripts_ch_attributes': ['glpk'],
     
     # optimization_ch
-    'test_optimization_ch_ConcHLinScript': 'glpk',
+    'test_optimization_ch_ConcHLinScript': ['glpk'],
     
     # overview_ch
-    'test_overview_ch_wl_mutable_excel': 'glpk',
-    'test_overview_ch_wl_excel': 'glpk',
-    'test_overview_ch_wl_concrete_script': 'glpk',
-    'test_overview_ch_wl_abstract_script': 'glpk',
-    'test_overview_ch_pyomo_wl_abstract': 'glpk',
+    'test_overview_ch_wl_mutable_excel': ['glpk'],
+    'test_overview_ch_wl_excel': ['glpk'],
+    'test_overview_ch_wl_concrete_script': ['glpk'],
+    'test_overview_ch_wl_abstract_script': ['glpk'],
+    'test_overview_ch_pyomo_wl_abstract': ['glpk'],
     
     # performance_ch
-    'test_performance_ch_wl': 'gurobi',
-    'test_performance_ch_persistent': 'gurobi_persistent',
+    'test_performance_ch_wl': ['gurobi', 'gurobi_persistent'],
+    'test_performance_ch_persistent': ['gurobi', 'gurobi_persistent'],
 }
 package_dependencies =  {
     # abstract_ch'
@@ -132,7 +132,7 @@ package_dependencies =  {
 #
 # Initialize the availability data
 #
-solvers_used = set(solver_dependencies.values())
+solvers_used = set(sum(list(solver_dependencies.values()), []))
 available_solvers = check_available_solvers(*solvers_used)
 solver_available = {solver_:solver_ in available_solvers for solver_ in solvers_used}
 
@@ -148,11 +148,18 @@ def check_skip(name):
     Return a boolean if the test should be skipped
     """
 
-    if name in solver_dependencies and \
-       not solver_available[solver_dependencies[name]]:
-        # Skip the test because a solver is not available
-        return 'Solver "%s" is not available' % (
-            solver_dependencies[name], )
+    if name in solver_dependencies:
+        solvers_ = solver_dependencies[name]
+        if not all([solver_available[i] for i in solvers_]):
+            # Skip the test because a solver is not available
+            _missing = []
+            for i in solvers_:
+                if not solver_available[i]:
+                    _missing.append(i)
+            return "Solver%s %s %s not available" % (
+                's' if len(_missing) > 1 else '',
+                ", ".join(_missing),
+                'are' if len(_missing) > 1 else 'is',)
 
     if name in package_dependencies:
         packages_ = package_dependencies[name]
@@ -178,7 +185,8 @@ def filter(line):
                    'Job ',
                    'Importing module',
                    'Function',
-                   'File', ):
+                   'File', 
+                   '^',):
         if line.startswith(field):
             return True
     for field in ( 'Total CPU',
@@ -355,7 +363,7 @@ class TestBookExamples(unittest.TestCase):
         os.chdir(dir_)
         out_file = os.path.splitext(test_file)[0]+'.out'
         with open(out_file, 'w') as f:
-            subprocess.run(['sh', bname], stdout=f, stderr=f, cwd=dir_)
+            subprocess.run(['bash', bname], stdout=f, stderr=f, cwd=dir_)
         os.chdir(cwd)
 
         self.compare_files(out_file, base_file)
