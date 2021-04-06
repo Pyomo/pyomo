@@ -11,7 +11,7 @@
 import pyomo.common.unittest as unittest
 from pyomo.common.tee import capture_output
 
-from six import StringIO
+from io import StringIO
 import sys
 import time
 

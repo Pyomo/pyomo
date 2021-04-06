@@ -16,8 +16,6 @@ __all__ = ['pyomo_api', 'IPyomoTask', 'PyomoAPIFactory', 'PyomoAPIData']
 
 import inspect
 import logging
-import six
-from six import iteritems, with_metaclass
 
 import pyutilib.workflow
 
@@ -89,7 +87,7 @@ class PyomoAPIData(dict):
     def __str__(self, nesting = 0, indent=''):
         attrs = []
         indentation = indent+"    " * nesting
-        for k, v in iteritems(self.__dict__):
+        for k, v in self.__dict__.items():
             if not k.startswith("_"):
                 text = [indentation, k, ":"]
                 if isinstance(v, PyomoAPIData):
@@ -234,26 +232,19 @@ def pyomo_api(fn=None, implements=None, outputs=None, namespace=None):
             _alias =  namespace+'.'+fn.__name__
         _name = _alias.replace('_', '.')
 
-        if six.PY2:
-            argspec = inspect.getargspec(fn)
-            if argspec.keywords is not None:
-                logger.error("Attempting to declare Pyomo task with function "
-                             "'%s' that contains variable keyword arguments" % _alias)
-                return                                      #pragma:nocover
-        else:
-            argspec = inspect.getfullargspec(fn)
-            if argspec.varkw is not None:
-                logger.error("Attempting to declare Pyomo task with function "
-                             "'%s' that contains variable keyword arguments" % _alias)
-                return                                     #pragma:nocover
-            # Not supporting new keyword-only definitions until someone
-            # who maintains this code decides the code that uses argspec below here
-            # is worth updating. Note that this attribute is an empty list when
-            # there are not keyword-only arguments.
-            if argspec.kwonlyargs:
-                logger.error("Attempting to declare Pyomo task with function "
-                             "'%s' that contains keyword-only arguments" % _alias)
-                return                                      #pragma:nocover
+        argspec = inspect.getfullargspec(fn)
+        if argspec.varkw is not None:
+            logger.error("Attempting to declare Pyomo task with function "
+                         "'%s' that contains variable keyword arguments" % _alias)
+            return                                     #pragma:nocover
+        # Not supporting new keyword-only definitions until someone
+        # who maintains this code decides the code that uses argspec below here
+        # is worth updating. Note that this attribute is an empty list when
+        # there are not keyword-only arguments.
+        if argspec.kwonlyargs:
+            logger.error("Attempting to declare Pyomo task with function "
+                         "'%s' that contains keyword-only arguments" % _alias)
+            return                                      #pragma:nocover
         if argspec.varargs is not None:
             logger.error("Attempting to declare Pyomo task with function "
                          "'%s' that contains variable arguments" % _alias)
@@ -266,7 +257,7 @@ def pyomo_api(fn=None, implements=None, outputs=None, namespace=None):
             def __new__(cls, name, bases, d):
                 return plugin.PluginMeta.__new__(cls, "PyomoTask_"+str(_name), bases, d)
 
-        class PyomoTask_tmp(with_metaclass(TaskMeta,PyomoTask)):
+        class PyomoTask_tmp(PyomoTask, metaclass=TaskMeta):
 
             plugin.alias(_alias)
 

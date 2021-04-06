@@ -8,15 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import six
-from six import itervalues, iteritems
-
-if six.PY3:
-    from collections.abc import MutableSet
-else:
-    from collections import MutableSet
-
+from collections.abc import MutableSet
 from collections import OrderedDict
+
 
 class OrderedSet(MutableSet):
     __slots__ = ('_dict')

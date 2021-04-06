@@ -8,7 +8,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyutilib.common import ApplicationError
+
+class ApplicationError(Exception):
+    """
+    An exception used when an external application generates an error.
+    """
+
+    def __init__(self, *args, **kargs):
+        Exception.__init__(self, *args, **kargs)  #pragma:nocover
 
 
 class PyomoException(Exception):
