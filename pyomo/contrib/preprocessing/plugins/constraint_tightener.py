@@ -1,7 +1,5 @@
 import logging
 
-from six.moves import zip
-
 from pyomo.common import deprecated
 from pyomo.core import Constraint, value, TransformationFactory
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation

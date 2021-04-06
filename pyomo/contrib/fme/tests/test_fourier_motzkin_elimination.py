@@ -27,7 +27,7 @@ from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.opt import SolverFactory, check_available_solvers
 import pyomo.contrib.fme.fourier_motzkin_elimination
 
-from six import StringIO
+from io import StringIO
 import logging
 import random
 
