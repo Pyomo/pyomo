@@ -13,7 +13,7 @@ import os
 import time
 import sys
 
-from six import StringIO, BytesIO
+from io import StringIO, BytesIO
 
 from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest

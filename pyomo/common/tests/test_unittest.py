@@ -10,7 +10,7 @@
 
 import datetime
 import multiprocessing
-import six
+from io import StringIO
 import time
 
 import pyomo.common.unittest as unittest
@@ -199,7 +199,7 @@ class TestPyomoUnittest(unittest.TestCase):
         if multiprocessing.get_start_method() == 'fork':
             self.bound_function()
             return
-        LOG = six.StringIO()
+        LOG = StringIO()
         with LoggingIntercept(LOG):
             with self.assertRaises(TypeError):
                 self.bound_function()

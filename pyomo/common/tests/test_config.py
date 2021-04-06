@@ -32,7 +32,7 @@ import re
 import sys
 import pyomo.common.unittest as unittest
 
-from six import PY3, StringIO
+from io import StringIO
 
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 def yaml_load(arg):
@@ -1548,12 +1548,8 @@ endBlock{}
         keys = self.config['scenario'].keys()
         # lists are independent
         self.assertFalse(keys is self.config['scenario'].keys())
-        if PY3:
-            self.assertIsNot(type(keys), list)
-            self.assertEqual(list(keys), ref)
-        else:
-            self.assertIs(type(keys), list)
-            self.assertEqual(keys, ref)
+        self.assertIsNot(type(keys), list)
+        self.assertEqual(list(keys), ref)
 
         # keys iterator
         keyiter = self.config['scenario'].iterkeys()
@@ -1574,10 +1570,7 @@ endBlock{}
 
         # list of values
         values = self.config['scenario'].values()
-        if PY3:
-            self.assertIsNot(type(values), list)
-        else:
-            self.assertIs(type(values), list)
+        self.assertIsNot(type(values), list)
         self.assertEqual(list(values), ref)
         # lists are independent
         self.assertFalse(values is self.config['scenario'].values())
@@ -1595,10 +1588,7 @@ endBlock{}
 
         # list of items
         items = self.config['scenario'].items()
-        if PY3:
-            self.assertIsNot(type(items), list)
-        else:
-            self.assertIs(type(items), list)
+        self.assertIsNot(type(items), list)
         self.assertEqual(list(items), ref)
         # lists are independent
         self.assertFalse(items is self.config['scenario'].items())
