@@ -19,7 +19,6 @@ that works with problems derived from AslNLP as long as those
 classes return numpy ndarray objects for the vectors and coo_matrix
 objects for the matrices (e.g., AmplNLP and PyomoNLP)
 """
-import six
 import sys
 import logging
 import os
@@ -103,8 +102,7 @@ _ipopt_term_cond = {
     'Internal_Error': TerminationCondition.internalSolverError,
 }
 
-@six.add_metaclass(abc.ABCMeta)
-class CyIpoptProblemInterface(object):
+class CyIpoptProblemInterface(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def x_init(self):
         """Return the initial values for x as a numpy ndarray

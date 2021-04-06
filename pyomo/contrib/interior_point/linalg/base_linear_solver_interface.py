@@ -1,9 +1,8 @@
 from abc import ABCMeta, abstractmethod
-import six
 import logging
 
 
-class LinearSolverInterface(six.with_metaclass(ABCMeta, object)):
+class LinearSolverInterface(object, metaclass=ABCMeta):
     @classmethod
     def getLoggerName(cls):
         return 'linear_solver'

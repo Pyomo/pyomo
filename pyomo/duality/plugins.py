@@ -39,15 +39,15 @@ logger = logging.getLogger('pyomo.core')
 # This returns a new Block object.
 #
 @TransformationFactory.register('duality.linear_dual', doc="Dualize a linear model")
+@deprecated(
+    "Use of the pyomo.duality package is deprecated. There are known bugs "
+    "in pyomo.duality, and we do not recommend the use of this code. "
+    "Development of dualization capabilities has been shifted to "
+    "the Pyomo Adversarial Optimization (PAO) library. Please contact "
+    "William Hart for further details (wehart@sandia.gov).",
+    version='5.6.2')
 class LinearDual_PyomoTransformation(Transformation):
 
-    @deprecated(
-        "Use of the pyomo.duality package is deprecated. There are known bugs "
-        "in pyomo.duality, and we do not recommend the use of this code. "
-        "Development of dualization capabilities has been shifted to "
-        "the Pyomo Adversarial Optimization (PAO) library. Please contact "
-        "William Hart for further details (wehart@sandia.gov).",
-        version='5.6.2')
     def __init__(self):
         super(LinearDual_PyomoTransformation, self).__init__()
 

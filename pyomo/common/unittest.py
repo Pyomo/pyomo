@@ -596,4 +596,4 @@ def runtests(options):
 if __name__ == '__main__':
     parser = buildParser()
     options = parser.parse_args()
-    runtests(options)
+    sys.exit(runtests(options))

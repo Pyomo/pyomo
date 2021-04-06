@@ -21,7 +21,7 @@ import os
 import sys
 import threading
 import time
-from six import StringIO
+from io import StringIO
 
 _mswindows = sys.platform.startswith('win')
 _poll_interval = 0.1

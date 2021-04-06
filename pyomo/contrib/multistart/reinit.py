@@ -4,8 +4,6 @@ from __future__ import division
 import logging
 import random
 
-from six.moves import range
-
 from pyomo.core import Var
 
 logger = logging.getLogger('pyomo.contrib.multistart')
