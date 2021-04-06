@@ -998,10 +998,10 @@ class ConfigBase(object):
                 implicit_domain )
             if domain is not ConfigBase.NoArgument:
                 logger.warn("domain ignored by __call__(): "
-                            "class is a ConfigDict" % (type(self),))
+                            "class is a ConfigDict")
             if default is not ConfigBase.NoArgument:
                 logger.warn("default ignored by __call__(): "
-                            "class is a ConfigDict" % (type(self),))
+                            "class is a ConfigDict")
         else:
             kwds['default'] = ( self.value()
                                 if default is ConfigBase.NoArgument else
