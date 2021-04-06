@@ -363,7 +363,9 @@ class TestBookExamples(unittest.TestCase):
         os.chdir(dir_)
         out_file = os.path.splitext(test_file)[0]+'.out'
         with open(out_file, 'w') as f:
-            subprocess.run(['bash', bname], stdout=f, stderr=f, cwd=dir_)
+            _env = os.environ.copy()
+            _env['PATH'] = os.pathsep.join([os.path.dirname(sys.executable), _env['PATH']])
+            subprocess.run(['bash', bname], stdout=f, stderr=f, cwd=dir_, env=_env)
         os.chdir(cwd)
 
         self.compare_files(out_file, base_file)
