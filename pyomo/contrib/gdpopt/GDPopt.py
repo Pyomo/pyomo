@@ -32,8 +32,7 @@
 """
 from __future__ import division
 
-import six
-from six import StringIO
+from io import StringIO
 
 from pyomo.common.config import (
     add_docstring_list
@@ -245,14 +244,6 @@ DOI: 10.1016/S0098-1354(00)00581-0.
 
     _metasolver = False
 
-    if six.PY2:
-        __doc__ = """
-    Keyword arguments below are specified for the :code:`solve` function.
-        
-    """ + add_docstring_list(__doc__, CONFIG)
-
-
-if six.PY3:
-    # Add the CONFIG arguments to the solve method docstring
-    GDPoptSolver.solve.__doc__ = add_docstring_list(
-        GDPoptSolver.solve.__doc__, GDPoptSolver.CONFIG, indent_by=8)
+# Add the CONFIG arguments to the solve method docstring
+GDPoptSolver.solve.__doc__ = add_docstring_list(
+    GDPoptSolver.solve.__doc__, GDPoptSolver.CONFIG, indent_by=8)
