@@ -203,8 +203,8 @@ def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=Non
             var_dic[i] = i
     for v in theta_names:
         v_tmp = str(kk)
-        setattr(m, str('original_')+v_tmp ,Param(initialize=theta[v], mutable=True))
-        setattr(m, str('perturbed_')+v_tmp ,Param(initialize=theta[v]))
+        m.add_component(str('original_')+v_tmp ,Param(initialize=theta[v], mutable=True))
+        m.add_component(m, str('perturbed_')+v_tmp ,Param(initialize=theta[v]))
         m.extra.add(eval('m.'+var_dic[v]) - eval('m.original_'+v_tmp) == 0 )
         original_Param.append(eval('m.original_'+v_tmp))
         perturbed_Param.append(eval('m.perturbed_'+v_tmp))
