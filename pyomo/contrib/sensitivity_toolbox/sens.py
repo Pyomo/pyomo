@@ -203,11 +203,13 @@ def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=Non
             var_dic[i] = i
     for v in theta_names:
         v_tmp = str(kk)
-        m.add_component(str('original_')+v_tmp ,Param(initialize=theta[v], mutable=True))
-        m.add_component(m, str('perturbed_')+v_tmp ,Param(initialize=theta[v]))
+        original_param_object = Param(initialize=theta[v], mutable=True)
+        perturbed_param_object = Param(initialize=theta[v])
+        m.add_component("original_"+v_tmp, original_param_object)
+        m.add_component("perturbed_"+v_tmp, perturbed_param_object)
         m.extra.add(eval('m.'+var_dic[v]) - eval('m.original_'+v_tmp) == 0 )
-        original_Param.append(eval('m.original_'+v_tmp))
-        perturbed_Param.append(eval('m.perturbed_'+v_tmp))
+        original_Param.append(original_param_object)
+        perturbed_Param.append(perturbed_param_object)
         kk = kk + 1
     m_kaug_dsdp = sensitivity_calculation('kaug',m,original_Param,perturbed_Param, tee)
 
