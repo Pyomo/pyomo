@@ -699,16 +699,10 @@ class TestSensitivityInterface(unittest.TestCase):
         '''
         It tests the function get_dsdp with rooney & biegler's model.
         '''
-        from pyomo.contrib.sensitivity_toolbox.examples.rooney_biegler import rooney_biegler_model
         variable_name = ['asymptote', 'rate_constant']
-        data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
-                                  [4,16.0],[5,15.6],[7,19.8]],
-                            columns=['hour', 'y'])
-        def SSE(model, data):
-            expr = sum((data.y[i] - model.response_function[data.hour[i]])**2 for i in data.index)
-            return expr
-        parmest_class = parmest.Estimator(rooney_biegler_model, data,variable_name,SSE)
-        obj, theta, cov = parmest_class.theta_est(calc_cov=True)
+
+        theta={'asymptote': 19.142575284617866, 'rate_constant': 0.53109137696521}
+        cov=np.array([[ 6.30579403, -0.4395341 ],[-0.4395341 ,  0.04193591]])
         model_uncertain= ConcreteModel()
         model_uncertain.asymptote = Var(initialize = 15)
         model_uncertain.rate_constant = Var(initialize = 0.5)
