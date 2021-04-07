@@ -808,7 +808,7 @@ def _munge_name(name, space_to_dash=True):
     return re.sub(r'[^a-zA-Z0-9-_]', '_', name)
 
 
-_leadingSpace = re.compile('^([ \n\t]*)')
+_leadingSpace = re.compile('^([ \t]*)')
 
 def _strip_indentation(doc):
     if not doc:
