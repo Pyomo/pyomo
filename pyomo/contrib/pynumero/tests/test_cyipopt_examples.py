@@ -37,18 +37,17 @@ if not AmplInterface.available():
         "Pynumero needs the ASL extension to run CyIpopt tests")
 
 import pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver as cyipopt_solver
-if not cyipopt_solver.ipopt_available:
-    raise unittest.SkipTest("PyNumero needs CyIpopt installed to run CyIpopt tests")
+if not cyipopt_solver.cyipopt_available:
+    raise unittest.SkipTest(
+        "PyNumero needs CyIpopt installed to run CyIpopt tests")
 import cyipopt as cyipopt_core
 
 example_dir = os.path.join(this_file_dir(), '..', 'examples')
 
 class TestPyomoCyIpoptSolver(unittest.TestCase):
     def test_status_maps(self):
-        self.assertEqual(len(cyipopt_core.STATUS_MESSAGES),
-                         len(cyipopt_solver._cyipopt_status_enum))
-        self.assertEqual(len(cyipopt_core.STATUS_MESSAGES),
-                         len(cyipopt_solver._ipopt_term_cond))
+        # verify that all status messages from cyipopy can be cleanly
+        # mapped back to a Pyomo TerminationCondition
         for msg in cyipopt_core.STATUS_MESSAGES.values():
             self.assertIn(msg, cyipopt_solver._cyipopt_status_enum)
         for status in cyipopt_solver._cyipopt_status_enum.values():
