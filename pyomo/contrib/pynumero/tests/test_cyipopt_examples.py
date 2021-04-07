@@ -46,10 +46,8 @@ example_dir = os.path.join(this_file_dir(), '..', 'examples')
 
 class TestPyomoCyIpoptSolver(unittest.TestCase):
     def test_status_maps(self):
-        self.assertEqual(len(cyipopt_core.STATUS_MESSAGES),
-                         len(cyipopt_solver._cyipopt_status_enum))
-        self.assertEqual(len(cyipopt_core.STATUS_MESSAGES),
-                         len(cyipopt_solver._ipopt_term_cond))
+        # verify that all status messages from cyipopy can be cleanly
+        # mapped back to a Pyomo TerminationCondition
         for msg in cyipopt_core.STATUS_MESSAGES.values():
             self.assertIn(msg, cyipopt_solver._cyipopt_status_enum)
         for status in cyipopt_solver._cyipopt_status_enum.values():

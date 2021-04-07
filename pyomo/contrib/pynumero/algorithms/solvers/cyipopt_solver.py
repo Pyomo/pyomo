@@ -70,27 +70,46 @@ logger = logging.getLogger(__name__)
 # This maps the cyipopt STATUS_MESSAGES back to string representations
 # of the Ipopt ApplicationReturnStatus enum
 _cyipopt_status_enum = [
-    'Solve_Succeeded', b'Algorithm terminated successfully at a locally optimal point, satisfying the convergence tolerances (can be specified by options).',
-    'Solved_To_Acceptable_Level', b'Algorithm stopped at a point that was converged, not to "desired" tolerances, but to "acceptable" tolerances (see the acceptable-... options).',
-    'Infeasible_Problem_Detected', b'Algorithm converged to a point of local infeasibility. Problem may be infeasible.',
-    'Search_Direction_Becomes_Too_Small', b'Algorithm proceeds with very little progress.',
-    'Diverging_Iterates', b'It seems that the iterates diverge.',
-    'User_Requested_Stop', b'The user call-back function intermediate_callback (see Section 3.3.4 in the documentation) returned false, i.e., the user code requested a premature termination of the optimization.',
-    'Feasible_Point_Found', b'Feasible point for square problem found.',
-    'Maximum_Iterations_Exceeded', b'Maximum number of iterations exceeded (can be specified by an option).',
-    'Restoration_Failed', b'Restoration phase failed, algorithm doesn\'t know how to proceed.',
-    'Error_In_Step_Computation', b'An unrecoverable error occurred while Ipopt tried to compute the search direction.',
-    'Maximum_CpuTime_Exceeded', b'Maximum CPU time exceeded.',
-    'Not_Enough_Degrees_Of_Freedom', b'Problem has too few degrees of freedom.',
-    'Invalid_Problem_Definition', b'Invalid problem definition.',
-    'Invalid_Option', b'Invalid option encountered.',
-    'Invalid_Number_Detected', b'Algorithm received an invalid number (such as NaN or Inf) from the NLP; see also option check_derivatives_for_naninf.',
-    # Note that the concluding '.' was missing before cyipopt 1.0.3
-    'Invalid_Number_Detected', b'Algorithm received an invalid number (such as NaN or Inf) from the NLP; see also option check_derivatives_for_naninf',
-    'Unrecoverable_Exception', b'Some uncaught Ipopt exception encountered.',
-    'NonIpopt_Exception_Thrown', b'Unknown Exception caught in Ipopt',
-    'Insufficient_Memory', b'Not enough memory.',
-    'Internal_Error', b'An unknown internal error occurred. Please contact the Ipopt authors through the mailing list.'
+    "Solve_Succeeded", (b"Algorithm terminated successfully at a locally "
+                        b"optimal point, satisfying the convergence tolerances "
+                        b"(can be specified by options)."),
+    "Solved_To_Acceptable_Level", (b"Algorithm stopped at a point that was "
+                                   b"converged, not to \"desired\" tolerances, "
+                                   b"but to \"acceptable\" tolerances (see the "
+                                   b"acceptable-... options)."),
+    "Infeasible_Problem_Detected", (b"Algorithm converged to a point of local "
+                                    b"infeasibility. Problem may be "
+                                    b"infeasible."),
+    "Search_Direction_Becomes_Too_Small", (b"Algorithm proceeds with very "
+                                           b"little progress."),
+    "Diverging_Iterates", b"It seems that the iterates diverge.",
+    "User_Requested_Stop", (b"The user call-back function intermediate_callback "
+                            b"(see Section 3.3.4 in the documentation) returned "
+                            b"false, i.e., the user code requested a premature "
+                            b"termination of the optimization."),
+    "Feasible_Point_Found", b"Feasible point for square problem found.",
+    "Maximum_Iterations_Exceeded", (b"Maximum number of iterations exceeded "
+                                    b"(can be specified by an option)."),
+    "Restoration_Failed", (b"Restoration phase failed, algorithm doesn\'t know "
+                           b"how to proceed."),
+    "Error_In_Step_Computation", (b"An unrecoverable error occurred while Ipopt "
+                                  b"tried to compute the search direction."),
+    "Maximum_CpuTime_Exceeded", b"Maximum CPU time exceeded.",
+    "Not_Enough_Degrees_Of_Freedom", b"Problem has too few degrees of freedom.",
+    "Invalid_Problem_Definition", b"Invalid problem definition.",
+    "Invalid_Option", b"Invalid option encountered.",
+    "Invalid_Number_Detected", (b"Algorithm received an invalid number (such as "
+                                b"NaN or Inf) from the NLP; see also option "
+                                b"check_derivatives_for_naninf."),
+    # Note that the concluding "." was missing before cyipopt 1.0.3
+    "Invalid_Number_Detected", (b"Algorithm received an invalid number (such as "
+                                b"NaN or Inf) from the NLP; see also option "
+                                b"check_derivatives_for_naninf"),
+    "Unrecoverable_Exception", b"Some uncaught Ipopt exception encountered.",
+    "NonIpopt_Exception_Thrown", b"Unknown Exception caught in Ipopt",
+    "Insufficient_Memory", b"Not enough memory.",
+    "Internal_Error", (b"An unknown internal error occurred. Please contact "
+                       b"the Ipopt authors through the mailing list."),
 ]
 _cyipopt_status_enum = {
     _cyipopt_status_enum[i+1]: _cyipopt_status_enum[i]
