@@ -198,6 +198,7 @@ def filter(line):
                    'Function',
                    'File', 
                    'Restricted license',
+                   'Matplotlib',
                    '    ^'):
         if line.startswith(field):
             return True
