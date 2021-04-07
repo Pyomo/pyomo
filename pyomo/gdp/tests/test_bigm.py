@@ -10,7 +10,9 @@
 
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import TransformationFactory, Block, Set, Constraint, ComponentMap, Suffix, ConcreteModel, Var, Any, value
+from pyomo.environ import (TransformationFactory, Block, Set, Constraint,
+                           ComponentMap, Suffix, ConcreteModel, Var,
+                           Any, value)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.core.base import constraint, _ConstraintData
 from pyomo.repn import generate_standard_repn
@@ -22,7 +24,7 @@ import pyomo.gdp.tests.common_tests as ct
 
 import random
 
-from six import StringIO
+from io import StringIO
 
 class CommonTests:
     def diff_apply_to_and_create_using(self, model):

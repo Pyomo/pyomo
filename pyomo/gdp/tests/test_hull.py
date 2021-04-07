@@ -27,7 +27,7 @@ linear_solvers = pyomo.opt.check_available_solvers(
     'glpk','cbc','gurobi','cplex')
 
 import random
-from six import iteritems, StringIO
+from io import StringIO
 
 EPS = TransformationFactory('gdp.hull').CONFIG.EPS
 
@@ -339,7 +339,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             mappings[m.y] = disjBlock[i].disaggregatedVars.y
             mappings[m.x] = disjBlock[i].disaggregatedVars.x
 
-            for orig, disagg in iteritems(mappings):
+            for orig, disagg in mappings.items():
                 self.assertIs(hull.get_src_var(disagg), orig)
                 self.assertIs(hull.get_disaggregated_var(orig, m.d[i]), disagg)
 
@@ -359,7 +359,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             mappings[disjBlock[i].disaggregatedVars.w] = disjBlock[i].w_bounds
             mappings[disjBlock[i].disaggregatedVars.y] = disjBlock[i].y_bounds
             mappings[disjBlock[i].disaggregatedVars.x] = disjBlock[i].x_bounds
-            for var, cons in iteritems(mappings):
+            for var, cons in mappings.items():
                 self.assertIs(hull.get_var_bounds_constraint(var), cons)
 
     def test_create_using_nonlinear(self):
@@ -676,7 +676,7 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
                 relaxedDisjuncts[5].disaggregatedVars.component('x[3]')],
         }
 
-        for i, disVars in iteritems(disaggregatedVars):
+        for i, disVars in disaggregatedVars.items():
             cons = hull.get_disaggregation_constraint(m.x[i],
                                                        m.disjunction[i])
             self.assertEqual(cons.lower, 0)
@@ -706,7 +706,7 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
                       relaxedDisjuncts[7].disaggregatedVars.component('a[2,B]')],
         }
 
-        for i, disVars in iteritems(disaggregatedVars):
+        for i, disVars in disaggregatedVars.items():
             cons = hull.get_disaggregation_constraint(m.a[i],
                                                        m.disjunction[i])
             self.assertEqual(cons.lower, 0)
