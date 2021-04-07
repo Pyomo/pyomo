@@ -10,7 +10,7 @@
 """
 The cyipopt_solver module includes the python interface to the
 Cythonized ipopt solver cyipopt (see more:
-https://github.com/matthias-k/cyipopt.git). To use the solver,
+https://github.com/mechmotum/cyipopt.git). To use the solver,
 you can create a derived implementation from the abstract base class
 CyIpoptProblemInterface that provides the necessary methods.
 
@@ -46,7 +46,7 @@ def _cyipopt_importer():
 cyipopt, cyipopt_available = attempt_import(
      'ipopt',
      error_message='cyipopt solver relies on the ipopt module from cyipopt. '
-     'See https://github.com/matthias-k/cyipopt.git for cyipopt '
+     'See https://github.com/mechmotum/cyipopt.git for cyipopt '
      'installation instructions.',
      importer=_cyipopt_importer,
 )
