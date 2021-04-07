@@ -16,7 +16,7 @@ import subprocess
 import sys
 from itertools import zip_longest
 from pyomo.opt import check_available_solvers
-from pyomo.common.dependencies import attempt_import
+from pyomo.common.dependencies import attempt_import, check_min_version
 from filecmp import cmp
 parameterized, param_available = attempt_import('parameterized')
 if not param_available:
@@ -106,7 +106,7 @@ solver_dependencies =   {
     
     # performance_ch
     'test_performance_ch_wl': ['gurobi', 'gurobi_persistent'],
-    'test_performance_ch_persistent': ['gurobi', 'gurobi_persistent'],
+    'test_performance_ch_persistent': ['gurobi_persistent'],
 }
 package_dependencies =  {
     # abstract_ch'
@@ -136,11 +136,13 @@ solvers_used = set(sum(list(solver_dependencies.values()), []))
 available_solvers = check_available_solvers(*solvers_used)
 solver_available = {solver_:solver_ in available_solvers for solver_ in solvers_used}
 
-package_available = {}        
+package_available = {}
+package_modules = {}        
 packages_used = set(sum(list(package_dependencies.values()), []))
 for package_ in packages_used:
     pack, pack_avail = attempt_import(package_)
     package_available[package_] = pack_avail
+    package_modules[package_] = pack
 
 
 def check_skip(name):
@@ -173,6 +175,15 @@ def check_skip(name):
                 's' if len(_missing) > 1 else '',
                 ", ".join(_missing),
                 'are' if len(_missing) > 1 else 'is',)
+
+        # This is a hack, xlrd dropped support for .xlsx files in 2.0.1 which
+        # causes problems with older versions of Pandas<=1.1.5 so skipping
+        # tests requiring both these packages when incompatible versions are found
+        if 'pandas' in package_dependencies[name] and 'xlrd' in package_dependencies[name]:
+            if check_min_version(package_modules['xlrd'], '2.0.1') and \
+               not check_min_version(package_modules['pandas'], '1.1.6'):
+                return "Incompatible versions of xlrd and pandas"
+
     return False
 
 def filter(line):
