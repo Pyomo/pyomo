@@ -11,9 +11,6 @@
 import operator
 import itertools
 
-from six.moves import xrange
-from six import advance_iterator
-
 from pyomo.common.dependencies import (
     numpy, numpy_available, scipy, scipy_available
 )
@@ -27,7 +24,7 @@ def is_constant(vals):
     if len(vals) <= 1:
         return True
     it = iter(vals)
-    advance_iterator(it)
+    next(it)
     op = operator.eq
     return all(itertools.starmap(op, zip(it,vals)))
 
@@ -36,7 +33,7 @@ def is_nondecreasing(vals):
     if len(vals) <= 1:
         return True
     it = iter(vals)
-    advance_iterator(it)
+    next(it)
     op = operator.ge
     return all(itertools.starmap(op, zip(it,vals)))
 
@@ -45,7 +42,7 @@ def is_nonincreasing(vals):
     if len(vals) <= 1:
         return True
     it = iter(vals)
-    advance_iterator(it)
+    next(it)
     op = operator.le
     return all(itertools.starmap(op, zip(it,vals)))
 
@@ -61,24 +58,17 @@ def log2floor(n):
     using floating point calculations. Input argument must
     be a positive integer."""
     assert n > 0
-    try:
-        return n.bit_length() - 1
-    except AttributeError:                        #pragma:nocover
-        # int.bit_length() was introduced in Python 2.7.  Fallback to a
-        # brute-force calculation if bit_length is not available.
-        s = bin(n)         # binary representation:  bin(37) --> '0b100101'
-        s = s.lstrip('0b') # remove leading zeros and 'b'
-        return len(s) - 1
+    return n.bit_length() - 1
 
 def generate_gray_code(nbits):
     """Generates a Gray code of nbits as list of lists"""
-    bitset = [0 for i in xrange(nbits)]
+    bitset = [0 for i in range(nbits)]
     # important that we copy bitset each time
     graycode = [list(bitset)]
 
-    for i in xrange(2,(1<<nbits)+1):
+    for i in range(2,(1<<nbits)+1):
         if i%2:
-            for j in xrange(-1,-nbits,-1):
+            for j in range(-1,-nbits,-1):
                 if bitset[j]:
                     bitset[j-1]=bitset[j-1]^1
                     break
@@ -124,7 +114,7 @@ def characterize_function(breakpoints, values):
 
     step = False
     slopes = []
-    for i in xrange(1, len(breakpoints)):
+    for i in range(1, len(breakpoints)):
         if breakpoints[i] != breakpoints[i-1]:
             slope = float(values[i] - values[i-1]) / \
                     (breakpoints[i] - breakpoints[i-1])

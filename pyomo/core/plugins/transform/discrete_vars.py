@@ -11,8 +11,6 @@
 import logging
 logger = logging.getLogger('pyomo.core')
 
-from six import itervalues
-
 from pyomo.common import deprecated
 from pyomo.core.base import (
     Transformation,
@@ -37,7 +35,7 @@ class RelaxIntegerVars(Transformation):
     def _apply_to(self, model, **kwds):
         options = kwds.pop('options', {})
         if kwds.get('undo', options.get('undo', False)):
-            for v, d in itervalues(model._relaxed_integer_vars[None]):
+            for v, d in model._relaxed_integer_vars[None].values():
                 bounds = v.bounds
                 v.domain = d
                 v.setlb(bounds[0])
@@ -83,14 +81,14 @@ class RelaxIntegerVars(Transformation):
 @TransformationFactory.register(
     'core.relax_discrete',
     doc="[DEPRECATED] Relax integer variables to continuous counterparts" )
+@deprecated(
+    "core.relax_discrete is deprecated.  Use core.relax_integer_vars",
+    version='5.7')
 class RelaxDiscreteVars(RelaxIntegerVars):
     """
     This plugin relaxes integrality in a Pyomo model.
     """
 
-    @deprecated(
-        "core.relax_discrete is deprecated.  Use core.relax_integer_vars",
-        version='5.7')
     def __init__(self, **kwds):
         super(RelaxDiscreteVars, self).__init__(**kwds)
 
@@ -132,9 +130,9 @@ class FixIntegerVars(Transformation):
 @TransformationFactory.register(
     'core.fix_discrete',
     doc="[DEPRECATED] Fix all integer variables to their current values")
+@deprecated(
+    "core.fix_discrete is deprecated.  Use core.fix_integer_vars",
+    version='5.7')
 class FixDiscreteVars(FixIntegerVars):
-    @deprecated(
-        "core.fix_discrete is deprecated.  Use core.fix_integer_vars",
-        version='5.7')
     def __init__(self, **kwds):
         super(FixDiscreteVars, self).__init__(**kwds)

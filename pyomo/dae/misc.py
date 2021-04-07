@@ -18,7 +18,7 @@ from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.block import IndexedBlock, SortComponents
 from pyomo.dae import ContinuousSet, DAE_Error
 
-from six import iterkeys, itervalues, StringIO
+from io import StringIO
 
 logger = logging.getLogger('pyomo.dae')
 
@@ -119,7 +119,7 @@ def expand_components(block):
     # BlockData will be added to the indexed Block but will not be
     # constructed correctly.
     for blk in block.component_objects(Block, descend_into=True):
-        missing_idx = set(blk._index) - set(iterkeys(blk._data))
+        missing_idx = set(blk._index) - set(blk._data.keys())
         if missing_idx:
             blk._dae_missing_idx = missing_idx
 
@@ -259,7 +259,7 @@ def _update_var(v):
     #       Var (which is now a IndexedComponent). However, it
     #       would be much slower to rely on that method to generate new
     #       _VarData for a large number of new indices.
-    new_indices = set(v._index) - set(iterkeys(v._data))
+    new_indices = set(v._index) - set(v._data.keys())
     for index in new_indices:
         v.add(index)
 
@@ -430,7 +430,7 @@ def block_fully_discretized(b):
     Checks to see if all ContinuousSets in a block have been discretized
     """
 
-    for i in itervalues(b.component_map(ContinuousSet)):
+    for i in b.component_map(ContinuousSet).values():
         if 'scheme' not in i.get_discretization_info():
             return False
     return True

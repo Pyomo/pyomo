@@ -19,7 +19,7 @@ topdir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))
 currdir = dirname(abspath(__file__))+os.sep
 tutorial_dir=topdir+os.sep+"examples"+os.sep+"pyomo"+os.sep+"tutorials"+os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 try:
     from win32com.client.dynamic import Dispatch

@@ -10,7 +10,7 @@
 
 import pickle
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.core.base.range import (
     NumericRange as NR, NonNumericRange as NNR, RangeProduct as RP,

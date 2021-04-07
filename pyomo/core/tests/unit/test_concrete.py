@@ -11,11 +11,12 @@
 # Test behavior of concrete classes.
 #
 
+import json
 import os
-from os.path import abspath, dirname
+from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.opt import check_available_solvers
 from pyomo.environ import ConcreteModel, Var, Objective, Constraint, SolverFactory
@@ -42,8 +43,12 @@ class Test(unittest.TestCase):
         opt = SolverFactory('glpk')
         results = opt.solve(model)
         model.solutions.store_to(results)
-        results.write(filename=currdir+"blend.out", format='json')
-        self.assertMatchesJsonBaseline(currdir+"blend.out",currdir+"blend.txt", tolerance=1e-2)
+        results.write(filename=join(currdir, "blend.out"), format='json')
+        with open(join(currdir,"blend.out"), 'r') as out, \
+            open(join(currdir,"blend.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-2,
+                                             allow_second_superset=True)
 
 
 if __name__ == "__main__":

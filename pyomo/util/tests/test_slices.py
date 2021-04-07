@@ -7,7 +7,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.core.base.indexed_component import normalize_index
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice

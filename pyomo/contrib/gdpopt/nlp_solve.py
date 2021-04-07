@@ -27,15 +27,19 @@ from pyomo.opt import TerminationCondition as tc
 def solve_disjunctive_subproblem(mip_result, solve_data, config):
     """Set up and solve the disjunctive subproblem."""
     if config.force_subproblem_nlp:
-        if config.strategy == "LOA":
+        if config.strategy in {"LOA", "RIC"}:
             return solve_local_NLP(mip_result.var_values, solve_data, config)
         elif config.strategy == 'GLOA':
             return solve_global_subproblem(mip_result, solve_data, config)
+        else:
+            raise ValueError('Unrecognized strategy: ' + config.strategy)
     else:
-        if config.strategy == "LOA":
+        if config.strategy in {"LOA", "RIC"}:
             return solve_local_subproblem(mip_result, solve_data, config)
         elif config.strategy == 'GLOA':
             return solve_global_subproblem(mip_result, solve_data, config)
+        else:
+            raise ValueError('Unrecognized strategy: ' + config.strategy)
 
 
 def solve_linear_subproblem(mip_model, solve_data, config):

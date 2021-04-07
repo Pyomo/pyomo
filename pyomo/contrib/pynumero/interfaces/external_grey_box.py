@@ -14,13 +14,12 @@ from scipy.sparse import coo_matrix
 
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base import Var, Constraint, value
+from pyomo.core.base import Var, Set, Constraint, value
 from pyomo.core.base.block import _BlockData, Block, declare_custom_block
 from pyomo.core.base.util import Initializer
 
 from ..sparse.block_matrix import BlockMatrix
 
-from six import iteritems
 
 logger = logging.getLogger('pyomo.contrib.pynumero')
 
@@ -305,13 +304,14 @@ class ExternalGreyBoxBlockData(_BlockData):
             raise ValueError(
                 'No input_names specified for external_grey_box_model.'
                 ' Must specify at least one input.')
-        self.inputs = Var(self._input_names)
+        self._input_names_set = Set(initialize=self._input_names, ordered=True)
+        self.inputs = Var(self._input_names_set)
 
         self._equality_constraint_names = ex_model.equality_constraint_names()
         self._output_names = ex_model.output_names()
 
-        # Note, this works even if output_names is an empty list
-        self.outputs = Var(self._output_names)
+        self._output_names_set = Set(initialize=self._output_names, ordered=True)
+        self.outputs = Var(self._output_names_set)
 
         # call the callback so the model can set initialization, bounds, etc.
         external_grey_box_model.finalize_block_construction(self)
@@ -352,7 +352,7 @@ class ExternalGreyBoxBlock(Block):
 
         if self._init_model is not None:
             block = self.parent_block()
-            for index, data in iteritems(self):
+            for index, data in self.items():
                 data.set_external_model(self._init_model(block, index))
 
 

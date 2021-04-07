@@ -19,9 +19,9 @@
 import logging
 import os
 from inspect import currentframe, getframeinfo
-from six import StringIO, PY2
+from io import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.log import (
     LoggingIntercept, WrappingFormatter, LegacyPyomoFormatter, LogHandler,
@@ -91,7 +91,6 @@ class TestWrappingFormatter(unittest.TestCase):
     def tearDown(self):
         logger.removeHandler(self.handler)
 
-    @unittest.skipIf(PY2, "style added in Python 3.2")
     def test_style_options(self):
         ans = ''
 

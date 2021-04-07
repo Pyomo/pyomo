@@ -12,7 +12,7 @@
 # Problem Writer for GAMS Format Files
 #
 
-from six import StringIO, string_types, iteritems
+from six import StringIO, iteritems
 
 from pyomo.common.gc_manager import PauseGC
 from pyomo.core.expr import current as EXPR
@@ -459,7 +459,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # immediately anyway.
         with PauseGC() as pgc:
             try:
-                if isinstance(output_filename, string_types):
+                if isinstance(output_filename, str):
                     output_file = open(output_filename, "w")
                 else:
                     # Support passing of stream such as a StringIO
@@ -487,7 +487,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     put_results_format=put_results_format,
                 )
             finally:
-                if isinstance(output_filename, string_types):
+                if isinstance(output_filename, str):
                     output_file.close()
 
         return output_filename, symbolMap
@@ -870,6 +870,7 @@ valid_solvers = {
 'SBB': {'MINLP','MIQCP'},
 'SCENSOLVER': {'LP','MIP','RMIP','NLP','MCP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
 'SCIP': {'MIP','NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'},
+'SHOT': {'MINLP','MIQCP'},
 'SNOPT': {'LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'},
 'SOPLEX': {'LP','RMIP'},
 'XA': {'LP','MIP','RMIP'},

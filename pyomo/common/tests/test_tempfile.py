@@ -20,13 +20,13 @@ import glob
 import os
 import shutil
 import sys
-from six import StringIO
+from io import StringIO
 
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__)) + os.sep
 tempdir = dirname(abspath(__file__)) + os.sep + 'tempdir' + os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.common.tempfiles as tempfiles
 

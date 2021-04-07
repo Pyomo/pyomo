@@ -14,8 +14,6 @@
 
 import re
 
-import pyutilib.misc
-
 from pyomo.opt.base import results
 from pyomo.opt.base.formats import ResultsFormat
 from pyomo.opt import (SolverResults,
@@ -24,6 +22,7 @@ from pyomo.opt import (SolverResults,
                        TerminationCondition)
 
 from six.moves import xrange
+from six import string_types
 
 
 @results.ReaderFactory.register(str(ResultsFormat.sol))
@@ -114,7 +113,8 @@ class ResultsReader_sol(results.AbstractResultsReader):
             objno = [int(t[1]), int(t[2])]
         res.solver.message = msg.strip()
         res.solver.message = res.solver.message.replace("\n","; ")
-        res.solver.message = pyutilib.misc.yaml_fix(res.solver.message)
+        if isinstance(res.solver.message, string_types):
+            res.solver.message = res.solver.message.replace(':', '\\x3a')
         ##res.solver.instanceName = osrl.header.instanceName
         ##res.solver.systime = osrl.header.time
         res.solver.status = SolverStatus.ok

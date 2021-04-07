@@ -8,12 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common import PyomoAPIData, pyomo_api, PyomoAPIFactory
 from pyomo.common.log import LoggingIntercept
 
-from six import StringIO
+from io import StringIO
 
 class TestData(unittest.TestCase):
 

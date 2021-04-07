@@ -9,9 +9,9 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyutilib.misc.redirect_io import capture_output
+from pyomo.common.tee import capture_output
 
-from six import StringIO
+from io import StringIO
 import sys
 import time
 
@@ -85,11 +85,12 @@ class TestTiming(unittest.TestCase):
             self.assertEqual(buf.getvalue().strip(), "")
 
     def test_TicTocTimer_tictoc(self):
-        RES = 1e-2 # resolution (seconds)
+        SLEEP = 0.1
+        RES = 0.02 # resolution (seconds): 1/5 the sleep
         timer = TicTocTimer()
         abs_time = time.time()
 
-        time.sleep(0.1)
+        time.sleep(SLEEP)
 
         with capture_output() as out:
             start_time = time.time()
@@ -104,7 +105,7 @@ class TestTiming(unittest.TestCase):
             r'\[    [.0-9]+\] Resetting the tic/toc delta timer'
         )
 
-        time.sleep(0.1)
+        time.sleep(SLEEP)
 
         with capture_output() as out:
             delta = timer.toc()
@@ -124,7 +125,7 @@ class TestTiming(unittest.TestCase):
 
         ref = 0
         ref -= time.time()
-        time.sleep(0.1)
+        time.sleep(SLEEP)
         timer.stop()
         ref += time.time()
         cumul_stop1 = timer.toc(None)
@@ -132,12 +133,12 @@ class TestTiming(unittest.TestCase):
                 RuntimeError,
                 'Stopping a TicTocTimer that was already stopped'):
             timer.stop()
-        time.sleep(0.1)
+        time.sleep(SLEEP)
         cumul_stop2 = timer.toc(None)
         self.assertEqual(cumul_stop1, cumul_stop2)
         timer.start()
         ref -= time.time()
-        time.sleep(0.1)
+        time.sleep(SLEEP)
 
         # Note: pypy on GHA frequently has timing differences of >0.05s
         # for the following tests

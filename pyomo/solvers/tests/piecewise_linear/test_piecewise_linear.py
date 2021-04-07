@@ -12,7 +12,7 @@ import os
 from os.path import dirname, abspath, join
 thisDir = dirname( abspath(__file__) )
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.opt
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args

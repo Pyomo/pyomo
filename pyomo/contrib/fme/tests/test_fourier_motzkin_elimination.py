@@ -15,7 +15,7 @@ currdir = dirname(abspath(__file__))+os.sep
 # Need solvers/writers registered.
 import pyomo.environ as pyo
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import ComponentSet
 from pyomo.core import (Var, Constraint, Param, ConcreteModel, NonNegativeReals,
@@ -27,7 +27,7 @@ from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.opt import SolverFactory, check_available_solvers
 import pyomo.contrib.fme.fourier_motzkin_elimination
 
-from six import StringIO
+from io import StringIO
 import logging
 import random
 

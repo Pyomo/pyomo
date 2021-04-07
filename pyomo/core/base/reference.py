@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyutilib.misc import flatten_tuple
 from pyomo.common import DeveloperError
 from pyomo.common.collections import (
     UserDict, OrderedDict, Mapping, MutableMapping,
@@ -22,11 +21,11 @@ from pyomo.core.base.indexed_component import (
 from pyomo.core.base.indexed_component_slice import (
     IndexedComponent_slice, _IndexedComponent_slice_iter
 )
-
-import six
-from six import iteritems, itervalues, advance_iterator
+from pyomo.core.base.util import flatten_tuple
+from pyomo.common.deprecation import deprecated
 
 _NotSpecified = object()
+
 
 class _fill_in_known_wildcards(object):
     """Variant of "six.advance_iterator" that substitutes wildcard values
@@ -182,7 +181,7 @@ class _ReferenceDict(MutableMapping):
 
     def __contains__(self, key):
         try:
-            advance_iterator(self._get_iter(self._slice, key))
+            next(self._get_iter(self._slice, key))
             # This calls IC_slice_iter.__next__, which calls
             # _fill_in_known_wildcards.
             return True
@@ -207,7 +206,7 @@ class _ReferenceDict(MutableMapping):
         try:
             # This calls IC_slice_iter.__next__, which calls
             # _fill_in_known_wildcards.
-            return advance_iterator(
+            return next(
                 self._get_iter(self._slice, key, get_if_not_present=True)
             )
         except SliceEllipsisLookupError:
@@ -248,7 +247,7 @@ class _ReferenceDict(MutableMapping):
             raise DeveloperError(
                 "Unexpected slice _call_stack operation: %s" % op)
         try:
-            advance_iterator(self._get_iter(tmp, key, get_if_not_present=True))
+            next(self._get_iter(tmp, key, get_if_not_present=True))
         except StopIteration:
             pass
 
@@ -265,7 +264,7 @@ class _ReferenceDict(MutableMapping):
             assert len(tmp._call_stack) == 1
             _iter = self._get_iter(tmp, key)
             try:
-                advance_iterator(_iter)
+                next(_iter)
                 del _iter._iter_stack[0].component[_iter.get_last_index()]
                 return
             except StopIteration:
@@ -280,7 +279,7 @@ class _ReferenceDict(MutableMapping):
             raise DeveloperError(
                 "Unexpected slice _call_stack operation: %s" % op)
         try:
-            advance_iterator(self._get_iter(tmp, key))
+            next(self._get_iter(tmp, key))
         except StopIteration:
             pass
 
@@ -292,7 +291,7 @@ class _ReferenceDict(MutableMapping):
         # is very slow (linear time).
         return sum(1 for i in self._slice)
 
-    def iteritems(self):
+    def items(self):
         """Return the wildcard, value tuples for this ReferenceDict
 
         This method is necessary because the default implementation
@@ -307,7 +306,7 @@ class _ReferenceDict(MutableMapping):
         """
         return self._slice.wildcard_items()
 
-    def itervalues(self):
+    def values(self):
         """Return the values for this ReferenceDict
 
         This method is necessary because the default implementation
@@ -322,6 +321,16 @@ class _ReferenceDict(MutableMapping):
         """
         return iter(self._slice)
 
+    @deprecated('The iteritems method is deprecated. Use dict.items().',
+                version='TBD')
+    def iteritems(self):
+        return self.items()
+
+    @deprecated('The itervalues method is deprecated. Use dict.values().',
+                version='TBD')
+    def itervalues(self):
+        return self.values()
+
     def _get_iter(self, _slice, key, get_if_not_present=False):
         # Construct a slice iter with `_fill_in_known_wildcards`
         # as `advance_iter`. This reuses all the logic from the slice
@@ -335,10 +344,6 @@ class _ReferenceDict(MutableMapping):
             _fill_in_known_wildcards(flatten_tuple(key),
                                      get_if_not_present=get_if_not_present)
         )
-
-if six.PY3:
-    _ReferenceDict.items = _ReferenceDict.iteritems
-    _ReferenceDict.values = _ReferenceDict.itervalues
 
 
 class _ReferenceDict_mapping(UserDict):
@@ -370,7 +375,7 @@ class _ReferenceSet(collections_Set):
 
     def __contains__(self, key):
         try:
-            advance_iterator(self._get_iter(self._slice, key))
+            next(self._get_iter(self._slice, key))
             return True
         except SliceEllipsisLookupError:
             if type(key) is tuple and len(key) == 1:
@@ -490,7 +495,7 @@ def _identify_wildcard_sets(iter_stack, index):
         if len(index[i]) != len(level):
             return None
         # if any wildcard "subset" differs in position or set.
-        if any(index[i].get(j,None) is not _set for j,_set in iteritems(level)):
+        if any(index[i].get(j,None) is not _set for j,_set in level.items()):
             return None
         # These checks seem to intentionally preclude
         #     m.b1[:].v and m.b2[1,:].v
@@ -617,12 +622,12 @@ def Reference(reference, ctype=_NotSpecified):
         index = None
     elif isinstance(reference, Mapping):
         _data = _ReferenceDict_mapping(dict(reference))
-        _iter = itervalues(_data)
+        _iter = _data.values()
         slice_idx = None
         index = SetOf(_data)
     elif isinstance(reference, Sequence):
         _data = _ReferenceDict_mapping(OrderedDict(enumerate(reference)))
-        _iter = itervalues(_data)
+        _iter = _data.values()
         slice_idx = None
         index = OrderedSetOf(_data)
     else:
@@ -668,7 +673,7 @@ def Reference(reference, ctype=_NotSpecified):
         if not slice_idx:
             index = SetOf(_ReferenceSet(reference))
         else:
-            wildcards = sum((sorted(iteritems(lvl)) for lvl in slice_idx
+            wildcards = sum((sorted(lvl.items()) for lvl in slice_idx
                              if lvl is not None), [])
             # Wildcards is a list of (coordinate, set) tuples.  Coordinate
             # is that within the subsets list, and set is a wildcard set.

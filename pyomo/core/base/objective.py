@@ -36,8 +36,6 @@ from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.set import Set
 from pyomo.core.base import minimize, maximize
 
-from six import iteritems
-
 logger = logging.getLogger('pyomo.core')
 
 _rule_returned_none_error = """Objective '%s': rule returned None.
@@ -402,7 +400,7 @@ class Objective(ActiveIndexedComponent):
              ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active)
              ],
-            iteritems(self._data),
+            self._data.items(),
             ( "Active","Sense","Expression"),
             lambda k, v: [ v.active,
                            ("minimize" if (v.sense == minimize) else "maximize"),
@@ -426,7 +424,7 @@ class Objective(ActiveIndexedComponent):
 
         ostream.write("\n")
         tabular_writer( ostream, prefix+tab,
-                        ((k,v) for k,v in iteritems(self._data) if v.active),
+                        ((k,v) for k,v in self._data.items() if v.active),
                         ( "Active","Value" ),
                         lambda k, v: [ v.active, value(v), ] )
 

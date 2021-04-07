@@ -13,7 +13,7 @@
 
 import pickle
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import Var, Block, ConcreteModel, RangeSet, Set
 from pyomo.core.base.block import _BlockData

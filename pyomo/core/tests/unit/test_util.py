@@ -10,13 +10,13 @@
 
 import pickle
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common import DeveloperError
 from pyomo.core.base.util import (
     Initializer, ConstantInitializer, ItemInitializer, ScalarCallInitializer,
     IndexedCallInitializer, CountedCallInitializer, CountedCallGenerator,
-    disable_methods,
+    disable_methods, flatten_tuple
 )
 from pyomo.environ import (
     ConcreteModel, Var,
@@ -59,7 +59,7 @@ class TestDisableMethods(unittest.TestCase):
         self.assertIs(type(x), _abstract_simple)
         self.assertIsInstance(x, _simple)
         with self.assertRaisesRegexp(
-                RuntimeError, "Cannot access a on _abstract_simple "
+                RuntimeError, "Cannot access 'a' on _abstract_simple "
                 "'foo' before it has been constructed"):
             x.a()
         with self.assertRaisesRegexp(
@@ -68,11 +68,11 @@ class TestDisableMethods(unittest.TestCase):
             x.b()
         self.assertEqual(x.c(), 'c')
         with self.assertRaisesRegexp(
-                RuntimeError, "Cannot access property d on _abstract_simple "
+                RuntimeError, "Cannot access property 'd' on _abstract_simple "
                 "'foo' before it has been constructed"):
             x.d
         with self.assertRaisesRegexp(
-                RuntimeError, "Cannot set property d on _abstract_simple "
+                RuntimeError, "Cannot set property 'd' on _abstract_simple "
                 "'foo' before it has been constructed"):
             x.d = 1
         with self.assertRaisesRegexp(
@@ -90,7 +90,7 @@ class TestDisableMethods(unittest.TestCase):
                 TypeError, "f\(\) takes "):
             x.f(1,2,3)
         with self.assertRaisesRegexp(
-                RuntimeError, "Cannot access f on _abstract_simple "
+                RuntimeError, "Cannot access 'f' on _abstract_simple "
                 "'foo' before it has been constructed"):
             x.f(1,2)
 
@@ -125,6 +125,14 @@ def _init_indexed(m, *args):
     return i
 
 class Test_Initializer(unittest.TestCase):
+    def test_flattener(self):
+        tup = (1, 0, (0, 1), (2, 3))
+        self.assertEqual((1, 0, 0, 1, 2, 3), flatten_tuple(tup))
+        li = [0]
+        self.assertEqual((0,), flatten_tuple(li))
+        ex = [(1, 0), [2, 3]]
+        self.assertEqual((1, 0, 2, 3), flatten_tuple(ex))
+
     def test_constant(self):
         m = ConcreteModel()
         a = Initializer(5)

@@ -15,8 +15,8 @@ from pyomo.opt import SolverFactory, TerminationCondition
 from pyomo.solvers.plugins.solvers.GAMS import (
     GAMSShell, GAMSDirect, gdxcc_available
 )
-import pyutilib.th as unittest
-from pyutilib.misc import capture_output
+import pyomo.common.unittest as unittest
+from pyomo.common.tee import capture_output
 import os, shutil
 from tempfile import mkdtemp
 

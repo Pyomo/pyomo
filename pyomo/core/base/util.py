@@ -13,33 +13,39 @@
 #
 import functools
 import inspect
-import six
 
-from six import iteritems, iterkeys
-from six.moves import xrange
-
-if six.PY2:
-    getargspec = inspect.getargspec
-    from collections import Sequence as collections_Sequence
-    from collections import Mapping as collections_Mapping
-else:
-    # For our needs, getfullargspec is a drop-in replacement for
-    # getargspec (which was removed in Python 3.x)
-    getargspec = inspect.getfullargspec
-    from collections.abc import Sequence as collections_Sequence
-    from collections.abc import Mapping as collections_Mapping
-
+from collections.abc import Sequence
+from collections.abc import Mapping
 
 from pyomo.common import DeveloperError
 from pyomo.core.expr.numvalue import (
     native_types,
 )
+from pyomo.core.base.indexed_component import normalize_index
+
 
 def is_functor(obj):
     """
     Returns true iff obj.__call__ is defined.
     """
     return inspect.isfunction(obj) or hasattr(obj,'__call__')
+
+
+def flatten_tuple(x):
+    """
+    This wraps around normalize_index. It flattens a nested sequence into 
+    a single tuple and always returns a tuple, even for single
+    element inputs.
+    
+    Returns
+    -------
+    tuple
+
+    """
+    x = normalize_index(x)
+    if isinstance(x, tuple):
+        return x
+    return (x,)
 
 
 #
@@ -53,54 +59,57 @@ def is_functor(obj):
 # environment (which would require some thought when managing any
 # potential name collisions)
 #
+_disabled_error = (
+    "Cannot %s %s '%s' before it has been constructed (initialized): "
+    "'%s' is an attribute on an Abstract component and cannot be "
+    "accessed until the component has been fully constructed (converted "
+    "to a Concrete component) using AbstractModel.create_instance() or "
+    "%s.construct()."
+)
+
 def _disable_method(fcn, msg=None):
     _name = fcn.__name__
     if msg is None:
-        msg = 'access %s on' % (_name,)
+        msg = "access '%s' on" % (_name,)
 
     # functools.wraps doesn't preserve the function signature until
     # Python 3.4, and even then, does not preserve it accurately (e.g.,
-    # calling with the incorreect number of arguments does not generate
+    # calling with the incorrect number of arguments does not generate
     # an error).  For backwards compatability with Python 2.x, we will
     # create a temporary (local) function using exec that matches the
     # function signature passed in and raises an exception
-    if six.PY2:
-        args = str(inspect.formatargspec(*getargspec(fcn)))
-    else:
-        args = str(inspect.signature(fcn))
+    args = str(inspect.signature(fcn))
     assert args == '(self)' or args.startswith('(self,')
 
     # lambda comes through with a function name "<lambda>".  We will
     # use exec here to create a function (in a private namespace)
     # that will have the correct name.
-    _env = {}
+    _env = {'_msg': msg, '_name': _name}
     _funcdef = """def %s%s:
-        raise RuntimeError(
-            "Cannot %s %%s '%%s' before it has been constructed (initialized)."
-            %% (type(self).__name__, self.name))
-""" % (_name, args, msg,)
+        raise RuntimeError("%s" %% (_msg, type(self).__name__,
+            self.name, _name, self.name))
+""" % (_name, args, _disabled_error)
     exec(_funcdef, _env)
     return functools.wraps(fcn)(_env[_name])
 
 
 def _disable_property(fcn, msg=None):
+    _name = fcn.fget.__name__
     if msg is None:
-        _gmsg = 'access property %s on' % (fcn.fget.__name__,)
+        _gmsg = "access property '%s' on" % (_name,)
     else:
         _gmsg = msg
     def getter(self, *args, **kwds):
-        raise RuntimeError(
-            "Cannot %s %s '%s' before it has been constructed (initialized)."
-            % (_gmsg, type(self).__name__, self.name))
+        raise RuntimeError(_disabled_error % (
+            _gmsg, type(self).__name__, self.name, _name, self.name))
 
     if msg is None:
-        _smsg = 'set property %s on' % (fcn.fget.__name__,)
+        _smsg = "set property '%s' on" % (_name,)
     else:
         _smsg = msg
     def setter(self, *args, **kwds):
-        raise RuntimeError(
-            "Cannot %s %s '%s' before it has been constructed (initialized)."
-            % (_smsg, type(self).__name__, self.name))
+        raise RuntimeError(_disabled_error % (
+            _smsg, type(self).__name__, self.name, _name, self.name))
 
     return property(fget=getter, fset=setter, doc=fcn.__doc__)
 
@@ -173,7 +182,7 @@ def Initializer(init,
         # accepted rules that took only the parent block (even for
         # indexed components).  We will preserve that functionality
         # here.
-        _args = getargspec(init)
+        _args = inspect.getfullargspec(init)
         _nargs = len(_args.args)
         if inspect.ismethod(init) and init.__self__ is not None:
             # Ignore 'self' for bound instance methods and 'cls' for
@@ -183,10 +192,10 @@ def Initializer(init,
             return ScalarCallInitializer(init)
         else:
             return IndexedCallInitializer(init)
-    elif isinstance(init, collections_Mapping):
+    elif isinstance(init, Mapping):
         return ItemInitializer(init)
-    elif isinstance(init, collections_Sequence) \
-            and not isinstance(init, six.string_types):
+    elif isinstance(init, Sequence) \
+            and not isinstance(init, str):
         if treat_sequences_as_mappings:
             return ItemInitializer(init)
         else:
@@ -204,7 +213,7 @@ def Initializer(init,
         # generator into a tuple and then store it as a constant.
         return ConstantInitializer(tuple(init))
     elif type(init) is functools.partial:
-        _args = getargspec(init.func)
+        _args = inspect.getfullargspec(init.func)
         if len(_args.args) - len(init.args) == 1 and _args.varargs is None:
             return ScalarCallInitializer(init)
         else:
@@ -230,7 +239,7 @@ class InitializerBase(object):
         return {k:getattr(self,k) for k in self.__slots__}
 
     def __setstate__(self, state):
-        for key, val in iteritems(state):
+        for key, val in state.items():
             object.__setattr__(self, key, val)
 
     def constant(self):
@@ -281,9 +290,9 @@ class ItemInitializer(InitializerBase):
 
     def indices(self):
         try:
-            return iterkeys(self._dict)
+            return self._dict.keys()
         except AttributeError:
-            return xrange(len(self._dict))
+            return range(len(self._dict))
 
 
 class IndexedCallInitializer(InitializerBase):
@@ -398,7 +407,7 @@ class CountedCallInitializer(InitializerBase):
 
         # Note that this code will only be called once, and only if
         # the object is not a scalar.
-        _args = getargspec(self._fcn)
+        _args = inspect.getfullargspec(self._fcn)
         _nargs = len(_args.args)
         if inspect.ismethod(self._fcn) and self._fcn.__self__ is not None:
             _nargs -= 1

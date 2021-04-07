@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.misc
 import pyomo.common.plugin
 import pyomo.common
 from pyomo.core.base import IPyomoPresolveAction
@@ -47,7 +46,7 @@ def simple_preprocessor(data, model=None):
     ranks = []
     for item in actions:
         ranks.append(action_rank[item])
-    index = pyutilib.misc.sort_index(ranks)
+    index = list(idx for idx, item in sorted(enumerate(ranks), key=lambda item: item[1]))
     sorted=[]
     for i in index:
         sorted.append( actions[i] )

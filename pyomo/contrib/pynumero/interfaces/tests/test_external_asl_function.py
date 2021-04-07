@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 #
 import os
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np, numpy_available, scipy_available)
 if not (numpy_available and scipy_available):

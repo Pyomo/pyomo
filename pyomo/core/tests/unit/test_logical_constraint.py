@@ -1,4 +1,4 @@
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import AbstractModel, BooleanVar, ConcreteModel, LogicalConstraint, TransformationFactory
 from pyomo.gdp import Disjunction, GDP_Error

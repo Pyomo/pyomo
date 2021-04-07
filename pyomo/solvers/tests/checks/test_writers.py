@@ -18,7 +18,7 @@ try:
 except:
     new_available=False
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.testcases import test_scenarios
@@ -117,6 +117,15 @@ def create_test_method(model,
             os.remove(save_filename)
         except OSError:
             pass
+
+    # 03/23/2021: IDAES-ext added CBC 2.10.4 to their official release
+    #             This is causing failures in this test.
+    #             Manually turning off CBC tests until a solution can be found.
+    #             - mrmundt
+    if solver == 'cbc':
+        def skipping_test(self):
+            self.skipTest('SKIP: cbc currently does not work.')
+        return skipping_test
 
     # Skip this test if the status is 'skip'
     if test_case.status == 'skip':

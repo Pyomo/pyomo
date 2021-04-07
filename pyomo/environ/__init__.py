@@ -31,7 +31,6 @@ _packages = [
     'pyomo.duality',
     'pyomo.checker',
     'pyomo.repn',
-    'pyomo.pysp',
     'pyomo.neos',
     'pyomo.solvers',
     'pyomo.gdp',
@@ -48,6 +47,7 @@ _packages = [
 # packages are optional and/or under development.
 #
 _optional_packages = {
+    'pyomo.contrib.appsi',
     'pyomo.contrib.example',
     'pyomo.contrib.fme',
     'pyomo.contrib.gdpbb',

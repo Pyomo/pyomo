@@ -19,7 +19,6 @@ that works with problems derived from AslNLP as long as those
 classes return numpy ndarray objects for the vectors and coo_matrix
 objects for the matrices (e.g., AmplNLP and PyomoNLP)
 """
-import six
 import sys
 import logging
 import os
@@ -39,6 +38,7 @@ ipopt, ipopt_available = attempt_import(
 # imports here so that the solver can be registered even when numpy is
 # not available.
 pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
+pyomo_grey_box = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_grey_box_nlp')[0]
 egb = attempt_import('pyomo.contrib.pynumero.interfaces.external_grey_box')[0]
 
 from pyomo.common.config import ConfigBlock, ConfigValue
@@ -102,8 +102,7 @@ _ipopt_term_cond = {
     'Internal_Error': TerminationCondition.internalSolverError,
 }
 
-@six.add_metaclass(abc.ABCMeta)
-class CyIpoptProblemInterface(object):
+class CyIpoptProblemInterface(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def x_init(self):
         """Return the initial values for x as a numpy ndarray
@@ -213,7 +212,7 @@ class CyIpoptProblemInterface(object):
 
 
 class CyIpoptNLP(CyIpoptProblemInterface):
-    def __init__(self, nlp):
+    def __init__(self, nlp, intermediate_callback=None):
         """This class provides a CyIpoptProblemInterface for use
         with the CyIpoptSolver class that can take in an NLP
         as long as it provides vectors as numpy ndarrays and
@@ -222,6 +221,8 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         and the CyIpoptSolver
         """
         self._nlp = nlp
+        self._intermediate_callback = intermediate_callback
+
         x = nlp.init_primals()
         y = nlp.init_duals()
         if np.any(np.isnan(y)):
@@ -336,7 +337,11 @@ class CyIpoptNLP(CyIpoptProblemInterface):
             alpha_pr,
             ls_trials
     ):
-        pass
+        if self._intermediate_callback is not None:
+            return self._intermediate_callback(self._nlp, alg_mod, iter_count, obj_value,
+                                               inf_pr, inf_du, mu, d_norm, regularization_size,
+                                               alpha_du, alpha_pr, ls_trials)
+        return True
 
 
 def _redirect_stdout():
@@ -448,8 +453,18 @@ class PyomoCyIpoptSolver(object):
         domain=bool,
         description="Store the final solution into the original Pyomo model",
     ))
+    CONFIG.declare("return_nlp", ConfigValue(
+        default=False,
+        domain=bool,
+        description="Return the results object and the underlying nlp"
+                    " NLP object from the solve call.",
+    ))
     CONFIG.declare("options", ConfigBlock(implicit=True))
-
+    CONFIG.declare("intermediate_callback", ConfigValue(
+        default=None,
+        description="Set the function that will be called each"
+                    " iteration."
+    ))
 
     def __init__(self, **kwds):
         """Create an instance of the CyIpoptSolver. You must
@@ -485,10 +500,12 @@ class PyomoCyIpoptSolver(object):
         grey_box_blocks = list(model.component_data_objects(
             egb.ExternalGreyBoxBlock, active=True))
         if grey_box_blocks:
-            nlp = pyomo_nlp.PyomoGreyBoxNLP(model)
+            # nlp = pyomo_nlp.PyomoGreyBoxNLP(model)
+            nlp = pyomo_grey_box.PyomoNLPWithGreyBoxBlocks(model)
         else:
             nlp = pyomo_nlp.PyomoNLP(model)
-        problem = CyIpoptNLP(nlp)
+
+        problem = CyIpoptNLP(nlp, intermediate_callback=config.intermediate_callback)
 
         xl = problem.x_lb()
         xu = problem.x_ub()
@@ -586,6 +603,10 @@ class PyomoCyIpoptSolver(object):
         results.solver.termination_condition = _ipopt_term_cond[status_enum]
         results.solver.status = TerminationCondition.to_solver_status(
             results.solver.termination_condition)
+
+        if config.return_nlp:
+            return results, nlp
+
         return results
 
     #

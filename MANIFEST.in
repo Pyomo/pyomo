@@ -1,0 +1,4 @@
+include README.md
+include LICENSE.txt
+include pyomo/contrib/mcpp/*.cpp
+include pyomo/contrib/pynumero/src/*.cpp

@@ -22,7 +22,7 @@ _init_url="$URL$"
 # The VOTD zipbuilder will automatically change releaselevel to "VOTD
 # {hash}" and set the serial number to YYMMDDhhmm.  The serial number
 # should generally be left at 0, unless a downstream package is tracking
-# master and needs a hard reference to "suitably new" development.
+# main and needs a hard reference to "suitably new" development.
 major=6
 minor=0
 micro=0

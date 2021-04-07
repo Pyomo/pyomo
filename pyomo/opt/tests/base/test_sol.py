@@ -11,12 +11,13 @@
 # Unit Tests for pyomo.opt.base.OS
 #
 
+import json
 import os
 from os.path import abspath, dirname
 pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.tempfiles import TempfileManager
 import pyomo.opt
@@ -49,7 +50,10 @@ class Test(unittest.TestCase):
                 raise IOError("Reader 'sol' is not registered")
             soln = reader(currdir+"test4_sol.sol", suffixes=["dual"])
             soln.write(filename=currdir+"factory.txt", format='json')
-            self.assertMatchesJsonBaseline(currdir+"factory.txt", currdir+"test4_sol.jsn")
+            with open(currdir+"factory.txt", 'r') as out, \
+                open(currdir+"test4_sol.jsn", 'r') as txt:
+                self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                                 allow_second_superset=True)
 
     def test_infeasible1(self):
         with pyomo.opt.ReaderFactory("sol") as reader:

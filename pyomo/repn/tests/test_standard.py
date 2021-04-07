@@ -16,7 +16,7 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.core.expr.current import Expr_if
 from pyomo.core.expr import current as EXPR
