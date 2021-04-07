@@ -197,7 +197,7 @@ def filter(line):
                    'Importing module',
                    'Function',
                    'File', 
-                   '^',):
+                   'Restricted license',):
         if line.startswith(field):
             return True
     for field in ( 'Total CPU',
@@ -215,16 +215,22 @@ def filter(line):
     return False
 
 
-def filter_items(items):
+def filter_file_contents(lines):
     filtered = []
-    for i in items:
-        if not i:
+    for line in lines:
+        if not line or filter(line):
             continue
-        if not (i.startswith('/') or i.startswith(":\\", 1)):
-            try:
-                filtered.append(float(i))
-            except:
-                filtered.append(i)
+
+        items = line.strip().split()
+        for i in items:
+            if not i:
+                continue
+            if not (i.startswith('/') or i.startswith(":\\", 1)):
+                try:
+                    filtered.append(float(i))
+                except:
+                    filtered.append(i)
+
     return filtered
 
 
@@ -304,26 +310,13 @@ class TestBookExamples(unittest.TestCase):
             with open(out_file, 'r') as f1, open(base_file, 'r') as f2:
                 out_file_contents = f1.read()
                 base_file_contents = f2.read()
-                f1_contents = out_file_contents.strip().split('\n')
-                f2_contents = base_file_contents.strip().split('\n')
-                f1_filtered = []
-                f2_filtered = []
-                for item1, item2 in zip_longest(f1_contents, f2_contents):
-                    if not item1 and not item2:
-                        # Both empty lines
-                        continue
-                    elif not item1 or not item2:
-                        # Empty line in one file but not the other
-                        f1_filtered.append(item1)
-                        f2_filtered.append(item2)
-                        break
-                    if not filter(item1):
-                        items1 = item1.strip().split()
-                        items2 = item2.strip().split()
-                        f1_filtered.append(filter_items(items1))
-                        f2_filtered.append(filter_items(items2))
+                
+                # Filter files independently and then compare filtered contents
+                out_filtered = filter_file_contents(out_file_contents.strip().split('\n'))
+                base_filtered = filter_file_contents(base_file_contents.strip().split('\n'))
+
                 try:
-                    self.assertStructuredAlmostEqual(f2_filtered, f1_filtered,
+                    self.assertStructuredAlmostEqual(out_filtered, base_filtered,
                                                  abstol=1e-6,
                                                  allow_second_superset=False)
                 except AssertionError as m:
