@@ -22,7 +22,6 @@ import inspect
 import logging
 import os
 import platform
-from six import itervalues
 import importlib.util
 import sys
 
@@ -720,7 +719,7 @@ class PathManager(object):
         through the PATH.
 
         """
-        for _path in itervalues(self._pathTo):
+        for _path in self._pathTo.values():
             _path.rehash()
 
 #

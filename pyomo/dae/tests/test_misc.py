@@ -14,7 +14,7 @@ Unit Tests for pyomo.dae.misc
 import os
 from os.path import abspath, dirname
 
-from six import StringIO, iterkeys
+from io import StringIO
 
 import pyomo.common.unittest as unittest
 
@@ -484,7 +484,7 @@ class TestDaeMisc(unittest.TestCase):
 
         generate_finite_elements(model.t, 5)
 
-        missing_idx = set(model.blk._index) - set(iterkeys(model.blk._data))
+        missing_idx = set(model.blk._index) - set(model.blk._data.keys())
         model.blk._dae_missing_idx = missing_idx
 
         update_contset_indexed_component(model.blk, expansion_map)
@@ -537,7 +537,7 @@ class TestDaeMisc(unittest.TestCase):
 
         generate_finite_elements(model.t, 5)
 
-        missing_idx = set(model.blk._index) - set(iterkeys(model.blk._data))
+        missing_idx = set(model.blk._index) - set(model.blk._data.keys())
         model.blk._dae_missing_idx = missing_idx
 
         update_contset_indexed_component(model.blk, expansion_map)
@@ -592,7 +592,7 @@ class TestDaeMisc(unittest.TestCase):
 
         generate_finite_elements(model.t, 5)
 
-        missing_idx = set(model.blk._index) - set(iterkeys(model.blk._data))
+        missing_idx = set(model.blk._index) - set(model.blk._data.keys())
         model.blk._dae_missing_idx = missing_idx
 
         update_contset_indexed_component(model.blk, expansion_map)
@@ -647,7 +647,7 @@ class TestDaeMisc(unittest.TestCase):
 
         generate_finite_elements(model.t, 5)
 
-        missing_idx = set(model.blk._index) - set(iterkeys(model.blk._data))
+        missing_idx = set(model.blk._index) - set(model.blk._data.keys())
         model.blk._dae_missing_idx = missing_idx
 
         update_contset_indexed_component(model.blk, expansion_map)

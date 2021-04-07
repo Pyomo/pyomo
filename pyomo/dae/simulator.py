@@ -15,8 +15,6 @@ from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.expr.template_expr import IndexTemplate, _GetItemIndexer
 
-from six import iterkeys
-
 import logging
 
 __all__ = ('Simulator', )
@@ -622,7 +620,7 @@ class Simulator:
         # parameters
         algvars = []
 
-        for item in iterkeys(templatemap):
+        for item in templatemap.keys():
             if item.base.name in derivs:
                 # Make sure there are no DerivativeVars in the
                 # template map

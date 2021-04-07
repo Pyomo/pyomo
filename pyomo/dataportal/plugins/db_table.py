@@ -13,7 +13,6 @@ import re
 import sys
 import shutil
 from decimal import Decimal
-from six import iteritems
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.dataportal import TableData
@@ -233,7 +232,7 @@ class pyodbc_db_Table(db_Table):
                     config = ODBCConfig()
                     dsninfo = self.create_dsn_dict(connection, config)
                     connstr = []
-                    for k,v in iteritems(dsninfo):
+                    for k, v in dsninfo.items():
                         if ' ' in v and (v[0] != "{" or v[-1] != "}"):
                             connstr.append("%s={%s}" % (k.upper(),v))
                         else:
