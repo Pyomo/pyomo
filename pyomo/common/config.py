@@ -29,6 +29,7 @@ from textwrap import wrap
 import builtins
 
 from pyomo.common.deprecation import deprecated
+from pyomo.common.modeling import NoArgumentGiven
 
 logger = logging.getLogger('pyomo.common.config')
 
@@ -962,9 +963,10 @@ class ConfigBase(object):
             # of setting self.__dict__[key] = val.
             object.__setattr__(self, key, val)
 
-    def __call__(self, value=NoArgument, default=NoArgument, domain=NoArgument,
-                 description=NoArgument, doc=NoArgument, visibility=NoArgument,
-                 implicit=NoArgument, implicit_domain=NoArgument,
+    def __call__(self, value=NoArgumentGiven, default=NoArgumentGiven,
+                 domain=NoArgumentGiven,  description=NoArgumentGiven,
+                 doc=NoArgumentGiven, visibility=NoArgumentGiven,
+                 implicit=NoArgumentGiven, implicit_domain=NoArgumentGiven,
                  preserve_implicit=False):
         # We will pass through overriding arguments to the constructor.
         # This way if the constructor does special processing of any of
@@ -973,47 +975,35 @@ class ConfigBase(object):
         # of logic to be sure we only pass through appropriate
         # arguments.
         kwds = {}
-        kwds['description'] = ( self._description
-                                if description is ConfigBase.NoArgument else
-                                description )
-        kwds['doc'] = ( self._doc
-                        if doc is ConfigBase.NoArgument else
-                        doc )
-        kwds['visibility'] = ( self._visibility
-                               if visibility is ConfigBase.NoArgument else
-                               visibility )
+        fields = ('description', 'doc', 'visibility')
         if isinstance(self, ConfigDict):
-            kwds['implicit'] = ( self._implicit_declaration
-                                 if implicit is ConfigBase.NoArgument else
-                                 implicit )
-            kwds['implicit_domain'] = (
-                self._implicit_domain
-                if implicit_domain is ConfigBase.NoArgument else
-                implicit_domain )
-            if domain is not ConfigBase.NoArgument:
-                logger.warn("domain ignored by __call__(): "
-                            "class is a ConfigDict")
-            if default is not ConfigBase.NoArgument:
-                logger.warn("default ignored by __call__(): "
-                            "class is a ConfigDict")
+            fields += (('implicit', '_implicit_declaration'), 'implicit_domain')
+            assert domain is NoArgumentGiven
+            assert default is NoArgumentGiven
         else:
-            kwds['default'] = ( self.value()
-                                if default is ConfigBase.NoArgument else
-                                default )
-            kwds['domain'] = ( self._domain
-                               if domain is ConfigBase.NoArgument else
-                               domain )
-            if implicit is not ConfigBase.NoArgument:
-                logger.warn("implicit ignored by __call__(): "
-                            "class %s is not a ConfigDict" % (type(self),))
-            if implicit_domain is not ConfigBase.NoArgument:
-                logger.warn("implicit_domain ignored by __call__(): "
-                            "class %s is not a ConfigDict" % (type(self),))
+            fields += ('domain',)
+            kwds['default'] = (
+                self.value() if default is NoArgumentGiven else default
+            )
+            assert implicit is NoArgumentGiven
+            assert implicit_domain is NoArgumentGiven
+        for field in fields:
+            if type(field) is tuple:
+                field, attr = field
+            else:
+                attr = '_'+field
+            if locals()[field] is NoArgumentGiven:
+                kwds[field] = getattr(self, attr, NoArgumentGiven)
+            else:
+                kwds[field] = locals()[field]
 
-        # Copy over any other object-specific information (mostly Dict
-        # definitions)
+        # Initialize the new config object
         ans = self.__class__(**kwds)
-        if isinstance(self, ConfigDict):
+
+        if not isinstance(self, ConfigDict):
+            ans.reset()
+        else:
+            # Copy over any Dict definitions
             for k in self._decl_order:
                 if preserve_implicit or k in self._declared:
                     v = self._data[k]
@@ -1023,10 +1013,9 @@ class ConfigBase(object):
                         ans._declared.add(k)
                     _tmp._parent = ans
                     _tmp._name = v._name
-        else:
-            ans.reset()
+
         # ... and set the value, if appropriate
-        if value is not ConfigBase.NoArgument:
+        if value is not NoArgumentGiven:
             ans.set_value(value)
         return ans
 
@@ -1056,7 +1045,7 @@ class ConfigBase(object):
             return value
         if self._domain is not None:
             try:
-                if value is not ConfigBase.NoArgument:
+                if value is not NoArgumentGiven:
                     return self._domain(value)
                 else:
                     return self._domain()
@@ -1585,7 +1574,7 @@ class ConfigList(ConfigBase):
         else:
             return val
 
-    def get(self, key, default=ConfigBase.NoArgument):
+    def get(self, key, default=NoArgumentGiven):
         # Note: get() is borrowed from ConfigDict for cases where we
         # want the raw stored object (and to aviod the implicit
         # conversion of ConfigValue members to their stored data).
@@ -1593,14 +1582,11 @@ class ConfigList(ConfigBase):
             val = self._data[key]
             self._userAccessed = True
             return val
-        except:
-            pass
-        if default is ConfigBase.NoArgument:
-            return None
-        if self._domain is not None:
-            return self._domain(default)
-        else:
-            return ConfigValue(default)
+        except IndexError:
+            if default is NoArgumentGiven:
+                raise
+        # Note: self._domain is ALWAYS derived from ConfigBase
+        return self._domain(default)
 
     def __setitem__(self, key, val):
         # Note: this will fail if the element doesn't exist in _data.
@@ -1651,7 +1637,7 @@ class ConfigList(ConfigBase):
         for val in self.user_values():
             val._userSet = False
 
-    def append(self, value=ConfigBase.NoArgument):
+    def append(self, value=NoArgumentGiven):
         val = self._cast(value)
         if val is None:
             return
@@ -1664,7 +1650,7 @@ class ConfigList(ConfigBase):
 
     @deprecated("ConfigList.add() has been deprecated.  Use append()",
                 version='5.7.2')
-    def add(self, value=ConfigBase.NoArgument):
+    def add(self, value=NoArgumentGiven):
         "Append the specified value to the list, casting as necessary."
         return self.append(value)
 
@@ -1774,24 +1760,24 @@ class ConfigDict(ConfigBase):
         else:
             return self._data[key]
 
-    def get(self, key, default=ConfigBase.NoArgument):
+    def get(self, key, default=NoArgumentGiven):
         self._userAccessed = True
         key = str(key)
         if key in self._data:
             return self._data[key]
-        if default is ConfigBase.NoArgument:
+        if default is NoArgumentGiven:
             return None
         if self._implicit_domain is not None:
             return self._implicit_domain(default)
         else:
             return ConfigValue(default)
 
-    def setdefault(self, key, default=ConfigBase.NoArgument):
+    def setdefault(self, key, default=NoArgumentGiven):
         self._userAccessed = True
         key = str(key)
         if key in self._data:
             return self._data[key]
-        if default is ConfigBase.NoArgument:
+        if default is NoArgumentGiven:
             return self.add(key, None)
         else:
             return self.add(key, default)
