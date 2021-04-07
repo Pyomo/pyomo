@@ -84,6 +84,8 @@ _cyipopt_status_enum = [
     'Not_Enough_Degrees_Of_Freedom', b'Problem has too few degrees of freedom.',
     'Invalid_Problem_Definition', b'Invalid problem definition.',
     'Invalid_Option', b'Invalid option encountered.',
+    'Invalid_Number_Detected', b'Algorithm received an invalid number (such as NaN or Inf) from the NLP; see also option check_derivatives_for_naninf.',
+    # Note that the concluding '.' was missing before cyipopt 1.0.3
     'Invalid_Number_Detected', b'Algorithm received an invalid number (such as NaN or Inf) from the NLP; see also option check_derivatives_for_naninf',
     'Unrecoverable_Exception', b'Some uncaught Ipopt exception encountered.',
     'NonIpopt_Exception_Thrown', b'Unknown Exception caught in Ipopt',
