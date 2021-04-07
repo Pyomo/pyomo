@@ -40,7 +40,7 @@ def yaml_load(arg):
 
 from pyomo.common.config import (
     ConfigDict, ConfigValue,
-    ConfigList, MarkImmutable,
+    ConfigList, MarkImmutable, ImmutableConfigValue,
     PositiveInt, NegativeInt, NonPositiveInt, NonNegativeInt,
     PositiveFloat, NegativeFloat, NonPositiveFloat, NonNegativeFloat,
     In, Path, PathList, ConfigEnum
@@ -466,26 +466,56 @@ class TestImmutableConfigValue(unittest.TestCase):
 
         config.declare('c', ConfigValue(default=-1, domain=int))
         locker = MarkImmutable(config.get('a'), config.get('b'))
+        # Making a copy of an immutable config value results in a
+        # *mutable* config value
         config2 = config({'c': -2})
         self.assertEqual(config2.a, 6)
         self.assertEqual(config2.b, 5)
         self.assertEqual(config2.c, -2)
-        with self.assertRaisesRegex(RuntimeError, 'is currently immutable'):
-            config3 = config({'a': 1})
-        locker.release_lock()
+        self.assertIs(type(config2.get('a')), ConfigValue)
+        self.assertIs(type(config2.get('b')), ConfigValue)
+        self.assertIs(type(config2.get('c')), ConfigValue)
+        # you can even update the original, as long as you don't change
+        # the immutable value:
+        config.set_value(config2)
+        self.assertEqual(config.a, 6)
+        self.assertEqual(config.b, 5)
+        self.assertEqual(config.c, -2)
+        self.assertIs(type(config.get('a')), ImmutableConfigValue)
+        self.assertIs(type(config.get('b')), ImmutableConfigValue)
+        self.assertIs(type(config.get('c')), ConfigValue)
+
+        # Making a copy of an immutable config value results in a
+        # *mutable* config value, even if you change the value of
+        # something that is currently immutable
         config3 = config({'a': 1})
         self.assertEqual(config3.a, 1)
+        self.assertEqual(config3.b, 5)
+        self.assertEqual(config3.c, -2)
+        self.assertIs(type(config3.get('a')), ConfigValue)
+        self.assertIs(type(config3.get('b')), ConfigValue)
+        self.assertIs(type(config3.get('c')), ConfigValue)
+        # but attempting to update the original will generate an
+        # exception
+        with self.assertRaisesRegex(RuntimeError, ' is currently immutable'):
+            config.set_value(config3)
+        locker.release_lock()
 
         # test reset
         config.reset()
         self.assertEqual(config.a, 1)
         self.assertEqual(config.b, 1)
-        with MarkImmutable(config.get('a'), config.get('b')):
+        with locker:
+            # Reset is OK as long as the values are all currently at
+            # their defaults
             config.reset()
             self.assertEqual(config.a, 1)
             self.assertEqual(config.b, 1)
+
         config.a = 2
-        with MarkImmutable(config.get('a'), config.get('b')):
+        with locker:
+            # But if reset would change an immutable value you will get
+            # an exception
             with self.assertRaisesRegex(RuntimeError, 'is currently immutable'):
                 config.reset()
 

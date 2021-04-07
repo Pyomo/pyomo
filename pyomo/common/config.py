@@ -1449,21 +1449,16 @@ class ConfigValue(ConfigBase):
 
 
 class ImmutableConfigValue(ConfigValue):
+    def __new__(self, *args, **kwds):
+        # ImmutableConfigValue objects are never directly created, and
+        # any attempt to copy one will generate a mutable ConfigValue
+        # object
+        return ConfigValue(*args, **kwds)
+
     def set_value(self, value):
         if self._cast(value) != self._data:
             raise RuntimeError(str(self) + ' is currently immutable')
         super(ImmutableConfigValue, self).set_value(value)
-
-    def reset(self):
-        try:
-            super(ImmutableConfigValue, self).set_value(self._default)
-        except:
-            if hasattr(self._default, '__call__'):
-                super(ImmutableConfigValue, self).set_value(self._default())
-            else:
-                raise
-        self._userAccessed = False
-        self._userSet = False
 
 
 class MarkImmutable(object):
@@ -1488,13 +1483,18 @@ class MarkImmutable(object):
     >>> locker.release_lock()
     """
     def __init__(self, *args):
-        self._locked = list()
+        self._targets = args
+        self._locked = []
+        self.lock()
+
+    def lock(self):
         try:
-            for arg in args:
-                if type(arg) is not ConfigValue:
-                    raise ValueError('Only ConfigValue instances can be marked immutable.')
-                arg.__class__ = ImmutableConfigValue
-                self._locked.append(arg)
+            for cfg in self._targets:
+                if type(cfg) is not ConfigValue:
+                    raise ValueError(
+                        'Only ConfigValue instances can be marked immutable.')
+                cfg.__class__ = ImmutableConfigValue
+                self._locked.append(cfg)
         except:
             self.release_lock()
             raise
@@ -1502,9 +1502,11 @@ class MarkImmutable(object):
     def release_lock(self):
         for arg in self._locked:
             arg.__class__ = ConfigValue
-        self._locked = list()
+        self._locked = []
 
     def __enter__(self):
+        if not self._locked:
+            self.lock()
         return self
 
     def __exit__(self, t, v, tb):
