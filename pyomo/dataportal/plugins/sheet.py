@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 import os.path
-import six
 from pyutilib.excel.spreadsheet import ExcelSpreadsheet, Interfaces
 
 from pyomo.dataportal import TableData
@@ -61,7 +60,7 @@ class SheetTable(TableData):
         if self.sheet is None:
             return
         tmp = self.sheet.get_range(self.options.range, raw=True)
-        if type(tmp) is float or type(tmp) in six.integer_types:
+        if type(tmp) is float or type(tmp) is int:
             if not self.options.param is None:
                 self._info = ["param"] + list(self.options.param) + [":=",tmp]
             elif len(self.options.symbol_map) == 1:
