@@ -1544,61 +1544,70 @@ endBlock{}
     def test_block_keys(self):
         ref = ['scenario file', 'merlion', 'detection']
 
-        # list of keys
+        # keys iterator
         keys = self.config['scenario'].keys()
         # lists are independent
-        self.assertFalse(keys is self.config['scenario'].keys())
+        self.assertIsNot(keys, self.config['scenario'].keys())
         self.assertIsNot(type(keys), list)
         self.assertEqual(list(keys), ref)
 
-        # keys iterator
-        keyiter = self.config['scenario'].iterkeys()
+        # (deprecated) python 2 iterator
+        out = StringIO()
+        with LoggingIntercept(out):
+            keyiter = self.config['scenario'].iterkeys()
+            # iterators are independent
+            self.assertIsNot(keyiter, self.config['scenario'].iterkeys())
+        self.assertIn("The iterkeys method is deprecated", out.getvalue())
         self.assertIsNot(type(keyiter), list)
         self.assertEqual(list(keyiter), ref)
-        # iterators are independent
-        self.assertFalse(keyiter is self.config['scenario'].iterkeys())
 
         # default iterator
         keyiter = self.config['scenario'].__iter__()
         self.assertIsNot(type(keyiter), list)
         self.assertEqual(list(keyiter), ref)
         # iterators are independent
-        self.assertFalse(keyiter is self.config['scenario'].__iter__())
+        self.assertIsNot(keyiter, self.config['scenario'].__iter__())
 
     def test_block_values(self):
         ref = ['Net3.tsg', False, [1, 2, 3]]
 
-        # list of values
+        # values iterator
         values = self.config['scenario'].values()
         self.assertIsNot(type(values), list)
         self.assertEqual(list(values), ref)
         # lists are independent
-        self.assertFalse(values is self.config['scenario'].values())
+        self.assertIsNot(values, self.config['scenario'].values())
 
-        # values iterator
-        valueiter = self.config['scenario'].itervalues()
+        # (deprecated) python 2 iterator
+        out = StringIO()
+        with LoggingIntercept(out):
+            valueiter = self.config['scenario'].itervalues()
+            # iterators are independent
+            self.assertIsNot(valueiter, self.config['scenario'].itervalues())
+        self.assertIn("The itervalues method is deprecated", out.getvalue())
         self.assertIsNot(type(valueiter), list)
         self.assertEqual(list(valueiter), ref)
-        # iterators are independent
-        self.assertFalse(valueiter is self.config['scenario'].itervalues())
 
     def test_block_items(self):
         ref = [('scenario file', 'Net3.tsg'), ('merlion', False),
                ('detection', [1, 2, 3])]
 
-        # list of items
+        # items iterator
         items = self.config['scenario'].items()
         self.assertIsNot(type(items), list)
         self.assertEqual(list(items), ref)
         # lists are independent
-        self.assertFalse(items is self.config['scenario'].items())
+        self.assertIsNot(items, self.config['scenario'].items())
 
-        # items iterator
-        itemiter = self.config['scenario'].iteritems()
+        # (deprecated) python 2 iterator
+        out = StringIO()
+        with LoggingIntercept(out):
+            itemiter = self.config['scenario'].iteritems()
+            # iterators are independent
+            self.assertIsNot(itemiter, self.config['scenario'].iteritems())
+        self.assertIn("The iteritems method is deprecated", out.getvalue())
         self.assertIsNot(type(itemiter), list)
         self.assertEqual(list(itemiter), ref)
-        # iterators are independent
-        self.assertFalse(itemiter is self.config['scenario'].iteritems())
 
     def test_value(self):
         #print(self.config.value())
@@ -1657,8 +1666,12 @@ endBlock{}
         X = ConfigDict(implicit=True)
         X.config = ConfigList()
         self.assertEqual(_display(X, 'userdata'), "")
-        self.assertIs(X.config.get(0), None )
+        with self.assertRaisesRegex(IndexError, 'list index out of range'):
+            self.assertIs(X.config.get(0), None)
         self.assertIs(X.config.get(0,None).value(), None )
+        val = X.config.get(0, 1)
+        self.assertIsInstance(val, ConfigValue)
+        self.assertEqual(val.value(), 1)
         self.assertRaisesRegexp(
             IndexError, '.*out of range', X.config.__getitem__, 0 )
         # get() shouldn't change the userdata flag...
@@ -1678,7 +1691,8 @@ endBlock{}
         # get() shouldn't change the userdata flag...
         self.assertEqual(_display(X, 'userdata'), "")
 
-        self.assertIs(X.config.get(1), None )
+        with self.assertRaisesRegex(IndexError, 'list index out of range'):
+            self.assertIs(X.config.get(1), None)
         self.assertRaisesRegexp(
             IndexError, '.*out of range', X.config.__getitem__, 1)
 
@@ -1713,10 +1727,10 @@ endBlock{}
         config['implicit_2'] = 5
         self.assertEqual(3, len(config))
         self.assertEqual(['implicit_1', 'formal', 'implicit_2'],
-                         list(config.iterkeys()))
+                         list(config.keys()))
         config.reset()
         self.assertEqual(1, len(config))
-        self.assertEqual(['formal'], list(config.iterkeys()))
+        self.assertEqual(['formal'], list(config.keys()))
 
     def test_argparse_help(self):
         parser = argparse.ArgumentParser(prog='tester')
