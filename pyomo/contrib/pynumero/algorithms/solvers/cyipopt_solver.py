@@ -109,6 +109,8 @@ _cyipopt_status_enum = [
                                 b"NaN or Inf) from the NLP; see also option "
                                 b"check_derivatives_for_naninf"),
     "Unrecoverable_Exception", b"Some uncaught Ipopt exception encountered.",
+    "NonIpopt_Exception_Thrown", b"Unknown Exception caught in Ipopt.",
+    # Note that the concluding "." was missing before cyipopt 1.0.3
     "NonIpopt_Exception_Thrown", b"Unknown Exception caught in Ipopt",
     "Insufficient_Memory", b"Not enough memory.",
     "Internal_Error", (b"An unknown internal error occurred. Please contact "
