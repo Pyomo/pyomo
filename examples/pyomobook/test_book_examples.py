@@ -212,7 +212,7 @@ def filter(line):
                    'with format cpxlp',
                    'usermodel = <module',
                    'execution time=',
-                   'Solver results file:'
+                   'Solver results file:',
                    'TokenServer'):
         if field in line:
             return True
