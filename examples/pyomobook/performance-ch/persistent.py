@@ -19,6 +19,8 @@ opt.set_instance(m)
 results = opt.solve()
 # @:solve
 
+print('Objective after solve 1: ', pyo.value(m.obj))
+
 # @add_constraint:
 m.c2 = pyo.Constraint(expr=m.y >= m.x)
 opt.add_constraint(m.c2)
@@ -28,11 +30,15 @@ opt.add_constraint(m.c2)
 results = opt.solve()
 # @:solve2
 
+print('Objective after solve 2: ', pyo.value(m.obj))
+
 # @remove_constraint:
 opt.remove_constraint(m.c2)
 del m.c2
 results = opt.solve()
 # @:remove_constraint
+
+print('Objective after solve 3: ', pyo.value(m.obj))
 
 # @extra_constraint:
 m = pyo.ConcreteModel()
@@ -95,6 +101,8 @@ opt.set_instance(m)
 results = opt.solve(save_results=False)
 # @:save_results
 
+print('Objective after solve 4: ', pyo.value(m.obj))
+
 # @load_from:
 results = opt.solve(save_results=False, load_solutions=False)
 if results.solver.termination_condition == pyo.TerminationCondition.optimal:
@@ -115,3 +123,5 @@ results = opt.solve(save_results=False, load_solutions=False)
 if results.solver.termination_condition == pyo.TerminationCondition.optimal:
     opt.load_vars([m.x])
 # @:load_vars2
+
+print('Objective after solve 5: ', pyo.value(m.obj))
