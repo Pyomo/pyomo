@@ -31,6 +31,9 @@ from pyomo.common.dependencies import (
 
 def _cyipopt_importer():
     import cyipopt
+    # cyipopt before version 1.0.3 called the problem class "Problem"
+    if not hasattr(cyipopt, 'Problem'):
+        cyipopt.Problem = cyipopt.problem
     # cyipopt before version 1.0.3 put the __version__ flag in the ipopt
     # module (which was deprecated starting in 1.0.3)
     if not hasattr(cyipopt, '__version__'):
@@ -434,7 +437,7 @@ class CyIpoptSolver(object):
         nx = len(xstart)
         ng = len(gl)
 
-        cyipopt_solver = cyipopt.problem(
+        cyipopt_solver = cyipopt.Problem(
             n=nx,
             m=ng,
             problem_obj=self._problem,
@@ -553,7 +556,7 @@ class PyomoCyIpoptSolver(object):
         nx = len(xl)
         ng = len(gl)
 
-        cyipopt_solver = cyipopt.problem(
+        cyipopt_solver = cyipopt.Problem(
             n=nx,
             m=ng,
             problem_obj=problem,
