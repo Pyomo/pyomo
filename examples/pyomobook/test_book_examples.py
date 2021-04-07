@@ -197,7 +197,8 @@ def filter(line):
                    'Importing module',
                    'Function',
                    'File', 
-                   'Restricted license',):
+                   'Restricted license',
+                   '    ^'):
         if line.startswith(field):
             return True
     for field in ( 'Total CPU',
