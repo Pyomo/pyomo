@@ -28,12 +28,29 @@ from pyomo.common.dependencies import (
     attempt_import,
     numpy as np, numpy_available,
 )
-ipopt, ipopt_available = attempt_import(
-    'ipopt',
-    error_message='cyipopt solver relies on the ipopt module from cyipopt. '
-    'See https://github.com/matthias-k/cyipopt.git for cyipopt '
-    'installation instructions.'
+
+def _cyipopt_importer():
+    import cyipopt
+    # cyipopt before version 1.0.3 put the __version__ flag in the ipopt
+    # module (which was deprecated starting in 1.0.3)
+    if not hasattr(cyipopt, '__version__'):
+        import ipopt
+        cyipopt.__version__ = ipopt.__version__
+    # Beginning in 1.0.3, STATUS_MESSAGES is in a separate
+    # ipopt_wrapper module
+    if not hasattr(cyipopt, 'STATUS_MESSAGES'):
+        import ipopt_wrapper
+        cyipopt.STATUS_MESSAGES = ipopt_wrapper.STATUS_MESSAGES
+    return cyipopt
+
+cyipopt, cyipopt_available = attempt_import(
+     'ipopt',
+     error_message='cyipopt solver relies on the ipopt module from cyipopt. '
+     'See https://github.com/matthias-k/cyipopt.git for cyipopt '
+     'installation instructions.',
+     importer=_cyipopt_importer,
 )
+
 # Because pynumero.interfaces requires numpy, we will leverage deferred
 # imports here so that the solver can be registered even when numpy is
 # not available.
@@ -396,7 +413,7 @@ class CyIpoptSolver(object):
         nx = len(xstart)
         ng = len(gl)
 
-        cyipopt_solver = ipopt.problem(
+        cyipopt_solver = cyipopt.problem(
             n=nx,
             m=ng,
             problem_obj=self._problem,
@@ -480,13 +497,13 @@ class PyomoCyIpoptSolver(object):
         self._model = model
 
     def available(self, exception_flag=False):
-        return numpy_available and ipopt_available
+        return numpy_available and cyipopt_available
 
     def license_is_valid(self):
         return True
 
     def version(self):
-        return tuple(int(_) for _ in ipopt.__version__.split('.'))
+        return tuple(int(_) for _ in cyipopt.__version__.split('.'))
 
     def solve(self, model, **kwds):
         config = self.config(kwds, preserve_implicit=True)
@@ -515,7 +532,7 @@ class PyomoCyIpoptSolver(object):
         nx = len(xl)
         ng = len(gl)
 
-        cyipopt_solver = ipopt.problem(
+        cyipopt_solver = cyipopt.problem(
             n=nx,
             m=ng,
             problem_obj=problem,
