@@ -43,7 +43,6 @@ from pyomo.contrib.sensitivity_toolbox.sens import (
         get_dfds_dcds,
         line_num
         )
-import pyomo.contrib.parmest.parmest as parmest
 import numpy as np
 import pandas as pd
 import pyomo.contrib.sensitivity_toolbox.examples.parameter as param_example
