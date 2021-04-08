@@ -873,20 +873,40 @@ flushing:
     detection: []
 """)
 
-    def test_display_userdata_block(self):
+    def test_display_userdata_add_block(self):
         self.config.add("foo", ConfigValue(0, int, None, None))
         self.config.add("bar", ConfigDict())
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
-        self.assertEqual(test, "")
+        self.assertEqual(test, """foo: 0
+bar:
+""")
 
-    def test_display_userdata_block_nonDefault(self):
+    def test_display_userdata_add_block_nonDefault(self):
         self.config.add("foo", ConfigValue(0, int, None, None))
         self.config.add("bar", ConfigDict(implicit=True)) \
                    .add("baz", ConfigDict())
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
-        self.assertEqual(test, "bar:\n")
+        self.assertEqual(test, """foo: 0
+bar:
+  baz:
+""")
+
+    def test_display_userdata_declare_block(self):
+        self.config.declare("foo", ConfigValue(0, int, None, None))
+        self.config.declare("bar", ConfigDict())
+        test = _display(self.config, 'userdata')
+        sys.stdout.write(test)
+        self.assertEqual(test, "")
+
+    def test_display_userdata_declare_block_nonDefault(self):
+        self.config.declare("foo", ConfigValue(0, int, None, None))
+        self.config.declare("bar", ConfigDict(implicit=True)) \
+                   .add("baz", ConfigDict())
+        test = _display(self.config, 'userdata')
+        sys.stdout.write(test)
+        self.assertEqual(test, "bar:\n  baz:\n")
 
     def test_unusedUserValues_default(self):
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
@@ -903,16 +923,14 @@ flushing:
         self.config['scenarios'].append()
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios
-scenarios[0]""")
+        self.assertEqual(test, """scenarios[0]""")
 
     def test_unusedUserValues_list_nonDefault(self):
         self.config['scenarios'].append()
         self.config['scenarios'].append({'merlion': True, 'detection': []})
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios
-scenarios[0]
+        self.assertEqual(test, """scenarios[0]
 scenarios[1]
 scenarios[1].merlion
 scenarios[1].detection""")
@@ -938,18 +956,33 @@ scenarios[1].detection""")
         self.assertEqual(test, """scenarios[0]
 scenarios[1].detection""")
 
-    def test_unusedUserValues_topBlock(self):
+    def test_unusedUserValues_add_topBlock(self):
         self.config.add('foo', ConfigDict())
+        test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
+        sys.stdout.write(test)
+        self.assertEqual(test, "foo")
+        test = '\n'.join(x.name(True) for x in
+                         self.config.foo.unused_user_values())
+        sys.stdout.write(test)
+        self.assertEqual(test, "foo")
+
+    def test_unusedUserValues_add_subBlock(self):
+        self.config['scenario'].add('foo', ConfigDict())
+        test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
+        sys.stdout.write(test)
+        self.assertEqual(test, """scenario.foo""")
+
+    def test_unusedUserValues_declare_topBlock(self):
+        self.config.declare('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
         sys.stdout.write(test)
         self.assertEqual(test, "")
 
-    def test_unusedUserValues_subBlock(self):
-        self.config['scenario'].add('foo', ConfigDict())
+    def test_unusedUserValues_declare_subBlock(self):
+        self.config['scenario'].declare('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenario
-scenario.foo""")
+        self.assertEqual(test, "")
 
     def test_UserValues_default(self):
         test = '\n'.join(x.name(True) for x in self.config.user_values())
@@ -966,16 +999,14 @@ scenario.foo""")
         self.config['scenarios'].append()
         test = '\n'.join(x.name(True) for x in self.config.user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios
-scenarios[0]""")
+        self.assertEqual(test, """scenarios[0]""")
 
     def test_UserValues_list_nonDefault(self):
         self.config['scenarios'].append()
         self.config['scenarios'].append({'merlion': True, 'detection': []})
         test = '\n'.join(x.name(True) for x in self.config.user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios
-scenarios[0]
+        self.assertEqual(test, """scenarios[0]
 scenarios[1]
 scenarios[1].merlion
 scenarios[1].detection""")
@@ -987,8 +1018,7 @@ scenarios[1].detection""")
             pass
         test = '\n'.join(x.name(True) for x in self.config.user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios
-scenarios[0]
+        self.assertEqual(test, """scenarios[0]
 scenarios[1]
 scenarios[1].merlion
 scenarios[1].detection""")
@@ -999,24 +1029,37 @@ scenarios[1].detection""")
         self.config['scenarios'][1]['merlion']
         test = '\n'.join(x.name(True) for x in self.config.user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios
-scenarios[0]
+        self.assertEqual(test, """scenarios[0]
 scenarios[1]
 scenarios[1].merlion
 scenarios[1].detection""")
 
-    def test_UserValues_topBlock(self):
+    def test_UserValues_add_topBlock(self):
         self.config.add('foo', ConfigDict())
+        test = '\n'.join(x.name(True) for x in self.config.user_values())
+        sys.stdout.write(test)
+        self.assertEqual(test, "foo")
+        test = '\n'.join(x.name(True) for x in self.config.foo.user_values())
+        sys.stdout.write(test)
+        self.assertEqual(test, "foo")
+
+    def test_UserValues_add_subBlock(self):
+        self.config['scenario'].add('foo', ConfigDict())
+        test = '\n'.join(x.name(True) for x in self.config.user_values())
+        sys.stdout.write(test)
+        self.assertEqual(test, """scenario.foo""")
+
+    def test_UserValues_declare_topBlock(self):
+        self.config.declare('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.user_values())
         sys.stdout.write(test)
         self.assertEqual(test, "")
 
-    def test_UserValues_subBlock(self):
-        self.config['scenario'].add('foo', ConfigDict())
+    def test_UserValues_declare_subBlock(self):
+        self.config['scenario'].declare('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenario
-scenario.foo""")
+        self.assertEqual(test, "")
 
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplayAndValue_default(self):
@@ -1057,21 +1100,38 @@ scenario.foo""")
                                           'detection': []}]})
 
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
-    def test_parseDisplay_userdata_block(self):
+    def test_parseDisplay_userdata_add_block(self):
         self.config.add("foo", ConfigValue(0, int, None, None))
         self.config.add("bar", ConfigDict())
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
-        self.assertEqual(yaml_load(test), None)
+        self.assertEqual(yaml_load(test), {'foo': 0, 'bar': None})
 
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
-    def test_parseDisplay_userdata_block_nonDefault(self):
+    def test_parseDisplay_userdata_add_block_nonDefault(self):
         self.config.add("foo", ConfigValue(0, int, None, None))
         self.config.add("bar", ConfigDict(implicit=True)) \
                    .add("baz", ConfigDict())
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
-        self.assertEqual(yaml_load(test), {'bar': None})
+        self.assertEqual(yaml_load(test), {'bar': {'baz': None}, foo: 0})
+
+    @unittest.skipIf(not yaml_available, "Test requires PyYAML")
+    def test_parseDisplay_userdata_add_block(self):
+        self.config.declare("foo", ConfigValue(0, int, None, None))
+        self.config.declare("bar", ConfigDict())
+        test = _display(self.config, 'userdata')
+        sys.stdout.write(test)
+        self.assertEqual(yaml_load(test), None)
+
+    @unittest.skipIf(not yaml_available, "Test requires PyYAML")
+    def test_parseDisplay_userdata_add_block_nonDefault(self):
+        self.config.declare("foo", ConfigValue(0, int, None, None))
+        self.config.declare("bar", ConfigDict(implicit=True)) \
+                   .add("baz", ConfigDict())
+        test = _display(self.config, 'userdata')
+        sys.stdout.write(test)
+        self.assertEqual(yaml_load(test), {'bar': {'baz': None}})
 
     def test_value_ConfigValue(self):
         val = self.config['flushing']['flush nodes']['rate']
@@ -1724,7 +1784,7 @@ endBlock{}
 
     def test_list_get(self):
         X = ConfigDict(implicit=True)
-        X.config = ConfigList()
+        X.declare('config', ConfigList())
         self.assertEqual(_display(X, 'userdata'), "")
         with self.assertRaisesRegex(IndexError, 'list index out of range'):
             self.assertIs(X.config.get(0), None)
@@ -1738,7 +1798,7 @@ endBlock{}
         self.assertEqual(_display(X, 'userdata'), "")
 
         X = ConfigDict(implicit=True)
-        X.config = ConfigList([42], int)
+        X.declare('config', ConfigList([42], int))
         self.assertEqual(_display(X, 'userdata'), "")
         val = X.config.get(0)
         self.assertEqual(val.value(), 42)
@@ -1759,20 +1819,36 @@ endBlock{}
         # this should ONLY change the userSet flag on the item (and not
         # the list)
         X.config.get(0).set_value(20)
-        self.assertEqual(_display(X, 'userdata'), "  - 20\n")
+        self.assertEqual(_display(X, 'userdata'), "config:\n  - 20\n")
+        self.assertEqual([_.name(True) for _ in X.user_values()],
+                         ["config[0]"])
 
         # this should ONLY change the userSet flag on the item (and not
         # the list)
         X = ConfigDict(implicit=True)
-        X.config = ConfigList([42], int)
+        X.declare('config', ConfigList([42], int))
         X.config[0] = 20
-        self.assertEqual(_display(X, 'userdata'), "  - 20\n")
+        self.assertEqual(_display(X, 'userdata'), "config:\n  - 20\n")
+        self.assertEqual([_.name(True) for _ in X.user_values()],
+                         ["config[0]"])
 
-        # This should change both...
+        # this should ONLY change the userSet flag on the item (and not
+        # the list)
         X = ConfigDict(implicit=True)
-        X.config = ConfigList([42], int)
+        X.declare('config', ConfigList([42], int))
         X.config.append(20)
         self.assertEqual(_display(X, 'userdata'), "config:\n  - 20\n")
+        self.assertEqual([_.name(True) for _ in X.user_values()],
+                         ["config[1]"])
+
+        # This should change both... because the [42] was "declared" as
+        # the default for the List, it will *not* be a user-set value
+        X = ConfigDict(implicit=True)
+        X.add('config', ConfigList([42], int))
+        X.config.append(20)
+        self.assertEqual(_display(X, 'userdata'), "config:\n  - 20\n")
+        self.assertEqual([_.name(True) for _ in X.user_values()],
+                         ["config", "config[1]"])
 
     def test_implicit_entries(self):
         config = ConfigDict()

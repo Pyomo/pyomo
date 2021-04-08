@@ -1645,7 +1645,9 @@ class ConfigList(ConfigBase):
         self._data[-1]._parent = self
         self._data[-1]._name = '[%s]' % (len(self._data) - 1,)
         self._data[-1]._userSet = True
-        self._userSet = True
+        # Adding something to the container should not change the
+        # userSet on the container (see #352 for justification)
+        #self._userSet = True
 
     @deprecated("ConfigList.add() has been deprecated.  Use append()",
                 version='5.7.2')
@@ -1920,13 +1922,16 @@ class ConfigDict(ConfigBase):
                 ans = self._add(name, ConfigValue(config))
         else:
             ans = self._add(name, self._implicit_domain(config))
-        self._userSet = True
+        ans._userSet = True
+        # Adding something to the container should not change the
+        # userSet on the container (see #352 for justification)
+        #self._userSet = True
         return ans
 
     def value(self, accessValue=True):
         if accessValue:
             self._userAccessed = True
-        return { cfg._name: cfg.value(accessValue) 
+        return { cfg._name: cfg.value(accessValue)
                  for cfg in map(self._data.__getitem__, self._decl_order) }
 
     def set_value(self, value, skip_implicit=False):
