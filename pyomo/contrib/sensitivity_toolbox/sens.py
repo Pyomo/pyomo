@@ -105,6 +105,47 @@ def _generate_component_items(components):
 
 def sensitivity_calculation(method, instance, paramList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None):
+    """This function accepts a Pyomo ConcreteModel, a list of parameters, along
+    with their corresponding perterbation list. The model is then converted
+    into the design structure required to call sipopt or k_aug to get an 
+    approximation perturbed solution with updated bounds on the decision variable. 
+    
+    Parameters
+    ----------
+    method: string
+        'sipopt' or 'k_aug'
+    instance: ConcreteModel
+        pyomo model object
+    paramSubList: list
+        list of mutable parameters
+    perturbList: list
+        list of perturbed parameter values
+    cloneModel: bool, optional
+        indicator to clone the model. If set to False, the original
+        model will be altered
+    tee: bool, optional
+        indicator to stream IPOPT solution
+    keepfiles: bool, optional
+        preserve solver interface files
+    solver_options: dict, optional
+        Provides options to the solver (also the name of an attribute)
+    
+    Returns
+    -------
+    model: ConcreteModel
+        if method == 'sipopt', 
+        the model modified for use with sipopt.  The returned model has
+        three :class:`Suffix` members defined:
+        - ``model.sol_state_1``: the approximated results at the
+          perturbation point
+        - ``model.sol_state_1_z_L``: the updated lower bound
+        - ``model.sol_state_1_z_U``: the updated upper bound
+        
+        if method == 'k_sug', 
+        the model modified for use with k_aug. The model includes 
+        approximate solution with the new parameter values.    
+    """
+    
     sens = SensitivityInterface(instance, clone_model=cloneModel)
     sens.setup_sensitivity(paramList)
 
