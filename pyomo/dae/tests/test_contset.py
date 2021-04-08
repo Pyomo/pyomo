@@ -20,7 +20,7 @@ import pyomo.common.unittest as unittest
 from pyomo.environ import ConcreteModel, AbstractModel, Set
 from pyomo.dae import ContinuousSet
 from pyomo.common.log import LoggingIntercept
-from six import StringIO
+from io import StringIO
 
 currdir = dirname(abspath(__file__)) + os.sep
 

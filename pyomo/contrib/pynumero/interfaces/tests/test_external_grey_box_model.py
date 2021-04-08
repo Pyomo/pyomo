@@ -24,7 +24,7 @@ if not AmplInterface.available():
         "Pynumero needs the ASL extension to run cyipopt tests")
 
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    ipopt, ipopt_available,
+    cyipopt_available,
 )
 
 from ..external_grey_box import ExternalGreyBoxModel, ExternalGreyBoxBlock
@@ -1217,7 +1217,8 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
             with self.assertRaises(AttributeError):
                 h = pyomo_nlp.evaluate_hessian_lag()
 
-    @unittest.skipIf(not ipopt_available, "CyIpopt needed to run tests with solve")
+    @unittest.skipIf(not cyipopt_available,
+                     "CyIpopt needed to run tests with solve")
     def test_external_greybox_solve(self):
         self._test_external_greybox_solve(ex_models.PressureDropTwoEqualitiesTwoOutputs(), False)
         self._test_external_greybox_solve(ex_models.PressureDropTwoEqualitiesTwoOutputsWithHessian(), True)
@@ -1423,7 +1424,8 @@ class TestPyomoGreyBoxNLP(unittest.TestCase):
         comparison_cs = np.asarray([3.1, 3.2, 4.1, 4.2, 1, 2.2], dtype=np.float64)
         check_vectors_specific_order(self, cs, c_order, comparison_cs, comparison_c_order)
 
-    @unittest.skipIf(not ipopt_available, "CyIpopt needed to run tests with solve")
+    @unittest.skipIf(not cyipopt_available,
+                     "CyIpopt needed to run tests with solve")
     def test_external_greybox_solve_scaling(self):
         m = pyo.ConcreteModel()
         m.mu = pyo.Var(bounds=(0,None), initialize=1)

@@ -24,8 +24,6 @@ from pyomo.dataportal.factory import DataManagerFactory, UnknownDataManager
 from pyomo.core.base.set import UnknownSetDimen
 from pyomo.core.base.util import flatten_tuple
 
-from six.moves import xrange
-
 numlist = {bool, int, float}
 
 logger = logging.getLogger('pyomo.core')
@@ -224,7 +222,7 @@ def _process_set(cmd, _model, _data):
         i += 1
         while i<len(cmd):
             ndx=cmd[i]
-            for j in xrange(0,len(ndx1)):
+            for j in range(0,len(ndx1)):
                 if cmd[i+j+1] == "+":
                     #print("DATA %s %s" % (ndx1[j], cmd[i]))
                     _data[cmd[1]][None].append((ndx1[j], cmd[i]))
