@@ -2181,7 +2181,7 @@ c: 1.0
         cfg.declare('list', ConfigList(domain=str))
 
         out = StringIO()
-        with LoggingIntercept(out):
+        with LoggingIntercept(out, module=""):
             cfg.set_value(
                 {'int': 100, 'in': 3, 'anon': 2.5, 'list': [2, 'a']}
             )
@@ -2203,7 +2203,7 @@ c: 1.0
             )
         self.assertEqual(out.getvalue(), "")
 
-        with LoggingIntercept(out):
+        with LoggingIntercept(out, module=""):
             cfg2['anon'] = 5.5
         self.assertIn(
             "ConfigValue 'anon' was pickled with an unpicklable domain",
