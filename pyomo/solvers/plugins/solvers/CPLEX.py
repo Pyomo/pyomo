@@ -216,6 +216,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             mst_file.write("<variables>\n")
             for var in instance.component_data_objects(Var):
                 if (var.value is not None) and \
+                   (not var.is_continuous()) and \
                    (id(var) in byObject):
                     name = byObject[id(var)]
                     mst_file.write("<variable index=\"%d\" "
