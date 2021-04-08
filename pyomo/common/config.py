@@ -1752,21 +1752,22 @@ class ConfigDict(ConfigBase):
             x._parent = self
 
     def __dir__(self):
+        # Note that dir() returns the *normalized* names (i.e., no spaces)
         return sorted(super(ConfigDict, self).__dir__() + list(self._data))
 
     def __getitem__(self, key):
         self._userAccessed = True
-        key = str(key)
-        if isinstance(self._data[key], ConfigValue):
-            return self._data[key].value()
+        _key = str(key).replace(' ','_')
+        if isinstance(self._data[_key], ConfigValue):
+            return self._data[_key].value()
         else:
-            return self._data[key]
+            return self._data[_key]
 
     def get(self, key, default=NoArgumentGiven):
         self._userAccessed = True
-        key = str(key)
-        if key in self._data:
-            return self._data[key]
+        _key = str(key).replace(' ','_')
+        if _key in self._data:
+            return self._data[_key]
         if default is NoArgumentGiven:
             return None
         if self._implicit_domain is not None:
@@ -1776,39 +1777,40 @@ class ConfigDict(ConfigBase):
 
     def setdefault(self, key, default=NoArgumentGiven):
         self._userAccessed = True
-        key = str(key)
-        if key in self._data:
-            return self._data[key]
+        _key = str(key).replace(' ','_')
+        if _key in self._data:
+            return self._data[_key]
         if default is NoArgumentGiven:
             return self.add(key, None)
         else:
             return self.add(key, default)
 
     def __setitem__(self, key, val):
-        key = str(key)
-        if key not in self._data:
+        _key = str(key).replace(' ','_')
+        if _key not in self._data:
             self.add(key, val)
         else:
-            self._data[key].set_value(val)
+            self._data[_key].set_value(val)
         #self._userAccessed = True
 
     def __delitem__(self, key):
         # Note that this will produce a KeyError if the key is not valid
         # for this ConfigDict.
-        del self._data[key]
+        _key = str(key).replace(' ','_')
+        del self._data[_key]
         # Clean up the other data structures
-        self._decl_order.remove(key)
-        self._declared.discard(key)
+        self._decl_order.remove(_key)
+        self._declared.discard(_key)
 
     def __contains__(self, key):
-        key = str(key)
-        return key in self._data
+        _key = str(key).replace(' ','_')
+        return _key in self._data
 
     def __len__(self):
         return self._decl_order.__len__()
 
     def __iter__(self):
-        return self._decl_order.__iter__()
+        return (self._data[key]._name for key in self._decl_order)
 
     def __getattr__(self, name):
         # Note: __getattr__ is only called after all "usual" attribute
@@ -1816,23 +1818,19 @@ class ConfigDict(ConfigBase):
         # know that key is not a __slot__ or a method, etc...
         #if name in ConfigDict._all_slots:
         #    return super(ConfigDict,self).__getattribute__(name)
-        if name not in self._data:
-            _name = name.replace('_', ' ')
-            if _name not in self._data:
-                raise AttributeError("Unknown attribute '%s'" % name)
-            name = _name
-        return ConfigDict.__getitem__(self, name)
+        _name = name.replace(' ', '_')
+        if _name not in self._data:
+            raise AttributeError("Unknown attribute '%s'" % name)
+        return ConfigDict.__getitem__(self, _name)
 
     def __setattr__(self, name, value):
         if name in ConfigDict._all_slots:
             super(ConfigDict, self).__setattr__(name, value)
         else:
-            if name not in self._data:
-                name = name.replace('_', ' ')
             ConfigDict.__setitem__(self, name, value)
 
     def keys(self):
-        return self._decl_order.__iter__()
+        return iter(self)
 
     def values(self):
         self._userAccessed = True
@@ -1842,7 +1840,7 @@ class ConfigDict(ConfigBase):
     def items(self):
         self._userAccessed = True
         for key in self._decl_order:
-            yield (key, self[key])
+            yield (self._data[key]._name, self[key])
 
     @deprecated('The iterkeys method is deprecated. Use dict.keys().',
                 version='TBD')
@@ -1861,12 +1859,13 @@ class ConfigDict(ConfigBase):
 
     def _add(self, name, config):
         name = str(name)
+        _name = name.replace(' ', '_')
         if config._parent is not None:
             raise ValueError(
                 "config '%s' is already assigned to ConfigDict '%s'; "
                 "cannot reassign to '%s'" %
                 (name, config._parent.name(True), self.name(True)))
-        if name in self._data:
+        if _name in self._data:
             raise ValueError(
                 "duplicate config '%s' defined for ConfigDict '%s'" %
                 (name, self.name(True)))
@@ -1874,15 +1873,16 @@ class ConfigDict(ConfigBase):
             raise ValueError(
                 "Illegal character in config '%s' for ConfigDict '%s': "
                 "'.[]' are not allowed." % (name, self.name(True)))
-        self._data[name] = config
-        self._decl_order.append(name)
+        self._data[_name] = config
+        self._decl_order.append(_name)
         config._parent = self
         config._name = name
         return config
 
     def declare(self, name, config):
+        _name = str(name).replace(' ', '_')
         ans = self._add(name, config)
-        self._declared.add(name)
+        self._declared.add(_name)
         return ans
 
     def declare_from(self, other, skip=None):
@@ -1897,7 +1897,7 @@ class ConfigDict(ConfigBase):
             if key in self:
                 raise ValueError("ConfigDict.declare_from passed a block "
                                  "with a duplicate field, '%s'" % (key,))
-            self.declare(key, other._data[key]())
+            self.declare(key, other.get(key)())
 
     def add(self, name, config):
         if not self._implicit_declaration:
@@ -1918,8 +1918,8 @@ class ConfigDict(ConfigBase):
     def value(self, accessValue=True):
         if accessValue:
             self._userAccessed = True
-        return dict((name, config.value(accessValue))
-                    for name, config in self._data.items())
+        return { cfg._name: cfg.value(accessValue) 
+                 for cfg in map(self._data.__getitem__, self._decl_order) }
 
     def set_value(self, value, skip_implicit=False):
         if value is None:
@@ -1933,26 +1933,22 @@ class ConfigDict(ConfigBase):
         _implicit = []
         _decl_map = {}
         for key in value:
-            _key = str(key)
+            _key = str(key).replace(' ', '_')
             if _key in self._data:
                 # str(key) may not be key... store the mapping so that
                 # when we later iterate over the _decl_order, we can map
                 # the local keys back to the incoming value keys.
                 _decl_map[_key] = key
             else:
-                _key = _key.replace('_', ' ')
-                if _key in self._data:
-                    _decl_map[str(_key)] = key
+                if skip_implicit:
+                    pass
+                elif self._implicit_declaration:
+                    _implicit.append(key)
                 else:
-                    if skip_implicit:
-                        pass
-                    elif self._implicit_declaration:
-                        _implicit.append(key)
-                    else:
-                        raise ValueError(
-                            "key '%s' not defined for ConfigDict '%s' and "
-                            "implicit (undefined) keys are not allowed" %
-                            (key, self.name(True)))
+                    raise ValueError(
+                        "key '%s' not defined for ConfigDict '%s' and "
+                        "implicit (undefined) keys are not allowed" %
+                        (key, self.name(True)))
 
         # If the set_value fails part-way through the new values, we
         # want to restore a deterministic state.  That is, either
@@ -1999,8 +1995,9 @@ class ConfigDict(ConfigBase):
             if level is not None:
                 level += 1
         for key in self._decl_order:
-            for v in self._data[key]._data_collector(level, key + ': ',
-                                                     visibility, docMode):
+            cfg = self._data[key]
+            for v in cfg._data_collector(
+                    level, cfg._name + ': ', visibility, docMode):
                 yield v
 
 # Backwards compatibility: ConfigDict was originally named ConfigBlock.
