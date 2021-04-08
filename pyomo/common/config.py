@@ -1198,18 +1198,15 @@ class ConfigBase(object):
         if content_filter not in ConfigDict.content_filters:
             raise ValueError("unknown content filter '%s'; valid values are %s"
                              % (content_filter, ConfigDict.content_filters))
-
         _blocks = []
         if ostream is None:
             ostream=sys.stdout
 
         for lvl, prefix, value, obj in self._data_collector(0, "", visibility):
-            if content_filter == 'userdata' and not obj._userSet:
-                continue
-
             _str = _value2string(prefix, value, obj)
             _blocks[lvl:] = [' ' * indent_spacing * lvl + _str + "\n",]
-
+            if content_filter == 'userdata' and not obj._userSet:
+                continue
             for i, v in enumerate(_blocks):
                 if v is not None:
                     ostream.write(v)
