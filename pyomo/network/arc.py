@@ -18,7 +18,6 @@ from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
-from six import iteritems
 from weakref import ref as weakref_ref
 import logging, sys
 
@@ -157,7 +156,7 @@ class _ArcData(ActiveComponentData):
         if len(vals):
             raise ValueError(
                 "set_value passed unrecognized keywords in val:\n\t" +
-                "\n\t".join("%s = %s" % (k, v) for k, v in iteritems(vals)))
+                "\n\t".join("%s = %s" % (k, v) for k, v in vals.items()))
 
         if directed is not None:
             if source is None and destination is None:
@@ -351,7 +350,7 @@ class Arc(ActiveIndexedComponent):
             [("Size", len(self)),
              ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active)],
-            iteritems(self),
+            self.items(),
             ("Ports", "Directed", "Active"),
             lambda k, v: ["(%s, %s)" % v.ports if v.ports is not None else None,
                           v.directed,
