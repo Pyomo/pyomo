@@ -20,7 +20,7 @@ import glob
 import os
 import shutil
 import sys
-from six import StringIO
+from io import StringIO
 
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__)) + os.sep

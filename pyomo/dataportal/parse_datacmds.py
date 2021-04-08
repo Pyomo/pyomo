@@ -18,7 +18,6 @@ import os.path
 import ply.lex as lex
 import ply.yacc as yacc
 from inspect import getfile, currentframe
-from six.moves import xrange
 
 from pyomo.common.fileutils import this_file
 from pyomo.core.base.util import flatten_tuple
@@ -255,13 +254,13 @@ def p_statement(p):
     if stmt == 'set':
         if p[2][-1] == '[':
             # Just turn off the flatten_list and see what happens
-            p[0] = ['set', p[2][:-1], '['] + list(flatten_tuple([p[i] for i in xrange(3,len(p)-1)]))
+            p[0] = ['set', p[2][:-1], '['] + list(flatten_tuple([p[i] for i in range(3,len(p)-1)]))
         else:
-            p[0] = list(flatten_tuple([p[i] for i in xrange(1,len(p)-1)]))
+            p[0] = list(flatten_tuple([p[i] for i in range(1,len(p)-1)]))
     elif stmt == 'param':
-        p[0] = list(flatten_tuple([p[i] for i in xrange(1,len(p)-1)]))
+        p[0] = list(flatten_tuple([p[i] for i in range(1,len(p)-1)]))
     elif stmt == 'include':
-        p[0] = [p[i] for i in xrange(1,len(p)-1)]
+        p[0] = [p[i] for i in range(1,len(p)-1)]
     elif stmt == 'load':
         p[0] = [p[1]]+ p[2]
     elif stmt == 'store':
