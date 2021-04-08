@@ -23,7 +23,6 @@ import socket
 import base64
 import tempfile
 import logging
-import http.client
 
 from pyomo.common.dependencies import attempt_import
 
@@ -96,6 +95,7 @@ class kestrelAMPL(object):
             self.transport.close()
 
     def setup_connection(self):
+        import http.client
         # on *NIX, the proxy can show up either upper or lowercase.
         # Prefer lower case, and prefer HTTPS over HTTP if the
         # NEOS.scheme is https.
