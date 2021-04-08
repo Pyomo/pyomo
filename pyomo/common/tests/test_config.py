@@ -1334,11 +1334,41 @@ scenario.foo""")
         self.assertEqual(sorted(config.keys()), ['bar'])
         config.foo = 5
         self.assertEqual(sorted(config.keys()), ['bar', 'foo'])
+        self.assertEqual(sorted(config._declared), ['bar'])
         del config['foo']
         self.assertEqual(sorted(config.keys()), ['bar'])
+        self.assertEqual(sorted(config._declared), ['bar'])
         del config['bar']
         self.assertEqual(sorted(config.keys()), [])
+        self.assertEqual(sorted(config._declared), [])
 
+        with self.assertRaisesRegex(KeyError, "'get'"):
+            del config['get']
+        with self.assertRaisesRegex(KeyError, "'foo'"):
+            del config['foo']
+
+    def test_delattr(self):
+        config = ConfigDict(implicit=True)
+        config.declare('bar', ConfigValue())
+        self.assertEqual(sorted(config.keys()), ['bar'])
+        config.foo = 5
+        self.assertEqual(sorted(config.keys()), ['bar', 'foo'])
+        self.assertEqual(sorted(config._declared), ['bar'])
+        del config.foo
+        self.assertEqual(sorted(config._declared), ['bar'])
+        self.assertEqual(sorted(config.keys()), ['bar'])
+        del config.bar
+        self.assertEqual(sorted(config.keys()), [])
+        self.assertEqual(sorted(config._declared), [])
+
+        with self.assertRaisesRegex(
+                AttributeError,
+                "'ConfigDict' object attribute 'get' is read-only"):
+            del config.get
+        with self.assertRaisesRegex(
+                AttributeError,
+                "'ConfigDict' object has no attribute 'foo'"):
+            del config.foo
 
     def test_generate_custom_documentation(self):
         reference = \

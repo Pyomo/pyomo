@@ -1829,6 +1829,17 @@ class ConfigDict(ConfigBase):
         else:
             ConfigDict.__setitem__(self, name, value)
 
+    def __delattr__(self, name):
+        _key = str(name).replace(' ','_')
+        if _key in self._data:
+            del self[_key]
+        elif _key in dir(self):
+            raise AttributeError("'%s' object attribute '%s' is read-only" %
+                                 (type(self).__name__, name))
+        else:
+            raise AttributeError("'%s' object has no attribute '%s'" %
+                                 (type(self).__name__, name))
+
     def keys(self):
         return iter(self)
 
