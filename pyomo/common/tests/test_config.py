@@ -2170,39 +2170,43 @@ c: 1.0
         self.assertEqual(mod_copy._visibility, 0)
 
     def test_pickle(self):
+        def anon_domain(domain):
+            def cast(x):
+                return domain(x)
+            return cast
         cfg = ConfigDict()
         cfg.declare('int', ConfigValue(domain=int, default=10))
         cfg.declare('in', ConfigValue(domain=In([1,3,5]), default=1))
-        cfg.declare('lambda', ConfigValue(domain=lambda x: int(x), default=1))
+        cfg.declare('anon', ConfigValue(domain=anon_domain(int), default=1))
         cfg.declare('list', ConfigList(domain=str))
 
         out = StringIO()
         with LoggingIntercept(out):
             cfg.set_value(
-                {'int': 100, 'in': 3, 'lambda': 2.5, 'list': [2, 'a']}
+                {'int': 100, 'in': 3, 'anon': 2.5, 'list': [2, 'a']}
             )
             self.assertEqual(
                 cfg.value(),
-                {'int': 100, 'in': 3, 'lambda': 2, 'list': ['2', 'a']}
+                {'int': 100, 'in': 3, 'anon': 2, 'list': ['2', 'a']}
             )
 
             cfg2 = pickle.loads(pickle.dumps(cfg))
             self.assertEqual(
                 cfg2.value(),
-                {'int': 100, 'in': 3, 'lambda': 2, 'list': ['2', 'a']}
+                {'int': 100, 'in': 3, 'anon': 2, 'list': ['2', 'a']}
             )
 
             cfg2.list.append(10)
             self.assertEqual(
                 cfg2.value(),
-                {'int': 100, 'in': 3, 'lambda': 2, 'list': ['2', 'a', '10']}
+                {'int': 100, 'in': 3, 'anon': 2, 'list': ['2', 'a', '10']}
             )
         self.assertEqual(out.getvalue(), "")
 
         with LoggingIntercept(out):
-            cfg2['lambda'] = 5.5
+            cfg2['anon'] = 5.5
         self.assertIn(
-            "ConfigValue lambda was pickled with an unpicklable domain",
+            "ConfigValue 'anon' was pickled with an unpicklable domain",
             out.getvalue()
         )
 

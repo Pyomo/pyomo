@@ -865,7 +865,7 @@ class _UnpickleableDomain(object):
 
     def __call__(self, arg):
         logging.error(
-"""%s %s was pickled with an unpicklable domain.
+"""%s '%s' was pickled with an unpicklable domain.
     The domain was stripped and lost during the pickle process.  Setting
     new values on the restored object cannot be mapped into the correct
     domain.
