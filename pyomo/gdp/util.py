@@ -16,7 +16,6 @@ from pyomo.core.base.component import _ComponentBase
 
 from pyomo.core import Block, TraversalStrategy
 from pyomo.opt import TerminationCondition, SolverStatus
-from six import iterkeys
 from weakref import ref as weakref_ref
 import logging
 
@@ -252,7 +251,7 @@ def _warn_for_active_disjunction(disjunction, disjunct, NAME_BUFFER):
     assert disjunction.active
     problemdisj = disjunction
     if disjunction.is_indexed():
-        for i in sorted(iterkeys(disjunction)):
+        for i in sorted(disjunction.keys()):
             if disjunction[i].active:
                 # a _DisjunctionData is active, we will yell about
                 # it specifically.
@@ -275,7 +274,7 @@ def _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER):
     assert innerdisjunct.active
     problemdisj = innerdisjunct
     if innerdisjunct.is_indexed():
-        for i in sorted(iterkeys(innerdisjunct)):
+        for i in sorted(innerdisjunct.keys()):
             if innerdisjunct[i].active:
                 # This shouldn't be true, we will complain about it.
                 problemdisj = innerdisjunct[i]

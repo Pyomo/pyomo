@@ -14,7 +14,7 @@ from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.core.base import constraint, ComponentUID
 from pyomo.repn import generate_standard_repn
 import pyomo.gdp.tests.models as models
-from six import StringIO, iteritems
+from io import StringIO
 import random
 
 # utitility functions
@@ -774,7 +774,7 @@ def check_indexedBlock_only_targets_transformed(self, transformation):
         ]
     }
 
-    for blocknum, lst in iteritems(pairs):
+    for blocknum, lst in pairs.items():
         for comp, i, j in lst:
             original = m.b[blocknum].component(comp)
             if blocknum == 0:
