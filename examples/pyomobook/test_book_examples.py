@@ -235,6 +235,12 @@ def filter_file_contents(lines):
                 except:
                     filtered.append(i)
 
+            # A few substitutions to get tests passing on pypy3
+            if ".inf" in i:
+                i.replace(".inf", "inf")
+            if "null" in i:
+                i.replace("null", "None")
+
     return filtered
 
 
