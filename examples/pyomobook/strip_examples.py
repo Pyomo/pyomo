@@ -8,16 +8,13 @@ def f(file):
     prefix = os.path.splitext(name)[0]
     if prefix.endswith('_strip'):
         return
-    OUTPUT = open(base+'/'+prefix+'_strip.py','w')
-    INPUT = open(file,'r')
-    for line in INPUT:
-        if line[0] == '#' and '@' in line:
-            continue
-        OUTPUT.write(line)
-    INPUT.close()
-    OUTPUT.close()
-    #if not os.path.exists(base+'/'+prefix+'.txt'):
-    #    print "No baseline:",file
+
+    with open(base+'/'+prefix+'_strip.py','w') as OUTPUT, \
+         open(file,'r') as INPUT:
+        for line in INPUT:
+            if line[0] == '#' and '@' in line:
+                continue
+            OUTPUT.write(line)
 
 
 for file in glob.glob(os.path.abspath(os.path.dirname(__file__))+'/*/*.py'):

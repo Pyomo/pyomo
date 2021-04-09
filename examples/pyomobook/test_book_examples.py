@@ -25,7 +25,6 @@ if not param_available:
 # Find all *.txt files, and use them to define baseline tests
 currdir = os.path.dirname(os.path.abspath(__file__))
 datadir = currdir
-testdirs = [currdir, ]
 
 solver_dependencies =   {
     # abstract_ch
@@ -247,9 +246,7 @@ def filter_file_contents(lines):
 py_test_tuples=[]
 sh_test_tuples=[]
 
-for tdir in testdirs:
-
-  for testdir in glob.glob(os.path.join(tdir,'*')):
+for testdir in glob.glob(os.path.join(currdir,'*')):
     if not os.path.isdir(testdir):
         continue
     # Only test files in directories ending in -ch. These directories
@@ -276,7 +273,6 @@ for tdir in testdirs:
                 suffix = suffix_
                 break
         if not suffix is None:
-            # cwd = os.getcwd()
             tname = tname.replace('-','_')
             tname = tname.replace('.','_')
         
@@ -310,6 +306,7 @@ def custom_name_func(test_func, test_num, test_params):
     func_name = test_func.__name__
     return "test_%s_%s" %(test_params.args[0], func_name[-2:])
 
+
 class TestBookExamples(unittest.TestCase):
 
     def compare_files(self, out_file, base_file):
@@ -330,6 +327,7 @@ class TestBookExamples(unittest.TestCase):
                                                  abstol=1e-6,
                                                  allow_second_superset=False)
                 except AssertionError as m:
+                    # Print helpful information when file comparison fails
                     print('---------------------------------')
                     print('BASELINE FILE')
                     print('---------------------------------')
