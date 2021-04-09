@@ -15,7 +15,7 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.util import check_model_algebraic
 from pyomo.common.log import LoggingIntercept
 import logging
-from six import StringIO
+from io import StringIO
 
 
 class TestGDPReclassificationError(unittest.TestCase):

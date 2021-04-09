@@ -10,7 +10,6 @@
 
 from collections import OrderedDict
 import importlib
-from six import iteritems
 """
 This module is a collection of classes that provide a
 friendlier interface to MPI (through mpi4py). They help
@@ -118,7 +117,7 @@ class ParallelTaskManager:
             local_data = OrderedDict()
             assert (len(global_data) == self._n_total_tasks)
             idx = 0
-            for k,v in iteritems(global_data):
+            for k, v in global_data.items():
                 if idx in self._local_map:
                     local_data[k] = v
                 idx += idx

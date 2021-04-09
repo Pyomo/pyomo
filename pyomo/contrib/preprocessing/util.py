@@ -1,6 +1,6 @@
 import logging
 
-from six import StringIO
+from io import StringIO
 
 from pyomo.common.log import LoggingIntercept
 

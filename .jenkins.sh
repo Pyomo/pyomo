@@ -9,7 +9,7 @@
 #     virtualenv) and config (the local Pyomo configuration/cache
 #     directory)
 #
-# CATEGORY: the category to pass to test.pyomo (defaults to nightly)
+# CATEGORY: the category to pass to pyomo.common.unittest (defaults to nightly)
 #
 # TEST_SUITES: Paths (module or directory) to be passed to nosetests to
 #     run. (defaults to "pyomo '$WORKSPACE/pyomo-model-libraries'")
@@ -164,7 +164,7 @@ if test -z "$MODE" -o "$MODE" == test; then
     echo "#"
     echo "# Running Pyomo tests"
     echo "#"
-    test.pyomo -v --cat=$CATEGORY $TEST_SUITES
+    python -m pyomo.common.unittest $TEST_SUITES -v --cat=$CATEGORY --xunit
 
     # Combine the coverage results and upload
     if test -z "$DISABLE_COVERAGE"; then
@@ -190,7 +190,8 @@ if test -z "$MODE" -o "$MODE" == test; then
                     -t $CODECOV_TOKEN --root `pwd` -e OS,python \
                     --name $CODECOV_JOB_NAME $CODECOV_ARGS \
                     | tee .cover.upload
-                if test $? == 0 -a `grep -i error .cover.upload | wc -l` -eq 0; then
+                if test $? == 0 -a `grep -i error .cover.upload \
+                        | grep -v branch= | wc -l` -eq 0; then
                     break
                 elif test $i -ge 4; then
                     exit 1

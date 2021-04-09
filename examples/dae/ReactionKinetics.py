@@ -17,8 +17,6 @@
 from pyomo.environ import *
 from pyomo.dae import *
 
-from six import itervalues, iteritems
-
 try:
     import matplotlib.pyplot as plt
 except ImportError:
@@ -102,14 +100,14 @@ class ReactionNetwork(object):
         """
         self.add(rxn)
         tmp = Reaction( name= rxn.name+'_r', 
-                        reactants= [(b,a) for a,b in iteritems(rxn.products)],
-                        products= [(b,a) for a,b in iteritems(rxn.reactants)] )
+                        reactants= [(b,a) for a,b in rxn.products.items()],
+                        products= [(b,a) for a,b in rxn.reactants.items()] )
         self.add(tmp)
 
     def species(self):
         """Return the set of all species appearing int he Reaction Network"""
         ans = set()
-        for rxn in itervalues(self.reactions):
+        for rxn in self.reactions.values():
             ans.update( rxn.reactants )
             ans.update( rxn.products )
         return sorted(ans)
@@ -141,7 +139,7 @@ def create_kinetic_model(rxnNet, time):
 
     def reaction_rate(m, t, r):
         rhs = m.k[r]
-        for s, coef in iteritems(m.rxnNetwork.reactions[r].reactants):
+        for s, coef in m.rxnNetwork.reactions[r].reactants.items():
             rhs *= m.c[t,s]**coef
         return m.rate[t,r] == rhs
     model.reaction_rate = Constraint( model.TIME, model.REACTIONS,
@@ -197,7 +195,7 @@ def simple_simulation_model():
     results = solver.solve(model, tee=True)
 
     if plt is not None:
-        _tmp = sorted(iteritems(model.c))
+        _tmp = sorted(model.c.items())
         for _i, _x in enumerate('ABC'):
             plt.plot([x[0][0] for x in _tmp if x[0][1] == _x], 
                      [value(x[1]) for x in _tmp if x[0][1] == _x], 

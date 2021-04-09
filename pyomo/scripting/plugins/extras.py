@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import six
 from pyomo.scripting.pyomo_parser import add_subparser, CustomHelpFormatter
 
 from pyomo.common.deprecation import deprecated
@@ -28,8 +27,6 @@ def get_packages():
         ('ipython[notebook]', 'IPython'),
         ('pyro4', 'Pyro4'),
     ]
-    if six.PY2:
-        packages.append(('pyro','Pyro'))
     return packages
 
 @deprecated(
@@ -96,7 +93,7 @@ def install_extras(args=[], quiet=False):
     print("Installation Summary")
     print('-'*60)
     print(' ')
-    for package, result in sorted(six.iteritems(results)):
+    for package, result in sorted(results.items()):
         if result:
             print("YES %s" % package)
         else:

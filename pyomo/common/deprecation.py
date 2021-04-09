@@ -19,19 +19,30 @@ import types
 
 from pyomo.common.errors import DeveloperError
 
+_doc_flag = '.. deprecated::'
 
-def _default_msg(user_msg, version, remove_in, func=None):
+
+def _default_msg(obj, user_msg, version, remove_in):
     """Generate the default deprecation message.
 
     See deprecated() function for argument details.
     """
     if user_msg is None:
-        if inspect.isclass(func):
+        if inspect.isclass(obj):
             _obj = ' class'
-        elif inspect.isfunction(func):
+        elif inspect.ismethod(obj):
+            _obj = ' method'
+        elif inspect.isfunction(obj) or inspect.isbuiltin(obj):
             _obj = ' function'
         else:
+            # either @deprecated() an unknown type or called from
+            # deprecation_warning()
             _obj = ''
+
+        _qual = getattr(obj, '__qualname__', '') or ''
+        if _qual.endswith('.__init__') or _qual.endswith('.__new__'):
+            _obj = ' class'
+
         user_msg = 'This%s has been deprecated and may be removed in a ' \
                    'future release.' % (_obj,)
     comment = []
@@ -40,8 +51,68 @@ def _default_msg(user_msg, version, remove_in, func=None):
     if remove_in:
         comment.append('will be removed in %s' % (remove_in))
     if comment:
-        user_msg += "  (%s)" % (', '.join(comment))
-    return user_msg
+        return user_msg + "  (%s)" % (', '.join(comment),)
+    else:
+        return user_msg
+
+
+def _deprecation_docstring(obj, msg, version, remove_in):
+    if version is None: # or version in ('','tbd','TBD'):
+        raise DeveloperError("@deprecated missing initial version")
+    return (
+        '%s %s\n   %s\n'
+        % (_doc_flag, version, _default_msg(obj, msg, None, remove_in))
+    )
+
+
+def _wrap_class(cls, msg, logger, version, remove_in):
+    _doc = None
+    # Note: __new_member__ is where enum.Enum buries the user's original
+    # __new__ method
+    for field in ('__new__', '__init__', '__new_member__'):
+        _funcDoc = getattr(getattr(cls, field, None), '__doc__', '') or ''
+        _flagIdx = _funcDoc.find(_doc_flag)
+        if _flagIdx >= 0:
+            _doc = _funcDoc[_flagIdx:]
+            break
+    # Note: test msg is not None to revert back to the user-supplied
+    # message.  Checking the fields is still useful as it lets us know
+    # if there is already a deprecation message on either new or init.
+    if msg is not None or _doc is None:
+        _doc = _deprecation_docstring(cls, msg, version, remove_in)
+    if cls.__doc__:
+        _doc = cls.__doc__ + '\n\n' + _doc
+    cls.__doc__ = 'DEPRECATED.\n\n' + _doc
+
+    if _flagIdx < 0:
+        # No deprecation message on __init__ or __new__: go through and
+        # find the "most derived" implementation of either __new__ or
+        # __init__ and wrap that (breaking ties in favor of __init__)
+        field = '__init__'
+        for c in cls.__mro__:
+            for f in ('__init__', '__new__'):
+                if getattr(c, f, None) is not getattr(cls, f, None):
+                    field = f
+        setattr(cls, field, _wrap_func(
+            getattr(cls, field), msg, logger, version, remove_in))
+    return cls
+
+
+def _wrap_func(func, msg, logger, version, remove_in):
+    message = _default_msg(func, msg, version, remove_in)
+
+    @functools.wraps(func, assigned=(
+        '__module__', '__name__', '__qualname__', '__annotations__'))
+    def wrapper(*args, **kwargs):
+        deprecation_warning(message, logger)
+        return func(*args, **kwargs)
+
+    wrapper.__doc__ = 'DEPRECATED.\n\n'
+    _doc = func.__doc__ or ''
+    if _doc:
+        wrapper.__doc__ += _doc + '\n\n'
+    wrapper.__doc__ += _deprecation_docstring(func, msg, version, remove_in)
+    return wrapper
 
 
 def deprecation_warning(msg, logger='pyomo.core', version=None,
@@ -55,7 +126,7 @@ def deprecation_warning(msg, logger='pyomo.core', version=None,
         msg (str): the deprecation message to format
     """
     msg = textwrap.fill(
-        'DEPRECATED: %s' % (_default_msg(msg, version, remove_in),),
+        'DEPRECATED: %s' % (_default_msg(None, msg, version, remove_in),),
         width=70)
     if calling_frame is None:
         try:
@@ -86,7 +157,7 @@ def deprecated(msg=None, logger='pyomo.core', version=None, remove_in=None):
             removed in a future release.")
 
         logger (str): the logger to use for emitting the warning
-            (default: "pyomo.core")
+            (default: "pyomo")
 
         version (str): [required] the version in which the decorated
             object was deprecated.  General practice is to set version
@@ -97,26 +168,11 @@ def deprecated(msg=None, logger='pyomo.core', version=None, remove_in=None):
             removed from the code.
 
     """
-    if version is None: # or version in ('','tbd','TBD'):
-        raise DeveloperError("@deprecated missing initial version")
-
-    def wrap(func):
-        message = _default_msg(msg, version, remove_in, func)
-
-        @functools.wraps(func, assigned=('__module__', '__name__'))
-        def wrapper(*args, **kwargs):
-            deprecation_warning(message, logger)
-            return func(*args, **kwargs)
-
-        if func.__doc__ is None:
-            wrapper.__doc__ = textwrap.fill(
-                'DEPRECATION WARNING: %s' % (message,), width=70)
+    def wrap(obj):
+        if inspect.isclass(obj):
+            return _wrap_class(obj, msg, logger, version, remove_in)
         else:
-            wrapper.__doc__ = textwrap.fill(
-                'DEPRECATION WARNING: %s' % (message,), width=70) + '\n\n' + \
-                textwrap.fill(textwrap.dedent(func.__doc__.strip()))
-        return wrapper
-
+            return _wrap_func(obj, msg, logger, version, remove_in)
     return wrap
 
 

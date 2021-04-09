@@ -118,6 +118,9 @@ class _ConnectorData(ComponentData, NumericValue):
 
 
 @ModelComponentFactory.register("A bundle of variables that can be manipilated together.")
+@deprecated("Use of pyomo.connectors is deprecated. "
+            "Its functionality has been replaced by pyomo.network.",
+            version='5.6.9')
 class Connector(IndexedComponent):
     """A collection of variables, which may be defined over a index
 
@@ -148,10 +151,6 @@ class Connector(IndexedComponent):
             return IndexedConnector.__new__(IndexedConnector)
 
     # TODO: default keyword is  not used?  Need to talk to Bill ...?
-    @deprecated(
-        "Use of pyomo.connectors is deprecated. "
-        "Its functionality has been replaced by pyomo.network.",
-        version='5.6.9')
     def __init__(self, *args, **kwd):
         kwd.setdefault('ctype', Connector)
         self._rule = kwd.pop('rule', None)

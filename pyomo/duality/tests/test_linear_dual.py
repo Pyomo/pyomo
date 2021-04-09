@@ -25,8 +25,6 @@ from pyomo.scripting.util import cleanup
 import pyomo.scripting.pyomo_main as main
 
 
-from six import iteritems
-
 solver = None
 class CommonTests(object):
 
@@ -143,7 +141,7 @@ class Solver(unittest.TestCase):
         self.assertEqual(len(refObj), len(ansObj))
         for i in range(len(refObj)):
             self.assertEqual(len(refObj[i]), len(ansObj[i]))
-            for key,val in iteritems(refObj[i]):
+            for key,val in refObj[i].items():
                 self.assertAlmostEqual(val['Value'], ansObj[i].get(key,None)['Value'], places=3)
 
 

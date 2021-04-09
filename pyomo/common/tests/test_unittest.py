@@ -10,7 +10,7 @@
 
 import datetime
 import multiprocessing
-import six
+from io import StringIO
 import time
 
 import pyomo.common.unittest as unittest
@@ -199,7 +199,7 @@ class TestPyomoUnittest(unittest.TestCase):
         if multiprocessing.get_start_method() == 'fork':
             self.bound_function()
             return
-        LOG = six.StringIO()
+        LOG = StringIO()
         with LoggingIntercept(LOG):
             with self.assertRaises(TypeError):
                 self.bound_function()
@@ -217,6 +217,20 @@ class TestPyomoUnittest(unittest.TestCase):
                 unittest.SkipTest,
                 "timeout requires unavailable fork interface"):
             self.bound_function_require_fork()
+
+    def test_build_parser(self):
+        cmd_opts = 'bogus target names --cat not-real --cat whatever'.split()
+        parser = unittest.buildParser()
+        arguments = parser.parse_args(cmd_opts)
+        self.assertEqual(arguments.cat, ['not-real', 'whatever'])
+        self.assertEqual(arguments.targets, ['bogus', 'target', 'names'])
+        self.assertFalse(arguments.verbose)
+        self.assertFalse(arguments.xunit)
+        cmd_opts.extend(['-v', '--xunit'])
+        arguments = parser.parse_args(cmd_opts)
+        self.assertTrue(arguments.verbose)
+        self.assertTrue(arguments.xunit)
+
 
 if __name__ == '__main__':
     unittest.main()

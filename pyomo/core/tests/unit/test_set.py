@@ -4415,58 +4415,58 @@ I : Size=1, Index=None, Ordered=Insertion
         with self.assertRaisesRegexp(
                 RuntimeError,
                 "Cannot iterate over AbstractFiniteSimpleSet 'I'"
-                " before it has been constructed \(initialized\)."):
+                " before it has been constructed \(initialized\)"):
             for i in m.I:
                 pass
 
         with self.assertRaisesRegexp(
                 RuntimeError,
                 "Cannot iterate over AbstractOrderedSimpleSet 'J'"
-                " before it has been constructed \(initialized\)."):
+                " before it has been constructed \(initialized\)"):
             for i in m.J:
                 pass
 
         with self.assertRaisesRegexp(
                 RuntimeError,
                 "Cannot iterate over AbstractSortedSimpleSet 'K'"
-                " before it has been constructed \(initialized\)."):
+                " before it has been constructed \(initialized\)"):
             for i in m.K:
                 pass
 
         with self.assertRaisesRegexp(
                 RuntimeError,
                 "Cannot test membership in AbstractFiniteSimpleSet 'I'"
-                " before it has been constructed \(initialized\)."):
+                " before it has been constructed \(initialized\)"):
             1 in m.I
 
         with self.assertRaisesRegexp(
                 RuntimeError,
                 "Cannot test membership in AbstractOrderedSimpleSet 'J'"
-                " before it has been constructed \(initialized\)."):
+                " before it has been constructed \(initialized\)"):
             1 in m.J
 
         with self.assertRaisesRegexp(
                 RuntimeError,
                 "Cannot test membership in AbstractSortedSimpleSet 'K'"
-                " before it has been constructed \(initialized\)."):
+                " before it has been constructed \(initialized\)"):
             1 in m.K
 
         with self.assertRaisesRegexp(
                 RuntimeError,
-                "Cannot access __len__ on AbstractFiniteSimpleSet 'I'"
-                " before it has been constructed \(initialized\)."):
+                "Cannot access '__len__' on AbstractFiniteSimpleSet 'I'"
+                " before it has been constructed \(initialized\)"):
             len(m.I)
 
         with self.assertRaisesRegexp(
                 RuntimeError,
-                "Cannot access __len__ on AbstractOrderedSimpleSet 'J'"
-                " before it has been constructed \(initialized\)."):
+                "Cannot access '__len__' on AbstractOrderedSimpleSet 'J'"
+                " before it has been constructed \(initialized\)"):
             len(m.J)
 
         with self.assertRaisesRegexp(
                 RuntimeError,
-                "Cannot access __len__ on AbstractSortedSimpleSet 'K'"
-                " before it has been constructed \(initialized\)."):
+                "Cannot access '__len__' on AbstractSortedSimpleSet 'K'"
+                " before it has been constructed \(initialized\)"):
             len(m.K)
 
     def test_set_end(self):

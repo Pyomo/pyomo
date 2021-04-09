@@ -7,11 +7,22 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+#
+#  Part of this module was originally developed as part of the PyUtilib project
+#  Copyright (c) 2008 Sandia Corporation.
+#  This software is distributed under the BSD License.
+#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
+#  the U.S. Government retains certain rights in this software.
+#  ___________________________________________________________________________
 
 import enum
 import logging
 import sys
+import os
+import argparse
+import subprocess
 from io import StringIO
+
 
 # Now, import the base unittest environment.  We will override things
 # specifically later
@@ -265,9 +276,7 @@ class TestCase(_unittest.TestCase):
     nightly = 1
     expensive = 0
     fragile = 0
-    # pyutilib_th will need to be changed to pyomo_unittest after
-    # rewriting the test driver
-    pyutilib_th = 1
+    pyomo_unittest = 1
     _default_categories = True
     unspecified_categories = {
         'smoke':0, 'nightly':0, 'expensive':0, 'fragile':0 }
@@ -446,3 +455,145 @@ class TestCase(_unittest.TestCase):
                 _unittest.case.safe_repr(first),
                 _unittest.case.safe_repr(second),
             ))
+
+
+def buildParser():
+    parser = argparse.ArgumentParser(usage='python -m pyomo.common.unittest [TARGETS] [OPTIONS]')
+
+    parser.add_argument(
+        'targets',
+        action='store',
+        nargs='*',
+        default=['pyomo'],
+        help='Packages to test')
+    parser.add_argument(
+        '-v',
+        '--verbose',
+        action='store_true',
+        dest='verbose',
+        help='Verbose output')
+    parser.add_argument(
+        '--cat',
+        '--category',
+        action='append',
+        dest='cat',
+        default=[],
+        help='Specify the test category. \
+            Can be used several times for multiple categories (e.g., \
+            --cat=nightly --cat=smoke).')
+    parser.add_argument('--xunit',
+        action='store_true',
+        dest='xunit',
+        help='Enable the nose XUnit plugin')
+    parser.add_argument('--dry-run',
+        action='store_true',
+        dest='dryrun',
+        help='Dry run: collect but do not execute the tests')
+    return parser
+
+
+def runtests(options):
+
+    import pyomo
+    basedir = os.path.dirname(pyomo.__file__)
+    env = os.environ.copy()
+    os.chdir(basedir)
+
+    print("Running tests in directory %s" % (basedir,))
+
+    if sys.platform.startswith('win'):
+        binDir = os.path.join(sys.exec_prefix, 'Scripts')
+        nosetests = os.path.join(binDir, 'nosetests.exe')
+    else:
+        binDir = os.path.join(sys.exec_prefix, 'bin')
+        nosetests = os.path.join(binDir, 'nosetests')
+
+    if os.path.exists(nosetests):
+        cmd = [nosetests]
+    else:
+        cmd = ['nosetests']
+
+    if (sys.platform.startswith('win') and sys.version_info[0:2] >= (3, 8)):
+        #######################################################
+        # This option is required due to a (likely) bug within nosetests.
+        # Nose is no longer maintained, but this workaround is based on a public forum suggestion:
+        #   https://stackoverflow.com/questions/58556183/nose-unittest-discovery-broken-on-python-3-8
+        #######################################################
+        cmd.append('--traverse-namespace')
+
+    if binDir not in env['PATH']:
+        env['PATH'] = os.pathsep.join([binDir, env.get('PATH','')])
+
+    if options.verbose:
+        cmd.append('-v')
+    if options.dryrun:
+        cmd.append('--collect-only')
+
+    if options.xunit:
+        cmd.append('--with-xunit')
+        cmd.append('--xunit-file=TEST-pyomo.xml')
+
+    attr = []
+    _with_performance = False
+    _categories = []
+    for x in options.cat:
+        _categories.extend( TestCase.parse_categories(x) )
+
+    # If no one specified a category, default to "smoke" (and anything
+    # not built on pyomo.common.unittest.TestCase)
+    if not _categories:
+        _categories = [ (('smoke',1),), (('pyomo_unittest',0),) ]
+    # process each category set (that is, each conjunction of categories)
+    for _category_set in _categories:
+        _attrs = []
+        # "ALL" deletes the categories, and just runs everything.  Note
+        # that "ALL" disables performance testing
+        if ('all', 1) in _category_set:
+            _categories = []
+            _with_performance = False
+            attr = []
+            break
+        # For each category set, unless the user explicitly says
+        # something about fragile, assume that fragile should be
+        # EXCLUDED.
+        if ('fragile',1) not in _category_set \
+           and ('fragile',0) not in _category_set:
+            _category_set = _category_set + (('fragile',0),)
+        # Process each category in the conjection and add to the nose
+        # "attrib" plugin arguments
+        for _category, _value in _category_set:
+            if not _category:
+                continue
+            if _value:
+                _attrs.append(_category)
+            else:
+                _attrs.append("(not %s)" % (_category,))
+            if _category == 'performance' and _value == 1:
+                _with_performance = True
+        if _attrs:
+            attr.append("--eval-attr=%s" % (' and '.join(_attrs),))
+    cmd.extend(attr)
+    if attr:
+        print(" ... for test categor%s: %s" %
+              ('y' if len(attr)<=2 else 'ies',
+               ' '.join(attr[1::2])))
+
+    if _with_performance:
+        cmd.append('--with-testdata')
+        env['NOSE_WITH_TESTDATA'] = '1'
+        env['NOSE_WITH_FORCED_GC'] = '1'
+
+    cmd.extend(options.targets)
+    print(cmd)
+    print("Running...\n    %s\n" % (
+            ' '.join( (x if ' ' not in x else '"'+x+'"') for x in cmd ), ))
+    sys.stdout.flush()
+    result = subprocess.run(cmd, env=env)
+    rc = result.returncode
+    return rc
+
+
+if __name__ == '__main__':
+    parser = buildParser()
+    options = parser.parse_args()
+    sys.exit(runtests(options))

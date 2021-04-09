@@ -12,7 +12,7 @@ from __future__ import division
 import logging
 from math import pi
 
-from six import StringIO
+from io import StringIO
 
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
