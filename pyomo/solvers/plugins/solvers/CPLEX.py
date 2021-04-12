@@ -216,7 +216,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             mst_file.write("<variables>\n")
             for var in instance.component_data_objects(Var):
                 if (var.value is not None) and \
-                   (not var.is_continuous()) and \
+                   (not (self._integer_only_warmstarts and var.is_continuous())) and \
                    (id(var) in byObject):
                     name = byObject[id(var)]
                     mst_file.write("<variable index=\"%d\" "
@@ -307,6 +307,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         self._warm_start_file_name = _validate_file_name(
             self, kwds.pop('warmstart_file', None), "warm start")
         user_warmstart = self._warm_start_file_name is not None
+        self._integer_only_warmstarts = kwds.pop('integer_only_warmstarts', False)
 
         # the input argument can currently be one of two things: an instance or a filename.
         # if a filename is provided and a warm-start is indicated, we go ahead and
