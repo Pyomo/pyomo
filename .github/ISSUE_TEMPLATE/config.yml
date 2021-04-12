@@ -1,0 +1,6 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: Get help/ask a question in the Pyomo forum
+    url: https://groups.google.com/g/pyomo-forum
+    about: Have a question? Need some help from the community? The quickest way to get help is on Pyomo's forum.
