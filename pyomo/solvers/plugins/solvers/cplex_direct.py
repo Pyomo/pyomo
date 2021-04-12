@@ -868,7 +868,7 @@ class CPLEXDirect(DirectSolver):
     def warm_start_capable(self):
         return True
 
-    def _warm_start(self):
+    def _warm_start(self, integer_only_warmstarts: bool = False):
         # here warm start means MIP start, which we can not add
         # if the problem type is not discrete
         cpxprob = self._solver_model
@@ -878,9 +878,9 @@ class CPLEXDirect(DirectSolver):
             var_names = []
             var_values = []
             for pyomo_var, cplex_var in self._pyomo_var_to_solver_var_map.items():
-                if pyomo_var.value is not None and not (self._integer_only_warmstarts and pyomo_var.is_continuous()):
+                if pyomo_var.value is not None and not (integer_only_warmstarts and pyomo_var.is_continuous()):
                     var_names.append(cplex_var)
-                    var_values.append(value(pyomo_var))
+                    var_values.append(value(pyomo_var) if pyomo_var.is_continuous() else round(value(pyomo_var)))
 
             if len(var_names):
                 self._solver_model.MIP_starts.add(
