@@ -69,8 +69,8 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
         del self._pyomo_var_to_ndx_map[pyomo_var]
         self._solver_model.variables.delete(solver_var)
 
-    def _warm_start(self):
-        CPLEXDirect._warm_start(self)
+    def _warm_start(self, integer_only_warmstarts: bool = False):
+        CPLEXDirect._warm_start(self, integer_only_warmstarts=integer_only_warmstarts)
 
     def update_var(self, var):
         """Update a single variable in the solver's model.
