@@ -221,7 +221,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                     name = byObject[id(var)]
                     mst_file.write("<variable index=\"%d\" "
                                    "name=\"%s\" value=\"%f\" />\n"
-                                   % (output_index, name, round(var.value)))
+                                   % (output_index, name, var.value if var.is_continuous() else round(var.value)))
                     output_index = output_index + 1
 
             mst_file.write("</variables>\n")
