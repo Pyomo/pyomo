@@ -119,6 +119,7 @@ class DirectOrPersistentSolver(OptSolver):
         warmstart_flag = kwds.pop('warmstart', False)
         self._keepfiles = kwds.pop('keepfiles', False)
         self._save_results = kwds.pop('save_results', True)
+        self._integer_only_warmstarts = kwds.pop('integer_only_warmstarts', False)
 
         # create a context in the temporary file manager for
         # this plugin - is "pop"ed in the _postsolve method.
