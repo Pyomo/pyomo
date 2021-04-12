@@ -6,19 +6,19 @@ labels: enhancement
 ---
 ## Summary
 
-<!--*Please add a concise summary of your suggestion here.*-->
+<!-- Please add a concise summary of your suggestion here. -->
 
 ### Rationale
 
-<!--*Is your feature request related to a problem? Please describe it!*-->
+<!-- Is your feature request related to a problem? Please describe it! -->
 
 ### Description
 
-<!--*Describe the solution you'd like and the alternatives you have considered.*-->
+<!-- Describe the solution you'd like and the alternatives you have considered. -->
 
 
 ### Additional information
-<!--*Add any other context about the feature request here.*-->
+<!-- Add any other context about the feature request here. -->
 
 
 
