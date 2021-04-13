@@ -115,11 +115,13 @@ class DirectOrPersistentSolver(OptSolver):
         the results directly from the solver object. If False, the solution will not be loaded into the Solution
         object."""
 
+        self._integer_only_warmstarts = False
+
     def _presolve(self, **kwds):
         warmstart_flag = kwds.pop('warmstart', False)
         self._keepfiles = kwds.pop('keepfiles', False)
         self._save_results = kwds.pop('save_results', True)
-        _integer_only_warmstarts = kwds.pop('integer_only_warmstarts', False)
+        self._integer_only_warmstarts = kwds.pop('integer_only_warmstarts', False)
 
         # create a context in the temporary file manager for
         # this plugin - is "pop"ed in the _postsolve method.
@@ -286,7 +288,7 @@ class DirectOrPersistentSolver(OptSolver):
     def warm_start_capable(self):
         raise NotImplementedError('This method should be implemented by subclasses')
 
-    def _warm_start(self, integer_only_warmstarts: bool = False):
+    def _warm_start(self):
         raise NotImplementedError('If a subclass can warmstart, then it should implement this method.')
 
     def available(self, exception_flag=True):

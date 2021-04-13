@@ -250,6 +250,26 @@ class CPLEXDirectTests(unittest.TestCase):
 
     @unittest.skipIf(not cplexpy_available,
                      "The 'cplex' python bindings are not available")
+    def test_integer_only_mip_start(self):
+        with SolverFactory("cplex", solver_io="python") as opt:
+
+            model = ConcreteModel()
+            model.X = Var(within=NonNegativeReals, initialize=1.5)
+            model.Y = Var(within=Binary, initialize=0)
+            model.O = Objective(expr= model.X * model.Y)
+            opt._set_instance(model)
+            opt._warm_start()
+            assert opt._solver_model.MIP_starts.get_num_entries(0) == 2
+            assert opt._solver_model.MIP_starts.get_starts(0)[0].val == [1.5, 0]
+            opt._solver_model.MIP_starts.delete()
+            opt.set_integer_only_warmstarts(True)
+            opt._warm_start()
+            assert opt._solver_model.MIP_starts.get_num_entries(0) == 1
+            assert opt._solver_model.MIP_starts.get_starts(0)[0].val == [0]
+
+
+    @unittest.skipIf(not cplexpy_available,
+                     "The 'cplex' python bindings are not available")
     def test_unbounded_mip(self):
         with SolverFactory("cplex", solver_io="python") as opt:
 
