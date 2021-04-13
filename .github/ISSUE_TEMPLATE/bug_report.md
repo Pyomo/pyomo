@@ -11,22 +11,37 @@ Example: "I ran `pyomo solve` to optimize a model and ..." -->
 
 ### Steps to reproduce the issue
 
+<!-- Please include the command run and/or provide an example script that demonstrates the problem. -->
+
 ```console
-$ pyomo <command1> <options>
-$ pyomo <command2> <options>
+$ command1 [options]
+$ command2 [options]
+...
+```
+
+```
+# example.py
+import pyomo.environ
 ...
 ```
 
 ### Error Message
 
-<!-- If Pyomo reported an error, provide the error message. If it did not report an error but the output appears incorrect, provide the incorrect output. If there was no error message and no output but the result is incorrect, describe how it does not match what you expect. -->
+<!-- If Pyomo reported an error, provide the error message. PLEASE INCLUDE THE ENTIRE STACK TRACE. -->
+
+<!-- If it did not report an error but the output appears incorrect, provide the incorrect output. If there was no error message and no output but the result is incorrect, describe how it does not match what you expect. -->
 ```console
-$ # Output message here
+$ # Output message here, including entire stack trace, if available
 ```
 
 ### Information on your system
 
-<!-- Please list the version of Pyomo, how it was installed, Python version, operating system, and any other relevant information (i.e., solver, solver version, etc.) -->
+Pyomo version:
+Python version:
+Operating system:
+How Pyomo was installed (PyPI, conda, source):
+Solver (if applicable):
+
 
 ### Additional information
 
