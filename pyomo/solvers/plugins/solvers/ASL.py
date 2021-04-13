@@ -104,6 +104,11 @@ class ASL(SystemCallSolver):
         except subprocess.TimeoutExpired:
             pass
 
+    def available(self, exception_flag=True):
+        if not super().available(exception_flag):
+            return False
+        return self.version() is not None
+
     def create_command_line(self, executable, problem_files):
         assert(self._problem_format == ProblemFormat.nl)
         assert(self._results_format == ResultsFormat.sol)
