@@ -93,12 +93,15 @@ class ASL(SystemCallSolver):
         if solver_exec is None:
             return _extract_version('')
         try:
-            results = subprocess.run([solver_exec,"-v"], timeout=1,
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT,
-                                 universal_newlines=True)
+            results = subprocess.run([solver_exec, "-v"],
+                                     timeout=2,
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.STDOUT,
+                                     universal_newlines=True)
             return _extract_version(results.stdout)
         except OSError:
+            pass
+        except subprocess.TimeoutExpired:
             pass
 
     def create_command_line(self, executable, problem_files):
