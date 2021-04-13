@@ -16,7 +16,6 @@ from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numvalue import ZeroConstant
-from pyomo.core.base.component import ActiveComponent
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base import Transformation, TransformationFactory, Reference
 from pyomo.core import (
@@ -32,7 +31,6 @@ from pyomo.gdp.util import ( _warn_for_active_logical_constraint,
                              get_src_disjunct, _warn_for_active_disjunction,
                              _warn_for_active_disjunct, )
 from functools import wraps
-from six import iteritems, iterkeys
 from weakref import ref as weakref_ref
 
 logger = logging.getLogger('pyomo.gdp.hull')
@@ -198,7 +196,7 @@ class Hull_Reformulation(Transformation):
     def _add_local_vars(self, block, local_var_dict):
         localVars = block.component('LocalVars')
         if type(localVars) is Suffix:
-            for disj, var_list in iteritems(localVars):
+            for disj, var_list in localVars.items():
                 if local_var_dict.get(disj) is None:
                     local_var_dict[disj] = ComponentSet(var_list)
                 else:
@@ -285,7 +283,7 @@ class Hull_Reformulation(Transformation):
         return transBlock
 
     def _transform_block(self, obj):
-        for i in sorted(iterkeys(obj)):
+        for i in sorted(obj.keys()):
             self._transform_blockData(obj[i])
 
     def _transform_blockData(self, obj):
@@ -342,7 +340,7 @@ class Hull_Reformulation(Transformation):
 
         # create the disjunction constraint and disaggregation
         # constraints and then relax each of the disjunctionDatas
-        for i in sorted(iterkeys(obj)):
+        for i in sorted(obj.keys()):
             self._transform_disjunctionData(obj[i], i, transBlock)
 
         # deactivate so the writers will be happy
@@ -656,12 +654,11 @@ class Hull_Reformulation(Transformation):
                 bigmConstraint.add('ub', var <= obj.indicator_var*ub)
             relaxationBlock._bigMConstraintMap[var] = bigmConstraint
 
-        var_substitute_map = dict((id(v), newV) for v, newV in iteritems(
-            relaxationBlock._disaggregatedVarMap['disaggregatedVar']))
+        var_substitute_map = dict((id(v), newV) for v, newV in 
+            relaxationBlock._disaggregatedVarMap['disaggregatedVar'].items())
         zero_substitute_map = dict((id(v), ZeroConstant) for v, newV in \
-                                   iteritems(
-                                       relaxationBlock._disaggregatedVarMap[
-                                           'disaggregatedVar']))
+                                   relaxationBlock._disaggregatedVarMap[
+                                           'disaggregatedVar'].items())
         zero_substitute_map.update((id(v), ZeroConstant) for v in localVars)
 
         # Transform each component within this disjunct
@@ -727,7 +724,7 @@ class Hull_Reformulation(Transformation):
 
     def _transfer_var_references(self, fromBlock, toBlock):
         disjunctList = toBlock.relaxedDisjuncts
-        for idx, disjunctBlock in iteritems(fromBlock.relaxedDisjuncts):
+        for idx, disjunctBlock in fromBlock.relaxedDisjuncts.items():
             # move all the of the local var references
             newblock = disjunctList[len(disjunctList)]
             newblock.localVarReferences = Block()
@@ -755,7 +752,7 @@ class Hull_Reformulation(Transformation):
         # directly.  (We are passing the disjunct through so that when
         # we find constraints, _transform_constraint will have access to
         # the correct indicator variable.
-        for i in sorted(iterkeys(block)):
+        for i in sorted(block.keys()):
             self._transform_block_components( block[i], disjunct,
                                               var_substitute_map,
                                               zero_substitute_map)
@@ -787,7 +784,7 @@ class Hull_Reformulation(Transformation):
         # constraint container (or SimpleConstraint)
         constraintMap['srcConstraints'][newConstraint] = obj
 
-        for i in sorted(iterkeys(obj)):
+        for i in sorted(obj.keys()):
             c = obj[i]
             if not c.active:
                 continue
@@ -810,7 +807,7 @@ class Hull_Reformulation(Transformation):
                         c.body,
                         substitute=dict(
                             (var,  subs/y)
-                            for var, subs in iteritems(var_substitute_map) )
+                            for var, subs in var_substitute_map.items() )
                     )
                     expr = sub_expr * y
                 elif mode == "GrossmannLee":
@@ -818,7 +815,7 @@ class Hull_Reformulation(Transformation):
                         c.body,
                         substitute=dict(
                             (var, subs/(y + EPS))
-                            for var, subs in iteritems(var_substitute_map) )
+                            for var, subs in var_substitute_map.items() )
                     )
                     expr = (y + EPS) * sub_expr
                 elif mode == "FurmanSawayaGrossmann":
@@ -826,7 +823,7 @@ class Hull_Reformulation(Transformation):
                         c.body,
                         substitute=dict(
                             (var, subs/((1 - EPS)*y + EPS))
-                            for var, subs in iteritems(var_substitute_map) )
+                            for var, subs in var_substitute_map.items() )
                     )
                     expr = ((1-EPS)*y + EPS)*sub_expr - EPS*h_0*(1-y)
                 else:

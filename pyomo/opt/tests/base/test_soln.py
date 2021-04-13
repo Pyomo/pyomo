@@ -26,8 +26,6 @@ import pyomo.opt
 
 from pyomo.common.dependencies import yaml, yaml_available
 
-from six import iterkeys
-
 old_tempdir = TempfileManager.tempdir
 
 class Test(unittest.TestCase):
@@ -192,7 +190,7 @@ class Test(unittest.TestCase):
         self.soln.variable[1]["Value"] = 0.0
         self.soln.variable[4]["Value"] =0.3
         self.soln.variable[4]["Slack"] = 0.4
-        self.assertEqual(list(iterkeys(self.soln.variable)),[1,2,4])
+        self.assertEqual(list(self.soln.variable.keys()),[1,2,4])
         self.assertEqual(self.soln.variable[1]["Value"],0.0)
         self.assertEqual(self.soln.variable[4]["Value"],0.3)
         self.assertEqual(self.soln.variable[4]["Slack"],0.4)

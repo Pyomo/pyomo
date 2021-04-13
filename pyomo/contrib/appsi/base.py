@@ -216,17 +216,32 @@ class Solver(abc.ABC):
 
     @abc.abstractmethod
     def available(self, exception_flag=False):
-        """
+        """Test if the solver is available on this system.
+
+        Nominally, this will return True if the solver interface is
+        valid and can be used to solve problems and False if it cannot.
+
+        Note that for licensed solvers there are a number of "levels" of
+        available: depending on the license, the solver may be available
+        with limitations on problem size or runtime (e.g., 'demo'
+        vs. 'community' vs. 'full').  In these cases, the solver may
+        return a subclass of enum.IntEnum, with members that resolve to
+        True if the solver is available (possibly with limitations).
+        The Enum may also have multiple members that all resolve to
+        False indicating the reason why the interface is not available
+        (not found, bad license, unsupported version, etc).
 
         Parameters
         ----------
         exception_flag: bool
-            If True, then an exception will be raised if the solver is not available.
+            If True, then an exception will be raised if the solver is
+            not available.
 
         Returns
         -------
-        available: bool
+        available: bool, enum.Enum
             True if the solver is available. Otherwise, False.
+
         """
 
     @abc.abstractmethod
@@ -238,10 +253,21 @@ class Solver(abc.ABC):
             A tuple representing the version
         """
 
-    # compatability with old solver interfaces and Solver Factory
-    # this should really be taken care of in available
-    def license_is_valid(self):
-        return True
+    def license_is_valid(self) -> bool:
+        """Test if the solver license is valid on this system.
+
+        Note that this method is included for compatibility with the
+        legacy SolverFactory interface.  Unlicensed or open source
+        solvers will return True by definition.  Licensed solvers will
+        return True if a valid license is found.
+
+        Returns
+        -------
+        available: bool
+            True if the solver license is valid. Otherwise, False.
+
+        """
+        return bool(self.available())
 
     @abc.abstractmethod
     def load_vars(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> NoReturn:

@@ -31,8 +31,6 @@ from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 import pyomo.opt
 from pyomo.environ import SolverFactory, TransformationFactory
 
-from six import iteritems
-
 solvers = pyomo.opt.check_available_solvers('cplex', 'glpk','gurobi')
 
 
@@ -205,7 +203,7 @@ class Solver(unittest.TestCase):
         self.assertEqual(len(refObj), len(ansObj))
         for i in range(len(refObj)):
             self.assertEqual(len(refObj[i]), len(ansObj[i]))
-            for key,val in iteritems(refObj[i]):
+            for key,val in refObj[i].items():
                 self.assertAlmostEqual(
                     val.get('Value', None),
                     ansObj[i].get(key,{}).get('Value', None),
