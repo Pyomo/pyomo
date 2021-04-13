@@ -156,7 +156,7 @@ class DirectOrPersistentSolver(OptSolver):
 
         if warmstart_flag:
             if self.warm_start_capable():
-                self._warm_start(integer_only_warmstarts=_integer_only_warmstarts)
+                self._warm_start()
             else:
                 raise ValueError('{0} solver plugin is not capable of warmstart.'.format(type(self)))
 
