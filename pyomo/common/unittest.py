@@ -494,8 +494,7 @@ def buildParser():
 
 def runtests(options):
 
-    import pyomo
-    basedir = os.path.dirname(pyomo.__file__)
+    from pyomo.common.fileutils import PYOMO_ROOT_DIR as basedir
     env = os.environ.copy()
     os.chdir(basedir)
 
