@@ -22,4 +22,4 @@ labels: enhancement
 
 
 
-<!-- If you want to ask a question (how to use Pyomo, what it can do, etc.), please post it in the [Pyomo forum](https://groups.google.com/g/pyomo-forum). -->
+<!-- If you want to ask a question (how to use Pyomo, what it can do, etc.), please refer to [online documentation](https://github.com/Pyomo/pyomo#getting-help) on ways to get help. -->
