@@ -50,5 +50,5 @@ Solver (if applicable):
 
 <!-- We encourage you to try, as much as possible, to reduce your problem to the minimal example that still reproduces the issue. That would help us a lot in fixing it quickly and effectively!
 
-If you want to ask a question (how to use Pyomo, what it can do, etc.), please refer to [online documentation](https://github.com/Pyomo/pyomo#getting-help) on ways to get help. -->
+If you want to ask a question (how to use Pyomo, what it can do, etc.), please refer to our [online documentation](https://github.com/Pyomo/pyomo#getting-help) on ways to get help. -->
 
