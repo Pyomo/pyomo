@@ -202,6 +202,11 @@ class Gurobi(PersistentBase, PersistentSolver):
     def _check_license(cls):
         try:
             m = gurobipy.Model()
+        except ImportError:
+            # Triggered if this is the first time the deferred import of
+            # gurobipy is resolved. _import_gurobipy will have already
+            # set _available appropriately.
+            return
         except gurobipy.GurobiError:
             cls._available = Gurobi.Availability.BadLicense
             return
