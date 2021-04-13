@@ -262,7 +262,7 @@ class CPLEXDirectTests(unittest.TestCase):
             assert opt._solver_model.MIP_starts.get_num_entries(0) == 2
             assert opt._solver_model.MIP_starts.get_starts(0)[0].val == [1.5, 0]
             opt._solver_model.MIP_starts.delete()
-            opt.set_integer_only_warmstarts(True)
+            opt._integer_only_warmstarts = True
             opt._warm_start()
             assert opt._solver_model.MIP_starts.get_num_entries(0) == 1
             assert opt._solver_model.MIP_starts.get_starts(0)[0].val == [0]

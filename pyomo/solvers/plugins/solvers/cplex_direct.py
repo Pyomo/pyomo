@@ -894,9 +894,6 @@ class CPLEXDirect(DirectSolver):
     def warm_start_capable(self):
         return True
 
-    def set_integer_only_warmstarts(self, integer_only_warmstarts: bool):
-        self._integer_only_warmstarts = integer_only_warmstarts
-
     def _warm_start(self):
         # here warm start means MIP start, which we can not add
         # if the problem type is not discrete
