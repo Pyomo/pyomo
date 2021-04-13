@@ -43,7 +43,8 @@ from pyomo.common.config import (
     ConfigList, MarkImmutable, ImmutableConfigValue,
     PositiveInt, NegativeInt, NonPositiveInt, NonNegativeInt,
     PositiveFloat, NegativeFloat, NonPositiveFloat, NonNegativeFloat,
-    In, Path, PathList, ConfigEnum
+    In, Path, PathList, ConfigEnum,
+    _UnpickleableDomain,
 )
 from pyomo.common.log import LoggingIntercept
 
@@ -2178,44 +2179,71 @@ c: 1.0
         cfg.declare('int', ConfigValue(domain=int, default=10))
         cfg.declare('in', ConfigValue(domain=In([1,3,5]), default=1))
         cfg.declare('anon', ConfigValue(domain=anon_domain(int), default=1))
+        cfg.declare('lambda', ConfigValue(domain=lambda x: int(x), default=1))
         cfg.declare('list', ConfigList(domain=str))
 
         out = StringIO()
         with LoggingIntercept(out, module=None):
             cfg.set_value(
-                {'int': 100, 'in': 3, 'anon': 2.5, 'list': [2, 'a']}
+                {'int': 100, 'in': 3, 'anon': 2.5, 'lambda': 1.5,
+                 'list': [2, 'a']}
             )
             self.assertEqual(
                 cfg.value(),
-                {'int': 100, 'in': 3, 'anon': 2, 'list': ['2', 'a']}
+                {'int': 100, 'in': 3, 'anon': 2, 'lambda': 1,
+                 'list': ['2', 'a']}
             )
 
             cfg2 = pickle.loads(pickle.dumps(cfg))
             self.assertEqual(
                 cfg2.value(),
-                {'int': 100, 'in': 3, 'anon': 2, 'list': ['2', 'a']}
+                {'int': 100, 'in': 3, 'anon': 2, 'lambda': 1,
+                 'list': ['2', 'a']}
             )
 
             cfg2.list.append(10)
             self.assertEqual(
                 cfg2.value(),
-                {'int': 100, 'in': 3, 'anon': 2, 'list': ['2', 'a', '10']}
+                {'int': 100, 'in': 3, 'anon': 2, 'lambda': 1,
+                 'list': ['2', 'a', '10']}
             )
+        # No warnings due to anythong above.
         self.assertEqual(out.getvalue(), "")
 
+        # On some platforms (notably, pypy3) if dill has been imported,
+        # then lambda and anonymous functions are actually picklable
+        # using the standard pickle.dumps() method.  We will check for
+        # one of two cases: either the domain was not picklable and was
+        # replaced by a passthrough "_UnpickleableDomain" object, OR it
+        # was picklable and the original domain was enforced.
+
+        out = StringIO()
         with LoggingIntercept(out, module=None):
             cfg2['anon'] = 5.5
-        ### DEBUGGING
-        if not out.getvalue():
-            for k in cfg:
-                print(k, type(cfg.get(k)), type(cfg.get(k)._domain))
-                print(cfg2.anon)
-                cfg2['anon'] = 6.5
-        ### DEBUGGING
-        self.assertIn(
-            "ConfigValue 'anon' was pickled with an unpicklable domain",
-            out.getvalue()
-        )
+        if type(cfg2.get('anon')._domain) is _UnpickleableDomain:
+            self.assertIn(
+                "ConfigValue 'anon' was pickled with an unpicklable domain",
+                out.getvalue()
+            )
+            self.assertEqual(cfg2['anon'], 5.5)
+        else:
+            self.assertEqual(out.getvalue(), "")
+            self.assertIn('dill', sys.modules)
+            self.assertEqual(cfg2['anon'], 5)
+
+        out = StringIO()
+        with LoggingIntercept(out, module=None):
+            cfg2['lambda'] = 6.5
+        if type(cfg2.get('lambda')._domain) is _UnpickleableDomain:
+            self.assertIn(
+                "ConfigValue 'lambda' was pickled with an unpicklable domain",
+                out.getvalue()
+            )
+            self.assertEqual(cfg2['lambda'], 6.5)
+        else:
+            self.assertEqual(out.getvalue(), "")
+            self.assertIn('dill', sys.modules)
+            self.assertEqual(cfg2['lambda'], 6)
 
 
     def test_self_assignment(self):
