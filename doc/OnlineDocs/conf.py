@@ -45,16 +45,18 @@ needs_sphinx = '1.8'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc',
-              'sphinx.ext.coverage',
-              'sphinx.ext.mathjax',
-              'sphinx.ext.viewcode',
-              'sphinx.ext.napoleon',
-              'sphinx.ext.ifconfig',
-              'sphinx.ext.inheritance_diagram',
-              'sphinx.ext.autosummary',
-              'sphinx.ext.doctest']
-    #'sphinx.ext.githubpages']
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.coverage',
+    'sphinx.ext.mathjax',
+    'sphinx.ext.viewcode',
+    'sphinx.ext.napoleon',
+    'sphinx.ext.ifconfig',
+    'sphinx.ext.inheritance_diagram',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.doctest',
+    #'sphinx.ext.githubpages',
+]
 
 viewcode_follow_imported_members = True
 #napoleon_include_private_with_doc = True
@@ -104,6 +106,13 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
+# If true, doctest flags (comments looking like # doctest: FLAG, ...) at
+# the ends of lines and <BLANKLINE> markers are removed for all code
+# blocks showing interactive Python sessions (i.e. doctests)
+trim_doctest_flags = True
+
+# If true, figures, tables and code-blocks are automatically numbered if
+# they have a caption.
 numfig = True
 
 # -- Options for HTML output ----------------------------------------------
