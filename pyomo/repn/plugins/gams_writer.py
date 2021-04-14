@@ -12,7 +12,7 @@
 # Problem Writer for GAMS Format Files
 #
 
-from six import StringIO, iteritems
+from io import StringIO
 
 from pyomo.common.gc_manager import PauseGC
 from pyomo.core.expr import current as EXPR
@@ -390,7 +390,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             raise ValueError(
                 "GAMS writer passed unrecognized io_options:\n\t" +
                 "\n\t".join("%s = %s"
-                            % (k,v) for k,v in iteritems(io_options)))
+                            % (k,v) for k,v in io_options.items()))
 
         if solver is not None and solver.upper() not in valid_solvers:
             raise ValueError(

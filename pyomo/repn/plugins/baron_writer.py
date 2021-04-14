@@ -15,7 +15,7 @@
 import itertools
 import logging
 import math
-from six import iteritems, StringIO
+from io import StringIO
 
 from pyomo.common.collections import OrderedSet
 from pyomo.opt import ProblemFormat
@@ -233,7 +233,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 if name == 'branching_priorities':
                     branching_priorities_suffixes.append(suffix)
                 elif name == 'constraint_types':
-                    for constraint_data, constraint_type in iteritems(suffix):
+                    for constraint_data, constraint_type in suffix.items():
                         if not _skip_trivial(constraint_data):
                             if constraint_type.lower() == 'relaxationonly':
                                 r_o_eqns.append(constraint_data)
@@ -363,7 +363,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                     if param.mutable and param.is_indexed():
                         param_data_iter = \
                             (param_data for index, param_data
-                             in iteritems(param))
+                             in param.items())
                     elif not param.is_indexed():
                         param_data_iter = iter([param])
                     else:
@@ -548,7 +548,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         if len(io_options):
             raise ValueError(
                 "ProblemWriter_baron_writer passed unrecognized io_options:\n\t" +
-                "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(io_options)))
+                "\n\t".join("%s = %s" % (k,v) for k,v in io_options.items()))
 
         if symbolic_solver_labels and (labeler is not None):
             raise ValueError("Baron problem writer: Using both the "
@@ -579,7 +579,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         output_file.write("OPTIONS {\n")
         summary_found = False
         if len(solver_options):
-            for key, val in iteritems(solver_options):
+            for key, val in solver_options.items():
                 if (key.lower() == 'summary'):
                     summary_found = True
                 if key.endswith("Name"):
@@ -774,7 +774,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # object, indexed by the relevant variable
         BranchingPriorityHeader = False
         for suffix in branching_priorities_suffixes:
-            for var_data, priority in iteritems(suffix):
+            for var_data, priority in suffix.items():
                 if id(var_data) not in referenced_variable_ids:
                     continue
                 if priority is not None:

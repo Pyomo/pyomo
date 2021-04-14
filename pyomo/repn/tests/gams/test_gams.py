@@ -13,7 +13,7 @@
 
 import os
 
-from six import StringIO
+from io import StringIO
 
 from filecmp import cmp
 import pyomo.common.unittest as unittest
