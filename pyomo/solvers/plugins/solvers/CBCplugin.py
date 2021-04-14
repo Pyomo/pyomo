@@ -15,7 +15,6 @@ import re
 import time
 import logging
 import subprocess
-from six import iteritems
 
 from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
@@ -344,7 +343,7 @@ class CBCSHELL(SystemCallSolver):
             self._results_file = self._soln_file
 
         def _check_and_escape_options(options):
-            for key, val in iteritems(self.options):
+            for key, val in self.options.items():
                 tmp_k = str(key)
                 _bad = ' ' in tmp_k
 
