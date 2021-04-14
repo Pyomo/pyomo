@@ -9,3 +9,4 @@ or rely on any other parts of Pyomo.
    :maxdepth: 1
 
    config.rst
+   timing.rst
