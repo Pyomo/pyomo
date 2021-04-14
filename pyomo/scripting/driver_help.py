@@ -268,7 +268,7 @@ def help_transformations():
         # is indicated here.
         _init_doc = TransformationFactory.get_class(xform).__init__.__doc__ \
                     or ""
-        if _init_doc.startswith('DEPRECATION') and 'DEPRECAT' not in _doc:
+        if _init_doc.strip().startswith('DEPRECATED') and 'DEPRECAT' not in _doc:
             _doc = ' '.join(('[DEPRECATED]', _doc))
         if _doc:
             print(wrapper.fill(_doc))

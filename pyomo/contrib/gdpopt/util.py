@@ -15,8 +15,6 @@ import logging
 from contextlib import contextmanager
 from math import fabs
 
-import six
-
 from pyomo.common import deprecated, timing
 from pyomo.common.collections import ComponentSet, Bunch
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
@@ -426,9 +424,9 @@ def get_main_elapsed_time(timing_data_obj):
         return current_time - timing_data_obj.main_timer_start_time
     except AttributeError as e:
         if 'main_timer_start_time' in str(e):
-            six.raise_from(e, AttributeError(
+            raise e from AttributeError(
                 "You need to be in a 'time_code' context to use `get_main_elapsed_time()`."
-            ))
+            )
 
 
 @deprecated(

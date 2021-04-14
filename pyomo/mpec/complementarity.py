@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import iteritems
 from collections import namedtuple
 
 from pyomo.common.log import is_debug_set
@@ -267,7 +266,7 @@ Error thrown for Complementarity "%s".""" % ( b.name, ) )
              ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active),
              ],
-            iteritems(self._data),
+            self._data.items(),
             ( "Arg0","Arg1","Active" ),
             (_table_data, _conditional_block_printer),
             )

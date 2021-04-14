@@ -18,7 +18,6 @@ from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
 from pyomo.core.expr.current import identify_variables
 from pyomo.repn import generate_standard_repn
 import logging, time
-from six import iteritems
 
 from pyomo.common.dependencies import (
     networkx as nx, networkx_available,
@@ -455,7 +454,7 @@ class SequentialDecomposition(FOQUSGraph):
             # (via set_split_fraction or something else) that will be used here
             # and is only relevant to this SM, and if they didn't specify
             # anything, throw an error.
-            for name, mem in iteritems(src.vars):
+            for name, mem in src.vars.items():
                 if not src.is_extensive(name):
                     continue
                 evar = eblock.component(name)
@@ -546,7 +545,7 @@ class SequentialDecomposition(FOQUSGraph):
 
     def load_guesses(self, guesses, port, fixed):
         srcs = port.sources()
-        for name, mem in iteritems(port.vars):
+        for name, mem in port.vars.items():
             try:
                 entry = guesses[port][name]
             except KeyError:

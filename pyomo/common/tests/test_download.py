@@ -11,7 +11,6 @@
 import os
 import platform
 import re
-import six
 import shutil
 import tempfile
 import subprocess
@@ -242,10 +241,7 @@ class Test_FileDownloader(unittest.TestCase):
             f = FileDownloader()
 
             # Mock retrieve_url so network connections are not necessary
-            if six.PY3:
-                f.retrieve_url = lambda url: bytes("\n", encoding='utf-8')
-            else:
-                f.retrieve_url = lambda url: str("\n")
+            f.retrieve_url = lambda url: bytes("\n", encoding='utf-8')
 
             # Binary files will preserve line endings
             target = os.path.join(tmpdir, 'bin.txt')

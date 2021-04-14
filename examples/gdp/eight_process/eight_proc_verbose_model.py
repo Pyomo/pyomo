@@ -9,7 +9,6 @@ from __future__ import division
 from pyomo.environ import (ConcreteModel, Constraint, NonNegativeReals,
                            Objective, Param, RangeSet, Var, exp, minimize)
 from pyomo.gdp import Disjunct, Disjunction
-from six import iteritems
 
 
 def build_eight_process_flowsheet():
@@ -146,7 +145,7 @@ def build_eight_process_flowsheet():
     """Bound definitions"""
     # x (flow) upper bounds
     x_ubs = {3: 2, 5: 2, 9: 2, 10: 1, 14: 1, 17: 2, 19: 2, 21: 2, 25: 3}
-    for i, x_ub in iteritems(x_ubs):
+    for i, x_ub in x_ubs.items():
         m.flow[i].setub(x_ub)
 
     # # optimal solution

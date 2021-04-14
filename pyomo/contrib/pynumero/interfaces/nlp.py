@@ -49,13 +49,12 @@ evaluate_jacobian_ineq.
 .. rubric:: Contents
 
 """
-import six
 import abc
 
 __all__ = ['NLP']
 
-@six.add_metaclass(abc.ABCMeta)
-class NLP(object):
+
+class NLP(object, metaclass=abc.ABCMeta):
     def __init__(self):
         pass
     
@@ -365,8 +364,8 @@ class NLP(object):
         primals and duals defined in the set methods"""
         pass
 
-@six.add_metaclass(abc.ABCMeta)
-class ExtendedNLP(NLP):
+
+class ExtendedNLP(NLP, metaclass=abc.ABCMeta):
     """ This interface extends the NLP interface to support a presentation
     of the problem that separates equality and inequality constraints
     """

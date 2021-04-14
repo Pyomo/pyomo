@@ -16,7 +16,7 @@ from __future__ import division
 import logging
 
 import pyomo.common.unittest as unittest
-from six import StringIO
+from io import StringIO
 
 from pyomo.common.dependencies import networkx_available
 from pyomo.common.log import LoggingIntercept

@@ -8,15 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import six
-from six import itervalues, iteritems
+from collections.abc import MutableSet as collections_MutableSet
+from collections.abc import Set as collections_Set
 
-if six.PY3:
-    from collections.abc import MutableSet as collections_MutableSet
-    from collections.abc import Set as collections_Set
-else:
-    from collections import MutableSet as collections_MutableSet
-    from collections import Set as collections_Set
 
 class ComponentSet(collections_MutableSet):
     """
@@ -55,7 +49,7 @@ class ComponentSet(collections_MutableSet):
     def __str__(self):
         """String representation of the mapping."""
         tmp = []
-        for objid, obj in iteritems(self._data):
+        for objid, obj in self._data.items():
             tmp.append(str(obj)+" (id="+str(objid)+")")
         return "ComponentSet("+str(tmp)+")"
 
@@ -85,7 +79,7 @@ class ComponentSet(collections_MutableSet):
         return self._data.__contains__(id(val))
 
     def __iter__(self):
-        return itervalues(self._data)
+        return iter(self._data.values())
 
     def __len__(self):
         return self._data.__len__()

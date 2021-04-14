@@ -13,12 +13,10 @@
 
 from pyomo.core import *
 
-from six.moves import xrange
-
 model = AbstractModel()
 
 def indices_rule(model):
-    return xrange(1,4)
+    return range(1,4)
 model.indices = Set(initialize=indices_rule, within=PositiveIntegers)
 
 model.x = Var(model.indices, within=Reals)

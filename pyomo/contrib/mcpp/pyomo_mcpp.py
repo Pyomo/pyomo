@@ -15,7 +15,6 @@ from __future__ import division
 import ctypes
 import logging
 import os
-import six
 
 from pyomo.common.fileutils import Library
 from pyomo.core import value, Expression
@@ -204,8 +203,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
         super(MCPP_visitor, self).__init__()
         self.mcpp = _MCPP_lib()
         so_file_version = self.mcpp.get_version()
-        if six.PY3:
-            so_file_version = so_file_version.decode("utf-8")
+        so_file_version = so_file_version.decode("utf-8")
         if not so_file_version == __version__:
             raise MCPP_Error(
                 "Shared object file version %s is out of date with MC++ interface version %s. "
@@ -304,8 +302,7 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
 
         if ans is None:
             msg = self.mcpp.get_last_exception_message()
-            if six.PY3:
-                msg = msg.decode("utf-8")
+            msg = msg.decode("utf-8")
             raise MCPP_Error(msg)
 
         return ans
@@ -427,8 +424,7 @@ class McCormick(object):
 
     def __repn__(self):
         repn = self.mcpp.toString(self.mc_expr)
-        if six.PY3:
-            repn = repn.decode("utf-8")
+        repn = repn.decode("utf-8")
         return repn
 
     def __str__(self):
