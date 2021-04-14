@@ -97,41 +97,27 @@ def is_in_block_indexed_by(comp, s, stop_at=None):
     return False
 
 
-def get_index_set_except(comp, *sets):
-    """ 
-    Function for getting indices of a component over a product of its
-    indexing sets other than those specified. Indices for the specified 
-    sets can be used to construct indices of the proper dimension for the 
-    original component via the index_getter function.
-
-    Args:
-        comp : Component whose indexing sets are to be manipulated
-        sets : Sets to omit from the set_except product
-
-    Returns:
-        A dictionary. Maps 'set_except' to a Pyomo Set or SetProduct
-        of comp's index set, excluding those in sets. Maps
-        'index_getter' to a function that returns an index of the
-        proper dimension for comp, given an element of set_except
-        and a value for each set excluded. These values must be provided
-        in the same order their Sets were provided in the sets argument.
+def get_indices_of_projection(index_set, *sets):
+    """
+    We want to project certain sets out of our indexing set.
+    We return the parameterization of this projection (the product
+    of remaining sets) and a function to recover the original index
+    from an element of the parameterization and coordinates of the
+    sets projected out.
     """
     s_set = ComponentSet(sets)
     try:
         total_s_dim = sum([s.dimen for s in sets])
     except TypeError:
-        msg = ('get_index_set_except does not support sets with '
+        msg = ('get_indices_of_projection does not support sets with '
               'dimen == None, including those with inconsistent dimen')
         raise TypeError(msg)
 
+    subset_set = ComponentSet(index_set.subsets())
+    assert all(s in subset_set for s in sets)
+
     info = {}
 
-    if not is_explicitly_indexed_by(comp, *sets):
-        msg = (comp.name + ' is not indexed by at least one of ' +
-                str([s.name for s in sets]))
-        raise ValueError(msg)
-
-    index_set = comp.index_set()
     if isinstance(index_set, SetProduct):
         projection_sets = list(index_set.subsets())
         counter = Counter([id(_) for _ in projection_sets])
@@ -162,7 +148,7 @@ def get_index_set_except(comp, *sets):
         location = {0: 0}
         other_ind_sets = []
 
-    if comp.dim() == total_s_dim: 
+    if index_set.dimen == total_s_dim: 
         # comp indexed by all sets and having this dimension
         # is sufficient to know that comp is only indexed by 
         # Sets in *sets
@@ -194,6 +180,33 @@ def get_index_set_except(comp, *sets):
     info['set_except'] = set_except
     info['index_getter'] = index_getter
     return info
+
+
+def get_index_set_except(comp, *sets):
+    """ 
+    Function for getting indices of a component over a product of its
+    indexing sets other than those specified. Indices for the specified 
+    sets can be used to construct indices of the proper dimension for the 
+    original component via the index_getter function.
+
+    Args:
+        comp : Component whose indexing sets are to be manipulated
+        sets : Sets to omit from the set_except product
+
+    Returns:
+        A dictionary. Maps 'set_except' to a Pyomo Set or SetProduct
+        of comp's index set, excluding those in sets. Maps
+        'index_getter' to a function that returns an index of the
+        proper dimension for comp, given an element of set_except
+        and a value for each set excluded. These values must be provided
+        in the same order their Sets were provided in the sets argument.
+    """
+    if not is_explicitly_indexed_by(comp, *sets):
+        msg = (comp.name + ' is not indexed by at least one of ' +
+                str([s.name for s in sets]))
+        raise ValueError(msg)
+
+    return get_indices_of_projection(comp.index_set(), *sets)
 
 
 def _complete_index(loc, index, *newvals):
