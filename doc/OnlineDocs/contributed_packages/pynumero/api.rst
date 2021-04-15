@@ -1,4 +1,4 @@
-.. _apisection:
+.. _pynumero_api:
 
 PyNumero API
 ============
