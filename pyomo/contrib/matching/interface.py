@@ -23,11 +23,7 @@ class IncidenceGraphInterface(object):
     def __init__(self, model):
         self.nlp = PyomoNLP(model)
 
-    def maximum_matching(self, variables=None, constraints=None):
-        """
-        Returns a maximal matching between the constraints and variables,
-        in terms of a map from constraints to variables.
-        """
+    def _validate_input(self, variables, constraints):
         if variables is None:
             variables = self.nlp.get_pyomo_variables()
         if constraints is None:
@@ -40,6 +36,14 @@ class IncidenceGraphInterface(object):
                         "ComponentData objects. Got %s, which is indexed."
                         % comp.name
                         )
+        return variables, constraints
+
+    def maximum_matching(self, variables=None, constraints=None):
+        """
+        Returns a maximal matching between the constraints and variables,
+        in terms of a map from constraints to variables.
+        """
+        variables, constraints = self._validate_input(variables, constraints)
 
         matrix = self.nlp.extract_submatrix_jacobian(variables, constraints)
         matching = maximum_matching(matrix.tocoo())
@@ -55,18 +59,7 @@ class IncidenceGraphInterface(object):
         map from constraints to their blocks in a block triangularization
         of the incidence matrix.
         """
-        if variables is None:
-            variables = self.nlp.get_pyomo_variables()
-        if constraints is None:
-            constraints = self.nlp.get_pyomo_constraints()
-
-        for comp in variables+constraints:
-            if comp.is_indexed():
-                raise ValueError(
-                        "Variables and constraints must be unindexed "
-                        "ComponentData objects. Got %s, which is indexed."
-                        % comp.name
-                        )
+        variables, constraints = self._validate_input(variables, constraints)
 
         matrix = self.nlp.extract_submatrix_jacobian(variables, constraints)
         row_block_map, col_block_map = block_triangularize(matrix.tocoo())
