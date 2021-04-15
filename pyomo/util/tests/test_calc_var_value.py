@@ -59,7 +59,7 @@ class Test_calc_var(unittest.TestCase):
         self.assertEqual(value(m.x), 5)
 
         m.lt = Constraint(expr=m.x <= m.y)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Constraint must be an equality constraint"):
             calculate_variable_from_constraint(m.x, m.lt)
 
@@ -87,28 +87,28 @@ class Test_calc_var(unittest.TestCase):
         # test that infeasible constraint throws error
         m.d = Constraint(expr=m.x**2 == -1)
         m.x.set_value(1.25) # set the initial value
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                RuntimeError, 'Iteration limit \(10\) reached'):
            calculate_variable_from_constraint(
                m.x, m.d, iterlim=10, linesearch=False)
 
         # same problem should throw a linesearch error if linesearch is on
         m.x.set_value(1.25) # set the initial value
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Linesearch iteration limit reached"):
            calculate_variable_from_constraint(
                m.x, m.d, iterlim=10, linesearch=True)
 
         # same problem should raise an error if initialized at 0
         m.x = 0
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Initial value for variable results in a "
                 "derivative value that is very close to zero."):
             calculate_variable_from_constraint(m.x, m.c)
 
         # same problem should raise a value error if we are asked to
         # solve for a variable that is not present
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Variable derivative == 0"):
             calculate_variable_from_constraint(m.y, m.c)
 
@@ -132,7 +132,7 @@ class Test_calc_var(unittest.TestCase):
 
         # we expect this to fail without a linesearch
         m.x.set_value(3.0)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Newton's method encountered a derivative "
                 "that was too close to zero"):
             calculate_variable_from_constraint(m.x, m.f, linesearch=False)
@@ -210,7 +210,7 @@ class Test_calc_var(unittest.TestCase):
         m.x = Var()
         m.c = Constraint(expr=m.x**0.5 == -1e-8)
         m.x = 1e-8#197.932807183
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Linesearch iteration limit reached; "
                 "remaining residual = {function evaluation error}"):
             calculate_variable_from_constraint(m.x, m.c, linesearch=True,

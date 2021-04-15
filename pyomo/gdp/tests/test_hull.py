@@ -234,7 +234,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m = models.makeTwoTermDisj_Nonlinear()
         m.disjunction.xor = False
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "Cannot do hull reformulation for Disjunction "
             "'disjunction' with OR constraint.  Must be an XOR!*",
@@ -531,7 +531,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # no bounds
         m.w.setlb(None)
         m.w.setub(None)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "Variables that appear in disjuncts must be "
             "bounded in order to use the hull "
@@ -615,7 +615,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # can't ask for simpledisj1.c[1]: it wasn't transformed
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 KeyError,
                 ".*b.simpledisj1.c\[1\]",
                 hull.get_transformed_constraints,
@@ -1597,13 +1597,13 @@ class TestSpecialCases(unittest.TestCase):
         m.d2.c = Constraint(expr=m.y >= m.d2.z)
         m.disj = Disjunction(expr=[m.d1, m.d2])
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             ".*Missing bound for d2.z.*",
             TransformationFactory('gdp.hull').create_using,
             m)
         m.d2.z.setlb(7)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             ".*Missing bound for d2.z.*",
             TransformationFactory('gdp.hull').create_using,
@@ -1842,7 +1842,7 @@ class TestErrors(unittest.TestCase):
 
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp.hull', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 AttributeError,
                 "'NoneType' object has no attribute '_bigMConstraintMap'",
                 hull.get_var_bounds_constraint,
@@ -1855,7 +1855,7 @@ class TestErrors(unittest.TestCase):
 
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp.hull', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 KeyError,
                 ".*_pyomo_gdp_hull_reformulation.relaxedDisjuncts\[1\]."
                 "disaggregatedVars.w",
@@ -1870,7 +1870,7 @@ class TestErrors(unittest.TestCase):
 
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp.hull', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 AttributeError,
                 "'NoneType' object has no attribute '_disaggregatedVarMap'",
                 hull.get_src_var,
@@ -1881,7 +1881,7 @@ class TestErrors(unittest.TestCase):
 
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp.hull', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 KeyError,
                 ".*_pyomo_gdp_hull_reformulation.relaxedDisjuncts\[1\]."
                 "disaggregatedVars.w",
@@ -1896,7 +1896,7 @@ class TestErrors(unittest.TestCase):
                                  "'d\[1\]'")
 
         m.random_disjunction = Disjunction(expr=[m.w == 2, m.w >= 7])
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "Disjunction 'random_disjunction' has not been properly "
             "transformed: None of its disjuncts are transformed.",
@@ -1904,7 +1904,7 @@ class TestErrors(unittest.TestCase):
             m.w,
             m.random_disjunction)
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "Disjunct 'random_disjunction_disjuncts\[0\]' has not been "
             "transformed",

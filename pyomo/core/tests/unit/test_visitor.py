@@ -722,7 +722,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         self.e = m.x**2 + m.y + m.z*(m.x+m.y)
 
     def test_bad_args(self):
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Unrecognized keyword arguments: {'foo': None}"):
             StreamBasedExpressionVisitor(foo=None)
 

@@ -970,7 +970,7 @@ class ArraySet(PyomoModel):
         #     pass
         # else:
         #     self.fail("Set arrays do not have a virtual data element")
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 AttributeError, ".*no attribute 'virtual'"):
             self.instance.A.virtual
 
@@ -1854,7 +1854,7 @@ class TestAnySet(SimpleSetA):
         #     pass
         # else:
         #     self.fail("test_len failure")
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError, "object of type 'Any' has no len()"):
             len(self.instance.A)
 
@@ -2798,7 +2798,7 @@ class TestSetIO(PyomoModel):
         self.model.A = Set()
         self.model.B = Set()
         self.model.C = self.model.A * self.model.B
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "SetOperator C with incompatible data"):
             self.instance = self.model.create_instance(currdir+"setA.dat")
 
@@ -2998,7 +2998,7 @@ class TestSetErrors(PyomoModel):
         #     pass
         a=Set()
         b=Set(a)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError, "Cannot apply a Set operator to an indexed"):
             c=Set(within=b, dimen=2)
             c.construct()
@@ -3075,7 +3075,7 @@ class TestSetErrors(PyomoModel):
         #     self.fail("test_construct - expected failure constructing with a dictionary")
         # except ValueError:
         #     pass
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 KeyError, "Cannot treat the scalar component '[^']*' "
                 "as an indexed component"):
             a.construct()
@@ -3119,11 +3119,11 @@ class TestSetErrors(PyomoModel):
         #     pass
         # except IndexError:
         #     pass
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, ".*before it has been constructed"):
             a[0]
         a.construct()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError, "Pyomo Sets are 1-indexed"):
             a[0]
         self.assertEqual(a[1], 2)
@@ -3310,7 +3310,7 @@ class TestSetErrors(PyomoModel):
         X = Reals ^ Integers
         self.assertIn(0.5, X)
         self.assertNotIn(1, X)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RangeDifferenceError, "We do not support subtracting an "
                 "infinite discrete range \[0:None\] from an infinite "
                 "continuous range \[None..None\]"):
@@ -3343,7 +3343,7 @@ class TestSetErrors(PyomoModel):
         X = Reals - Integers
         self.assertIn(0.5, X)
         self.assertNotIn(1, X)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RangeDifferenceError, "We do not support subtracting an "
                 "infinite discrete range \[0:None\] from an infinite "
                 "continuous range \[None..None\]"):
@@ -3426,7 +3426,7 @@ class TestSetErrors(PyomoModel):
         #     self.fail("test_arrayset_construct - expected ValueError")
         # except ValueError:
         #     pass
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError, "'int' object is not iterable"):
             b.construct()
 

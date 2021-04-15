@@ -317,7 +317,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m.BigM[None] = 20
 
         # give an arg
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "Big-M \([^)]*\) for constraint d\[0\].c is not of "
             "length two. Expected either a single value or "
@@ -343,7 +343,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m.BigM[None] = 20
 
         # give an arg
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "Big-M \[[^\]]*\] for constraint d\[0\].c is not of "
             "length two. Expected either a single value or "
@@ -404,7 +404,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
     def test_tuple_wrong_length_err(self):
         m = models.makeTwoTermDisj()
         M = (-20,19, 32)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "Big-M \(-20, 19, 32\) for constraint d\[0\].c is not of "
             "length two. Expected either a single value or "
@@ -416,7 +416,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
     def test_list_wrong_length_err(self):
         m = models.makeTwoTermDisj()
         M = [-20, 19, 34]
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "Big-M \[-20, 19, 34\] for constraint d\[0\].c is not of "
             "length two. Expected either a single value or "
@@ -536,7 +536,7 @@ class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
     def test_nonlinear_bigM_missing_var_bounds(self):
         m = models.makeTwoTermDisj_Nonlinear()
         m.y.setlb(None)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "Cannot estimate M for unbounded nonlinear "
             "expressions.\n\t\(found while processing "
@@ -1248,7 +1248,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         (src, key) = bigm.get_m_value_src(m.simpledisj2.c)
         self.assertIs(src, m.BigM)
         self.assertIsNone(key)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "This is why this method is deprecated: The lower "
             "and upper M values for constraint b.disjunct\[0\].c "
@@ -1311,7 +1311,7 @@ class SimpleDisjIndexedConstraints(unittest.TestCase, CommonTests):
         # the real test: This wasn't transformed
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 KeyError,
                 ".*b.simpledisj1.c\[1\]",
                 bigm.get_transformed_constraints,
@@ -1417,7 +1417,7 @@ class SimpleDisjIndexedConstraints(unittest.TestCase, CommonTests):
 
     def test_unbounded_var_m_estimation_err(self):
         m = models.makeTwoTermDisj_IndexedConstraints()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "Cannot estimate M for expressions with unbounded variables."
             "\n\t\(found unbounded var 'a\[1\]' while processing constraint "

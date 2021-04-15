@@ -667,20 +667,20 @@ class TestBlock(unittest.TestCase):
         ### creation of a circular reference
         b = Block(concrete=True)
         b.c = Block()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Cannot assign the top-level block as a subblock "
                 "of one of its children \(c\): creates a circular hierarchy"):
             b.c.d = b
 
     def test_set_value(self):
         b = Block(concrete=True)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Block components do not support assignment "
                 "or set_value"):
             b.set_value(None)
 
         b.b = Block()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Block components do not support assignment "
                 "or set_value"):
             b.b = 5
@@ -799,14 +799,14 @@ class TestBlock(unittest.TestCase):
         b.c = Block()
         b.c.d = Block()
         b.c.d.e = Block()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, '_BlockData.transfer_attributes_from\(\): '
                 'Cannot set a sub-block \(c.d.e\) to a parent block \(c\):'):
             b.c.d.e.transfer_attributes_from(b.c)
 
         ### bad data type
         b = Block(concrete=True)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
                 '_BlockData.transfer_attributes_from\(\): expected a Block '
                 'or dict; received str'):
@@ -2412,22 +2412,22 @@ class TestBlock(unittest.TestCase):
 
     def test_reserved_words(self):
         m = ConcreteModel()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError, ".*using the name of a reserved attribute",
             m.add_component, "add_component", Var())
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, ".*using the name of a reserved attribute"):
             m.add_component = Var()
         m.foo = Var()
 
         m.b = DerivedBlock()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError, ".*using the name of a reserved attribute",
             m.b.add_component, "add_component", Var())
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError, ".*using the name of a reserved attribute",
             m.b.add_component, "foo", Var())
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, ".*using the name of a reserved attribute"):
             m.b.foo = Var()
 
@@ -2443,11 +2443,11 @@ class TestBlock(unittest.TestCase):
 
     def test_write_exceptions(self):
         m = Block()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, ".*Could not infer file format from file name"):
             m.write(filename="foo.bogus")
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, ".*Cannot write model in format"):
             m.write(format="bogus")
 

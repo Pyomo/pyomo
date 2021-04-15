@@ -1449,7 +1449,7 @@ endBlock{}
         cfg.declare('foo', ConfigValue(1, int))
         self.assertEqual( cfg.setdefault('foo', 5).value(), 1 )
         self.assertEqual( len(cfg), 1 )
-        self.assertRaisesRegexp(ValueError, '.*disallows implicit entries',
+        self.assertRaisesRegex(ValueError, '.*disallows implicit entries',
                                 cfg.setdefault, 'bar', 0)
         self.assertEqual( len(cfg), 1 )
 
@@ -1579,7 +1579,7 @@ endBlock{}
         self.assertEqual(_display(X, 'userdata'), "")
         self.assertIs(X.config.get(0), None )
         self.assertIs(X.config.get(0,None).value(), None )
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             IndexError, '.*out of range', X.config.__getitem__, 0 )
         # get() shouldn't change the userdata flag...
         self.assertEqual(_display(X, 'userdata'), "")
@@ -1599,7 +1599,7 @@ endBlock{}
         self.assertEqual(_display(X, 'userdata'), "")
 
         self.assertIs(X.config.get(1), None )
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             IndexError, '.*out of range', X.config.__getitem__, 1)
 
         # this should ONLY change the userSet flag on the item (and not
@@ -1622,7 +1622,7 @@ endBlock{}
 
     def test_implicit_entries(self):
         config = ConfigDict()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Key 'test' not defined in ConfigDict '' "
                 "and Dict disallows implicit entries"):
             config['test'] = 5
@@ -1782,12 +1782,12 @@ Node information:
         self.assertEqual(20, foo['implicit bar'])
         self.assertEqual(20, foo.implicit_bar)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Key 'baz' not defined in ConfigDict '' "
                 "and Dict disallows implicit entries"):
             config.baz = 10
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 AttributeError, "Unknown attribute 'baz'"):
             a = config.baz
 
