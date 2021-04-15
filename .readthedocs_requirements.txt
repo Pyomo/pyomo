@@ -1,5 +1,5 @@
 git+https://github.com/PyUtilib/pyutilib
-Sphinx
+Sphinx>2
 sphinx-rtd-theme
 sphinxcontrib-jsmath
 sphinxcontrib-napoleon
