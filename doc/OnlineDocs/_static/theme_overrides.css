@@ -8,13 +8,12 @@ code.xref.py {
     color: #8C1AFF;
 }
 
-/* method signitures should be in fixed-width font, names should be bold
-   arguments should be black*/
+/* method names should be bold */
 code.sig-name.descname {
-    font-family: monospace;
     font-weight: bold !important;
     color: black;
 }
+/* method argument lists shoult *not* be bold, argument names in black */
 dl.py.method dt {
     font-weight: normal;
 }

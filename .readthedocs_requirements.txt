@@ -1,6 +1,6 @@
 git+https://github.com/PyUtilib/pyutilib
 Sphinx>2
-sphinx-rtd-theme>0.5
+sphinx-rtd-theme
 sphinxcontrib-jsmath
 sphinxcontrib-napoleon
 networkx
