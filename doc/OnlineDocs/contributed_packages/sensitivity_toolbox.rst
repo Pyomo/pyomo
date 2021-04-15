@@ -26,7 +26,7 @@ Here :math:`x_1`, :math:`x_2`, and :math:`x_3` are the decision variables while 
     Import Pyomo and sipopt from the sensitivity toolbox
 
     >>> from pyomo.environ import *
-    >>> from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation
+    >>> from pyomo.contrib.sensitivity_toolbox.sens import sipopt
 
     Create a concrete model
 
