@@ -424,7 +424,7 @@ class Collocation_Discretization_Transformation(Transformation):
                 generate_finite_elements(ds, self._nfe[currentds])
                 if not ds.get_changed():
                     if len(ds) - 1 > self._nfe[currentds]:
-                        logger.warn("More finite elements were found in "
+                        logger.warning("More finite elements were found in "
                                     "ContinuousSet '%s' than the number of "
                                     "finite elements specified in apply. The "
                                     "larger number of finite elements will be "

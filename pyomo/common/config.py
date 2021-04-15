@@ -904,10 +904,10 @@ class ConfigBase(object):
                 if implicit_domain is ConfigBase.NoArgument else
                 implicit_domain )
             if domain is not ConfigBase.NoArgument:
-                logger.warn("domain ignored by __call__(): "
+                logger.warning("domain ignored by __call__(): "
                             "class is a ConfigDict" % (type(self),))
             if default is not ConfigBase.NoArgument:
-                logger.warn("default ignored by __call__(): "
+                logger.warning("default ignored by __call__(): "
                             "class is a ConfigDict" % (type(self),))
         else:
             kwds['default'] = ( self.value()
@@ -917,10 +917,10 @@ class ConfigBase(object):
                                if domain is ConfigBase.NoArgument else
                                domain )
             if implicit is not ConfigBase.NoArgument:
-                logger.warn("implicit ignored by __call__(): "
+                logger.warning("implicit ignored by __call__(): "
                             "class %s is not a ConfigDict" % (type(self),))
             if implicit_domain is not ConfigBase.NoArgument:
-                logger.warn("implicit_domain ignored by __call__(): "
+                logger.warning("implicit_domain ignored by __call__(): "
                             "class %s is not a ConfigDict" % (type(self),))
 
         # Copy over any other object-specific information (mostly Dict
