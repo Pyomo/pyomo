@@ -1788,12 +1788,12 @@ class Test_SetOperator(unittest.TestCase):
         model.b = Set(initialize=pandas_index)
 
         self.assertIsInstance(model.a, Set)
-        self.assertEquals(list(model.a), list(pandas_index))
-        self.assertEquals(model.a.dimen, pandas_index.nlevels)
+        self.assertEqual(list(model.a), list(pandas_index))
+        self.assertEqual(model.a.dimen, pandas_index.nlevels)
 
         self.assertIsInstance(model.b, Set)
-        self.assertEquals(list(model.b), list(pandas_index))
-        self.assertEquals(model.b.dimen, pandas_index.nlevels)
+        self.assertEqual(list(model.b), list(pandas_index))
+        self.assertEqual(model.b.dimen, pandas_index.nlevels)
 
 
 class TestSetUnion(unittest.TestCase):
@@ -4019,14 +4019,14 @@ class TestSet(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertFalse( m.I.add(1) )
-        self.assertEquals(
+        self.assertEqual(
             output.getvalue(),
             "Element 1 already exists in Set I; no action taken\n")
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertFalse( m.I.add((1,)) )
-        self.assertEquals(
+        self.assertEqual(
             output.getvalue(),
             "Element (1,) already exists in Set I; no action taken\n")
 
@@ -4041,7 +4041,7 @@ class TestSet(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertFalse( m.J.add(1) )
-        self.assertEquals(
+        self.assertEqual(
             output.getvalue(),
             "Element 1 already exists in Set J; no action taken\n")
 
@@ -4059,7 +4059,7 @@ class TestSet(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertTrue( m.K.add((0,0)) )
             self.assertFalse( m.K.add((0,1)) )
-        self.assertEquals(output.getvalue(), "")
+        self.assertEqual(output.getvalue(), "")
         self.assertEqual(
             list(m.K), [(1,1), (2,1), (2,2), (3,1), (3,2), (3,3), (0,0)])
 
@@ -4079,7 +4079,7 @@ class TestSet(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertTrue( m.L[2].add(0) )
             self.assertFalse( m.L[2].add((100)) )
-        self.assertEquals(output.getvalue(), "")
+        self.assertEqual(output.getvalue(), "")
         self.assertEqual(list(m.L[2]), [1,2,0])
 
 

@@ -2129,13 +2129,13 @@ class TestSetArgs1(PyomoModel):
         # except ValueError:
         #     pass
         instance = self.model.create_instance()
-        self.assertEquals(len(instance.B), 6)
-        self.assertEquals(instance.B[0,1,0,False], [])
-        self.assertEquals(instance.B[0,1,0,True], [0,1])
-        self.assertEquals(instance.B[1,2,1,False], [])
-        self.assertEquals(instance.B[1,2,1,True], [1,2])
-        self.assertEquals(instance.B[2,3,4,False], [])
-        self.assertEquals(instance.B[2,3,4,True], [2,3])
+        self.assertEqual(len(instance.B), 6)
+        self.assertEqual(instance.B[0,1,0,False], [])
+        self.assertEqual(instance.B[0,1,0,True], [0,1])
+        self.assertEqual(instance.B[1,2,1,False], [])
+        self.assertEqual(instance.B[1,2,1,True], [1,2])
+        self.assertEqual(instance.B[2,3,4,False], [])
+        self.assertEqual(instance.B[2,3,4,True], [2,3])
 
     def test_initialize9(self):
         self.model.A = Set(initialize=range(0,3))

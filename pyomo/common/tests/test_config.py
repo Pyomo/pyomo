@@ -1412,7 +1412,7 @@ endBlock{}
         self.assertNotEquals(
             self.config.get('scenario', 'bogus').value(), 'bogus')
         self.assertFalse('fubar' in self.config)
-        self.assertEquals(
+        self.assertEqual(
             self.config.get('fubar', 'bogus').value(), 'bogus')
 
         cfg = ConfigDict()

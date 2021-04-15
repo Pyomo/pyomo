@@ -267,7 +267,7 @@ class Test(unittest.TestCase):
         instance=tmodel.create_instance()
         expr = sum_product(instance.x,instance.B,instance.y)
         baseline = "B[1]*x[1]*y[1] + B[2]*x[2]*y[2] + B[3]*x[3]*y[3]"
-        self.assertEquals( str(expr), baseline )
+        self.assertEqual( str(expr), baseline )
 
     # same as above, but pickles the constructed AbstractModel and
     # then operates on the unpickled instance.
@@ -284,7 +284,7 @@ class Test(unittest.TestCase):
         instance = pickle.loads(pickle_str)
         expr = sum_product(instance.x,instance.B,instance.y)
         baseline = "B[1]*x[1]*y[1] + B[2]*x[2]*y[2] + B[3]*x[3]*y[3]"
-        self.assertEquals( str(expr), baseline )
+        self.assertEqual( str(expr), baseline )
 
     # verifies that the use of lambda expressions as rules yields model instances
     # that are not pickle'able.

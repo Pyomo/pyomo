@@ -433,7 +433,7 @@ class ParamTester(object):
             expectException = self.instance.A._default_val is NoValue
             try:
                 ans = value(test)
-                self.assertEquals(ans, value(self.instance.A._default_val))
+                self.assertEqual(ans, value(self.instance.A._default_val))
                 self.assertFalse(expectException)
             except:
                 if not expectException:
