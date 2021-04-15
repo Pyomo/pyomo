@@ -1228,9 +1228,32 @@ class BlockVector(np.ndarray, BaseBlockVector):
         return '{}{}'.format(self.__class__.__name__, self.bshape)
 
     def get_block(self, key):
+        """
+        Access a block.
+
+        Parameters
+        ----------
+        key: int
+            This is the block index
+
+        Returns
+        -------
+        block: np.ndarray or BlockVector
+            The block corresponding to the index key.
+        """
         return super(BlockVector, self).__getitem__(key)
 
     def set_block(self, key, value):
+        """
+        Set a block. The value can be a NumPy array or another BlockVector.
+
+        Parameters
+        ----------
+        key: int
+            This is the block index
+        value:
+            This is the block. It can be a NumPy array or another BlockVector.
+        """
         assert -self.nblocks < key < self.nblocks, 'out of range'
         assert isinstance(value, np.ndarray) or \
             isinstance(value, BaseBlockVector), \

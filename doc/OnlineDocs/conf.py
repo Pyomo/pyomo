@@ -53,11 +53,14 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.ifconfig',
               'sphinx.ext.inheritance_diagram',
               'sphinx.ext.autosummary',
-              'sphinx.ext.doctest']
+              'sphinx.ext.doctest',
+              'sphinx_copybutton']
     #'sphinx.ext.githubpages']
 
 viewcode_follow_imported_members = True
 #napoleon_include_private_with_doc = True
+
+copybutton_prompt_text = ">>> "
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

@@ -15,6 +15,7 @@ Contributed packages distributed with Pyomo:
 .. toctree::
    :maxdepth: 1
 
+   pynumero/index.rst
    preprocessing.rst
    gdpopt.rst
    multistart.rst
