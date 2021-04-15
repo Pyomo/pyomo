@@ -270,7 +270,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
                 m,
                 vars_to_eliminate=m.x,
                 constraint_filtering_callback=not_a_callback)
-        self.assertRegexpMatches(
+        self.assertRegex(
             log.getvalue(),
             "Problem calling constraint filter callback "
             "on constraint with right-hand side -1.0 and body:*")
@@ -287,7 +287,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
                 m,
                 vars_to_eliminate=m.x,
                 constraint_filtering_callback=5)
-        self.assertRegexpMatches(
+        self.assertRegex(
             log.getvalue(),
             "Problem calling constraint filter callback "
             "on constraint with right-hand side -1.0 and body:*")

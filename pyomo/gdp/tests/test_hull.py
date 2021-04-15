@@ -620,7 +620,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
                 ".*b.simpledisj1.c\[1\]",
                 hull.get_transformed_constraints,
                 m.b.simpledisj1.c[1])
-        self.assertRegexpMatches(log.getvalue(),
+        self.assertRegex(log.getvalue(),
                                  ".*Constraint 'b.simpledisj1.c\[1\]' has not "
                                  "been transformed.")
 
@@ -1847,7 +1847,7 @@ class TestErrors(unittest.TestCase):
                 "'NoneType' object has no attribute '_bigMConstraintMap'",
                 hull.get_var_bounds_constraint,
                 m.w)
-        self.assertRegexpMatches(
+        self.assertRegex(
             log.getvalue(),
             ".*Either 'w' is not a disaggregated variable, "
             "or the disjunction that disaggregates it has "
@@ -1862,7 +1862,7 @@ class TestErrors(unittest.TestCase):
                 hull.get_disaggregation_constraint,
                 m.d[1].transformation_block().disaggregatedVars.w,
                 m.disjunction)
-        self.assertRegexpMatches(log.getvalue(), ".*It doesn't appear that "
+        self.assertRegex(log.getvalue(), ".*It doesn't appear that "
                                  "'_pyomo_gdp_hull_reformulation."
                                  "relaxedDisjuncts\[1\].disaggregatedVars.w' "
                                  "is a variable that was disaggregated by "
@@ -1875,7 +1875,7 @@ class TestErrors(unittest.TestCase):
                 "'NoneType' object has no attribute '_disaggregatedVarMap'",
                 hull.get_src_var,
                 m.w)
-        self.assertRegexpMatches(
+        self.assertRegex(
             log.getvalue(),
             ".*'w' does not appear to be a disaggregated variable")
 
@@ -1888,7 +1888,7 @@ class TestErrors(unittest.TestCase):
                 hull.get_disaggregated_var,
                 m.d[1].transformation_block().disaggregatedVars.w,
                 m.d[1])
-        self.assertRegexpMatches(log.getvalue(),
+        self.assertRegex(log.getvalue(),
                                  ".*It does not appear "
                                  "'_pyomo_gdp_hull_reformulation."
                                  "relaxedDisjuncts\[1\].disaggregatedVars.w' "

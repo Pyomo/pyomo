@@ -1316,7 +1316,7 @@ class SimpleDisjIndexedConstraints(unittest.TestCase, CommonTests):
                 ".*b.simpledisj1.c\[1\]",
                 bigm.get_transformed_constraints,
                 m.b.simpledisj1.c[1])
-        self.assertRegexpMatches(log.getvalue(),
+        self.assertRegex(log.getvalue(),
                                  ".*Constraint 'b.simpledisj1.c\[1\]' "
                                  "has not been transformed.")
 

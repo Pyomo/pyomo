@@ -447,7 +447,7 @@ class InfiniteSetTester(unittest.TestCase):
         with LoggingIntercept(os, 'pyomo'):
             self.assertIn(None, AnyWithNone)
             self.assertIn(1, AnyWithNone)
-        self.assertRegexpMatches(
+        self.assertRegex(
             os.getvalue(),
             "^DEPRECATED: The AnyWithNone set is deprecated")
 
@@ -1717,7 +1717,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertTrue(m.I.check_values())
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: check_values\(\) is deprecated:")
 
@@ -2946,7 +2946,7 @@ J : Size=1, Index=None, Ordered=False
         os = StringIO()
         with LoggingIntercept(os, 'pyomo'):
             self.assertEqual(x.set_tuple, [a,b])
-        self.assertRegexpMatches(
+        self.assertRegex(
             os.getvalue(),
             '^DEPRECATED: SetProduct.set_tuple is deprecated.')
 
@@ -3216,7 +3216,7 @@ J : Size=1, Index=None, Ordered=False
         with LoggingIntercept(output, 'pyomo.core'):
             m.create_instance(
                 data={None:{'J': {None: [(1,1),(1,2),(2,1),(2,2)]}}})
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue().replace('\n',' '),
             "^DEPRECATED: Providing construction data to SetOperator objects "
             "is deprecated")
@@ -3229,7 +3229,7 @@ J : Size=1, Index=None, Ordered=False
                     "\(2, 1\)\]\}"):
                 m.create_instance(
                     data={None:{'J': {None: [(1,1),(1,2),(2,1)]}}})
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue().replace('\n',' '),
             "^DEPRECATED: Providing construction data to SetOperator objects "
             "is deprecated")
@@ -3242,7 +3242,7 @@ J : Size=1, Index=None, Ordered=False
                     "\(2, 1\), \(2, 2\)\]\}"):
                 m.create_instance(
                     data={None:{'J': {None: [(1,3),(1,2),(2,1),(2,2)]}}})
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue().replace('\n',' '),
             "^DEPRECATED: Providing construction data to SetOperator objects "
             "is deprecated")
@@ -3496,7 +3496,7 @@ class TestSet(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.core'):
             m.I = Set(virtual=True)
             self.assertEqual(len(m.I), 0)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: Pyomo Sets ignore the 'virtual' keyword argument")
 
@@ -5403,21 +5403,21 @@ class TestDeprecation(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertIsNone(m.I.filter)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: 'filter' is no longer a public attribute")
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertIsNone(m.J.filter)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: 'filter' is no longer a public attribute")
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertIsInstance(m.K.filter, IndexedCallInitializer)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: 'filter' is no longer a public attribute")
 
@@ -5429,21 +5429,21 @@ class TestDeprecation(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertFalse(m.I.virtual)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: The 'virtual' attribute is no longer supported")
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertTrue(m.J.virtual)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: The 'virtual' attribute is no longer supported")
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             m.J.virtual = True
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: The 'virtual' attribute is no longer supported")
         with self.assertRaisesRegex(
@@ -5460,28 +5460,28 @@ class TestDeprecation(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertTrue(m.I.concrete)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: The 'concrete' attribute is no longer supported")
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertTrue(m.J.concrete)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: The 'concrete' attribute is no longer supported")
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertFalse(Reals.concrete)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: The 'concrete' attribute is no longer supported")
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             m.J.concrete = True
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: The 'concrete' attribute is no longer supported.")
         with self.assertRaisesRegex(
@@ -5497,13 +5497,13 @@ class TestDeprecation(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertTrue(m.J.ordered)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: The 'ordered' attribute is no longer supported.")
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertFalse(m.K.ordered)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: The 'ordered' attribute is no longer supported.")
 
@@ -5515,7 +5515,7 @@ class TestDeprecation(unittest.TestCase):
             tmp = m.J.value
         self.assertIs(type(tmp), set)
         self.assertEqual(tmp, set([1,3,2]))
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: The 'value' attribute is deprecated.  Use .data\(\)")
 
@@ -5527,7 +5527,7 @@ class TestDeprecation(unittest.TestCase):
             tmp = m.J.value_list
         self.assertIs(type(tmp), list)
         self.assertEqual(tmp, list([1,3,2]))
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue().replace('\n',' '),
             "^DEPRECATED: The 'value_list' attribute is deprecated.  "
             "Use .ordered_data\(\)")
@@ -5538,7 +5538,7 @@ class TestDeprecation(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertTrue(m.I.check_values())
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: check_values\(\) is deprecated: Sets only "
             "contain valid")
@@ -5547,7 +5547,7 @@ class TestDeprecation(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertTrue(m.J.check_values())
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: check_values\(\) is deprecated:")
 
@@ -5556,7 +5556,7 @@ class TestDeprecation(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertTrue(m.K.check_values())
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: check_values\(\) is deprecated: Sets only "
             "contain valid")

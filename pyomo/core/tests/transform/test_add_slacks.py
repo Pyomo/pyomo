@@ -318,7 +318,7 @@ class TestAddSlacks(unittest.TestCase):
             TransformationFactory('core.add_slack_variables').apply_to(
                 m,
                 targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
-        self.assertRegexpMatches(out.getvalue(), 
+        self.assertRegex(out.getvalue(), 
                                  "DEPRECATED: In future releases ComponentUID "
                                  "targets will no longer be\nsupported in the "
                                  "core.add_slack_variables transformation. "
