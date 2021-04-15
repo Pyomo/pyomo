@@ -29,9 +29,6 @@ from pyomo.opt.base.convert import convert_problem
 from pyomo.opt.base.formats import ResultsFormat, ProblemFormat
 import pyomo.opt.base.results
 
-from six import iteritems
-from six.moves import xrange
-
 logger = logging.getLogger('pyomo.opt')
 
 # The version string is first searched for trunk/Trunk, and if
@@ -52,7 +49,7 @@ def _extract_version(x, length=4):
         # version is greater/less than some other version, it makes
         # since that a solver advertising trunk should always be greater
         # than a version check, hence returning a tuple of infinities
-        return tuple(float('inf') for i in xrange(length))
+        return tuple(float('inf') for i in range(length))
     m = re.search('[0-9]+(\.[0-9]+){1,3}',x)
     if not m is None:
         version = tuple(int(i) for i in m.group(0).split('.')[:length])
@@ -679,7 +676,7 @@ class OptSolver(object):
             if len(kwds):
                 raise ValueError(
                     "Solver="+self.type+" passed unrecognized keywords: \n\t"
-                    +("\n\t".join("%s = %s" % (k,v) for k,v in iteritems(kwds))))
+                    +("\n\t".join("%s = %s" % (k,v) for k,v in kwds.items())))
 
         if (type(self._problem_files) in (list,tuple)) and \
            (not isinstance(self._problem_files[0], str)):
@@ -814,16 +811,6 @@ def default_config_block(solver, init=False):
                 str,
                 'The technique that is used to manage solver executions.',
                 None) )
-    solver.declare('pyro host', ConfigValue(
-                None,
-                str,
-                "The hostname to bind on when searching for a Pyro nameserver.",
-                None) )
-    solver.declare('pyro port', ConfigValue(
-                None,
-                int,
-                "The port to bind on when searching for a Pyro nameserver.",
-                None) )
     solver.declare('options', ConfigBlock(
                 implicit=True,
                 implicit_domain=ConfigValue(
@@ -871,10 +858,6 @@ def default_config_block(solver, init=False):
     solver_list[0].get('manager').\
         declare_as_argument('--solver-manager', dest="smanager_type",
                             metavar="TYPE")
-    solver_list[0].get('pyro host').\
-        declare_as_argument('--pyro-host', dest="pyro_host")
-    solver_list[0].get('pyro port').\
-        declare_as_argument('--pyro-port', dest="pyro_port")
     solver_list[0].get('options string').\
         declare_as_argument('--solver-options', dest='options_string',
                             metavar="STRING")

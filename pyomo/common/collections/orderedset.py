@@ -8,15 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import six
-from six import itervalues, iteritems
-
-if six.PY3:
-    from collections.abc import MutableSet
-else:
-    from collections import MutableSet
-
+from collections.abc import MutableSet
 from collections import OrderedDict
+
 
 class OrderedSet(MutableSet):
     __slots__ = ('_dict')
@@ -80,3 +74,12 @@ class OrderedSet(MutableSet):
     def remove(self, val):
         """Remove an element. If not a member, raise a KeyError."""
         del self._dict[val]
+
+    def intersection(self, other):
+        res = OrderedSet([i for i in self if i in other])
+        return res
+
+    def union(self, other):
+        res = OrderedSet(self)
+        res.update(other)
+        return res

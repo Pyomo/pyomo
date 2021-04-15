@@ -23,7 +23,6 @@
 # gurobi_ampl version 6.5.0.
 from pyomo.environ import *
 
-import six
 
 #
 # Create the gurobi_ampl solver plugin using the ASL interface

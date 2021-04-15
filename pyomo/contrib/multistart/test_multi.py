@@ -1,8 +1,7 @@
 import logging
 from itertools import product
 
-from six import StringIO
-from six.moves import range
+from io import StringIO
 
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept

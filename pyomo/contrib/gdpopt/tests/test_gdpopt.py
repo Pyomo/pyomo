@@ -13,7 +13,7 @@ import logging
 from math import fabs
 from os.path import join, normpath
 
-from six import StringIO
+from io import StringIO
 
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept

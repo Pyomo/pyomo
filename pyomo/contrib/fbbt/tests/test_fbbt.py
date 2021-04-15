@@ -17,7 +17,7 @@ from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.core.expr.numeric_expr import (ProductExpression,
                                           UnaryFunctionExpression)
 import math
-from six import StringIO
+from io import StringIO
 
 
 class DummyExpr(ProductExpression):

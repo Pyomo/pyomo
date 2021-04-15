@@ -535,10 +535,6 @@ def apply_optimizer(data, instance=None):
     # Create the solver manager
     #
     solver_mngr_kwds = {}
-    if data.options.solvers[0].pyro_host is not None:
-        solver_mngr_kwds['host'] = data.options.solvers[0].pyro_host
-    if data.options.solvers[0].pyro_port is not None:
-        solver_mngr_kwds['port'] = data.options.solvers[0].pyro_port
     with SolverManagerFactory(solver_mngr_name, **solver_mngr_kwds) as solver_mngr:
         if solver_mngr is None:
             msg = "Problem constructing solver manager '%s'"

@@ -12,7 +12,6 @@
 __all__ = ['ActionManagerError', 'ActionHandle', 'AsynchronousActionManager', 'ActionStatus', 'FailedActionHandle', 'solve_all_instances']
 
 import enum
-from six import itervalues
 
 class ActionStatus(str, enum.Enum):
     done='done'
@@ -145,7 +144,7 @@ class AsynchronousActionManager(object):
         #
         ahs = set()
         if len(args) == 0:
-            ahs.update(ah for ah in itervalues(self.event_handle)
+            ahs.update(ah for ah in self.event_handle.values()
                        if ah.status == ActionStatus.queued)
         else:
             ahs = self._flatten(*args)

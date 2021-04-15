@@ -22,6 +22,7 @@ import logging
 import re
 import sys
 import textwrap
+from io import TextIOBase
 
 from pyomo.common.deprecation import deprecated
 from pyomo.common.fileutils import PYOMO_ROOT_DIR
@@ -251,11 +252,11 @@ _handler.addFilter(_GlobalLogFilter())
 _pyomoLogger.addHandler(_handler)
 
 
+@deprecated('The pyomo.common.log.LogHandler class has been deprecated '
+            'in favor of standard Handlers from the Python logging module '
+            'combined with the pyomo.common.log.WrappingFormatter.',
+            version='5.7.3')
 class LogHandler(logging.StreamHandler):
-    @deprecated('The pyomo.common.log.LogHandler class has been deprecated '
-                'in favor of standard Handlers from the Python logging module '
-                'combined with the pyomo.common.log.WrappingFormatter.',
-                version='5.7.3')
     def __init__(self, base='', stream=None,
                  level=logging.NOTSET, verbosity=None):
         super(LogHandler, self).__init__(stream)
@@ -285,9 +286,9 @@ class LoggingIntercept(object):
         level (int): the logging level to intercept
 
     Examples:
-        >>> import six, logging
+        >>> import io, logging
         >>> from pyomo.common.log import LoggingIntercept
-        >>> buf = six.StringIO()
+        >>> buf = io.StringIO()
         >>> with LoggingIntercept(buf, 'pyomo.core', logging.WARNING):
         ...     logging.getLogger('pyomo.core').warning('a simple message')
         >>> buf.getvalue()
@@ -315,3 +316,21 @@ class LoggingIntercept(object):
         logger.propagate = self._save[1]
         for h in self._save[2]:
             logger.handlers.append(h)
+
+
+class LogStream(TextIOBase):
+    """
+    This class logs whatever gets sent to the write method.
+    This is useful for logging solver output (a LogStream
+    instance can be handed to TeeStream from pyomo.common.tee).
+    """
+    def __init__(self, level, logger):
+        self._level = level
+        self._logger = logger
+
+    def write(self, s: str) -> int:
+        res = len(s)
+        s = s.rstrip('\n')
+        for line in s.split('\n'):
+            self._logger.log(self._level, line)
+        return res
