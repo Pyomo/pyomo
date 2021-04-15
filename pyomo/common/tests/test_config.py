@@ -1409,7 +1409,7 @@ endBlock{}
 
     def test_block_get(self):
         self.assertTrue('scenario' in self.config)
-        self.assertNotEquals(
+        self.assertNotEqual(
             self.config.get('scenario', 'bogus').value(), 'bogus')
         self.assertFalse('fubar' in self.config)
         self.assertEqual(
