@@ -10,10 +10,6 @@
 
 from pyomo.contrib.matching.maximum_matching import maximum_matching
 from pyomo.common.dependencies import networkx as nx
-nxb = nx.algorithms.bipartite
-nxc = nx.algorithms.components
-nxd = nx.algorithms.dag
-from_biadjacency_matrix = nxb.matrix.from_biadjacency_matrix
 
 def block_triangularize(matrix, matching=None):
     """
@@ -34,6 +30,10 @@ def block_triangularize(matrix, matching=None):
     column index to the index of its block in a block-lower triangular
     permutation of the matrix.
     """
+    nxb = nx.algorithms.bipartite
+    nxc = nx.algorithms.components
+    nxd = nx.algorithms.dag
+    from_biadjacency_matrix = nxb.matrix.from_biadjacency_matrix
 
     M, N = matrix.shape
     if M != N:

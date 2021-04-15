@@ -9,15 +9,16 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.dependencies import networkx as nx
-nxb = nx.algorithms.bipartite
-nxc = nx.algorithms.components
-from_biadjacency_matrix = nxb.matrix.from_biadjacency_matrix
 
 def maximum_matching(matrix):
     """
     Returns a maximum matching of the rows and columns of the 
     matrix as a dict from row indices to column indices.
     """
+    nxb = nx.algorithms.bipartite
+    nxc = nx.algorithms.components
+    from_biadjacency_matrix = nxb.matrix.from_biadjacency_matrix
+
     M, N = matrix.shape
     bg = from_biadjacency_matrix(matrix)
 
