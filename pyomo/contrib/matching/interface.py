@@ -11,7 +11,9 @@
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.matching.maximum_matching import maximum_matching
 from pyomo.contrib.matching.block_triangularize import block_triangularize
-from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
+from pyomo.common.dependencies import scipy_available
+if scipy_available:
+    from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 
 class IncidenceGraphInterface(object):
     """
