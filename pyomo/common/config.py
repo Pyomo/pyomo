@@ -278,7 +278,6 @@ class Path(object):
         self.expandPath = expandPath
 
     def __call__(self, path):
-        #print "normalizing path '%s' " % (path,),
         path = str(path)
         _expand = self.expandPath
         if _expand is None:
@@ -307,7 +306,6 @@ class Path(object):
         ans = os.path.normpath(os.path.abspath(os.path.join(
             os.path.expanduser(os.path.expandvars(base)),
             os.path.expanduser(os.path.expandvars(path)))))
-        #print "to '%s'" % (ans,)
         return ans
 
 
@@ -468,7 +466,7 @@ inputs without "cluttering" the code with input validation:
     int
 
 In addition to common types (like ``int``, ``float``, ``bool``, and
-``str``), The config system profides a number of custom domain
+``str``), the config system profides a number of custom domain
 validators for common use cases:
 
 .. autosummary::
@@ -1305,7 +1303,6 @@ class ConfigBase(object):
         lastObj = self
         indent = ''
         for lvl, pre, val, obj in self._data_collector(1, '', visibility, True):
-            #print len(level), lvl, val, obj
             if len(level) < lvl:
                 while len(level) < lvl - 1:
                     level.append(None)
@@ -1641,12 +1638,12 @@ class ConfigList(ConfigBase):
         if val is None:
             return
         self._data.append(val)
-        #print self._data[-1], type(self._data[-1])
         self._data[-1]._parent = self
         self._data[-1]._name = '[%s]' % (len(self._data) - 1,)
         self._data[-1]._userSet = True
         # Adding something to the container should not change the
-        # userSet on the container (see #352 for justification)
+        # userSet on the container (see Pyomo/pyomo#352; now
+        # Pyomo/pysp#8 for justification)
         #self._userSet = True
 
     @deprecated("ConfigList.add() has been deprecated.  Use append()",
@@ -1924,7 +1921,8 @@ class ConfigDict(ConfigBase):
             ans = self._add(name, self._implicit_domain(config))
         ans._userSet = True
         # Adding something to the container should not change the
-        # userSet on the container (see #352 for justification)
+        # userSet on the container (see Pyomo/pyomo#352; now
+        # Pyomo/pysp#8 for justification)
         #self._userSet = True
         return ans
 
@@ -1973,7 +1971,6 @@ class ConfigDict(ConfigBase):
             # on the order)
             for key in self._decl_order:
                 if key in _decl_map:
-                    #print "Setting", key, " = ", value
                     self[key] = value[_decl_map[key]]
             # implicit data is declared at the end (in sorted order)
             for key in sorted(_implicit):

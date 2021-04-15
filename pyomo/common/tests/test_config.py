@@ -2207,7 +2207,7 @@ c: 1.0
                 {'int': 100, 'in': 3, 'anon': 2, 'lambda': 1,
                  'list': ['2', 'a', '10']}
             )
-        # No warnings due to anythong above.
+        # No warnings due to anything above.
         self.assertEqual(out.getvalue(), "")
 
         # On some platforms (notably, pypy3) if dill has been imported,
