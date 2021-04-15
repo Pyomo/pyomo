@@ -32,7 +32,7 @@ def tearDownModule():
     TempfileManager.tempdir = old_tempdir
 
 
-class TestSolver2(pyomo.opt.OptSolver):
+class DummySolver2(pyomo.opt.OptSolver):
 
     def __init__(self, **kwds):
         kwds['type'] = 'stest_type'
@@ -45,7 +45,7 @@ class TestSolver2(pyomo.opt.OptSolver):
 class OptSolverDebug(unittest.TestCase):
 
     def setUp(self):
-        pyomo.opt.SolverFactory.register('stest2')(TestSolver2)
+        pyomo.opt.SolverFactory.register('stest2')(DummySolver2)
 
     def tearDown(self):
         pyomo.opt.SolverFactory.unregister('stest2')
