@@ -36,6 +36,17 @@ try:
 finally:
     sys.path.pop(0)
 
+# -- Options for intersphinx ---------------------------------------------
+
+intersphinx_mapping = {
+    'matplotlib': ('https://matplotlib.org/stable/', None),
+    'numpy': ('https://numpy.org/doc/stable/', None),
+    'pandas': ('https://pandas.pydata.org/docs/', None),
+    'scikit-learn': ('https://scikit-learn.org/stable/', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
+    'Sphinx': ('https://www.sphinx-doc.org/en/stable/', None),
+}
+
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -46,6 +57,7 @@ needs_sphinx = '1.8'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinx.ext.intersphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
@@ -124,7 +136,12 @@ numfig = True
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 html_theme = 'sphinx_rtd_theme'
-html4_writer = True
+
+# Force HTML4: the Paramters/Returns/Return type formatting is strange
+# in HTML5
+#html4_writer = True
+#html5_writer = True
+
 if not on_rtd:  # only import and set the theme if we're building docs locally
     import sphinx_rtd_theme
     html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]

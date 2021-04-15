@@ -9,7 +9,7 @@ code.xref.py {
 }
 
 /* method names should be bold */
-code.sig-name.descname {
+code.descname {
     font-weight: bold !important;
     color: black;
 }
