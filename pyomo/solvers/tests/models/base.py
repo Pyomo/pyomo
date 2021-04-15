@@ -10,7 +10,6 @@
 
 from os.path import join, dirname, abspath
 import json
-import six
 
 import pyomo.common.unittest as unittest
 
@@ -415,7 +414,7 @@ class _BaseTestModel(object):
 
 if __name__ == "__main__":
     import pyomo.solvers.tests.models
-    for key, value in six.iteritems(_test_models):
+    for key, value in _test_models.items():
         print(key)
         obj = value()
         obj.generate_model()
