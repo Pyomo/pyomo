@@ -70,7 +70,7 @@ class PyomoNLP(AslNLP):
 
             # write the nl file for the Pyomo model and get the symbolMap
             fname, symbolMap = WriterFactory('nl')(
-                pyomo_model, nl_file, lambda x:True, {})
+                pyomo_model, nl_file, lambda x:True, {'skip_trivial_constraints': True})
 
             # create component maps from vardata to idx and condata to idx
             self._vardata_to_idx = vdidx = ComponentMap()
