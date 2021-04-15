@@ -14,7 +14,8 @@ from pyomo.common.dependencies import (
         scipy_available,
         networkx_available,
         )
-sps = scipy.sparse
+if scipy_available:
+    sps = scipy.sparse
 
 import pyomo.common.unittest as unittest
 
