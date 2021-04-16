@@ -113,3 +113,136 @@ Similarly, `BlockMatrix` behaves very similarly to SciPy sparse matrices:
   >>> (m * v).flatten()
   array([-4.26341971, -2.50127873, -1.25      , -0.09493509,  1.77025575])
 
+Accessing blocks
+
+.. code-block:: python
+
+  >>> v.get_block(1)
+  array([0.1       , 1.14872127])
+  >>> m.get_block(1, 0).toarray()
+  array([[ 0.        ,  0.        ],
+         [-1.64872127,  1.        ]])
+
+Empty blocks in a `BlockMatrix` return `None`:
+
+.. code-block:: python
+
+  >>> print(m.get_block(1, 1))
+  None
+
+The dimensions of a blocks in a `BlockMatrix` can be set without setting a block:
+
+.. code-block:: python
+
+  >>> m2 = BlockMatrix(2, 2)
+  >>> m2.set_row_size(0, 5)
+  >>> m2.set_block(0, 0, m.get_block(0, 0))
+  ValueError: Incompatible row dimensions for row 0; got 2; expected 5.0
+
+Note that operations on `BlockVector` and `BlockMatrix` cannot be performed until the dimensions are fully specified:
+
+.. code-block:: python
+
+  >>> v2 = BlockVector(3)
+  >>> v + v2
+  NotFullyDefinedBlockVectorError: Operation not allowed with None blocks.
+  >>> m2 = BlockMatrix(3, 3)
+  >>> m2 * 2
+  NotFullyDefinedBlockMatrixError: Operation not allowed with None rows. Specify at least one block in every row
+
+The `has_none` property can be used to see if a `BlockVector` is fully
+specified. If `has_none` returns `True`, then there are `None` blocks,
+and the `BlockVector` is not fully specified.
+
+.. code-block:: python
+		
+  >>> v.has_none
+  False
+  >>> v2.has_none
+  True
+
+For `BlockMatrix`, use the `has_undefined_row_sizes()` and `has_undefined_col_sizes()` methods:
+
+.. code-block:: python
+
+  >>> m.has_undefined_row_sizes()
+  False
+  >>> m.has_undefined_col_sizes()
+  False
+  >>> m2.has_undefined_row_sizes()
+  True
+  >>> m2.has_undefined_col_sizes()
+  True
+
+To efficiently iterate over non-empty blocks in a `BlockMatrix`, use
+the `get_block_mask()` method, which returns a 2-D array indicating
+where the non-empty blocks are:
+
+.. code-block:: python
+
+  >>> m.get_block_mask(copy=False)
+  array([[ True,  True,  True],
+         [ True, False,  True],
+         [ True,  True, False]])
+  >>> for i, j in zip(*np.nonzero(m.get_block_mask(copy=False))):
+  ...     assert m.get_block(i, j) is not None
+
+Copying data:
+
+.. code-block:: python
+
+  >>> v2 = v.copy()
+  >>> v2.flatten()
+  array([-0.67025575, -1.2       ,  0.1       ,  1.14872127,  1.25      ])
+  >>> v2 = v.copy_structure()
+  >>> v2.block_sizes()
+  array([2, 2, 1])
+  >>> v2.copyfrom(v)
+  >>> v2.flatten()
+  array([-0.67025575, -1.2       ,  0.1       ,  1.14872127,  1.25      ])
+  >>> m2 = m.copy()
+  >>> (m - m2).tocoo().toarray()
+  array([[0., 0., 0., 0., 0.],
+         [0., 0., 0., 0., 0.],
+         [0., 0., 0., 0., 0.],
+         [0., 0., 0., 0., 0.],
+         [0., 0., 0., 0., 0.]])
+  >>> m2 = m.copy_structure()
+  >>> m2.has_undefined_row_sizes()
+  False
+  >>> m2.has_undefined_col_sizes()
+  False
+  >>> m2.copyfrom(m)
+  >>> (m - m2).tocoo().toarray()
+  array([[0., 0., 0., 0., 0.],
+         [0., 0., 0., 0., 0.],
+         [0., 0., 0., 0., 0.],
+         [0., 0., 0., 0., 0.],
+         [0., 0., 0., 0., 0.]])
+
+Nested blocks:
+
+.. code-block:: python
+
+  >>> v2 = BlockVector(2)
+  >>> v2.set_block(0, v)
+  >>> v2.set_block(1, np.ones(2))
+  >>> v2.block_sizes()
+  array([5, 2])
+  >>> v2.flatten()
+  array([-0.67025575, -1.2       ,  0.1       ,  1.14872127,  1.25      ,
+          1.        ,  1.        ])
+  >>> v3 = v2.copy_structure()
+  >>> v3.fill(1)
+  >>> (v2 + v3).flatten()
+  array([ 0.32974425, -0.2       ,  1.1       ,  2.14872127,  2.25      ,
+          2.        ,  2.        ])
+  >>> np.abs(v2).flatten()
+  array([0.67025575, 1.2       , 0.1       , 1.14872127, 1.25      ,
+         1.        , 1.        ])
+  >>> v2.get_block(0)
+  BlockVector(3,)
+
+Nested `BlockMatrix` applications work similarly.
+
+For more information, see the API documentation (:ref:`pynumero_api`).

@@ -44,10 +44,10 @@ class BlockVector(np.ndarray, BaseBlockVector):
     Structured vector interface. This interface can be used to
     performe operations on vectors composed by vectors. For example,
 
-    bv = BlockVector(3)
-    bv.set_block(0, v0)
-    bv.set_block(1, v1)
-    bv.set_block(2, v2)
+    >>> bv = BlockVector(3)
+    >>> bv.set_block(0, v0)
+    >>> bv.set_block(1, v1)
+    >>> bv.set_block(2, v2)
 
     where vi are numpy.ndarrays or BlockVectors.
 
