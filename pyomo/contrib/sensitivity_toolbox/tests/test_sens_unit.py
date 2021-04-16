@@ -685,6 +685,8 @@ class TestSensitivityInterface(unittest.TestCase):
             getattr(m, v).setlb(theta[v])
             getattr(m, v).setub(theta[v])
         dsdp_dic, col = get_dsdp(m, variable_name, theta)
+        print(dsdp_dic)
+        print(dsdp_dic['d(x1)/d(p1)'])
         np.testing.assert_almost_equal(dsdp_dic['d(x1)/d(p1)'], 1.0)
         np.testing.assert_almost_equal(dsdp_dic['d(x2)/d(p1)'], 0.0)
         np.testing.assert_almost_equal(dsdp_dic['d(p1)/d(p1)'], 1.0)
