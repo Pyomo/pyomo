@@ -34,11 +34,6 @@ class CBCTests(unittest.TestCase):
         m.c = Constraint(expr=m.x + m.z + m.w >= 0)
         m.o = Objective(expr=m.x + m.z + m.w)
 
-        # Set some initial values for warm start.
-        m.x.set_value(10)
-        m.z.set_value(5)
-        m.w.set_value(1)
-
         TempfileManager.push()
         tempdir = os.path.dirname(TempfileManager.create_tempfile())
         TempfileManager.pop()
@@ -56,22 +51,32 @@ class CBCTests(unittest.TestCase):
         # directory (which may or may not be on the same drive), and
         # then from the tempdir (which will be on the same drive).
 
-        with SolverFactory("cbc") as opt:
-            with capture_output() as output:
-                opt.solve(m, tee=True, warmstart=True, options={
-                    'sloglevel': 2, 'loglevel': 2})
+        # Set some initial values for warm start.
+        m.x.set_value(10)
+        m.z.set_value(5)
+        m.w.set_value(1)
 
-            log = output.getvalue()
-            # Check if CBC loaded the warmstart file.
-            self.assertIn('opening mipstart file', log)
+        with SolverFactory("cbc") as opt, capture_output() as output:
+            opt.solve(m, tee=True, warmstart=True, options={
+                'sloglevel': 2, 'loglevel': 2})
 
-            if sameDrive:
-                # Only integer and binary variables are considered by CBC.
-                self.assertIn('MIPStart values read for 2 variables.', log)
-                # m.x is ignored because it is continuous, so cost should be 5+1
-                self.assertIn('MIPStart provided solution with cost 6', log)
-            else:
-                self.assertNotIn('MIPStart values read', log)
+        log = output.getvalue()
+        # Check if CBC loaded the warmstart file.
+        self.assertIn('opening mipstart file', log)
+
+        if sameDrive:
+            # Only integer and binary variables are considered by CBC.
+            self.assertIn('MIPStart values read for 2 variables.', log)
+            # m.x is ignored because it is continuous, so cost should be 5+1
+            self.assertIn('MIPStart provided solution with cost 6', log)
+        else:
+            self.assertNotIn('MIPStart values read', log)
+
+
+        # Set some initial values for warm start.
+        m.x.set_value(10)
+        m.z.set_value(5)
+        m.w.set_value(1)
 
         try:
             _origDir = os.getcwd()
@@ -79,16 +84,16 @@ class CBCTests(unittest.TestCase):
             with SolverFactory("cbc") as opt, capture_output() as output:
                 opt.solve(m, tee=True, warmstart=True, options={
                     'sloglevel': 2, 'loglevel': 2})
-
-            log = output.getvalue()
-            # Check if CBC loaded the warmstart file.
-            self.assertIn('opening mipstart file', log)
-            # Only integer and binary variables are considered by CBC.
-            self.assertIn('MIPStart values read for 2 variables.', log)
-            # m.x is ignored because it is continuous, so cost should be 5+1
-            self.assertIn('MIPStart provided solution with cost 6', log)
         finally:
             os.chdir(_origDir)
+
+        log = output.getvalue()
+        # Check if CBC loaded the warmstart file.
+        self.assertIn('opening mipstart file', log)
+        # Only integer and binary variables are considered by CBC.
+        self.assertIn('MIPStart values read for 2 variables.', log)
+        # m.x is ignored because it is continuous, so cost should be 5+1
+        self.assertIn('MIPStart provided solution with cost 6', log)
 
 
     @unittest.skipIf(not cbc_available,
