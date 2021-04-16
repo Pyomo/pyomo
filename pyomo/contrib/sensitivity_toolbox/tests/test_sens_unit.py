@@ -43,10 +43,13 @@ from pyomo.contrib.sensitivity_toolbox.sens import (
         get_dfds_dcds,
         line_num
         )
-import numpy as np
-import pandas as pd
 import pyomo.contrib.sensitivity_toolbox.examples.parameter as param_example
 from pyomo.opt import SolverFactory
+
+from pyomo.common.dependencies import (
+    numpy as np, numpy_available,
+    pandas as pd, pandas_available,
+)
 
 opt_kaug = SolverFactory('k_aug',solver_io='nl')
 opt_dotsens = SolverFactory('dot_sens',solver_io='nl')

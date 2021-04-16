@@ -29,7 +29,9 @@ from pyomo.opt import SolverFactory, SolverStatus
 import logging
 import os
 import shutil
-import numpy as np
+from pyomo.common.dependencies import (
+    numpy as np, numpy_available
+    )
 
 logger = logging.getLogger('pyomo.contrib.sensitivity_toolbox')
 

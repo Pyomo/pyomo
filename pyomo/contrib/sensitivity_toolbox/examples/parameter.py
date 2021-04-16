@@ -12,11 +12,10 @@
 #
 # Original implementation by Hans Pirany is in pyomo/examples/pyomo/suffixes
 #
-
 from __future__ import print_function
 from pyomo.environ import ConcreteModel, Param, Var, Objective, Constraint, NonNegativeReals, value
 from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation
-
+import idaes
 def create_model():
     ''' Create a concrete Pyomo model for this example
     '''
