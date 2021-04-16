@@ -276,12 +276,13 @@ class CBCSHELL(SystemCallSolver):
             _drive, _path = os.path.splitdrive(self._warm_start_file_name)
             if _drive:
                 _cwd_drive = os.path.splitdrive(os.path.abspath(os.getcwd()))
-                if _cwd_drive != _drive:
+                if _cwd_drive == _drive:
+                    self._warm_start_file_name = _path
+                else:
                     logger.warning(
                         "warmstart_file points to a file on a drive "
                         "different from the current working directory.  "
                         "CBC is likely to (silently) ignore the warmstart.")
-                self._warm_start_file_name = _path
 
         # let the base class handle any remaining keywords/actions.
         # let the base class handle any remaining keywords/actions.
