@@ -24,30 +24,25 @@ We will start with a motivating example:
 
 Here :math:`x_1`, :math:`x_2`, and :math:`x_3` are the decision variables while :math:`p_1` and :math:`p_2` are parameters. At first, let's consider :math:`p_1 = 4.5` and :math:`p_2 = 1.0`. Below is the model implemented in Pyomo.
 
-.. doctest::
+.. code:: python
 
-    Import Pyomo and sipopt from the sensitivity toolbox
-
+    # Import Pyomo and sipopt from the sensitivity toolbox
     >>> from pyomo.environ import *
     >>> from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation
 
-    Create a concrete model
-
+    # Create a concrete model
     >>> m = ConcreteModel()
 
-    Define the variables with bounds and initial values
-
+    # Define the variables with bounds and initial values
     >>> m.x1 = Var(initialize = 0.15, within=NonNegativeReals)
     >>> m.x2 = Var(initialize = 0.15, within=NonNegativeReals)
     >>> m.x3 = Var(initialize = 0.0, within=NonNegativeReals)
 
-    Define the parameters
-
+    # Define the parameters
     >>> m.eta1 = Param(initialize=4.5,mutable=True)
     >>> m.eta2 = Param(initialize=1.0,mutable=True)
 
-    Define the constraints and objective
-
+    # Define the constraints and objective
     >>> m.const1 = Constraint(expr=6*m.x1+3*m.x2+2*m.x3-m.eta1 ==0)
     >>> m.const2 = Constraint(expr=m.eta2*m.x1+m.x2-m.x3-1 ==0)
     >>> m.cost = Objective(expr=m.x1**2+m.x2**2+m.x3**2)
@@ -57,49 +52,45 @@ The solution of this optimization problem is :math:`x_1^* = 0.5`, :math:`x_2^* =
 
 Next we define the perturbed parameter values :math:`\hat{p}_1` and :math:`\hat{p}_2`:
 
-.. doctest::
+.. code:: python
 
     >>> m.perturbed_eta1 = Param(initialize = 4.0)
     >>> m.perturbed_eta2 = Param(initialize = 1.0)
 
 And finally we call sIPOPT or k_aug:
 
-.. doctest::
-    :skipif: not sipopt_available
+.. code:: python
 
     >>> m_sipopt = sensitivity_calculation('sipopt',m,[m.eta1,m.eta2], [m.perturbed_eta1,m.perturbed_eta2], tee=True)
-    Ipopt ...: run_sens=yes
-    ...
+
+    Ipopt 3.13.2: run_sens=yes
+    
     ******************************************************************************
     This program contains Ipopt, a library for large-scale nonlinear optimization.
      Ipopt is released as open source code under the Eclipse Public License (EPL).
              For more information visit http://projects.coin-or.org/Ipopt
-    ...
     ******************************************************************************
     ...
     EXIT: Optimal Solution Found.
 
     >>> m_kaug_dsdp = sensitivity_calculation('kaug',m,[m.eta1,m.eta2], [m.perturbed_eta1,m.perturbed_eta2], tee=True)
-    Ipopt ...: 
-    ...
+    Ipopt 3.12.13:  
+    
     ******************************************************************************
     This program contains Ipopt, a library for large-scale nonlinear optimization.
      Ipopt is released as open source code under the Eclipse Public License (EPL).
              For more information visit http://projects.coin-or.org/Ipopt
     ******************************************************************************
-    ...
     EXIT: Optimal Solution Found.
     W[K_AUG]...	[K_AUG_ASL]No n_rhs declared
     ...
-    I[[DOT_SENS]]...	[MAIN]Timing...
+    I[[DOT_SENS]]...	[MAIN]Timing..0.000143 sec.
 
 The first argument specify the method, either 'sipopt' or 'k_aug'. The second argument is the Pyomo model. The third argument is a list of the original parameters. The fourth argument is a list of the perturbed parameters. Both sIPOPT and k_aug model require these two lists are the same length. The ```...``` represents extra lines of output that were cut from this page for brevity.
 
 First, we can inspect the initial point:
 
-.. doctest::
-    :skipif: not sipopt_available
-    
+.. code:: python    
 
     >>> print("eta1 = %0.3f" % m.eta1())
     eta1 = 4.500
@@ -107,7 +98,7 @@ First, we can inspect the initial point:
     >>> print("eta2 = %0.3f" % m.eta2())
     eta2 = 1.000
 
-    Initial point (not feasible):
+    # Initial point (not feasible):
     >>> print("Objective = %0.3f" % m.cost())
     Objective = 0.045
 
@@ -122,10 +113,9 @@ First, we can inspect the initial point:
 
 Next, we inspect the solution :math:`x_1^*`, :math:`x_2^*`, and :math:`x_3^*`:
 
-.. doctest::
-    :skipif: not sipopt_available
+.. code:: python
 
-    Solution with the original parameter values:
+    # Solution with the original parameter values:
     >>> print("Objective = %0.3f" % m_sipopt.cost())
     Objective = 0.500
 
@@ -140,18 +130,17 @@ Next, we inspect the solution :math:`x_1^*`, :math:`x_2^*`, and :math:`x_3^*`:
 
 Note that k_aug does not save solution with the original parameter values. Finally, we inspect the approximate solution :math:`\hat{x}_1^*`, :math:`\hat{x}_2^*`, and :math:`\hat{x}_3^*`:
 
-.. doctest::
-    :skipif: not sipopt_available
+.. code:: python
     
-    *sIPOPT*
-    New parameter values:
+    # *sIPOPT*
+    # New parameter values:
     >>> print("eta1 = %0.3f" %m_sipopt.perturbed_eta1())
     eta1 = 4.000
 
     >>> print("eta2 = %0.3f" % m_sipopt.perturbed_eta2())
     eta2 = 1.000
 
-    (Approximate) solution with the new parameter values:
+    # (Approximate) solution with the new parameter values:
     >>> x1 = m_sipopt.sens_sol_state_1[m_sipopt.x1]
     >>> x2 = m_sipopt.sens_sol_state_1[m_sipopt.x2]
     >>> x3 = m_sipopt.sens_sol_state_1[m_sipopt.x3]
@@ -167,15 +156,15 @@ Note that k_aug does not save solution with the original parameter values. Final
     >>> print("x3 = %0.3f" % x3)
     x3 = -0.000
 
-    *k_aug*
-    New parameter values:
+    # *k_aug*
+    # New parameter values:
     >>> print("eta1 = %0.3f" %m_kaug_dsdp.perturbed_eta1())
     eta1 = 4.000
 
     >>> print("eta2 = %0.3f" % m_kaug_dsdp.perturbed_eta2())
     eta2 = 1.000
 
-    (Approximate) solution with the new parameter values:
+    # (Approximate) solution with the new parameter values:
     >>> x1 = m_kaug_dsdp.x1()
     >>> x2 = m_kaug_dsdp.x2()
     >>> x3 = m_kaug_dsdp.x3()
