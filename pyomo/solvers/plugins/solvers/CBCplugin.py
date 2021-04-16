@@ -248,23 +248,40 @@ class CBCSHELL(SystemCallSolver):
         if self._warm_start_file_name is not None:
             user_warmstart = True
 
-        # the input argument can currently be one of two things: an instance or a filename.
-        # if a filename is provided and a warm-start is indicated, we go ahead and
-        # create the temporary file - assuming that the user has already, via some external
-        # mechanism, invoked warm_start() with a instance to create the warm start file.
-        if self._warm_start_solve and \
-                isinstance(args[0], str):
+        # the input argument can currently be one of two things: an
+        # instance or a filename.  if a filename is provided and a
+        # warm-start is indicated, we go ahead and create the temporary
+        # file - assuming that the user has already, via some external
+        # mechanism, invoked warm_start() with a instance to create the
+        # warm start file.
+        if self._warm_start_solve and isinstance(args[0], str):
             # we assume the user knows what they are doing...
             pass
-        elif self._warm_start_solve and \
-                (not isinstance(args[0], str)):
-            # assign the name of the warm start file *before* calling the base class
-            # presolve - the base class method ends up creating the command line,
-            # and the warm start file-name is (obviously) needed there.
+        elif self._warm_start_solve and (not isinstance(args[0], str)):
+            # assign the name of the warm start file *before* calling
+            # the base class presolve - the base class method ends up
+            # creating the command line, and the warm start file-name is
+            # (obviously) needed there.
             if self._warm_start_file_name is None:
                 assert not user_warmstart
-                self._warm_start_file_name = TempfileManager.\
-                                             create_tempfile(suffix = '.cbc.soln')
+                self._warm_start_file_name = TempfileManager.create_tempfile(
+                    suffix = '.cbc.soln')
+
+        # CBC does not cleanly handle windows-style drive names in the
+        # MIPSTART file name (though at least 2.10.5).
+        #
+        # See https://github.com/coin-or/Cbc/issues/32
+        # The problematic source is https://github.com/coin-or/Cbc/blob/3dcedb27664ae458990e9d4d50bc11c2c55917a0/src/CbcSolver.cpp#L9445-L9459
+        if self._warm_start_file_name is not None:
+            _drive, _path = os.path.splitdrive(self._warm_start_file_name)
+            if _drive:
+                _cwd_drive = os.path.splitdrive(os.path.abspath(os.getcwd()))
+                if _cwd_drive != _drive:
+                    logger.warning(
+                        "warmstart_file points to a file on a drive "
+                        "different from the current working directory.  "
+                        "CBC is likely to (silently) ignore the warmstart.")
+                self._warm_start_file_name = _path
 
         # let the base class handle any remaining keywords/actions.
         # let the base class handle any remaining keywords/actions.
