@@ -87,7 +87,7 @@ class TestDisableMethods(unittest.TestCase):
         # Verify that the wrapper function enforces the same API as the
         # wrapped function
         with self.assertRaisesRegex(
-                TypeError, "f\(\) takes "):
+                TypeError, r"f\(\) takes "):
             x.f(1,2,3)
         with self.assertRaisesRegex(
                 RuntimeError, "Cannot access 'f' on _abstract_simple "
@@ -107,8 +107,8 @@ class TestDisableMethods(unittest.TestCase):
 
     def test_bad_api(self):
         with self.assertRaisesRegex(
-                DeveloperError, "Cannot disable method not_there on "
-                "<class '.*\.foo'>"):
+                DeveloperError, r"Cannot disable method not_there on "
+                r"<class '.*\.foo'>"):
 
             @disable_methods(('a','not_there'))
             class foo(_simple):

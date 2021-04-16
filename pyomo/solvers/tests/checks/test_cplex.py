@@ -53,7 +53,7 @@ class CPLEX_utils(unittest.TestCase):
         # check BAD path separators
         bad_char = '/\\'.replace(os.path.sep,'')
         fname = 'foo%sbar.lp' % (bad_char,)
-        msg = 'Unallowed character \(%s\) found in CPLEX xxx file' % (
+        msg = r'Unallowed character \(%s\) found in CPLEX xxx file' % (
             repr(bad_char)[1:-1],)
         with self.assertRaisesRegex(ValueError, msg):
             _validate_file_name(_126, fname, 'xxx')

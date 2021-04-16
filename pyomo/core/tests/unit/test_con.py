@@ -332,28 +332,30 @@ class TestConstraintCreation(unittest.TestCase):
         c = Constraint(rule=lambda m: True)
         self.assertRaisesRegex(
             ValueError,
-            ".*resolved to a trivial Boolean \(True\).*Constraint\.Feasible",
+            r".*resolved to a trivial Boolean \(True\).*Constraint\.Feasible",
             m.add_component, 'c', c)
 
         m = ConcreteModel()
         c = Constraint([1], rule=lambda m,i: True)
         self.assertRaisesRegex(
             ValueError,
-            ".*resolved to a trivial Boolean \(True\).*Constraint\.Feasible",
+            r".*resolved to a trivial Boolean \(True\).*Constraint\.Feasible",
             m.add_component, 'c', c)
 
         m = ConcreteModel()
         c = Constraint(rule=lambda m: False)
         self.assertRaisesRegex(
             ValueError,
-            ".*resolved to a trivial Boolean \(False\).*Constraint\.Infeasible",
+            r".*resolved to a trivial Boolean \(False\).*"
+            r"Constraint\.Infeasible",
             m.add_component, 'c', c)
 
         m = ConcreteModel()
         c = Constraint([1], rule=lambda m,i: False)
         self.assertRaisesRegex(
             ValueError,
-            ".*resolved to a trivial Boolean \(False\).*Constraint\.Infeasible",
+            r".*resolved to a trivial Boolean \(False\).*"
+            r"Constraint\.Infeasible",
             m.add_component, 'c', c)
 
     def test_nondata_bounds(self):
@@ -922,7 +924,7 @@ class TestArrayCon(unittest.TestCase):
         self.assertEqual(len(m.c), 1)
         self.assertRaisesRegex( KeyError, "3", m.c.__getitem__, 3)
 
-        self.assertRaisesRegex( ValueError, "'c\[3\]': rule returned None",
+        self.assertRaisesRegex( ValueError, r"'c\[3\]': rule returned None",
                                  m.c.__setitem__, 3, None)
         self.assertEqual(len(m.c), 1)
 

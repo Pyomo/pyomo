@@ -1229,7 +1229,7 @@ scenario.foo""")
         self.assertEqual(c.value(), 10)
 
         with self.assertRaisesRegex(
-                TypeError, "<lambda>\(\) .* argument"):
+                TypeError, r"<lambda>\(\) .* argument"):
             c = ConfigValue(default=lambda x: 10 * x, domain=int)
 
         with self.assertRaisesRegex(
@@ -1403,7 +1403,7 @@ endBlock{}
             item_end=    "endItem\n",
         )
 
-        stripped_reference = re.sub('\{[^\}]*\}','',reference,flags=re.M)
+        stripped_reference = re.sub(r'\{[^\}]*\}','',reference,flags=re.M)
         #print(test)
         self.assertEqual(test, stripped_reference)
 

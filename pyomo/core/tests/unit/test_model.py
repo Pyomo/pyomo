@@ -860,7 +860,7 @@ class Test(unittest.TestCase):
             m.c = Constraint( rule=c )
 
         with self.assertRaisesRegex(
-                ValueError, 'x\[1\]: The component has not been constructed.'):
+                ValueError, r'x\[1\]: The component has not been constructed.'):
             model = AbstractModel(rule=make_invalid)
             instance = model.create_instance()
 

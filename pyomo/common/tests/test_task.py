@@ -605,8 +605,7 @@ class TestAPI(unittest.TestCase):
         # Note: the TypeError message changes in Python 3.6, so we need
         # a weaker regexp.
         with self.assertRaisesRegex(
-                TypeError,
-                "err6\(\) takes .* arguments .* given" ):
+                TypeError, r"err6\(\) takes .* arguments .* given" ):
             err6(PyomoAPIData())
 
     def test_err7a_arg_missing_from_docstring(self):

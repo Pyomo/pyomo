@@ -617,12 +617,12 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         with LoggingIntercept(log, 'pyomo.gdp', logging.ERROR):
             self.assertRaisesRegex(
                 KeyError,
-                ".*b.simpledisj1.c\[1\]",
+                r".*b.simpledisj1.c\[1\]",
                 hull.get_transformed_constraints,
                 m.b.simpledisj1.c[1])
         self.assertRegex(log.getvalue(),
-                                 ".*Constraint 'b.simpledisj1.c\[1\]' has not "
-                                 "been transformed.")
+                         r".*Constraint 'b.simpledisj1.c\[1\]' has not "
+                         r"been transformed.")
 
         # this fixes a[2] to 0, so we should get the disggregated var
         transformed = hull.get_transformed_constraints(m.b.simpledisj1.c[2])
@@ -1857,16 +1857,16 @@ class TestErrors(unittest.TestCase):
         with LoggingIntercept(log, 'pyomo.gdp.hull', logging.ERROR):
             self.assertRaisesRegex(
                 KeyError,
-                ".*_pyomo_gdp_hull_reformulation.relaxedDisjuncts\[1\]."
-                "disaggregatedVars.w",
+                r".*_pyomo_gdp_hull_reformulation.relaxedDisjuncts\[1\]."
+                r"disaggregatedVars.w",
                 hull.get_disaggregation_constraint,
                 m.d[1].transformation_block().disaggregatedVars.w,
                 m.disjunction)
         self.assertRegex(log.getvalue(), ".*It doesn't appear that "
-                                 "'_pyomo_gdp_hull_reformulation."
-                                 "relaxedDisjuncts\[1\].disaggregatedVars.w' "
-                                 "is a variable that was disaggregated by "
-                                 "Disjunction 'disjunction'")
+                         r"'_pyomo_gdp_hull_reformulation."
+                         r"relaxedDisjuncts\[1\].disaggregatedVars.w' "
+                         r"is a variable that was disaggregated by "
+                         r"Disjunction 'disjunction'")
 
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp.hull', logging.ERROR):
@@ -1883,17 +1883,17 @@ class TestErrors(unittest.TestCase):
         with LoggingIntercept(log, 'pyomo.gdp.hull', logging.ERROR):
             self.assertRaisesRegex(
                 KeyError,
-                ".*_pyomo_gdp_hull_reformulation.relaxedDisjuncts\[1\]."
-                "disaggregatedVars.w",
+                r".*_pyomo_gdp_hull_reformulation.relaxedDisjuncts\[1\]."
+                r"disaggregatedVars.w",
                 hull.get_disaggregated_var,
                 m.d[1].transformation_block().disaggregatedVars.w,
                 m.d[1])
         self.assertRegex(log.getvalue(),
-                                 ".*It does not appear "
-                                 "'_pyomo_gdp_hull_reformulation."
-                                 "relaxedDisjuncts\[1\].disaggregatedVars.w' "
-                                 "is a variable which appears in disjunct "
-                                 "'d\[1\]'")
+                         r".*It does not appear "
+                         r"'_pyomo_gdp_hull_reformulation."
+                         r"relaxedDisjuncts\[1\].disaggregatedVars.w' "
+                         r"is a variable which appears in disjunct "
+                         r"'d\[1\]'")
 
         m.random_disjunction = Disjunction(expr=[m.w == 2, m.w >= 7])
         self.assertRaisesRegex(
@@ -1906,8 +1906,8 @@ class TestErrors(unittest.TestCase):
 
         self.assertRaisesRegex(
             GDP_Error,
-            "Disjunct 'random_disjunction_disjuncts\[0\]' has not been "
-            "transformed",
+            r"Disjunct 'random_disjunction_disjuncts\[0\]' has not been "
+            r"transformed",
             hull.get_disaggregated_var,
             m.w,
             m.random_disjunction.disjuncts[0])

@@ -88,7 +88,7 @@ class Test_calc_var(unittest.TestCase):
         m.d = Constraint(expr=m.x**2 == -1)
         m.x.set_value(1.25) # set the initial value
         with self.assertRaisesRegex(
-               RuntimeError, 'Iteration limit \(10\) reached'):
+               RuntimeError, r'Iteration limit \(10\) reached'):
            calculate_variable_from_constraint(
                m.x, m.d, iterlim=10, linesearch=False)
 

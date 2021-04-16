@@ -669,7 +669,7 @@ class TestBlock(unittest.TestCase):
         b.c = Block()
         with self.assertRaisesRegex(
                 ValueError, "Cannot assign the top-level block as a subblock "
-                "of one of its children \(c\): creates a circular hierarchy"):
+                r"of one of its children \(c\): creates a circular hierarchy"):
             b.c.d = b
 
     def test_set_value(self):
@@ -800,15 +800,15 @@ class TestBlock(unittest.TestCase):
         b.c.d = Block()
         b.c.d.e = Block()
         with self.assertRaisesRegex(
-                ValueError, '_BlockData.transfer_attributes_from\(\): '
-                'Cannot set a sub-block \(c.d.e\) to a parent block \(c\):'):
+                ValueError, r'_BlockData.transfer_attributes_from\(\): '
+                r'Cannot set a sub-block \(c.d.e\) to a parent block \(c\):'):
             b.c.d.e.transfer_attributes_from(b.c)
 
         ### bad data type
         b = Block(concrete=True)
         with self.assertRaisesRegex(
                 ValueError,
-                '_BlockData.transfer_attributes_from\(\): expected a Block '
+                r'_BlockData.transfer_attributes_from\(\): expected a Block '
                 'or dict; received str'):
             b.transfer_attributes_from('foo')
 

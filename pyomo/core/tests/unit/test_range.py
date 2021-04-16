@@ -65,7 +65,7 @@ class TestNumericRange(unittest.TestCase):
 
         with self.assertRaisesRegex(
                 ValueError,
-                '\[0:1\] is discrete, but passed closed=\(False, True\)'):
+                r'\[0:1\] is discrete, but passed closed=\(False, True\)'):
             NR(0, 1, 1, "(]")
 
         a = NR(0, None, 1)
@@ -563,8 +563,8 @@ class TestNumericRange(unittest.TestCase):
         # And the onee thing we don't support:
         with self.assertRaisesRegex(
                 RangeDifferenceError, 'We do not support subtracting an '
-                'infinite discrete range \[0:None\] from an infinite '
-                'continuous range \[None..None\]'):
+                r'infinite discrete range \[0:None\] from an infinite '
+                r'continuous range \[None..None\]'):
             NR(None,None,0).range_difference([NR(0,None,1)])
 
     def test_range_intersection(self):

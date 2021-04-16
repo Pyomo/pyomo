@@ -282,7 +282,7 @@ class TestComponentSlices(unittest.TestCase):
         _slice = self.m.b[1,:].c[:,4].x
         with self.assertRaisesRegex(
                 KeyError, "Index 'bogus' is not valid for indexed "
-                "component 'b\[1,4\]\.c\[1,4\]\.x'"):
+                r"component 'b\[1,4\]\.c\[1,4\]\.x'"):
             _slice['bogus'] = 0
         # but disabling the exception flag will run without error
         _slice.key_errors_generate_exceptions = False
@@ -335,7 +335,7 @@ class TestComponentSlices(unittest.TestCase):
         _slice = self.m.b[2,:].c[:,4].x
         with self.assertRaisesRegex(
                 KeyError, "Index 'bogus' is not valid for indexed "
-                "component 'b\[2,4\]\.c\[1,4\]\.x'"):
+                r"component 'b\[2,4\]\.c\[1,4\]\.x'"):
             del _slice['bogus']
         # but disabling the exception flag will run without error
         _slice.key_errors_generate_exceptions = False

@@ -117,8 +117,8 @@ def check_improperly_deactivated_disjuncts(self, transformation):
     m.d[0].indicator_var.fix(1)
     self.assertRaisesRegex(
         GDP_Error,
-        "The disjunct 'd\[0\]' is deactivated, but the "
-        "indicator_var is fixed to 1. This makes no sense.",
+        r"The disjunct 'd\[0\]' is deactivated, but the "
+        r"indicator_var is fixed to 1. This makes no sense.",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m)
 
@@ -231,9 +231,9 @@ def check_do_not_transform_twice_if_disjunction_reactivated(self,
     # get an error.
     self.assertRaisesRegex(
         GDP_Error,
-        "The disjunct 'd\[0\]' has been transformed, but a disjunction "
-        "it appears in has not. Putting the same disjunct in "
-        "multiple disjunctions is not supported.",
+        r"The disjunct 'd\[0\]' has been transformed, but a disjunction "
+        r"it appears in has not. Putting the same disjunct in "
+        r"multiple disjunctions is not supported.",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m)
 
@@ -537,11 +537,11 @@ def check_targets_cannot_be_cuids(self, transformation):
     m = models.makeTwoTermDisj()
     self.assertRaisesRegex(
         ValueError,
-        "invalid value for configuration 'targets':\n"
-        "\tFailed casting \[disjunction\]\n"
-        "\tto target_list\n"
-        "\tError: Expected Component or list of Components."
-        "\n\tRecieved %s" % type(ComponentUID(m.disjunction)),
+        r"invalid value for configuration 'targets':\n"
+        r"\tFailed casting \[disjunction\]\n"
+        r"\tto target_list\n"
+        r"\tError: Expected Component or list of Components."
+        r"\n\tRecieved %s" % type(ComponentUID(m.disjunction)),
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m,
         targets=[ComponentUID(m.disjunction)])
@@ -623,8 +623,8 @@ def check_warn_for_untransformed(self, transformation):
     # disjunction, which is also active.
     self.assertRaisesRegex(
         GDP_Error,
-        "Found active disjunct 'disjunct1\[1,1\].innerdisjunct\[0\]' "
-        "in disjunct 'disjunct1\[1,1\]'!.*",
+        r"Found active disjunct 'disjunct1\[1,1\].innerdisjunct\[0\]' "
+        r"in disjunct 'disjunct1\[1,1\]'!.*",
         TransformationFactory('gdp.%s' % transformation).create_using,
         m,
         targets=[m.disjunction1[1]])
@@ -636,8 +636,8 @@ def check_warn_for_untransformed(self, transformation):
     m.disjunct1[1,1].add_component('innerdisjunct', tmp)
     self.assertRaisesRegex(
         GDP_Error,
-        "Found untransformed disjunction 'disjunct1\[1,1\]."
-        "innerdisjunction\[0\]' in disjunct 'disjunct1\[1,1\]'!.*",
+        r"Found untransformed disjunction 'disjunct1\[1,1\]."
+        r"innerdisjunction\[0\]' in disjunct 'disjunct1\[1,1\]'!.*",
         TransformationFactory('gdp.%s' % transformation).create_using,
         m,
         targets=[m.disjunction1[1]])
@@ -647,8 +647,8 @@ def check_warn_for_untransformed(self, transformation):
     m.disjunct1[1,1].innerdisjunction[0].deactivate()
     self.assertRaisesRegex(
         GDP_Error,
-        "Found active disjunct 'disjunct1\[1,1\].innerdisjunct\[0\]' "
-        "in disjunct 'disjunct1\[1,1\]'!.*",
+        r"Found active disjunct 'disjunct1\[1,1\].innerdisjunct\[0\]' "
+        r"in disjunct 'disjunct1\[1,1\]'!.*",
         TransformationFactory('gdp.%s' % transformation).create_using,
         m,
         targets=[m.disjunction1[1]])
@@ -1159,8 +1159,8 @@ def check_deactivated_disjunct_nonzero_indicator_var(self, transformation):
 
     self.assertRaisesRegex(
         GDP_Error,
-        "The disjunct 'disjunction_disjuncts\[0\]' is deactivated, but the "
-        "indicator_var is fixed to 1. This makes no sense.",
+        r"The disjunct 'disjunction_disjuncts\[0\]' is deactivated, but the "
+        r"indicator_var is fixed to 1. This makes no sense.",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m)
 
@@ -1174,11 +1174,11 @@ def check_deactivated_disjunct_unfixed_indicator_var(self, transformation):
 
     self.assertRaisesRegex(
         GDP_Error,
-        "The disjunct 'disjunction_disjuncts\[0\]' is deactivated, but the "
-        "indicator_var is not fixed and the disjunct does not "
-        "appear to have been relaxed. This makes no sense. "
-        "\(If the intent is to deactivate the disjunct, fix its "
-        "indicator_var to 0.\)",
+        r"The disjunct 'disjunction_disjuncts\[0\]' is deactivated, but the "
+        r"indicator_var is not fixed and the disjunct does not "
+        r"appear to have been relaxed. This makes no sense. "
+        r"\(If the intent is to deactivate the disjunct, fix its "
+        r"indicator_var to 0.\)",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m)
 
@@ -1228,10 +1228,10 @@ def check_silly_target(self, transformation):
     m = models.makeTwoTermDisj()
     self.assertRaisesRegex(
         GDP_Error,
-        "Target 'd\[1\].c1' was not a Block, Disjunct, or Disjunction. "
-        "It was of type "
-        "<class 'pyomo.core.base.constraint.SimpleConstraint'> and "
-        "can't be transformed.",
+        r"Target 'd\[1\].c1' was not a Block, Disjunct, or Disjunction. "
+        r"It was of type "
+        r"<class 'pyomo.core.base.constraint.SimpleConstraint'> and "
+        r"can't be transformed.",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m,
         targets=[m.d[1].c1])
@@ -1244,8 +1244,8 @@ def check_ask_for_transformed_constraint_from_untransformed_disjunct(
 
     self.assertRaisesRegex(
         GDP_Error,
-        "Constraint 'disjunct\[2,b\].cons_b' is on a disjunct which has "
-        "not been transformed",
+        r"Constraint 'disjunct\[2,b\].cons_b' is on a disjunct which has "
+        r"not been transformed",
         trans.get_transformed_constraints,
         m.disjunct[2, 'b'].cons_b)
 
@@ -1253,9 +1253,9 @@ def check_error_for_same_disjunct_in_multiple_disjunctions(self, transformation)
     m = models.makeDisjunctInMultipleDisjunctions()
     self.assertRaisesRegex(
         GDP_Error,
-        "The disjunct 'disjunct1\[1\]' has been transformed, "
-        "but a disjunction it appears in has not. Putting the same "
-        "disjunct in multiple disjunctions is not supported.",
+        r"The disjunct 'disjunct1\[1\]' has been transformed, "
+        r"but a disjunction it appears in has not. Putting the same "
+        r"disjunct in multiple disjunctions is not supported.",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m)
 
@@ -1312,11 +1312,11 @@ def check_activeInnerDisjunction_err(self, transformation):
     m = models.makeDuplicatedNestedDisjunction()
     self.assertRaisesRegex(
         GDP_Error,
-        "Found untransformed disjunction "
-        "'outerdisjunct\[1\].duplicateddisjunction' in disjunct "
-        "'outerdisjunct\[1\]'! The disjunction must be transformed before "
-        "the disjunct. If you are using targets, put the disjunction "
-        "before the disjunct in the list.*",
+        r"Found untransformed disjunction "
+        r"'outerdisjunct\[1\].duplicateddisjunction' in disjunct "
+        r"'outerdisjunct\[1\]'! The disjunction must be transformed before "
+        r"the disjunct. If you are using targets, put the disjunction "
+        r"before the disjunct in the list.*",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m,
         targets=[m.outerdisjunct[1].innerdisjunction,

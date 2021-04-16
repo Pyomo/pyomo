@@ -3311,9 +3311,9 @@ class TestSetErrors(PyomoModel):
         self.assertIn(0.5, X)
         self.assertNotIn(1, X)
         with self.assertRaisesRegex(
-                RangeDifferenceError, "We do not support subtracting an "
-                "infinite discrete range \[0:None\] from an infinite "
-                "continuous range \[None..None\]"):
+                RangeDifferenceError, r"We do not support subtracting an "
+                r"infinite discrete range \[0:None\] from an infinite "
+                r"continuous range \[None..None\]"):
             X < Reals
         # In the set rewrite, the following now works!
         # try:
@@ -3344,9 +3344,9 @@ class TestSetErrors(PyomoModel):
         self.assertIn(0.5, X)
         self.assertNotIn(1, X)
         with self.assertRaisesRegex(
-                RangeDifferenceError, "We do not support subtracting an "
-                "infinite discrete range \[0:None\] from an infinite "
-                "continuous range \[None..None\]"):
+                RangeDifferenceError, r"We do not support subtracting an "
+                r"infinite discrete range \[0:None\] from an infinite "
+                r"continuous range \[None..None\]"):
             X < Reals
         # In the set rewrite, the following now works!
         # try:
