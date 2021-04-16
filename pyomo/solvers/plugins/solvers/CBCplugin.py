@@ -211,7 +211,8 @@ class CBCSHELL(SystemCallSolver):
         column_index = 0
         with open(filename, 'w') as solnfile:
             for var in instance.component_data_objects(Var):
-                # Cbc only expects integer variables with non-zero values for mipstart.
+                # Cbc only expects integer variables with non-zero
+                # values for mipstart.
                 if var.value \
                         and (var.is_integer() or var.is_binary()) \
                         and (id(var) in byObject):

@@ -37,14 +37,16 @@ class CBCTests(unittest.TestCase):
 
         with SolverFactory("cbc") as opt:
             with capture_output() as output:
-                opt.solve(m, tee=True, warmstart=True)
+                opt.solve(m, tee=True, warmstart=True, options={
+                    'sloglevel': 2, 'loglevel': 2})
 
-                # Check if CBC loaded the warmstart file.
-                self.assertIn('opening mipstart file', output.getvalue())
-                # Only integer and binary variables are considered by CBC.
-                self.assertIn('MIPStart values read for 2 variables.', output.getvalue())
-                # m.x is ignored because it is continuous, so cost should be 5+1
-                self.assertIn('MIPStart provided solution with cost 6', output.getvalue())
+            log = output.getvalue()
+            # Check if CBC loaded the warmstart file.
+            self.assertIn('opening mipstart file', log)
+            # Only integer and binary variables are considered by CBC.
+            self.assertIn('MIPStart values read for 2 variables.', log)
+            # m.x is ignored because it is continuous, so cost should be 5+1
+            self.assertIn('MIPStart provided solution with cost 6', log)
 
     @unittest.skipIf(not cbc_available,
                      "The CBC solver is not available")
