@@ -46,6 +46,10 @@ from pyomo.contrib.sensitivity_toolbox.sens import (
 import numpy as np
 import pandas as pd
 import pyomo.contrib.sensitivity_toolbox.examples.parameter as param_example
+from pyomo.opt import SolverFactory
+
+opt_kaug = SolverFactory('k_aug',solver_io='nl')
+opt_dotsens = SolverFactory('dot_sens',solver_io='nl')
 
 def make_indexed_model():
     """
