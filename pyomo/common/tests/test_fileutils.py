@@ -235,8 +235,10 @@ class TestFileUtils(unittest.TestCase):
             c = find_library('foo/bar/libc.so', **_args)
         self.assertIsNotNone(a)
         self.assertIsNotNone(b)
-        self.assertIsNone(c)
+        self.assertIsNotNone(c)
         self.assertEqual(a,b)
+        # find_library could have found libc.so.6
+        self.assertTrue(c.startswith(a))
         # Verify that the library is loadable (they are all the same
         # file, so only check one)
         _lib = ctypes.cdll.LoadLibrary(a)
