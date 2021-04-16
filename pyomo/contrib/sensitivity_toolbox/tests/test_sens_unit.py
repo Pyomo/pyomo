@@ -51,6 +51,7 @@ from pyomo.common.dependencies import (
     pandas as pd, pandas_available,
 )
 
+opt_ipopt = SolverFactory('ipopt',solver_io='nl')
 opt_kaug = SolverFactory('k_aug',solver_io='nl')
 opt_dotsens = SolverFactory('dot_sens',solver_io='nl')
 
@@ -667,6 +668,7 @@ class TestSensitivityInterface(unittest.TestCase):
                 self.assertEqual(instance.sens_state_value_1[var], ptb)
                 self.assertEqual(instance.DeltaP[con], obj.value-ptb)
 
+    @unittest.skipIf(not opt_ipopt.available(False), "ipopt is not available")
     def test_get_dsdp1(self):
         '''
         It tests the function get_dsdp with a simple nonlinear programming example.
@@ -701,6 +703,7 @@ class TestSensitivityInterface(unittest.TestCase):
         np.testing.assert_almost_equal(dsdp_dic['d(p1)/d(p2)'], 0.0)
         np.testing.assert_almost_equal(dsdp_dic['d(p2)/d(p2)'], 1.0)
 
+    @unittest.skipIf(not opt_ipopt.available(False), "ipopt is not available")
     def test_get_dsdp2(self):
         '''
         It tests the function get_dsdp with rooney & biegler's model.
