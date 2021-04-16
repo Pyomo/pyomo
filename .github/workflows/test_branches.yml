@@ -26,7 +26,7 @@ env:
   PYTHON_NUMPY_PKGS: >
       numpy scipy pyodbc pandas matplotlib seaborn numdifftools 
       parameterized casadi
-  CACHE_VER: v3
+  CACHE_VER: v210415.0
   NEOS_EMAIL: tests@pyomo.org
 
 jobs:
