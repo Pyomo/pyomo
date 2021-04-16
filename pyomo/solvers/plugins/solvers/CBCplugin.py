@@ -275,7 +275,7 @@ class CBCSHELL(SystemCallSolver):
         if self._warm_start_file_name is not None:
             _drive, _path = os.path.splitdrive(self._warm_start_file_name)
             if _drive:
-                _cwd_drive = os.path.splitdrive(os.path.abspath(os.getcwd()))
+                _cwd_drive = os.path.splitdrive(os.getcwd())[0]
                 if _cwd_drive.lower() == _drive.lower():
                     self._warm_start_file_name = _path
                 else:
