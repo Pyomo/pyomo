@@ -202,7 +202,9 @@ The sensitivity toolbox requires either sIPOPT or k_aug is installed and availab
 * https://coin-or.github.io/coinbrew/
 * https://github.com/dthierry/k_aug
 
-.. note:: 1) If you get an error that ``ipopt_sens`` cannot be found, you need to make sure sIPOPT was installed and that it is in the system path. 2) If you get an error that ``k_aug`` and `dot_sens`` cannot be found, you need to make sure k_aug was installed and that it is in the system path.
+.. note:: 
+1) If you get an error that ``ipopt_sens`` cannot be found, you need to make sure sIPOPT was installed and that it is in the system path. 
+2) If you get an error that ``k_aug`` and ``dot_sens`` cannot be found, you need to make sure k_aug was installed and that it is in the system path.
 
 Sensitivity Toolbox Interface
 -----------------------------
