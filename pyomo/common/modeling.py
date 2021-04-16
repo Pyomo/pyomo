@@ -42,7 +42,7 @@ class FlagType(type):
     This metaclass redefines the ``str()`` and ``repr()`` of resulting
     classes.  The str() of the class returns only the class' ``__name__``,
     whereas the repr() returns either the qualified class name
-    (``__qualname__``) is Sphinx has been imported, or else the
+    (``__qualname__``) if Sphinx has been imported, or else the
     fully-qualified class name (``__module__ + '.' + __qualname__``).
 
     This is useful for defining "flag types" that are default arguments
