@@ -5,7 +5,7 @@ The sensitivity toolbox provides a Pyomo interface to sIPOPT and k_aug to very q
 
   H. Pirnay, R. Lopez-Negrete, and L.T. Biegler, Optimal Sensitivity based on IPOPT, Math. Prog. Comp., 4(4):307--331, 2012.
 
-The details of `k_aug <https://github.com/dthierry/k_aug>` can be in the following link:
+The details of `k_aug` can be in the following link:
 
   David Thierry (2020). k_aug, https://github.com/dthierry/k_aug
 
@@ -91,7 +91,7 @@ And finally we call sIPOPT or k_aug:
     EXIT: Optimal Solution Found.
     W[K_AUG]...	[K_AUG_ASL]No n_rhs declared
     ...
-    I[[DOT_SENS]]...	[MAIN]Timing..0.00019 sec.
+    I[[DOT_SENS]]...	[MAIN]Timing...
 
 The first argument specify the method, either 'sipopt' or 'k_aug'. The second argument is the Pyomo model. The third argument is a list of the original parameters. The fourth argument is a list of the perturbed parameters. Both sIPOPT and k_aug model require these two lists are the same length. The ```...``` represents extra lines of output that were cut from this page for brevity.
 
