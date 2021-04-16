@@ -685,8 +685,6 @@ class TestSensitivityInterface(unittest.TestCase):
             getattr(m, v).setlb(theta[v])
             getattr(m, v).setub(theta[v])
         dsdp_dic, col = get_dsdp(m, variable_name, theta)
-        print(dsdp_dic)
-        print(dsdp_dic['d(x1)/d(p1)'])
         np.testing.assert_almost_equal(dsdp_dic['d(x1)/d(p1)'], 1.0)
         np.testing.assert_almost_equal(dsdp_dic['d(x2)/d(p1)'], 0.0)
         np.testing.assert_almost_equal(dsdp_dic['d(p1)/d(p1)'], 1.0)
@@ -717,7 +715,9 @@ class TestSensitivityInterface(unittest.TestCase):
         np.testing.assert_almost_equal( dsdp_dic['d(rate_constant)/d(asymptote)'] , 0.0)
         np.testing.assert_almost_equal( dsdp_dic['d(asymptote)/d(rate_constant)'] , 0.0)
         np.testing.assert_almost_equal( dsdp_dic['d(rate_constant)/d(rate_constant)'] , 1.0)
-
+    
+    @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
+    @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available") 
     def test_get_dfds_dcds(self):
         '''
         It tests the function get_sensitivity with a simple nonlinear programming example.
@@ -756,6 +756,8 @@ class TestSensitivityInterface(unittest.TestCase):
         np.testing.assert_almost_equal( line_dic['p1'] , 3)
         np.testing.assert_almost_equal( line_dic['p2'] , 4)
 
+    @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
+    @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")
     def test_get_dfds_dcds2(self):
         '''
         It tests the function get_sensitivity with rooney & biegler's model.
