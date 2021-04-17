@@ -11,8 +11,6 @@
 __all__ = ['SolutionStatus', 'Solution']
 
 import math
-from six import iterkeys, iteritems
-from six.moves import xrange
 import enum
 from pyomo.opt.results.container import MapContainer, ListContainer, ignore
 from pyomo.common.collections import Bunch, OrderedDict
@@ -128,26 +126,26 @@ class Solution(MapContainer):
                 id_nonzeros_map = {} # are any of the non-id entries are non-zero?
                 entries_to_print = False
 
-                for entry_name, entry_dict in iteritems(value):
+                for entry_name, entry_dict in value.items():
                     entry_id = id_ctr
                     id_ctr += 1
                     id_name_map[entry_id] = entry_name
                     id_dict_map[entry_id] = entry_dict
                     id_nonzeros_map[entry_id] = False # until proven otherwise
-                    for attr_name, attr_value in iteritems(entry_dict):
+                    for attr_name, attr_value in entry_dict.items():
                         if print_zeros or math.fabs(attr_value) > 1e-16:
                             id_nonzeros_map[entry_id] = True
                             entries_to_print = True
 
                 if entries_to_print:
-                    for entry_id in sorted(iterkeys(id_dict_map), key=lambda id:id_name_map[id]):
+                    for entry_id in sorted(id_dict_map.keys(), key=lambda id:id_name_map[id]):
                         if id_nonzeros_map[entry_id]:
                             if first:
                                 ostream.write("\n")
                                 first = False
                             ostream.write(prefix+str(id_name_map[entry_id])+":\n")
                             entry_dict = id_dict_map[entry_id]
-                            for attr_name in sorted(iterkeys(entry_dict)):
+                            for attr_name in sorted(entry_dict.keys()):
                                 attr_value = entry_dict[attr_name]
                                 if isinstance(attr_value,float) and (math.floor(attr_value) == attr_value):
                                     attr_value = int(attr_value)
@@ -199,7 +197,7 @@ class SolutionSet(ListContainer):
             ostream.write(prefix+spaces+key+": "+str(repn[0][key])+'\n')
             spaces="  "
         i=0
-        for i in xrange(len(self._list)):
+        for i in range(len(self._list)):
             item = self._list[i]
             ostream.write(prefix+'- ')
             item.pprint(ostream, option, from_list=True, prefix=prefix+"  ", repn=repn[i+1])

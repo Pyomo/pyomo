@@ -230,16 +230,18 @@ class TestDependencies(unittest.TestCase):
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.common'):
             mod.generate_import_warning()
-        self.assertEqual(
-            log.getvalue(), "The pyomo.common.tests.dep_mod_except module "
-            "(an optional Pyomo dependency) failed to import\n")
+        self.assertIn(
+            "The pyomo.common.tests.dep_mod_except module "
+            "(an optional Pyomo dependency) failed to import",
+            log.getvalue())
 
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.core.base'):
             mod.generate_import_warning('pyomo.core.base')
-        self.assertEqual(
-            log.getvalue(), "The pyomo.common.tests.dep_mod_except module "
-            "(an optional Pyomo dependency) failed to import\n")
+        self.assertIn(
+            "The pyomo.common.tests.dep_mod_except module "
+            "(an optional Pyomo dependency) failed to import",
+            log.getvalue())
 
     def test_importer(self):
         attempted_import = []
