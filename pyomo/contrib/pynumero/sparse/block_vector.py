@@ -44,6 +44,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
     Structured vector interface. This interface can be used to
     performe operations on vectors composed by vectors. For example,
 
+    >>> import numpy as np
     >>> from pyomo.contrib.pynumero.sparse import BlockVector
     >>> bv = BlockVector(3)
     >>> v0 = np.ones(3)
