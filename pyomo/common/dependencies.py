@@ -451,14 +451,16 @@ def _finalize_matplotlib(module, available):
         module.use('Agg')
     import matplotlib.pyplot
 
-yaml, yaml_available = attempt_import('yaml', callback=_finalize_yaml)
+yaml, yaml_available = attempt_import(
+    'yaml', callback=_finalize_yaml)
 pympler, pympler_available = attempt_import(
     'pympler', callback=_finalize_pympler)
-numpy, numpy_available = attempt_import('numpy', alt_names=['np'])
+numpy, numpy_available = attempt_import('numpy')
 scipy, scipy_available = attempt_import(
-    'scipy', callback=_finalize_scipy, deferred_submodules={'stats':None})
-networkx, networkx_available = attempt_import('networkx', alt_names=['nx'])
-pandas, pandas_available = attempt_import('pandas', alt_names=['pd'])
+    'scipy', callback=_finalize_scipy,
+    deferred_submodules=['stats', 'sparse', 'spatial'])
+networkx, networkx_available = attempt_import('networkx')
+pandas, pandas_available = attempt_import('pandas')
 dill, dill_available = attempt_import('dill')
 
 # Note that matplotlib.pyplot can generate a runtime error on OSX when
