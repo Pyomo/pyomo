@@ -38,18 +38,37 @@ class ModuleUnavailable(object):
     # that to raise an AttributeError and not a DeferredImportError
     _getattr_raises_attributeerror = {'__sphinx_mock__',}
 
-    def __init__(self, message):
-        self._error_message_ = message
+    def __init__(self, name, message, version_error, import_error):
+        self.__name__ = name
+        self._moduleunavailable_info_ = (message, version_error, import_error)
 
     def __getattr__(self, attr):
         if attr in ModuleUnavailable._getattr_raises_attributeerror:
             raise AttributeError("'%s' object has no attribute '%s'"
                                  % (type(self).__name__, attr))
-        raise DeferredImportError(self._error_message_)
+        raise DeferredImportError(self._moduleunavailable_message())
 
-    def generate_import_warning(self, logger='pyomo.common'):
-        logging.getLogger(logger).warning(
-            self._error_message_)
+    def _moduleunavailable_message(self, msg=None):
+        _err, _ver, _imp = self._moduleunavailable_info_
+        if msg is None:
+            msg = _err
+        if _imp:
+            if not msg:
+                msg = (
+                    "The %s module (an optional Pyomo dependency) " \
+                    "failed to import: %s" % (self.__name__, _imp)
+                )
+            else:
+                msg += " (import raised %s)" % (_imp,)
+        if _ver:
+            if not msg:
+                msg = "The %s module %s" % (self.__name__, _ver)
+            else:
+                msg += " (%s)" % (_ver,)
+        return msg
+
+    def generate_import_warning(self, logger='pyomo.common', msg=None):
+        logging.getLogger(logger).warning(self._moduleunavailable_message(msg))
 
 class DeferredImportModule(object):
     """Dummy object that serves as a module placeholder until the first time
@@ -151,10 +170,14 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
                     importer=self._importer,
                     defer_check=False,
                 )
-            except:
+            except Exception as e:
                 # make sure that we cache the result
                 self._module = ModuleUnavailable(
-                    "Exception raised when importing %s" % (self._names[0],))
+                    self._names[0],
+                    "Exception raised when importing %s" % (self._names[0],),
+                    None,
+                    "%s: %s" % (type(e).__name__, e),
+                )
                 self._available = False
                 raise
 
@@ -162,14 +185,15 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
             # deferred submodules and resolve them as well
             if self._deferred_submodules and \
                type(self._module) is ModuleUnavailable:
-                err = self._module._error_message_
+                info = self._module._moduleunavailable_info_
                 for submod in self._deferred_submodules:
                     refmod = self._module
                     for name in submod.split('.')[1:]:
                         try:
                             refmod = getattr(refmod, name)
                         except DeferredImportError:
-                            setattr(refmod, name, ModuleUnavailable(err))
+                            setattr(refmod, name, ModuleUnavailable(
+                                refmod.__name__+submod, *info))
                             refmod = getattr(refmod, name)
 
             # Replace myself in the original globals() where I was
@@ -386,6 +410,8 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
         raise ValueError(
             "deferred_submodules is only valid if defer_check==True")
 
+    import_error = None
+    version_error = None
     try:
         if importer is None:
             module = importlib.import_module(name)
@@ -396,23 +422,15 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
             if callback is not None:
                 callback(module, True)
             return module, True
-        elif error_message:
-            version = getattr(module, '__version__', 'UNKNOWN')
-            error_message += " (version %s does not satisfy the minimum " \
-                             "version %s)" % (version, minimum_version)
         else:
             version = getattr(module, '__version__', 'UNKNOWN')
-            error_message = "The %s module version %s does not satisfy " \
-                            "the minimum version %s" % (
-                                name, version, minimum_version)
+            version_error = (
+                "version %s does not satisfy the minimum version %s"
+                % (version, minimum_version))
     except catch_exceptions as e:
-        _err = str(e)
+        import_error = "%s: %s" % (type(e).__name__, e)
 
-    if not error_message:
-        error_message = "The %s module (an optional Pyomo dependency) " \
-                        "failed to import: %s" % (name, _err)
-
-    module = ModuleUnavailable(error_message)
+    module = ModuleUnavailable(name, error_message, version_error, import_error)
     if callback is not None:
         callback(module, False)
     return module, False
