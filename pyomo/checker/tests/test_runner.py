@@ -64,13 +64,13 @@ class RunnerTest(unittest.TestCase):
         expectedScriptCount = 0
 
         for text in self.testScripts:
-            self.assertEquals(expectedScriptCount, len(runner.scripts))
+            self.assertEqual(expectedScriptCount, len(runner.scripts))
 
             script = ModelScript(text = text)
             runner.addScript(script)
             expectedScriptCount += 1
 
-            self.assertEquals(expectedScriptCount, len(runner.scripts))
+            self.assertEqual(expectedScriptCount, len(runner.scripts))
             self.assertTrue(script in runner.scripts)
 
     def test_run_immediate(self):

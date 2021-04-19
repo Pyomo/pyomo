@@ -41,7 +41,7 @@ class TestRepnUtils(unittest.TestCase):
         if f == float(f):
             test = self.assertNotRegexpMatches
         else:
-            test = self.assertRegexpMatches
+            test = self.assertRegex
         test( log.getvalue(),
               '.*Converting 1.1234567890123456789 to string '
               'resulted in loss of precision' )

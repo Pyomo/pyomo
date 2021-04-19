@@ -433,7 +433,7 @@ class ParamTester(object):
             expectException = self.instance.A._default_val is NoValue
             try:
                 ans = value(test)
-                self.assertEquals(ans, value(self.instance.A._default_val))
+                self.assertEqual(ans, value(self.instance.A._default_val))
                 self.assertFalse(expectException)
             except:
                 if not expectException:
@@ -830,7 +830,7 @@ class ScalarTester(ParamTester):
         #"""Check the use of the __call__ method"""
         if self.sparse_data.get(None,0) is NoValue or \
            self.data.get(None,NoValue) is NoValue: #not self.sparse_data:
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 ValueError, ".*currently set to an invalid value",
                 self.instance.A.__call__ )
         else:

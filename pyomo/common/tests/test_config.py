@@ -1339,7 +1339,7 @@ scenarios[1].detection""")
         self.assertEqual(c.value(), 10)
 
         with self.assertRaisesRegex(
-                TypeError, "<lambda>\(\) .* argument"):
+                TypeError, r"<lambda>\(\) .* argument"):
             c = ConfigValue(default=lambda x: 10 * x, domain=int)
 
         with self.assertRaisesRegex(
@@ -1555,7 +1555,7 @@ endBlock{}
             item_end=    "endItem\n",
         )
 
-        stripped_reference = re.sub('\{[^\}]*\}','',reference,flags=re.M)
+        stripped_reference = re.sub(r'\{[^\}]*\}','',reference,flags=re.M)
         #print(test)
         self.assertEqual(test, stripped_reference)
 
@@ -1599,10 +1599,10 @@ endBlock{}
 
     def test_block_get(self):
         self.assertTrue('scenario' in self.config)
-        self.assertNotEquals(
+        self.assertNotEqual(
             self.config.get('scenario', 'bogus').value(), 'bogus')
         self.assertFalse('fubar' in self.config)
-        self.assertEquals(
+        self.assertEqual(
             self.config.get('fubar', 'bogus').value(), 'bogus')
 
         cfg = ConfigDict()
@@ -1639,7 +1639,7 @@ endBlock{}
         cfg.declare('foo', ConfigValue(1, int))
         self.assertEqual( cfg.setdefault('foo', 5).value(), 1 )
         self.assertEqual( len(cfg), 1 )
-        self.assertRaisesRegexp(ValueError, '.*disallows implicit entries',
+        self.assertRaisesRegex(ValueError, '.*disallows implicit entries',
                                 cfg.setdefault, 'bar', 0)
         self.assertEqual( len(cfg), 1 )
 
@@ -1793,7 +1793,7 @@ endBlock{}
         val = X.config.get(0, 1)
         self.assertIsInstance(val, ConfigValue)
         self.assertEqual(val.value(), 1)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             IndexError, '.*out of range', X.config.__getitem__, 0 )
         # get() shouldn't change the userdata flag...
         self.assertEqual(_display(X, 'userdata'), "")
@@ -1814,7 +1814,7 @@ endBlock{}
 
         with self.assertRaisesRegex(IndexError, 'list index out of range'):
             self.assertIs(X.config.get(1), None)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             IndexError, '.*out of range', X.config.__getitem__, 1)
 
         # this should ONLY change the userSet flag on the item (and not
@@ -1853,7 +1853,7 @@ endBlock{}
 
     def test_implicit_entries(self):
         config = ConfigDict()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Key 'test' not defined in ConfigDict '' "
                 "and Dict disallows implicit entries"):
             config['test'] = 5
@@ -2013,12 +2013,12 @@ Node information:
         self.assertEqual(20, foo['implicit bar'])
         self.assertEqual(20, foo.implicit_bar)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Key 'baz' not defined in ConfigDict '' "
                 "and Dict disallows implicit entries"):
             config.baz = 10
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 AttributeError, "Unknown attribute 'baz'"):
             a = config.baz
 

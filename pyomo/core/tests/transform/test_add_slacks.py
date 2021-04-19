@@ -166,7 +166,7 @@ class TestAddSlacks(unittest.TestCase):
         model = ConcreteModel()
         model.x = Var(within=NonNegativeReals)
         model.rule1 = Constraint(expr=inequality(6, model.x, 5))
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError, 
             "Lower bound exceeds upper bound in constraint rule1*", 
             TransformationFactory('core.add_slack_variables').apply_to, 
@@ -280,7 +280,7 @@ class TestAddSlacks(unittest.TestCase):
 
     def test_err_for_bogus_kwds(self):
         m = self.makeModel()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "key 'notakwd' not defined for ConfigDict ''",
             TransformationFactory('core.add_slack_variables').apply_to,
@@ -291,7 +291,7 @@ class TestAddSlacks(unittest.TestCase):
     def test_error_for_non_constraint_noniterable_target(self):
         m = self.makeModel()
         m.indexedVar = Var([1, 2])
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "Expected Constraint or list of Constraints.\n\tRecieved "
             "<class 'pyomo.core.base.var._GeneralVarData'>",
@@ -302,7 +302,7 @@ class TestAddSlacks(unittest.TestCase):
 
     def test_error_for_non_constraint_target_in_list(self):
         m = self.makeModel()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "Expected Constraint or list of Constraints.\n\tRecieved "
             "<class 'pyomo.core.base.var.SimpleVar'>",
@@ -318,7 +318,7 @@ class TestAddSlacks(unittest.TestCase):
             TransformationFactory('core.add_slack_variables').apply_to(
                 m,
                 targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
-        self.assertRegexpMatches(out.getvalue(), 
+        self.assertRegex(out.getvalue(), 
                                  "DEPRECATED: In future releases ComponentUID "
                                  "targets will no longer be\nsupported in the "
                                  "core.add_slack_variables transformation. "

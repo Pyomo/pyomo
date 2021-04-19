@@ -1120,10 +1120,15 @@ class Piecewise(Block):
             msg = "Piecewise component keyword 'f_rule' must "\
                   "be a function, dict, list, or tuple"
             raise ValueError(msg)
-        if bound_type not in Bound:
-            msg = "Invalid value for Piecewise component "\
-                  "keyword 'pw_constr_type'"
-            raise ValueError(msg)
+        try:
+            bound_type = Bound(bound_type)
+        except ValueError:
+            try:
+                bound_type = Bound[bound_type]
+            except KeyError:
+                msg = "Invalid value for Piecewise component "\
+                      "keyword 'pw_constr_type'"
+                raise ValueError(msg)
         if warning_tol.__class__ is not float:
             msg = "Invalid type '%s' for Piecewise component "\
                   "keyword 'warning_tol', which must be of type 'float'"
