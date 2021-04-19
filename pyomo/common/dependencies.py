@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from collections.abc import Mapping
 import inspect
 import importlib
 import logging
@@ -114,12 +115,10 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
     attributes on the DeferredImportModule.
     """
 
-    def __init__(self, name, alt_names, error_message, catch_exceptions,
+    def __init__(self, name, error_message, catch_exceptions,
                  minimum_version, original_globals, callback, importer,
                  deferred_submodules):
         self._names = [name]
-        if alt_names:
-            self._names += list(alt_names)
         for _n in tuple(self._names):
             if '.' in _n:
                 self._names.append(_n.split('.')[-1])
@@ -131,6 +130,12 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
         self._importer = importer
         self._module = None
         self._available = None
+        if isinstance(deferred_submodules, Mapping):
+            deprecation_warning(
+                'attempt_import() deferred_submodules takes an iterable '
+                'and not a mapping (the alt_names supplied by the mapping '
+                'are no longer needed and are ignored.', version='TBD')
+            deferred_submodules = list(deferred_submodules)
         self._deferred_submodules = deferred_submodules
 
     def resolve(self):
@@ -287,9 +292,10 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
         module.__version__)
 
     alt_names: list, optional
+        DEPRECATED: alt_names no longer needs to be specified and is ignored.
         A list of common alternate names by which to look for this
         module in the globals() namespaces.  For example, the alt_names
-        for NumPy would be ['np']
+        for NumPy would be ['np'].  (deprecated in version 6.0)
 
     callback: function, optional
         A function with the signature "`fcn(module, available)`" that
@@ -307,12 +313,11 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
         flag.  The method will return instances of DeferredImportModule
         and DeferredImportIndicator.
 
-    deferred_submodules: dict, optional
-        If provided, a mapping of submodules to within this module that
+    deferred_submodules: Iterable, optional
+        If provided, an iterable of submodule names within this module that
         can be accessed without triggering a deferred import of this
-        module, to a list of alternate names by which to look for the
-        submodule in the globals() namespaces.  For example, the
-        deferred_submodules for matplotlib is {'pyplot': ['plt']}
+        module.  For example, the deferred_submodules for matplotlib is
+        ``['pyplot']``
 
     Returns
     -------
@@ -325,6 +330,10 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
         of "py:class:`DeferredImportIndicator`
 
     """
+    if alt_names is not None:
+        deprecation_warning('alt_names no longer needs to be specified '
+                            'and is ignored', version='TBD')
+
     if only_catch_importerror is not None:
         deprecation_warning(
             "only_catch_importerror is deprecated.  Pass exceptions to "
@@ -348,23 +357,22 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
             # Fill in any missing submodules.  For example, if a user
             # provides {'foo.bar.baz': ['bz']}, then expand the dict to
             # {'.foo': None, '.foo.bar': None, '.foo.bar.baz': ['bz']}
-            deferred = {}
-            for _submod, _alt in deferred_submodules.items():
+            deferred = []
+            for _submod in deferred_submodules:
                 if _submod[0] != '.':
                     _submod = '.' + _submod
                 _mod_path = _submod.split('.')
                 for i in range(len(_mod_path)):
                     _test_mod = '.'.join(_mod_path[:i])
                     if _test_mod not in deferred:
-                        deferred[_test_mod] = None
-                deferred[_submod] = _alt
-            deferred.pop('', None)
+                        deferred.append(_test_mod)
+                deferred.append(_submod)
+            deferred = [_ for _ in deferred if _]
         else:
             deferred = None
 
         indicator = DeferredImportIndicator(
             name=name,
-            alt_names=alt_names,
             error_message=error_message,
             catch_exceptions=catch_exceptions,
             minimum_version=minimum_version,
@@ -458,7 +466,7 @@ dill, dill_available = attempt_import('dill')
 matplotlib, matplotlib_available = attempt_import(
     'matplotlib',
     callback=_finalize_matplotlib,
-    deferred_submodules={'pyplot': ['plt']},
+    deferred_submodules=['pyplot'],
     catch_exceptions=(ImportError, RuntimeError),
 )
 

@@ -267,10 +267,10 @@ class TestDependencies(unittest.TestCase):
         self.assertIsInstance(pyo, DeferredImportModule)
         self.assertIsNone(pyo._submodule_name)
         self.assertEqual(pyo_available._deferred_submodules,
-                         {'.version': None,
-                          '.common': None,
-                          '.common.tests': None,
-                          '.common.tests.dep_mod': ['dm']})
+                         ['.version',
+                          '.common',
+                          '.common.tests',
+                          '.common.tests.dep_mod',])
         # This doesn't cause test_mod to be resolved
         version = pyo.version
         self.assertIsInstance(pyo, DeferredImportModule)
