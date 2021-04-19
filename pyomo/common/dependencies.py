@@ -179,31 +179,19 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
         self.replace_self_in_globals(_frame.f_globals)
 
     def replace_self_in_globals(self, _globals):
-        for name in self._names:
-            if ( name in _globals
-                 and isinstance(_globals[name], DeferredImportModule)
-                 and _globals[name]._indicator_flag is self
-                 and _globals[name]._submodule_name is None ):
-                _globals[name] = self._module
-            for flag_name in (name+'_available', 'has_'+name, 'have_'+name):
-                if flag_name in _globals and _globals[flag_name] is self:
-                    _globals[flag_name] = self._available
-        if not self._deferred_submodules:
-            return
-        for submod, alt_names in self._deferred_submodules.items():
-            _mod_path = submod.split('.')[1:]
-            _names = [_mod_path[-1]]
-            if alt_names:
-                _names.extend(alt_names)
-            for name in _names:
-                if ( name in _globals
-                     and isinstance(_globals[name], DeferredImportModule)
-                     and _globals[name]._indicator_flag is self
-                     and _globals[name]._submodule_name == submod ):
+        for k,v in _globals.items():
+            if v is self:
+                _globals[k] = self._available
+            elif v.__class__ is DeferredImportModule and \
+                 v._indicator_flag is self:
+                if v._submodule_name is None:
+                    _globals[k] = self._module
+                else:
+                    _mod_path = v._submodule_name.split('.')[1:]
                     _mod = self._module
                     for _sub in _mod_path:
                         _mod = getattr(_mod, _sub)
-                    _globals[name] = _mod
+                    _globals[k] = _mod
 
     def __nonzero__(self):
         self.resolve()
