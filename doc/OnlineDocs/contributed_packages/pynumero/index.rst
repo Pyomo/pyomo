@@ -26,6 +26,20 @@ The development team includes:
 * John Siirola
 
 
+Packages built on PyNumero
+--------------------------
+  * https://github.com/Pyomo/pyomo/tree/main/pyomo/contrib/interior_point
+  * https://github.com/parapint/parapint
+
+
+Papers utilizing PyNumero
+-------------------------
+
+  * Rodriguez, J. S., Laird, C. D., & Zavala, V. M. (2020). Scalable
+    preconditioning of block-structured linear algebra systems using
+    ADMM. Computers & Chemical Engineering, 133, 106478.
+
+
 Indices and Tables
 ------------------
 
