@@ -1,6 +1,7 @@
 # Copyright 2020 by B. Knueven, D. Mildebrath, C. Muir, J-P Watson, and D.L. Woodruff
 # This software is distributed under the 3-clause BSD License.
-# copied from mpisppy/scenario_tree.py with trivial modifications.
+# Copied with minor modifications from mpisppy/scenario_tree.py 
+# from the mpi-sppy library (https://github.com/Pyomo/mpi-sppy).
 # ALL INDEXES ARE ZERO-BASED
 
 """
