@@ -12,33 +12,7 @@ or all processes/ranks.
 
 Consider the following example (in a file called "parallel_vector_ops.py").
 
-.. code-block:: python
-
-  import numpy as np
-  from mpi4py import MPI
-  from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
-  
-  comm = MPI.COMM_WORLD
-  rank = comm.Get_rank()
-  
-  owners = [2, 0, 1, -1]
-  x = MPIBlockVector(4, rank_owner=owners, mpi_comm=comm)
-  x.set_block(owners.index(rank), np.ones(3)*(rank + 1))
-  x.set_block(3, np.array([1, 2, 3]))
-  
-  y = MPIBlockVector(4, rank_owner=owners, mpi_comm=comm)
-  y.set_block(owners.index(rank), np.ones(3)*(rank + 1))
-  y.set_block(3, np.array([1, 2, 3]))
-  
-  z1: MPIBlockVector = x + y  # add x and y
-  z2 = x.dot(y)  # dot product
-  z3 = np.abs(x).max()  # infinity norm
-  
-  z1_local = z1.make_local_copy()
-  if rank == 0:
-      print(z1_local.flatten())
-      print(z2)
-      print(z3)
+.. literalinclude:: ../../../../pyomo/contrib/pynumero/examples/parallel_vector_ops.py
 
 This example can be run with
 
@@ -72,42 +46,7 @@ except that the operations are now performed in parallel.
 `MPIBlockMatrix` construction is very similar. Consider the following
 example in a file called "parallel_matvec.py".
 
-.. code-block::
-
-  import numpy as np
-  from mpi4py import MPI
-  from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
-  from pyomo.contrib.pynumero.sparse.mpi_block_matrix import MPIBlockMatrix
-  from scipy.sparse import random
-  
-  comm = MPI.COMM_WORLD
-  rank = comm.Get_rank()
-  
-  owners = [0, 1, 2, -1]
-  x = MPIBlockVector(4, rank_owner=owners, mpi_comm=comm)
-  
-  owners = np.array([[ 0, -1, -1, 0],
-                     [-1,  1, -1, 1],
-                     [-1, -1,  2, 2]])
-  a = MPIBlockMatrix(3, 4, rank_ownership=owners, mpi_comm=comm)
-  
-  np.random.seed(0)
-  x.set_block(3, np.random.uniform(-10, 10, size=10))
-  
-  np.random.seed(rank)
-  x.set_block(rank, np.random.uniform(-10, 10, size=10))
-  a.set_block(rank, rank, random(10, 10, density=0.1))
-  a.set_block(rank, 3, random(10, 10, density=0.1))
-  
-  b = a * x  # parallel matrix-vector dot product
-  
-  # check the answer
-  local_x = x.make_local_copy().flatten()
-  local_a = a.to_local_array()
-  local_b = b.make_local_copy().flatten()
-  
-  if rank == 0:
-      print('error: ', np.abs(local_a.dot(local_x) - local_b).max())
+.. literalinclude:: ../../../../pyomo/contrib/pynumero/examples/parallel_matvec.py
 
 Which can be run with
 
