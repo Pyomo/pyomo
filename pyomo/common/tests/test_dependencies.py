@@ -58,7 +58,7 @@ class TestDependencies(unittest.TestCase):
                 "attribute '__sphinx_mock__'"):
             module_obj.__sphinx_mock__
 
-                
+
     def test_import_success(self):
         module_obj, module_available = attempt_import(
             'pyutilib','Testing import of PyUtilib', defer_check=False)
@@ -130,6 +130,18 @@ class TestDependencies(unittest.TestCase):
         mod, avail = attempt_import('pyomo.common.tests.dep_mod',
                                     defer_check=True)
         self.assertFalse(check_min_version(mod, '2.0'))
+
+        # Verify check_min_version works when called directly
+
+        mod, avail = attempt_import('pyomo.common.tests.dep_mod',
+                                    minimum_version='1.0')
+        self.assertTrue(check_min_version(mod, '1.0'))
+
+        mod, avail = attempt_import('pyomo.common.tests.bogus',
+                                    minimum_version='1.0')
+        self.assertFalse(check_min_version(mod, '1.0'))
+
+
 
     def test_and_or(self):
         mod0, avail0 = attempt_import('pyutilib',
@@ -287,13 +299,13 @@ class TestDependencies(unittest.TestCase):
         with self.assertRaisesRegex(
                 ValueError,
                 "deferred_submodules is only valid if defer_check==True"):
-            mod, mod_available \
-                = attempt_import('nonexisting.module', defer_check=False,
-                                 deferred_submodules={'submod': None})
+            mod, mod_available = attempt_import(
+                'nonexisting.module', defer_check=False,
+                deferred_submodules={'submod': None})
 
-        mod, mod_available \
-            = attempt_import('nonexisting.module', defer_check=True,
-                             deferred_submodules={'submod.subsubmod': None})
+        mod, mod_available = attempt_import(
+            'nonexisting.module', defer_check=True,
+            deferred_submodules={'submod.subsubmod': None})
         self.assertIs(type(mod), DeferredImportModule)
         self.assertFalse(mod_available)
         _mod = mod_available._module

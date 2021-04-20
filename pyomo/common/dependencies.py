@@ -14,23 +14,35 @@ import importlib
 import logging
 import sys
 
-from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.deprecation import deprecated, deprecation_warning
 
 class DeferredImportError(ImportError):
     pass
 
 class ModuleUnavailable(object):
-    """Dummy object that raises a DeferredImportError upon attribute access
+    """Mock object that raises a DeferredImportError upon attribute access
 
-    This object is returned by attempt_import() in lieu of the module in
-    the case that the module import fails.  Any attempts to access
-    attributes on this object will raise a DeferredImportError
+    This object is returned by :py:func:`attempt_import()` in lieu of
+    the module in the case that the module import fails.  Any attempts
+    to access attributes on this object will raise a DeferredImportError
     exception.
 
     Parameters
     ----------
+    name: str
+        The module name that was being imported
+
     message: str
         The string message to return in the raised exception
+
+    version_error: str
+        A string to add to the message if the module failed to import because
+        it did not match the required version
+
+    import_error: str
+        A string to add to the message documenting the Exception
+        raised when the module failed to import.
+
     """
 
     # We need special handling for Sphinx here, as it will look for the
@@ -67,18 +79,32 @@ class ModuleUnavailable(object):
                 msg += " (%s)" % (_ver,)
         return msg
 
-    def generate_import_warning(self, logger='pyomo.common', msg=None):
+    def log_import_warning(self, logger='pyomo', msg=None):
+        """Log the import error message to the specified logger
+
+        This will log the the import error message to the specified
+        logger.  If ``msg=`` is specified, it will override the default
+        message passed to this instance of
+        :py:class:`ModuleUnavailable`.
+
+        """
         logging.getLogger(logger).warning(self._moduleunavailable_message(msg))
 
-class DeferredImportModule(object):
-    """Dummy object that serves as a module placeholder until the first time
-    getattr is called, at which point it imports the module and returns
-    the module attribute.
+    @deprecated("use log_import_warning()", version='TBD')
+    def generate_import_warning(self, logger='pyomo.common'):
+        self.log_import_warning(logger)
 
-    This object is returned by attempt_import() in lieu of the module in
-    the case that the module import fails.  Any attempts to access
-    attributes on this object will raise a DeferredImportError
-    exception.
+
+class DeferredImportModule(object):
+    """Mock module object to support the deferred import of a module.
+
+    This object is returned by :py:func:`attempt_import()` in lieu of
+    the module when :py:func:`attempt_import()` is called with
+    ``defer_check=True``.  Any attempts to access attributes on this
+    object will trigger the actual module import and return either the
+    appropriate module attribute or else if the module import fails,
+    raise a DeferredImportError exception.
+
     """
     def __init__(self, indicator, deferred_submodules, submodule_name):
         self._indicator_flag = indicator
@@ -129,6 +155,14 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
     bool will cause the import to be attempted.  The actual import logic
     is here and not in the DeferredImportModule to reduce the number of
     attributes on the DeferredImportModule.
+
+    ``DeferredImportIndicator`` supports limited logical expressions
+    using the ``&`` (and) and ``|`` (or) binary operators.  Creating
+    these expressions does not trigger the import of the corresponding
+    :py:class:`DeferredImportModule` instances, although casting the
+    resulting expression to ``bool()`` will trigger any relevant
+    imports.
+
     """
 
     def __init__(self, name, error_message, catch_exceptions,
@@ -153,9 +187,9 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
         return self._available
 
     def resolve(self):
+        # Only attempt the import once, then cache some form of result
         if self._module is None:
             try:
-                # Only attempt the import once
                 self._module, self._available = attempt_import(
                     name=self._names[0],
                     error_message=self._error_message,
@@ -261,33 +295,45 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
                    minimum_version=None, alt_names=None, callback=None,
                    importer=None, defer_check=True, deferred_submodules=None,
                    catch_exceptions=None):
-
     """Attempt to import the specified module.
 
     This will attempt to import the specified module, returning a
-    (module, available) tuple.  If the import was successful, `module`
-    will be the imported module and `available` will be True.  If the
-    import results in an exception, then `module` will be an instance of
-    :py:class:`ModuleUnavailable` and `available` will be False
+    ``(module, available)`` tuple.  If the import was successful, ``module``
+    will be the imported module and ``available`` will be True.  If the
+    import results in an exception, then ``module`` will be an instance of
+    :py:class:`ModuleUnavailable` and ``available`` will be False
 
-    The following is equivalent to ``import numpy as np``:
+    The following
 
     .. doctest::
 
        >>> from pyomo.common.dependencies import attempt_import
        >>> numpy, numpy_available = attempt_import('numpy')
 
+    Is roughly equivalent to
+
+    .. doctest::
+
+       >>> from pyomo.common.dependencies import ModuleUnavailable
+       >>> try:
+       ...     import numpy
+       ...     numpy_available = True
+       ... except ImportError:
+       ...     numpy = ModuleUnavailable('numpy', 'Numpy is not available')
+       ...     numpy_available = False
+
     The import can be "deferred" until the first time the code either
-    attempts to access the module or checks the boolean value of the
+    attempts to access the module or checks the Boolean value of the
     available flag.  This allows optional dependencies to be declared at
     the module scope but not imported until they are actually used by
     the module (thereby speeding up the initial package import).
     Deferred imports are handled by two helper classes
-    (DeferredImportModule and DeferredImportIndicator).  Upon actual
-    import, DeferredImportIndicator.resolve() attempts to replace those
-    objects (in both the local and original global namespaces) with the
-    imported module and boolean flag so that subsequent uses of the
-    module do not incur any overhead due to the delayed import.
+    (:py:class`DeferredImportModule` and
+    :py:class:`DeferredImportIndicator`).  Upon actual import,
+    :py:meth:`DeferredImportIndicator.resolve()` attempts to replace
+    those objects (in both the local and original global namespaces)
+    with the imported module and Boolean flag so that subsequent uses of
+    the module do not incur any overhead due to the delayed import.
 
     Parameters
     ----------
@@ -295,32 +341,34 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
         The name of the module to import
 
     error_message: str, optional
-        The message for the exception raised by ModuleUnavailable
+        The message for the exception raised by :py:class:`ModuleUnavailable`
 
     only_catch_importerror: bool, optional
-        If True (the default), exceptions other than ImportError raised
+        DEPRECATED: use catch_exceptions instead or only_catch_importerror.
+        If True (the default), exceptions other than ``ImportError`` raised
         during module import will be reraised.  If False, any exception
-        will result in returning a ModuleUnavailable object.
+        will result in returning a :py:class:`ModuleUnavailable` object.
+        (deprecated in version 5.7.3)
 
     minimum_version: str, optional
         The minimum acceptable module version (retrieved from
-        module.__version__)
+        ``module.__version__``)
 
     alt_names: list, optional
         DEPRECATED: alt_names no longer needs to be specified and is ignored.
         A list of common alternate names by which to look for this
-        module in the globals() namespaces.  For example, the alt_names
-        for NumPy would be ['np'].  (deprecated in version 6.0)
+        module in the ``globals()`` namespaces.  For example, the alt_names
+        for NumPy would be ``['np']``.  (deprecated in version 6.0)
 
     callback: function, optional
-        A function with the signature "`fcn(module, available)`" that
+        A function with the signature "``fcn(module, available)``" that
         will be called after the import is first attempted.
 
     importer: function, optional
         A function that will perform the import and return the imported
-        module (or raise an ImportError).  This is useful for cases
-        where there are several equivalent modules and you want to
-        import/return the first one that is available.
+        module (or raise an :py:class:`ImportError`).  This is useful
+        for cases where there are several equivalent modules and you
+        want to import/return the first one that is available.
 
     defer_check: bool, optional
         If True (the default), then the attempted import is deferred
@@ -328,11 +376,19 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
         flag.  The method will return instances of DeferredImportModule
         and DeferredImportIndicator.
 
-    deferred_submodules: Iterable, optional
-        If provided, an iterable of submodule names within this module that
-        can be accessed without triggering a deferred import of this
-        module.  For example, the deferred_submodules for matplotlib is
-        ``['pyplot']``
+    deferred_submodules: Iterable[str], optional
+        If provided, an iterable of submodule names within this module
+        that can be accessed without triggering a deferred import of
+        this module.  For example, this module uses
+        ``deferred_submodules=['pyplot', 'pylab']`` for ``matplotlib``.
+
+    catch_exceptions: Iterable[Exception], optional
+        If provide, this is the list of exceptions that will be caught
+        when importing the target module, resulting in
+        ``attempt_import`` returning a :py:class:`ModuleUnavailable`
+        instance.  The default is to only catch :py:class:`ImportError`.
+        This is useful when a module can regularly return additional
+        exceptions during import.
 
     Returns
     -------
@@ -342,7 +398,7 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
         :py:class:`DeferredImportModule`
     : bool
         Boolean indicating if the module import succeeded or an instance
-        of "py:class:`DeferredImportIndicator`
+        of :py:class:`DeferredImportIndicator`
 
     """
     if alt_names is not None:
@@ -513,12 +569,12 @@ def _finalize_matplotlib(module, available):
     # we are in the middle of testing, we need to switch the backend to
     # 'Agg', otherwise attempts to generate plots on CI services without
     # terminal windows will fail.
-    if any(mod in sys.modules for mod in ('nose', 'nose2', 'sphinx')):
+    if any(m in sys.modules for m in ('nose', 'nose2', 'sphinx', 'pytest')):
         module.use('Agg')
     import matplotlib.pyplot
 
-yaml, yaml_available = attempt_import(
-    'yaml', callback=_finalize_yaml)
+
+yaml, yaml_available = attempt_import('yaml', callback=_finalize_yaml)
 pympler, pympler_available = attempt_import(
     'pympler', callback=_finalize_pympler)
 numpy, numpy_available = attempt_import('numpy')
