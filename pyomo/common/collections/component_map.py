@@ -8,15 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import six
-from six import itervalues
+from collections.abc import MutableMapping as collections_MutableMapping
+from collections.abc import Mapping as collections_Mapping
 
-if six.PY3:
-    from collections.abc import MutableMapping as collections_MutableMapping
-    from collections.abc import Mapping as collections_Mapping
-else:
-    from collections import MutableMapping as collections_MutableMapping
-    from collections import Mapping as collections_Mapping
 
 class ComponentMap(collections_MutableMapping):
     """
@@ -66,7 +60,7 @@ class ComponentMap(collections_MutableMapping):
         # so we rebuild the dictionary keys
         self._dict = \
             {id(obj):(obj,val) \
-                 for obj, val in itervalues(state['_dict'])}
+                 for obj, val in state['_dict'].values()}
 
     def __getstate__(self):
         # *** Temporary hack to allow this class to be used
@@ -115,7 +109,7 @@ class ComponentMap(collections_MutableMapping):
     def __iter__(self):
         return (obj \
                 for obj, val in \
-                itervalues(self._dict))
+                self._dict.values())
 
     def __len__(self):
         return self._dict.__len__()

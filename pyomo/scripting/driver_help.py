@@ -268,7 +268,7 @@ def help_transformations():
         # is indicated here.
         _init_doc = TransformationFactory.get_class(xform).__init__.__doc__ \
                     or ""
-        if _init_doc.startswith('DEPRECATION') and 'DEPRECAT' not in _doc:
+        if _init_doc.strip().startswith('DEPRECATED') and 'DEPRECAT' not in _doc:
             _doc = ' '.join(('[DEPRECATED]', _doc))
         if _doc:
             print(wrapper.fill(_doc))
@@ -291,13 +291,13 @@ def help_solvers():
         print(wrapper.fill(format % (s , pyomo.opt.SolverManagerFactory.doc(s))))
     print("")
     wrapper = textwrap.TextWrapper(subsequent_indent='')
-    print(wrapper.fill("If no solver manager is specified, Pyomo uses the serial solver manager to execute solvers locally.  The pyro solver manager requires the installation and configuration of the pyro software.  The neos solver manager is used to execute solvers on the NEOS optimization server."))
+    print(wrapper.fill("If no solver manager is specified, Pyomo uses the serial solver manager to execute solvers locally.  The neos solver manager is used to execute solvers on the NEOS optimization server."))
     print("")
 
     print("")
     print("Serial Solver Interfaces")
     print("------------------------")
-    print(wrapper.fill("The serial and pyro solver managers support the following solver interfaces:"))
+    print(wrapper.fill("The serial manager supports the following solver interfaces:"))
     print("")
     solver_list = list(pyomo.opt.SolverFactory)
     solver_list = sorted( filter(lambda x: '_' != x[0], solver_list) )

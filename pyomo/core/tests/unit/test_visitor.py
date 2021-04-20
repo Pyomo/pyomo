@@ -19,7 +19,7 @@ import pyomo.common.unittest as unittest
 from pyomo.common.unittest import nottest
 
 from pyomo.environ import ConcreteModel, RangeSet, Param, Var, Expression, ExternalFunction, VarList, sum_product, inequality, quicksum, sin, tanh
-from pyomo.core.expr.numvalue import nonpyomo_leaf_types
+from pyomo.core.expr.numvalue import nonpyomo_leaf_types, NumericConstant
 from pyomo.core.expr.numeric_expr import (
     SumExpression, ProductExpression, 
     MonomialTermExpression, LinearExpression)
@@ -33,6 +33,7 @@ from pyomo.core.expr.visitor import (
 from pyomo.core.base.param import _ParamData, SimpleParam
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.expr_errors import TemplateExpressionError
+from pyomo.common.collections import ComponentSet
 from pyomo.common.log import LoggingIntercept
 from io import StringIO
 
@@ -76,7 +77,7 @@ class TestExpressionUtilities(unittest.TestCase):
 
     def test_identify_vars_expr(self):
         #
-        # Identify variables when there are duplicates
+        # Identify variables in named expressions
         #
         m = ConcreteModel()
         m.a = Var(initialize=1)
@@ -156,7 +157,7 @@ class TestIdentifyParams(unittest.TestCase):
         m.a = Var(initialize=1)
         m.b = Var(m.I, initialize=1)
         #
-        # There are no variables in expressions with only vars
+        # There are no parameters in expressions with only vars
         #
         self.assertEqual( list(identify_mutable_parameters(m.a)), [] )
         self.assertEqual( list(identify_mutable_parameters(m.b[1])), [] )
@@ -166,6 +167,23 @@ class TestIdentifyParams(unittest.TestCase):
             m.a**m.b[1] + m.b[2])), [] )
         self.assertEqual( list(identify_mutable_parameters(
             m.a**m.b[1] + m.b[2]*m.b[3]*m.b[2])), [] )
+
+    def test_identify_mutable_parameters_constants(self):
+        #
+        # SimpleParams and NumericConstants are not recognized
+        #
+        m = ConcreteModel()
+        m.x = Var(initialize=1)
+        m.x.fix()
+        m.p = Param(initialize=2, mutable=False)
+        m.p_m = Param(initialize=3, mutable=True)
+        e1 = (m.x + m.p + NumericConstant(5))
+        self.assertEqual(list(identify_mutable_parameters(e1)), [])
+
+        e2 = (5*m.x + NumericConstant(3)*m.p_m + m.p == 0)
+        mut_params = list(identify_mutable_parameters(e2))
+        self.assertEqual(len(mut_params), 1)
+        self.assertIs(mut_params[0], m.p_m)
 
     def test_identify_duplicate_params(self):
         #
@@ -179,7 +197,7 @@ class TestIdentifyParams(unittest.TestCase):
 
     def test_identify_mutable_parameters_expr(self):
         #
-        # Identify variables when there are duplicates
+        # Identify mutable params in named expressions
         #
         m = ConcreteModel()
         m.a = Param(initialize=1, mutable=True)
@@ -190,6 +208,17 @@ class TestIdentifyParams(unittest.TestCase):
         self.assertEqual( list(identify_mutable_parameters(m.b+m.e)), [ m.b, m.a ] )
         self.assertEqual( list(identify_mutable_parameters(m.E[0])), [ m.a ] )
         self.assertEqual( list(identify_mutable_parameters(m.E[1])), [ m.b ] )
+
+    def test_identify_mutable_parameters_logical_expr(self):
+        #
+        # Identify mutable params in logical expressions
+        #
+        m = ConcreteModel()
+        m.a = Param(initialize=0, mutable=True)
+        expr = m.a+1 == 0
+        param_set = ComponentSet(identify_mutable_parameters(expr))
+        self.assertEqual(len(param_set), 1)
+        self.assertIn(m.a, param_set)
 
     def test_identify_mutable_parameters_params(self):
         m = ConcreteModel()
@@ -693,7 +722,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         self.e = m.x**2 + m.y + m.z*(m.x+m.y)
 
     def test_bad_args(self):
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Unrecognized keyword arguments: {'foo': None}"):
             StreamBasedExpressionVisitor(foo=None)
 
@@ -768,10 +797,10 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         walker = StreamBasedExpressionVisitor(
             enterNode=enter, acceptChildResult=accept)
         # 4 operators, 6 leaf nodes
-        self.assertEquals(walker.walk_expression(self.e), 10)
+        self.assertEqual(walker.walk_expression(self.e), 10)
 
     def test_sizeof_expression(self):
-        self.assertEquals(sizeof_expression(self.e), 10)
+        self.assertEqual(sizeof_expression(self.e), 10)
 
     def test_enterNode(self):
         # This is an alternative way to implement the beforeChild test:
@@ -901,7 +930,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         ans = walker.walk_expression(self.e)
         m = self.m
         self.assertEqual(ans, None)
-        self.assertEquals(counts, [9,9,9])
+        self.assertEqual(counts, [9,9,9])
 
     def test_OLD_beforeChild_acceptChildResult_afterChild(self):
         counts = [0,0,0]
@@ -935,7 +964,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         ans = walker.walk_expression(self.e)
         m = self.m
         self.assertEqual(ans, None)
-        self.assertEquals(counts, [9,9,9])
+        self.assertEqual(counts, [9,9,9])
 
     def test_enterNode_acceptChildResult_beforeChild(self):
         ans = []

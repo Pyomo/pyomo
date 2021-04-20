@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 import logging
-from six import iterkeys
 
 from pyomo.core.base import (Transformation,
                              TransformationFactory,
@@ -55,7 +54,7 @@ class MPEC4_Transformation(Transformation):
                                                descend_into=(Block, Disjunct),
                                                sort=SortComponents.deterministic):
             cobjs.append(cobj)
-            for index in sorted(iterkeys(cobj)):
+            for index in sorted(cobj.keys()):
                 _cdata = cobj[index]
                 if not _cdata.active:
                     continue

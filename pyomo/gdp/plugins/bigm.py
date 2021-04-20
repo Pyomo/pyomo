@@ -35,7 +35,6 @@ from pyomo.gdp.util import (
 from pyomo.repn import generate_standard_repn
 
 from functools import wraps
-from six import iterkeys, iteritems
 from weakref import ref as weakref_ref
 
 logger = logging.getLogger('pyomo.gdp.bigm')
@@ -273,7 +272,7 @@ class BigM_Transformation(Transformation):
                         warning_msg += "\t%s\n" % component.name
                     else:
                         warning_msg += "\t%s\n" % component
-                logger.warn(warning_msg)
+                logger.warning(warning_msg)
 
     def _add_transformation_block(self, instance):
         # make a transformation block on instance to put transformed disjuncts
@@ -289,7 +288,7 @@ class BigM_Transformation(Transformation):
         return transBlock
 
     def _transform_block(self, obj, bigM):
-        for i in sorted(iterkeys(obj)):
+        for i in sorted(obj.keys()):
             self._transform_blockData(obj[i], bigM)
 
     def _transform_blockData(self, obj, bigM):
@@ -345,7 +344,7 @@ class BigM_Transformation(Transformation):
             transBlock = self._add_transformation_block(obj.parent_block())
 
         # relax each of the disjunctionDatas
-        for i in sorted(iterkeys(obj)):
+        for i in sorted(obj.keys()):
             self._transform_disjunctionData(obj[i], bigM, i, transBlock)
 
         # deactivate so the writers don't scream
@@ -526,7 +525,7 @@ class BigM_Transformation(Transformation):
         # we need to leave those on the disjunct.
         disjunctList = toBlock.relaxedDisjuncts
         to_delete = []
-        for idx, disjunctBlock in iteritems(fromBlock.relaxedDisjuncts):
+        for idx, disjunctBlock in fromBlock.relaxedDisjuncts.items():
             newblock = disjunctList[len(disjunctList)]
             newblock.transfer_attributes_from(disjunctBlock)
 
@@ -565,7 +564,7 @@ class BigM_Transformation(Transformation):
         # directly.  (We are passing the disjunct through so that when
         # we find constraints, _xform_constraint will have access to
         # the correct indicator variable.)
-        for i in sorted(iterkeys(block)):
+        for i in sorted(block.keys()):
             self._transform_block_components( block[i], disjunct, bigMargs,
                                               arg_list, suffix_list)
 
@@ -625,7 +624,7 @@ class BigM_Transformation(Transformation):
         # add mapping of transformed constraint to original constraint
         constraintMap['srcConstraints'][newConstraint] = obj
 
-        for i in sorted(iterkeys(obj)):
+        for i in sorted(obj.keys()):
             c = obj[i]
             if not c.active:
                 continue
@@ -777,7 +776,7 @@ class BigM_Transformation(Transformation):
 
         # use the precomputed traversal up the blocks
         for arg in arg_list:
-            for block, val in iteritems(arg):
+            for block, val in arg.items():
                 (lower, upper, 
                  need_lower, need_upper) = self._process_M_value(val, lower,
                                                                  upper,
@@ -909,7 +908,7 @@ class BigM_Transformation(Transformation):
 
         # clean up if we unfixed things (fixed_vars is empty if we were assuming
         # fixed vars are fixed for life)
-        for v, val in iteritems(fixed_vars):
+        for v, val in fixed_vars.items():
             v.fix(val)
 
         return tuple(M)

@@ -20,7 +20,6 @@ from pyomo.core.base.util import Initializer
 
 from ..sparse.block_matrix import BlockMatrix
 
-from six import iteritems
 
 logger = logging.getLogger('pyomo.contrib.pynumero')
 
@@ -353,7 +352,7 @@ class ExternalGreyBoxBlock(Block):
 
         if self._init_model is not None:
             block = self.parent_block()
-            for index, data in iteritems(self):
+            for index, data in self.items():
                 data.set_external_model(self._init_model(block, index))
 
 

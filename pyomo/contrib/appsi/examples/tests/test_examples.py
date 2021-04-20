@@ -1,5 +1,5 @@
 from pyomo.contrib.appsi.examples import getting_started
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import pyomo.environ as pe
 
 

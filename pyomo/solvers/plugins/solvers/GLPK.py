@@ -22,8 +22,6 @@ from pyomo.opt import SolverFactory, OptSolver, ProblemFormat, ResultsFormat, So
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.solver import SystemCallSolver
 
-from six import iteritems
-
 logger = logging.getLogger('pyomo.solvers')
 
 _glpk_version = None
@@ -449,7 +447,7 @@ class GLPKSHELL(SystemCallSolver):
             # For the range constraints, supply only the dual with the largest
             # magnitude (at least one should always be numerically zero)
             scon = soln.Constraint
-            for key, (ld,ud) in iteritems(range_duals):
+            for key, (ld,ud) in range_duals.items():
                 if abs(ld) > abs(ud):
                     scon['r_l_'+key] = {"Dual":ld}
                 else:

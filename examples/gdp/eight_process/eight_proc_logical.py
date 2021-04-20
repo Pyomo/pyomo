@@ -24,13 +24,11 @@ http://dx.doi.org/10.1016/0098-1354(95)00219-7
 """
 from __future__ import division
 
-from six import iteritems
-
 from pyomo.core.expr.logical_expr import land, lor
 from pyomo.core.plugins.transform.logical_to_linear import update_boolean_vars_from_binary
 from pyomo.environ import (
     ConcreteModel, Constraint, ConstraintList, NonNegativeReals,
-    Objective, Param, RangeSet, Reference, Var, exp, minimize, BooleanVar, LogicalConstraint, )
+    Objective, Param, RangeSet, Reference, Var, exp, minimize, LogicalConstraint, )
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverFactory
 
@@ -152,7 +150,7 @@ def build_eight_process_flowsheet():
     """Bound definitions"""
     # x (flow) upper bounds
     x_ubs = {3: 2, 5: 2, 9: 2, 10: 1, 14: 1, 17: 2, 19: 2, 21: 2, 25: 3}
-    for i, x_ub in iteritems(x_ubs):
+    for i, x_ub in x_ubs.item():
         m.flow[i].setub(x_ub)
 
     # Optimal solution uses units 2, 4, 6, 8 with objective value 68.

@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six.moves import zip_longest
+from itertools import zip_longest
 
 import pyomo.common.unittest as unittest
 
@@ -37,18 +37,18 @@ class TestUtilComponents(unittest.TestCase):
                                      component_list=c_list,
                                      prefix='scaled_')
 
-        self.assertEquals(name_map[model.scaled_obj], 'obj')
-        self.assertEquals(name_map[model.scaled_x], 'x')
-        self.assertEquals(name_map[model.scaled_con], 'con')
-        self.assertEquals(name_map[model.scaled_zcon], 'zcon')
-        self.assertEquals(name_map[model.b.scaled_bz], 'b.bz')
+        self.assertEqual(name_map[model.scaled_obj], 'obj')
+        self.assertEqual(name_map[model.scaled_x], 'x')
+        self.assertEqual(name_map[model.scaled_con], 'con')
+        self.assertEqual(name_map[model.scaled_zcon], 'zcon')
+        self.assertEqual(name_map[model.b.scaled_bz], 'b.bz')
 
-        self.assertEquals(model.scaled_obj.name, 'scaled_obj')
-        self.assertEquals(model.scaled_x.name, 'scaled_x')
-        self.assertEquals(model.scaled_con.name, 'scaled_con')
-        self.assertEquals(model.scaled_zcon.name, 'scaled_zcon')
-        self.assertEquals(model.b.name, 'b')
-        self.assertEquals(model.b.scaled_bz.name, 'b.scaled_bz')
+        self.assertEqual(model.scaled_obj.name, 'scaled_obj')
+        self.assertEqual(model.scaled_x.name, 'scaled_x')
+        self.assertEqual(model.scaled_con.name, 'scaled_con')
+        self.assertEqual(model.scaled_zcon.name, 'scaled_zcon')
+        self.assertEqual(model.b.name, 'b')
+        self.assertEqual(model.b.scaled_bz.name, 'b.scaled_bz')
 
     def assertSameComponents(self, obj, other_obj):
         for i, j in zip_longest(obj, other_obj):

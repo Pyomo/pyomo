@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import inspect
-from six import StringIO
+from io import StringIO
 
 import pyomo.common.unittest as unittest
 
@@ -74,17 +74,17 @@ class TestDependencies(unittest.TestCase):
         self.assertIs(bogus_available, False)
         # Note: this also tests the implicit alt_names for dotted imports
         self.assertIs(type(bogus), ModuleUnavailable)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 DeferredImportError, "The nonexisting.module.bogus module "
-                "\(an optional Pyomo dependency\) failed to import"):
+                r"\(an optional Pyomo dependency\) failed to import"):
             bogus.hello
 
     def test_imported_deferred_import(self):
         self.assertIs(type(has_bogus_nem), DeferredImportIndicator)
         self.assertIs(type(bogus_nem), DeferredImportModule)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 DeferredImportError, "The bogus_nonexisting_module module "
-                "\(an optional Pyomo dependency\) failed to import"):
+                r"\(an optional Pyomo dependency\) failed to import"):
             bogus_nem.hello
         self.assertIs(has_bogus_nem, False)
         self.assertIs(type(bogus_nem), ModuleUnavailable)
@@ -118,7 +118,7 @@ class TestDependencies(unittest.TestCase):
         self.assertIs(type(mod), ModuleUnavailable)
         with self.assertRaisesRegex(
                 DeferredImportError, "Failed import "
-                "\(version 1.5 does not satisfy the minimum version 2.0\)"):
+                r"\(version 1.5 does not satisfy the minimum version 2.0\)"):
             mod.hello
 
         # Verify check_min_version works with deferred imports
@@ -230,16 +230,18 @@ class TestDependencies(unittest.TestCase):
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.common'):
             mod.generate_import_warning()
-        self.assertEqual(
-            log.getvalue(), "The pyomo.common.tests.dep_mod_except module "
-            "(an optional Pyomo dependency) failed to import\n")
+        self.assertIn(
+            "The pyomo.common.tests.dep_mod_except module "
+            "(an optional Pyomo dependency) failed to import",
+            log.getvalue())
 
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.core.base'):
             mod.generate_import_warning('pyomo.core.base')
-        self.assertEqual(
-            log.getvalue(), "The pyomo.common.tests.dep_mod_except module "
-            "(an optional Pyomo dependency) failed to import\n")
+        self.assertIn(
+            "The pyomo.common.tests.dep_mod_except module "
+            "(an optional Pyomo dependency) failed to import",
+            log.getvalue())
 
     def test_importer(self):
         attempted_import = []

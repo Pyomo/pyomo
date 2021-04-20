@@ -675,38 +675,21 @@ instance and pass ``warmstart=True`` to the ``solve()`` method. E.g.,
 Solving Multiple Instances in Parallel
 --------------------------------------
 
-Solvers are controlled by solver servers. The pyro mip solver server is
-launched with the command ``pyro_mip_server``. This command may be
-repeated to launch as many solvers as are desired. A name server and a
-dispatch server must be running and accessible to the process that runs
-the script that will use the mip servers as well as to the mip
-servers. The name server is launched using the command ``pyomo_ns`` and
-then the dispatch server is launched with ``dispatch_srvr``. Note that
-both commands contain an underscore. Both programs keep running until
-terminated by an external signal, so it is common to pipe their output
-to a file.  The commands are:
+Building and solving Pyomo models in parallel is a common requirement
+for many applications. We recommend using MPI for Python (mpi4py) for
+this purpose. For more information on mpi4py, see the mpi4py
+documentation (https://mpi4py.readthedocs.io/en/stable/). The example
+below demonstrates how to use mpi4py to solve two pyomo models in
+parallel. The example can be run with the following command:
 
-- Once: ``pyomo_ns``
-- Once: ``dispatch_srvr``
-- Multiple times: ``pyro_mip_server``
+.. code-block::
 
+   mpirun -np 2 python -m mpi4py parallel.py
 
-This example demonstrates how to use these services to solve two
-instances in parallel.
 
 .. literalinclude:: tests/scripting/parallel.py
    :language: python
 
-This example creates two instances that are very similar and then sends
-them to be dispatched to solvers. If there are two solvers, then these
-problems could be solved in parallel (we say "could" because for such
-trivial problems to be actually solved in parallel, the solvers would
-have to be very, very slow). This example is non-sensical; the goal is
-simply to show ``solver_manager.queue`` to submit jobs to a name server
-for dispatch to solver servers and ``solver_manager.wait_any`` to
-recover the results. The ``wait_all`` function is similar, but it takes
-a list of action handles (returned by ``queue``) as an argument and
-returns all of the results at once.
 
 Changing the temporary directory
 --------------------------------

@@ -17,7 +17,6 @@ import traceback
 import types
 import time
 import json
-from six import iteritems
 from pyomo.common import pyomo_api
 from pyomo.common.deprecation import deprecated
 from pyomo.common.log import is_debug_set
@@ -241,7 +240,7 @@ def create_model(data):
     #
     _models = {}
     _model_IDS = set()
-    for _name, _obj in iteritems(data.local.usermodel.__dict__):
+    for _name, _obj in data.local.usermodel.__dict__.items():
         if isinstance(_obj, Model) and id(_obj) not in _model_IDS:
             _models[_name] = _obj
             _model_IDS.add(id(_obj))
@@ -535,10 +534,6 @@ def apply_optimizer(data, instance=None):
     # Create the solver manager
     #
     solver_mngr_kwds = {}
-    if data.options.solvers[0].pyro_host is not None:
-        solver_mngr_kwds['host'] = data.options.solvers[0].pyro_host
-    if data.options.solvers[0].pyro_port is not None:
-        solver_mngr_kwds['port'] = data.options.solvers[0].pyro_port
     with SolverManagerFactory(solver_mngr_name, **solver_mngr_kwds) as solver_mngr:
         if solver_mngr is None:
             msg = "Problem constructing solver manager '%s'"

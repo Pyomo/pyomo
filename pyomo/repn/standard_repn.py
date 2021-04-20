@@ -36,12 +36,9 @@ from pyomo.core.kernel.expression import expression, noclone
 from pyomo.core.kernel.variable import IVariable, variable
 from pyomo.core.kernel.objective import objective
 
-from six import iteritems, StringIO, PY3
-from six.moves import zip
+from io import StringIO
 
 logger = logging.getLogger('pyomo.core')
-
-using_py3 = PY3
 
 
 #
@@ -590,10 +587,10 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     ans = Results()
     ans.constant = multiplier*lhs.constant * rhs.constant
     if not (lhs.constant.__class__ in native_numeric_types and lhs.constant == 0):
-        for key, coef in iteritems(rhs.linear):
+        for key, coef in rhs.linear.items():
             ans.linear[key] = multiplier*coef*lhs.constant
     if not (rhs.constant.__class__ in native_numeric_types and rhs.constant == 0):
-        for key, coef in iteritems(lhs.linear):
+        for key, coef in lhs.linear.items():
             if key in ans.linear:
                 ans.linear[key] += multiplier*coef*rhs.constant
             else:
@@ -601,26 +598,26 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
 
     if quadratic:
         if not (lhs.constant.__class__ in native_numeric_types and lhs.constant == 0):
-            for key, coef in iteritems(rhs.quadratic):
+            for key, coef in rhs.quadratic.items():
                 ans.quadratic[key] = multiplier*coef*lhs.constant
         if not (rhs.constant.__class__ in native_numeric_types and rhs.constant == 0):
-            for key, coef in iteritems(lhs.quadratic):
+            for key, coef in lhs.quadratic.items():
                 if key in ans.quadratic:
                     ans.quadratic[key] += multiplier*coef*rhs.constant
                 else:
                     ans.quadratic[key] = multiplier*coef*rhs.constant
-        for lkey, lcoef in iteritems(lhs.linear):
-            for rkey, rcoef in iteritems(rhs.linear):
+        for lkey, lcoef in lhs.linear.items():
+            for rkey, rcoef in rhs.linear.items():
                 ndx = (lkey, rkey) if lkey <= rkey else (rkey, lkey)
                 if ndx in ans.quadratic:
                     ans.quadratic[ndx] += multiplier*lcoef*rcoef
                 else:
                     ans.quadratic[ndx] = multiplier*lcoef*rcoef
         # TODO - Use quicksum here?
-        el_linear = multiplier*sum(coef*idMap[key] for key, coef in iteritems(lhs.linear))
-        er_linear = multiplier*sum(coef*idMap[key] for key, coef in iteritems(rhs.linear))
-        el_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in iteritems(lhs.quadratic))
-        er_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in iteritems(rhs.quadratic))
+        el_linear = multiplier*sum(coef*idMap[key] for key, coef in lhs.linear.items())
+        er_linear = multiplier*sum(coef*idMap[key] for key, coef in rhs.linear.items())
+        el_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in lhs.quadratic.items())
+        er_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in rhs.quadratic.items())
         ans.nonl += el_linear*er_quadratic + el_quadratic*er_linear
 
     return ans
@@ -1427,7 +1424,7 @@ def preprocess_constraint(block,
         block._repn = ComponentMap()
     block_repn = block._repn
 
-    for index, constraint_data in iteritems(constraint):
+    for index, constraint_data in constraint.items():
 
         if not constraint_data.active:
             continue

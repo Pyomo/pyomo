@@ -44,6 +44,8 @@ def _is_numeric(x):
 @SolverFactory.register('gurobi_direct', doc='Direct python interface to Gurobi')
 class GurobiDirect(DirectSolver):
 
+    _verified_license = None
+
     def __init__(self, **kwds):
         if 'type' not in kwds:
             kwds['type'] = 'gurobi_direct'
@@ -76,7 +78,8 @@ class GurobiDirect(DirectSolver):
             # course, the license is a token license. unfortunately, you can't
             # import without a license, which means we can't test for the
             # exception above!
-            print("Import of gurobipy failed - gurobi message=" + str(e) + "\n")
+            logger.error(
+                "Import of gurobipy failed - gurobi message=%s\n" % (e,))
             self._python_api_exists = False
 
         self._range_constraints = set()
@@ -97,6 +100,21 @@ class GurobiDirect(DirectSolver):
            (self._version_major < 5):
             self._max_constraint_degree = 1
             self._capabilities.quadratic_constraint = False
+
+    def available(self, exception_flag=True):
+        if not super().available(exception_flag):
+            return False
+        if self._verified_license is None:
+            try:
+                # verify that we can get a Gurobi license
+                m = self._gurobipy.Model()
+                m.dispose()
+                GurobiDirect._verified_license = True
+            except Exception as e:
+                logger.error(
+                    "Could not create Model - gurobi message=%s\n" % (e,))
+                GurobiDirect._verified_license = False
+        return self._verified_license
 
     def _apply_solver(self):
         if not self._save_results:

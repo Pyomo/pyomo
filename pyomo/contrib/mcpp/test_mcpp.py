@@ -12,7 +12,7 @@ from __future__ import division
 import logging
 from math import pi
 
-from six import StringIO
+from io import StringIO
 
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
@@ -31,7 +31,7 @@ class TestMcCormick(unittest.TestCase):
     def test_outofbounds(self):
         m = ConcreteModel()
         m.x = Var(bounds=(-1, 5), initialize=2)
-        with self.assertRaisesRegexp(MCPP_Error, '.*Log with negative values in range'):
+        with self.assertRaisesRegex(MCPP_Error, '.*Log with negative values in range'):
             mc(log(m.x))
 
     def test_mc_2d(self):
@@ -164,7 +164,7 @@ class TestMcCormick(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 2), initialize=1)
         m.y = Var(bounds=(1e-4, 2), initialize=1)
-        with self.assertRaisesRegexp(MCPP_Error, "Log with negative values in range"):
+        with self.assertRaisesRegex(MCPP_Error, "Log with negative values in range"):
             mc(m.x ** 1.5)
         mc_expr = mc(m.y ** 1.5)
         self.assertAlmostEqual(mc_expr.lower(), 1e-4**1.5)
