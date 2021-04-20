@@ -450,6 +450,11 @@ def _finalize_scipy(module, available):
     if available:
         # Import key subpackages that we will want to assume are present
         import scipy.stats
+        # As of scipy 1.6.0, importing scipy.stats causes the following
+        # to be automatically imported.  However, we will still
+        # explicitly import them here to guard against potential future
+        # changes in scipy.
+        import scipy.integrate
         import scipy.sparse
         import scipy.spatial
 
@@ -476,7 +481,7 @@ pympler, pympler_available = attempt_import(
 numpy, numpy_available = attempt_import('numpy')
 scipy, scipy_available = attempt_import(
     'scipy', callback=_finalize_scipy,
-    deferred_submodules=['stats', 'sparse', 'spatial'])
+    deferred_submodules=['stats', 'sparse', 'spatial', 'integrate'])
 networkx, networkx_available = attempt_import('networkx')
 pandas, pandas_available = attempt_import('pandas')
 dill, dill_available = attempt_import('dill')
@@ -486,7 +491,7 @@ dill, dill_available = attempt_import('dill')
 matplotlib, matplotlib_available = attempt_import(
     'matplotlib',
     callback=_finalize_matplotlib,
-    deferred_submodules=['pyplot'],
+    deferred_submodules=['pyplot', 'pylab'],
     catch_exceptions=(ImportError, RuntimeError),
 )
 
