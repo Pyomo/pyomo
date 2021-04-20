@@ -24,7 +24,7 @@ stats = scipy.stats
 # (e.g. python 3.5) get released that are either broken not
 # compatible, resulting in a SyntaxError
 sns, seaborn_available = attempt_import(
-    'seaborn', alt_names=['sns'],
+    'seaborn',
     catch_exceptions=(ImportError, SyntaxError)
 )
 
