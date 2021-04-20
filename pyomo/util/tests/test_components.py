@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six.moves import zip_longest
+from itertools import zip_longest
 
 import pyomo.common.unittest as unittest
 
