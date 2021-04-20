@@ -1,10 +1,20 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from os.path import abspath, dirname, join, normpath
 
-import pyutilib.th as unittest
-from pyutilib.misc import import_file
+import pyomo.common.unittest as unittest
 
-from pyomo.contrib.satsolver.satsolver import satisfiable, _z3_available
-from pyomo.core.kernel.set_types import PositiveIntegers, NonNegativeReals, Binary
+from pyomo.common.fileutils import import_file
+from pyomo.contrib.satsolver.satsolver import satisfiable, z3_available
+from pyomo.core.base.set_types import PositiveIntegers, NonNegativeReals, Binary
 from pyomo.environ import (
     ConcreteModel, Var, Constraint, Objective, sin, cos, tan, asin, acos, atan, sqrt, log,
     minimize)
@@ -14,7 +24,7 @@ currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'gdp'))
 
 
-@unittest.skipUnless(_z3_available, "Z3 SAT solver is not available.")
+@unittest.skipUnless(z3_available, "Z3 SAT solver is not available.")
 class SatSolverTests(unittest.TestCase):
 
     def test_simple_sat_model(self):

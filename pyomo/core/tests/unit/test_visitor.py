@@ -11,52 +11,31 @@
 # Unit Tests for expression generation
 #
 
-import copy
-import pickle
-import math
 import os
-import re
-import six
-import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
-from pyutilib.th import nottest
+import pyomo.common.unittest as unittest
+from pyomo.common.unittest import nottest
 
-from pyomo.environ import *
-import pyomo.kernel
-from pyomo.core.expr.numvalue import (
-    native_types, nonpyomo_leaf_types, NumericConstant, as_numeric, 
-    is_potentially_variable,
-)
+from pyomo.environ import ConcreteModel, RangeSet, Param, Var, Expression, ExternalFunction, VarList, sum_product, inequality, quicksum, sin, tanh
+from pyomo.core.expr.numvalue import nonpyomo_leaf_types, NumericConstant
 from pyomo.core.expr.numeric_expr import (
-    ExpressionBase, UnaryFunctionExpression, SumExpression, PowExpression,
-    ProductExpression, DivisionExpression, NegationExpression,
-    MonomialTermExpression, LinearExpression,
-    NPV_NegationExpression, NPV_ProductExpression, NPV_DivisionExpression,
-    NPV_PowExpression,
-    decompose_term, clone_counter,
-    _MutableLinearExpression, _MutableSumExpression, _decompose_linear_terms,
-    LinearDecompositionError,
-)
-import pyomo.core.expr.logical_expr as logical_expr
-from pyomo.core.expr.logical_expr import (
-    InequalityExpression, EqualityExpression, RangedExpression,
-)
+    SumExpression, ProductExpression, 
+    MonomialTermExpression, LinearExpression)
 from pyomo.core.expr.visitor import (
     FixedExpressionError, NonConstantExpressionError,
     StreamBasedExpressionVisitor, ExpressionReplacementVisitor,
     evaluate_expression, expression_to_string, replace_expressions,
-    clone_expression, sizeof_expression,
+    sizeof_expression,
     identify_variables, identify_components, identify_mutable_parameters,
 )
-from pyomo.core.expr.current import Expr_if
-from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.param import _ParamData, SimpleParam
-from pyomo.core.base.label import *
-from pyomo.core.base.template_expr import IndexTemplate
+from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.expr_errors import TemplateExpressionError
+from pyomo.common.collections import ComponentSet
+from pyomo.common.log import LoggingIntercept
+from io import StringIO
 
 
 class TestExpressionUtilities(unittest.TestCase):
@@ -98,7 +77,7 @@ class TestExpressionUtilities(unittest.TestCase):
 
     def test_identify_vars_expr(self):
         #
-        # Identify variables when there are duplicates
+        # Identify variables in named expressions
         #
         m = ConcreteModel()
         m.a = Var(initialize=1)
@@ -178,7 +157,7 @@ class TestIdentifyParams(unittest.TestCase):
         m.a = Var(initialize=1)
         m.b = Var(m.I, initialize=1)
         #
-        # There are no variables in expressions with only vars
+        # There are no parameters in expressions with only vars
         #
         self.assertEqual( list(identify_mutable_parameters(m.a)), [] )
         self.assertEqual( list(identify_mutable_parameters(m.b[1])), [] )
@@ -188,6 +167,23 @@ class TestIdentifyParams(unittest.TestCase):
             m.a**m.b[1] + m.b[2])), [] )
         self.assertEqual( list(identify_mutable_parameters(
             m.a**m.b[1] + m.b[2]*m.b[3]*m.b[2])), [] )
+
+    def test_identify_mutable_parameters_constants(self):
+        #
+        # SimpleParams and NumericConstants are not recognized
+        #
+        m = ConcreteModel()
+        m.x = Var(initialize=1)
+        m.x.fix()
+        m.p = Param(initialize=2, mutable=False)
+        m.p_m = Param(initialize=3, mutable=True)
+        e1 = (m.x + m.p + NumericConstant(5))
+        self.assertEqual(list(identify_mutable_parameters(e1)), [])
+
+        e2 = (5*m.x + NumericConstant(3)*m.p_m + m.p == 0)
+        mut_params = list(identify_mutable_parameters(e2))
+        self.assertEqual(len(mut_params), 1)
+        self.assertIs(mut_params[0], m.p_m)
 
     def test_identify_duplicate_params(self):
         #
@@ -201,7 +197,7 @@ class TestIdentifyParams(unittest.TestCase):
 
     def test_identify_mutable_parameters_expr(self):
         #
-        # Identify variables when there are duplicates
+        # Identify mutable params in named expressions
         #
         m = ConcreteModel()
         m.a = Param(initialize=1, mutable=True)
@@ -212,6 +208,17 @@ class TestIdentifyParams(unittest.TestCase):
         self.assertEqual( list(identify_mutable_parameters(m.b+m.e)), [ m.b, m.a ] )
         self.assertEqual( list(identify_mutable_parameters(m.E[0])), [ m.a ] )
         self.assertEqual( list(identify_mutable_parameters(m.E[1])), [ m.b ] )
+
+    def test_identify_mutable_parameters_logical_expr(self):
+        #
+        # Identify mutable params in logical expressions
+        #
+        m = ConcreteModel()
+        m.a = Param(initialize=0, mutable=True)
+        expr = m.a+1 == 0
+        param_set = ComponentSet(identify_mutable_parameters(expr))
+        self.assertEqual(len(param_set), 1)
+        self.assertIn(m.a, param_set)
 
     def test_identify_mutable_parameters_params(self):
         m = ConcreteModel()
@@ -715,7 +722,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         self.e = m.x**2 + m.y + m.z*(m.x+m.y)
 
     def test_bad_args(self):
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Unrecognized keyword arguments: {'foo': None}"):
             StreamBasedExpressionVisitor(foo=None)
 
@@ -730,7 +737,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         self.assertEqual(ans, ref)
 
     def test_beforeChild(self):
-        def before(node, child):
+        def before(node, child, child_idx):
             if type(child) in nonpyomo_leaf_types \
                or not child.is_expression_type():
                 return False, [child]
@@ -752,18 +759,48 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         ref = []
         self.assertEqual(str(ans), str(ref))
 
+    def test_old_beforeChild(self):
+        def before(node, child):
+            if type(child) in nonpyomo_leaf_types \
+               or not child.is_expression_type():
+                return False, [child]
+        os = StringIO()
+        with LoggingIntercept(os, 'pyomo'):
+            walker = StreamBasedExpressionVisitor(beforeChild=before)
+        self.assertIn(
+            "Note that the API for the StreamBasedExpressionVisitor "
+            "has changed to include the child index for the beforeChild() "
+            "method", os.getvalue().replace('\n',' '))
+
+        ans = walker.walk_expression(self.e)
+        m = self.m
+        ref = [
+            [[m.x], [2]],
+            [m.y],
+            [[m.z], [[m.x], [m.y]]]
+        ]
+        self.assertEqual(str(ans), str(ref))
+
+        ans = walker.walk_expression(m.x)
+        ref = []
+        self.assertEqual(str(ans), str(ref))
+
+        ans = walker.walk_expression(2)
+        ref = []
+        self.assertEqual(str(ans), str(ref))
+
     def test_reduce_in_accept(self):
         def enter(node):
             return None, 1
-        def accept(node, data, child_result):
+        def accept(node, data, child_result, child_idx):
             return data + child_result
         walker = StreamBasedExpressionVisitor(
             enterNode=enter, acceptChildResult=accept)
         # 4 operators, 6 leaf nodes
-        self.assertEquals(walker.walk_expression(self.e), 10)
+        self.assertEqual(walker.walk_expression(self.e), 10)
 
     def test_sizeof_expression(self):
-        self.assertEquals(sizeof_expression(self.e), 10)
+        self.assertEqual(sizeof_expression(self.e), 10)
 
     def test_enterNode(self):
         # This is an alternative way to implement the beforeChild test:
@@ -879,6 +916,24 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
 
     def test_beforeChild_acceptChildResult_afterChild(self):
         counts = [0,0,0]
+        def before(node, child, child_idx):
+            counts[0] += 1
+            if type(child) in nonpyomo_leaf_types \
+               or not child.is_expression_type():
+                return False, None
+        def accept(node, data, child_result, child_idx):
+            counts[1] += 1
+        def after(node, child, child_idx):
+            counts[2] += 1
+        walker = StreamBasedExpressionVisitor(
+            beforeChild=before, acceptChildResult=accept, afterChild=after)
+        ans = walker.walk_expression(self.e)
+        m = self.m
+        self.assertEqual(ans, None)
+        self.assertEqual(counts, [9,9,9])
+
+    def test_OLD_beforeChild_acceptChildResult_afterChild(self):
+        counts = [0,0,0]
         def before(node, child):
             counts[0] += 1
             if type(child) in nonpyomo_leaf_types \
@@ -888,20 +943,36 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
             counts[1] += 1
         def after(node, child):
             counts[2] += 1
-        walker = StreamBasedExpressionVisitor(
-            beforeChild=before, acceptChildResult=accept, afterChild=after)
+
+        os = StringIO()
+        with LoggingIntercept(os, 'pyomo'):
+            walker = StreamBasedExpressionVisitor(
+                beforeChild=before, acceptChildResult=accept, afterChild=after)
+        self.assertIn(
+            "Note that the API for the StreamBasedExpressionVisitor "
+            "has changed to include the child index for the "
+            "beforeChild() method", os.getvalue().replace('\n',' '))
+        self.assertIn(
+            "Note that the API for the StreamBasedExpressionVisitor "
+            "has changed to include the child index for the "
+            "acceptChildResult() method", os.getvalue().replace('\n',' '))
+        self.assertIn(
+            "Note that the API for the StreamBasedExpressionVisitor "
+            "has changed to include the child index for the "
+            "afterChild() method", os.getvalue().replace('\n',' '))
+
         ans = walker.walk_expression(self.e)
         m = self.m
         self.assertEqual(ans, None)
-        self.assertEquals(counts, [9,9,9])
+        self.assertEqual(counts, [9,9,9])
 
     def test_enterNode_acceptChildResult_beforeChild(self):
         ans = []
-        def before(node, child):
+        def before(node, child, child_idx):
             if type(child) in nonpyomo_leaf_types \
                or not child.is_expression_type():
                 return False, child
-        def accept(node, data, child_result):
+        def accept(node, data, child_result, child_idx):
             if data is not child_result:
                 data.append(child_result)
             return data
@@ -916,11 +987,11 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
 
     def test_finalize(self):
         ans = []
-        def before(node, child):
+        def before(node, child, child_idx):
             if type(child) in nonpyomo_leaf_types \
                or not child.is_expression_type():
                 return False, child
-        def accept(node, data, child_result):
+        def accept(node, data, child_result, child_idx):
             if data is not child_result:
                 data.append(child_result)
             return data
@@ -945,11 +1016,11 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
             ans.append("Enter %s" % (name(node)))
         def exit(node, data):
             ans.append("Exit %s" % (name(node)))
-        def before(node, child):
+        def before(node, child, child_idx):
             ans.append("Before %s (from %s)" % (name(child), name(node)))
-        def accept(node, data, child_result):
+        def accept(node, data, child_result, child_idx):
             ans.append("Accept into %s" % (name(node)))
-        def after(node, child):
+        def after(node, child, child_idx):
             ans.append("After %s (from %s)" % (name(child), name(node)))
         def finalize(result):
             ans.append("Finalize")
@@ -1020,6 +1091,81 @@ Finalize""")
                 self.ans.append("Enter %s" % (name(node)))
             def exitNode(self, node, data):
                 self.ans.append("Exit %s" % (name(node)))
+            def beforeChild(self, node, child, child_idx):
+                self.ans.append("Before %s (from %s)"
+                                % (name(child), name(node)))
+            def acceptChildResult(self, node, data, child_result, child_idx):
+                self.ans.append("Accept into %s" % (name(node)))
+            def afterChild(self, node, child, child_idx):
+                self.ans.append("After %s (from %s)"
+                                % (name(child), name(node)))
+            def finalizeResult(self, result):
+                self.ans.append("Finalize")
+        walker = all_callbacks()
+        self.assertIsNone( walker.walk_expression(self.e) )
+        self.assertEqual("\n".join(walker.ans),"""Enter sum
+Before pow (from sum)
+Enter pow
+Before x (from pow)
+Enter x
+Exit x
+Accept into pow
+After x (from pow)
+Before 2 (from pow)
+Enter 2
+Exit 2
+Accept into pow
+After 2 (from pow)
+Exit pow
+Accept into sum
+After pow (from sum)
+Before y (from sum)
+Enter y
+Exit y
+Accept into sum
+After y (from sum)
+Before prod (from sum)
+Enter prod
+Before z (from prod)
+Enter z
+Exit z
+Accept into prod
+After z (from prod)
+Before sum (from prod)
+Enter sum
+Before x (from sum)
+Enter x
+Exit x
+Accept into sum
+After x (from sum)
+Before y (from sum)
+Enter y
+Exit y
+Accept into sum
+After y (from sum)
+Exit sum
+Accept into prod
+After sum (from prod)
+Exit prod
+Accept into sum
+After prod (from sum)
+Exit sum
+Finalize""")
+
+    def test_all_derived_class_oldAPI(self):
+        def name(x):
+            if type(x) in nonpyomo_leaf_types:
+                return str(x)
+            else:
+                return x.name
+        class all_callbacks(StreamBasedExpressionVisitor):
+            def __init__(self):
+                self.ans = []
+                super(all_callbacks, self).__init__()
+            def enterNode(self, node):
+                self.ans.append("Enter %s" % (name(node)))
+            def exitNode(self, node, data):
+                self.ans.append("Exit %s" % (name(node)))
             def beforeChild(self, node, child):
                 self.ans.append("Before %s (from %s)"
                                 % (name(child), name(node)))
@@ -1030,7 +1176,22 @@ Finalize""")
                                 % (name(child), name(node)))
             def finalizeResult(self, result):
                 self.ans.append("Finalize")
-        walker = all_callbacks()
+        os = StringIO()
+        with LoggingIntercept(os, 'pyomo'):
+            walker = all_callbacks()
+        self.assertIn(
+            "Note that the API for the StreamBasedExpressionVisitor "
+            "has changed to include the child index for the "
+            "beforeChild() method", os.getvalue().replace('\n',' '))
+        self.assertIn(
+            "Note that the API for the StreamBasedExpressionVisitor "
+            "has changed to include the child index for the "
+            "acceptChildResult() method", os.getvalue().replace('\n',' '))
+        self.assertIn(
+            "Note that the API for the StreamBasedExpressionVisitor "
+            "has changed to include the child index for the "
+            "afterChild() method", os.getvalue().replace('\n',' '))
+
         self.assertIsNone( walker.walk_expression(self.e) )
         self.assertEqual("\n".join(walker.ans),"""Enter sum
 Before pow (from sum)

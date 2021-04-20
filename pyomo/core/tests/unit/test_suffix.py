@@ -17,7 +17,7 @@ import pickle
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.core.base.suffix import \
     (active_export_suffix_generator,
      export_suffix_generator,
@@ -27,9 +27,9 @@ from pyomo.core.base.suffix import \
      local_suffix_generator,
      active_suffix_generator,
      suffix_generator)
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, Suffix, Var, Param, Set, Objective, Constraint, Block, sum_product
 
-from six import StringIO
+from io import StringIO
 
 def simple_con_rule(model,i):
     return model.x[i] == 1

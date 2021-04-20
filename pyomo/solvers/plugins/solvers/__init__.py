@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 # TODO: Disabled until we can confirm application to Pyomo models
-import pyomo.solvers.plugins.solvers.ps
 import pyomo.solvers.plugins.solvers.PICO
 import pyomo.solvers.plugins.solvers.CBCplugin
 import pyomo.solvers.plugins.solvers.GLPK
@@ -30,3 +29,6 @@ import pyomo.solvers.plugins.solvers.cplex_direct
 import pyomo.solvers.plugins.solvers.cplex_persistent
 import pyomo.solvers.plugins.solvers.GAMS
 import pyomo.solvers.plugins.solvers.mosek_direct
+import pyomo.solvers.plugins.solvers.mosek_persistent
+import pyomo.solvers.plugins.solvers.xpress_direct
+import pyomo.solvers.plugins.solvers.xpress_persistent

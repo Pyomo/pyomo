@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from collections import OrderedDict
 import importlib
 """
@@ -107,7 +117,7 @@ class ParallelTaskManager:
             local_data = OrderedDict()
             assert (len(global_data) == self._n_total_tasks)
             idx = 0
-            for k,v in six.iteritems(global_data):
+            for k, v in global_data.items():
                 if idx in self._local_map:
                     local_data[k] = v
                 idx += idx

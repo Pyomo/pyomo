@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 import logging
-from six import iterkeys
 
 from pyomo.core.base import (Transformation,
                              TransformationFactory,
@@ -36,7 +35,6 @@ class MPEC4_Transformation(Transformation):
         super(MPEC4_Transformation, self).__init__()
 
     def _apply_to(self, instance, **kwds):
-        options = kwds.pop('options', {})
         #
         # Find the free variables
         #
@@ -55,9 +53,8 @@ class MPEC4_Transformation(Transformation):
         for cobj in instance.component_objects(Complementarity, active=True,
                                                descend_into=(Block, Disjunct),
                                                sort=SortComponents.deterministic):
-            bdata = cobj.parent_block()
             cobjs.append(cobj)
-            for index in sorted(iterkeys(cobj)):
+            for index in sorted(cobj.keys()):
                 _cdata = cobj[index]
                 if not _cdata.active:
                     continue

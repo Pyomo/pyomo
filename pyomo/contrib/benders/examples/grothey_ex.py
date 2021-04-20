@@ -1,40 +1,50 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from pyomo.contrib.benders.benders_cuts import BendersCutGenerator
-import pyomo.environ as pe
+import pyomo.environ as pyo
 
 
-def create_master():
-    m = pe.ConcreteModel()
-    m.y = pe.Var(bounds=(1, None))
-    m.eta = pe.Var(bounds=(-10, None))
-    m.obj = pe.Objective(expr=m.y**2 + m.eta)
+def create_root():
+    m = pyo.ConcreteModel()
+    m.y = pyo.Var(bounds=(1, None))
+    m.eta = pyo.Var(bounds=(-10, None))
+    m.obj = pyo.Objective(expr=m.y**2 + m.eta)
     return m
 
 
-def create_subproblem(master):
-    m = pe.ConcreteModel()
-    m.x1 = pe.Var()
-    m.x2 = pe.Var()
-    m.y = pe.Var()
-    m.obj = pe.Objective(expr=-m.x2)
-    m.c1 = pe.Constraint(expr=(m.x1 - 1)**2 + m.x2**2 <= pe.log(m.y))
-    m.c2 = pe.Constraint(expr=(m.x1 + 1)**2 + m.x2**2 <= pe.log(m.y))
+def create_subproblem(root):
+    m = pyo.ConcreteModel()
+    m.x1 = pyo.Var()
+    m.x2 = pyo.Var()
+    m.y = pyo.Var()
+    m.obj = pyo.Objective(expr=-m.x2)
+    m.c1 = pyo.Constraint(expr=(m.x1 - 1)**2 + m.x2**2 <= pyo.log(m.y))
+    m.c2 = pyo.Constraint(expr=(m.x1 + 1)**2 + m.x2**2 <= pyo.log(m.y))
 
-    complicating_vars_map = pe.ComponentMap()
-    complicating_vars_map[master.y] = m.y
+    complicating_vars_map = pyo.ComponentMap()
+    complicating_vars_map[root.y] = m.y
 
     return m, complicating_vars_map
 
 
 def main():
-    m = create_master()
-    master_vars = [m.y]
+    m = create_root()
+    root_vars = [m.y]
     m.benders = BendersCutGenerator()
-    m.benders.set_input(master_vars=master_vars, tol=1e-8)
+    m.benders.set_input(root_vars=root_vars, tol=1e-8)
     m.benders.add_subproblem(subproblem_fn=create_subproblem,
-                             subproblem_fn_kwargs={'master': m},
-                             master_eta=m.eta,
+                             subproblem_fn_kwargs={'root': m},
+                             root_eta=m.eta,
                              subproblem_solver='ipopt', )
-    opt = pe.SolverFactory('gurobi_direct')
+    opt = pyo.SolverFactory('gurobi_direct')
 
     for i in range(30):
         res = opt.solve(m, tee=False)

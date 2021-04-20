@@ -70,8 +70,21 @@ determined by the following traits:
 The following code snippet shows examples of declaring a Suffix
 component on a Pyomo model:
 
-.. literalinclude:: ../script_spy_files/spy4suffixes_Declare_suffix_component.spy
-   :language: python
+.. testcode::
+
+   import pyomo.environ as pyo
+
+   model = pyo.ConcreteModel()
+
+   # Export integer data
+   model.priority = pyo.Suffix(
+       direction=pyo.Suffix.EXPORT, datatype=pyo.Suffix.INT)
+
+   # Export and import floating point data
+   model.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
+
+   # Store floating point data
+   model.junk = pyo.Suffix()
 
 Declaring a Suffix with a non-local direction on a model is not
 guaranteed to be compatible with all solver plugins in Pyomo. Whether a
@@ -125,16 +138,41 @@ number of methods whose default semantics are more convenient for
 working with indexed modeling components.  The easiest way to highlight
 this functionality is through the use of an example.
 
-.. literalinclude:: ../script_spy_files/spy4suffixes_Use_suffix_component_class_methods.spy
-   :language: python
+.. testcode::
+
+   model = pyo.ConcreteModel()
+   model.x = pyo.Var()
+   model.y = pyo.Var([1,2,3])
+   model.foo = pyo.Suffix()
 
 In this example we have a concrete Pyomo model with two different types
 of variable components (indexed and non-indexed) as well as a Suffix
 declaration (foo). The next code snippet shows examples of adding
 entries to the suffix foo.
 
-.. literalinclude:: ../script_spy_files/spy4suffixes_Add_entries_to_suffix_declaration.spy
-   :language: python
+.. testcode::
+
+   # Assign a suffix value of 1.0 to model.x
+   model.foo.set_value(model.x, 1.0)
+
+   # Same as above with dict interface
+   model.foo[model.x] = 1.0
+
+   # Assign a suffix value of 0.0 to all indices of model.y
+   # By default this expands so that entries are created for
+   # every index (y[1], y[2], y[3]) and not model.y itself
+   model.foo.set_value(model.y, 0.0)
+
+   # The same operation using the dict interface results in an entry only
+   # for the parent component model.y
+   model.foo[model.y] = 50.0
+
+   # Assign a suffix value of -1.0 to model.y[1]
+   model.foo.set_value(model.y[1], -1.0)
+
+   # Same as above with the dict interface
+   model.foo[model.y[1]] = -1.0
+
 
 In this example we highlight the fact that the ``__setitem__`` and
 ``setValue`` entry methods can be used interchangeably except in the
@@ -148,16 +186,58 @@ value of ``False`` results in the same behavior as ``__setitem__``.
 Other operations like accessing or removing entries in our mapping can
 performed as if the built-in ``dict`` class is in use.
 
-.. literalinclude:: ../script_spy_files/spy4suffixes_Print_value.spy
-   :language: python
+.. doctest::
+
+   >>> print(model.foo.get(model.x))
+   1.0
+   >>> print(model.foo[model.x])
+   1.0
+
+   >>> print(model.foo.get(model.y[1]))
+   -1.0
+   >>> print(model.foo[model.y[1]])
+   -1.0
+
+   >>> print(model.foo.get(model.y[2]))
+   0.0
+   >>> print(model.foo[model.y[2]])
+   0.0
+
+   >>> print(model.foo.get(model.y))
+   50.0
+   >>> print(model.foo[model.y])
+   50.0
+
+   >>> del model.foo[model.y]
+   >>> print(model.foo.get(model.y))
+   None
+
+   >>> print(model.foo[model.y])
+   Traceback (most recent call last):
+     ...
+   KeyError: "Component with id '...': y"
+
 
 The non-dict method ``clear_value`` can be used in place of
 ``__delitem__`` to remove entries, where it inherits the same default
 behavior as ``setValue`` for indexed components and does not raise a
 KeyError when the argument does not exist as a key in the mapping.
 
-.. literalinclude:: ../script_spy_files/spy4suffixes_Clear_value.spy
-   :language: python
+.. doctest::
+
+   >>> model.foo.clear_value(model.y)
+
+   >>> print(model.foo[model.y[1]])
+   Traceback (most recent call last):
+     ...
+   KeyError: "Component with id '...': y[1]"
+
+   >>> del model.foo[model.y[1]]
+   Traceback (most recent call last):
+     ...
+   KeyError: "Component with id '...': y[1]"
+
+   >>> model.foo.clear_value(model.y[1])
 
 A summary non-dict Suffix methods is provided here:
 
@@ -207,8 +287,13 @@ interfaces, is constraint dual multipliers. Requesting that duals be
 imported into suffix data can be accomplished by declaring a Suffix
 component on the model.
 
-.. literalinclude:: ../script_spy_files/spy4suffixes_Import_suffix_information.spy
-   :language: python
+.. testcode::
+
+   model = pyo.ConcreteModel()
+   model.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+   model.x = pyo.Var()
+   model.obj = pyo.Objective(expr=model.x)
+   model.con = pyo.Constraint(expr=model.x >= 1.0)
 
 The existence of an active suffix with the name dual that has an import
 style suffix direction will cause constraint dual information to be
@@ -218,8 +303,13 @@ problem instance (using a python script or Pyomo callback functions in
 conjunction with the ``pyomo`` command), one can access the dual values
 associated with constraints using the dual Suffix component.
 
-.. literalinclude:: ../script_spy_files/spy4suffixes_Print_dual_value.spy
-   :language: python
+.. doctest::
+   :skipif: not glpk_available
+
+   >>> results = pyo.SolverFactory('glpk').solve(model)
+   >>> pyo.assert_optimal_termination(results)
+   >>> print(model.dual[model.con])
+   1.0
 
 Alternatively, the ``pyomo`` option ``--solver-suffixes`` can be used to
 request suffix information from a solver. In the event that suffix names
@@ -237,8 +327,19 @@ component values with it. The following example shows how one can
 declare a special ordered set of type 1 using AMPL-style suffix notation
 in conjunction with Pyomo's NL file interface.
 
-.. literalinclude:: ../script_spy_files/spy4suffixes_Export_suffix_data.spy
-   :language: python
+.. testcode::
+
+   model = pyo.ConcreteModel()
+   model.y = pyo.Var([1,2,3], within=pyo.NonNegativeReals)
+
+   model.sosno = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+   model.ref = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+
+   # Add entry for each index of model.y
+   model.sosno.set_value(model.y, 1)
+   model.ref[model.y[1]] = 0
+   model.ref[model.y[2]] = 1
+   model.ref[model.y[3]] = 2
 
 Most AMPL-compatible solvers will recognize the suffix names ``sosno``
 and ``ref`` as declaring a special ordered set, where a positive value
@@ -247,8 +348,8 @@ value indicates a special ordered set of type 2.
 
 .. note::
 
-   Pyomo provides the SOSConstraint component for declaring special
-   ordered sets, which is recognized by all solver interface, including
+   Pyomo provides the :class:`SOSConstraint` component for declaring special
+   ordered sets, which is recognized by all solver interfaces, including
    the NL file interface.
 
 Pyomo's NL file interface will recognize an EXPORT style Suffix
@@ -261,39 +362,89 @@ primal (variable values) and dual (suffixes) solution information. This
 dual suffix information can be both imported and exported using a single
 Suffix component with an IMPORT_EXPORT direction.
 
-.. literalinclude:: ../script_spy_files/ipopt_warmstart.py
-   :language: python
+.. testcode::
+
+   model = pyo.ConcreteModel()
+   model.x1 = pyo.Var(bounds=(1,5),initialize=1.0)
+   model.x2 = pyo.Var(bounds=(1,5),initialize=5.0)
+   model.x3 = pyo.Var(bounds=(1,5),initialize=5.0)
+   model.x4 = pyo.Var(bounds=(1,5),initialize=1.0)
+   model.obj = pyo.Objective(
+       expr=model.x1*model.x4*(model.x1 + model.x2 + model.x3) + model.x3)
+   model.inequality = pyo.Constraint(
+       expr=model.x1*model.x2*model.x3*model.x4 >= 25.0)
+   model.equality = pyo.Constraint(
+       expr=model.x1**2 + model.x2**2 + model.x3**2 + model.x4**2 == 40.0)
+
+   ### Declare all suffixes
+   # Ipopt bound multipliers (obtained from solution)
+   model.ipopt_zL_out = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+   model.ipopt_zU_out = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+   # Ipopt bound multipliers (sent to solver)
+   model.ipopt_zL_in = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+   model.ipopt_zU_in = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+   # Obtain dual solutions from first solve and send to warm start
+   model.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
+
+   ipopt = pyo.SolverFactory('ipopt')
 
 The difference in performance can be seen by examining Ipopt's iteration
 log with and without warm starting:
 
 - Without Warmstart:
 
-::
+  .. testcode::
+   :skipif: not ipopt_available
 
-  iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-    0  1.6109693e+01 1.12e+01 5.28e-01  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0
-    1  1.6982239e+01 7.30e-01 1.02e+01  -1.0 6.11e-01    -  7.19e-02 1.00e+00f  1
-    2  1.7318411e+01 3.60e-02 5.05e-01  -1.0 1.61e-01    -  1.00e+00 1.00e+00h  1
-    3  1.6849424e+01 2.78e-01 6.68e-02  -1.7 2.85e-01    -  7.94e-01 1.00e+00h  1
-    4  1.7051199e+01 4.71e-03 2.78e-03  -1.7 6.06e-02    -  1.00e+00 1.00e+00h  1
-    5  1.7011979e+01 7.19e-03 8.50e-03  -3.8 3.66e-02    -  9.45e-01 9.98e-01h  1
-    6  1.7014271e+01 1.74e-05 9.78e-06  -3.8 3.33e-03    -  1.00e+00 1.00e+00h  1
-    7  1.7014021e+01 1.23e-07 1.82e-07  -5.7 2.69e-04    -  1.00e+00 1.00e+00h  1
-    8  1.7014017e+01 1.77e-11 2.52e-11  -8.6 3.32e-06    -  1.00e+00 1.00e+00h  1
+   ipopt.solve(model, tee=True)
 
-    Number of Iterations....: 8
+  .. testoutput::
+   :skipif: not ipopt_available
+
+   ...
+   iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
+      0  1.6109693e+01 1.12e+01 5.28e-01  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0
+      1  1.6982239e+01 7.30e-01 1.02e+01  -1.0 6.11e-01    -  7.19e-02 1.00e+00f  1
+      2  1.7318411e+01 3.60e-02 5.05e-01  -1.0 1.61e-01    -  1.00e+00 1.00e+00h  1
+      3  1.6849424e+01 2.78e-01 6.68e-02  -1.7 2.85e-01    -  7.94e-01 1.00e+00h  1
+      4  1.7051199e+01 4.71e-03 2.78e-03  -1.7 6.06e-02    -  1.00e+00 1.00e+00h  1
+      5  1.7011979e+01 7.19e-03 8.50e-03  -3.8 3.66e-02    -  9.45e-01 9.98e-01h  1
+      6  1.7014271e+01 1.74e-05 9.78e-06  -3.8 3.33e-03    -  1.00e+00 1.00e+00h  1
+      7  1.7014021e+01 1.23e-07 1.82e-07  -5.7 2.69e-04    -  1.00e+00 1.00e+00h  1
+      8  1.7014017e+01 1.77e-11 2.52e-11  -8.6 3.32e-06    -  1.00e+00 1.00e+00h  1
+
+   Number of Iterations....: 8
+   ...
 
 - With Warmstart:
 
-::
+  .. testcode::
+   :skipif: not ipopt_available
 
-  iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-    0  1.7014032e+01 2.00e-06 4.07e-06  -6.0 0.00e+00    -  0.00e+00 0.00e+00   0
-    1  1.7014019e+01 3.65e-12 1.00e-11  -6.0 2.50e-01    -  1.00e+00 1.00e+00h  1
-    2  1.7014017e+01 4.48e-12 6.43e-12  -9.0 1.92e-06    -  1.00e+00 1.00e+00h  1
+   ### Set Ipopt options for warm-start
+   # The current values on the ipopt_zU_out and ipopt_zL_out suffixes will
+   # be used as initial conditions for the bound multipliers to solve the
+   # new problem
+   model.ipopt_zL_in.update(model.ipopt_zL_out)
+   model.ipopt_zU_in.update(model.ipopt_zU_out)
+   ipopt.options['warm_start_init_point'] = 'yes'
+   ipopt.options['warm_start_bound_push'] = 1e-6
+   ipopt.options['warm_start_mult_bound_push'] = 1e-6
+   ipopt.options['mu_init'] = 1e-6
 
-    Number of Iterations....: 2
+   ipopt.solve(model, tee=True)
+
+  .. testoutput::
+   :skipif: not ipopt_available
+
+   ...
+   iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
+      0  1.7014032e+01 2.00e-06 4.07e-06  -6.0 0.00e+00    -  0.00e+00 0.00e+00   0
+      1  1.7014019e+01 3.65e-12 1.00e-11  -6.0 2.50e-01    -  1.00e+00 1.00e+00h  1
+      2  1.7014017e+01 4.48e-12 6.42e-12  -9.0 1.92e-06    -  1.00e+00 1.00e+00h  1
+
+   Number of Iterations....: 2
+   ...
 
 Using Suffixes With an AbstractModel
 ------------------------------------
@@ -307,11 +458,55 @@ initialization. Suffix rules are expected to return an iterable of
 (component, value) tuples, where the ``expand=True`` semantics are
 applied for indexed components.
 
-.. literalinclude:: ../script_spy_files/spy4suffixes_Suffix_initialization_rule_keyword.spy
-   :language: python
+.. testcode::
+
+   model = pyo.AbstractModel()
+   model.x = pyo.Var()
+   model.c = pyo.Constraint(expr=model.x >= 1)
+
+   def foo_rule(m):
+      return ((m.x, 2.0), (m.c, 3.0))
+   model.foo = pyo.Suffix(rule=foo_rule)
+
+.. doctest::
+
+   >>> # Instantiate the model
+   >>> inst = model.create_instance()
+
+   >>> print(inst.foo[inst.x])
+   2.0
+   >>> print(inst.foo[inst.c])
+   3.0
+
+   >>> # Note that model.x and inst.x are not the same object
+   >>> print(inst.foo[model.x])
+   Traceback (most recent call last):
+     ...
+   KeyError: "Component with id '...': x"
 
 The next example shows an abstract model where suffixes are attached
 only to the variables:
 
-.. literalinclude:: ../script_spy_files/AbstractSuffixes.py
-   :language: python
+.. testcode::
+
+   model = pyo.AbstractModel()
+   model.I = pyo.RangeSet(1,4)
+   model.x = pyo.Var(model.I)
+   def c_rule(m, i):
+       return m.x[i] >= i
+   model.c = pyo.Constraint(model.I, rule=c_rule)
+
+   def foo_rule(m):
+       return ((m.x[i], 3.0*i) for i in m.I)
+   model.foo = pyo.Suffix(rule=foo_rule)
+
+.. doctest::
+
+   >>> # instantiate the model
+   >>> inst = model.create_instance()
+   >>> for i in inst.I:
+   ...     print((i, inst.foo[inst.x[i]]))
+   (1, 3.0)
+   (2, 6.0)
+   (3, 9.0)
+   (4, 12.0)

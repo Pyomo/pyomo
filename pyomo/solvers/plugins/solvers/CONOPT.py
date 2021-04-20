@@ -9,22 +9,19 @@
 #  ___________________________________________________________________________
 
 import os
+import subprocess
 
-import pyomo.common
-import pyutilib.misc
+from pyomo.common import Executable
+from pyomo.common.collections import Bunch
+from pyomo.common.tempfiles import TempfileManager
 
-from pyomo.opt.base import *
-from pyomo.opt.base.solvers import _extract_version
-from pyomo.opt.results import *
-from pyomo.opt.solver import *
+from pyomo.opt.base import ProblemFormat, ResultsFormat
+from pyomo.opt.base.solvers import _extract_version, SolverFactory
+from pyomo.opt.results import SolverStatus
+from pyomo.opt.solver import  SystemCallSolver
 
 import logging
 logger = logging.getLogger('pyomo.solvers')
-
-try:
-    unicode
-except:
-    basestring = str
 
 
 @SolverFactory.register('conopt', doc='The CONOPT NLP solver')
@@ -50,7 +47,7 @@ class CONOPT(SystemCallSolver):
         self.set_problem_format(ProblemFormat.nl)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = pyutilib.misc.Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.integer = True
         self._capabilities.quadratic_objective = True
@@ -62,7 +59,7 @@ class CONOPT(SystemCallSolver):
         return ResultsFormat.sol
 
     def _default_executable(self):
-        executable = pyomo.common.Executable("conopt")
+        executable = Executable("conopt")
         if not executable:
             logger.warning("Could not locate the 'conopt' executable, "
                            "which is required for solver %s" % self.name)
@@ -77,8 +74,11 @@ class CONOPT(SystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = pyutilib.subprocess.run( [solver_exec], timelimit=1 )
-        return _extract_version(results[1])
+        results = subprocess.run( [solver_exec], timeout=1,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT,
+                                 universal_newlines=True)
+        return _extract_version(results.stdout)
 
     def create_command_line(self, executable, problem_files):
 
@@ -89,7 +89,7 @@ class CONOPT(SystemCallSolver):
         # Define log file
         #
         if self._log_file is None:
-            self._log_file = pyutilib.services.TempfileManager.\
+            self._log_file = TempfileManager.\
                              create_tempfile(suffix="_conopt.log")
 
         fname = problem_files[0]
@@ -133,7 +133,7 @@ class CONOPT(SystemCallSolver):
         for key in self.options:
             if key == 'solver':
                 continue
-            if isinstance(self.options[key], basestring) and ' ' in self.options[key]:
+            if isinstance(self.options[key], str) and ' ' in self.options[key]:
                 opt.append(key+"=\""+str(self.options[key])+"\"")
                 cmd.append(str(key)+"="+str(self.options[key]))
             elif key == 'subsolver':
@@ -147,7 +147,7 @@ class CONOPT(SystemCallSolver):
         # Merge with any options coming in through the environment
         env[envstr] = " ".join(opt)
 
-        return pyutilib.misc.Bunch(cmd=cmd, log_file=self._log_file, env=env)
+        return Bunch(cmd=cmd, log_file=self._log_file, env=env)
 
     def _postsolve(self):
         results = super(CONOPT, self)._postsolve()

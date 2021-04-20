@@ -1,11 +1,22 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import tempfile
 import os
 import pickle
 import random
 import collections
 import itertools
+from io import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.expr.symbol_map import SymbolMap
 import pyomo.kernel as pmo
@@ -22,7 +33,7 @@ from pyomo.core.kernel.base import \
 from pyomo.core.kernel.heterogeneous_container import \
     (heterogeneous_containers,
      IHeterogeneousContainer)
-from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.common.collections import ComponentMap
 from pyomo.core.kernel.suffix import suffix
 from pyomo.core.kernel.constraint import (IConstraint,
                                           constraint,
@@ -49,9 +60,6 @@ from pyomo.core.kernel.block import (IBlock,
                                      block_list)
 from pyomo.core.kernel.sos import sos
 from pyomo.opt.results import Solution
-
-import six
-from six import StringIO
 
 def _path_to_object_exists(obj, descendent):
     if descendent is obj:

@@ -4,15 +4,16 @@ from __future__ import division
 
 from copy import deepcopy
 
+from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.data_class import MasterProblemResult
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time
 from pyomo.core import (Block, Expression, Objective, TransformationFactory,
                         Var, minimize, value, Constraint)
 from pyomo.gdp import Disjunct
-from pyomo.opt import TerminationCondition as tc, SolverResults
-from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.network import Port
+from pyomo.opt import SolutionStatus, SolverFactory
+from pyomo.opt import TerminationCondition as tc, SolverResults
 
 
 def solve_linear_GDP(linear_GDP_model, solve_data, config):
@@ -25,29 +26,40 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
     _bigm.apply_to(m)
 
     preprocessing_transformations = [
-        # Propagate variable bounds
-        'contrib.propagate_eq_var_bounds',
-        # Detect fixed variables
-        'contrib.detect_fixed_vars',
-        # Propagate fixed variables
-        'contrib.propagate_fixed_vars',
-        # Remove zero terms in linear expressions
-        'contrib.remove_zero_terms',
-        # Remove terms in equal to zero summations
-        'contrib.propagate_zero_sum',
-        # Transform bound constraints
-        'contrib.constraints_to_var_bounds',
-        # Detect fixed variables
-        'contrib.detect_fixed_vars',
-        # Remove terms in equal to zero summations
-        'contrib.propagate_zero_sum',
+        # # Propagate variable bounds
+        # 'contrib.propagate_eq_var_bounds',
+        # # Detect fixed variables
+        # 'contrib.detect_fixed_vars',
+        # # Propagate fixed variables
+        # 'contrib.propagate_fixed_vars',
+        # # Remove zero terms in linear expressions
+        # 'contrib.remove_zero_terms',
+        # # Remove terms in equal to zero summations
+        # 'contrib.propagate_zero_sum',
+        # # Transform bound constraints
+        # 'contrib.constraints_to_var_bounds',
+        # # Detect fixed variables
+        # 'contrib.detect_fixed_vars',
+        # # Remove terms in equal to zero summations
+        # 'contrib.propagate_zero_sum',
         # Remove trivial constraints
         'contrib.deactivate_trivial_constraints',
     ]
     if config.mip_presolve:
-        # fbbt(m, integer_tol=config.integer_tolerance)
-        for xfrm in preprocessing_transformations:
-            TransformationFactory(xfrm).apply_to(m)
+        try:
+            fbbt(m, integer_tol=config.integer_tolerance)
+            for xfrm in preprocessing_transformations:
+                TransformationFactory(xfrm).apply_to(m)
+        except InfeasibleConstraintException:
+            config.logger.debug("MIP preprocessing detected infeasibility.")
+            mip_result = MasterProblemResult()
+            mip_result.feasible = False
+            mip_result.var_values = list(v.value for v in GDPopt.variable_list)
+            mip_result.pyomo_results = SolverResults()
+            mip_result.pyomo_results.solver.termination_condition = tc.error
+            mip_result.disjunct_values = list(
+                disj.indicator_var.value for disj in GDPopt.disjunct_list)
+            return mip_result
 
     # Deactivate extraneous IMPORT/EXPORT suffixes
     getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
@@ -63,11 +75,21 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
 
     try:
         with SuppressInfeasibleWarning():
+            mip_args = dict(config.mip_solver_args)
+            elapsed = get_main_elapsed_time(solve_data.timing)
+            remaining = max(config.time_limit - elapsed, 1)
+            if config.mip_solver == 'gams':
+                mip_args['add_options'] = mip_args.get('add_options', [])
+                mip_args['add_options'].append('option reslim=%s;' % remaining)
+            elif config.mip_solver == 'multisolve':
+                mip_args['time_limit'] = min(mip_args.get(
+                    'time_limit', float('inf')), remaining)
             results = SolverFactory(config.mip_solver).solve(
-                m, **config.mip_solver_args)
+                m, **mip_args)
     except RuntimeError as e:
         if 'GAMS encountered an error during solve.' in str(e):
-            config.logger.warning("GAMS encountered an error in solve. Treating as infeasible.")
+            config.logger.warning(
+                "GAMS encountered an error in solve. Treating as infeasible.")
             mip_result = MasterProblemResult()
             mip_result.feasible = False
             mip_result.var_values = list(v.value for v in GDPopt.variable_list)
@@ -95,7 +117,8 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
             'Resolving with arbitrary bound values of (-{0:.10g}, {0:.10g}) on the objective. '
             'Check your initialization routine.'.format(obj_bound))
         main_objective = next(m.component_data_objects(Objective, active=True))
-        GDPopt.objective_bound = Constraint(expr=(-obj_bound, main_objective.expr, obj_bound))
+        GDPopt.objective_bound = Constraint(
+            expr=(-obj_bound, main_objective.expr, obj_bound))
         with SuppressInfeasibleWarning():
             results = SolverFactory(config.mip_solver).solve(
                 m, **config.mip_solver_args)
@@ -109,7 +132,7 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
     mip_result.disjunct_values = list(
         disj.indicator_var.value for disj in GDPopt.disjunct_list)
 
-    if terminate_cond is tc.optimal or terminate_cond is tc.locallyOptimal:
+    if terminate_cond in {tc.optimal, tc.locallyOptimal, tc.feasible}:
         pass
     elif terminate_cond is tc.infeasible:
         config.logger.info(
@@ -163,7 +186,7 @@ def solve_LOA_master(solve_data, config):
     solve_data.mip_iteration += 1
     main_objective = next(m.component_data_objects(Objective, active=True))
 
-    if solve_data.current_strategy == 'LOA':
+    if solve_data.active_strategy == 'LOA':
         # Set up augmented Lagrangean penalty objective
         main_objective.deactivate()
         sign_adjust = 1 if main_objective.sense == minimize else -1
@@ -178,8 +201,10 @@ def solve_LOA_master(solve_data, config):
 
         obj_expr = GDPopt.oa_obj.expr
         base_obj_expr = main_objective.expr
-    elif solve_data.current_strategy == 'GLOA':
+    elif solve_data.active_strategy in {'GLOA', 'RIC'}:
         obj_expr = base_obj_expr = main_objective.expr
+    else:
+        raise ValueError('Unrecognized strategy: ' + solve_data.active_strategy)
 
     mip_result = solve_linear_GDP(m, solve_data, config)
     if mip_result.feasible:

@@ -11,13 +11,11 @@
 import logging
 logger = logging.getLogger('pyomo.core')
 
-from six import next, iteritems, itervalues
-
+from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.log import is_debug_set
 from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.base import Transformation, TransformationFactory, Connector, Constraint, \
-    ConstraintList, Var, VarList, TraversalStrategy, SortComponents
+    ConstraintList, Var, SortComponents
 from pyomo.core.base.connector import _ConnectorData, SimpleConnector
 
 
@@ -26,7 +24,7 @@ from pyomo.core.base.connector import _ConnectorData, SimpleConnector
 class ExpandConnectors(Transformation):
 
     def _apply_to(self, instance, **kwds):
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
+        if is_debug_set(logger):   #pragma:nocover
             logger.debug("Calling ConnectorExpander")
 
         connectorsFound = False
@@ -36,7 +34,7 @@ class ExpandConnectors(Transformation):
         if not connectorsFound:
             return
 
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
+        if is_debug_set(logger):   #pragma:nocover
             logger.debug("   Connectors found!")
 
         self._name_buffer = {}
@@ -111,7 +109,7 @@ class ExpandConnectors(Transformation):
 
         # Validate all connector sets and expand the empty ones
         known_conn_sets = {}
-        for groupID, conn_set in sorted(itervalues(connector_groups)):
+        for groupID, conn_set in sorted(connector_groups.values()):
             known_conn_sets[id(conn_set)] \
                 = self._validate_and_expand_connector_set(conn_set)
 
@@ -124,7 +122,7 @@ class ExpandConnectors(Transformation):
                 cList )
             connId = next(iter(conn_set))
             ref = known_conn_sets[id(matched_connectors[connId])]
-            for k,v in sorted(iteritems(ref)):
+            for k,v in sorted(ref.items()):
                 if v[1] >= 0:
                     _iter = v[0]
                 else:
@@ -148,7 +146,7 @@ class ExpandConnectors(Transformation):
         # Now, go back and implement VarList aggregators
         for conn in connector_list:
             block = conn.parent_block()
-            for var, aggregator in iteritems(conn.aggregators):
+            for var, aggregator in conn.aggregators.items():
                 c = Constraint(expr=aggregator(block, conn.vars[var]))
                 block.add_component(
                     '%s.%s.aggregate' % (
@@ -162,7 +160,7 @@ class ExpandConnectors(Transformation):
         ref = {}
         # First, go through the connectors and get the superset of all fields
         for c in connectors:
-            for k,v in iteritems(c.vars):
+            for k,v in c.vars.items():
                 if k in ref:
                     # We have already seen this var
                     continue
@@ -194,7 +192,7 @@ class ExpandConnectors(Transformation):
                 empty_or_partial.append(c)
                 continue
 
-            for k,v in iteritems(ref):
+            for k,v in ref.items():
                 if k not in c.vars:
                     raise ValueError(
                         "Connector mismatch: Connector '%s' missing variable "
@@ -232,7 +230,7 @@ class ExpandConnectors(Transformation):
 
         # as we are adding things to the model, sort by key so that
         # the order things are added is deterministic
-        sorted_refs = sorted(iteritems(ref))
+        sorted_refs = sorted(ref.items())
         if len(empty_or_partial) > 1:
             # This is expensive (names aren't cheap), but does result in
             # a deterministic ordering

@@ -1,12 +1,20 @@
-"""Transformation to propagate state through an equality set."""
-import textwrap
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
+"""Transformation to propagate state through an equality set."""
+
+from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.base.suffix import Suffix
 from pyomo.core.expr.numvalue import value
-from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.common.config import ConfigBlock, ConfigValue, add_docstring_list

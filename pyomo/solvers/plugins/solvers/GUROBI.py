@@ -15,30 +15,23 @@ import time
 import logging
 import subprocess
 
-import pyomo.common
-import pyutilib.misc
+from pyomo.common import Executable
+from pyomo.common.collections import Bunch
+from pyomo.common.tempfiles import TempfileManager
 
-from pyomo.opt.base import *
-from pyomo.opt.base.solvers import _extract_version
-from pyomo.opt.results import *
-from pyomo.opt.solver import *
+from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
+from pyomo.opt.base.solvers import _extract_version, SolverFactory
+from pyomo.opt.results import SolverStatus, TerminationCondition, SolutionStatus, ProblemSense, Solution
+from pyomo.opt.solver import ILMLicensedSystemCallSolver
 from pyomo.core.kernel.block import IBlock
 
 logger = logging.getLogger('pyomo.solvers')
-
-from six import iteritems, StringIO
-
-try:
-    unicode
-except:
-    basestring = str
 
 
 @SolverFactory.register('gurobi', doc='The GUROBI LP/MIP solver')
 class GUROBI(OptSolver):
     """The GUROBI LP/MIP solver
     """
-
     def __new__(cls, *args, **kwds):
         try:
             mode = kwds['solver_io']
@@ -83,6 +76,7 @@ class GUROBI(OptSolver):
 class GUROBISHELL(ILMLicensedSystemCallSolver):
     """Shell interface to the GUROBI LP/MIP solver
     """
+    _solver_info_cache = {}
 
     def __init__(self, **kwds):
         #
@@ -108,7 +102,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         self.set_problem_format(ProblemFormat.cpxlp)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = pyutilib.misc.Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -116,8 +110,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         self._capabilities.sos1 = True
         self._capabilities.sos2 = True
 
-    @staticmethod
-    def license_is_valid(executable='gurobi_cl'):
+    def license_is_valid(self):
         """
         Runs a check for a valid Gurobi license using the
         given executable (default is 'gurobi_cl'). All
@@ -125,25 +118,37 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         (including the executable being invalid), then this
         function will return False.
         """
-        try:
-            rc = subprocess.call([executable, "--license"],
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT)
-        except OSError:
-            rc = 1
-        if rc:
-            #
-            # Try the --status flag if --license is not available
-            #
+        solver_exec = self.executable()
+        if (solver_exec, 'licensed') in self._solver_info_cache:
+            return self._solver_info_cache[(solver_exec, 'licensed')]
+
+        if not solver_exec:
+            licensed = False
+        else:
+            executable = os.path.join(
+                os.path.dirname(solver_exec), 'gurobi_cl')
+
             try:
-                rc = subprocess.call([executable, "--status"],
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT)
+                rc = subprocess.call([executable, "--license"],
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.STDOUT)
             except OSError:
                 rc = 1
-            if rc:
-                return False
-        return True
+                if rc:
+                    #
+                    # Try the --status flag if --license is not available
+                    #
+                    try:
+                        rc = subprocess.call([executable, "--status"],
+                                             stdout=subprocess.PIPE,
+                                             stderr=subprocess.STDOUT)
+                    except OSError:
+                        rc = 1
+            licensed = not rc
+
+        self._solver_info_cache[(solver_exec, 'licensed')] = licensed
+        return licensed
+
 
     def _default_results_format(self, prob_format):
         return ResultsFormat.soln
@@ -190,7 +195,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
 
         # create a context in the temporary file manager for
         # this plugin - is "pop"ed in the _postsolve method.
-        pyutilib.services.TempfileManager.push()
+        TempfileManager.push()
 
         # if the first argument is a string (representing a filename),
         # then we don't have an instance => the solver is being applied
@@ -206,17 +211,17 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # create the temporary file - assuming that the user has already, via some external
         # mechanism, invoked warm_start() with a instance to create the warm start file.
         if self._warm_start_solve and \
-           isinstance(args[0], basestring):
+           isinstance(args[0], str):
             # we assume the user knows what they are doing...
             pass
         elif self._warm_start_solve and \
-             (not isinstance(args[0], basestring)):
+             (not isinstance(args[0], str)):
             # assign the name of the warm start file *before* calling the base class
             # presolve - the base class method ends up creating the command line,
             # and the warm start file-name is (obviously) needed there.
             if self._warm_start_file_name is None:
                 assert not user_warmstart
-                self._warm_start_file_name = pyutilib.services.TempfileManager.\
+                self._warm_start_file_name = TempfileManager.\
                                              create_tempfile(suffix = '.gurobi.mst')
 
         # let the base class handle any remaining keywords/actions.
@@ -225,7 +230,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # NB: we must let the base class presolve run first so that the
         # symbol_map is actually constructed!
 
-        if (len(args) > 0) and (not isinstance(args[0], basestring)):
+        if (len(args) > 0) and (not isinstance(args[0], str)):
 
             if len(args) != 1:
                 raise ValueError(
@@ -244,9 +249,9 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
 
     def _default_executable(self):
         if sys.platform == 'win32':
-            executable = pyomo.common.Executable("gurobi.bat")
+            executable = Executable("gurobi.bat")
         else:
-            executable = pyomo.common.Executable("gurobi.sh")
+            executable = Executable("gurobi.sh")
         if not executable:
             logger.warning("Could not locate the 'gurobi' executable, "
                            "which is required for solver %s" % self.name)
@@ -259,24 +264,29 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         Returns a tuple describing the solver executable version.
         """
         solver_exec = self.executable()
-        if solver_exec is None:
-            return _extract_version('')
-        f = StringIO()
-        results = pyutilib.subprocess.run([solver_exec],
-                                          stdin=('from gurobipy import *; '
-                                                 'print(gurobi.version()); exit()'),
-                                          ostream=f)
-        tmp = None
-        try:
-            tmp = tuple(eval(f.getvalue().strip()))
-            while(len(tmp) < 4):
-                tmp += (0,)
-        except SyntaxError:
-            tmp = None
-        if tmp is None:
-            return _extract_version('')
+        if (solver_exec, 'version') in self._solver_info_cache:
+            return self._solver_info_cache[(solver_exec, 'version')]
 
-        return tmp[:4]
+        if solver_exec is None:
+            ver = _extract_version('')
+        else:
+            results = subprocess.run(
+                [solver_exec],
+                input='from gurobipy import *; print(gurobi.version()); exit()',
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+            )
+            ver = None
+            try:
+                ver = tuple(eval(results.stdout.strip()))
+                while(len(ver) < 4):
+                    ver += (0,)
+            except SyntaxError:
+                ver = _extract_version('')
+        ver = ver[:4]
+        self._solver_info_cache[(solver_exec, 'version')] = ver
+        return ver
 
     def create_command_line(self,executable,problem_files):
 
@@ -285,7 +295,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # The log file in CPLEX contains the solution trace, but the solver status can be found in the solution file.
         #
         if self._log_file is None:
-            self._log_file = pyutilib.services.TempfileManager.\
+            self._log_file = TempfileManager.\
                             create_tempfile(suffix = '.gurobi.log')
 
         #
@@ -293,7 +303,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # As indicated above, contains (in XML) both the solution and solver status.
         #
         if self._soln_file is None:
-            self._soln_file = pyutilib.services.TempfileManager.\
+            self._soln_file = TempfileManager.\
                               create_tempfile(suffix = '.gurobi.txt')
 
         #
@@ -336,7 +346,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # dump the script and warm-start file names for the
         # user if we're keeping files around.
         if self._keepfiles:
-            script_fname = pyutilib.services.TempfileManager.create_tempfile(suffix = '.gurobi.script')
+            script_fname = TempfileManager.create_tempfile(suffix = '.gurobi.script')
             script_file = open(script_fname, 'w')
             script_file.write( script )
             script_file.close()
@@ -353,7 +363,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         cmd = [executable]
         if self._timer:
             cmd.insert(0, self._timer)
-        return pyutilib.misc.Bunch(cmd=cmd, script=script,
+        return Bunch(cmd=cmd, script=script,
                                    log_file=self._log_file, env=None)
 
     def process_logfile(self):
@@ -373,13 +383,13 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         extract_rc = False
         for suffix in self._suffixes:
             flag=False
-            if re.match(suffix,"dual"):
+            if re.match(suffix, "dual"):
                 extract_duals = True
                 flag=True
-            if re.match(suffix,"slack"):
+            if re.match(suffix, "slack"):
                 extract_slacks = True
                 flag=True
-            if re.match(suffix,"rc"):
+            if re.match(suffix, "rc"):
                 extract_rc = True
                 flag=True
             if not flag:
@@ -492,13 +502,13 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
 
         # For the range constraints, supply only the dual with the largest
         # magnitude (at least one should always be numerically zero)
-        for key,(ld,ud) in iteritems(range_duals):
+        for key,(ld,ud) in range_duals.items():
             if abs(ld) > abs(ud):
                 soln_constraints['r_l_'+key] = {"Dual" : ld}
             else:
                 soln_constraints['r_l_'+key] = {"Dual" : ud}                # Use the same key
         # slacks
-        for key,(ls,us) in iteritems(range_slacks):
+        for key,(ls,us) in range_slacks.items():
             if abs(ls) > abs(us):
                 soln_constraints.setdefault('r_l_'+key,{})["Slack"] = ls
             else:
@@ -532,6 +542,6 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # manager, created populated *directly* by this plugin. does not
         # include, for example, the execution script. but does include
         # the warm-start file.
-        pyutilib.services.TempfileManager.pop(remove=not self._keepfiles)
+        TempfileManager.pop(remove=not self._keepfiles)
 
         return results

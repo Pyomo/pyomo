@@ -18,8 +18,6 @@
 from pyomo.core.base import Objective, Constraint
 import array
 
-from six.moves import xrange
-
 def to_standard_form(self):
     """
     Produces a standard-form representation of the model. Returns
@@ -309,12 +307,12 @@ def to_standard_form(self):
         if len(tmp_name) > maxColWidth:
             maxColWidth = len(tmp_name)
         varNames[colID[name]] = tmp_name
-    for i in xrange(0, nSlack):
+    for i in range(0, nSlack):
         tmp_name = " _slack_%i" % i
         if len(tmp_name) > maxColWidth:
             maxColWidth = len(tmp_name)
         varNames.append(tmp_name)
-    for i in xrange(0, nExcess):
+    for i in range(0, nExcess):
         tmp_name = " _excess_%i" % i
         if len(tmp_name) > maxColWidth:
             maxColWidth = len(tmp_name)
@@ -322,7 +320,7 @@ def to_standard_form(self):
 
     # Variable names
     line = " "*maxConNameLen + (" "*constraintPadding) + " "
-    for col in xrange(0, nVariables):
+    for col in range(0, nVariables):
         # Format entry
         token = varNames[col]
 
@@ -337,7 +335,7 @@ def to_standard_form(self):
     print(" "*maxConNameLen + (" "*constraintPadding) + "+--" + \
           " "*((maxColWidth+2)*nVariables - 4) + "--+" + '\n')
     line = " "*maxConNameLen + (" "*constraintPadding) + "|"
-    for col in xrange(0, nVariables):
+    for col in range(0, nVariables):
         # Format entry
         token = numFmt % costs[col]
         if len(token) > maxColWidth:
@@ -358,12 +356,12 @@ def to_standard_form(self):
           " "*((maxColWidth+2)*nVariables - 4) + "--+" + \
           (" "*constraintPadding) + "+--" + \
           (" "*(maxConstraintColWidth-1)) + "--+"+'\n')
-    for row in xrange(0, nConstraints):
+    for row in range(0, nConstraints):
         # Print constraint name
         line = conNames[row] + (" "*constraintPadding) + (" "*(maxConNameLen - len(conNames[row]))) + "|"
 
         # Print each coefficient
-        for col in xrange(0, nVariables):
+        for col in range(0, nVariables):
             # Format entry
             token = numFmt % coefficients[nVariables*row + col]
             if len(token) > maxColWidth:

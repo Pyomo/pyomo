@@ -14,15 +14,23 @@ Unit Tests for pyomo.dae.misc
 import os
 from os.path import abspath, dirname
 
-from six import StringIO
+from io import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
-from pyomo.environ import *
+from pyomo.environ import (
+    ConcreteModel, Set, Param, Var, Constraint, Expression, Block,
+    TransformationFactory, Piecewise, Objective, ExternalFunction,
+    Suffix, value,
+)
+from pyomo.common.collections import ComponentMap
 from pyomo.common.log import LoggingIntercept
-from pyomo.dae import *
-from pyomo.dae.misc import *
-from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.dae import ContinuousSet, DerivativeVar
+from pyomo.dae.misc import (
+    generate_finite_elements, generate_colloc_points,
+    update_contset_indexed_component, expand_components,
+    get_index_information,
+)
 
 currdir = dirname(abspath(__file__)) + os.sep
 
@@ -476,7 +484,7 @@ class TestDaeMisc(unittest.TestCase):
 
         generate_finite_elements(model.t, 5)
 
-        missing_idx = set(model.blk._index_set) - set(iterkeys(model.blk._data))
+        missing_idx = set(model.blk._index_set) - set(model.blk._data.keys())
         model.blk._dae_missing_idx = missing_idx
 
         update_contset_indexed_component(model.blk, expansion_map)
@@ -529,7 +537,7 @@ class TestDaeMisc(unittest.TestCase):
 
         generate_finite_elements(model.t, 5)
 
-        missing_idx = set(model.blk._index_set) - set(iterkeys(model.blk._data))
+        missing_idx = set(model.blk._index_set) - set(model.blk._data.keys())
         model.blk._dae_missing_idx = missing_idx
 
         update_contset_indexed_component(model.blk, expansion_map)
@@ -584,7 +592,7 @@ class TestDaeMisc(unittest.TestCase):
 
         generate_finite_elements(model.t, 5)
 
-        missing_idx = set(model.blk._index_set) - set(iterkeys(model.blk._data))
+        missing_idx = set(model.blk._index_set) - set(model.blk._data.keys())
         model.blk._dae_missing_idx = missing_idx
 
         update_contset_indexed_component(model.blk, expansion_map)
@@ -639,7 +647,7 @@ class TestDaeMisc(unittest.TestCase):
 
         generate_finite_elements(model.t, 5)
 
-        missing_idx = set(model.blk._index_set) - set(iterkeys(model.blk._data))
+        missing_idx = set(model.blk._index_set) - set(model.blk._data.keys())
         model.blk._dae_missing_idx = missing_idx
 
         update_contset_indexed_component(model.blk, expansion_map)
@@ -1007,6 +1015,6 @@ class TestDaeMisc(unittest.TestCase):
         self.assertEqual(index_getter('a',1,0),(2.0,'a'))
 
 
-    
+
 if __name__ == "__main__":
     unittest.main()

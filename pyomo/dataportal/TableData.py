@@ -10,9 +10,7 @@
 
 __all__ = ['TableData']
 
-from six.moves import xrange
-
-from pyutilib.misc import Options
+from pyomo.common.collections import Bunch
 from pyomo.dataportal.process_data import _process_data
 
 
@@ -28,7 +26,7 @@ class TableData(object):
         """
         self._info=None
         self._data=None
-        self.options = Options()
+        self.options = Bunch()
         self.options.ncolumns = 1
 
     def available(self):
@@ -106,12 +104,12 @@ class TableData(object):
         self._info = None
 
     def _set_data(self, headers, rows):
-        from pyomo.core.base.sets import Set
+        from pyomo.core.base.set import Set
         from pyomo.core.base.param import Param
 
         header_index = []
         if self.options.select is None:
-            for i in xrange(len(headers)):
+            for i in range(len(headers)):
                 header_index.append(i)
         else:
             for i in self.options.select:
@@ -221,17 +219,17 @@ class TableData(object):
         from pyomo.core.expr import value
 
         tmp = []
-        if not self.options.columns is None:
+        if self.options.columns is not None:
             tmp.append(self.options.columns)
-        if not self.options.set is None:
+        if self.options.set is not None:
             # Create column names
             if self.options.columns is None:
                 cols = []
-                for i in xrange(self.options.set.dimen):
+                for i in range(self.options.set.dimen):
                     cols.append(self.options.set.local_name+str(i))
                 tmp.append(cols)
             # Get rows
-            if not self.options.sort is None:
+            if self.options.sort is not None:
                 for data in sorted(self.options.set):
                     if self.options.set.dimen > 1:
                         tmp.append(list(data))
@@ -243,12 +241,11 @@ class TableData(object):
                         tmp.append(list(data))
                     else:
                         tmp.append([data])
-        elif not self.options.param is None:
+        elif self.options.param is not None:
             if type(self.options.param) in (list,tuple):
                 _param = self.options.param
             else:
                 _param = [self.options.param]
-            tmp = []
             # Collect data
             for index in _param[0]:
                 if index is None:
@@ -263,9 +260,9 @@ class TableData(object):
             # Create column names
             if self.options.columns is None:
                 cols = []
-                for i in xrange(len(tmp[0])-len(_param)):
+                for i in range(len(tmp[0])-len(_param)):
                     cols.append('I'+str(i))
                 for param in _param:
                     cols.append(param)
-                tmp = [cols] + tmp
+                tmp.insert(0,cols)
         return tmp

@@ -8,24 +8,24 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import json
 import os
 from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))
 
-import pyutilib.th as unittest
-import pyutilib.services
-
-import pyomo.opt
-from pyomo.core import *
+import pyomo.common.unittest as unittest
+from pyomo.common.tempfiles import TempfileManager
+from pyomo.opt import SolverFactory
+from pyomo.core import ConcreteModel, Var, Objective, Constraint
 
 old_tempdir = None
 def setUpModule():
     global old_tempdir
-    old_tempdir = pyutilib.services.TempfileManager.tempdir
-    pyutilib.services.TempfileManager.tempdir = currdir
+    old_tempdir = TempfileManager.tempdir
+    TempfileManager.tempdir = currdir
 
 def tearDownModule():
-    pyutilib.services.TempfileManager.tempdir = old_tempdir
+    TempfileManager.tempdir = old_tempdir
 
 scip_available = False
 class Test(unittest.TestCase):
@@ -46,19 +46,26 @@ class Test(unittest.TestCase):
         global tmpdir
         tmpdir = os.getcwd()
         os.chdir(currdir)
-        pyutilib.services.TempfileManager.sequential_files(0)
+        TempfileManager.sequential_files(0)
 
-        self.scip = pyomo.opt.SolverFactory('scip', solver_io='nl')
+        self.scip = SolverFactory('scip', solver_io='nl')
 
         m = self.model = ConcreteModel()
         m.v = Var()
         m.o = Objective(expr=m.v)
         m.c = Constraint(expr=m.v >= 1)
 
+    def compare_json(self, file1, file2):
+        with open(file1, 'r') as out, \
+            open(file2, 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-7,
+                                             allow_second_superset=True)
+
     def tearDown(self):
         global tmpdir
-        pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.unique_files()
+        TempfileManager.clear_tempfiles()
+        TempfileManager.unique_files()
         os.chdir(tmpdir)
 
     def test_version_scip(self):
@@ -78,9 +85,8 @@ class Test(unittest.TestCase):
         results.write(filename=join(currdir, "test_scip_solve_from_instance.txt"),
                       times=False,
                       format='json')
-        self.assertMatchesJsonBaseline(join(currdir, "test_scip_solve_from_instance.txt"),
-                                       join(currdir, "test_scip_solve_from_instance.baseline"),
-                                       tolerance=1e-7)
+        self.compare_json(join(currdir, "test_scip_solve_from_instance.txt"),
+                          join(currdir, "test_scip_solve_from_instance.baseline"))
 
     def test_scip_solve_from_instance_options(self):
 
@@ -102,9 +108,8 @@ class Test(unittest.TestCase):
         results.write(filename=join(currdir, "test_scip_solve_from_instance.txt"),
                       times=False,
                       format='json')
-        self.assertMatchesJsonBaseline(join(currdir, "test_scip_solve_from_instance.txt"),
-                                       join(currdir, "test_scip_solve_from_instance.baseline"),
-                                       tolerance=1e-7)
+        self.compare_json(join(currdir, "test_scip_solve_from_instance.txt"),
+                          join(currdir, "test_scip_solve_from_instance.baseline"))
 
 if __name__ == "__main__":
     unittest.main()

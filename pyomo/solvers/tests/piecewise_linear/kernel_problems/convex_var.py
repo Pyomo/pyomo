@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.kernel as pmo
+from pyomo.kernel import block, variable, variable_list, block_list, piecewise, objective, constraint, constraint_list
 
 breakpoints = list(range(-5,0))+list(range(1,5))
 values = [x**2 for x in breakpoints]
@@ -17,31 +17,31 @@ def define_model(**kwds):
 
     sense = kwds.pop("sense")
 
-    m = pmo.block()
+    m = block()
 
-    m.x = pmo.variable_list()
-    m.Fx = pmo.variable_list()
-    m.piecewise = pmo.block_list()
+    m.x = variable_list()
+    m.Fx = variable_list()
+    m.piecewise = block_list()
     for i in range(7):
-        m.x.append(pmo.variable(lb=-5, ub=4))
-        m.Fx.append(pmo.variable())
+        m.x.append(variable(lb=-5, ub=4))
+        m.Fx.append(variable())
         m.piecewise.append(
-            pmo.piecewise(breakpoints, values,
+             piecewise(breakpoints, values,
                           input=m.x[i],
                           output=m.Fx[i],
                           **kwds))
 
-    m.obj = pmo.objective(expr=sum(m.Fx),
+    m.obj = objective(expr=sum(m.Fx),
                           sense=sense)
 
     # fix the answer for testing purposes
-    m.set_answer = pmo.constraint_list()
-    m.set_answer.append(pmo.constraint(m.x[0] == -5.0))
-    m.set_answer.append(pmo.constraint(m.x[1] == -3.0))
-    m.set_answer.append(pmo.constraint(m.x[2] == -2.5))
-    m.set_answer.append(pmo.constraint(m.x[3] == -1.5))
-    m.set_answer.append(pmo.constraint(m.x[4] == 2.0))
-    m.set_answer.append(pmo.constraint(m.x[5] == 3.5))
-    m.set_answer.append(pmo.constraint(m.x[6] == 4.0))
+    m.set_answer = constraint_list()
+    m.set_answer.append(constraint(m.x[0] == -5.0))
+    m.set_answer.append(constraint(m.x[1] == -3.0))
+    m.set_answer.append(constraint(m.x[2] == -2.5))
+    m.set_answer.append(constraint(m.x[3] == -1.5))
+    m.set_answer.append(constraint(m.x[4] == 2.0))
+    m.set_answer.append(constraint(m.x[5] == 3.5))
+    m.set_answer.append(constraint(m.x[6] == 4.0))
 
     return m

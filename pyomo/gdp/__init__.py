@@ -13,5 +13,5 @@ from pyomo.gdp.disjunct import GDP_Error, Disjunct, Disjunction
 # Do not import these files: importing them registers the transformation
 # plugins with the pyomo script so that they get automatically invoked.
 #import pyomo.gdp.bigm
-#import pyomo.gdp.chull
+#import pyomo.gdp.hull
 

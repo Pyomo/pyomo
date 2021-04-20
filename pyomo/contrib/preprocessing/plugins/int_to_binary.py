@@ -4,12 +4,12 @@ from __future__ import division
 from math import floor, log
 import logging
 
+from pyomo.common.collections import ComponentSet
 from pyomo.common.config import ConfigBlock, ConfigValue, In
 from pyomo.core import TransformationFactory, Var, Block, Constraint, Any, Binary, value, RangeSet, \
     Reals
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.gdp import Disjunct
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.expr.current import identify_variables
 from pyomo.common.modeling import unique_component_name
 
@@ -53,9 +53,10 @@ class IntegerToBinary(IsomorphicTransformation):
         integer_vars = list(
             v for v in model.component_data_objects(
                 ctype=Var, descend_into=(Block, Disjunct))
-            if v.is_integer() and not v.fixed)
+            if v.is_integer() and not v.is_binary() and not v.fixed)
         if len(integer_vars) == 0:
-            logger.info("Model has no free integer variables. No reformulation needed.")
+            logger.info(
+                "Model has no free integer variables. No reformulation needed.")
             return
 
         vars_on_constr = ComponentSet()
@@ -111,7 +112,7 @@ class IntegerToBinary(IsomorphicTransformation):
                 idx, expr=int_var == sum(
                     reform_block.new_binary_var[idx, pwr] * (2 ** pwr)
                     for pwr in range(0, highest_power + 1))
-                    + int_var.lb)
+                + int_var.lb)
 
             # Relax the original integer variable
             if config.relax_integrality:

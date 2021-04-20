@@ -15,48 +15,37 @@ import copy
 import pickle
 import math
 import os
-import re
-import six
-import sys
-from os.path import abspath, dirname
+from collections import defaultdict
+
+from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
-from pyutilib.th import nottest
+from filecmp import cmp
+import pyomo.common.unittest as unittest
 
-from pyomo.environ import *
-import pyomo.kernel
-from pyomo.core.expr.numvalue import (
-    native_types, nonpyomo_leaf_types, NumericConstant, as_numeric, 
-    is_potentially_variable,
-)
+from pyomo.environ import ConcreteModel, AbstractModel, RangeSet, Var, Param, Set, Constraint, ConstraintList, Expression, Objective, Reals, ExternalFunction, PositiveReals, log10, exp, floor, ceil, log, cos, sin, tan, acos, asin, atan, sinh, cosh, tanh, acosh, asinh, atanh, sqrt, value, quicksum, sum_product, is_fixed, is_constant
+from pyomo.kernel import variable, expression, objective
+from pyomo.core.expr.numvalue import (NumericConstant, as_numeric,
+                                      native_numeric_types,
+                                      is_potentially_variable, polynomial_degree)
 from pyomo.core.expr.numeric_expr import (
     ExpressionBase, UnaryFunctionExpression, SumExpression, PowExpression,
-    ProductExpression, ReciprocalExpression, NegationExpression,
+    ProductExpression, NegationExpression, linear_expression,
     MonomialTermExpression, LinearExpression, DivisionExpression,
-    NPV_NegationExpression, NPV_ProductExpression, NPV_ReciprocalExpression,
+    NPV_NegationExpression, NPV_ProductExpression, 
     NPV_PowExpression, NPV_DivisionExpression,
-    decompose_term, clone_counter,
+    decompose_term, clone_counter, nonlinear_expression,
     _MutableLinearExpression, _MutableSumExpression, _decompose_linear_terms,
     LinearDecompositionError,
 )
 import pyomo.core.expr.logical_expr as logical_expr
-from pyomo.core.expr.logical_expr import (
-    InequalityExpression, EqualityExpression, RangedExpression,
-)
-from pyomo.core.expr.visitor import (
-    FixedExpressionError, NonConstantExpressionError,
-    StreamBasedExpressionVisitor, ExpressionReplacementVisitor,
-    evaluate_expression, expression_to_string, replace_expressions,
-    clone_expression, sizeof_expression,
-    identify_variables, identify_components, identify_mutable_parameters,
-)
+from pyomo.core.expr.visitor import (expression_to_string, 
+                                     clone_expression)
 from pyomo.core.expr.current import Expr_if
-from pyomo.core.base.var import SimpleVar
-from pyomo.core.base.param import _ParamData, SimpleParam
-from pyomo.core.base.label import *
-from pyomo.core.base.template_expr import IndexTemplate
-from pyomo.core.expr.expr_errors import TemplateExpressionError
+from pyomo.core.base.label import NumericLabeler
+from pyomo.core.expr.template_expr import IndexTemplate
+from pyomo.core.expr import expr_common
+from pyomo.core.base.var import _GeneralVarData
 
 from pyomo.repn import generate_standard_repn
 
@@ -72,7 +61,7 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         # Create the type of expression term that we are testing
         return NumericConstant(val)
 
-    @nottest
+    @unittest.nottest
     def value_test(self, exp, val, expectExpression=None):
         """ Test the value of the expression. """
         #
@@ -89,7 +78,7 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         #
         self.assertEqual(value(exp), val)
 
-    @nottest
+    @unittest.nottest
     def relation_test(self, exp, val, expectConstExpression=None):
         """ Test a relationship expression. """
         #
@@ -227,7 +216,6 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
 class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericConstant):
 
     def setUp(self):
-        import pyomo.core.base.var
         #
         # Create Model
         #
@@ -239,7 +227,7 @@ class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericConstant):
         self.expectConstExpression = False
 
     def create(self, val, domain):
-        tmp=pyomo.core.base.var._GeneralVarData()
+        tmp=_GeneralVarData()
         tmp.domain = domain
         tmp.value=val
         return tmp
@@ -248,7 +236,6 @@ class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericConstant):
 class TestExpression_EvaluateVar(TestExpression_EvaluateNumericConstant):
 
     def setUp(self):
-        import pyomo.core.base.var
         #
         # Create Model
         #
@@ -269,7 +256,6 @@ class TestExpression_EvaluateVar(TestExpression_EvaluateNumericConstant):
 class TestExpression_EvaluateFixedVar(TestExpression_EvaluateNumericConstant):
 
     def setUp(self):
-        import pyomo.core.base.var
         #
         # Create Model
         #
@@ -291,7 +277,6 @@ class TestExpression_EvaluateFixedVar(TestExpression_EvaluateNumericConstant):
 class TestExpression_EvaluateImmutableParam(TestExpression_EvaluateNumericConstant):
 
     def setUp(self):
-        import pyomo.core.base.var
         #
         # Create Model
         #
@@ -311,7 +296,6 @@ class TestExpression_EvaluateImmutableParam(TestExpression_EvaluateNumericConsta
 class TestExpression_Evaluate_MutableParam(TestExpression_EvaluateNumericConstant):
 
     def setUp(self):
-        import pyomo.core.base.var
         #
         # Create Model
         #
@@ -2089,7 +2073,7 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         t = IndexTemplate(m.I)
 
         e = m.x[t+m.P[t+1]] + 3
-        self.assertEqual("sum(x(sum({I}, P(sum({I}, 1)))), 3)", str(e))
+        self.assertEqual("sum(getitem(x, sum({I}, getitem(P, sum({I}, 1)))), 3)", str(e))
 
     def test_small_expression(self):
         #
@@ -2326,7 +2310,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         t = IndexTemplate(m.I)
 
         e = m.x[t+m.P[t+1]] + 3
-        self.assertEqual("x({I} + P({I} + 1)) + 3", str(e))
+        self.assertEqual("x[{I} + P[{I} + 1]] + 3", str(e))
 
     def test_associativity_rules(self):
         m = ConcreteModel()
@@ -2469,11 +2453,12 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         model.cl = ConstraintList(rule=cl_rule)
 
         instance=model.create_instance()
-        OUTPUT=open(currdir+"varpprint.out","w")
+        OUTPUT=open(join(currdir, "varpprint.out"), "w")
         instance.pprint(ostream=OUTPUT)
         OUTPUT.close()
-        self.assertFileEqualsBaseline( currdir+"varpprint.out",
-                                       currdir+"varpprint.txt" )
+        _out, _txt = join(currdir, "varpprint.out"), join(currdir, "varpprint.txt")
+        self.assertTrue(cmp(_out, _txt),
+                        msg="Files %s and %s differ" % (_txt, _out))
 
     def test_labeler(self):
         M = ConcreteModel()
@@ -3429,10 +3414,19 @@ class TestPolynomialDegree(unittest.TestCase):
         expr = Expr_if(m.e,1,0)
         self.assertEqual(expr.polynomial_degree(), 0)
         #
+        # A nonconstant expression has degree if both arguments have the
+        # same degree, as long as the IF is fixed (even if it is not
+        # defined)
+        #
+        expr = Expr_if(m.e,m.a,0)
+        self.assertEqual(expr.polynomial_degree(), 0)
+        expr = Expr_if(m.e,5*m.b,1+m.b)
+        self.assertEqual(expr.polynomial_degree(), 1)
+        #
         # A nonconstant expression has degree None because
         # m.e is an uninitialized parameter
         #
-        expr = Expr_if(m.e,m.a,0)
+        expr = Expr_if(m.e,m.b,0)
         self.assertEqual(expr.polynomial_degree(), None)
 
 
@@ -4002,7 +3996,7 @@ class TestCloneExpression(unittest.TestCase):
 
             e = m.x[t+m.P[t+1]] + 3
             e_ = e.clone()
-            self.assertEqual("x({I} + P({I} + 1)) + 3", str(e_))
+            self.assertEqual("x[{I} + P[{I} + 1]] + 3", str(e_))
             #
             total = counter.count - start
             self.assertEqual(total, 1)
@@ -5012,7 +5006,7 @@ class Test_pickle(unittest.TestCase):
         e = m.x[t+m.P[t+1]] + 3
         s = pickle.dumps(e)
         e_ = pickle.loads(s)
-        self.assertEqual("x({I} + P({I} + 1)) + 3", str(e))
+        self.assertEqual("x[{I} + P[{I} + 1]] + 3", str(e))
 
     def test_abs(self):
         M = ConcreteModel()
@@ -5088,14 +5082,14 @@ class TestNamedExpressionDuckTyping(unittest.TestCase):
         self.check_api(M.e[0])
 
     def test_expression(self):
-        x = pyomo.kernel.variable()
-        e = pyomo.kernel.expression()
+        x = variable()
+        e = expression()
         e.expr = x
         self.check_api(e)
 
     def test_objective(self):
-        x = pyomo.kernel.variable()
-        e = pyomo.kernel.objective()
+        x = variable()
+        e = objective()
         e.expr = x
         self.check_api(e)
 
@@ -5140,7 +5134,7 @@ class TestNumValueDuckTyping(unittest.TestCase):
         self.check_api(M.x[0])
 
     def test_variable(self):
-        x = pyomo.kernel.variable()
+        x = variable()
         self.check_api(x)
 
 class TestDirect_LinearExpression(unittest.TestCase):
@@ -5211,6 +5205,44 @@ class TestDirect_LinearExpression(unittest.TestCase):
         self.assertAlmostEqual(repn.constant, 1.0)
         self.assertTrue(len(repn.linear_coefs) == N)
         self.assertTrue(len(repn.linear_vars) == N)
+
+    def test_LinearExpression_polynomial_degree(self):
+        m = ConcreteModel()
+        m.S = RangeSet(2)
+        m.var_1 = Var(initialize=0)
+        m.var_2 = Var(initialize=0)
+        m.var_3 = Var(m.S, initialize=0)
+
+        def con_rule(model):
+            return model.var_1 - (model.var_2 + sum_product(defaultdict(lambda: 6), model.var_3)) <= 0
+
+        m.c1 = Constraint(rule=con_rule)
+
+        m.var_1.fix(1)
+        m.var_2.fix(1)
+        m.var_3.fix(1)
+
+        self.assertTrue(is_fixed(m.c1.body))
+        self.assertEqual(polynomial_degree(m.c1.body), 0)
+
+    def test_LinearExpression_is_fixed(self):
+        m = ConcreteModel()
+        m.S = RangeSet(2)
+        m.var_1 = Var(initialize=0)
+        m.var_2 = Var(initialize=0)
+        m.var_3 = Var(m.S, initialize=0)
+
+        def con_rule(model):
+            return model.var_1 - (model.var_2 + sum_product(defaultdict(lambda: 6), model.var_3)) <= 0
+
+        m.c1 = Constraint(rule=con_rule)
+
+        m.var_1.fix(1)
+        m.var_2.fix(1)
+
+        self.assertFalse(is_fixed(m.c1.body))
+        self.assertEqual(polynomial_degree(m.c1.body), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

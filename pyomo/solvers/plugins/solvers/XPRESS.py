@@ -13,18 +13,18 @@ import os
 import re
 import logging
 
-import pyomo.common
-import pyutilib.common
-import pyutilib.misc
+from pyomo.common import Executable
+from pyomo.common.errors import ApplicationError
+from pyomo.common.collections import Bunch
+from pyomo.common.tempfiles import TempfileManager
 
-from pyomo.opt.base import *
-from pyomo.opt.base.solvers import _extract_version
-from pyomo.opt.results import *
-from pyomo.opt.solver import *
+from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
+from pyomo.opt.base.solvers import _extract_version, SolverFactory
+from pyomo.opt.results import SolverResults, SolverStatus, TerminationCondition, ProblemSense, Solution
+from pyomo.opt.solver import ILMLicensedSystemCallSolver
 from pyomo.solvers.mockmip import MockMIP
 
 logger = logging.getLogger('pyomo.solvers')
-
 
 @SolverFactory.register('xpress', doc='The XPRESS LP/MIP solver')
 class XPRESS(OptSolver):
@@ -48,6 +48,18 @@ class XPRESS(OptSolver):
             return opt
         elif mode == 'nl':
             opt = SolverFactory('asl', **kwds)
+        elif mode in ['python', 'direct']:
+            opt = SolverFactory('xpress_direct', **kwds)
+            if opt is None:
+                logger.error('Python API for XPRESS is not installed')
+                return
+            return opt
+        elif mode == 'persistent':
+            opt = SolverFactory('xpress_persistent', **kwds)
+            if opt is None:
+                logger.error('Python API for XPRESS is not installed')
+                return
+            return opt
         else:
             logging.getLogger('pyomo.solvers').error(
                 'Unknown IO type for solver xpress: %s'
@@ -86,7 +98,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         #
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = pyutilib.misc.Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -105,7 +117,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         return False
 
     def _default_executable(self):
-        executable = pyomo.common.Executable("optimizer")
+        executable = Executable("optimizer")
         if not executable:
             logger.warning("Could not locate the 'optimizer' executable, "
                            "which is required for solver %s" % self.name)
@@ -128,14 +140,14 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         # The log file in XPRESS contains the solution trace, but the solver status can be found in the solution file.
         #
         if self._log_file is None:
-            self._log_file = pyutilib.services.TempfileManager.\
+            self._log_file = TempfileManager.\
                             create_tempfile(suffix = '.xpress.log')
 
         #
         # Define solution file
         # As indicated above, contains (in XML) both the solution and solver status.
         #
-        self._soln_file = pyutilib.services.TempfileManager.\
+        self._soln_file = TempfileManager.\
                           create_tempfile(suffix = '.xpress.wrtsol')
 
         #
@@ -178,7 +190,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         # dump the script and warm-start file names for the
         # user if we're keeping files around.
         if self._keepfiles:
-            script_fname = pyutilib.services.TempfileManager.create_tempfile(suffix = '.xpress.script')
+            script_fname = TempfileManager.create_tempfile(suffix = '.xpress.script')
             tmp = open(script_fname,'w')
             tmp.write(script)
             tmp.close()
@@ -191,7 +203,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         cmd = [executable]
         if self._timer:
             cmd.insert(0, self._timer)
-        return pyutilib.misc.Bunch(cmd=cmd, script=script,
+        return Bunch(cmd=cmd, script=script,
                                    log_file=self._log_file, env=None)
 
     def process_logfile(self):
@@ -289,7 +301,8 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
                 results.solver.termination_message = ' '.join(tokens)
 
         try:
-            results.solver.termination_message = pyutilib.misc.yaml_fix(results.solver.termination_message)
+            if isinstance(results.solver.termination_message, str):
+                results.solver.termination_message = results.solver.termination_message.replace(':', '\\x3a')
         except:
             pass
         return results
@@ -356,7 +369,9 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
                 variable_name = name
                 variable_value = primary_value
                 variable_reduced_cost = None
-
+                ### TODO: What is going on here with field_name, and shortly thereafter, with variable_status and whatnot? They've never been defined. 
+                ### It seems like this is trying to mimic the CPLEX solver but has some issues
+                ## !! THIS SEEMS LIKE A BUG!! - mrmundt
                 if (extract_reduced_costs is True) and (field_name == "reducedCost"):
                     variable_reduced_cost = tertiary_value
 
@@ -414,7 +429,7 @@ class MockXPRESS(XPRESS_shell,MockMIP):
     def __init__(self, **kwds):
         try:
             XPRESS_shell.__init__(self, **kwds)
-        except pyutilib.common.ApplicationError: #pragma:nocover
+        except ApplicationError: #pragma:nocover
             pass                                 #pragma:nocover
         MockMIP.__init__(self,"cplex")
 

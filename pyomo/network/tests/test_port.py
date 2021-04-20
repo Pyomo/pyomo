@@ -11,11 +11,11 @@
 # Unit Tests for Port
 #
 
-import pyutilib.th as unittest
-from six import StringIO
+import pyomo.common.unittest as unittest
+from io import StringIO
 
-from pyomo.environ import *
-from pyomo.network import *
+from pyomo.environ import ConcreteModel, AbstractModel, Var, Set, NonNegativeReals, Binary, Reals, Integers, RangeSet
+from pyomo.network import Port, Arc
 
 class TestPort(unittest.TestCase):
 

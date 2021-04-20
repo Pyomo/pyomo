@@ -1,6 +1,16 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import pickle
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.core.expr.numvalue import (NumericValue,
                                       is_fixed,
                                       is_constant,
@@ -26,11 +36,6 @@ from pyomo.core.kernel.variable import variable
 from pyomo.core.kernel.parameter import parameter
 from pyomo.core.kernel.objective import objective
 from pyomo.core.kernel.block import block
-from pyomo.core.kernel.set_types import (RealSet,
-                                         IntegerSet)
-
-import six
-from six import StringIO
 
 try:
     import numpy
@@ -250,12 +255,7 @@ class Test_noclone(unittest.TestCase):
         self.assertIs(type(e.expr), parameter)
         self.assertEqual((1/e)(), 0.5)
         self.assertEqual((parameter(1)/e)(), 0.5)
-        # since the type returned is int, this should result
-        # in the behavior used by the interpreter
-        if six.PY3:
-            self.assertEqual((1/e.expr()), 0.5)
-        else:
-            self.assertEqual((1/e.expr()), 0)
+        self.assertEqual((1/e.expr()), 0.5)
 
     def test_to_string(self):
         b = block()
@@ -402,12 +402,7 @@ class _Test_expression_base(object):
         self.assertIs(type(e.expr), int)
         self.assertEqual((1/e)(), 0.5)
         self.assertEqual((parameter(1)/e)(), 0.5)
-        # since the type returned is int, this should result
-        # in the behavior used by the interpreter
-        if six.PY3:
-            self.assertEqual((1/e.expr), 0.5)
-        else:
-            self.assertEqual((1/e.expr), 0)
+        self.assertEqual((1/e.expr), 0.5)
 
     def test_to_string(self):
         b = block()

@@ -8,26 +8,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.core.expr
+from pyomo.common.dependencies import (
+    numpy, numpy_available as has_numpy,
+    scipy, scipy_available as has_scipy,
+)
 from pyomo.core.expr.numvalue import NumericValue
 from pyomo.core.kernel.constraint import \
     (IConstraint,
      constraint_tuple)
-
-import six
-from six.moves import zip, xrange
-
-try:
-    import numpy
-    has_numpy = True
-except:     #pragma:nocover
-    has_numpy = False
-
-try:
-    import scipy
-    has_scipy = True
-except:     #pragma:nocover
-    has_scipy = False
 
 _noarg = object()
 
@@ -71,8 +59,8 @@ class _MatrixConstraintData(IConstraint):
                 "No variable order has been assigned")
         A = parent._A
         if parent._sparse:
-            for k in xrange(A.indptr[self._storage_key],
-                            A.indptr[self._storage_key+1]):
+            for k in range(A.indptr[self._storage_key],
+                           A.indptr[self._storage_key+1]):
                 yield x[A.indices[k]], A.data[k]
         else:
             for item in zip(x, A[self._storage_key,:].tolist()):
@@ -270,7 +258,7 @@ class matrix_constraint(constraint_tuple):
         assert m > 0
         assert n > 0
         cons = (_MatrixConstraintData(i)
-                for i in xrange(m))
+                for i in range(m))
         super(matrix_constraint, self).__init__(cons)
 
         if sparse:

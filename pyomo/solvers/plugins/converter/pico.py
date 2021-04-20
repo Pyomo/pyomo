@@ -8,15 +8,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import six
-
 import os.path
+import subprocess
 
-import pyutilib.common
-import pyutilib.subprocess
 import pyomo.common
+from pyomo.common.tempfiles import TempfileManager
+from pyomo.common.errors import ApplicationError
 
-from pyomo.opt.base import *
+from pyomo.opt.base import ProblemFormat, ConverterError
 
 
 class PicoMIPConverter(object):
@@ -59,9 +58,9 @@ class PicoMIPConverter(object):
         if target=="cpxlp":
             target="lp"
         # NOTE: if you have an extra "." in the suffix, the pico_convert program fails to output to the correct filename.
-        output_filename = pyutilib.services.TempfileManager.create_tempfile(suffix = 'pico_convert.' + target)
-        if not isinstance(args[2],six.string_types):
-            fname= pyutilib.services.TempfileManager.create_tempfile(suffix= 'pico_convert.' +str(args[0]))
+        output_filename = TempfileManager.create_tempfile(suffix = 'pico_convert.' + target)
+        if not isinstance(args[2], str):
+            fname= TempfileManager.create_tempfile(suffix= 'pico_convert.' +str(args[0]))
             args[2].write(filename=fname, format=args[1])
             cmd = pico_convert_cmd +" --output="+output_filename+" "+target+" "+fname
         else:
@@ -71,8 +70,9 @@ class PicoMIPConverter(object):
                     raise ConverterError("File "+item+" does not exist!")
                 cmd = cmd + " "+item
         print("Running command: "+cmd)
-        pyutilib.subprocess.run(cmd)
+        subprocess.run(cmd, stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL)
         if not os.path.exists(output_filename):       #pragma:nocover
-            raise pyutilib.common.ApplicationError(\
+            raise ApplicationError(\
                     "Problem launching 'pico_convert' to create "+output_filename)
         return (output_filename,),None # no variable map at the moment

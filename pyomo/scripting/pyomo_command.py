@@ -8,20 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import sys
-import argparse
-try:
-    from pympler import muppy
-    from pympler.muppy import summary
-    from pympler import tracker
-    from pympler.asizeof import *
-    pympler_available = True
-except:
-    pympler_available = False
-
-from pyutilib.misc import Options, Container
-
-from pyomo.common import pyomo_command
+from pyomo.common.dependencies import pympler_available
+from pyomo.common.collections import Bunch
 import pyomo.scripting.util
 from pyomo.core import ConcreteModel
 
@@ -260,7 +248,7 @@ def add_misc_group(parser):
         dest='profile',
         type=int,
         default=0)
-    if pympler_available is True:
+    if pympler_available:
         group.add_argument("--profile-memory",
                              help="If Pympler is available, report memory usage statistics for the generated instance and any associated processing steps. A value of 0 indicates disabled. A value of 1 forces the print of the total memory after major stages of the pyomo script. A value of 2 forces summary memory statistics after major stages of the pyomo script. A value of 3 forces detailed memory statistics during instance creation and various steps of preprocessing. Values equal to 4 and higher currently provide no additional information. Higher values automatically enable all functionality associated with lower values, e.g., 3 turns on detailed and summary statistics.",
                              action="store",
@@ -285,12 +273,12 @@ def add_misc_group(parser):
     return group
 
 
-def run_pyomo(options=Options(), parser=None):
-    data = Options(options=options)
+def run_pyomo(options=Bunch(), parser=None):
+    data = Bunch(options=options)
 
     if options.model.filename == '':
         parser.print_help()
-        return Container()
+        return Bunch()
 
     try:
         pyomo.scripting.util.setup_environment(data)
@@ -316,10 +304,10 @@ def run_pyomo(options=Options(), parser=None):
             #      model(=None) results in an a different error related to
             #      task port values.  Not sure how to interpret that.
             pyomo.scripting.util.finalize(data,
-                                          model=ConcretModel(),
+                                          model=ConcreteModel(),
                                           instance=None,
                                           results=None)
-            return Container()                                   #pragma:nocover
+            return Bunch()                                   #pragma:nocover
 
     try:
         model_data = pyomo.scripting.util.create_model(data)
@@ -342,7 +330,7 @@ def run_pyomo(options=Options(), parser=None):
                                           model=model_data.model,
                                           instance=model_data.instance,
                                           results=None)
-            return Container(instance=model_data.instance)
+            return Bunch(instance=model_data.instance)
 
     try:
         opt_data = pyomo.scripting.util.apply_optimizer(data,
@@ -373,7 +361,7 @@ def run_pyomo(options=Options(), parser=None):
                                       instance=model_data.instance,
                                       results=opt_data.results)
 
-        return Container(options=options,
+        return Bunch(options=options,
                          instance=model_data.instance,
                          results=opt_data.results,
                          local=opt_data.local)

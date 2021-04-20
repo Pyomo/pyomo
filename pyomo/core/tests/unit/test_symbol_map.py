@@ -1,7 +1,14 @@
-import pickle
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
-import pyutilib.th as unittest
-import pyomo.environ
+import pyomo.common.unittest as unittest
 from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.kernel.variable import variable
 
@@ -10,7 +17,7 @@ class TestSymbolMap(unittest.TestCase):
     def test_no_labeler(self):
         s = SymbolMap()
         v = variable()
-        self.assertEquals(str(v), s.getSymbol(v))
+        self.assertEqual(str(v), s.getSymbol(v))
 
     def test_existing_alias(self):
         s = SymbolMap()

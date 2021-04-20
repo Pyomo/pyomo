@@ -16,14 +16,13 @@ try:
 except:
     new_available=False
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.testcases import test_scenarios
 from pyomo.common.log import LoggingIntercept
 
-import six
-from six import StringIO
+from io import StringIO
 
 # The test directory
 thisDir = os.path.dirname(os.path.abspath( __file__ ))
@@ -76,11 +75,20 @@ def create_test_method(model,
             # file with garbage values in it for a failed solve
             self.assertEqual(len(results.solution), 1)
 
+    # 03/23/2021: IDAES-ext added CBC 2.10.4 to their official release
+    #             This is causing failures in this test.
+    #             Manually turning off CBC tests until a solution can be found.
+    #             - mrmundt
+    if solver == 'cbc':
+        def skipping_test(self):
+            self.skipTest('SKIP: cbc currently does not work.')
+        return skipping_test
+
     # Skip this test if the status is 'skip'
     if test_case.status == 'skip':
-        def skipping_this(self):
+        def skipping_test(self):
             return self.skipTest(test_case.msg)
-        return skipping_this
+        return skipping_test
 
     if is_expected_failure:
         @unittest.expectedFailure
@@ -108,6 +116,7 @@ for model in test_models():
             cls = new.classobj(name, (unittest.TestCase,), {})
         else:
             cls = types.new_class(name, (unittest.TestCase,))
+            cls.__module__ = __name__
         cls = unittest.category(*case.level)(cls)
         driver[model] = cls
         globals()[name] = cls
@@ -117,6 +126,7 @@ for model in test_models():
 #
 for key, value in test_scenarios():
     model, solver, io = key
+
     if model in driver:
         cls = driver[model]
         # TODO: expand these tests to cover ASL models once
@@ -126,7 +136,10 @@ for key, value in test_scenarios():
             test_name = "test_"+solver+"_"+io
             test_method = create_test_method(model, solver, io, value)
             if test_method is not None:
+                test_method = unittest.category('smoke','nightly',solver)(
+                    test_method)
                 setattr(cls, test_name, test_method)
+                test_method = None
 
 # Reset the cls variable, since it contains a unittest.TestCase subclass.
 # This prevents this class from being processed twice!

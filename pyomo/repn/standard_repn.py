@@ -15,16 +15,11 @@ __all__ = ['StandardRepn', 'generate_standard_repn']
 
 import sys
 import logging
-import math
 import itertools
 
 from pyomo.core.base import (Constraint,
                              Objective,
                              ComponentMap)
-
-import pyomo.common
-from pyutilib.misc import Bunch
-from pyutilib.math.util import isclose as isclose_default
 
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.objective import (_GeneralObjectiveData,
@@ -34,31 +29,16 @@ from pyomo.core.base.expression import SimpleExpression, _GeneralExpressionData
 from pyomo.core.base.var import (SimpleVar,
                                  Var,
                                  _GeneralVarData,
-                                 _VarData,
                                  value)
-from pyomo.core.base.param import _ParamData
 from pyomo.core.base.numvalue import (NumericConstant,
-                                      native_numeric_types,
-                                      is_fixed)
-from pyomo.core.kernel.expression import IIdentityExpression, expression, noclone
-from pyomo.core.kernel.variable import IVariable
+                                      native_numeric_types)
+from pyomo.core.kernel.expression import expression, noclone
+from pyomo.core.kernel.variable import IVariable, variable
 from pyomo.core.kernel.objective import objective
 
-import six
-from six import iteritems
-from six import itervalues, iteritems, StringIO
-from six.moves import xrange, zip
-try:
-    basestring
-except:
-    basestring = str
+from io import StringIO
 
 logger = logging.getLogger('pyomo.core')
-
-using_py3 = six.PY3
-
-from pyomo.core.base import _VarData, _GeneralVarData, SimpleVar
-from pyomo.core.kernel.variable import IVariable, variable
 
 
 #
@@ -72,14 +52,7 @@ def isclose_const(a, b, rel_tol=1e-9, abs_tol=0.0):
             a = value(a)
         else:
             return False
-    # Copied from pyutilib.math.isclose
     return abs(a-b) <= max( rel_tol * max(abs(a), abs(b)), abs_tol )
-
-#
-# The global isclose() function used below.  This is either isclose_default
-# (defined in pyutilib) or isclose_const
-#
-isclose = isclose_default
 
 
 class StandardRepn(object):
@@ -261,14 +234,6 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         Results = ResultsWithQuadratics
     else:
         Results = ResultsWithoutQuadratics
-    #
-    # Use a custom isclose function
-    #
-    global isclose
-    if compute_values:
-        isclose = isclose_default
-    else:
-        isclose = isclose_const
 
     if True:
         #
@@ -622,10 +587,10 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     ans = Results()
     ans.constant = multiplier*lhs.constant * rhs.constant
     if not (lhs.constant.__class__ in native_numeric_types and lhs.constant == 0):
-        for key, coef in six.iteritems(rhs.linear):
+        for key, coef in rhs.linear.items():
             ans.linear[key] = multiplier*coef*lhs.constant
     if not (rhs.constant.__class__ in native_numeric_types and rhs.constant == 0):
-        for key, coef in six.iteritems(lhs.linear):
+        for key, coef in lhs.linear.items():
             if key in ans.linear:
                 ans.linear[key] += multiplier*coef*rhs.constant
             else:
@@ -633,26 +598,26 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
 
     if quadratic:
         if not (lhs.constant.__class__ in native_numeric_types and lhs.constant == 0):
-            for key, coef in six.iteritems(rhs.quadratic):
+            for key, coef in rhs.quadratic.items():
                 ans.quadratic[key] = multiplier*coef*lhs.constant
         if not (rhs.constant.__class__ in native_numeric_types and rhs.constant == 0):
-            for key, coef in six.iteritems(lhs.quadratic):
+            for key, coef in lhs.quadratic.items():
                 if key in ans.quadratic:
                     ans.quadratic[key] += multiplier*coef*rhs.constant
                 else:
                     ans.quadratic[key] = multiplier*coef*rhs.constant
-        for lkey, lcoef in six.iteritems(lhs.linear):
-            for rkey, rcoef in six.iteritems(rhs.linear):
+        for lkey, lcoef in lhs.linear.items():
+            for rkey, rcoef in rhs.linear.items():
                 ndx = (lkey, rkey) if lkey <= rkey else (rkey, lkey)
                 if ndx in ans.quadratic:
                     ans.quadratic[ndx] += multiplier*lcoef*rcoef
                 else:
                     ans.quadratic[ndx] = multiplier*lcoef*rcoef
         # TODO - Use quicksum here?
-        el_linear = multiplier*sum(coef*idMap[key] for key, coef in six.iteritems(lhs.linear))
-        er_linear = multiplier*sum(coef*idMap[key] for key, coef in six.iteritems(rhs.linear))
-        el_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in six.iteritems(lhs.quadratic))
-        er_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in six.iteritems(rhs.quadratic))
+        el_linear = multiplier*sum(coef*idMap[key] for key, coef in lhs.linear.items())
+        er_linear = multiplier*sum(coef*idMap[key] for key, coef in rhs.linear.items())
+        el_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in lhs.quadratic.items())
+        er_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in rhs.quadratic.items())
         ans.nonl += el_linear*er_quadratic + el_quadratic*er_linear
 
     return ans
@@ -735,16 +700,29 @@ def _collect_pow(exp, multiplier, idMap, compute_values, verbose, quadratic):
             elif compute_values and len(res.linear) == 0:
                 return Results(constant=multiplier*res.constant**exponent)
             #
-            # If there is one linear term, then we compute the quadratic expression for it.
+            # If the base is linear, then we compute the quadratic expression for it.
             #
-            elif len(res.linear) == 1:
-                key, coef = res.linear.popitem()
-                var = idMap[key]
+            else:
                 ans = Results()
-                if not (res.constant.__class__ in native_numeric_types and res.constant == 0):
+                has_constant = (res.constant.__class__
+                                not in native_numeric_types
+                                or res.constant != 0)
+                if has_constant:
                     ans.constant = multiplier*res.constant*res.constant
-                    ans.linear[key] = 2*multiplier*coef*res.constant
-                ans.quadratic[key,key] = multiplier*coef*coef
+
+                # this is reversed since we want to pop off the end for efficiency
+                # and the quadratic terms have a convention that the indexing tuple
+                # of key1, key2 is such that key1 <= key2
+                keys = sorted(res.linear.keys(), reverse=True)
+                while len(keys) > 0:
+                    key1 = keys.pop()
+                    coef1 = res.linear[key1]
+                    if has_constant:
+                        ans.linear[key1] = 2*multiplier*coef1*res.constant
+                    ans.quadratic[key1,key1] = multiplier*coef1*coef1
+                    for key2 in keys:
+                        coef2 = res.linear[key2]
+                        ans.quadratic[key1,key2] = 2*multiplier*coef1*coef2
                 return ans
 
     #
@@ -868,9 +846,9 @@ def _collect_linear(exp, multiplier, idMap, compute_values, verbose, quadratic):
     for c,v in zip(exp.linear_coefs, exp.linear_vars):
         if v.fixed:
             if compute_values:
-                ans.constant += multiplier*v.value
+                ans.constant += multiplier * value(c) * value(v)
             else:
-                ans.constant += multiplier*v
+                ans.constant += multiplier * c * v
         else:
             id_ = id(v)
             if id_ in idMap[None]:
@@ -896,7 +874,7 @@ def _collect_comparison(exp, multiplier, idMap, compute_values, verbose, quadrat
 
 def _collect_external_fn(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if compute_values and exp.is_fixed():
-        return Results(nonl=multiplier*value(exp))
+        return Results(constant=multiplier*value(exp))
     return Results(nonl=multiplier*exp)
 
 
@@ -1446,7 +1424,7 @@ def preprocess_constraint(block,
         block._repn = ComponentMap()
     block_repn = block._repn
 
-    for index, constraint_data in iteritems(constraint):
+    for index, constraint_data in constraint.items():
 
         if not constraint_data.active:
             continue

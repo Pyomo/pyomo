@@ -1,5 +1,15 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from pyomo.contrib.benders.benders_cuts import BendersCutGenerator
-import pyomo.environ as pe
+import pyomo.environ as pyo
 import time
 from mpi4py import MPI
 import sys
@@ -34,54 +44,54 @@ class Farmer(object):
         self.scenario_probabilities['AboveAverageScenario'] = 0.3333
 
 
-def create_master(farmer):
-    m = pe.ConcreteModel()
+def create_root(farmer):
+    m = pyo.ConcreteModel()
 
-    m.crops = pe.Set(initialize=farmer.crops, ordered=True)
-    m.scenarios = pe.Set(initialize=farmer.scenarios, ordered=True)
+    m.crops = pyo.Set(initialize=farmer.crops, ordered=True)
+    m.scenarios = pyo.Set(initialize=farmer.scenarios, ordered=True)
 
-    m.devoted_acreage = pe.Var(m.crops, bounds=(0, farmer.total_acreage))
-    m.eta = pe.Var(m.scenarios)
+    m.devoted_acreage = pyo.Var(m.crops, bounds=(0, farmer.total_acreage))
+    m.eta = pyo.Var(m.scenarios)
     for s in m.scenarios:
         m.eta[s].setlb(-432000 * farmer.scenario_probabilities[s])
 
-    m.total_acreage_con = pe.Constraint(expr=sum(m.devoted_acreage.values()) <= farmer.total_acreage)
+    m.total_acreage_con = pyo.Constraint(expr=sum(m.devoted_acreage.values()) <= farmer.total_acreage)
 
-    m.obj = pe.Objective(expr=sum(farmer.PlantingCostPerAcre[crop] * m.devoted_acreage[crop] for crop in m.crops) + sum(m.eta.values()))
+    m.obj = pyo.Objective(expr=sum(farmer.PlantingCostPerAcre[crop] * m.devoted_acreage[crop] for crop in m.crops) + sum(m.eta.values()))
     return m
 
 
-def create_subproblem(master, farmer, scenario):
-    m = pe.ConcreteModel()
+def create_subproblem(root, farmer, scenario):
+    m = pyo.ConcreteModel()
 
-    m.crops = pe.Set(initialize=farmer.crops, ordered=True)
+    m.crops = pyo.Set(initialize=farmer.crops, ordered=True)
 
-    m.devoted_acreage = pe.Var(m.crops)
-    m.QuantitySubQuotaSold = pe.Var(m.crops, bounds=(0.0, None))
-    m.QuantitySuperQuotaSold = pe.Var(m.crops, bounds=(0.0, None))
-    m.QuantityPurchased = pe.Var(m.crops, bounds=(0.0, None))
+    m.devoted_acreage = pyo.Var(m.crops)
+    m.QuantitySubQuotaSold = pyo.Var(m.crops, bounds=(0.0, None))
+    m.QuantitySuperQuotaSold = pyo.Var(m.crops, bounds=(0.0, None))
+    m.QuantityPurchased = pyo.Var(m.crops, bounds=(0.0, None))
 
     def EnforceCattleFeedRequirement_rule(m, i):
         return (farmer.CattleFeedRequirement[i] <= (farmer.crop_yield[scenario][i] * m.devoted_acreage[i]) +
                 m.QuantityPurchased[i] - m.QuantitySubQuotaSold[i] - m.QuantitySuperQuotaSold[i])
-    m.EnforceCattleFeedRequirement = pe.Constraint(m.crops, rule=EnforceCattleFeedRequirement_rule)
+    m.EnforceCattleFeedRequirement = pyo.Constraint(m.crops, rule=EnforceCattleFeedRequirement_rule)
 
     def LimitAmountSold_rule(m, i):
         return m.QuantitySubQuotaSold[i] + m.QuantitySuperQuotaSold[i] - (farmer.crop_yield[scenario][i] * m.devoted_acreage[i]) <= 0.0
-    m.LimitAmountSold = pe.Constraint(m.crops, rule=LimitAmountSold_rule)
+    m.LimitAmountSold = pyo.Constraint(m.crops, rule=LimitAmountSold_rule)
 
     def EnforceQuotas_rule(m, i):
         return (0.0, m.QuantitySubQuotaSold[i], farmer.PriceQuota[i])
-    m.EnforceQuotas = pe.Constraint(m.crops, rule=EnforceQuotas_rule)
+    m.EnforceQuotas = pyo.Constraint(m.crops, rule=EnforceQuotas_rule)
 
     obj_expr = sum(farmer.PurchasePrice[crop] * m.QuantityPurchased[crop] for crop in m.crops)
     obj_expr -= sum(farmer.SubQuotaSellingPrice[crop] * m.QuantitySubQuotaSold[crop] for crop in m.crops)
     obj_expr -= sum(farmer.SuperQuotaSellingPrice[crop] * m.QuantitySuperQuotaSold[crop] for crop in m.crops)
-    m.obj = pe.Objective(expr=farmer.scenario_probabilities[scenario] * obj_expr)
+    m.obj = pyo.Objective(expr=farmer.scenario_probabilities[scenario] * obj_expr)
 
-    complicating_vars_map = pe.ComponentMap()
+    complicating_vars_map = pyo.ComponentMap()
     for crop in m.crops:
-        complicating_vars_map[master.devoted_acreage[crop]] = m.devoted_acreage[crop]
+        complicating_vars_map[root.devoted_acreage[crop]] = m.devoted_acreage[crop]
 
     return m, complicating_vars_map
 
@@ -93,23 +103,27 @@ def main():
 
     t0 = time.time()
     farmer = Farmer()
-    m = create_master(farmer=farmer)
-    master_vars = list(m.devoted_acreage.values())
+    m = create_root(farmer=farmer)
+    root_vars = list(m.devoted_acreage.values())
     m.benders = BendersCutGenerator()
-    m.benders.set_input(master_vars=master_vars, tol=1e-8)
+    m.benders.set_input(root_vars=root_vars, tol=1e-8)
     for s in farmer.scenarios:
         subproblem_fn_kwargs = dict()
-        subproblem_fn_kwargs['master'] = m
+        subproblem_fn_kwargs['root'] = m
         subproblem_fn_kwargs['farmer'] = farmer
         subproblem_fn_kwargs['scenario'] = s
         m.benders.add_subproblem(subproblem_fn=create_subproblem,
                                  subproblem_fn_kwargs=subproblem_fn_kwargs,
-                                 master_eta=m.eta[s],
+                                 root_eta=m.eta[s],
                                  subproblem_solver='gurobi_persistent')
-    opt = pe.SolverFactory('gurobi_persistent')
+    opt = pyo.SolverFactory('gurobi_persistent')
     opt.set_instance(m)
 
-    print('{0:<15}{1:<15}{2:<15}{3:<15}{4:<15}'.format('# Cuts', 'Corn', 'Sugar Beets', 'Wheat', 'Time'))
+    print('{0:<15}{1:<15}{2:<15}{3:<15}{4:<15}'.format('# Cuts',
+                                                       'Corn',
+                                                       'Sugar Beets',
+                                                       'Wheat',
+                                                       'Time'))
     for i in range(30):
         res = opt.solve(tee=False, save_results=False)
         cuts_added = m.benders.generate_cut()

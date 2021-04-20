@@ -1,14 +1,23 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Transformation to aggregate equal variables."""
 
 from __future__ import division
 
-import textwrap
-
-from pyomo.core.base import Block, Constraint, VarList, Objective, TransformationFactory
+from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.core.base import (
+    Block, Constraint, VarList, Objective, TransformationFactory,
+)
 from pyomo.core.expr.current import ExpressionReplacementVisitor
 from pyomo.core.expr.numvalue import value
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
 import logging
@@ -88,7 +97,7 @@ def _fix_equality_fixed_variables(model, scaling_tolerance=1E-10):
         const = repn.constant if repn.constant is not None else 0
 
         if abs(coef) <= scaling_tolerance:
-            logger.warn(
+            logger.warning(
                 "Skipping fixed variable processing for constraint %s: "
                 "%s * %s + %s = %s because coefficient %s is below "
                 "tolerance of %s. Check your problem scaling." %

@@ -1,15 +1,22 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Transformation to detect variables fixed by bounds and fix them."""
-import textwrap
 from math import fabs
 
-from six import iteritems
-
 from pyomo.core.base.plugin import TransformationFactory
+from pyomo.common.collections import ComponentMap
 from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
                                  add_docstring_list)
 from pyomo.core.base.var import Var
 from pyomo.core.expr.numvalue import value
-from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 
 
@@ -61,8 +68,7 @@ class FixedVarDetector(IsomorphicTransformation):
 
     def revert(self, instance):
         """Revert variables fixed by the transformation."""
-        for var, var_value in iteritems(
-                instance._xfrm_detect_fixed_vars_old_values):
+        for var, var_value in instance._xfrm_detect_fixed_vars_old_values.items():
             var.unfix()
             var.set_value(var_value)
 

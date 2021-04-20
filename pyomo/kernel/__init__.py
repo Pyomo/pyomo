@@ -22,13 +22,41 @@ from pyomo.opt import (SolverFactory,
 #
 # Define the modeling namespace
 #
-from pyomo.core.expr import *
+from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.core.expr import (
+    numvalue, numeric_expr, boolean_value, logical_expr, current,
+    calculus, symbol_map, expr_errors, visitor, sympy_tools, taylor_series,
+    expr_common, cnf_walker, template_expr
+)
+
+
+from pyomo.core.expr.numvalue import (
+    value, is_constant, is_fixed, is_variable_type,
+    is_potentially_variable, NumericValue, ZeroConstant,
+    native_numeric_types, native_types, polynomial_degree,
+)
+
+from pyomo.core.expr.boolean_value import BooleanValue
+
+from pyomo.core.expr.numeric_expr import linear_expression, nonlinear_expression
+
+from pyomo.core.expr.logical_expr import (land, lor, equivalent, exactly,
+                                          atleast, atmost, implies, lnot,
+                                          xor, inequality)
+
+from pyomo.core.expr.current import (
+    log, log10, sin, cos, tan, cosh, sinh, tanh,
+    asin, acos, atan, exp, sqrt, asinh, acosh,
+    atanh, ceil, floor,
+    Expr_if,
+)
+
+from pyomo.core.expr.calculus.derivatives import differentiate
+from pyomo.core.expr.taylor_series import taylor_series_expansion
 import pyomo.core.kernel
 from pyomo.kernel.util import (generate_names,
                                preorder_traversal,
                                pprint)
-from pyomo.core.kernel.component_map import ComponentMap
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.kernel.variable import \
     (variable,
      variable_tuple,
@@ -89,6 +117,8 @@ from pyomo.core.kernel.piecewise_library.transforms_nd import \
 from pyomo.core.kernel.set_types import \
     (RealSet,
      IntegerSet,
+     BooleanSet)
+from pyomo.environ import (
      Reals,
      PositiveReals,
      NonPositiveReals,
@@ -104,8 +134,8 @@ from pyomo.core.kernel.set_types import \
      Boolean,
      Binary,
      RealInterval,
-     IntegerInterval)
-
+     IntegerInterval,
+)
 #
 # allow the use of standard kernel modeling components
 # as the ctype argument for the general iterator method
@@ -225,12 +255,6 @@ def _valid_problem_types(self):
     return [pyomo.opt.base.ProblemFormat.pyomo]
 block.valid_problem_types = _valid_problem_types
 del _valid_problem_types
-
-from pyomo.core.kernel.base import ICategorizedObject
-def _type(self):
-    return self._ctype
-ICategorizedObject.type = _type
-del ICategorizedObject
 
 # update the reserved block attributes now that
 # new hacked methods have been placed on blocks

@@ -8,21 +8,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import collections.abc
+
 from pyomo.core.kernel.homogeneous_container import \
     IHomogeneousContainer
 
-import six
-from six.moves import xrange as range
-
-if six.PY3:
-    from collections.abc import Sequence as collections_Sequence
-    from collections.abc import Set as collections_Set
-else:
-    from collections import Sequence as collections_Sequence
-    from collections import Set as collections_Set
 
 class TupleContainer(IHomogeneousContainer,
-                     collections_Sequence):
+                     collections.abc.Sequence):
     """
     A partial implementation of the IHomogeneousContainer
     interface that provides tuple-like storage functionality.
@@ -122,8 +115,8 @@ class TupleContainer(IHomogeneousContainer,
     # Convert both objects to a plain tuple of (type(val),
     # id(val)) tuples and compare that instead.
     def __eq__(self, other):
-        if not isinstance(other, (collections_Set,
-                                  collections_Sequence)):
+        if not isinstance(other, (collections.abc.Set,
+                                  collections.abc.Sequence)):
             return False
         return tuple((type(val), id(val))
                      for val in self) == \

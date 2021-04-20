@@ -8,24 +8,24 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['Component', 'ComponentUID', 'name']
-
 import logging
-import six
 import sys
 from copy import deepcopy
 from pickle import PickleError
-from six import iteritems, string_types
 from weakref import ref as weakref_ref
 
-from pyutilib.misc.indent_io import StreamIndenter
-
 import pyomo.common
-from pyomo.common import deprecated
 from pyomo.common.modeling import NoArgumentGiven
+from pyomo.common.deprecation import deprecated, relocated_module_attribute
+from pyomo.common.fileutils import StreamIndenter
+from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base.misc import tabular_writer, sorted_robust
 
 logger = logging.getLogger('pyomo.core')
+
+relocated_module_attribute(
+    'ComponentUID', 'pyomo.core.base.componentuid.ComponentUID',
+    version='5.7.2')
 
 def _name_index_generator(idx):
     """
@@ -41,7 +41,7 @@ def _name_index_generator(idx):
             # requires escaping any single quotes in the string... which
             # in turn requires escaping the escape character.
             ans = "%s" % (val,)
-            if isinstance(val, six.string_types):
+            if isinstance(val, str):
                 ans = ans.replace("\\", "\\\\").replace("'", "\\'")
                 if ',' in ans or "'" in ans:
                     ans = "'"+ans+"'"
@@ -67,12 +67,16 @@ def name(component, index=None, fully_qualified=False, relative_to=None):
         return base + _name_index_generator( index )
 
 
-@deprecated(msg="The cname() function has been renamed to name()", version='TBD', remove_in='TBD')
+@deprecated(msg="The cname() function has been renamed to name()",
+            version='5.6.9')
 def cname(*args, **kwds):
     return name(*args, **kwds)
 
 
-class _ComponentBase(object):
+class CloneError(pyomo.common.errors.PyomoException):
+    pass
+
+class _ComponentBase(PyomoObject):
     """A base class for Component and ComponentData
 
     This class defines some fundamental methods and properties that are
@@ -82,6 +86,10 @@ class _ComponentBase(object):
     __slots__ = ()
 
     _PPRINT_INDENT = "    "
+
+    def is_component_type(self):
+        """Return True if this class is a Pyomo component"""
+        return True
 
     def __deepcopy__(self, memo):
         # The problem we are addressing is when we want to clone a
@@ -191,11 +199,13 @@ class _ComponentBase(object):
             elif paranoid is not None:
                 raise PickleError()
             new_state = {}
-            for k,v in iteritems(state):
+            for k, v in state.items():
                 try:
                     if paranoid:
                         saved_memo = dict(memo)
                     new_state[k] = deepcopy(v, memo)
+                except CloneError:
+                    raise
                 except:
                     if paranoid:
                         memo.clear()
@@ -218,17 +228,31 @@ class _ComponentBase(object):
                         "Unable to clone Pyomo component attribute.\n"
                         "%s '%s' contains an uncopyable field '%s' (%s)"
                         % ( what, self.name, k, type(v) ))
-                    # raise  # Uncomment this to see what the underlying error was.
+                    # If this is an abstract model, then we are probably
+                    # in the middle of create_instance, and the model
+                    # that will eventually become the concrete model is
+                    # missing initialization data.  This is an
+                    # exceptional event worthy of a stronger (and more
+                    # informative) error.
+                    if not self.parent_component()._constructed:
+                        raise CloneError(
+                            "Uncopyable attribute (%s) encountered when "
+                            "cloning component %s on an abstract block.  "
+                            "The resulting instance is therefore "
+                            "missing data from the original abstract model "
+                            "and likely will not construct correctly.  "
+                            "Consider changing how you initialize this "
+                            "component or using a ConcreteModel."
+                            % ( k, self.name ))
         ans.__setstate__(new_state)
         return ans
 
+    @deprecated("""The cname() method has been renamed to getname().
+    The preferred method of obtaining a component name is to use the
+    .name property, which returns the fully qualified component name.
+    The .local_name property will return the component name only within
+    the context of the immediate parent container.""", version='5.0')
     def cname(self, *args, **kwds):
-        logger.warning(
-            """DEPRECATED: The cname() method has been renamed to getname().
-The preferred method of obtaining a component name is to use the .name
-property, which returns the fully qualified component name.  The
-.local_name property will return the component name only within the
-context of the immediate parent container.""")
         return self.getname(*args, **kwds)
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
@@ -242,7 +266,7 @@ context of the immediate parent container.""")
         """
         comp = self.parent_component()
         _attr, _data, _header, _fcn = comp._pprint()
-        if isinstance(type(_data), six.string_types):
+        if isinstance(type(_data), str):
             # If the component _pprint only returned a pre-formatted
             # result, then we have no way to only emit the information
             # for this _data object.
@@ -333,7 +357,7 @@ context of the immediate parent container.""")
         if _header is not None:
             if _fcn2 is not None:
                 _data_dict = dict(_data)
-                _data = iteritems(_data_dict)
+                _data = _data_dict.items()
             tabular_writer( ostream, '', _data, _header, _fcn )
             if _fcn2 is not None:
                 for _key in sorted_robust(_data_dict):
@@ -362,15 +386,15 @@ class Component(_ComponentBase):
         _constructed    A boolean that is true if this component has been
                             constructed
         _parent         A weakref to the parent block that owns this component
-        _type           The class type for the derived subclass
+        _ctype          The class type for the derived subclass
     """
 
     def __init__ (self, **kwds):
         #
         # Get arguments
         #
-        self._type = kwds.pop('ctype', None)
-        self.doc   = kwds.pop('doc', None)
+        self._ctype = kwds.pop('ctype', None)
+        self.doc    = kwds.pop('doc', None)
         self._name  = kwds.pop('name', str(type(self).__name__))
         if kwds:
             raise ValueError(
@@ -379,7 +403,7 @@ class Component(_ComponentBase):
         #
         # Verify that ctype has been specified.
         #
-        if self._type is None:
+        if self._ctype is None:
             raise pyomo.common.DeveloperError(
                 "Must specify a component type for class %s!"
                 % ( type(self).__name__, ) )
@@ -407,7 +431,7 @@ class Component(_ComponentBase):
         _base = super(Component,self)
         if hasattr(_base, '__getstate__'):
             state = _base.__getstate__()
-            for key,val in iteritems(self.__dict__):
+            for key,val in self.__dict__.items():
                 if key not in state:
                     state[key] = val
         else:
@@ -435,15 +459,22 @@ class Component(_ComponentBase):
         if hasattr(_base, '__setstate__'):
             _base.__setstate__(state)
         else:
-            for key, val in iteritems(state):
+            for key, val in state.items():
                 # Note: per the Python data model docs, we explicitly
                 # set the attribute using object.__setattr__() instead
                 # of setting self.__dict__[key] = val.
                 object.__setattr__(self, key, val)
 
+    @property
+    def ctype(self):
+        """Return the class type for this component"""
+        return self._ctype
+
+    @deprecated("Component.type() method has been replaced by the "
+                ".ctype property.", version='5.7')
     def type(self):
         """Return the class type for this component"""
-        return self._type
+        return self.ctype
 
     def construct(self, data=None):                     #pragma:nocover
         """API definition for constructing components"""
@@ -518,15 +549,20 @@ class Component(_ComponentBase):
         return self.name
 
     def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
-        """
-        Returns the component name associated with this object.
+        """Returns the component name associated with this object.
 
-        Arguments:
-            fully_qualified     Generate full name from nested block names
-            name_buffer         Can be used to optimize iterative name
-                                    generation (using a dictionary)
-            relative_to         When generating a fully qualified name,
-                                    stop at this block.
+        Parameters
+        ----------
+        fully_qualified: bool
+            Generate full name from nested block names
+
+        name_buffer: dict
+            A dictionary that caches encountered names and indices.
+            Providing a ``name_buffer`` can significantly speed up
+            iterative name generation
+
+        relative_to: Block
+            Generate fully_qualified names reletive to the specified block.
         """
         if fully_qualified:
             pb = self.parent_block()
@@ -568,13 +604,9 @@ class Component(_ComponentBase):
         """Return true if this component is indexed"""
         return False
 
-    def is_component_type(self):
-        """Return True if this class is a Pyomo component"""
-        return True
-
     def clear_suffix_value(self, suffix_or_name, expand=True):
         """Clear the suffix value for this component data"""
-        if isinstance(suffix_or_name, six.string_types):
+        if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
             for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
                 if suffix_or_name == name_:
@@ -585,7 +617,7 @@ class Component(_ComponentBase):
 
     def set_suffix_value(self, suffix_or_name, value, expand=True):
         """Set the suffix value for this component data"""
-        if isinstance(suffix_or_name, six.string_types):
+        if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
             for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
                 if suffix_or_name == name_:
@@ -596,7 +628,7 @@ class Component(_ComponentBase):
 
     def get_suffix_value(self, suffix_or_name, default=None):
         """Get the suffix value for this component data"""
-        if isinstance(suffix_or_name, six.string_types):
+        if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
             for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
                 if suffix_or_name == name_:
@@ -742,18 +774,25 @@ class ComponentData(_ComponentBase):
         if hasattr(_base, '__setstate__'):
             _base.__setstate__(state)
         else:
-            for key, val in iteritems(state):
+            for key, val in state.items():
                 # Note: per the Python data model docs, we explicitly
                 # set the attribute using object.__setattr__() instead
                 # of setting self.__dict__[key] = val.
                 object.__setattr__(self, key, val)
 
-    def type(self):
+    @property
+    def ctype(self):
         """Return the class type for this component"""
         _parent = self.parent_component()
         if _parent is None:
-            return _parent
-        return _parent._type
+            return None
+        return _parent._ctype
+
+    @deprecated("Component.type() method has been replaced by the "
+                ".ctype property.", version='5.7')
+    def type(self):
+        """Return the class type for this component"""
+        return self.ctype
 
     def parent_component(self):
         """Returns the component associated with this object."""
@@ -855,13 +894,9 @@ class ComponentData(_ComponentBase):
         """Return true if this component is indexed"""
         return False
 
-    def is_component_type(self):
-        """Return True if this class is a Pyomo component"""
-        return True
-
     def clear_suffix_value(self, suffix_or_name, expand=True):
         """Set the suffix value for this component data"""
-        if isinstance(suffix_or_name, six.string_types):
+        if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
             for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
                 if suffix_or_name == name_:
@@ -872,7 +907,7 @@ class ComponentData(_ComponentBase):
 
     def set_suffix_value(self, suffix_or_name, value, expand=True):
         """Set the suffix value for this component data"""
-        if isinstance(suffix_or_name, six.string_types):
+        if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
             for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
                 if suffix_or_name == name_:
@@ -883,7 +918,7 @@ class ComponentData(_ComponentBase):
 
     def get_suffix_value(self, suffix_or_name, default=None):
         """Get the suffix value for this component data"""
-        if isinstance(suffix_or_name, six.string_types):
+        if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
             for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
                 if suffix_or_name == name_:
@@ -952,376 +987,3 @@ class ActiveComponentData(ComponentData):
         """Set the active attribute to False"""
         self._active = False
 
-
-class ComponentUID(object):
-    """
-    This class provides a system to generate "component unique
-    identifiers".  Any component in a model can be described by a CUID,
-    and from a CUID you can find the component.  An important feature of
-    CUIDs is that they are relative to a model, so you can use a CUID
-    generated on one model to find the equivalent component on another
-    model.  This is especially useful when you clone a model and want
-    to, for example, copy a variable value from the cloned model back to
-    the original model.
-
-    The CUID has a string representation that can specify a specific
-    component or a group of related components through the use of index
-    wildcards (* for a single element in the index, and ** for all
-    indexes)
-
-    This class is also used by test_component.py to validate the structure
-    of components.
-    """
-
-    __slots__ = ( '_cids', )
-    tList = [ int, str ]
-    tKeys = '#$'
-    tDict = {} # ...initialized below
-
-    def __init__(self, component, cuid_buffer=None, context=None):
-        # A CUID can be initialized from either a reference component or
-        # the string representation.
-        if isinstance(component, string_types):
-            if context is not None:
-                raise ValueError("Context is not allowed when initializing a "
-                                 "ComponentUID object from a string type")
-            self._cids = tuple(self.parse_cuid(component))
-        else:
-            self._cids = tuple(self._generate_cuid(component,
-                                                   cuid_buffer=cuid_buffer,
-                                                   context=context))
-
-    def __str__(self):
-        """
-        TODO
-        """
-        a = ""
-        for name, args, types in reversed(self._cids):
-            if a:
-                a += '.' + name
-            else:
-                a = name
-            if types is None:
-                a += '[**]'
-                continue
-            if len(args) == 0:
-                continue
-            a += '['+','.join(str(x) or '*' for x in args) + ']'
-        return a
-
-    def __repr__(self):
-        """
-        TODO
-        """
-        a = ""
-        for name, args, types in reversed(self._cids):
-            if a:
-                a += '.' + name
-            else:
-                a = name
-            if types is None:
-                a += ':**'
-                continue
-            if len(args) == 0:
-                continue
-            a += ':'+','.join( (types[i] if types[i] not in '.' else '')+str(x)
-                               for i,x in enumerate(args) )
-        return a
-
-    def __getstate__(self):
-        return dict((x,getattr(self,x)) for x in ComponentUID.__slots__)
-
-    def __setstate__(self, state):
-        for key, val in iteritems(state):
-            setattr(self,key,val)
-
-    # Define all comparison operators using the underlying tuple's
-    # comparison operators. We will be lazy and assume that the other is
-    # a CUID.
-
-    def __hash__(self):
-        """
-        TODO
-        """
-        return self._cids.__hash__()
-
-    def __lt__(self, other):
-        """
-        TODO
-        """
-        try:
-            return self._cids.__lt__(other._cids)
-        except AttributeError:
-            return self._cids.__lt__(other)
-
-    def __le__(self, other):
-        """
-        TODO
-        """
-        try:
-            return self._cids.__le__(other._cids)
-        except AttributeError:
-            return self._cids.__le__(other)
-
-    def __gt__(self, other):
-        """
-        TODO
-        """
-        try:
-            return self._cids.__gt__(other._cids)
-        except AttributeError:
-            return self._cids.__gt__(other)
-
-    def __ge__(self, other):
-        """
-        TODO
-        """
-        try:
-            return self._cids.__ge__(other._cids)
-        except AttributeError:
-            return self._cids.__ge__(other)
-
-    def __eq__(self, other):
-        """
-        TODO
-        """
-        try:
-            return self._cids.__eq__(other._cids)
-        except AttributeError:
-            return self._cids.__eq__(other)
-
-    def __ne__(self, other):
-        """
-        TODO
-        """
-        try:
-            return self._cids.__ne__(other._cids)
-        except AttributeError:
-            return self._cids.__ne__(other)
-
-    def _partial_cuid_from_index(self, idx):
-        """
-        TODO
-        """
-        tDict = ComponentUID.tDict
-        if idx.__class__ is tuple:
-            return ( idx, ''.join(tDict.get(type(x), '?') for x in idx) )
-        else:
-            return ( (idx,), tDict.get(type(idx), '?') )
-
-    def _generate_cuid(self, component, cuid_buffer=None, context=None):
-        """
-        TODO
-        """
-        model = component.model()
-        if context is None:
-            context = model
-        orig_component = component
-        tDict = ComponentUID.tDict
-        if not hasattr(component, '_component'):
-            yield ( component.local_name, '**', None )
-            component = component.parent_block()
-        while component is not context:
-            if component is model:
-                raise ValueError("Context '%s' does not apply to component "
-                                 "'%s'" % (context.name,
-                                           orig_component.name))
-            c = component.parent_component()
-            if c is component:
-                yield ( c.local_name, tuple(), '' )
-            elif cuid_buffer is not None:
-                if id(self) not in cuid_buffer:
-                    for idx, obj in iteritems(c):
-                        cuid_buffer[id(obj)] = \
-                            self._partial_cuid_from_index(idx)
-                yield (c.local_name,) + cuid_buffer[id(component)]
-            else:
-                for idx, obj in iteritems(c):
-                    if obj is component:
-                        yield (c.local_name,) + self._partial_cuid_from_index(idx)
-                        break
-            component = component.parent_block()
-
-    def parse_cuid(self, label):
-        """
-        TODO
-        """
-        cList = label.split('.')
-        tKeys = ComponentUID.tKeys
-        tDict = ComponentUID.tDict
-        for c in reversed(cList):
-            if c[-1] == ']':
-                c_info = c[:-1].split('[',1)
-            else:
-                c_info = c.split(':',1)
-            if len(c_info) == 1:
-                yield ( c_info[0], tuple(), '' )
-            else:
-                idx = c_info[1].split(',')
-                _type = ''
-                for i, val in enumerate(idx):
-                    if val == '*':
-                        _type += '*'
-                        idx[i] = ''
-                    elif val[0] in tKeys:
-                        _type += val[0]
-                        idx[i] = tDict[val[0]](val[1:])
-                    elif val[0] in  "\"'" and val[-1] == val[0]:
-                        _type += ComponentUID.tDict[str]
-                        idx[i] = val[1:-1]
-                    else:
-                        _type += '.'
-                if len(idx) == 1 and idx[0] == '**':
-                    yield ( c_info[0], '**', None )
-                else:
-                    yield ( c_info[0], tuple(idx), _type )
-
-    def find_component_on(self, block):
-        """
-        TODO
-        """
-        return self.find_component(block)
-
-    def find_component(self, block):
-        """
-        Return the (unique) component in the block.  If the CUID contains
-        a wildcard in the last component, then returns that component.  If
-        there are wildcards elsewhere (or the last component was a partial
-        slice), then returns None.  See list_components below.
-        """
-        obj = block
-        for name, idx, types in reversed(self._cids):
-            try:
-                if len(idx) and idx != '**' and types.strip('*'):
-                    obj = getattr(obj, name)[idx]
-                else:
-                    obj = getattr(obj, name)
-            except KeyError:
-                if '.' not in types:
-                    return None
-                tList = ComponentUID.tList
-                def _checkIntArgs(_idx, _t, _i):
-                    if _i == -1:
-                        try:
-                            return getattr(obj, name)[tuple(_idx)]
-                        except KeyError:
-                            return None
-                    _orig = _idx[_i]
-                    for _cast in tList:
-                        try:
-                            _idx[_i] = _cast(_orig)
-                            ans = _checkIntArgs(_idx, _t, _t.find('.',_i+1))
-                            if ans is not None:
-                                return ans
-                        except ValueError:
-                            pass
-                    _idx[_i] = _orig
-                    return None
-                obj = _checkIntArgs(list(idx), types, types.find('.'))
-            except AttributeError:
-                return None
-        return obj
-
-    def _list_components(self, _obj, cids):
-        """
-        TODO
-        """
-        if not cids:
-            yield _obj
-            return
-
-        name, idx, types = cids[-1]
-        try:
-            obj = getattr(_obj, name)
-        except AttributeError:
-            return
-        if len(idx) == 0:
-            for ans in self._list_components(obj, cids[:-1]):
-                yield ans
-        elif idx != '**' and '*' not in types and '.' not in types:
-            try:
-                obj = obj[idx]
-            except KeyError:
-                return
-            for ans in self._list_components(obj, cids[:-1]):
-                yield ans
-        else:
-            all =  idx == '**'
-            tList = ComponentUID.tList
-            for target_idx, target_obj in iteritems(obj):
-                if not all and idx != target_idx:
-                    _idx, _types = self._partial_cuid_from_index(target_idx)
-                    if len(idx) != len(_idx):
-                        continue
-                    match = True
-                    for j in range(len(idx)):
-                        if idx[j] == _idx[j] or types[j] == '*':
-                            continue
-                        elif types[j] == '.':
-                            ok = False
-                            for _cast in tList:
-                                try:
-                                    if _cast(idx[j]) == _idx[j]:
-                                        ok = True
-                                        break
-                                except ValueError:
-                                    pass
-                            if not ok:
-                                match = False
-                                break
-                        else:
-                            match = False
-                            break
-                    if not match:
-                        continue
-                for ans in self._list_components(target_obj, cids[:-1]):
-                    yield ans
-
-    def list_components(self, block):
-        """
-        TODO
-        """
-        for ans in self._list_components(block, self._cids):
-            yield ans
-
-    def matches(self, component):
-        """
-        TODO
-        """
-        tList = ComponentUID.tList
-        for i, (name, idx, types) in enumerate(self._generate_cuid(component)):
-            if i == len(self._cids):
-                return False
-            _n, _idx, _types = self._cids[i]
-            if _n != name:
-                return False
-            if _idx == '**' or idx == _idx:
-                continue
-            if len(idx) != len(_idx):
-                return False
-            for j in range(len(idx)):
-                if idx[j] == _idx[j] or _types[j] == '*':
-                    continue
-                elif _types[j] == '.':
-                    ok = False
-                    for _cast in tList:
-                        try:
-                            if _cast(_idx[j]) == idx[j]:
-                                ok = True
-                                break
-                        except ValueError:
-                            pass
-                    if not ok:
-                        return False
-                else:
-                    return False
-        # Matched if all self._cids were consumed
-        return i+1 == len(self._cids)
-
-# WEH - What does it mean to initialize this dictionary outside
-#       of the definition of this class?  Is tList populated
-#       with all components???
-ComponentUID.tDict.update( (ComponentUID.tKeys[i], v)
-                           for i,v in enumerate(ComponentUID.tList) )
-ComponentUID.tDict.update( (v, ComponentUID.tKeys[i])
-                           for i,v in enumerate(ComponentUID.tList) )

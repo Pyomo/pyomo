@@ -10,16 +10,15 @@
 
 import logging
 
-from pyomo.core.kernel.base import \
-    (ICategorizedObject,
-     _abstract_readwrite_property,
-     _abstract_readonly_property)
+from pyomo.common.collections import ComponentMap
+from pyomo.common.deprecation import deprecated
+from pyomo.core.kernel.base import (
+    ICategorizedObject, _abstract_readonly_property
+)
 from pyomo.core.kernel.dict_container import DictContainer
-from pyomo.core.kernel.container_utils import \
+from pyomo.core.kernel.container_utils import (
     define_homogeneous_container_type
-from pyomo.core.kernel.component_map import ComponentMap
-
-import six
+)
 
 logger = logging.getLogger('pyomo.core')
 
@@ -63,9 +62,8 @@ class suffix(ISuffix):
                  "_storage_key",
                  "_active",
                  "_direction",
-                 "_datatype")
-    if six.PY3:
-        __slots__ = list(__slots__) + ["__weakref__"]
+                 "_datatype",
+                 "__weakref__")
 
     # neither sent to solver or received from solver
     LOCAL  = 0
@@ -150,49 +148,43 @@ class suffix(ISuffix):
     # Methods that are deprecated
     #
 
+    @deprecated("suffix.set_all_values will be removed in the future.",
+                version='5.3')
     def set_all_values(self, value):
-        logger.warning("DEPRECATION WARNING: suffix.set_all_values "
-                       "will be removed in the future.")
         for ndx in self:
             self[ndx] = value
 
+    @deprecated("suffix.clear_value will be removed in the future. "
+                "Use 'del suffix[key]' instead.", version='5.3')
     def clear_value(self, component):
-        logger.warning("DEPRECATION WARNING: suffix.clear_value "
-                       "will be removed in the future. Use "
-                       "'del suffix[key]' instead.")
         try:
             del self[component]
         except KeyError:
             pass
 
+    @deprecated("suffix.clear_all_values is replaced with suffix.clear",
+                version='5.3')
     def clear_all_values(self):
-        logger.warning(
-            "DEPRECATION WARNING: suffix.clear_all_values "
-            "is replaced with suffix.clear")
         self.clear()
 
+    @deprecated("suffix.get_datatype is replaced with the property "
+                "suffix.datatype", version='5.3')
     def get_datatype(self):
-        logger.warning(
-            "DEPRECATION WARNING: suffix.get_datatype is replaced "
-            "with the property suffix.datatype")
         return self.datatype
 
+    @deprecated("suffix.set_datatype is replaced with the property "
+                "setter suffix.datatype", version='5.3')
     def set_datatype(self, datatype):
-        logger.warning(
-            "DEPRECATION WARNING: suffix.set_datatype is replaced "
-            "with the property setter suffix.datatype")
         self.datatype = datatype
 
+    @deprecated("suffix.get_direction is replaced with the property "
+                "suffix.direction", version='5.3')
     def get_direction(self):
-        logger.warning(
-            "DEPRECATION WARNING: suffix.get_direction is replaced "
-            "with the property suffix.direction")
         return self.direction
 
+    @deprecated("suffix.set_direction is replaced with the property "
+                "setter suffix.direction", version='5.3')
     def set_direction(self, direction):
-        logger.warning(
-            "DEPRECATION WARNING: suffix.set_direction is replaced "
-            "with the property setter suffix.direction")
         self.direction = direction
 
 # A list of convenient suffix generators, including:

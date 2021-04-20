@@ -15,12 +15,11 @@ import glob
 import datetime
 import textwrap
 import logging
-import argparse
+import socket
+import subprocess
 
-import pyutilib.subprocess
-from pyutilib.misc import Options
-
-from pyomo.common import get_pyomo_commands
+import pyomo.common
+from pyomo.common.collections import Bunch
 import pyomo.scripting.pyomo_parser
 
 logger = logging.getLogger('pyomo.solvers')
@@ -53,7 +52,9 @@ def command_exec(options):
     if not os.path.exists(cmddir+options.command[0]):
         print("  ERROR: the command '%s' does not exist" % (cmddir+options.command[0]))
         return 1
-    return pyutilib.subprocess.run(cmddir+' '.join(options.command), tee=True)[0]
+    return subprocess.run([cmddir] + options.command,
+                          stdout=subprocess.DEVNULL,
+                          stderr=subprocess.DEVNULL).returncode
 
 #
 # Add a subparser for the pyomo command
@@ -86,7 +87,7 @@ def help_commands():
     print("")
     print("The following commands are installed with Pyomo:")
     print("-"*75)
-    registry = get_pyomo_commands()
+    registry = pyomo.common.get_pyomo_commands()
     d = max(len(key) for key in registry)
     fmt = "%%-%ds  %%s" % d
     for key in sorted(registry.keys(), key=lambda v: v.upper()):
@@ -139,7 +140,6 @@ def help_datamanagers(options):
         print(wrapper.fill(DataManagerFactory.doc(xform)))
 
 def help_api(options):
-    import pyomo.common
     services = pyomo.common.PyomoAPIFactory.services()
     #
     f = {}
@@ -221,10 +221,9 @@ def help_api(options):
                     print("    "+line)
 
 def help_environment():
-    cmddir = os.path.dirname(os.path.abspath(sys.executable))+os.sep
-    info = Options()
+    info = Bunch()
     #
-    info.python = Options()
+    info.python = Bunch()
     info.python.version = '%d.%d.%d' % sys.version_info[:3]
     info.python.executable = sys.executable
     info.python.platform = sys.platform
@@ -232,12 +231,13 @@ def help_environment():
         packages = []
         import pip
         for package in pip.get_installed_distributions():
-            packages.append( Options(name=package.project_name, version=package.version) )
+            packages.append(Bunch(name=package.project_name,
+                                    version=package.version))
         info.python.packages = packages
     except:
         pass
     #
-    info.environment = Options()
+    info.environment = Bunch()
     path = os.environ.get('PATH', None)
     if not path is None:
         info.environment['shell path'] = path.split(os.pathsep)
@@ -259,7 +259,19 @@ def help_transformations():
     print("---------------------------")
     for xform in sorted(TransformationFactory):
         print("  "+xform)
-        print(wrapper.fill(TransformationFactory.doc(xform)))
+        _doc = TransformationFactory.doc(xform) or ""
+        # Ideally, the Factory would ensure that the doc string
+        # indicated deprecation, but as @deprecated() is Pyomo
+        # functionality and the Factory comes directly from PyUtilib,
+        # PyUtilib probably shouldn't contain Pyomo-specific processing.
+        # The next best thing is to ensure that the deprecation status
+        # is indicated here.
+        _init_doc = TransformationFactory.get_class(xform).__init__.__doc__ \
+                    or ""
+        if _init_doc.strip().startswith('DEPRECATED') and 'DEPRECAT' not in _doc:
+            _doc = ' '.join(('[DEPRECATED]', _doc))
+        if _doc:
+            print(wrapper.fill(_doc))
 
 def help_solvers():
     import pyomo.environ
@@ -279,41 +291,61 @@ def help_solvers():
         print(wrapper.fill(format % (s , pyomo.opt.SolverManagerFactory.doc(s))))
     print("")
     wrapper = textwrap.TextWrapper(subsequent_indent='')
-    print(wrapper.fill("If no solver manager is specified, Pyomo uses the serial solver manager to execute solvers locally.  The pyro and phpyro solver managers require the installation and configuration of the pyro software.  The neos solver manager is used to execute solvers on the NEOS optimization server."))
+    print(wrapper.fill("If no solver manager is specified, Pyomo uses the serial solver manager to execute solvers locally.  The neos solver manager is used to execute solvers on the NEOS optimization server."))
     print("")
 
     print("")
     print("Serial Solver Interfaces")
     print("------------------------")
-    print(wrapper.fill("The serial, pyro and phpyro solver managers support the following solver interfaces:"))
+    print(wrapper.fill("The serial manager supports the following solver interfaces:"))
     print("")
     solver_list = list(pyomo.opt.SolverFactory)
     solver_list = sorted( filter(lambda x: '_' != x[0], solver_list) )
-    n = max(map(len, solver_list))
-    wrapper = textwrap.TextWrapper(subsequent_indent=' '*(n+9))
+    _data = []
     try:
         # Disable warnings
         logging.disable(logging.WARNING)
         for s in solver_list:
             # Create a solver, and see if it is available
             with pyomo.opt.SolverFactory(s) as opt:
-                if s == 'py' or (hasattr(opt, "_metasolver") and opt._metasolver):
+                ver = ''
+                if opt.available(False):
+                    avail = '-'
+                    if opt.license_is_valid():
+                        avail = '+'
+                    try:
+                        ver = opt.version()
+                        if ver:
+                            while len(ver) > 2 and ver[-1] == 0:
+                                ver = ver[:-1]
+                            ver = '.'.join(str(v) for v in ver)
+                        else:
+                            ver = ''
+                    except (AttributeError, NameError):
+                        pass
+                elif s == 'py' or (hasattr(opt, "_metasolver") and opt._metasolver):
                     # py is a metasolver, but since we don't specify a subsolver
                     # for this test, opt is actually an UnknownSolver, so we
                     # can't try to get the _metasolver attribute from it.
                     # Also, default to False if the attribute isn't implemented
-                    msg = '    %-'+str(n)+'s   + %s'
-                elif opt.available(False):
-                    msg = '    %-'+str(n)+'s   * %s'
+                    avail = '*'
                 else:
-                    msg = '    %-'+str(n)+'s     %s'
-                print(wrapper.fill(msg % (s, pyomo.opt.SolverFactory.doc(s))))
+                    avail = ''
+                _data.append((avail, s, ver, pyomo.opt.SolverFactory.doc(s)))
     finally:
         # Reset logging level
         logging.disable(logging.NOTSET)
+    nameFieldLen = max(len(line[1]) for line in _data)
+    verFieldLen = max(len(line[2]) for line in _data)
+    fmt = '   %%1s%%-%ds %%-%ds %%s' % (nameFieldLen, verFieldLen)
+    wrapper = textwrap.TextWrapper(
+        subsequent_indent=' '*(nameFieldLen + verFieldLen + 6))
+    for _line in _data:
+        print(wrapper.fill(fmt % _line))
+
     print("")
     wrapper = textwrap.TextWrapper(subsequent_indent='')
-    print(wrapper.fill("An asterisk indicates solvers that are currently available to be run from Pyomo with the serial solver manager. A plus indicates meta-solvers, that are always available."))
+    print(wrapper.fill("""The leading symbol (one of *, -, +) indicates the current solver availability.  A plus (+) indicates the solver is currently available to be run from Pyomo with the serial solver manager, and (if applicable) has a valid license.  A minus (-) indicates the solver executables are available but do not report having a valid license.  The solver may still be usable in an unlicensed or "demo" mode for limited problem sizes. An asterisk (*) indicates meta-solvers or generic interfaces, which are always available."""))
     print('')
     print(wrapper.fill('Pyomo also supports solver interfaces that are wrappers around third-party solver interfaces. These interfaces require a subsolver specification that indicates the solver being executed.  For example, the following indicates that the ipopt solver will be used:'))
     print('')
@@ -327,6 +359,7 @@ def help_solvers():
     print('')
     try:
         logging.disable(logging.WARNING)
+        socket.setdefaulttimeout(10)
         import pyomo.neos.kestrel
         kestrel = pyomo.neos.kestrel.kestrelAMPL()
         #print "HERE", solver_list
@@ -354,6 +387,7 @@ def help_solvers():
         pass
     finally:
         logging.disable(logging.NOTSET)
+        socket.setdefaulttimeout(None)
 
 def print_components(data):
     """
@@ -364,7 +398,7 @@ def print_components(data):
     print("Pyomo Model Components:")
     print("----------------------------------------------------------------")
     components = pyomo.core.base._pyomo.model_components()
-    index = pyutilib.misc.sort_index(components)
+    index = list(idx for idx, item in sorted(enumerate(components), key=lambda item: item[1]))
     for i in index:
         print("")
         print(" "+components[i][0])
@@ -375,7 +409,7 @@ def print_components(data):
     print("Pyomo Virtual Sets:")
     print("----------------------------------------------------------------")
     pyomo_sets = pyomo.core.base._pyomo.predefined_sets()
-    index = pyutilib.misc.sort_index(pyomo_sets)
+    index = list(idx for idx, item in sorted(enumerate(pyomo_sets), key=lambda item: item[1]))
     for i in index:
         print("")
         print(" "+pyomo_sets[i][0])

@@ -13,19 +13,13 @@ __all__ = ()
 
 import time
 
-try:
-    from collections import OrderedDict
-except ImportError:                         #pragma:nocover
-    from ordereddict import OrderedDict
+from pyomo.common.collections import OrderedDict
 
 import pyomo.opt
 from pyomo.opt.parallel.manager import (ActionManagerError,
                                         ActionStatus,
                                         ActionHandle)
 from pyomo.opt.parallel.async_solver import AsynchronousSolverManager, SolverManagerFactory
-
-import six
-from six import string_types
 
 
 @SolverManagerFactory.register("serial", doc="Synchronously execute solvers locally")
@@ -51,7 +45,7 @@ class SolverManager_Serial(AsynchronousSolverManager):
                 % (type(self).__name__) )
 
         time_start = time.time()
-        if isinstance(opt, string_types):
+        if isinstance(opt, str):
             with pyomo.opt.SolverFactory(opt) as _opt:
                 results = _opt.solve(*args, **kwds)
         else:

@@ -1,6 +1,7 @@
 1 Set Declarations
-    cc_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(0, 2)
-        [0, 1, 2]
+    cc_index : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {0, 1, 2}
 
 4 Var Declarations
     x1 : Size=1, Index=None
@@ -16,8 +17,13 @@
         Key  : Lower : Value : Upper : Fixed : Stale : Domain
         None :  None :  None :  None : False :  True :  Reals
 
+1 Constraint Declarations
+    keep_var_con : Size=1, Index=None, Active=True
+        Key  : Lower : Body : Upper : Active
+        None :   0.5 :   x1 :   0.5 :   True
+
 1 Block Declarations
     cc : Size=0, Index=cc_index, Active=True
         Key : Arg0 : Arg1 : Active
 
-6 Declarations: y x1 x2 x3 cc_index cc
+7 Declarations: y x1 x2 x3 cc_index cc keep_var_con

@@ -13,14 +13,14 @@
 
 import pickle
 import os
-import six
+import io
 import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
-from pyomo.environ import *
+from pyomo.environ import AbstractModel, ConcreteModel, Set, Var, Param, Constraint, inequality, display
 import pyomo.core.expr.logical_expr as logical_expr
 from pyomo.core.expr.logical_expr import (
     InequalityExpression, EqualityExpression, RangedExpression,
@@ -64,16 +64,16 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #   a   b
         # Python 2.7 supports better testing of exceptions
         if sys.hexversion >= 0x02070000:
-            self.assertRaisesRegexp(TypeError, "EqualityExpression .*"
+            self.assertRaisesRegex(TypeError, "EqualityExpression .*"
                                    "sub-expressions is a relational",
                                    e.__eq__, m.a)
-            self.assertRaisesRegexp(TypeError, "EqualityExpression .*"
+            self.assertRaisesRegex(TypeError, "EqualityExpression .*"
                                    "sub-expressions is a relational",
                                    m.a.__eq__, e)
 
             # NB: cannot test the reverse here: _VarArray (correctly)
             # does not define __eq__
-            self.assertRaisesRegexp(TypeError, "Argument .*"
+            self.assertRaisesRegex(TypeError, "Argument .*"
                                     "is an indexed numeric value",
                                     m.a.__eq__, m.x)
         else:
@@ -494,29 +494,29 @@ class TestGenerate_ChainedRelationalExpression(unittest.TestCase):
             #
             # Check error with indexed variable
             #
-            self.assertRaisesRegexp(TypeError, "Argument .*"
+            self.assertRaisesRegex(TypeError, "Argument .*"
                                     "is an indexed numeric value",
                                     m.a.__lt__, m.x)
-            self.assertRaisesRegexp(TypeError, "Argument .*"
+            self.assertRaisesRegex(TypeError, "Argument .*"
                                     "is an indexed numeric value",
                                     m.a.__gt__, m.x)
 
             #
             # Check error with more than two inequalities
             #
-            self.assertRaisesRegexp(TypeError, "Cannot create an InequalityExpression where one of the sub-expressions is an equality or ranged expression:.*", e.__lt__, m.c)
-            self.assertRaisesRegexp(TypeError, "Cannot create an InequalityExpression where one of the sub-expressions is an equality or ranged expression:.*", e.__gt__, m.c)
+            self.assertRaisesRegex(TypeError, "Cannot create an InequalityExpression where one of the sub-expressions is an equality or ranged expression:.*", e.__lt__, m.c)
+            self.assertRaisesRegex(TypeError, "Cannot create an InequalityExpression where one of the sub-expressions is an equality or ranged expression:.*", e.__gt__, m.c)
 
             #
             # Check error when both expressions are relational
             #
-            self.assertRaisesRegexp(TypeError, "InequalityExpression .*"
+            self.assertRaisesRegex(TypeError, "InequalityExpression .*"
                                    "one of the sub-expressions is an equality or ranged expression",
                                    e.__lt__, m.a < m.b)
-            self.assertRaisesRegexp(TypeError, "InequalityExpression .*"
+            self.assertRaisesRegex(TypeError, "InequalityExpression .*"
                                    "one of the sub-expressions is an equality or ranged expression",
                                    m.a.__lt__, e1)
-            self.assertRaisesRegexp(TypeError, "InequalityExpression .*"
+            self.assertRaisesRegex(TypeError, "InequalityExpression .*"
                                    "one of the sub-expressions is an equality or ranged expression",
                                    m.a.__gt__, e1)
         else:
@@ -676,7 +676,7 @@ class TestMultiArgumentExpressions(unittest.TestCase):
             return inequality(m.vmin[i]**2, m.v[i], m.vmax[i]**2)
         m.con = Constraint(m.s, rule=_con)
 
-        OUT = six.StringIO()
+        OUT = io.StringIO()
         for i in m.s:
             OUT.write(str(_con(m,i)))
             OUT.write("\n")

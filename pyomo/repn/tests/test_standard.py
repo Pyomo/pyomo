@@ -16,25 +16,22 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
-import pyutilib.services
+import pyomo.common.unittest as unittest
 
 from pyomo.core.expr.current import Expr_if
-from pyomo.core.expr import expr_common, current as EXPR
-from pyomo.repn import *
-from pyomo.environ import *
+from pyomo.core.expr import current as EXPR
+from pyomo.repn import generate_standard_repn
+from pyomo.environ import AbstractModel, ConcreteModel, Var, Param, Set, Expression, RangeSet, ExternalFunction, quicksum, cos, sin, summation, sum_product
 import pyomo.kernel
 from pyomo.core.base.numvalue import native_numeric_types, as_numeric
 
-from six import iteritems
-from six.moves import range
 
 class frozendict(dict):
     __slots__ = ('_hash',)
     def __hash__(self):
         rval = getattr(self, '_hash', None)
         if rval is None:
-            rval = self._hash = hash(frozenset(iteritems(self)))
+            rval = self._hash = hash(frozenset(self.items()))
         return rval
 
 
@@ -3141,19 +3138,25 @@ class Test(unittest.TestCase):
         rep = generate_standard_repn(e, compute_values=False, quadratic=True)
         #
         self.assertFalse( rep.is_fixed() )
-        self.assertEqual( rep.polynomial_degree(), None )
+        self.assertEqual( rep.polynomial_degree(), 2 )
         self.assertFalse( rep.is_constant() )
         self.assertFalse( rep.is_linear() )
-        self.assertFalse( rep.is_quadratic() )
+        self.assertTrue( rep.is_quadratic() )
         self.assertTrue( rep.is_nonlinear() )
         #
         self.assertTrue(len(rep.linear_vars) == 0)
         self.assertTrue(len(rep.linear_coefs) == 0)
-        self.assertTrue(len(rep.quadratic_vars) == 0)
-        self.assertTrue(len(rep.quadratic_coefs) == 0)
-        self.assertFalse(rep.nonlinear_expr is None)
-        self.assertTrue(len(rep.nonlinear_vars) == 2)
-        baseline = { }
+        self.assertTrue(len(rep.quadratic_vars) == 3)
+        self.assertTrue(len(rep.quadratic_coefs) == 3)
+        self.assertTrue(rep.nonlinear_expr is None)
+        self.assertTrue(len(rep.nonlinear_vars) == 0)
+        baseline = { (id(m.a), id(m.a)): 1,
+                     (id(m.b), id(m.b)): 1 }
+        if id(m.a) < id(m.b):
+            baseline[id(m.a), id(m.b)] = 2
+        else:
+            baseline[id(m.b), id(m.a)] = 2
+
         self.assertEqual(baseline, repn_to_dict(rep))
 
         e = (m.a+3)**2
@@ -3256,6 +3259,51 @@ class Test(unittest.TestCase):
         self.assertTrue(rep.nonlinear_expr is None)
         self.assertTrue(len(rep.nonlinear_vars) == 0)
         baseline = { None:8 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+    def test_pow_of_lin_sum(self):
+        m = ConcreteModel()
+        m.x = Var(range(4))
+        e = sum(x for x in m.x.values())**2
+
+        rep = generate_standard_repn(e, compute_values=False, quadratic=False)
+        #
+        self.assertFalse( rep.is_fixed() )
+        self.assertEqual( rep.polynomial_degree(), None )
+        self.assertFalse( rep.is_constant() )
+        self.assertFalse( rep.is_linear() )
+        self.assertFalse( rep.is_quadratic() )
+        self.assertTrue( rep.is_nonlinear() )
+        #
+        self.assertTrue(len(rep.linear_vars) == 0)
+        self.assertTrue(len(rep.linear_coefs) == 0)
+        self.assertTrue(len(rep.quadratic_vars) == 0)
+        self.assertTrue(len(rep.quadratic_coefs) == 0)
+        self.assertFalse(rep.nonlinear_expr is None)
+        self.assertTrue(len(rep.nonlinear_vars) == 4)
+        baseline = { }
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+        rep = generate_standard_repn(e, compute_values=False, quadratic=True)
+        #
+        self.assertFalse( rep.is_fixed() )
+        self.assertEqual( rep.polynomial_degree(), 2 )
+        self.assertFalse( rep.is_constant() )
+        self.assertFalse( rep.is_linear() )
+        self.assertTrue( rep.is_quadratic() )
+        self.assertTrue( rep.is_nonlinear() )
+        #
+        self.assertTrue(len(rep.linear_vars) == 0)
+        self.assertTrue(len(rep.linear_coefs) == 0)
+        self.assertTrue(len(rep.quadratic_vars) == 10)
+        self.assertTrue(len(rep.quadratic_coefs) == 10)
+        self.assertTrue(rep.nonlinear_expr is None)
+        self.assertTrue(len(rep.nonlinear_vars) == 0)
+        baseline = {(id(i), id(j)): 2
+                    for i in m.x.values()
+                    for j in m.x.values()
+                    if id(i) < id(j)}
+        baseline.update({(id(i), id(i)): 1 for i in m.x.values()})
         self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_fixed_exponent(self):
@@ -4000,7 +4048,7 @@ class Test(unittest.TestCase):
         m = ConcreteModel()
         m.A = RangeSet(5)
         m.v = Var(m.A, initialize=1)
-        m.p = Param(m.A, initialize={1:-2, 2:-1, 3:0, 4:1, 5:2})
+        m.p = Param(m.A, initialize={1: -2, 2: -1, 3: 0, 4: 1, 5: 2})
 
         e = summation(m.v) + sum_product(m.p, m.v)
         rep = generate_standard_repn(e, compute_values=True)
@@ -4008,11 +4056,42 @@ class Test(unittest.TestCase):
         rep = generate_standard_repn(e, compute_values=False)
         self.assertEqual(str(rep.to_expression()), "- v[1] + v[3] + 2*v[4] + 3*v[5]")
 
-        m.v[1].fixed=True
+        m.v[1].fixed = True
         rep = generate_standard_repn(e, compute_values=True)
-        self.assertEqual(str(rep.to_expression()), "2 + v[3] + 2*v[4] + 3*v[5]")
+        self.assertEqual(str(rep.to_expression()), "-1 + v[3] + 2*v[4] + 3*v[5]")
         rep = generate_standard_repn(e, compute_values=False)
-        self.assertEqual(str(rep.to_expression()), "v[1] + v[1] + v[3] + 2*v[4] + 3*v[5]")
+        self.assertEqual(
+            str(rep.to_expression()), "v[1] - 2*v[1] + v[3] + 2*v[4] + 3*v[5]"
+        )
+
+    def test_linear_with_mutable_param_and_fixed_var(self):
+        m = ConcreteModel()
+        m.A = RangeSet(5)
+        m.v = Var(m.A, initialize=1)
+        m.p = Param(m.A, initialize={1: -2, 2: -1, 3: 0, 4: 1, 5: 2}, mutable=True)
+
+        with EXPR.linear_expression() as expr:
+            for i in m.A:
+                expr += m.p[i] * m.v[i]
+
+        e = summation(m.v) + expr
+
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "- v[1] + v[3] + 2*v[4] + 3*v[5]")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(
+            str(rep.to_expression()),
+            "(1 + p[1])*v[1] + (1 + p[2])*v[2] + (1 + p[3])*v[3] + (1 + p[4])*v[4] + (1 + p[5])*v[5]",
+        )
+
+        m.v[1].fixed = True
+        rep = generate_standard_repn(e, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "-1 + v[3] + 2*v[4] + 3*v[5]")
+        rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(
+            str(rep.to_expression()),
+            "v[1] + p[1]*v[1] + (1 + p[2])*v[2] + (1 + p[3])*v[3] + (1 + p[4])*v[4] + (1 + p[5])*v[5]",
+        )
 
     def test_linear2(self):
         m = ConcreteModel()
@@ -4065,14 +4144,21 @@ class Test(unittest.TestCase):
         e = 100*m.g(1,2.0,'3')
         rep = generate_standard_repn(e, compute_values=True)
         self.assertEqual(str(rep.to_expression()), "300")
+        self.assertEqual(rep.polynomial_degree(), 0)
         rep = generate_standard_repn(e, compute_values=False)
+        self.assertEqual(rep.polynomial_degree(), 0)
         # The function ID is inconsistent, so we don't do a test
         #self.assertEqual(str(rep.to_expression()), "100*g(0, 1, 2.0, '3')")
 
         e = 100*m.g(1,2.0,'3',m.v)
         rep = generate_standard_repn(e, compute_values=True)
         self.assertEqual(str(rep.to_expression()), "400")
+        self.assertEqual(rep.polynomial_degree(), 0)
         rep = generate_standard_repn(e, compute_values=False)
+        # FIXME: this is a lie: the degree should be 0, but because
+        # compute_falues=False creates a "structural" standard repn, the
+        # computed degree appears to be general nonlinear.
+        self.assertEqual(rep.polynomial_degree(), None)
         # The function ID is inconsistent, so we don't do a test
         #self.assertEqual(str(rep.to_expression()), "100*g(0, 1, 2.0, '3', v)")
 

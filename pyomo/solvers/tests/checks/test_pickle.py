@@ -9,9 +9,6 @@
 #  ___________________________________________________________________________
 
 import pickle
-import os
-from os.path import join, dirname, abspath
-import warnings
 import types
 try:
     import new
@@ -19,10 +16,9 @@ try:
 except:
     new_available=False
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.testcases import test_scenarios
-
 
 #
 # A function that returns a function that gets
@@ -48,12 +44,17 @@ def create_test_method(model, solver, io,
         load_solutions = (not model_class.solve_should_fail) and \
                          (test_case.status != 'expected failure')
 
-        opt, status = model_class.solve(solver,
-                                        io,
-                                        test_case.testcase.io_options,
-                                        test_case.testcase.options,
-                                        symbolic_labels,
-                                        load_solutions)
+        try:
+            opt, status = model_class.solve(solver,
+                                            io,
+                                            test_case.testcase.io_options,
+                                            test_case.testcase.options,
+                                            symbolic_labels,
+                                            load_solutions)
+        except:
+            if test_case.status == 'expected failure':
+                return
+            raise
         m = pickle.loads(pickle.dumps(model_class.model))
 
         #
@@ -102,11 +103,30 @@ def create_test_method(model, solver, io,
         # then unpickle and load status
         inst, res = pickle.loads(pickle.dumps([instance3,status3]))
 
+    # 03/23/2021: IDAES-ext added CBC 2.10.4 to their official release
+    #             This is causing failures in this test.
+    #             Manually turning off CBC tests until a solution can be found.
+    #             - mrmundt
+    if solver == 'cbc':
+        def skipping_test(self):
+            self.skipTest('SKIP: cbc currently does not work.')
+        return skipping_test
+
     # Skip this test if the status is 'skip'
     if test_case.status == 'skip':
-        def skipping_this(self):
+        def skipping_test(self):
             return self.skipTest(test_case.msg)
-        return skipping_this
+        return skipping_test
+
+    # If this solver is in demo mode
+    size = getattr(test_case.model, 'size', (None, None, None))
+    for prb, sol in zip(size, test_case.demo_limits):
+        if prb is None or sol is None:
+            continue
+        if prb > sol:
+            def skipping_test(self):
+                self.skipTest("Problem is too large for unlicensed %s solver" % solver)
+            return skipping_test
 
     if is_expected_failure:
         @unittest.expectedFailure
@@ -133,6 +153,7 @@ for model in test_models():
         cls = new.classobj(name, (unittest.TestCase,), {})
     else:
         cls = types.new_class(name, (unittest.TestCase,))
+        cls.__module__ = __name__
     cls = unittest.category(*case.level)(cls)
     driver[model] = cls
     globals()[name] = cls
@@ -142,16 +163,22 @@ for model in test_models():
 for key, value in test_scenarios(lambda c: c.test_pickling):
     model, solver, io = key
     cls = driver[model]
+
     # Symbolic labels
     test_name = "test_"+solver+"_"+io +"_symbolic_labels"
     test_method = create_test_method(model, solver, io, value, True)
     if test_method is not None:
+        test_method = unittest.category('smoke','nightly',solver)(test_method)
         setattr(cls, test_name, test_method)
+        test_method = None
+
     # Non-symbolic labels
     test_name = "test_"+solver+"_"+io +"_nonsymbolic_labels"
     test_method = create_test_method(model, solver, io, value, False)
     if test_method is not None:
+        test_method = unittest.category('smoke','nightly',solver)(test_method)
         setattr(cls, test_name, test_method)
+        test_method = None
 
 # Reset the cls variable, since it contains a unittest.TestCase subclass.
 # This prevents this class from being processed twice!

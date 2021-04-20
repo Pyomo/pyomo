@@ -14,42 +14,28 @@
 
 __all__ = ['ProblemWriter_nl']
 
-try:
-    basestring
-except:
-    basestring = str
-
 import itertools
 import logging
 import operator
 import os
 import time
+from math import isclose
 
-from pyutilib.math.util import isclose
-from pyutilib.misc import PauseGC
-
-from pyomo.opt import ProblemFormat
-from pyomo.opt.base import *
+from pyomo.common.gc_manager import PauseGC
+from pyomo.opt import ProblemFormat, AbstractProblemWriter, WriterFactory
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import (NumericConstant,
                                       native_numeric_types,
-                                      value)
-from pyomo.core.base import *
-from pyomo.core.base import SymbolMap, Block
-from pyomo.core.base.var import Var
-from pyomo.core.base import _ExpressionData, Expression, SortComponents
-from pyomo.core.base import var
-from pyomo.core.base import param
+                                      value,
+                                      is_fixed)
+from pyomo.core.base import SymbolMap, NameLabeler, _ExpressionData, SortComponents, var, param, Var, ExternalFunction, ComponentMap, Objective, Constraint, SOSConstraint, Suffix
 import pyomo.core.base.suffix
-from pyomo.repn.standard_repn import StandardRepn, generate_standard_repn
+from pyomo.repn.standard_repn import generate_standard_repn
 
 import pyomo.core.kernel.suffix
 from pyomo.core.kernel.block import IBlock
 from pyomo.core.kernel.expression import IIdentityExpression
 from pyomo.core.kernel.variable import IVariable
-
-from six import itervalues, iteritems
-from six.moves import xrange, zip
 
 logger = logging.getLogger('pyomo.core')
 
@@ -328,7 +314,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         if len(io_options):
             raise ValueError(
                 "ProblemWriter_nl passed unrecognized io_options:\n\t" +
-                "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(io_options)))
+                "\n\t".join("%s = %s" % (k,v) for k,v in io_options.items()))
 
         if filename is None:
             filename = model.name + ".nl"
@@ -343,7 +329,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             comment_str = _op_comment[optype]
             if type(template_str) is tuple:
                 op_strings = []
-                for i in xrange(len(template_str)):
+                for i in range(len(template_str)):
                     if symbolic_solver_labels:
                         op_strings.append(template_str[i].format(C=comment_str[i]))
                     else:
@@ -450,7 +436,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             n = len(exp)
             if n > 2:
                 OUTPUT.write(nary_sum_str % (n))
-                for i in xrange(0,n):
+                for i in range(0,n):
                     assert(exp[i].__class__ is tuple)
                     coef = exp[i][0]
                     child_exp = exp[i][1]
@@ -458,7 +444,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         OUTPUT.write(coef_term_str % (coef))
                     self._print_nonlinear_terms_NL(child_exp)
             else: # n == 1 or 2
-                for i in xrange(0,n):
+                for i in range(0,n):
                     assert(exp[i].__class__ is tuple)
                     coef = exp[i][0]
                     child_exp = exp[i][1]
@@ -568,7 +554,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                     exp.nargs(),
                                     exp.name))
                 for arg in exp.args:
-                    if isinstance(arg, basestring):
+                    if isinstance(arg, str):
                         OUTPUT.write(string_arg_str % (len(arg), arg))
                     elif arg.is_fixed():
                         self._print_nonlinear_terms_NL(arg())
@@ -809,7 +795,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #         cntr))
         #     cntr += len(vars_counter)
         #     Vars_dict.update(vars_counter)
-        self._varID_map = dict((id(val),key) for key,val in iteritems(Vars_dict))
+        self._varID_map = dict((id(val),key) for key,val in Vars_dict.items())
         self_varID_map = self._varID_map
         # Use to label the rest of the components (which we will not encounter twice)
         trivial_labeler = _Counter(cntr)
@@ -1120,7 +1106,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         if include_all_variable_bounds:
             # classify unused vars as linear
             AllVars = set(self_varID_map[id(vardata)]
-                          for vardata in itervalues(Vars_dict))
+                          for vardata in Vars_dict.values())
             UnusedVars = AllVars.difference(UsedVars)
             LinearVars.update(UnusedVars)
 
@@ -1234,6 +1220,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
             subsection_timer.report("Write .col file")
             subsection_timer.reset()
 
+        if len(full_var_list) < 1:
+            raise ValueError("No variables appear in the Pyomo model constraints or"
+                             " objective. This is not supported by the NL file interface")
+
         #
         # Print Header
         #
@@ -1320,7 +1310,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # "F" lines
         #
-        for fcn, fid in sorted(itervalues(self.external_byFcn),
+        for fcn, fid in sorted(self.external_byFcn.values(),
                                key=operator.itemgetter(1)):
             OUTPUT.write("F%d 1 -1 %s\n" % (fid, fcn._function))
 
@@ -1448,7 +1438,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             obj_s_lines = []
             mod_s_lines = []
             for suffix in suffixes:
-                for component_data, suffix_value in iteritems(suffix):
+                for component_data, suffix_value in suffix.items():
 
                     try:
                         symbol = symbol_map_byObject[id(component_data)]
@@ -1518,7 +1508,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         if symbolic_solver_labels:
             rowf = open(rowfilename,'w')
 
-        cu = [0 for i in xrange(len(full_var_list))]
+        cu = [0 for i in range(len(full_var_list))]
         for con_ID in nonlin_con_order_list:
             con_data, wrapped_repn = Constraints_dict[con_ID]
             row_id = self_ampl_con_id[con_ID]
@@ -1564,7 +1554,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # "O" lines
         #
-        for obj_ID, (obj, wrapped_repn) in iteritems(Objectives_dict):
+        for obj_ID, (obj, wrapped_repn) in Objectives_dict.items():
 
             k = 0
             if not obj.is_minimizing():
@@ -1612,7 +1602,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             s_lines = []
             for dual_suffix in suffix_dict['dual']:
 
-                for constraint_data, suffix_value in iteritems(dual_suffix):
+                for constraint_data, suffix_value in dual_suffix.items():
                     try:
                         # a constraint might not be referenced
                         # (inactive / on inactive block)
@@ -1728,7 +1718,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             OUTPUT.write("\t#intermediate Jacobian column lengths")
         OUTPUT.write("\n")
         ktot = 0
-        for i in xrange(n1):
+        for i in range(n1):
             ktot += cu[i]
             OUTPUT.write("%d\n"%(ktot))
         del cu
@@ -1791,7 +1781,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # "G" lines
         #
         for obj_ID, (obj, wrapped_repn) in \
-               iteritems(Objectives_dict):
+               Objectives_dict.items():
 
             grad_entries = {}
             for idx, obj_var in enumerate(
@@ -1829,14 +1819,14 @@ class ProblemWriter_nl(AbstractProblemWriter):
             else:
                 _parent = v.parent_block()
                 while _parent is not None and _parent is not model:
-                    if _parent.type() is not model.type():
+                    if _parent.ctype is not model.type():
                         _errors.append(
                             "Variable '%s' exists within %s '%s', "
                             "but is used by an active "
                             "expression.  Currently variables "
                             "must be reachable through a tree "
                             "of active Blocks."
-                            % (v.name, _parent.type().__name__,
+                            % (v.name, _parent.ctype.__name__,
                                _parent.name))
                     if not _parent.active:
                         _errors.append(
@@ -1845,7 +1835,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                             "an active expression.  Currently "
                             "variables must be reachable through "
                             "a tree of active Blocks."
-                            % (v.name, _parent.type().__name__,
+                            % (v.name, _parent.ctype.__name__,
                                _parent.name))
                     _parent = _parent.parent_block()
 

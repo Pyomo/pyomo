@@ -8,17 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.core.expr
 from pyomo.core.expr.numvalue import is_numeric_data
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
-     _abstract_readwrite_property,
-     _abstract_readonly_property)
+     _abstract_readwrite_property)
 from pyomo.core.kernel.container_utils import \
     define_simple_containers
 
-import six
-from six.moves import zip
 
 class ISOS(ICategorizedObject):
     """

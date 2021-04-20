@@ -8,12 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.environ import *
+from pyomo.environ import Var, maximize, value
 from pyomo.opt import SolverFactory
-
-from six import itervalues
-
-#import yaml
 
 opt = SolverFactory('cplexamp',solve_io='nl')
 
@@ -48,12 +44,9 @@ for problem_name in problem_names:
 
     res = dict()
     for block in inst.block_data_objects(active=True):
-        for variable in itervalues(block.component_map(Var, active=True)):
-            for var in itervalues(variable):
+        for variable in block.component_map(Var, active=True).values():
+            for var in variable.values():
                 name = var.name
                 if (name[:2] == 'Fx') or (name[:1] == 'x'):
                     res[name] = value(var)
     print(res)
-
-    #with open(problem_name+'_baseline_results.yml','w') as f:
-    #    yaml.dump(res,f)

@@ -8,12 +8,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.core import ConcreteModel, Var, Constraint
 from pyomo.gdp import Disjunction, Disjunct
 
-from six import iterkeys
 
 class TestDisjunction(unittest.TestCase):
     def test_empty_disjunction(self):
@@ -43,7 +42,7 @@ class TestDisjunction(unittest.TestCase):
         self.assertEqual(len(m.component_map(Disjunction)), 1)
         self.assertEqual(len(m.component_map(Disjunct)), 1)
 
-        implicit_disjuncts = list(iterkeys(m.component_map(Disjunct)))
+        implicit_disjuncts = list(m.component_map(Disjunct).keys())
         self.assertEqual(implicit_disjuncts[0][:2], "d_")
         disjuncts = m.d.disjuncts
         self.assertEqual(len(disjuncts), 2)
@@ -57,7 +56,7 @@ class TestDisjunction(unittest.TestCase):
         m.e = Disjunction(expr=[m.y<=0, m.x>=1])
         self.assertEqual(len(m.component_map(Disjunction)), 2)
         self.assertEqual(len(m.component_map(Disjunct)), 2)
-        implicit_disjuncts = list(iterkeys(m.component_map(Disjunct)))
+        implicit_disjuncts = list(m.component_map(Disjunct).keys())
         self.assertEqual(implicit_disjuncts[1][:12], "e_disjuncts_")
         disjuncts = m.e.disjuncts
         self.assertEqual(len(disjuncts), 2)
@@ -80,7 +79,7 @@ class TestDisjunction(unittest.TestCase):
             _gen() ])
         self.assertEqual(len(m.component_map(Disjunction)), 3)
         self.assertEqual(len(m.component_map(Disjunct)), 3)
-        implicit_disjuncts = list(iterkeys(m.component_map(Disjunct)))
+        implicit_disjuncts = list(m.component_map(Disjunct).keys())
         self.assertEqual(implicit_disjuncts[2][:12], "f_disjuncts")
         disjuncts = m.f.disjuncts
         self.assertEqual(len(disjuncts), 3)
@@ -227,6 +226,51 @@ class TestDisjunct(unittest.TestCase):
         self.assertFalse(m.d.disjuncts[1].indicator_var.is_fixed())
         self.assertFalse(m.d.disjuncts[2].indicator_var.is_fixed())
 
+    def test_indexed_disjunct_active_property(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 12))
+        @m.Disjunct([0, 1, 2])
+        def disjunct(d, i):
+            m = d.model()
+            if i == 0:
+                d.cons = Constraint(expr=m.x >= 3)
+            if i == 1:
+                d.cons = Constraint(expr=m.x >= 8)
+            else:
+                d.cons = Constraint(expr=m.x == 12)
+
+        self.assertTrue(m.disjunct.active)
+        m.disjunct[1].deactivate()
+        self.assertTrue(m.disjunct.active)
+        m.disjunct[0].deactivate()
+        m.disjunct[2].deactivate()
+        self.assertFalse(m.disjunct.active)
+        m.disjunct.activate()
+        self.assertTrue(m.disjunct.active)
+        m.disjunct.deactivate()
+        self.assertFalse(m.disjunct.active)
+        for i in range(3):
+            self.assertFalse(m.disjunct[i].active)
+
+    def test_indexed_disjunction_active_property(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 12))
+        @m.Disjunction([0, 1, 2])
+        def disjunction(m, i):
+            return [m.x == i*5, m.x == i*5 + 1]
+        
+        self.assertTrue(m.disjunction.active)
+        m.disjunction[2].deactivate()
+        self.assertTrue(m.disjunction.active)
+        m.disjunction[0].deactivate()
+        m.disjunction[1].deactivate()
+        self.assertFalse(m.disjunction.active)
+        m.disjunction.activate()
+        self.assertTrue(m.disjunction.active)
+        m.disjunction.deactivate()
+        self.assertFalse(m.disjunction.active)
+        for i in range(3):
+            self.assertFalse(m.disjunction[i].active)
 
 if __name__ == '__main__':
     unittest.main()

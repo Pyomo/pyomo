@@ -1,20 +1,31 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import logging
 
-import os
 import numpy as np
-from pyutilib.math import infinity
-from pyomo.common.modeling import randint, unique_component_name
-from pyomo.core import Block, Var, Param, Set, VarList, ConstraintList, Constraint, Objective, RangeSet, value, ConcreteModel, Reals, sqrt, minimize, maximize
+from math import inf
+from pyomo.common.collections import ComponentSet
+from pyomo.common.modeling import unique_component_name
+from pyomo.core import (
+    Block, Var, Param, VarList, ConstraintList, Constraint, Objective,
+    RangeSet, value, ConcreteModel, Reals, sqrt, minimize, maximize,
+)
 from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.base.external import PythonCallbackFunction
-from pyomo.core.base.var import _VarData
 from pyomo.core.base.numvalue import nonpyomo_leaf_types
 from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
 from pyomo.contrib.trustregion.GeometryGenerator import (
     generate_quadratic_rom_geometry
 )
-from pyomo.contrib.trustregion.helper import *
+from pyomo.contrib.trustregion.helper import maxIgnoreNone, minIgnoreNone
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
@@ -152,7 +163,7 @@ class PyomoInterface(object):
         TRF = Block()
 
         # Get all varibles
-        seenVar = Set()
+        seenVar = set()
         allVariables = []
         for var in model.component_data_objects(Var):
             if id(var) not in seenVar:
@@ -186,7 +197,7 @@ class PyomoInterface(object):
         # xvars and zvars are lists of x and z varibles as in the paper
         TRF.xvars = []
         TRF.zvars = []
-        seenVar = Set()
+        seenVar = set()
         for varss in TRF.exfn_xvars:
             for var in varss:
                 if id(var) not in seenVar:
@@ -557,7 +568,7 @@ class PyomoInterface(object):
         else:
             print("Waring: Crticality check fails with solver Status: " + str(results.solver.status))
             print("And Termination Conditions: " + str(results.solver.termination_condition))
-            return False, infinity
+            return False, inf
 
 
 

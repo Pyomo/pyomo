@@ -9,16 +9,10 @@
 #  ___________________________________________________________________________
 
 import logging
-import os
-import six
-
-import pyutilib.services
-import pyutilib.misc
 
 from pyomo.opt.base.solvers import SolverFactory
-from pyomo.opt.base import *
-from pyomo.opt.results import *
-from pyomo.opt.solver import *
+from pyomo.common import Executable
+from pyomo.common.collections import Bunch
 from pyomo.solvers.plugins.solvers.ASL import ASL
 
 logger = logging.getLogger('pyomo.solvers')
@@ -38,11 +32,11 @@ class PATHAMPL(ASL):
         #
         # Define solver capabilities, which default to 'None'
         #
-        self._capabilities = pyutilib.misc.Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
 
     def _default_executable(self):
-        executable = pyomo.common.Executable("pathampl")
+        executable = Executable("pathampl")
         if not executable:                      #pragma:nocover
             logger.warning("Could not locate the 'pathampl' executable, "
                            "which is required for solver %s" % self.name)

@@ -12,11 +12,11 @@
 # NOTE: deprecated code
 #
 from pyomo.common.deprecation import deprecated
-from pyomo.core import *
+from pyomo.core import TransformationFactory, Constraint, Set, Var, Objective, AbstractModel, maximize
+from pyomo.repn import generate_standard_repn
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.core.plugins.transform.standard_form import StandardForm
 from pyomo.core.plugins.transform.util import partial, process_canonical_repn
-from pyomo.common.deprecation import deprecated
 
 
 @TransformationFactory.register("core.lagrangian_dual", doc="Create the LP dual model.")

@@ -12,26 +12,17 @@
 # Test the mpec_minlp solver
 #
 
-import sys
 import os
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir,'..','..','..','examples','mpec'))
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
+from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 import pyomo.opt
 import pyomo.scripting.pyomo_main as pyomo_main
 from pyomo.scripting.util import cleanup
-from pyomo.environ import *
-
-from six import iteritems
-
-try:
-    import yaml
-    yaml_available=True
-except ImportError:
-    yaml_available=False
 
 solvers = pyomo.opt.check_available_solvers('cplex', 'glpk')
 
@@ -85,7 +76,7 @@ class CommonTests:
 
     def getObjective(self, fname):
         FILE = open(fname,'r')
-        data = yaml.load(FILE)
+        data = yaml.load(FILE, **yaml_load_args)
         FILE.close()
         solutions = data.get('Solution', [])
         ans = []
@@ -114,7 +105,7 @@ class CommonTests:
         self.assertEqual(len(refObj), len(ansObj))
         for i in range(len(refObj)):
             self.assertEqual(len(refObj[i]), len(ansObj[i]))
-            for key,val in iteritems(refObj[i]):
+            for key,val in refObj[i].items():
                 self.assertAlmostEqual(val['Value'], ansObj[i].get(key,None)['Value'], places=3)
 
 

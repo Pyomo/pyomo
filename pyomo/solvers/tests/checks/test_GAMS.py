@@ -9,10 +9,14 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.environ import *
-from pyomo.solvers.plugins.solvers.GAMS import GAMSShell, GAMSDirect
-import pyutilib.th as unittest
-from pyutilib.misc import capture_output
+from pyomo.environ import ConcreteModel, Var, Objective, Constraint, maximize, Expression, log10
+from pyomo.opt import SolverFactory, TerminationCondition
+
+from pyomo.solvers.plugins.solvers.GAMS import (
+    GAMSShell, GAMSDirect, gdxcc_available
+)
+import pyomo.common.unittest as unittest
+from pyomo.common.tee import capture_output
 import os, shutil
 from tempfile import mkdtemp
 
@@ -101,9 +105,9 @@ class GAMSTests(unittest.TestCase):
             self.assertFalse(os.path.exists(os.path.join(tmpdir,
                                                          'output.lst')))
             self.assertFalse(os.path.exists(os.path.join(tmpdir,
-                                                         'results.dat')))
+                                                         'GAMS_MODEL_p.gdx')))
             self.assertFalse(os.path.exists(os.path.join(tmpdir,
-                                                         'resultsstat.dat')))
+                                                         'GAMS_MODEL_s.gdx')))
 
             os.rmdir(tmpdir)
 
@@ -156,10 +160,16 @@ class GAMSTests(unittest.TestCase):
                                                          'model.gms')))
             self.assertTrue(os.path.exists(os.path.join(tmpdir,
                                                          'output.lst')))
-            self.assertTrue(os.path.exists(os.path.join(tmpdir,
-                                                         'results.dat')))
-            self.assertTrue(os.path.exists(os.path.join(tmpdir,
-                                                         'resultsstat.dat')))
+            if gdxcc_available:
+                self.assertTrue(os.path.exists(os.path.join(
+                    tmpdir, 'GAMS_MODEL_p.gdx')))
+                self.assertTrue(os.path.exists(os.path.join(
+                    tmpdir, 'results_s.gdx')))
+            else:
+                self.assertTrue(os.path.exists(os.path.join(
+                    tmpdir, 'results.dat')))
+                self.assertTrue(os.path.exists(os.path.join(
+                    tmpdir, 'resultsstat.dat')))
 
             shutil.rmtree(tmpdir)
 

@@ -12,16 +12,14 @@ __all__ = ['SOSConstraint']
 
 import sys
 import logging
-import six
-from six.moves import zip, xrange
 
+from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import ActiveIndexedComponent, UnindexedComponent_set
 from pyomo.core.base.set_types import PositiveIntegers
-from pyomo.core.base.sets import Set, _IndexedOrderedSetData
 
 logger = logging.getLogger('pyomo.core')
 
@@ -219,8 +217,7 @@ class SOSConstraint(ActiveIndexedComponent):
         Construct this component
         """
         assert data is None # because I don't know why it's an argument
-        generate_debug_messages \
-            = __debug__ and logger.isEnabledFor(logging.DEBUG)
+        generate_debug_messages = is_debug_set(logger)
         if self._constructed is True:   #pragma:nocover
             return
 
@@ -236,7 +233,7 @@ class SOSConstraint(ActiveIndexedComponent):
             else:
                 if not self.is_indexed():
                     if self._sosSet is None:
-                        if getattr(self._sosVars.index_set(), 'ordered', False):
+                        if getattr(self._sosVars.index_set(), 'isordered', lambda *x: False)():
                             _sosSet = {None: list(self._sosVars.index_set())}
                         else:
                             _sosSet = {None: set(self._sosVars.index_set())}
@@ -245,7 +242,7 @@ class SOSConstraint(ActiveIndexedComponent):
                 else:
                     _sosSet = self._sosSet
 
-                for index, sosSet in six.iteritems(_sosSet):
+                for index, sosSet in _sosSet.items():
                     if generate_debug_messages:     #pragma:nocover
                         logger.debug("  Constructing "+self.name+" index "+str(index))
 
@@ -256,9 +253,7 @@ class SOSConstraint(ActiveIndexedComponent):
                         ordered=False
                         if type(sosSet) is list or sosSet is UnindexedComponent_set or len(sosSet) == 1:
                             ordered=True
-                        if hasattr(sosSet, 'ordered') and sosSet.ordered:
-                            ordered=True
-                        if type(sosSet) is _IndexedOrderedSetData:
+                        if hasattr(sosSet, 'isordered') and sosSet.isordered():
                             ordered=True
                         if not ordered:
                             raise ValueError("Cannot define a SOS over an unordered index.")
@@ -310,7 +305,7 @@ class SOSConstraint(ActiveIndexedComponent):
         soscondata.level = self._sosLevel
 
         if weights is None:
-            soscondata.set_items(variables, list(xrange(1, len(variables)+1)))
+            soscondata.set_items(variables, list(range(1, len(variables)+1)))
         else:
             soscondata.set_items(variables, weights)
 
@@ -324,7 +319,7 @@ class SOSConstraint(ActiveIndexedComponent):
             ostream.write(self.doc+'\n')
             ostream.write("  ")
         ostream.write("\tSize="+str(len(self._data.keys()))+' ')
-        if isinstance(self._index_set,Set):
+        if self.is_indexed():
             ostream.write("\tIndex= "+self._index_set.name+'\n')
         else:
             ostream.write("\n")

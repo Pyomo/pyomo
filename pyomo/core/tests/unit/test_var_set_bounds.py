@@ -15,13 +15,12 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
-from six.moves import xrange
+import pyomo.common.unittest as unittest
 
-import pyomo.opt
-from pyomo.environ import *
+from pyomo.opt import check_available_solvers
+from pyomo.environ import ConcreteModel, RangeSet, Var, Set, Objective, Constraint, SolverFactory, AbstractModel
 
-solvers = pyomo.opt.check_available_solvers('glpk')
+solvers = check_available_solvers('glpk')
 
 # GAH: These tests been temporarily disabled. It is no longer the job of Var
 #      to validate its domain at the time of construction. It only needs to
@@ -152,6 +151,8 @@ class TestVarSetBounds(unittest.TestCase):
         self.model.con2 = Constraint(expr=self.model.y[2] <= 2.9)
         
         self.instance = self.model.create_instance()
+        # !! THIS SEEMS LIKE A BUG!! - mrmundt
+        # I think it's supposed to be SolverFactory
         self.opt = solver["glpk"]
         self.results = self.opt.solve(self.instance)
         self.instance.load(self.results)
@@ -239,7 +240,7 @@ class TestVarSetBounds(unittest.TestCase):
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def Xtest_rangeset_domain(self):
         self.model = ConcreteModel()
-        self.model.y = Var([1,2], within=xrange(4))
+        self.model.y = Var([1,2], within=range(4))
         
         self.model.obj = Objective(expr=self.model.y[1]-self.model.y[2])
         self.model.con1 = Constraint(expr=self.model.y[1] >= 1.1)

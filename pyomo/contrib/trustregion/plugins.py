@@ -10,15 +10,16 @@
 
 import logging
 
-from pyutilib.services import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.common.download import DownloadFactory
 from pyomo.opt.base import SolverFactory, OptSolver
 from pyomo.solvers.plugins.solvers.ASL import ASL
 
-from pyutilib.misc.config import ConfigBlock, ConfigValue
 from pyomo.common.config import ( 
-    PositiveInt, PositiveFloat, NonNegativeFloat, In)
+    ConfigBlock, ConfigValue, 
+    PositiveInt, PositiveFloat, 
+    NonNegativeFloat, In)
 from pyomo.core import Var, value
 
 from pyomo.contrib.trustregion.TRF import TRF

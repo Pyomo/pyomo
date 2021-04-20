@@ -11,9 +11,8 @@
 from pyomo.core.expr.current import ProductExpression, PowExpression
 from pyomo.core import Binary, value
 from pyomo.core.base import Transformation, TransformationFactory, Var, Constraint, ConstraintList, Block, RangeSet
+from pyomo.core.base.numvalue import as_numeric
 from pyomo.core.base.var import _VarData
-
-from six import iteritems
 
 import logging
 logger = logging.getLogger(__name__)
@@ -136,7 +135,7 @@ class RadixLinearization(Transformation):
                          bounds=(0,2**-precision) )
 
         # Actually discretize the terms we have marked for discretization
-        for _id, _idx in iteritems(_discretize):
+        for _id, _idx in _discretize.items():
             if verbose:
                 logger.info("Discretizing variable %s as %s" %
                             (_counts[_id][0].name, _idx))

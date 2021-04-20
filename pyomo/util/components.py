@@ -8,8 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.common.collections import ComponentMap
 from pyomo.common.modeling import unique_component_name
+
 
 def rename_components(model, component_list, prefix):
     """
@@ -52,3 +53,30 @@ def rename_components(model, component_list, prefix):
         name_map[c] = old_name
 
     return name_map
+
+
+def iter_component(obj):
+    """
+    Yield "child" objects from a component that is defined with either the `base` or `kernel` APIs.
+    If the component is not indexed, it returns itself.
+
+    Parameters
+    ----------
+    obj : ComponentType
+        eg. `TupleContainer`, `ListContainer`, `DictContainer`, `IndexedComponent`, or `Component`
+
+    Returns
+    -------
+    Iterator[ComponentType] : Iterator of the component data objects.
+    """
+    try:
+        # catches `IndexedComponent`, and kernel's `_dict`
+        return iter(obj.values())
+    except AttributeError:
+        pass
+
+    try:
+        # catches list and kernel's `_list` and `_tuple`
+        return iter(obj)
+    except TypeError:
+        return iter((obj,))

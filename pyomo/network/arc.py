@@ -16,10 +16,9 @@ from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
     UnindexedComponent_set)
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.plugin import (ModelComponentFactory,
-    IPyomoScriptModifyInstance, TransformationFactory)
+from pyomo.core.base.plugin import ModelComponentFactory
+from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
-from six import iteritems
 from weakref import ref as weakref_ref
 import logging, sys
 
@@ -159,7 +158,7 @@ class _ArcData(ActiveComponentData):
         if len(vals):
             raise ValueError(
                 "set_value passed unrecognized keywords in val:\n\t" +
-                "\n\t".join("%s = %s" % (k, v) for k, v in iteritems(vals)))
+                "\n\t".join("%s = %s" % (k, v) for k, v in vals.items()))
 
         if directed is not None:
             if source is None and destination is None:
@@ -213,7 +212,7 @@ class _ArcData(ActiveComponentData):
                     "containing exactly 2 Ports.")
             for p in ports:
                 try:
-                    if p.type() is not Port:
+                    if p.ctype is not Port:
                         raise ValueError(msg +
                             "found object '%s' in 'ports' not "
                             "of type Port." % p.name)
@@ -232,7 +231,7 @@ class _ArcData(ActiveComponentData):
                     "for directed Arc.")
             for p, side in [(source, "source"), (destination, "destination")]:
                 try:
-                    if p.type() is not Port:
+                    if p.ctype is not Port:
                         raise ValueError(msg +
                             "%s object '%s' not of type Port." % (p.name, side))
                     elif p.is_indexed():
@@ -293,7 +292,7 @@ class Arc(ActiveIndexedComponent):
 
     def construct(self, data=None):
         """Initialize the Arc"""
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing Arc %s" % self.name)
 
         if self._constructed:
@@ -353,7 +352,7 @@ class Arc(ActiveIndexedComponent):
             [("Size", len(self)),
              ("Index", self._index_set if self.is_indexed() else None),
              ("Active", self.active)],
-            iteritems(self),
+            self.items(),
             ("Ports", "Directed", "Active"),
             lambda k, v: ["(%s, %s)" % v.ports if v.ports is not None else None,
                           v.directed,

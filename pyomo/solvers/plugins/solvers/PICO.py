@@ -8,21 +8,19 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-
 import re
 import os
+import subprocess
 
-from six import iteritems
+from pyomo.common import Executable
+from pyomo.common.errors import  ApplicationError
+from pyomo.common.collections import Bunch
+from pyomo.common.tempfiles import TempfileManager
 
-import pyomo.common
-import pyutilib.common
-import pyutilib.common
-import pyutilib.misc
-
-from pyomo.opt.base import *
-from pyomo.opt.base.solvers import _extract_version
-from pyomo.opt.results import *
-from pyomo.opt.solver import *
+from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
+from pyomo.opt.base.solvers import _extract_version, SolverFactory
+from pyomo.opt.results import SolverResults, SolverStatus, TerminationCondition, SolutionStatus, ProblemSense, Solution
+from pyomo.opt.solver import  SystemCallSolver
 from pyomo.solvers.mockmip import MockMIP
 
 import logging
@@ -92,7 +90,7 @@ class PICOSHELL(SystemCallSolver):
         self.set_problem_format(ProblemFormat.cpxlp)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = pyutilib.misc.Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.integer = True
         #self._capabilities.sos1 = True
@@ -119,7 +117,7 @@ class PICOSHELL(SystemCallSolver):
         return ResultsFormat.soln
 
     def _default_executable(self):
-        executable = pyomo.common.Executable("PICO")
+        executable = Executable("PICO_deprecated_not_supported")
         if not executable:
             logger.warning("Could not locate the 'PICO' executable, "
                            "which is required for solver %s" % self.name)
@@ -134,12 +132,15 @@ class PICOSHELL(SystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = pyutilib.subprocess.run([solver_exec, "--version"], timelimit=1)
+        results = subprocess.run([solver_exec, "--version"], timeout=1,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT,
+                                 universal_newlines=True)
         # 'PICO --version' seems to print 'pebble <version>, PICO <version>
         # we don't wan't the pebble version being advertised so we split
         # the string at the comma before extracting a version number. It
         # also exits with a nonzero return code so don't bother checking it.
-        return _extract_version(results[1].split(',')[1])
+        return _extract_version(results.stdout.split(',')[1])
 
     # Nothing needs to be done here
     #def _presolve(self, *args, **kwds):
@@ -151,7 +152,7 @@ class PICOSHELL(SystemCallSolver):
         # Define log file
         #
         if self._log_file is None:
-            self._log_file = pyutilib.services.TempfileManager.\
+            self._log_file = TempfileManager.\
                             create_tempfile(suffix="PICO.log")
 
         problem_filename_prefix = problem_files[0]
@@ -179,7 +180,7 @@ class PICOSHELL(SystemCallSolver):
             #self._results_file = self.tmpDir+os.sep+"PICO.osrl.xml"
 
         def _check_and_escape_options(options):
-            for key, val in iteritems(self.options):
+            for key, val in self.options.items():
                 tmp_k = str(key)
                 _bad = ' ' in tmp_k
 
@@ -240,7 +241,7 @@ class PICOSHELL(SystemCallSolver):
             cmd.extend(['--output', self._soln_file,
                         problem_files[0]])
 
-        return pyutilib.misc.Bunch(cmd=cmd, log_file=self._log_file, env=env)
+        return Bunch(cmd=cmd, log_file=self._log_file, env=env)
 
     def process_logfile(self):
         """
@@ -407,7 +408,7 @@ class PICOSHELL(SystemCallSolver):
                         range_duals.setdefault(var[4:],[0,0])[1] = val
             # For the range constraints, supply only the dual with the largest
             # magnitude (at least one should always be numerically zero)
-            for key,(ld,ud) in iteritems(range_duals):
+            for key,(ld,ud) in range_duals.items():
                 if abs(ld) > abs(ud):
                     soln_constraints['r_l_'+key] = {"Dual" : ld}
                 else:
@@ -423,7 +424,7 @@ class MockPICO(PICOSHELL,MockMIP):
     def __init__(self, **kwds):
         try:
             PICOSHELL.__init__(self,**kwds)
-        except pyutilib.common.ApplicationError: #pragma:nocover
+        except ApplicationError: #pragma:nocover
             pass                        #pragma:nocover
         MockMIP.__init__(self,"pico")
 

@@ -19,7 +19,6 @@
 # solver is in the current search path for executables
 # on this system. This example was tested using Gurobi
 # Solver 5.0.0
-import six
 
 import pyomo.environ
 from pyomo.core import *
@@ -85,24 +84,24 @@ opt.options['bestbound'] = 1
 model.sstatus[model.x[1]] = sstatus_table['low']
 
 def print_model_suffixes(model):
-    # Six.Print_ all suffix values for all model components in a nice table
-    six.print_("\t",end='')
+    # print all suffix values for all model components in a nice table
+    print("\t",end='')
     for name,suffix in active_import_suffix_generator(model):
-            six.print_("%10s" % (name),end='')
-    six.print_("")
+            print("%10s" % (name),end='')
+    print("")
     for i in model.s:
-        six.print_(model.x[i].name+"\t",end='')
+        print(model.x[i].name+"\t",end='')
         for name,suffix in active_import_suffix_generator(model):
-            six.print_("%10s" % (suffix.get(model.x[i])),end='')
-        six.print_("")
+            print("%10s" % (suffix.get(model.x[i])),end='')
+        print("")
     for i in model.s:
-        six.print_(model.con[i].name+"\t",end='')
+        print(model.con[i].name+"\t",end='')
         for name,suffix in active_import_suffix_generator(model):
-            six.print_("%10s" % (suffix.get(model.con[i])),end='')
-        six.print_("")
-    six.print_(model.obj.name+"\t",end='')
+            print("%10s" % (suffix.get(model.con[i])),end='')
+        print("")
+    print(model.obj.name+"\t",end='')
     for name,suffix in active_import_suffix_generator(model):
-        six.print_("%10s" % (suffix.get(model.obj)),end='')
+        print("%10s" % (suffix.get(model.obj)),end='')
     print("")
     print("")
 

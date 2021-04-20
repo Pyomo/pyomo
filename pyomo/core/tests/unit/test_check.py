@@ -16,11 +16,11 @@
 #
 
 import os
-from six import StringIO
+from io import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
-from pyomo.environ import *
+from pyomo.environ import AbstractModel, BuildCheck, Param, Set, value
 
 class PyomoModel(unittest.TestCase):
 
@@ -173,8 +173,9 @@ class TestMisc(unittest.TestCase):
         buf = StringIO()
         instance.pprint(ostream=buf)
         self.assertEqual(buf.getvalue(),"""1 Set Declarations
-    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
-        [1, 2, 3]
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {1, 2, 3}
 
 2 BuildCheck Declarations
     c1 : 

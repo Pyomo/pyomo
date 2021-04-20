@@ -13,27 +13,30 @@ import os
 import re
 import time
 import logging
+import subprocess
 
-import pyomo.common
-import pyutilib.common
-import pyutilib.misc
+from pyomo.common import Executable
+from pyomo.common.errors import ApplicationError
+from pyomo.common.tempfiles import TempfileManager
 
-from pyomo.opt.base import *
-from pyomo.opt.base.solvers import _extract_version
-from pyomo.opt.results import *
-from pyomo.opt.solver import *
+from pyomo.common.collections import ComponentMap, Bunch
+from pyomo.opt.base import (
+    ProblemFormat, ResultsFormat, OptSolver, BranchDirection,
+)
+from pyomo.opt.base.solvers import _extract_version, SolverFactory
+from pyomo.opt.results import (
+    SolverResults, SolverStatus, TerminationCondition, SolutionStatus,
+    ProblemSense, Solution,
+)
+from pyomo.opt.solver import ILMLicensedSystemCallSolver
 from pyomo.solvers.mockmip import MockMIP
+from pyomo.core.base import Var, Suffix, active_export_suffix_generator
+from pyomo.core.kernel.suffix import export_suffix_generator
 from pyomo.core.kernel.block import IBlock
+from pyomo.util.components import iter_component
 
 logger = logging.getLogger('pyomo.solvers')
 
-from six import iteritems
-from six.moves import xrange
-
-try:
-    unicode
-except:
-    basestring = unicode = str
 
 def _validate_file_name(cplex, filename, description):
     """Validate filenames against the set of allowable chaacters in CPLEX.
@@ -112,6 +115,28 @@ class CPLEX(OptSolver):
         return opt
 
 
+class ORDFileSchema(object):
+    HEADER = "* ENCODING=ISO-8859-1\nNAME             Priority Order\n"
+    FOOTER = "ENDATA\n"
+
+    @classmethod
+    def ROW(cls, name, priority, branch_direction=None):
+        return " %s %s %s\n" % (
+            cls._direction_to_str(branch_direction),
+            name,
+            priority,
+        )
+
+    @staticmethod
+    def _direction_to_str(branch_direction):
+        try:
+            return {BranchDirection.down: "DN", BranchDirection.up: "UP"}[
+                branch_direction
+            ]
+        except KeyError:
+            return ""
+
+
 @SolverFactory.register('_cplex_shell', doc='Shell interface to the CPLEX LP/MIP solver')
 class CPLEXSHELL(ILMLicensedSystemCallSolver):
     """Shell interface to the CPLEX LP/MIP solver
@@ -141,7 +166,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         self.set_problem_format(ProblemFormat.cpxlp)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = pyutilib.misc.Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -162,9 +187,6 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
     # write a warm-start file in the CPLEX MST format.
     #
     def _warm_start(self, instance):
-
-        from pyomo.core.base import Var
-
         # for each variable in the symbol_map, add a child to the
         # variables element.  Both continuous and discrete are accepted
         # (and required, depending on other options), according to the
@@ -201,12 +223,78 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             mst_file.write("</variables>\n")
             mst_file.write("</CPLEXSolution>\n")
 
+    # Expected names of `Suffix` components for branching priorities and directions respectively
+    SUFFIX_PRIORITY_NAME = "priority"
+    SUFFIX_DIRECTION_NAME = "direction"
+
+    def _write_priorities_file(self, instance):
+        """ Write a variable priorities file in the CPLEX ORD format. """
+        priorities, directions = self._get_suffixes(instance)
+        rows = self._convert_priorities_to_rows(instance, priorities, directions)
+        self._write_priority_rows(rows)
+
+    def _get_suffixes(self, instance):
+        if isinstance(instance, IBlock):
+            suffixes = (
+                (suf.name, suf)
+                for suf in export_suffix_generator(
+                    instance, datatype=Suffix.INT, active=True, descend_into=False
+                )
+            )
+        else:
+            suffixes = active_export_suffix_generator(instance, datatype=Suffix.INT)
+        suffixes = dict(suffixes)
+
+        if self.SUFFIX_PRIORITY_NAME not in suffixes:
+            raise ValueError(
+                "Cannot write branching priorities file as `model.%s` Suffix has not been declared."
+                % (self.SUFFIX_PRIORITY_NAME,)
+            )
+
+        return (
+            suffixes[self.SUFFIX_PRIORITY_NAME],
+            suffixes.get(self.SUFFIX_DIRECTION_NAME, ComponentMap()),
+        )
+
+    def _convert_priorities_to_rows(self, instance, priorities, directions):
+        if isinstance(instance, IBlock):
+            smap = getattr(instance, "._symbol_maps")[self._smap_id]
+        else:
+            smap = instance.solutions.symbol_map[self._smap_id]
+        byObject = smap.byObject
+
+        rows = []
+        for var, priority in priorities.items():
+            if priority is None or not var.active:
+                continue
+
+            if not (0 <= priority == int(priority)):
+                raise ValueError("`priority` must be a non-negative integer")
+
+            var_direction = directions.get(var, BranchDirection.default)
+
+            for child_var in iter_component(var):
+                if id(child_var) not in byObject:
+                    continue
+
+                child_var_direction = directions.get(child_var, var_direction)
+
+                rows.append((byObject[id(child_var)], priority, child_var_direction))
+        return rows
+
+    def _write_priority_rows(self, rows):
+        with open(self._priorities_file_name, "w") as ord_file:
+            ord_file.write(ORDFileSchema.HEADER)
+            for var_name, priority, direction in rows:
+                ord_file.write(ORDFileSchema.ROW(var_name, priority, direction))
+            ord_file.write(ORDFileSchema.FOOTER)
+
     # over-ride presolve to extract the warm-start keyword, if specified.
     def _presolve(self, *args, **kwds):
 
         # create a context in the temporary file manager for
         # this plugin - is "pop"ed in the _postsolve method.
-        pyutilib.services.TempfileManager.push()
+        TempfileManager.push()
 
         # if the first argument is a string (representing a filename),
         # then we don't have an instance => the solver is being applied
@@ -221,18 +309,33 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # create the temporary file - assuming that the user has already, via some external
         # mechanism, invoked warm_start() with a instance to create the warm start file.
         if self._warm_start_solve and \
-           isinstance(args[0], basestring):
+           isinstance(args[0], str):
             # we assume the user knows what they are doing...
             pass
         elif self._warm_start_solve and \
-             (not isinstance(args[0], basestring)):
+             (not isinstance(args[0], str)):
             # assign the name of the warm start file *before* calling the base class
             # presolve - the base class method ends up creating the command line,
             # and the warm start file-name is (obviously) needed there.
             if self._warm_start_file_name is None:
                 assert not user_warmstart
-                self._warm_start_file_name = pyutilib.services.TempfileManager.\
+                self._warm_start_file_name = TempfileManager.\
                                              create_tempfile(suffix = '.cplex.mst')
+
+        self._priorities_solve = kwds.pop("priorities", False)
+        self._priorities_file_name = _validate_file_name(
+            self, kwds.pop("priorities_file", None), "branching priorities"
+        )
+        user_priorities = self._priorities_file_name is not None
+
+        if (
+            self._priorities_solve
+            and not isinstance(args[0], str)
+            and not user_priorities
+        ):
+            self._priorities_file_name = TempfileManager.create_tempfile(
+                suffix=".cplex.ord"
+            )
 
         # let the base class handle any remaining keywords/actions.
         ILMLicensedSystemCallSolver._presolve(self, *args, **kwds)
@@ -240,7 +343,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # NB: we must let the base class presolve run first so that the
         # symbol_map is actually constructed!
 
-        if (len(args) > 0) and (not isinstance(args[0], basestring)):
+        if (len(args) > 0) and (not isinstance(args[0], str)):
 
             if len(args) != 1:
                 raise ValueError(
@@ -259,8 +362,18 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                     print("Warm start write time= %.2f seconds"
                           % (end_time-start_time))
 
+            if self._priorities_solve and (not user_priorities):
+                start_time = time.time()
+                self._write_priorities_file(args[0])
+                end_time = time.time()
+                if self._report_timing:
+                    print(
+                        "Branching priorities write time= %.2f seconds"
+                        % (end_time - start_time)
+                    )
+
     def _default_executable(self):
-        executable = pyomo.common.Executable("cplex")
+        executable = Executable("cplex")
         if not executable:
             logger.warning("Could not locate the 'cplex' executable"
                            ", which is required for solver %s"
@@ -276,8 +389,11 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = pyutilib.subprocess.run( [solver_exec,'-c','quit'], timelimit=1 )
-        return _extract_version(results[1])
+        results = subprocess.run( [solver_exec,'-c','quit'], timeout=1,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT,
+                                 universal_newlines=True)
+        return _extract_version(results.stdout)
 
     def create_command_line(self, executable, problem_files):
 
@@ -286,7 +402,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # The log file in CPLEX contains the solution trace, but the solver status can be found in the solution file.
         #
         if self._log_file is None:
-            self._log_file = pyutilib.services.TempfileManager.\
+            self._log_file = TempfileManager.\
                             create_tempfile(suffix = '.cplex.log')
         self._log_file = _validate_file_name(self, self._log_file, "log")
 
@@ -295,7 +411,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # As indicated above, contains (in XML) both the solution and solver status.
         #
         if self._soln_file is None:
-            self._soln_file = pyutilib.services.TempfileManager.\
+            self._soln_file = TempfileManager.\
                               create_tempfile(suffix = '.cplex.sol')
         self._soln_file = _validate_file_name(self, self._soln_file, "solution")
 
@@ -313,7 +429,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         for key in self.options:
             if key == 'relax_integrality' or key == 'mipgap':
                 continue
-            elif isinstance(self.options[key], basestring) and \
+            elif isinstance(self.options[key], str) and \
                  (' ' in self.options[key]):
                 opt = ' '.join(key.split('_'))+' '+str(self.options[key])
             else:
@@ -328,6 +444,9 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
            (self._warm_start_file_name is not None):
             script += 'read %s\n' % (self._warm_start_file_name,)
 
+        if self._priorities_solve and self._priorities_file_name is not None:
+            script += "read %s\n" % (self._priorities_file_name,)
+
         if 'relax_integrality' in self.options:
             script += 'change problem lp\n'
 
@@ -339,7 +458,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # dump the script and warm-start file names for the
         # user if we're keeping files around.
         if self._keepfiles:
-            script_fname = pyutilib.services.TempfileManager.\
+            script_fname = TempfileManager.\
                            create_tempfile(suffix = '.cplex.script')
             tmp = open(script_fname,'w')
             tmp.write(script)
@@ -351,13 +470,16 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 print("Solver warm-start file="
                       +self._warm_start_file_name)
 
+            if self._priorities_solve and self._priorities_file_name is not None:
+                print("Solver priorities file=" + self._priorities_file_name)
+
         #
         # Define command line
         #
         cmd = [executable]
         if self._timer:
             cmd.insert(0, self._timer)
-        return pyutilib.misc.Bunch(cmd=cmd, script=script,
+        return Bunch(cmd=cmd, script=script,
                                    log_file=self._log_file, env=None)
 
     def process_logfile(self):
@@ -494,7 +616,8 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 results.solver.termination_message = ' '.join(tokens)
 
         try:
-            results.solver.termination_message = pyutilib.misc.yaml_fix(results.solver.termination_message)
+            if isinstance(results.solver.termination_message, str):
+                results.solver.termination_message = results.solver.termination_message.replace(':', '\\x3a')
         except:
             pass
         return results
@@ -565,7 +688,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 variable_value = None
                 variable_reduced_cost = None
                 variable_status = None
-                for i in xrange(1,len(tokens)):
+                for i in range(1,len(tokens)):
                     field_name =  tokens[i].split('=')[0]
                     field_value = tokens[i].split('=')[1].lstrip("\"").rstrip("\"")
                     if field_name == "name":
@@ -601,7 +724,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 is_range = False
                 rlabel = None
                 rkey = None
-                for i in xrange(1,len(tokens)):
+                for i in range(1,len(tokens)):
                     field_name =  tokens[i].split('=')[0]
                     field_value = tokens[i].split('=')[1].lstrip("\"").rstrip("\"")
                     if field_name == "name":
@@ -649,9 +772,21 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                     break
                 tINPUT.close()
 
-            elif tokens[0].startswith("objectiveValue"):
+            elif tokens[0].startswith("objectiveValue") and tokens[0] != 'objectiveValues':
+                # prior to 12.10.0, the objective value came back as an
+                # attribute on the <header> tag
                 objective_value = (tokens[0].split('=')[1].strip()).lstrip("\"").rstrip("\"")
                 soln.objective['__default_objective__']['Value'] = float(objective_value)
+
+            elif tokens[0] == "objective":
+                # beginning in 12.10.0, CPLEX supports multiple
+                # objectives in an <objectiveValue> tag
+                fields = {}
+                for field in tokens[1:]:
+                    k,v = field.split('=')
+                    fields[k] = v.strip('"')
+                soln.objective.setdefault(fields['name'], {})['Value'] = float(fields['value'])
+
             elif tokens[0].startswith("solutionStatusValue"):
                pieces = tokens[0].split("=")
                solution_status = eval(pieces[1])
@@ -711,13 +846,13 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
         # For the range constraints, supply only the dual with the largest
         # magnitude (at least one should always be numerically zero)
-        for key,(ld,ud) in iteritems(range_duals):
+        for key,(ld,ud) in range_duals.items():
             if abs(ld) > abs(ud):
                 soln_constraints['r_l_'+key] = {"Dual" : ld}
             else:
                 soln_constraints['r_l_'+key] = {"Dual" : ud}                # Use the same key
         # slacks
-        for key,(ls,us) in iteritems(range_slacks):
+        for key,(ls,us) in range_slacks.items():
             if abs(ls) > abs(us):
                 soln_constraints.setdefault('r_l_'+key,{})["Slack"] = ls
             else:
@@ -770,7 +905,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # manager, created populated *directly* by this plugin. does not
         # include, for example, the execution script. but does include
         # the warm-start file.
-        pyutilib.services.TempfileManager.pop(remove=not self._keepfiles)
+        TempfileManager.pop(remove=not self._keepfiles)
 
         return results
 
@@ -783,7 +918,7 @@ class MockCPLEX(CPLEXSHELL,MockMIP):
     def __init__(self, **kwds):
         try:
             CPLEXSHELL.__init__(self, **kwds)
-        except pyutilib.common.ApplicationError: #pragma:nocover
+        except ApplicationError: #pragma:nocover
             pass                        #pragma:nocover
         MockMIP.__init__(self,"cplex")
 

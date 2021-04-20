@@ -11,17 +11,15 @@
 import logging
 import re
 import sys
-import pyomo.common
-from pyutilib.misc import Bunch
-from pyutilib.services import TempfileManager
+
+from pyomo.common.tempfiles import TempfileManager
+from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
 from pyomo.repn import generate_standard_repn
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
 from pyomo.core.kernel.objective import minimize, maximize
-from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
@@ -45,6 +43,8 @@ def _is_numeric(x):
 
 @SolverFactory.register('gurobi_direct', doc='Direct python interface to Gurobi')
 class GurobiDirect(DirectSolver):
+
+    _verified_license = None
 
     def __init__(self, **kwds):
         if 'type' not in kwds:
@@ -78,7 +78,8 @@ class GurobiDirect(DirectSolver):
             # course, the license is a token license. unfortunately, you can't
             # import without a license, which means we can't test for the
             # exception above!
-            print("Import of gurobipy failed - gurobi message=" + str(e) + "\n")
+            logger.error(
+                "Import of gurobipy failed - gurobi message=%s\n" % (e,))
             self._python_api_exists = False
 
         self._range_constraints = set()
@@ -99,6 +100,21 @@ class GurobiDirect(DirectSolver):
            (self._version_major < 5):
             self._max_constraint_degree = 1
             self._capabilities.quadratic_constraint = False
+
+    def available(self, exception_flag=True):
+        if not super().available(exception_flag):
+            return False
+        if self._verified_license is None:
+            try:
+                # verify that we can get a Gurobi license
+                m = self._gurobipy.Model()
+                m.dispose()
+                GurobiDirect._verified_license = True
+            except Exception as e:
+                logger.error(
+                    "Could not create Model - gurobi message=%s\n" % (e,))
+                GurobiDirect._verified_license = False
+        return self._verified_license
 
     def _apply_solver(self):
         if not self._save_results:
@@ -203,9 +219,10 @@ class GurobiDirect(DirectSolver):
 
         return gurobi_expr, referenced_vars
 
-    def _add_var(self, var):
-        varname = self._symbol_map.getSymbol(var, self._labeler)
-        vtype = self._gurobi_vtype_from_var(var)
+    def _gurobi_lb_ub_from_var(self, var):
+        if var.is_fixed():
+            val = var.value
+            return val, val
         if var.has_lb():
             lb = value(var.lb)
         else:
@@ -214,9 +231,12 @@ class GurobiDirect(DirectSolver):
             ub = value(var.ub)
         else:
             ub = self._gurobipy.GRB.INFINITY
-        if var.is_fixed():
-            lb = value(var.value)
-            ub = value(var.value)
+        return lb, ub
+
+    def _add_var(self, var):
+        varname = self._symbol_map.getSymbol(var, self._labeler)
+        vtype = self._gurobi_vtype_from_var(var)
+        lb, ub = self._gurobi_lb_ub_from_var(var)
 
         gurobipy_var = self._solver_model.addVar(lb=lb, ub=ub, vtype=vtype, name=varname)
 
@@ -242,7 +262,7 @@ class GurobiDirect(DirectSolver):
             e = sys.exc_info()[1]
             msg = ("Unable to create Gurobi model. "
                    "Have you installed the Python "
-                   "bindings for Gurboi?\n\n\t"+
+                   "bindings for Gurobi?\n\n\t"+
                    "Error message: {0}".format(e))
             raise Exception(msg)
 

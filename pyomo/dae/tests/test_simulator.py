@@ -9,15 +9,20 @@
 #  ___________________________________________________________________________
 
 from __future__ import print_function
-import pyutilib.th as unittest
+import json
+import pyomo.common.unittest as unittest
 
 from pyomo.core.expr import current as EXPR
 from pyomo.environ import (
-    ConcreteModel, RangeSet, Param, Var, Set, value, Constraint, 
+    ConcreteModel, Param, Var, Set, Constraint, 
     sin, log, sqrt, TransformationFactory)
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 from pyomo.dae.simulator import (
+    is_pypy,
+    scipy_available,
+    casadi,
+    casadi_available,
     Simulator, 
     _check_getitemexpression, 
     _check_productexpression,
@@ -25,34 +30,19 @@ from pyomo.dae.simulator import (
     _check_viewsumexpression, 
     substitute_pyomo2casadi,
 )
-from pyomo.core.base.template_expr import (
+from pyomo.core.expr.template_expr import (
     IndexTemplate, 
     _GetItemIndexer,
 )
+from pyomo.common.fileutils import import_file
 
 import os
-from pyutilib.misc import setup_redirect, reset_redirect
-from pyutilib.misc import import_file
-
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'dae'))
 
-try:
-    import casadi 
-    casadi_available = True
-except ImportError:
-    casadi_available = False
-
-try:
-    import platform
-    if platform.python_implementation() == "PyPy":
-        # Scipy is importable into PyPy, but ODE integrators don't work. (2/18)
-        raise ImportError
-    import scipy 
-    scipy_available = True
-except ImportError:
-    scipy_available = False
+# We will skip tests unless we have scipy and not running in pypy
+scipy_available = scipy_available and not is_pypy
 
 
 class TestSimulator(unittest.TestCase):
@@ -931,8 +921,8 @@ class TestExpressionCheckers(unittest.TestCase):
         temp = _check_getitemexpression(e, 0)
         self.assertIs(e.arg(0), temp[0])
         self.assertIs(e.arg(1), temp[1])
-        self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(m.v, temp[1]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
+        self.assertIs(m.v, temp[1].arg(0))
         temp = _check_getitemexpression(e, 1)
         self.assertIsNone(temp)
 
@@ -940,8 +930,8 @@ class TestExpressionCheckers(unittest.TestCase):
         temp = _check_getitemexpression(e, 1)
         self.assertIs(e.arg(0), temp[1])
         self.assertIs(e.arg(1), temp[0])
-        self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(m.v, temp[1]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
+        self.assertIs(m.v, temp[1].arg(0))
         temp = _check_getitemexpression(e, 0)
         self.assertIsNone(temp)
 
@@ -963,36 +953,36 @@ class TestExpressionCheckers(unittest.TestCase):
         # Check multiplication by constant
         e = 5 * m.dv[t] == m.v[t]
         temp = _check_productexpression(e, 0)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
 
         e = m.v[t] == 5 * m.dv[t]
         temp = _check_productexpression(e, 1)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
 
         # Check multiplication by fixed param
         e = m.p * m.dv[t] == m.v[t]
         temp = _check_productexpression(e, 0)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
 
         e = m.v[t] == m.p * m.dv[t]
         temp = _check_productexpression(e, 1)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
 
         # Check multiplication by mutable param
         e = m.mp * m.dv[t] == m.v[t]
         temp = _check_productexpression(e, 0)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
         self.assertIs(m.mp, temp[1].arg(1))      # Reciprocal
         self.assertIs(e.arg(1), temp[1].arg(0))
 
         e = m.v[t] == m.mp * m.dv[t]
         temp = _check_productexpression(e, 1)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
         self.assertIs(m.mp, temp[1].arg(1))      # Reciprocal
         self.assertIs(e.arg(0), temp[1].arg(0))
@@ -1000,14 +990,14 @@ class TestExpressionCheckers(unittest.TestCase):
         # Check multiplication by var
         e = m.y * m.dv[t] / m.z == m.v[t]
         temp = _check_productexpression(e, 0)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
         self.assertIs(e.arg(1), temp[1].arg(0).arg(0))
         self.assertIs(m.z,        temp[1].arg(0).arg(1))
 
         e = m.v[t] == m.y * m.dv[t] / m.z
         temp = _check_productexpression(e, 1)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
         self.assertIs(e.arg(0), temp[1].arg(0).arg(0))
         self.assertIs(m.z, temp[1].arg(0).arg(1))
@@ -1015,14 +1005,14 @@ class TestExpressionCheckers(unittest.TestCase):
         # Check having the DerivativeVar in the denominator
         e = m.y / (m.dv[t] * m.z) == m.mp
         temp = _check_productexpression(e, 0)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
         self.assertIs(m.y,        temp[1].arg(0))
         self.assertIs(e.arg(1), temp[1].arg(1).arg(0))
 
         e = m.mp == m.y / (m.dv[t] * m.z)
         temp = _check_productexpression(e, 1)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
         self.assertIs(m.y,        temp[1].arg(0))
         self.assertIs(e.arg(0), temp[1].arg(1).arg(0))
@@ -1044,8 +1034,8 @@ class TestExpressionCheckers(unittest.TestCase):
         temp = _check_negationexpression(e, 0)
         self.assertIs(e.arg(0).arg(0), temp[0])
         self.assertIs(e.arg(1), temp[1].arg(0))
-        self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(m.v, temp[1].arg(0)._base)
+        self.assertIs(m.dv, temp[0].arg(0))
+        self.assertIs(m.v, temp[1].arg(0).arg(0))
         temp = _check_negationexpression(e, 1)
         self.assertIsNone(temp)
 
@@ -1053,8 +1043,8 @@ class TestExpressionCheckers(unittest.TestCase):
         temp = _check_negationexpression(e, 1)
         self.assertIs(e.arg(0), temp[1].arg(0))
         self.assertIs(e.arg(1).arg(0), temp[0])
-        self.assertIs(m.dv, temp[0]._base)
-        self.assertIs(m.v, temp[1].arg(0)._base)
+        self.assertIs(m.dv, temp[0].arg(0))
+        self.assertIs(m.v, temp[1].arg(0).arg(0))
         temp = _check_negationexpression(e, 0)
         self.assertIsNone(temp)
 
@@ -1077,7 +1067,7 @@ class TestExpressionCheckers(unittest.TestCase):
 
         e = m.dv[t] + m.y + m.z == m.v[t]
         temp = _check_viewsumexpression(e, 0)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.SumExpression)
         self.assertIs(type(temp[1].arg(0)), EXPR.GetItemExpression)
         self.assertIs(type(temp[1].arg(1)), EXPR.MonomialTermExpression)
@@ -1089,7 +1079,7 @@ class TestExpressionCheckers(unittest.TestCase):
 
         e = m.v[t] == m.y + m.dv[t] + m.z
         temp = _check_viewsumexpression(e, 1)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.SumExpression)
         self.assertIs(type(temp[1].arg(0)), EXPR.GetItemExpression)
         self.assertIs(type(temp[1].arg(1)), EXPR.MonomialTermExpression)
@@ -1099,7 +1089,7 @@ class TestExpressionCheckers(unittest.TestCase):
 
         e = 5 * m.dv[t] + 5 * m.y - m.z == m.v[t]
         temp = _check_viewsumexpression(e, 0)
-        self.assertIs(m.dv, temp[0]._base)
+        self.assertIs(m.dv, temp[0].arg(0))
         self.assertIs(type(temp[1]), EXPR.DivisionExpression)
 
         self.assertIs(type(temp[1].arg(0).arg(0)), EXPR.GetItemExpression)
@@ -1221,17 +1211,20 @@ class TestSimulationInterface():
     Class to test running a simulation
     """
 
-    def _print(self, model, profiles):
-        import numpy as np
-        np.set_printoptions(formatter={'float': '{: 0.4f}'.format})
-        model.pprint()
-        print(profiles)
+    def _store_results(self, model, profiles):
+        results = dict()
+        for v in model.component_objects(Var):
+            # Can't just use extract_values here because when writing to json
+            # all keys are converted to strings
+            temp = v.extract_values()
+            results[v.name] = [[k, temp[k]] for k in v.keys()]
+
+        results['sim_profiles'] = profiles.tolist()
+        return results
 
     def _test(self, tname):
 
-        ofile = join(currdir, tname + '.' + self.sim_mod + '.out')
-        bfile = join(currdir, tname + '.' + self.sim_mod + '.txt')
-        setup_redirect(ofile)
+        bfile = join(currdir, tname + '.' + self.sim_mod + '.json')
 
         # create model
         exmod = import_file(join(exdir, tname + '.py'))
@@ -1242,7 +1235,7 @@ class TestSimulationInterface():
 
         if hasattr(m, 'var_input'):
             tsim, profiles = sim.simulate(numpoints=100,
-                                          varying_inputs=m.var_input)
+                                              varying_inputs=m.var_input)
         else:
             tsim, profiles = sim.simulate(numpoints=100)
 
@@ -1253,20 +1246,21 @@ class TestSimulationInterface():
         # Initialize model
         sim.initialize_model()
 
-        self._print(m, profiles)
+        results = self._store_results(m, profiles)
 
-        reset_redirect()
+        # Used to regenerate baseline files
         if not os.path.exists(bfile):
-            os.rename(ofile, bfile)
+            with open(bfile, 'w') as f1:
+                json.dump(results, f1)
 
-        # os.system('diff ' + ofile + ' ' + bfile)
-        self.assertFileEqualsBaseline(ofile, bfile, tolerance=0.01)
+        # Compare results to baseline
+        with open(bfile, 'r') as f2:
+            baseline = json.load(f2)
+            self.assertStructuredAlmostEqual(results, baseline, abstol=1e-2)
 
     def _test_disc_first(self, tname):
 
-        ofile = join(currdir, tname + '.' + self.sim_mod + '.out')
-        bfile = join(currdir, tname + '.' + self.sim_mod + '.txt')
-        setup_redirect(ofile)
+        bfile = join(currdir, tname + '.' + self.sim_mod + '.json')
 
         # create model
         exmod = import_file(join(exdir, tname + '.py'))
@@ -1281,21 +1275,24 @@ class TestSimulationInterface():
 
         if hasattr(m, 'var_input'):
             tsim, profiles = sim.simulate(numpoints=100,
-                                          varying_inputs=m.var_input)
+                                              varying_inputs=m.var_input)
         else:
             tsim, profiles = sim.simulate(numpoints=100)
 
         # Initialize model
         sim.initialize_model()
 
-        self._print(m, profiles)
+        results = self._store_results(m, profiles)
 
-        reset_redirect()
+        # Used to regenerate baseline files
         if not os.path.exists(bfile):
-            os.rename(ofile, bfile)
+            with open(bfile, 'w') as f1:
+                json.dump(results, f1)
 
-        # os.system('diff ' + ofile + ' ' + bfile)
-        self.assertFileEqualsBaseline(ofile, bfile, tolerance=0.01)
+        # Compare results to baseline
+        with open(bfile, 'r') as f2:
+            baseline = json.load(f2)
+            self.assertStructuredAlmostEqual(results, baseline, abstol=1e-2)
 
 
 @unittest.skipIf(not scipy_available, "Scipy is not available")

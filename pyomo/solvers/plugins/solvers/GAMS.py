@@ -8,18 +8,19 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import StringIO, iteritems, string_types
+from io import StringIO
+import shlex
 from tempfile import mkdtemp
-import os, sys, math, logging, shutil, time
+import os, sys, math, logging, shutil, time, subprocess
 
 from pyomo.core.base import Constraint, Var, value, Objective
 from pyomo.opt import ProblemFormat, SolverFactory
 
 import pyomo.common
+from pyomo.common.collections import Bunch
+from pyomo.common.tee import TeeStream
 
 from pyomo.opt.base.solvers import _extract_version
-import pyutilib.subprocess
-from pyutilib.misc import Options, quote_split
 
 from pyomo.core.kernel.block import IBlock
 from pyomo.core.kernel.objective import IObjective
@@ -31,6 +32,8 @@ import pyomo.core.kernel.suffix
 from pyomo.opt.results import (SolverResults, SolverStatus, Solution,
     SolutionStatus, TerminationCondition, ProblemSense)
 
+from pyomo.common.dependencies import attempt_import
+gdxcc, gdxcc_available = attempt_import('gdxcc', defer_check=True)
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -42,7 +45,7 @@ class _GAMSSolver(object):
         self._default_variable_value = None
         self._metasolver = False
 
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -50,7 +53,7 @@ class _GAMSSolver(object):
         self._capabilities.sos1 = False
         self._capabilities.sos2 = False
 
-        self.options = Options()
+        self.options = Bunch()
 
     def version(self):
         """Returns a 4-tuple describing the solver executable version."""
@@ -66,7 +69,7 @@ class _GAMSSolver(object):
         return self._default_variable_value
 
     def set_options(self, istr):
-        if isinstance(istr, string_types):
+        if isinstance(istr, str):
             istr = self._options_string_to_dict(istr)
         for key in istr:
             if not istr[key] is None:
@@ -80,7 +83,7 @@ class _GAMSSolver(object):
             return ans
         if istr[0] == "'" or istr[0] == '"':
             istr = eval(istr)
-        tokens = quote_split('[ ]+',istr)
+        tokens = shlex.split(istr)
         for token in tokens:
             index = token.find('=')
             if index == -1:
@@ -92,6 +95,21 @@ class _GAMSSolver(object):
                 val = token[(index+1):]
             ans[token[:index]] = val
         return ans
+
+    def _simple_model(self, n):
+        return \
+            """
+            option limrow = 0;
+            option limcol = 0;
+            option solprint = off;
+            set I / 1 * %s /;
+            variables ans;
+            positive variables x(I);
+            equations obj;
+            obj.. ans =g= sum(I, x(I));
+            model test / all /;
+            solve test using lp minimizing ans;
+            """ % (n,)
 
     #
     # Support "with" statements.
@@ -116,12 +134,8 @@ class GAMSSolver(_GAMSSolver):
             Requires the gams executable be on your system PATH.
     """
     def __new__(cls, *args, **kwds):
-        try:
-            mode = kwds['solver_io']
-            if mode is None:
-                mode = 'shell'
-            del kwds['solver_io']
-        except KeyError:
+        mode = kwds.pop('solver_io', 'shell')
+        if mode is None:
             mode = 'shell'
 
         if mode == 'direct' or mode == 'python':
@@ -146,14 +160,22 @@ class GAMSDirect(_GAMSSolver):
         """True if the solver is available."""
         try:
             from gams import GamsWorkspace, DebugLevel
-            return True
         except ImportError as e:
-            if exception_flag is False:
+            if not exception_flag:
                 return False
-            else:
-                raise ImportError("Import of gams failed - GAMS direct "
-                                  "solver functionality is not available.\n"
-                                  "GAMS message: %s" % e)
+            raise ImportError("Import of gams failed - GAMS direct "
+                              "solver functionality is not available.\n"
+                              "GAMS message: %s" % (e,))
+        avail = self._run_simple_model(1)
+        if not avail and exception_flag:
+            raise NameError(
+                "'gams' command failed to solve a simple model - "
+                "GAMS shell solver functionality is not available.")
+        return avail
+
+    def license_is_valid(self):
+        # New versions of the community license can run LPs up to 5k
+        return self._run_simple_model(5001)
 
     def _get_version(self):
         """Returns a tuple describing the solver executable version."""
@@ -165,6 +187,20 @@ class GAMSDirect(_GAMSSolver):
         while(len(version) < 4):
             version += (0,)
         return version
+
+    def _run_simple_model(self, n):
+        tmpdir = mkdtemp()
+        try:
+            from gams import GamsWorkspace, DebugLevel
+            ws = GamsWorkspace(debug=DebugLevel.Off,
+                          working_directory=tmpdir)
+            t1 = ws.add_job_from_string(self._simple_model(n))
+            t1.run()
+            return True
+        except:
+            return False
+        finally:
+            shutil.rmtree(tmpdir)
 
     def solve(self, *args, **kwds):
         """
@@ -324,7 +360,7 @@ class GAMSDirect(_GAMSSolver):
         extract_rc = ('rc' in model_suffixes)
 
         results = SolverResults()
-        results.problem.name = t1.name
+        results.problem.name = os.path.join(ws.working_directory, t1.name + '.gms')
         results.problem.lower_bound = t1.out_db["OBJEST"].find_record().value
         results.problem.upper_bound = t1.out_db["OBJEST"].find_record().value
         results.problem.number_of_variables = \
@@ -450,7 +486,7 @@ class GAMSDirect(_GAMSSolver):
         soln.gap = abs(results.problem.upper_bound \
                        - results.problem.lower_bound)
 
-        for sym, ref in iteritems(symbolMap.bySymbol):
+        for sym, ref in symbolMap.bySymbol.items():
             obj = ref()
             if isinstance(model, IBlock):
                 # Kernel variables have no 'parent_component'
@@ -459,9 +495,9 @@ class GAMSDirect(_GAMSSolver):
                 if obj.ctype is not IVariable:
                     continue
             else:
-                if obj.parent_component().type() is Objective:
+                if obj.parent_component().ctype is Objective:
                     soln.objective[sym] = {'Value': objctvval}
-                if obj.parent_component().type() is not Var:
+                if obj.parent_component().ctype is not Var:
                     continue
             rec = t1.out_db[sym].find_record()
             # obj.value = rec.level
@@ -568,15 +604,40 @@ class GAMSShell(_GAMSSolver):
     def available(self, exception_flag=True):
         """True if the solver is available."""
         exe = pyomo.common.Executable("gams")
-        if exception_flag is False:
-            return exe.available()
-        else:
-            if exe.available():
-                return True
-            else:
-                raise NameError(
-                    "No 'gams' command found on system PATH - GAMS shell "
-                    "solver functionality is not available.")
+        if not exe.available():
+            if not exception_flag:
+                return False
+            raise NameError(
+                "No 'gams' command found on system PATH - GAMS shell "
+                "solver functionality is not available.")
+        # New versions of GAMS require a license to run anything.
+        # Instead of parsing the output, we will try solving a trivial
+        # model.
+        avail = self._run_simple_model(1)
+        if not avail and exception_flag:
+            raise NameError(
+                "'gams' command failed to solve a simple model - "
+                "GAMS shell solver functionality is not available.")
+        return avail
+
+    def license_is_valid(self):
+        # New versions of the community license can run LPs up to 5k
+        return self._run_simple_model(5001)
+
+    def _run_simple_model(self, n):
+        tmpdir = mkdtemp()
+        try:
+            test = os.path.join(tmpdir, 'test.gms')
+            with open(test, 'w') as FILE:
+                FILE.write(self._simple_model(n))
+            result = subprocess.run(
+                [self.executable(), test, "curdir=" + tmpdir, 'lo=0'],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL)
+            return not result.returncode
+        finally:
+            shutil.rmtree(tmpdir)
+        return False
 
     def _default_executable(self):
         executable = pyomo.common.Executable("gams")
@@ -599,11 +660,23 @@ class GAMSShell(_GAMSSolver):
             return _extract_version('')
         else:
             # specify logging to stdout for windows compatibility
-            # technically this command makes gams complain because we're not
-            # providing a filename, but it will include the version name anyway
-            cmd = [solver_exec, "", "lo=3"]
-            _, txt = pyutilib.subprocess.run(cmd, tee=False)
-            return _extract_version(txt)
+            cmd = [solver_exec, "audit", "lo=3"]
+            results = subprocess.run(cmd, stdout=subprocess.PIPE,
+                                     stderr=subprocess.STDOUT,
+                                     universal_newlines=True)
+            return _extract_version(results.stdout)
+
+    @staticmethod
+    def _parse_special_values(value):
+        if value == 1.0e300 or value == 2.0e300:
+            return float('nan')
+        if value == 3.0e300:
+            return float('inf')
+        if value == 4.0e300:
+            return -float('inf')
+        if value == 5.0e300:
+            return sys.float_info.epsilon
+        return value
 
     def solve(self, *args, **kwds):
         """
@@ -689,8 +762,19 @@ class GAMSShell(_GAMSSolver):
 
         put_results = "results"
         io_options["put_results"] = put_results
-        results_filename = os.path.join(tmpdir, put_results + ".dat")
-        statresults_filename = os.path.join(tmpdir, put_results + "stat.dat")
+        io_options.setdefault("put_results_format",
+                              'gdx' if gdxcc_available else 'dat')
+
+        if io_options['put_results_format'] == 'gdx':
+            results_filename = os.path.join(
+                tmpdir, "GAMS_MODEL_p.gdx")
+            statresults_filename = os.path.join(
+                tmpdir, "%s_s.gdx" % (put_results,))
+        else:
+            results_filename = os.path.join(
+                tmpdir, "%s.dat" % (put_results,))
+            statresults_filename = os.path.join(
+                tmpdir, "%sstat.dat" % (put_results,))
 
         if isinstance(model, IBlock):
             # Kernel blocks have slightly different write method
@@ -731,26 +815,42 @@ class GAMSShell(_GAMSSolver):
             command.append("lf=" + str(logfile))
 
         try:
-            rc, _ = pyutilib.subprocess.run(command, tee=tee)
+            ostreams = [StringIO()]
+            if tee:
+                ostreams.append(sys.stdout)
+            with TeeStream(*ostreams) as t:
+                result = subprocess.run(command, stdout=t.STDOUT,
+                                        stderr=t.STDERR)
+            rc = result.returncode
+            txt = ostreams[0].getvalue()
 
             if keepfiles:
                 print("\nGAMS WORKING DIRECTORY: %s\n" % tmpdir)
 
             if rc == 1 or rc == 127:
-                raise RuntimeError("Command 'gams' was not recognized")
+                raise IOError("Command 'gams' was not recognized")
             elif rc != 0:
                 if rc == 3:
                     # Execution Error
                     # Run check_expr_evaluation, which errors if necessary
                     check_expr_evaluation(model, symbolMap, 'shell')
                 # If nothing was raised, or for all other cases, raise this
+                logger.error("GAMS encountered an error during solve. "
+                             "Check listing file for details.")
+                logger.error(txt)
+                if os.path.exists(lst_filename):
+                    with open(lst_filename, 'r') as FILE:
+                        logger.error(
+                            "GAMS Listing file:\n\n%s" % (FILE.read(),))
                 raise RuntimeError("GAMS encountered an error during solve. "
                                    "Check listing file for details.")
 
-            with open(results_filename, 'r') as results_file:
-                results_text = results_file.read()
-            with open(statresults_filename, 'r') as statresults_file:
-                statresults_text = statresults_file.read()
+            if io_options['put_results_format'] == 'gdx':
+                model_soln, stat_vars = self._parse_gdx_results(
+                    results_filename, statresults_filename)
+            else:
+                model_soln, stat_vars = self._parse_dat_results(
+                    results_filename, statresults_filename)
         finally:
             if not keepfiles:
                 if newdir:
@@ -783,16 +883,6 @@ class GAMSShell(_GAMSSolver):
                                   active_import_suffix_generator(model))
         extract_dual = ('dual' in model_suffixes)
         extract_rc = ('rc' in model_suffixes)
-
-        stat_vars = dict()
-        # Skip first line of explanatory text
-        for line in statresults_text.splitlines()[1:]:
-            items = line.split()
-            try:
-                stat_vars[items[0]] = float(items[1])
-            except ValueError:
-                # GAMS printed NA, just make it nan
-                stat_vars[items[0]] = float('nan')
 
         results = SolverResults()
         results.problem.name = output_filename
@@ -916,14 +1006,8 @@ class GAMSShell(_GAMSSolver):
         soln.gap = abs(results.problem.upper_bound \
                        - results.problem.lower_bound)
 
-        model_soln = dict()
-        # Skip first line of explanatory text
-        for line in results_text.splitlines()[1:]:
-            items = line.split()
-            model_soln[items[0]] = (items[1], items[2])
-
         has_rc_info = True
-        for sym, ref in iteritems(symbolMap.bySymbol):
+        for sym, ref in symbolMap.bySymbol.items():
             obj = ref()
             if isinstance(model, IBlock):
                 # Kernel variables have no 'parent_component'
@@ -932,11 +1016,15 @@ class GAMSShell(_GAMSSolver):
                 if obj.ctype is not IVariable:
                     continue
             else:
-                if obj.parent_component().type() is Objective:
+                if obj.parent_component().ctype is Objective:
                     soln.objective[sym] = {'Value': objctvval}
-                if obj.parent_component().type() is not Var:
+                if obj.parent_component().ctype is not Var:
                     continue
-            rec = model_soln[sym]
+            try:
+                rec = model_soln[sym]
+            except KeyError:
+                # no solution returned
+                rec = (float('nan'), float('nan'))
             # obj.value = float(rec[0])
             soln.variable[sym] = {"Value": float(rec[0])}
             if extract_rc and has_rc_info:
@@ -955,7 +1043,11 @@ class GAMSShell(_GAMSSolver):
                     continue
                 sym = symbolMap.getSymbol(c)
                 if c.equality:
-                    rec = model_soln[sym]
+                    try:
+                        rec = model_soln[sym]
+                    except KeyError:
+                        # no solution returned
+                        rec = (float('nan'), float('nan'))
                     try:
                         # model.dual[c] = float(rec[1])
                         soln.constraint[sym] = {'dual': float(rec[1])}
@@ -969,14 +1061,22 @@ class GAMSShell(_GAMSSolver):
                     # Negate marginal for _lo equations
                     marg = 0
                     if c.lower is not None:
-                        rec_lo = model_soln[sym + '_lo']
+                        try:
+                            rec_lo = model_soln[sym + '_lo']
+                        except KeyError:
+                            # no solution returned
+                            rec_lo = (float('nan'), float('nan'))
                         try:
                             marg -= float(rec_lo[1])
                         except ValueError:
                             # Solver didn't provide marginals
                             marg = float('nan')
                     if c.upper is not None:
-                        rec_hi = model_soln[sym + '_hi']
+                        try:
+                            rec_hi = model_soln[sym + '_hi']
+                        except KeyError:
+                            # no solution returned
+                            rec_hi = (float('nan'), float('nan'))
                         try:
                             marg += float(rec_hi[1])
                         except ValueError:
@@ -1034,6 +1134,106 @@ class GAMSShell(_GAMSSolver):
                   (postsolve_completion_time - initial_time))
 
         return results
+
+    def _parse_gdx_results(self, results_filename, statresults_filename):
+        model_soln = dict()
+        stat_vars = dict.fromkeys(['MODELSTAT', 'SOLVESTAT', 'OBJEST',
+                                   'OBJVAL', 'NUMVAR', 'NUMEQU', 'NUMDVAR',
+                                   'NUMNZ', 'ETSOLVE'])
+
+        pgdx = gdxcc.new_gdxHandle_tp()
+        ret = gdxcc.gdxCreateD(pgdx, os.path.dirname(self.executable()), 128)
+        if not ret[0]:
+            raise RuntimeError("GAMS GDX failure (gdxCreate): %s." % ret[1])
+
+        if os.path.exists(statresults_filename):
+            ret = gdxcc.gdxOpenRead(pgdx, statresults_filename)
+            if not ret[0]:
+                raise RuntimeError("GAMS GDX failure (gdxOpenRead): %d." % ret[1])
+
+            i = 0
+            while True:
+                i += 1
+                ret = gdxcc.gdxDataReadRawStart(pgdx, i)
+                if not ret[0]:
+                    break
+
+                ret = gdxcc.gdxSymbolInfo(pgdx, i)
+                if not ret[0]:
+                    break
+                if len(ret) < 2:
+                    raise RuntimeError("GAMS GDX failure (gdxSymbolInfo).")
+                stat = ret[1]
+                if not stat in stat_vars:
+                    continue
+
+                ret = gdxcc.gdxDataReadRaw(pgdx)
+                if not ret[0] or len(ret[2]) == 0:
+                    raise RuntimeError("GAMS GDX failure (gdxDataReadRaw).")
+
+                if stat in ('OBJEST', 'OBJVAL', 'ETSOLVE'):
+                    stat_vars[stat] = self._parse_special_values(ret[2][0])
+                else:
+                    stat_vars[stat] = int(ret[2][0])
+
+            gdxcc.gdxDataReadDone(pgdx)
+            gdxcc.gdxClose(pgdx)
+
+        if os.path.exists(results_filename):
+            ret = gdxcc.gdxOpenRead(pgdx, results_filename)
+            if not ret[0]:
+                raise RuntimeError("GAMS GDX failure (gdxOpenRead): %d." % ret[1])
+
+            i = 0
+            while True:
+                i += 1
+                ret = gdxcc.gdxDataReadRawStart(pgdx, i)
+                if not ret[0]:
+                    break
+
+                ret = gdxcc.gdxDataReadRaw(pgdx)
+                if not ret[0] or len(ret[2]) < 2:
+                    raise RuntimeError("GAMS GDX failure (gdxDataReadRaw).")
+                level = self._parse_special_values(ret[2][0])
+                dual = self._parse_special_values(ret[2][1])
+
+                ret = gdxcc.gdxSymbolInfo(pgdx, i)
+                if not ret[0]:
+                    break
+                if len(ret) < 2:
+                    raise RuntimeError("GAMS GDX failure (gdxSymbolInfo).")
+                model_soln[ret[1]] = (level, dual)
+
+            gdxcc.gdxDataReadDone(pgdx)
+            gdxcc.gdxClose(pgdx)
+
+        gdxcc.gdxFree(pgdx)
+        return model_soln, stat_vars
+
+    def _parse_dat_results(self, results_filename, statresults_filename):
+        with open(statresults_filename, 'r') as statresults_file:
+            statresults_text = statresults_file.read()
+
+        stat_vars = dict()
+        # Skip first line of explanatory text
+        for line in statresults_text.splitlines()[1:]:
+            items = line.split()
+            try:
+                stat_vars[items[0]] = float(items[1])
+            except ValueError:
+                # GAMS printed NA, just make it nan
+                stat_vars[items[0]] = float('nan')
+
+        with open(results_filename, 'r') as results_file:
+            results_text = results_file.read()
+
+        model_soln = dict()
+        # Skip first line of explanatory text
+        for line in results_text.splitlines()[1:]:
+            items = line.split()
+            model_soln[items[0]] = (items[1], items[2])
+
+        return model_soln, stat_vars
 
 
 class OutputStream:

@@ -1,3 +1,4 @@
+$offlisting
 $offdigit
 
 EQUATIONS
@@ -39,6 +40,10 @@ c15.. GAMS_OBJECTIVE =e= x1 + 0*x1 + 0*x1 + x1*x1*0 + x1*x1*0 + 0*power(x1, 2) ;
 
 
 MODEL GAMS_MODEL /all/ ;
+option solprint=off;
+option limrow=0;
+option limcol=0;
+option solvelink=5;
 SOLVE GAMS_MODEL USING nlp minimizing GAMS_OBJECTIVE;
 
 Scalars MODELSTAT 'model status', SOLVESTAT 'solve status';

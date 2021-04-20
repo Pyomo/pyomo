@@ -8,20 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.th as unittest
-import pyutilib.misc
+import pyomo.common.unittest as unittest
 
-from pyomo.common import *
+from pyomo.common import PyomoAPIData, pyomo_api, PyomoAPIFactory
 from pyomo.common.log import LoggingIntercept
 
-from six import StringIO
-
-try:
-    import yaml
-    yaml_available=True
-except ImportError:
-    yaml_available=False
-
+from io import StringIO
 
 class TestData(unittest.TestCase):
 
@@ -46,7 +38,6 @@ c:
     y: 2""")
         self.assertEqual(len(data._dirty_), 0)
 
-    @unittest.skipIf(not yaml_available, "No YAML interface available")
     def test_print_PyomoAPIData_repr(self):
         #"""Print PyomoAPIData representation"""
         data = PyomoAPIData()
@@ -69,14 +60,14 @@ c:
     def test_err_unknown_attr(self):
         #"""Unknown attribute"""
         data = PyomoAPIData()
-        with self.assertRaisesRegexp(AttributeError, 'Unknown attribute _x'):
+        with self.assertRaisesRegex(AttributeError, 'Unknown attribute _x'):
             data._x
 
     def test_err_undeclared_attr(self):
         #"""Undeclared attribute"""
         data = PyomoAPIData()
         data.declare('a')
-        with self.assertRaisesRegexp( AttributeError,
+        with self.assertRaisesRegex( AttributeError,
                                       "Undeclared attribute 'x'" ):
             data.x
 
@@ -84,7 +75,7 @@ c:
         #"""Undeclared attribute"""
         data = PyomoAPIData()
         data.declare(['a'])
-        with self.assertRaisesRegexp( AttributeError,
+        with self.assertRaisesRegex( AttributeError,
                                       "Undeclared attribute 'x'" ):
             data.x
 
@@ -541,7 +532,7 @@ class TestAPI(unittest.TestCase):
             """
             return PyomoAPIData(z=2*x)
         #
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
                 "Cannot return value 'z' that is not a predefined output" ):
             retval = test10(x=3)
@@ -572,7 +563,7 @@ class TestAPI(unittest.TestCase):
         def err3(data):
             return 1
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
                 "A Pyomo task function must return either None, a "
                 "PyomoAPIData object, or an instance of dict"):
@@ -584,7 +575,7 @@ class TestAPI(unittest.TestCase):
         def err4(data):
             data.a = 2
             data.b[0] = 2
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
                 "A PyomoTask instance must be executed with at "
                 "'data' argument"):
@@ -595,7 +586,7 @@ class TestAPI(unittest.TestCase):
         @pyomo_api
         def err5(data):
             return PyomoAPIData(z=None)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
                 "Cannot return value 'z' that is not a predefined output "
                 "of a Pyomo task" ):
@@ -613,9 +604,8 @@ class TestAPI(unittest.TestCase):
 
         # Note: the TypeError message changes in Python 3.6, so we need
         # a weaker regexp.
-        with self.assertRaisesRegexp(
-                TypeError,
-                "err6\(\) takes .* arguments .* given" ):
+        with self.assertRaisesRegex(
+                TypeError, r"err6\(\) takes .* arguments .* given" ):
             err6(PyomoAPIData())
 
     def test_err7a_arg_missing_from_docstring(self):
@@ -723,7 +713,7 @@ class TestAPI(unittest.TestCase):
                 data.x: integer
             """
             pass
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
                 "None value found for nested attribute 'data.x'" ):
             err8a(PyomoAPIData())
@@ -737,7 +727,7 @@ class TestAPI(unittest.TestCase):
                 data.x: integer
             """
             pass
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
                 "None value found for nested attribute 'data.x'" ):
             err8b(PyomoAPIData(data=PyomoAPIData()))
@@ -751,7 +741,7 @@ class TestAPI(unittest.TestCase):
                 data.x.y: integer
             """
             pass
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
                 "Failed to verify existence of nested attribute 'data.x.y'" ):
             err8c(PyomoAPIData(x={}))
@@ -766,7 +756,7 @@ class TestAPI(unittest.TestCase):
                 data.foo.bar:
             """
             data.foo.foo = 3
-            with self.assertRaisesRegexp(
+            with self.assertRaisesRegex(
                     AttributeError, "Undeclared attribute 'a'" ):
                 data.a = 2
         #
@@ -821,7 +811,7 @@ class TestAPI(unittest.TestCase):
                 data:
                 x:
             """
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
                 "A PyomoTask instance must be executed with at 'data' "
                 "argument" ):
@@ -831,7 +821,7 @@ class TestAPI(unittest.TestCase):
         #"""Expect an error when multiple data options are provided"""
         @pyomo_api
         def err12(data): pass
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
                 "A PyomoTask instance can only be executed with a single "
                 "non-keyword argument" ):
@@ -842,7 +832,7 @@ class TestAPI(unittest.TestCase):
         @pyomo_api
         def err13(data):
             return set()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
                 "A Pyomo task function must return either None, a "
                 "PyomoAPIData object, or an instance of dict" ):

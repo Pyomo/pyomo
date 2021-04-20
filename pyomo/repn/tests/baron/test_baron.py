@@ -13,10 +13,10 @@
 
 import os
 
-import pyutilib.th as unittest
+from filecmp import cmp
+import pyomo.common.unittest as unittest
 
-from pyomo.environ import *
-import pyomo.opt
+from pyomo.environ import ConcreteModel, Var, Param,  Constraint, Objective,  Block, sin
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 
@@ -42,10 +42,13 @@ class Test(unittest.TestCase):
         model.write(test_fname,
                     format="bar",
                     io_options=io_options)
-        self.assertFileEqualsBaseline(
-            test_fname,
-            baseline_fname,
-            delete=True)
+        try:
+            self.assertTrue(cmp(test_fname, baseline_fname))
+        except:
+            with open(test_fname, 'r') as f1, open(baseline_fname, 'r') as f2:
+                f1_contents = f1.read().replace(' ;', ';').split()
+                f2_contents = f2.read().replace(' ;', ';').split()
+                self.assertEqual(f1_contents, f2_contents)
         self._cleanup(test_fname)
 
     def _gen_expression(self, terms):
@@ -141,7 +144,7 @@ class Test(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(bounds=(0,2*3.1415))
         m.obj = Objective(expr=sin(m.x))
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
             RuntimeError,
             'The BARON .BAR format does not support the unary function "sin"'
             ):

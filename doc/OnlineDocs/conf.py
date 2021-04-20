@@ -25,6 +25,27 @@ sys.path.insert(0, os.path.abspath('../../../pyutilib'))
 # top-level pyomo source directory
 sys.path.insert(0, os.path.abspath('../..'))
 
+# -- Rebuild SPY files ----------------------------------------------------
+sys.path.insert(0, os.path.abspath('tests'))
+try:
+    print("Regenerating SPY files...")
+    from strip_examples import generate_spy_files
+    generate_spy_files(os.path.abspath('tests'))
+    generate_spy_files(os.path.abspath(os.path.join(
+        'library_reference','kernel','examples')))
+finally:
+    sys.path.pop(0)
+
+# -- Options for intersphinx ---------------------------------------------
+
+intersphinx_mapping = {
+    'matplotlib': ('https://matplotlib.org/stable/', None),
+    'numpy': ('https://numpy.org/doc/stable/', None),
+    'pandas': ('https://pandas.pydata.org/docs/', None),
+    'scikit-learn': ('https://scikit-learn.org/stable/', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
+    'Sphinx': ('https://www.sphinx-doc.org/en/stable/', None),
+}
 
 # -- General configuration ------------------------------------------------
 
@@ -35,18 +56,21 @@ needs_sphinx = '1.8'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc',
-              'sphinx.ext.coverage',
-              'sphinx.ext.mathjax',
-              'sphinx.ext.viewcode',
-              'sphinx.ext.napoleon',
-              'sphinx.ext.ifconfig',
-              'sphinx.ext.inheritance_diagram',
-              'sphinx.ext.autosummary',
-              'sphinx.ext.doctest']
-    #'sphinx.ext.githubpages']
+extensions = [
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.coverage',
+    'sphinx.ext.mathjax',
+    'sphinx.ext.viewcode',
+    'sphinx.ext.napoleon',
+    'sphinx.ext.ifconfig',
+    'sphinx.ext.inheritance_diagram',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.doctest',
+    #'sphinx.ext.githubpages',
+]
 
-viewcode_import = True
+viewcode_follow_imported_members = True
 #napoleon_include_private_with_doc = True
 
 # Add any paths that contain templates here, relative to this directory.
@@ -94,6 +118,13 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
+# If true, doctest flags (comments looking like # doctest: FLAG, ...) at
+# the ends of lines and <BLANKLINE> markers are removed for all code
+# blocks showing interactive Python sessions (i.e. doctests)
+trim_doctest_flags = True
+
+# If true, figures, tables and code-blocks are automatically numbered if
+# they have a caption.
 numfig = True
 
 # -- Options for HTML output ----------------------------------------------
@@ -104,13 +135,21 @@ numfig = True
 #html_theme = 'alabaster'
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
+html_theme = 'sphinx_rtd_theme'
+
+# Force HTML4: If we don't explicitly force HTML4, then the background
+# of the Paramters/Returns/Return type headers is shaded the same as the
+# method prototype (tested 15 April 21 with Sphinx=3.5.4 and
+# sphinx-rtd-theme=0.5.2).
+html4_writer = True
+#html5_writer = True
+
 if not on_rtd:  # only import and set the theme if we're building docs locally
     import sphinx_rtd_theme
-    html_theme = 'sphinx_rtd_theme'
     html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
     # Override default css to get a larger width for local build
     def setup(app):
-        app.add_stylesheet('theme_overrides.css')
+        app.add_css_file('theme_overrides.css')
     html_context = {
         'css_files': [
             '_static/theme_overrides.css',
@@ -197,3 +236,31 @@ texinfo_documents = [
 
 #autodoc_member_order = 'bysource'
 #autodoc_member_order = 'groupwise'
+
+# -- Check which conditional dependencies are available ------------------
+# Used for skipping certain doctests
+
+doctest_global_setup = '''
+
+from pyomo.common.dependencies import (
+    attempt_import, numpy_available, scipy_available, pandas_available,
+    yaml_available, networkx_available, matplotlib_available,
+    pympler_available, dill_available,
+)
+pint_available = attempt_import('pint', defer_check=False)[1]
+from pyomo.contrib.parmest.parmest import parmest_available
+
+import pyomo.opt
+# Not using SolverFactory to check solver availability because
+# as of June 2020 there is no way to supress warnings when 
+# solvers are not available
+ipopt_available = bool(pyomo.opt.check_available_solvers('ipopt'))
+sipopt_available = bool(pyomo.opt.check_available_solvers('ipopt_sens'))
+baron_available = bool(pyomo.opt.check_available_solvers('baron'))
+glpk_available = bool(pyomo.opt.check_available_solvers('glpk'))
+try:
+    import gurobipy
+    gurobipy_available = True
+except ImportError:
+    gurobipy_available = False
+'''

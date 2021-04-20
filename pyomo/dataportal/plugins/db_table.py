@@ -8,46 +8,20 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-try:
-    unicode
-except:
-    basestring = str
-    long = int
-
 import os.path
 import re
 import sys
 import shutil
 from decimal import Decimal
-from six import iteritems
 
-try:
-    import pyodbc
-    pyodbc_available=True
-except ImportError:
-    pyodbc_available=False
-
-try:
-    import pypyodbc
-    pypyodbc_available=True
-except Exception:
-    pypyodbc_available=False
-
-try:
-    import sqlite3
-    sqlite3_available=True
-except ImportError:
-    sqlite3_available=False
-
-try:
-    import pymysql
-    pymysql_available=True
-except ImportError:
-    pymysql_available=False
-
+from pyomo.common.dependencies import attempt_import
 from pyomo.dataportal import TableData
 from pyomo.dataportal.factory import DataManagerFactory
 
+pyodbc, pyodbc_available = attempt_import('pyodbc')
+pypyodbc, pypyodbc_available = attempt_import('pypyodbc')
+sqlite3, sqlite3_available = attempt_import('sqlite3')
+pymysql, pymysql_available = attempt_import('pymysql')
 
 # format=
 # using=
@@ -129,7 +103,7 @@ or that there is a bug in the ODBC connector.
                     ttmp.append(float(data))
                 elif data is None:
                     ttmp.append('.')
-                elif isinstance(data, str) or isinstance(data, basestring):
+                elif isinstance(data, str):
                     nulidx = data.find('\x00')
                     if nulidx > -1:
                         data = data[:nulidx]
@@ -141,7 +115,7 @@ or that there is a bug in the ODBC connector.
         #
         # Process data from the table
         #
-        if type(tmp) in (int,long,float):
+        if type(tmp) in (int, float):
             if not self.options.param is None:
                 self._info = ["param", self.options.param.local_name, ":=", tmp]
             elif len(self.options.symbol_map) == 1:
@@ -258,7 +232,7 @@ class pyodbc_db_Table(db_Table):
                     config = ODBCConfig()
                     dsninfo = self.create_dsn_dict(connection, config)
                     connstr = []
-                    for k,v in iteritems(dsninfo):
+                    for k, v in dsninfo.items():
                         if ' ' in v and (v[0] != "{" or v[-1] != "}"):
                             connstr.append("%s={%s}" % (k.upper(),v))
                         else:

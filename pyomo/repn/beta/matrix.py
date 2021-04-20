@@ -16,10 +16,10 @@ import logging
 import array
 from weakref import ref as weakref_ref
 
+from pyomo.common.log import is_debug_set
 from pyomo.core.base.set_types import Any
 from pyomo.core.base import (SortComponents,
-                             Var,
-                             Constraint)
+                             Var)
 from pyomo.core.base.numvalue import (is_fixed,
                                       value,
                                       ZeroConstant)
@@ -31,13 +31,7 @@ from pyomo.core.base.constraint import (Constraint,
 from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.repn import generate_standard_repn
 
-from six import iteritems, PY3
-from six.moves import xrange
-
-if PY3:
-    from collections.abc import Mapping as collections_Mapping
-else:
-    from collections import Mapping as collections_Mapping
+from collections.abc import Mapping
 
 
 logger = logging.getLogger('pyomo.core')
@@ -164,7 +158,7 @@ def compile_block_linear_constraints(parent_block,
                 # Note that as we may be removing items from the _data
                 # dictionary, we need to make a copy of the items list
                 # before iterating:
-                for index, constraint_data in list(iteritems(constraint)):
+                for index, constraint_data in list(constraint.items()):
 
                     if constraint_data.body.__class__ in native_numeric_types or constraint_data.body.polynomial_degree() <= 1:
 
@@ -459,7 +453,7 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         vals = comp._vals
         try:
             return sum(varmap[jcols[p]]() * vals[p]
-                       for p in xrange(prows[index],
+                       for p in range(prows[index],
                                        prows[index+1]))
         except (ValueError, TypeError):
             if exception:
@@ -511,14 +505,13 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
     def variables(self):
         """A tuple of variables comprising the constraint body."""
         comp = self.parent_component()
-        index = self.index()
         prows = comp._prows
         jcols = comp._jcols
         varmap = comp._varmap
         if prows[self._index] == prows[self._index+1]:
             return()
         variables = tuple(varmap[jcols[p]]
-                          for p in xrange(prows[self._index],
+                          for p in range(prows[self._index],
                                           prows[self._index+1])
                           if not varmap[jcols[p]].fixed)
 
@@ -528,14 +521,13 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
     def coefficients(self):
         """A tuple of coefficients associated with the variables."""
         comp = self.parent_component()
-        index = self.index()
         prows = comp._prows
         jcols = comp._jcols
         vals = comp._vals
         varmap = comp._varmap
         if prows[self._index] == prows[self._index+1]:
             return ()
-        coefs = tuple(vals[p] for p in xrange(prows[self._index],
+        coefs = tuple(vals[p] for p in range(prows[self._index],
                                               prows[self._index+1])
                       if not varmap[jcols[p]].fixed)
 
@@ -548,7 +540,6 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
     def constant(self):
         """The constant value associated with the constraint body."""
         comp = self.parent_component()
-        index = self.index()
         prows = comp._prows
         jcols = comp._jcols
         vals = comp._vals
@@ -556,7 +547,7 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         if prows[self._index] == prows[self._index+1]:
             return 0
         terms = tuple(vals[p] * varmap[jcols[p]]()
-                      for p in xrange(prows[self._index],
+                      for p in range(prows[self._index],
                                       prows[self._index+1])
                       if varmap[jcols[p]].fixed)
 
@@ -578,7 +569,7 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         if prows[self._index] == prows[self._index+1]:
             return ZeroConstant
         return sum(varmap[jcols[p]] * vals[p]
-                   for p in xrange(prows[index],
+                   for p in range(prows[index],
                                    prows[index+1]))
 
     @property
@@ -626,8 +617,7 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
 
 @ModelComponentFactory.register(
                    "A set of constraint expressions in Ax=b form.")
-class MatrixConstraint(collections_Mapping,
-                       IndexedConstraint):
+class MatrixConstraint(Mapping, IndexedConstraint):
 
     #
     # Bound types
@@ -673,7 +663,7 @@ class MatrixConstraint(collections_Mapping,
         """
         Construct the expression(s) for this constraint.
         """
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing constraint %s"
                          % (self.name))
         if self._constructed:
@@ -682,7 +672,7 @@ class MatrixConstraint(collections_Mapping,
 
         _init = _LinearMatrixConstraintData
         self._data = tuple(_init(i, component=self)
-                           for i in xrange(len(self._range_types)))
+                           for i in range(len(self._range_types)))
 
     #
     # Override some IndexedComponent methods
@@ -695,7 +685,7 @@ class MatrixConstraint(collections_Mapping,
         return self._data.__len__()
 
     def __iter__(self):
-        return iter(i for i in xrange(len(self)))
+        return iter(i for i in range(len(self)))
 
     #
     # Remove methods that allow modifying this constraint

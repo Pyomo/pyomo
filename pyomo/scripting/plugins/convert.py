@@ -12,8 +12,8 @@ import json
 import sys
 import argparse
 
-from pyutilib.misc import Options
-from pyomo.opt import ProblemFormat, ProblemConfigFactory, guess_format
+from pyomo.common.collections import Bunch
+from pyomo.opt import ProblemConfigFactory, guess_format
 from pyomo.scripting.pyomo_parser import add_subparser, CustomHelpFormatter
 
 
@@ -42,7 +42,7 @@ def create_parser(parser=None):
     return parser
 
 
-def run_convert(options=Options(), parser=None):
+def run_convert(options=Bunch(), parser=None):
     from pyomo.scripting.convert import convert, convert_dakota
     if options.model.save_format is None and options.model.save_file:
         options.model.save_format = options.model.save_file.split('.')[-1]

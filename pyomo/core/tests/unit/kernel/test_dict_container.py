@@ -8,9 +8,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import collections.abc
 import pickle
+from io import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import pyomo.kernel as pmo
 from pyomo.common.log import LoggingIntercept
 from pyomo.core.kernel.base import \
@@ -19,19 +21,8 @@ from pyomo.core.kernel.base import \
 from pyomo.core.kernel.homogeneous_container import \
     IHomogeneousContainer
 from pyomo.core.kernel.dict_container import DictContainer
-from pyomo.core.kernel.block import (IBlock,
-                                     block,
+from pyomo.core.kernel.block import (block,
                                      block_dict)
-
-import six
-from six import StringIO
-
-if six.PY3:
-    from collections.abc import Mapping as collections_Mapping
-    from collections.abc import MutableMapping as collections_MutableMapping
-else:
-    from collections import Mapping as collections_Mapping
-    from collections import MutableMapping as collections_MutableMapping
 
 #
 # There are no fully implemented test suites in this
@@ -46,8 +37,10 @@ else:
 #       and weakref (bas
 _pickle_test_protocol = pickle.HIGHEST_PROTOCOL
 
+
 class _bad_ctype(object):
     ctype = "_this_is_definitely_not_the_ctype_being_tested"
+
 
 class _TestDictContainerBase(object):
 
@@ -102,7 +95,7 @@ class _TestDictContainerBase(object):
         cdict = self._container_type()
 
     def test_init2(self):
-        index = ['a', 1, None, (1,), (1,2)]
+        index = ['a', 1, None, (1,), (1, 2)]
         self._container_type((i, self._ctype_factory())
                              for i in index)
         self._container_type(((i, self._ctype_factory())
@@ -138,10 +131,10 @@ class _TestDictContainerBase(object):
         self.assertTrue(isinstance(cdict, ICategorizedObjectContainer))
         self.assertTrue(isinstance(cdict, IHomogeneousContainer))
         self.assertTrue(isinstance(cdict, DictContainer))
-        self.assertTrue(isinstance(cdict, collections_Mapping))
-        self.assertTrue(isinstance(cdict, collections_MutableMapping))
-        self.assertTrue(issubclass(type(cdict), collections_Mapping))
-        self.assertTrue(issubclass(type(cdict), collections_MutableMapping))
+        self.assertTrue(isinstance(cdict, collections.abc.Mapping))
+        self.assertTrue(isinstance(cdict, collections.abc.MutableMapping))
+        self.assertTrue(issubclass(type(cdict), collections.abc.Mapping))
+        self.assertTrue(issubclass(type(cdict), collections.abc.MutableMapping))
 
     def test_len1(self):
         cdict = self._container_type()
@@ -155,7 +148,7 @@ class _TestDictContainerBase(object):
 
     def test_setitem(self):
         cdict = self._container_type()
-        index = ['a', 1, None, (1,), (1,2)]
+        index = ['a', 1, None, (1,), (1, 2)]
         for i in index:
             self.assertTrue(i not in cdict)
         for cnt, i in enumerate(index, 1):
@@ -168,13 +161,13 @@ class _TestDictContainerBase(object):
     # examined more carefully before supporting it.
     # For now just test that implicit assignment raises an exception
     def test_wrong_type_init(self):
-        index = ['a', 1, None, (1,), (1,2)]
+        index = ['a', 1, None, (1,), (1, 2)]
         with self.assertRaises(TypeError):
             c = self._container_type(
                 (i, _bad_ctype()) for i in index)
 
     def test_wrong_type_update(self):
-        index = ['a', 1, None, (1,), (1,2)]
+        index = ['a', 1, None, (1,), (1, 2)]
         c = self._container_type()
         with self.assertRaises(TypeError):
             c.update((i, _bad_ctype()) for i in index)
@@ -221,7 +214,7 @@ class _TestDictContainerBase(object):
     # make sure an existing Data object IS replaced
     # by a call to setitem and not simply updated.
     def test_setitem_exists_overwrite(self):
-        index = ['a', 1, None, (1,), (1,2)]
+        index = ['a', 1, None, (1,), (1, 2)]
         c = self._container_type((i, self._ctype_factory())
                               for i in index)
         self.assertEqual(len(c), len(index))
@@ -235,7 +228,7 @@ class _TestDictContainerBase(object):
             self.assertEqual(cdata.parent, None)
 
     def test_delitem(self):
-        index = ['a', 1, None, (1,), (1,2)]
+        index = ['a', 1, None, (1,), (1, 2)]
         c = self._container_type((i, self._ctype_factory())
                               for i in index)
         self.assertEqual(len(c), len(index))
@@ -250,7 +243,7 @@ class _TestDictContainerBase(object):
             self.assertEqual(cdata.parent, None)
 
     def test_iter(self):
-        index = ['a', 1, None, (1,), (1,2)]
+        index = ['a', 1, None, (1,), (1, 2)]
         c = self._container_type((i, self._ctype_factory())
                               for i in index)
         self.assertEqual(len(c), len(index))
@@ -260,7 +253,7 @@ class _TestDictContainerBase(object):
             self.assertTrue(idx in index)
 
     def test_pickle(self):
-        index = ['a', 1, None, (1,), (1,2)]
+        index = ['a', 1, None, (1,), (1, 2)]
         cdict = self._container_type((i, self._ctype_factory())
                                      for i in index)
         cdict[0] = self._container_type()
@@ -279,18 +272,16 @@ class _TestDictContainerBase(object):
             self.assertTrue(cdict[i].parent is cdict)
 
     def test_keys(self):
-        index = ['a', 1, None, (1,), (1,2)]
-        raw_constraint_dict = dict((i, self._ctype_factory())
-                                   for i in index)
+        index = ['a', 1, None, (1,), (1, 2)]
+        raw_constraint_dict = {i:self._ctype_factory() for i in index}
         c = self._container_type(raw_constraint_dict)
         self.assertEqual(sorted(list(raw_constraint_dict.keys()),
                                 key=str),
                          sorted(list(c.keys()), key=str))
 
     def test_values(self):
-        index = ['a', 1, None, (1,), (1,2)]
-        raw_constraint_dict = dict((i, self._ctype_factory())
-                                   for i in index)
+        index = ['a', 1, None, (1,), (1, 2)]
+        raw_constraint_dict = {i:self._ctype_factory() for i in index}
         c = self._container_type(raw_constraint_dict)
         self.assertEqual(
             sorted(list(id(_v)
@@ -301,9 +292,8 @@ class _TestDictContainerBase(object):
                    key=str))
 
     def test_items(self):
-        index = ['a', 1, None, (1,), (1,2)]
-        raw_constraint_dict = dict((i, self._ctype_factory())
-                                   for i in index)
+        index = ['a', 1, None, (1,), (1, 2)]
+        raw_constraint_dict = {i:self._ctype_factory() for i in index}
         c = self._container_type(raw_constraint_dict)
         self.assertEqual(
             sorted(list((_i, id(_v))
@@ -314,9 +304,8 @@ class _TestDictContainerBase(object):
                    key=str))
 
     def test_update(self):
-        index = ['a', 1, None, (1,), (1,2)]
-        raw_constraint_dict = dict((i, self._ctype_factory())
-                                   for i in index)
+        index = ['a', 1, None, (1,), (1, 2)]
+        raw_constraint_dict = {i:self._ctype_factory() for i in index}
         c = self._container_type()
         c.update(raw_constraint_dict)
         self.assertEqual(sorted(list(raw_constraint_dict.keys()),
@@ -600,6 +589,7 @@ class _TestDictContainerBase(object):
                          [id(c) for c in descend.seen])
         return cdict, traversal
 
+
 class _TestActiveDictContainerBase(_TestDictContainerBase):
 
     def test_active_type(self):
@@ -608,8 +598,8 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
         self.assertTrue(isinstance(cdict, ICategorizedObjectContainer))
         self.assertTrue(isinstance(cdict, IHomogeneousContainer))
         self.assertTrue(isinstance(cdict, DictContainer))
-        self.assertTrue(isinstance(cdict, collections_Mapping))
-        self.assertTrue(isinstance(cdict, collections_MutableMapping))
+        self.assertTrue(isinstance(cdict, collections.abc.Mapping))
+        self.assertTrue(isinstance(cdict, collections.abc.MutableMapping))
 
     def test_active(self):
         children = {}
@@ -617,7 +607,7 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
         children[1] = self._ctype_factory()
         children[None] = self._ctype_factory()
         children[(1,)] = self._ctype_factory()
-        children[(1,2)] = self._ctype_factory()
+        children[(1, 2)] = self._ctype_factory()
         children['(1,2)'] = self._ctype_factory()
 
         cdict = self._container_type()
@@ -959,6 +949,7 @@ class _TestActiveDictContainerBase(_TestDictContainerBase):
                                             descend=descend))
         self.assertEqual(len(descend.seen), 1)
         self.assertIs(descend.seen[0], cdict)
+
 
 if __name__ == "__main__":
     unittest.main()

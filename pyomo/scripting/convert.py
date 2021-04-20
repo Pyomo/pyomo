@@ -13,21 +13,18 @@ __all__ = ['pyomo2lp', 'pyomo2nl', 'pyomo2dakota']
 import os
 import sys
 
-from pyutilib.misc import Options, Container
-
-from pyomo.common import pyomo_command
+from pyomo.common.collections import Bunch
 from pyomo.opt import ProblemFormat
 from pyomo.core.base import (Objective,
                              Var,
                              Constraint,
                              value,
                              ConcreteModel)
-import pyomo.scripting.util
 
 _format = None
 
 
-def convert(options=Options(), parser=None, model_format=None):
+def convert(options=Bunch(), parser=None, model_format=None):
     global _format
     if not model_format is None:
         _format = model_format
@@ -43,7 +40,7 @@ def convert(options=Options(), parser=None, model_format=None):
             options.model.save_file = 'unknown.'+str(_format)
     options.model.save_format = _format
 
-    data = Options(options=options)
+    data = Bunch(options=options)
 
     model_data = None
     try:
@@ -52,7 +49,7 @@ def convert(options=Options(), parser=None, model_format=None):
         pyomo.scripting.util.apply_preprocessing(data, parser=parser)
 
         if data.error:
-            return Container()
+            return Bunch()
 
         model_data = pyomo.scripting.util.create_model(data)
 
@@ -76,7 +73,7 @@ def convert(options=Options(), parser=None, model_format=None):
 
     return model_data
 
-def convert_dakota(options=Options(), parser=None):
+def convert_dakota(options=Bunch(), parser=None):
     #
     # Import plugins
     #

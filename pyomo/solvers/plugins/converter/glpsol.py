@@ -9,12 +9,12 @@
 #  ___________________________________________________________________________
 
 import os
-import six
 
-import pyutilib.subprocess
-import pyutilib.common
+import subprocess
 import pyomo.common
-from pyomo.opt.base import *
+from pyomo.common.errors import ApplicationError
+from pyomo.common.tempfiles import TempfileManager
+from pyomo.opt.base import ProblemFormat, ConverterError
 from pyomo.opt.base.convert import ProblemConverterFactory
 
 
@@ -43,7 +43,7 @@ class GlpsolMIPConverter(object):
 
     def apply(self, *args, **kwargs):
         """Convert an instance of one type into another"""
-        if not isinstance(args[2],six.string_types):
+        if not isinstance(args[2], str):
             raise ConverterError("Can only apply glpsol to convert file data")
         _exec = pyomo.common.Executable("glpsol")
         if not _exec:
@@ -55,14 +55,14 @@ class GlpsolMIPConverter(object):
         #
         modfile=''
         if args[1] == ProblemFormat.mps: #pragma:nocover
-            ofile = pyutilib.services.TempfileManager.create_tempfile(suffix = '.glpsol.mps')
+            ofile = TempfileManager.create_tempfile(suffix = '.glpsol.mps')
             cmd.extend([
                 "--check",
                 "--name", "MPS model derived from "+os.path.basename(args[2]),
                 "--wfreemps", ofile
             ])
         elif args[1] == ProblemFormat.cpxlp:
-            ofile = pyutilib.services.TempfileManager.create_tempfile(suffix = '.glpsol.lp')
+            ofile = TempfileManager.create_tempfile(suffix = '.glpsol.lp')
             cmd.extend([
                 "--check",
                 "--name","MPS model derived from "+os.path.basename(args[2]),
@@ -75,7 +75,7 @@ class GlpsolMIPConverter(object):
             # Create a temporary model file, since GLPSOL can only
             # handle one input file
             #
-            modfile = pyutilib.services.TempfileManager.create_tempfile(suffix = '.glpsol.mod')
+            modfile = TempfileManager.create_tempfile(suffix = '.glpsol.mod')
             OUTPUT=open(modfile,"w")
             flag=False
             #
@@ -103,9 +103,10 @@ class GlpsolMIPConverter(object):
                 OUTPUT.write("end;\n")
             OUTPUT.close()
             cmd.append(modfile)
-        pyutilib.subprocess.run(cmd)
+        subprocess.run(cmd, stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL)
         if not os.path.exists(ofile):       #pragma:nocover
-            raise pyutilib.common.ApplicationError("Problem launching 'glpsol' to create "+ofile)
+            raise ApplicationError("Problem launching 'glpsol' to create "+ofile)
         if os.path.exists(modfile):
             os.remove(modfile)
         return (ofile,),None # empty variable map

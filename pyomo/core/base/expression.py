@@ -15,9 +15,10 @@ import logging
 from weakref import ref as weakref_ref
 
 from pyomo.common.modeling import NoArgumentGiven
+from pyomo.common.log import is_debug_set
+from pyomo.common.deprecation import deprecated
 from pyomo.common.timing import ConstructionTimer
 
-from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.indexed_component import (
@@ -28,8 +29,6 @@ from pyomo.core.base.misc import (apply_indexed_rule,
 from pyomo.core.base.numvalue import (NumericValue,
                                       as_numeric)
 from pyomo.core.base.util import is_functor
-
-from six import iteritems
 
 logger = logging.getLogger('pyomo.core')
 
@@ -197,16 +196,17 @@ class _GeneralExpressionDataImpl(_ExpressionData):
 
     # for backwards compatibility reasons
     @property
+    @deprecated("The .value property getter on _GeneralExpressionDataImpl "
+                "is deprecated. Use the .expr property getter instead",
+                version='4.3.11323')
     def value(self):
-        logger.warning("DEPRECATED: The .value property getter on "
-                       "_GeneralExpressionDataImpl is deprecated. Use "
-                       "the .expr property getter instead")
         return self._expr
+
     @value.setter
+    @deprecated("The .value property setter on _GeneralExpressionDataImpl "
+                "is deprecated. Use the set_value(expr) method instead",
+                version='4.3.11323')
     def value(self, expr):
-        logger.warning("DEPRECATED: The .value property setter on "
-                       "_GeneralExpressionDataImpl is deprecated. Use "
-                       "the set_value(expr) method instead")
         self.set_value(expr)
 
     def set_value(self, expr):
@@ -299,7 +299,7 @@ class Expression(IndexedComponent):
              ('Index', None if (not self.is_indexed())
                   else self._index_set)
              ],
-            self.iteritems(),
+            self.items(),
             ("Expression",),
             lambda k,v: \
                ["Undefined" if v.expr is None else v.expr]
@@ -319,7 +319,7 @@ class Expression(IndexedComponent):
         tabular_writer(
             ostream,
             prefix+tab,
-            ((k,v) for k,v in iteritems(self._data)),
+            ((k,v) for k,v in self._data.items()),
             ( "Value", ),
             lambda k, v: \
                ["Undefined" if v.expr is None else v()])
@@ -331,8 +331,8 @@ class Expression(IndexedComponent):
     # expensive to extract the contents of an expression.
     #
     def extract_values(self):
-        return dict((key, expression_data.expr) \
-                    for key, expression_data in iteritems(self))
+        return {key:expression_data.expr
+                for key, expression_data in self.items()}
 
     #
     # takes as input a (index, value) dictionary for updating this
@@ -348,7 +348,7 @@ class Expression(IndexedComponent):
                 "="+self.name+"; no value with index "
                 "None in input new values map.")
 
-        for index, new_value in iteritems(new_values):
+        for index, new_value in new_values.items():
             self._data[index].set_value(new_value)
 
     def _getitem_when_not_present(self, index):
@@ -361,7 +361,7 @@ class Expression(IndexedComponent):
     def construct(self, data=None):
         """ Apply the rule to construct values in this set """
 
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug(
                 "Constructing Expression, name=%s, from data=%s"
                 % (self.name, str(data)))
@@ -449,16 +449,17 @@ class SimpleExpression(_GeneralExpressionData, Expression):
 
     # for backwards compatibility reasons
     @property
+    @deprecated("The .value property getter on SimpleExpression "
+                "is deprecated. Use the .expr property getter instead",
+                version='4.3.11323')
     def value(self):
-        logger.warning("DEPRECATED: The .value property getter on "
-                       "SimpleExpression is deprecated. Use "
-                       "the .expr property getter instead")
         return self.expr
+
     @value.setter
+    @deprecated("The .value property setter on SimpleExpression "
+                "is deprecated. Use the set_value(expr) method instead",
+                version='4.3.11323')
     def value(self, expr):
-        logger.warning("DEPRECATED: The .value property setter on "
-                       "SimpleExpression is deprecated. Use the "
-                       "set_value(expr) method instead")
         self.set_value(expr)
 
     def set_value(self, expr):

@@ -11,11 +11,8 @@
 """
 UI Tests
 """
-import pyutilib.th as unittest
-import time
-import pytest
 
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, Var, Param, Constraint, Objective, Reals, Block, Expression, ExternalFunction, sin, sqrt, log
 from pyomo.contrib.viewer.qt import qt_available
 from pyomo.contrib.viewer.qt import QtCore, QMessageBox
 from pyomo.contrib.viewer.ui import get_mainwindow, ModelBrowser
@@ -83,10 +80,10 @@ def test_model_information(qtbot):
     text = mw._dialog.text()
     mw._dialog.close()
     text = text.split("\n")
-    assert(text[0].startswith("8")) # Active constraints
-    assert(text[1].startswith("7")) # Active equalities
-    assert(text[2].startswith("7")) # Free vars in active equalities
-    assert(text[3].startswith("0")) # degrees of feedom
+    assert(str(text[0]).startswith("8")) # Active constraints
+    assert(str(text[1]).startswith("7")) # Active equalities
+    assert(str(text[2]).startswith("7")) # Free vars in active equalities
+    assert(str(text[3]).startswith("0")) # degrees of feedom
     # Main window has parts it is supposed to 
     assert(hasattr(mw, "menuBar"))
     assert(isinstance(mw.variables, ModelBrowser))
