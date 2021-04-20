@@ -42,7 +42,7 @@ if not cyipopt_solver.cyipopt_available:
         "PyNumero needs CyIpopt installed to run CyIpopt tests")
 import cyipopt as cyipopt_core
 
-example_dir = os.path.join(this_file_dir(), '..', 'examples')
+example_dir = os.path.join(this_file_dir(), '..')
 
 class TestPyomoCyIpoptSolver(unittest.TestCase):
     def test_status_maps(self):
