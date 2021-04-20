@@ -237,9 +237,8 @@ jobs:
         python -m pip install --cache-dir cache/pip --upgrade pip
         pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS}
         pip install --cache-dir cache/pip ${PYTHON_PACKAGES}
-        # pymysql 1.0.0: No longer supports Python 2 or pypy2
         pip install --cache-dir cache/pip pymysql || \
-            pip install --cache-dir cache/pip pymysql==0.10.1
+            pip install --cache-dir cache/pip pymysql
         if test -z "${{matrix.slim}}"; then
             pip install --cache-dir cache/pip cplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
