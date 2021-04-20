@@ -433,6 +433,51 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
         callback(module, False)
     return module, False
 
+
+def declare_deferred_modules_as_importable(globals_dict):
+    """Make all DeferredImportModules in ``globals_dict`` importable
+
+    This function will go throught the specified ``globals_dict``
+    dictionary and add any instances of :py:class:`DeferredImportModule`
+    that it finds (and any of their deferred submodules) to
+    ``sys.modules`` so that the modules can be imported through the
+    ``globals_dict`` namespace.
+
+    For example, ``pyomo/common/dependencies.py`` declares:
+
+    .. doctest::
+
+       scipy, scipy_available = attempt_import(
+           'scipy', callback=_finalize_scipy,
+           deferred_submodules=['stats', 'sparse', 'spatial', 'integrate'])
+
+       declare_deferred_modules_as_importable(globals())
+
+    Which enables users to use:
+
+    .. doctest::
+
+       import pyomo.common.dependencies.scipy.sparse as spa
+
+    If the deferred import has not yet been triggered, then the
+    :py:class:`DeferredImportModule` is returned and named ``spa``.
+    However, if the import has already been triggered, then ``spa`` will
+    either be the ``scipy.sparse` module, or a
+    py:class:`ModuleUnavailable` instance.
+
+    """
+    _global_name = globals_dict['__name__'] + '.'
+    deferred = list((k, v) for k, v in globals_dict.items()
+                    if type(v) is DeferredImportModule )
+    while deferred:
+        name, mod = deferred.pop(0)
+        mod.__path__ = None
+        mod.__spec__ = None
+        sys.modules[_global_name + name] = mod
+        deferred.extend((name + '.' + k, v) for k, v in mod.__dict__.items()
+                        if type(v) is DeferredImportModule )
+
+
 #
 # Common optional dependencies used throughout Pyomo
 #
@@ -497,3 +542,5 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+
+declare_deferred_modules_as_importable(globals())
