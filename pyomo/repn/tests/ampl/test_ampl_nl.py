@@ -48,7 +48,7 @@ class TestNLWriter(unittest.TestCase):
 
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError,
             "'a' is not part of the model",
             model.write, test_fname, format='nl')
@@ -87,7 +87,7 @@ class TestNLWriter(unittest.TestCase):
 
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError,
             "'other.a' exists within Foo 'other'",
             model.write, test_fname, format='nl')

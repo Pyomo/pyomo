@@ -89,7 +89,7 @@ def create_test_method(model,
 
         if is_expected_failure:
             if rc[0]:
-                warnings.warn("\nTest model '%s' was marked as an expected "
+                warnings.warning("\nTest model '%s' was marked as an expected "
                               "failure but no failure occured. The "
                               "reason given for the expected failure "
                               "is:\n\n****\n%s\n****\n\n"

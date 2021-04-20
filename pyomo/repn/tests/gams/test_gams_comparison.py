@@ -87,7 +87,7 @@ class BaselineTests(Tests):
 
     @parameterized.parameterized.expand(input=invalidlist)
     def gams_writer_test_invalid(self, name, targetdir):
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "GAMS files cannot represent the unary function"):
             if os.path.exists(targetdir+name+'.dat'):
                 self.pyomo(['--output='+currdir+name+'.test.gms',

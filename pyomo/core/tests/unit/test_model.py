@@ -209,7 +209,7 @@ class Test(unittest.TestCase):
         model.obj = Objective(rule=obj_rule)
         self.assertEqual( value(model.obj), 48 )
 
-    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
+    @unittest.skipIf('glpk' not in solvers, "glpk solver is not available")
     def test_solve1(self):
         model = ConcreteModel()
         model.A = RangeSet(1,4)
@@ -281,6 +281,7 @@ class Test(unittest.TestCase):
                                              abstol=1e-4,
                                              allow_second_superset=True)
             
+    @unittest.skipIf('glpk' not in solvers, "glpk solver is not available")
     def test_store_to_skip_stale_vars(self):
         # test store_to() function with skip_stale_vars=True
         model = ConcreteModel()
@@ -325,7 +326,7 @@ class Test(unittest.TestCase):
         self.assertTrue(cmp(_out, _txt),
                         msg="Files %s and %s differ" % (_txt, _out))
 
-    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
+    @unittest.skipIf('glpk' not in solvers, "glpk solver is not available")
     def test_solve4(self):
         model = ConcreteModel()
         model.A = RangeSet(1,4)
@@ -349,7 +350,7 @@ class Test(unittest.TestCase):
                                              abstol=1e-4,
                                              allow_second_superset=True)
 
-    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
+    @unittest.skipIf('glpk' not in solvers, "glpk solver is not available")
     def test_solve6(self):
         #
         # Test that solution values have complete block names:
@@ -380,7 +381,7 @@ class Test(unittest.TestCase):
                                              abstol=1e-4,
                                              allow_second_superset=True)
 
-    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
+    @unittest.skipIf('glpk' not in solvers, "glpk solver is not available")
     def test_solve7(self):
         #
         # Test that solution values are writen with appropriate
@@ -502,7 +503,7 @@ class Test(unittest.TestCase):
         self.assertEqual(model.nobjectives(), 0)
         self.assertEqual(model.nconstraints(), 0)
 
-    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
+    @unittest.skipIf('glpk' not in solvers, "glpk solver is not available")
     def test_solve_with_pickle(self):
         model = ConcreteModel()
         model.A = RangeSet(1,4)
@@ -526,7 +527,7 @@ class Test(unittest.TestCase):
         #self.assertEqual(tmodel.solutions[0].status, SolutionStatus.feasible)
         self.assertEqual(tmodel.solutions[0].message, None)
 
-    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
+    @unittest.skipIf('glpk' not in solvers, "glpk solver is not available")
     def test_solve_with_pickle_then_clone(self):
         # This tests github issue Pyomo-#65
         model = ConcreteModel()
@@ -588,7 +589,7 @@ class Test(unittest.TestCase):
             _v = inst.solutions[0]._entry['variable'][id(inst.b.x[v])]
             self.assertIs(_v[0](), inst.b.x[v])
 
-    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
+    @unittest.skipIf('glpk' not in solvers, "glpk solver is not available")
     @unittest.skipIf(not yaml_available, "YAML not available available")
     def test_solve_with_store1(self):
         # With symbolic solver labels
@@ -630,7 +631,7 @@ class Test(unittest.TestCase):
         tmodel.solutions.load_from(results)
         self.assertEqual(len(tmodel.solutions), 1)
 
-    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
+    @unittest.skipIf('glpk' not in solvers, "glpk solver is not available")
     @unittest.skipIf(not yaml_available, "YAML not available available")
     def test_solve_with_store2(self):
         # Without symbolic solver labels
@@ -672,7 +673,7 @@ class Test(unittest.TestCase):
         tmodel.solutions.load_from(results)
         self.assertEqual(len(tmodel.solutions), 1)
 
-    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
+    @unittest.skipIf('glpk' not in solvers, "glpk solver is not available")
     @unittest.skipIf(not yaml_available, "YAML not available available")
     def test_solve_with_store2(self):
         model = ConcreteModel()
@@ -725,7 +726,7 @@ class Test(unittest.TestCase):
         tmodel.solutions.load_from(results, ignore_invalid_labels=True)
         self.assertEqual(len(tmodel.solutions), 1)
 
-    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
+    @unittest.skipIf('glpk' not in solvers, "glpk solver is not available")
     @unittest.skipIf(not yaml_available, "YAML not available available")
     def test_solve_with_store3(self):
         model = ConcreteModel()
@@ -779,7 +780,7 @@ class Test(unittest.TestCase):
                                              yaml.full_load(out),
                                              allow_second_superset=True)
 
-    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
+    @unittest.skipIf('glpk' not in solvers, "glpk solver is not available")
     @unittest.skipIf(not yaml_available, "YAML not available available")
     def test_solve_with_store4(self):
         model = ConcreteModel()
@@ -805,7 +806,7 @@ class Test(unittest.TestCase):
                                              yaml.full_load(out),
                                              allow_second_superset=True)
 
-    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
+    @unittest.skipIf('glpk' not in solvers, "glpk solver is not available")
     @unittest.skipIf(not yaml_available, "YAML not available available")
     def test_solve_with_store5(self):
         model = ConcreteModel()
@@ -858,8 +859,8 @@ class Test(unittest.TestCase):
                 return sum(m.x[i] for i in m.I) >= 0
             m.c = Constraint( rule=c )
 
-        with self.assertRaisesRegexp(
-                ValueError, 'x\[1\]: The component has not been constructed.'):
+        with self.assertRaisesRegex(
+                ValueError, r'x\[1\]: The component has not been constructed.'):
             model = AbstractModel(rule=make_invalid)
             instance = model.create_instance()
 

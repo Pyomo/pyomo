@@ -722,7 +722,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         self.e = m.x**2 + m.y + m.z*(m.x+m.y)
 
     def test_bad_args(self):
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Unrecognized keyword arguments: {'foo': None}"):
             StreamBasedExpressionVisitor(foo=None)
 
@@ -797,10 +797,10 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         walker = StreamBasedExpressionVisitor(
             enterNode=enter, acceptChildResult=accept)
         # 4 operators, 6 leaf nodes
-        self.assertEquals(walker.walk_expression(self.e), 10)
+        self.assertEqual(walker.walk_expression(self.e), 10)
 
     def test_sizeof_expression(self):
-        self.assertEquals(sizeof_expression(self.e), 10)
+        self.assertEqual(sizeof_expression(self.e), 10)
 
     def test_enterNode(self):
         # This is an alternative way to implement the beforeChild test:
@@ -930,7 +930,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         ans = walker.walk_expression(self.e)
         m = self.m
         self.assertEqual(ans, None)
-        self.assertEquals(counts, [9,9,9])
+        self.assertEqual(counts, [9,9,9])
 
     def test_OLD_beforeChild_acceptChildResult_afterChild(self):
         counts = [0,0,0]
@@ -964,7 +964,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         ans = walker.walk_expression(self.e)
         m = self.m
         self.assertEqual(ans, None)
-        self.assertEquals(counts, [9,9,9])
+        self.assertEqual(counts, [9,9,9])
 
     def test_enterNode_acceptChildResult_beforeChild(self):
         ans = []

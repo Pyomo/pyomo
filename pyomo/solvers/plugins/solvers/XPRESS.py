@@ -12,7 +12,6 @@
 import os
 import re
 import logging
-from six import string_types
 
 from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
@@ -302,7 +301,7 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
                 results.solver.termination_message = ' '.join(tokens)
 
         try:
-            if isinstance(results.solver.termination_message, string_types):
+            if isinstance(results.solver.termination_message, str):
                 results.solver.termination_message = results.solver.termination_message.replace(':', '\\x3a')
         except:
             pass

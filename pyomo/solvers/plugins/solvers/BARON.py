@@ -26,8 +26,6 @@ from pyomo.opt.results import (
 )
 from pyomo.opt.solver import SystemCallSolver
 
-from six.moves import zip
-
 logger = logging.getLogger('pyomo.solvers')
 
 @SolverFactory.register('baron',  doc='The BARON MINLP solver')
