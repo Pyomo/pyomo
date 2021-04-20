@@ -526,7 +526,7 @@ class TestConfig(unittest.TestCase):
     def setUp(self):
         # Save the original environment, then force a fixed column width
         # so tests do not fail on some platforms (notably, OSX)
-        self.original_environ = os.environ
+        self.original_environ, os.environ = os.environ, os.environ.copy()
         os.environ["COLUMNS"] = "80"
 
         self.config = config = ConfigDict(

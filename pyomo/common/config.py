@@ -620,6 +620,13 @@ Key information from the ConfigDict is automatically transferred over
 to the ArgumentParser object:
 
 .. doctest::
+   :hide:
+
+    >>> import os
+    >>> original_environ, os.environ = os.environ, os.environ.copy()
+    >>> os.environ['COLUMNS'] = '80'
+
+.. doctest::
 
     >>> print(parser.format_help())
     usage: tester [-h] [--iterlim INT] [--lbfgs] [--disable-linesearch]
@@ -637,6 +644,11 @@ to the ArgumentParser object:
       --abstol FLOAT, -a FLOAT
                             absolute convergence tolerance
     <BLANKLINE>
+
+.. doctest::
+   :hide:
+
+    >>> os.environ = original_environ
 
 Parsed arguments can then be imported back into the ConfigDict:
 
