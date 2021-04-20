@@ -7,7 +7,8 @@ documentation (:ref:`pynumero_api`).
 
 Relevant imports
 
-.. code-block:: python
+.. doctest::
+   :skipif: not numpy_available or not scipy_available or not asl_available
 
    >>> import pyomo.environ as pe
    >>> from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
@@ -15,7 +16,8 @@ Relevant imports
 
 Create a Pyomo model
 
-.. code-block:: python
+.. doctest::
+   :skipif: not numpy_available or not scipy_available or not asl_available
 
    >>> m = pe.ConcreteModel()
    >>> m.x = pe.Var(bounds=(-5, None))
@@ -26,13 +28,15 @@ Create a Pyomo model
 
 Create a :py:class:`pyomo.contrib.pynumero.interfaces.pyomo_nlp.PyomoNLP` instance
 
-.. code-block:: python
-   
+.. doctest::
+   :skipif: not numpy_available or not scipy_available or not asl_available
+
    >>> nlp = PyomoNLP(m)
 
 Get values of primals and duals
 
-.. code-block:: python
+.. doctest::
+   :skipif: not numpy_available or not scipy_available or not asl_available
 
    >>> nlp.get_primals()
    array([0. , 2.5])
@@ -41,7 +45,8 @@ Get values of primals and duals
 
 Get variable and constraint bounds
 
-.. code-block:: python
+.. doctest::
+   :skipif: not numpy_available or not scipy_available or not asl_available
 
    >>> nlp.primals_lb()
    array([ -5., -inf])
@@ -54,7 +59,8 @@ Get variable and constraint bounds
 
 Objective and constraint evaluations
 
-.. code-block:: python
+.. doctest::
+   :skipif: not numpy_available or not scipy_available or not asl_available
 
    >>> nlp.evaluate_objective()
    6.25
@@ -63,13 +69,14 @@ Objective and constraint evaluations
 
 Derivative evaluations
 
-.. code-block:: python
+.. doctest::
+   :skipif: not numpy_available or not scipy_available or not asl_available
 
    >>> nlp.evaluate_grad_objective()
    array([0., 5.])
-   >>> nlp.evaluate_jacobian()
+   >>> nlp.evaluate_jacobian()  # doctest: +SKIP
    <2x2 sparse matrix of type '<class 'numpy.float64'>'
-           with 4 stored elements in COOrdinate format>
+       with 4 stored elements in COOrdinate format>
    >>> nlp.evaluate_jacobian().toarray()
    array([[ 2.,  1.],
           [ 1., -1.]])
@@ -79,7 +86,8 @@ Derivative evaluations
 
 Set values of primals and duals
 
-.. code-block:: python
+.. doctest::
+   :skipif: not numpy_available or not scipy_available or not asl_available
 
    >>> nlp.set_primals(np.array([0, 1]))
    >>> nlp.evaluate_constraints()
@@ -90,7 +98,8 @@ Set values of primals and duals
 
 Equality and inequality constraints separately
 
-.. code-block:: python
+.. doctest::
+   :skipif: not numpy_available or not scipy_available or not asl_available
 
    >>> nlp.evaluate_eq_constraints()
    array([0.])

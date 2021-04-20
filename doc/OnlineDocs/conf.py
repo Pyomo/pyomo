@@ -267,4 +267,20 @@ try:
     gurobipy_available = True
 except ImportError:
     gurobipy_available = False
+from pyomo.common.dependencies import numpy_available, scipy_available
+numpy_available = bool(numpy_available)
+scipy_available = bool(scipy_available)
+if numpy_available and scipy_available:
+    from pyomo.contrib.pynumero.asl import AmplInterface
+    asl_available = AmplInterface.available()
+    from pyomo.contrib.pynumero.linalg.mumps_interface import mumps_available
+    from pyomo.contrib.pynumero.linalg.ma27 import MA27Interface
+    ma27_available = MA27Interface.available()
+else:
+    asl_available = False
+    mumps_available = False
+    ma27_available = False
+asl_available = bool(asl_available)
+mumps_available = bool(mumps_available)
+ma27_available = bool(ma27_available)
 '''
