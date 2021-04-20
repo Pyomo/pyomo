@@ -19,10 +19,11 @@ Developers
 The development team includes:
 
 * Jose Santiago Rodriguez
-* Carl Laird
-* John Siirola
 * Michael Bynum
+* Carl Laird
+* Bethany Nicholson
 * Robby Parker
+* John Siirola
 
 
 Indices and Tables
