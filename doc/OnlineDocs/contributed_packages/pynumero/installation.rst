@@ -16,7 +16,7 @@ Method 1
 One way to build PyNumero extensions is with the pyomo
 download-extensions and build-extensions subcommands. Note that
 this approach will build PyNumero without support for the HSL linear
-sovlers. ::
+solvers. ::
 
   pyomo download-extensions
   pyomo build-extensions
