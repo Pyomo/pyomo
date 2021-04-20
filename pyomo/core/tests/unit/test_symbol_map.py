@@ -17,7 +17,7 @@ class TestSymbolMap(unittest.TestCase):
     def test_no_labeler(self):
         s = SymbolMap()
         v = variable()
-        self.assertEquals(str(v), s.getSymbol(v))
+        self.assertEqual(str(v), s.getSymbol(v))
 
     def test_existing_alias(self):
         s = SymbolMap()

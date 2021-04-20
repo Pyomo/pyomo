@@ -58,38 +58,38 @@ class TestDisableMethods(unittest.TestCase):
         x = _abstract_simple('foo')
         self.assertIs(type(x), _abstract_simple)
         self.assertIsInstance(x, _simple)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Cannot access 'a' on _abstract_simple "
                 "'foo' before it has been constructed"):
             x.a()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Cannot custom_msg _abstract_simple "
                 "'foo' before it has been constructed"):
             x.b()
         self.assertEqual(x.c(), 'c')
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Cannot access property 'd' on _abstract_simple "
                 "'foo' before it has been constructed"):
             x.d
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Cannot set property 'd' on _abstract_simple "
                 "'foo' before it has been constructed"):
             x.d = 1
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Cannot custom_pmsg _abstract_simple "
                 "'foo' before it has been constructed"):
             x.e
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Cannot custom_pmsg _abstract_simple "
                 "'foo' before it has been constructed"):
             x.e = 1
 
         # Verify that the wrapper function enforces the same API as the
         # wrapped function
-        with self.assertRaisesRegexp(
-                TypeError, "f\(\) takes "):
+        with self.assertRaisesRegex(
+                TypeError, r"f\(\) takes "):
             x.f(1,2,3)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Cannot access 'f' on _abstract_simple "
                 "'foo' before it has been constructed"):
             x.f(1,2)
@@ -106,9 +106,9 @@ class TestDisableMethods(unittest.TestCase):
         self.assertEqual(x.f(1,2), 'f12')
 
     def test_bad_api(self):
-        with self.assertRaisesRegexp(
-                DeveloperError, "Cannot disable method not_there on "
-                "<class '.*\.foo'>"):
+        with self.assertRaisesRegex(
+                DeveloperError, r"Cannot disable method not_there on "
+                r"<class '.*\.foo'>"):
 
             @disable_methods(('a','not_there'))
             class foo(_simple):
@@ -422,7 +422,7 @@ class Test_Initializer(unittest.TestCase):
         def a_init(m):
             yield 0
             yield 3
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Generator functions are not allowed"):
             a = Initializer(a_init)
 
@@ -469,7 +469,7 @@ class Test_Initializer(unittest.TestCase):
         init = Init()
 
         m = ConcreteModel()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Generator functions are not allowed"):
             a = Initializer(init.a_init)
 
@@ -496,7 +496,7 @@ class Test_Initializer(unittest.TestCase):
 
     def test_generators(self):
         m = ConcreteModel()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Generators are not allowed"):
             a = Initializer(iter([0,3]))
 
@@ -509,7 +509,7 @@ class Test_Initializer(unittest.TestCase):
         def x_init():
             yield 0
             yield 3
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Generators are not allowed"):
             a = Initializer(x_init())
 

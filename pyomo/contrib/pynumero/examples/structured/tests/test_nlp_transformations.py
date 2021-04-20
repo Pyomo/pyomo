@@ -11,10 +11,11 @@
 import pyomo.common.unittest as unittest
 
 from pyomo.contrib.pynumero.dependencies import (
-    numpy as np, numpy_available, scipy_sparse as spa, scipy_available
+    numpy as np, numpy_available, scipy, scipy_available
 )
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
+spa = scipy.sparse
 
 from pyomo.contrib.pynumero.asl import AmplInterface
 
@@ -22,8 +23,8 @@ if not AmplInterface.available():
     raise unittest.SkipTest(
         "Pynumero needs the ASL extension to run NLP tests")
 
-from pyomo.contrib.pynumero.interfaces.nlp import PyomoNLP
-from pyomo.contrib.pynumero.interfaces.nlp_transformations import AdmmNLP
+from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
+from pyomo.contrib.pynumero.examples.structured.nlp_transformations import AdmmNLP
 from pyomo.core.plugins.transform.hierarchy import Transformation
 import pyomo.environ as pyo
 

@@ -1498,7 +1498,7 @@ class Test_constraint(unittest.TestCase):
             pass
         def f():
             c.expr = a
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             TypeError, "Relational expression used in an unexpected "
             "Boolean context.", f)
 

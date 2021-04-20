@@ -144,7 +144,7 @@ class Test(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(bounds=(0,2*3.1415))
         m.obj = Objective(expr=sin(m.x))
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
             RuntimeError,
             'The BARON .BAR format does not support the unary function "sin"'
             ):

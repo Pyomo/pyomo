@@ -409,12 +409,12 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
             error_message = "The %s module version %s does not satisfy " \
                             "the minimum version %s" % (
                                 name, version, minimum_version)
-    except catch_exceptions:
-        pass
+    except catch_exceptions as e:
+        _err = str(e)
 
     if not error_message:
         error_message = "The %s module (an optional Pyomo dependency) " \
-                        "failed to import" % (name,)
+                        "failed to import: %s" % (name, _err)
 
     module = ModuleUnavailable(error_message)
     if callback is not None:

@@ -22,7 +22,7 @@ from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.testcases import test_scenarios
 from pyomo.common.log import LoggingIntercept
 
-from six import StringIO
+from io import StringIO
 
 # The test directory
 thisDir = os.path.dirname(os.path.abspath( __file__ ))

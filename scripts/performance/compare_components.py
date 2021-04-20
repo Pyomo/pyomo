@@ -44,9 +44,6 @@ try:
 except:
     pympler_available = False
 
-import six
-from six.moves import xrange as range
-from six.moves import zip
 
 pympler_kwds = {}
 

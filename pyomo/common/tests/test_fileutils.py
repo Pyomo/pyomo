@@ -82,7 +82,7 @@ class TestFileUtils(unittest.TestCase):
         self.assertTrue(samefile(ref, found))
 
     def test_this_file(self):
-        self.assertEquals(_this_file, __file__.replace('.pyc','.py'))
+        self.assertEqual(_this_file, __file__.replace('.pyc','.py'))
         # Note that in some versions of PyPy, this can return <module>
         # instead of the normal <string>
         self.assertIn(subprocess.run([
@@ -93,7 +93,7 @@ class TestFileUtils(unittest.TestCase):
             stderr=subprocess.STDOUT,
             universal_newlines=True).stdout.strip(),
             ['<string>','<module>'])
-        self.assertEquals(subprocess.run(
+        self.assertEqual(subprocess.run(
             [sys.executable],
             input='from pyomo.common.fileutils import this_file;'
             'print(this_file())', stdout=subprocess.PIPE,
@@ -237,7 +237,8 @@ class TestFileUtils(unittest.TestCase):
         self.assertIsNotNone(b)
         self.assertIsNotNone(c)
         self.assertEqual(a,b)
-        self.assertEqual(a,c)
+        # find_library could have found libc.so.6
+        self.assertTrue(c.startswith(a))
         # Verify that the library is loadable (they are all the same
         # file, so only check one)
         _lib = ctypes.cdll.LoadLibrary(a)

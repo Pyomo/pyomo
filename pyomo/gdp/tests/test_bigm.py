@@ -10,7 +10,9 @@
 
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import TransformationFactory, Block, Set, Constraint, ComponentMap, Suffix, ConcreteModel, Var, Any, value
+from pyomo.environ import (TransformationFactory, Block, Set, Constraint,
+                           ComponentMap, Suffix, ConcreteModel, Var,
+                           Any, value)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.core.base import constraint, _ConstraintData
 from pyomo.repn import generate_standard_repn
@@ -22,7 +24,7 @@ import pyomo.gdp.tests.common_tests as ct
 
 import random
 
-from six import StringIO
+from io import StringIO
 
 class CommonTests:
     def diff_apply_to_and_create_using(self, model):
@@ -315,11 +317,11 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m.BigM[None] = 20
 
         # give an arg
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
-            "Big-M \([^)]*\) for constraint d\[0\].c is not of "
-            "length two. Expected either a single value or "
-            "tuple or list of length two for M.*",
+            r"Big-M \([^)]*\) for constraint d\[0\].c is not of "
+            r"length two. Expected either a single value or "
+            r"tuple or list of length two for M.*",
             TransformationFactory('gdp.bigm').apply_to,
             m,
             bigM=(-18, 19.2, 3))
@@ -341,11 +343,11 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m.BigM[None] = 20
 
         # give an arg
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
-            "Big-M \[[^\]]*\] for constraint d\[0\].c is not of "
-            "length two. Expected either a single value or "
-            "tuple or list of length two for M.*",
+            r"Big-M \[[^\]]*\] for constraint d\[0\].c is not of "
+            r"length two. Expected either a single value or "
+            r"tuple or list of length two for M.*",
             TransformationFactory('gdp.bigm').apply_to,
             m,
             bigM=[-18, 19.2, 3])
@@ -402,11 +404,11 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
     def test_tuple_wrong_length_err(self):
         m = models.makeTwoTermDisj()
         M = (-20,19, 32)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
-            "Big-M \(-20, 19, 32\) for constraint d\[0\].c is not of "
-            "length two. Expected either a single value or "
-            "tuple or list of length two for M.*",
+            r"Big-M \(-20, 19, 32\) for constraint d\[0\].c is not of "
+            r"length two. Expected either a single value or "
+            r"tuple or list of length two for M.*",
             TransformationFactory('gdp.bigm').apply_to,
             m,
             bigM={None: M})
@@ -414,11 +416,11 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
     def test_list_wrong_length_err(self):
         m = models.makeTwoTermDisj()
         M = [-20, 19, 34]
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
-            "Big-M \[-20, 19, 34\] for constraint d\[0\].c is not of "
-            "length two. Expected either a single value or "
-            "tuple or list of length two for M.*",
+            r"Big-M \[-20, 19, 34\] for constraint d\[0\].c is not of "
+            r"length two. Expected either a single value or "
+            r"tuple or list of length two for M.*",
             TransformationFactory('gdp.bigm').apply_to,
             m,
             bigM={None: M})
@@ -534,11 +536,11 @@ class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
     def test_nonlinear_bigM_missing_var_bounds(self):
         m = models.makeTwoTermDisj_Nonlinear()
         m.y.setlb(None)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
-            "Cannot estimate M for unbounded nonlinear "
-            "expressions.\n\t\(found while processing "
-            "constraint 'd\[0\].c'\)",
+            r"Cannot estimate M for unbounded nonlinear "
+            r"expressions.\n\t\(found while processing "
+            r"constraint 'd\[0\].c'\)",
             TransformationFactory('gdp.bigm').apply_to,
             m)
 
@@ -1246,12 +1248,12 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         (src, key) = bigm.get_m_value_src(m.simpledisj2.c)
         self.assertIs(src, m.BigM)
         self.assertIsNone(key)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
-            "This is why this method is deprecated: The lower "
-            "and upper M values for constraint b.disjunct\[0\].c "
-            "came from different sources, please use the "
-            "get_M_value_src method.",
+            r"This is why this method is deprecated: The lower "
+            r"and upper M values for constraint b.disjunct\[0\].c "
+            r"came from different sources, please use the "
+            r"get_M_value_src method.",
             bigm.get_m_value_src,
             m.b.disjunct[0].c)
         (src, key) = bigm.get_m_value_src(m.b.disjunct[1].c)
@@ -1309,14 +1311,14 @@ class SimpleDisjIndexedConstraints(unittest.TestCase, CommonTests):
         # the real test: This wasn't transformed
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 KeyError,
-                ".*b.simpledisj1.c\[1\]",
+                r".*b.simpledisj1.c\[1\]",
                 bigm.get_transformed_constraints,
                 m.b.simpledisj1.c[1])
-        self.assertRegexpMatches(log.getvalue(),
-                                 ".*Constraint 'b.simpledisj1.c\[1\]' "
-                                 "has not been transformed.")
+        self.assertRegex(log.getvalue(),
+                         r".*Constraint 'b.simpledisj1.c\[1\]' "
+                         r"has not been transformed.")
 
         # and the rest of the container was transformed
         cons_list = bigm.get_transformed_constraints(m.b.simpledisj1.c[2])
@@ -1415,11 +1417,11 @@ class SimpleDisjIndexedConstraints(unittest.TestCase, CommonTests):
 
     def test_unbounded_var_m_estimation_err(self):
         m = models.makeTwoTermDisj_IndexedConstraints()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
-            "Cannot estimate M for expressions with unbounded variables."
-            "\n\t\(found unbounded var 'a\[1\]' while processing constraint "
-            "'b.simpledisj1.c'\)",
+            r"Cannot estimate M for expressions with unbounded variables."
+            r"\n\t\(found unbounded var 'a\[1\]' while processing constraint "
+            r"'b.simpledisj1.c'\)",
             TransformationFactory('gdp.bigm').apply_to,
             m)
 

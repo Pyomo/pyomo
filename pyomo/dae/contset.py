@@ -162,7 +162,7 @@ class ContinuousSet(SortedSimpleSet):
         if point in self._fe:
             return point
         elif point > max(self._fe):
-            logger.warn("The point '%s' exceeds the upper bound "
+            logger.warning("The point '%s' exceeds the upper bound "
                         "of the ContinuousSet '%s'. Returning the upper bound"
                         % (str(point), self.name))
             return max(self._fe)
@@ -195,7 +195,7 @@ class ContinuousSet(SortedSimpleSet):
                         return self._fe[tmp - 1]
             return point
         elif point < min(self._fe):
-            logger.warn("The point '%s' is less than the lower bound "
+            logger.warning("The point '%s' is less than the lower bound "
                         "of the ContinuousSet '%s'. Returning the lower bound "
                         % (str(point), self.name))
             return min(self._fe)
