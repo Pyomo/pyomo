@@ -259,11 +259,7 @@ def _update_var(v):
     #       Var (which is now a IndexedComponent). However, it
     #       would be much slower to rely on that method to generate new
     #       _VarData for a large number of new indices.
-<<<<<<< HEAD
-    new_indices = set(v._index_set) - set(iterkeys(v._data))
-=======
-    new_indices = set(v._index) - set(v._data.keys())
->>>>>>> c17ab1ced9ccfb3ab6f747c64b8f7a566e66c332
+    new_indices = set(v._index_set) - set(v._data.keys())
     for index in new_indices:
         v.add(index)
 
