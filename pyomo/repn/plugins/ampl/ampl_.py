@@ -354,7 +354,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
         # Pause the GC for the duration of this method
         with PauseGC() as pgc:
-            with open(filename,"w") as f:
+            with open(filename,"w",newline='\n') as f:
                 self._OUTPUT = f
                 symbol_map = self._print_model_NL(
                     model,
@@ -558,7 +558,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                     exp.name))
                 for arg in exp.args:
                     if isinstance(arg, str):
-                        OUTPUT.write(string_arg_str % (len(arg) + 1, arg))
+                        OUTPUT.write(string_arg_str % (len(arg), arg))
                     elif isinstance(arg, (float, int)):
                         self._print_nonlinear_terms_NL(arg)
                     elif arg.is_fixed():
@@ -1212,7 +1212,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         else:
             colfilename = OUTPUT.name+'.col'
         if symbolic_solver_labels:
-            colf = open(colfilename,'w')
+            colf = open(colfilename,'w',newline='\n')
             colfile_line_template = "%s\n"
             for var_ID in full_var_list:
                 varname = name_labeler(Vars_dict[var_ID])
@@ -1511,7 +1511,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         else:
             rowfilename = OUTPUT.name+'.row'
         if symbolic_solver_labels:
-            rowf = open(rowfilename,'w')
+            rowf = open(rowfilename,'w',newline='\n')
 
         cu = [0 for i in xrange(len(full_var_list))]
         for con_ID in nonlin_con_order_list:
