@@ -19,10 +19,10 @@ numpy, numpy_available = attempt_import(
     defer_check=False)
 
 if not numpy_available:
-    numpy.generate_import_warning('pyomo.contrib.pynumero')
+    numpy.log_import_warning('pyomo.contrib.pynumero')
 
 if not scipy_available:
-    scipy.sparse.generate_import_warning(
+    scipy.sparse.log_import_warning(
         'pyomo.contrib.pynumero',
         'Pynumero requires the optional Pyomo dependency "scipy.sparse"',
     )

@@ -240,20 +240,66 @@ class TestDependencies(unittest.TestCase):
 
         # Test generate warning
         log = StringIO()
-        with LoggingIntercept(log, 'pyomo.common'):
-            mod.generate_import_warning()
+        dep = StringIO()
+        with LoggingIntercept(dep, 'pyomo'):
+            with LoggingIntercept(log, 'pyomo.common'):
+                mod.generate_import_warning()
         self.assertIn(
             "The pyomo.common.tests.dep_mod_except module "
             "(an optional Pyomo dependency) failed to import",
             log.getvalue())
+        self.assertIn(
+            "DEPRECATED: use :py:class:`log_import_warning()`",
+            dep.getvalue())
 
         log = StringIO()
-        with LoggingIntercept(log, 'pyomo.core.base'):
-            mod.generate_import_warning('pyomo.core.base')
+        dep = StringIO()
+        with LoggingIntercept(dep, 'pyomo'):
+            with LoggingIntercept(log, 'pyomo.core.base'):
+                mod.generate_import_warning('pyomo.core.base')
         self.assertIn(
             "The pyomo.common.tests.dep_mod_except module "
             "(an optional Pyomo dependency) failed to import",
             log.getvalue())
+        self.assertIn(
+            "DEPRECATED: use :py:class:`log_import_warning()`",
+            dep.getvalue())
+
+    def test_log_warning(self):
+        mod, avail = attempt_import('pyomo.common.tests.dep_mod_except',
+                                    defer_check=True,
+                                    only_catch_importerror=False)
+        log = StringIO()
+        dep = StringIO()
+        with LoggingIntercept(dep, 'pyomo'):
+            with LoggingIntercept(log, 'pyomo.common'):
+                mod.log_import_warning()
+        self.assertIn(
+            "The pyomo.common.tests.dep_mod_except module "
+            "(an optional Pyomo dependency) failed to import",
+            dep.getvalue())
+        self.assertNotIn("DEPRECATED:", dep.getvalue())
+        self.assertEqual("", log.getvalue())
+
+        log = StringIO()
+        dep = StringIO()
+        with LoggingIntercept(dep, 'pyomo'):
+            with LoggingIntercept(log, 'pyomo.core.base'):
+                mod.log_import_warning('pyomo.core.base')
+        self.assertIn(
+            "The pyomo.common.tests.dep_mod_except module "
+            "(an optional Pyomo dependency) failed to import",
+            log.getvalue())
+        self.assertEqual("", dep.getvalue())
+
+        log = StringIO()
+        with LoggingIntercept(dep, 'pyomo'):
+            with LoggingIntercept(log, 'pyomo.core.base'):
+                mod.log_import_warning('pyomo.core.base', "Custom")
+        self.assertIn(
+            "Custom (import raised ValueError: cannot import module)",
+            log.getvalue())
+        self.assertEqual("", dep.getvalue())
 
     def test_importer(self):
         attempted_import = []

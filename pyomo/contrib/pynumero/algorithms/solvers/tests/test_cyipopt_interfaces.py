@@ -14,7 +14,8 @@ import pyomo.environ as pyo
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np, numpy_available, scipy, scipy_available
 )
-spa = scipy.sparse
+from pyomo.common.dependencies.scipy import sparse as spa
+
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
