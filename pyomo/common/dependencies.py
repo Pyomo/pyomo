@@ -146,12 +146,6 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
         self._importer = importer
         self._module = None
         self._available = None
-        if isinstance(deferred_submodules, Mapping):
-            deprecation_warning(
-                'attempt_import() deferred_submodules takes an iterable '
-                'and not a mapping (the alt_names supplied by the mapping '
-                'are no longer needed and are ignored.', version='TBD')
-            deferred_submodules = list(deferred_submodules)
         self._deferred_submodules = deferred_submodules
 
     def __bool__(self):
@@ -373,6 +367,13 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
     # deferred import module object
     if defer_check:
         if deferred_submodules:
+            if isinstance(deferred_submodules, Mapping):
+                deprecation_warning(
+                    'attempt_import(): deferred_submodules takes an iterable '
+                    'and not a mapping (the alt_names supplied by the mapping '
+                    'are no longer needed and are ignored).', version='TBD')
+                deferred_submodules = list(deferred_submodules)
+
             # Ensures all names begin with '.'
             #
             # Fill in any missing submodules.  For example, if a user
