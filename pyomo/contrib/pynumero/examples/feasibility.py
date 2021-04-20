@@ -41,8 +41,8 @@ solver.solve(model, tee=True)
 nlp = PyomoNLP(model)
 
 # get initial point
-print(nlp.variable_names())
-x0 = nlp.init_primals()
+print(nlp.primals_names())
+x0 = nlp.get_primals()
 
 # vectors of lower and upper bounds
 xl = nlp.primals_lb()

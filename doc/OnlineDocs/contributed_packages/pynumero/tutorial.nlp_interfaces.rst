@@ -30,13 +30,13 @@ Create a :py:class:`pyomo.contrib.pynumero.interfaces.pyomo_nlp.PyomoNLP` instan
    
    >>> nlp = PyomoNLP(m)
 
-Get initial values for primals and duals
+Get values of primals and duals
 
 .. code-block:: python
 
-   >>> nlp.init_primals()
+   >>> nlp.get_primals()
    array([0. , 2.5])
-   >>> nlp.init_duals()
+   >>> nlp.get_duals()
    array([0., 0.])
 
 Get variable and constraint bounds
@@ -87,15 +87,6 @@ Set values of primals and duals
    >>> nlp.set_duals(np.array([-2/3, 4/3]))
    >>> nlp.evaluate_grad_objective() + nlp.evaluate_jacobian().transpose() * nlp.get_duals()
    array([0., 0.])
-
-Get values of primals and duals
-
-.. code-block:: python
-
-   >>> nlp.get_primals()
-   array([0., 1.])
-   >>> nlp.get_duals()
-   array([-0.66666667,  1.33333333])
 
 Equality and inequality constraints separately
 

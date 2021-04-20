@@ -107,7 +107,7 @@ p = np.array([4.45, 1.05])
 dp = p - p0
 dx = ds.dot(dp)[0:3]
 x_indices = nlp.get_primal_indices([m.x1, m.x2, m.x3])
-x_names = np.array(nlp.variable_names())
+x_names = np.array(nlp.primals_names())
 new_x = x[x_indices] + dx
 print("dp:", dp)
 print("dx:", dx)
