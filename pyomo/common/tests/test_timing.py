@@ -11,6 +11,7 @@
 import pyomo.common.unittest as unittest
 from pyomo.common.tee import capture_output
 
+import gc
 from io import StringIO
 import sys
 import time
@@ -21,6 +22,14 @@ from pyomo.common.timing import (ConstructionTimer, report_timing,
 from pyomo.environ import ConcreteModel, RangeSet, Var, TransformationFactory
 
 class TestTiming(unittest.TestCase):
+    def setUp(self):
+        self.reenable_gc = gc.isenabled()
+        gc.disable()
+
+    def tearDown(self):
+        if self.reenable_gc:
+            gc.enable()
+
     def test_raw_construction_timer(self):
         a = ConstructionTimer(None)
         self.assertIn(
@@ -86,7 +95,7 @@ class TestTiming(unittest.TestCase):
 
     def test_TicTocTimer_tictoc(self):
         SLEEP = 0.1
-        RES = 0.02 # resolution (seconds): 1/5 the sleep
+        RES = 0.01 # resolution (seconds): 1/10 the sleep
         timer = TicTocTimer()
         abs_time = time.time()
 
@@ -143,7 +152,7 @@ class TestTiming(unittest.TestCase):
         # Note: pypy on GHA frequently has timing differences of >0.05s
         # for the following tests
         if 'pypy_version_info' in dir(sys):
-            RES = 6.5e-2
+            RES = 0.065
 
         with capture_output() as out:
             delta = timer.toc()
@@ -165,7 +174,7 @@ class TestTiming(unittest.TestCase):
         )
 
     def test_HierarchicalTimer(self):
-        RES = 1e-2 # resolution (seconds)
+        RES = 0.01 # resolution (seconds)
 
         timer = HierarchicalTimer()
         start_time = time.time()
