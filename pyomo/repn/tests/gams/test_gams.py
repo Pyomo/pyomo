@@ -13,7 +13,7 @@
 
 import os
 
-from six import StringIO
+from io import StringIO
 
 from filecmp import cmp
 import pyomo.common.unittest as unittest
@@ -292,15 +292,15 @@ class Test(unittest.TestCase):
             acos(m.x), tc, lbl, smap=smap), ("arccos(x1)", False))
         self.assertEqual(expression_to_string(
             atan(m.x), tc, lbl, smap=smap), ("arctan(x1)", False))
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
                 "GAMS files cannot represent the unary function asinh"):
             expression_to_string(asinh(m.x), tc, lbl, smap=smap)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
                 "GAMS files cannot represent the unary function acosh"):
             expression_to_string(acosh(m.x), tc, lbl, smap=smap)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
                 "GAMS files cannot represent the unary function atanh"):
             expression_to_string(atanh(m.x), tc, lbl, smap=smap)

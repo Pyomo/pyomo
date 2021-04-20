@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 import logging
-from six import iterkeys
 
 from pyomo.core.expr import inequality
 from pyomo.core.base import (Transformation,
@@ -46,7 +45,7 @@ class MPEC2_Transformation(Transformation):
                                                           sort=SortComponents.deterministic):
             block = complementarity.parent_block()
 
-            for index in sorted(iterkeys(complementarity)):
+            for index in sorted(complementarity.keys()):
                 _data = complementarity[index]
                 if not _data.active:
                     continue

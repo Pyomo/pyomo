@@ -79,7 +79,7 @@ class TestComponentUID(unittest.TestCase):
             (('c',tuple()), ('a',())) )
         with self.assertRaisesRegex(
                 ValueError,
-                "Context 'b\[1,2\]' does not apply to component 's'"):
+                r"Context 'b\[1,2\]' does not apply to component 's'"):
             ComponentUID(self.m.s, context=self.m.b[1,'2'])
         with self.assertRaisesRegex(
                 ValueError,
@@ -1202,7 +1202,7 @@ class TestComponentUID(unittest.TestCase):
         with self.assertRaisesRegex(
                 ValueError,
                 "Cannot create a CUID from a slice with a call to any "
-                "method other than 'component': got 'fix'\."):
+                r"method other than 'component': got 'fix'\."):
             cuid = ComponentUID(_slice)
 
         _slice = IndexedComponent_slice(m.b[:].component('v'), (
@@ -1262,7 +1262,7 @@ class TestComponentUID(unittest.TestCase):
                 ValueError,
                 "Cannot create a CUID from a slice that "
                 "contains `set` or `del` calls: got call %s "
-                "with argument \('foo',\)" % (
+                r"with argument \('foo',\)" % (
                     IndexedComponent_slice.del_attribute,)):
             cuid = ComponentUID(_slice)
 

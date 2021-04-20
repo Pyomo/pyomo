@@ -49,7 +49,7 @@ class Test_FileDownloader(unittest.TestCase):
         self.assertEqual(f.cacert, this_file())
         self.assertIsNone(f._fname)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "cacert='nonexistant_file_name' does not "
                 "refer to a valid file."):
             FileDownloader(True, 'nonexistant_file_name')
@@ -94,7 +94,7 @@ class Test_FileDownloader(unittest.TestCase):
                           io.getvalue())
 
         f = FileDownloader()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "--cacert='nonexistant_file_name' does "
                 "not refer to a valid file"):
             f.parse_args(['--cacert', 'nonexistant_file_name'])
@@ -213,7 +213,7 @@ class Test_FileDownloader(unittest.TestCase):
     def test_get_platform_url(self):
         f = FileDownloader()
         urlmap = {'bogus_sys': 'bogus'}
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "cannot infer the correct url for platform '.*'"):
             f.get_platform_url(urlmap)
 
@@ -223,15 +223,15 @@ class Test_FileDownloader(unittest.TestCase):
 
     def test_get_files_requires_set_destination(self):
         f = FileDownloader()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 DeveloperError, 'target file name has not been initialized'):
             f.get_binary_file('bogus')
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 DeveloperError, 'target file name has not been initialized'):
             f.get_binary_file_from_zip_archive('bogus', 'bogus')
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 DeveloperError, 'target file name has not been initialized'):
             f.get_gzipped_binary_file('bogus')
 

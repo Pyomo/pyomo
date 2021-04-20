@@ -26,32 +26,32 @@ class Test(unittest.TestCase):
         self.assertTrue(re.search('Serial Solver', OUT))
         # Test known solvers and metasolver flags
         # ASL is a metasolver
-        self.assertTrue(re.search('\n   \*asl ', OUT))
+        self.assertTrue(re.search(r'\n   \*asl ', OUT))
         # MindtPY is bundled with Pyomo so should always be available
-        self.assertTrue(re.search('\n   \+mindtpy ', OUT))
+        self.assertTrue(re.search(r'\n   \+mindtpy ', OUT))
         for solver in ('ipopt','cbc','glpk'):
             s = SolverFactory(solver)
             if s.available():
                 self.assertTrue(
-                    re.search("\n   \+%s " % solver, OUT),
+                    re.search(r"\n   \+%s " % solver, OUT),
                     "'   +%s' not found in help --solvers" % solver)
             else:
                 self.assertTrue(
-                    re.search("\n    %s " % solver, OUT),
+                    re.search(r"\n    %s " % solver, OUT),
                     "'    %s' not found in help --solvers" % solver)
         for solver in ('baron',):
             s = SolverFactory(solver)
             if s.license_is_valid():
                 self.assertTrue(
-                    re.search("\n   \+%s " % solver, OUT),
+                    re.search(r"\n   \+%s " % solver, OUT),
                     "'   +%s' not found in help --solvers" % solver)
             elif s.available():
                 self.assertTrue(
-                    re.search("\n   \-%s " % solver, OUT),
+                    re.search(r"\n   \-%s " % solver, OUT),
                     "'   -%s' not found in help --solvers" % solver)
             else:
                 self.assertTrue(
-                    re.search("\n    %s " % solver, OUT),
+                    re.search(r"\n    %s " % solver, OUT),
                     "'    %s' not found in help --solvers" % solver)
 
     def test_help_transformations(self):
@@ -61,7 +61,8 @@ class Test(unittest.TestCase):
         self.assertTrue(re.search('Pyomo Model Transformations', OUT))
         self.assertTrue(re.search('core.relax_integer_vars', OUT))
         # test a transformation that we know is deprecated
-        self.assertTrue(re.search('duality.linear_dual\s+\[DEPRECATED\]', OUT))
+        self.assertTrue(
+            re.search(r'duality.linear_dual\s+\[DEPRECATED\]', OUT))
 
 
 if __name__ == "__main__":

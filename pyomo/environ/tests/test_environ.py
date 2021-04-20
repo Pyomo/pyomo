@@ -16,7 +16,6 @@ import sys
 import subprocess
 
 from collections import namedtuple
-from six import iteritems, itervalues
 
 import pyomo.common.unittest as unittest
 
@@ -58,7 +57,7 @@ def collect_import_time(module):
                 inner = data.pop()
                 inner.tpl = {
                     (k if '(from' in k else "%s (from %s)" % (k, _module),
-                     v) for k,v in iteritems(inner.tpl) }
+                     v) for k,v in inner.tpl.items() }
                 if _module.startswith('pyomo'):
                     data[_level].update(inner)
                     data[_level].pyomo[_module] = _self
@@ -94,9 +93,9 @@ class TestPyomoEnviron(unittest.TestCase):
                      "Import timing introduced in python 3.7")
     def test_tpl_import_time(self):
         data = collect_import_time('pyomo.environ')
-        pyomo_time = sum(itervalues(data.pyomo))
-        pyutilib_time = sum(itervalues(data.pyutilib))
-        tpl_time = sum(itervalues(data.tpl))
+        pyomo_time = sum(data.pyomo.values())
+        pyutilib_time = sum(data.pyutilib.values())
+        tpl_time = sum(data.tpl.values())
         total = float(pyomo_time + pyutilib_time + tpl_time)
         print("Pyomo (by module time):")
         print("\n".join("   %s: %s" % i for i in sorted(
@@ -107,7 +106,7 @@ class TestPyomoEnviron(unittest.TestCase):
         print("\n".join(_line_fmt % (k[:k.find(' ')], v, k[k.find(' '):])
                         for k,v in sorted(data.tpl.items())))
         tpl = {}
-        for k, v in iteritems(data.tpl):
+        for k, v in data.tpl.items():
             _mod = k[:k.find(' ')].split('.')[0]
             tpl[_mod] = tpl.get(_mod,0) + v
         tpl_by_time = sorted(tpl.items(), key=lambda x: x[1])
@@ -157,7 +156,6 @@ class TestPyomoEnviron(unittest.TestCase):
             'zipfile',
         }
         # Non-standard-library TPLs that Pyomo will load unconditionally
-        ref.add('six')
         ref.add('ply')
         if numpy_available:
             ref.add('numpy')

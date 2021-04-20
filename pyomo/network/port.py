@@ -11,7 +11,6 @@
 __all__ = [ 'Port' ]
 
 import logging, sys
-from six import iteritems
 from weakref import ref as weakref_ref
 
 from pyomo.common.collections import ComponentMap
@@ -247,12 +246,12 @@ class _PortData(ComponentData):
             names: `bool`
                 If True, yield (name, index, var/expr) tuples
         """
-        for name, mem in iteritems(self.vars):
+        for name, mem in self.vars.items():
             if not mem.is_indexed():
                 itr = {None: mem}
             else:
                 itr = mem
-            for idx, v in iteritems(itr):
+            for idx, v in itr.items():
                 if fixed is not None and v.is_fixed() != fixed:
                     continue
                 if expr_vars and v.is_expression_type():
@@ -378,7 +377,7 @@ class Port(IndexedComponent):
             for key in self._implicit:
                 tmp.add(None, key)
             if self._extends:
-                for key, val in iteritems(self._extends.vars):
+                for key, val in self._extends.vars.items():
                     tmp.add(val, key, self._extends.rule_for(key))
             if self._initialize:
                 self._add_from_container(tmp, self._initialize)
@@ -389,7 +388,7 @@ class Port(IndexedComponent):
 
     def _add_from_container(self, port, items):
         if type(items) is dict:
-            for key, val in iteritems(items):
+            for key, val in items.items():
                 if type(val) is tuple:
                     if len(val) == 2:
                         obj, rule = val
@@ -414,7 +413,7 @@ class Port(IndexedComponent):
     def _pprint(self, ostream=None, verbose=False):
         """Print component information."""
         def _line_generator(k, v):
-            for _k, _v in sorted(iteritems(v.vars)):
+            for _k, _v in sorted(v.vars.items()):
                 if _v is None:
                     _len = '-'
                 elif _v.is_indexed():
@@ -425,7 +424,7 @@ class Port(IndexedComponent):
         return (
             [("Size", len(self)),
              ("Index", self._index if self.is_indexed() else None)],
-             iteritems(self._data),
+             self._data.items(),
              ( "Name", "Size", "Variable"),
              _line_generator)
 
@@ -445,7 +444,7 @@ class Port(IndexedComponent):
 
         ostream.write("\n")
         def _line_generator(k,v):
-            for _k, _v in sorted(iteritems(v.vars)):
+            for _k, _v in sorted(v.vars.items()):
                 if _v is None:
                     _val = '-'
                 elif not _v.is_indexed():
@@ -456,7 +455,7 @@ class Port(IndexedComponent):
                             x, value(_v[x])) for x in sorted(_v._data)))
                 yield _k, _val
         tabular_writer(ostream, prefix+tab,
-                       ((k, v) for k, v in iteritems(self._data)),
+                       ((k, v) for k, v in self._data.items()),
                        ("Name", "Value"), _line_generator)
 
     @staticmethod
@@ -619,7 +618,7 @@ class Port(IndexedComponent):
             if eblock.component("splitfrac") is None:
                 if not include_splitfrac:
                     num_data_objs = 0
-                    for k, v in iteritems(port.vars):
+                    for k, v in port.vars.items():
                         if port.is_extensive(k):
                             if v.is_indexed():
                                 num_data_objs += len(v)

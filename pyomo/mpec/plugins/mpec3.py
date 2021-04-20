@@ -17,8 +17,6 @@ from pyomo.core.base import (Transformation,
 from pyomo.mpec.complementarity import Complementarity
 from pyomo.gdp import Disjunct
 
-from six import iterkeys
-
 logger = logging.getLogger('pyomo.core')
 
 
@@ -41,7 +39,7 @@ class MPEC3_Transformation(Transformation):
                                                           descend_into=(Block, Disjunct),
                                                           sort=SortComponents.deterministic):
             block = complementarity.parent_block()
-            for index in sorted(iterkeys(complementarity)):
+            for index in sorted(complementarity.keys()):
                 _data = complementarity[index]
                 if not _data.active:
                     continue

@@ -83,7 +83,7 @@ class TestPyomoUnittest(unittest.TestCase):
                 self.failureException, "'hi' !~= 'hello'"):
             self.assertStructuredAlmostEqual("hi", "hello")
         with self.assertRaisesRegex(
-                self.failureException, "'hi' !~= \['h',"):
+                self.failureException, r"'hi' !~= \['h',"):
             self.assertStructuredAlmostEqual("hi", ['h','i'])
 
     def test_assertStructuredAlmostEqual_othertype(self):
@@ -100,7 +100,7 @@ class TestPyomoUnittest(unittest.TestCase):
         b = [1,2,3]
         with self.assertRaisesRegex(
                 self.failureException,
-                'sequences are different sizes \(2 != 3\)'):
+                r'sequences are different sizes \(2 != 3\)'):
             self.assertStructuredAlmostEqual(a, b)
         self.assertStructuredAlmostEqual(a, b, allow_second_superset=True)
         a.append(3)
@@ -118,7 +118,7 @@ class TestPyomoUnittest(unittest.TestCase):
         b = {1:2, 3:4, 5:6}
         with self.assertRaisesRegex(
                 self.failureException,
-                'mappings are different sizes \(2 != 3\)'):
+                r'mappings are different sizes \(2 != 3\)'):
             self.assertStructuredAlmostEqual(a, b)
         self.assertStructuredAlmostEqual(a, b, allow_second_superset=True)
         a[5] = 6
@@ -135,7 +135,7 @@ class TestPyomoUnittest(unittest.TestCase):
         b[6] = 6
         with self.assertRaisesRegex(
                 self.failureException,
-                'key \(1\) from first not found in second'):
+                r'key \(1\) from first not found in second'):
             self.assertStructuredAlmostEqual(a, b)
 
     def test_assertStructuredAlmostEqual_nested(self):
@@ -157,7 +157,7 @@ class TestPyomoUnittest(unittest.TestCase):
             long_sleep()
         with self.assertRaisesRegex(
                 NameError,
-                f"name 'foo' is not defined\s+Original traceback:"):
+                r"name 'foo' is not defined\s+Original traceback:"):
             raise_exception()
         with self.assertRaisesRegex(AssertionError, r"^0 != 1$"):
             fail()

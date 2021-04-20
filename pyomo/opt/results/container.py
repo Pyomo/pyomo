@@ -16,8 +16,7 @@ from math import inf
 from pyomo.common.collections import Bunch
 
 import enum
-from six import StringIO
-from six.moves import xrange
+from io import StringIO
 
 
 class ScalarType(str, enum.Enum):
@@ -210,7 +209,7 @@ class ListContainer(object):
             return ignore
         ostream.write("\n")
         i=0
-        for i in xrange(len(self._list)):
+        for i in range(len(self._list)):
             item = self._list[i]
             ostream.write(prefix+'- ')
             item.pprint(ostream, option, from_list=True, prefix=prefix+"  ", repn=repn[i])

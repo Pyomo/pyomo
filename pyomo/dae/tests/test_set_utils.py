@@ -16,12 +16,15 @@ from os.path import abspath, dirname
 
 import pyomo.common.unittest as unittest
 
-from pyomo.core.base import (
+from pyomo.environ import (
     Block, Constraint, ConcreteModel, Var, Set, TransformationFactory
 )
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.set_utils import (
-    is_explicitly_indexed_by, is_in_block_indexed_by, get_index_set_except,
+    is_explicitly_indexed_by,
+    is_in_block_indexed_by,
+    get_indices_of_projection,
+    get_index_set_except,
     deactivate_model_at,
 )
 
@@ -332,6 +335,53 @@ class TestDaeSetUtils(unittest.TestCase):
         with self.assertRaises(KeyError):
             deactivate_model_at(m, m.time, m.time[1], allow_skip=False,
                     suppress_warnings=True)
+
+    def test_get_indices_of_projection(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1,2,3])
+        m.s2 = Set(initialize=[4,5,6])
+        m.s3 = Set(initialize=['a','b'])
+        m.s4 = Set(initialize=['c','d'])
+
+        # Basic test:
+        product = m.s1.cross(m.s2, m.s3, m.s4)
+        info = get_indices_of_projection(product, m.s2)
+        set_except = info['set_except']
+        index_getter = info['index_getter']
+        predicted_len = len(m.s1)*len(m.s3)*len(m.s4)
+        self.assertEqual(len(set_except), predicted_len)
+        removed_index = 4
+        for idx in m.s1*m.s3*m.s4:
+            self.assertIn(idx, set_except)
+            full_index = index_getter(idx, removed_index)
+            self.assertIn(full_index, product)
+
+        # Works with nested products:
+        sub_prod = m.s2.cross(m.s3, m.s4)
+        product = m.s1.cross(sub_prod)
+        info = get_indices_of_projection(product, m.s2)
+        set_except = info['set_except']
+        index_getter = info['index_getter']
+        predicted_len = len(m.s1)*len(m.s3)*len(m.s4)
+        self.assertEqual(len(set_except), predicted_len)
+        removed_index = 4
+        for idx in m.s1*m.s3*m.s4:
+            self.assertIn(idx, set_except)
+            full_index = index_getter(idx, removed_index)
+            self.assertIn(full_index, product)
+
+        # Works with multiple sets:
+        product = m.s1.cross(m.s2, m.s3, m.s4)
+        info = get_indices_of_projection(product, m.s2, m.s4)
+        set_except = info['set_except']
+        index_getter = info['index_getter']
+        predicted_len = len(m.s1)*len(m.s3)
+        self.assertEqual(len(set_except), predicted_len)
+        removed_index = (4, 'd')
+        for idx in m.s1*m.s3:
+            self.assertIn(idx, set_except)
+            full_index = index_getter(idx, *removed_index)
+            self.assertIn(full_index, product)
 
 
 if __name__ == "__main__":

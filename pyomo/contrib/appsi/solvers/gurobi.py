@@ -1,24 +1,44 @@
+from collections.abc import Iterable
+import enum
 import logging
-from pyomo.core.expr.numvalue import value, is_constant, is_fixed, native_numeric_types
-from pyomo.repn import generate_standard_repn
+import math
+from typing import List, Dict
+
+from pyomo.common.collections import ComponentSet, ComponentMap, OrderedSet
+from pyomo.common.dependencies import attempt_import
+from pyomo.common.errors import PyomoException
+from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.kernel.objective import minimize, maximize
-from pyomo.common.collections import ComponentSet, ComponentMap
+from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.core.base.var import Var, _GeneralVarData
 from pyomo.core.base.constraint import _GeneralConstraintData
 from pyomo.core.base.sos import _SOSConstraintData
 from pyomo.core.base.param import _ParamData
-from pyomo.common.errors import PyomoException
-from pyomo.contrib.appsi.base import PersistentSolver, Results, TerminationCondition, MIPSolverConfig, PersistentBase
-from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
-import collections
-from pyomo.common.collections.orderedset import OrderedSet
-import math
-from typing import List, Dict
-from pyomo.common.timing import HierarchicalTimer
+from pyomo.core.expr.numvalue import (
+    value, is_constant, is_fixed, native_numeric_types,
+)
+from pyomo.repn import generate_standard_repn
 
+from pyomo.contrib.appsi.base import (
+    PersistentSolver, Results, TerminationCondition, MIPSolverConfig,
+    PersistentBase,
+)
 
 logger = logging.getLogger(__name__)
 
+def _import_gurobipy():
+    try:
+        import gurobipy
+    except ImportError:
+        Gurobi._available = Gurobi.Availability.NotFound
+        raise
+    if gurobipy.GRB.VERSION_MAJOR < 7:
+        Gurobi._available = Gurobi.Availability.BadVersion
+        raise ImportError('The APPSI Gurobi interface requires gurobipy>=7.0.0')
+    return gurobipy
+
+gurobipy, gurobipy_available = attempt_import('gurobipy',
+                                              importer=_import_gurobipy)
 
 class DegreeError(PyomoException):
     pass
@@ -132,6 +152,18 @@ class Gurobi(PersistentBase, PersistentSolver):
     """
     Interface to Gurobi
     """
+    class Availability(enum.IntEnum):
+        NotFound = 0
+        BadVersion = -1
+        BadLicense = -2
+        LimitedLicense = 1
+        FullLicense = 2
+
+        def __bool__(self):
+            return self._value_ > 0
+
+    _available = None
+
     def __init__(self):
         super(Gurobi, self).__init__()
         self._config = MIPSolverConfig()
@@ -153,32 +185,46 @@ class Gurobi(PersistentBase, PersistentSolver):
         self._constraints_added_since_update = OrderedSet()
         self._vars_added_since_update = ComponentSet()
 
-        try:
-            import gurobipy
-            self._gurobipy = gurobipy
-            self._gurobipy_available = True
-        except ImportError:
-            self._gurobipy = None
-            self._gurobipy_available = False
-
     def available(self, exception_flag=False):
-        res = None
-        if self._gurobipy_available and self.version() >= (7, 0, 0):
-            res = True
-        elif self._gurobipy_available:
-            if exception_flag:
-                raise RuntimeError('The APPSI interface to Gurobi requires Gurobi version 7 or greater.')
-            res = False
-        else:
-            if exception_flag:
-                raise RuntimeError('gurobipy is not available')
-            res = False
-        return res
+        if self._available is None:
+            self._check_license()
+        if exception_flag and not self._available:
+            if self._available == Gurobi.Availability.BadVersion:
+                msg = ('The APPSI interface to Gurobi requires '
+                       'Gurobi version 7 or greater (found %s).'
+                       % ('.'.join(str(_) for _ in self.version())))
+            else:
+                msg = 'gurobipy is not available'
+            raise RuntimeError(msg)
+        return self._available
+
+    @classmethod
+    def _check_license(cls):
+        try:
+            m = gurobipy.Model()
+        except ImportError:
+            # Triggered if this is the first time the deferred import of
+            # gurobipy is resolved. _import_gurobipy will have already
+            # set _available appropriately.
+            return
+        except gurobipy.GurobiError:
+            cls._available = Gurobi.Availability.BadLicense
+            return
+        try:
+            # As of 3/2021, the limited-size Gurobi license was limited
+            # to 2000 variables.
+            m.addVars(range(2001))
+            m.optimize()
+            cls._available = Gurobi.Availability.FullLicense
+        except gurobipy.GurobiError:
+            cls._available = Gurobi.Availability.LimitedLicense
+        finally:
+            m.dispose()
 
     def version(self):
-        version = (self._gurobipy.GRB.VERSION_MAJOR,
-                   self._gurobipy.GRB.VERSION_MINOR,
-                   self._gurobipy.GRB.VERSION_TECHNICAL)
+        version = (gurobipy.GRB.VERSION_MAJOR,
+                   gurobipy.GRB.VERSION_MINOR,
+                   gurobipy.GRB.VERSION_TECHNICAL)
         return version
 
     @property
@@ -245,9 +291,9 @@ class Gurobi(PersistentBase, PersistentSolver):
             lb = value(var.lb)
             ub = value(var.ub)
             if lb is None:
-                lb = -self._gurobipy.GRB.INFINITY
+                lb = -gurobipy.GRB.INFINITY
             if ub is None:
-                ub = self._gurobipy.GRB.INFINITY
+                ub = gurobipy.GRB.INFINITY
             if var.is_fixed():
                 lb = value(var.value)
                 ub = value(var.value)
@@ -285,9 +331,9 @@ class Gurobi(PersistentBase, PersistentSolver):
             self._labeler = NumericLabeler('x')
 
         if model.name is not None:
-            self._solver_model = self._gurobipy.Model(model.name)
+            self._solver_model = gurobipy.Model(model.name)
         else:
-            self._solver_model = self._gurobipy.Model()
+            self._solver_model = gurobipy.Model()
 
         self.add_block(model)
         if self._objective is None:
@@ -311,7 +357,7 @@ class Gurobi(PersistentBase, PersistentSolver):
                     mutable_linear_coefficient.var = self._pyomo_var_to_solver_var_map[id(repn.linear_vars[ndx])]
                     mutable_linear_coefficients.append(mutable_linear_coefficient)
                 linear_coef_vals.append(value(coef))
-            new_expr = self._gurobipy.LinExpr(linear_coef_vals, [self._pyomo_var_to_solver_var_map[id(i)] for i in repn.linear_vars])
+            new_expr = gurobipy.LinExpr(linear_coef_vals, [self._pyomo_var_to_solver_var_map[id(i)] for i in repn.linear_vars])
         else:
             new_expr = 0.0
 
@@ -339,13 +385,13 @@ class Gurobi(PersistentBase, PersistentSolver):
              mutable_linear_coefficients,
              mutable_quadratic_coefficients) = self._get_expr_from_pyomo_expr(con.body)
 
-            if (gurobi_expr.__class__ in {self._gurobipy.LinExpr, self._gurobipy.Var} or
+            if (gurobi_expr.__class__ in {gurobipy.LinExpr, gurobipy.Var} or
                     gurobi_expr.__class__ in native_numeric_types):
                 if con.equality:
                     rhs_expr = con.lower - repn_constant
                     rhs_val = value(rhs_expr)
                     gurobipy_con = self._solver_model.addLConstr(gurobi_expr,
-                                                                 self._gurobipy.GRB.EQUAL,
+                                                                 gurobipy.GRB.EQUAL,
                                                                  rhs_val,
                                                                  name=conname)
                     if not is_constant(rhs_expr):
@@ -371,7 +417,7 @@ class Gurobi(PersistentBase, PersistentSolver):
                 elif con.has_lb():
                     rhs_expr = con.lower - repn_constant
                     rhs_val = value(rhs_expr)
-                    gurobipy_con = self._solver_model.addLConstr(gurobi_expr, self._gurobipy.GRB.GREATER_EQUAL, rhs_val, name=conname)
+                    gurobipy_con = self._solver_model.addLConstr(gurobi_expr, gurobipy.GRB.GREATER_EQUAL, rhs_val, name=conname)
                     if not is_constant(rhs_expr):
                         mutable_constant = _MutableConstant()
                         mutable_constant.expr = rhs_expr
@@ -380,7 +426,7 @@ class Gurobi(PersistentBase, PersistentSolver):
                 elif con.has_ub():
                     rhs_expr = con.upper - repn_constant
                     rhs_val = value(rhs_expr)
-                    gurobipy_con = self._solver_model.addLConstr(gurobi_expr, self._gurobipy.GRB.LESS_EQUAL, rhs_val, name=conname)
+                    gurobipy_con = self._solver_model.addLConstr(gurobi_expr, gurobipy.GRB.LESS_EQUAL, rhs_val, name=conname)
                     if not is_constant(rhs_expr):
                         mutable_constant = _MutableConstant()
                         mutable_constant.expr = rhs_expr
@@ -397,21 +443,21 @@ class Gurobi(PersistentBase, PersistentSolver):
                         self._mutable_helpers[con] = mutable_linear_coefficients
                     else:
                         self._mutable_helpers[con].extend(mutable_linear_coefficients)
-            elif gurobi_expr.__class__ is self._gurobipy.QuadExpr:
+            elif gurobi_expr.__class__ is gurobipy.QuadExpr:
                 if con.equality:
                     rhs_expr = con.lower - repn_constant
                     rhs_val = value(rhs_expr)
-                    gurobipy_con = self._solver_model.addQConstr(gurobi_expr, self._gurobipy.GRB.EQUAL, rhs_val, name=conname)
+                    gurobipy_con = self._solver_model.addQConstr(gurobi_expr, gurobipy.GRB.EQUAL, rhs_val, name=conname)
                 elif con.has_lb() and con.has_ub():
                     raise NotImplementedError('Quadratic range constraints are not supported')
                 elif con.has_lb():
                     rhs_expr = con.lower - repn_constant
                     rhs_val = value(rhs_expr)
-                    gurobipy_con = self._solver_model.addQConstr(gurobi_expr, self._gurobipy.GRB.GREATER_EQUAL, rhs_val, name=conname)
+                    gurobipy_con = self._solver_model.addQConstr(gurobi_expr, gurobipy.GRB.GREATER_EQUAL, rhs_val, name=conname)
                 elif con.has_ub():
                     rhs_expr = con.upper - repn_constant
                     rhs_val = value(rhs_expr)
-                    gurobipy_con = self._solver_model.addQConstr(gurobi_expr, self._gurobipy.GRB.LESS_EQUAL, rhs_val, name=conname)
+                    gurobipy_con = self._solver_model.addQConstr(gurobi_expr, gurobipy.GRB.LESS_EQUAL, rhs_val, name=conname)
                 else:
                     raise ValueError("Constraint does not have a lower "
                                      "or an upper bound: {0} \n".format(con))
@@ -436,9 +482,9 @@ class Gurobi(PersistentBase, PersistentSolver):
             conname = self._symbol_map.getSymbol(con, self._labeler)
             level = con.level
             if level == 1:
-                sos_type = self._gurobipy.GRB.SOS_TYPE1
+                sos_type = gurobipy.GRB.SOS_TYPE1
             elif level == 2:
-                sos_type = self._gurobipy.GRB.SOS_TYPE2
+                sos_type = gurobipy.GRB.SOS_TYPE2
             else:
                 raise ValueError("Solver does not support SOS "
                                  "level {0} constraints".format(level))
@@ -507,8 +553,8 @@ class Gurobi(PersistentBase, PersistentSolver):
                 lb = var.value
                 ub = var.value
             else:
-                lb = -self._gurobipy.GRB.INFINITY
-                ub = self._gurobipy.GRB.INFINITY
+                lb = -gurobipy.GRB.INFINITY
+                ub = gurobipy.GRB.INFINITY
                 _lb = value(var.lb)
                 _ub = value(var.ub)
                 if _lb is not None:
@@ -547,9 +593,9 @@ class Gurobi(PersistentBase, PersistentSolver):
         new_gurobi_expr = helper.get_updated_expression()
         if new_gurobi_expr is not None:
             if pyomo_obj.sense == minimize:
-                sense = self._gurobipy.GRB.MINIMIZE
+                sense = gurobipy.GRB.MINIMIZE
             else:
-                sense = self._gurobipy.GRB.MAXIMIZE
+                sense = gurobipy.GRB.MAXIMIZE
             self._solver_model.setObjective(new_gurobi_expr, sense=sense)
 
     def _gurobi_vtype_from_var(self, var):
@@ -559,27 +605,27 @@ class Gurobi(PersistentBase, PersistentSolver):
         :return: gurobipy.GRB.CONTINUOUS or gurobipy.GRB.BINARY or gurobipy.GRB.INTEGER
         """
         if var.is_binary():
-            vtype = self._gurobipy.GRB.BINARY
+            vtype = gurobipy.GRB.BINARY
         elif var.is_integer():
-            vtype = self._gurobipy.GRB.INTEGER
+            vtype = gurobipy.GRB.INTEGER
         elif var.is_continuous():
-            vtype = self._gurobipy.GRB.CONTINUOUS
+            vtype = gurobipy.GRB.CONTINUOUS
         else:
             raise ValueError('Variable domain type is not recognized for {0}'.format(var.domain))
         return vtype
 
     def _set_objective(self, obj):
         if obj is None:
-            sense = self._gurobipy.GRB.MINIMIZE
+            sense = gurobipy.GRB.MINIMIZE
             gurobi_expr = 0
             repn_constant = 0
             mutable_linear_coefficients = list()
             mutable_quadratic_coefficients = list()
         else:
             if obj.sense == minimize:
-                sense = self._gurobipy.GRB.MINIMIZE
+                sense = gurobipy.GRB.MINIMIZE
             elif obj.sense == maximize:
-                sense = self._gurobipy.GRB.MAXIMIZE
+                sense = gurobipy.GRB.MAXIMIZE
             else:
                 raise ValueError('Objective sense is not recognized: {0}'.format(obj.sense))
 
@@ -602,7 +648,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         config = self.config
 
         gprob = self._solver_model
-        grb = self._gurobipy.GRB
+        grb = gurobipy.GRB
         status = gprob.Status
 
         results = GurobiResults()
@@ -645,14 +691,14 @@ class Gurobi(PersistentBase, PersistentSolver):
         else:
             try:
                 results.best_feasible_objective = gprob.ObjVal
-            except (self._gurobipy.GurobiError, AttributeError):
+            except (gurobipy.GurobiError, AttributeError):
                 results.best_feasible_objective = None
             try:
                 if gprob.NumBinVars + gprob.NumIntVars == 0:
                     results.best_objective_bound = gprob.ObjVal
                 else:
                     results.best_objective_bound = gprob.ObjBound
-            except (self._gurobipy.GurobiError, AttributeError):
+            except (gurobipy.GurobiError, AttributeError):
                 if self._objective.sense == minimize:
                     results.best_objective_bound = -math.inf
                 else:
@@ -1082,13 +1128,13 @@ class Gurobi(PersistentBase, PersistentSolver):
                 raise ValueError('Upper bound of constraint {0} is not constant.'.format(con))
 
         if con.equality:
-            self._solver_model.cbCut(lhs=gurobi_expr, sense=self._gurobipy.GRB.EQUAL,
+            self._solver_model.cbCut(lhs=gurobi_expr, sense=gurobipy.GRB.EQUAL,
                                      rhs=value(con.lower - repn_constant))
         elif con.has_lb() and (value(con.lower) > -float('inf')):
-            self._solver_model.cbCut(lhs=gurobi_expr, sense=self._gurobipy.GRB.GREATER_EQUAL,
+            self._solver_model.cbCut(lhs=gurobi_expr, sense=gurobipy.GRB.GREATER_EQUAL,
                                      rhs=value(con.lower - repn_constant))
         elif con.has_ub() and (value(con.upper) < float('inf')):
-            self._solver_model.cbCut(lhs=gurobi_expr, sense=self._gurobipy.GRB.LESS_EQUAL,
+            self._solver_model.cbCut(lhs=gurobi_expr, sense=gurobipy.GRB.LESS_EQUAL,
                                      rhs=value(con.upper - repn_constant))
         else:
             raise ValueError('Constraint does not have a lower or an upper bound {0} \n'.format(con))
@@ -1102,7 +1148,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         ----------
         vars: Var or iterable of Var
         """
-        if not isinstance(vars, collections.Iterable):
+        if not isinstance(vars, Iterable):
             vars = [vars]
         gurobi_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in vars]
         var_values = self._solver_model.cbGetNodeRel(gurobi_vars)
@@ -1115,7 +1161,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         ----------
         vars: iterable of vars
         """
-        if not isinstance(vars, collections.Iterable):
+        if not isinstance(vars, Iterable):
             vars = [vars]
         gurobi_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in vars]
         var_values = self._solver_model.cbGetSolution(gurobi_vars)
@@ -1150,19 +1196,19 @@ class Gurobi(PersistentBase, PersistentSolver):
                 raise ValueError('Upper bound of constraint {0} is not constant.'.format(con))
 
         if con.equality:
-            self._solver_model.cbLazy(lhs=gurobi_expr, sense=self._gurobipy.GRB.EQUAL,
+            self._solver_model.cbLazy(lhs=gurobi_expr, sense=gurobipy.GRB.EQUAL,
                                       rhs=value(con.lower - repn_constant))
         elif con.has_lb() and (value(con.lower) > -float('inf')):
-            self._solver_model.cbLazy(lhs=gurobi_expr, sense=self._gurobipy.GRB.GREATER_EQUAL,
+            self._solver_model.cbLazy(lhs=gurobi_expr, sense=gurobipy.GRB.GREATER_EQUAL,
                                       rhs=value(con.lower - repn_constant))
         elif con.has_ub() and (value(con.upper) < float('inf')):
-            self._solver_model.cbLazy(lhs=gurobi_expr, sense=self._gurobipy.GRB.LESS_EQUAL,
+            self._solver_model.cbLazy(lhs=gurobi_expr, sense=gurobipy.GRB.LESS_EQUAL,
                                       rhs=value(con.upper - repn_constant))
         else:
             raise ValueError('Constraint does not have a lower or an upper bound {0} \n'.format(con))
 
     def cbSetSolution(self, vars, solution):
-        if not isinstance(vars, collections.Iterable):
+        if not isinstance(vars, Iterable):
             vars = [vars]
         gurobi_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in vars]
         self._solver_model.cbSetSolution(gurobi_vars, solution)
@@ -1172,3 +1218,4 @@ class Gurobi(PersistentBase, PersistentSolver):
 
     def reset(self):
         self._solver_model.reset()
+

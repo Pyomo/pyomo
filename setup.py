@@ -127,7 +127,6 @@ def run_setup():
       install_requires=[
           'PyUtilib>=6.0.1.dev0',
           'ply',
-          'six>=1.4',
       ],
       packages=find_packages(exclude=("scripts",)),
       package_data={"pyomo.contrib.viewer":["*.ui"]},
