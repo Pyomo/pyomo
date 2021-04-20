@@ -108,9 +108,6 @@ class DeferredImportModule(object):
 
 
 class _DeferredImportIndicatorBase(object):
-    def __bool__(self):
-        return self.__nonzero__()
-
     def __and__(self, other):
         return _DeferredAnd(self, other)
 
@@ -156,6 +153,10 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
                 'are no longer needed and are ignored.', version='TBD')
             deferred_submodules = list(deferred_submodules)
         self._deferred_submodules = deferred_submodules
+
+    def __bool__(self):
+        self.resolve()
+        return self._available
 
     def resolve(self):
         if self._module is None:
@@ -222,17 +223,13 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
                         _mod = getattr(_mod, _sub)
                     _globals[k] = _mod
 
-    def __nonzero__(self):
-        self.resolve()
-        return self._available
-
 
 class _DeferredAnd(_DeferredImportIndicatorBase):
     def __init__(self, a, b):
         self._a = a
         self._b = b
 
-    def __nonzero__(self):
+    def __bool__(self):
         return bool(self._a) and bool(self._b)
 
 
@@ -241,7 +238,7 @@ class _DeferredOr(_DeferredImportIndicatorBase):
         self._a = a
         self._b = b
 
-    def __nonzero__(self):
+    def __bool__(self):
         return bool(self._a) or bool(self._b)
 
 
