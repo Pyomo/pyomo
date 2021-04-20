@@ -90,7 +90,7 @@ class ModuleUnavailable(object):
         """
         logging.getLogger(logger).warning(self._moduleunavailable_message(msg))
 
-    @deprecated("use log_import_warning()", version='TBD')
+    @deprecated("use :py:class:`log_import_warning()`", version='TBD')
     def generate_import_warning(self, logger='pyomo.common'):
         self.log_import_warning(logger)
 
@@ -402,8 +402,8 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
 
     """
     if alt_names is not None:
-        deprecation_warning('alt_names no longer needs to be specified '
-                            'and is ignored', version='TBD')
+        deprecation_warning('alt_names=%s no longer needs to be specified '
+                            'and is ignored' % (alt_names,), version='TBD')
 
     if only_catch_importerror is not None:
         deprecation_warning(
@@ -502,23 +502,31 @@ def declare_deferred_modules_as_importable(globals_dict):
     For example, ``pyomo/common/dependencies.py`` declares:
 
     .. doctest::
+       :hide:
 
-       scipy, scipy_available = attempt_import(
-           'scipy', callback=_finalize_scipy,
-           deferred_submodules=['stats', 'sparse', 'spatial', 'integrate'])
+       >>> from pyomo.common.dependencies import (
+       ...     attempt_import, _finalize_scipy, __dict__ as dep_globals,
+       ...     declare_deferred_modules_as_importable, )
+       >>> # Sphinx does not provide a proper globals()
+       >>> def globals(): return dep_globals
 
-       declare_deferred_modules_as_importable(globals())
+    .. doctest::
+
+       >>> scipy, scipy_available = attempt_import(
+       ...     'scipy', callback=_finalize_scipy,
+       ...     deferred_submodules=['stats', 'sparse', 'spatial', 'integrate'])
+       >>> declare_deferred_modules_as_importable(globals())
 
     Which enables users to use:
 
     .. doctest::
 
-       import pyomo.common.dependencies.scipy.sparse as spa
+       >>> import pyomo.common.dependencies.scipy.sparse as spa
 
     If the deferred import has not yet been triggered, then the
     :py:class:`DeferredImportModule` is returned and named ``spa``.
     However, if the import has already been triggered, then ``spa`` will
-    either be the ``scipy.sparse` module, or a
+    either be the ``scipy.sparse`` module, or a
     py:class:`ModuleUnavailable` instance.
 
     """
