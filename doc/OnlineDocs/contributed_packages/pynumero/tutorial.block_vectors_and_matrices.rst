@@ -218,7 +218,7 @@ Copying data:
    >>> v2.flatten()
    array([-0.67025575, -1.2       ,  0.1       ,  1.14872127,  1.25      ])
    >>> v2 = v.copy_structure()
-   >>> v2.block_sizes()
+   >>> v2.block_sizes()  # doctest: +SKIP
    array([2, 2, 1])
    >>> v2.copyfrom(v)
    >>> v2.flatten()
@@ -251,7 +251,7 @@ Nested blocks:
    >>> v2 = BlockVector(2)
    >>> v2.set_block(0, v)
    >>> v2.set_block(1, np.ones(2))
-   >>> v2.block_sizes()
+   >>> v2.block_sizes()  # doctest: +SKIP
    array([5, 2])
    >>> v2.flatten()
    array([-0.67025575, -1.2       ,  0.1       ,  1.14872127,  1.25      ,
