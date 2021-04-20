@@ -14,7 +14,9 @@ Method 1
 --------
 
 One way to build PyNumero extensions is with the pyomo
-download-extensions and build-extensions subcommands ::
+download-extensions and build-extensions subcommands. Note that
+this approach will build PyNumero without support for the HSL linear
+solvers. ::
 
   pyomo download-extensions
   pyomo build-extensions
@@ -22,7 +24,8 @@ download-extensions and build-extensions subcommands ::
 Method 2
 --------
 
-Use the build script ::
+If you want PyNumero support for the HSL solvers and you have an IPOPT compilation
+for your machine, you can build PyNumero using the build script ::
 
   cd pyomo/contrib/pynumero/
   python build.py -DBUILD_ASL=ON -DBUILD_MA27=ON -DIPOPT_DIR=<path/to/ipopt/build/>
