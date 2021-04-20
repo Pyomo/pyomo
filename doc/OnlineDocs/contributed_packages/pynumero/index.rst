@@ -13,6 +13,18 @@ PyNumero. For more details, see the API documentation (:ref:`pynumero_api`).
    api.rst
 
 
+Developers
+----------
+
+The development team includes:
+
+* Jose Santiago Rodriguez
+* Carl Laird
+* John Siirola
+* Michael Bynum
+* Robby Parker
+
+
 Indices and Tables
 ------------------
 
