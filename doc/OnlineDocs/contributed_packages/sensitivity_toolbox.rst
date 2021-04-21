@@ -61,6 +61,7 @@ And finally we call sIPOPT or k_aug:
 
 .. code:: python
 
+
     >>> m_sipopt = sensitivity_calculation('sipopt',m,[m.eta1,m.eta2], [m.perturbed_eta1,m.perturbed_eta2], tee=True)
 
     Ipopt 3.13.2: run_sens=yes

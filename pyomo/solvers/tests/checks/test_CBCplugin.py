@@ -20,6 +20,7 @@ from pyomo.environ import (ConcreteModel, Var, Objective, RangeSet,
                            maximize, minimize)
 from pyomo.opt import (SolverFactory, ProblemSense,
                        TerminationCondition, SolverStatus)
+from pyomo.solvers.plugins.solvers.CBCplugin import CBCSHELL
 
 cbc_available = SolverFactory('cbc', solver_io='lp').available(exception_flag=False)
 
@@ -342,6 +343,24 @@ class TestCBCUsingMock(unittest.TestCase):
         self.assertEqual(results.solver.statistics.branch_and_bound.number_of_bounded_subproblems, 0)
         self.assertEqual(results.solver.statistics.branch_and_bound.number_of_created_subproblems, 0)
         self.assertEqual(results.solver.statistics.black_box.number_of_iterations, 0)
+
+    def test_process_logfile(self):
+        cbc_shell = CBCSHELL()
+        cbc_shell._log_file = os.path.join(data_dir, 'test5_timeout_cbc.txt')
+        results = cbc_shell.process_logfile()
+        self.assertEqual(results.solution.gap, 0.01)
+        self.assertEqual(results.solver.statistics.black_box.number_of_iterations, 50364)
+        self.assertEqual(results.solver.system_time, 2.01)
+        self.assertEqual(results.solver.statistics.branch_and_bound.number_of_created_subproblems, 34776)
+
+    def test_process_logfile_gap_inf(self):
+        cbc_shell = CBCSHELL()
+        cbc_shell._log_file = os.path.join(data_dir, 'test5_timeout_cbc_gap.txt')
+        results = cbc_shell.process_logfile()
+        self.assertEqual(results.solution.gap, float('inf'))
+        self.assertEqual(results.solver.statistics.black_box.number_of_iterations, 50364)
+        self.assertEqual(results.solver.system_time, 2.01)
+        self.assertEqual(results.solver.statistics.branch_and_bound.number_of_created_subproblems, 34776)
 
 
 if __name__ == "__main__":

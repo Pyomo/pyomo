@@ -24,18 +24,18 @@ import pyomo.opt
 old_tempdir = TempfileManager.tempdir
 
 
-class TestSolver1(pyomo.opt.OptSolver):
+class MockSolver1(pyomo.opt.OptSolver):
 
     def __init__(self, **kwds):
         kwds['type'] = 'stest_type'
-        kwds['doc'] = 'TestSolver1 Documentation'
+        kwds['doc'] = 'MockSolver1 Documentation'
         pyomo.opt.OptSolver.__init__(self,**kwds)
 
 
 class OptSolverDebug(unittest.TestCase):
 
     def setUp(self):
-        pyomo.opt.SolverFactory.register('stest1')(TestSolver1)
+        pyomo.opt.SolverFactory.register('stest1')(MockSolver1)
         TempfileManager.tempdir = currdir
 
     def tearDown(self):
@@ -49,16 +49,16 @@ class OptSolverDebug(unittest.TestCase):
         Verify the processing of 'type', 'name' and 'doc' options
         """
         ans = pyomo.opt.SolverFactory("stest1")
-        self.assertEqual(type(ans), TestSolver1)
-        self.assertEqual(ans._doc, "TestSolver1 Documentation")
+        self.assertEqual(type(ans), MockSolver1)
+        self.assertEqual(ans._doc, "MockSolver1 Documentation")
 
         ans = pyomo.opt.SolverFactory("stest1", doc="My Doc")
-        self.assertEqual(type(ans), TestSolver1)
-        self.assertEqual(ans._doc, "TestSolver1 Documentation")
+        self.assertEqual(type(ans), MockSolver1)
+        self.assertEqual(ans._doc, "MockSolver1 Documentation")
 
         ans = pyomo.opt.SolverFactory("stest1", name="my name")
-        self.assertEqual(type(ans), TestSolver1)
-        self.assertEqual(ans._doc, "TestSolver1 Documentation")
+        self.assertEqual(type(ans), MockSolver1)
+        self.assertEqual(ans._doc, "MockSolver1 Documentation")
 
     def test_solver_init2(self):
         """

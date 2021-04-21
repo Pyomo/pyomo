@@ -38,7 +38,7 @@ def _neos_error(msg, results, current_message):
         if error_re.search(line):
             logger.error(line)
         elif warn_re.search(line):
-            logger.warn(line)
+            logger.warning(line)
 
 
 @SolverManagerFactory.register(

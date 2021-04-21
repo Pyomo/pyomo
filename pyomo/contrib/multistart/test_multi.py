@@ -103,20 +103,20 @@ class MultistartTests(unittest.TestCase):
         m.x = Var()
         m.o = Objective(expr=m.x)
         m.o2 = Objective(expr=m.x)
-        with self.assertRaisesRegexp(RuntimeError, "multiple active objectives"):
+        with self.assertRaisesRegex(RuntimeError, "multiple active objectives"):
             SolverFactory('multistart').solve(m)
 
     def test_no_obj(self):
         m = ConcreteModel()
         m.x = Var()
-        with self.assertRaisesRegexp(RuntimeError, "no active objective"):
+        with self.assertRaisesRegex(RuntimeError, "no active objective"):
             SolverFactory('multistart').solve(m)
 
     def test_const_obj(self):
         m = ConcreteModel()
         m.x = Var()
         m.o = Objective(expr = 5)
-        with self.assertRaisesRegexp(RuntimeError, "constant objective"):
+        with self.assertRaisesRegex(RuntimeError, "constant objective"):
             SolverFactory('multistart').solve(m)
 
 

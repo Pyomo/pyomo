@@ -14,19 +14,28 @@
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
 #  ___________________________________________________________________________
-
-import sys
+import functools
 import logging
+import sys
 import time
 import traceback
+from pyomo.common.modeling import NOTSET as _NotSpecified
 
 _logger = logging.getLogger('pyomo.common.timing')
 _logger.propagate = False
 _logger.setLevel(logging.WARNING)
 
-class _NotSpecified(object): pass
-
 def report_timing(stream=True):
+    """Set reporting of Pyomo timing information.
+
+    Parameters
+    ----------
+    stream: bool, TextIOBase
+        The destination stream to emit timing information.  If ``True``,
+        defaults to ``sys.stdout``.  If ``False`` or ``None``, disables
+        reporting of timing information.
+
+    """
     if stream:
         _logger.setLevel(logging.INFO)
         if stream is True:
@@ -39,7 +48,6 @@ def report_timing(stream=True):
         _logger.setLevel(logging.WARNING)
         for h in _logger.handlers:
             _logger.removeHandler(h)
-
 
 _construction_logger = logging.getLogger('pyomo.common.timing.construction')
 
@@ -159,7 +167,7 @@ class TicTocTimer(object):
         ostream (FILE): an optional output stream to print the timing
             information
         logger (Logger): an optional output stream using the python
-           logging package. Note: timing logged using logger.info
+           logging package. Note: the timing logged using ``logger.info()``
     """
     def __init__(self, ostream=_NotSpecified, logger=None):
         self._lastTime = self._loadTime = default_timer()
@@ -207,8 +215,8 @@ class TicTocTimer(object):
                 printed.
             delta (bool): print out the elapsed wall clock time since
                 the last call to :meth:`tic` or :meth:`toc`
-                (:const:`True` (default)) or since the module was first
-                loaded (:const:`False`).
+                (``True`` (default)) or since the module was first
+                loaded (``False``).
             ostream (FILE): an optional output stream (overrides the ostream
                 provided when the class was constructed).
             logger (Logger): an optional output stream using the python
@@ -272,8 +280,18 @@ class TicTocTimer(object):
         self._lastTime = default_timer()
 
 _globalTimer = TicTocTimer()
-tic = _globalTimer.tic
-toc = _globalTimer.toc
+tic = functools.partial(TicTocTimer.tic, _globalTimer)
+tic.__doc__ = """
+Reset the global :py:class:`TicTocTimer` instance.
+
+See :py:meth:`TicTocTimer.tic()`.
+"""
+toc = functools.partial(TicTocTimer.toc, _globalTimer)
+toc.__doc__ = """
+Print the elapsed time from the global :py:class:`TicTocTimer` instance.
+
+See :py:meth:`TicTocTimer.toc()`.
+"""
 
 
 class _HierarchicalHelper(object):
@@ -440,7 +458,6 @@ class HierarchicalTimer(object):
 
     def _get_timer(self, identifier, should_exist=False):
         """
-
         This method gets the timer associated with the current state
         of self.stack and the specified identifier.
 
@@ -470,8 +487,7 @@ class HierarchicalTimer(object):
             return parent.timers[identifier]
 
     def start(self, identifier):
-        """
-        Start incrementing the timer identified with identifier
+        """Start incrementing the timer identified with identifier
 
         Parameters
         ----------
@@ -483,8 +499,7 @@ class HierarchicalTimer(object):
         self.stack.append(identifier)
 
     def stop(self, identifier):
-        """
-        Stop incrementing the timer identified with identifier
+        """Stop incrementing the timer identified with identifier
 
         Parameters
         ----------
