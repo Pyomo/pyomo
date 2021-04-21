@@ -8,12 +8,57 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentMap
+from pyomo.common.dependencies import scipy_available
 from pyomo.contrib.matching.maximum_matching import maximum_matching
 from pyomo.contrib.matching.block_triangularize import block_triangularize
-from pyomo.common.dependencies import scipy_available
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
+    import scipy as sp
+
+
+def _check_unindexed(complist):
+    for comp in complist:
+        if comp.is_indexed():
+            raise ValueError(
+                    "Variables and constraints must be unindexed "
+                    "ComponentData objects. Got %s, which is indexed."
+                    % comp.name
+                    )
+
+
+def get_structural_incidence_matrix(variables, constraints, include_fixed=True):
+    """
+    This function gets the incidence matrix of Pyomo constraints and variables.
+
+    Arguments
+    ---------
+    variables: A list of Pyomo variable data objects
+    constraints: A list of Pyomo constraint data objects
+
+    Returns
+    -------
+    A scipy.sparse coo matrix. Rows are indices into the user-provided list of
+    constraints, columns are indices into the user-provided list of variables.
+    Entries are 1.0.
+
+    """
+    _check_unindexed(variables+constraints)
+    N, M = len(variables), len(constraints)
+    var_idx_map = ComponentMap((v, i) for i, v in enumerate(variables))
+    rows = []
+    cols = []
+    for i, con in enumerate(constraints):
+        cols.extend(var_idx_map[v] for v in
+                identify_variables(con.body, include_fixed=include_fixed)
+                if v in var_idx_map)
+        rows.extend([i]*(len(cols) - len(rows)))
+    assert len(rows) == len(cols)
+    data = [1.0]*len(rows)
+    matrix = sp.sparse.coo_matrix( (data, (rows, cols)), shape=(M, N) )
+    return matrix
+
 
 class IncidenceGraphInterface(object):
     """
