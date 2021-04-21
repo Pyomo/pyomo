@@ -17,6 +17,7 @@ from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.tee import TeeStream
 import sys
+from typing import Dict
 from pyomo.common.config import ConfigValue, NonNegativeInt
 
 
@@ -50,12 +51,10 @@ class Cbc(PersistentSolver):
         self._primal_sol = dict()
         self._reduced_costs = dict()
 
-    def available(self, exception_flag=False):
+    def available(self):
         if self.config.executable.path() is None:
-            if exception_flag:
-                raise RuntimeError('Cbc is not available')
-            return False
-        return True
+            return self.Availability.NotFound
+        return self.Availability.FullLicense
 
     def version(self):
         results = subprocess.run([str(self.config.executable), '-stop'],
@@ -92,8 +91,19 @@ class Cbc(PersistentSolver):
         return self._config
 
     @property
-    def solver_options(self):
+    def cbc_options(self):
+        """
+        Returns
+        -------
+        cbc_options: dict
+            A dictionary mapping solver options to values for those options. These
+            are solver specific.
+        """
         return self._solver_options
+
+    @cbc_options.setter
+    def cbc_options(self, val: Dict):
+        self._solver_options = val
 
     @property
     def update_config(self):

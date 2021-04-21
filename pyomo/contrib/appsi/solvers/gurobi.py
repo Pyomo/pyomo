@@ -2,7 +2,7 @@ import collections
 import enum
 import logging
 import math
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 from pyomo.common.collections import ComponentSet, ComponentMap, OrderedSet
 from pyomo.common.dependencies import attempt_import
@@ -21,10 +21,11 @@ from pyomo.repn import generate_standard_repn
 
 from pyomo.contrib.appsi.base import (
     PersistentSolver, Results, TerminationCondition, MIPSolverConfig,
-    PersistentBase,
+    PersistentBase, PersistentSolutionLoader
 )
 
 logger = logging.getLogger(__name__)
+
 
 def _import_gurobipy():
     try:
@@ -37,17 +38,26 @@ def _import_gurobipy():
         raise ImportError('The APPSI Gurobi interface requires gurobipy>=7.0.0')
     return gurobipy
 
+
 gurobipy, gurobipy_available = attempt_import('gurobipy',
                                               importer=_import_gurobipy)
+
 
 class DegreeError(PyomoException):
     pass
 
 
+class GurobiSolutionLoader(PersistentSolutionLoader):
+    def load_vars(self, vars_to_load=None, solution_number=0):
+        self._assert_solution_still_valid()
+        self._solver.load_vars(vars_to_load=vars_to_load, solution_number=solution_number)
+
+
 class GurobiResults(Results):
-    def __init__(self):
+    def __init__(self, solver):
         super(GurobiResults, self).__init__()
         self.wallclock_time = None
+        self.solution_loader = GurobiSolutionLoader(solver=solver)
 
 
 class _MutableLinearCoefficient(object):
@@ -152,16 +162,6 @@ class Gurobi(PersistentBase, PersistentSolver):
     """
     Interface to Gurobi
     """
-    class Availability(enum.IntEnum):
-        NotFound = 0
-        BadVersion = -1
-        BadLicense = -2
-        LimitedLicense = 1
-        FullLicense = 2
-
-        def __bool__(self):
-            return self._value_ > 0
-
     _available = None
 
     def __init__(self):
@@ -184,18 +184,11 @@ class Gurobi(PersistentBase, PersistentSolver):
         self._callback_func = None
         self._constraints_added_since_update = OrderedSet()
         self._vars_added_since_update = ComponentSet()
+        self._last_results_object: Optional[GurobiResults] = None
 
-    def available(self, exception_flag=False):
+    def available(self):
         if self._available is None:
             self._check_license()
-        if exception_flag and not self._available:
-            if self._available == Gurobi.Availability.BadVersion:
-                msg = ('The APPSI interface to Gurobi requires '
-                       'Gurobi version 7 or greater (found %s).'
-                       % ('.'.join(str(_) for _ in self.version())))
-            else:
-                msg = 'gurobipy is not available'
-            raise RuntimeError(msg)
         return self._available
 
     @classmethod
@@ -236,11 +229,18 @@ class Gurobi(PersistentBase, PersistentSolver):
         self._config = val
 
     @property
-    def solver_options(self):
+    def gurobi_options(self):
+        """
+        Returns
+        -------
+        gurobi_options: dict
+            A dictionary mapping solver options to values for those options. These
+            are solver specific.
+        """
         return self._solver_options
 
-    @solver_options.setter
-    def solver_options(self, val: Dict):
+    @gurobi_options.setter
+    def gurobi_options(self, val: Dict):
         self._solver_options = val
 
     def _solve(self, timer: HierarchicalTimer):
@@ -264,7 +264,11 @@ class Gurobi(PersistentBase, PersistentSolver):
         return self._postsolve(timer)
 
     def solve(self, model, timer: HierarchicalTimer = None) -> Results:
-        self.available(exception_flag=True)
+        avail = self.available()
+        if not avail:
+            raise PyomoException(f'Solver {self.__class__} is not available ({avail}).')
+        if self._last_results_object is not None:
+            self._last_results_object.solution_loader.invalidate()
         if timer is None:
             timer = HierarchicalTimer()
         if model is not self._model:
@@ -651,7 +655,8 @@ class Gurobi(PersistentBase, PersistentSolver):
         grb = gurobipy.GRB
         status = gprob.Status
 
-        results = GurobiResults()
+        results = GurobiResults(self)
+        self._last_results_object = results
         results.wallclock_time = gprob.Runtime
 
         if status == grb.LOADED:  # problem is loaded, but no solution

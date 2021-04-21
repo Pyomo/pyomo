@@ -7,11 +7,13 @@ from pyomo.core.base.var import _GeneralVarData, Var
 from pyomo.core.base.param import _ParamData, Param
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.objective import _GeneralObjectiveData
+from pyomo.core.base.suffix import Suffix
 from pyomo.common.collections import ComponentMap, OrderedSet
 from .utils.get_objective import get_objective
 from .utils.identify_named_expressions import identify_named_expressions
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat
+from pyomo.common.errors import ApplicationError
 
 
 class TerminationCondition(enum.Enum):
@@ -110,6 +112,127 @@ class MIPSolverConfig(SolverConfig):
         self.relax_integrality: bool = False
 
 
+class SolutionLoaderBase(abc.ABC):
+    @abc.abstractmethod
+    def load_vars(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> NoReturn:
+        """
+        Load the solution of the primal variables into the value attribute of the variables.
+
+        Parameters
+        ----------
+        vars_to_load: list
+            A list of the variables whose solution should be loaded. If vars_to_load is None, then the solution
+            to all primal variables will be loaded.
+        """
+        pass
+
+    def get_duals(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None) -> Dict[_GeneralConstraintData, float]:
+        """
+        Returns a dictionary mapping constraint to dual value.
+
+        Parameters
+        ----------
+        cons_to_load: list
+            A list of the constraints whose duals should be retreived. If cons_to_load is None, then the duals for all
+            constraints will be retreived.
+
+        Returns
+        -------
+        duals: dict
+            Maps constraints to dual values
+        """
+        raise NotImplementedError(f'{type(self)} does not support the get_duals method')
+
+    def get_slacks(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None) -> Dict[_GeneralConstraintData, float]:
+        """
+        Returns a dictionary mapping constraint to slack.
+
+        Parameters
+        ----------
+        cons_to_load: list
+            A list of the constraints whose duals should be loaded. If cons_to_load is None, then the duals for all
+            constraints will be loaded.
+
+        Returns
+        -------
+        slacks: dict
+            Maps constraints to slacks
+        """
+        raise NotImplementedError(f'{type(self)} does not support the get_slacks method')
+
+    def get_reduced_costs(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
+        """
+        Returns a ComponentMap mapping variable to reduced cost.
+
+        Parameters
+        ----------
+        vars_to_load: list
+            A list of the variables whose reduced cost should be retreived. If vars_to_load is None, then the
+            reduced costs for all variables will be loaded.
+
+        Returns
+        -------
+        reduced_costs: ComponentMap
+            Maps variables to reduced costs
+        """
+        raise NotImplementedError(f'{type(self)} does not support the get_reduced_costs method')
+
+
+class SolutionLoader(SolutionLoaderBase):
+    def __init__(self, primals, duals, slacks, reduced_costs):
+        """
+        Parameters
+        ----------
+        primals: dict
+            maps id(Var) to (var, value)
+        duals: dict
+            maps Constraint to dual value
+        slacks: dict
+            maps Constraint to slack value
+        reduced_costs: dict
+            maps id(Var) to (var, reduced_cost)
+        """
+        self._primals = primals
+        self._duals = duals
+        self._slacks = slacks
+        self._reduced_costs = reduced_costs
+
+    def load_vars(self, vars_to_load=None):
+        if vars_to_load is None:
+            for v, val in self._primals.values():
+                v.value = val
+        else:
+            for v in vars_to_load:
+                v.value = self._primals[id(v)][1]
+
+    def get_duals(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None) -> Dict[_GeneralConstraintData, float]:
+        if cons_to_load is None:
+            duals = dict(self._duals)
+        else:
+            duals = dict()
+            for c in cons_to_load:
+                duals[c] = self._duals[c]
+        return duals
+
+    def get_slacks(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None) -> Dict[_GeneralConstraintData, float]:
+        if cons_to_load is None:
+            slacks = dict(self._slacks)
+        else:
+            slacks = dict()
+            for c in cons_to_load:
+                slacks[c] = self._slacks[c]
+        return slacks
+
+    def get_reduced_costs(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
+        if vars_to_load is None:
+            rc = ComponentMap(self._reduced_costs.values())
+        else:
+            rc = ComponentMap()
+            for v in vars_to_load:
+                rc[v] = self._reduced_costs[id(v)][1]
+        return rc
+
+
 class Results(object):
     """
     Attributes
@@ -139,11 +262,11 @@ class Results(object):
         >>> results = opt.solve(m) #doctest:+SKIP
         >>> if results.termination_condition == appsi.base.TerminationCondition.optimal: #doctest:+SKIP
         ...     print('optimal solution found: ', results.best_feasible_objective) #doctest:+SKIP
-        ...     opt.load_vars() #doctest:+SKIP
+        ...     results.solution_loader.load_vars() #doctest:+SKIP
         ...     print('the optimal value of x is ', m.x.value) #doctest:+SKIP
         ... elif results.best_feasible_objective is not None: #doctest:+SKIP
         ...     print('sub-optimal but feasible solution found: ', results.best_feasible_objective) #doctest:+SKIP
-        ...     opt.load_vars(vars_to_load=[m.x]) #doctest:+SKIP
+        ...     results.solution_loader.load_vars(vars_to_load=[m.x]) #doctest:+SKIP
         ...     print('The value of x in the feasible solution is ', m.x.value) #doctest:+SKIP
         ... elif results.termination_condition in {appsi.base.TerminationCondition.maxIterations, appsi.base.TerminationCondition.maxTimeLimit}: #doctest:+SKIP
         ...     print('No feasible solution was found. The best lower bound found was ', results.best_objective_bound) #doctest:+SKIP
@@ -151,6 +274,7 @@ class Results(object):
         ...     print('The following termination condition was encountered: ', results.termination_condition) #doctest:+SKIP
     """
     def __init__(self):
+        self.solution_loader: Optional[SolutionLoaderBase] = None
         self.termination_condition: TerminationCondition = TerminationCondition.unknown
         self.best_feasible_objective: Optional[float] = None
         self.best_objective_bound: Optional[float] = None
@@ -196,6 +320,16 @@ class UpdateConfig(ConfigDict):
 
 
 class Solver(abc.ABC):
+    class Availability(enum.IntEnum):
+        NotFound = 0
+        BadVersion = -1
+        BadLicense = -2
+        FullLicense = 1
+        LimitedLicense = 2
+
+        def __bool__(self):
+            return self._value_ > 0
+
     @abc.abstractmethod
     def solve(self, model: _BlockData, timer: HierarchicalTimer = None) -> Results:
         """
@@ -213,9 +347,10 @@ class Solver(abc.ABC):
         results: Results
             A results object
         """
+        pass
 
     @abc.abstractmethod
-    def available(self, exception_flag=False):
+    def available(self):
         """Test if the solver is available on this system.
 
         Nominally, this will return True if the solver interface is
@@ -231,18 +366,15 @@ class Solver(abc.ABC):
         False indicating the reason why the interface is not available
         (not found, bad license, unsupported version, etc).
 
-        Parameters
-        ----------
-        exception_flag: bool
-            If True, then an exception will be raised if the solver is
-            not available.
-
         Returns
         -------
-        available: bool, enum.Enum
-            True if the solver is available. Otherwise, False.
-
+        available: Solver.Availability
+            An enum that indicates "how available" the solver is.
+            Note that the enum can be cast to bool, which will
+            be True if the solver is runable at all and False
+            otherwise.
         """
+        pass
 
     @abc.abstractmethod
     def version(self) -> Tuple:
@@ -253,21 +385,33 @@ class Solver(abc.ABC):
             A tuple representing the version
         """
 
-    def license_is_valid(self) -> bool:
-        """Test if the solver license is valid on this system.
-
-        Note that this method is included for compatibility with the
-        legacy SolverFactory interface.  Unlicensed or open source
-        solvers will return True by definition.  Licensed solvers will
-        return True if a valid license is found.
+    @property
+    @abc.abstractmethod
+    def config(self):
+        """
+        An object for configuring solve options.
 
         Returns
         -------
-        available: bool
-            True if the solver license is valid. Otherwise, False.
-
+        SolverConfig
+            An object for configuring pyomo solve options such as the time limit.
+            These options are mostly independent of the solver.
         """
-        return bool(self.available())
+        pass
+
+    def is_persistent(self):
+        """
+        Returns
+        -------
+        is_persistent: bool
+            True if the solver is a persistent solver.
+        """
+        return False
+
+
+class PersistentSolver(Solver):
+    def is_persistent(self):
+        return True
 
     @abc.abstractmethod
     def load_vars(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> NoReturn:
@@ -284,6 +428,8 @@ class Solver(abc.ABC):
 
     def get_duals(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None) -> Dict[_GeneralConstraintData, float]:
         """
+        Declare sign convention in docstring here.
+
         Parameters
         ----------
         cons_to_load: list
@@ -326,52 +472,6 @@ class Solver(abc.ABC):
             Maps variable to reduced cost
         """
         raise NotImplementedError('{0} does not support the get_reduced_costs method'.format(type(self)))
-
-    @property
-    @abc.abstractmethod
-    def config(self):
-        """
-        An object for configuring solve options.
-
-        Returns
-        -------
-        SolverConfig
-            An object for configuring pyomo solve options such as the time limit.
-            These options are mostly independent of the solver.
-        """
-        pass
-
-    @property
-    @abc.abstractmethod
-    def solver_options(self):
-        """
-        Returns
-        -------
-        solver_options: dict
-            A dictionary mapping solver options to values for those options. These
-            are solver specific.
-        """
-        pass
-
-    def is_persistent(self):
-        """
-        Returns
-        -------
-        is_persistent: bool
-            True if the solver is a persistent solver.
-        """
-        return False
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, t, v, traceback):
-        pass
-
-
-class PersistentSolver(Solver):
-    def is_persistent(self):
-        return True
 
     @property
     @abc.abstractmethod
@@ -425,6 +525,35 @@ class PersistentSolver(Solver):
     @abc.abstractmethod
     def update_params(self):
         pass
+
+
+class PersistentSolutionLoader(SolutionLoaderBase):
+    def __init__(self, solver: PersistentSolver):
+        self._solver = solver
+        self._valid = True
+
+    def _assert_solution_still_valid(self):
+        if not self._valid:
+            raise RuntimeError('The results in the solver are no longer valid.')
+
+    def load_vars(self, vars_to_load=None):
+        self._assert_solution_still_valid()
+        self._solver.load_vars(vars_to_load=vars_to_load)
+
+    def get_duals(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None) -> Dict[_GeneralConstraintData, float]:
+        self._assert_solution_still_valid()
+        return self._solver.get_duals(cons_to_load=cons_to_load)
+
+    def get_slacks(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None) -> Dict[_GeneralConstraintData, float]:
+        self._assert_solution_still_valid()
+        return self._solver.get_slacks(cons_to_load=cons_to_load)
+
+    def get_reduced_costs(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
+        self._assert_solution_still_valid()
+        return self._solver.get_reduced_costs(vars_to_load=vars_to_load)
+
+    def invalidate(self):
+        self._valid = False
 
 
 """
@@ -811,3 +940,136 @@ class PersistentBase(abc.ABC):
         if need_to_set_objective:
             self.set_objective(pyomo_obj)
         timer.stop('objective')
+
+
+class LegacySolutionLoader(object):
+    def __init__(self, model, primals, duals, slacks, reduced_costs):
+        """
+        Parameters
+        ----------
+        model: the pyomo model
+        primals: ComponentMap
+            maps Var to value
+        duals: ComponentMap
+            maps Constraint to dual value
+        slacks: ComponentMap
+            maps Constraint to slack value
+        reduced_costs: ComponentMap
+            maps Var to reduced cost
+        """
+        self._model = model
+        self._primals = primals
+        self._duals = duals
+        self._slacks = slacks
+        self._reduced_costs = reduced_costs
+
+    def load_solution(self):
+        self.load_vars()
+
+        if hasattr(self._model, 'dual') and self._model.dual.import_enabled():
+            self.load_suffix('dual')
+
+        if hasattr(self._model, 'slack') and self._model.slack.import_enabled():
+            self.load_suffix('slack')
+
+        if hasattr(self._model, 'rc') and self._model.rc.import_enabled():
+            self.load_suffix('rc')
+
+    def load_suffix(self, suffix):
+        if suffix == 'dual':
+            self.load_duals()
+        elif suffix == 'slack':
+            self.load_slacks()
+        elif suffix == 'rc':
+            self.load_reduced_costs()
+        else:
+            raise ValueError('suffix not recognized')
+
+    def load_vars(self, vars_to_load=None):
+        if vars_to_load is None:
+            for v, val in self._primals.items():
+                v.value = val
+        else:
+            for v in vars_to_load:
+                v.value = self._primals[v]
+
+    def load_duals(self, cons_to_load=None):
+        if not hasattr(self._model, 'dual'):
+            self._model.dual = Suffix(direction=Suffix.IMPORT)
+
+        if not self._model.dual.import_enabled():
+            raise RuntimeError('dual Suffix is not enabled for importing')
+
+        if cons_to_load is None:
+            for c, val in self._duals.items():
+                self._model.dual[c] = val
+        else:
+            for c in cons_to_load:
+                self._model.dual[c] = self._duals[c]
+
+    def load_slacks(self, cons_to_load=None):
+        if not hasattr(self._model, 'slack'):
+            self._model.slack = Suffix(direction=Suffix.IMPORT)
+
+        if not self._model.slack.import_enabled():
+            raise RuntimeError('slack Suffix is not enabled for importing')
+
+        if cons_to_load is None:
+            for c, val in self._slacks.items():
+                self._model.slack[c] = val
+        else:
+            for c in cons_to_load:
+                self._model.slack[c] = self._slacks[c]
+
+    def load_reduced_costs(self, vars_to_load=None):
+        if not hasattr(self._model, 'rc'):
+            self._model.rc = Suffix(direction=Suffix.IMPORT)
+
+        if not self._model.rc.import_enabled():
+            raise RuntimeError('rc Suffix is not enabled for importing')
+
+        if vars_to_load is None:
+            for v, val in self._reduced_costs.items():
+                self._model.rc[v] = val
+        else:
+            for v in vars_to_load:
+                self._model.rc[v] = self._reduced_costs[v]
+
+
+class LegacySolverInterface(object):
+    def available(self, exception_flag=True):
+        ans = super(LegacySolverInterface, self).available()
+        if exception_flag and not ans:
+            raise ApplicationError(f'Solver {self.__class__} is not available ({ans}).')
+        return ans
+
+    def license_is_valid(self) -> bool:
+        """Test if the solver license is valid on this system.
+
+        Note that this method is included for compatibility with the
+        legacy SolverFactory interface.  Unlicensed or open source
+        solvers will return True by definition.  Licensed solvers will
+        return True if a valid license is found.
+
+        Returns
+        -------
+        available: bool
+            True if the solver license is valid. Otherwise, False.
+
+        """
+        return bool(self.available())
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
+
+
+class NewFactory(object):
+    def register(self, name, ...):
+        def decorator(cls):
+            self.add_registration(name, cls)
+            class LegacySolver(LegacySolverInterface, cls):
+                pass
+            OldFactory.register(name, LegacySolver)

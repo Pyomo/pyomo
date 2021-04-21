@@ -19,7 +19,7 @@ from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.tee import TeeStream
 import sys
-import os
+from typing import Dict
 from pyomo.common.config import ConfigValue, NonNegativeInt
 
 
@@ -111,12 +111,10 @@ class Ipopt(PersistentSolver):
         self._primal_sol = ComponentMap()
         self._reduced_costs = ComponentMap()
 
-    def available(self, exception_flag=False):
+    def available(self):
         if self.config.executable.path() is None:
-            if exception_flag:
-                raise RuntimeError('Could not find Ipopt executable')
-            return False
-        return True
+            return self.Availability.NotFound
+        return self.Availability.FullLicense
 
     def version(self):
         results = subprocess.run([str(self.config.executable), '--version'],
@@ -153,8 +151,19 @@ class Ipopt(PersistentSolver):
         return self._config
 
     @property
-    def solver_options(self):
+    def ipopt_options(self):
+        """
+        Returns
+        -------
+        ipopt_options: dict
+            A dictionary mapping solver options to values for those options. These
+            are solver specific.
+        """
         return self._solver_options
+
+    @ipopt_options.setter
+    def ipopt_options(self, val: Dict):
+        self._solver_options = val
 
     @property
     def update_config(self):

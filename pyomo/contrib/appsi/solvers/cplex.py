@@ -42,6 +42,8 @@ class CplexResults(Results):
 
 
 class Cplex(PersistentSolver):
+    _available = None
+
     def __init__(self):
         self._config = CplexConfig()
         self._solver_options = dict()
@@ -58,10 +60,28 @@ class Cplex(PersistentSolver):
             self._cplex_model = None
             self._cplex_available = False
 
-    def available(self, exception_flag=False):
-        if exception_flag and not self._cplex_available:
-            raise RuntimeError('Cplex is not available')
-        return self._cplex_available
+    def available(self):
+        if self._available is None:
+            self._check_license()
+        return self._available
+
+    def _check_license(self):
+        if self._cplex_available:
+            try:
+                m = self._cplex.Cplex()
+                m.variables.add(lb=[0]*1001)
+                m.solve()
+                self._available = self.Availability.FullLicense
+            except self._cplex.exceptions.errors.CplexSolverError:
+                try:
+                    m = self._cplex.Cplex()
+                    m.variables.add(lb=[0])
+                    m.solve()
+                    self._available = self.Availability.LimitedLicense
+                except:
+                    self._available = self.Availability.BadLicense
+        else:
+            self._available = self.Availability.NotFound
 
     def version(self):
         return tuple(int(k) for k in self._cplex.Cplex().get_version().split('.'))
@@ -83,8 +103,19 @@ class Cplex(PersistentSolver):
         return self._config
 
     @property
-    def solver_options(self):
+    def cplex_options(self):
+        """
+        Returns
+        -------
+        cplex_options: dict
+            A dictionary mapping solver options to values for those options. These
+            are solver specific.
+        """
         return self._solver_options
+
+    @cplex_options.setter
+    def cplex_options(self, val: Dict):
+        self._solver_options = val
 
     @property
     def update_config(self):
