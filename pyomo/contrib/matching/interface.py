@@ -69,6 +69,6 @@ class IncidenceGraphInterface(object):
                 for i, idx in row_block_map.items())
         var_block_map = ComponentMap((variables[j], idx)
                 for j, idx in col_block_map.items())
-        # Switch the order of the maps here to matching the method call.
+        # Switch the order of the maps here to match the method call.
         # Hopefully this does not get too confusing...
         return var_block_map, con_block_map
