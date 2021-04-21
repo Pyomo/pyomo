@@ -300,7 +300,7 @@ class OneVarDisj(unittest.TestCase):
     def test_non_unique_cut_name_error(self):
         m = models.twoSegments_SawayaGrossmann()
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "cuts_name was specified as 'disj1', but this is "
             "already a component on the instance! Please "
@@ -514,7 +514,7 @@ class TwoTermDisj(unittest.TestCase):
     def test_active_objective_err(self):
         m = models.makeTwoTermDisj_boxes()
         m.obj.deactivate()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "Cannot apply cutting planes transformation without an active "
             "objective in the model*",

@@ -11,7 +11,6 @@
 import re
 import os
 import subprocess
-from six import iteritems
 
 from pyomo.common import Executable
 from pyomo.common.errors import  ApplicationError
@@ -181,7 +180,7 @@ class PICOSHELL(SystemCallSolver):
             #self._results_file = self.tmpDir+os.sep+"PICO.osrl.xml"
 
         def _check_and_escape_options(options):
-            for key, val in iteritems(self.options):
+            for key, val in self.options.items():
                 tmp_k = str(key)
                 _bad = ' ' in tmp_k
 
@@ -409,7 +408,7 @@ class PICOSHELL(SystemCallSolver):
                         range_duals.setdefault(var[4:],[0,0])[1] = val
             # For the range constraints, supply only the dual with the largest
             # magnitude (at least one should always be numerically zero)
-            for key,(ld,ud) in iteritems(range_duals):
+            for key,(ld,ud) in range_duals.items():
                 if abs(ld) > abs(ud):
                     soln_constraints['r_l_'+key] = {"Dual" : ld}
                 else:

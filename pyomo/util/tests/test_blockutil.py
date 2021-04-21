@@ -11,7 +11,7 @@
 
 import logging
 
-from six import StringIO
+from io import StringIO
 
 import pyomo.common.unittest as unittest
 

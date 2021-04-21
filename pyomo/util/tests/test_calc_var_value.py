@@ -9,7 +9,8 @@
 #  ___________________________________________________________________________
 
 import logging
-import six
+from io import StringIO
+
 import pyomo.common.unittest as unittest
 
 from pyomo.common.log import LoggingIntercept
@@ -59,7 +60,7 @@ class Test_calc_var(unittest.TestCase):
         self.assertEqual(value(m.x), 5)
 
         m.lt = Constraint(expr=m.x <= m.y)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Constraint must be an equality constraint"):
             calculate_variable_from_constraint(m.x, m.lt)
 
@@ -87,28 +88,28 @@ class Test_calc_var(unittest.TestCase):
         # test that infeasible constraint throws error
         m.d = Constraint(expr=m.x**2 == -1)
         m.x.set_value(1.25) # set the initial value
-        with self.assertRaisesRegexp(
-               RuntimeError, 'Iteration limit \(10\) reached'):
+        with self.assertRaisesRegex(
+               RuntimeError, r'Iteration limit \(10\) reached'):
            calculate_variable_from_constraint(
                m.x, m.d, iterlim=10, linesearch=False)
 
         # same problem should throw a linesearch error if linesearch is on
         m.x.set_value(1.25) # set the initial value
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Linesearch iteration limit reached"):
            calculate_variable_from_constraint(
                m.x, m.d, iterlim=10, linesearch=True)
 
         # same problem should raise an error if initialized at 0
         m.x = 0
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Initial value for variable results in a "
                 "derivative value that is very close to zero."):
             calculate_variable_from_constraint(m.x, m.c)
 
         # same problem should raise a value error if we are asked to
         # solve for a variable that is not present
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Variable derivative == 0"):
             calculate_variable_from_constraint(m.y, m.c)
 
@@ -132,7 +133,7 @@ class Test_calc_var(unittest.TestCase):
 
         # we expect this to fail without a linesearch
         m.x.set_value(3.0)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Newton's method encountered a derivative "
                 "that was too close to zero"):
             calculate_variable_from_constraint(m.x, m.f, linesearch=False)
@@ -169,13 +170,9 @@ class Test_calc_var(unittest.TestCase):
         # Starting with an invalid guess (above TC) should raise an
         # exception
         m.x.set_value(600)
-        output = six.StringIO()
+        output = StringIO()
         with LoggingIntercept(output, 'pyomo', logging.WARNING):
-            if six.PY2:
-                expectedException = ValueError
-            else:
-                expectedException = TypeError
-            with self.assertRaises(expectedException):
+            with self.assertRaises(TypeError):
                 calculate_variable_from_constraint(m.x, m.f, linesearch=False)
         self.assertIn('Encountered an error evaluating the expression '
                       'at the initial guess', output.getvalue())
@@ -190,7 +187,7 @@ class Test_calc_var(unittest.TestCase):
         calculate_variable_from_constraint(m.x, m.c, linesearch=True)
         self.assertAlmostEqual(value(m.x), 0.046415888)
         m.x = .1
-        output = six.StringIO()
+        output = StringIO()
         with LoggingIntercept(output, 'pyomo', logging.WARNING):
             with self.assertRaises(ValueError):
                 # Note that the ValueError is different between Python 2
@@ -210,7 +207,7 @@ class Test_calc_var(unittest.TestCase):
         m.x = Var()
         m.c = Constraint(expr=m.x**0.5 == -1e-8)
         m.x = 1e-8#197.932807183
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Linesearch iteration limit reached; "
                 "remaining residual = {function evaluation error}"):
             calculate_variable_from_constraint(m.x, m.c, linesearch=True,
