@@ -11,7 +11,7 @@
 import pyomo.environ as pyo
 from pyomo.common.dependencies import networkx_available
 from pyomo.common.dependencies import scipy_available
-from pyomo.common.collections import ComponentSet
+from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.contrib.matching.interface import (
         IncidenceGraphInterface,
         get_structural_incidence_matrix,
@@ -84,6 +84,50 @@ class TestGasExpansionIncidenceMatrix(unittest.TestCase):
         n_var = 4*(N+1)
         n_con = 4*N+1
         self.assertEqual(imat.shape, (n_con, n_var))
+
+        var_idx_map = ComponentMap((v, i) for i, v in enumerate(all_vars))
+        con_idx_map = ComponentMap((c, i) for i, c in enumerate(all_cons))
+
+        # Map constraints to the variables they contain.
+        csr_map = ComponentMap()
+        csr_map.update((model.mbal[i], ComponentSet([
+            model.F[i],
+            model.F[i-1],
+            model.rho[i],
+            model.rho[i-1],
+            ])) for i in model.streams if i != model.streams.first())
+        csr_map.update((model.ebal[i], ComponentSet([
+            model.F[i],
+            model.F[i-1],
+            model.rho[i],
+            model.rho[i-1],
+            model.T[i],
+            model.T[i-1],
+            ])) for i in model.streams if i != model.streams.first())
+        csr_map.update((model.expansion[i], ComponentSet([
+            model.rho[i],
+            model.rho[i-1],
+            model.P[i],
+            model.P[i-1],
+            ])) for i in model.streams if i != model.streams.first())
+        csr_map.update((model.ideal_gas[i], ComponentSet([
+            model.P[i],
+            model.rho[i],
+            model.T[i],
+            ])) for i in model.streams)
+
+        # Want to test that the columns have the rows we expect.
+        i = model.streams.first()
+        for i, j, e in zip(imat.row, imat.col, imat.data):
+            con = all_cons[i]
+            var = all_vars[j]
+            self.assertIn(var, csr_map[con])
+            csr_map[con].remove(var)
+            self.assertEqual(e, 1.0)
+        # And no additional rows
+        for con in csr_map:
+            self.assertEqual(len(csr_map[con]), 0)
+
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
