@@ -31,7 +31,7 @@ class TestGDPReclassificationError(unittest.TestCase):
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp', logging.WARNING):
             check_model_algebraic(m)
-        self.assertRegexpMatches( log.getvalue(), 
+        self.assertRegex( log.getvalue(), 
                                   '.*not found in any Disjunctions.*')
 
     def test_disjunct_not_in_active_disjunction(self):
@@ -47,6 +47,6 @@ class TestGDPReclassificationError(unittest.TestCase):
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp', logging.WARNING):
             check_model_algebraic(m)
-        self.assertRegexpMatches(log.getvalue(), 
+        self.assertRegex(log.getvalue(), 
                                  '.*While it participates in a Disjunction, '
                                  'that Disjunction is currently deactivated.*')

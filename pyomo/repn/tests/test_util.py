@@ -1,7 +1,17 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import logging
 
 import pyomo.common.unittest as unittest
-from six import StringIO
+from io import StringIO
 
 from pyomo.common.log import LoggingIntercept
 from pyomo.repn.util import ftoa
@@ -31,7 +41,7 @@ class TestRepnUtils(unittest.TestCase):
         if f == float(f):
             test = self.assertNotRegexpMatches
         else:
-            test = self.assertRegexpMatches
+            test = self.assertRegex
         test( log.getvalue(),
               '.*Converting 1.1234567890123456789 to string '
               'resulted in loss of precision' )

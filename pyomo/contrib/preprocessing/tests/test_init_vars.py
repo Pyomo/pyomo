@@ -23,21 +23,21 @@ class TestInitVars(unittest.TestCase):
         m.v4.setub(2)
 
         TransformationFactory('contrib.init_vars_midpoint').apply_to(m)
-        self.assertEquals(value(m.v1), 0)
-        self.assertEquals(value(m.v2), 2)
-        self.assertEquals(value(m.v3), 2)
-        self.assertEquals(value(m.v4), 1)
-        self.assertEquals(value(m.v5), 2)
-        self.assertEquals(value(m.v6), 3)
+        self.assertEqual(value(m.v1), 0)
+        self.assertEqual(value(m.v2), 2)
+        self.assertEqual(value(m.v3), 2)
+        self.assertEqual(value(m.v4), 1)
+        self.assertEqual(value(m.v5), 2)
+        self.assertEqual(value(m.v6), 3)
 
         TransformationFactory('contrib.init_vars_midpoint').apply_to(
             m, overwrite=True)
-        self.assertEquals(value(m.v1), 0)
-        self.assertEquals(value(m.v2), 2)
-        self.assertEquals(value(m.v3), 2)
-        self.assertEquals(value(m.v4), 1)
-        self.assertEquals(value(m.v5), 2)
-        self.assertEquals(value(m.v6), 0)
+        self.assertEqual(value(m.v1), 0)
+        self.assertEqual(value(m.v2), 2)
+        self.assertEqual(value(m.v3), 2)
+        self.assertEqual(value(m.v4), 1)
+        self.assertEqual(value(m.v5), 2)
+        self.assertEqual(value(m.v6), 0)
 
     def test_zero_var_init(self):
         """Test zero initialization."""
@@ -55,21 +55,21 @@ class TestInitVars(unittest.TestCase):
         m.v4.setub(2)
 
         TransformationFactory('contrib.init_vars_zero').apply_to(m)
-        self.assertEquals(value(m.v1), 0)
-        self.assertEquals(value(m.v2), 2)
-        self.assertEquals(value(m.v3), -2)
-        self.assertEquals(value(m.v4), 0)
-        self.assertEquals(value(m.v5), 2)
-        self.assertEquals(value(m.v6), 3)
+        self.assertEqual(value(m.v1), 0)
+        self.assertEqual(value(m.v2), 2)
+        self.assertEqual(value(m.v3), -2)
+        self.assertEqual(value(m.v4), 0)
+        self.assertEqual(value(m.v5), 2)
+        self.assertEqual(value(m.v6), 3)
 
         TransformationFactory('contrib.init_vars_zero').apply_to(
             m, overwrite=True)
-        self.assertEquals(value(m.v1), 0)
-        self.assertEquals(value(m.v2), 2)
-        self.assertEquals(value(m.v3), -2)
-        self.assertEquals(value(m.v4), 0)
-        self.assertEquals(value(m.v5), 2)
-        self.assertEquals(value(m.v6), 0)
+        self.assertEqual(value(m.v1), 0)
+        self.assertEqual(value(m.v2), 2)
+        self.assertEqual(value(m.v3), -2)
+        self.assertEqual(value(m.v4), 0)
+        self.assertEqual(value(m.v5), 2)
+        self.assertEqual(value(m.v6), 0)
 
 
 if __name__ == '__main__':

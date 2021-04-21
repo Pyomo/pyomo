@@ -36,23 +36,23 @@ def setUpModule():
 def tearDownModule():
     TempfileManager.tempdir = old_tempdir
 
-class TestWriter(AbstractProblemWriter):
+class MockWriter(AbstractProblemWriter):
 
     def __init__(self, name=None):
         AbstractProblemWriter.__init__(self,name)
 
 
-class TestReader(AbstractResultsReader):
+class MockReader(AbstractResultsReader):
 
     def __init__(self, name=None):
         AbstractResultsReader.__init__(self,name)
 
 
-class TestSolver(OptSolver):
+class MockSolver(OptSolver):
 
     def __init__(self, **kwds):
         kwds['type'] = 'stest_type'
-        kwds['doc'] = 'TestSolver Documentation'
+        kwds['doc'] = 'MockSolver Documentation'
         OptSolver.__init__(self,**kwds)
 
 
@@ -72,7 +72,7 @@ class OptFactoryDebug(unittest.TestCase):
         """
         Testing the pyomo.opt solver factory with MIP solvers
         """
-        SolverFactory.register('stest3')(TestSolver)
+        SolverFactory.register('stest3')(MockSolver)
         ans = sorted(SolverFactory)
         tmp = ['_mock_asl', '_mock_cbc', '_mock_cplex', '_mock_glpk', '_mock_pico', 'cbc', 'cplex', 'glpk', 'pico', 'stest3', 'asl']
         tmp.sort()
@@ -96,7 +96,7 @@ class OptFactoryDebug(unittest.TestCase):
         """
         SolverFactory.unregister('stest3')
         self.assertTrue('stest3' not in SolverFactory)
-        SolverFactory.register('stest3')(TestSolver)
+        SolverFactory.register('stest3')(MockSolver)
         self.assertTrue('stest3' in SolverFactory)
         self.assertTrue('_mock_pico' in SolverFactory)
 
@@ -104,7 +104,7 @@ class OptFactoryDebug(unittest.TestCase):
         """
         Testing the pyomo.opt writer factory with MIP writers
         """
-        WriterFactory.register('wtest3')(TestWriter)
+        WriterFactory.register('wtest3')(MockWriter)
         factory = WriterFactory
         self.assertTrue(set(['wtest3']) <= set(factory))
 
@@ -126,7 +126,7 @@ class OptFactoryDebug(unittest.TestCase):
         """
         WriterFactory.unregister('wtest3')
         self.assertTrue(not 'wtest3' in WriterFactory)
-        WriterFactory.register('wtest3')(TestWriter)
+        WriterFactory.register('wtest3')(MockWriter)
         self.assertTrue('wtest3' in WriterFactory)
 
 
@@ -134,7 +134,7 @@ class OptFactoryDebug(unittest.TestCase):
         """
         Testing the pyomo.opt reader factory
         """
-        ReaderFactory.register('rtest3')(TestReader)
+        ReaderFactory.register('rtest3')(MockReader)
         ans = ReaderFactory
         #self.assertEqual(len(ans),4)
         self.assertTrue(set(ans) >= set(["rtest3", "sol","yaml", "json"]))
@@ -157,7 +157,7 @@ class OptFactoryDebug(unittest.TestCase):
         """
         ReaderFactory.unregister('rtest3')
         self.assertTrue(not 'rtest3' in ReaderFactory)
-        ReaderFactory.register('rtest3')(TestReader)
+        ReaderFactory.register('rtest3')(MockReader)
         self.assertTrue('rtest3' in ReaderFactory)
 
 if __name__ == "__main__":

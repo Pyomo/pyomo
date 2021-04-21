@@ -1,4 +1,4 @@
-import collections
+from collections.abc import Iterable
 import enum
 import logging
 import math
@@ -1148,7 +1148,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         ----------
         vars: Var or iterable of Var
         """
-        if not isinstance(vars, collections.Iterable):
+        if not isinstance(vars, Iterable):
             vars = [vars]
         gurobi_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in vars]
         var_values = self._solver_model.cbGetNodeRel(gurobi_vars)
@@ -1161,7 +1161,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         ----------
         vars: iterable of vars
         """
-        if not isinstance(vars, collections.Iterable):
+        if not isinstance(vars, Iterable):
             vars = [vars]
         gurobi_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in vars]
         var_values = self._solver_model.cbGetSolution(gurobi_vars)
@@ -1208,7 +1208,7 @@ class Gurobi(PersistentBase, PersistentSolver):
             raise ValueError('Constraint does not have a lower or an upper bound {0} \n'.format(con))
 
     def cbSetSolution(self, vars, solution):
-        if not isinstance(vars, collections.Iterable):
+        if not isinstance(vars, Iterable):
             vars = [vars]
         gurobi_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in vars]
         self._solver_model.cbSetSolution(gurobi_vars, solution)
