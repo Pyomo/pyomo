@@ -70,7 +70,7 @@ def make_gas_expansion_model(N=2):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
-class TestGasExpansionIncidenceMatrix(unittest.TestCase):
+class TestGasExpansionStructuralIncidenceMatrix(unittest.TestCase):
     """
     This class tests the get_structural_incidence_matrix function
     """
@@ -132,7 +132,7 @@ class TestGasExpansionIncidenceMatrix(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
-class TestGasExpansionModel(unittest.TestCase):
+class TestGasExpansionModelInterfaceClass(unittest.TestCase):
     def test_imperfect_matching(self):
         model = make_gas_expansion_model()
         model.obj = pyo.Objective(expr=0)
