@@ -12,7 +12,10 @@ import pyomo.environ as pyo
 from pyomo.common.dependencies import networkx_available
 from pyomo.common.dependencies import scipy_available
 from pyomo.common.collections import ComponentSet
-from pyomo.contrib.matching.interface import IncidenceGraphInterface
+from pyomo.contrib.matching.interface import (
+        IncidenceGraphInterface,
+        get_structural_incidence_matrix,
+        )
 import pyomo.common.unittest as unittest
 
 def make_gas_expansion_model(N=2):
@@ -63,6 +66,24 @@ def make_gas_expansion_model(N=2):
     m.ideal_gas = pyo.Constraint(m.streams, rule=ideal_gas)
 
     return m
+
+
+@unittest.skipUnless(networkx_available, "networkx is not available.")
+@unittest.skipUnless(scipy_available, "scipy is not available.")
+class TestGasExpansionIncidenceMatrix(unittest.TestCase):
+    """
+    This class tests the get_structural_incidence_matrix function
+    """
+    def test_incidence_matrix(self):
+        N = 5
+        model = make_gas_expansion_model(N)
+        model.obj = pyo.Objective(expr=0)
+        all_vars = list(model.component_data_objects(pyo.Var))
+        all_cons = list(model.component_data_objects(pyo.Constraint))
+        imat = get_structural_incidence_matrix(all_vars, all_cons)
+        n_var = 4*(N+1)
+        n_con = 4*N+1
+        self.assertEqual(imat.shape, (n_con, n_var))
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
