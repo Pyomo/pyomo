@@ -1,6 +1,6 @@
 # Copyright 2020 by B. Knueven, D. Mildebrath, C. Muir, J-P Watson, and D.L. Woodruff
 # This software is distributed under the 3-clause BSD License.
-# Copied with minor modification from create_EF in mpisppy/utils/sputils.py
+# Copied with minor modifications from create_EF in mpisppy/utils/sputils.py
 # from the mpi-sppy library (https://github.com/Pyomo/mpi-sppy).
 """
 Note: parmest can make use of mpi-sppy to form the EF so that it could, if it
@@ -23,12 +23,12 @@ def get_objs(scenario_instance):
     if (len(scenario_objs) > 1):
         print("WARNING: Scenario", sname, "has multiple active "
               "objectives. Selecting the first objective for "
-                  "inclusion in the extensive form.")
+              "inclusion in the extensive form.")
     return scenario_objs
 
 
 def _models_have_same_sense(models):
-    ''' Check if every model in the provided dict has the same objective sense.
+    """ Check if every model in the provided dict has the same objective sense.
 
         Input:
             models (dict) -- Keys are scenario names, values are Pyomo
@@ -41,7 +41,7 @@ def _models_have_same_sense(models):
         Raises:
             ValueError -- If any of the models has either none or multiple
                 active objectives.
-    '''
+    """
     if (len(models) == 0):
         return True, True
     senses = [find_active_objective(scenario).is_minimizing()

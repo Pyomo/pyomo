@@ -6,7 +6,7 @@
 
 """
 Note: parmest can make use of mpi-sppy to form the EF so that it could, if it
-needed to, solve using a decomposition. To guard against loss of mpi-sspy,
+needed to, solve using a decomposition. To guard against loss of mpi-sppy,
 we also have this "local" ability to form the EF.
 """
 
