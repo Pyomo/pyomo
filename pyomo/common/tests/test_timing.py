@@ -156,7 +156,7 @@ class TestTiming(unittest.TestCase):
         # Note: pypy on GHA frequently has timing differences of >0.05s
         # for the following tests
         if 'pypy_version_info' in dir(sys):
-            RES = 0.065
+            RES = 0.01
 
         # Note: osx(python 3.8) on GHA frequently has timing differences
         # of >0.02s
