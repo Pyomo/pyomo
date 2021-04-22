@@ -1068,11 +1068,10 @@ class LegacySolverInterface(object):
         self.config.report_timing = report_timing
         if 'keepfiles' in self.config:
             self.config.keepfiles = keepfiles
+        tmp_logger = None
         if logfile is not None:
             if 'solver_output_logger' in self.config:
                 tmp_logger = logging.getLogger('_tmp_' + str(self.__class__))
-                for handler in tmp_logger.handlers:
-                    tmp_logger.removeHandler(handler)
                 file_handler = logging.FileHandler(logfile)
                 self.config.log_level = logging.CRITICAL
                 file_handler.setLevel(self.config.log_level)
@@ -1091,6 +1090,11 @@ class LegacySolverInterface(object):
             self.options = options
 
         results: Results = super(LegacySolverInterface, self).solve(model)
+
+        if tmp_logger is not None:
+            file_handler.close()
+            tmp_logger.removeHandler(file_handler)
+
         legacy_results = LegacySolverResults()
         legacy_soln = LegacySolution()
         legacy_results.solver.status = legacy_solver_status_map[results.termination_condition]
