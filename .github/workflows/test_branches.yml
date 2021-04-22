@@ -47,28 +47,19 @@ jobs:
 
         include:
         - os: ubuntu-18.04
-          python: pypy3
           TARGET: linux
           PYENV: pip
-          skip_doctest: 1
-
-        - os: ubuntu-18.04
-          TARGET: linux
-          PYENV: pip
-          skip_doctest: 1
 
         - os: macos-latest
           python: 3.8
           TARGET: osx
           PYENV: pip
-          skip_doctest: 1
 
         - os: windows-latest
           python: 3.7
           TARGET: win
           PYENV: conda
           PACKAGES: glpk
-          skip_doctest: 1
 
         - os: ubuntu-18.04
           python: 3.8
@@ -509,8 +500,8 @@ jobs:
         for cat in ${{matrix.category}}; do
             CATEGORY+=" --cat $cat"
         done
-        #$PYTHON_EXE -m pyomo.common.unittest pyomo `pwd`/pyomo-model-libraries -v $CATEGORY
-        $PYTHON_EXE -m pyomo.common.unittest pyomo.common -v
+        $PYTHON_EXE -m pyomo.common.unittest \
+            pyomo `pwd`/pyomo-model-libraries -v $CATEGORY
 
     - name: Run Pyomo MPI tests
       if: matrix.mpi != 0
