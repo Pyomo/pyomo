@@ -44,7 +44,6 @@ jobs:
         python: [3.6, 3.7, 3.8, 3.9, pypy3]
         other: [""]
         category: ["nightly"]
-        skip_doctest: [1]
         # Ubuntu-18.04 should be replaced with ubuntu-latest once PyNumero
         # build error is resolved:
         # https://github.com/Pyomo/pyomo/issues/1710
