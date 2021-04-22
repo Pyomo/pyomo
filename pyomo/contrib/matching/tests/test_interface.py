@@ -15,6 +15,7 @@ from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.contrib.matching.interface import (
         IncidenceGraphInterface,
         get_structural_incidence_matrix,
+        get_numeric_incidence_matrix,
         )
 from pyomo.contrib.matching.maximum_matching import (
         maximum_matching,
@@ -47,7 +48,7 @@ def make_gas_expansion_model(N=2):
         if i == 0:
             return pyo.Constraint.Skip
         else:
-            return m.rho[i]*m.F[i] == m.rho[i-1]*m.F[i-1]
+            return m.rho[i-1]*m.F[i-1] - m.rho[i]*m.F[i] == 0
     m.mbal = pyo.Constraint(m.streams, rule=mbal)
 
     def ebal(m, i):
@@ -56,8 +57,8 @@ def make_gas_expansion_model(N=2):
         else:
             return (
                     m.rho[i-1]*m.F[i-1]*m.T[i-1] +
-                    m.Q[i] ==
-                    m.rho[i]*m.F[i]*m.T[i]
+                    m.Q[i] -
+                    m.rho[i]*m.F[i]*m.T[i] == 0
                     )
     m.ebal = pyo.Constraint(m.streams, rule=ebal)
 
@@ -65,11 +66,11 @@ def make_gas_expansion_model(N=2):
         if i == 0:
             return pyo.Constraint.Skip
         else:
-            return m.P[i]/m.P[i-1] == (m.rho[i]/m.rho[i-1])**m.gamma
+            return m.P[i]/m.P[i-1] - (m.rho[i]/m.rho[i-1])**m.gamma == 0
     m.expansion = pyo.Constraint(m.streams, rule=expansion)
 
     def ideal_gas(m, i):
-        return m.P[i] == m.rho[i]*m.R*m.T[i]
+        return m.P[i] - m.rho[i]*m.R*m.T[i] == 0
     m.ideal_gas = pyo.Constraint(m.streams, rule=ideal_gas)
 
     return m
@@ -77,14 +78,147 @@ def make_gas_expansion_model(N=2):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
-class TestGasExpansionStructuralIncidenceMatrix(unittest.TestCase):
+class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
     """
-    This class tests the get_structural_incidence_matrix function
+    This class tests the get_numeric_incidence_matrix function on
+    the gas expansion model.
     """
     def test_incidence_matrix(self):
         N = 5
         model = make_gas_expansion_model(N)
-        model.obj = pyo.Objective(expr=0)
+        all_vars = list(model.component_data_objects(pyo.Var))
+        all_cons = list(model.component_data_objects(pyo.Constraint))
+        imat = get_numeric_incidence_matrix(all_vars, all_cons)
+        n_var = 4*(N+1)
+        n_con = 4*N+1
+        self.assertEqual(imat.shape, (n_con, n_var))
+
+        var_idx_map = ComponentMap((v, i) for i, v in enumerate(all_vars))
+        con_idx_map = ComponentMap((c, i) for i, c in enumerate(all_cons))
+
+        # Map constraints to the variables they contain.
+        csr_map = ComponentMap()
+        csr_map.update((model.mbal[i], ComponentSet([
+            model.F[i],
+            model.F[i-1],
+            model.rho[i],
+            model.rho[i-1],
+            ])) for i in model.streams if i != model.streams.first())
+        csr_map.update((model.ebal[i], ComponentSet([
+            model.F[i],
+            model.F[i-1],
+            model.rho[i],
+            model.rho[i-1],
+            model.T[i],
+            model.T[i-1],
+            ])) for i in model.streams if i != model.streams.first())
+        csr_map.update((model.expansion[i], ComponentSet([
+            model.rho[i],
+            model.rho[i-1],
+            model.P[i],
+            model.P[i-1],
+            ])) for i in model.streams if i != model.streams.first())
+        csr_map.update((model.ideal_gas[i], ComponentSet([
+            model.P[i],
+            model.rho[i],
+            model.T[i],
+            ])) for i in model.streams)
+
+        # Map constraint and variable indices to the values of the derivatives
+        # Note that the derivative values calculated here depend on the model's
+        # canonical form.
+        deriv_lookup = {}
+        m = model # for convenience
+        for s in model.streams:
+            # Ideal gas:
+            i = con_idx_map[model.ideal_gas[s]]
+            j = var_idx_map[model.P[s]]
+            deriv_lookup[i,j] = 1.0
+
+            j = var_idx_map[model.rho[s]]
+            deriv_lookup[i,j] = - model.R.value*model.T[s].value
+
+            j = var_idx_map[model.T[s]]
+            deriv_lookup[i,j] = - model.R.value*model.rho[s].value
+
+            if s != model.streams.first():
+                # Expansion:
+                i = con_idx_map[model.expansion[s]]
+                j = var_idx_map[model.P[s]]
+                deriv_lookup[i,j] = 1/model.P[s-1].value
+
+                j = var_idx_map[model.P[s-1]]
+                deriv_lookup[i,j] = -model.P[s].value/model.P[s-1]**2
+
+                j = var_idx_map[model.rho[s]]
+                deriv_lookup[i,j] = pyo.value(
+                        -m.gamma*(m.rho[s]/m.rho[s-1])**(m.gamma-1)/m.rho[s-1]
+                        )
+
+                j = var_idx_map[model.rho[s-1]]
+                deriv_lookup[i,j] = pyo.value(
+                        -m.gamma*(m.rho[s]/m.rho[s-1])**(m.gamma-1) *
+                        (-m.rho[s]/m.rho[s-1]**2)
+                        )
+
+                # Energy balance:
+                i = con_idx_map[m.ebal[s]]
+                j = var_idx_map[m.rho[s-1]]
+                deriv_lookup[i,j] = pyo.value(m.F[s-1]*m.T[s-1])
+
+                j = var_idx_map[m.F[s-1]]
+                deriv_lookup[i,j] = pyo.value(m.rho[s-1]*m.T[s-1])
+
+                j = var_idx_map[m.T[s-1]]
+                deriv_lookup[i,j] = pyo.value(m.F[s-1]*m.rho[s-1])
+
+                j = var_idx_map[m.rho[s]]
+                deriv_lookup[i,j] = pyo.value(-m.F[s]*m.T[s])
+
+                j = var_idx_map[m.F[s]]
+                deriv_lookup[i,j] = pyo.value(-m.rho[s]*m.T[s])
+
+                j = var_idx_map[m.T[s]]
+                deriv_lookup[i,j] = pyo.value(-m.F[s]*m.rho[s])
+
+                # Mass balance:
+                i = con_idx_map[m.mbal[s]]
+                j = var_idx_map[m.rho[s-1]]
+                deriv_lookup[i,j] = pyo.value(m.F[s-1])
+
+                j = var_idx_map[m.F[s-1]]
+                deriv_lookup[i,j] = pyo.value(m.rho[s-1])
+
+                j = var_idx_map[m.rho[s]]
+                deriv_lookup[i,j] = pyo.value(-m.F[s])
+
+                j = var_idx_map[m.F[s]]
+                deriv_lookup[i,j] = pyo.value(-m.rho[s])
+
+
+        # Want to test that the columns have the rows we expect.
+        i = model.streams.first()
+        for i, j, e in zip(imat.row, imat.col, imat.data):
+            con = all_cons[i]
+            var = all_vars[j]
+            self.assertIn(var, csr_map[con])
+            csr_map[con].remove(var)
+            self.assertAlmostEqual(deriv_lookup[i,j], e, 8)
+        # And no additional rows
+        for con in csr_map:
+            self.assertEqual(len(csr_map[con]), 0)
+
+
+@unittest.skipUnless(networkx_available, "networkx is not available.")
+@unittest.skipUnless(scipy_available, "scipy is not available.")
+class TestGasExpansionStructuralIncidenceMatrix(unittest.TestCase):
+    """
+    This class tests the get_structural_incidence_matrix function
+    on the gas expansion model.
+    """
+    def test_incidence_matrix(self):
+        N = 5
+        model = make_gas_expansion_model(N)
         all_vars = list(model.component_data_objects(pyo.Var))
         all_cons = list(model.component_data_objects(pyo.Constraint))
         imat = get_structural_incidence_matrix(all_vars, all_cons)

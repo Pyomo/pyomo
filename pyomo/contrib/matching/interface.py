@@ -8,8 +8,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.core.base.block import Block
+from pyomo.core.base.objective import Objective
+from pyomo.core.base.reference import Reference
 from pyomo.core.expr.visitor import identify_variables
-from pyomo.common.collections import ComponentMap
+from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import scipy_available
 from pyomo.contrib.matching.maximum_matching import maximum_matching
 from pyomo.contrib.matching.block_triangularize import block_triangularize
@@ -58,6 +61,47 @@ def get_structural_incidence_matrix(variables, constraints, include_fixed=True):
     data = [1.0]*len(rows)
     matrix = sp.sparse.coo_matrix( (data, (rows, cols)), shape=(M, N) )
     return matrix
+
+
+def get_numeric_incidence_matrix(variables, constraints):
+    """
+    This function gets the numeric incidence matrix (Jacobian) of Pyomo
+    constraints with respect to variables.
+    """
+    # NOTE: There are several ways to get a numeric incidence matrix
+    # from a Pyomo model. This function implements a somewhat roundabout
+    # method, which is to construct a dummy Block with the necessary
+    # variables and constraints, then construct a PyNumero PyomoNLP
+    # from the block and have PyNumero evaluate the desired Jacobian
+    # via ASL.
+    comps = list(variables) + list(constraints)
+    _check_unindexed(comps)
+    M, N = len(constraints), len(variables)
+    _block = Block()
+    _block.construct()
+    _block.obj = Objective(expr=0)
+    _block.vars = Reference(variables)
+    _block.cons = Reference(constraints)
+    var_set = ComponentSet(variables)
+    other_vars = []
+    for con in constraints:
+        for var in identify_variables(con.body, include_fixed=False):
+            # Fixed vars will be ignored by the nl file write, so
+            # there is no point to including them here.
+            # A different method of assembling this matrix, e.g.
+            # Pyomo's automatic differentiation, could support taking
+            # derivatives with respect to fixed variables.
+            if var not in var_set:
+                other_vars.append(var)
+                var_set.add(var)
+    # These variables are necessary due to the nl writer's philosophy
+    # about what constitutes a model. Note that we take derivatives with
+    # respect to them even though this is not necessary. We could fix them
+    # here to avoid doing this extra work, but that would alter the user's
+    # model, which we would rather not do.
+    _block.other_vars = Reference(other_vars)
+    _nlp = PyomoNLP(_block)
+    return _nlp.extract_submatrix_jacobian(variables, constraints)
 
 
 class IncidenceGraphInterface(object):
