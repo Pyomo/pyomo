@@ -76,13 +76,7 @@ class IncidenceGraphInterface(object):
         if constraints is None:
             constraints = self.nlp.get_pyomo_constraints()
 
-        for comp in variables+constraints:
-            if comp.is_indexed():
-                raise ValueError(
-                        "Variables and constraints must be unindexed "
-                        "ComponentData objects. Got %s, which is indexed."
-                        % comp.name
-                        )
+        _check_unindexed(variables+constraints)
         return variables, constraints
 
     def maximum_matching(self, variables=None, constraints=None):
