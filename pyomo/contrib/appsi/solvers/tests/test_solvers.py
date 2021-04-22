@@ -1,10 +1,11 @@
 import pyomo.environ as pe
 import pyomo.common.unittest as unittest
 from parameterized import parameterized
-from pyomo.contrib.appsi.base import TerminationCondition, Results, Solver
+from pyomo.contrib.appsi.base import TerminationCondition, Results, PersistentSolver
 from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc
 from typing import Type
 from pyomo.core.expr.numeric_expr import LinearExpression
+import os
 
 
 all_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt), ('cplex', Cplex), ('cbc', Cbc)]
@@ -50,8 +51,8 @@ fixed variables
 
 class TestSolvers(unittest.TestCase):
     @parameterized.expand(input=all_solvers)
-    def test_range_constraint(self, name: str, opt_class: Type[Solver]):
-        opt: Solver = opt_class()
+    def test_range_constraint(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -71,8 +72,8 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c], 1)
 
     @parameterized.expand(input=all_solvers)
-    def test_reduced_costs(self, name: str, opt_class: Type[Solver]):
-        opt: Solver = opt_class()
+    def test_reduced_costs(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -88,8 +89,8 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(rc[m.y], 4)
 
     @parameterized.expand(input=all_solvers)
-    def test_reduced_costs2(self, name: str, opt_class: Type[Solver]):
-        opt: Solver = opt_class()
+    def test_reduced_costs2(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -108,8 +109,8 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(rc[m.x], 1)
 
     @parameterized.expand(input=all_solvers)
-    def test_param_changes(self, name: str, opt_class: Type[Solver]):
-        opt: Solver = opt_class()
+    def test_param_changes(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -140,8 +141,8 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
     @parameterized.expand(input=all_solvers)
-    def test_equality(self, name: str, opt_class: Type[Solver]):
-        opt: Solver = opt_class()
+    def test_equality(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -172,8 +173,8 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(duals[m.c2], -a1 / (a2 - a1))
 
     @parameterized.expand(input=all_solvers)
-    def test_linear_expression(self, name: str, opt_class: Type[Solver]):
-        opt: Solver = opt_class()
+    def test_linear_expression(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -202,8 +203,8 @@ class TestSolvers(unittest.TestCase):
             self.assertTrue(res.best_objective_bound <= m.y.value)
 
     @parameterized.expand(input=all_solvers)
-    def test_no_objective(self, name: str, opt_class: Type[Solver]):
-        opt: Solver = opt_class()
+    def test_no_objective(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -234,8 +235,8 @@ class TestSolvers(unittest.TestCase):
             self.assertAlmostEqual(duals[m.c2], 0)
 
     @parameterized.expand(input=all_solvers)
-    def test_add_remove_cons(self, name: str, opt_class: Type[Solver]):
-        opt: Solver = opt_class()
+    def test_add_remove_cons(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -284,8 +285,8 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
 
     @parameterized.expand(input=all_solvers)
-    def test_results_infeasible(self, name: str, opt_class: Type[Solver]):
-        opt: Solver = opt_class()
+    def test_results_infeasible(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -311,8 +312,8 @@ class TestSolvers(unittest.TestCase):
         self.assertTrue(res.best_feasible_objective is None)
 
     @parameterized.expand(input=all_solvers)
-    def test_duals(self, name: str, opt_class: Type[Solver]):
-        opt: Solver = opt_class()
+    def test_duals(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -334,8 +335,8 @@ class TestSolvers(unittest.TestCase):
         self.assertNotIn(m.c2, duals)
 
     @parameterized.expand(input=qcp_solvers)
-    def test_mutable_quadratic_coefficient(self, name: str, opt_class: Type[Solver]):
-        opt: Solver = opt_class()
+    def test_mutable_quadratic_coefficient(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -356,8 +357,8 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 0.0869525991355825, 4)
 
     @parameterized.expand(input=qcp_solvers)
-    def test_mutable_quadratic_objective(self, name: str, opt_class: Type[Solver]):
-        opt: Solver = opt_class()
+    def test_mutable_quadratic_objective(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -381,8 +382,8 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 0.09227926676152151, 4)
 
     @parameterized.expand(input=all_solvers)
-    def test_fixed_vars(self, namee: str, opt_class: Type[Solver]):
-        opt: Solver = opt_class()
+    def test_fixed_vars(self, namee: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -405,8 +406,8 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
 
     @parameterized.expand(input=all_solvers)
-    def test_mutable_param_with_range(self, name: str, opt_class: Type[Solver]):
-        opt: Solver = opt_class()
+    def test_mutable_param_with_range(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
         if not opt.available():
             raise unittest.SkipTest
         try:
@@ -467,7 +468,7 @@ class TestSolvers(unittest.TestCase):
                 self.assertAlmostEqual(duals[m.con2], -a1 / (a2 - a1), 6)
 
     @parameterized.expand(input=all_solvers)
-    def test_add_and_remove_vars(self, name: str, opt_class: Type[Solver]):
+    def test_add_and_remove_vars(self, name: str, opt_class: Type[PersistentSolver]):
         opt = opt_class()
         if not opt.available():
             raise unittest.SkipTest
@@ -512,7 +513,7 @@ class TestSolvers(unittest.TestCase):
             opt.load_vars([m.x])
 
     @parameterized.expand(input=nlp_solvers)
-    def test_exp(self, name: str, opt_class: Type[Solver]):
+    def test_exp(self, name: str, opt_class: Type[PersistentSolver]):
         opt = opt_class()
         if not opt.available():
             raise unittest.SkipTest
@@ -526,7 +527,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 0.6529186341994245)
 
     @parameterized.expand(input=nlp_solvers)
-    def test_log(self, name: str, opt_class: Type[Solver]):
+    def test_log(self, name: str, opt_class: Type[PersistentSolver]):
         opt = opt_class()
         if not opt.available():
             raise unittest.SkipTest
@@ -538,3 +539,69 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, 0.6529186341994245)
         self.assertAlmostEqual(m.y.value, -0.42630274815985264)
+
+
+class TestLegacySolverInterface(unittest.TestCase):
+    @parameterized.expand(input=all_solvers)
+    def test_param_updates(self, name: str, opt_class: Type[PersistentSolver]):
+        opt = pe.SolverFactory('appsi_' + name)
+        if not opt.available(exception_flag=False):
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.a1 = pe.Param(mutable=True)
+        m.a2 = pe.Param(mutable=True)
+        m.b1 = pe.Param(mutable=True)
+        m.b2 = pe.Param(mutable=True)
+        m.obj = pe.Objective(expr=m.y)
+        m.c1 = pe.Constraint(expr=(0, m.y - m.a1*m.x - m.b1, None))
+        m.c2 = pe.Constraint(expr=(None, -m.y + m.a2*m.x + m.b2, 0))
+        m.dual = pe.Suffix(direction=pe.Suffix.IMPORT)
+
+        params_to_test = [(1, -1, 2, 1), (1, -2, 2, 1), (1, -1, 3, 1)]
+        for (a1, a2, b1, b2) in params_to_test:
+            m.a1.value = a1
+            m.a2.value = a2
+            m.b1.value = b1
+            m.b2.value = b2
+            res = opt.solve(m)
+            pe.assert_optimal_termination(res)
+            self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
+            self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
+            self.assertAlmostEqual(m.dual[m.c1], (1 + a1 / (a2 - a1)))
+            self.assertAlmostEqual(m.dual[m.c2], a1 / (a2 - a1))
+
+    @parameterized.expand(input=all_solvers)
+    def test_load_solutions(self, name: str, opt_class: Type[PersistentSolver]):
+        opt = pe.SolverFactory('appsi_' + name)
+        if not opt.available(exception_flag=False):
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.obj = pe.Objective(expr=m.x)
+        m.c = pe.Constraint(expr=(-1, m.x, 1))
+        m.dual = pe.Suffix(direction=pe.Suffix.IMPORT)
+        res = opt.solve(m, load_solutions=False)
+        pe.assert_optimal_termination(res)
+        self.assertIsNone(m.x.value)
+        self.assertNotIn(m.c, m.dual)
+        m.solutions.load_from(res)
+        self.assertAlmostEqual(m.x.value, -1)
+        self.assertAlmostEqual(m.dual[m.c], 1)
+
+    @parameterized.expand(input=all_solvers)
+    def test_logfile(self, name: str, opt_class: Type[PersistentSolver]):
+        opt = pe.SolverFactory('appsi_' + name)
+        if not opt.available(exception_flag=False):
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.obj = pe.Objective(expr=m.x)
+        m.c = pe.Constraint(expr=(-1, m.x, 1))
+        m.dual = pe.Suffix(direction=pe.Suffix.IMPORT)
+        res = opt.solve(m, logfile='logfile_test.log')
+        pe.assert_optimal_termination(res)
+        self.assertTrue(os.path.exists('logfile_test.log'))
+        self.assertTrue(os.path.isfile('logfile_test.log'))
+        os.remove('logfile_test.log')
