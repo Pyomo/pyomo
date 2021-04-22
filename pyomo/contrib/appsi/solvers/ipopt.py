@@ -161,6 +161,10 @@ class Ipopt(PersistentSolver):
     def config(self):
         return self._config
 
+    @config.setter
+    def config(self, val):
+        self._config = val
+
     @property
     def ipopt_options(self):
         """

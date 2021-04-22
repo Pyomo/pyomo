@@ -593,7 +593,7 @@ class PersistentSolutionLoader(SolutionLoaderBase):
 
     def get_primals(self, vars_to_load=None):
         self._assert_solution_still_valid()
-        self._solver.get_primals(vars_to_load=vars_to_load)
+        return self._solver.get_primals(vars_to_load=vars_to_load)
 
     def get_duals(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None) -> Dict[_GeneralConstraintData, float]:
         self._assert_solution_still_valid()

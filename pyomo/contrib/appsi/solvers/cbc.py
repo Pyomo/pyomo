@@ -101,6 +101,10 @@ class Cbc(PersistentSolver):
     def config(self):
         return self._config
 
+    @config.setter
+    def config(self, val):
+        self._config = val
+
     @property
     def cbc_options(self):
         """

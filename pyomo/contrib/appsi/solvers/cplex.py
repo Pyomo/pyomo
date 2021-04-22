@@ -81,9 +81,9 @@ class Cplex(PersistentSolver):
         return self._writer.symbol_map
 
     def available(self):
-        if self._available is None:
+        if Cplex._available is None:
             self._check_license()
-        return self._available
+        return Cplex._available
 
     def _check_license(self):
         if self._cplex_available:
@@ -91,17 +91,17 @@ class Cplex(PersistentSolver):
                 m = self._cplex.Cplex()
                 m.variables.add(lb=[0]*1001)
                 m.solve()
-                self._available = self.Availability.FullLicense
+                Cplex._available = self.Availability.FullLicense
             except self._cplex.exceptions.errors.CplexSolverError:
                 try:
                     m = self._cplex.Cplex()
                     m.variables.add(lb=[0])
                     m.solve()
-                    self._available = self.Availability.LimitedLicense
+                    Cplex._available = self.Availability.LimitedLicense
                 except:
-                    self._available = self.Availability.BadLicense
+                    Cplex._available = self.Availability.BadLicense
         else:
-            self._available = self.Availability.NotFound
+            Cplex._available = self.Availability.NotFound
 
     def version(self):
         return tuple(int(k) for k in self._cplex.Cplex().get_version().split('.'))
@@ -121,6 +121,10 @@ class Cplex(PersistentSolver):
     @property
     def config(self):
         return self._config
+
+    @config.setter
+    def config(self, val):
+        self._config = val
 
     @property
     def cplex_options(self):
