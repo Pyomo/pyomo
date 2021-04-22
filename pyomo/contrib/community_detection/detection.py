@@ -16,7 +16,7 @@ from pyomo.core.expr.current import identify_variables
 from pyomo.core.expr.visitor import replace_expressions
 from pyomo.contrib.community_detection.community_graph import generate_model_graph
 from pyomo.common.dependencies import networkx as nx
-from pyomo.common.dependencies import matplotlib, matplotlib_available
+from pyomo.common.dependencies.matplotlib import pyplot as plt
 from itertools import combinations
 
 import copy
@@ -26,9 +26,6 @@ logger = getLogger('pyomo.contrib.community_detection')
 # Attempt import of louvain community detection package
 community_louvain, community_louvain_available = attempt_import(
     'community', error_message="Could not import the 'community' library, available via 'python-louvain' on PyPI.")
-
-# Import matplotlib
-plt = matplotlib.pyplot
 
 
 def detect_communities(model, type_of_community_map='constraint', with_objective=True, weighted_graph=True,
