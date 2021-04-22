@@ -75,6 +75,101 @@ def make_gas_expansion_model(N=2):
 
     return m
 
+    #
+    # The following tests were copied from the
+    # `TestGasExpansionModelInterfaceClass` test case, and modified
+    # to use the data format returned by get_structural_incidence_matrix.
+    #
+    def test_imperfect_matching(self):
+        model = make_gas_expansion_model()
+        all_vars = list(model.component_data_objects(pyo.Var))
+        all_cons = list(model.component_data_objects(pyo.Constraint))
+        imat = get_numeric_incidence_matrix(all_vars, all_cons)
+
+        n_eqn = len(all_cons)
+        matching = maximum_matching(imat)
+        values = set(matching.values())
+        self.assertEqual(len(matching), n_eqn)
+        self.assertEqual(len(values), n_eqn)
+
+    def test_perfect_matching(self):
+        model = make_gas_expansion_model()
+
+        # These are the variables and constraints of the square,
+        # nonsingular subsystem
+        variables = []
+        variables.extend(model.P.values())
+        variables.extend(model.T[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.rho[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.F[i] for i in model.streams
+                if i != model.streams.first())
+
+        constraints = list(model.component_data_objects(pyo.Constraint))
+
+        imat = get_numeric_incidence_matrix(variables, constraints)
+        con_idx_map = ComponentMap((c, i) for i, c in enumerate(constraints))
+
+        n_var = len(variables)
+        matching = maximum_matching(imat)
+        matching = ComponentMap((c, variables[matching[con_idx_map[c]]])
+                for c in constraints)
+        values = ComponentSet(matching.values())
+        self.assertEqual(len(matching), n_var)
+        self.assertEqual(len(values), n_var)
+
+        # The subset of variables and equations we have identified
+        # do not have a unique perfect matching. But we at least know
+        # this much.
+        self.assertIs(matching[model.ideal_gas[0]], model.P[0])
+
+    def test_triangularize(self):
+        N = 5
+        model = make_gas_expansion_model(N)
+
+        # These are the variables and constraints of the square,
+        # nonsingular subsystem
+        variables = []
+        variables.extend(model.P.values())
+        variables.extend(model.T[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.rho[i] for i in model.streams
+                if i != model.streams.first())
+        variables.extend(model.F[i] for i in model.streams
+                if i != model.streams.first())
+
+        constraints = list(model.component_data_objects(pyo.Constraint))
+
+        imat = get_numeric_incidence_matrix(variables, constraints)
+        con_idx_map = ComponentMap((c, i) for i, c in enumerate(constraints))
+        var_idx_map = ComponentMap((v, i) for i, v in enumerate(variables))
+
+        row_block_map, col_block_map = block_triangularize(imat)
+        var_block_map = ComponentMap((v, col_block_map[var_idx_map[v]])
+                for v in variables)
+        con_block_map = ComponentMap((c, row_block_map[con_idx_map[c]])
+                for c in constraints)
+
+        var_values = set(var_block_map.values())
+        con_values = set(con_block_map.values())
+        self.assertEqual(len(var_values), N+1)
+        self.assertEqual(len(con_values), N+1)
+
+        self.assertEqual(var_block_map[model.P[0]], 0)
+
+        for i in model.streams:
+            if i != model.streams.first():
+                self.assertEqual(var_block_map[model.rho[i]], i)
+                self.assertEqual(var_block_map[model.T[i]], i)
+                self.assertEqual(var_block_map[model.P[i]], i)
+                self.assertEqual(var_block_map[model.F[i]], i)
+
+                self.assertEqual(con_block_map[model.ideal_gas[i]], i)
+                self.assertEqual(con_block_map[model.expansion[i]], i)
+                self.assertEqual(con_block_map[model.mbal[i]], i)
+                self.assertEqual(con_block_map[model.ebal[i]], i)
+
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
