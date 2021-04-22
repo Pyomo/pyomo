@@ -225,13 +225,13 @@ class TestReferenceDict(unittest.TestCase):
         self.assertFalse(10 in rd)
         self.assertEqual(len(list(x.value for x in rd.values())), 2-1)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 KeyError,
                 r"\(8, 10\) is not valid for indexed component 'b\[1,4\].x'"):
             del rd[10]
 
         rd = _ReferenceDict(m.b[1,:].x[8,0])
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 KeyError,
                 r"'\(8, 0\)' is not valid for indexed component 'b\[1,4\].x'"):
             del rd[4]
@@ -371,22 +371,22 @@ class TestReference(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var([1,2])
         class Foo(object): pass
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             TypeError,
             "First argument to Reference constructors must be a "
-            "component, component slice, Sequence, or Mapping \(received Foo",
+            r"component, component slice, Sequence, or Mapping \(received Foo",
             Reference, Foo()
             )
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             TypeError,
             "First argument to Reference constructors must be a "
-            "component, component slice, Sequence, or Mapping \(received int",
+            r"component, component slice, Sequence, or Mapping \(received int",
             Reference, 5
             )
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             TypeError,
             "First argument to Reference constructors must be a "
-            "component, component slice, Sequence, or Mapping \(received None",
+            r"component, component slice, Sequence, or Mapping \(received None",
             Reference, None
             )
 

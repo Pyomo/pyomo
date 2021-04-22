@@ -37,9 +37,6 @@ from pyomo.util.components import iter_component
 
 logger = logging.getLogger('pyomo.solvers')
 
-from six import iteritems
-from six.moves import xrange
-
 
 def _validate_file_name(cplex, filename, description):
     """Validate filenames against the set of allowable chaacters in CPLEX.
@@ -691,7 +688,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 variable_value = None
                 variable_reduced_cost = None
                 variable_status = None
-                for i in xrange(1,len(tokens)):
+                for i in range(1,len(tokens)):
                     field_name =  tokens[i].split('=')[0]
                     field_value = tokens[i].split('=')[1].lstrip("\"").rstrip("\"")
                     if field_name == "name":
@@ -727,7 +724,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 is_range = False
                 rlabel = None
                 rkey = None
-                for i in xrange(1,len(tokens)):
+                for i in range(1,len(tokens)):
                     field_name =  tokens[i].split('=')[0]
                     field_value = tokens[i].split('=')[1].lstrip("\"").rstrip("\"")
                     if field_name == "name":
@@ -849,13 +846,13 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
         # For the range constraints, supply only the dual with the largest
         # magnitude (at least one should always be numerically zero)
-        for key,(ld,ud) in iteritems(range_duals):
+        for key,(ld,ud) in range_duals.items():
             if abs(ld) > abs(ud):
                 soln_constraints['r_l_'+key] = {"Dual" : ld}
             else:
                 soln_constraints['r_l_'+key] = {"Dual" : ud}                # Use the same key
         # slacks
-        for key,(ls,us) in iteritems(range_slacks):
+        for key,(ls,us) in range_slacks.items():
             if abs(ls) > abs(us):
                 soln_constraints.setdefault('r_l_'+key,{})["Slack"] = ls
             else:

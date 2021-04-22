@@ -173,7 +173,7 @@ class TestMindtPy(unittest.TestCase):
 
     #         # self.assertIs(results.solver.termination_condition,
     #         #               TerminationCondition.optimal)
-    #         self.assertAlmostEquals(value(model.obj.expr), 0.66555, places=2)
+    #         self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
 
 
 if __name__ == "__main__":

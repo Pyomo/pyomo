@@ -8,11 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from collections.abc import Iterable
+
 from pyomo.solvers.plugins.solvers.gurobi_direct import GurobiDirect
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.core.expr.numvalue import value, is_fixed
 from pyomo.opt.base import SolverFactory
-import collections
 
 
 @SolverFactory.register('gurobi_persistent', doc='Persistent python interface to Gurobi')
@@ -582,7 +583,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         ----------
         vars: Var or iterable of Var
         """
-        if not isinstance(vars, collections.Iterable):
+        if not isinstance(vars, Iterable):
             vars = [vars]
         gurobi_vars = [self._pyomo_var_to_solver_var_map[i] for i in vars]
         var_values = self._solver_model.cbGetNodeRel(gurobi_vars)
@@ -595,7 +596,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         ----------
         vars: iterable of vars
         """
-        if not isinstance(vars, collections.Iterable):
+        if not isinstance(vars, Iterable):
             vars = [vars]
         gurobi_vars = [self._pyomo_var_to_solver_var_map[i] for i in vars]
         var_values = self._solver_model.cbGetSolution(gurobi_vars)
@@ -639,7 +640,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             raise ValueError('Constraint does not have a lower or an upper bound {0} \n'.format(con))
 
     def cbSetSolution(self, vars, solution):
-        if not isinstance(vars, collections.Iterable):
+        if not isinstance(vars, Iterable):
             vars = [vars]
         gurobi_vars = [self._pyomo_var_to_solver_var_map[i] for i in vars]
         self._solver_model.cbSetSolution(gurobi_vars, solution)

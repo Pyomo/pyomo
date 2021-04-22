@@ -1,0 +1,6 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: Get help/Ask a question
+    url: https://github.com/Pyomo/pyomo#getting-help
+    about: Have a question? Need some help from the community? Refer to our online documentation for ways to get help.

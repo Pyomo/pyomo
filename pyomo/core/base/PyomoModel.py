@@ -128,7 +128,7 @@ class ModelSolution(object):
             # None).
             for obj, entry in data.values():
                 if obj is None or obj() is None:
-                    logger.warn(
+                    logger.warning(
                         "Solution component in '%s' no longer "
                         "accessible: %s!" % ( name, entry ))
                 else:

@@ -67,7 +67,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
     def test_no_vars_specified(self):
         m = self.makeModel()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "The Fourier-Motzkin Elimination transformation "
             "requires the argument vars_to_eliminate, a "
@@ -199,7 +199,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.cons1 = Constraint(expr=m.x >= 6)
         m.cons2 = Constraint(expr=m.x <= 2)
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "Fourier-Motzkin found the model is infeasible!",
             TransformationFactory('contrib.fourier_motzkin_elimination').\
@@ -213,7 +213,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.cons1 = Constraint(expr=m.x >= 6)
         m.cons2 = Constraint(expr=m.x <= 2)
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "Fourier-Motzkin found the model is infeasible!",
             TransformationFactory('contrib.fourier_motzkin_elimination').\
@@ -227,7 +227,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.cons = Constraint(expr=m.x**2 >= 2)
         m.cons2 = Constraint(expr=m.x<= 10)
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "Variable x appears in a nonlinear "
             "constraint. The Fourier-Motzkin "
@@ -243,7 +243,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m = self.makeModel()
         m.disj = Disjunction(expr=[m.x == 0, m.y >= 2])
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "Found active component %s of type %s. The "
             "Fourier-Motzkin Elimination transformation can only "
@@ -263,14 +263,14 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.contrib.fme', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 RuntimeError,
                 "I don't know how to do my job.",
                 fme.apply_to,
                 m,
                 vars_to_eliminate=m.x,
                 constraint_filtering_callback=not_a_callback)
-        self.assertRegexpMatches(
+        self.assertRegex(
             log.getvalue(),
             "Problem calling constraint filter callback "
             "on constraint with right-hand side -1.0 and body:*")
@@ -280,14 +280,14 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.contrib.fme', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 TypeError,
                 "'int' object is not callable",
                 fme.apply_to,
                 m,
                 vars_to_eliminate=m.x,
                 constraint_filtering_callback=5)
-        self.assertRegexpMatches(
+        self.assertRegex(
             log.getvalue(),
             "Problem calling constraint filter callback "
             "on constraint with right-hand side -1.0 and body:*")
@@ -688,7 +688,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.c2 = Constraint(expr=0.25*m.y >= 0.5*m.x)
 
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "The do_integer_arithmetic flag was "
             "set to True, but the coefficient of "
@@ -710,7 +710,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.c2 = Constraint(expr=0.25*m.y >= 5*m.x)
 
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "The do_integer_arithmetic flag was "
             "set to True, but the coefficient of "
@@ -909,7 +909,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
     def test_non_unique_constraint_name_error(self):
         m = self.make_tiny_model_where_bounds_matter()
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "projected_constraints_name was specified "
             "as 'c', but this is already a component on "

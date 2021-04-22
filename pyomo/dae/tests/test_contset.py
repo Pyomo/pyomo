@@ -85,8 +85,8 @@ class TestContinuousSet(unittest.TestCase):
         self.assertEqual(model.t.last(), 4)
 
         model = ConcreteModel()
-        with self.assertRaisesRegexp(
-                ValueError, "value is not in the domain \[0..4\]"):
+        with self.assertRaisesRegex(
+                ValueError, r"value is not in the domain \[0..4\]"):
             model.t = ContinuousSet(bounds=(0, 4), initialize=[1, 2, 3, 5])
         # self.assertEqual(len(model.t), 5)
         # self.assertEqual(model.t.first(), 0)
@@ -95,8 +95,8 @@ class TestContinuousSet(unittest.TestCase):
         # del model.t
 
         model = ConcreteModel()
-        with self.assertRaisesRegexp(
-                ValueError, "value is not in the domain \[2..6\]"):
+        with self.assertRaisesRegex(
+                ValueError, r"value is not in the domain \[2..6\]"):
             model.t = ContinuousSet(bounds=(2, 6), initialize=[1, 2, 3, 5])
         # self.assertEqual(len(model.t), 5)
         # self.assertEqual(model.t.first(), 1)
@@ -104,8 +104,8 @@ class TestContinuousSet(unittest.TestCase):
         # del model.t
 
         model = ConcreteModel()
-        with self.assertRaisesRegexp(
-                ValueError, "value is not in the domain \[2..4\]"):
+        with self.assertRaisesRegex(
+                ValueError, r"value is not in the domain \[2..4\]"):
             model.t = ContinuousSet(bounds=(2, 4), initialize=[1, 3, 5])
         # self.assertEqual(len(model.t), 3)
         # self.assertNotIn(2, model.t)
@@ -309,8 +309,8 @@ class TestIO(unittest.TestCase):
         OUTPUT.write("end;\n")
         OUTPUT.close()
         self.model.A = ContinuousSet(bounds=(0, 4))
-        with self.assertRaisesRegexp(
-                ValueError, "The value is not in the domain \[0..4\]"):
+        with self.assertRaisesRegex(
+                ValueError, r"The value is not in the domain \[0..4\]"):
             self.instance = self.model.create_instance("diffset.dat")
         #self.assertEqual(len(self.instance.A), 4)
 
@@ -321,8 +321,8 @@ class TestIO(unittest.TestCase):
         OUTPUT.write("end;\n")
         OUTPUT.close()
         self.model.A = ContinuousSet(bounds=(2, 6))
-        with self.assertRaisesRegexp(
-                ValueError, "The value is not in the domain \[2..6\]"):
+        with self.assertRaisesRegex(
+                ValueError, r"The value is not in the domain \[2..6\]"):
             self.instance = self.model.create_instance("diffset.dat")
         #self.assertEqual(len(self.instance.A), 4)
 
@@ -333,8 +333,8 @@ class TestIO(unittest.TestCase):
         OUTPUT.write("end;\n")
         OUTPUT.close()
         self.model.A = ContinuousSet(bounds=(2, 4))
-        with self.assertRaisesRegexp(
-                ValueError, "The value is not in the domain \[2..4\]"):
+        with self.assertRaisesRegex(
+                ValueError, r"The value is not in the domain \[2..4\]"):
             self.instance = self.model.create_instance("diffset.dat")
         #self.assertEqual(len(self.instance.A), 3)
 
