@@ -326,7 +326,7 @@ class TestBookExamples(unittest.TestCase):
                     self.assertStructuredAlmostEqual(out_filtered, base_filtered,
                                                  abstol=1e-6,
                                                  allow_second_superset=False)
-                except AssertionError as m:
+                except AssertionError:
                     # Print helpful information when file comparison fails
                     print('---------------------------------')
                     print('BASELINE FILE')
@@ -337,7 +337,7 @@ class TestBookExamples(unittest.TestCase):
                     print('TEST OUTPUT FILE')
                     print('---------------------------------')
                     print(out_file_contents)
-                    raise(m)
+                    raise 
 
     @parameterized.parameterized.expand(py_test_tuples, name_func=custom_name_func)
     def test_book_py(self, tname, test_file, base_file):
