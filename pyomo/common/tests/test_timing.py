@@ -153,15 +153,10 @@ class TestTiming(unittest.TestCase):
         timer.start()
         time.sleep(SLEEP)
 
-        # Note: pypy on GHA frequently has timing differences of >0.05s
-        # for the following tests
-        if 'pypy_version_info' in dir(sys):
-            RES = 0.01
-
-        # Note: osx(python 3.8) on GHA frequently has timing differences
-        # of >0.02s
-        if sys.platform == 'darwin':
-            RES = 0.01
+        # Note: pypy and osx (py3.8) on GHA occasionally have timing
+        # differences of >0.01s for the following tests
+        if 'pypy_version_info' in dir(sys) or sys.platform == 'darwin':
+            RES *= 2
 
         with capture_output() as out:
             ref += time.time()
