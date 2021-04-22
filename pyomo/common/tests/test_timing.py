@@ -161,7 +161,7 @@ class TestTiming(unittest.TestCase):
         # Note: osx(python 3.8) on GHA frequently has timing differences
         # of >0.02s
         if sys.platform == 'darwin':
-            RES = 0.03
+            RES = 0.01
 
         with capture_output() as out:
             ref += time.time()
