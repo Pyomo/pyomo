@@ -1,6 +1,7 @@
 from pyomo.contrib.appsi.examples import getting_started
 import pyomo.common.unittest as unittest
 import pyomo.environ as pe
+from pyomo.contrib import appsi
 
 
 class TestExamples(unittest.TestCase):
@@ -9,7 +10,7 @@ class TestExamples(unittest.TestCase):
             import numpy as np
         except:
             raise unittest.SkipTest('numpy is not available')
-        opt = pe.SolverFactory('appsi_cplex')
+        opt = appsi.solvers.Cplex()
         if not opt.available():
             raise unittest.SkipTest('cplex is not available')
         getting_started.main(plot=False, n_points=10)
