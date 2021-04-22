@@ -8,6 +8,7 @@ from pyomo.common.collections import ComponentSet, ComponentMap, OrderedSet
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import PyomoException
 from pyomo.common.timing import HierarchicalTimer
+from pyomo.common.config import ConfigValue
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.core.base.var import Var, _GeneralVarData
@@ -47,10 +48,31 @@ class DegreeError(PyomoException):
     pass
 
 
+class GurobiConfig(MIPSolverConfig):
+    def __init__(self,
+                 description=None,
+                 doc=None,
+                 implicit=False,
+                 implicit_domain=None,
+                 visibility=0):
+        super(GurobiConfig, self).__init__(description=description,
+                                           doc=doc,
+                                           implicit=implicit,
+                                           implicit_domain=implicit_domain,
+                                           visibility=visibility)
+
+        self.declare('logfile', ConfigValue(domain=str))
+        self.logfile = ''
+
+
 class GurobiSolutionLoader(PersistentSolutionLoader):
     def load_vars(self, vars_to_load=None, solution_number=0):
         self._assert_solution_still_valid()
         self._solver.load_vars(vars_to_load=vars_to_load, solution_number=solution_number)
+
+    def get_primals(self, vars_to_load=None, solution_number=0):
+        self._assert_solution_still_valid()
+        return self._solver.get_primals(vars_to_load=vars_to_load, solution_number=solution_number)
 
 
 class GurobiResults(Results):
@@ -166,7 +188,7 @@ class Gurobi(PersistentBase, PersistentSolver):
 
     def __init__(self):
         super(Gurobi, self).__init__()
-        self._config = MIPSolverConfig()
+        self._config = GurobiConfig()
         self._solver_options = dict()
         self._solver_model = None
         self._symbol_map = SymbolMap()
@@ -207,6 +229,7 @@ class Gurobi(PersistentBase, PersistentSolver):
             # As of 3/2021, the limited-size Gurobi license was limited
             # to 2000 variables.
             m.addVars(range(2001))
+            m.setParam('OutputFlag', 0)
             m.optimize()
             cls._available = Gurobi.Availability.FullLicense
         except gurobipy.GurobiError:
@@ -221,11 +244,11 @@ class Gurobi(PersistentBase, PersistentSolver):
         return version
 
     @property
-    def config(self) -> MIPSolverConfig:
+    def config(self) -> GurobiConfig:
         return self._config
 
     @config.setter
-    def config(self, val: MIPSolverConfig):
+    def config(self, val: GurobiConfig):
         self._config = val
 
     @property
@@ -243,13 +266,19 @@ class Gurobi(PersistentBase, PersistentSolver):
     def gurobi_options(self, val: Dict):
         self._solver_options = val
 
+    @property
+    def symbol_map(self):
+        return self._symbol_map
+
     def _solve(self, timer: HierarchicalTimer):
         config = self.config
-        options = self.solver_options
+        options = self.gurobi_options
         if config.stream_solver:
-            self._solver_model.setParam('OutputFlag', 1)
+            self._solver_model.setParam('LogToConsole', 1)
         else:
-            self._solver_model.setParam('OutputFlag', 0)
+            self._solver_model.setParam('LogToConsole', 0)
+        self._solver_model.setParam('LogFile', config.logfile)
+
         if config.time_limit is not None:
             self._solver_model.setParam('TimeLimit', config.time_limit)
         if config.mip_gap is not None:
@@ -280,6 +309,7 @@ class Gurobi(PersistentBase, PersistentSolver):
             self.update(timer=timer)
             timer.stop('update')
         res = self._solve(timer)
+        self._last_results_object = res
         if self.config.report_timing:
             logger.info('\n' + str(timer))
         return res
@@ -321,11 +351,11 @@ class Gurobi(PersistentBase, PersistentSolver):
         if not self.available():
             raise ImportError('Could not import gurobipy')
         saved_config = self.config
-        saved_options = self.solver_options
+        saved_options = self.gurobi_options
         saved_update_config = self.update_config
         self.__init__()
         self.config = saved_config
-        self.solver_options = saved_options
+        self.gurobi_options = saved_options
         self.update_config = saved_update_config
         self._model = model
 
@@ -656,7 +686,6 @@ class Gurobi(PersistentBase, PersistentSolver):
         status = gprob.Status
 
         results = GurobiResults(self)
-        self._last_results_object = results
         results.wallclock_time = gprob.Runtime
 
         if status == grb.LOADED:  # problem is loaded, but no solution
@@ -736,12 +765,18 @@ class Gurobi(PersistentBase, PersistentSolver):
         self._solver_model.set_gurobi_param('SolutionNumber', solution_number)
         gurobi_vars_to_load = [var_map[id(pyomo_var)] for pyomo_var in vars_to_load]
         vals = self._solver_model.getAttr("Xn", gurobi_vars_to_load)
+        res = ComponentMap()
         for var, val in zip(vars_to_load, vals):
             if ref_vars[id(var)] > 0:
-                var.value = val
+                res[var] = val
         self._solver_model.set_gurobi_param('SolutionNumber', original_solution_number)
+        return res
 
     def load_vars(self, vars_to_load=None, solution_number=0):
+        for v, val in self.get_primals(vars_to_load=vars_to_load, solution_number=solution_number).items():
+            v.value = val
+
+    def get_primals(self, vars_to_load=None, solution_number=0):
         if self._needs_updated:
             self._update_gurobi_model()  # this is needed to ensure that solutions cannot be loaded after the model has been changed
         var_map = self._pyomo_var_to_solver_var_map
@@ -752,14 +787,16 @@ class Gurobi(PersistentBase, PersistentSolver):
             vars_to_load = [id(v) for v in vars_to_load]
 
         if solution_number != 0:
-            self._load_suboptimal_mip_solution(vars_to_load=vars_to_load, solution_number=solution_number)
+            return self._load_suboptimal_mip_solution(vars_to_load=vars_to_load, solution_number=solution_number)
         else:
             gurobi_vars_to_load = [var_map[pyomo_var_id] for pyomo_var_id in vars_to_load]
             vals = self._solver_model.getAttr("X", gurobi_vars_to_load)
 
+            res = ComponentMap()
             for var_id, val in zip(vars_to_load, vals):
                 if ref_vars[var_id] > 0:
-                    self._vars[var_id][0].value = val
+                    res[self._vars[var_id][0]] = val
+            return res
 
     def get_reduced_costs(self, vars_to_load=None):
         if self._needs_updated:
@@ -1083,8 +1120,8 @@ class Gurobi(PersistentBase, PersistentSolver):
                 >>> opt = appsi.solvers.Gurobi()
                 >>> opt.config.stream_solver = True
                 >>> opt.set_instance(m) # doctest:+SKIP
-                >>> opt.solver_options['PreCrush'] = 1
-                >>> opt.solver_options['LazyConstraints'] = 1
+                >>> opt.gurobi_options['PreCrush'] = 1
+                >>> opt.gurobi_options['LazyConstraints'] = 1
                 >>>
                 >>> def my_callback(cb_m, cb_opt, cb_where):
                 ...     if cb_where == GRB.Callback.MIPSOL:

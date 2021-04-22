@@ -14,6 +14,16 @@ from .utils.identify_named_expressions import identify_named_expressions
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat
 from pyomo.common.errors import ApplicationError
+from pyomo.opt.base import SolverFactory as LegacySolverFactory
+from pyomo.common.factory import Factory
+import logging
+import os
+from pyomo.opt.results.results_ import SolverResults as LegacySolverResults
+from pyomo.opt.results.solution import Solution as LegacySolution, SolutionStatus as LegacySolutionStatus
+from pyomo.opt.results.solver import TerminationCondition as LegacyTerminationCondition, SolverStatus as LegacySolverStatus
+from pyomo.core.kernel.objective import minimize, maximize
+from pyomo.core.base import SymbolMap
+import weakref
 
 
 class TerminationCondition(enum.Enum):
@@ -76,8 +86,17 @@ class SolverConfig(ConfigDict):
         If True, then some timing information will be printed at the
         end of the solve.
     """
-    def __init__(self):
-        super(SolverConfig, self).__init__()
+    def __init__(self,
+                 description=None,
+                 doc=None,
+                 implicit=False,
+                 implicit_domain=None,
+                 visibility=0):
+        super(SolverConfig, self).__init__(description=description,
+                                           doc=doc,
+                                           implicit=implicit,
+                                           implicit_domain=implicit_domain,
+                                           visibility=visibility)
 
         self.declare('time_limit', ConfigValue(domain=NonNegativeFloat))
         self.declare('stream_solver', ConfigValue(domain=bool))
@@ -102,8 +121,17 @@ class MIPSolverConfig(SolverConfig):
         If True, all integer variables will be relaxed to continuous
         variables before solving
     """
-    def __init__(self):
-        super(MIPSolverConfig, self).__init__()
+    def __init__(self,
+                 description=None,
+                 doc=None,
+                 implicit=False,
+                 implicit_domain=None,
+                 visibility=0):
+        super(MIPSolverConfig, self).__init__(description=description,
+                                              doc=doc,
+                                              implicit=implicit,
+                                              implicit_domain=implicit_domain,
+                                              visibility=visibility)
 
         self.declare('mip_gap', ConfigValue(domain=NonNegativeFloat))
         self.declare('relax_integrality', ConfigValue(domain=bool))
@@ -113,7 +141,6 @@ class MIPSolverConfig(SolverConfig):
 
 
 class SolutionLoaderBase(abc.ABC):
-    @abc.abstractmethod
     def load_vars(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> NoReturn:
         """
         Load the solution of the primal variables into the value attribute of the variables.
@@ -123,6 +150,25 @@ class SolutionLoaderBase(abc.ABC):
         vars_to_load: list
             A list of the variables whose solution should be loaded. If vars_to_load is None, then the solution
             to all primal variables will be loaded.
+        """
+        for v, val in self.get_primals(vars_to_load=vars_to_load).items():
+            v.value = val
+
+    @abc.abstractmethod
+    def get_primals(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
+        """
+        Returns a ComponentMap mapping variable to var value.
+
+        Parameters
+        ----------
+        vars_to_load: list
+            A list of the variables whose solution value should be retreived. If vars_to_load is None,
+            then the values for all variables will be retreived.
+
+        Returns
+        -------
+        primals: ComponentMap
+            Maps variables to solution values
         """
         pass
 
@@ -197,13 +243,13 @@ class SolutionLoader(SolutionLoaderBase):
         self._slacks = slacks
         self._reduced_costs = reduced_costs
 
-    def load_vars(self, vars_to_load=None):
+    def get_primals(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
         if vars_to_load is None:
-            for v, val in self._primals.values():
-                v.value = val
+            return ComponentMap(self._primals.values())
         else:
+            primals = ComponentMap()
             for v in vars_to_load:
-                v.value = self._primals[id(v)][1]
+                primals[v] = self._primals[id(v)][1]
 
     def get_duals(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None) -> Dict[_GeneralConstraintData, float]:
         if cons_to_load is None:
@@ -399,6 +445,11 @@ class Solver(abc.ABC):
         """
         pass
 
+    @property
+    @abc.abstractmethod
+    def symbol_map(self):
+        pass
+
     def is_persistent(self):
         """
         Returns
@@ -413,7 +464,6 @@ class PersistentSolver(Solver):
     def is_persistent(self):
         return True
 
-    @abc.abstractmethod
     def load_vars(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> NoReturn:
         """
         Load the solution of the primal variables into the value attribut of the variables.
@@ -424,6 +474,11 @@ class PersistentSolver(Solver):
             A list of the variables whose solution should be loaded. If vars_to_load is None, then the solution
             to all primal variables will be loaded.
         """
+        for v, val in self.get_primals(vars_to_load=vars_to_load).items():
+            v.value = val
+
+    @abc.abstractmethod
+    def get_primals(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
         pass
 
     def get_duals(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None) -> Dict[_GeneralConstraintData, float]:
@@ -536,9 +591,9 @@ class PersistentSolutionLoader(SolutionLoaderBase):
         if not self._valid:
             raise RuntimeError('The results in the solver are no longer valid.')
 
-    def load_vars(self, vars_to_load=None):
+    def get_primals(self, vars_to_load=None):
         self._assert_solution_still_valid()
-        self._solver.load_vars(vars_to_load=vars_to_load)
+        self._solver.get_primals(vars_to_load=vars_to_load)
 
     def get_duals(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None) -> Dict[_GeneralConstraintData, float]:
         self._assert_solution_still_valid()
@@ -942,106 +997,172 @@ class PersistentBase(abc.ABC):
         timer.stop('objective')
 
 
-class LegacySolutionLoader(object):
-    def __init__(self, model, primals, duals, slacks, reduced_costs):
-        """
-        Parameters
-        ----------
-        model: the pyomo model
-        primals: ComponentMap
-            maps Var to value
-        duals: ComponentMap
-            maps Constraint to dual value
-        slacks: ComponentMap
-            maps Constraint to slack value
-        reduced_costs: ComponentMap
-            maps Var to reduced cost
-        """
-        self._model = model
-        self._primals = primals
-        self._duals = duals
-        self._slacks = slacks
-        self._reduced_costs = reduced_costs
+legacy_termination_condition_map = {
+    TerminationCondition.unknown: LegacyTerminationCondition.unknown,
+    TerminationCondition.maxTimeLimit: LegacyTerminationCondition.maxTimeLimit,
+    TerminationCondition.maxIterations: LegacyTerminationCondition.maxIterations,
+    TerminationCondition.objectiveLimit: LegacyTerminationCondition.minFunctionValue,
+    TerminationCondition.minStepLength: LegacyTerminationCondition.minStepLength,
+    TerminationCondition.optimal: LegacyTerminationCondition.optimal,
+    TerminationCondition.unbounded: LegacyTerminationCondition.unbounded,
+    TerminationCondition.infeasible: LegacyTerminationCondition.infeasible,
+    TerminationCondition.infeasibleOrUnbounded: LegacyTerminationCondition.infeasibleOrUnbounded,
+    TerminationCondition.error: LegacyTerminationCondition.error,
+    TerminationCondition.interrupted: LegacyTerminationCondition.resourceInterrupt,
+    TerminationCondition.licensingProblems: LegacyTerminationCondition.licensingProblems
+}
 
-    def load_solution(self):
-        self.load_vars()
 
-        if hasattr(self._model, 'dual') and self._model.dual.import_enabled():
-            self.load_suffix('dual')
+legacy_solver_status_map = {
+    TerminationCondition.unknown: LegacySolverStatus.unknown,
+    TerminationCondition.maxTimeLimit: LegacySolverStatus.aborted,
+    TerminationCondition.maxIterations: LegacySolverStatus.aborted,
+    TerminationCondition.objectiveLimit: LegacySolverStatus.aborted,
+    TerminationCondition.minStepLength: LegacySolverStatus.error,
+    TerminationCondition.optimal: LegacySolverStatus.ok,
+    TerminationCondition.unbounded: LegacySolverStatus.error,
+    TerminationCondition.infeasible: LegacySolverStatus.error,
+    TerminationCondition.infeasibleOrUnbounded: LegacySolverStatus.error,
+    TerminationCondition.error: LegacySolverStatus.error,
+    TerminationCondition.interrupted: LegacySolverStatus.aborted,
+    TerminationCondition.licensingProblems: LegacySolverStatus.error
+}
 
-        if hasattr(self._model, 'slack') and self._model.slack.import_enabled():
-            self.load_suffix('slack')
 
-        if hasattr(self._model, 'rc') and self._model.rc.import_enabled():
-            self.load_suffix('rc')
-
-    def load_suffix(self, suffix):
-        if suffix == 'dual':
-            self.load_duals()
-        elif suffix == 'slack':
-            self.load_slacks()
-        elif suffix == 'rc':
-            self.load_reduced_costs()
-        else:
-            raise ValueError('suffix not recognized')
-
-    def load_vars(self, vars_to_load=None):
-        if vars_to_load is None:
-            for v, val in self._primals.items():
-                v.value = val
-        else:
-            for v in vars_to_load:
-                v.value = self._primals[v]
-
-    def load_duals(self, cons_to_load=None):
-        if not hasattr(self._model, 'dual'):
-            self._model.dual = Suffix(direction=Suffix.IMPORT)
-
-        if not self._model.dual.import_enabled():
-            raise RuntimeError('dual Suffix is not enabled for importing')
-
-        if cons_to_load is None:
-            for c, val in self._duals.items():
-                self._model.dual[c] = val
-        else:
-            for c in cons_to_load:
-                self._model.dual[c] = self._duals[c]
-
-    def load_slacks(self, cons_to_load=None):
-        if not hasattr(self._model, 'slack'):
-            self._model.slack = Suffix(direction=Suffix.IMPORT)
-
-        if not self._model.slack.import_enabled():
-            raise RuntimeError('slack Suffix is not enabled for importing')
-
-        if cons_to_load is None:
-            for c, val in self._slacks.items():
-                self._model.slack[c] = val
-        else:
-            for c in cons_to_load:
-                self._model.slack[c] = self._slacks[c]
-
-    def load_reduced_costs(self, vars_to_load=None):
-        if not hasattr(self._model, 'rc'):
-            self._model.rc = Suffix(direction=Suffix.IMPORT)
-
-        if not self._model.rc.import_enabled():
-            raise RuntimeError('rc Suffix is not enabled for importing')
-
-        if vars_to_load is None:
-            for v, val in self._reduced_costs.items():
-                self._model.rc[v] = val
-        else:
-            for v in vars_to_load:
-                self._model.rc[v] = self._reduced_costs[v]
+legacy_solution_status_map = {
+    TerminationCondition.unknown: LegacySolutionStatus.unknown,
+    TerminationCondition.maxTimeLimit: LegacySolutionStatus.stoppedByLimit,
+    TerminationCondition.maxIterations: LegacySolutionStatus.stoppedByLimit,
+    TerminationCondition.objectiveLimit: LegacySolutionStatus.stoppedByLimit,
+    TerminationCondition.minStepLength: LegacySolutionStatus.error,
+    TerminationCondition.optimal: LegacySolutionStatus.optimal,
+    TerminationCondition.unbounded: LegacySolutionStatus.unbounded,
+    TerminationCondition.infeasible: LegacySolutionStatus.infeasible,
+    TerminationCondition.infeasibleOrUnbounded: LegacySolutionStatus.unsure,
+    TerminationCondition.error: LegacySolutionStatus.error,
+    TerminationCondition.interrupted: LegacySolutionStatus.error,
+    TerminationCondition.licensingProblems: LegacySolutionStatus.error
+}
 
 
 class LegacySolverInterface(object):
+    def solve(self,
+              model: _BlockData,
+              tee: bool = False,
+              load_solutions: bool = True,
+              logfile: Optional[str] = None,
+              solnfile: Optional[str] = None,
+              timelimit: Optional[float] = None,
+              report_timing: bool = False,
+              solver_io: Optional[str] = None,
+              suffixes: Optional[Sequence] = None,
+              options: Optional[Dict] = None,
+              keepfiles: bool = False,
+              symbolic_solver_labels: bool = False):
+        original_config = self.config
+        self.config = self.config()
+        self.config.stream_solver = tee
+        self.config.load_solution = load_solutions
+        self.config.symbolic_solver_labels = symbolic_solver_labels
+        self.config.time_limit = timelimit
+        self.config.report_timing = report_timing
+        if 'keepfiles' in self.config:
+            self.config.keepfiles = keepfiles
+        if logfile is not None:
+            if 'solver_output_logger' in self.config:
+                tmp_logger = logging.getLogger('_tmp_' + str(self.__class__))
+                for handler in tmp_logger.handlers:
+                    tmp_logger.removeHandler(handler)
+                file_handler = logging.FileHandler(logfile)
+                self.config.log_level = logging.CRITICAL
+                file_handler.setLevel(self.config.log_level)
+                formatter = logging.Formatter('%(message)s')
+                file_handler.setFormatter(formatter)
+                tmp_logger.addHandler(file_handler)
+                self.config.solver_output_logger = tmp_logger
+            elif 'logfile' in self.config:
+                self.config.logfile = logfile
+        if solnfile is not None:
+            if 'filename' in self.config:
+                filename = os.path.splitext(solnfile)[0]
+                self.config.filename = filename
+        original_options = self.options
+        if options is not None:
+            self.options = options
+
+        results: Results = super(LegacySolverInterface, self).solve(model)
+        legacy_results = LegacySolverResults()
+        legacy_soln = LegacySolution()
+        legacy_results.solver.status = legacy_solver_status_map[results.termination_condition]
+        legacy_results.solver.termination_condition = legacy_termination_condition_map[results.termination_condition]
+        legacy_soln.status = legacy_solution_status_map[results.termination_condition]
+        legacy_results.solver.termination_message = str(results.termination_condition)
+
+        obj = get_objective(model)
+        legacy_results.problem.sense = obj.sense
+
+        if obj.sense == minimize:
+            legacy_results.problem.lower_bound = results.best_objective_bound
+            legacy_results.problem.upper_bound = results.best_feasible_objective
+        else:
+            legacy_results.problem.upper_bound = results.best_objective_bound
+            legacy_results.problem.lower_bound = results.best_feasible_objective
+        legacy_soln.gap = abs(results.best_feasible_objective - results.best_objective_bound)
+
+        symbol_map = SymbolMap()
+        symbol_map.byObject = dict(self.symbol_map.byObject)
+        symbol_map.bySymbol = {symb: weakref.ref(obj()) for symb, obj in self.symbol_map.bySymbol.items()}
+        symbol_map.aliases = {symb: weakref.ref(obj()) for symb, obj in self.symbol_map.aliases.items()}
+        symbol_map.default_labeler = self.symbol_map.default_labeler
+        model.solutions.add_symbol_map(symbol_map)
+        legacy_results._smap_id = id(symbol_map)
+
+        legacy_results.problem.number_of_variables = len(results.solution_loader.get_primals())
+        legacy_results.problem.number_of_constraints = len(symbol_map.bySymbol) - legacy_results.problem.number_of_variables
+        if id(obj) in symbol_map.byObject:
+            legacy_results.problem.number_of_constraints -= 1
+
+        delete_legacy_soln = True
+        if load_solutions:
+            if hasattr(model, 'dual') and model.dual.import_enabled():
+                for c, val in results.solution_loader.get_duals().items():
+                    model.dual[c] = val
+            if hasattr(model, 'slack') and model.slack.import_enabled():
+                for c, val in results.solution_loader.get_slacks().items():
+                    model.slack[c] = val
+            if hasattr(model, 'rc') and model.rc.import_enabled():
+                for v, val in results.solution_loader.get_reduced_costs().items():
+                    model.rc[v] = val
+        elif results.best_feasible_objective is not None:
+            delete_legacy_soln = False
+            for v, val in results.solution_loader.get_primals().items():
+                legacy_soln.variable[symbol_map.getSymbol(v)] = {'Value': val}
+            if hasattr(model, 'dual') and model.dual.import_enabled():
+                for c, val in results.solution_loader.get_duals().items():
+                    legacy_soln.constraint[symbol_map.getSymbol(c)] = {'Dual': val}
+            if hasattr(model, 'slack') and model.slack.import_enabled():
+                for c, val in results.solution_loader.get_slacks().items():
+                    symbol = symbol_map.getSymbol(c)
+                    if symbol in legacy_soln.constraint:
+                        legacy_soln.constraint[symbol]['Slack'] = val
+            if hasattr(model, 'rc') and model.rc.import_enabled():
+                for v, val in results.solution_loader.get_reduced_costs().items():
+                    legacy_soln.variable['Rc'] = val
+
+        legacy_results.solution.insert(legacy_soln)
+        if delete_legacy_soln:
+            legacy_results.solution.delete(0)
+
+        self.config = original_config
+        self.options = original_options
+
+        return legacy_results
+
     def available(self, exception_flag=True):
         ans = super(LegacySolverInterface, self).available()
         if exception_flag and not ans:
             raise ApplicationError(f'Solver {self.__class__} is not available ({ans}).')
-        return ans
+        return bool(ans)
 
     def license_is_valid(self) -> bool:
         """Test if the solver license is valid on this system.
@@ -1059,6 +1180,24 @@ class LegacySolverInterface(object):
         """
         return bool(self.available())
 
+    @property
+    def options(self):
+        for solver_name in ['gurobi', 'ipopt', 'cplex', 'cbc']:
+            if hasattr(self, solver_name + '_options'):
+                return getattr(self, solver_name + '_options')
+        raise NotImplementedError('Could not find the correct options')
+
+    @options.setter
+    def options(self, val):
+        found = False
+        for solver_name in ['gurobi', 'ipopt', 'cplex', 'cbc']:
+            if hasattr(self, solver_name + '_options'):
+                setattr(self, solver_name + '_options', val)
+                found = True
+        if not found:
+            raise NotImplementedError('Could not find the correct options')
+
+
     def __enter__(self):
         return self
 
@@ -1066,10 +1205,18 @@ class LegacySolverInterface(object):
         pass
 
 
-class NewFactory(object):
-    def register(self, name, ...):
+class SolverFactoryClass(Factory):
+    def register(self, name, doc=None):
         def decorator(cls):
-            self.add_registration(name, cls)
+            self._cls[name] = cls
+            self._doc[name] = doc
+
             class LegacySolver(LegacySolverInterface, cls):
                 pass
-            OldFactory.register(name, LegacySolver)
+            LegacySolverFactory.register(name, doc)(LegacySolver)
+
+            return cls
+        return decorator
+
+
+SolverFactory = SolverFactoryClass()

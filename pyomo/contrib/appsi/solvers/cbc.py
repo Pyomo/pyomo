@@ -1,6 +1,6 @@
 from pyutilib.services import TempfileManager
 from pyomo.common.fileutils import Executable
-from pyomo.contrib.appsi.base import PersistentSolver, Results, TerminationCondition, SolverConfig
+from pyomo.contrib.appsi.base import PersistentSolver, Results, TerminationCondition, SolverConfig, PersistentSolutionLoader
 from pyomo.contrib.appsi.writers import LPWriter
 from pyomo.common.log import LogStream
 import logging
@@ -19,14 +19,24 @@ from pyomo.common.tee import TeeStream
 import sys
 from typing import Dict
 from pyomo.common.config import ConfigValue, NonNegativeInt
+from pyomo.common.errors import PyomoException
 
 
 logger = logging.getLogger(__name__)
 
 
 class CbcConfig(SolverConfig):
-    def __init__(self):
-        super(CbcConfig, self).__init__()
+    def __init__(self,
+                 description=None,
+                 doc=None,
+                 implicit=False,
+                 implicit_domain=None,
+                 visibility=0):
+        super(CbcConfig, self).__init__(description=description,
+                                        doc=doc,
+                                        implicit=implicit,
+                                        implicit_domain=implicit_domain,
+                                        visibility=visibility)
 
         self.declare('executable', ConfigValue())
         self.declare('filename', ConfigValue(domain=str))
@@ -50,6 +60,7 @@ class Cbc(PersistentSolver):
         self._dual_sol = dict()
         self._primal_sol = dict()
         self._reduced_costs = dict()
+        self._last_results_object: Optional[Results] = None
 
     def available(self):
         if self.config.executable.path() is None:
@@ -109,6 +120,14 @@ class Cbc(PersistentSolver):
     def update_config(self):
         return self._writer.update_config
 
+    @property
+    def writer(self):
+        return self._writer
+
+    @property
+    def symbol_map(self):
+        return self._writer.symbol_map
+
     def set_instance(self, model):
         self._writer.set_instance(model)
 
@@ -146,7 +165,11 @@ class Cbc(PersistentSolver):
         self._writer.update_params()
 
     def solve(self, model, timer: HierarchicalTimer = None):
-        self.available(exception_flag=True)
+        avail = self.available()
+        if not avail:
+            raise PyomoException(f'Solver {self.__class__} is not available ({avail}).')
+        if self._last_results_object is not None:
+            self._last_results_object.solution_loader.invalidate()
         if timer is None:
             timer = HierarchicalTimer()
         try:
@@ -162,6 +185,7 @@ class Cbc(PersistentSolver):
             self._writer.write(model, self._filename+'.lp', timer=timer)
             timer.stop('write lp file')
             res = self._apply_solver(timer)
+            self._last_results_object = res
             if self.config.report_timing:
                 logger.info('\n' + str(timer))
             return res
@@ -274,6 +298,8 @@ class Cbc(PersistentSolver):
                                'results.termination_condition and '
                                'resutls.best_feasible_objective before loading a solution.')
 
+        results.solution_loader = PersistentSolutionLoader(solver=self)
+
         return results
 
     def _apply_solver(self, timer: HierarchicalTimer):
@@ -285,7 +311,7 @@ class Cbc(PersistentSolver):
             timeout = None
 
         def _check_and_escape_options():
-            for key, val in self.solver_options.items():
+            for key, val in self.cbc_options.items():
                 tmp_k = str(key)
                 _bad = ' ' in tmp_k
 
@@ -362,13 +388,14 @@ class Cbc(PersistentSolver):
 
         return results
 
-    def load_vars(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> NoReturn:
+    def get_primals(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
+        res = ComponentMap()
         if vars_to_load is None:
             for v_id, (v, val) in self._primal_sol.items():
-                v.value = val
+                res[v] = val
         else:
             for v in vars_to_load:
-                v.value = self._primal_sol[id(v)][1]
+                res[v] = self._primal_sol[id(v)][1]
 
     def get_duals(self, cons_to_load = None):
         if cons_to_load is None:
