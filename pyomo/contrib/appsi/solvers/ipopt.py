@@ -434,6 +434,7 @@ class Ipopt(PersistentSolver):
         else:
             for v in vars_to_load:
                 res[v] = self._primal_sol[v]
+        return res
 
     def get_duals(self, cons_to_load = None):
         if cons_to_load is None:

@@ -266,7 +266,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
         m.c = pe.Constraint(expr=m.y == (m.x-1)**2 - 2)
         opt = Gurobi()
-        opt.solver_options['nonconvex'] = 2
+        opt.gurobi_options['nonconvex'] = 2
         opt.solve(m)
         self.assertAlmostEqual(m.x.value, -0.3660254037844423, 2)
         self.assertAlmostEqual(m.y.value, -0.13397459621555508, 2)
@@ -281,7 +281,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m.c1 = pe.Constraint(expr=0 <= -m.y + (m.x-1)**2 - 2)
         m.c2 = pe.Constraint(expr=0 >= -m.y + (m.x-1)**2 - 2)
         opt = Gurobi()
-        opt.solver_options['nonconvex'] = 2
+        opt.gurobi_options['nonconvex'] = 2
         opt.solve(m)
         self.assertAlmostEqual(m.x.value, -0.3660254037844423, 2)
         self.assertAlmostEqual(m.y.value, -0.13397459621555508, 2)
@@ -342,7 +342,7 @@ class TestManualModel(unittest.TestCase):
         self.assertEqual(opt.get_model_attr('NumQConstrs'), 0)
 
         self.assertEqual(opt.get_gurobi_param_info('FeasibilityTol')[2], 1e-6)
-        opt.solver_options['FeasibilityTol'] = 1e-7
+        opt.gurobi_options['FeasibilityTol'] = 1e-7
         opt.config.load_solution = True
         res = opt.solve(m)
         self.assertEqual(opt.get_gurobi_param_info('FeasibilityTol')[2], 1e-7)
