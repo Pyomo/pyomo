@@ -211,7 +211,8 @@ def filter(line):
                    'usermodel = <module',
                    'execution time=',
                    'Solver results file:',
-                   'TokenServer'):
+                   'TokenServer',
+                   'function calls'):
         if field in line:
             return True
     return False
@@ -222,6 +223,12 @@ def filter_file_contents(lines):
     for line in lines:
         if not line or filter(line):
             continue
+            
+        # Strip off beginning of lines giving time in seconds
+        # Needed for the performance chapter tests
+        if "seconds" in line:
+            s = line.find("seconds")+7
+            line = line[s:]
 
         items = line.strip().split()
         for i in items:
@@ -232,9 +239,9 @@ def filter_file_contents(lines):
 
             # A few substitutions to get tests passing on pypy3
             if ".inf" in i:
-                i.replace(".inf", "inf")
+                i = i.replace(".inf", "inf")
             if "null" in i:
-                i.replace("null", "None")
+                i = i.replace("null", "None")
 
             try:
                 filtered.append(float(i))
