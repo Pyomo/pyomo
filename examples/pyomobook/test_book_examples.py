@@ -196,14 +196,13 @@ def filter(line):
                    'Importing module',
                    'Function',
                    'File', 
-                   'Restricted license',
-                   'Using license',
                    'Matplotlib',
                    '    ^'):
         if line.startswith(field):
             return True
     for field in ( 'Total CPU',
                    'Ipopt',
+                   'license',
                    'Status: optimal',
                    'Status: feasible',
                    'time:',
@@ -228,17 +227,19 @@ def filter_file_contents(lines):
         for i in items:
             if not i:
                 continue
-            if not (i.startswith('/') or i.startswith(":\\", 1)):
-                try:
-                    filtered.append(float(i))
-                except:
-                    filtered.append(i)
+            if i.startswith('/') or i.startswith(":\\", 1):
+                continue
 
             # A few substitutions to get tests passing on pypy3
             if ".inf" in i:
                 i.replace(".inf", "inf")
             if "null" in i:
                 i.replace("null", "None")
+
+            try:
+                filtered.append(float(i))
+            except:
+                filtered.append(i)
 
     return filtered
 
