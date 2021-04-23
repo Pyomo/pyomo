@@ -39,7 +39,7 @@ class CPLEX_utils(unittest.TestCase):
 
         # Check spaces in the file
         fname = 'foo bar.lp'
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Space detected in CPLEX xxx file"):
             _validate_file_name(_126, fname, 'xxx')
         self.assertEqual('"%s"' % (fname,),
@@ -53,11 +53,11 @@ class CPLEX_utils(unittest.TestCase):
         # check BAD path separators
         bad_char = '/\\'.replace(os.path.sep,'')
         fname = 'foo%sbar.lp' % (bad_char,)
-        msg = 'Unallowed character \(%s\) found in CPLEX xxx file' % (
+        msg = r'Unallowed character \(%s\) found in CPLEX xxx file' % (
             repr(bad_char)[1:-1],)
-        with self.assertRaisesRegexp(ValueError, msg):
+        with self.assertRaisesRegex(ValueError, msg):
             _validate_file_name(_126, fname, 'xxx')
-        with self.assertRaisesRegexp(ValueError, msg):
+        with self.assertRaisesRegex(ValueError, msg):
             _validate_file_name(_128, fname, 'xxx')
 
 

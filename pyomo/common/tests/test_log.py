@@ -52,12 +52,12 @@ class TestLegacyLogHandler(unittest.TestCase):
         logger.setLevel(logging.WARNING)
         logger.info("(info)")
         self.assertEqual(self.stream.getvalue(), "")
-        logger.warn("(warn)")
+        logger.warning("(warn)")
         ans = "WARNING: (warn)\n"
         self.assertEqual(self.stream.getvalue(), ans)
 
         logger.setLevel(logging.DEBUG)
-        logger.warn("(warn)")
+        logger.warning("(warn)")
         lineno = getframeinfo(currentframe()).lineno - 1
         ans += 'WARNING: "[base]%stest_log.py", %d, test_simple_log\n' \
                '    (warn)\n' % (os.path.sep, lineno,)
@@ -75,7 +75,7 @@ class TestLegacyLogHandler(unittest.TestCase):
         logger.addHandler(self.handler)
 
         logger.setLevel(logging.WARNING)
-        logger.warn("(warn)")
+        logger.warning("(warn)")
         lineno = getframeinfo(currentframe()).lineno - 1
         ans = 'WARNING: "[base]%stest_log.py", %d, test_default_verbosity\n' \
                '    (warn)\n' % (os.path.sep, lineno,)
@@ -95,17 +95,17 @@ class TestWrappingFormatter(unittest.TestCase):
         ans = ''
 
         self.handler.setFormatter(WrappingFormatter(style='%'))
-        logger.warn("(warn)")
+        logger.warning("(warn)")
         ans += "WARNING: (warn)\n"
         self.assertEqual(self.stream.getvalue(), ans)
 
         self.handler.setFormatter(WrappingFormatter(style='$'))
-        logger.warn("(warn)")
+        logger.warning("(warn)")
         ans += "WARNING: (warn)\n"
         self.assertEqual(self.stream.getvalue(), ans)
 
         self.handler.setFormatter(WrappingFormatter(style='{'))
-        logger.warn("(warn)")
+        logger.warning("(warn)")
         ans += "WARNING: (warn)\n"
         self.assertEqual(self.stream.getvalue(), ans)
 
@@ -140,12 +140,12 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
         logger.setLevel(logging.WARNING)
         logger.info("(info)")
         self.assertEqual(self.stream.getvalue(), "")
-        logger.warn("(warn)")
+        logger.warning("(warn)")
         ans = "WARNING: (warn)\n"
         self.assertEqual(self.stream.getvalue(), ans)
 
         logger.setLevel(logging.DEBUG)
-        logger.warn("(warn)")
+        logger.warning("(warn)")
         lineno = getframeinfo(currentframe()).lineno - 1
         ans += 'WARNING: "[base]%stest_log.py", %d, test_simple_log\n' \
                '    (warn)\n' % (os.path.sep, lineno,)
@@ -159,7 +159,7 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
         logger.setLevel(logging.WARNING)
         logger.info("(info)")
         self.assertEqual(self.stream.getvalue(), "")
-        logger.warn("(warn)")
+        logger.warning("(warn)")
         lineno = getframeinfo(currentframe()).lineno - 1
         ans = 'WARNING: "%s", %d, test_alternate_base\n' \
                '    (warn)\n' % (filename, lineno,)
@@ -171,7 +171,7 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
         logger.setLevel(logging.WARNING)
         logger.info("(info)")
         self.assertEqual(self.stream.getvalue(), "")
-        logger.warn("(warn)")
+        logger.warning("(warn)")
         lineno = getframeinfo(currentframe()).lineno - 1
         ans = 'WARNING: "%s", %d, test_no_base\n' \
                '    (warn)\n' % (filename, lineno,)
@@ -187,12 +187,12 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
         logger.info("")
         self.assertEqual(self.stream.getvalue(), "")
 
-        logger.warn("")
+        logger.warning("")
         ans = "WARNING:\n"
         self.assertEqual(self.stream.getvalue(), ans)
 
         logger.setLevel(logging.DEBUG)
-        logger.warn("")
+        logger.warning("")
         lineno = getframeinfo(currentframe()).lineno - 1
         ans += 'WARNING: "[base]%stest_log.py", %d, test_no_message\n\n' \
                % (os.path.sep, lineno,)
@@ -205,12 +205,12 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
         ))
 
         logger.setLevel(logging.WARNING)
-        logger.warn("\n\nthis is a message.\n\n\n")
+        logger.warning("\n\nthis is a message.\n\n\n")
         ans = "WARNING: this is a message.\n"
         self.assertEqual(self.stream.getvalue(), ans)
 
         logger.setLevel(logging.DEBUG)
-        logger.warn("\n\nthis is a message.\n\n\n")
+        logger.warning("\n\nthis is a message.\n\n\n")
         lineno = getframeinfo(currentframe()).lineno - 1
         ans += 'WARNING: "[base]%stest_log.py", %d, test_blank_lines\n' \
                "    this is a message.\n" % (os.path.sep, lineno)
@@ -257,7 +257,7 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
                "    - including a bulleted list\n"
                "    - list 2  ")
         logger.setLevel(logging.WARNING)
-        logger.warn(msg)
+        logger.warning(msg)
         ans = ( "WARNING: This is a long message\n"
                 "\n"
                 "    With some kind of internal formatting\n"
@@ -279,7 +279,7 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
         # test trailing newline
         msg += "\n"
         logger.setLevel(logging.WARNING)
-        logger.warn(msg)
+        logger.warning(msg)
         ans += ( "WARNING: This is a long message\n"
                  "\n"
                  "    With some kind of internal formatting\n"
@@ -301,7 +301,7 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
         # test initial and final blank lines
         msg = "\n" + msg + "\n\n"
         logger.setLevel(logging.WARNING)
-        logger.warn(msg)
+        logger.warning(msg)
         ans += ( "WARNING: This is a long message\n"
                  "\n"
                 "    With some kind of internal formatting\n"
@@ -346,7 +346,7 @@ class TestLegacyPyomoFormatter(unittest.TestCase):
             "  - and a short list \n"
         )
         logger.setLevel(logging.WARNING)
-        logger.warn(msg)
+        logger.warning(msg)
         ans = (
             "WARNING: This is a long message\n"
             "\n"

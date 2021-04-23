@@ -83,11 +83,6 @@ class _ImplicitAny(Any.__class__):
                 version='5.6.9', remove_in='6.0')
         return True
 
-class _NotValid(object):
-    """A dummy type that is pickle-safe that we can use as the default
-    value for Params to indicate that no valid value is present."""
-    pass
-
 
 class _ParamData(ComponentData, NumericValue):
     """
@@ -113,7 +108,7 @@ class _ParamData(ComponentData, NumericValue):
         # The following is equivalent to calling the
         # base NumericValue constructor.
         #
-        self._value = _NotValid
+        self._value = Param.NoValue
 
     def __getstate__(self):
         """
@@ -129,7 +124,7 @@ class _ParamData(ComponentData, NumericValue):
 
     def clear(self):
         """Clear the data in this component"""
-        self._value = _NotValid
+        self._value = Param.NoValue
 
     # FIXME: ComponentData need to have pointers to their index to make
     # operations like validation efficient.  As it stands now, if
@@ -145,7 +140,7 @@ class _ParamData(ComponentData, NumericValue):
         """
         Return the value of this object.
         """
-        if self._value is _NotValid:
+        if self._value is Param.NoValue:
             if exception:
                 raise ValueError(
                     "Error evaluating Param value (%s):\n\tThe Param value is "
@@ -234,6 +229,11 @@ class Param(IndexedComponent):
 
     DefaultMutable = False
 
+    class NoValue(object):
+        """A dummy type that is pickle-safe that we can use as the default
+        value for Params to indicate that no valid value is present."""
+        pass
+
     def __new__(cls, *args, **kwds):
         if cls != Param:
             return super(Param, cls).__new__(cls)
@@ -243,13 +243,13 @@ class Param(IndexedComponent):
             return IndexedParam.__new__(IndexedParam)
 
     def __init__(self, *args, **kwd):
-        self._rule          = kwd.pop('rule', _NotValid )
+        self._rule          = kwd.pop('rule', Param.NoValue )
         self._rule          = kwd.pop('initialize', self._rule )
         self._validate      = kwd.pop('validate', None )
         self.domain         = kwd.pop('domain', None )
         self.domain         = kwd.pop('within', self.domain )
         self._mutable       = kwd.pop('mutable', Param.DefaultMutable )
-        self._default_val   = kwd.pop('default', _NotValid )
+        self._default_val   = kwd.pop('default', Param.NoValue )
         self._dense_initialize = kwd.pop('initialize_as_dense', False)
         self._units         = kwd.pop('units', None)
         if self._units is not None:
@@ -272,7 +272,7 @@ class Param(IndexedComponent):
         component.  If a default value is specified, then the
         length equals the number of items in the component index.
         """
-        if self._default_val is _NotValid:
+        if self._default_val is Param.NoValue:
             return len(self._data)
         return len(self._index)
 
@@ -281,7 +281,7 @@ class Param(IndexedComponent):
         Return true if the index is in the dictionary.  If the default value
         is specified, then all members of the component index are valid.
         """
-        if self._default_val is _NotValid:
+        if self._default_val is Param.NoValue:
             return idx in self._data
         return idx in self._index
 
@@ -290,7 +290,7 @@ class Param(IndexedComponent):
         Iterate over the keys in the dictionary.  If the default value is
         specified, then iterate over all keys in the component index.
         """
-        if self._default_val is _NotValid:
+        if self._default_val is Param.NoValue:
             return self._data.__iter__()
         return self._index.__iter__()
 
@@ -466,7 +466,7 @@ class Param(IndexedComponent):
         NOTE: this test will not validate the value of function return values.
         """
         if self._constructed \
-                and val is not _NotValid \
+                and val is not Param.NoValue \
                 and type(val) in native_types \
                 and val not in self.domain:
             raise ValueError(
@@ -479,7 +479,7 @@ class Param(IndexedComponent):
         Return the value of the parameter default.
 
         Possible values:
-            None            
+            Param.NoValue
                 No default value is provided.
             Numeric         
                 A constant value that is the default value for all undefined 
@@ -498,12 +498,12 @@ class Param(IndexedComponent):
         # Local values
         #
         val = self._default_val
-        if val is _NotValid:
+        if val is Param.NoValue:
             # We should allow the creation of mutable params without
             # a default value, as long as *solving* a model without
             # reasonable values produces an informative error.
             if self._mutable:
-                # Note: _ParamData defaults to _NotValid
+                # Note: _ParamData defaults to Param.NoValue
                 ans = self._data[index] = _ParamData(self)
                 return ans
             if self.is_indexed():
@@ -887,7 +887,7 @@ This has resulted in the conversion of the source to dense form.
         # the domain.
         #
         val = self._default_val
-        if val is not _NotValid \
+        if val is not Param.NoValue \
                 and type(val) in native_types \
                 and val not in self.domain:
             raise ValueError(
@@ -900,7 +900,7 @@ This has resulted in the conversion of the source to dense form.
         #
         # Step #1: initialize data from rule value
         #
-        if self._rule is not _NotValid:
+        if self._rule is not Param.NoValue:
             self._initialize_from(self._rule)
         #
         # Step #2: allow any user-specified (external) data to override
@@ -957,7 +957,7 @@ This has resulted in the conversion of the source to dense form.
         """
         Return data that will be printed for this component.
         """
-        if self._default_val is _NotValid:
+        if self._default_val is Param.NoValue:
             default = "None" # for backwards compatibility in reporting
         elif type(self._default_val) is types.FunctionType:
             default = "(function)"

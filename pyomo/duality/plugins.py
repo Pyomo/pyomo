@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 import logging
-from six import iteritems
 
 from pyomo.common.deprecation import deprecated
 from pyomo.core.base import (Transformation,
@@ -123,7 +122,7 @@ class LinearDual_PyomoTransformation(Transformation):
         # Construct the constraints
         #
         for cname in A:
-            for ndx, terms in iteritems(A[cname]):
+            for ndx, terms in A[cname].items():
                 expr = 0
                 for term in terms:
                     expr += term.coef * getvar(term.var, term.ndx)
@@ -144,7 +143,7 @@ class LinearDual_PyomoTransformation(Transformation):
                     c_name = "%s[%s]" % (cname, str(ndx))
                 setattr(dual, c_name, c)
             #
-            for (name, ndx), domain in iteritems(v_domain):
+            for (name, ndx), domain in v_domain.items():
                 v = getvar(name, ndx)
                 flag = type(ndx) is tuple and (ndx[-1] == 'lb' or ndx[-1] == 'ub')
                 if domain == 1:

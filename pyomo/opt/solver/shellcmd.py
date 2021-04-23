@@ -15,7 +15,7 @@ import sys
 import time
 import logging
 import subprocess
-from six import StringIO
+from io import StringIO
 
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch

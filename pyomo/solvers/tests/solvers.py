@@ -10,7 +10,6 @@
 
 __all__ = ['test_solver_cases', 'available_solvers']
 
-import six
 import logging
 
 from pyomo.common.collections import Bunch
@@ -426,7 +425,7 @@ def test_solver_cases(*args):
         #
         # Error Checks
         #
-        for sc in six.itervalues(_test_solver_cases):
+        for sc in _test_solver_cases.values():
             if sc.capabilities is None:
                 sc.capabilities = set([])
             if sc.export_suffixes is None:

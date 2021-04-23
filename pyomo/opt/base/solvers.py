@@ -29,9 +29,6 @@ from pyomo.opt.base.convert import convert_problem
 from pyomo.opt.base.formats import ResultsFormat, ProblemFormat
 import pyomo.opt.base.results
 
-from six import iteritems
-from six.moves import xrange
-
 logger = logging.getLogger('pyomo.opt')
 
 # The version string is first searched for trunk/Trunk, and if
@@ -52,7 +49,7 @@ def _extract_version(x, length=4):
         # version is greater/less than some other version, it makes
         # since that a solver advertising trunk should always be greater
         # than a version check, hence returning a tuple of infinities
-        return tuple(float('inf') for i in xrange(length))
+        return tuple(float('inf') for i in range(length))
     m = re.search('[0-9]+(\.[0-9]+){1,3}',x)
     if not m is None:
         version = tuple(int(i) for i in m.group(0).split('.')[:length])
@@ -679,7 +676,7 @@ class OptSolver(object):
             if len(kwds):
                 raise ValueError(
                     "Solver="+self.type+" passed unrecognized keywords: \n\t"
-                    +("\n\t".join("%s = %s" % (k,v) for k,v in iteritems(kwds))))
+                    +("\n\t".join("%s = %s" % (k,v) for k,v in kwds.items())))
 
         if (type(self._problem_files) in (list,tuple)) and \
            (not isinstance(self._problem_files[0], str)):

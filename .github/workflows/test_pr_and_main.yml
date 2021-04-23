@@ -23,7 +23,7 @@ env:
   PYTHON_REQUIRED_PKGS: >
       nose coverage parameterized pybind11
   PYTHON_BASE_PKGS: >
-      ply six dill ipython networkx openpyxl pathos
+      ply dill ipython networkx openpyxl pathos
       pint pyro4 pyyaml sphinx_rtd_theme sympy xlrd
       python-louvain
   PYTHON_NUMPY_PKGS: >
@@ -250,9 +250,8 @@ jobs:
         python -m pip install --cache-dir cache/pip --upgrade pip
         pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS}
         pip install --cache-dir cache/pip ${PYTHON_PACKAGES}
-        # pymysql 1.0.0: No longer supports Python 2 or pypy2
         pip install --cache-dir cache/pip pymysql || \
-            pip install --cache-dir cache/pip pymysql==0.10.1
+            pip install --cache-dir cache/pip pymysql
         if test -z "${{matrix.slim}}"; then
             pip install --cache-dir cache/pip cplex \
                 || echo "WARNING: CPLEX Community Edition is not available"

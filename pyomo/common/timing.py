@@ -14,19 +14,28 @@
 #  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
 #  the U.S. Government retains certain rights in this software.
 #  ___________________________________________________________________________
-
-import sys
+import functools
 import logging
+import sys
 import time
 import traceback
+from pyomo.common.modeling import NOTSET as _NotSpecified
 
 _logger = logging.getLogger('pyomo.common.timing')
 _logger.propagate = False
 _logger.setLevel(logging.WARNING)
 
-class _NotSpecified(object): pass
-
 def report_timing(stream=True):
+    """Set reporting of Pyomo timing information.
+
+    Parameters
+    ----------
+    stream: bool, TextIOBase
+        The destination stream to emit timing information.  If ``True``,
+        defaults to ``sys.stdout``.  If ``False`` or ``None``, disables
+        reporting of timing information.
+
+    """
     if stream:
         _logger.setLevel(logging.INFO)
         if stream is True:
@@ -39,7 +48,6 @@ def report_timing(stream=True):
         _logger.setLevel(logging.WARNING)
         for h in _logger.handlers:
             _logger.removeHandler(h)
-
 
 _construction_logger = logging.getLogger('pyomo.common.timing.construction')
 
@@ -146,8 +154,12 @@ class TicTocTimer(object):
        >>> from pyomo.common.timing import TicTocTimer
        >>> timer = TicTocTimer()
        >>> timer.tic('starting timer') # starts the elapsed time timer (from 0)
+       [    0.00] starting timer
        >>> # ... do task 1
-       >>> timer.toc('task 1') # prints the elapsed time for task 1
+       >>> dT = timer.toc('task 1')
+       [+   0.00] task 1
+       >>> print("elapsed time: %0.1f" % dT)
+       elapsed time: 0.0
 
     If no ostream or logger is provided, then output is printed to sys.stdout
 
@@ -155,7 +167,7 @@ class TicTocTimer(object):
         ostream (FILE): an optional output stream to print the timing
             information
         logger (Logger): an optional output stream using the python
-           logging package. Note: timing logged using logger.info
+           logging package. Note: the timing logged using ``logger.info()``
     """
     def __init__(self, ostream=_NotSpecified, logger=None):
         self._lastTime = self._loadTime = default_timer()
@@ -203,8 +215,8 @@ class TicTocTimer(object):
                 printed.
             delta (bool): print out the elapsed wall clock time since
                 the last call to :meth:`tic` or :meth:`toc`
-                (:const:`True` (default)) or since the module was first
-                loaded (:const:`False`).
+                (``True`` (default)) or since the module was first
+                loaded (``False``).
             ostream (FILE): an optional output stream (overrides the ostream
                 provided when the class was constructed).
             logger (Logger): an optional output stream using the python
@@ -268,8 +280,18 @@ class TicTocTimer(object):
         self._lastTime = default_timer()
 
 _globalTimer = TicTocTimer()
-tic = _globalTimer.tic
-toc = _globalTimer.toc
+tic = functools.partial(TicTocTimer.tic, _globalTimer)
+tic.__doc__ = """
+Reset the global :py:class:`TicTocTimer` instance.
+
+See :py:meth:`TicTocTimer.tic()`.
+"""
+toc = functools.partial(TicTocTimer.toc, _globalTimer)
+toc.__doc__ = """
+Print the elapsed time from the global :py:class:`TicTocTimer` instance.
+
+See :py:meth:`TicTocTimer.toc()`.
+"""
 
 
 class _HierarchicalHelper(object):
@@ -361,7 +383,7 @@ class HierarchicalTimer(object):
     ...     timer.stop('b')
     ...
     >>> timer.stop('all')
-    >>> print(timer)
+    >>> print(timer)       # doctest: +SKIP
     Identifier        ncalls   cumtime   percall      %
     ---------------------------------------------------
     all                    1     2.248     2.248  100.0
@@ -379,40 +401,51 @@ class HierarchicalTimer(object):
     <BLANKLINE>
 
     The columns are:
-      ncalls : The number of times the timer was started and stopped
-      cumtime: The cumulative time (in seconds) the timer was active
-               (started but not stopped)
-      percall: cumtime (in seconds) / ncalls
-      %      : This is cumtime of the timer divided by cumtime of the
-               parent timer times 100
 
+      ncalls
+          The number of times the timer was started and stopped
+      cumtime
+          The cumulative time (in seconds) the timer was active
+          (started but not stopped)
+      percall
+          cumtime (in seconds) / ncalls
+      "%"
+          This is cumtime of the timer divided by cumtime of the
+          parent timer times 100
 
-    >>> print('a total time: %f' % timer.get_total_time('all.a'))
+    >>> print('a total time: %f' % timer.get_total_time('all.a')) \
+        # doctest: +SKIP
     a total time: 1.902037
-    >>> print('ab num calls: %d' % timer.get_num_calls('all.a.ab'))
+    >>> print('ab num calls: %d' % timer.get_num_calls('all.a.ab')) \
+        # doctest: +SKIP
     ab num calls: 10
-    >>> print('aa %% time: %f' % timer.get_relative_percent_time('all.a.aa'))
+    >>> print('aa %% time: %f' % timer.get_relative_percent_time('all.a.aa')) \
+        # doctest: +SKIP
     aa % time: 44.144148
-    >>> print('aa %% total: %f' % timer.get_total_percent_time('all.a.aa'))
+    >>> print('aa %% total: %f' % timer.get_total_percent_time('all.a.aa')) \
+        # doctest: +SKIP
     aa % total: 35.976058
 
-    Internal Workings
-    -----------------
-    The HierarchicalTimer use a stack to track which timers are active
-    at any point in time. Additionally, each timer has a dictionary of
-    timers for its children timers. Consider
+
+    Notes
+    -----
+
+    The :py:class:`HierarchicalTimer` use a stack to track which timers
+    are active at any point in time. Additionally, each timer has a
+    dictionary of timers for its children timers. Consider
 
     >>> timer = HierarchicalTimer()
     >>> timer.start('all')
     >>> timer.start('a')
     >>> timer.start('aa')
 
-    After the above code is run, self.stack will be ['all', 'a', 'aa']
-    and self.timers will have one key, 'all' and one value which will be
-    a _HierarchicalHelper. The _HierarchicalHelper has its own timers
-    dictionary:
+    After the above code is run, ``timer.stack`` will be
+    ``['all', 'a', 'aa']`` and ``timer.timers`` will have one key,
+    ``'all'`` and one value which will be a
+    :py:class:`_HierarchicalHelper`. The :py:class:`_HierarchicalHelper`
+    has its own timers dictionary:
 
-    {'a': _HierarchicalHelper}
+        ``{'a': _HierarchicalHelper}``
 
     and so on. This way, we can easily access any timer with something
     that looks like the stack. The logic is recursive (although the
@@ -425,7 +458,6 @@ class HierarchicalTimer(object):
 
     def _get_timer(self, identifier, should_exist=False):
         """
-
         This method gets the timer associated with the current state
         of self.stack and the specified identifier.
 
@@ -455,8 +487,7 @@ class HierarchicalTimer(object):
             return parent.timers[identifier]
 
     def start(self, identifier):
-        """
-        Start incrementing the timer identified with identifier
+        """Start incrementing the timer identified with identifier
 
         Parameters
         ----------
@@ -468,8 +499,7 @@ class HierarchicalTimer(object):
         self.stack.append(identifier)
 
     def stop(self, identifier):
-        """
-        Stop incrementing the timer identified with identifier
+        """Stop incrementing the timer identified with identifier
 
         Parameters
         ----------

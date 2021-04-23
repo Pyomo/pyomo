@@ -24,8 +24,6 @@ import pyomo.opt
 import pyomo.scripting.pyomo_main as pyomo_main
 from pyomo.scripting.util import cleanup
 
-from six import iteritems
-
 solvers = pyomo.opt.check_available_solvers('path')
 
 class CommonTests:
@@ -114,7 +112,7 @@ class CommonTests:
             self.assertEqual(len(refObj[i]), len(ansObj[i]))
             if isinstance(refObj[i], str):
                 continue
-            for key,val in iteritems(refObj[i]):
+            for key,val in refObj[i].items():
                 self.assertAlmostEqual(val['Value'], ansObj[i].get(key,None)['Value'], places=2)
 
 
