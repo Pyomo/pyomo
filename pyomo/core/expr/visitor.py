@@ -929,6 +929,9 @@ def sizeof_expression(expr):
 
 class _EvaluationVisitor(ExpressionValueVisitor):
 
+    def __init__(self, exception):
+        self.exception = exception
+
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
         return node._apply_operation(values)
@@ -946,9 +949,9 @@ class _EvaluationVisitor(ExpressionValueVisitor):
             return False, None
 
         if node.is_numeric_type():
-            return True, value(node)
+            return True, value(node, exception=self.exception)
         elif node.is_logical_type():
-            return True, value(node)
+            return True, value(node, exception=self.exception)
         else:
             return True, node
 
@@ -1036,7 +1039,7 @@ def evaluate_expression(exp, exception=True, constant=False):
     if constant:
         visitor = _EvaluateConstantExpressionVisitor()
     else:
-        visitor = _EvaluationVisitor()
+        visitor = _EvaluationVisitor(exception=exception)
     try:
         return visitor.dfs_postorder_stack(exp)
 
