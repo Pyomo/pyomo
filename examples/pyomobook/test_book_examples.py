@@ -212,7 +212,10 @@ def filter(line):
                    'execution time=',
                    'Solver results file:',
                    'TokenServer',
-                   'function calls'):
+                   'function calls',
+                   'List reduced',
+                   '.py:',
+                   'posix.waitpid'):
         if field in line:
             return True
     return False
@@ -332,8 +335,8 @@ class TestBookExamples(unittest.TestCase):
 
                 try:
                     self.assertStructuredAlmostEqual(out_filtered, base_filtered,
-                                                 abstol=1e-6,
-                                                 allow_second_superset=False)
+                                                     abstol=1e-6,
+                                                     allow_second_superset=False)
                 except AssertionError:
                     # Print helpful information when file comparison fails
                     print('---------------------------------')
