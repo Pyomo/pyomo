@@ -88,7 +88,7 @@ class FunctionDeprecationTest(unittest.TestCase):
                  [m.perturbed_eta1,m.perturbed_eta2],
                  cloneModel=False)        
         self.assertIn("DEPRECATED: The kaug function has been deprecated. Use the "
-                      "sensitivity_calculation() function with method='kaug'",
+                      "sensitivity_calculation() function with method='k_aug'",
                       output.getvalue().replace('\n', ' '))
 
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
@@ -105,7 +105,7 @@ class FunctionDeprecationTest(unittest.TestCase):
         m11 = kaug(m1,[m1.eta1,m1.eta2],
                    [m1.perturbed_eta1,m1.perturbed_eta2],
                    cloneModel=True)        
-        m22 = sensitivity_calculation('kaug',m2,[m2.eta1,m2.eta2],
+        m22 = sensitivity_calculation('k_aug',m2,[m2.eta1,m2.eta2],
                                       [m2.perturbed_eta1,m2.perturbed_eta2],
                                       cloneModel=True)        
         out1 = StringIO()
@@ -466,7 +466,7 @@ class TestSensitivityToolbox(unittest.TestCase):
         m_orig.perturbed_a = Param(initialize=-0.25)
         m_orig.perturbed_H = Param(initialize=0.55)
 
-        m_kaug = sensitivity_calculation('kaug',m_orig,[m_orig.a,m_orig.H],
+        m_kaug = sensitivity_calculation('k_aug',m_orig,[m_orig.a,m_orig.H],
                                [m_orig.perturbed_a,m_orig.perturbed_H],
                                 cloneModel=True)
 
@@ -579,7 +579,7 @@ class TestSensitivityToolbox(unittest.TestCase):
         m_orig.perturbed_a = Param(initialize=-0.25)
         m_orig.perturbed_H = Param(initialize=0.55)
 
-        m_kaug = sensitivity_calculation('kaug',m_orig,[m_orig.a,m_orig.H],
+        m_kaug = sensitivity_calculation('k_aug',m_orig,[m_orig.a,m_orig.H],
                              [m_orig.perturbed_a,m_orig.perturbed_H],
                              cloneModel=False)
 
@@ -684,7 +684,7 @@ class TestSensitivityToolbox(unittest.TestCase):
 
         m.aaDelta = Param(initialize =0.0001001)
 
-        m_kaug = sensitivity_calculation('kaug',m, [m.eps,m.qq,m.aa],
+        m_kaug = sensitivity_calculation('k_aug',m, [m.eps,m.qq,m.aa],
                          [m.epsDelta,m.qqDelta,m.aaDelta])
 
         # Make sure Param constraints have the correct form, i.e.
@@ -725,7 +725,7 @@ class TestSensitivityToolbox(unittest.TestCase):
 #        m.pert_b = Param(initialize=1.01)
 #
 #        with self.assertRaises(Exception) as context:
-#            m_kaug = sensitivity_calculation('kaug',m,[m.a,m.b], [m.pert_a,m.pert_b])
+#            m_kaug = sensitivity_calculation('k_aug',m,[m.a,m.b], [m.pert_a,m.pert_b])
 #        self.assertTrue('kaug does not support inequality constraints.'
 #                in str(context.exception))
 

@@ -48,13 +48,13 @@ def sipopt(instance, paramSubList, perturbList,
     return m
 
 @deprecated("The kaug function has been deprecated. Use the sensitivity_calculation() "
-            "function with method='kaug' to access this functionality.", 
+            "function with method='k_aug' to access this functionality.", 
             logger='pyomo.contrib.sensitivity_toolbox',
             version='TBD')
 def kaug(instance, paramSubList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None,
          streamSoln=False):
-    m = sensitivity_calculation('kaug', instance, paramSubList, perturbList,
+    m = sensitivity_calculation('k_aug', instance, paramSubList, perturbList,
          cloneModel, tee, keepfiles, solver_options)
 
     return m
@@ -143,7 +143,7 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
         - ``model.sol_state_1_z_L``: the updated lower bound
         - ``model.sol_state_1_z_U``: the updated upper bound
         
-        if method == 'k_sug', 
+        if method == 'k_aug', 
         the model modified for use with k_aug. The model includes 
         approximate solution with the new parameter values.    
     """
@@ -153,8 +153,11 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
 
     m = sens.model_instance
 
-    if method == 'kaug':
-        kaug = SolverFactory('k_aug', solver_io='nl')
+    if method is not 'k_aug' and method is not 'sipopt':
+        raise ValueError("Only methods 'k_aug' and 'sipopt' are supported'")
+
+    if method == 'k_aug':
+        k_aug = SolverFactory('k_aug', solver_io='nl')
         dotsens = SolverFactory('dot_sens', solver_io='nl')
         ipopt = SolverFactory('ipopt', solver_io='nl')
 
@@ -162,8 +165,8 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
         m.ipopt_zL_in.update(m.ipopt_zL_out)  #: important!
         m.ipopt_zU_in.update(m.ipopt_zU_out)  #: important!    
 
-        kaug.options['dsdp_mode'] = ""  #: sensitivity mode!
-        kaug.solve(m, tee=tee)
+        k_aug.options['dsdp_mode'] = ""  #: sensitivity mode!
+        k_aug.solve(m, tee=tee)
         m.write('col_row.nl', format='nl', io_options={'symbolic_solver_labels':True})
 
     sens.perturb_parameters(perturbList)
@@ -175,7 +178,7 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
         # Send the model to the ipopt_sens and collect the solution
         results = ipopt_sens.solve(m, keepfiles=keepfiles, tee=tee)
 
-    elif method == 'kaug':
+    elif method == 'k_aug':
         dotsens.options["dsdp_mode"] = ""
         dotsens.solve(m, tee=tee)
         try:
@@ -253,7 +256,7 @@ def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=Non
         original_Param.append(original_param_object)
         perturbed_Param.append(perturbed_param_object)
         kk = kk + 1
-    m_kaug_dsdp = sensitivity_calculation('kaug',m,original_Param,perturbed_Param, tee)
+    m_k_aug_dsdp = sensitivity_calculation('k_aug',m,original_Param,perturbed_Param, tee)
 
     try:
         with open ("./dsdp/col_row.col", "r") as myfile:
@@ -321,7 +324,7 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     Raises
     ------
     RuntimeError
-        When ipopt or kaug or dotsens is not available
+        When ipopt or k_aug or dotsens is not available
     Exception
         When ipopt fails 
     """
@@ -329,11 +332,11 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     ipopt = SolverFactory('ipopt',solver_io='nl')
     if solver_options is not None:
         ipopt.options = solver_options
-    kaug = SolverFactory('k_aug',solver_io='nl')
+    k_aug = SolverFactory('k_aug',solver_io='nl')
     dotsens = SolverFactory('dot_sens',solver_io='nl')
     if not ipopt.available(False):
         raise RuntimeError('ipopt is not available')
-    if not kaug.available(False):
+    if not k_aug.available(False):
         raise RuntimeError('k_aug is not available')
     if not dotsens.available(False):
         raise RuntimeError('dotsens is not available')
@@ -344,7 +347,7 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     # K_AUG SUFFIXES
     model.dof_v = Suffix(direction=Suffix.EXPORT)  #: SUFFIX FOR K_AUG
     model.rh_name = Suffix(direction=Suffix.IMPORT)  #: SUFFIX FOR K_AUG AS WELL
-    kaug.options["print_kkt"] = ""
+    k_aug.options["print_kkt"] = ""
     results = ipopt.solve(model,tee=tee)
 
     # Rasie Exception if ipopt fails 
@@ -356,7 +359,7 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     model.ipopt_zL_in.update(model.ipopt_zL_out)
     model.ipopt_zU_in.update(model.ipopt_zU_out)
     #: run k_aug
-    kaug.solve(model, tee=tee)  #: always call k_aug AFTER ipopt.
+    k_aug.solve(model, tee=tee)  #: always call k_aug AFTER ipopt.
     model.write('col_row.nl', format='nl', io_options={'symbolic_solver_labels':True})
     # get the column numbers of theta
     line_dic = {}
