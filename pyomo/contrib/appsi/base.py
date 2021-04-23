@@ -1111,7 +1111,10 @@ class LegacySolverInterface(object):
         else:
             legacy_results.problem.upper_bound = results.best_objective_bound
             legacy_results.problem.lower_bound = results.best_feasible_objective
-        legacy_soln.gap = abs(results.best_feasible_objective - results.best_objective_bound)
+        if results.best_feasible_objective is not None and results.best_objective_bound is not None:
+            legacy_soln.gap = abs(results.best_feasible_objective - results.best_objective_bound)
+        else:
+            legacy_soln.gap = None
 
         symbol_map = SymbolMap()
         symbol_map.byObject = dict(self.symbol_map.byObject)
@@ -1120,11 +1123,6 @@ class LegacySolverInterface(object):
         symbol_map.default_labeler = self.symbol_map.default_labeler
         model.solutions.add_symbol_map(symbol_map)
         legacy_results._smap_id = id(symbol_map)
-
-        legacy_results.problem.number_of_variables = len(results.solution_loader.get_primals())
-        legacy_results.problem.number_of_constraints = len(symbol_map.bySymbol) - legacy_results.problem.number_of_variables
-        if id(obj) in symbol_map.byObject:
-            legacy_results.problem.number_of_constraints -= 1
 
         delete_legacy_soln = True
         if load_solutions:

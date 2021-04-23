@@ -737,6 +737,8 @@ class Gurobi(PersistentBase, PersistentSolver):
                     results.best_objective_bound = -math.inf
                 else:
                     results.best_objective_bound = math.inf
+            if results.best_feasible_objective is not None and not math.isfinite(results.best_feasible_objective):
+                results.best_feasible_objective = None
 
         timer.start('load solution')
         if config.load_solution:
