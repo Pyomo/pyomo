@@ -22,6 +22,7 @@ from pyomo.environ import (ConcreteModel, Param, Var, Objective, Constraint,
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.simulator import Simulator
 from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation
+from pyomo.common.dependencies.matplotlib import pyplot as plt
 
 def create_model():
     m = ConcreteModel()
@@ -73,8 +74,6 @@ def initialize_model(m,nfe):
 
 
 def plot_optimal_solution(m):
-    import matplotlib.pyplot as plt
-
     SolverFactory('ipopt').solve(m, tee=True)
 
     x=[]

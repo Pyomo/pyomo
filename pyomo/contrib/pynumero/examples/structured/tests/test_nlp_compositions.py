@@ -131,9 +131,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
             scenario_name = "s{}".format(i)
             cls.scenarios[scenario_name] = nlp
 
-            cvars = list()
-            for k in cls.complicated_vars_ids:
-                cvars.append(nlp.variable_idx(instance.z[k]))
+            cvars = nlp.get_primal_indices([
+                instance.z[k] for k in cls.complicated_vars_ids])
             cls.coupling_vars[scenario_name] = cvars
 
         cls.nlp = TwoStageStochasticNLP(cls.scenarios, cls.coupling_vars)
@@ -148,9 +147,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
             nlp = PyomoNLP(instance)
             scenario_name = "s{}".format(i)
             cls.scenarios2[scenario_name] = nlp
-            cvars = []
-            for k in cls.complicated_vars_ids2:
-                cvars.append(nlp.variable_idx(instance.x[k]))
+            cvars = nlp.get_primal_indices([
+                instance.x[k] for k in cls.complicated_vars_ids2])
             cls.coupling_vars2[scenario_name] = cvars
 
         cls.nlp2 = TwoStageStochasticNLP(cls.scenarios2, cls.coupling_vars2)

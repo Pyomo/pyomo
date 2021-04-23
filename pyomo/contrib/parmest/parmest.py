@@ -597,7 +597,7 @@ class Estimator(object):
                     vals = {}
                     for var in return_values:
                         exp_i_var = exp_i.find_component(str(var))
-                        temp = [pyo.value(_) for _ in exp_i_var.itervalues()]
+                        temp = [pyo.value(_) for _ in exp_i_var.values()]
                         if len(temp) == 1:
                             vals[var] = temp[0]
                         else:
