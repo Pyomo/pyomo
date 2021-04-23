@@ -315,6 +315,8 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
         If no constraint exists, return []
     col: list
         list of variable names
+    line_dic: dict
+        column numbers of the theta_names in the model. Index starts from 1
 
     Raises
     ------
@@ -398,10 +400,10 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     shutil.move("col_row.col", "./GJH/")
     shutil.move("col_row.row", "./GJH/")
     shutil.rmtree('GJH', ignore_errors=True)
-    return gradient_f, gradient_c, col
+    return gradient_f, gradient_c, col,line_dic
 
 def line_num(file_name, target):
-    """This function returns the line number contains 'target' in the file_name.
+    """This function returns the line inumber contains 'target' in the file_name.
     This function identities constraints that have variables in theta_names.
 
     Parameters
