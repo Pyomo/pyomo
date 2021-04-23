@@ -228,13 +228,12 @@ def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=Non
 
     Returns
     -------
-    dsdp_dic: dict
-        gradient vector of the (decision variables, parameters) with respect to paramerters (=theta_name).
-        e.g) dict = {'d(x1)/d(p1)', 'd(x2)/d(p1)', 'd(p1)/d(p1)', 'd(p2)/d(p1)', 'd(x3)/d(p1)', 
-                     'd(x1)/d(p2)', 'd(x2)/d(p2)', 'd(p1)/d(p2)', 'd(p2)/d(p2)', 'd(x3)/d(p2)'},
+    dsdp: numpy.ndarray
+        Gradient vector of the (decision variables, parameters) with respect to paramerters (=theta_name).
+        number of rows = len(theta_name)
+        number of columns= len(col)
     col: list
-        list of variable names
-        e.g) col = ['x1', 'x2', 'p1', 'p2', 'x3'].
+        List of variable names
     """
     m = model.clone()
     original_Param = []
@@ -262,20 +261,21 @@ def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=Non
         dsdp = np.loadtxt("./dsdp/dsdp_in_.in")
     except Exception as e:
         print('File not found.')
-
     dsdp = dsdp.reshape((len(theta_names), int(len(dsdp)/len(theta_names))))
     dsdp = dsdp[:len(theta_names), :len(col)]
+    '''
     dsdp_dic = {}
     for i in range(len(theta_names)):
         for j in range(len(col)):
             if SensitivityInterface.get_default_block_name() not in col[j]:
                 dsdp_dic["d("+col[j] +")/d("+theta_names[i]+")"] =  -dsdp[i, j]
+    '''
     try:
         shutil.rmtree('dsdp', ignore_errors=True)
     except OSError:
         pass
     col = [i for i in col if SensitivityInterface.get_default_block_name() not in i]
-    return dsdp_dic, col
+    return dsdp, col
 
 def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     """This function calculates gradient vector of the objective function 
@@ -309,19 +309,12 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     -------
     gradient_f: numpy.ndarray
         gradient vector of the objective function with respect to the (decision variables, parameters) at the optimal solution
-    gradient_f_dic: dic
-        gradient_f with variable name as key 
-        e.g) dic = {'d(f)/d(x1)': 10.0, 'd(f)/d(x2)': 50.0, 'd(f)/d(p1)': 15.0, 'd(f)/d(p2)': 35.0}
-    gradient_c: numpy.ndarray
+    gradient_c: numpy.ndarray 
         gradient vector of the constraints with respect to the (decision variables, parameters) at the optimal solution
-        Each row contains column number, row number, and value
+        Each row contains [column number, row number, and value], colum order follows variable order in col
         If no constraint exists, return []
-    gradient_c: dic
-        gradient_c with constraint number and variable name as key 
-        e.g) dic = {'d(c1)/d(x1)': 1.0, 'd(c1)/d(p1)': -1.0, 'd(c2)/d(x2)': 1.0, 'd(c2)/d(p2)': -1.0}
-        Only non-zero gradients are included.
-    line_dic: dict
-        column numbers of the theta_names in the model. Index starts from 1
+    col: list
+        list of variable names
 
     Raises
     ------
@@ -375,9 +368,11 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     except Exception as e:
         print('File not found.')
         raise e
+    '''
     gradient_f_dic = {}
     for i in range(len(col)):
         gradient_f_dic["d(f)/d("+col[i]+")"] = gradient_f[i]
+    '''
     # load gradient of all constraints (sparse)
     # If no constraint exists, return []
     num_constraints = len(list(model.component_data_objects(Constraint,
@@ -389,10 +384,12 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
         except Exception as e:
             print('./GJH/A_print.txt not found.')
         gradient_c = np.array([i for i in gradient_c if not np.isclose(i[2],0)])
+        '''
         row_number, col_number = np.shape(gradient_c)
         gradient_c_dic = {}
         for i in range(row_number):
             gradient_c_dic["d(c"+ str(int(gradient_c[i,1]))+")/d("+col[int(gradient_c[i,0]-1)]+")"] = gradient_c[i,2]
+        '''
     else:
         gradient_c = np.array([])
         gradient_c_dic = {}
@@ -401,7 +398,7 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     shutil.move("col_row.col", "./GJH/")
     shutil.move("col_row.row", "./GJH/")
     shutil.rmtree('GJH', ignore_errors=True)
-    return gradient_f,gradient_f_dic, gradient_c,gradient_c_dic, line_dic
+    return gradient_f, gradient_c, col
 
 def line_num(file_name, target):
     """This function returns the line number contains 'target' in the file_name.

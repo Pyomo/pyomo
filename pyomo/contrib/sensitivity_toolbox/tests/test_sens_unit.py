@@ -693,15 +693,11 @@ class TestSensitivityInterface(unittest.TestCase):
         for v in variable_name:
             getattr(m, v).setlb(theta[v])
             getattr(m, v).setub(theta[v])
-        dsdp_dic, col = get_dsdp(m, variable_name, theta)
-        np.testing.assert_almost_equal(dsdp_dic['d(x1)/d(p1)'], 1.0)
-        np.testing.assert_almost_equal(dsdp_dic['d(x2)/d(p1)'], 0.0)
-        np.testing.assert_almost_equal(dsdp_dic['d(p1)/d(p1)'], 1.0)
-        np.testing.assert_almost_equal(dsdp_dic['d(p2)/d(p1)'], 0.0)
-        np.testing.assert_almost_equal(dsdp_dic['d(x1)/d(p2)'], 0.0)
-        np.testing.assert_almost_equal(dsdp_dic['d(x2)/d(p2)'], 1.0)
-        np.testing.assert_almost_equal(dsdp_dic['d(p1)/d(p2)'], 0.0)
-        np.testing.assert_almost_equal(dsdp_dic['d(p2)/d(p2)'], 1.0)
+        dsdp, col = get_dsdp(m, variable_name, theta)
+        np.testing.assert_almost_equal(dsdp,[[-1.,  0., -1.,  0., -1.,  0.],
+                                                 [ 0., -1.,  0., -1.,  0., -1.]])
+
+        assert col == ['x1', 'x2', 'p1', 'p2']
 
     @unittest.skipIf(not opt_ipopt.available(False), "ipopt is not available")
     def test_get_dsdp2(self):
@@ -720,11 +716,11 @@ class TestSensitivityInterface(unittest.TestCase):
         for v in variable_name:
             getattr(model_uncertain, v).setlb(theta[v])
             getattr(model_uncertain, v).setub(theta[v])
-        dsdp_dic, col =  get_dsdp(model_uncertain, variable_name, theta, {})
-        np.testing.assert_almost_equal( dsdp_dic['d(asymptote)/d(asymptote)'] , 1.0)
-        np.testing.assert_almost_equal( dsdp_dic['d(rate_constant)/d(asymptote)'] , 0.0)
-        np.testing.assert_almost_equal( dsdp_dic['d(asymptote)/d(rate_constant)'] , 0.0)
-        np.testing.assert_almost_equal( dsdp_dic['d(rate_constant)/d(rate_constant)'] , 1.0)
+        dsdp, col =  get_dsdp(model_uncertain, variable_name, theta, {})
+        np.testing.assert_almost_equal(dsdp , [[-1.,  0., -1.,  0.],
+                                               [ 0., -1.,  0., -1.]])
+        assert col == ['asymptote', 'rate_constant']
+
     
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available") 
@@ -752,19 +748,10 @@ class TestSensitivityInterface(unittest.TestCase):
         for v in variable_name:
             getattr(m, v).setlb(theta[v])
             getattr(m, v).setub(theta[v])
-        gradient_f,gradient_f_dic, gradient_c,gradient_c_dic, line_dic =  get_dfds_dcds(m, variable_name)
-        np.testing.assert_almost_equal( gradient_f_dic['d(f)/d(x1)'] , 10.0)
-        np.testing.assert_almost_equal( gradient_f_dic['d(f)/d(x2)'] , 50.0)
-        np.testing.assert_almost_equal( gradient_f_dic['d(f)/d(p1)'] , 15.0)
-        np.testing.assert_almost_equal( gradient_f_dic['d(f)/d(p2)'] , 35.0)
-        np.testing.assert_almost_equal( gradient_c_dic['d(c1)/d(x1)'] , 1.0)
-        np.testing.assert_almost_equal( gradient_c_dic['d(c1)/d(p1)'] , -1.0)
-        np.testing.assert_almost_equal( gradient_c_dic['d(c2)/d(x2)'] , 1.0)
-        np.testing.assert_almost_equal( gradient_c_dic['d(c2)/d(p2)'] , -1.0)
-        np.testing.assert_almost_equal( gradient_f , np.array([10., 50., 15., 35.]))
-        np.testing.assert_almost_equal( gradient_c , np.array([[ 1.,  1.,  1.],[ 3.,  1., -1.],[ 2.,  2.,  1.],[ 4.,  2., -1.]]))
-        np.testing.assert_almost_equal( line_dic['p1'] , 3)
-        np.testing.assert_almost_equal( line_dic['p2'] , 4)
+        gradient_f, gradient_c, col =  get_dfds_dcds(m, variable_name)
+        np.testing.assert_almost_equal( gradient_f, [10., 50., 15., 35.])
+        np.testing.assert_almost_equal( gradient_c ,)[[ 1.,  1.,  1.], [ 3.,  1., -1.], [ 2.,  2.,  1.], [ 4.,  2., -1.]]
+        assert col = ['x1', 'x2', 'p1', 'p2']
 
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")
@@ -784,12 +771,9 @@ class TestSensitivityInterface(unittest.TestCase):
             getattr(model_uncertain, v).setlb(theta[v])
             getattr(model_uncertain, v).setub(theta[v])
         gradient_f,gradient_f_dic, gradient_c,gradient_c_dic, line_dic =  get_dfds_dcds(model_uncertain, variable_name)
-        np.testing.assert_almost_equal( gradient_f_dic['d(f)/d(asymptote)'] , 0.99506259)
-        np.testing.assert_almost_equal( gradient_f_dic['d(f)/d(rate_constant)'] , 0.945148)
-        np.testing.assert_almost_equal( gradient_f , np.array([0.99506259, 0.945148]))
+        np.testing.assert_almost_equal( gradient_f , [0.99506259, 0.945148])
         np.testing.assert_almost_equal( gradient_c , np.array([]))
-        np.testing.assert_almost_equal( line_dic['asymptote'] , 1)
-        np.testing.assert_almost_equal( line_dic['rate_constant'] , 2)
+        assert col = ['asymptote', 'rate_constant']
 
     def test_line_num1(self):
         '''
@@ -805,7 +789,7 @@ class TestSensitivityInterface(unittest.TestCase):
         self.assertEqual(i, 1)
         self.assertEqual(j, 2)
 
-    def test_line_num1(self):
+    def test_line_num2(self):
         '''
         It tests an exception error when file does not include target
         '''
