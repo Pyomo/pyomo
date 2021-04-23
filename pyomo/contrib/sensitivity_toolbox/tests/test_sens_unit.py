@@ -751,7 +751,7 @@ class TestSensitivityInterface(unittest.TestCase):
         gradient_f, gradient_c, col =  get_dfds_dcds(m, variable_name)
         np.testing.assert_almost_equal( gradient_f, [10., 50., 15., 35.])
         np.testing.assert_almost_equal( gradient_c ,)[[ 1.,  1.,  1.], [ 3.,  1., -1.], [ 2.,  2.,  1.], [ 4.,  2., -1.]]
-        assert col = ['x1', 'x2', 'p1', 'p2']
+        assert col == ['x1', 'x2', 'p1', 'p2']
 
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")
@@ -773,7 +773,7 @@ class TestSensitivityInterface(unittest.TestCase):
         gradient_f,gradient_f_dic, gradient_c,gradient_c_dic, line_dic =  get_dfds_dcds(model_uncertain, variable_name)
         np.testing.assert_almost_equal( gradient_f , [0.99506259, 0.945148])
         np.testing.assert_almost_equal( gradient_c , np.array([]))
-        assert col = ['asymptote', 'rate_constant']
+        assert col == ['asymptote', 'rate_constant']
 
     def test_line_num1(self):
         '''
