@@ -11,6 +11,7 @@
 import pyomo.common.unittest as unittest
 from pyomo.common.tee import capture_output
 
+import gc
 from io import StringIO
 import sys
 import time
@@ -21,6 +22,14 @@ from pyomo.common.timing import (ConstructionTimer, report_timing,
 from pyomo.environ import ConcreteModel, RangeSet, Var, TransformationFactory
 
 class TestTiming(unittest.TestCase):
+    def setUp(self):
+        self.reenable_gc = gc.isenabled()
+        gc.disable()
+
+    def tearDown(self):
+        if self.reenable_gc:
+            gc.enable()
+
     def test_raw_construction_timer(self):
         a = ConstructionTimer(None)
         self.assertIn(
@@ -86,9 +95,9 @@ class TestTiming(unittest.TestCase):
 
     def test_TicTocTimer_tictoc(self):
         SLEEP = 0.1
-        RES = 0.02 # resolution (seconds): 1/5 the sleep
-        timer = TicTocTimer()
+        RES = 0.01 # resolution (seconds): 1/10 the sleep
         abs_time = time.time()
+        timer = TicTocTimer()
 
         time.sleep(SLEEP)
 
@@ -107,28 +116,31 @@ class TestTiming(unittest.TestCase):
 
         time.sleep(SLEEP)
 
+        ref = time.time()
         with capture_output() as out:
             delta = timer.toc()
-        self.assertAlmostEqual(time.time() - start_time, delta, delta=RES)
+        self.assertAlmostEqual(ref - start_time, delta, delta=RES)
         self.assertAlmostEqual(0, timer.toc(None), delta=RES)
         self.assertRegex(
             out.getvalue(),
             r'\[\+   [.0-9]+\] .* in test_TicTocTimer_tictoc'
         )
+        ref = time.time()
         with capture_output() as out:
             total = timer.toc(delta=False)
-        self.assertAlmostEqual(time.time() - abs_time, total, delta=RES)
+        self.assertAlmostEqual(ref - abs_time, total, delta=RES)
         self.assertRegex(
             out.getvalue(),
             r'\[    [.0-9]+\] .* in test_TicTocTimer_tictoc'
         )
 
-        ref = 0
-        ref -= time.time()
+        ref *= -1
         time.sleep(SLEEP)
-        timer.stop()
+
         ref += time.time()
+        timer.stop()
         cumul_stop1 = timer.toc(None)
+        self.assertAlmostEqual(ref, cumul_stop1, delta=RES)
         with self.assertRaisesRegex(
                 RuntimeError,
                 'Stopping a TicTocTimer that was already stopped'):
@@ -136,19 +148,20 @@ class TestTiming(unittest.TestCase):
         time.sleep(SLEEP)
         cumul_stop2 = timer.toc(None)
         self.assertEqual(cumul_stop1, cumul_stop2)
-        timer.start()
+
         ref -= time.time()
+        timer.start()
         time.sleep(SLEEP)
 
-        # Note: pypy on GHA frequently has timing differences of >0.05s
-        # for the following tests
-        if 'pypy_version_info' in dir(sys):
-            RES = 6.5e-2
+        # Note: pypy and osx (py3.8) on GHA occasionally have timing
+        # differences of >0.01s for the following tests
+        if 'pypy_version_info' in dir(sys) or sys.platform == 'darwin':
+            RES *= 2
 
         with capture_output() as out:
-            delta = timer.toc()
-            timer.stop()
             ref += time.time()
+            timer.stop()
+            delta = timer.toc()
         self.assertAlmostEqual(ref, delta, delta=RES)
         #self.assertAlmostEqual(0, timer.toc(None), delta=RES)
         self.assertRegex(
@@ -165,7 +178,7 @@ class TestTiming(unittest.TestCase):
         )
 
     def test_HierarchicalTimer(self):
-        RES = 1e-2 # resolution (seconds)
+        RES = 0.01 # resolution (seconds)
 
         timer = HierarchicalTimer()
         start_time = time.time()

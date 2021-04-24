@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import StringIO, iteritems
+from io import StringIO
 import shlex
 from tempfile import mkdtemp
 import os, sys, math, logging, shutil, time, subprocess
@@ -486,7 +486,7 @@ class GAMSDirect(_GAMSSolver):
         soln.gap = abs(results.problem.upper_bound \
                        - results.problem.lower_bound)
 
-        for sym, ref in iteritems(symbolMap.bySymbol):
+        for sym, ref in symbolMap.bySymbol.items():
             obj = ref()
             if isinstance(model, IBlock):
                 # Kernel variables have no 'parent_component'
@@ -1007,7 +1007,7 @@ class GAMSShell(_GAMSSolver):
                        - results.problem.lower_bound)
 
         has_rc_info = True
-        for sym, ref in iteritems(symbolMap.bySymbol):
+        for sym, ref in symbolMap.bySymbol.items():
             obj = ref()
             if isinstance(model, IBlock):
                 # Kernel variables have no 'parent_component'

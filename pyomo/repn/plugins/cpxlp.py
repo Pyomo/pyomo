@@ -14,8 +14,6 @@
 
 import logging
 
-from six import iteritems
-
 from pyomo.common.gc_manager import PauseGC
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter, WriterFactory
@@ -129,7 +127,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         if len(io_options):
             raise ValueError(
                 "ProblemWriter_cpxlp passed unrecognized io_options:\n\t" +
-                "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(io_options)))
+                "\n\t".join("%s = %s" % (k,v) for k,v in io_options.items()))
 
         if symbolic_solver_labels and (labeler is not None):
             raise ValueError("ProblemWriter_cpxlp: Using both the "

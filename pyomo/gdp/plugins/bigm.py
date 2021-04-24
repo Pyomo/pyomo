@@ -272,7 +272,7 @@ class BigM_Transformation(Transformation):
                         warning_msg += "\t%s\n" % component.name
                     else:
                         warning_msg += "\t%s\n" % component
-                logger.warn(warning_msg)
+                logger.warning(warning_msg)
 
     def _add_transformation_block(self, instance):
         # make a transformation block on instance to put transformed disjuncts

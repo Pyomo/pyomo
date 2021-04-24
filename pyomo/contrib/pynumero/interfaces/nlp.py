@@ -7,7 +7,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-"""The pyomo.contrib.pynumero.interfaces.nlp module includes abstract
+r"""The pyomo.contrib.pynumero.interfaces.nlp module includes abstract
 classes to represent nonlinear programming problems. There are two
 classes that provide different representations for the NLP.
 

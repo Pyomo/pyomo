@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 from pyomo.contrib.pynumero.interfaces.nlp import NLP
-from pyomo.contrib.pynumero.sparse import empty_matrix
 
 from scipy.sparse import coo_matrix, csr_matrix
 import pyomo.environ as pyo
@@ -605,7 +604,7 @@ class AugmentedLagrangianNLP(NLP):
         The jacobian of the equality contraints in a coo_matrix format
 
         """
-        return empty_matrix(0, self.nx)
+        return coo_matrix((0, self.nx))
 
     def jacobian_d(self, x, out=None, **kwargs):
 

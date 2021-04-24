@@ -8,4 +8,6 @@ or rely on any other parts of Pyomo.
 .. toctree::
    :maxdepth: 1
 
+   config.rst
+   dependencies.rst
    timing.rst

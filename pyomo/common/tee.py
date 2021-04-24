@@ -24,7 +24,7 @@ import time
 from io import StringIO
 
 _mswindows = sys.platform.startswith('win')
-_poll_interval = 0.1
+_poll_interval = 0.0001
 try:
     if _mswindows:
         from msvcrt import get_osfhandle
@@ -244,15 +244,15 @@ class TeeStream(object):
             h.close()
 
         # Join all stream processing threads
-        join_iter = 1
+        _poll = _poll_interval
         while True:
             for th in self._threads:
-                th.join(_poll_interval*join_iter)
+                th.join(_poll)
             self._threads[:] = [th for th in self._threads if th.is_alive()]
             if not self._threads:
                 break
-            join_iter += 1
-            if join_iter == 10:
+            _poll *= 2
+            if _poll >= 2:  # bail after a total of 2 seconds * #threads
                 if in_exception:
                     # We are already processing an exception: no reason
                     # to trigger another
@@ -310,9 +310,20 @@ class TeeStream(object):
     def _mergedReader(self):
         noop = []
         handles = self._handles
+        _poll = _poll_interval
+        _fast_poll_ct = 10
+        new_data = '' # something not None
         while handles:
-            if _mswindows:
+            if new_data is None:
+                if _fast_poll_ct:
+                    _fast_poll_ct -= 1
+                    if not _fast_poll_ct:
+                        _poll *= 10
+                        if _poll < 0.095:
+                            _fast_poll_ct = 10
+            else:
                 new_data = None
+            if _mswindows:
                 for handle in list(handles):
                     try:
                         pipe = get_osfhandle(handle.read_pipe)
@@ -328,7 +339,7 @@ class TeeStream(object):
                 if new_data is None:
                     # PeekNamedPipe is non-blocking; to avoid swamping
                     # the core, sleep for a "short" amount of time
-                    time.sleep(_poll_interval)
+                    time.sleep(_poll)
                     continue
             else:
                 # Because we could be *adding* handles to the TeeStream
@@ -339,8 +350,9 @@ class TeeStream(object):
                 # deadlocks when handles are added while select() is
                 # waiting
                 ready_handles = select(
-                    list(handles), noop, noop, _poll_interval)[0]
+                    list(handles), noop, noop, _poll)[0]
                 if not ready_handles:
+                    new_data = None
                     continue
 
                 handle = ready_handles[0]

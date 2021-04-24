@@ -202,7 +202,7 @@ class LabelerTests(unittest.TestCase):
         lbl = ShortNameLabeler(4, '_', caseInsensitive=True)
         for i in range(9):
             self.assertEqual(lbl(m.mycomp), 'p_%d_' % (i+1))
-        with self.assertRaisesRegexp(RuntimeError, "Too many identifiers"):
+        with self.assertRaisesRegex(RuntimeError, "Too many identifiers"):
             lbl(m.mycomp)
 
     def test_shortnamelabeler_legal_regex(self):

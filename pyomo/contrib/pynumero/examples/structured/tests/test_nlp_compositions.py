@@ -12,7 +12,7 @@ import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 import os
 from pyomo.contrib.pynumero.dependencies import (
-    numpy as np, numpy_available, scipy_sparse, scipy_available
+    numpy as np, numpy_available, scipy, scipy_available
 )
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
@@ -21,7 +21,7 @@ from pyomo.contrib.pynumero.interfaces.nlp import NLP
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.examples.structured.nlp_compositions import TwoStageStochasticNLP
 from pyomo.contrib.pynumero.sparse import BlockVector, BlockMatrix
-from scipy_sparse import coo_matrix, identity
+from scipy.sparse import coo_matrix, identity
 if not AmplInterface.available():
     raise unittest.SkipTest(
         "Pynumero needs the ASL extension to run NLP tests")
@@ -131,9 +131,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
             scenario_name = "s{}".format(i)
             cls.scenarios[scenario_name] = nlp
 
-            cvars = list()
-            for k in cls.complicated_vars_ids:
-                cvars.append(nlp.variable_idx(instance.z[k]))
+            cvars = nlp.get_primal_indices([
+                instance.z[k] for k in cls.complicated_vars_ids])
             cls.coupling_vars[scenario_name] = cvars
 
         cls.nlp = TwoStageStochasticNLP(cls.scenarios, cls.coupling_vars)
@@ -148,9 +147,8 @@ class TestTwoStageStochasticNLP(unittest.TestCase):
             nlp = PyomoNLP(instance)
             scenario_name = "s{}".format(i)
             cls.scenarios2[scenario_name] = nlp
-            cvars = []
-            for k in cls.complicated_vars_ids2:
-                cvars.append(nlp.variable_idx(instance.x[k]))
+            cvars = nlp.get_primal_indices([
+                instance.x[k] for k in cls.complicated_vars_ids2])
             cls.coupling_vars2[scenario_name] = cvars
 
         cls.nlp2 = TwoStageStochasticNLP(cls.scenarios2, cls.coupling_vars2)

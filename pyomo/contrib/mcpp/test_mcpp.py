@@ -16,7 +16,7 @@ from io import StringIO
 
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
-from pyomo.common.dependencies import matplotlib
+from pyomo.common.dependencies.matplotlib import pyplot as plt
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, mcpp_available, MCPP_Error
 from pyomo.core import (
     ConcreteModel, Expression, Var, acos, asin, atan, cos, exp, quicksum, sin,
@@ -31,7 +31,7 @@ class TestMcCormick(unittest.TestCase):
     def test_outofbounds(self):
         m = ConcreteModel()
         m.x = Var(bounds=(-1, 5), initialize=2)
-        with self.assertRaisesRegexp(MCPP_Error, '.*Log with negative values in range'):
+        with self.assertRaisesRegex(MCPP_Error, '.*Log with negative values in range'):
             mc(log(m.x))
 
     def test_mc_2d(self):
@@ -164,7 +164,7 @@ class TestMcCormick(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 2), initialize=1)
         m.y = Var(bounds=(1e-4, 2), initialize=1)
-        with self.assertRaisesRegexp(MCPP_Error, "Log with negative values in range"):
+        with self.assertRaisesRegex(MCPP_Error, "Log with negative values in range"):
             mc(m.x ** 1.5)
         mc_expr = mc(m.y ** 1.5)
         self.assertAlmostEqual(mc_expr.lower(), 1e-4**1.5)
@@ -202,7 +202,6 @@ def make2dPlot(expr, numticks=10, show_plot=False):
         mc_cvVals[i] = mc_expr.convex()
         fvals[i] = value(expr)
     if show_plot:
-        plt = matplotlib.pyplot
         plt.plot(xaxis, fvals, 'r', xaxis, mc_ccVals, 'b--', xaxis,
                  mc_cvVals, 'b--', xaxis, aff_cc, 'k|', xaxis, aff_cv, 'k|')
         plt.show()
@@ -253,7 +252,6 @@ def make3dPlot(expr, numticks=30, show_plot=False):
             fvals[i + (numticks + 1) * j] = value(expr)
 
     if show_plot:
-        plt = matplotlib.pyplot
         from mpl_toolkits.mplot3d import Axes3D
         assert Axes3D  # silence pyflakes
 
