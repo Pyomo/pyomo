@@ -215,7 +215,7 @@ def filter(line):
                    'function calls',
                    'List reduced',
                    '.py:',
-                   'posix.waitpid'):
+                   'built-in method'):
         if field in line:
             return True
     return False
