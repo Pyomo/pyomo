@@ -16,7 +16,7 @@
 #          will not solve if sent to a real optimizer.
 #
 
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, Var, Param, Objective, Constraint, inequality
 from pyomo.core.expr.current import Expr_if
 
 

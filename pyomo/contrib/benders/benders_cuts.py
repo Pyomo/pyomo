@@ -1,5 +1,15 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from pyomo.core.base.block import _BlockData, declare_custom_block
-import pyomo.environ as pe
+import pyomo.environ as pyo
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentSet
@@ -103,35 +113,35 @@ def _setup_subproblem(b, master_vars, relax_subproblem_cons):
     # first get the objective and turn it into a constraint
     master_vars = ComponentSet(master_vars)
 
-    objs = list(b.component_data_objects(pe.Objective, descend_into=False, active=True))
+    objs = list(b.component_data_objects(pyo.Objective, descend_into=False, active=True))
     if len(objs) != 1:
         raise ValueError('Subproblem must have exactly one objective')
     orig_obj = objs[0]
     orig_obj_expr = orig_obj.expr
     b.del_component(orig_obj)
 
-    b._z = pe.Var(bounds=(0, None))
-    b.objective = pe.Objective(expr=b._z)
-    b.dual = pe.Suffix(direction=pe.Suffix.IMPORT)
-    b._eta = pe.Var()
+    b._z = pyo.Var(bounds=(0, None))
+    b.objective = pyo.Objective(expr=b._z)
+    b.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT)
+    b._eta = pyo.Var()
 
-    b.aux_cons = pe.ConstraintList()
-    for c in list(b.component_data_objects(pe.Constraint, descend_into=True, active=True, sort=True)):
+    b.aux_cons = pyo.ConstraintList()
+    for c in list(b.component_data_objects(pyo.Constraint, descend_into=True, active=True, sort=True)):
         if not relax_subproblem_cons:
             c_vars = ComponentSet(identify_variables(c.body, include_fixed=False))
             if not _any_common_elements(master_vars, c_vars):
                 continue
         if c.equality:
             body = c.body
-            rhs = pe.value(c.lower)
+            rhs = pyo.value(c.lower)
             body -= rhs
             b.aux_cons.add(body - b._z <= 0)
             b.aux_cons.add(-body - b._z <= 0)
             _del_con(c)
         else:
             body = c.body
-            lower = pe.value(c.lower)
-            upper = pe.value(c.upper)
+            lower = pyo.value(c.lower)
+            upper = pyo.value(c.upper)
             if upper is not None:
                 body_upper = body - upper - b._z
                 b.aux_cons.add(body_upper <= 0)
@@ -142,7 +152,7 @@ def _setup_subproblem(b, master_vars, relax_subproblem_cons):
                 b.aux_cons.add(body_lower <= 0)
             _del_con(c)
 
-    b.obj_con = pe.Constraint(expr=orig_obj_expr - b._eta - b._z <= 0)
+    b.obj_con = pyo.Constraint(expr=orig_obj_expr - b._eta - b._z <= 0)
 
 
 @declare_custom_block(name='BendersCutGenerator')
@@ -158,7 +168,7 @@ class BendersCutGeneratorData(_BlockData):
         self.subproblems = list()
         self.complicating_vars_maps = list()
         self.master_vars = list()
-        self.master_vars_indices = pe.ComponentMap()
+        self.master_vars_indices = pyo.ComponentMap()
         self.master_etas = list()
         self.cuts = None
         self.subproblem_solvers = list()
@@ -190,12 +200,12 @@ class BendersCutGeneratorData(_BlockData):
             self.comm = MPI.COMM_WORLD
         self.num_subproblems_by_rank = np.zeros(self.comm.Get_size())
         del self.cuts
-        self.cuts = pe.ConstraintList()
+        self.cuts = pyo.ConstraintList()
         self.subproblems = list()
         self.master_etas = list()
         self.complicating_vars_maps = list()
         self.master_vars = list(master_vars)
-        self.master_vars_indices = pe.ComponentMap()
+        self.master_vars_indices = pyo.ComponentMap()
         for i, v in enumerate(self.master_vars):
             self.master_vars_indices[v] = i
         self.tol = tol
@@ -216,7 +226,7 @@ class BendersCutGeneratorData(_BlockData):
             self._subproblem_ndx_map[len(self.subproblems) - 1] = self.global_num_subproblems() - 1
 
             if isinstance(subproblem_solver, str):
-                subproblem_solver = pe.SolverFactory(subproblem_solver)
+                subproblem_solver = pyo.SolverFactory(subproblem_solver)
             self.subproblem_solvers.append(subproblem_solver)
             if isinstance(subproblem_solver, PersistentSolver):
                 subproblem_solver.set_instance(subproblem)
@@ -233,15 +243,15 @@ class BendersCutGeneratorData(_BlockData):
             master_eta = self.master_etas[local_subproblem_ndx]
             coeff_ndx = global_subproblem_ndx * len(self.master_vars)
 
-            subproblem.fix_complicating_vars = pe.ConstraintList()
-            var_to_con_map = pe.ComponentMap()
+            subproblem.fix_complicating_vars = pyo.ConstraintList()
+            var_to_con_map = pyo.ComponentMap()
             for master_var in self.master_vars:
                 if master_var in complicating_vars_map:
                     sub_var = complicating_vars_map[master_var]
                     sub_var.value = master_var.value
                     new_con = subproblem.fix_complicating_vars.add(sub_var - master_var.value == 0)
                     var_to_con_map[master_var] = new_con
-            subproblem.fix_eta = pe.Constraint(expr=subproblem._eta - master_eta.value == 0)
+            subproblem.fix_eta = pyo.Constraint(expr=subproblem._eta - master_eta.value == 0)
             subproblem._eta.value = master_eta.value
 
             subproblem_solver = self.subproblem_solvers[local_subproblem_ndx]
@@ -254,22 +264,22 @@ class BendersCutGeneratorData(_BlockData):
                     subproblem_solver.add_constraint(c)
                 subproblem_solver.add_constraint(subproblem.fix_eta)
                 res = subproblem_solver.solve(tee=False, load_solutions=False, save_results=False)
-                if res.solver.termination_condition != pe.TerminationCondition.optimal:
+                if res.solver.termination_condition != pyo.TerminationCondition.optimal:
                     raise RuntimeError('Unable to generate cut because subproblem failed to converge.')
                 subproblem_solver.load_vars()
                 subproblem_solver.load_duals()
             else:
                 res = subproblem_solver.solve(subproblem, tee=False, load_solutions=False)
-                if res.solver.termination_condition != pe.TerminationCondition.optimal:
+                if res.solver.termination_condition != pyo.TerminationCondition.optimal:
                     raise RuntimeError('Unable to generate cut because subproblem failed to converge.')
                 subproblem.solutions.load_from(res)
 
-            constants[global_subproblem_ndx] = pe.value(subproblem._z)
-            eta_coeffs[global_subproblem_ndx] = sign_convention * pe.value(subproblem.dual[subproblem.obj_con])
+            constants[global_subproblem_ndx] = pyo.value(subproblem._z)
+            eta_coeffs[global_subproblem_ndx] = sign_convention * pyo.value(subproblem.dual[subproblem.obj_con])
             for master_var in self.master_vars:
                 if master_var in complicating_vars_map:
                     c = var_to_con_map[master_var]
-                    coefficients[coeff_ndx] = sign_convention * pe.value(subproblem.dual[c])
+                    coefficients[coeff_ndx] = sign_convention * pyo.value(subproblem.dual[c])
                 coeff_ndx += 1
 
             if isinstance(subproblem_solver, PersistentSolver):

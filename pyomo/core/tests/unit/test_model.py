@@ -14,7 +14,6 @@
 #
 
 import os
-import sys
 from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))
 import pickle
@@ -24,8 +23,8 @@ import pyutilib.services
 
 from pyomo.common.dependencies import yaml_available
 from pyomo.core.expr import current as EXPR
-from pyomo.environ import *
-from pyomo.opt import SolutionStatus, check_available_solvers
+from pyomo.environ import RangeSet, ConcreteModel, Var, Param, Block, AbstractModel, Set, Constraint, Objective, value, sum_product, SolverFactory, VarList, ObjectiveList, ConstraintList
+from pyomo.opt import check_available_solvers
 from pyomo.opt.parallel.local import SolverManager_Serial
 
 solvers = check_available_solvers('glpk')

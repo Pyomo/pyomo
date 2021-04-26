@@ -25,7 +25,6 @@ from pyomo.common.dependencies import (
     pandas as pd, pandas_available,
     scipy, scipy_available,
 )
-parmest_available = numpy_available & pandas_available & scipy_available
 
 import pyomo.environ as pyo
 ####import pyomo.pysp.util.rapper as st
@@ -36,8 +35,11 @@ from pyomo.environ import Block
 
 import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
-from pyomo.contrib.parmest.graphics import pairwise_plot, grouped_boxplot, grouped_violinplot, \
-    fit_rect_dist, fit_mvn_dist, fit_kde_dist
+from pyomo.contrib.parmest.graphics import (fit_rect_dist,
+                                            fit_mvn_dist,
+                                            fit_kde_dist)
+
+parmest_available = numpy_available & pandas_available & scipy_available
 
 __version__ = 0.3
 
@@ -45,10 +47,11 @@ if numpy_available and scipy_available:
     from pyomo.contrib.pynumero.asl import AmplInterface
     asl_available = AmplInterface.available()
 else:
-    asl_available=False
+    asl_available = False
 
 if asl_available:
     from pyomo.contrib.interior_point.inverse_reduced_hessian import inv_reduced_hessian_barrier
+
 
 
 #=============================================
@@ -59,11 +62,9 @@ def _object_from_string(instance, vstr):
         instance: a concrete pyomo model
         vstr: a particular Var or Param (e.g. "pp.Keq_a[2]")
     output:
-        the object 
-    NOTE: We need to deal with blocks 
-          and with indexes that might really be strings or ints.
-          There can be blocks within blocks and the Var might not be indexed...
-    TBD: do a better job with indexes (e.g., tuples of integers)
+        the object
+    NOTE: We need to deal with blocks
+          and with indexes that might really be strings or ints
     """
 
     def ni(s):
@@ -527,12 +528,11 @@ class Estimator(object):
             
             if len(return_values) > 0:
                 var_values = []
-                # assumes we solved using mpi-sppy
-                for exp_i in ef.component_objects(Block, descend_into=False):
+                for exp_i in self.ef_instance.component_objects(Block, descend_into=False):
                     vals = {}
                     for var in return_values:
                         exp_i_var = eval('exp_i.'+ str(var))
-                        temp = [_.value for _ in exp_i_var.itervalues()]
+                        temp = [pyo.value(_) for _ in exp_i_var.itervalues()]
                         if len(temp) == 1:
                             vals[var] = temp[0]
                         else:

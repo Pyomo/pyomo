@@ -1,6 +1,16 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 # This problem has a unique primal and dual solution.
 
-from pyomo.core import *
+from pyomo.core import ConcreteModel, Param, RangeSet, Var, NonNegativeReals, Objective, Constraint, Suffix, sum_product
 
 model = ConcreteModel()
 

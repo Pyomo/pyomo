@@ -14,7 +14,7 @@ import six
 import pyutilib.subprocess
 import pyutilib.common
 import pyomo.common
-from pyomo.opt.base import *
+from pyomo.opt.base import ProblemFormat, ConverterError
 from pyomo.opt.base.convert import ProblemConverterFactory
 
 

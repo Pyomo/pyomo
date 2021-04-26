@@ -12,7 +12,6 @@
 # Test transformations for bilevel linear programs
 #
 
-import sys
 import os
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
@@ -25,7 +24,7 @@ from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 import pyomo.opt
 import pyomo.scripting.pyomo_main as pyomo_main
 from pyomo.scripting.util import cleanup
-from pyomo.environ import *
+from pyomo.environ import TransformationFactory
 
 from six import iteritems
 

@@ -14,7 +14,6 @@
 # TestArrayCon                Class for testing array of constraint
 #
 
-import logging
 import sys
 import os
 from os.path import abspath, dirname
@@ -27,8 +26,6 @@ from pyomo.environ import ConcreteModel, AbstractModel, Var, Constraint, \
     simple_constraintlist_rule, simple_constraint_rule, inequality
 from pyomo.core.expr import logical_expr
 from pyomo.core.base.constraint import _GeneralConstraintData
-
-from six import StringIO
 
 
 class TestConstraintCreation(unittest.TestCase):

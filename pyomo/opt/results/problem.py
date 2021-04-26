@@ -11,7 +11,7 @@
 __all__ = ['ProblemInformation', 'ProblemSense']
 
 import enum
-from pyomo.opt.results.container import *
+from pyomo.opt.results.container import MapContainer
 
 class ProblemSense(str, enum.Enum):
     unknown='unknown'

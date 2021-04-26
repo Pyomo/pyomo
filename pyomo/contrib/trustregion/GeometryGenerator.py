@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import logging
 
 # This is an auto geometry generator for quadratic ROM
@@ -72,7 +82,7 @@ if __name__ == '__main__':
         print("   LX:    single number or range in the form nn:nn")
         print("   COUNT: number of random matricies to generate")
 
-    from os.path import abspath, dirname, exists, join
+    from os.path import abspath, dirname, join
     from inspect import getfile, currentframe
     CACHE_FILE = join(dirname(abspath(getfile(currentframe()))), 'cache.py')
     if not os.path.isfile (CACHE_FILE) or not os.access(CACHE_FILE, os.W_OK):

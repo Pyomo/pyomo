@@ -23,16 +23,16 @@ except:
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import (
     Any, Block, Constraint, Objective, Param, Var, SortComponents,
-    Transformation, TransformationFactory, value, TransformationFactory
+    Transformation, TransformationFactory, value
 )
 from pyomo.opt import SolverFactory
 
-from pyomo.gdp import Disjunct, Disjunction, GDP_Error
+from pyomo.gdp import Disjunct, GDP_Error
 from pyomo.gdp.util import (
-    verify_successful_solve, NORMAL, INFEASIBLE, NONOPTIMAL
+    verify_successful_solve, NORMAL
 )
 
-from six import iterkeys, itervalues
+from six import iterkeys
 
 import math
 import logging

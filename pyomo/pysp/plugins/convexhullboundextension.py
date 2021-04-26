@@ -14,7 +14,7 @@ import copy
 
 import pyomo.common.plugin
 from pyomo.opt import SolverFactory
-from pyomo.core import *
+from pyomo.core import ConcreteModel, Var, Reals, Param, Objective, ConstraintList, minimize
 from pyomo.pysp import phextension
 from pyomo.pysp.plugins.phboundextension import (_PHBoundBase,
                                                  ExtractInternalNodeSolutionsforInner)

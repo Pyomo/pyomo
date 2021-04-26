@@ -21,8 +21,7 @@
 
 # Modified for no optimization, and PETSc solver
 
-from pyomo.environ import *
-from pyomo.dae import *
+from pyomo.environ import ConcreteModel, Param, Var, Constraint, Suffix, SolverFactory
 
 m = ConcreteModel()
 m.tf = Param(initialize=1)

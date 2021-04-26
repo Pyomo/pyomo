@@ -8,20 +8,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import string_types
-
 import pyomo.core.expr.current as EXPR
-from pyomo.core.expr.numvalue import nonpyomo_leaf_types, native_numeric_types
 from pyomo.gdp import GDP_Error, Disjunction
 from pyomo.gdp.disjunct import _DisjunctData, Disjunct
-from copy import deepcopy
 
-from pyomo.core.base.component import _ComponentBase, ComponentUID
+from pyomo.core.base.component import _ComponentBase
+
 from pyomo.core import Block, TraversalStrategy
 from pyomo.opt import TerminationCondition, SolverStatus
-from pyomo.common.deprecation import deprecation_warning
 from six import iterkeys
-import sys
 from weakref import ref as weakref_ref
 import logging
 

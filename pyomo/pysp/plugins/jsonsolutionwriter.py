@@ -8,9 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.plugin import *
+from pyomo.common.plugin import SingletonPlugin, implements
 from pyomo.pysp import solutionwriter
-from pyomo.pysp.scenariotree import *
+from pyomo.pysp.scenariotree import ScenarioTree
 from pyomo.pysp.plugins.phhistoryextension \
     import extract_scenario_tree_structure, \
            extract_scenario_solutions, \
