@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 import logging
 
@@ -27,7 +27,7 @@ linear_solvers = pyomo.opt.check_available_solvers(
     'glpk','cbc','gurobi','cplex')
 
 import random
-from six import iteritems, StringIO
+from io import StringIO
 
 EPS = TransformationFactory('gdp.hull').CONFIG.EPS
 
@@ -234,7 +234,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m = models.makeTwoTermDisj_Nonlinear()
         m.disjunction.xor = False
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "Cannot do hull reformulation for Disjunction "
             "'disjunction' with OR constraint.  Must be an XOR!*",
@@ -339,7 +339,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             mappings[m.y] = disjBlock[i].disaggregatedVars.y
             mappings[m.x] = disjBlock[i].disaggregatedVars.x
 
-            for orig, disagg in iteritems(mappings):
+            for orig, disagg in mappings.items():
                 self.assertIs(hull.get_src_var(disagg), orig)
                 self.assertIs(hull.get_disaggregated_var(orig, m.d[i]), disagg)
 
@@ -359,7 +359,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             mappings[disjBlock[i].disaggregatedVars.w] = disjBlock[i].w_bounds
             mappings[disjBlock[i].disaggregatedVars.y] = disjBlock[i].y_bounds
             mappings[disjBlock[i].disaggregatedVars.x] = disjBlock[i].x_bounds
-            for var, cons in iteritems(mappings):
+            for var, cons in mappings.items():
                 self.assertIs(hull.get_var_bounds_constraint(var), cons)
 
     def test_create_using_nonlinear(self):
@@ -531,7 +531,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # no bounds
         m.w.setlb(None)
         m.w.setub(None)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "Variables that appear in disjuncts must be "
             "bounded in order to use the hull "
@@ -615,14 +615,14 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # can't ask for simpledisj1.c[1]: it wasn't transformed
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 KeyError,
-                ".*b.simpledisj1.c\[1\]",
+                r".*b.simpledisj1.c\[1\]",
                 hull.get_transformed_constraints,
                 m.b.simpledisj1.c[1])
-        self.assertRegexpMatches(log.getvalue(),
-                                 ".*Constraint 'b.simpledisj1.c\[1\]' has not "
-                                 "been transformed.")
+        self.assertRegex(log.getvalue(),
+                         r".*Constraint 'b.simpledisj1.c\[1\]' has not "
+                         r"been transformed.")
 
         # this fixes a[2] to 0, so we should get the disggregated var
         transformed = hull.get_transformed_constraints(m.b.simpledisj1.c[2])
@@ -676,7 +676,7 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
                 relaxedDisjuncts[5].disaggregatedVars.component('x[3]')],
         }
 
-        for i, disVars in iteritems(disaggregatedVars):
+        for i, disVars in disaggregatedVars.items():
             cons = hull.get_disaggregation_constraint(m.x[i],
                                                        m.disjunction[i])
             self.assertEqual(cons.lower, 0)
@@ -706,7 +706,7 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
                       relaxedDisjuncts[7].disaggregatedVars.component('a[2,B]')],
         }
 
-        for i, disVars in iteritems(disaggregatedVars):
+        for i, disVars in disaggregatedVars.items():
             cons = hull.get_disaggregation_constraint(m.a[i],
                                                        m.disjunction[i])
             self.assertEqual(cons.lower, 0)
@@ -1597,13 +1597,13 @@ class TestSpecialCases(unittest.TestCase):
         m.d2.c = Constraint(expr=m.y >= m.d2.z)
         m.disj = Disjunction(expr=[m.d1, m.d2])
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             ".*Missing bound for d2.z.*",
             TransformationFactory('gdp.hull').create_using,
             m)
         m.d2.z.setlb(7)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             ".*Missing bound for d2.z.*",
             TransformationFactory('gdp.hull').create_using,
@@ -1842,12 +1842,12 @@ class TestErrors(unittest.TestCase):
 
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp.hull', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 AttributeError,
                 "'NoneType' object has no attribute '_bigMConstraintMap'",
                 hull.get_var_bounds_constraint,
                 m.w)
-        self.assertRegexpMatches(
+        self.assertRegex(
             log.getvalue(),
             ".*Either 'w' is not a disaggregated variable, "
             "or the disjunction that disaggregates it has "
@@ -1855,48 +1855,48 @@ class TestErrors(unittest.TestCase):
 
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp.hull', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 KeyError,
-                ".*_pyomo_gdp_hull_reformulation.relaxedDisjuncts\[1\]."
-                "disaggregatedVars.w",
+                r".*_pyomo_gdp_hull_reformulation.relaxedDisjuncts\[1\]."
+                r"disaggregatedVars.w",
                 hull.get_disaggregation_constraint,
                 m.d[1].transformation_block().disaggregatedVars.w,
                 m.disjunction)
-        self.assertRegexpMatches(log.getvalue(), ".*It doesn't appear that "
-                                 "'_pyomo_gdp_hull_reformulation."
-                                 "relaxedDisjuncts\[1\].disaggregatedVars.w' "
-                                 "is a variable that was disaggregated by "
-                                 "Disjunction 'disjunction'")
+        self.assertRegex(log.getvalue(), ".*It doesn't appear that "
+                         r"'_pyomo_gdp_hull_reformulation."
+                         r"relaxedDisjuncts\[1\].disaggregatedVars.w' "
+                         r"is a variable that was disaggregated by "
+                         r"Disjunction 'disjunction'")
 
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp.hull', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 AttributeError,
                 "'NoneType' object has no attribute '_disaggregatedVarMap'",
                 hull.get_src_var,
                 m.w)
-        self.assertRegexpMatches(
+        self.assertRegex(
             log.getvalue(),
             ".*'w' does not appear to be a disaggregated variable")
 
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp.hull', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 KeyError,
-                ".*_pyomo_gdp_hull_reformulation.relaxedDisjuncts\[1\]."
-                "disaggregatedVars.w",
+                r".*_pyomo_gdp_hull_reformulation.relaxedDisjuncts\[1\]."
+                r"disaggregatedVars.w",
                 hull.get_disaggregated_var,
                 m.d[1].transformation_block().disaggregatedVars.w,
                 m.d[1])
-        self.assertRegexpMatches(log.getvalue(),
-                                 ".*It does not appear "
-                                 "'_pyomo_gdp_hull_reformulation."
-                                 "relaxedDisjuncts\[1\].disaggregatedVars.w' "
-                                 "is a variable which appears in disjunct "
-                                 "'d\[1\]'")
+        self.assertRegex(log.getvalue(),
+                         r".*It does not appear "
+                         r"'_pyomo_gdp_hull_reformulation."
+                         r"relaxedDisjuncts\[1\].disaggregatedVars.w' "
+                         r"is a variable which appears in disjunct "
+                         r"'d\[1\]'")
 
         m.random_disjunction = Disjunction(expr=[m.w == 2, m.w >= 7])
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "Disjunction 'random_disjunction' has not been properly "
             "transformed: None of its disjuncts are transformed.",
@@ -1904,10 +1904,10 @@ class TestErrors(unittest.TestCase):
             m.w,
             m.random_disjunction)
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
-            "Disjunct 'random_disjunction_disjuncts\[0\]' has not been "
-            "transformed",
+            r"Disjunct 'random_disjunction_disjuncts\[0\]' has not been "
+            r"transformed",
             hull.get_disaggregated_var,
             m.w,
             m.random_disjunction.disjuncts[0])

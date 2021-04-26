@@ -11,7 +11,7 @@
 
 # -*- coding: UTF-8 -*-
 """Tests disjunct fixing."""
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.environ import (Block,
                            Constraint, ConcreteModel, TransformationFactory,
                            NonNegativeReals)

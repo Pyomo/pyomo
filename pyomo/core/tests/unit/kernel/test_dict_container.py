@@ -12,7 +12,7 @@ import collections.abc
 import pickle
 from io import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import pyomo.kernel as pmo
 from pyomo.common.log import LoggingIntercept
 from pyomo.core.kernel.base import \

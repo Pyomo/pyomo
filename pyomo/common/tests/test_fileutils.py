@@ -18,9 +18,9 @@ import sys
 import tempfile
 import subprocess
 
-from six import StringIO
+from io import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.common.config as config
 from pyomo.common.log import LoggingIntercept
@@ -82,7 +82,7 @@ class TestFileUtils(unittest.TestCase):
         self.assertTrue(samefile(ref, found))
 
     def test_this_file(self):
-        self.assertEquals(_this_file, __file__.replace('.pyc','.py'))
+        self.assertEqual(_this_file, __file__.replace('.pyc','.py'))
         # Note that in some versions of PyPy, this can return <module>
         # instead of the normal <string>
         self.assertIn(subprocess.run([
@@ -93,7 +93,7 @@ class TestFileUtils(unittest.TestCase):
             stderr=subprocess.STDOUT,
             universal_newlines=True).stdout.strip(),
             ['<string>','<module>'])
-        self.assertEquals(subprocess.run(
+        self.assertEqual(subprocess.run(
             [sys.executable],
             input='from pyomo.common.fileutils import this_file;'
             'print(this_file())', stdout=subprocess.PIPE,
@@ -106,15 +106,8 @@ class TestFileUtils(unittest.TestCase):
 
     def test_import_file(self):
         import_ex = import_file(os.path.join(_this_file_dir, 'import_ex.py'))
-        if not "import_ex" in sys.modules.keys():
-            self.fail("test_import_file - failed to import the import_ex.py file")
-
-    def test_import_vars(self):
-        import_ex = import_file(os.path.join(_this_file_dir, 'import_ex.py'))
-        try:
-            importvar = import_ex.a
-        except:
-            self.fail('test_import_vars - failed to access data in import_ex.py file.')
+        self.assertIn("pyomo.common.tests.import_ex", sys.modules)
+        self.assertEqual(import_ex.b, 2)
 
     def test_import_file_no_extension(self):
         with self.assertRaises(FileNotFoundError) as context:
@@ -244,7 +237,8 @@ class TestFileUtils(unittest.TestCase):
         self.assertIsNotNone(b)
         self.assertIsNotNone(c)
         self.assertEqual(a,b)
-        self.assertEqual(a,c)
+        # find_library could have found libc.so.6
+        self.assertTrue(c.startswith(a))
         # Verify that the library is loadable (they are all the same
         # file, so only check one)
         _lib = ctypes.cdll.LoadLibrary(a)

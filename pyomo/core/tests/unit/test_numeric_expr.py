@@ -17,11 +17,11 @@ import math
 import os
 from collections import defaultdict
 
-from os.path import abspath, dirname
+from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
-from pyutilib.th import nottest
+from filecmp import cmp
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import ConcreteModel, AbstractModel, RangeSet, Var, Param, Set, Constraint, ConstraintList, Expression, Objective, Reals, ExternalFunction, PositiveReals, log10, exp, floor, ceil, log, cos, sin, tan, acos, asin, atan, sinh, cosh, tanh, acosh, asinh, atanh, sqrt, value, quicksum, sum_product, is_fixed, is_constant
 from pyomo.kernel import variable, expression, objective
@@ -62,7 +62,7 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         # Create the type of expression term that we are testing
         return NumericConstant(val)
 
-    @nottest
+    @unittest.nottest
     def value_test(self, exp, val, expectExpression=None):
         """ Test the value of the expression. """
         #
@@ -79,7 +79,7 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         #
         self.assertEqual(value(exp), val)
 
-    @nottest
+    @unittest.nottest
     def relation_test(self, exp, val, expectConstExpression=None):
         """ Test a relationship expression. """
         #
@@ -2433,11 +2433,12 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         model.cl = ConstraintList(rule=cl_rule)
 
         instance=model.create_instance()
-        OUTPUT=open(currdir+"varpprint.out","w")
+        OUTPUT=open(join(currdir, "varpprint.out"), "w")
         instance.pprint(ostream=OUTPUT)
         OUTPUT.close()
-        self.assertFileEqualsBaseline( currdir+"varpprint.out",
-                                       currdir+"varpprint.txt" )
+        _out, _txt = join(currdir, "varpprint.out"), join(currdir, "varpprint.txt")
+        self.assertTrue(cmp(_out, _txt),
+                        msg="Files %s and %s differ" % (_txt, _out))
 
     def test_labeler(self):
         M = ConcreteModel()

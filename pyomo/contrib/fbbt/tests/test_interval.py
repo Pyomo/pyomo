@@ -1,5 +1,5 @@
 import math
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.errors import InfeasibleConstraintException
 import pyomo.contrib.fbbt.interval as interval

@@ -11,9 +11,9 @@
 """Tests infeasible model debugging utilities."""
 import logging
 
-from six import StringIO
+from io import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import ConcreteModel, Constraint, Var, inequality
 from pyomo.util.infeasible import (log_active_constraints, log_close_to_bounds,

@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.environ import ConcreteModel, Var, RangeSet, Block, Constraint, CounterLabeler, NumericLabeler, TextLabeler, ComponentUID, ShortNameLabeler, CNameLabeler, CuidLabeler, AlphaNumericTextLabeler, NameLabeler
 
 
@@ -202,7 +202,7 @@ class LabelerTests(unittest.TestCase):
         lbl = ShortNameLabeler(4, '_', caseInsensitive=True)
         for i in range(9):
             self.assertEqual(lbl(m.mycomp), 'p_%d_' % (i+1))
-        with self.assertRaisesRegexp(RuntimeError, "Too many identifiers"):
+        with self.assertRaisesRegex(RuntimeError, "Too many identifiers"):
             lbl(m.mycomp)
 
     def test_shortnamelabeler_legal_regex(self):

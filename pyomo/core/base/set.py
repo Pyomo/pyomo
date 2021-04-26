@@ -2701,7 +2701,10 @@ class RangeSet(Component):
                              % (self.name, data))
         if data is not None:
             raise ValueError(
-                "RangeSet.construct() does not support the data= argument.")
+                "RangeSet.construct() does not support the data= argument.\n"
+                "Initialization data (range endpoints) can only be supplied "
+                "as numbers, constants, or Params to the RangeSet() "
+                "declaration")
         self._constructed = True
 
         args, ranges = self._init_data
@@ -4149,16 +4152,16 @@ BooleanSet = Boolean.__class__
 # classes (leveraging the new global RangeSet objects)
 #
 
+@deprecated("RealInterval has been deprecated.  Please use "
+            "RangeSet(lower, upper, 0)", version='5.7')
 class RealInterval(RealSet):
-    @deprecated("RealInterval has been deprecated.  Please use "
-                "RangeSet(lower, upper, 0)", version='5.7')
     def __new__(cls, **kwds):
         kwds.setdefault('class_name', 'RealInterval')
         return super(RealInterval, cls).__new__(RealSet, **kwds)
 
+@deprecated("IntegerInterval has been deprecated.  Please use "
+            "RangeSet(lower, upper, 1)", version='5.7')
 class IntegerInterval(IntegerSet):
-    @deprecated("IntegerInterval has been deprecated.  Please use "
-                "RangeSet(lower, upper, 1)", version='5.7')
     def __new__(cls, **kwds):
         kwds.setdefault('class_name', 'IntegerInterval')
         return super(IntegerInterval, cls).__new__(IntegerSet, **kwds)

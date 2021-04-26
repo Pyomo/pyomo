@@ -10,13 +10,19 @@
 
 import os.path
 from pyomo.common.fileutils import this_file_dir, import_file
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.common.dependencies import attempt_import
+from pyomo.common.log import LoggingIntercept
+from pyomo.opt import TerminationCondition
+from io import StringIO
+import logging
 
 from pyomo.contrib.pynumero.dependencies import (
-    numpy as np, numpy_available, scipy_sparse as spa, scipy_available
+    numpy as np, numpy_available, scipy, scipy_available
 )
+from pyomo.common.dependencies.scipy import sparse as spa
+
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run CyIpopt tests")
 
@@ -33,18 +39,17 @@ if not AmplInterface.available():
         "Pynumero needs the ASL extension to run CyIpopt tests")
 
 import pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver as cyipopt_solver
-if not cyipopt_solver.ipopt_available:
-    raise unittest.SkipTest("PyNumero needs CyIpopt installed to run CyIpopt tests")
+if not cyipopt_solver.cyipopt_available:
+    raise unittest.SkipTest(
+        "PyNumero needs CyIpopt installed to run CyIpopt tests")
 import cyipopt as cyipopt_core
 
 example_dir = os.path.join(this_file_dir(), '..', 'examples')
 
 class TestPyomoCyIpoptSolver(unittest.TestCase):
     def test_status_maps(self):
-        self.assertEqual(len(cyipopt_core.STATUS_MESSAGES),
-                         len(cyipopt_solver._cyipopt_status_enum))
-        self.assertEqual(len(cyipopt_core.STATUS_MESSAGES),
-                         len(cyipopt_solver._ipopt_term_cond))
+        # verify that all status messages from cyipopy can be cleanly
+        # mapped back to a Pyomo TerminationCondition
         for msg in cyipopt_core.STATUS_MESSAGES.values():
             self.assertIn(msg, cyipopt_solver._cyipopt_status_enum)
         for status in cyipopt_solver._cyipopt_status_enum.values():
@@ -149,3 +154,28 @@ class TestExamples(unittest.TestCase):
 
         m = ex.perform_estimation_pyomo_only(data_fname, solver_trace=False)
         self.assertAlmostEqual(pyo.value(m.UA), 204.43761, places=3)
+
+    def test_cyipopt_callbacks(self):
+        ex = import_file(os.path.join(example_dir, 'callback', 'cyipopt_callback.py'))
+
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo', logging.INFO):
+            ex.main()
+
+        self.assertIn("Residuals for iteration 2",
+                          output.getvalue().strip())
+
+    @unittest.skipIf(not pandas_available, "pandas needed to run this example")
+    def test_cyipopt_functor(self):
+        ex = import_file(os.path.join(example_dir, 'callback', 'cyipopt_functor_callback.py'))
+        df = ex.main()
+        self.assertEqual(df.shape, (7, 5))
+        # check one of the residuals
+        s = df['ca_bal']
+        self.assertAlmostEqual(s.iloc[6], 0, places=3)
+
+    def test_cyipopt_callback_halt(self):
+        ex = import_file(os.path.join(example_dir, 'callback', 'cyipopt_callback_halt.py'))
+        status = ex.main()
+        self.assertEqual(status.solver.termination_condition, TerminationCondition.userInterrupt)
+

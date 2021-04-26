@@ -12,9 +12,9 @@
 import logging
 from os.path import abspath, dirname, join, normpath
 
-from six import StringIO
+from io import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.core import Binary, Block, ConcreteModel, Constraint, Integers, Var
 from pyomo.gdp import Disjunct, Disjunction

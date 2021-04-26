@@ -11,7 +11,7 @@
 # Unit Tests for components
 #
 from io import StringIO
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common import DeveloperError
 import pyomo.core.base._pyomo
@@ -22,7 +22,7 @@ from pyomo.environ import (
 class TestComponent(unittest.TestCase):
 
     def test_construct_component_throws_exception(self):
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 DeveloperError,
                 "Must specify a component type for class Component"):
             Component()

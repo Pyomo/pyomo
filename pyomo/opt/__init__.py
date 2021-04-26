@@ -38,7 +38,7 @@ from pyomo.opt.problem import (
 )
 
 from pyomo.opt.parallel import (
-    pyro, manager, async_solver, local,
+    manager, async_solver, local,
     SolverManagerFactory, AsynchronousSolverManager
 )
 

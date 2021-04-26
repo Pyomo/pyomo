@@ -14,7 +14,7 @@ import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
-from pyomo.common.collections import Options, Bunch
+from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat
@@ -53,7 +53,7 @@ class ASL(SystemCallSolver):
         #
         # Note: Undefined capabilities default to 'None'
         #
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.integer = True
         self._capabilities.quadratic_objective = True
@@ -93,13 +93,21 @@ class ASL(SystemCallSolver):
         if solver_exec is None:
             return _extract_version('')
         try:
-            results = subprocess.run([solver_exec,"-v"], timeout=1,
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT,
-                                 universal_newlines=True)
+            results = subprocess.run([solver_exec, "-v"],
+                                     timeout=2,
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.STDOUT,
+                                     universal_newlines=True)
             return _extract_version(results.stdout)
         except OSError:
             pass
+        except subprocess.TimeoutExpired:
+            pass
+
+    def available(self, exception_flag=True):
+        if not super().available(exception_flag):
+            return False
+        return self.version() is not None
 
     def create_command_line(self, executable, problem_files):
         assert(self._problem_format == ProblemFormat.nl)

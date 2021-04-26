@@ -13,7 +13,7 @@ import os
 import time
 import sys
 
-from six import StringIO, BytesIO
+from io import StringIO, BytesIO
 
 from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
@@ -51,10 +51,10 @@ class TestTeeStream(unittest.TestCase):
             # flush() and short pause should help
             t.STDOUT.write("Hello\nWorld")
             t.STDOUT.flush()
-            time.sleep(tee._poll_interval*2)
+            time.sleep(tee._poll_interval*20)
             t.STDERR.write("interrupting\ncow")
             t.STDERR.flush()
-            time.sleep(tee._poll_interval*3)
+            time.sleep(tee._poll_interval*30)
         self.assertEqual(a.getvalue(), "Hello\ninterrupting\ncowWorld")
         self.assertEqual(b.getvalue(), "Hello\ninterrupting\ncowWorld")
 

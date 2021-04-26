@@ -1,8 +1,7 @@
 [![Github Actions Status](https://github.com/Pyomo/pyomo/workflows/GitHub%20CI/badge.svg?event=push)](https://github.com/Pyomo/pyomo/actions?query=event%3Apush+workflow%3A%22GitHub+CI%22)
 [![Jenkins Status](https://img.shields.io/jenkins/s/https/software.sandia.gov/downloads/pub/pyomo/jenkins/Pyomo_trunk.svg?logo=jenkins&logoColor=white)](https://jenkins-srn.sandia.gov/job/Pyomo_trunk)
-[![codecov](https://codecov.io/gh/Pyomo/pyomo/branch/master/graph/badge.svg)](https://codecov.io/gh/Pyomo/pyomo)
+[![codecov](https://codecov.io/gh/Pyomo/pyomo/branch/main/graph/badge.svg)](https://codecov.io/gh/Pyomo/pyomo)
 [![Documentation Status](https://readthedocs.org/projects/pyomo/badge/?version=latest)](http://pyomo.readthedocs.org/en/latest/)
-
 [![GitHub contributors](https://img.shields.io/github/contributors/pyomo/pyomo.svg)](https://github.com/pyomo/pyomo/graphs/contributors)
 [![Merged PRs](https://img.shields.io/github/issues-pr-closed-raw/pyomo/pyomo.svg?label=merged+PRs)](https://github.com/pyomo/pyomo/pulls?q=is:pr+is:merged)
 [![Issue stats](http://isitmaintained.com/badge/resolution/pyomo/pyomo.svg)](http://isitmaintained.com/project/pyomo/pyomo)
@@ -73,10 +72,9 @@ Pyomo is currently tested with the following Python implementations:
 
 ### Getting Help
 
-* [Ask a Pyomo Question on StackExchange](https://stackoverflow.com/questions/ask?tags=pyomo)
+To get help from the Pyomo community ask a question on one of the following:
+* [Use the #pyomo tag on StackOverflow](https://stackoverflow.com/questions/ask?tags=pyomo)
 * [Pyomo Forum](https://groups.google.com/forum/?hl=en#!forum/pyomo-forum)
-* [Add a Ticket](https://github.com/Pyomo/pyomo/issues/new)
-* [Find a Ticket](https://github.com/Pyomo/pyomo/issues) and **Vote On It**!
 
 ### Developers
 

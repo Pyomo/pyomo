@@ -9,7 +9,8 @@
 #  ___________________________________________________________________________
 
 from __future__ import print_function
-import pyutilib.th as unittest
+import json
+import pyomo.common.unittest as unittest
 
 from pyomo.core.expr import current as EXPR
 from pyomo.environ import (
@@ -34,10 +35,8 @@ from pyomo.core.expr.template_expr import (
     _GetItemIndexer,
 )
 from pyomo.common.fileutils import import_file
-from pyomo.common.tee import capture_output
 
 import os
-
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'dae'))
@@ -1212,77 +1211,88 @@ class TestSimulationInterface():
     Class to test running a simulation
     """
 
-    def _print(self, model, profiles):
-        import numpy as np
-        np.set_printoptions(formatter={'float': '{: 0.4f}'.format})
-        model.pprint()
-        print(profiles)
+    def _store_results(self, model, profiles):
+        results = dict()
+        for v in model.component_objects(Var):
+            # Can't just use extract_values here because when writing to json
+            # all keys are converted to strings
+            temp = v.extract_values()
+            results[v.name] = [[k, temp[k]] for k in v.keys()]
+
+        results['sim_profiles'] = profiles.tolist()
+        return results
 
     def _test(self, tname):
 
-        ofile = join(currdir, tname + '.' + self.sim_mod + '.out')
-        bfile = join(currdir, tname + '.' + self.sim_mod + '.txt')
-        with capture_output(ofile):
-            # create model
-            exmod = import_file(join(exdir, tname + '.py'))
-            m = exmod.create_model()
+        bfile = join(currdir, tname + '.' + self.sim_mod + '.json')
 
-            # Simulate model
-            sim = Simulator(m, package=self.sim_mod)
+        # create model
+        exmod = import_file(join(exdir, tname + '.py'))
+        m = exmod.create_model()
 
-            if hasattr(m, 'var_input'):
-                tsim, profiles = sim.simulate(numpoints=100,
+        # Simulate model
+        sim = Simulator(m, package=self.sim_mod)
+
+        if hasattr(m, 'var_input'):
+            tsim, profiles = sim.simulate(numpoints=100,
                                               varying_inputs=m.var_input)
-            else:
-                tsim, profiles = sim.simulate(numpoints=100)
+        else:
+            tsim, profiles = sim.simulate(numpoints=100)
 
-            # Discretize model
-            discretizer = TransformationFactory('dae.collocation')
-            discretizer.apply_to(m, nfe=10, ncp=5)
+        # Discretize model
+        discretizer = TransformationFactory('dae.collocation')
+        discretizer.apply_to(m, nfe=10, ncp=5)
 
-            # Initialize model
-            sim.initialize_model()
+        # Initialize model
+        sim.initialize_model()
 
-            self._print(m, profiles)
+        results = self._store_results(m, profiles)
 
+        # Used to regenerate baseline files
         if not os.path.exists(bfile):
-            os.rename(ofile, bfile)
+            with open(bfile, 'w') as f1:
+                json.dump(results, f1)
 
-        # os.system('diff ' + ofile + ' ' + bfile)
-        self.assertFileEqualsBaseline(ofile, bfile, tolerance=0.01)
+        # Compare results to baseline
+        with open(bfile, 'r') as f2:
+            baseline = json.load(f2)
+            self.assertStructuredAlmostEqual(results, baseline, abstol=1e-2)
 
     def _test_disc_first(self, tname):
 
-        ofile = join(currdir, tname + '.' + self.sim_mod + '.out')
-        bfile = join(currdir, tname + '.' + self.sim_mod + '.txt')
-        with capture_output(ofile):
-            # create model
-            exmod = import_file(join(exdir, tname + '.py'))
-            m = exmod.create_model()
+        bfile = join(currdir, tname + '.' + self.sim_mod + '.json')
 
-            # Discretize model
-            discretizer = TransformationFactory('dae.collocation')
-            discretizer.apply_to(m, nfe=10, ncp=5)
+        # create model
+        exmod = import_file(join(exdir, tname + '.py'))
+        m = exmod.create_model()
 
-            # Simulate model
-            sim = Simulator(m, package=self.sim_mod)
+        # Discretize model
+        discretizer = TransformationFactory('dae.collocation')
+        discretizer.apply_to(m, nfe=10, ncp=5)
 
-            if hasattr(m, 'var_input'):
-                tsim, profiles = sim.simulate(numpoints=100,
+        # Simulate model
+        sim = Simulator(m, package=self.sim_mod)
+
+        if hasattr(m, 'var_input'):
+            tsim, profiles = sim.simulate(numpoints=100,
                                               varying_inputs=m.var_input)
-            else:
-                tsim, profiles = sim.simulate(numpoints=100)
+        else:
+            tsim, profiles = sim.simulate(numpoints=100)
 
-            # Initialize model
-            sim.initialize_model()
+        # Initialize model
+        sim.initialize_model()
 
-            self._print(m, profiles)
+        results = self._store_results(m, profiles)
 
+        # Used to regenerate baseline files
         if not os.path.exists(bfile):
-            os.rename(ofile, bfile)
+            with open(bfile, 'w') as f1:
+                json.dump(results, f1)
 
-        # os.system('diff ' + ofile + ' ' + bfile)
-        self.assertFileEqualsBaseline(ofile, bfile, tolerance=0.01)
+        # Compare results to baseline
+        with open(bfile, 'r') as f2:
+            baseline = json.load(f2)
+            self.assertStructuredAlmostEqual(results, baseline, abstol=1e-2)
 
 
 @unittest.skipIf(not scipy_available, "Scipy is not available")

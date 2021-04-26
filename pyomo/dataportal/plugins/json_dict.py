@@ -10,9 +10,8 @@
 
 import os.path
 import json
-import six
 
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 from pyomo.dataportal.factory import DataManagerFactory
 
@@ -93,7 +92,7 @@ class JSONDictionary(object):
 
     def __init__(self):
         self._info = {}
-        self.options = Options()
+        self.options = Bunch()
 
     def available(self):
         return True
@@ -120,18 +119,7 @@ class JSONDictionary(object):
         if not os.path.exists(self.filename):
             raise IOError("Cannot find file '%s'" % self.filename)
         INPUT = open(self.filename, 'r')
-        if six.PY2 and self.options.convert_unicode:
-            def _byteify(data, ignore_dicts=False):
-                if isinstance(data, six.text_type):
-                    return data.encode('utf-8') 
-                if isinstance(data, list):
-                    return [ _byteify(item, True) for item in data ]
-                if isinstance(data, dict) and not ignore_dicts:
-                    return dict( (_byteify(key, True), _byteify(value, True)) for (key, value) in data.iteritems() )
-                return data
-            jdata = json.load(INPUT, object_hook=_byteify)
-        else:
-            jdata = json.load(INPUT)
+        jdata = json.load(INPUT)
         INPUT.close()
         if jdata is None or len(jdata) == 0:
             raise IOError("Empty JSON data file")
@@ -192,7 +180,7 @@ class YamlDictionary(object):
 
     def __init__(self):
         self._info = {}
-        self.options = Options()
+        self.options = Bunch()
 
     def available(self):
         return yaml_available

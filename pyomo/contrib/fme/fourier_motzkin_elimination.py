@@ -21,8 +21,6 @@ from pyomo.opt import TerminationCondition
 
 import logging
 
-from six import iteritems
-
 logger = logging.getLogger('pyomo.contrib.fme')
 NAME_BUFFER = {}
 
@@ -30,7 +28,7 @@ def _check_var_bounds_filter(constraint):
     """Check if the constraint is already implied by the variable bounds"""
     # this is one of our constraints, so we know that it is >=.
     min_lhs = 0
-    for v, coef in iteritems(constraint['map']):
+    for v, coef in constraint['map'].items():
         if coef > 0:
             if v.lb is None:
                 return True # we don't have var bounds with which to imply the

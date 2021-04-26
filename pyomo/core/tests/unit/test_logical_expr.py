@@ -18,7 +18,7 @@ import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import AbstractModel, ConcreteModel, Set, Var, Param, Constraint, inequality, display
 import pyomo.core.expr.logical_expr as logical_expr
@@ -64,16 +64,16 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #   a   b
         # Python 2.7 supports better testing of exceptions
         if sys.hexversion >= 0x02070000:
-            self.assertRaisesRegexp(TypeError, "EqualityExpression .*"
+            self.assertRaisesRegex(TypeError, "EqualityExpression .*"
                                    "sub-expressions is a relational",
                                    e.__eq__, m.a)
-            self.assertRaisesRegexp(TypeError, "EqualityExpression .*"
+            self.assertRaisesRegex(TypeError, "EqualityExpression .*"
                                    "sub-expressions is a relational",
                                    m.a.__eq__, e)
 
             # NB: cannot test the reverse here: _VarArray (correctly)
             # does not define __eq__
-            self.assertRaisesRegexp(TypeError, "Argument .*"
+            self.assertRaisesRegex(TypeError, "Argument .*"
                                     "is an indexed numeric value",
                                     m.a.__eq__, m.x)
         else:

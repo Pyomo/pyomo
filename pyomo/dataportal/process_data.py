@@ -14,7 +14,7 @@ import copy
 import logging
 
 from pyomo.common.log import is_debug_set
-from pyomo.common.collections import Options, OrderedDict
+from pyomo.common.collections import Bunch, OrderedDict
 from pyomo.common.errors import ApplicationError
 
 from pyomo.dataportal.parse_datacmds import (
@@ -23,8 +23,6 @@ from pyomo.dataportal.parse_datacmds import (
 from pyomo.dataportal.factory import DataManagerFactory, UnknownDataManager
 from pyomo.core.base.set import UnknownSetDimen
 from pyomo.core.base.util import flatten_tuple
-
-from six.moves import xrange
 
 numlist = {bool, int, float}
 
@@ -224,7 +222,7 @@ def _process_set(cmd, _model, _data):
         i += 1
         while i<len(cmd):
             ndx=cmd[i]
-            for j in xrange(0,len(ndx1)):
+            for j in range(0,len(ndx1)):
                 if cmd[i+j+1] == "+":
                     #print("DATA %s %s" % (ndx1[j], cmd[i]))
                     _data[cmd[1]][None].append((ndx1[j], cmd[i]))
@@ -694,7 +692,7 @@ def _process_table(cmd, _model, _data, _default, options=None):
     #print("_param %s" % _param)
     #print("_labels %s" % _labels)
 #
-    options = Options(**_options)
+    options = Bunch(**_options)
     for key in options:
         if not key in ['columns']:
             raise ValueError("Unknown table option '%s'" % key)
@@ -827,7 +825,7 @@ def _process_load(cmd, _model, _data, _default, options=None):
     if len(cmd) < 2:
         raise IOError("The 'load' command must specify a filename")
 
-    options = Options(**_options)
+    options = Bunch(**_options)
     for key in options:
         if not key in ['range','filename','format','using','driver','query','table','user','password','database']:
             raise ValueError("Unknown load option '%s'" % key)

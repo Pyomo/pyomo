@@ -34,7 +34,7 @@ from io import StringIO
 
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.core.base
 from pyomo.core.base.util import flatten_tuple
@@ -970,7 +970,7 @@ class ArraySet(PyomoModel):
         #     pass
         # else:
         #     self.fail("Set arrays do not have a virtual data element")
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 AttributeError, ".*no attribute 'virtual'"):
             self.instance.A.virtual
 
@@ -1854,7 +1854,7 @@ class TestAnySet(SimpleSetA):
         #     pass
         # else:
         #     self.fail("test_len failure")
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError, "object of type 'Any' has no len()"):
             len(self.instance.A)
 
@@ -2129,13 +2129,13 @@ class TestSetArgs1(PyomoModel):
         # except ValueError:
         #     pass
         instance = self.model.create_instance()
-        self.assertEquals(len(instance.B), 6)
-        self.assertEquals(instance.B[0,1,0,False], [])
-        self.assertEquals(instance.B[0,1,0,True], [0,1])
-        self.assertEquals(instance.B[1,2,1,False], [])
-        self.assertEquals(instance.B[1,2,1,True], [1,2])
-        self.assertEquals(instance.B[2,3,4,False], [])
-        self.assertEquals(instance.B[2,3,4,True], [2,3])
+        self.assertEqual(len(instance.B), 6)
+        self.assertEqual(instance.B[0,1,0,False], [])
+        self.assertEqual(instance.B[0,1,0,True], [0,1])
+        self.assertEqual(instance.B[1,2,1,False], [])
+        self.assertEqual(instance.B[1,2,1,True], [1,2])
+        self.assertEqual(instance.B[2,3,4,False], [])
+        self.assertEqual(instance.B[2,3,4,True], [2,3])
 
     def test_initialize9(self):
         self.model.A = Set(initialize=range(0,3))
@@ -2798,7 +2798,7 @@ class TestSetIO(PyomoModel):
         self.model.A = Set()
         self.model.B = Set()
         self.model.C = self.model.A * self.model.B
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "SetOperator C with incompatible data"):
             self.instance = self.model.create_instance(currdir+"setA.dat")
 
@@ -2998,7 +2998,7 @@ class TestSetErrors(PyomoModel):
         #     pass
         a=Set()
         b=Set(a)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError, "Cannot apply a Set operator to an indexed"):
             c=Set(within=b, dimen=2)
             c.construct()
@@ -3075,7 +3075,7 @@ class TestSetErrors(PyomoModel):
         #     self.fail("test_construct - expected failure constructing with a dictionary")
         # except ValueError:
         #     pass
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 KeyError, "Cannot treat the scalar component '[^']*' "
                 "as an indexed component"):
             a.construct()
@@ -3119,11 +3119,11 @@ class TestSetErrors(PyomoModel):
         #     pass
         # except IndexError:
         #     pass
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, ".*before it has been constructed"):
             a[0]
         a.construct()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError, "Pyomo Sets are 1-indexed"):
             a[0]
         self.assertEqual(a[1], 2)
@@ -3310,10 +3310,10 @@ class TestSetErrors(PyomoModel):
         X = Reals ^ Integers
         self.assertIn(0.5, X)
         self.assertNotIn(1, X)
-        with self.assertRaisesRegexp(
-                RangeDifferenceError, "We do not support subtracting an "
-                "infinite discrete range \[0:None\] from an infinite "
-                "continuous range \[None..None\]"):
+        with self.assertRaisesRegex(
+                RangeDifferenceError, r"We do not support subtracting an "
+                r"infinite discrete range \[0:None\] from an infinite "
+                r"continuous range \[None..None\]"):
             X < Reals
         # In the set rewrite, the following now works!
         # try:
@@ -3343,10 +3343,10 @@ class TestSetErrors(PyomoModel):
         X = Reals - Integers
         self.assertIn(0.5, X)
         self.assertNotIn(1, X)
-        with self.assertRaisesRegexp(
-                RangeDifferenceError, "We do not support subtracting an "
-                "infinite discrete range \[0:None\] from an infinite "
-                "continuous range \[None..None\]"):
+        with self.assertRaisesRegex(
+                RangeDifferenceError, r"We do not support subtracting an "
+                r"infinite discrete range \[0:None\] from an infinite "
+                r"continuous range \[None..None\]"):
             X < Reals
         # In the set rewrite, the following now works!
         # try:
@@ -3426,7 +3426,7 @@ class TestSetErrors(PyomoModel):
         #     self.fail("test_arrayset_construct - expected ValueError")
         # except ValueError:
         #     pass
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError, "'int' object is not iterable"):
             b.construct()
 

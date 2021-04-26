@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import StringIO, iteritems
+from io import StringIO
 import shlex
 from tempfile import mkdtemp
 import os, sys, math, logging, shutil, time, subprocess
@@ -17,7 +17,7 @@ from pyomo.core.base import Constraint, Var, value, Objective
 from pyomo.opt import ProblemFormat, SolverFactory
 
 import pyomo.common
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 from pyomo.common.tee import TeeStream
 
 from pyomo.opt.base.solvers import _extract_version
@@ -45,7 +45,7 @@ class _GAMSSolver(object):
         self._default_variable_value = None
         self._metasolver = False
 
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -53,7 +53,7 @@ class _GAMSSolver(object):
         self._capabilities.sos1 = False
         self._capabilities.sos2 = False
 
-        self.options = Options()
+        self.options = Bunch()
 
     def version(self):
         """Returns a 4-tuple describing the solver executable version."""
@@ -486,7 +486,7 @@ class GAMSDirect(_GAMSSolver):
         soln.gap = abs(results.problem.upper_bound \
                        - results.problem.lower_bound)
 
-        for sym, ref in iteritems(symbolMap.bySymbol):
+        for sym, ref in symbolMap.bySymbol.items():
             obj = ref()
             if isinstance(model, IBlock):
                 # Kernel variables have no 'parent_component'
@@ -1007,7 +1007,7 @@ class GAMSShell(_GAMSSolver):
                        - results.problem.lower_bound)
 
         has_rc_info = True
-        for sym, ref in iteritems(symbolMap.bySymbol):
+        for sym, ref in symbolMap.bySymbol.items():
             obj = ref()
             if isinstance(model, IBlock):
                 # Kernel variables have no 'parent_component'

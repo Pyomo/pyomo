@@ -11,8 +11,6 @@
 """Transformation to detect variables fixed by bounds and fix them."""
 from math import fabs
 
-from six import iteritems
-
 from pyomo.core.base.plugin import TransformationFactory
 from pyomo.common.collections import ComponentMap
 from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
@@ -70,8 +68,7 @@ class FixedVarDetector(IsomorphicTransformation):
 
     def revert(self, instance):
         """Revert variables fixed by the transformation."""
-        for var, var_value in iteritems(
-                instance._xfrm_detect_fixed_vars_old_values):
+        for var, var_value in instance._xfrm_detect_fixed_vars_old_values.items():
             var.unfix()
             var.set_value(var_value)
 

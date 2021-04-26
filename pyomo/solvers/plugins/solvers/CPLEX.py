@@ -19,7 +19,7 @@ from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
 from pyomo.common.tempfiles import TempfileManager
 
-from pyomo.common.collections import ComponentMap, Options, Bunch
+from pyomo.common.collections import ComponentMap, Bunch
 from pyomo.opt.base import (
     ProblemFormat, ResultsFormat, OptSolver, BranchDirection,
 )
@@ -36,9 +36,6 @@ from pyomo.core.kernel.block import IBlock
 from pyomo.util.components import iter_component
 
 logger = logging.getLogger('pyomo.solvers')
-
-from six import iteritems
-from six.moves import xrange
 
 
 def _validate_file_name(cplex, filename, description):
@@ -169,7 +166,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         self.set_problem_format(ProblemFormat.cpxlp)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -619,7 +616,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 results.solver.termination_message = ' '.join(tokens)
 
         try:
-            if isinstance(results.solver.termination_message, basestring):
+            if isinstance(results.solver.termination_message, str):
                 results.solver.termination_message = results.solver.termination_message.replace(':', '\\x3a')
         except:
             pass
@@ -691,7 +688,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 variable_value = None
                 variable_reduced_cost = None
                 variable_status = None
-                for i in xrange(1,len(tokens)):
+                for i in range(1,len(tokens)):
                     field_name =  tokens[i].split('=')[0]
                     field_value = tokens[i].split('=')[1].lstrip("\"").rstrip("\"")
                     if field_name == "name":
@@ -727,7 +724,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 is_range = False
                 rlabel = None
                 rkey = None
-                for i in xrange(1,len(tokens)):
+                for i in range(1,len(tokens)):
                     field_name =  tokens[i].split('=')[0]
                     field_value = tokens[i].split('=')[1].lstrip("\"").rstrip("\"")
                     if field_name == "name":
@@ -849,13 +846,13 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
         # For the range constraints, supply only the dual with the largest
         # magnitude (at least one should always be numerically zero)
-        for key,(ld,ud) in iteritems(range_duals):
+        for key,(ld,ud) in range_duals.items():
             if abs(ld) > abs(ud):
                 soln_constraints['r_l_'+key] = {"Dual" : ld}
             else:
                 soln_constraints['r_l_'+key] = {"Dual" : ud}                # Use the same key
         # slacks
-        for key,(ls,us) in iteritems(range_slacks):
+        for key,(ls,us) in range_slacks.items():
             if abs(ls) > abs(us):
                 soln_constraints.setdefault('r_l_'+key,{})["Slack"] = ls
             else:

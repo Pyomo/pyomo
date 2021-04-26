@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.contrib.fbbt.fbbt import fbbt, compute_bounds_on_expr
 from pyomo.common.dependencies import numpy as np, numpy_available
@@ -17,7 +17,7 @@ from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.core.expr.numeric_expr import (ProductExpression,
                                           UnaryFunctionExpression)
 import math
-from six import StringIO
+from io import StringIO
 
 
 class DummyExpr(ProductExpression):

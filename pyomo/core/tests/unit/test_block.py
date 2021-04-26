@@ -15,13 +15,14 @@ from io import StringIO
 import os
 import sys
 import types
+import json
 
 from copy import deepcopy
 from os.path import abspath, dirname, join
 
 currdir = dirname( abspath(__file__) )
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import (AbstractModel, ConcreteModel, Var, Set, 
                            Param, Block, Suffix, Constraint, Component,
@@ -342,6 +343,15 @@ class TestGenerators(unittest.TestCase):
         self.assertEqual(sorted([id(comp) for comp in model.block_data_objects(sort=False)]),
                          sorted([id(comp) for comp in [model,]+model.component_data_lists[Block]]))
 
+    def test_mixed_index_type(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,'1',3.5,4])
+        m.x = Var(m.I)
+        v = list(m.component_data_objects(Var, sort=True))
+        self.assertEqual(len(v), 4)
+        for a,b in zip([m.x[1], m.x[3.5], m.x[4], m.x['1']], v):
+            self.assertIs(a, b)
+
 
 class HierarchicalModel(object):
     def __init__(self):
@@ -657,20 +667,20 @@ class TestBlock(unittest.TestCase):
         ### creation of a circular reference
         b = Block(concrete=True)
         b.c = Block()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Cannot assign the top-level block as a subblock "
-                "of one of its children \(c\): creates a circular hierarchy"):
+                r"of one of its children \(c\): creates a circular hierarchy"):
             b.c.d = b
 
     def test_set_value(self):
         b = Block(concrete=True)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Block components do not support assignment "
                 "or set_value"):
             b.set_value(None)
 
         b.b = Block()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Block components do not support assignment "
                 "or set_value"):
             b.b = 5
@@ -789,16 +799,16 @@ class TestBlock(unittest.TestCase):
         b.c = Block()
         b.c.d = Block()
         b.c.d.e = Block()
-        with self.assertRaisesRegexp(
-                ValueError, '_BlockData.transfer_attributes_from\(\): '
-                'Cannot set a sub-block \(c.d.e\) to a parent block \(c\):'):
+        with self.assertRaisesRegex(
+                ValueError, r'_BlockData.transfer_attributes_from\(\): '
+                r'Cannot set a sub-block \(c.d.e\) to a parent block \(c\):'):
             b.c.d.e.transfer_attributes_from(b.c)
 
         ### bad data type
         b = Block(concrete=True)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
-                '_BlockData.transfer_attributes_from\(\): expected a Block '
+                r'_BlockData.transfer_attributes_from\(\): expected a Block '
                 'or dict; received str'):
             b.transfer_attributes_from('foo')
 
@@ -2228,9 +2238,11 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1.out"), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve1.out"), join(currdir,"solve1.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve1.out"), 'r') as out, \
+            open(join(currdir,"solve1.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
         #
         def d_rule(model):
             return model.x[1] >= 0
@@ -2239,17 +2251,21 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1x.out"), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve1x.out"), join(currdir,"solve1.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve1x.out"), 'r') as out, \
+            open(join(currdir,"solve1.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
         #
         model.d.activate()
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1a.out"), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve1a.out"), join(currdir,"solve1a.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve1a.out"), 'r') as out, \
+            open(join(currdir,"solve1a.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
         #
         model.d.deactivate()
         def e_rule(model, i):
@@ -2260,17 +2276,21 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1y.out"), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve1y.out"), join(currdir,"solve1.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve1y.out"), 'r') as out, \
+            open(join(currdir,"solve1.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
         #
         model.e.activate()
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1b.out"), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve1b.out"), join(currdir,"solve1b.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve1b.out"), 'r') as out, \
+            open(join(currdir,"solve1b.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve4(self):
@@ -2290,9 +2310,11 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,'solve4.out'), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve4.out"), join(currdir,"solve1.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve4.out"), 'r') as out, \
+            open(join(currdir,"solve1.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve6(self):
@@ -2319,9 +2341,11 @@ class TestBlock(unittest.TestCase):
         results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,'solve6.out'), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve6.out"), join(currdir,"solve6.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve6.out"), 'r') as out, \
+            open(join(currdir,"solve6.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve7(self):
@@ -2349,9 +2373,11 @@ class TestBlock(unittest.TestCase):
         #model.display()
         model.solutions.store_to(results)
         results.write(filename=join(currdir,'solve7.out'), format='json')
-        self.assertMatchesJsonBaseline(
-            join(currdir,"solve7.out"), join(currdir,"solve7.txt"),
-            tolerance=1e-4)
+        with open(join(currdir,"solve7.out"), 'r') as out, \
+            open(join(currdir,"solve7.txt"), 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-4,
+                                             allow_second_superset=True)
 
 
     def test_abstract_index(self):
@@ -2386,22 +2412,22 @@ class TestBlock(unittest.TestCase):
 
     def test_reserved_words(self):
         m = ConcreteModel()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError, ".*using the name of a reserved attribute",
             m.add_component, "add_component", Var())
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, ".*using the name of a reserved attribute"):
             m.add_component = Var()
         m.foo = Var()
 
         m.b = DerivedBlock()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError, ".*using the name of a reserved attribute",
             m.b.add_component, "add_component", Var())
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError, ".*using the name of a reserved attribute",
             m.b.add_component, "foo", Var())
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, ".*using the name of a reserved attribute"):
             m.b.foo = Var()
 
@@ -2417,11 +2443,11 @@ class TestBlock(unittest.TestCase):
 
     def test_write_exceptions(self):
         m = Block()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, ".*Could not infer file format from file name"):
             m.write(filename="foo.bogus")
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, ".*Cannot write model in format"):
             m.write(format="bogus")
 

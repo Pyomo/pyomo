@@ -19,7 +19,7 @@ import socket
 import subprocess
 
 import pyomo.common
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 import pyomo.scripting.pyomo_parser
 
 logger = logging.getLogger('pyomo.solvers')
@@ -221,9 +221,9 @@ def help_api(options):
                     print("    "+line)
 
 def help_environment():
-    info = Options()
+    info = Bunch()
     #
-    info.python = Options()
+    info.python = Bunch()
     info.python.version = '%d.%d.%d' % sys.version_info[:3]
     info.python.executable = sys.executable
     info.python.platform = sys.platform
@@ -231,13 +231,13 @@ def help_environment():
         packages = []
         import pip
         for package in pip.get_installed_distributions():
-            packages.append(Options(name=package.project_name,
+            packages.append(Bunch(name=package.project_name,
                                     version=package.version))
         info.python.packages = packages
     except:
         pass
     #
-    info.environment = Options()
+    info.environment = Bunch()
     path = os.environ.get('PATH', None)
     if not path is None:
         info.environment['shell path'] = path.split(os.pathsep)
@@ -268,7 +268,7 @@ def help_transformations():
         # is indicated here.
         _init_doc = TransformationFactory.get_class(xform).__init__.__doc__ \
                     or ""
-        if _init_doc.startswith('DEPRECATION') and 'DEPRECAT' not in _doc:
+        if _init_doc.strip().startswith('DEPRECATED') and 'DEPRECAT' not in _doc:
             _doc = ' '.join(('[DEPRECATED]', _doc))
         if _doc:
             print(wrapper.fill(_doc))
@@ -291,13 +291,13 @@ def help_solvers():
         print(wrapper.fill(format % (s , pyomo.opt.SolverManagerFactory.doc(s))))
     print("")
     wrapper = textwrap.TextWrapper(subsequent_indent='')
-    print(wrapper.fill("If no solver manager is specified, Pyomo uses the serial solver manager to execute solvers locally.  The pyro solver manager requires the installation and configuration of the pyro software.  The neos solver manager is used to execute solvers on the NEOS optimization server."))
+    print(wrapper.fill("If no solver manager is specified, Pyomo uses the serial solver manager to execute solvers locally.  The neos solver manager is used to execute solvers on the NEOS optimization server."))
     print("")
 
     print("")
     print("Serial Solver Interfaces")
     print("------------------------")
-    print(wrapper.fill("The serial and pyro solver managers support the following solver interfaces:"))
+    print(wrapper.fill("The serial manager supports the following solver interfaces:"))
     print("")
     solver_list = list(pyomo.opt.SolverFactory)
     solver_list = sorted( filter(lambda x: '_' != x[0], solver_list) )

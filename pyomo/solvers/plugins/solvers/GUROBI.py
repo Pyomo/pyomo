@@ -16,7 +16,7 @@ import logging
 import subprocess
 
 from pyomo.common import Executable
-from pyomo.common.collections import Options, Bunch
+from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
@@ -26,8 +26,6 @@ from pyomo.opt.solver import ILMLicensedSystemCallSolver
 from pyomo.core.kernel.block import IBlock
 
 logger = logging.getLogger('pyomo.solvers')
-
-from six import iteritems
 
 
 @SolverFactory.register('gurobi', doc='The GUROBI LP/MIP solver')
@@ -104,7 +102,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         self.set_problem_format(ProblemFormat.cpxlp)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -504,13 +502,13 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
 
         # For the range constraints, supply only the dual with the largest
         # magnitude (at least one should always be numerically zero)
-        for key,(ld,ud) in iteritems(range_duals):
+        for key,(ld,ud) in range_duals.items():
             if abs(ld) > abs(ud):
                 soln_constraints['r_l_'+key] = {"Dual" : ld}
             else:
                 soln_constraints['r_l_'+key] = {"Dual" : ud}                # Use the same key
         # slacks
-        for key,(ls,us) in iteritems(range_slacks):
+        for key,(ls,us) in range_slacks.items():
             if abs(ls) > abs(us):
                 soln_constraints.setdefault('r_l_'+key,{})["Slack"] = ls
             else:

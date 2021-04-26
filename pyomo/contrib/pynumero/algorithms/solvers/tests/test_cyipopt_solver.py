@@ -8,13 +8,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 import os
 
 from pyomo.contrib.pynumero.dependencies import (
-    numpy as np, numpy_available, scipy_sparse as spa, scipy_available
+    numpy as np, numpy_available, scipy, scipy_available
 )
+from pyomo.common.dependencies.scipy import sparse as spa
+
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 

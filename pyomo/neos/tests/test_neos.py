@@ -20,7 +20,7 @@ import os
 import json
 import os.path
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.scripting.pyomo_command as main
 from pyomo.scripting.util import cleanup
@@ -230,8 +230,8 @@ class PyomoCommandDriver(object):
 
 
 @unittest.category('neos')
-@unittest.skipUnless(email_set, "NEOS_EMAIL not set")
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
+@unittest.skipUnless(email_set, "NEOS_EMAIL not set")
 class TestSolvers_direct_call_min(RunAllNEOSSolvers, DirectDriver,
                                   unittest.TestCase):
     sense = pyo.minimize
@@ -242,15 +242,15 @@ class TestSolvers_direct_call_min(RunAllNEOSSolvers, DirectDriver,
         super(TestSolvers_direct_call_min, self).test_cbc()
 
 @unittest.category('neos')
-@unittest.skipUnless(email_set, "NEOS_EMAIL not set")
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
+@unittest.skipUnless(email_set, "NEOS_EMAIL not set")
 class TestSolvers_direct_call_max(RunAllNEOSSolvers, DirectDriver,
                                   unittest.TestCase):
     sense = pyo.maximize
 
 @unittest.category('neos')
-@unittest.skipUnless(email_set, "NEOS_EMAIL not set")
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
+@unittest.skipUnless(email_set, "NEOS_EMAIL not set")
 class TestSolvers_pyomo_cmd_min(RunAllNEOSSolvers, PyomoCommandDriver,
                                 unittest.TestCase):
     sense = pyo.minimize

@@ -15,7 +15,7 @@ import sys
 import subprocess
 
 from pyomo.common.errors import ApplicationError
-from pyomo.common.collections import Bunch, Options
+from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.common import Executable
@@ -26,7 +26,6 @@ from pyomo.opt.solver import SystemCallSolver
 from pyomo.solvers.mockmip import MockMIP
 from pyomo.solvers.plugins.solvers.GLPK import _glpk_version, configure_glpk
 
-from six import iteritems
 import logging
 logger = logging.getLogger('pyomo.solvers')
 
@@ -77,7 +76,7 @@ class GLPKSHELL_4_42(SystemCallSolver):
         self.set_problem_format(ProblemFormat.cpxlp)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.integer = True
 
@@ -395,7 +394,7 @@ class GLPKSHELL_4_42(SystemCallSolver):
             # For the range constraints, supply only the dual with the largest
             # magnitude (at least one should always be numerically zero)
             scon = soln.Constraint
-            for key,(ld,ud) in iteritems(range_duals):
+            for key,(ld,ud) in range_duals.items():
                 if abs(ld) > abs(ud):
                     scon['r_l_'+key] = {"Dual":ld}
                 else:
@@ -427,7 +426,7 @@ class GLPKSHELL_old(SystemCallSolver):
         self.set_problem_format(ProblemFormat.cpxlp)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.integer = True
 
