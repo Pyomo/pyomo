@@ -106,8 +106,25 @@ ExpectedFailures['glpk', 'mps', 'LP_duals_maximize'] = \
 
 ExpectedFailures['cbc', 'nl', 'MILP_unbounded'] = \
     (lambda v: v <= _trunk_version,
-     "Cbc fails to report a MILP model as unbounded when it"
-     "is defined as an NL file.")
+     "Cbc fails to report an unbounded MILP model as unbounded through "
+     "the NL interface (through 2.9.x), and fails with invalid free() "
+     "(in 2.10.x).")
+
+ExpectedFailures['cbc', 'nl', 'LP_unbounded'] = \
+    (lambda v: v[:2] == (2, 10),
+     "Cbc fails (invalid free()) for unbounded LP models through "
+     "the NL interface in 2.10.x versions "
+     "(reported upstream as coin-or/Cbc#389)")
+
+ExpectedFailures['cbc', 'nl', 'SOS1_simple'] = \
+    (lambda v: v[:2] == (2, 10),
+     "Cbc segfaults for SOS constraints in the NL interface "
+     "(reported upstream as coin-or/Cbc#388)")
+
+ExpectedFailures['cbc', 'nl', 'SOS2_simple'] = \
+    (lambda v: v[:2] == (2, 10),
+     "Cbc segfaults for SOS constraints in the NL interface "
+     "(reported upstream as coin-or/Cbc#388)")
 
 #
 # PICO

@@ -206,16 +206,15 @@ class TestAdmmNLP(unittest.TestCase):
 
         cls.model = create_basic_dense_qp(G, A, b, c)
         cls.pyomo_nlp = PyomoNLP(cls.model)
-        cls.coupling_vars = [cls.pyomo_nlp.variable_idx(cls.model.x[0]),
-                             cls.pyomo_nlp.variable_idx(cls.model.x[2])]
+        cls.coupling_vars = cls.pyomo_nlp.get_primal_indices(
+            [cls.model.x[0], cls.model.x[2]])
         cls.nlp = AdmmNLP(cls.pyomo_nlp, cls.coupling_vars, rho=2.0)
 
         # test problem 2
         cls.model2 = create_model2()
         cls.pyomo_nlp2 = PyomoNLP(cls.model2)
-        cls.coupling_vars2 = [cls.pyomo_nlp2.variable_idx(cls.model2.x[1]),
-                             cls.pyomo_nlp2.variable_idx(cls.model2.x[3]),
-                             cls.pyomo_nlp2.variable_idx(cls.model2.x[5])]
+        cls.coupling_vars2 = cls.pyomo_nlp2.get_primal_indices([
+            cls.model2.x[1], cls.model2.x[3], cls.model2.x[5]])
         cls.nlp2 = AdmmNLP(cls.pyomo_nlp2,
                            cls.coupling_vars2,
                            rho=1.0)
@@ -223,7 +222,8 @@ class TestAdmmNLP(unittest.TestCase):
         # test problem 3
         cls.model3 = create_basic_model()
         cls.pyomo_nlp3 = PyomoNLP(cls.model3)
-        cls.coupling_vars3 = [cls.pyomo_nlp3.variable_idx(cls.model3.x[1])]
+        cls.coupling_vars3 = cls.pyomo_nlp3.get_primal_indices([
+            cls.model3.x[1]])
         cls.nlp3 = AdmmNLP(cls.pyomo_nlp3,
                            cls.coupling_vars3,
                            rho=1.0)
