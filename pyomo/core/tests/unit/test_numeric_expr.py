@@ -90,30 +90,11 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         #
         # Confirm that this is a relational expression
         #
-        self.assertTrue(isinstance(exp, ExpressionBase))
-        self.assertTrue(exp.is_relational())
+        self.assertEqual(type(exp), bool)
         #
         # Check that the expression evaluates correctly
         #
-        self.assertEqual(exp(), val)
-        #
-        # Check that the expression evaluates correctly in a Boolean context
-        #
-        if expectConstExpression:
-            #
-            # The relational expression should be a constant.
-            #
-            # Check that 'val' equals the boolean value of the expression.
-            #
-            self.assertEqual(bool(exp), val)
-        else:
-            #
-            # The relational expression may not be constant
-            #
-            # Check that the expression evaluates to 'val'
-            #
-            with self.assertRaises(PyomoException):
-                bool(exp)
+        self.assertEqual(exp, val)
 
     def test_lt(self):
         #
@@ -193,13 +174,61 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         self.value_test(abs(-a), 0.5)
 
 
-class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericConstant):
+class TestExpression_EvaluateNumericValue(TestExpression_EvaluateNumericConstant):
+
+    def setUp(self):
+        super().setUp()
+
+    def create(self, val, domain):
+        tmp = Var()
+        tmp.domain = domain
+        tmp.value = val
+        return tmp
+
+    @unittest.nottest
+    def relation_test(self, exp, val, expectConstExpression=None):
+        """ Test a relationship expression. """
+        #
+        # Override the class value of 'expectConstExpression'
+        #
+        if expectConstExpression is None:
+            expectConstExpression = self.expectConstExpression
+        #
+        # Confirm that this is a relational expression
+        #
+        self.assertTrue(isinstance(exp, ExpressionBase))
+        self.assertTrue(exp.is_relational())
+        #
+        # Check that the expression evaluates correctly
+        #
+        self.assertEqual(exp(), val)
+        #
+        # Check that the expression evaluates correctly in a Boolean context
+        #
+        if expectConstExpression:
+            #
+            # The relational expression should be a constant.
+            #
+            # Check that 'val' equals the boolean value of the expression.
+            #
+            self.assertEqual(bool(exp), val)
+        else:
+            #
+            # The relational expression may not be constant
+            #
+            # Check that the expression evaluates to 'val'
+            #
+            with self.assertRaises(PyomoException):
+                bool(exp)
+
+
+class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericValue):
 
     def setUp(self):
         #
         # Create Model
         #
-        TestExpression_EvaluateNumericConstant.setUp(self)
+        super().setUp()
         #
         # Create model instance
         #
@@ -213,13 +242,13 @@ class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericConstant):
         return tmp
 
 
-class TestExpression_EvaluateVar(TestExpression_EvaluateNumericConstant):
+class TestExpression_EvaluateVar(TestExpression_EvaluateNumericValue):
 
     def setUp(self):
         #
         # Create Model
         #
-        TestExpression_EvaluateNumericConstant.setUp(self)
+        super().setUp()
         #
         # Create model instance
         #
@@ -233,13 +262,13 @@ class TestExpression_EvaluateVar(TestExpression_EvaluateNumericConstant):
         return tmp
 
 
-class TestExpression_EvaluateFixedVar(TestExpression_EvaluateNumericConstant):
+class TestExpression_EvaluateFixedVar(TestExpression_EvaluateNumericValue):
 
     def setUp(self):
         #
         # Create Model
         #
-        TestExpression_EvaluateNumericConstant.setUp(self)
+        super().setUp()
         #
         # Create model instance
         #
@@ -260,7 +289,7 @@ class TestExpression_EvaluateImmutableParam(TestExpression_EvaluateNumericConsta
         #
         # Create Model
         #
-        TestExpression_EvaluateNumericConstant.setUp(self)
+        super().setUp()
         #
         # Create model instance
         #
@@ -273,13 +302,13 @@ class TestExpression_EvaluateImmutableParam(TestExpression_EvaluateNumericConsta
         return tmp
 
 
-class TestExpression_Evaluate_MutableParam(TestExpression_EvaluateNumericConstant):
+class TestExpression_Evaluate_MutableParam(TestExpression_EvaluateNumericValue):
 
     def setUp(self):
         #
         # Create Model
         #
-        TestExpression_EvaluateNumericConstant.setUp(self)
+        super().setUp()
         #
         # Create model instance
         #

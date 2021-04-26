@@ -26,6 +26,7 @@ from .numvalue import (
     native_numeric_types,
     as_numeric,
     native_logical_types,
+    value
 )
 
 from .boolean_value import (
@@ -167,24 +168,16 @@ class InequalityExpression(_LinearOperatorExpression):
             state[i] = getattr(self, i)
         return state
 
-    def __nonzero__(self):
-        if not self.is_constant():
-            raise PyomoException('Cannot convert non-constant expression '
-                                 'to bool. This error usually arises for '
-                                 'one of two reasons. One possibility is '
-                                 'using an expression in a boolean context '
-                                 'such as an if statement. For example, \n'
-                                 '    m.x = Var()\n'
-                                 '    if m.x <= 0:\n'
-                                 '        ...\n'
-                                 'would cause this exception. Another '
-                                 'possibility is the use of chained '
-                                 'inequalities. Use the inequality() function '
-                                 'to express ranged inequality expressions.')
-
-        return bool(self())
-
-    __bool__ = __nonzero__
+    def __bool__(self):
+        raise PyomoException('Cannot convert non-constant expression '
+                             'to bool. This error usually arises for '
+                             'one of two reasons. One possibility is '
+                             'using an expression in a boolean context '
+                             'such as an if statement. For example, \n'
+                             '    m.x = Var()\n'
+                             '    if m.x <= 0:\n'
+                             '        ...\n'
+                             'would cause this exception.')
 
     def is_relational(self):
         return True
@@ -330,6 +323,18 @@ def _generate_relational_expression(etype, lhs, rhs):
         rhs = as_numeric(rhs)
     elif rhs.is_relational():
         rhs_is_relational = True
+
+    if lhs.is_constant() and rhs.is_constant():
+        lhs = value(lhs)
+        rhs = value(rhs)
+        if etype == _eq:
+            return lhs == rhs
+        elif etype == _le:
+            return lhs <= rhs
+        elif etype == _lt:
+            return lhs < rhs
+        else:
+            raise ValueError("Unknown relational expression type '%s'" % etype)
 
     if etype == _eq:
         if lhs_is_relational or rhs_is_relational:
