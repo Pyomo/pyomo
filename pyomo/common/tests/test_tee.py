@@ -51,10 +51,17 @@ class TestTeeStream(unittest.TestCase):
             # flush() and short pause should help
             t.STDOUT.write("Hello\nWorld")
             t.STDOUT.flush()
-            time.sleep(tee._poll_interval*20)
+            time.sleep(tee._poll_interval*10)
             t.STDERR.write("interrupting\ncow")
             t.STDERR.flush()
-            time.sleep(tee._poll_interval*30)
+            # For determinism, it is important that the STDERR message
+            # appears in hte output stream before we start shutting down
+            # the TeeStream (which will dump the OUT and ERR in an
+            # arbitrary order)
+            i = 0
+            while i < 1000 and 'cow' not in a.getvalue():
+                time.sleep(tee._poll_interval)
+                i += 1
         self.assertEqual(a.getvalue(), "Hello\ninterrupting\ncowWorld")
         self.assertEqual(b.getvalue(), "Hello\ninterrupting\ncowWorld")
 
