@@ -11,7 +11,6 @@
 __all__ = ['instance2dat']
 
 import types
-from six import iteritems
 from pyomo.core.base import Set, Param, value
 
 
@@ -21,7 +20,7 @@ def instance2dat(instance, output_filename):
 
     output_file = open(output_filename,"w")
 
-    for set_name, set_object in iteritems(instance.component_map(Set, active=True)):
+    for set_name, set_object in instance.component_map(Set, active=True).items():
         if (set_object.initialize is not None) and (type(set_object.initialize) is types.FunctionType):
             continue
 
@@ -45,7 +44,8 @@ def instance2dat(instance, output_filename):
 
             output_file.write("\n")
 
-    for param_name, param_object in iteritems(instance.component_map(Param, active=True)):
+    for param_name, param_object in instance.component_map(Param,
+                                                           active=True).items():
         if (param_object._initialize is not None) and (type(param_object._initialize) is types.FunctionType):
             continue
         elif len(param_object) == 0:

@@ -12,7 +12,6 @@
 import logging
 import weakref
 
-import pyutilib.misc
 from pyomo.core.base.set_types import Any
 from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.numeric_expr import LinearExpression
@@ -20,14 +19,10 @@ from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.repn.standard_repn import StandardRepn
 from pyomo.core.base.constraint import (IndexedConstraint,
                                         _ConstraintData)
+from pyomo.common.gc_manager import PauseGC
+from pyomo.common.log import is_debug_set
 
-import six
-from six.moves import xrange
-
-if six.PY3:
-    from collections.abc import Mapping as collections_Mapping
-else:
-    from collections import Mapping as collections_Mapping
+from collections.abc import Mapping
 
 
 logger = logging.getLogger('pyomo.core')
@@ -84,7 +79,7 @@ class _MatrixConstraintData(_ConstraintData):
         variables = []
         coefficients = []
         constant = 0
-        for p in xrange(indptr[index],
+        for p in range(indptr[index],
                         indptr[index+1]):
             v = x[indices[p]]
             c = data[p]
@@ -144,7 +139,7 @@ class _MatrixConstraintData(_ConstraintData):
         indices = comp._A_indices
         indptr = comp._A_indptr
         x = comp._x
-        ptrs = xrange(indptr[index],
+        ptrs = range(indptr[index],
                       indptr[index+1])
         try:
             return sum(x[indices[p]].value * data[p]
@@ -231,7 +226,7 @@ class _MatrixConstraintData(_ConstraintData):
         indices = comp._A_indices
         indptr = comp._A_indptr
         x = comp._x
-        ptrs = xrange(indptr[index],
+        ptrs = range(indptr[index],
                       indptr[index+1])
         return LinearExpression(
             linear_vars=[x[indices[p]] for p in ptrs],
@@ -287,8 +282,7 @@ class _MatrixConstraintData(_ConstraintData):
 
 @ModelComponentFactory.register(
                    "A set of constraint expressions in Ax=b form.")
-class MatrixConstraint(collections_Mapping,
-                       IndexedConstraint):
+class MatrixConstraint(Mapping, IndexedConstraint):
     """
     Defines a set of linear constraints of the form:
 
@@ -353,7 +347,7 @@ class MatrixConstraint(collections_Mapping,
 
     def construct(self, data=None):
         """Construct the expression(s) for this constraint."""
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing constraint %s"
                          % (self.name))
         if self._constructed:
@@ -361,9 +355,9 @@ class MatrixConstraint(collections_Mapping,
         self._constructed = True
 
         ref = weakref.ref(self)
-        with pyutilib.misc.PauseGC():
+        with PauseGC():
             self._data = tuple(_MatrixConstraintData(i, ref)
-                               for i in xrange(len(self._lower)))
+                               for i in range(len(self._lower)))
 
     #
     # Override some IndexedComponent methods
@@ -376,7 +370,7 @@ class MatrixConstraint(collections_Mapping,
         return self._data.__len__()
 
     def __iter__(self):
-        return iter(i for i in xrange(len(self)))
+        return iter(i for i in range(len(self)))
 
     #
     # Remove methods that allow modifying this constraint

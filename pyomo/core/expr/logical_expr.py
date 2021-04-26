@@ -15,7 +15,7 @@ from __future__ import division
 import types
 from itertools import islice
 
-_using_chained_inequality = True
+_using_chained_inequality = False
 import logging
 import traceback
 

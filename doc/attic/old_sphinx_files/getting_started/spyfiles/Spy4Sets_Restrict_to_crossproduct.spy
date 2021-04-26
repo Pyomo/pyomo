@@ -1,1 +1,0 @@
-model.K = Set(within=model.B * model.C)

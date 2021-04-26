@@ -9,17 +9,13 @@
 #  ___________________________________________________________________________
 
 import argparse
-import gzip
 import io
 import logging
 import os
 import platform
 import re
-import ssl
 import sys
-import zipfile
-
-from pyutilib.subprocess import run
+import subprocess
 
 from .config import PYOMO_CONFIG_DIR
 from .deprecation import deprecated
@@ -27,7 +23,10 @@ from .errors import DeveloperError
 import pyomo.common
 from pyomo.common.dependencies import attempt_import
 
-request = attempt_import('six.moves.urllib.request')[0]
+request = attempt_import('urllib.request')[0]
+ssl = attempt_import('ssl')[0]
+zipfile = attempt_import('zipfile')[0]
+gzip = attempt_import('gzip')[0]
 distro, distro_available = attempt_import('distro')
 
 logger = logging.getLogger('pyomo.common.download')
@@ -98,9 +97,11 @@ class FileDownloader(object):
 
     @classmethod
     def _get_distver_from_lsb_release(cls):
-        rc, dist = run(['lsb_release', '-si'])
-        rc, ver = run(['lsb_release', '-sr'])
-        return cls._map_dist(dist.lower().strip()), ver.strip()
+        dist = subprocess.run(['lsb_release', '-si'], stdout=subprocess.PIPE,
+                              stderr=subprocess.STDOUT, universal_newlines=True)
+        ver = subprocess.run(['lsb_release', '-sr'], stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT, universal_newlines=True)
+        return cls._map_dist(dist.stdout.lower().strip()), ver.stdout.strip()
 
     @classmethod
     def _get_distver_from_distro(cls):
@@ -130,7 +131,8 @@ class FileDownloader(object):
                 dist, ver = cls._get_distver_from_distro()
             elif os.path.exists('/etc/redhat-release'):
                 dist, ver = cls._get_distver_from_redhat_release()
-            elif run(['lsb_release'])[0] == 0:
+            elif subprocess.run(['lsb_release'], stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL).returncode == 0:
                 dist, ver = cls._get_distver_from_lsb_release()
             elif os.path.exists('/etc/os-release'):
                 # Note that (at least on centos), os_release is an

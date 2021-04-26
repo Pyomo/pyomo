@@ -9,7 +9,7 @@
 #     virtualenv) and config (the local Pyomo configuration/cache
 #     directory)
 #
-# CATEGORY: the category to pass to test.pyomo (defaults to nightly)
+# CATEGORY: the category to pass to pyomo.common.unittest (defaults to nightly)
 #
 # TEST_SUITES: Paths (module or directory) to be passed to nosetests to
 #     run. (defaults to "pyomo '$WORKSPACE/pyomo-model-libraries'")
@@ -72,8 +72,7 @@ if test -z "$MODE" -o "$MODE" == setup; then
     echo "# Setting up virtual environment"
     echo "#"
     virtualenv python $VENV_SYSTEM_PACKAGES --clear
-    # Put the venv at the beginning of the PATH
-    export PATH="$WORKSPACE/python/bin:$PATH"
+    source python/bin/activate
     # Because modules set the PYTHONPATH, we need to make sure that the
     # virtualenv appears first
     LOCAL_SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
@@ -94,14 +93,6 @@ if test -z "$MODE" -o "$MODE" == setup; then
     #
     # DO NOT install pyomo-model-libraries
     #
-
-    #
-    # #! lines cannot exceed 128 characters, which Jenkins will
-    # periodically do, especially for matrix jobs.  We will make
-    # the virtualenv relocatable to shorten the line, instead relying
-    # on the virtualenv being the first thing on the PATH.
-    #
-    virtualenv --relocatable python
 
     # Set up coverage tracking for subprocesses
     if test -z "$DISABLE_COVERAGE"; then
@@ -173,7 +164,7 @@ if test -z "$MODE" -o "$MODE" == test; then
     echo "#"
     echo "# Running Pyomo tests"
     echo "#"
-    test.pyomo -v --cat=$CATEGORY $TEST_SUITES
+    python -m pyomo.common.unittest $TEST_SUITES -v --cat=$CATEGORY --xunit
 
     # Combine the coverage results and upload
     if test -z "$DISABLE_COVERAGE"; then
@@ -199,7 +190,8 @@ if test -z "$MODE" -o "$MODE" == test; then
                     -t $CODECOV_TOKEN --root `pwd` -e OS,python \
                     --name $CODECOV_JOB_NAME $CODECOV_ARGS \
                     | tee .cover.upload
-                if test $? == 0 -a `grep -i error .cover.upload | wc -l` -eq 0; then
+                if test $? == 0 -a `grep -i error .cover.upload \
+                        | grep -v branch= | wc -l` -eq 0; then
                     break
                 elif test $i -ge 4; then
                     exit 1

@@ -16,33 +16,33 @@ from os.path import abspath, dirname
 pyomodir = dirname(abspath(__file__))+"/../.."
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
-import pyutilib.services
+import pyomo.common.unittest as unittest
 
+from pyomo.common.tempfiles import TempfileManager
 import pyomo.opt
 import pyomo.opt.plugins.sol
 from pyomo.opt.base.solvers import UnknownSolver
 
-old_tempdir = pyutilib.services.TempfileManager.tempdir
+old_tempdir = TempfileManager.tempdir
 
 
-class TestWriter(pyomo.opt.AbstractProblemWriter):
+class MockWriter(pyomo.opt.AbstractProblemWriter):
 
     def __init__(self, name=None):
         pyomo.opt.AbstractProblemWriter.__init__(self,name)
 
 
-class TestReader(pyomo.opt.AbstractResultsReader):
+class MockReader(pyomo.opt.AbstractResultsReader):
 
     def __init__(self, name=None):
         pyomo.opt.AbstractResultsReader.__init__(self,name)
 
 
-class TestSolver(pyomo.opt.OptSolver):
+class MockSolver(pyomo.opt.OptSolver):
 
     def __init__(self, **kwds):
         kwds['type'] = 'stest_type'
-        kwds['doc'] = 'TestSolver Documentation'
+        kwds['doc'] = 'MockSolver Documentation'
         pyomo.opt.OptSolver.__init__(self,**kwds)
 
 
@@ -56,14 +56,14 @@ class Test(unittest.TestCase):
         unittest.TestCase.run(self,result)
 
     def setUp(self):
-        pyomo.opt.WriterFactory.register('wtest')(TestWriter)
-        pyomo.opt.ReaderFactory.register('rtest')(TestReader)
-        pyomo.opt.SolverFactory.register('stest')(TestSolver)
-        pyutilib.services.TempfileManager.tempdir = currdir
+        pyomo.opt.WriterFactory.register('wtest')(MockWriter)
+        pyomo.opt.ReaderFactory.register('rtest')(MockReader)
+        pyomo.opt.SolverFactory.register('stest')(MockSolver)
+        TempfileManager.tempdir = currdir
 
     def tearDown(self):
-        pyutilib.services.TempfileManager.clear_tempfiles()
-        pyutilib.services.TempfileManager.tempdir = old_tempdir
+        TempfileManager.clear_tempfiles()
+        TempfileManager.tempdir = old_tempdir
         pyomo.opt.WriterFactory.unregister('wtest')
         pyomo.opt.ReaderFactory.unregister('rtest')
         pyomo.opt.SolverFactory.unregister('stest')
@@ -83,9 +83,9 @@ class Test(unittest.TestCase):
         ans = pyomo.opt.SolverFactory("none")
         self.assertTrue(isinstance(ans, UnknownSolver))
         ans = pyomo.opt.SolverFactory("stest")
-        self.assertEqual(type(ans), TestSolver)
+        self.assertEqual(type(ans), MockSolver)
         ans = pyomo.opt.SolverFactory("stest", name="mymock")
-        self.assertEqual(type(ans), TestSolver)
+        self.assertEqual(type(ans), MockSolver)
         self.assertEqual(ans.name,  "mymock")
 
     def test_writer_factory(self):

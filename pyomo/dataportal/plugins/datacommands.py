@@ -10,8 +10,7 @@
 
 import os.path
 
-from pyutilib.misc import Options
-
+from pyomo.common.collections import Bunch
 from pyomo.dataportal.factory import DataManagerFactory
 from pyomo.dataportal.process_data import _process_include
 
@@ -21,7 +20,7 @@ class PyomoDataCommands(object):
 
     def __init__(self):
         self._info = []
-        self.options = Options()
+        self.options = Bunch()
 
     def available(self):
         return True

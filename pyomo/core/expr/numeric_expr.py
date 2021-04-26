@@ -16,7 +16,7 @@ from itertools import islice
 
 logger = logging.getLogger('pyomo.core')
 
-from pyutilib.math.util import isclose
+from math import isclose
 from pyomo.common.deprecation import deprecated
 
 from .expr_common import (
@@ -823,6 +823,7 @@ class NPV_DivisionExpression(DivisionExpression):
         return False
 
 
+@deprecated("Use DivisionExpression", version='5.6.7')
 class ReciprocalExpression(ExpressionBase):
     """
     Reciprocal expressions::
@@ -832,8 +833,6 @@ class ReciprocalExpression(ExpressionBase):
     __slots__ = ()
     PRECEDENCE = 4
 
-    @deprecated("ReciprocalExpression is deprecated. Use DivisionExpression",
-                version='5.6.7')
     def __init__(self, args):
         super(ReciprocalExpression, self).__init__(args)
 

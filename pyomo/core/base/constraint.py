@@ -12,12 +12,13 @@ __all__ = ['Constraint', '_ConstraintData', 'ConstraintList',
            'simple_constraint_rule', 'simple_constraintlist_rule']
 
 import inspect
-import six
+import io
 import sys
 import logging
+import math
 from weakref import ref as weakref_ref
 
-import pyutilib.math
+from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr import logical_expr
 from pyomo.core.expr.numvalue import (ZeroConstant,
@@ -29,26 +30,13 @@ from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import \
     ( ActiveIndexedComponent,
-      UnindexedComponent_set,
-      _get_indexed_component_data_name, )
-from pyomo.core.base.misc import (apply_indexed_rule,
-                                  tabular_writer)
+      UnindexedComponent_set)
+from pyomo.core.base.misc import (tabular_writer)
 from pyomo.core.base.set import Set
 from pyomo.core.base.util import (
     disable_methods, Initializer,
     IndexedCallInitializer, CountedCallInitializer
 )
-
-from six import StringIO, iteritems
-
-if six.PY3:
-    from collections.abc import Sequence as collections_Sequence
-    def formatargspec(fn):
-        return str(inspect.signature(fn))
-else:
-    from collections import Sequence as collections_Sequence
-    def formatargspec(fn):
-        return str(inspect.formatargspec(*inspect.getargspec(fn)))
 
 
 logger = logging.getLogger('pyomo.core')
@@ -62,6 +50,7 @@ tuple, or one of Constraint.Skip, Constraint.Feasible, or
 Constraint.Infeasible.  The most common cause of this error is
 forgetting to include the "return" statement at the end of your rule.
 """
+
 
 def _map_constraint_result(fn, none_val, args, kwargs):
     if fn.__class__ in _simple_constraint_rule_types:
@@ -120,7 +109,7 @@ def simple_constraint_rule( fn ):
     # knowing the number of positional arguments, we will go to extra
     # effort here to preserve the original function signature.
     _funcdef = _map_constraint_funcdef % (
-        formatargspec(fn), 'ConstraintList.Skip'
+        str(inspect.signature(fn)), 'ConstraintList.Skip'
     )
     # Create the wrapper in a temporary environment that mimics this
     # function's environment.
@@ -151,7 +140,7 @@ def simple_constraintlist_rule( fn ):
     # knowing the number of positional arguments, we will go to extra
     # effort here to preserve the original function signature.
     _funcdef = _map_constraint_funcdef % (
-        formatargspec(fn), 'ConstraintList.End'
+        str(inspect.signature(fn)), 'ConstraintList.End'
     )
     # Create the wrapper in a temporary environment that mimics this
     # function's environment.
@@ -526,7 +515,7 @@ class _GeneralConstraintData(_ConstraintData):
             if logical_expr._using_chained_inequality \
                and logical_expr._chainedInequality.prev is not None:
 
-                buf = StringIO()
+                buf = io.StringIO()
                 logical_expr._chainedInequality.prev.pprint(buf)
                 #
                 # We are about to raise an exception, so it's OK to
@@ -612,18 +601,20 @@ class _GeneralConstraintData(_ConstraintData):
                         "using '<=', '>=', or '=='."
                         % (self.name))
 
-                if not expr.arg(1).is_potentially_variable():
+                arg0 = as_numeric(expr.arg(0))
+                arg1 = as_numeric(expr.arg(1))
+                if not arg1.is_potentially_variable():
                     self._lower = None
-                    self._body  = expr.arg(0)
-                    self._upper = as_numeric(expr.arg(1))
-                elif not expr.arg(0).is_potentially_variable():
-                    self._lower = as_numeric(expr.arg(0))
-                    self._body  = expr.arg(1)
+                    self._body  = arg0
+                    self._upper = arg1
+                elif not arg0.is_potentially_variable():
+                    self._lower = arg0
+                    self._body  = arg1
                     self._upper = None
                 else:
                     self._lower = None
-                    self._body = expr.arg(0)
-                    self._body -= expr.arg(1)
+                    self._body = arg0
+                    self._body -= arg1
                     self._upper = ZeroConstant
 
 
@@ -662,7 +653,7 @@ class _GeneralConstraintData(_ConstraintData):
         #
         if (self._lower is not None) and is_constant(self._lower):
             val = self._lower if self._lower.__class__ in native_numeric_types else self._lower()
-            if not pyutilib.math.is_finite(val):
+            if not math.isfinite(val):
                 if val > 0:
                     raise ValueError(
                         "Constraint '%s' created with a +Inf lower "
@@ -675,7 +666,7 @@ class _GeneralConstraintData(_ConstraintData):
 
         if (self._upper is not None) and is_constant(self._upper):
             val = self._upper if self._upper.__class__ in native_numeric_types else self._upper()
-            if not pyutilib.math.is_finite(val):
+            if not math.isfinite(val):
                 if val < 0:
                     raise ValueError(
                         "Constraint '%s' created with a -Inf upper "
@@ -797,7 +788,7 @@ class Constraint(ActiveIndexedComponent):
         self._constructed=True
 
         timer = ConstructionTimer(self)
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing constraint %s"
                          % (self.name))
 
@@ -865,7 +856,7 @@ class Constraint(ActiveIndexedComponent):
              ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active),
              ],
-            iteritems(self),
+            self.items(),
             ( "Lower","Body","Upper","Active" ),
             lambda k, v: [ "-Inf" if v.lower is None else v.lower,
                            v.body,
@@ -890,7 +881,7 @@ class Constraint(ActiveIndexedComponent):
 
         ostream.write("\n")
         tabular_writer( ostream, prefix+tab,
-                        ((k,v) for k,v in iteritems(self._data) if v.active),
+                        ((k,v) for k,v in self._data.items() if v.active),
                         ( "Lower","Body","Upper" ),
                         lambda k, v: [ value(v.lower),
                                        v.body(),
@@ -1076,9 +1067,7 @@ class ConstraintList(IndexedConstraint):
             return
         self._constructed=True
 
-        generate_debug_messages = \
-            __debug__ and logger.isEnabledFor(logging.DEBUG)
-        if generate_debug_messages:
+        if is_debug_set(logger):
             logger.debug("Constructing constraint list %s"
                          % (self.name))
 

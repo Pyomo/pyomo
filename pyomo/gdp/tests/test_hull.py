@@ -8,11 +8,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 import logging
 
-from pyomo.environ import TransformationFactory, Block, Set, Constraint, Var, RealSet, ComponentMap, value, log, ConcreteModel, Any, Suffix, SolverFactory
+from pyomo.environ import (TransformationFactory, Block, Set, Constraint, Var,
+                           RealSet, ComponentMap, value, log, ConcreteModel,
+                           Any, Suffix, SolverFactory, RangeSet, Param,
+                           Objective, TerminationCondition)
 from pyomo.repn import generate_standard_repn
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
@@ -24,7 +27,7 @@ linear_solvers = pyomo.opt.check_available_solvers(
     'glpk','cbc','gurobi','cplex')
 
 import random
-from six import iteritems, StringIO
+from io import StringIO
 
 EPS = TransformationFactory('gdp.hull').CONFIG.EPS
 
@@ -231,7 +234,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m = models.makeTwoTermDisj_Nonlinear()
         m.disjunction.xor = False
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "Cannot do hull reformulation for Disjunction "
             "'disjunction' with OR constraint.  Must be an XOR!*",
@@ -336,7 +339,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             mappings[m.y] = disjBlock[i].disaggregatedVars.y
             mappings[m.x] = disjBlock[i].disaggregatedVars.x
 
-            for orig, disagg in iteritems(mappings):
+            for orig, disagg in mappings.items():
                 self.assertIs(hull.get_src_var(disagg), orig)
                 self.assertIs(hull.get_disaggregated_var(orig, m.d[i]), disagg)
 
@@ -356,7 +359,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             mappings[disjBlock[i].disaggregatedVars.w] = disjBlock[i].w_bounds
             mappings[disjBlock[i].disaggregatedVars.y] = disjBlock[i].y_bounds
             mappings[disjBlock[i].disaggregatedVars.x] = disjBlock[i].x_bounds
-            for var, cons in iteritems(mappings):
+            for var, cons in mappings.items():
                 self.assertIs(hull.get_var_bounds_constraint(var), cons)
 
     def test_create_using_nonlinear(self):
@@ -528,7 +531,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # no bounds
         m.w.setlb(None)
         m.w.setub(None)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "Variables that appear in disjuncts must be "
             "bounded in order to use the hull "
@@ -612,14 +615,14 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # can't ask for simpledisj1.c[1]: it wasn't transformed
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 KeyError,
-                ".*b.simpledisj1.c\[1\]",
+                r".*b.simpledisj1.c\[1\]",
                 hull.get_transformed_constraints,
                 m.b.simpledisj1.c[1])
-        self.assertRegexpMatches(log.getvalue(),
-                                 ".*Constraint 'b.simpledisj1.c\[1\]' has not "
-                                 "been transformed.")
+        self.assertRegex(log.getvalue(),
+                         r".*Constraint 'b.simpledisj1.c\[1\]' has not "
+                         r"been transformed.")
 
         # this fixes a[2] to 0, so we should get the disggregated var
         transformed = hull.get_transformed_constraints(m.b.simpledisj1.c[2])
@@ -673,7 +676,7 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
                 relaxedDisjuncts[5].disaggregatedVars.component('x[3]')],
         }
 
-        for i, disVars in iteritems(disaggregatedVars):
+        for i, disVars in disaggregatedVars.items():
             cons = hull.get_disaggregation_constraint(m.x[i],
                                                        m.disjunction[i])
             self.assertEqual(cons.lower, 0)
@@ -703,7 +706,7 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
                       relaxedDisjuncts[7].disaggregatedVars.component('a[2,B]')],
         }
 
-        for i, disVars in iteritems(disaggregatedVars):
+        for i, disVars in disaggregatedVars.items():
             cons = hull.get_disaggregation_constraint(m.a[i],
                                                        m.disjunction[i])
             self.assertEqual(cons.lower, 0)
@@ -1542,6 +1545,44 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         self.assertEqual(value(m.d2.indicator_var), 1)
         self.assertEqual(value(m.x), 1.1)
 
+    @unittest.skipIf(not linear_solvers, "No linear solver available")
+    def test_disaggregated_vars_are_set_to_0_correctly(self):
+        m = models.makeNestedDisjunctions_FlatDisjuncts()
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
+
+        # this should be a feasible integer solution
+        m.d1.indicator_var.fix(0)
+        m.d2.indicator_var.fix(1)
+        m.d3.indicator_var.fix(0)
+        m.d4.indicator_var.fix(0)
+
+        results = SolverFactory(linear_solvers[0]).solve(m)
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.optimal)
+        self.assertEqual(value(m.x), 1.1)
+
+        self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d1)), 0)
+        self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d2)), 1.1)
+        self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d3)), 0)
+        self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d4)), 0)
+
+        # and what if one of the inner disjuncts is true?
+        m.d1.indicator_var.fix(1)
+        m.d2.indicator_var.fix(0)
+        m.d3.indicator_var.fix(1)
+        m.d4.indicator_var.fix(0)
+
+        results = SolverFactory(linear_solvers[0]).solve(m)
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.optimal)
+        self.assertEqual(value(m.x), 1.2)
+
+        self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d1)), 1.2)
+        self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d2)), 0)
+        self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d3)), 1.2)
+        self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d4)), 0)
+
 class TestSpecialCases(unittest.TestCase):
     def test_local_vars(self):
         """ checks that if nothing is marked as local, we assume it is all
@@ -1556,13 +1597,13 @@ class TestSpecialCases(unittest.TestCase):
         m.d2.c = Constraint(expr=m.y >= m.d2.z)
         m.disj = Disjunction(expr=[m.d1, m.d2])
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             ".*Missing bound for d2.z.*",
             TransformationFactory('gdp.hull').create_using,
             m)
         m.d2.z.setlb(7)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             ".*Missing bound for d2.z.*",
             TransformationFactory('gdp.hull').create_using,
@@ -1801,12 +1842,12 @@ class TestErrors(unittest.TestCase):
 
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp.hull', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 AttributeError,
                 "'NoneType' object has no attribute '_bigMConstraintMap'",
                 hull.get_var_bounds_constraint,
                 m.w)
-        self.assertRegexpMatches(
+        self.assertRegex(
             log.getvalue(),
             ".*Either 'w' is not a disaggregated variable, "
             "or the disjunction that disaggregates it has "
@@ -1814,48 +1855,48 @@ class TestErrors(unittest.TestCase):
 
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp.hull', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 KeyError,
-                ".*_pyomo_gdp_hull_reformulation.relaxedDisjuncts\[1\]."
-                "disaggregatedVars.w",
+                r".*_pyomo_gdp_hull_reformulation.relaxedDisjuncts\[1\]."
+                r"disaggregatedVars.w",
                 hull.get_disaggregation_constraint,
                 m.d[1].transformation_block().disaggregatedVars.w,
                 m.disjunction)
-        self.assertRegexpMatches(log.getvalue(), ".*It doesn't appear that "
-                                 "'_pyomo_gdp_hull_reformulation."
-                                 "relaxedDisjuncts\[1\].disaggregatedVars.w' "
-                                 "is a variable that was disaggregated by "
-                                 "Disjunction 'disjunction'")
+        self.assertRegex(log.getvalue(), ".*It doesn't appear that "
+                         r"'_pyomo_gdp_hull_reformulation."
+                         r"relaxedDisjuncts\[1\].disaggregatedVars.w' "
+                         r"is a variable that was disaggregated by "
+                         r"Disjunction 'disjunction'")
 
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp.hull', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 AttributeError,
                 "'NoneType' object has no attribute '_disaggregatedVarMap'",
                 hull.get_src_var,
                 m.w)
-        self.assertRegexpMatches(
+        self.assertRegex(
             log.getvalue(),
             ".*'w' does not appear to be a disaggregated variable")
 
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.gdp.hull', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 KeyError,
-                ".*_pyomo_gdp_hull_reformulation.relaxedDisjuncts\[1\]."
-                "disaggregatedVars.w",
+                r".*_pyomo_gdp_hull_reformulation.relaxedDisjuncts\[1\]."
+                r"disaggregatedVars.w",
                 hull.get_disaggregated_var,
                 m.d[1].transformation_block().disaggregatedVars.w,
                 m.d[1])
-        self.assertRegexpMatches(log.getvalue(),
-                                 ".*It does not appear "
-                                 "'_pyomo_gdp_hull_reformulation."
-                                 "relaxedDisjuncts\[1\].disaggregatedVars.w' "
-                                 "is a variable which appears in disjunct "
-                                 "'d\[1\]'")
+        self.assertRegex(log.getvalue(),
+                         r".*It does not appear "
+                         r"'_pyomo_gdp_hull_reformulation."
+                         r"relaxedDisjuncts\[1\].disaggregatedVars.w' "
+                         r"is a variable which appears in disjunct "
+                         r"'d\[1\]'")
 
         m.random_disjunction = Disjunction(expr=[m.w == 2, m.w >= 7])
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "Disjunction 'random_disjunction' has not been properly "
             "transformed: None of its disjuncts are transformed.",
@@ -1863,10 +1904,10 @@ class TestErrors(unittest.TestCase):
             m.w,
             m.random_disjunction)
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
-            "Disjunct 'random_disjunction_disjuncts\[0\]' has not been "
-            "transformed",
+            r"Disjunct 'random_disjunction_disjuncts\[0\]' has not been "
+            r"transformed",
             hull.get_disaggregated_var,
             m.w,
             m.random_disjunction.disjuncts[0])
@@ -2039,3 +2080,72 @@ class NameDeprecationTest(unittest.TestCase):
         m1.pprint(ostream=out1)
         m2.pprint(ostream=out2)
         self.assertMultiLineEqual(out1.getvalue(), out2.getvalue())
+
+class KmeansTest(unittest.TestCase):
+    @unittest.skipIf('gurobi' not in linear_solvers, 
+                     "Gurobi solver not available")
+    def test_optimal_soln_feasible(self):
+        m = ConcreteModel()
+        m.Points = RangeSet(3)
+        m.Centroids = RangeSet(2)
+
+        m.X = Param(m.Points, initialize={1:0.3672, 2:0.8043, 3:0.3059})
+
+        m.cluster_center = Var(m.Centroids, bounds=(0,2))
+        m.distance = Var(m.Points, bounds=(0,2))
+        m.t = Var(m.Points, m.Centroids, bounds=(0,2))
+
+        @m.Disjunct(m.Points, m.Centroids)
+        def AssignPoint(d, i, k):
+            m = d.model()
+            d.LocalVars = Suffix(direction=Suffix.LOCAL)
+            d.LocalVars[d] = [m.t[i,k]]
+            def distance1(d):
+                return m.t[i,k] >= m.X[i] - m.cluster_center[k]
+            def distance2(d):
+                return m.t[i,k] >= - (m.X[i] - m.cluster_center[k])
+            d.dist1 = Constraint(rule=distance1)
+            d.dist2 = Constraint(rule=distance2)
+            d.define_distance = Constraint(expr=m.distance[i] == m.t[i,k])
+
+        @m.Disjunction(m.Points)
+        def OneCentroidPerPt(m, i):
+            return [m.AssignPoint[i, k] for k in m.Centroids]
+
+        m.obj = Objective(expr=sum(m.distance[i] for i in m.Points))
+
+        TransformationFactory('gdp.hull').apply_to(m)
+
+        # fix an optimal solution
+        m.AssignPoint[1,1].indicator_var.fix(1)
+        m.AssignPoint[1,2].indicator_var.fix(0)
+        m.AssignPoint[2,1].indicator_var.fix(0)
+        m.AssignPoint[2,2].indicator_var.fix(1)
+        m.AssignPoint[3,1].indicator_var.fix(1)
+        m.AssignPoint[3,2].indicator_var.fix(0)
+
+        m.cluster_center[1].fix(0.3059)
+        m.cluster_center[2].fix(0.8043)
+
+        m.distance[1].fix(0.0613)
+        m.distance[2].fix(0)
+        m.distance[3].fix(0)
+
+        m.t[1,1].fix(0.0613)
+        m.t[1,2].fix(0)
+        m.t[2,1].fix(0)
+        m.t[2,2].fix(0)
+        m.t[3,1].fix(0)
+        m.t[3,2].fix(0)
+
+        results = SolverFactory('gurobi').solve(m)
+        
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.optimal)
+        
+        TOL = 1e-8
+        for c in m.component_data_objects(Constraint, active=True): 
+            if c.lower is not None:
+                self.assertGreaterEqual(value(c.body) + TOL, value(c.lower))
+            if c.upper is not None:
+                self.assertLessEqual(value(c.body) - TOL, value(c.upper))

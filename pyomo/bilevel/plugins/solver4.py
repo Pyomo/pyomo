@@ -9,9 +9,9 @@
 #  ___________________________________________________________________________
 
 import time
-import pyutilib.misc
 import pyomo.opt
 from pyomo.core import TransformationFactory, Var, Set
+from pyomo.common.collections import Bunch
 
 
 @pyomo.opt.SolverFactory.register('bilevel_bqp',
@@ -87,7 +87,9 @@ class BILEVEL_Solver4(pyomo.opt.OptSolver):
         # Deactivate the block that contains the optimality conditions,
         # and reactivate SubModel
         #
-        submodel = self._instance._transformation_data['bilevel.linear_mpec'].submodel_cuid.find_component(self._instance)
+        submodel = self._instance._transformation_data[
+            'bilevel.linear_mpec'].submodel_cuid.find_component_on(
+                self._instance)
         for (name, data) in submodel.component_map(active=False).items():
             if not isinstance(data,Var) and not isinstance(data,Set):
                 data.activate()
@@ -95,11 +97,13 @@ class BILEVEL_Solver4(pyomo.opt.OptSolver):
         # TODO: delete this subblock
         # TODO: Remove bilinear and bigM blocks
         #
-        self._instance._transformation_data['bilevel.linear_mpec'].block_cuid.find_component(self._instance).deactivate()
+        self._instance._transformation_data[
+            'bilevel.linear_mpec'].block_cuid.find_component_on(
+                self._instance).deactivate()
         #
         # Return the sub-solver return condition value and log
         #
-        return pyutilib.misc.Bunch(rc=getattr(opt,'_rc', None),
+        return Bunch(rc=getattr(opt,'_rc', None),
                                    log=getattr(opt,'_log',None))
 
     def _postsolve(self):

@@ -14,7 +14,7 @@
 #
 
 import pyomo.contrib.example
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 
 class Tests(unittest.TestCase):

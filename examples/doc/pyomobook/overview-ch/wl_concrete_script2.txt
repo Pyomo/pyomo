@@ -1,3 +1,0 @@
-Harlingen serves customers: ['LA', 'Houston']
-Memphis: do not build
-Ashland serves customers: ['NYC', 'Chicago']

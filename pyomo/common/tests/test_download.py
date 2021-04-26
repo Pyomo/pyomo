@@ -11,18 +11,18 @@
 import os
 import platform
 import re
-import six
 import shutil
 import tempfile
+import subprocess
 
-import pyutilib.th as unittest
-from pyutilib.misc import capture_output
-from pyutilib.subprocess import run
+import pyomo.common.unittest as unittest
+
 
 from pyomo.common import DeveloperError
 from pyomo.common.config import PYOMO_CONFIG_DIR
 from pyomo.common.fileutils import this_file
 from pyomo.common.download import FileDownloader, distro_available
+from pyomo.common.tee import capture_output
 
 class Test_FileDownloader(unittest.TestCase):
     def setUp(self):
@@ -49,7 +49,7 @@ class Test_FileDownloader(unittest.TestCase):
         self.assertEqual(f.cacert, this_file())
         self.assertIsNone(f._fname)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "cacert='nonexistant_file_name' does not "
                 "refer to a valid file."):
             FileDownloader(True, 'nonexistant_file_name')
@@ -83,18 +83,18 @@ class Test_FileDownloader(unittest.TestCase):
         with capture_output() as io:
             with self.assertRaises(SystemExit):
                 f.parse_args(['--cacert'])
-            self.assertIn('argument --cacert: expected one argument',
+        self.assertIn('argument --cacert: expected one argument',
                           io.getvalue())
 
         f = FileDownloader()
         with capture_output() as io:
             with self.assertRaises(SystemExit):
                 f.parse_args(['--cacert', '--insecure'])
-            self.assertIn('argument --cacert: expected one argument',
+        self.assertIn('argument --cacert: expected one argument',
                           io.getvalue())
 
         f = FileDownloader()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "--cacert='nonexistant_file_name' does "
                 "not refer to a valid file"):
             f.parse_args(['--cacert', 'nonexistant_file_name'])
@@ -103,7 +103,7 @@ class Test_FileDownloader(unittest.TestCase):
         with capture_output() as io:
             with self.assertRaises(SystemExit):
                 f.parse_args(['--foo'])
-            self.assertIn('error: unrecognized arguments: --foo',
+        self.assertIn('error: unrecognized arguments: --foo',
                           io.getvalue())
 
     def test_set_destination_filename(self):
@@ -169,7 +169,8 @@ class Test_FileDownloader(unittest.TestCase):
                 self.assertEqual(_ver, v)
                 self.assertTrue(v.replace('.','').startswith(dist_ver))
 
-            if run(['lsb_release'])[0] == 0:
+            if subprocess.run(['lsb_release'], stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL).returncode == 0:
                 d, v = f._get_distver_from_lsb_release()
                 #print(d,v)
                 self.assertEqual(_os, d)
@@ -212,7 +213,7 @@ class Test_FileDownloader(unittest.TestCase):
     def test_get_platform_url(self):
         f = FileDownloader()
         urlmap = {'bogus_sys': 'bogus'}
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "cannot infer the correct url for platform '.*'"):
             f.get_platform_url(urlmap)
 
@@ -222,15 +223,15 @@ class Test_FileDownloader(unittest.TestCase):
 
     def test_get_files_requires_set_destination(self):
         f = FileDownloader()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 DeveloperError, 'target file name has not been initialized'):
             f.get_binary_file('bogus')
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 DeveloperError, 'target file name has not been initialized'):
             f.get_binary_file_from_zip_archive('bogus', 'bogus')
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 DeveloperError, 'target file name has not been initialized'):
             f.get_gzipped_binary_file('bogus')
 
@@ -240,10 +241,7 @@ class Test_FileDownloader(unittest.TestCase):
             f = FileDownloader()
 
             # Mock retrieve_url so network connections are not necessary
-            if six.PY3:
-                f.retrieve_url = lambda url: bytes("\n", encoding='utf-8')
-            else:
-                f.retrieve_url = lambda url: str("\n")
+            f.retrieve_url = lambda url: bytes("\n", encoding='utf-8')
 
             # Binary files will preserve line endings
             target = os.path.join(tmpdir, 'bin.txt')

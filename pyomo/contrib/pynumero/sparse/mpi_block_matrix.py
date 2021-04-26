@@ -81,44 +81,35 @@ class MPIBlockMatrix(BaseBlockMatrix):
                     owned by all processes the rank is -1. Blocks that are
                     None should be owned by all processes.
     mpi_comm : MPI communicator
+    assert_correct_owners: bool
+                           If True, then checks will be performed to ensure
+                           that processor owners are consistent. This check
+                           requires communication. If False, this check is 
+                           skipped.
     """
 
     def __init__(self,
                  nbrows,
                  nbcols,
                  rank_ownership,
-                 mpi_comm):
+                 mpi_comm,
+                 assert_correct_owners=False):
 
         shape = (nbrows, nbcols)
         self._block_matrix = BlockMatrix(nbrows, nbcols)
         self._mpiw = mpi_comm
-        self._rank_owner = np.zeros(shape, dtype=np.int64)
-        self._owned_mask = np.zeros(shape, dtype=bool)
-        self._unique_owned_mask = np.zeros(shape, dtype=bool)
-
         rank = self._mpiw.Get_rank()
+        self._rank_owner = np.asarray(rank_ownership, dtype=np.int)
+        self._owned_mask = np.bitwise_or(self._rank_owner == rank, self._rank_owner < 0)
+        self._unique_owned_mask = self._rank_owner == rank
 
-        if isinstance(rank_ownership, list):
-            rank_ownership = np.asarray(rank_ownership, dtype=np.int64)
-        if not isinstance(rank_ownership, np.ndarray):
-            raise RuntimeError('rank_ownership must be a list of lists or a numpy array')
-        assert rank_ownership.ndim == 2, 'rank_ownership must be of size 2'
-
-        for i in range(nbrows):
-            for j in range(nbcols):
-                owner = rank_ownership[i, j]
-                assert owner < self._mpiw.Get_size(), \
-                    'rank owner out of range'
-                self._rank_owner[i, j] = owner
-                if rank == owner or owner < 0:
-                    self._owned_mask[i, j] = True
-                    if owner == rank:
-                        self._unique_owned_mask[i, j] = True
+        assert self._rank_owner.ndim == 2, 'rank_ownership must be of size 2'
 
         # Note: this requires communication but is disabled when assertions
         # are turned off
-        assert self._assert_correct_owners(), \
-            'rank_owner must be the same in all processors'
+        if assert_correct_owners:
+            assert self._assert_correct_owners(), \
+                'rank_owner must be the same in all processors'
 
         # make some of the pointers unmutable
         self._rank_owner.flags.writeable = False
@@ -264,7 +255,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         m = self.bshape[0]
         n = self.bshape[1]
-        result = MPIBlockMatrix(n, m, self._rank_owner.T, self._mpiw)
+        result = MPIBlockMatrix(n, m, self._rank_owner.T, self._mpiw, assert_correct_owners=False)
         result._block_matrix = self._block_matrix.transpose()
         return result
 
@@ -564,7 +555,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         """
         m, n = self.bshape
-        result = MPIBlockMatrix(m, n, self._rank_owner, self._mpiw)
+        result = MPIBlockMatrix(m, n, self._rank_owner, self._mpiw, assert_correct_owners=False)
         result._block_matrix = self._block_matrix.copy()
         return result
 
@@ -581,7 +572,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
         """
         m, n = self.bshape
-        result = MPIBlockMatrix(m, n, self._rank_owner, self._mpiw)
+        result = MPIBlockMatrix(m, n, self._rank_owner, self._mpiw, assert_correct_owners=False)
         result._block_matrix = self._block_matrix.copy_structure()
         return result
 
@@ -589,7 +580,6 @@ class MPIBlockMatrix(BaseBlockMatrix):
 
     # Note: this requires communication
     def _assert_correct_owners(self, root=0):
-
         rank = self._mpiw.Get_rank()
         num_processors = self._mpiw.Get_size()
 
@@ -606,11 +596,10 @@ class MPIBlockMatrix(BaseBlockMatrix):
         if rank == root:
             owners_in_processor = np.split(receive_data, num_processors)
             root_rank_owners = owners_in_processor[root]
-            for i in range(flat_size):
-                for k in range(num_processors):
-                    if k != root:
-                        if owners_in_processor[k][i] != root_rank_owners[i]:
-                            return False
+            for k in range(num_processors):
+                if k != root:
+                    if not np.array_equal(owners_in_processor[k], root_rank_owners):
+                        return False
         return True
 
     def __repr__(self):
@@ -1159,7 +1148,8 @@ class MPIBlockMatrix(BaseBlockMatrix):
         # create vector
         bv = MPIBlockVector(bm,
                             col_ownership,
-                            self._mpiw)
+                            self._mpiw,
+                            assert_correct_owners=False)
 
         # compute offset columns
         offset = 0
@@ -1209,7 +1199,8 @@ class MPIBlockMatrix(BaseBlockMatrix):
         # create vector
         bv = MPIBlockVector(bn,
                             row_ownership,
-                            self._mpiw)
+                            self._mpiw,
+                            assert_correct_owners=False)
         # compute offset columns
         offset = 0
         if brow > 0:
@@ -1231,7 +1222,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         return bv
 
     @staticmethod
-    def fromBlockMatrix(block_matrix, rank_ownership, mpi_comm):
+    def fromBlockMatrix(block_matrix, rank_ownership, mpi_comm, assert_correct_owners=False):
         """
         Creates a parallel MPIBlockMatrix from blockmatrix
 
@@ -1254,7 +1245,8 @@ class MPIBlockMatrix(BaseBlockMatrix):
         mat = MPIBlockMatrix(bm,
                              bn,
                              rank_ownership,
-                             mpi_comm)
+                             mpi_comm,
+                             assert_correct_owners=assert_correct_owners)
 
         # populate matrix
         for i in range(bm):

@@ -13,12 +13,13 @@ from pyomo.core.base.block import Block, _BlockData
 from pyomo.core.kernel.block import IBlock
 from pyomo.opt.base.solvers import OptSolver
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
-import pyutilib.common
 import pyomo.common
-from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.errors import ApplicationError
+from pyomo.common.collections import ComponentMap, ComponentSet, Bunch
+from pyomo.common.tempfiles import TempfileManager
 import pyomo.opt.base.solvers
 from pyomo.opt.base.formats import ResultsFormat
-from pyutilib.misc import Options
+
 
 class DirectOrPersistentSolver(OptSolver):
     """
@@ -100,7 +101,7 @@ class DirectOrPersistentSolver(OptSolver):
         self._symbolic_solver_labels = False
         """A bool. If true then the solver components will be given names corresponding to the pyomo component names."""
 
-        self._capabilites = Options()
+        self._capabilites = Bunch()
 
         self._referenced_variables = ComponentMap()
         """dict: {var: count} where count is the number of constraints/objective referencing the var"""
@@ -122,7 +123,7 @@ class DirectOrPersistentSolver(OptSolver):
 
         # create a context in the temporary file manager for
         # this plugin - is "pop"ed in the _postsolve method.
-        pyutilib.services.TempfileManager.push()
+        TempfileManager.push()
 
         self.results = None
 
@@ -158,7 +159,7 @@ class DirectOrPersistentSolver(OptSolver):
                 raise ValueError('{0} solver plugin is not capable of warmstart.'.format(type(self)))
 
         if self._log_file is None:
-            self._log_file = pyutilib.services.TempfileManager.create_tempfile(suffix='.log')
+            self._log_file = TempfileManager.create_tempfile(suffix='.log')
 
     """ This method should be implemented by subclasses."""
     def _apply_solver(self):
@@ -290,14 +291,12 @@ class DirectOrPersistentSolver(OptSolver):
     def available(self, exception_flag=True):
         """True if the solver is available."""
 
-        if exception_flag is False:
-            return self._python_api_exists
-        else:
-            if self._python_api_exists is False:
-                raise pyutilib.common.ApplicationError(("No Python bindings available for {0} solver " +
-                                                        "plugin").format(type(self)))
-            else:
-                return True
+        _api = getattr(self, '_python_api_exists', False)
+        if exception_flag and not _api:
+            raise ApplicationError(
+                "No Python bindings available for %s solver plugin"
+                % (type(self),))
+        return _api
 
     def _get_version(self):
         if self._version is None:

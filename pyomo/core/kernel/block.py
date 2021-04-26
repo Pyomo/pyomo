@@ -11,15 +11,13 @@
 import sys
 import logging
 import math
-import collections
-if sys.version_info[:2] >= (3,6):
+
+if sys.version_info[:2] >= (3,7):
+    # dict became ordered in CPython 3.6 and added to the standard in 3.7
     _ordered_dict_ = dict
 else:
-    try:
-        _ordered_dict_ = collections.OrderedDict
-    except ImportError:                         #pragma:nocover
-        import ordereddict
-        _ordered_dict_ = ordereddict.OrderedDict
+    import collections
+    _ordered_dict_ = collections.OrderedDict
 
 from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.kernel.base import \
@@ -29,8 +27,6 @@ from pyomo.core.kernel.heterogeneous_container import \
     IHeterogeneousContainer
 from pyomo.core.kernel.container_utils import \
     define_simple_containers
-
-import six
 
 logger = logging.getLogger('pyomo.core')
 
@@ -376,13 +372,13 @@ class block(IBlock):
         # values exist on the suffix and but only sparse
         # dual values exist in the results object) we clear
         # all active import suffixes.
-        for suffix in six.itervalues(valid_import_suffixes):
+        for suffix in valid_import_suffixes.values():
             suffix.clear()
 
         # Load problem (model) level suffixes. These would
         # only come from ampl interfaced solution suffixes
         # at this point in time.
-        for _attr_key, attr_value in six.iteritems(solution.problem):
+        for _attr_key, attr_value in solution.problem.items():
             attr_key = _attr_key[0].lower() + _attr_key[1:]
             if attr_key in valid_import_suffixes:
                 valid_import_suffixes[attr_key][self] = attr_value
@@ -395,7 +391,7 @@ class block(IBlock):
             var.stale = True
         var_skip_attrs = ['id','canonical_label']
         seen_var_ids = set()
-        for label, entry in six.iteritems(solution.variable):
+        for label, entry in solution.variable.items():
             var = symbol_map.getObject(label)
             if (var is None) or \
                (var is SymbolMap.UnknownSymbol):
@@ -421,7 +417,7 @@ class block(IBlock):
                                  "A new value is not expected "
                                  "in solution" % (var.name))
 
-            for _attr_key, attr_value in six.iteritems(entry):
+            for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key == 'value':
                     if allow_consistent_values_for_fixed_vars and \
@@ -451,15 +447,17 @@ class block(IBlock):
         # they exist)
         #
         objective_skip_attrs = ['id','canonical_label','value']
-        for label,entry in six.iteritems(solution.objective):
+        for label,entry in solution.objective.items():
             obj = symbol_map.getObject(label)
             if (obj is None) or \
                (obj is SymbolMap.UnknownSymbol):
                 raise KeyError("Objective associated with symbol '%s' "
                                 "is not found on this block"
                                 % (label))
-            unseen_var_ids.remove(id(obj))
-            for _attr_key, attr_value in six.iteritems(entry):
+            # Because of __default_objective__, an objective might
+            # appear twice in the objective dictionary.
+            unseen_var_ids.discard(id(obj))
+            for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:
                     valid_import_suffixes[attr_key][obj] = \
@@ -469,7 +467,7 @@ class block(IBlock):
         # Load constraint solution
         #
         con_skip_attrs = ['id', 'canonical_label']
-        for label, entry in six.iteritems(solution.constraint):
+        for label, entry in solution.constraint.items():
             con = symbol_map.getObject(label)
             if con is SymbolMap.UnknownSymbol:
                 #
@@ -482,7 +480,7 @@ class block(IBlock):
                                    "is not found on this block"
                                    % (label))
             unseen_var_ids.remove(id(con))
-            for _attr_key, attr_value in six.iteritems(entry):
+            for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:
                     valid_import_suffixes[attr_key][con] = \

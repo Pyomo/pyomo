@@ -16,6 +16,7 @@ import logging
 from weakref import ref as weakref_ref
 
 from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import ModelComponentFactory
@@ -23,10 +24,9 @@ from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent, \
     UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
-from pyomo.core.base.numvalue import NumericValue, native_types, value
+from pyomo.core.base.numvalue import NumericValue, native_types
 from pyomo.core.base.set_types import Any, Reals
-
-from six import iteritems, iterkeys, next, itervalues
+from pyomo.core.base.units_container import units
 
 logger = logging.getLogger('pyomo.core')
 
@@ -83,11 +83,6 @@ class _ImplicitAny(Any.__class__):
                 version='5.6.9', remove_in='6.0')
         return True
 
-class _NotValid(object):
-    """A dummy type that is pickle-safe that we can use as the default
-    value for Params to indicate that no valid value is present."""
-    pass
-
 
 class _ParamData(ComponentData, NumericValue):
     """
@@ -113,7 +108,7 @@ class _ParamData(ComponentData, NumericValue):
         # The following is equivalent to calling the
         # base NumericValue constructor.
         #
-        self._value = _NotValid
+        self._value = Param.NoValue
 
     def __getstate__(self):
         """
@@ -129,7 +124,7 @@ class _ParamData(ComponentData, NumericValue):
 
     def clear(self):
         """Clear the data in this component"""
-        self._value = _NotValid
+        self._value = Param.NoValue
 
     # FIXME: ComponentData need to have pointers to their index to make
     # operations like validation efficient.  As it stands now, if
@@ -145,7 +140,7 @@ class _ParamData(ComponentData, NumericValue):
         """
         Return the value of this object.
         """
-        if self._value is _NotValid:
+        if self._value is Param.NoValue:
             if exception:
                 raise ValueError(
                     "Error evaluating Param value (%s):\n\tThe Param value is "
@@ -234,6 +229,11 @@ class Param(IndexedComponent):
 
     DefaultMutable = False
 
+    class NoValue(object):
+        """A dummy type that is pickle-safe that we can use as the default
+        value for Params to indicate that no valid value is present."""
+        pass
+
     def __new__(cls, *args, **kwds):
         if cls != Param:
             return super(Param, cls).__new__(cls)
@@ -243,16 +243,17 @@ class Param(IndexedComponent):
             return IndexedParam.__new__(IndexedParam)
 
     def __init__(self, *args, **kwd):
-        self._rule          = kwd.pop('rule', _NotValid )
+        self._rule          = kwd.pop('rule', Param.NoValue )
         self._rule          = kwd.pop('initialize', self._rule )
         self._validate      = kwd.pop('validate', None )
         self.domain         = kwd.pop('domain', None )
         self.domain         = kwd.pop('within', self.domain )
         self._mutable       = kwd.pop('mutable', Param.DefaultMutable )
-        self._default_val   = kwd.pop('default', _NotValid )
+        self._default_val   = kwd.pop('default', Param.NoValue )
         self._dense_initialize = kwd.pop('initialize_as_dense', False)
         self._units         = kwd.pop('units', None)
         if self._units is not None:
+            self._units = units.get_units(self._units)
             self._mutable = True
         #
         if 'repn' in kwd:
@@ -271,7 +272,7 @@ class Param(IndexedComponent):
         component.  If a default value is specified, then the
         length equals the number of items in the component index.
         """
-        if self._default_val is _NotValid:
+        if self._default_val is Param.NoValue:
             return len(self._data)
         return len(self._index)
 
@@ -280,7 +281,7 @@ class Param(IndexedComponent):
         Return true if the index is in the dictionary.  If the default value
         is specified, then all members of the component index are valid.
         """
-        if self._default_val is _NotValid:
+        if self._default_val is Param.NoValue:
             return idx in self._data
         return idx in self._index
 
@@ -289,13 +290,17 @@ class Param(IndexedComponent):
         Iterate over the keys in the dictionary.  If the default value is
         specified, then iterate over all keys in the component index.
         """
-        if self._default_val is _NotValid:
+        if self._default_val is Param.NoValue:
             return self._data.__iter__()
         return self._index.__iter__()
 
     @property
     def mutable(self):
         return self._mutable
+
+    def get_units(self):
+        """Return the units for this ParamData"""
+        return self._units
 
     #
     # These are "sparse equivalent" access / iteration methods that
@@ -304,27 +309,27 @@ class Param(IndexedComponent):
 
     def sparse_keys(self):
         """Return a list of keys in the defined parameters"""
-        return list(iterkeys(self._data))
+        return list(self._data.keys())
 
     def sparse_values(self):
         """Return a list of the defined param data objects"""
-        return list(itervalues(self._data))
+        return list(self._data.values())
 
     def sparse_items(self):
         """Return a list (index,data) tuples for defined parameters"""
-        return list(iteritems(self._data))
+        return list(self._data.items())
 
     def sparse_iterkeys(self):
         """Return an iterator for the keys in the defined parameters"""
-        return iterkeys(self._data)
+        return self._data.keys()
 
     def sparse_itervalues(self):
         """Return an iterator for the defined param data objects"""
-        return itervalues(self._data)
+        return self._data.values()
 
     def sparse_iteritems(self):
         """Return an iterator of (index,data) tuples for defined parameters"""
-        return iteritems(self._data)
+        return self._data.items()
 
     def extract_values(self):
         """
@@ -341,7 +346,7 @@ class Param(IndexedComponent):
             # Thus, we need to create a temporary dictionary that contains the
             # values from the ParamData objects.
             #
-            return {key:param_value() for key,param_value in self.iteritems()}
+            return {key:param_value() for key,param_value in self.items()}
         elif not self.is_indexed():
             #
             # The parameter is a scalar, so we need to create a temporary
@@ -353,7 +358,7 @@ class Param(IndexedComponent):
             # The parameter is not mutable, so iteritems() can be
             # converted into a dictionary containing parameter values.
             #
-            return dict( self.iteritems() )
+            return dict( self.items() )
 
     def extract_values_sparse(self):
         """
@@ -405,7 +410,7 @@ class Param(IndexedComponent):
         #
         if check:
             if _isDict:
-                for index, new_value in iteritems(new_values):
+                for index, new_value in new_values.items():
                     self[index] = new_value
             else:
                 for index in self._index:
@@ -421,7 +426,7 @@ class Param(IndexedComponent):
                 # index is not already in the _data dict.  As these
                 # cases are rare, we will recover from the exception
                 # instead of incurring the penalty of checking.
-                for index, new_value in iteritems(new_values):
+                for index, new_value in new_values.items():
                     if index not in self._data:
                         self._data[index] = _ParamData(self)
                     self._data[index]._value = new_value
@@ -461,7 +466,7 @@ class Param(IndexedComponent):
         NOTE: this test will not validate the value of function return values.
         """
         if self._constructed \
-                and val is not _NotValid \
+                and val is not Param.NoValue \
                 and type(val) in native_types \
                 and val not in self.domain:
             raise ValueError(
@@ -474,7 +479,7 @@ class Param(IndexedComponent):
         Return the value of the parameter default.
 
         Possible values:
-            None            
+            Param.NoValue
                 No default value is provided.
             Numeric         
                 A constant value that is the default value for all undefined 
@@ -493,12 +498,12 @@ class Param(IndexedComponent):
         # Local values
         #
         val = self._default_val
-        if val is _NotValid:
+        if val is Param.NoValue:
             # We should allow the creation of mutable params without
             # a default value, as long as *solving* a model without
             # reasonable values produces an informative error.
             if self._mutable:
-                # Note: _ParamData defaults to _NotValid
+                # Note: _ParamData defaults to Param.NoValue
                 ans = self._data[index] = _ParamData(self)
                 return ans
             if self.is_indexed():
@@ -870,7 +875,7 @@ This has resulted in the conversion of the source to dense form.
         constructed.  We throw an exception if a user tries
         to use an uninitialized Param.
         """
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
+        if is_debug_set(logger):   #pragma:nocover
             logger.debug("Constructing Param, name=%s, from data=%s"
                          % ( self.name, str(data) ))
         #
@@ -882,7 +887,7 @@ This has resulted in the conversion of the source to dense form.
         # the domain.
         #
         val = self._default_val
-        if val is not _NotValid \
+        if val is not Param.NoValue \
                 and type(val) in native_types \
                 and val not in self.domain:
             raise ValueError(
@@ -895,7 +900,7 @@ This has resulted in the conversion of the source to dense form.
         #
         # Step #1: initialize data from rule value
         #
-        if self._rule is not _NotValid:
+        if self._rule is not Param.NoValue:
             self._initialize_from(self._rule)
         #
         # Step #2: allow any user-specified (external) data to override
@@ -903,7 +908,7 @@ This has resulted in the conversion of the source to dense form.
         #
         if data is not None:
             try:
-                for key, val in iteritems(data):
+                for key, val in data.items():
                     self._setitem_when_not_present(
                         self._validate_index(key), val)
             except Exception:
@@ -952,7 +957,7 @@ This has resulted in the conversion of the source to dense form.
         """
         Return data that will be printed for this component.
         """
-        if self._default_val is _NotValid:
+        if self._default_val is Param.NoValue:
             default = "None" # for backwards compatibility in reporting
         elif type(self._default_val) is types.FunctionType:
             default = "(function)"

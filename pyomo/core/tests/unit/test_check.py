@@ -16,9 +16,9 @@
 #
 
 import os
-from six import StringIO
+from io import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import AbstractModel, BuildCheck, Param, Set, value
 

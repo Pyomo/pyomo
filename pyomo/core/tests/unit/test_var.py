@@ -18,7 +18,7 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.core.base import IntegerSet
 from pyomo.environ import AbstractModel, ConcreteModel, Set, Param, Var, VarList, RangeSet, Suffix, Expression, NonPositiveReals, PositiveReals, Reals, RealSet, NonNegativeReals, Integers, Binary, value
@@ -684,7 +684,7 @@ class TestVarList(PyomoModel):
     def test_initialize_with_bad_dict(self):
         """Test initialize option with a dictionary of subkeys"""
         self.model.x = VarList(initialize={0:1.3})
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError, ".*Index '0' is not valid for indexed component 'x'",
             self.model.create_instance )
 

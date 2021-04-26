@@ -8,9 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import iteritems
 from collections import namedtuple
 
+from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import ZeroConstant, native_numeric_types, as_numeric
@@ -192,6 +192,7 @@ Error thrown for Complementarity "%s".""" % ( b.name, ) )
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('ctype', Complementarity)
+        kwargs.setdefault('dense', False)
         _init = tuple( _arg for _arg in (
             kwargs.pop('initialize', None),
             kwargs.pop('rule', None),
@@ -265,7 +266,7 @@ Error thrown for Complementarity "%s".""" % ( b.name, ) )
              ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active),
              ],
-            iteritems(self._data),
+            self._data.items(),
             ( "Arg0","Arg1","Active" ),
             (_table_data, _conditional_block_printer),
             )
@@ -320,8 +321,7 @@ class ComplementarityList(IndexedComplementarity):
         """
         Construct the expression(s) for this complementarity condition.
         """
-        generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
-        if generate_debug_messages:
+        if is_debug_set(logger):
             logger.debug("Constructing complementarity list %s", self.name)
         if self._constructed:
             return

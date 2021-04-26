@@ -12,7 +12,10 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
+# Need solvers/writers registered.
+import pyomo.environ as pyo
+
+import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import ComponentSet
 from pyomo.core import (Var, Constraint, Param, ConcreteModel, NonNegativeReals,
@@ -24,7 +27,7 @@ from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.opt import SolverFactory, check_available_solvers
 import pyomo.contrib.fme.fourier_motzkin_elimination
 
-from six import StringIO
+from io import StringIO
 import logging
 import random
 
@@ -64,7 +67,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
     def test_no_vars_specified(self):
         m = self.makeModel()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "The Fourier-Motzkin Elimination transformation "
             "requires the argument vars_to_eliminate, a "
@@ -196,7 +199,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.cons1 = Constraint(expr=m.x >= 6)
         m.cons2 = Constraint(expr=m.x <= 2)
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "Fourier-Motzkin found the model is infeasible!",
             TransformationFactory('contrib.fourier_motzkin_elimination').\
@@ -210,7 +213,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.cons1 = Constraint(expr=m.x >= 6)
         m.cons2 = Constraint(expr=m.x <= 2)
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "Fourier-Motzkin found the model is infeasible!",
             TransformationFactory('contrib.fourier_motzkin_elimination').\
@@ -224,7 +227,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.cons = Constraint(expr=m.x**2 >= 2)
         m.cons2 = Constraint(expr=m.x<= 10)
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "Variable x appears in a nonlinear "
             "constraint. The Fourier-Motzkin "
@@ -240,7 +243,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m = self.makeModel()
         m.disj = Disjunction(expr=[m.x == 0, m.y >= 2])
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "Found active component %s of type %s. The "
             "Fourier-Motzkin Elimination transformation can only "
@@ -260,14 +263,14 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.contrib.fme', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 RuntimeError,
                 "I don't know how to do my job.",
                 fme.apply_to,
                 m,
                 vars_to_eliminate=m.x,
                 constraint_filtering_callback=not_a_callback)
-        self.assertRegexpMatches(
+        self.assertRegex(
             log.getvalue(),
             "Problem calling constraint filter callback "
             "on constraint with right-hand side -1.0 and body:*")
@@ -277,14 +280,14 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.contrib.fme', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 TypeError,
                 "'int' object is not callable",
                 fme.apply_to,
                 m,
                 vars_to_eliminate=m.x,
                 constraint_filtering_callback=5)
-        self.assertRegexpMatches(
+        self.assertRegex(
             log.getvalue(),
             "Problem calling constraint filter callback "
             "on constraint with right-hand side -1.0 and body:*")
@@ -577,8 +580,9 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
         fme.apply_to(m, vars_to_eliminate=m.x,
+                     projected_constraints_name='projected_constraints',
                      constraint_filtering_callback=None)
-        constraints = m._pyomo_contrib_fme_transformation.projected_constraints
+        constraints = m.projected_constraints
 
         # 0 <= y <= 3
         cons = constraints[5]
@@ -656,7 +660,9 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         constraints[1].deactivate()
         # NOTE also that some of the suproblems in this test are unbounded: We
         # need to keep those constraints.
-        fme.post_process_fme_constraints(m, SolverFactory('glpk'))
+        fme.post_process_fme_constraints(
+            m, SolverFactory('glpk'),
+            projected_constraints=m.projected_constraints)
         # we needed all the constraints, so we kept them all
         self.assertEqual(len(constraints), 6)
 
@@ -665,7 +671,9 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         # because why withold the information *during* FME, but if there's some
         # reason, we may as well use all the information we've got.)
         m.some_new_cons = Constraint(expr=m.y <= 2)
-        fme.post_process_fme_constraints(m, SolverFactory('glpk'))
+        fme.post_process_fme_constraints(
+            m, SolverFactory('glpk'),
+            projected_constraints=m.projected_constraints)
         # now we should have lost one constraint
         self.assertEqual(len(constraints), 5)
         # and it should be the y <= 3 one...
@@ -680,7 +688,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.c2 = Constraint(expr=0.25*m.y >= 0.5*m.x)
 
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "The do_integer_arithmetic flag was "
             "set to True, but the coefficient of "
@@ -702,7 +710,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.c2 = Constraint(expr=0.25*m.y >= 5*m.x)
 
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "The do_integer_arithmetic flag was "
             "set to True, but the coefficient of "
@@ -853,21 +861,17 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertIs(cons.body, m.y)
         self.assertIsNone(cons.upper)
 
-    def test_use_all_var_bounds(self):
+    def make_tiny_model_where_bounds_matter(self):
         m = ConcreteModel()
         m.b = Block()
         m.x = Var(bounds=(0, 15))
         m.y = Var(bounds=(3, 5))
         m.b.c = Constraint(expr=m.x + m.y <= 8)
 
-        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
-        fme.apply_to(m.b, vars_to_eliminate=[m.y])
-        constraints = m.b.\
-                      _pyomo_contrib_fme_transformation.projected_constraints
+        return m
 
-        # if we hadn't included y's bounds, then we wouldn't get any constraints
-        # and y wouldn't be eliminated. If we do include y's bounds, we get new
-        # information that x <= 5:
+    def check_tiny_model_constraints(self, constraints):
+        m = constraints.model()
         self.assertEqual(len(constraints), 1)
         cons = constraints[1]
         self.assertEqual(value(cons.lower), -5)
@@ -877,6 +881,44 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(len(repn.linear_vars), 1)
         self.assertIs(repn.linear_vars[0], m.x)
         self.assertEqual(repn.linear_coefs[0], -1)
+
+    def test_use_all_var_bounds(self):
+        m = self.make_tiny_model_where_bounds_matter()
+
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        fme.apply_to(m.b, vars_to_eliminate=[m.y])
+        constraints = m.b.\
+                      _pyomo_contrib_fme_transformation.projected_constraints
+
+        # if we hadn't included y's bounds, then we wouldn't get any constraints
+        # and y wouldn't be eliminated. If we do include y's bounds, we get new
+        # information that x <= 5:
+        self.check_tiny_model_constraints(constraints)
+
+    def test_projected_constraints_named_correctly(self):
+        m = self.make_tiny_model_where_bounds_matter()
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        fme.apply_to(m.b, vars_to_eliminate=[m.y],
+                     projected_constraints_name='fme_constraints')
+        self.assertIsInstance(m.b.component("fme_constraints"), Constraint)
+        self.check_tiny_model_constraints(m.b.fme_constraints)
+
+        self.assertIsNone(m.b._pyomo_contrib_fme_transformation.component(
+            "projected_constraints"))
+
+    def test_non_unique_constraint_name_error(self):
+        m = self.make_tiny_model_where_bounds_matter()
+        fme = TransformationFactory('contrib.fourier_motzkin_elimination')
+        self.assertRaisesRegex(
+            RuntimeError,
+            "projected_constraints_name was specified "
+            "as 'c', but this is already a component on "
+            "the instance! Please specify a unique " 
+            "name.",
+            fme.apply_to,
+            m.b, 
+            vars_to_eliminate=[m.y],
+            projected_constraints_name='c')
 
     def test_simple_hull_example(self):
         m = ConcreteModel()
@@ -891,7 +933,6 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         fme.apply_to(m, vars_to_eliminate=[m.x0, m.x1])
 
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
-        constraints.pprint()
 
         self.assertEqual(len(constraints), 1)
         cons = constraints[1]

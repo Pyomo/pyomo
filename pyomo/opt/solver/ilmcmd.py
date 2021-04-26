@@ -13,10 +13,10 @@ __all__ = ['ILMLicensedSystemCallSolver']
 import re
 import sys
 import os
+import subprocess
 
 import pyomo.common
-import pyutilib.subprocess
-import pyutilib.common
+from pyomo.common.errors import ApplicationError
 
 import pyomo.opt.solver.shellcmd
 from pyomo.opt.solver.shellcmd import SystemCallSolver
@@ -47,12 +47,14 @@ class ILMLicensedSystemCallSolver(SystemCallSolver):
                     # this behavior, this command will stall until the
                     # user hits Ctrl-C.
                     cmd.append("-batch")
-                [rc,log] = pyutilib.subprocess.run(cmd)
-            except pyutilib.common.WindowsError:
+                result = subprocess.run(cmd, stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT,
+                                        universal_newlines=True)
+            except OSError:
                 msg = sys.exc_info()[1]
-                raise pyutilib.common.ApplicationError("Could not execute the command: ilmtest\n\tError message: "+msg)
+                raise ApplicationError("Could not execute the command: ilmtest\n\tError message: "+msg)
             sys.stdout.flush()
-            for line in log.split("\n"):
+            for line in result.stdout.split("\n"):
                 tokens = re.split('[\t ]+',line.strip())
                 if len(tokens) == 5 and tokens[0] == 'tokens' and tokens[1] == 'reserved:' and tokens[4] == os.environ.get('USER',None):
                     if not (tokens[2] == 'none' or tokens[2] == '0'):

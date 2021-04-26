@@ -1,25 +1,48 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Decorator for deprecating functions."""
 
 import logging
 import functools
 import inspect
+import sys
 import textwrap
+import types
 
 from pyomo.common.errors import DeveloperError
 
+_doc_flag = '.. deprecated::'
 
-def _default_msg(user_msg, version, remove_in, func=None):
+
+def _default_msg(obj, user_msg, version, remove_in):
     """Generate the default deprecation message.
 
     See deprecated() function for argument details.
     """
     if user_msg is None:
-        if inspect.isclass(func):
+        if inspect.isclass(obj):
             _obj = ' class'
-        elif inspect.isfunction(func):
+        elif inspect.ismethod(obj):
+            _obj = ' method'
+        elif inspect.isfunction(obj) or inspect.isbuiltin(obj):
             _obj = ' function'
         else:
+            # either @deprecated() an unknown type or called from
+            # deprecation_warning()
             _obj = ''
+
+        _qual = getattr(obj, '__qualname__', '') or ''
+        if _qual.endswith('.__init__') or _qual.endswith('.__new__'):
+            _obj = ' class'
+
         user_msg = 'This%s has been deprecated and may be removed in a ' \
                    'future release.' % (_obj,)
     comment = []
@@ -28,11 +51,72 @@ def _default_msg(user_msg, version, remove_in, func=None):
     if remove_in:
         comment.append('will be removed in %s' % (remove_in))
     if comment:
-        user_msg += "  (%s)" % (', '.join(comment))
-    return user_msg
+        return user_msg + "  (%s)" % (', '.join(comment),)
+    else:
+        return user_msg
 
 
-def deprecation_warning(msg, logger='pyomo.core', version=None, remove_in=None):
+def _deprecation_docstring(obj, msg, version, remove_in):
+    if version is None: # or version in ('','tbd','TBD'):
+        raise DeveloperError("@deprecated missing initial version")
+    return (
+        '%s %s\n   %s\n'
+        % (_doc_flag, version, _default_msg(obj, msg, None, remove_in))
+    )
+
+
+def _wrap_class(cls, msg, logger, version, remove_in):
+    _doc = None
+    # Note: __new_member__ is where enum.Enum buries the user's original
+    # __new__ method
+    for field in ('__new__', '__init__', '__new_member__'):
+        _funcDoc = getattr(getattr(cls, field, None), '__doc__', '') or ''
+        _flagIdx = _funcDoc.find(_doc_flag)
+        if _flagIdx >= 0:
+            _doc = _funcDoc[_flagIdx:]
+            break
+    # Note: test msg is not None to revert back to the user-supplied
+    # message.  Checking the fields is still useful as it lets us know
+    # if there is already a deprecation message on either new or init.
+    if msg is not None or _doc is None:
+        _doc = _deprecation_docstring(cls, msg, version, remove_in)
+    if cls.__doc__:
+        _doc = cls.__doc__ + '\n\n' + _doc
+    cls.__doc__ = 'DEPRECATED.\n\n' + _doc
+
+    if _flagIdx < 0:
+        # No deprecation message on __init__ or __new__: go through and
+        # find the "most derived" implementation of either __new__ or
+        # __init__ and wrap that (breaking ties in favor of __init__)
+        field = '__init__'
+        for c in cls.__mro__:
+            for f in ('__init__', '__new__'):
+                if getattr(c, f, None) is not getattr(cls, f, None):
+                    field = f
+        setattr(cls, field, _wrap_func(
+            getattr(cls, field), msg, logger, version, remove_in))
+    return cls
+
+
+def _wrap_func(func, msg, logger, version, remove_in):
+    message = _default_msg(func, msg, version, remove_in)
+
+    @functools.wraps(func, assigned=(
+        '__module__', '__name__', '__qualname__', '__annotations__'))
+    def wrapper(*args, **kwargs):
+        deprecation_warning(message, logger)
+        return func(*args, **kwargs)
+
+    wrapper.__doc__ = 'DEPRECATED.\n\n'
+    _doc = func.__doc__ or ''
+    if _doc:
+        wrapper.__doc__ += _doc + '\n\n'
+    wrapper.__doc__ += _deprecation_docstring(func, msg, version, remove_in)
+    return wrapper
+
+
+def deprecation_warning(msg, logger='pyomo.core', version=None,
+                        remove_in=None, calling_frame=None):
     """Standardized formatter for deprecation warnings
 
     This is a standardized routine for formatting deprecation warnings
@@ -41,13 +125,21 @@ def deprecation_warning(msg, logger='pyomo.core', version=None, remove_in=None):
     Args:
         msg (str): the deprecation message to format
     """
-    msg = textwrap.fill('DEPRECATED: %s' % (_default_msg(msg, version, remove_in),),
-                        width=70)
-    try:
-        caller = inspect.getframeinfo(inspect.stack()[2][0])
-        msg += "\n(called from %s:%s)" % (caller.filename.strip(), caller.lineno)
-    except:
-        pass
+    msg = textwrap.fill(
+        'DEPRECATED: %s' % (_default_msg(None, msg, version, remove_in),),
+        width=70)
+    if calling_frame is None:
+        try:
+            g = globals()
+            calling_frame = inspect.currentframe().f_back
+            while calling_frame is not None and calling_frame.f_globals is g:
+                calling_frame = calling_frame.f_back
+        except:
+            pass
+    if calling_frame is not None:
+        info = inspect.getframeinfo(calling_frame)
+        msg += "\n(called from %s:%s)" % (info.filename.strip(), info.lineno)
+
     logging.getLogger(logger).warning(msg)
 
 
@@ -65,7 +157,7 @@ def deprecated(msg=None, logger='pyomo.core', version=None, remove_in=None):
             removed in a future release.")
 
         logger (str): the logger to use for emitting the warning
-            (default: "pyomo.core")
+            (default: "pyomo")
 
         version (str): [required] the version in which the decorated
             object was deprecated.  General practice is to set version
@@ -76,24 +168,132 @@ def deprecated(msg=None, logger='pyomo.core', version=None, remove_in=None):
             removed from the code.
 
     """
-    if version is None: # or version in ('','tbd','TBD'):
-        raise DeveloperError("@deprecated missing initial version")
-
-    def wrap(func):
-        message = _default_msg(msg, version, remove_in, func)
-
-        @functools.wraps(func, assigned=('__module__', '__name__'))
-        def wrapper(*args, **kwargs):
-            deprecation_warning(message, logger)
-            return func(*args, **kwargs)
-
-        if func.__doc__ is None:
-            wrapper.__doc__ = textwrap.fill(
-                'DEPRECATION WARNING: %s' % (message,), width=70)
+    def wrap(obj):
+        if inspect.isclass(obj):
+            return _wrap_class(obj, msg, logger, version, remove_in)
         else:
-            wrapper.__doc__ = textwrap.fill(
-                'DEPRECATION WARNING: %s' % (message,), width=70) + '\n\n' + \
-                textwrap.fill(textwrap.dedent(func.__doc__.strip()))
-        return wrapper
-
+            return _wrap_func(obj, msg, logger, version, remove_in)
     return wrap
+
+
+def _import_object(name, target, version, remove_in):
+    from importlib import import_module
+    modname, targetname = target.rsplit('.',1)
+    deprecation_warning(
+        "the '%s' class has been moved to '%s'" % (name, target),
+        version=version, remove_in=remove_in)
+    return getattr(import_module(modname), targetname)
+
+class _ModuleGetattrBackport_27(object):
+    """Backport for support of module.__getattr__
+
+
+    Beginning in Python 3.7, modules support the declaration of a
+    module-scoped __getattr__ and __dir__ to allow for the dynamic
+    resolution of module attributes.  This class wraps the module class
+    and implements `__getattr__`.  As it declares no local
+    attributes, all module attribute accesses incur a slight runtime
+    penalty (one extra function call).
+
+    """
+    def __init__(self, module):
+        # Wrapped module needs to be a local attribute.  Everything else
+        # is delegated to the inner module type
+        super(_ModuleGetattrBackport_27, self).__setattr__(
+            '_wrapped_module', module)
+
+    def __getattr__(self, name):
+        try:
+            return getattr(self._wrapped_module, name)
+        except AttributeError:
+            info = self._wrapped_module.__relocated_attrs__.get(name, None)
+            if info is not None:
+                target_obj = _import_object(name, *info)
+                setattr(self, name, target_obj)
+                return target_obj
+            raise
+
+    def __dir__(self):
+        return dir(self._wrapped_module)
+
+    def __setattr__(self, name, val):
+        setattr(self._wrapped_module, name, val)
+
+class _ModuleGetattrBackport_35(types.ModuleType):
+    """Backport for support of module.__getattr__
+
+    Beginning in Python 3.7, modules support the declaration of a
+    module-scoped __getattr__ and __dir__ to allow for the dynamic
+    resolution of module attributes.  This class derives from
+    types.ModuleType and implements `__getattr__`.  As it is a direct
+    replacement for types.ModuleType (i.e., we can reassign the already
+    loaded module to this type, it is more efficient that the
+    ModuleGetattrBackport_27 class which must wrap the already loaded
+    module.
+
+    """
+    def __getattr__(self, name):
+        info = self.__relocated_attrs__.get(name, None)
+        if info is not None:
+            target_obj = _import_object(name, *info)
+            setattr(self, name, target_obj)
+            return target_obj
+        raise AttributeError("module '%s' has no attribute '%s'"
+                             % (self.__name__, name))
+
+def relocated_module_attribute(local, target, version, remove_in=None):
+    """Provide a deprecation path for moved / renamed module attributes
+
+    This function declares that a local module attribute has been moved
+    to another location.  For Python 3.7+, it leverages a
+    module.__getattr__ method to manage the deferred import of the
+    object from the new location (on request), as well as emitting the
+    deprecation warning.
+
+    It contains backports of the __getattr__ functionality for earlier
+    versions of Python (although the implementation for 3.5+ is more
+    efficient that the implementation for 2.7+)
+
+    Parameters
+    ----------
+    local: str
+        The original (local) name of the relocated attribute
+    target: str
+        The new absolute import name of the relocated attribute
+    version: str
+        The Pyomo version when this move was released
+        (passed to deprecation_warning)
+    remove_in: str
+        The Pyomo version when this deprecation path will be removed
+        (passed to deprecation_warning)
+    """
+    _module = sys.modules[inspect.currentframe().f_back.f_globals['__name__']]
+    if not hasattr(_module, '__relocated_attrs__'):
+        _module.__relocated_attrs__ = {}
+        if sys.version_info >= (3,7):
+            _relocated = _module.__relocated_attrs__
+            _mod_getattr = getattr(_module, '__getattr__', None)
+            def __getattr__(name):
+                info = _relocated.get(name, None)
+                if info is not None:
+                    target_obj = _import_object(name, *info)
+                    setattr(_module, name, target_obj)
+                    return target_obj
+                elif _mod_getattr is not None:
+                    return _mod_getattr(name)
+                raise AttributeError("module '%s' has no attribute '%s'"
+                                     % (_module.__name__, name))
+            _module.__getattr__ = __getattr__
+        elif sys.version_info >= (3,5):
+            # If you run across a case where this assertion fails
+            # (because someone else has messed with the module type), we
+            # could add logic to use the _ModuleGetattrBackport_27 class
+            # to wrap the module.  However, as I believe that this will
+            # never happen in Pyomo, it is not worth adding unused
+            # functionality at this point
+            assert _module.__class__ is types.ModuleType
+            _module.__class__ = _ModuleGetattrBackport_35
+        else: # sys.version_info >= (2,7):
+            _module = sys.modules[_module.__name__] \
+                      = _ModuleGetattrBackport_27(_module)
+    _module.__relocated_attrs__[local] = (target, version, remove_in)

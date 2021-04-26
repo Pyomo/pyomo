@@ -11,7 +11,7 @@
 import pickle
 import math
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.kernel import pprint, IntegerSet
 from pyomo.core.kernel.base import ICategorizedObject
 from pyomo.core.kernel.constraint import (IConstraint,

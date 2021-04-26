@@ -8,12 +8,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.core import ConcreteModel, Var, Constraint
 from pyomo.gdp import Disjunction, Disjunct
-
-from six import iterkeys
 
 
 class TestDisjunction(unittest.TestCase):
@@ -44,7 +42,7 @@ class TestDisjunction(unittest.TestCase):
         self.assertEqual(len(m.component_map(Disjunction)), 1)
         self.assertEqual(len(m.component_map(Disjunct)), 1)
 
-        implicit_disjuncts = list(iterkeys(m.component_map(Disjunct)))
+        implicit_disjuncts = list(m.component_map(Disjunct).keys())
         self.assertEqual(implicit_disjuncts[0][:2], "d_")
         disjuncts = m.d.disjuncts
         self.assertEqual(len(disjuncts), 2)
@@ -58,7 +56,7 @@ class TestDisjunction(unittest.TestCase):
         m.e = Disjunction(expr=[m.y<=0, m.x>=1])
         self.assertEqual(len(m.component_map(Disjunction)), 2)
         self.assertEqual(len(m.component_map(Disjunct)), 2)
-        implicit_disjuncts = list(iterkeys(m.component_map(Disjunct)))
+        implicit_disjuncts = list(m.component_map(Disjunct).keys())
         self.assertEqual(implicit_disjuncts[1][:12], "e_disjuncts_")
         disjuncts = m.e.disjuncts
         self.assertEqual(len(disjuncts), 2)
@@ -81,7 +79,7 @@ class TestDisjunction(unittest.TestCase):
             _gen() ])
         self.assertEqual(len(m.component_map(Disjunction)), 3)
         self.assertEqual(len(m.component_map(Disjunct)), 3)
-        implicit_disjuncts = list(iterkeys(m.component_map(Disjunct)))
+        implicit_disjuncts = list(m.component_map(Disjunct).keys())
         self.assertEqual(implicit_disjuncts[2][:12], "f_disjuncts")
         disjuncts = m.f.disjuncts
         self.assertEqual(len(disjuncts), 3)

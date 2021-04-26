@@ -13,14 +13,8 @@ __all__ = ['CounterLabeler', 'NumericLabeler', 'CNameLabeler', 'TextLabeler',
            'ShortNameLabeler']
 
 import re
-import six
-if six.PY3:
-    _translate = str.translate
-else:
-    import string
-    _translate = string.translate
 
-from pyomo.core.base.component import ComponentUID
+from pyomo.core.base.componentuid import ComponentUID
 
 # This module provides some basic functionality for generating labels
 # from pyomo names, which often contain characters such as "[" and "]"
@@ -40,7 +34,7 @@ class _CharMapper(object):
                   preserve or translate
         """
         self.table = {k if isinstance(k, int) else ord(k): v
-            for k,v in six.iteritems(dict(translate)) }
+            for k,v in dict(translate).items() }
         for c in preserve:
             _c = ord(c)
             if _c in self.table and self.table[_c] != c:
@@ -73,7 +67,7 @@ def cpxlp_label_from_name(name):
         raise RuntimeError("Illegal name=None supplied to "
                            "cpxlp_label_from_name function")
 
-    return _translate(name, _cpxlp_translation_table)
+    return str.translate(name, _cpxlp_translation_table)
 
 _alphanum_translation_table = _CharMapper( preserve=_alpha+_digit+'_',
                                        translate = {},
@@ -84,7 +78,7 @@ def alphanum_label_from_name(name):
         raise RuntimeError("Illegal name=None supplied to "
                            "alphanum_label_from_name function")
 
-    return _translate(name, _alphanum_translation_table)
+    return str.translate(name, _alphanum_translation_table)
 
 class CuidLabeler(object):
 
@@ -164,7 +158,7 @@ class ShortNameLabeler(object):
         else:
             self.labeler = AlphaNumericTextLabeler()
         self.known_labels = set() if caseInsensitive else None
-        if isinstance(legalRegex, six.string_types):
+        if isinstance(legalRegex, str):
             self.legalRegex = re.compile(legalRegex)
         else:
             self.legalRegex = legalRegex

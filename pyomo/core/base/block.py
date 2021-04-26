@@ -12,7 +12,6 @@ __all__ = ['Block', 'TraversalStrategy', 'SortComponents',
            'active_components', 'components', 'active_components_data',
            'components_data', 'SimpleBlock']
 
-import collections
 import copy
 import logging
 import sys
@@ -21,28 +20,25 @@ import textwrap
 
 from inspect import isclass
 from operator import itemgetter
-from six import iteritems, iterkeys, itervalues, StringIO, string_types, \
-    advance_iterator, PY3
+from io import StringIO
 
-if PY3:
-    from collections.abc import Mapping as collections_Mapping
-else:
-    from collections import Mapping as collections_Mapping
-
-from pyutilib.misc.indent_io import StreamIndenter
-
-from pyomo.common.collections import ComponentMap
+from pyomo.common.collections import Mapping
+from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.fileutils import StreamIndenter
+from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import (
-    Component, ActiveComponentData, ComponentUID,
+    Component, ActiveComponentData,
 )
+from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.set import GlobalSetBase, _SetDataBase
 from pyomo.core.base.var import Var
-from pyomo.core.base.misc import apply_indexed_rule
+from pyomo.core.base.util import Initializer
 from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent, UnindexedComponent_set,
 )
+from pyomo.core.base.misc import sorted_robust
 
 from pyomo.opt.base import ProblemFormat, guess_format
 from pyomo.opt import WriterFactory
@@ -258,7 +254,7 @@ class PseudoMap(object):
         """
         TODO
         """
-        return self.iterkeys()
+        return self.keys()
 
     def __getitem__(self, key):
         """
@@ -291,12 +287,13 @@ class PseudoMap(object):
         # list will be walked and sorted before returning the first
         # element.
         sort_order = self._sorted
-        self._sorted = False
-        for x in itervalues(self):
+        try:
+            self._sorted = False
+            for x in self.values():
+                return True
+            return False
+        finally:
             self._sorted = sort_order
-            return True
-        self._sorted = sort_order
-        return False
 
     __bool__ = __nonzero__
 
@@ -311,7 +308,7 @@ class PseudoMap(object):
         #
         if self._active is None:
             if self._ctypes is None:
-                return sum(x[2] for x in itervalues(self._block._ctypes))
+                return sum(x[2] for x in self._block._ctypes.values())
             else:
                 return sum(self._block._ctypes.get(x, (0, 0, 0))[2]
                            for x in self._block._ctypes
@@ -320,7 +317,7 @@ class PseudoMap(object):
         # If _active is True or False, then we have to count by brute force.
         #
         ans = 0
-        for x in itervalues(self):
+        for x in self.values():
             ans += 1
         return ans
 
@@ -362,9 +359,9 @@ class PseudoMap(object):
                     _idx_list.sort(reverse=True)
                     break
 
-    def iterkeys(self):
+    def keys(self):
         """
-        TODO
+        Generator returning the component names defined on the Block
         """
         # Iterate over the PseudoMap keys (the component names) in
         # declaration order
@@ -372,12 +369,12 @@ class PseudoMap(object):
         # Ironically, the values are the fundamental thing that we
         # can (efficiently) iterate over in decl_order.  iterkeys
         # just wraps itervalues.
-        for obj in self.itervalues():
+        for obj in self.values():
             yield obj._name
 
-    def itervalues(self):
+    def values(self):
         """
-        TODO
+        Generator returning the components defined on the Block
         """
         # Iterate over the PseudoMap values (the component objects) in
         # declaration order
@@ -410,40 +407,41 @@ class PseudoMap(object):
         else:
             return walker
 
-    def iteritems(self):
+    def items(self):
         """
-        TODO
+        Generator returning (name, component) tuples for components
+        defined on the Block
         """
         # Ironically, the values are the fundamental thing that we
         # can (efficiently) iterate over in decl_order.  iteritems
         # just wraps itervalues.
-        for obj in self.itervalues():
+        for obj in self.values():
             yield (obj._name, obj)
 
-    def keys(self):
+    @deprecated('The iterkeys method is deprecated. Use dict.keys().',
+                version='TBD')
+    def iterkeys(self):
         """
-        Return a list of dictionary keys
+        Generator returning the component names defined on the Block
         """
-        return list(self.iterkeys())
+        return self.keys()
 
-    def values(self):
+    @deprecated('The itervalues method is deprecated. Use dict.values().',
+                version='TBD')
+    def itervalues(self):
         """
-        Return a list of dictionary values
+        Generator returning the components defined on the Block
         """
-        return list(self.itervalues())
+        return self.values()
 
-    def items(self):
+    @deprecated('The iteritems method is deprecated. Use dict.items().',
+                version='TBD')
+    def iteritems(self):
         """
-        Return a list of (key, value) tuples
+        Generator returning (name, component) tuples for components
+        defined on the Block
         """
-        return list(self.iteritems())
-
-# In Python3, the items(), etc methods of dict-like things return
-# generator-like objects.
-if PY3:
-    PseudoMap.keys = PseudoMap.iterkeys
-    PseudoMap.values = PseudoMap.itervalues
-    PseudoMap.items = PseudoMap.iteritems
+        return self.items()
 
 
 class _BlockData(ActiveComponentData):
@@ -688,9 +686,9 @@ class _BlockData(ActiveComponentData):
                 j += 1
                 _new_decl_order.append(entry)
         # Update the _decl map
-        self._decl = {k:idxMap[idx] for k,idx in iteritems(self._decl)}
+        self._decl = {k:idxMap[idx] for k,idx in self._decl.items()}
         # Update the ctypes, _decl_order linked lists
-        for ctype, info in iteritems(self._ctypes):
+        for ctype, info in self._ctypes.items():
             idx = info[0]
             entry = self._decl_order[idx]
             while entry[0] is None:
@@ -718,7 +716,7 @@ class _BlockData(ActiveComponentData):
             """))
 
     def clear(self):
-        for name in iterkeys(self.component_map()):
+        for name in self.component_map().keys():
             if name not in self._Block_reserved_words:
                 self.del_component(name)
         for attr in tuple(self.__dict__):
@@ -764,9 +762,9 @@ class _BlockData(ActiveComponentData):
             # record the components and the non-component objects added
             # to the block
             src_comp_map = src.component_map()
-            src_raw_dict = {k:v for k,v in iteritems(src.__dict__)
+            src_raw_dict = {k:v for k,v in src.__dict__.items()
                             if k not in src_comp_map}
-        elif isinstance(src, collections_Mapping):
+        elif isinstance(src, Mapping):
             src_comp_map = {}
             src_raw_dict = src
         else:
@@ -775,7 +773,7 @@ class _BlockData(ActiveComponentData):
                 "Block or dict; received %s" % (type(src).__name__,))
 
         # Use component_map for the components to preserve decl_order
-        for k,v in iteritems(src_comp_map):
+        for k,v in src_comp_map.items():
             if k in self._decl:
                 self.del_component(k)
             src.del_component(k)
@@ -783,7 +781,7 @@ class _BlockData(ActiveComponentData):
         # Because Blocks are not slotized and we allow the
         # assignment of arbitrary data to Blocks, we will move over
         # any other unrecognized entries in the object's __dict__:
-        for k in sorted(iterkeys(src_raw_dict)):
+        for k in sorted(src_raw_dict.keys()):
             if k not in self._Block_reserved_words or not hasattr(self, k) \
                or k in self._decl:
                 setattr(self, k, src_raw_dict[k])
@@ -900,6 +898,12 @@ class _BlockData(ActiveComponentData):
             ans = next
             next = next.parent_block()
         return ans
+
+    def find_component(self, label_or_component):
+        """
+        Return a block component given a name.
+        """
+        return ComponentUID(label_or_component).find_component_on(self)
 
     def add_component(self, name, val):
         """
@@ -1059,7 +1063,8 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                     data = data.get(name, None)
             else:
                 data = None
-            if __debug__ and logger.isEnabledFor(logging.DEBUG):
+            generate_debug_messages = is_debug_set(logger)
+            if generate_debug_messages:
                 # This is tricky: If we are in the middle of
                 # constructing an indexed block, the block component
                 # already has _constructed=True.  Now, if the
@@ -1077,7 +1082,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                         _blockName = "Block '%s[...]'" \
                             % self.parent_component().name
                 logger.debug("Constructing %s '%s' on %s from data=%s",
-                             val.__class__.__name__, val.name,
+                             val.__class__.__name__, name,
                              _blockName, str(data))
             try:
                 val.construct(data)
@@ -1088,11 +1093,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                     str(val.name), str(data).strip(),
                     type(err).__name__, err)
                 raise
-            if __debug__ and logger.isEnabledFor(logging.DEBUG):
+            if generate_debug_messages:
                 if _blockName[-1] == "'":
-                    _blockName = _blockName[:-1] + '.' + val.name + "'"
+                    _blockName = _blockName[:-1] + '.' + name + "'"
                 else:
-                    _blockName = "'" + _blockName + '.' + val.name + "'"
+                    _blockName = "'" + _blockName + '.' + name + "'"
                 _out = StringIO()
                 val.pprint(ostream=_out)
                 logger.debug("Constructed component '%s':\n%s"
@@ -1259,7 +1264,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         return that component IFF the component is a child of this
         block. Returns None on lookup failure.
         """
-        if isinstance(name_or_object, string_types):
+        if isinstance(name_or_object, str):
             if name_or_object in self._decl:
                 return self._decl_order[self._decl[name_or_object]][0]
         else:
@@ -1335,7 +1340,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         """
         _sort_indices = SortComponents.sort_indices(sort)
         _subcomp = PseudoMap(self, ctype, active, sort)
-        for name, comp in _subcomp.iteritems():
+        for name, comp in _subcomp.items():
             # NOTE: Suffix has a dict interface (something other derived
             #   non-indexed Components may do as well), so we don't want
             #   to test the existence of iteritems as a check for
@@ -1344,17 +1349,17 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             #   processing for the scalar components to catch the case
             #   where there are "sparse scalar components"
             if comp.is_indexed():
-                _items = comp.iteritems()
+                _items = comp.items()
             elif hasattr(comp, '_data'):
                 # This may be an empty Scalar component (e.g., from
                 # Constraint.Skip on a scalar Constraint)
                 assert len(comp._data) <= 1
-                _items = iteritems(comp._data)
+                _items = comp._data.items()
             else:
                 _items = ((None, comp),)
 
             if _sort_indices:
-                _items = sorted(_items, key=itemgetter(0))
+                _items = sorted_robust(_items, key=itemgetter(0))
             if active is None or not isinstance(comp, ActiveIndexedComponent):
                 for idx, compData in _items:
                     yield (name, idx), compData
@@ -1363,25 +1368,29 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                     if compData.active == active:
                         yield (name, idx), compData
 
+    @deprecated("The all_components method is deprecated.  "
+                "Use the Block.component_objects() method.",
+                version="4.1.10486")
     def all_components(self, *args, **kwargs):
-        logger.warning(
-            "DEPRECATED: The all_components method is deprecated.  Use the Block.component_objects() method.")
         return self.component_objects(*args, **kwargs)
 
+    @deprecated("The active_components method is deprecated.  "
+                "Use the Block.component_objects() method.",
+                version="4.1.10486")
     def active_components(self, *args, **kwargs):
-        logger.warning(
-            "DEPRECATED: The active_components method is deprecated.  Use the Block.component_objects() method.")
         kwargs['active'] = True
         return self.component_objects(*args, **kwargs)
 
+    @deprecated("The all_component_data method is deprecated.  "
+                "Use the Block.component_data_objects() method.",
+                version="4.1.10486")
     def all_component_data(self, *args, **kwargs):
-        logger.warning(
-            "DEPRECATED: The all_component_data method is deprecated.  Use the Block.component_data_objects() method.")
         return self.component_data_objects(*args, **kwargs)
 
+    @deprecated("The active_component_data method is deprecated.  "
+                "Use the Block.component_data_objects() method.",
+                version="4.1.10486")
     def active_component_data(self, *args, **kwargs):
-        logger.warning(
-            "DEPRECATED: The active_component_data method is deprecated.  Use the Block.component_data_objects() method.")
         kwargs['active'] = True
         return self.component_data_objects(*args, **kwargs)
 
@@ -1393,11 +1402,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         generator recursively descends into sub-blocks.
         """
         if not descend_into:
-            for x in self.component_map(ctype, active, sort).itervalues():
+            for x in self.component_map(ctype, active, sort).values():
                 yield x
             return
         for _block in self.block_data_objects(active, sort, descend_into, descent_order):
-            for x in _block.component_map(ctype, active, sort).itervalues():
+            for x in _block.component_map(ctype, active, sort).values():
                 yield x
 
     def component_data_objects(self,
@@ -1457,14 +1466,16 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                                                  sort=sort):
                 yield x
 
+    @deprecated("The all_blocks method is deprecated.  "
+                "Use the Block.block_data_objects() method.",
+                version="4.1.10486")
     def all_blocks(self, *args, **kwargs):
-        logger.warning(
-            "DEPRECATED: The all_blocks method is deprecated.  Use the Block.block_data_objects() method.")
         return self.block_data_objects(*args, **kwargs)
 
+    @deprecated("The active_blocks method is deprecated.  "
+                "Use the Block.block_data_objects() method.",
+                version="4.1.10486")
     def active_blocks(self, *args, **kwargs):
-        logger.warning(
-            "DEPRECATED: The active_blocks method is deprecated.  Use the Block.block_data_objects() method.")
         kwargs['active'] = True
         return self.block_data_objects(*args, **kwargs)
 
@@ -1551,7 +1562,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         _stack = [(self,).__iter__(), ]
         while _stack:
             try:
-                PM._block = _block = advance_iterator(_stack[-1])
+                PM._block = _block = next(_stack[-1])
                 yield _block
                 if not PM:
                     continue
@@ -1575,7 +1586,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         _stack = [(self, self.component_data_iterindex(ctype, active, sort, False))]
         while _stack:
             try:
-                _sub = advance_iterator(_stack[-1][1])[-1]
+                _sub = next(_stack[-1][1])[-1]
                 _stack.append((_sub,
                                _sub.component_data_iterindex(ctype, active, sort, False)
                                ))
@@ -1629,16 +1640,16 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
 
     def fix_all_vars(self):
         # TODO: Simplify based on recursive logic
-        for var in itervalues(self.component_map(Var)):
+        for var in self.component_map(Var).values():
             var.fix()
-        for block in itervalues(self.component_map(Block)):
+        for block in self.component_map(Block).values():
             block.fix_all_vars()
 
     def unfix_all_vars(self):
         # TODO: Simplify based on recursive logic
-        for var in itervalues(self.component_map(Var)):
+        for var in self.component_map(Var).values():
             var.unfix()
-        for block in itervalues(self.component_map(Block)):
+        for block in self.component_map(Block).values():
             block.unfix_all_vars()
 
     def is_constructed(self):
@@ -1727,7 +1738,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             if not ACTIVE:
                 ostream.write(prefix + "    None\n")
             else:
-                for obj in itervalues(ACTIVE):
+                for obj in ACTIVE.values():
                     obj.display(prefix=prefix + "    ", ostream=ostream)
 
         item = Block
@@ -1737,7 +1748,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             ostream.write(
                 prefix + "  %s:\n" %
                 pyomo.core.base.component_order.display_name[item])
-            for obj in itervalues(ACTIVE):
+            for obj in ACTIVE.values():
                 obj.display(prefix=prefix + "    ", ostream=ostream)
 
     #
@@ -1768,14 +1779,25 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             # user did something like 'model.write("f.nl")' and
             # expected guess_format to create an NL file.
             format = ProblemFormat.cpxlp
-        if (filename is not None) and (format is None):
-            format = guess_format(filename)
+        if filename is not None:
+            try:
+                _format = guess_format(filename)
+            except AttributeError:
+                # End up here if an ostream is passed to the filename argument
+                _format = None
             if format is None:
-                raise ValueError(
-                    "Could not infer file format from file name '%s'.\n"
-                    "Either provide a name with a recognized extension "
-                    "or specify the format using the 'format' argument."
-                    % filename)
+                if _format is None:
+                    raise ValueError(
+                        "Could not infer file format from file name '%s'.\n"
+                        "Either provide a name with a recognized extension "
+                        "or specify the format using the 'format' argument."
+                        % filename)
+                else:
+                    format = _format
+            elif format != _format and _format is not None:
+                logger.warning(
+                    "Filename '%s' likely does not match specified "
+                    "file format (%s)" % (filename, format))
         problem_writer = WriterFactory(format)
         if problem_writer is None:
             raise ValueError(
@@ -1803,7 +1825,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             self.solutions = ModelSolutions(self)
         self.solutions.add_symbol_map(smap)
 
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug(
                 "Writing model '%s' to file '%s' with format %s",
                 self.name,
@@ -1836,11 +1858,31 @@ class Block(ActiveIndexedComponent):
     def __init__(self, *args, **kwargs):
         """Constructor"""
         self._suppress_ctypes = set()
-        self._rule = kwargs.pop('rule', None)
-        self._options = kwargs.pop('options', None)
+        _rule = kwargs.pop('rule', None)
+        _options = kwargs.pop('options', None)
+        # As concrete applies to the Block at declaration time, we will
+        # not use an initializer.
         _concrete = kwargs.pop('concrete', False)
+        # As dense applies to the whole container, we will not use an
+        # initializer
+        self._dense = kwargs.pop('dense', True)
         kwargs.setdefault('ctype', Block)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
+        if _options is not None:
+            deprecation_warning(
+                "The Block 'options=' keyword is deprecated.  "
+                "Equivalent functionality can be obtained by wrapping "
+                "the rule function to add the options dictionary to "
+                "the function arguments", version='5.7.2')
+            if self.is_indexed():
+                def rule_wrapper(model, *_idx):
+                    return _rule(model, *_idx, **_options)
+            else:
+                def rule_wrapper(model):
+                    return _rule(model, **_options)
+            self._rule = Initializer(rule_wrapper)
+        else:
+            self._rule = Initializer(_rule)
         if _concrete:
             # Call self.construct() as opposed to just setting the _constructed
             # flag so that the base class construction procedure fires (this
@@ -1857,38 +1899,37 @@ class Block(ActiveIndexedComponent):
             if data is not None:
                 data = data.get(idx, None)
             if data is not None:
+                # Note that for scalar Blocks, this will override the
+                # entry for _BlockConstruction.data[id(self)], as _block
+                # is self.
                 _BlockConstruction.data[id(_block)] = data
         else:
             data = None
 
         try:
-            obj = apply_indexed_rule(
-                self, self._rule, _block, idx, self._options)
-        finally:
-            if data is not None:
-                del _BlockConstruction.data[id(_block)]
-
-        if obj is not _block and isinstance(obj, _BlockData):
+            obj = self._rule(_block, idx)
             # If the user returns a block, transfer over everything
-            # they defined into the empty one we created.
-            _block.transfer_attributes_from(obj)
+            # they defined into the empty one we created.  We do
+            # this inside the try block so that any abstract
+            # components declared by the rule have the opportunity
+            # to be initialized with data from
+            # _BlockConstruction.data as they are transferred over.
+            if obj is not _block and isinstance(obj, _BlockData):
+                _block.transfer_attributes_from(obj)
+        finally:
+            if data is not None and _block is not self:
+                del _BlockConstruction.data[id(_block)]
 
         # TBD: Should we allow skipping Blocks???
         # if obj is Block.Skip and idx is not None:
         #   del self._data[idx]
         return _block
 
-    def find_component(self, label_or_component):
-        """
-        Return a block component given a name.
-        """
-        return ComponentUID(label_or_component).find_component_on(self)
-
     def construct(self, data=None):
         """
         Initialize the block
         """
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing %s '%s', from data=%s",
                          self.__class__.__name__, self.name, str(data))
         if self._constructed:
@@ -1913,7 +1954,8 @@ class Block(ActiveIndexedComponent):
         try:
             if self.is_indexed():
                 # We can only populate Blocks with finite indexing sets
-                if self._rule is not None and self.index_set().isfinite():
+                if self.index_set().isfinite() and (
+                        self._dense or self._rule is not None):
                     for _idx in self.index_set():
                         # Trigger population & call the rule
                         self._getitem_when_not_present(_idx)
@@ -1924,34 +1966,30 @@ class Block(ActiveIndexedComponent):
                 # pseudo-abstract) sub-blocks and then adding them to a
                 # Concrete model block.
                 _idx = next(iter(UnindexedComponent_set))
-                if _idx not in self._data:
-                    # Derived block classes may not follow the scalar
-                    # Block convention of initializing _data to point to
-                    # itself (i.e., they are not set up to support
-                    # Abstract models)
-                    self._data[_idx] = self
-                _block = self
-                for name, obj in iteritems(_block.component_map()):
-                    if not obj._constructed:
-                        if data is None:
-                            _data = None
-                        else:
-                            _data = data.get(name, None)
-                        obj.construct(_data)
-                if self._rule is not None:
-                    obj = apply_indexed_rule(
-                        self, self._rule, _block, _idx, self._options)
-                    if obj is not _block and isinstance(obj, _BlockData):
-                        # If the user returns a block, transfer over
-                        # everything they defined into the empty one we
-                        # created.
-                        _block.transfer_attributes_from(obj)
+                _predefined_components = self.component_map()
+                if _predefined_components:
+                    if _idx not in self._data:
+                        # Derived block classes may not follow the scalar
+                        # Block convention of initializing _data to point to
+                        # itself (i.e., they are not set up to support
+                        # Abstract models)
+                        self._data[_idx] = self
+                    if data is not None:
+                        data = data.get(_idx, None)
+                    if data is None:
+                        data = {}
+                    for name, obj in _predefined_components.items():
+                        if not obj._constructed:
+                            obj.construct(data.get(name, None))
+                # Trigger the (normal) initialization of the block
+                self._getitem_when_not_present(_idx)
         finally:
-            # We must check if data is still in the dictionary, as
-            # scalar blocks will have already removed the entry (as
-            # the _data and the component are the same object)
-            if data is not None and id(self) in _BlockConstruction.data:
-                del _BlockConstruction.data[id(self)]
+            # We must allow that id(self) may no longer be in
+            # _BlockConstruction.data, as _getitem_when_not_present will
+            # have already removed the entry for scalar blocks (as the
+            # BlockData and the Block component are the same object)
+            if data is not None:
+                _BlockConstruction.data.pop(id(self), None)
             timer.report()
 
     def _pprint_callback(self, ostream, idx, data):
@@ -1970,9 +2008,9 @@ class Block(ActiveIndexedComponent):
         ]
         # HACK: suppress the top-level block header (for historical reasons)
         if self.parent_block() is None and not self.is_indexed():
-            return None, iteritems(self._data), None, self._pprint_callback
+            return None, self._data.items(), None, self._pprint_callback
         else:
-            return _attrs, iteritems(self._data), None, self._pprint_callback
+            return _attrs, self._data.items(), None, self._pprint_callback
 
     def display(self, filename=None, ostream=None, prefix=""):
         """
@@ -2001,11 +2039,8 @@ class SimpleBlock(_BlockData, Block):
         # trigger the Block rule
         self._data[None] = self
 
-    def display(self, filename=None, ostream=None, prefix=""):
-        """
-        Display values in the block
-        """
-        Block.display(self, filename, ostream, prefix)
+    # We want scalar Blocks to pick up the Block display method
+    display = Block.display
 
 
 class IndexedBlock(Block):
@@ -2014,136 +2049,42 @@ class IndexedBlock(Block):
         Block.__init__(self, *args, **kwds)
 
 
-def generate_cuid_names(block,
-                        ctype=None,
-                        descend_into=True,
-                        cuid_names_=None):
-    """
-    Bulk generation of CUID strings for all components stored on a block.
-
-    Args:
-        block: The block to generate CUID strings for.
-        ctype: The ctype to generate CUID strings for (e.g.,
-            Var). This keyword is optional and if left to
-            its default value of None, the function will
-            generate CUID strings for all component
-            types. Note that if ctype is not None, this
-            function will still generate CUID strings for
-            any parent containers (such as blocks) that
-            prefix the components requested even though the
-            parent ctype may not match the input ctype.
-        descend_into (bool, component type, or iterable of component types):
-            Indicates whether or not the function should descend
-            into subblocks. Default is True.
-            Example usage: descend_into=(Block, Disjunct)
-        cuid_names_: Used internally by the function.
-
-    Returns:
-        A dictionary-like object that maps model components
-        to their CUID string.
-
-    """
-    # get the current blocks label, if it has one
-    if cuid_names_ is None:
-        cuid_names_ = ComponentMap()
-        block_prefix = ''
-    else:
-        block_prefix = cuid_names_[block] + '.'
-
-    # determine if we need to generate labels on
-    # subblocks
-    if descend_into is True:
-        descend_ctype = (Block,)
-    elif descend_into is False:
-        descend_ctype = False
-    elif type(descend_into) == type:
-        descend_ctype = (descend_into,)
-    elif isinstance(descend_into, collections.Iterable):
-        for i in descend_into:
-            assert type(i) == type
-        descend_ctype = tuple(descend_into)
-    else:
-        raise ValueError('Unrecognized value passed to descend_into: %s. '
-                         'We support True, False, types, or '
-                         'iterables of types.'
-                         % descend_into)
-
-    if type(ctype) in (tuple, list, set):
-        ctypes = tuple(ctype)
-    elif ctype is None:
-        ctypes = None
-    else:
-        ctypes = (ctype,)
-
-    if descend_into and ctype is not None:
-        ctypes = tuple(set(descend_ctype) | set(ctypes))
-
-    for key, obj in block.component_map(ctype=ctypes).items():
-        obj_cuid = block_prefix + key
-        if obj.is_indexed():
-            for data_key, obj_data in obj.items():
-                if data_key.__class__ is tuple:
-                    key_cuid = ','.join(
-                        ComponentUID.tDict.get(type(x), '?') + str(x)
-                        for x in data_key)
-                else:
-                    key_cuid = ComponentUID.tDict.get(type(data_key), '?') + \
-                        str(data_key)
-                cuid_names_[obj_data] = obj_cuid + ":" + key_cuid
-            obj_cuid += ":**"
-        cuid_names_[obj] = obj_cuid
-
-    # Now recurse into subblocks
-    if descend_into:
-        sub_blocks = block.component_data_objects(descend_ctype,
-                                                  descend_into=descend_into)
-        for block_ in sub_blocks:
-            generate_cuid_names(block_,
-                                ctype=ctypes,
-                                descend_into=False,
-                                cuid_names_=cuid_names_)
-
-    return cuid_names_
-
-
 #
 # Deprecated functions.
 #
-def active_components(block, ctype, sort_by_names=False, sort_by_keys=False):
-    """DEPRECATED: The active_components function is deprecated.
+@deprecated("generate_cuid_names() is deprecated. "
+            "Use the ComponentUID.generate_cuid_string_map() static method",
+            version="5.7.2")
+def generate_cuid_names(block, ctype=None, descend_into=True):
+    return ComponentUID.generate_cuid_string_map(block, ctype, descend_into)
 
-    Use the Block.component_objects() method.
-    """
-    logger.warning(active_components.__doc__)
+@deprecated("The active_components function is deprecated.  "
+            "Use the Block.component_objects() method.",
+            version="4.1.10486")
+def active_components(block, ctype, sort_by_names=False, sort_by_keys=False):
     return block.component_objects(ctype, active=True, sort=sort_by_names)
 
 
+@deprecated("The components function is deprecated.  "
+            "Use the Block.component_objects() method.",
+            version="4.1.10486")
 def components(block, ctype, sort_by_names=False, sort_by_keys=False):
-    """DEPRECATED: The components function is deprecated.
-
-    Use the Block.component_objects() method.
-    """
-    logger.warning(components.__doc__)
     return block.component_objects(ctype, active=False, sort=sort_by_names)
 
 
+@deprecated("The active_components_data function is deprecated.  "
+            "Use the Block.component_data_objects() method.",
+            version="4.1.10486")
 def active_components_data(block, ctype,
                            sort=None, sort_by_keys=False, sort_by_names=False):
-    """DEPRECATED: The active_components_data function is deprecated.
-
-    Use the Block.component_data_objects() method.
-    """
-    logger.warning(active_components_data.__doc__)
     return block.component_data_objects(ctype=ctype, active=True, sort=sort)
 
 
+@deprecated("The components_data function is deprecated.  "
+            "Use the Block.component_data_objects() method.",
+            version="4.1.10486")
 def components_data(block, ctype,
                     sort=None, sort_by_keys=False, sort_by_names=False):
-    """DEPRECATED: The components_data function is deprecated.
-
-    Use the Block.component_data_objects() method.
-    """
-    logger.warning(components_data.__doc__)
     return block.component_data_objects(ctype=ctype, active=False, sort=sort)
 
 

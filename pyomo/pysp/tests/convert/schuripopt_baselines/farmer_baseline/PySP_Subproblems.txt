@@ -1,3 +1,0 @@
-BelowAverageScenario.nl
-AverageScenario.nl
-AboveAverageScenario.nl

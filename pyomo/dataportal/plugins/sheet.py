@@ -9,8 +9,6 @@
 #  ___________________________________________________________________________
 
 import os.path
-import six
-import pyutilib.common
 from pyutilib.excel.spreadsheet import ExcelSpreadsheet, Interfaces
 
 from pyomo.dataportal import TableData
@@ -18,6 +16,7 @@ from pyomo.dataportal import TableData
 #     pyodbc_available, pyodbc_db_Table, pypyodbc_available, pypyodbc_db_Table
 # )
 from pyomo.dataportal.factory import DataManagerFactory
+from pyomo.common.errors import ApplicationError
 
 
 def _attempt_open_excel():
@@ -54,14 +53,14 @@ class SheetTable(TableData):
         else:
             try:
                 self.sheet = ExcelSpreadsheet(self.filename, ctype=self.ctype)
-            except pyutilib.common.ApplicationError:
+            except ApplicationError:
                 raise
 
     def read(self):
         if self.sheet is None:
             return
         tmp = self.sheet.get_range(self.options.range, raw=True)
-        if type(tmp) is float or type(tmp) in six.integer_types:
+        if type(tmp) is float or type(tmp) is int:
             if not self.options.param is None:
                 self._info = ["param"] + list(self.options.param) + [":=",tmp]
             elif len(self.options.symbol_map) == 1:

@@ -13,9 +13,9 @@ import logging
 import pyomo.common.config as cfg
 from pyomo.common import deprecated
 from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numvalue import ZeroConstant
-from pyomo.core.base.component import ActiveComponent, ComponentUID
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base import Transformation, TransformationFactory, Reference
 from pyomo.core import (
@@ -24,14 +24,13 @@ from pyomo.core import (
     Any, RangeSet, Reals, value, NonNegativeIntegers, LogicalConstraint,
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import (
-    _warn_for_active_logical_constraint, clone_without_expression_components, target_list,
-    is_child_of, get_src_disjunction,
-    get_src_constraint, get_transformed_constraints,
-    get_src_disjunct, _warn_for_active_disjunction,
-    _warn_for_active_disjunct, )
+from pyomo.gdp.util import ( _warn_for_active_logical_constraint,
+                             clone_without_expression_components, target_list,
+                             is_child_of, get_src_disjunction,
+                             get_src_constraint, get_transformed_constraints,
+                             get_src_disjunct, _warn_for_active_disjunction,
+                             _warn_for_active_disjunct, )
 from functools import wraps
-from six import iteritems, iterkeys
 from weakref import ref as weakref_ref
 
 logger = logging.getLogger('pyomo.gdp.hull')
@@ -192,11 +191,12 @@ class Hull_Reformulation(Transformation):
             Block:       self._transform_block_on_disjunct,
             LogicalConstraint: self._warn_for_active_logical_statement,
             }
+        self._generate_debug_messages = False
 
     def _add_local_vars(self, block, local_var_dict):
         localVars = block.component('LocalVars')
         if type(localVars) is Suffix:
-            for disj, var_list in iteritems(localVars):
+            for disj, var_list in localVars.items():
                 if local_var_dict.get(disj) is None:
                     local_var_dict[disj] = ComponentSet(var_list)
                 else:
@@ -232,6 +232,7 @@ class Hull_Reformulation(Transformation):
     def _apply_to_impl(self, instance, **kwds):
         self._config = self.CONFIG(kwds.pop('options', {}))
         self._config.set_value(kwds)
+        self._generate_debug_messages = is_debug_set(logger)
 
         targets = self._config.targets
         if targets is None:
@@ -282,7 +283,7 @@ class Hull_Reformulation(Transformation):
         return transBlock
 
     def _transform_block(self, obj):
-        for i in sorted(iterkeys(obj)):
+        for i in sorted(obj.keys()):
             self._transform_blockData(obj[i])
 
     def _transform_blockData(self, obj):
@@ -339,7 +340,7 @@ class Hull_Reformulation(Transformation):
 
         # create the disjunction constraint and disaggregation
         # constraints and then relax each of the disjunctionDatas
-        for i in sorted(iterkeys(obj)):
+        for i in sorted(obj.keys()):
             self._transform_disjunctionData(obj[i], i, transBlock)
 
         # deactivate so the writers will be happy
@@ -420,25 +421,37 @@ class Hull_Reformulation(Transformation):
         # as being local. Note however, that we do declare our own disaggregated
         # variables as local, so they will not be re-disaggregated.
         varSet = []
-        # values of localVarsByDisjunct are ComponentSets, so we need this for
-        # determinism (we iterate through the localVars later)
-        localVars = []
+        # Note that variables are local with respect to a Disjunct. We deal with
+        # them here to do some error checking (if something is obviously not
+        # local since it is used in multiple Disjuncts in this Disjunction) and
+        # also to get a deterministic order in which to process them when we
+        # transform the Disjuncts: Values of localVarsByDisjunct are
+        # ComponentSets, so we need this for determinism (we iterate through the
+        # localVars of a Disjunct later)
+        localVars = ComponentMap()
         for var in varOrder:
             disjuncts = [d for d in varsByDisjunct if var in varsByDisjunct[d]]
             # clearly not local if used in more than one disjunct
             if len(disjuncts) > 1:
-                if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                if self._generate_debug_messages:
                     logger.debug("Assuming '%s' is not a local var since it is"
                                  "used in multiple disjuncts." %
                                  var.getname(fully_qualified=True,
                                              name_buffer=NAME_BUFFER))
                 varSet.append(var)
+            # disjuncts is a list of length 1
             elif localVarsByDisjunct.get(disjuncts[0]) is not None:
                 if var in localVarsByDisjunct[disjuncts[0]]:
-                    localVars.append(var)
+                    localVars_thisDisjunct = localVars.get(disjuncts[0])
+                    if localVars_thisDisjunct is not None:
+                        localVars[disjuncts[0]].append(var)
+                    else:
+                        localVars[disjuncts[0]] = [var]
                 else:
+                    # It's not local to this Disjunct
                     varSet.append(var)
             else:
+                # We don't even have have any local vars for this Disjunct.
                 varSet.append(var)
 
         # Now that we know who we need to disaggregate, we will do it
@@ -446,12 +459,14 @@ class Hull_Reformulation(Transformation):
         or_expr = 0
         for disjunct in obj.disjuncts:
             or_expr += disjunct.indicator_var
-            self._transform_disjunct(disjunct, transBlock, varSet, localVars)
+            self._transform_disjunct(disjunct, transBlock, varSet,
+                                     localVars.get(disjunct, []))
         orConstraint.add(index, (or_expr, 1))
         # map the DisjunctionData to its XOR constraint to mark it as
         # transformed
         obj._algebraic_constraint = weakref_ref(orConstraint[index])
 
+        # add the reaggregation constraints
         for i, var in enumerate(varSet):
             disaggregatedExpr = 0
             for disjunct in obj.disjuncts:
@@ -551,9 +566,15 @@ class Hull_Reformulation(Transformation):
                 break
             parent_disjunct = parent_disjunct.parent_block()
         if parent_disjunct is not None:
-            localVarSuffix = relaxationBlock.LocalVars = Suffix(
-                direction=Suffix.LOCAL)
-            local_var_set = localVarSuffix[parent_disjunct] = ComponentSet()
+            # This limits the cases that a user is allowed to name something
+            # (other than a Suffix) 'LocalVars' on a Disjunct. But I am assuming
+            # that the Suffix has to be somewhere above the disjunct in the
+            # tree, so I can't put it on a Block that I own. And if I'm coopting
+            # something of theirs, it may as well be here.
+            self._add_local_var_suffix(parent_disjunct)
+            if parent_disjunct.LocalVars.get(parent_disjunct) is None:
+                parent_disjunct.LocalVars[parent_disjunct] = []
+            local_var_set = parent_disjunct.LocalVars[parent_disjunct]
 
         # add the disaggregated variables and their bigm constraints
         # to the relaxationBlock
@@ -581,7 +602,7 @@ class Hull_Reformulation(Transformation):
             # mark this as local because we won't re-disaggregate if this is a
             # nested disjunction
             if local_var_set is not None:
-                local_var_set.add(disaggregatedVar)
+                local_var_set.append(disaggregatedVar)
             # store the mappings from variables to their disaggregated selves on
             # the transformation block.
             relaxationBlock._disaggregatedVarMap['disaggregatedVar'][
@@ -633,12 +654,11 @@ class Hull_Reformulation(Transformation):
                 bigmConstraint.add('ub', var <= obj.indicator_var*ub)
             relaxationBlock._bigMConstraintMap[var] = bigmConstraint
 
-        var_substitute_map = dict((id(v), newV) for v, newV in iteritems(
-            relaxationBlock._disaggregatedVarMap['disaggregatedVar']))
+        var_substitute_map = dict((id(v), newV) for v, newV in 
+            relaxationBlock._disaggregatedVarMap['disaggregatedVar'].items())
         zero_substitute_map = dict((id(v), ZeroConstant) for v, newV in \
-                                   iteritems(
-                                       relaxationBlock._disaggregatedVarMap[
-                                           'disaggregatedVar']))
+                                   relaxationBlock._disaggregatedVarMap[
+                                           'disaggregatedVar'].items())
         zero_substitute_map.update((id(v), ZeroConstant) for v in localVars)
 
         # Transform each component within this disjunct
@@ -653,12 +673,11 @@ class Hull_Reformulation(Transformation):
         # As opposed to bigm, in hull the only special thing we need to do for
         # nested Disjunctions is to make sure that we move up local var
         # references and also references to the disaggregated variables so that
-        # all will be accessible after we transform this
-        # Disjunct. Mathematically, there is nothing to do: the indicator
+        # all will be accessible after we transform this Disjunct.The indicator
         # variables and disaggregated variables of the inner disjunction will
-        # need to be disaggregated again anyway, and nothing will get
-        # double-bigm-ed. (If an untransformed disjunction is lurking here, we
-        # will catch it below).
+        # need to be disaggregated again, but the transformed constraints will
+        # not be. But this way nothing will get double-bigm-ed. (If an
+        # untransformed disjunction is lurking here, we will catch it below).
 
         # add references to all local variables on block (including the
         # indicator_var)
@@ -705,7 +724,7 @@ class Hull_Reformulation(Transformation):
 
     def _transfer_var_references(self, fromBlock, toBlock):
         disjunctList = toBlock.relaxedDisjuncts
-        for idx, disjunctBlock in iteritems(fromBlock.relaxedDisjuncts):
+        for idx, disjunctBlock in fromBlock.relaxedDisjuncts.items():
             # move all the of the local var references
             newblock = disjunctList[len(disjunctList)]
             newblock.localVarReferences = Block()
@@ -723,7 +742,8 @@ class Hull_Reformulation(Transformation):
     def _warn_for_active_logical_statement(
             self, logical_statment, disjunct, var_substitute_map,
             zero_substitute_map):
-        _warn_for_active_logical_constraint(logical_statment, disjunct, NAME_BUFFER)
+        _warn_for_active_logical_constraint(logical_statment, disjunct,
+                                            NAME_BUFFER)
 
     def _transform_block_on_disjunct( self, block, disjunct, var_substitute_map,
                                       zero_substitute_map):
@@ -732,7 +752,7 @@ class Hull_Reformulation(Transformation):
         # directly.  (We are passing the disjunct through so that when
         # we find constraints, _transform_constraint will have access to
         # the correct indicator variable.
-        for i in sorted(iterkeys(block)):
+        for i in sorted(block.keys()):
             self._transform_block_components( block[i], disjunct,
                                               var_substitute_map,
                                               zero_substitute_map)
@@ -764,7 +784,7 @@ class Hull_Reformulation(Transformation):
         # constraint container (or SimpleConstraint)
         constraintMap['srcConstraints'][newConstraint] = obj
 
-        for i in sorted(iterkeys(obj)):
+        for i in sorted(obj.keys()):
             c = obj[i]
             if not c.active:
                 continue
@@ -787,7 +807,7 @@ class Hull_Reformulation(Transformation):
                         c.body,
                         substitute=dict(
                             (var,  subs/y)
-                            for var, subs in iteritems(var_substitute_map) )
+                            for var, subs in var_substitute_map.items() )
                     )
                     expr = sub_expr * y
                 elif mode == "GrossmannLee":
@@ -795,7 +815,7 @@ class Hull_Reformulation(Transformation):
                         c.body,
                         substitute=dict(
                             (var, subs/(y + EPS))
-                            for var, subs in iteritems(var_substitute_map) )
+                            for var, subs in var_substitute_map.items() )
                     )
                     expr = (y + EPS) * sub_expr
                 elif mode == "FurmanSawayaGrossmann":
@@ -803,7 +823,7 @@ class Hull_Reformulation(Transformation):
                         c.body,
                         substitute=dict(
                             (var, subs/((1 - EPS)*y + EPS))
-                            for var, subs in iteritems(var_substitute_map) )
+                            for var, subs in var_substitute_map.items() )
                     )
                     expr = ((1-EPS)*y + EPS)*sub_expr - EPS*h_0*(1-y)
                 else:
@@ -859,7 +879,7 @@ class Hull_Reformulation(Transformation):
                 continue
 
             if c.lower is not None:
-                if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                if self._generate_debug_messages:
                     _name = c.getname(
                         fully_qualified=True, name_buffer=NAME_BUFFER)
                     logger.debug("GDP(Hull): Transforming constraint " +
@@ -881,7 +901,7 @@ class Hull_Reformulation(Transformation):
                     constraintMap['srcConstraints'][newConstraint['lb']] = c
 
             if c.upper is not None:
-                if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                if self._generate_debug_messages:
                     _name = c.getname(
                         fully_qualified=True, name_buffer=NAME_BUFFER)
                     logger.debug("GDP(Hull): Transforming constraint " +
@@ -914,6 +934,21 @@ class Hull_Reformulation(Transformation):
 
         # deactivate now that we have transformed
         obj.deactivate()
+
+    def _add_local_var_suffix(self, disjunct):
+        # If the Suffix is there, we will borrow it. If not, we make it. If it's
+        # something else, we complain.
+        localSuffix = disjunct.component("LocalVars")
+        if localSuffix is None:
+            disjunct.LocalVars = Suffix(direction=Suffix.LOCAL)
+        else:
+            if localSuffix.ctype is Suffix:
+                return
+            raise GDP_Error("A component called 'LocalVars' is declared on "
+                            "Disjunct %s, but it is of type %s, not Suffix."  
+                            % (disjunct.getname(fully_qualified=True,
+                                                name_buffer=NAME_BUFFER), 
+                               localSuffix.ctype))
 
     # These are all functions to retrieve transformed components from
     # original ones and vice versa.
@@ -998,8 +1033,8 @@ class Hull_Reformulation(Transformation):
             if transBlock is not None:
                 break
         if transBlock is None:
-            raise GDP_Error("Disjunction '%s' has not been properly transformed: "
-                            "None of its disjuncts are transformed."
+            raise GDP_Error("Disjunction '%s' has not been properly transformed:"
+                            " None of its disjuncts are transformed."
                             % disjunction.name)
 
         try:
@@ -1038,9 +1073,10 @@ class Hull_Reformulation(Transformation):
 @TransformationFactory.register(
     'gdp.chull',
     doc="Deprecated name for the hull reformulation. Please use 'gdp.hull'.")
+@deprecated("The 'gdp.chull' name is deprecated. "
+            "Please use the more apt 'gdp.hull' instead.",
+            logger='pyomo.gdp',
+            version="5.7")
 class _Deprecated_Name_Hull(Hull_Reformulation):
-    @deprecated("The 'gdp.chull' name is deprecated. Please use the more apt 'gdp.hull' instead.",
-                logger='pyomo.gdp',
-                version="5.7")
     def __init__(self):
         super(_Deprecated_Name_Hull, self).__init__()

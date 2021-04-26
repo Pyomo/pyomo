@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.core import ConcreteModel, Var, Param, Constraint, Objective, exp
 from pyomo.repn.standard_repn import generate_standard_repn as gar

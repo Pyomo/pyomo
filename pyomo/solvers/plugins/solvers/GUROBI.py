@@ -16,9 +16,8 @@ import logging
 import subprocess
 
 from pyomo.common import Executable
-from pyutilib.misc import Options, Bunch
-from pyutilib.services import TempfileManager
-from pyutilib.subprocess import run
+from pyomo.common.collections import Bunch
+from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
@@ -28,19 +27,11 @@ from pyomo.core.kernel.block import IBlock
 
 logger = logging.getLogger('pyomo.solvers')
 
-from six import iteritems, StringIO
-
-try:
-    unicode
-except:
-    basestring = str
-
 
 @SolverFactory.register('gurobi', doc='The GUROBI LP/MIP solver')
 class GUROBI(OptSolver):
     """The GUROBI LP/MIP solver
     """
-
     def __new__(cls, *args, **kwds):
         try:
             mode = kwds['solver_io']
@@ -85,6 +76,7 @@ class GUROBI(OptSolver):
 class GUROBISHELL(ILMLicensedSystemCallSolver):
     """Shell interface to the GUROBI LP/MIP solver
     """
+    _solver_info_cache = {}
 
     def __init__(self, **kwds):
         #
@@ -110,7 +102,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         self.set_problem_format(ProblemFormat.cpxlp)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -118,8 +110,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         self._capabilities.sos1 = True
         self._capabilities.sos2 = True
 
-    @staticmethod
-    def license_is_valid(executable='gurobi_cl'):
+    def license_is_valid(self):
         """
         Runs a check for a valid Gurobi license using the
         given executable (default is 'gurobi_cl'). All
@@ -127,25 +118,37 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         (including the executable being invalid), then this
         function will return False.
         """
-        try:
-            rc = subprocess.call([executable, "--license"],
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT)
-        except OSError:
-            rc = 1
-        if rc:
-            #
-            # Try the --status flag if --license is not available
-            #
+        solver_exec = self.executable()
+        if (solver_exec, 'licensed') in self._solver_info_cache:
+            return self._solver_info_cache[(solver_exec, 'licensed')]
+
+        if not solver_exec:
+            licensed = False
+        else:
+            executable = os.path.join(
+                os.path.dirname(solver_exec), 'gurobi_cl')
+
             try:
-                rc = subprocess.call([executable, "--status"],
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT)
+                rc = subprocess.call([executable, "--license"],
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.STDOUT)
             except OSError:
                 rc = 1
-            if rc:
-                return False
-        return True
+                if rc:
+                    #
+                    # Try the --status flag if --license is not available
+                    #
+                    try:
+                        rc = subprocess.call([executable, "--status"],
+                                             stdout=subprocess.PIPE,
+                                             stderr=subprocess.STDOUT)
+                    except OSError:
+                        rc = 1
+            licensed = not rc
+
+        self._solver_info_cache[(solver_exec, 'licensed')] = licensed
+        return licensed
+
 
     def _default_results_format(self, prob_format):
         return ResultsFormat.soln
@@ -208,11 +211,11 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # create the temporary file - assuming that the user has already, via some external
         # mechanism, invoked warm_start() with a instance to create the warm start file.
         if self._warm_start_solve and \
-           isinstance(args[0], basestring):
+           isinstance(args[0], str):
             # we assume the user knows what they are doing...
             pass
         elif self._warm_start_solve and \
-             (not isinstance(args[0], basestring)):
+             (not isinstance(args[0], str)):
             # assign the name of the warm start file *before* calling the base class
             # presolve - the base class method ends up creating the command line,
             # and the warm start file-name is (obviously) needed there.
@@ -227,7 +230,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # NB: we must let the base class presolve run first so that the
         # symbol_map is actually constructed!
 
-        if (len(args) > 0) and (not isinstance(args[0], basestring)):
+        if (len(args) > 0) and (not isinstance(args[0], str)):
 
             if len(args) != 1:
                 raise ValueError(
@@ -261,24 +264,29 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         Returns a tuple describing the solver executable version.
         """
         solver_exec = self.executable()
-        if solver_exec is None:
-            return _extract_version('')
-        f = StringIO()
-        results = run([solver_exec],
-                                          stdin=('from gurobipy import *; '
-                                                 'print(gurobi.version()); exit()'),
-                                          ostream=f)
-        tmp = None
-        try:
-            tmp = tuple(eval(f.getvalue().strip()))
-            while(len(tmp) < 4):
-                tmp += (0,)
-        except SyntaxError:
-            tmp = None
-        if tmp is None:
-            return _extract_version('')
+        if (solver_exec, 'version') in self._solver_info_cache:
+            return self._solver_info_cache[(solver_exec, 'version')]
 
-        return tmp[:4]
+        if solver_exec is None:
+            ver = _extract_version('')
+        else:
+            results = subprocess.run(
+                [solver_exec],
+                input='from gurobipy import *; print(gurobi.version()); exit()',
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+            )
+            ver = None
+            try:
+                ver = tuple(eval(results.stdout.strip()))
+                while(len(ver) < 4):
+                    ver += (0,)
+            except SyntaxError:
+                ver = _extract_version('')
+        ver = ver[:4]
+        self._solver_info_cache[(solver_exec, 'version')] = ver
+        return ver
 
     def create_command_line(self,executable,problem_files):
 
@@ -375,13 +383,13 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         extract_rc = False
         for suffix in self._suffixes:
             flag=False
-            if re.match(suffix,"dual"):
+            if re.match(suffix, "dual"):
                 extract_duals = True
                 flag=True
-            if re.match(suffix,"slack"):
+            if re.match(suffix, "slack"):
                 extract_slacks = True
                 flag=True
-            if re.match(suffix,"rc"):
+            if re.match(suffix, "rc"):
                 extract_rc = True
                 flag=True
             if not flag:
@@ -494,13 +502,13 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
 
         # For the range constraints, supply only the dual with the largest
         # magnitude (at least one should always be numerically zero)
-        for key,(ld,ud) in iteritems(range_duals):
+        for key,(ld,ud) in range_duals.items():
             if abs(ld) > abs(ud):
                 soln_constraints['r_l_'+key] = {"Dual" : ld}
             else:
                 soln_constraints['r_l_'+key] = {"Dual" : ud}                # Use the same key
         # slacks
-        for key,(ls,us) in iteritems(range_slacks):
+        for key,(ls,us) in range_slacks.items():
             if abs(ls) > abs(us):
                 soln_constraints.setdefault('r_l_'+key,{})["Slack"] = ls
             else:

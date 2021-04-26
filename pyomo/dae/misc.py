@@ -18,7 +18,7 @@ from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.block import IndexedBlock, SortComponents
 from pyomo.dae import ContinuousSet, DAE_Error
 
-from six import iterkeys, itervalues, StringIO
+from io import StringIO
 
 logger = logging.getLogger('pyomo.dae')
 
@@ -69,7 +69,7 @@ def generate_finite_elements(ds, nfe):
 
 
 def _add_point(ds):
-    sortds = sorted(ds)
+    sortds = list(ds)
     maxstep = sortds[1] - sortds[0]
     maxloc = 0
     for i in range(2, len(sortds)):
@@ -85,7 +85,7 @@ def generate_colloc_points(ds, tau):
     This function adds collocation points between the finite elements
     in the differential set
     """
-    fes = sorted(ds)
+    fes = list(ds)
     for i in range(1, len(fes)):
         h = fes[i] - fes[i - 1]
         for j in range(len(tau)):
@@ -119,7 +119,7 @@ def expand_components(block):
     # BlockData will be added to the indexed Block but will not be
     # constructed correctly.
     for blk in block.component_objects(Block, descend_into=True):
-        missing_idx = set(blk._index) - set(iterkeys(blk._data))
+        missing_idx = set(blk._index) - set(blk._data.keys())
         if missing_idx:
             blk._dae_missing_idx = missing_idx
 
@@ -259,7 +259,7 @@ def _update_var(v):
     #       Var (which is now a IndexedComponent). However, it
     #       would be much slower to rely on that method to generate new
     #       _VarData for a large number of new indices.
-    new_indices = set(v._index) - set(iterkeys(v._data))
+    new_indices = set(v._index) - set(v._data.keys())
     for index in new_indices:
         v.add(index)
 
@@ -360,7 +360,7 @@ def create_access_function(var):
 def create_partial_expression(scheme, expr, ind, loc):
     """
     This method returns a function which applies a discretization scheme
-    to an expression along a particular indexind set. This is admittedly a
+    to an expression along a particular indexing set. This is admittedly a
     convoluted looking implementation. The idea is that we only apply a
     discretization scheme to one indexing set at a time but we also want
     the function to be expanded over any other indexing sets.
@@ -403,13 +403,13 @@ def add_continuity_equations(block, d, i, loc):
         afinal = s.get_discretization_info()['afinal']
 
         def _fun(i):
-            tmp = sorted(s)
-            idx = tmp.index(i)
+            tmp = list(s)
+            idx = s.ord(i)-1
             low = s.get_lower_element_boundary(i)
             if i != low or idx == 0:
                 raise IndexError("list index out of range")
             low = s.get_lower_element_boundary(tmp[idx - 1])
-            lowidx = tmp.index(low)
+            lowidx = s.ord(low)-1
             return sum(v(tmp[lowidx + j]) * afinal[j] for j in range(ncp + 1))
         return _fun
     expr = create_partial_expression(_cont_exp, create_access_function(svar),
@@ -430,7 +430,7 @@ def block_fully_discretized(b):
     Checks to see if all ContinuousSets in a block have been discretized
     """
 
-    for i in itervalues(b.component_map(ContinuousSet)):
+    for i in b.component_map(ContinuousSet).values():
         if 'scheme' not in i.get_discretization_info():
             return False
     return True
@@ -498,8 +498,8 @@ def _get_idx(l, ds, n, i, k):
     points and is not separated into finite elements and collocation
     points.
     """
-    t = sorted(ds)
-    tmp = t.index(ds._fe[i])
+    t = list(ds)
+    tmp = ds.ord(ds._fe[i])-1
     tik = t[tmp + k]
     if n is None:
         return tik

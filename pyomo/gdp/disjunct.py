@@ -12,19 +12,19 @@ import logging
 import sys
 import types
 
-from six import iteritems, itervalues
 from weakref import ref as weakref_ref
 
 from pyomo.common.errors import PyomoException
+from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import (
-    BooleanVar, ModelComponentFactory, Binary, Block, Var, ConstraintList, Any,
+    ModelComponentFactory, Binary, Block, Var, ConstraintList, Any,
     LogicalConstraintList, BooleanValue, value)
 from pyomo.core.base.component import (
     ActiveComponent, ActiveComponentData, ComponentData
 )
-from pyomo.core.base.numvalue import native_types, value
+from pyomo.core.base.numvalue import native_types
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
@@ -150,7 +150,7 @@ class Disjunct(Block):
         # call this method.
         ActiveComponent.activate(self)
         if self.is_indexed():
-            for component_data in itervalues(self):
+            for component_data in self.values():
                 component_data._activate_without_unfixing_indicator()
 
 
@@ -175,7 +175,7 @@ class IndexedDisjunct(Disjunct):
     #
     @property
     def active(self):
-        return any(d.active for d in itervalues(self._data))
+        return any(d.active for d in self._data.values())
 
 
 _DisjunctData._Block_reserved_words = set(dir(Disjunct()))
@@ -357,7 +357,7 @@ class Disjunction(ActiveIndexedComponent):
                 self._data[key].xor = bool(value(val[key]))
 
     def construct(self, data=None):
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+        if is_debug_set(logger):
             logger.debug("Constructing disjunction %s"
                          % (self.name))
         if self._constructed:
@@ -422,7 +422,7 @@ class Disjunction(ActiveIndexedComponent):
              ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active),
              ],
-            iteritems(self),
+            self.items(),
             ( "Disjuncts", "Active", "XOR" ),
             lambda k, v: [ [x.name for x in v.disjuncts], v.active, v.xor]
             )
@@ -468,4 +468,4 @@ class IndexedDisjunction(Disjunction):
     #
     @property
     def active(self):
-        return any(d.active for d in itervalues(self._data))
+        return any(d.active for d in self._data.values())

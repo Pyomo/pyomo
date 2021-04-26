@@ -32,8 +32,7 @@
 """
 from __future__ import division
 
-import six
-from six import StringIO
+from io import StringIO
 
 from pyomo.common.config import (
     add_docstring_list
@@ -107,6 +106,13 @@ class GDPoptSolver(object):
         """
         config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
         config.set_value(kwds)
+        if config.strategy is None:
+            msg = 'Please specify solution strategy. Options are: \n'
+            msg += '    LOA:  Logic-based Outer Approximation\n'
+            msg += '    GLOA: Global Logic-based Outer Approximation\n'
+            msg += '    LBB:  Logic-based Branch and Bound\n'
+            msg += '    RIC:  Relaxation with Integer Cuts'
+            raise ValueError(msg)
 
         with setup_solver_environment(model, config) as solve_data:
             self._log_solver_intro_message(config)
@@ -122,7 +128,7 @@ class GDPoptSolver(object):
                 # TODO merge the solver results
                 return presolve_results  # problem presolved
 
-            if solve_data.active_strategy in {'LOA', 'GLOA'}:
+            if solve_data.active_strategy in {'LOA', 'GLOA', 'RIC'}:
                 # Initialize the master problem
                 with time_code(solve_data.timing, 'initialization'):
                     GDPopt_initialize_master(solve_data, config)
@@ -132,6 +138,8 @@ class GDPoptSolver(object):
                     GDPopt_iteration_loop(solve_data, config)
             elif solve_data.active_strategy == 'LBB':
                 _perform_branch_and_bound(solve_data)
+            else:
+                raise ValueError('Unrecognized strategy: ' + config.strategy)
 
         return solve_data.results
 
@@ -149,6 +157,9 @@ class GDPoptSolver(object):
         always be available, and so this should reflect that possibility.
 
         """
+        return True
+
+    def license_is_valid(self):
         return True
 
     def version(self):
@@ -233,14 +244,6 @@ DOI: 10.1016/S0098-1354(00)00581-0.
 
     _metasolver = False
 
-    if six.PY2:
-        __doc__ = """
-    Keyword arguments below are specified for the :code:`solve` function.
-        
-    """ + add_docstring_list(__doc__, CONFIG)
-
-
-if six.PY3:
-    # Add the CONFIG arguments to the solve method docstring
-    GDPoptSolver.solve.__doc__ = add_docstring_list(
-        GDPoptSolver.solve.__doc__, GDPoptSolver.CONFIG, indent_by=8)
+# Add the CONFIG arguments to the solve method docstring
+GDPoptSolver.solve.__doc__ = add_docstring_list(
+    GDPoptSolver.solve.__doc__, GDPoptSolver.CONFIG, indent_by=8)

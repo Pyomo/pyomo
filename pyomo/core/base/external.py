@@ -10,7 +10,6 @@
 
 import logging
 import os
-import six
 import types
 import weakref
 
@@ -21,13 +20,9 @@ from ctypes import (
 from pyomo.core.expr.numvalue import native_types, NonNumericValue
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import Component
+from pyomo.core.base.units_container import units
 
 __all__  = ( 'ExternalFunction', )
-
-try:
-    basestring
-except:
-    basestring = str
 
 logger = logging.getLogger('pyomo.core')
 
@@ -47,7 +42,11 @@ class ExternalFunction(Component):
 
     def __init__(self, *args, **kwds):
         self._units = kwds.pop('units', None)
+        if self._units is not None:
+            self._units = units.get_units(self._units)
         self._arg_units = kwds.pop('arg_units', None)
+        if self._arg_units is not None:
+            self._arg_units = [units.get_units(u) for u in self._arg_units]
         kwds.setdefault('ctype', ExternalFunction)
         Component.__init__(self, **kwds)
         self._constructed = True
@@ -111,6 +110,13 @@ class AMPLExternalFunction(ExternalFunction):
         self._so = None
         ExternalFunction.__init__(self, *args, **kwds)
 
+    def __getstate__(self):
+        state = super(AMPLExternalFunction, self).__getstate__()
+        # Remove reference to loaded library (they are not copyable or
+        # picklable)
+        state['_so'] = state['_known_functions'] = None
+        return state
+
     def _evaluate(self, args, fgh, fixed):
         if self._so is None:
             self.load_library()
@@ -165,7 +171,7 @@ class AMPLExternalFunction(ExternalFunction):
         def addfunc(name, f, _type, nargs, funcinfo, ae):
             # trap for Python 3, where the name comes in as bytes() and
             # not a string
-            if not isinstance(name, six.string_types):
+            if not isinstance(name, str):
                 name = name.decode()
             self._known_functions[str(name)] = (f, _type, nargs, funcinfo, ae)
         AE.Addfunc = _AMPLEXPORTS.ADDFUNC(addfunc)
@@ -203,11 +209,14 @@ class PythonCallbackFunction(ExternalFunction):
         if not args:
             self._fcn = kwds.pop('function')
 
-        self._library = 'pyomo_ampl.so'
-        self._function = 'pyomo_socket_server'
+        # There is an implicit first argument (the function pointer), we
+        # need to add that to the arg_units
         arg_units = kwds.get('arg_units', None)
         if arg_units is not None:
-            kwds['arg_units'] = [None]+list(arg_units)
+            kwds['arg_units'] = [None] + list(arg_units)
+
+        self._library = 'pyomo_ampl.so'
+        self._function = 'pyomo_socket_server'
         ExternalFunction.__init__(self, *args, **kwds)
         self._fcn_id = PythonCallbackFunction.register_instance(self)
 

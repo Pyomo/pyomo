@@ -8,7 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+
+from collections.abc import (
+    MutableMapping, MutableSet, Mapping, Set, Sequence
+)
+from collections import UserDict
+
 from .orderedset import OrderedDict, OrderedSet
 from .component_map import ComponentMap
 from .component_set import ComponentSet
-
+from .bunch import Bunch

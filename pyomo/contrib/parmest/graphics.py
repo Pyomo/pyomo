@@ -8,31 +8,28 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-imports_available = True
-try:
-    import numpy as np
-    import pandas as pd
-    from scipy import stats
-    import itertools
-    from scipy.interpolate import griddata
-except ImportError:
-    imports_available = False
+import itertools
+from pyomo.common.dependencies import (
+    matplotlib, matplotlib_available,
+    numpy as np, numpy_available,
+    pandas as pd, pandas_available,
+    scipy, scipy_available,
+    check_min_version, attempt_import
+)
 
-try:
-    # matplotlib.pyplot can generate a runtime error on OSX when not
-    # installed as a Framework (as is the case in the CI systems)
-    #
-    # occasionally dependent conda packages for older distributions
-    # (e.g. python 3.5) get released that are either broken not
-    # compatible, resulting in a SyntaxError
-    import seaborn as sns
-    import matplotlib.pyplot as plt
-    import matplotlib.tri as tri
-    from matplotlib.lines import Line2D
-except (ImportError, RuntimeError, SyntaxError):
-    imports_available = False
+plt = matplotlib.pyplot
+stats = scipy.stats
 
-from pyomo.common.dependencies import check_min_version
+# occasionally dependent conda packages for older distributions
+# (e.g. python 3.5) get released that are either broken not
+# compatible, resulting in a SyntaxError
+sns, seaborn_available = attempt_import(
+    'seaborn', alt_names=['sns'],
+    catch_exceptions=(ImportError, SyntaxError)
+)
+
+imports_available = numpy_available & scipy_available & pandas_available \
+                    & matplotlib_available & seaborn_available
 
 def _get_variables(ax,columns):
     sps = ax.get_subplotspec()
@@ -82,11 +79,13 @@ def _get_data_slice(xvar,yvar,columns,data,theta_star):
                 temp[col] = temp[col] + data[col].std()
             data = data.append(temp, ignore_index=True)
     
-    data_slice['obj'] = griddata(np.array(data[columns]),
-                             np.array(data[['obj']]),
-                             np.array(data_slice[columns]),
-                             method='linear',
-                             rescale=True)
+    data_slice['obj'] = scipy.interpolate.griddata(
+        np.array(data[columns]),
+        np.array(data[['obj']]),
+        np.array(data_slice[columns]),
+        method='linear',
+        rescale=True,
+    )
         
     X = data_slice[xvar]
     Y = data_slice[yvar]
@@ -161,7 +160,7 @@ def _add_obj_contour(x,y,color,columns,data,theta_star,label=None):
     try:
         X, Y, Z = _get_data_slice(xvar,yvar,columns,data,theta_star)
         
-        triang = tri.Triangulation(X, Y)
+        triang = matplotlib.tri.Triangulation(X, Y)
         cmap = plt.cm.get_cmap('Greys')
         
         plt.tricontourf(triang,Z,cmap=cmap)
@@ -199,37 +198,55 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     
     Parameters
     ----------
-    theta_values: DataFrame, columns = variable names and (optionally) 'obj' and alpha values
-        Theta values and (optionally) an objective value and results from 
-        leaveNout_bootstrap_test, likelihood_ratio_test, or 
-        confidence_region_test
-    theta_star: dict or Series, keys = variable names, optional
-        Theta* (or other individual values of theta, also used to 
-        slice higher dimensional contour intervals in 2D)
+    theta_values: DataFrame or tuple
+    
+        * If theta_values is a DataFrame, then it contains one column for each theta variable 
+          and (optionally) an objective value column ('obj') and columns that contains 
+          Boolean results from confidence interval tests (labeled using the alpha value). 
+          Each row is a sample.
+          
+          * Theta variables can be computed from ``theta_est_bootstrap``, 
+            ``theta_est_leaveNout``, and  ``leaveNout_bootstrap_test``.
+          * The objective value can be computed using the ``likelihood_ratio_test``.
+          * Results from confidence interval tests can be computed using the  
+           ``leaveNout_bootstrap_test``, ``likelihood_ratio_test``, and 
+           ``confidence_region_test``.
+
+        * If theta_values is a tuple, then it contains a mean, covariance, and number 
+          of samples (mean, cov, n) where mean is a dictionary or Series 
+          (indexed by variable name), covariance is a DataFrame (indexed by 
+          variable name, one column per variable name), and n is an integer.
+          The mean and covariance are used to create a multivariate normal 
+          sample of n theta values. The covariance can be computed using 
+          ``theta_est(calc_cov=True)``.
+        
+    theta_star: dict or Series, optional
+        Estimated value of theta.  The dictionary or Series is indexed by variable name.  
+        Theta_star is used to slice higher dimensional contour intervals in 2D
     alpha: float, optional
         Confidence interval value, if an alpha value is given and the 
         distributions list is empty, the data will be filtered by True/False 
         values using the column name whose value equals alpha (see results from
-        leaveNout_bootstrap_test, likelihood_ratio_test, or 
-        confidence_region_test)
+        ``leaveNout_bootstrap_test``, ``likelihood_ratio_test``, and 
+        ``confidence_region_test``)
     distributions: list of strings, optional
         Statistical distribution used to define a confidence region, 
         options = 'MVN' for multivariate_normal, 'KDE' for gaussian_kde, and 
         'Rect' for rectangular.
-        Confidence interval is a 2D slice, using linear interpolation at theta*.
+        Confidence interval is a 2D slice, using linear interpolation at theta_star.
     axis_limits: dict, optional
         Axis limits in the format {variable: [min, max]}
     title: string, optional
         Plot title
     add_obj_contour: bool, optional
         Add a contour plot using the column 'obj' in theta_values.
-        Contour plot is a 2D slice, using linear interpolation at theta*.
+        Contour plot is a 2D slice, using linear interpolation at theta_star.
     add_legend: bool, optional
         Add a legend to the plot
     filename: string, optional
         Filename used to save the figure
     """
-    assert isinstance(theta_values, pd.DataFrame)
+    assert isinstance(theta_values, (pd.DataFrame, tuple))
     assert isinstance(theta_star, (type(None), dict, pd.Series, pd.DataFrame))
     assert isinstance(alpha, (type(None), int, float))
     assert isinstance(distributions, list)
@@ -239,8 +256,20 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     assert isinstance(add_obj_contour, bool)
     assert isinstance(filename, (type(None), str))
     
-    if len(theta_values) == 0:
-        return('Empty data')    
+    # If theta_values is a tuple containing (mean, cov, n), create a DataFrame of values
+    if isinstance(theta_values, tuple):
+        assert(len(theta_values) == 3)
+        mean = theta_values[0]
+        cov = theta_values[1]
+        n = theta_values[2]
+        if isinstance(mean, dict):
+            mean = pd.Series(mean)
+        theta_names = mean.index
+        mvn_dist = stats.multivariate_normal(mean, cov)
+        theta_values = pd.DataFrame(mvn_dist.rvs(n, random_state=1), columns=theta_names)
+            
+    assert(theta_values.shape[0] > 0)
+    
     if isinstance(theta_star, dict):
         theta_star = pd.Series(theta_star)
     if isinstance(theta_star, pd.DataFrame):
@@ -278,15 +307,17 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
         
     # Plot thetas
     g.map_offdiag(plt.scatter, s=10)
-    legend_elements.append(Line2D([0], [0], marker='o', color='w', label='thetas',
-                          markerfacecolor='cadetblue', markersize=5))
+    legend_elements.append(matplotlib.lines.Line2D(
+        [0], [0], marker='o', color='w', label='thetas',
+        markerfacecolor='cadetblue', markersize=5))
     
     # Plot theta*
     if theta_star is not None:
         g.map_offdiag(_add_scatter, color='k', columns=theta_names, theta_star=theta_star)
         
-        legend_elements.append(Line2D([0], [0], marker='o', color='w', label='theta*',
-                                      markerfacecolor='k', markersize=6))
+        legend_elements.append(matplotlib.lines.Line2D(
+            [0], [0], marker='o', color='w', label='theta*',
+            markerfacecolor='k', markersize=6))
     
     # Plot confidence regions
     colors = ['r', 'mediumblue', 'darkgray']
@@ -304,7 +335,8 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
                 lb, ub = fit_rect_dist(thetas, alpha)
                 g.map_offdiag(_add_rectangle_CI, color=colors[i], columns=theta_names, 
                             lower_bound=lb, upper_bound=ub)
-                legend_elements.append(Line2D([0], [0], color=colors[i], lw=1, label=dist))
+                legend_elements.append(matplotlib.lines.Line2D(
+                    [0], [0], color=colors[i], lw=1, label=dist))
                 
             elif dist == 'MVN':
                 mvn_dist = fit_mvn_dist(thetas)
@@ -313,7 +345,8 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
                 g.map_offdiag(_add_scipy_dist_CI, color=colors[i], columns=theta_names, 
                             ncells=100, alpha=score, dist=mvn_dist, 
                             theta_star=theta_star)
-                legend_elements.append(Line2D([0], [0], color=colors[i], lw=1, label=dist))
+                legend_elements.append(matplotlib.lines.Line2D(
+                    [0], [0], color=colors[i], lw=1, label=dist))
                 
             elif dist == 'KDE':
                 kde_dist = fit_kde_dist(thetas)
@@ -322,7 +355,8 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
                 g.map_offdiag(_add_scipy_dist_CI, color=colors[i], columns=theta_names, 
                             ncells=100, alpha=score, dist=kde_dist, 
                             theta_star=theta_star)
-                legend_elements.append(Line2D([0], [0], color=colors[i], lw=1, label=dist))
+                legend_elements.append(matplotlib.lines.Line2D(
+                    [0], [0], color=colors[i], lw=1, label=dist))
             
     _set_axis_limits(g, axis_limits, thetas, theta_star)
     
@@ -372,16 +406,15 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
     else:
         plt.savefig(filename)
         plt.close()
-    
-
+        
 def fit_rect_dist(theta_values, alpha):
     """
     Fit an alpha-level rectangular distribution to theta values
     
     Parameters
     ----------
-    theta_values: DataFrame, columns = variable names
-        Theta values
+    theta_values: DataFrame
+        Theta values, columns = variable names
     alpha: float, optional
         Confidence interval value
     
@@ -406,8 +439,8 @@ def fit_mvn_dist(theta_values):
     
     Parameters
     ----------
-    theta_values: DataFrame, columns = variable names
-        Theta values
+    theta_values: DataFrame
+        Theta values, columns = variable names
     
     Returns
     ---------
@@ -415,8 +448,8 @@ def fit_mvn_dist(theta_values):
     """
     assert isinstance(theta_values, pd.DataFrame)
     
-    dist = stats.multivariate_normal(theta_values.mean(), 
-                                    theta_values.cov(), allow_singular=True)
+    dist = stats.multivariate_normal(
+        theta_values.mean(), theta_values.cov(), allow_singular=True)
     return dist
 
 def fit_kde_dist(theta_values):
@@ -425,8 +458,8 @@ def fit_kde_dist(theta_values):
     
     Parameters
     ----------
-    theta_values: DataFrame, columns = variable names
-        Theta values
+    theta_values: DataFrame
+        Theta values, columns = variable names
     
     Returns
     ---------
@@ -464,10 +497,10 @@ def grouped_boxplot(data1, data2, normalize=False, group_names=['data1', 'data2'
     
     Parameters
     ----------
-    data1: DataFrame, columns = variable names
-        Data set
-    data2: DataFrame, columns = variable names
-        Data set
+    data1: DataFrame
+        Data set, columns = variable names
+    data2: DataFrame
+        Data set, columns = variable names
     normalize : bool, optional
         Normalize both datasets by the median and standard deviation of data1
     group_names : list, optional
@@ -506,10 +539,10 @@ def grouped_violinplot(data1, data2, normalize=False, group_names=['data1', 'dat
     
     Parameters
     ----------
-    data1: DataFrame, columns = variable names
-        Data set
-    data2: DataFrame, columns = variable names
-        Data set
+    data1: DataFrame
+        Data set, columns = variable names
+    data2: DataFrame
+        Data set, columns = variable names
     normalize : bool, optional
         Normalize both datasets by the median and standard deviation of data1
     group_names : list, optional

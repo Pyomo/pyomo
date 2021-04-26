@@ -97,7 +97,7 @@ def _fix_equality_fixed_variables(model, scaling_tolerance=1E-10):
         const = repn.constant if repn.constant is not None else 0
 
         if abs(coef) <= scaling_tolerance:
-            logger.warn(
+            logger.warning(
                 "Skipping fixed variable processing for constraint %s: "
                 "%s * %s + %s = %s because coefficient %s is below "
                 "tolerance of %s. Check your problem scaling." %

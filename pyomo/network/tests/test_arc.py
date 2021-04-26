@@ -11,12 +11,14 @@
 # Unit Tests for Arc
 #
 
-import pyutilib.th as unittest
-from six import StringIO
+import pyomo.common.unittest as unittest
+from io import StringIO
 import logging
 
-from pyomo.environ import ConcreteModel, AbstractModel, Var, Set, Constraint, RangeSet, NonNegativeReals, Reals, Binary, TransformationFactory, Block
+from pyomo.environ import ConcreteModel, AbstractModel, Var, Set, Constraint, RangeSet, NonNegativeReals, Reals, Binary, TransformationFactory, Block, value
 from pyomo.network import Arc, Port
+from pyomo.core.expr.visitor import identify_variables
+from pyomo.common.collections.component_set import ComponentSet
 
 class TestArc(unittest.TestCase):
 
@@ -1875,6 +1877,40 @@ class TestArc(unittest.TestCase):
 
 28 Declarations: comp feed tru node1 node2 multi prod stream0 stream1 stream2 stream3 stream4 stream5 stream6 stream7 stream8 stream9 stream10 stream1_expanded stream2_expanded stream3_expanded stream4_expanded stream5_expanded stream6_expanded stream7_expanded stream8_expanded stream9_expanded stream10_expanded
 """)
+
+    def test_clone(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.p1 = Port()
+        m.p2 = Port()
+        m.p1.add(m.x, 'v')
+        m.p2.add(m.y, 'v')
+        m.arc = Arc(source=m.p1, destination=m.p2)
+
+        m2 = m.clone()
+        self.assertEqual(len(m2.p1.arcs()), 1)
+        self.assertEqual(len(m2.p2.arcs()), 1)
+        self.assertIs(m2.p1.arcs()[0], m2.arc)
+        self.assertIs(m2.p2.arcs()[0], m2.arc)
+
+        self.assertIsNot(m2.p1.arcs()[0], m.arc)
+        self.assertIsNot(m2.p2.arcs()[0], m.arc)
+
+        TransformationFactory('network.expand_arcs').apply_to(m2)
+        all_cons = list(m2.component_data_objects(Constraint))
+        self.assertEqual(len(all_cons), 1)
+        c = all_cons[0]
+        self.assertAlmostEqual(value(c.lower), 0)
+        self.assertAlmostEqual(value(c.upper), 0)
+        c_vars = ComponentSet(identify_variables(c.body))
+        self.assertIn(m2.x, c_vars)
+        self.assertIn(m2.y, c_vars)
+        self.assertNotIn(m.x, c_vars)
+        self.assertNotIn(m.y, c_vars)
+        m2.x.value = 1.25
+        m2.y.value = 1.25
+        self.assertAlmostEqual(value(c.body), 0)
 
 
 if __name__ == "__main__":

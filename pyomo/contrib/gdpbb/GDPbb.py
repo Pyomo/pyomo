@@ -10,10 +10,8 @@ import heapq
 import logging
 import traceback
 
-from pyutilib.misc import Container
-
 from pyomo.common import deprecated
-from pyomo.common.collections import ComponentSet
+from pyomo.common.collections import ComponentSet, Bunch
 from pyomo.common.config import (ConfigBlock, ConfigValue, PositiveInt)
 from pyomo.contrib.gdpopt.util import create_utility_block, time_code, a_logger, restore_logger_level, \
     setup_results_object, get_main_elapsed_time, process_objective
@@ -32,8 +30,11 @@ class GDPbbSolveData(object):
     pass
 
 
-@SolverFactory.register('gdpbb',
-                        doc='Branch and Bound based GDP Solver')
+@SolverFactory.register('gdpbb', doc='Branch and Bound based GDP Solver')
+@deprecated("GDPbb has been merged into GDPopt. "
+            "You can use the algorithm using GDPopt with strategy='LBB'.",
+            logger="pyomo.solvers",
+            version='5.6.9')
 class GDPbbSolver(object):
     """
     A branch and bound-based solver for Generalized Disjunctive Programming (GDP) problems
@@ -78,10 +79,6 @@ class GDPbbSolver(object):
             "need to set subsolver time limits as well."
     ))
 
-    @deprecated("GDPbb has been merged into GDPopt. "
-                "You can use the algorithm using GDPopt with strategy='LBB'.",
-                logger="pyomo.solvers",
-                version='5.6.9')
     def __init__(self, *args, **kwargs):
         super(GDPbbSolver, self).__init__(*args, **kwargs)
 
@@ -92,6 +89,9 @@ class GDPbbSolver(object):
         always be available, and so this should reflect that possibility.
 
         """
+        return True
+
+    def license_is_valid(self):
         return True
 
     def version(self):
@@ -111,7 +111,7 @@ class GDPbbSolver(object):
         self.validate_model(model)
         # Set solver as an MINLP
         solve_data = GDPbbSolveData()
-        solve_data.timing = Container()
+        solve_data.timing = Bunch()
         solve_data.original_model = model
         solve_data.results = SolverResults()
 

@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 import os
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.env import CtypesEnviron
 

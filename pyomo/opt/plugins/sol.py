@@ -14,16 +14,12 @@
 
 import re
 
-import pyutilib.misc
-
 from pyomo.opt.base import results
 from pyomo.opt.base.formats import ResultsFormat
 from pyomo.opt import (SolverResults,
                        SolutionStatus,
                        SolverStatus,
                        TerminationCondition)
-
-from six.moves import xrange
 
 
 @results.ReaderFactory.register(str(ResultsFormat.sol))
@@ -58,17 +54,21 @@ class ResultsReader_sol(results.AbstractResultsReader):
         if res is None:
             res = SolverResults()
         #
-        msg = ""
-        line = fin.readline()
-        if line.strip() == "":
+        # Some solvers (minto) do not write a message.  We will assume
+        # all non-blank lines up the 'Options' line is the message.
+        msg = []
+        while True:
             line = fin.readline()
-        while line:
-            if line[0] == '\n' or (line[0] == '\r' and line[1] == '\n'):
+            if not line:
+                # EOF
                 break
-            msg += line
-            line = fin.readline()
+            line = line.strip()
+            if line == 'Options':
+                break
+            if line:
+                msg.append(line)
+        msg = '\n'.join(msg)
         z = []
-        line = fin.readline()
         if line[:7] == "Options":
             line = fin.readline()
             nopts = int(line)
@@ -76,7 +76,7 @@ class ResultsReader_sol(results.AbstractResultsReader):
             if nopts > 4:           # WEH - when is this true?
                 nopts -= 2
                 need_vbtol = True
-            for i in xrange(nopts + 4):
+            for i in range(nopts + 4):
                 line = fin.readline()
                 z += [int(line)]
             if need_vbtol:          # WEH - when is this true?
@@ -110,7 +110,8 @@ class ResultsReader_sol(results.AbstractResultsReader):
             objno = [int(t[1]), int(t[2])]
         res.solver.message = msg.strip()
         res.solver.message = res.solver.message.replace("\n","; ")
-        res.solver.message = pyutilib.misc.yaml_fix(res.solver.message)
+        if isinstance(res.solver.message, str):
+            res.solver.message = res.solver.message.replace(':', '\\x3a')
         ##res.solver.instanceName = osrl.header.instanceName
         ##res.solver.systime = osrl.header.time
         res.solver.status = SolverStatus.ok
@@ -173,7 +174,7 @@ class ResultsReader_sol(results.AbstractResultsReader):
                 i = i + 1
             soln_constraint = soln.constraint
             if any(re.match(suf,"dual") for suf in suffixes):
-                for i in xrange(0,len(y)):
+                for i in range(0,len(y)):
                     soln_constraint["c"+str(i)] = {"Dual" : y[i]}
 
             ### Read suffixes ###
@@ -207,10 +208,10 @@ class ResultsReader_sol(results.AbstractResultsReader):
                 if any(re.match(suf,suffix_name) for suf in suffixes):
                     # ignore translation of the table number to string value for now,
                     # this information can be obtained from the solver documentation
-                    for n in xrange(tabline):
+                    for n in range(tabline):
                         fin.readline()
                     if kind == 0: # Var
-                        for cnt in xrange(nvalues):
+                        for cnt in range(nvalues):
                             suf_line = fin.readline().split()
                             key = "v"+suf_line[0]
                             if key not in soln_variable:
@@ -218,7 +219,7 @@ class ResultsReader_sol(results.AbstractResultsReader):
                             soln_variable[key][suffix_name] = \
                                 convert_function(suf_line[1])
                     elif kind == 1: # Con
-                        for cnt in xrange(nvalues):
+                        for cnt in range(nvalues):
                             suf_line = fin.readline().split()
                             key = "c"+suf_line[0]
                             if key not in soln_constraint:
@@ -235,19 +236,19 @@ class ResultsReader_sol(results.AbstractResultsReader):
                             soln_constraint[key][translated_suffix_name] = \
                                 convert_function(suf_line[1])
                     elif kind == 2: # Obj
-                        for cnt in xrange(nvalues):
+                        for cnt in range(nvalues):
                             suf_line = fin.readline().split()
                             soln.objective.setdefault("o"+suf_line[0],{})[suffix_name] = \
                                 convert_function(suf_line[1])
                     elif kind == 3: # Prob
                         # Skip problem kind suffixes for now. Not sure the
                         # best place to put them in the results object
-                        for cnt in xrange(nvalues):
+                        for cnt in range(nvalues):
                             suf_line = fin.readline().split()
                             soln.problem[suffix_name] = convert_function(suf_line[1])
                 else:
                     # do not store the suffix in the solution object
-                    for cnt in xrange(nvalues):
+                    for cnt in range(nvalues):
                         fin.readline()
                 line = fin.readline()
 

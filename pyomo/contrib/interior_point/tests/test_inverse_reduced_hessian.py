@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.opt import check_optimal_termination
 from pyomo.common.dependencies import attempt_import
@@ -99,7 +99,7 @@ class TestInverseReducedHessian(unittest.TestCase):
 
         return model
 
-    @unittest.skipIf(not numdiff_available, "numdiff missing")
+    @unittest.skipIf(not numdiff_available, "numdifftools missing")
     @unittest.skipIf(not pandas_available, "pandas missing")
     def test_3x3_using_linear_regression(self):
         """ simple linear regression with two x columns, so 3x3 Hessian"""        
@@ -133,7 +133,7 @@ class TestInverseReducedHessian(unittest.TestCase):
         np.testing.assert_array_almost_equal(HInv, H_inv_red_hess, decimal=3)
 
 
-    @unittest.skipIf(not numdiff_available, "numdiff missing")
+    @unittest.skipIf(not numdiff_available, "numdifftools missing")
     @unittest.skipIf(not pandas_available, "pandas missing")
     def test_with_binding_constraint(self):
         """ there is a binding constraint"""        

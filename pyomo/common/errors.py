@@ -9,6 +9,15 @@
 #  ___________________________________________________________________________
 
 
+class ApplicationError(Exception):
+    """
+    An exception used when an external application generates an error.
+    """
+
+    def __init__(self, *args, **kargs):
+        Exception.__init__(self, *args, **kargs)  #pragma:nocover
+
+
 class PyomoException(Exception):
     """
     Exception class for other pyomo exceptions to inherit from,

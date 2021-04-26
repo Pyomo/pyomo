@@ -10,7 +10,7 @@
 
 import pickle
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.core.expr import logical_expr
 from pyomo.kernel import pprint
 from pyomo.core.tests.unit.kernel.test_dict_container import \
@@ -1498,7 +1498,7 @@ class Test_constraint(unittest.TestCase):
             pass
         def f():
             c.expr = a
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             TypeError, "Relational expression used in an unexpected "
             "Boolean context.", f)
 

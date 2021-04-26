@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       git-ref:
-        description: Git Hash (Optional)    
+        description: Git Hash (Optional)
         required: false
 
 jobs:
@@ -33,22 +33,26 @@ jobs:
         python -m pip install --upgrade pip
         pip install twine wheel setuptools
     - name: Build manylinux Python wheels
-      uses: RalfG/python-wheels-manylinux-build@v0.2.2-manylinux2010_x86_64
+      uses: RalfG/python-wheels-manylinux-build@v0.3.3-manylinux2010_x86_64
       with:
-        python-versions: 'cp27-cp27mu cp35-cp35m cp36-cp36m cp37-cp37m cp38-cp38'
+        python-versions: 'cp36-cp36m cp37-cp37m cp38-cp38 cp39-cp39'
         build-requirements: 'cython'
         package-path: ''
         pip-wheel-args: ''
         # When locally testing, --no-deps flag is necessary (PyUtilib dependency will trigger an error otherwise)
+    - name: Consolidate wheels
+      run: |
+        sudo test -d dist || mkdir -v dist
+        sudo find . -name \*.whl | grep -v /dist/ | xargs -n1 -i mv -v "{}" dist/
     - name: Delete linux wheels
       run: |
-        sudo rm -rf wheelhouse/*-linux_x86_64.whl
+        sudo rm -rfv dist/*-linux_x86_64.whl
     - name: Upload artifact
       uses: actions/upload-artifact@v1
       with:
         name: manylinux-wheels
-        path: wheelhouse
-        
+        path: dist
+
   generictarball:
     name: ${{ matrix.TARGET }}
     runs-on: ${{ matrix.os }}
@@ -89,7 +93,7 @@ jobs:
         include:
         - os: macos-latest
           TARGET: osx
-        python-version: [ 2.7, 3.5, 3.6, 3.7, 3.8 ]
+        python-version: [ 3.6, 3.7, 3.8, 3.9 ]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -103,7 +107,7 @@ jobs:
     - name: Build OSX Python wheels
       run: |
         python setup.py  --with-cython sdist --format=gztar bdist_wheel
-        
+
     - name: Upload artifact
       uses: actions/upload-artifact@v1
       with:
@@ -120,7 +124,7 @@ jobs:
         include:
         - os: windows-latest
           TARGET: win
-        python-version: [ 3.6, 3.7, 3.8 ]
+        python-version: [ 3.6, 3.7, 3.8, 3.9 ]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}

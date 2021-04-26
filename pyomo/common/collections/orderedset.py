@@ -8,19 +8,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import six
-from six import itervalues, iteritems
+from collections.abc import MutableSet
+from collections import OrderedDict
 
-if six.PY3:
-    from collections.abc import MutableSet as collections_MutableSet
-else:
-    from collections import MutableSet as collections_MutableSet
-try:
-    from collections import OrderedDict
-except:
-    from ordereddict import OrderedDict
 
-class OrderedSet(collections_MutableSet):
+class OrderedSet(MutableSet):
     __slots__ = ('_dict')
 
     def __init__(self, iterable=None):
@@ -39,7 +31,7 @@ class OrderedSet(collections_MutableSet):
 
     #
     # This method must be defined for deepcopy/pickling
-    # because this class relies on Python ids.
+    # because this class is slotized.
     #
     def __setstate__(self, state):
         self._dict = state
@@ -82,3 +74,12 @@ class OrderedSet(collections_MutableSet):
     def remove(self, val):
         """Remove an element. If not a member, raise a KeyError."""
         del self._dict[val]
+
+    def intersection(self, other):
+        res = OrderedSet([i for i in self if i in other])
+        return res
+
+    def union(self, other):
+        res = OrderedSet(self)
+        res.update(other)
+        return res

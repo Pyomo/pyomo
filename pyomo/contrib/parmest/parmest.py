@@ -9,153 +9,78 @@
 #  ___________________________________________________________________________
 #### Using mpi-sppy instead of PySP; May 2020
 #### Adding option for "local" EF starting Sept 2020
+#### Wrapping mpi-sppy functionality and local option Jan 2021, Feb 2021
 
-use_mpisppy_ef = True  # this is for testing only as Sept 2020
+# False implies always use the EF that is local to parmest
+use_mpisppy = True  # Use it if we can but use local if not.
+if use_mpisppy:
+    try:
+        import mpisppy.utils.sputils as sputils
+    except:
+        use_mpisppy = False  # we can't use it
+if use_mpisppy:
+    # These things should be outside the try block.
+    sputils.disable_tictoc_output()
+    import mpisppy.opt.ef as st
+    import mpisppy.scenario_tree as scenario_tree
+else:
+    import pyomo.contrib.parmest.create_ef as local_ef
+    import pyomo.contrib.parmest.scenario_tree as scenario_tree
 
 import re
 import importlib as im
+import logging
 import types
 import json
 from itertools import combinations
-import mpisppy.utils.sputils as sputils
-import pyomo.contrib.parmest.create_ef as local_ef
 
 from pyomo.common.dependencies import (
+    attempt_import,
     numpy as np, numpy_available,
     pandas as pd, pandas_available,
     scipy, scipy_available,
 )
 
 import pyomo.environ as pyo
-####import pyomo.pysp.util.rapper as st
-import mpisppy.opt.ef as st
-import mpisppy.scenario_tree as scenario_tree
+
 from pyomo.opt import SolverFactory
-from pyomo.environ import Block
+from pyomo.environ import Block, ComponentUID
 
 import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
-from pyomo.contrib.parmest.graphics import (fit_rect_dist,
-                                            fit_mvn_dist,
-                                            fit_kde_dist)
+import pyomo.contrib.parmest.graphics as graphics
 
 parmest_available = numpy_available & pandas_available & scipy_available
 
-__version__ = 0.3
+inverse_reduced_hessian, inverse_reduced_hessian_available = attempt_import(
+    'pyomo.contrib.interior_point.inverse_reduced_hessian')
 
-if numpy_available and scipy_available:
-    from pyomo.contrib.pynumero.asl import AmplInterface
-    asl_available = AmplInterface.available()
-else:
-    asl_available = False
+logger = logging.getLogger(__name__)
 
-if asl_available:
-    from pyomo.contrib.interior_point.inverse_reduced_hessian import inv_reduced_hessian_barrier
+def ef_nonants(ef):
+    # Wrapper to call someone's ef_nonants
+    # (the function being called is very short, but it might be changed)
+    if use_mpisppy:
+        return sputils.ef_nonants(ef)
+    else:
+        return local_ef.ef_nonants(ef)
 
 
-
-#=============================================
-def _object_from_string(instance, vstr):
+def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_data=None):
     """
-    Create a Pyomo object from a string; it is attached to instance
-    args:
-        instance: a concrete pyomo model
-        vstr: a particular Var or Param (e.g. "pp.Keq_a[2]")
-    output:
-        the object
-    NOTE: We need to deal with blocks
-          and with indexes that might really be strings or ints
-    """
-
-    def ni(s):
-        l = s.find('[')
-        if l == -1:
-            indexstr = None
-            basestr = s
-        else:
-            r = s.find(']')
-            indexstr = s[l+1:r]
-            basestr = s[:l]
-        return basestr, indexstr
-
-    retval = instance
-    parts = vstr.split('.')
-    for i in range(len(parts)):
-        bname, bindex = ni(parts[i])
-        if bindex is None:
-            retval = getattr(retval, bname)
-        else:
-            try:
-                bindex = int(bindex)  # TBD: improve
-            except:
-                pass
-            retval = getattr(retval, bname)[bindex]
-    return retval
-
-#=============================================
-def _ef_ROOT_node_Object_from_string(efinstance, vstr):
-    """
-    Wrapper for _object_from_string for PySP extensive forms
-    but only for Vars at the node named RootNode.
-    DLW April 2018: needs work to be generalized.
-    """
-    efvstr = "MASTER_BLEND_VAR_RootNode["+vstr+"]"
-    return _object_from_string(efinstance, efvstr)
-
-#=============================================
-###def _build_compdatalists(model, complist):
-    # March 2018: not used
-    """
-    Convert a list of names of pyomo components (Var and Param)
-    into two lists of so-called data objects found on model.
-
-    args:
-        model: ConcreteModel
-        complist: pyo.Var and pyo.Param names in model
-    return:
-        vardatalist: a list of Vardata objects (perhaps empty)
-        paramdatalist: a list of Paramdata objects or (perhaps empty)
-    """
-    """
-    vardatalist = list()
-    paramdatalist = list()
-
-    if complist is None:
-        raise RuntimeError("Internal: complist cannot be empty")
-    # TBD: require a list (even if it there is only a single element
-    
-    for comp in complist:
-        c = getattr(model, comp)
-        if c.is_indexed() and isinstance(c, pyo.Var):
-            vardatalist.extend([c[i] for i in sorted(c.keys())])
-        elif isinstance(c, pyo.Var):
-            vardatalist.append(c)
-        elif c.is_indexed() and isinstance(c, pyo.Param):
-            paramdatalist.extend([c[i] for i in sorted(c.keys())])
-        elif isinstance(c, pyo.Param):
-            paramdatalist.append(c)
-        else:
-            raise RuntimeError("Invalid component list entry= "+\
-                               (str(c)) + " Expecting Param or Var")
-    
-    return vardatalist, paramdatalist
-    """
-
-def _pysp_instance_creation_callback(scenario_name, node_names=None, cb_data=None):
-    """
-    This is going to be called by mpi-sppy and it will call into
+    This is going to be called by mpi-sppy or the local EF and it will call into
     the user's model's callback.
 
     Parameters:
     -----------
     scenario_name: `str` Scenario name should end with a number
     node_names: `None` ( Not used here )
-    outer_cb_data : dict with ["callback"], ["BootList"], 
-                     ["theta_names"], ["cb_data"], etc.
-                    "cb_data" is passed through to user's callback function
-                    that is the "callback" value.
-                    "BootList" is None or bootstrap experiment number list.
-                    (called cb_data by mpisppy)
+    cb_data : dict with ["callback"], ["BootList"], 
+              ["theta_names"], ["cb_data"], etc.
+              "cb_data" is passed through to user's callback function
+                        that is the "callback" value.
+              "BootList" is None or bootstrap experiment number list.
+                       (called cb_data by mpisppy)
  
 
     Returns:
@@ -231,12 +156,11 @@ def _pysp_instance_creation_callback(scenario_name, node_names=None, cb_data=Non
             print("Failed to create instance using callback.")
             raise
         """
-    if hasattr(instance, "_PySPnode_list"):
-        raise RuntimeError ("scenario for experiment {} has _PySPnode_list".\
-                            format(exp_num))
-    nonant_list = [_object_from_string(instance, vstr) for vstr in\
+    if hasattr(instance, "_mpisppy_node_list"):
+        raise RuntimeError (f"scenario for experiment {exp_num} has _mpisppy_node_list")
+    nonant_list = [instance.find_component(vstr) for vstr in\
                    outer_cb_data["theta_names"]]
-    instance._PySPnode_list = [scenario_tree.ScenarioNode(
+    instance._mpisppy_node_list = [scenario_tree.ScenarioNode(
                                                 name="ROOT",
                                                 cond_prob=1.0,
                                                 stage=1,
@@ -251,7 +175,7 @@ def _pysp_instance_creation_callback(scenario_name, node_names=None, cb_data=Non
 
         # dlw august 2018: see mea code for more general theta
         for vstr in thetavals:
-            object = _object_from_string(instance, vstr)
+            object = instance.find_component(vstr)
             if thetavals[vstr] is not None:
                 #print("Fixing",vstr,"at",str(thetavals[vstr]))
                 object.fix(thetavals[vstr])
@@ -262,6 +186,40 @@ def _pysp_instance_creation_callback(scenario_name, node_names=None, cb_data=Non
     return instance
 
 #=============================================
+def _treemaker(scenlist):
+    """
+    Makes a scenario tree (avoids dependence on daps)
+    
+    Parameters
+    ---------- 
+    scenlist (list of `int`): experiment (i.e. scenario) numbers
+
+    Returns
+    -------
+    a `ConcreteModel` that is the scenario tree
+    """
+
+    num_scenarios = len(scenlist)
+    m = scenariotree.tree_structure_model.CreateAbstractScenarioTreeModel()
+    m = m.create_instance()
+    m.Stages.add('Stage1')
+    m.Stages.add('Stage2')
+    m.Nodes.add('RootNode')
+    for i in scenlist:
+        m.Nodes.add('LeafNode_Experiment'+str(i))
+        m.Scenarios.add('Experiment'+str(i))
+    m.NodeStage['RootNode'] = 'Stage1'
+    m.ConditionalProbability['RootNode'] = 1.0
+    for node in m.Nodes:
+        if node != 'RootNode':
+            m.NodeStage[node] = 'Stage2'
+            m.Children['RootNode'].add(node)
+            m.Children[node].clear()
+            m.ConditionalProbability[node] = 1.0/num_scenarios
+            m.ScenarioLeafNode[node.replace('LeafNode_','')] = node
+
+    return m
+
     
 def group_data(data, groupby_column_name, use_mean=None):
     """
@@ -325,8 +283,7 @@ class Estimator(object):
         sum of squared error between measurements and model variables.  
         If no function is specified, the model is used 
         "as is" and should be defined with a "FirstStateCost" and 
-        "SecondStageCost" expression that are used to build an objective 
-        for pysp.
+        "SecondStageCost" expression that are used to build an objective.
     tee: bool, optional
         Indicates that ef solver output should be teed
     diagnostic_mode: bool, optional
@@ -365,12 +322,27 @@ class Estimator(object):
         if (len(self.theta_names) == 1) and (self.theta_names[0] == 'parmest_dummy_var'):
             model.parmest_dummy_var = pyo.Var(initialize = 1.0)
             
-        for theta in self.theta_names:
-            try:
-                var_validate = eval('model.'+theta)
-                var_validate.fixed = False
-            except:
-                print(theta +' is not a variable')
+        for i, theta in enumerate(self.theta_names):
+            # First, leverage the parser in ComponentUID to locate the
+            # component.  If that fails, fall back on the original
+            # (insecure) use of 'eval'
+            var_cuid = ComponentUID(theta)
+            var_validate = var_cuid.find_component_on(model)
+            if var_validate is None:
+                logger.warning(
+                    "theta_name[%s] (%s) was not found on the model",
+                    (i, theta))
+            else:
+                try:
+                    # If the component that was found is not a variable,
+                    # this will generate an exception (and the warning
+                    # in the 'except')
+                    var_validate.fixed = False
+                    # We want to standardize on the CUID string
+                    # representation
+                    self.theta_names[i] = repr(var_cuid)
+                except:
+                    logger.warning(theta + ' is not a variable')
         
         if self.obj_function:
             for obj in model.component_objects(Objective):
@@ -407,11 +379,9 @@ class Estimator(object):
                     with open(exp_data,'r') as infile:
                         exp_data = json.load(infile)
                 except:
-                    print('Unexpected data format')
-                    return
+                    raise RuntimeError(f'Could not read {exp_data} as json')
         else:
-            print('Unexpected data format')
-            return
+            raise RuntimeError(f'Unexpected data format for cb_data={cb_data}')
         model = self._create_parmest_model(exp_data)
         
         return model
@@ -446,21 +416,20 @@ class Estimator(object):
 
         options = {"solver": "ipopt"}
         scenario_creator_options = {"cb_data": outer_cb_data}
-        if use_mpisppy_ef:
-            EF = st.ExtensiveForm(options,
-                                  scen_names,
-                                  _pysp_instance_creation_callback,
-                                  model_name = "_Q_opt",
-                                  scenario_creator_options\
-                                  =scenario_creator_options,
-                                  suppress_warnings=True)
-            ef = EF.ef
+        if use_mpisppy:
+            ef = sputils.create_EF(scen_names,
+                              _experiment_instance_creation_callback,
+                              EF_name = "_Q_opt",
+                              suppress_warnings=True,
+                              scenario_creator_kwargs=scenario_creator_options)
         else:
             ef = local_ef.create_EF(scen_names,
-                                    _pysp_instance_creation_callback,
+                                    _experiment_instance_creation_callback,
                                     EF_name = "_Q_opt",
-                                    creator_options=scenario_creator_options)
-                                    
+                                    suppress_warnings=True,
+                                    scenario_creator_kwargs=scenario_creator_options)
+        self.ef_instance = ef
+        
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
         
@@ -474,18 +443,24 @@ class Estimator(object):
 
                 solve_result = solver.solve(ef, tee = self.tee)
 
-            elif not asl_available:
-                raise ImportError("parmest requires ASL to calculate the covariance matrix with solver 'ipopt'")
+            # The import error will be raised when we attempt to use
+            # inv_reduced_hessian_barrier below.
+            #
+            #elif not asl_available:
+            #    raise ImportError("parmest requires ASL to calculate the "
+            #                      "covariance matrix with solver 'ipopt'")
             else:
                 # parmest makes the fitted parameters stage 1 variables
                 ind_vars = []
-                for ndname, Var, solval in sputils.ef_nonants(ef):
+                for ndname, Var, solval in ef_nonants(ef):
                     ind_vars.append(Var)
                 # calculate the reduced hessian
-                solve_result, inv_red_hes = inv_reduced_hessian_barrier(ef, 
-                    independent_variables= ind_vars,
-                    solver_options=self.solver_options,
-                    tee=self.tee)
+                solve_result, inv_red_hes = \
+                    inverse_reduced_hessian.inv_reduced_hessian_barrier(
+                        self.ef_instance,
+                        independent_variables= ind_vars,
+                        solver_options=self.solver_options,
+                        tee=self.tee)
             
             if self.diagnostic_mode:
                 print('    Solver termination condition = ',
@@ -493,7 +468,7 @@ class Estimator(object):
 
             # assume all first stage are thetas...
             thetavals = {}
-            for ndname, Var, solval in sputils.ef_nonants(ef):
+            for ndname, Var, solval in ef_nonants(ef):
                 # process the name
                 # the scenarios are blocks, so strip the scenario name
                 vname  = Var.name[Var.name.find(".")+1:]
@@ -521,23 +496,27 @@ class Estimator(object):
                 (7-5-16) in "Nonlinear Parameter Estimation", Y. Bard, 1974.
                 
                 This formula is also applicable if the objective is scaled by a constant;
-                the constant cancels out. (PySP scaled by 1/n because it computes an
+                the constant cancels out. (was scaled by 1/n because it computes an
                 expected value.)
                 '''
                 cov = 2 * sse / (n - l) * inv_red_hes
+                cov = pd.DataFrame(cov, index=thetavals.keys(), columns=thetavals.keys())
             
             if len(return_values) > 0:
                 var_values = []
                 for exp_i in self.ef_instance.component_objects(Block, descend_into=False):
                     vals = {}
                     for var in return_values:
-                        exp_i_var = eval('exp_i.'+ str(var))
-                        temp = [pyo.value(_) for _ in exp_i_var.itervalues()]
+                        exp_i_var = exp_i.find_component(str(var))
+                        if exp_i_var is None:  # we might have a block such as _mpisppy_data
+                            continue
+                        temp = [pyo.value(_) for _ in exp_i_var.values()]
                         if len(temp) == 1:
                             vals[var] = temp[0]
                         else:
-                            vals[var] = temp                    
-                    var_values.append(vals)                    
+                            vals[var] = temp
+                    if len(vals) > 0:
+                        var_values.append(vals)                    
                 var_values = pd.DataFrame(var_values)
                 if calc_cov:
                     return objval, thetavals, var_values, cov
@@ -545,6 +524,7 @@ class Estimator(object):
                     return objval, thetavals, var_values
 
             if calc_cov:
+                
                 return objval, thetavals, cov
             else:
                 return objval, thetavals
@@ -586,7 +566,7 @@ class Estimator(object):
 
         # start block of code to deal with models with no constraints
         # (ipopt will crash or complain on such problems without special care)
-        instance = _pysp_instance_creation_callback("FOO1", None, dummy_cb)
+        instance = _experiment_instance_creation_callback("FOO1", None, dummy_cb)
         try: # deal with special problems so Ipopt will not crash
             first = next(instance.component_objects(pyo.Constraint, active=True))
         except:
@@ -599,7 +579,7 @@ class Estimator(object):
         totobj = 0
         for snum in self._numbers_list:
             sname = "scenario_NODE"+str(snum)
-            instance = _pysp_instance_creation_callback(sname, None, dummy_cb)
+            instance = _experiment_instance_creation_callback(sname, None, dummy_cb)
             if not sillylittle:
                 if self.diagnostic_mode:
                     print('      Experiment = ',snum)
@@ -681,12 +661,11 @@ class Estimator(object):
         thetavals: dict
             A dictionary of all values for theta
         variable values: pd.DataFrame
-            Variable values for each variable name in return_values (only for ef_ipopt)
+            Variable values for each variable name in return_values (only for solver='ef_ipopt')
         Hessian: dict
-            A dictionary of dictionaries for the Hessian.
-            The Hessian is not returned if the solver is ef_ipopt.
-        cov: numpy.array
-            Covariance matrix of the fitted parameters (only for ef_ipopt)
+            A dictionary of dictionaries for the Hessian (only for solver='k_aug')
+        cov: pd.DataFrame
+            Covariance matrix of the fitted parameters (only for solver='ef_ipopt')
         """
         assert isinstance(solver, str)
         assert isinstance(return_values, list)
@@ -707,7 +686,7 @@ class Estimator(object):
             Number of bootstrap samples to draw from the data
         samplesize: int or None, optional
             Size of each bootstrap sample. If samplesize=None, samplesize will be 
-			set to the number of samples in the data
+            set to the number of samples in the data
         replacement: bool, optional
             Sample with or without replacement
         seed: int or None, optional
@@ -942,7 +921,7 @@ class Estimator(object):
     
     def likelihood_ratio_test(self, obj_at_theta, obj_value, alphas, 
                               return_thresholds=False):
-        """
+        r"""
         Likelihood ratio test to identify theta values within a confidence 
         region using the :math:`\chi^2` distribution
         
@@ -1032,7 +1011,7 @@ class Estimator(object):
         for a in alphas:
             
             if distribution == 'Rect':
-                lb, ub = fit_rect_dist(theta_values, a)
+                lb, ub = graphics.fit_rect_dist(theta_values, a)
                 training_results[a] = ((theta_values > lb).all(axis=1) & \
                                   (theta_values < ub).all(axis=1))
                 
@@ -1042,7 +1021,7 @@ class Estimator(object):
                                   (test_theta_values < ub).all(axis=1))
                     
             elif distribution == 'MVN':
-                dist = fit_mvn_dist(theta_values)
+                dist = graphics.fit_mvn_dist(theta_values)
                 Z = dist.pdf(theta_values)
                 score = scipy.stats.scoreatpercentile(Z, (1-a)*100) 
                 training_results[a] = (Z >= score)
@@ -1053,7 +1032,7 @@ class Estimator(object):
                     test_result[a] = (Z >= score) 
                 
             elif distribution == 'KDE':
-                dist = fit_kde_dist(theta_values)
+                dist = graphics.fit_kde_dist(theta_values)
                 Z = dist.pdf(theta_values.transpose())
                 score = scipy.stats.scoreatpercentile(Z, (1-a)*100) 
                 training_results[a] = (Z >= score)

@@ -21,8 +21,6 @@ from pyomo.opt import TerminationCondition
 
 import logging
 
-from six import iteritems
-
 logger = logging.getLogger('pyomo.contrib.fme')
 NAME_BUFFER = {}
 
@@ -30,7 +28,7 @@ def _check_var_bounds_filter(constraint):
     """Check if the constraint is already implied by the variable bounds"""
     # this is one of our constraints, so we know that it is >=.
     min_lhs = 0
-    for v, coef in iteritems(constraint['map']):
+    for v, coef in constraint['map'].items():
         if coef > 0:
             if v.lb is None:
                 return True # we don't have var bounds with which to imply the
@@ -167,13 +165,29 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         abs(int(x) - x) <= integer_tolerance.
         """
     ))
+    CONFIG.declare('projected_constraints_name', ConfigValue(
+        default=None,
+        domain=str,
+        description="Optional name for the ConstraintList containing the "
+        "projected constraints. Must be a unique name with respect to the "
+        "instance.",
+        doc="""
+        Optional name for the ConstraintList containing the projected 
+        constraints. If not specified, the constraints will be stored on a 
+        private block created by the transformation, so if you want access 
+        to them after the transformation, use this argument.
+
+        Must be a string which is a unique component name with respect to the 
+        Block on which the transformation is called.
+        """
+    ))
 
     def __init__(self):
         """Initialize transformation object"""
         super(Fourier_Motzkin_Elimination_Transformation, self).__init__()
 
     def _apply_to(self, instance, **kwds):
-        log_level = logger.getEffectiveLevel()
+        log_level = logger.level
         try:
             assert not NAME_BUFFER
             config = self.CONFIG(kwds.pop('options', {}))
@@ -211,8 +225,19 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
             '_pyomo_contrib_fme_transformation')
         transBlock = Block()
         instance.add_component(transBlockName, transBlock)
-        projected_constraints = transBlock.projected_constraints = \
-                                ConstraintList()
+        nm = config.projected_constraints_name
+        if nm is None:
+            projected_constraints = transBlock.projected_constraints = \
+                                    ConstraintList()
+        else:
+            # check that this component doesn't already exist
+            if instance.component(nm) is not None:
+                raise RuntimeError("projected_constraints_name was specified "
+                                   "as '%s', but this is already a component "
+                                   "on the instance! Please specify a unique " 
+                                   "name." % nm)
+            projected_constraints = ConstraintList()
+            instance.add_component(nm, projected_constraints)
 
         # collect all of the constraints
         # NOTE that we are ignoring deactivated constraints
@@ -366,9 +391,12 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                         vars_that_appear_set.add(var)
 
         # we actually begin the recursion here
+        total = len(vars_that_appear)
+        iteration = 1
         while vars_that_appear:
             # first var we will project out
             the_var = vars_that_appear.pop()
+            logger.warning("Projecting out var %s of %s" % (iteration, total))
             if self.verbose:
                 logger.info("Projecting out %s" %
                             the_var.getname(fully_qualified=True,
@@ -438,6 +466,8 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                         logger.info("\t%s <= %s" %
                                     (cons['lower'],
                                      cons['body'].to_expression()))
+
+            iteration += 1
 
         return constraints
 
@@ -573,7 +603,8 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
 
         return ans
 
-    def post_process_fme_constraints(self, m, solver_factory, tolerance=0):
+    def post_process_fme_constraints(self, m, solver_factory,
+                                     projected_constraints=None, tolerance=0):
         """Function that solves a sequence of LPs problems to check if
         constraints are implied by each other. Deletes any that are.
 
@@ -590,6 +621,11 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                         had nonlinear constraints unrelated to the variables
                         being projected, you need to either deactivate them or
                         provide a solver which will do the right thing.)
+        projected_constraints: The ConstraintList of projected constraints. 
+                               Default is None, in which case we assume that 
+                               the FME transformation was called without 
+                               specifying their name, so will look for them on 
+                               the private transformation block.
         tolerance: Tolerance at which we decide a constraint is implied by the
                    others. Default is 0, meaning we remove the constraint if
                    the LP solve finds the constraint can be tight but not
@@ -597,14 +633,22 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                    remove constraints more conservatively. Setting it to a
                    negative value would result in a relaxed problem.
         """
-        # make sure m looks like what we expect
-        if not hasattr(m, "_pyomo_contrib_fme_transformation"):
-            raise RuntimeError("It looks like model %s has not been "
-                               "transformed with the "
-                               "fourier_motzkin_elimination transformation!"
-                               % m.name)
-        transBlock = m._pyomo_contrib_fme_transformation
-        constraints = transBlock.projected_constraints
+        if projected_constraints is None:
+            # make sure m looks like what we expect
+            if not hasattr(m, "_pyomo_contrib_fme_transformation"):
+                raise RuntimeError("It looks like model %s has not been "
+                                   "transformed with the "
+                                   "fourier_motzkin_elimination transformation!"
+                % m.name)
+            transBlock = m._pyomo_contrib_fme_transformation
+            if not hasattr(transBlock, 'projected_constraints'):
+                raise RuntimeError("It looks the projected constraints "
+                                   "were manually named when the FME "
+                                   "transformation was called on %s. "
+                                   "If this is so, specify the ConstraintList "
+                                   "of projected constraints with the "
+                                   "'projected_constraints' argument."  % m.name)
+            projected_constraints = transBlock.projected_constraints
 
         # relax integrality so that we can do this with LP solves.
         TransformationFactory('core.relax_integer_vars').apply_to(
@@ -620,16 +664,17 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
         obj_name = unique_component_name(m, '_fme_post_process_obj')
         obj = Objective(expr=0)
         m.add_component(obj_name, obj)
-        for i in constraints:
+        for i in projected_constraints:
             # If someone wants us to ignore it and leave it in the model, we
             # can.
-            if not constraints[i].active:
+            if not projected_constraints[i].active:
                 continue
             # deactivate the constraint
-            constraints[i].deactivate()
+            projected_constraints[i].deactivate()
             m.del_component(obj)
             # make objective to maximize its infeasibility
-            obj = Objective(expr=constraints[i].body - constraints[i].lower)
+            obj = Objective(expr=projected_constraints[i].body - \
+                            projected_constraints[i].lower)
             m.add_component(obj_name, obj)
             results = solver_factory.solve(m)
             if results.solver.termination_condition == \
@@ -640,16 +685,16 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                 raise RuntimeError("Unsuccessful subproblem solve when checking"
                                    "constraint %s.\n\t"
                                    "Termination Condition: %s" %
-                                   (constraints[i].name,
+                                   (projected_constraints[i].name,
                                     results.solver.termination_condition))
             else:
                 obj_val = value(obj)
             # if we couldn't make it infeasible, it's useless
             if obj_val >= tolerance:
-                m.del_component(constraints[i])
-                del constraints[i]
+                m.del_component(projected_constraints[i])
+                del projected_constraints[i]
             else:
-                constraints[i].activate()
+                projected_constraints[i].activate()
 
         # clean up
         m.del_component(obj)
