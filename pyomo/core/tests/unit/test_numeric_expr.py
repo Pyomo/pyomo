@@ -49,6 +49,33 @@ from pyomo.core.expr import expr_common
 from pyomo.core.base.var import _GeneralVarData
 
 from pyomo.repn import generate_standard_repn
+from pyomo.core.expr.numvalue import NumericValue
+
+
+class decompose_term_wrapper(object):
+    def __init__(self, decomposed_term):
+        lin, pairs = decomposed_term
+        self.linear = lin
+        self.pairs = pairs
+
+    def __eq__(self, other):
+        if self.linear != other.linear:
+            return False
+        if self.pairs is None:
+            if other.pairs is not None:
+                return False
+        else:
+            if other.pairs is None:
+                return False
+            if len(self.pairs) != len(other.pairs):
+                return False
+            for ndx in range(len(self.pairs)):
+                if value(self.pairs[ndx][0]) != value(other.pairs[ndx][0]):
+                    return False
+                if self.pairs[ndx][1] is not other.pairs[ndx][1]:
+                    return False
+        return True
+
 
 class TestExpression_EvaluateNumericConstant(unittest.TestCase):
 
@@ -4867,13 +4894,13 @@ class Test_decompose_linear_terms(unittest.TestCase):
         M.w = Var()
         M.q = Param(initialize=3)
         e = SumExpression([2])
-        self.assertEqual(decompose_term(e), (True, [(2,None)]))
+        self.assertEqual(decompose_term_wrapper(decompose_term(e)), decompose_term_wrapper((True, [(2,None)])))
         e = SumExpression([2,M.v])
-        self.assertEqual(decompose_term(e), (True, [(2,None), (1,M.v)]))
+        self.assertEqual(decompose_term_wrapper(decompose_term(e)), decompose_term_wrapper((True, [(2,None), (1,M.v)])))
         e = SumExpression([2,M.q+M.v])
-        self.assertEqual(decompose_term(e), (True, [(2,None), (3,None), (1,M.v)]))
+        self.assertEqual(decompose_term_wrapper(decompose_term(e)), decompose_term_wrapper((True, [(2,None), (3,None), (1,M.v)])))
         e = SumExpression([2,M.q+M.v,M.w])
-        self.assertEqual(decompose_term(e), (True, [(2,None), (3,None), (1,M.v), (1,M.w)]))
+        self.assertEqual(decompose_term_wrapper(decompose_term(e)), decompose_term_wrapper((True, [(2,None), (3,None), (1,M.v), (1,M.w)])))
 
     def test_linear(self):
         M = ConcreteModel()
