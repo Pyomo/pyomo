@@ -18,13 +18,11 @@ numpy, numpy_available = attempt_import(
     minimum_version='1.13.0',
     defer_check=False)
 
-scipy_sparse, scipy_sparse_available = attempt_import(
-    'scipy.sparse',
-    'Pynumero requires the optional Pyomo dependency "scipy"',
-    defer_check=False)
-
 if not numpy_available:
-    numpy.generate_import_warning('pyomo.contrib.pynumero')
+    numpy.log_import_warning('pyomo.contrib.pynumero')
 
 if not scipy_available:
-    scipy_sparse.generate_import_warning('pyomo.contrib.pynumero')
+    scipy.sparse.log_import_warning(
+        'pyomo.contrib.pynumero',
+        'Pynumero requires the optional Pyomo dependency "scipy.sparse"',
+    )

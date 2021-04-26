@@ -66,13 +66,11 @@ And finally we call sIPOPT:
 
     >>> m_sipopt = sipopt(m,[m.eta1,m.eta2], [m.perturbed_eta1,m.perturbed_eta2], streamSoln=True)
     Ipopt ...: run_sens=yes
-    ...
-    ******************************************************************************
+    ...***************************************************************************
     This program contains Ipopt, a library for large-scale nonlinear optimization.
      Ipopt is released as open source code under the Eclipse Public License (EPL).
              For more information visit http://projects.coin-or.org/Ipopt
-    ...
-    ******************************************************************************
+    ...***************************************************************************
     ...
     EXIT: Optimal Solution Found.
 

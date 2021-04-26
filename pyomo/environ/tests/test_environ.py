@@ -152,6 +152,7 @@ class TestPyomoEnviron(unittest.TestCase):
             'gzip',
             'imp',
             'runpy',
+            'six',
             'tarfile',
             'zipfile',
         }
