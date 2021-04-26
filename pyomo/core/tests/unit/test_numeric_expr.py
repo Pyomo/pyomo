@@ -4975,8 +4975,8 @@ class Test_pickle(unittest.TestCase):
         e_ = pickle.loads(s)
         flag, terms = decompose_term(e_)
         self.assertTrue(flag)
-        self.assertEqual(terms[0][0], 0.5)
-        self.assertEqual(terms[0][1], None)
+        self.assertEqual(value(terms[0][0]), 0.5)
+        self.assertEqual(value(terms[0][1]), None)
         
     def test_multisum(self):
         M = ConcreteModel()
