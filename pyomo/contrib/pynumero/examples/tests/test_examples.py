@@ -2,7 +2,7 @@ from pyomo.contrib.pynumero.dependencies import numpy_available, scipy_available
 import pyomo.common.unittest as unittest
 
 if not (numpy_available and scipy_available):
-    raise unittest.SkipTest('Pynumero examples needs scipy and numpy')
+    raise unittest.SkipTest('Pynumero examples need scipy and numpy')
 
 import numpy as np
 
