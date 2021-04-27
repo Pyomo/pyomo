@@ -1,4 +1,3 @@
-# Copyright 2020 by B. Knueven, D. Mildebrath, C. Muir, J-P Watson, and D.L. Woodruff
 # This software is distributed under the 3-clause BSD License.
 # Copied with minor modifications from create_EF in mpisppy/utils/sputils.py
 # from the mpi-sppy library (https://github.com/Pyomo/mpi-sppy).
