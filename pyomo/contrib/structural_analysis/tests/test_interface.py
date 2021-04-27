@@ -647,6 +647,54 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
                 self.assertEqual(con_block_map[model.mbal[i]], i)
                 self.assertEqual(con_block_map[model.ebal[i]], i)
 
+    def test_triangularize_submatrix(self):
+        # This test exercises the extraction of a somewhat nontrivial
+        # submatrix from a cached incidence matrix.
+        N = 5
+        model = make_gas_expansion_model(N)
+        igraph = IncidenceGraphInterface(model)
+
+        # These are the variables and constraints of a square,
+        # nonsingular subsystem
+        variables = []
+        half = N//2
+        variables.extend(model.P[i] for i in model.streams if i >= half)
+        variables.extend(model.T[i] for i in model.streams if i > half)
+        variables.extend(model.rho[i] for i in model.streams if i > half)
+        variables.extend(model.F[i] for i in model.streams if i > half)
+
+        constraints = []
+        constraints.extend(model.ideal_gas[i] for i in model.streams
+                if i >= half)
+        constraints.extend(model.expansion[i] for i in model.streams
+                if i > half)
+        constraints.extend(model.mbal[i] for i in model.streams
+                if i > half)
+        constraints.extend(model.ebal[i] for i in model.streams
+                if i > half)
+
+        var_block_map, con_block_map = igraph.block_triangularize(
+                variables, constraints)
+        var_values = set(var_block_map.values())
+        con_values = set(con_block_map.values())
+        self.assertEqual(len(var_values), (N-half)+1)
+        self.assertEqual(len(con_values), (N-half)+1)
+
+        self.assertEqual(var_block_map[model.P[half]], 0)
+
+        for i in model.streams:
+            if i > half:
+                idx = i - half
+                self.assertEqual(var_block_map[model.rho[i]], idx)
+                self.assertEqual(var_block_map[model.T[i]], idx)
+                self.assertEqual(var_block_map[model.P[i]], idx)
+                self.assertEqual(var_block_map[model.F[i]], idx)
+
+                self.assertEqual(con_block_map[model.ideal_gas[i]], idx)
+                self.assertEqual(con_block_map[model.expansion[i]], idx)
+                self.assertEqual(con_block_map[model.mbal[i]], idx)
+                self.assertEqual(con_block_map[model.ebal[i]], idx)
+
     def test_exception(self):
         model = make_gas_expansion_model()
         igraph = IncidenceGraphInterface(model)
