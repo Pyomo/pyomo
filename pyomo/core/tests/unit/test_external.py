@@ -29,17 +29,17 @@ class TestPythonCallbackFunction(unittest.TestCase):
         m = ConcreteModel()
         m.f = ExternalFunction(_g)
         self.assertIsInstance(m.f, PythonCallbackFunction)
-        self.assertEqual(m.f(), 0)
-        self.assertEqual(m.f(2), 1)
-        self.assertEqual(m.f(2,3), 2)
+        self.assertEqual(value(m.f()), 0)
+        self.assertEqual(value(m.f(2)), 1)
+        self.assertEqual(value(m.f(2,3)), 2)
 
     def test_call_sumfcn(self):
         m = ConcreteModel()
         m.f = ExternalFunction(_h)
         self.assertIsInstance(m.f, PythonCallbackFunction)
-        self.assertEqual(m.f(), 2.0)
-        self.assertEqual(m.f(1), 3.0)
-        self.assertEqual(m.f(1,2), 5.0)
+        self.assertEqual(value(m.f()), 2.0)
+        self.assertEqual(value(m.f(1)), 3.0)
+        self.assertEqual(value(m.f(1,2)), 5.0)
 
     def test_getname(self):
         m = ConcreteModel()

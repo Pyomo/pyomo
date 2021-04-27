@@ -22,6 +22,7 @@ import pyomo.common.unittest as unittest
 
 from pyomo.environ import AbstractModel, ConcreteModel, Set, Var, Param, Constraint, inequality, display
 import pyomo.core.expr.logical_expr as logical_expr
+from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.logical_expr import (
     InequalityExpression, EqualityExpression, RangedExpression,
 )
@@ -331,11 +332,11 @@ class TestGenerate_RangedExpression(unittest.TestCase):
         m.v = Var(initialize=2)
 
         e = inequality(0, m.v, 2)
-        self.assertEqual(e.__nonzero__(), True)
+        self.assertEqual(value(e), True)
         e = inequality(0, m.v, 1)
-        self.assertEqual(e.__nonzero__(), False)
+        self.assertEqual(value(e), False)
         e = inequality(0, m.v, 2, strict=True)
-        self.assertEqual(e.__nonzero__(), False)
+        self.assertEqual(value(e), False)
 
     def test_val2(self):
         m = ConcreteModel()
@@ -343,10 +344,10 @@ class TestGenerate_RangedExpression(unittest.TestCase):
 
         e = 1 < m.v
         e = e <= 2
-        self.assertEqual(e.__nonzero__(), True)
+        self.assertEqual(value(e), True)
         e = 1 <= m.v
         e = e < 2
-        self.assertEqual(e.__nonzero__(), False)
+        self.assertEqual(value(e), False)
 
 
 #
