@@ -13,9 +13,10 @@
 
 import os
 
-from filecmp import cmp
+
 import pyomo.common.unittest as unittest
 
+from pyomo.common.fileutils import file_compare
 from pyomo.common.getGSL import find_GSL
 from pyomo.environ import ConcreteModel, Var, Constraint, Objective, Param, Block, ExternalFunction, value
 
@@ -66,9 +67,10 @@ class TestNLWriter(unittest.TestCase):
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
         model.write(test_fname, format='nl')
-        self.assertTrue(cmp(
+        self.assertTrue(file_compare(
             test_fname,
-            baseline_fname),
+            baseline_fname,
+            allow_eol_mismatch=True),
             msg="Files %s and %s differ" % (test_fname, baseline_fname))
         self._cleanup(test_fname)
 
@@ -116,9 +118,10 @@ class TestNLWriter(unittest.TestCase):
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True})
-        self.assertTrue(cmp(
+        self.assertTrue(file_compare(
             test_fname,
-            baseline_fname),
+            baseline_fname,
+            allow_eol_mismatch=True),
             msg="Files %s and %s differ" % (test_fname, baseline_fname))
         self._cleanup(test_fname)
 
@@ -130,9 +133,10 @@ class TestNLWriter(unittest.TestCase):
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True})
-        self.assertTrue(cmp(
+        self.assertTrue(file_compare(
             test_fname,
-            baseline_fname),
+            baseline_fname,
+            allow_eol_mismatch=True),
             msg="Files %s and %s differ" % (test_fname, baseline_fname))
         self._cleanup(test_fname)
 
@@ -145,9 +149,10 @@ class TestNLWriter(unittest.TestCase):
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True})
-        self.assertTrue(cmp(
+        self.assertTrue(file_compare(
             test_fname,
-            baseline_fname),
+            baseline_fname,
+            allow_eol_mismatch=True),
             msg="Files %s and %s differ" % (test_fname, baseline_fname))
         self._cleanup(test_fname)
 
@@ -159,9 +164,10 @@ class TestNLWriter(unittest.TestCase):
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True})
-        self.assertTrue(cmp(
+        self.assertTrue(file_compare(
             test_fname,
-            variable_baseline),
+            variable_baseline,
+            allow_eol_mismatch=True),
             msg="Files %s and %s differ" % (test_fname, baseline_fname))
 
         self.assertIsNot(m._repn, None)
@@ -172,9 +178,10 @@ class TestNLWriter(unittest.TestCase):
                 io_options={'symbolic_solver_labels':True})
         partial_baseline = baseline_fname.replace(
             'rewrite_fixed','partial_fixed')
-        self.assertTrue(cmp(
+        self.assertTrue(file_compare(
             test_fname,
-            partial_baseline),
+            partial_baseline,
+            allow_eol_mismatch=True),
             msg="Files %s and %s differ" % (test_fname, baseline_fname))
 
         m.y.fix()
@@ -182,9 +189,10 @@ class TestNLWriter(unittest.TestCase):
         m.write(test_fname, format='nl',
                 io_options={'symbolic_solver_labels':True})
         fixed_baseline = baseline_fname.replace('rewrite_fixed','fixed')
-        self.assertTrue(cmp(
+        self.assertTrue(file_compare(
             test_fname,
-            fixed_baseline),
+            fixed_baseline,
+            allow_eol_mismatch=True),
             msg="Files %s and %s differ" % (test_fname, baseline_fname))
         self._cleanup(test_fname)
 

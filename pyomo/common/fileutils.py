@@ -24,6 +24,7 @@ import os
 import platform
 import importlib.util
 import sys
+import filecmp
 
 from .deprecation import deprecated
 from . import config
@@ -149,7 +150,7 @@ def find_file(filename, cwd=True, mode=os.R_OK, ext=None, pathlist=[],
     Parameters
     ----------
     filename : str
-    
+
         The file name to locate.  The file name may contain references
         to a user's home directory (``~user``), environment variables
         (``${HOME}/bin``), and shell wildcards (``?`` and ``*``); all of
@@ -402,7 +403,7 @@ def import_file(path, clear_cache=False, infer_package=True):
     """
     Import a module given the full path/filename of the file.
     Replaces import_file from pyutilib (Pyomo 6.0.0).
-    
+
     This function returns the module object that is created.
     Parameters
     ----------
@@ -428,6 +429,17 @@ def import_file(path, clear_cache=False, infer_package=True):
     module = spec.loader.load_module()
     return module
 
+def file_compare(path1, path2, allow_eol_mismatch=False):
+    if not allow_eol_mismatch:
+        filecmp.cmp(path1, path2)
+    else:
+        with open(path1, "r") as f:
+            c1 = f.read()
+            c1.replace("\r\n", "\n")
+        with open(path2, "r") as f:
+            c2 = f.read()
+            c2.replace("\r\n", "\n")
+        return c1 == c2
 
 class StreamIndenter(object):
     """

@@ -14,7 +14,7 @@
 import os
 import random
 
-from filecmp import cmp
+from pyomo.common.fileutils import file_compare
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import ConcreteModel, Var, Constraint, Objective, Block, ComponentMap
@@ -41,9 +41,10 @@ class TestCPXLPOrdering(unittest.TestCase):
         model.write(test_fname,
                     format="lp",
                     io_options=io_options)
-        self.assertTrue(cmp(
+        self.assertTrue(file_compare(
             test_fname,
-            baseline_fname),
+            baseline_fname,
+            allow_eol_mismatch=True),
             msg="Files %s and %s differ" % (test_fname, baseline_fname))
         self._cleanup(test_fname)
 
@@ -210,9 +211,10 @@ class TestCPXLP_writer(unittest.TestCase):
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
         model.write(test_fname, format='lp')
-        self.assertTrue(cmp(
+        self.assertTrue(file_compare(
             test_fname,
-            baseline_fname),
+            baseline_fname,
+            allow_eol_mismatch=True),
             msg="Files %s and %s differ" % (test_fname, baseline_fname))
 
     def test_var_on_nonblock(self):

@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -14,7 +14,7 @@
 import os
 import random
 
-from filecmp import cmp
+from pyomo.common.fileutils import file_compare
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import ConcreteModel, Var, Objective, Constraint, ComponentMap
@@ -42,9 +42,10 @@ class TestMPSOrdering(unittest.TestCase):
         model.write(test_fname,
                     format="mps",
                     io_options=io_options)
-        self.assertTrue(cmp(
+        self.assertTrue(file_compare(
             test_fname,
-            baseline_fname),
+            baseline_fname,
+            allow_eol_mismatch=True),
             msg="Files %s and %s differ" % (test_fname, baseline_fname))
         self._cleanup(test_fname)
 
