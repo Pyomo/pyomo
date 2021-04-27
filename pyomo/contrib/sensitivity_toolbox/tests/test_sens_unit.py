@@ -694,8 +694,7 @@ class TestSensitivityInterface(unittest.TestCase):
             getattr(m, v).setlb(theta[v])
             getattr(m, v).setub(theta[v])
         dsdp, col = get_dsdp(m, variable_name, theta)
-        np.testing.assert_almost_equal(dsdp.toarray(),[[1., 0., 1., 0.],
-                                                       [0., 1., 0., 1.]])
+        np.testing.assert_almost_equal(dsdp.toarray(),[[1., 0., 1., 0.],[0., 1., 0., 1.]])
 
         assert col == ['x1', 'x2', 'p1', 'p2']
 
