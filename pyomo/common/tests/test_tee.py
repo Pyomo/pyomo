@@ -46,6 +46,8 @@ class TestTeeStream(unittest.TestCase):
         # _peek_available is True)
         a = StringIO()
         b = StringIO()
+        # make sure this doesn't accidentally become a very long wait
+        assert tee._poll_interval <= 0.1
         with tee.TeeStream(a,b) as t:
             # This is a slightly nondeterministic (on Windows), so a
             # flush() and short pause should help
@@ -55,13 +57,12 @@ class TestTeeStream(unittest.TestCase):
             t.STDERR.write("interrupting\ncow")
             t.STDERR.flush()
             # For determinism, it is important that the STDERR message
-            # appears in hte output stream before we start shutting down
+            # appears in the output stream before we start shutting down
             # the TeeStream (which will dump the OUT and ERR in an
             # arbitrary order)
-            i = 0
-            while i < 1000 and 'cow' not in a.getvalue():
+            start_time = time.time()
+            while 'cow' not in a.getvalue() and time.time() - start_time < 1:
                 time.sleep(tee._poll_interval)
-                i += 1
         self.assertEqual(a.getvalue(), "Hello\ninterrupting\ncowWorld")
         self.assertEqual(b.getvalue(), "Hello\ninterrupting\ncowWorld")
 
