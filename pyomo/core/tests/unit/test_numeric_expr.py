@@ -52,15 +52,11 @@ from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numvalue import NumericValue
 
 
-class decompose_term_wrapper(object):
-    def __init__(self, decomposed_term):
-        lin, pairs = decomposed_term
-        self.linear = lin
+class decompose_linear_term_wrapper(object):
+    def __init__(self, pairs):
         self.pairs = pairs
 
     def __eq__(self, other):
-        if self.linear != other.linear:
-            return False
         if self.pairs is None:
             if other.pairs is not None:
                 return False
@@ -77,50 +73,39 @@ class decompose_term_wrapper(object):
         return True
 
 
-class TestExpression_EvaluateNumericConstant(unittest.TestCase):
+class decompose_term_wrapper(decompose_linear_term_wrapper):
+    def __init__(self, decomposed_term):
+        lin, pairs = decomposed_term
+        super().__init__(pairs)
+        self.linear = lin
 
-    def setUp(self):
-        # Do we expect arithmetic operations to return expressions?
-        self.expectExpression = False
-        # Do we expect relational tests to return constant expressions?
-        self.expectConstExpression = True
+    def __eq__(self, other):
+        if self.linear != other.linear:
+            return False
+        return super().__eq__(other)
+
+
+class TestExpression_EvaluateNumericConstant(unittest.TestCase):
 
     def create(self, val, domain):
         # Create the type of expression term that we are testing
         return NumericConstant(val)
 
     @unittest.nottest
-    def value_test(self, exp, val, expectExpression=None):
+    def value_test(self, exp, val):
         """ Test the value of the expression. """
-        #
-        # Override the class value of 'expectExpression'
-        #
-        if expectExpression is None:
-            expectExpression = self.expectExpression
         #
         # Confirm whether 'exp' is an expression
         #
-        self.assertEqual(isinstance(exp,ExpressionBase), expectExpression)
+        self.assertEqual(isinstance(exp, ExpressionBase), False)
         #
         # Confirm that 'exp' has the expected value
         #
-        self.assertEqual(value(exp), val)
+        self.assertEqual(exp, val)
 
     @unittest.nottest
-    def relation_test(self, exp, val, expectConstExpression=None):
-        """ Test a relationship expression. """
-        #
-        # Override the class value of 'expectConstExpression'
-        #
-        if expectConstExpression is None:
-            expectConstExpression = self.expectConstExpression
-        #
-        # Confirm that this is a relational expression
-        #
+    def relation_test(self, exp, val):
         self.assertEqual(type(exp), bool)
-        #
-        # Check that the expression evaluates correctly
-        #
         self.assertEqual(exp, val)
 
     def test_lt(self):
@@ -161,15 +146,15 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         #
         a=self.create(1.3, Reals)
         b=self.create(2.0, Reals)
-        self.relation_test(a==b, False, True)
-        self.relation_test(a==a, True, True)
-        self.relation_test(b==a, False, True)
-        self.relation_test(a==2.0, False, True)
-        self.relation_test(a==1.3, True, True)
-        self.relation_test(b==1.3, False, True)
-        self.relation_test(1.3==b, False, True)
-        self.relation_test(1.3==a, True, True)
-        self.relation_test(2.0==a, False, True)
+        self.relation_test(a==b, False)
+        self.relation_test(a==a, True)
+        self.relation_test(b==a, False)
+        self.relation_test(a==2.0, False)
+        self.relation_test(a==1.3, True)
+        self.relation_test(b==1.3, False)
+        self.relation_test(1.3==b, False)
+        self.relation_test(1.3==a, True)
+        self.relation_test(2.0==a, False)
 
     def test_arithmetic(self):
         #
@@ -197,29 +182,19 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         self.value_test((0.5)**b, 0.25)
 
         self.value_test(-a, 0.5)
-        self.value_test(+a, -0.5, False)        # This doesn't generate an expression
         self.value_test(abs(-a), 0.5)
 
 
 class TestExpression_EvaluateNumericValue(TestExpression_EvaluateNumericConstant):
 
-    def setUp(self):
-        super().setUp()
-
     def create(self, val, domain):
-        tmp = Var()
-        tmp.domain = domain
-        tmp.value = val
+        tmp = Var(name='unknown', initialize=val, domain=domain)
+        tmp.construct()
         return tmp
 
     @unittest.nottest
-    def relation_test(self, exp, val, expectConstExpression=None):
+    def relation_test(self, exp, val):
         """ Test a relationship expression. """
-        #
-        # Override the class value of 'expectConstExpression'
-        #
-        if expectConstExpression is None:
-            expectConstExpression = self.expectConstExpression
         #
         # Confirm that this is a relational expression
         #
@@ -232,35 +207,28 @@ class TestExpression_EvaluateNumericValue(TestExpression_EvaluateNumericConstant
         #
         # Check that the expression evaluates correctly in a Boolean context
         #
-        if expectConstExpression:
-            #
-            # The relational expression should be a constant.
-            #
-            # Check that 'val' equals the boolean value of the expression.
-            #
-            self.assertEqual(bool(exp), val)
-        else:
-            #
-            # The relational expression may not be constant
-            #
-            # Check that the expression evaluates to 'val'
-            #
-            with self.assertRaises(PyomoException):
-                bool(exp)
+        #
+        # The relational expression may not be constant
+        #
+        # Check that the expression evaluates to 'val'
+        #
+        with self.assertRaises(PyomoException):
+            bool(exp)
+
+    @unittest.nottest
+    def value_test(self, exp, val):
+        """ Test the value of the expression. """
+        #
+        # Confirm whether 'exp' is an expression
+        #
+        self.assertEqual(isinstance(exp, ExpressionBase), True)
+        #
+        # Confirm that 'exp' has the expected value
+        #
+        self.assertEqual(value(exp), val)
 
 
 class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericValue):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        super().setUp()
-        #
-        # Create model instance
-        #
-        self.expectExpression = True
-        self.expectConstExpression = False
 
     def create(self, val, domain):
         tmp=_GeneralVarData()
@@ -271,17 +239,6 @@ class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericValue):
 
 class TestExpression_EvaluateVar(TestExpression_EvaluateNumericValue):
 
-    def setUp(self):
-        #
-        # Create Model
-        #
-        super().setUp()
-        #
-        # Create model instance
-        #
-        self.expectExpression = True
-        self.expectConstExpression = False
-
     def create(self, val, domain):
         tmp=Var(name="unknown",domain=domain)
         tmp.construct()
@@ -290,17 +247,6 @@ class TestExpression_EvaluateVar(TestExpression_EvaluateNumericValue):
 
 
 class TestExpression_EvaluateFixedVar(TestExpression_EvaluateNumericValue):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        super().setUp()
-        #
-        # Create model instance
-        #
-        self.expectExpression = True
-        self.expectConstExpression = False
 
     def create(self, val, domain):
         tmp=Var(name="unknown", domain=domain)
@@ -312,17 +258,6 @@ class TestExpression_EvaluateFixedVar(TestExpression_EvaluateNumericValue):
 
 class TestExpression_EvaluateImmutableParam(TestExpression_EvaluateNumericConstant):
 
-    def setUp(self):
-        #
-        # Create Model
-        #
-        super().setUp()
-        #
-        # Create model instance
-        #
-        self.expectExpression = False
-        self.expectConstExpression = True
-
     def create(self, val, domain):
         tmp=Param(default=val, mutable=False, within=domain)
         tmp.construct()
@@ -330,17 +265,6 @@ class TestExpression_EvaluateImmutableParam(TestExpression_EvaluateNumericConsta
 
 
 class TestExpression_Evaluate_MutableParam(TestExpression_EvaluateNumericValue):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        super().setUp()
-        #
-        # Create model instance
-        #
-        self.expectExpression = True
-        self.expectConstExpression = False
 
     def create(self, val, domain):
         tmp=Param(default=val, mutable=True, within=domain)
@@ -4820,13 +4744,13 @@ class TestLinearDecomp(unittest.TestCase):
         M.w = Var()
         M.q = Param(initialize=2)
         e = SumExpression([2])
-        self.assertEqual(list(_decompose_linear_terms(e)), [(2,None)])
+        self.assertEqual(decompose_linear_term_wrapper(list(_decompose_linear_terms(e))), decompose_linear_term_wrapper([(2,None)]))
         e = SumExpression([2,M.v])
-        self.assertEqual(list(_decompose_linear_terms(e)), [(2,None), (1,M.v)])
+        self.assertEqual(decompose_linear_term_wrapper(list(_decompose_linear_terms(e))), decompose_linear_term_wrapper([(2,None), (1,M.v)]))
         e = SumExpression([2,M.q+M.v])
-        self.assertEqual(list(_decompose_linear_terms(e)), [(2,None), (2,None), (1,M.v)])
+        self.assertEqual(decompose_linear_term_wrapper(list(_decompose_linear_terms(e))), decompose_linear_term_wrapper([(2,None), (2,None), (1,M.v)]))
         e = SumExpression([2,M.q+M.v,M.w])
-        self.assertEqual(list(_decompose_linear_terms(e)), [(2,None), (2,None), (1,M.v), (1,M.w)])
+        self.assertEqual(decompose_linear_term_wrapper(list(_decompose_linear_terms(e))), decompose_linear_term_wrapper([(2,None), (2,None), (1,M.v), (1,M.w)]))
         
 
 #
