@@ -130,11 +130,12 @@ class IncidenceGraphInterface(object):
         #          model.
         self.cached = IncidenceMatrixType.NONE
         if isinstance(model, PyomoNLP):
+            nlp = model
             self.cached = IncidenceMatrixType.NUMERIC
-            self.variables = self.nlp.get_pyomo_variables()
-            self.constraints = self.nlp.get_pyomo_constraints()
-            self.var_index_map = self.nlp._vardata_to_idx
-            self.con_index_map = self.nlp._condata_to_idx
+            self.variables = nlp.get_pyomo_variables()
+            self.constraints = nlp.get_pyomo_constraints()
+            self.var_index_map = nlp._vardata_to_idx
+            self.con_index_map = nlp._condata_to_idx
             self.incidence_matrix = nlp.evaluate_jacobian_eq()
         elif isinstance(model, Block):
             self.cached = IncidenceMatrixType.STRUCTURAL
@@ -157,35 +158,50 @@ class IncidenceGraphInterface(object):
 
     def _validate_input(self, variables, constraints):
         if variables is None:
-            variables = self.variables
+            if self.cached is IncidenceMatrixType.NONE:
+                raise ValueError(
+                        "Neither variables nor a model have been provided."
+                        )
+            else:
+                variables = self.variables
         if constraints is None:
-            constraints = self.constraints
+            if self.cached is IncidenceMatrixType.NONE:
+                raise ValueError(
+                        "Neither constraints nor a model have been provided."
+                        )
+            else:
+                constraints = self.constraints
 
         _check_unindexed(variables+constraints)
         return variables, constraints
 
     def _extract_submatrix(self, variables, constraints):
-        # Assumes variables and constraints are valid,
-        # incidence matrix has been cached, and this cache
-        # is still valid.
-        N, M = len(variables), len(constraints)
-        old_new_var_indices = dict((self.var_index_map[v], i)
-                for i, v in enumerate(variables))
-        old_new_con_indices = dict((self.con_index_map[c], i)
-                for i, c in enumerate(constraints))
-        coo = self.incidence_matrix
-        new_row = []
-        new_col = []
-        new_data = []
-        for r, c, e in zip(coo.row, coo.col, coo.data):
-            if r in old_new_con_indices and c in old_new_var_indices:
-                new_row.append(old_new_con_indices[r])
-                new_col.append(old_new_var_indices[c])
-                new_data.append(e)
-        return sp.sparse.coo_matrix(
-                (new_data, (new_row, new_col)),
-                shape=(M, N),
-                )
+        # Assumes variables and constraints are valid
+        if self.cached is IncidenceMatrixType.NONE:
+            return get_structural_incidence_matrix(
+                    variables,
+                    constraints,
+                    include_fixed=False,
+                    )
+        else:
+            N, M = len(variables), len(constraints)
+            old_new_var_indices = dict((self.var_index_map[v], i)
+                    for i, v in enumerate(variables))
+            old_new_con_indices = dict((self.con_index_map[c], i)
+                    for i, c in enumerate(constraints))
+            coo = self.incidence_matrix
+            new_row = []
+            new_col = []
+            new_data = []
+            for r, c, e in zip(coo.row, coo.col, coo.data):
+                if r in old_new_con_indices and c in old_new_var_indices:
+                    new_row.append(old_new_con_indices[r])
+                    new_col.append(old_new_var_indices[c])
+                    new_data.append(e)
+            return sp.sparse.coo_matrix(
+                    (new_data, (new_row, new_col)),
+                    shape=(M, N),
+                    )
 
     def maximum_matching(self, variables=None, constraints=None):
         """
@@ -193,15 +209,7 @@ class IncidenceGraphInterface(object):
         in terms of a map from constraints to variables.
         """
         variables, constraints = self._validate_input(variables, constraints)
-
-        if self.cached is IncidenceMatrixType.NONE:
-            matrix = get_structural_incidence_matrix(
-                    variables,
-                    constraints,
-                    include_fixed=False,
-                    )
-        else:
-            matrix = self._extract_submatrix(variables, constraints)
+        matrix = self._extract_submatrix(variables, constraints)
 
         matching = maximum_matching(matrix.tocoo())
         # Matching maps row (constraint) indices to column (variable) indices
@@ -217,15 +225,7 @@ class IncidenceGraphInterface(object):
         of the incidence matrix.
         """
         variables, constraints = self._validate_input(variables, constraints)
-
-        if self.cached is IncidenceMatrixType.NONE:
-            matrix = get_structural_incidence_matrix(
-                    variables,
-                    constraints,
-                    include_fixed=False,
-                    )
-        else:
-            matrix = self._extract_submatrix(variables, constraints)
+        matrix = self._extract_submatrix(variables, constraints)
 
         row_block_map, col_block_map = block_triangularize(matrix.tocoo())
         con_block_map = ComponentMap((constraints[i], idx)
