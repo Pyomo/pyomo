@@ -32,6 +32,7 @@ import shutil
 from pyomo.common.dependencies import (
     numpy as np, numpy_available
     )
+from scipy import sparse
 
 logger = logging.getLogger('pyomo.contrib.sensitivity_toolbox')
 
@@ -48,13 +49,13 @@ def sipopt(instance, paramSubList, perturbList,
     return m
 
 @deprecated("The kaug function has been deprecated. Use the sensitivity_calculation() "
-            "function with method='k_aug' to access this functionality.", 
+            "function with method='kaug' to access this functionality.", 
             logger='pyomo.contrib.sensitivity_toolbox',
             version='TBD')
 def kaug(instance, paramSubList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None,
          streamSoln=False):
-    m = sensitivity_calculation('k_aug', instance, paramSubList, perturbList,
+    m = sensitivity_calculation('kaug', instance, paramSubList, perturbList,
          cloneModel, tee, keepfiles, solver_options)
 
     return m
@@ -143,7 +144,7 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
         - ``model.sol_state_1_z_L``: the updated lower bound
         - ``model.sol_state_1_z_U``: the updated upper bound
         
-        if method == 'k_aug', 
+        if method == 'k_sug', 
         the model modified for use with k_aug. The model includes 
         approximate solution with the new parameter values.    
     """
@@ -153,11 +154,8 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
 
     m = sens.model_instance
 
-    if method is not 'k_aug' and method is not 'sipopt':
-        raise ValueError("Only methods 'k_aug' and 'sipopt' are supported'")
-
-    if method == 'k_aug':
-        k_aug = SolverFactory('k_aug', solver_io='nl')
+    if method == 'kaug':
+        kaug = SolverFactory('k_aug', solver_io='nl')
         dotsens = SolverFactory('dot_sens', solver_io='nl')
         ipopt = SolverFactory('ipopt', solver_io='nl')
 
@@ -165,8 +163,8 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
         m.ipopt_zL_in.update(m.ipopt_zL_out)  #: important!
         m.ipopt_zU_in.update(m.ipopt_zU_out)  #: important!    
 
-        k_aug.options['dsdp_mode'] = ""  #: sensitivity mode!
-        k_aug.solve(m, tee=tee)
+        kaug.options['dsdp_mode'] = ""  #: sensitivity mode!
+        kaug.solve(m, tee=tee)
         m.write('col_row.nl', format='nl', io_options={'symbolic_solver_labels':True})
 
     sens.perturb_parameters(perturbList)
@@ -178,7 +176,7 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
         # Send the model to the ipopt_sens and collect the solution
         results = ipopt_sens.solve(m, keepfiles=keepfiles, tee=tee)
 
-    elif method == 'k_aug':
+    elif method == 'kaug':
         dotsens.options["dsdp_mode"] = ""
         dotsens.solve(m, tee=tee)
         try:
@@ -235,8 +233,9 @@ def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=Non
 
     Returns
     -------
-    dsdp: numpy.ndarray
-        Ntheta by Nvar size. a Jacobian matrix of the (decision variables, parameters) with respect to paramerters (=theta_name).
+    dsdp: scipy.sparse.csr.csr_matrix
+        Ntheta by Nvar size sparse matrix. A Jacobian matrix of the (decision variables, parameters) 
+        with respect to paramerters (=theta_name). number of rows = len(theta_name), number of columns= len(col)
     col: list
         List of variable names
     """
@@ -258,7 +257,7 @@ def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=Non
         original_Param.append(original_param_object)
         perturbed_Param.append(perturbed_param_object)
         kk = kk + 1
-    m_k_aug_dsdp = sensitivity_calculation('k_aug',m,original_Param,perturbed_Param, tee)
+    m_kaug_dsdp = sensitivity_calculation('kaug',m,original_Param,perturbed_Param, tee)
 
     try:
         with open ("./dsdp/col_row.col", "r") as myfile:
@@ -275,7 +274,13 @@ def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=Non
     except OSError:
         pass
     col = [i for i in col if SensitivityInterface.get_default_block_name() not in i]
-    return dsdp, col
+    dsdp_out = np.zeros((len(theta_names),len(col)))
+    for i in range(len(theta_names)):
+        for j in range(len(col)):
+            if SensitivityInterface.get_default_block_name() not in col[j]:
+                dsdp_out[i,j] =  -dsdp[i, j] # e.g) k_aug dsdp returns -dx1/dx1 = -1.0
+
+    return sparse.csr_matrix(dsdp_out), col
 
 def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     """This function calculates gradient vector of the objective function 
@@ -284,7 +289,7 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
        the number of theta = Ntheta, the numer of decision (primal) variables = Nx. 
        Then, the number of all variables (columns) = Nvar = Ntheta + Nx. 
        All results follow row and column order in row and col.
-    
+
     e.g) min f:  p1*x1+ p2*(x2^2) + p1*p2
          s.t  c1: x1 + x2 = p1
               c2: x2 + x3 = p2
@@ -309,8 +314,8 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     -------
     gradient_f: numpy.ndarray
         Length Nvar array. A gradient vector of the objective function with respect to the (decision variables, parameters) at the optimal solution
-    gradient_c: numpy.ndarray
-        Ncon by Nvar size matrix. A Jacobian matrix of the constraints with respect to the (decision variables, parameters) at the optimal solution
+    gradient_c: scipy.sparse.csr.csr_matrix
+        Ncon by Nvar size sparse matrix. A Jacobian matrix of the constraints with respect to the (decision variables, parameters) at the optimal solution
         Each row contains [column number, row number, and value], colum order follows variable order in col and index starts from 1. 
         Note that it follows k_aug.
         If no constraint exists, return []
@@ -318,13 +323,14 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
         Size Nvar. list of variable names
     row: list
         Size Ncon+1. List of constraints and objective function names
+        The final element is the objective function name.
     line_dic: dict
         column numbers of the theta_names in the model. Index starts from 1
 
     Raises
     ------
     RuntimeError
-        When ipopt or k_aug or dotsens is not available
+        When ipopt or kaug or dotsens is not available
     Exception
         When ipopt fails 
     """
@@ -332,11 +338,11 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     ipopt = SolverFactory('ipopt',solver_io='nl')
     if solver_options is not None:
         ipopt.options = solver_options
-    k_aug = SolverFactory('k_aug',solver_io='nl')
+    kaug = SolverFactory('k_aug',solver_io='nl')
     dotsens = SolverFactory('dot_sens',solver_io='nl')
     if not ipopt.available(False):
         raise RuntimeError('ipopt is not available')
-    if not k_aug.available(False):
+    if not kaug.available(False):
         raise RuntimeError('k_aug is not available')
     if not dotsens.available(False):
         raise RuntimeError('dotsens is not available')
@@ -347,7 +353,7 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     # K_AUG SUFFIXES
     model.dof_v = Suffix(direction=Suffix.EXPORT)  #: SUFFIX FOR K_AUG
     model.rh_name = Suffix(direction=Suffix.IMPORT)  #: SUFFIX FOR K_AUG AS WELL
-    k_aug.options["print_kkt"] = ""
+    kaug.options["print_kkt"] = ""
     results = ipopt.solve(model,tee=tee)
 
     # Rasie Exception if ipopt fails 
@@ -359,7 +365,7 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     model.ipopt_zL_in.update(model.ipopt_zL_out)
     model.ipopt_zU_in.update(model.ipopt_zU_out)
     #: run k_aug
-    k_aug.solve(model, tee=tee)  #: always call k_aug AFTER ipopt.
+    kaug.solve(model, tee=tee)  #: always call k_aug AFTER ipopt.
     model.write('col_row.nl', format='nl', io_options={'symbolic_solver_labels':True})
     # get the column numbers of theta
     line_dic = {}
@@ -370,9 +376,12 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
         gradient_f = np.loadtxt("./GJH/gradient_f_print.txt")
         with open ("col_row.col", "r") as myfile:
             col = myfile.read().splitlines()
+        col = [i for i in col if SensitivityInterface.get_default_block_name() not in i]
+        with open ("col_row.row", "r") as myfile:
+            row = myfile.read().splitlines()
     except Exception as e:
-        print('File not found.')
-        raise e
+         print('File not found.')
+         raise e
     # load gradient of all constraints (sparse)
     # If no constraint exists, return []
     num_constraints = len(list(model.component_data_objects(Constraint,
@@ -383,15 +392,20 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
             gradient_c = np.loadtxt("./GJH/A_print.txt")
         except Exception as e:
             print('./GJH/A_print.txt not found.')
-        gradient_c = np.array([i for i in gradient_c if not np.isclose(i[2],0, atol=0.0)])
+        row_idx = gradient_c[:,1]-1
+        col_idx = gradient_c[:,0]-1
+        data = gradient_c[:,2]
+        gradient_c = sparse.csr_matrix((data, (row_idx, col_idx)), shape=(len(row)-1, len(col)))
     else:
         gradient_c = np.array([])
     # remove all generated files
+    
     shutil.move("col_row.nl", "./GJH/")
     shutil.move("col_row.col", "./GJH/")
     shutil.move("col_row.row", "./GJH/")
     shutil.rmtree('GJH', ignore_errors=True)
-    return gradient_f, gradient_c, col, row, oine_dic
+    
+    return gradient_f, gradient_c, col,row, line_dic
 
 def line_num(file_name, target):
     """This function returns the line inumber contains 'target' in the file_name.
