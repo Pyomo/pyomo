@@ -9,8 +9,10 @@
 #  ___________________________________________________________________________
 
 import random
-from pyomo.contrib.matching.maximum_matching import maximum_matching
-from pyomo.contrib.matching.block_triangularize import block_triangularize
+from pyomo.contrib.structural_analysis.maximum_matching import maximum_matching
+from pyomo.contrib.structural_analysis.block_triangularize import (
+        block_triangularize,
+        )
 from pyomo.common.dependencies import (
         scipy,
         scipy_available,

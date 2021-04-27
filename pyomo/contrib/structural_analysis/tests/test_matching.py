@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.contrib.matching.maximum_matching import maximum_matching
+from pyomo.contrib.structural_analysis.maximum_matching import maximum_matching
 from pyomo.common.dependencies import (
         scipy,
         scipy_available,

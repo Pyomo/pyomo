@@ -17,8 +17,10 @@ from pyomo.core.base.reference import Reference
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import scipy_available
-from pyomo.contrib.matching.maximum_matching import maximum_matching
-from pyomo.contrib.matching.block_triangularize import block_triangularize
+from pyomo.contrib.structural_analysis.maximum_matching import maximum_matching
+from pyomo.contrib.structural_analysis.block_triangularize import (
+        block_triangularize,
+        )
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
     import scipy as sp
