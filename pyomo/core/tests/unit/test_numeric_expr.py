@@ -182,6 +182,7 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         self.value_test((0.5)**b, 0.25)
 
         self.value_test(-a, 0.5)
+        self.assertIs(+a, a)
         self.value_test(abs(-a), 0.5)
 
 
