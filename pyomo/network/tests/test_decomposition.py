@@ -187,9 +187,9 @@ class TestSequentialDecomposition(unittest.TestCase):
                         self.expr_var_idx_in_side_2[i])
             self.expr_var_out.value = \
                 value(self.expr_var_in_side_1 + self.expr_var_in_side_2)
-            assert self.temperature_in_side_1 == self.temperature_in_side_2
+            assert self.temperature_in_side_1.value == self.temperature_in_side_2.value
             self.temperature_out.value = value(self.temperature_in_side_1)
-            assert self.pressure_in_side_1 == self.pressure_in_side_2
+            assert self.pressure_in_side_1.value == self.pressure_in_side_2.value
             self.pressure_out.value = value(self.pressure_in_side_1)
 
         m.mixer.initialize = MethodType(initialize_mixer, m.mixer)
