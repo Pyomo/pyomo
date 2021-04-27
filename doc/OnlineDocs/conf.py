@@ -67,11 +67,15 @@ extensions = [
     'sphinx.ext.inheritance_diagram',
     'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
+    'sphinx_copybutton',
     #'sphinx.ext.githubpages',
 ]
 
 viewcode_follow_imported_members = True
 #napoleon_include_private_with_doc = True
+
+copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: "
+copybutton_prompt_is_regexp = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -263,4 +267,14 @@ try:
     gurobipy_available = True
 except ImportError:
     gurobipy_available = False
+if numpy_available and scipy_available:
+    from pyomo.contrib.pynumero.asl import AmplInterface
+    asl_available = AmplInterface.available()
+    from pyomo.contrib.pynumero.linalg.mumps_interface import mumps_available
+    from pyomo.contrib.pynumero.linalg.ma27 import MA27Interface
+    ma27_available = MA27Interface.available()
+else:
+    asl_available = False
+    mumps_available = False
+    ma27_available = False
 '''
