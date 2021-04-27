@@ -201,10 +201,7 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
 
 def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=None):
     """This function calculates gradient vector of the (decision variables, parameters)
-        with respect to the paramerters (theta_names). We assume that the number of 
-        constraints (rows) = Ncon, the number of theta = Ntheta, the numer of decision 
-        (primal) variables = Nx. Then, the number of all variables (columns) = Nvar = Ntheta + Nx.  
-        All results follow row and column order in row and col.
+        with respect to the paramerters (theta_names). 
 
     e.g) min f:  p1*x1+ p2*(x2^2) + p1*p2
          s.t  c1: x1 + x2 = p1
@@ -213,6 +210,13 @@ def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=Non
               p1 = 10
               p2 = 5
     the function retuns dx/dp and dp/dp, and colum orders.
+    
+    The following terms are used to define the output dimensions:
+    Ncon   = number of constraints
+    Nvar   = number of variables (Nx + Ntheta)
+    Nx     = the numer of decision (primal) variables
+    Ntheta = number of uncertain parameters.
+
     Parameters
     ----------
     model: Pyomo ConcreteModel
@@ -285,10 +289,6 @@ def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=Non
 def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     """This function calculates gradient vector of the objective function 
        and constraints with respect to the variables in theta_names.
-       We assume that the number of  constraints (rows) = Ncon, 
-       the number of theta = Ntheta, the numer of decision (primal) variables = Nx. 
-       Then, the number of all variables (columns) = Nvar = Ntheta + Nx. 
-       All results follow row and column order in row and col.
 
     e.g) min f:  p1*x1+ p2*(x2^2) + p1*p2
          s.t  c1: x1 + x2 = p1
@@ -298,6 +298,12 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
               p2 = 5
     - Variables = (x1, x2, x3, p1, p2)
     - Fix p1 and p2 with estimated values
+
+    The following terms are used to define the output dimensions:
+    Ncon   = number of constraints
+    Nvar   = number of variables (Nx + Ntheta)
+    Nx     = the numer of decision (primal) variables
+    Ntheta = number of uncertain parameters.
 
     Parameters
     ----------
