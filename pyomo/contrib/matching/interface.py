@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import enum
 from pyomo.core.base.block import Block
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.reference import Reference
@@ -19,6 +20,12 @@ from pyomo.contrib.matching.block_triangularize import block_triangularize
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
     import scipy as sp
+
+
+class IncidenceMatrixType(enum.Enum):
+    NONE = 0
+    STRUCTURAL = 1
+    NUMERIC = 2
 
 
 def _check_unindexed(complist):
@@ -111,8 +118,40 @@ class IncidenceGraphInterface(object):
     model without constructing multiple PyomoNLPs.
     """
 
-    def __init__(self, model):
-        self.nlp = PyomoNLP(model)
+    def __init__(self, model=None):
+        """
+        """
+        # If the user gives us a model or an NLP, we assume they want us
+        # to cache the incidence matrix for fast analysis of submatrices
+        # later on.
+        # WARNING: This cache will become invalid if the user alters their
+        #          model.
+        self.cached = IncidenceMatrixType.NONE
+        if isinstance(model, PyomoNLP):
+            self.cached = IncidenceMatrixType.NUMERIC
+            self.variables = self.nlp.get_pyomo_variables()
+            self.constraints = self.nlp.get_pyomo_constraints()
+            self.var_index_map = self.nlp._vardata_to_idx
+            self.con_index_map = self.nlp._condata_to_idx
+            self.incidence_matrix = nlp.evaluate_jacobian_eq()
+        elif isinstance(model, Block):
+            self.cached = IncidenceMatrixType.STRUCTURAL
+            self.variables = list(model.component_data_objects(Var))
+            self.constraints = list(model.component_data_objects(Constraint))
+            self.var_index_map = ComponentMap(
+                    (var, i) for i, var in enumerate(variables))
+            self.con_index_map = ComponentMap(
+                    (con, i) for i, con in enumerate(constraints))
+            self.incidence_matrix = get_structural_incidence_matrix(
+                    variables,
+                    constraints,
+                    )
+        elif model is not None:
+            raise TypeError(
+                "Unsupported type for incidence matrix. Expected "
+                "%s or %s but got %s."
+                % (PyomoNLP, Block, type(model))
+                )
 
     def _validate_input(self, variables, constraints):
         if variables is None:
@@ -123,6 +162,26 @@ class IncidenceGraphInterface(object):
         _check_unindexed(variables+constraints)
         return variables, constraints
 
+    def _extract_submatrix(self, variables, constraints):
+        # Assumes variables and constraints are valid,
+        # incidence matrix has been cached, and this cache
+        # is still valid.
+        N, M = len(variables), len(constraints)
+        old_new_var_indices = dict((self.var_index_map[v], i)
+                for i, v in enumerate(variables))
+        old_new_con_indices = dict((self.con_index_map[c], i)
+                for i, c in enumerate(constraints))
+        coo = self.incidence_matrix
+        new_row = []
+        new_col = []
+        new_data = []
+        for r, c, e in zip(coo.row, coo.col, coo.data):
+            if r in old_new_con_indices and c in old_new_var_indices:
+                new_row.append(old_new_con_indices[r])
+                new_col.append(old_new_var_indices[c])
+                new_data.append(e)
+        return coo_matrix((new_data, (new_row, new_col)), shape=(N, M))
+
     def maximum_matching(self, variables=None, constraints=None):
         """
         Returns a maximal matching between the constraints and variables,
@@ -130,7 +189,9 @@ class IncidenceGraphInterface(object):
         """
         variables, constraints = self._validate_input(variables, constraints)
 
-        matrix = self.nlp.extract_submatrix_jacobian(variables, constraints)
+        if self.numeric:
+            matrix = self.nlp.extract_submatrix_jacobian(variables, constraints)
+
         matching = maximum_matching(matrix.tocoo())
         # Matching maps row (constraint) indices to column (variable) indices
 
