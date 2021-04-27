@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -13,13 +13,13 @@
 #
 
 from itertools import zip_longest
-from filecmp import cmp
 import os
 from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))+os.sep
 scriptdir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))+os.sep
 scriptdir = join(scriptdir,'examples','pyomo','piecewise')
 
+from pyomo.common.fileutils import file_compare
 import pyomo.common.unittest as unittest
 
 import pyomo.scripting.convert as convert
@@ -42,14 +42,14 @@ class Test(unittest.TestCase):
         """Test examples/pyomo/piecewise/step.py"""
         self.run_convert2lp('step.py')
         _out, _log = join(currdir,'unknown.lp'), join(currdir, 'step.lp')
-        self.assertTrue(cmp(_out, _log),
+        self.assertTrue(file_compare(_out, _log, allow_eol_mismatch=True),
                         msg="Files %s and %s differ" % (_out, _log))
 
     def test_step_nl(self):
         """Test examples/pyomo/piecewise/step.py"""
         self.run_convert2nl('step.py')
         _out, _log = join(currdir,'unknown.nl'), join(currdir, 'step.nl')
-        self.assertTrue(cmp(_out, _log),
+        self.assertTrue(file_compare(_out, _log, allow_eol_mismatch=True),
                         msg="Files %s and %s differ" % (_out, _log))
         os.remove(join(currdir,'unknown.row'))
         os.remove(join(currdir,'unknown.col'))
@@ -58,14 +58,14 @@ class Test(unittest.TestCase):
         """Test examples/pyomo/piecewise/nonconvex.py"""
         self.run_convert2lp('nonconvex.py')
         _out, _log = join(currdir,'unknown.lp'), join(currdir, 'nonconvex.lp')
-        self.assertTrue(cmp(_out, _log),
+        self.assertTrue(file_compare(_out, _log, allow_eol_mismatch=True),
                         msg="Files %s and %s differ" % (_out, _log))
 
     def test_nonconvex_nl(self):
         """Test examples/pyomo/piecewise/nonconvex.py"""
         self.run_convert2nl('nonconvex.py')
         _out, _log = join(currdir,'unknown.nl'), join(currdir, 'nonconvex.nl')
-        self.assertTrue(cmp(_out, _log),
+        self.assertTrue(file_compare(_out, _log, allow_eol_mismatch=True),
                         msg="Files %s and %s differ" % (_out, _log))
         os.remove(join(currdir,'unknown.row'))
         os.remove(join(currdir,'unknown.col'))
@@ -74,14 +74,14 @@ class Test(unittest.TestCase):
         """Test examples/pyomo/piecewise/convex.py"""
         self.run_convert2lp('convex.py')
         _out, _log = join(currdir,'unknown.lp'), join(currdir, 'convex.lp')
-        self.assertTrue(cmp(_out, _log),
+        self.assertTrue(file_compare(_out, _log, allow_eol_mismatch=True),
                         msg="Files %s and %s differ" % (_out, _log))
 
     def test_convex_nl(self):
         """Test examples/pyomo/piecewise/convex.py"""
         self.run_convert2nl('convex.py')
         _out, _log = join(currdir,'unknown.nl'), join(currdir, 'convex.nl')
-        self.assertTrue(cmp(_out, _log),
+        self.assertTrue(file_compare(_out, _log, allow_eol_mismatch=True),
                         msg="Files %s and %s differ" % (_out, _log))
         os.remove(join(currdir,'unknown.row'))
         os.remove(join(currdir,'unknown.col'))
@@ -118,7 +118,7 @@ class Test(unittest.TestCase):
         """Test examples/pyomo/piecewise/indexed_nonlinear.py"""
         self.run_convert2nl('indexed_nonlinear.py')
         _out, _log = join(currdir,'unknown.nl'), join(currdir, 'indexed_nonlinear.nl')
-        self.assertTrue(cmp(_out, _log),
+        self.assertTrue(file_compare(_out, _log, allow_eol_mismatch=True),
                         msg="Files %s and %s differ" % (_out, _log))
         os.remove(join(currdir,'unknown.row'))
         os.remove(join(currdir,'unknown.col'))

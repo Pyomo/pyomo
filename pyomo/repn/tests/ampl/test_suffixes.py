@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -15,7 +15,7 @@ import os
 from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))
 
-from filecmp import cmp
+from pyomo.common.fileutils import file_compare
 import pyomo.common.unittest as unittest
 
 from pyomo.opt import ProblemFormat
@@ -66,7 +66,7 @@ class TestSuffix(unittest.TestCase):
                     io_options={"symbolic_solver_labels" : False})
 
         _test, _base = join(currdir,"EXPORT_suffixes.test.nl"), join(currdir,"EXPORT_suffixes_int.baseline.nl")
-        self.assertTrue(cmp(_test, _base),
+        self.assertTrue(file_compare(_test, _base, allow_eol_mismatch=True),
                         msg="Files %s and %s differ" % (_test, _base))
 
     # test that EXPORT suffixes on variables,
@@ -108,7 +108,7 @@ class TestSuffix(unittest.TestCase):
                     io_options={"symbolic_solver_labels" : False})
 
         _test, _base = join(currdir,"EXPORT_suffixes.test.nl"), join(currdir,"EXPORT_suffixes_float.baseline.nl")
-        self.assertTrue(cmp(_test, _base),
+        self.assertTrue(file_compare(_test, _base, allow_eol_mismatch=True),
                         msg="Files %s and %s differ" % (_test, _base))
 
     # Test that user defined ref suffixes fail to
@@ -126,7 +126,7 @@ class TestSuffix(unittest.TestCase):
 
         for i,val in zip([1,2,3],[11,12,13]):
             model.ref.set_value(model.y[i],val)
-        
+
         try:
             model.write(filename=join(currdir,"junk.nl"),
                         format=ProblemFormat.nl,
@@ -138,7 +138,7 @@ class TestSuffix(unittest.TestCase):
             self.fail("The NL writer should have thrown an exception "\
                       "when overlap of SOSConstraint generated suffixes "\
                       "and user declared suffixes occurs.")
-        
+
         try:
             os.remove(join(currdir,"junk.nl"))
         except:
@@ -159,7 +159,7 @@ class TestSuffix(unittest.TestCase):
 
         for i in [1,2,3]:
             model.sosno.set_value(model.y[i],-1)
-        
+
         try:
             model.write(filename=join(currdir,"junk.nl"),
                         format=ProblemFormat.nl,
@@ -191,7 +191,7 @@ class TestSuffix(unittest.TestCase):
 
         for i in [1,2,3]:
             model.sosno.set_value(model.y[i],-1)
-        
+
         try:
             model.write(filename=join(currdir,"junk.nl"),
                         format=ProblemFormat.nl,
