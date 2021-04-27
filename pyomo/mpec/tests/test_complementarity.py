@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -19,7 +19,7 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__)) + os.sep
 
-from filecmp import cmp
+from pyomo.common.fileutils import file_compare
 import pyomo.common.unittest as unittest
 
 from pyomo.opt import ProblemFormat
@@ -56,7 +56,7 @@ class CCTests(object):
         if not os.path.exists(bfile):
             os.rename(ofile, bfile)
         try:
-            self.assertTrue(cmp(ofile, bfile),
+            self.assertTrue(file_compare(ofile, bfile, allow_eol_mismatch=True),
                             msg="Files %s and %s differ" % (ofile, bfile))
         except:
             with open(ofile, 'r') as f1, open(bfile, 'r') as f2:
@@ -189,7 +189,7 @@ class CCTests(object):
         M.cc = Complementarity([0,1,2])
         # AMPL needs at least one variable in the problem therefore
         # we need to have a constraint that keeps them around
-        M.keep_var_con = Constraint(expr=M.x1 == 0.5)        
+        M.keep_var_con = Constraint(expr=M.x1 == 0.5)
         self._test("cov2", M)
 
     def test_cov4(self):
@@ -395,7 +395,7 @@ class CCTests_nl_nlxfrm(CCTests, unittest.TestCase):
         M.write(ofile, format=ProblemFormat.nl)
         if not os.path.exists(bfile):
             os.rename(ofile, bfile)
-        self.assertTrue(cmp(ofile, bfile),
+        self.assertTrue(file_compare(ofile, bfile, allow_eol_mismatch=True),
                         msg="Files %s and %s differ" % (ofile, bfile))
 
 class DescendIntoDisjunct(unittest.TestCase):
@@ -431,7 +431,7 @@ class DescendIntoDisjunct(unittest.TestCase):
         m = self.get_model()
         TransformationFactory('mpec.simple_disjunction').apply_to(m.disjunct1)
         self.check_simple_disjunction(m)
-    
+
     def check_simple_nonlinear(self, m):
         # check that we have what we expect on disjunct1
         compBlock = m.disjunct1.component('comp')
