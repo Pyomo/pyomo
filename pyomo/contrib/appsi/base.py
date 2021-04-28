@@ -24,6 +24,7 @@ from pyomo.opt.results.solver import TerminationCondition as LegacyTerminationCo
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base import SymbolMap
 import weakref
+from io import StringIO
 
 
 class TerminationCondition(enum.Enum):
@@ -1072,12 +1073,13 @@ class LegacySolverInterface(object):
         if logfile is not None:
             if 'solver_output_logger' in self.config:
                 tmp_logger = logging.getLogger('_tmp_' + str(self.__class__))
-                file_handler = logging.FileHandler(logfile)
+                stream = StringIO()
+                handler = logging.StreamHandler(stream)
                 self.config.log_level = logging.CRITICAL
-                file_handler.setLevel(self.config.log_level)
+                handler.setLevel(self.config.log_level)
                 formatter = logging.Formatter('%(message)s')
-                file_handler.setFormatter(formatter)
-                tmp_logger.addHandler(file_handler)
+                handler.setFormatter(formatter)
+                tmp_logger.addHandler(handler)
                 self.config.solver_output_logger = tmp_logger
             elif 'logfile' in self.config:
                 self.config.logfile = logfile
@@ -1089,11 +1091,13 @@ class LegacySolverInterface(object):
         if options is not None:
             self.options = options
 
-        results: Results = super(LegacySolverInterface, self).solve(model)
-
-        if tmp_logger is not None:
-            file_handler.close()
-            tmp_logger.removeHandler(file_handler)
+        try:
+            results: Results = super(LegacySolverInterface, self).solve(model)
+        finally:
+            if tmp_logger is not None:
+                with open(logfile, 'w') as f:
+                    f.write(stream.getvalue())
+                tmp_logger.removeHandler(handler)
 
         legacy_results = LegacySolverResults()
         legacy_soln = LegacySolution()
