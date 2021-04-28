@@ -97,11 +97,9 @@ def power(xl, xu, yl, yu, feasibility_tol):
         elif yl >= 0:
             lb = min(xl**yl, xl**yu)
             ub = max(xu**yl, xu**yu)
-        elif yu <= 0:
+        else:  # yu <= 0:
             lb = min(xu**yl, xu**yu)
             ub = max(xl**yl, xl**yu)
-        else:
-            raise DeveloperError()
     elif xl == 0:
         if yl >= 0:
             lb = min(xl ** yl, xl ** yu)
