@@ -13,7 +13,7 @@ Test data model tree for QTreeView.  These tests need PyQt.
 """
 
 import pyomo.common.unittest as unittest
-from pyomo.environ import ConcreteModel, Var, Constraint, Objective, Reals, Block, Expression, ExternalFunction, sin, sqrt
+from pyomo.environ import ConcreteModel, Var, Constraint, Objective, Reals, Block, Expression, ExternalFunction, sin, sqrt, value
 from pyomo.contrib.viewer.model_browser import ComponentDataModel
 try:
     no_pyqt = False
@@ -136,7 +136,7 @@ class TestDataModel(unittest.TestCase):
         # and the indexes are sorted
         children = data_model.rootItems[0].children
         assert(children[0].data == self.m.b1)
-        assert(children[0].children[0].data == self.m.b1.e1)
+        assert(value(children[0].children[0].data) == value(self.m.b1.e1))
         ui_data.calculate_expressions()
         # Check the data display role The rows in the tree should be:
         #   0. Model
@@ -167,7 +167,7 @@ class TestDataModel(unittest.TestCase):
         # and the indexes are sorted
         children = data_model.rootItems[0].children
         assert(children[0].data == self.m.b1)
-        assert(children[0].children[0].data == self.m.b1.e1)
+        assert(value(children[0].children[0].data) == value(self.m.b1.e1))
         ui_data.calculate_expressions()
         # Check the data display role The rows in the tree should be:
         #   0. Model
