@@ -589,19 +589,3 @@ class TestLegacySolverInterface(unittest.TestCase):
         m.solutions.load_from(res)
         self.assertAlmostEqual(m.x.value, -1)
         self.assertAlmostEqual(m.dual[m.c], 1)
-
-    @parameterized.expand(input=all_solvers)
-    def test_logfile(self, name: str, opt_class: Type[PersistentSolver]):
-        opt = pe.SolverFactory('appsi_' + name)
-        if not opt.available(exception_flag=False):
-            raise unittest.SkipTest
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.obj = pe.Objective(expr=m.x)
-        m.c = pe.Constraint(expr=(-1, m.x, 1))
-        m.dual = pe.Suffix(direction=pe.Suffix.IMPORT)
-        res = opt.solve(m, logfile='logfile_test.log')
-        pe.assert_optimal_termination(res)
-        self.assertTrue(os.path.exists('logfile_test.log'))
-        self.assertTrue(os.path.isfile('logfile_test.log'))
-        os.remove('logfile_test.log')
