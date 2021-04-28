@@ -44,7 +44,7 @@ def inv(xl, xu, feasibility_tol):
     but should be very slightly positive) should not be an issue. Suppose xu is 2 and xl is 1e-15 but should be -1e-15.
     The bounds obtained from this function will be [0.5, 1e15] or [0.5, inf), depending on the value of
     feasibility_tol. The true bounds are (-inf, -1e15] U [0.5, inf), where U is union. The exclusion of (-inf, -1e15]
-    should be acceptable. Additionally, it very important to return [0, 1/xu] when xl is 0.
+    should be acceptable. Additionally, it very important to return a non-negative interval when xl is non-negative.
     """
     if xu <= 0 <= xl:
         if abs(xl - xu) <= feasibility_tol:
