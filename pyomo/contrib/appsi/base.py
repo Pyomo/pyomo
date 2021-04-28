@@ -1067,22 +1067,14 @@ class LegacySolverInterface(object):
         self.config.symbolic_solver_labels = symbolic_solver_labels
         self.config.time_limit = timelimit
         self.config.report_timing = report_timing
+        if solver_io is not None:
+            raise NotImplementedError('Still working on this')
+        if suffixes is not None:
+            raise NotImplementedError('Still working on this')
+        if logfile is not None:
+            raise NotImplementedError('Still working on this')
         if 'keepfiles' in self.config:
             self.config.keepfiles = keepfiles
-        tmp_logger = None
-        if logfile is not None:
-            if 'solver_output_logger' in self.config:
-                tmp_logger = logging.getLogger('_tmp_' + str(self.__class__))
-                stream = StringIO()
-                handler = logging.StreamHandler(stream)
-                self.config.log_level = logging.CRITICAL
-                handler.setLevel(self.config.log_level)
-                formatter = logging.Formatter('%(message)s')
-                handler.setFormatter(formatter)
-                tmp_logger.addHandler(handler)
-                self.config.solver_output_logger = tmp_logger
-            elif 'logfile' in self.config:
-                self.config.logfile = logfile
         if solnfile is not None:
             if 'filename' in self.config:
                 filename = os.path.splitext(solnfile)[0]
@@ -1091,13 +1083,7 @@ class LegacySolverInterface(object):
         if options is not None:
             self.options = options
 
-        try:
-            results: Results = super(LegacySolverInterface, self).solve(model)
-        finally:
-            if tmp_logger is not None:
-                with open(logfile, 'w') as f:
-                    f.write(stream.getvalue())
-                tmp_logger.removeHandler(handler)
+        results: Results = super(LegacySolverInterface, self).solve(model)
 
         legacy_results = LegacySolverResults()
         legacy_soln = LegacySolution()
