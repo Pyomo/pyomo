@@ -147,10 +147,10 @@ class TestInterval(unittest.TestCase):
 
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_pow2(self):
-        xl = np.linspace(-2, 2, 17)
-        xu = np.linspace(-2, 2, 17)
-        yl = np.linspace(-2, 2, 17)
-        yu = np.linspace(-2, 2, 17)
+        xl = np.linspace(-2, 2, 9)
+        xu = np.linspace(-2, 2, 9)
+        yl = np.linspace(-2, 2, 9)
+        yu = np.linspace(-2, 2, 9)
         for _xl in xl:
             for _xu in xu:
                 if _xl > _xu:
@@ -175,20 +175,11 @@ class TestInterval(unittest.TestCase):
                                 nan_fill = ub - 1
                             else:
                                 nan_fill = 0
-                            x = np.linspace(_xl, _xu, 17)
-                            y = np.linspace(_yl, _yu, 17)
-                            all_values = list()
-                            for _x in x:
-                                z = _x**y
-                                #np.nan_to_num(z, copy=False, nan=nan_fill, posinf=np.inf, neginf=-np.inf)
-                                tmp = []
-                                for _z in z:
-                                    if math.isnan(_z):
-                                        tmp.append(nan_fill)
-                                    else:
-                                        tmp.append(_z)
-                                all_values.append(np.array(tmp))
-                            all_values = np.array(all_values)
+                            x = np.linspace(_xl, _xu, 30)
+                            y = np.linspace(_yl, _yu, 30)
+                            z = x**np.split(y, len(y))
+                            z[np.isnan(z)] = nan_fill
+                            all_values = z
                             estimated_lb = all_values.min()
                             estimated_ub = all_values.max()
                             self.assertTrue(lb - 1e-8 <= estimated_lb)

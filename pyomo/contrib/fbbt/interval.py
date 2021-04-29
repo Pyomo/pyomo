@@ -46,11 +46,10 @@ def inv(xl, xu, feasibility_tol):
     feasibility_tol. The true bounds are (-inf, -1e15] U [0.5, inf), where U is union. The exclusion of (-inf, -1e15]
     should be acceptable. Additionally, it very important to return a non-negative interval when xl is non-negative.
     """
-    if xu <= 0 <= xl:
-        if abs(xl - xu) <= feasibility_tol:
-            raise IntervalException(f'Division by zero in inv; xl: {xl}; xu: {xu}')
-        else:
-            raise InfeasibleConstraintException(f'lower bound is greater than upper bound in inv; xl: {xl}; xu: {xu}')
+    if xu - xl <= -feasibility_tol:
+        raise InfeasibleConstraintException(f'lower bound is greater than upper bound in inv; xl: {xl}; xu: {xu}')
+    elif xu <= 0 <= xl:
+        raise IntervalException(f'Division by zero in inv; xl: {xl}; xu: {xu}')
     elif 0 <= xl <= feasibility_tol:
         # xu must be strictly positive
         ub = inf

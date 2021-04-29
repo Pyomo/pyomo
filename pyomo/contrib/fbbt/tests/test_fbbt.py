@@ -236,10 +236,9 @@ class TestFBBT(unittest.TestCase):
                     yu = np.inf
                 else:
                     yu = m.y.ub
-                for _x in x:
-                    _y = np.exp(np.log(abs(z)) / _x)
-                    self.assertTrue(np.all(yl <= _y))
-                    self.assertTrue(np.all(yu >= _y))
+                y = np.exp(np.split(np.log(np.abs(z)), len(z)) / x)
+                self.assertTrue(np.all(yl <= y))
+                self.assertTrue(np.all(yu >= y))
 
     def test_x_sq(self):
         m = pyo.ConcreteModel()
