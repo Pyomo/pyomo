@@ -8,3 +8,4 @@ pandas
 numpy
 seaborn
 pint
+sphinx-copybutton
