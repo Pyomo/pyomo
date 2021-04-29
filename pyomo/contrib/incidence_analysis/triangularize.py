@@ -88,8 +88,8 @@ def block_triangularize(matrix, matching=None):
     scc_block_map = {c: i for i, c in enumerate(scc_order)}
     row_block_map = {n: scc_block_map[c] for n, c in node_scc_map.items()}
     # ^ This maps row indices to the blocks they belong to.
-    # Invert the matching to map row indices to column indices
 
+    # Invert the matching to map row indices to column indices
     col_row_map = {c: r for r, c in matching.items()}
     assert len(col_row_map) == M
 
