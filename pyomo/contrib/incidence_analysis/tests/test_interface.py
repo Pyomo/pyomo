@@ -12,13 +12,13 @@ import pyomo.environ as pyo
 from pyomo.common.dependencies import networkx_available
 from pyomo.common.dependencies import scipy_available
 from pyomo.common.collections import ComponentSet, ComponentMap
-from pyomo.contrib.structural_analysis.interface import (
+from pyomo.contrib.incidence_analysis.interface import (
         IncidenceGraphInterface,
         get_structural_incidence_matrix,
         get_numeric_incidence_matrix,
         )
-from pyomo.contrib.structural_analysis.matching import maximum_matching
-from pyomo.contrib.structural_analysis.triangularize import block_triangularize
+from pyomo.contrib.incidence_analysis.matching import maximum_matching
+from pyomo.contrib.incidence_analysis.triangularize import block_triangularize
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 import pyomo.common.unittest as unittest

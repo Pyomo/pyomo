@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.contrib.structural_analysis.matching import maximum_matching
+from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.common.dependencies import networkx as nx
 
 def block_triangularize(matrix, matching=None):

@@ -17,8 +17,8 @@ from pyomo.core.base.reference import Reference
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import scipy_available
-from pyomo.contrib.structural_analysis.matching import maximum_matching
-from pyomo.contrib.structural_analysis.triangularize import block_triangularize
+from pyomo.contrib.incidence_analysis.matching import maximum_matching
+from pyomo.contrib.incidence_analysis.triangularize import block_triangularize
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
     import scipy as sp
@@ -134,8 +134,10 @@ class IncidenceGraphInterface(object):
             self.cached = IncidenceMatrixType.NUMERIC
             self.variables = nlp.get_pyomo_variables()
             self.constraints = nlp.get_pyomo_constraints()
-            self.var_index_map = nlp._vardata_to_idx
-            self.con_index_map = nlp._condata_to_idx
+            self.var_index_map = ComponentMap(
+                    (var, idx) for idx, var in enumerate(self.variables))
+            self.con_index_map = ComponentMap(
+                    (con, idx) for idx, con in enumerate(self.constraints))
             self.incidence_matrix = nlp.evaluate_jacobian_eq()
         elif isinstance(model, Block):
             self.cached = IncidenceMatrixType.STRUCTURAL
