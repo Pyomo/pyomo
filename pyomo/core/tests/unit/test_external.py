@@ -62,7 +62,7 @@ class TestPythonCallbackFunction(unittest.TestCase):
         with self.assertRaises(ValueError):
             m.f = ExternalFunction(_g, this_should_raise_error='foo')
 
-        
+
 class TestAMPLExternalFunction(unittest.TestCase):
     def assertListsAlmostEqual(self, first, second, places=7, msg=None):
         self.assertEqual(len(first), len(second))
@@ -135,6 +135,20 @@ class TestAMPLExternalFunction(unittest.TestCase):
         opt = SolverFactory('ipopt')
         res = opt.solve(model, tee=True)
         self.assertAlmostEqual(value(model.o), 0.885603194411, 7)
+
+    @unittest.skipIf(not check_available_solvers('ipopt'),
+                     "The 'ipopt' solver is not available")
+    def test_solve_gsl_function_const_arg(self):
+        DLL = find_GSL()
+        if not DLL:
+            self.skipTest("Could not find the amplgsl.dll library")
+        model = ConcreteModel()
+        model.z_func = ExternalFunction(library=DLL, function="gsl_sf_beta")
+        model.x = Var(initialize=1, bounds=(0.1,None))
+        model.o = Objective(expr=-model.z_func(1, model.x))
+        opt = SolverFactory('ipopt')
+        res = opt.solve(model, tee=True)
+        self.assertAlmostEqual(value(model.x), 0.1, 5)
 
     @unittest.skipIf(not check_available_solvers('ipopt'),
                      "The 'ipopt' solver is not available")
