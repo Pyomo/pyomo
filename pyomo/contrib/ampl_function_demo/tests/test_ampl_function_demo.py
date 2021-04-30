@@ -15,6 +15,8 @@ class TestAMPLExternalFunction(unittest.TestCase):
         assert abs(pyo.value(m.tf("whatevs", 1, 2, 3) - 6))/6 < 1e-5
         assert abs(pyo.value(m.tf("inv", 1, 2, 3) - 1.8333333))/1.8333 < 1e-5
 
+    @unittest.skipIf(not check_available_solvers('ipopt'),
+                     "The 'ipopt' solver is not available")
     def test_solve_function(self):
         if not flib:
             self.skipTest("Could not find the function_ASL.dll library")
