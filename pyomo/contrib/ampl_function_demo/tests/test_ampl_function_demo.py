@@ -1,3 +1,4 @@
+import platform
 import pyomo.environ as pyo
 import pyomo.common.unittest as unittest
 from pyomo.core.base.external import ExternalFunction
@@ -10,6 +11,8 @@ class TestAMPLExternalFunction(unittest.TestCase):
     def test_eval_function(self):
         if not flib:
             self.skipTest("Could not find the function_ASL.dll library")
+        if platform.python_implementation().lower().startswith('pypy'):
+            self.skipTest("AMPLExternalFunction interface does not work on pypy")
         m = pyo.ConcreteModel()
         m.tf = pyo.ExternalFunction(library=flib, function="testing_only")
         assert abs(pyo.value(m.tf("whatevs", 1, 2, 3) - 6))/6 < 1e-5
