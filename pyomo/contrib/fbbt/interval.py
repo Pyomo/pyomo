@@ -39,19 +39,42 @@ def mul(xl, xu, yl, yu):
 
 
 def inv(xl, xu, feasibility_tol):
-    if xl <= feasibility_tol and xu >= -feasibility_tol:
-        # if the denominator (x) can include 0, then 1/x is unbounded.
-        lb = -inf
+    """
+    The case where xl is very slightly positive but should be very slightly negative (or xu is very slightly negative
+    but should be very slightly positive) should not be an issue. Suppose xu is 2 and xl is 1e-15 but should be -1e-15.
+    The bounds obtained from this function will be [0.5, 1e15] or [0.5, inf), depending on the value of
+    feasibility_tol. The true bounds are (-inf, -1e15] U [0.5, inf), where U is union. The exclusion of (-inf, -1e15]
+    should be acceptable. Additionally, it very important to return a non-negative interval when xl is non-negative.
+    """
+    if xu - xl <= -feasibility_tol:
+        raise InfeasibleConstraintException(f'lower bound is greater than upper bound in inv; xl: {xl}; xu: {xu}')
+    elif xu <= 0 <= xl:
+        raise IntervalException(f'Division by zero in inv; xl: {xl}; xu: {xu}')
+    elif 0 <= xl <= feasibility_tol:
+        # xu must be strictly positive
         ub = inf
-    else:
+        lb = 1.0 / xu
+    elif xl > feasibility_tol:
+        # xl and xu must be strictly positive
         ub = 1.0 / xl
         lb = 1.0 / xu
+    elif -feasibility_tol <= xu <= 0:
+        # xl must be strictly negative
+        lb = -inf
+        ub = 1.0 / xl
+    elif xu < -feasibility_tol:
+        # xl and xu must be strictly negative
+        ub = 1.0 / xl
+        lb = 1.0 / xu
+    else:
+        # everything else
+        lb = -inf
+        ub = inf
     return lb, ub
 
 
 def div(xl, xu, yl, yu, feasibility_tol):
-    if yl <= feasibility_tol and yu >= -feasibility_tol:
-        # if the denominator (y) can include 0, then x/y is unbounded.
+    if xl <= 0 <= xu and yl <= 0 <= yu:
         lb = -inf
         ub = inf
     else:
@@ -59,7 +82,7 @@ def div(xl, xu, yl, yu, feasibility_tol):
     return lb, ub
 
 
-def power(xl, xu, yl, yu):
+def power(xl, xu, yl, yu, feasibility_tol):
     """
     Compute bounds on x**y.
     """
@@ -67,24 +90,26 @@ def power(xl, xu, yl, yu):
         """
         If x is always positive, things are simple. We only need to worry about the sign of y.
         """
-        if yl < 0 and yu > 0:
+        if yl < 0 < yu:
             lb = min(xu ** yl, xl ** yu)
             ub = max(xl ** yl, xu ** yu)
         elif yl >= 0:
             lb = min(xl**yl, xl**yu)
             ub = max(xu**yl, xu**yu)
-        elif yu <= 0:
+        else:  # yu <= 0:
             lb = min(xu**yl, xu**yu)
             ub = max(xl**yl, xl**yu)
-        else:
-            raise DeveloperError()
     elif xl == 0:
         if yl >= 0:
             lb = min(xl ** yl, xl ** yu)
             ub = max(xu ** yl, xu ** yu)
+        elif yu <= 0:
+            lb, ub = inv(*power(xl, xu, *sub(0, 0, yl, yu), feasibility_tol), feasibility_tol)
         else:
-            lb = -inf
-            ub = inf
+            lb1, ub1 = power(xl, xu, 0, yu, feasibility_tol)
+            lb2, ub2 = power(xl, xu, yl, 0, feasibility_tol)
+            lb = min(lb1, lb2)
+            ub = max(ub1, ub2)
     elif yl == yu and yl == round(yl):
         # the exponent is an integer, so x can be negative
         """
@@ -140,7 +165,7 @@ def power(xl, xu, yl, yu):
             msg += 'The upper bound of a variable raised to the power of {0} is {1}'.format(yl, xu)
             raise InfeasibleConstraintException(msg)
         xl = 0
-        lb, ub = power(xl, xu, yl, yu)
+        lb, ub = power(xl, xu, yl, yu, feasibility_tol)
     else:
         lb = -inf
         ub = inf
