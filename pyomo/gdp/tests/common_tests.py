@@ -9,7 +9,9 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.environ import TransformationFactory, ConcreteModel, Constraint, Var, Objective, Block, Any, RangeSet, Expression, value
+from pyomo.environ import (TransformationFactory, ConcreteModel, Constraint,
+                           Var, Objective, Block, Any, RangeSet, Expression,
+                           value)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.core.base import constraint, ComponentUID
 from pyomo.repn import generate_standard_repn
@@ -68,8 +70,8 @@ def checkb0TargetsInactive(self, m):
 
 def checkb0TargetsTransformed(self, m, transformation):
     trans = TransformationFactory('gdp.%s' % transformation)
-    disjBlock = m.b[0].component("_pyomo_gdp_%s_reformulation" % transformation).\
-                relaxedDisjuncts
+    disjBlock = m.b[0].component(
+        "_pyomo_gdp_%s_reformulation" % transformation).relaxedDisjuncts
     self.assertEqual(len(disjBlock), 2)
     self.assertIsInstance(disjBlock[0].component("b[0].disjunct[0].c"),
                           Constraint)
