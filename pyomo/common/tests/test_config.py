@@ -2260,16 +2260,16 @@ c: 1.0
         # function types
         self.assertIs(_picklable(_display, obj), _display)
         if local_picklable:
-            self.assertIs(_picklable(local_fcn, obj), local_picklable)
+            self.assertIs(_picklable(local_fcn, obj), local_fcn)
         else:
-            self.assertIsNot(_picklable(local_fcn, obj), local_picklable)
+            self.assertIsNot(_picklable(local_fcn, obj), local_fcn)
 
         # Twice: implicit test that the result is not cached
         self.assertIs(_picklable(_display, obj), _display)
         if local_picklable:
-            self.assertIs(_picklable(local_fcn, obj), local_picklable)
+            self.assertIs(_picklable(local_fcn, obj), local_fcn)
         else:
-            self.assertIsNot(_picklable(local_fcn, obj), local_picklable)
+            self.assertIsNot(_picklable(local_fcn, obj), local_fcn)
 
         self.assertIn(types.FunctionType, _picklable.unknowable_types)
         self.assertNotIn(types.FunctionType, _picklable.known)
