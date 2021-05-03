@@ -16,6 +16,7 @@
 #  ___________________________________________________________________________
 
 import argparse
+import builtins
 import enum
 import inspect
 import io
@@ -26,7 +27,7 @@ import platform
 import re
 import sys
 from textwrap import wrap
-import builtins
+import types
 
 from pyomo.common.deprecation import deprecated
 from pyomo.common.modeling import NoArgumentGiven
@@ -888,7 +889,8 @@ def _picklable(field,obj):
         return field if _picklable.known[ftype] else _UnpickleableDomain(obj)
     try:
         pickle.dumps(field)
-        _picklable.known[ftype] = True
+        if ftype not in _picklable.unknowable_types:
+            _picklable.known[ftype] = True
         return field
     except:
         # Contrary to the documentation, Python is not at all consistent
@@ -906,10 +908,16 @@ def _picklable(field,obj):
         # of RuntimeError).
         if isinstance(sys.exc_info()[0], RuntimeError):
             raise
-        _picklable.known[ftype] = False
+        if ftype not in _picklable.unknowable_types:
+            _picklable.known[ftype] = False
         return _UnpickleableDomain(obj)
 
 _picklable.known = {}
+# The "picklability" of some types is not categorically "knowable"
+# (e.g., functions can be pickled, but only if they are declared at the
+# module scope)
+_picklable.unknowable_types = {types.FunctionType,}
+
 
 class ConfigBase(object):
     __slots__ = ('_parent', '_name', '_userSet', '_userAccessed', '_data',

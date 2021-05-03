@@ -30,6 +30,7 @@ import os.path
 import pickle
 import re
 import sys
+import types
 import pyomo.common.unittest as unittest
 
 from io import StringIO
@@ -44,7 +45,7 @@ from pyomo.common.config import (
     PositiveInt, NegativeInt, NonPositiveInt, NonNegativeInt,
     PositiveFloat, NegativeFloat, NonPositiveFloat, NonNegativeFloat,
     In, Path, PathList, ConfigEnum,
-    _UnpickleableDomain,
+    _UnpickleableDomain, _picklable,
 )
 from pyomo.common.log import LoggingIntercept
 
@@ -2245,6 +2246,33 @@ c: 1.0
             self.assertIn('dill', sys.modules)
             self.assertEqual(cfg2['lambda'], 6)
 
+    def test_unknowable_types(self):
+        obj = ConfigValue()
+        def local_fcn():
+            pass
+        try:
+            pickle.dumps(local_fcn)
+            local_picklable = True
+        except:
+            local_picklable = False
+
+        # Test that _picklable does not cache the picklability of
+        # function types
+        self.assertIs(_picklable(_display, obj), _display)
+        if local_picklable:
+            self.assertIs(_picklable(local_fcn, obj), local_picklable)
+        else:
+            self.assertIsNot(_picklable(local_fcn, obj), local_picklable)
+
+        # Twice: implicit test that the result is not cached
+        self.assertIs(_picklable(_display, obj), _display)
+        if local_picklable:
+            self.assertIs(_picklable(local_fcn, obj), local_picklable)
+        else:
+            self.assertIsNot(_picklable(local_fcn, obj), local_picklable)
+
+        self.assertIn(types.FunctionType, _picklable.unknowable_types)
+        self.assertNotIn(types.FunctionType, _picklable.known)
 
     def test_self_assignment(self):
         cfg = ConfigDict()
