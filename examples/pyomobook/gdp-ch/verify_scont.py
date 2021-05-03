@@ -23,9 +23,9 @@ def verify_file(fname):
     for i in range(3):
         x[i] = ans['Solution'][1]['Variable'].get('x[%s]'%i, ZERO)['Value']
         iv[i,0] = ans['Solution'][1]['Variable'].get(
-            'd_0[%s].indicator_var'%i, ZERO)['Value']
+            'd_0[%s].binary_indicator_var'%i, ZERO)['Value']
         iv[i,1] = ans['Solution'][1]['Variable'].get(
-            'd_nonzero[%s].indicator_var'%i, ZERO)['Value']
+            'd_nonzero[%s].binary_indicator_var'%i, ZERO)['Value']
     verify(obj, x, iv)
 
 def verify_model(model):
@@ -35,8 +35,8 @@ def verify_model(model):
     iv = {}
     for i in range(3):
         x[i] = model.x[i]()
-        iv[i,0] = model.d_0[i].indicator_var()
-        iv[i,1] = model.d_nonzero[i].indicator_var()
+        iv[i,0] = model.d_0[i].binary_indicator_var()
+        iv[i,1] = model.d_nonzero[i].binary_indicator_var()
     verify(obj, x, iv)
 
 if __name__ == '__main__':

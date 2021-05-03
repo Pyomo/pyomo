@@ -76,3 +76,13 @@ model.startupState = pyo.LogicalConstraint(
     model.GENERATORS, model.TIME, rule=startupState)
 # @:logic
 
+#
+# Fictitious objective to form a legal LP file
+#
+@model.Objective()
+def obj(m):
+    return sum(m.Power[g, t] for g in m.GENERATORS for t in m.TIME)
+
+@model.Constraint(model.GENERATORS)
+def nontrivial(m, g):
+    return sum(m.Power[g, t] for t in m.TIME) >= len(m.TIME)/2 * m.MinPower[g]
