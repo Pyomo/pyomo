@@ -88,7 +88,7 @@ class XpressDirect(DirectSolver):
             self._python_api_exists = False
         finally:
             # In some versions of XPRESS (notably 8.9.0), `import
-            # xpress` temporarily changes the CWD.  If the import failes
+            # xpress` temporarily changes the CWD.  If the import fails
             # (e.g., due to an expired license), the CWD is not always
             # restored.  This block ensures that the CWD is preserved.
             os.chdir(_cwd)
