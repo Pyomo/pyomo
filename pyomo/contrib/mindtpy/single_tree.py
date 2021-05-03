@@ -336,7 +336,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             'MIP %s: OBJ (at current node): %s  Bound: %s  LB: %s  UB: %s  TIME: %s'
             % (solve_data.mip_iter, self.get_objective_value(), self.get_best_objective_value(),
                 solve_data.LB, solve_data.UB, round(get_main_elapsed_time(
-                solve_data.timing),2)))
+                    solve_data.timing), 2)))
 
     def handle_lazy_subproblem_optimal(self, fixed_nlp, solve_data, config, opt):
         """
@@ -374,7 +374,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
 
         config.logger.info(
             'Fixed-NLP {}: OBJ: {}  LB: {}  UB: {}  TIME: {}'
-            .format(solve_data.nlp_iter, value(main_objective.expr), solve_data.LB, solve_data.UB, round(get_main_elapsed_time(solve_data.timing),2)))
+            .format(solve_data.nlp_iter, value(main_objective.expr), solve_data.LB, solve_data.UB, round(get_main_elapsed_time(solve_data.timing), 2)))
 
         if solve_data.solution_improved:
             solve_data.best_solution_found = fixed_nlp.clone()
@@ -482,7 +482,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 'MindtPy unable to handle NLP subproblem termination '
                 'condition of {}'.format(termination_condition))
 
-    def handle_lazy_regularization_problem(self,main_mip, main_mip_results,solve_data, config):
+    def handle_lazy_regularization_problem(self, main_mip, main_mip_results, solve_data, config):
         if main_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
             handle_main_optimal(
                 main_mip, solve_data, config, update_bound=False)
@@ -497,7 +497,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                         main_mip, solve_data, config, update_bound=False)
                 elif main_mip_results.solver.termination_condition is tc.infeasible:
                     config.logger.info('regularization problem still infeasible with reduced level_coef. '
-                                        'NLP subproblem is generated based on the incumbent solution of the main problem.')
+                                       'NLP subproblem is generated based on the incumbent solution of the main problem.')
                 elif main_mip_results.solver.termination_condition is tc.maxTimeLimit:
                     config.logger.info(
                         'Regularization problem failed to converge within the time limit.')
@@ -516,8 +516,8 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                             main_mip, solve_data, config, update_bound=False)
                     else:
                         config.logger.info('No solution obtained from the regularization subproblem.'
-                                            'Please set mip_solver_tee to True for more informations.'
-                                            'The solution of the OA main problem will be adopted.')
+                                           'Please set mip_solver_tee to True for more informations.'
+                                           'The solution of the OA main problem will be adopted.')
                 else:
                     raise ValueError(
                         'MindtPy unable to handle regularization problem termination condition '
@@ -548,12 +548,10 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 'of %s. Solver message: %s' %
                 (main_mip_results.solver.termination_condition, main_mip_results.solver.message))
 
-
-
     def __call__(self):
         """
         This is an inherent function in LazyConstraintCallback in cplex. 
-        This function is called whenever the a integer solution is found during the branch and bound process
+        This function is called whenever an integer solution is found during the branch and bound process
         """
         solve_data = self.solve_data
         config = self.config
@@ -569,9 +567,9 @@ class LazyOACallback_cplex(LazyConstraintCallback):
 
         if config.add_cuts_at_incumbent:
             self.copy_lazy_var_list_values(opt,
-                                            main_mip.MindtPy_utils.variable_list,
-                                            solve_data.mip.MindtPy_utils.variable_list,
-                                            config)
+                                           main_mip.MindtPy_utils.variable_list,
+                                           solve_data.mip.MindtPy_utils.variable_list,
+                                           config)
             if config.strategy == 'OA':
                 self.add_lazy_oa_cuts(
                     solve_data.mip, None, solve_data, config, opt)
@@ -602,17 +600,18 @@ class LazyOACallback_cplex(LazyConstraintCallback):
 
         # check if the same integer combination is obtained.
         solve_data.curr_int_sol = get_integer_solution(
-            solve_data.working_model,string_zero=True)
+            solve_data.working_model, string_zero=True)
 
         if solve_data.curr_int_sol in set(solve_data.integer_list):
             config.logger.info('This integer combination has been explored. '
-                                'We will skip solving the Fixed-NLP subproblem.')
+                               'We will skip solving the Fixed-NLP subproblem.')
             solve_data.solution_improved = False
             if config.strategy == 'GOA':
                 if config.add_no_good_cuts:
                     var_values = list(
                         v.value for v in solve_data.working_model.MindtPy_utils.variable_list)
-                    self.add_lazy_no_good_cuts(var_values, solve_data, config, opt)
+                    self.add_lazy_no_good_cuts(
+                        var_values, solve_data, config, opt)
                 return
             elif config.strategy == 'OA':
                 return

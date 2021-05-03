@@ -73,7 +73,7 @@ class MindtPySolver(object):
 
         Warning: this solver is still in beta. Keyword arguments subject to
         change. Undocumented keyword arguments definitely subject to change.
-        
+
         Args:
             model (Block): a Pyomo model or block to be solved
         """
@@ -120,7 +120,7 @@ class MindtPySolver(object):
                               use_mcpp=config.use_mcpp,
                               updata_var_con_list=config.add_regularization is None
                               )
-            # The epigraph constraint is very "flat" for brnaching rules,
+            # The epigraph constraint is very "flat" for branching rules,
             # we want to use to original model for the main mip.
             if MindtPy.objective_list[0].expr.polynomial_degree() in (1, 0) and config.add_regularization is not None:
                 MindtPy.objective_list[0].activate()

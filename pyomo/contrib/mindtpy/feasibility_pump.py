@@ -71,7 +71,7 @@ def solve_fp_subproblem(solve_data, config):
     # the norm type is consistant with the norm obj of the FP-main problem.
     if config.fp_norm_constraint:
         if config.fp_main_norm == 'L1':
-            # TODO: check if we can access the block defined in FP-main probelm
+            # TODO: check if we can access the block defined in FP-main problem
             generate_norm1_norm_constraint(
                 fp_nlp, solve_data.mip, config, discrete_only=True)
         elif config.fp_main_norm == 'L2':

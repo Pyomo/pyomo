@@ -29,7 +29,7 @@ def _get_MindtPy_config():
     ))
     CONFIG.declare('strategy', ConfigValue(
         default='OA',
-        domain=In(['OA', 'ECP' ,'GOA', 'FP']),
+        domain=In(['OA', 'ECP', 'GOA', 'FP']),
         description='Decomposition strategy',
         doc='MINLP Decomposition strategy to be applied to the method. '
             'Currently available Outer Approximation (OA), Extended Cutting '
@@ -415,7 +415,6 @@ def _add_loa_configs(CONFIG):
     ))
 
 
-
 def check_config(config):
     # configuration confirmation
     if config.add_regularization in {'grad_lag', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
@@ -423,7 +422,8 @@ def check_config(config):
     if config.add_regularization is not None:
         if config.regularization_mip_threads == 0 and config.threads > 0:
             config.regularization_mip_threads = config.threads
-            config.logger.info('Set regularization_mip_threads equal to threads')
+            config.logger.info(
+                'Set regularization_mip_threads equal to threads')
         if config.single_tree:
             config.add_cuts_at_incumbent = True
             # if no method is activated by users, we will use use_bb_tree_incumbent by default
@@ -448,7 +448,6 @@ def check_config(config):
     if config.strategy == 'GOA':
         config.add_slack = False
         config.use_mcpp = True
-        # config.integer_to_binary = True
         config.equality_relaxation = False
         config.use_fbbt = True
         # add_no_good_cuts is Ture by default in GOA
@@ -459,7 +458,6 @@ def check_config(config):
         config.init_strategy = 'FP'
         config.iteration_limit = 0
     if config.init_strategy == 'FP':
-        # TODO: Choose one from the following two
         config.add_no_good_cuts = True
         config.use_tabu_list = False
 

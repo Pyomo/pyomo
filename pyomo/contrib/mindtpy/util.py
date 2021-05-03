@@ -82,7 +82,7 @@ def model_is_valid(solve_data, config):
             set_solver_options(mainopt, solve_data,
                                config, solver_type='mip')
             mainopt.solve(solve_data.original_model,
-                            tee=config.mip_solver_tee, **config.mip_solver_args)
+                          tee=config.mip_solver_tee, **config.mip_solver_args)
             return False
 
     if not hasattr(m, 'dual') and config.calculate_dual:  # Set up dual value reporting
@@ -316,7 +316,7 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
     # So PyomoNLP should operate on setpoint_model
 
     # Implementation 1
-    # First calculate jacobin and hessian without assigning variable and constraint sequence, then use get_primal_indices to get the indices.
+    # First calculate Jacobian and Hessian without assigning variable and constraint sequence, then use get_primal_indices to get the indices.
     with time_code(solve_data.timing, 'PyomoNLP'):
         nlp = pyomo_nlp.PyomoNLP(temp_model)
         lam = [-temp_model.dual[constr] if abs(temp_model.dual[constr]) > config.zero_tolerance else 0
