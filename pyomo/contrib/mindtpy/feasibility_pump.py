@@ -221,8 +221,6 @@ def fp_loop(solve_data, config):
             'L_infinity_obj')
 
     # deactivate the improving_objective_cut
-    # solve_data.mip.MindtPy_utils.del_component('fp_mip_obj')
-    # solve_data.mip.MindtPy_utils.objective.activate()
     solve_data.mip.MindtPy_utils.cuts.del_component(
         'improving_objective_cut')
     if not config.fp_transfercuts:
