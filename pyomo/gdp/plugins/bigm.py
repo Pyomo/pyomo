@@ -37,6 +37,8 @@ from pyomo.repn import generate_standard_repn
 from functools import wraps
 from weakref import ref as weakref_ref
 
+from nose.tools import set_trace
+
 logger = logging.getLogger('pyomo.gdp.bigm')
 
 NAME_BUFFER = {}
@@ -493,7 +495,14 @@ class BigM_Transformation(Transformation):
                 continue
             # get this disjunction's relaxation block.
             transBlock = obj.algebraic_constraint().parent_block()
+            # ESJ TODO: I'm confused. Since we created references above, what is
+            # here that we still need to make a reference to? Why is this
+            # breaking the constraint mapping and causing us to not recognize an
+            # untransformed inner disjunction?
+            for block in transBlock.relaxedDisjuncts.values():
+                block.localVarReferences.deactivate()
 
+            transBlock.pprint()
             # move transBlock up to parent component
             self._transfer_transBlock_data(transBlock, destinationBlock)
             # we leave the transformation block because it still has the XOR
