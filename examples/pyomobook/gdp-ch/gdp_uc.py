@@ -70,7 +70,7 @@ model.onState = pyo.LogicalConstraint(
 def startupState(m, g, t):
     if t == m.TIME.first():
         return pyo.LogicalConstraint.Skip
-    return m.GenStartUp[g, t].indicator_var.implies(
+    return m.GenStartup[g, t].indicator_var.implies(
         m.GenOff[g, t-1].indicator_var)
 model.startupState = pyo.LogicalConstraint(
     model.GENERATORS, model.TIME, rule=startupState)
