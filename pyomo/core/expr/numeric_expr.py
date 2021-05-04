@@ -1576,7 +1576,7 @@ def _process_arg(obj):
         if hasattr(obj, 'as_binary'):
             # We assume non-numeric types that have an as_binary method
             # are instances of AutoLinkedBooleanVar.  Calling as_binary
-            # will return a valif Binar Var (and issue the appropriate
+            # will return a valid Binar Var (and issue the appropriate
             # deprecation warning)
             obj = obj.as_binary()
         else:
