@@ -179,7 +179,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
         self._associated_binary = None
 
     def __getstate__(self):
-        state = super(_GeneralBooleanVarData, self).__getstate__()
+        state = super().__getstate__()
         for i in _GeneralBooleanVarData.__slots__:
             state[i] = getattr(self, i)
         if self._associated_binary is not None:
@@ -192,18 +192,9 @@ class _GeneralBooleanVarData(_BooleanVarData):
         Note: adapted from class ComponentData in pyomo.core.base.component
 
         """
-        if state['_associated_binary'] is not None and type(state['_associated_binary']) is not weakref_ref:
-            state['_associated_binary'] = weakref_ref(state['_associated_binary'])
-
-        _base = super(_GeneralBooleanVarData, self)
-        if hasattr(_base, '__setstate__'):
-            _base.__setstate__(state)
-        else:
-            for key, val in state.items():
-                # Note: per the Python data model docs, we explicitly
-                # set the attribute using object.__setattr__() instead
-                # of setting self.__dict__[key] = val.
-                object.__setattr__(self, key, val)
+        super().__setstate__(state)
+        if self._associated_binary is not None:
+            self._associated_binary = weakref_ref(self._associated_binary)
 
     #
     # Abstract Interface
