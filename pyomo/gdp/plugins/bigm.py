@@ -380,7 +380,7 @@ class BigM_Transformation(Transformation):
                             obj.getname(fully_qualified=True,
                                         name_buffer=NAME_BUFFER))
         for disjunct in obj.disjuncts:
-            or_expr += disjunct.indicator_var
+            or_expr += disjunct.binary_indicator_var
             # make suffix list. (We don't need it until we are
             # transforming constraints, but it gets created at the
             # disjunct level, so more efficient to make it here and
@@ -407,7 +407,7 @@ class BigM_Transformation(Transformation):
         # deactivated -> either we've already transformed or user deactivated
         if not obj.active:
             if obj.indicator_var.is_fixed():
-                if value(obj.indicator_var) == 0:
+                if not value(obj.indicator_var):
                     # The user cleanly deactivated the disjunct: there
                     # is nothing for us to do here.
                     return
@@ -422,7 +422,7 @@ class BigM_Transformation(Transformation):
                     "indicator_var is not fixed and the disjunct does not "
                     "appear to have been relaxed. This makes no sense. "
                     "(If the intent is to deactivate the disjunct, fix its "
-                    "indicator_var to 0.)"
+                    "indicator_var to False.)"
                     % ( obj.name, ))
 
         if obj._transformation_block is not None:
@@ -696,7 +696,7 @@ class BigM_Transformation(Transformation):
                 if M[0] is None:
                     raise GDP_Error("Cannot relax disjunctive constraint '%s' "
                                     "because M is not defined." % name)
-                M_expr = M[0] * (1 - disjunct.indicator_var)
+                M_expr = M[0] * (1 - disjunct.binary_indicator_var)
                 newConstraint.add(i_lb, c.lower <= c. body - M_expr)
                 constraintMap[
                     'transformedConstraints'][c] = [newConstraint[i_lb]]
@@ -705,7 +705,7 @@ class BigM_Transformation(Transformation):
                 if M[1] is None:
                     raise GDP_Error("Cannot relax disjunctive constraint '%s' "
                                     "because M is not defined." % name)
-                M_expr = M[1] * (1 - disjunct.indicator_var)
+                M_expr = M[1] * (1 - disjunct.binary_indicator_var)
                 newConstraint.add(i_ub, c.body - M_expr <= c.upper)
                 transformed = constraintMap['transformedConstraints'].get(c)
                 if transformed is not None:

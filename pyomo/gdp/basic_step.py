@@ -24,6 +24,7 @@ def _pseudo_clone(self):
     memo = {
         '__block_scope__': {id(self): True, id(None): False},
         id(self.indicator_var): self.indicator_var,
+        id(self.binary_indicator_var): self.binary_indicator_var,
     }
     new_block = copy.deepcopy(self, memo)
     new_block._parent = None
@@ -77,7 +78,8 @@ def apply_basic_step(disjunctions_or_constraints):
             tmp = _pseudo_clone(disjunctions[i].disjuncts[
                 idx[i] if isinstance(idx, tuple) else idx])
             for k,v in list(tmp.component_map().items()):
-                if k == 'indicator_var':
+                if v.parent_block() is not tmp:
+                    # Skip indicator_var and binary_indicator_var
                     continue
                 tmp.del_component(k)
                 ans.disjuncts[idx].src[i].add_component(k,v)
@@ -107,15 +109,18 @@ def apply_basic_step(disjunctions_or_constraints):
     for i in ans.DISJUNCTIONS:
         for j in range(len(disjunctions[i].disjuncts)):
             orig_var = disjunctions[i].disjuncts[j].indicator_var
+            orig_binary_var = orig_var.get_associated_binary()
             ans.indicator_links.add(
-                orig_var ==
-                sum( ans.disjuncts[idx].indicator_var for idx in ans.INDEX
+                orig_binary_var ==
+                sum( ans.disjuncts[idx].binary_indicator_var
+                     for idx in ans.INDEX
                      if (idx[i] if isinstance(idx, tuple) else idx) == j ))
             # and throw on a Reference to original on the block
-            name_base = orig_var.getname(fully_qualified=True,
-                                         name_buffer=NAME_BUFFER)
-            ans.add_component(unique_component_name( ans, name_base),
-                              Reference(orig_var))
+            for v in (orig_var, orig_binary_var):
+                name_base = v.getname(
+                    fully_qualified=True, name_buffer=NAME_BUFFER)
+                ans.add_component(unique_component_name( ans, name_base),
+                                  Reference(v))
 
     # Form the new disjunction
     ans.disjunction = Disjunction(expr=[ans.disjuncts[i] for i in ans.INDEX])

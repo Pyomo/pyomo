@@ -378,7 +378,7 @@ def check_model_algebraic(instance):
 def _disjunct_not_fixed_true(disjunct):
     # Return true if the disjunct indicator variable is not fixed to True
     return not (disjunct.indicator_var.fixed and
-                disjunct.indicator_var.value == 1)
+                disjunct.indicator_var.value)
 
 def _disjunct_on_active_block(disjunct):
     # Check first to make sure that the disjunct is not a descendent of an
@@ -391,7 +391,7 @@ def _disjunct_on_active_block(disjunct):
             return False
         # properly deactivated Disjunct
         elif (parent_block.ctype is Disjunct and not parent_block.active
-              and parent_block.indicator_var.value == 0
+              and parent_block.indicator_var.value == False
               and parent_block.indicator_var.fixed):
             return False
         else:
