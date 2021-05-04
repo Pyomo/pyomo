@@ -19,8 +19,8 @@ import logging
 logger = logging.getLogger('pyomo.gdp')
 
 
-def _pseudo_clone(self):
-    """Clone everything in a Disjunct except for the indicator_var"""
+def _clone_all_but_indicator_vars(self):
+    """Clone everything in a Disjunct except for the indicator_vars"""
     memo = {
         '__block_scope__': {id(self): True, id(None): False},
         id(self.indicator_var): self.indicator_var,
@@ -75,7 +75,7 @@ def apply_basic_step(disjunctions_or_constraints):
         #
         ans.disjuncts[idx].src = Block(ans.DISJUNCTIONS)
         for i in ans.DISJUNCTIONS:
-            tmp = _pseudo_clone(disjunctions[i].disjuncts[
+            tmp = _clone_all_but_indicator_vars(disjunctions[i].disjuncts[
                 idx[i] if isinstance(idx, tuple) else idx])
             for k,v in list(tmp.component_map().items()):
                 if v.parent_block() is not tmp:
