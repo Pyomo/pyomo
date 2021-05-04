@@ -2308,7 +2308,8 @@ c: 1.0
             self.assertIsNot(_picklable(local_class, obj), local_class)
             self.assertEqual(_picklable.known.get(local_class, None), False)
 
-        # Ensure that none of the added `type` to the known dict
+        # Ensure that none of the above added the type `type` to the
+        # "known" dict
         self.assertNotIn(type, _picklable.known)
 
 
