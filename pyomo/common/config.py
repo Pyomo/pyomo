@@ -885,6 +885,10 @@ class _UnpickleableDomain(object):
 
 def _picklable(field,obj):
     ftype = type(field)
+    # If the field is a type (class, etc), cache the 'known' status of
+    # the actual field type and not the generic 'type' class
+    if ftype is type:
+        ftype = field
     if ftype in _picklable.known:
         return field if _picklable.known[ftype] else _UnpickleableDomain(obj)
     try:
@@ -916,7 +920,7 @@ _picklable.known = {}
 # The "picklability" of some types is not categorically "knowable"
 # (e.g., functions can be pickled, but only if they are declared at the
 # module scope)
-_picklable.unknowable_types = {types.FunctionType,}
+_picklable.unknowable_types = {type, types.FunctionType,}
 
 
 class ConfigBase(object):

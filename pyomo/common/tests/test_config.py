@@ -56,6 +56,11 @@ def _display(obj, *args):
     return test.getvalue()
 
 
+class GlobalClass(object):
+    "test class for test_known_types"
+    pass
+
+
 class TestConfigDomains(unittest.TestCase):
     def test_PositiveInt(self):
         c = ConfigDict()
@@ -2273,6 +2278,39 @@ c: 1.0
 
         self.assertIn(types.FunctionType, _picklable.unknowable_types)
         self.assertNotIn(types.FunctionType, _picklable.known)
+
+    def test_known_types(self):
+        def local_fcn():
+            class LocalClass(object):
+                pass
+            return LocalClass
+        local_class = local_fcn()
+
+        self.assertIsNone(_picklable.known.get(local_class, None))
+        self.assertIsNone(_picklable.known.get(GlobalClass, None))
+
+        obj = ConfigValue()
+
+        # Test that a global class is picklable
+        self.assertIs(_picklable(GlobalClass, obj), GlobalClass)
+        self.assertEqual(_picklable.known.get(GlobalClass, None), True)
+
+        # Test that a local class is (most likely) not picklable
+        try:
+            pickle.dumps(local_class)
+            local_picklable = True
+        except:
+            local_picklable = False
+        if local_picklable:
+            self.assertIs(_picklable(local_class, obj), local_class)
+            self.assertEqual(_picklable.known.get(local_class, None), True)
+        else:
+            self.assertIsNot(_picklable(local_class, obj), local_class)
+            self.assertEqual(_picklable.known.get(local_class, None), False)
+
+        # Ensure that none of the added `type` to the known dict
+        self.assertNotIn(type, _picklable.known)
+
 
     def test_self_assignment(self):
         cfg = ConfigDict()
