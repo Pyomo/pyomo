@@ -12,6 +12,7 @@ import logging
 import sys
 import types
 
+from math import fabs
 from weakref import ref as weakref_ref
 
 from pyomo.common.deprecation import deprecation_warning
@@ -57,6 +58,9 @@ class AutoLinkedBinaryVar(SimpleVar):
     Disjunct.indicator_var, it only supports Scalar instances and does
     not support indexing.
     """
+
+    INTEGER_TOLERANCE = 0.001
+
     def __init__(self, boolean_var=None):
         super().__init__(domain=Binary)
         self._associated_boolean = weakref_ref(boolean_var)
@@ -74,16 +78,17 @@ class AutoLinkedBinaryVar(SimpleVar):
         # the property setter explicitly.
         SimpleVar.value.fset(self, val)
         bool_var = self.get_associated_boolean()
+        # Only update the associated boolean value if it is needed
+        # to match the current (potentially fractional) binary value.
+        # (This prevents infinite recursion.)
         if val is None:
-            if bool_var.value is not None:
-                bool_var.set_value(None)
+            bool_val = None
+        elif fabs(val - 0.5) < 0.5 - AutoLinkedBinaryVar.INTEGER_TOLERANCE:
+            bool_val = None
         else:
-            # Only update the associated boolean value if it is needed
-            # to match the current (potentially fractional) binary value.
-            # (This prevents infinite recursion.)
             bool_val = bool(int(val + 0.5))
-            if bool_val != bool_var.value:
-                bool_var.set_value(bool_val)
+        if bool_val != bool_var.value:
+            bool_var.set_value(bool_val)
 
     def fix(self, *val):
         super().fix(*val)
@@ -159,27 +164,35 @@ class AutoLinkedBooleanVar(SimpleBooleanVar):
         # the property setter explicitly.
         SimpleBooleanVar.value.fset(self, val)
         bin_var = self.get_associated_binary()
-        if val is None:
-            if bin_var.value is not None:
-                bin_var.set_value(None)
+        bin_val = bin_var.value
+        if bin_val is None:
+            bool_val = None
+        elif fabs(bin_val - 0.5) < 0.5 - AutoLinkedBinaryVar.INTEGER_TOLERANCE:
+            bool_val = None
         else:
-            # Only update the associated (potentially fractional) binary
-            # value if it is needed to match the current Boolean value.
-            # (This prevents infinite recursion.)
-            bin_val = bin_var.value
-            if bin_val is None:
-                bin_val = 2 # something not in [0..1]
-            if int(bin_val + 0.5) != int(self.value):
-                bin_var.set_value(int(self.value))
+            bool_val = bool(int(bin_val + 0.5))
+        # Fetch the current value (so that it is cast to None/bool)
+        val = self.value
+        # Only update the associated (potentially fractional) binary
+        # value if it is needed to match the current Boolean value.
+        # (This prevents infinite recursion.)
+        if val != bool_val:
+            if val is not None:
+                val = int(val)
+            bin_var.set_value(val)
 
     def fix(self, *val):
         super().fix(*val)
         bin_var = self.get_associated_binary()
-        if not bin_var.is_fixed():
-            # Note: if someone fixes the boolean to True/False then we
+
+        val = self.value
+        if val is not None:
+            val = int(val)
+        if not bin_var.is_fixed() or bin_var.value != val:
+            # Note: if someone fixes the Boolean to True/False then we
             # need to snap the binary to 1/0 (and not leave it at the
             # potentially fractional value)
-            bin_var.fix(int(self.value))
+            bin_var.fix(val)
 
     def unfix(self):
         super().unfix()
