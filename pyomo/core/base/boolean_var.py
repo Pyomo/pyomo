@@ -218,6 +218,10 @@ class _GeneralBooleanVarData(_BooleanVarData):
     @value.setter
     def value(self, val):
         """Set the value for this variable."""
+        if type(val) not in {bool, type(None)}:
+            logger.warning("implicitly casting '%s' value %s to bool"
+                           % (self.name, val))
+            val = bool(val)
         self._value = val
 
     @property
