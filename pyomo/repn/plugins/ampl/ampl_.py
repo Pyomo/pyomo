@@ -1819,7 +1819,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             else:
                 _parent = v.parent_block()
                 while _parent is not None and _parent is not model:
-                    if _parent.ctype is not model.type():
+                    if _parent.ctype is not model.ctype:
                         _errors.append(
                             "Variable '%s' exists within %s '%s', "
                             "but is used by an active "
