@@ -9,7 +9,10 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.environ import TransformationFactory, ConcreteModel, Constraint, Var, Objective, Block, Any, RangeSet, Expression, value
+from pyomo.environ import (
+    TransformationFactory, ConcreteModel, Constraint, Var, Objective,
+    Block, Any, RangeSet, Expression, value, BooleanVar
+)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.core.base import constraint, ComponentUID
 from pyomo.repn import generate_standard_repn
@@ -20,6 +23,10 @@ import random
 # utitility functions
 
 def check_linear_coef(self, repn, var, coef):
+    # Map logical variables to their Boolean counterparts
+    if isinstance(var, BooleanVar):
+        var = var.get_associated_binary()
+
     # utility used to check a variable-coefficient pair in a standard_repn
     var_id = None
     for i,v in enumerate(repn.linear_vars):
@@ -118,7 +125,7 @@ def check_improperly_deactivated_disjuncts(self, transformation):
     self.assertRaisesRegex(
         GDP_Error,
         r"The disjunct 'd\[0\]' is deactivated, but the "
-        r"indicator_var is fixed to 1. This makes no sense.",
+        r"indicator_var is fixed to True. This makes no sense.",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m)
 
@@ -303,12 +310,14 @@ def check_indicator_vars(self, transformation):
     oldblock = m.component("d")
     # have indicator variables on original disjuncts and they are still
     # active.
-    self.assertIsInstance(oldblock[0].indicator_var, Var)
-    self.assertTrue(oldblock[0].indicator_var.active)
-    self.assertTrue(oldblock[0].indicator_var.is_binary())
-    self.assertIsInstance(oldblock[1].indicator_var, Var)
-    self.assertTrue(oldblock[1].indicator_var.active)
-    self.assertTrue(oldblock[1].indicator_var.is_binary())
+    _binary0 = oldblock[0].binary_indicator_var
+    self.assertIsInstance(_binary0, Var)
+    self.assertTrue(_binary0.active)
+    self.assertTrue(_binary0.is_binary())
+    _binary1 = oldblock[1].binary_indicator_var
+    self.assertIsInstance(_binary1, Var)
+    self.assertTrue(_binary1.active)
+    self.assertTrue(_binary1.is_binary())
 
 def check_xor_constraint(self, transformation):
     # verify xor constraint for a SimpleDisjunction
@@ -320,8 +329,8 @@ def check_xor_constraint(self, transformation):
     xor = rBlock.component("disjunction_xor")
     self.assertIsInstance(xor, Constraint)
     self.assertEqual(len(xor), 1)
-    self.assertIs(m.d[0].indicator_var, xor.body.arg(0))
-    self.assertIs(m.d[1].indicator_var, xor.body.arg(1))
+    self.assertIs(m.d[0].binary_indicator_var, xor.body.arg(0))
+    self.assertIs(m.d[1].binary_indicator_var, xor.body.arg(1))
     repn = generate_standard_repn(xor.body)
     self.assertTrue(repn.is_linear())
     self.assertEqual(repn.constant, 0)
@@ -1160,7 +1169,7 @@ def check_deactivated_disjunct_nonzero_indicator_var(self, transformation):
     self.assertRaisesRegex(
         GDP_Error,
         r"The disjunct 'disjunction_disjuncts\[0\]' is deactivated, but the "
-        r"indicator_var is fixed to 1. This makes no sense.",
+        r"indicator_var is fixed to True. This makes no sense.",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m)
 
@@ -1178,7 +1187,7 @@ def check_deactivated_disjunct_unfixed_indicator_var(self, transformation):
         r"indicator_var is not fixed and the disjunct does not "
         r"appear to have been relaxed. This makes no sense. "
         r"\(If the intent is to deactivate the disjunct, fix its "
-        r"indicator_var to 0.\)",
+        r"indicator_var to False.\)",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m)
 
@@ -1386,7 +1395,7 @@ def check_mappings_between_disjunctions_and_xors(self, transformation):
     disjunctionPairs = [
         (m.disjunction, transBlock.disjunction_xor),
         (m.disjunct[1].innerdisjunction[0],
-         m.disjunct[1].component("_pyomo_gdp_%s_reformulation" 
+         m.disjunct[1].component("_pyomo_gdp_%s_reformulation"
                                  % transformation).\
          component("disjunct[1].innerdisjunction_xor")[0]),
         (m.simpledisjunct.innerdisjunction,
