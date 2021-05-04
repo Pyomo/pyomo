@@ -136,16 +136,17 @@ class AutoLinkedBooleanVar(SimpleBooleanVar):
         """Return the binary variable associated with this Boolean variable.
 
         This method returns the associated binary variable along with a
-        deprecation warning about using the Boolean variable in a Binary
+        deprecation warning about using the Boolean variable in a numeric
         context.
 
         """
         deprecation_warning(
-            "Implicit conversion of the Boolean indicator_var to a binary "
-            "variable is deprecated and will be removed.  Either express "
-            "constraints on indicator_var using LogicalConstraints or "
-            "work with the Binary variable from "
-            "indicator_var.get_associated_binary()", version='TBD')
+            "Implicit conversion of the Boolean indicator_var '%s' to a "
+            "binary variable is deprecated and will be removed.  "
+            "Either express constraints on indicator_var using "
+            "LogicalConstraints or work with the associated binary "
+            "variable from indicator_var.get_associated_binary()"
+            % (self.name,), version='TBD')
         return self.get_associated_binary()
 
     @property

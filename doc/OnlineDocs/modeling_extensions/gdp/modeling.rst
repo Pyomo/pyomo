@@ -203,16 +203,16 @@ Integration with Disjunctions
 
 .. note::
 
-    This section is subject to change between this date and August 2020.
-    The current plan is to provide a deprecation path changing ``indicator_var`` from binary ``Var`` to ``BooleanVar``.
+    Historically, the ``indicator_var`` on ``Disjunct`` objects was
+    implemented as a binary ``Var``.  Beginning in Pyomo 6.0, that has
+    been changed to the more mathematically correct ``BooleanVar``, with
+    the associated binary variable available as
+    ``binary_indicator_var``.
 
-The logical expression system is designed to augment the previously introduced ``Disjunct`` and ``Disjunction`` components, the only original logical modeling types in Pyomo.GDP.
-Note that for historical reasons, an indicator variable ``indicator_var`` was originally implemented in Pyomo.GDP as a binary variable.
-Mathematically, the disjunct indicator variable is Boolean.
-We now automatically add an indicator Boolean, named ``indicator_bool``, to a newly created disjunct and associate it with the pre-existing ``indicator_var`` for backwards-compatibility.
-This new ``indicator_bool`` can participate in logical propositions.
-
-For convenience, we can also alias these ``BooleanVar`` objects using a ``Reference``.
+The logical expression system is designed to augment the previously
+introduced ``Disjunct`` and ``Disjunction`` components.  Mathematically,
+the disjunct indicator variable is Boolean, and can be used directly in
+logical propositions.
 
 Here, we demonstrate this capability with a toy example:
 
@@ -242,13 +242,9 @@ Here, we demonstrate this capability with a toy example:
     >>> m.d[4].c = Constraint(expr=m.x == 2.5)
     >>> m.o = Objective(expr=m.x)
 
-    >>> # Create Boolean variables associated with the disjuncts.
-    >>> m.Y = BooleanVar(m.s)
-    >>> for idx in m.Y:
-    ...    m.Y[idx].associate_binary_var(m.d[idx].indicator_var)
-
     >>> # Add the logical proposition
-    >>> m.p = LogicalConstraint(expr=m.Y[1].implies(m.Y[4]))
+    >>> m.p = LogicalConstraint(
+    ...    expr=m.d[1].indicator_var.implies(m.d[4].indicator_var))
     >>> # Note: the implicit XOR enforced by m.djn[1] and m.djn[2] still apply
 
     >>> # Convert logical propositions to linear algebraic constraints
@@ -256,8 +252,9 @@ Here, we demonstrate this capability with a toy example:
     >>> TransformationFactory('core.logical_to_linear').apply_to(m)
     >>> TransformationFactory('gdp.bigm').apply_to(m)
 
-    >>> m.Y.display()  # Before solve, Boolean vars have no value
-    Y : Size=4, Index=s
+    >>> # Before solve, Boolean vars have no value
+    >>> Reference(m.d[:].indicator_var).display()
+    IndexedBooleanVar : Size=4, Index=s
         Key : Value : Fixed : Stale
           1 :  None : False :  True
           2 :  None : False :  True
@@ -267,16 +264,15 @@ Here, we demonstrate this capability with a toy example:
     >>> # Solve the reformulated model and update the Boolean variables
     >>> # based on the algebraic model results
     >>> run_data = SolverFactory('glpk').solve(m)
-    >>> update_boolean_vars_from_binary(m)
-    >>> m.Y.display()
-    Y : Size=4, Index=s
+    >>> Reference(m.d[:].indicator_var).display()
+    IndexedBooleanVar : Size=4, Index=s
         Key : Value : Fixed : Stale
           1 :  True : False : False
           2 : False : False : False
           3 : False : False : False
           4 :  True : False : False
 
-We elaborate on the ``logical_to_linear`` transformation and the ``update_boolean_vars_from_binary()`` function :ref:`on the next page <gdp-reformulations>`.
+We elaborate on the ``logical_to_linear`` transformation :ref:`on the next page <gdp-reformulations>`.
 
 .. _gdp-advanced-examples:
 
