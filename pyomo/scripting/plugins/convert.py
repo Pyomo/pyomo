@@ -13,7 +13,7 @@ import sys
 import argparse
 
 from pyomo.common.collections import Bunch
-from pyomo.opt import ProblemConfigFactory, guess_format
+from pyomo.opt import guess_format
 from pyomo.scripting.pyomo_parser import add_subparser, CustomHelpFormatter
 
 
