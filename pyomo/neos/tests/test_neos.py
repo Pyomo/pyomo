@@ -255,10 +255,17 @@ class TestSolvers_pyomo_cmd_min(RunAllNEOSSolvers, PyomoCommandDriver,
                                 unittest.TestCase):
     sense = pyo.minimize
 
-    # Add the CBC test to the nightly suite
+    # Add the CBC test to the nightly suite, but with a non-fatal
+    # (short) timeout
     @unittest.category('nightly')
-    def test_cbc(self):
-        super(TestSolvers_pyomo_cmd_min, self).test_cbc()
+    def test_cbc_nightly(self):
+        try:
+            test = unittest.timeout(60)(
+                super(TestSolvers_pyomo_cmd_min, self).test_cbc
+            )
+            test()
+        except TimeoutError:
+            self.skipTest("NEOS solve timed out")
 
 if __name__ == "__main__":
     unittest.main()
