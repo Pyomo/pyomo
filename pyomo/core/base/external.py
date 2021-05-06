@@ -3,7 +3,7 @@
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -55,7 +55,7 @@ class ExternalFunction(Component):
         # block._add_temporary_set assumes ALL components define an
         # index.  Sigh.
         self._index = None
-        
+
     def get_units(self):
         """Return the units for this ExternalFunction"""
         return self._units
@@ -85,7 +85,7 @@ class ExternalFunction(Component):
                     pass
                 if not arg.__class__ in native_types and arg.is_potentially_variable():
                     pv = True
-            except AttributeError:    
+            except AttributeError:
                 args_[i] = NonNumericValue(arg)
         #
         if pv:
@@ -189,6 +189,17 @@ class AMPLExternalFunction(ExternalFunction):
         FUNCADD = CFUNCTYPE( None, POINTER(_AMPLEXPORTS) )
         FUNCADD(('funcadd_ASL', self._so))(byref(AE))
 
+    def _pprint(self):
+        return (
+            [ ('function', self._function),
+              ('library', self._library),
+              ('units', str(self._units)),
+              ('arg_units', [ str(u) for u in self._arg_units ]
+               if self._arg_units is not None else None),
+            ],
+            (), None, None
+        )
+
 
 class PythonCallbackFunction(ExternalFunction):
     global_registry = {}
@@ -237,6 +248,16 @@ class PythonCallbackFunction(ExternalFunction):
             raise RuntimeError(
                 "PythonCallbackFunction called with invalid Global ID" )
         return self._fcn(*args_[1:])
+
+    def _pprint(self):
+        return (
+            [ ('function', self._fcn.__qualname__),
+              ('units', str(self._units)),
+              ('arg_units', [ str(u) for u in self._arg_units[1:] ]
+               if self._arg_units is not None else None),
+            ],
+            (), None, None
+        )
 
 
 class _ARGLIST(Structure):
