@@ -60,7 +60,7 @@ def MindtPy_iteration_loop(solve_data, config):
             main_mip, main_mip_results = solve_main(
                 solve_data, config)
             if main_mip_results is not None:
-                if config.single_tree is False:
+                if not config.single_tree:
                     if main_mip_results.solver.termination_condition is tc.optimal:
                         handle_main_optimal(main_mip, solve_data, config)
                     elif main_mip_results.solver.termination_condition is tc.infeasible:
@@ -81,7 +81,7 @@ def MindtPy_iteration_loop(solve_data, config):
             raise NotImplementedError()
 
         # regularization is activated after the first feasible solution is found.
-        if config.add_regularization is not None and solve_data.best_solution_found is not None and config.single_tree is False:
+        if config.add_regularization is not None and solve_data.best_solution_found is not None and not config.single_tree:
             # the main problem might be unbounded, regularization is activated only when a valid bound is provided.
             if (solve_data.objective_sense == minimize and solve_data.LB != float('-inf')) or (solve_data.objective_sense == maximize and solve_data.UB != float('inf')):
                 main_mip, main_mip_results = solve_main(
@@ -153,7 +153,7 @@ def MindtPy_iteration_loop(solve_data, config):
             last_iter_cuts = False
             break
 
-        if config.single_tree is False and config.strategy != 'ECP':  # if we don't use lazy callback, i.e. LP_NLP
+        if not config.single_tree and config.strategy != 'ECP':  # if we don't use lazy callback, i.e. LP_NLP
             # Solve NLP subproblem
             # The constraint linearization happens in the handlers
             fixed_nlp, fixed_nlp_result = solve_subproblem(
@@ -418,7 +418,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
         config.zero_tolerance = 1E-4
         # Solve NLP subproblem
         # The constraint linearization happens in the handlers
-        if last_iter_cuts is False:
+        if not last_iter_cuts:
             fixed_nlp, fixed_nlp_result = solve_subproblem(
                 solve_data, config)
             if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:

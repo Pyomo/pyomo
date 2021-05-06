@@ -121,7 +121,7 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
                                       'No integer solution is found, so the cplex solver will report an error status. ')
         return None, None
     if main_mip_results.solver.termination_condition is tc.optimal:
-        if config.single_tree and config.add_no_good_cuts is False and regularization_problem is False:
+        if config.single_tree and not config.add_no_good_cuts and not regularization_problem:
             if solve_data.objective_sense == minimize:
                 solve_data.LB = max(
                     main_mip_results.problem.lower_bound, solve_data.LB)

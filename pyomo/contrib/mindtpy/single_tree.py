@@ -210,7 +210,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     concave_cut_valid = False
                 if not any(cvSlope.values()):
                     convex_cut_valid = False
-                if (concave_cut_valid or convex_cut_valid) is False:
+                if not (concave_cut_valid or convex_cut_valid):
                     continue
 
                 ub_int = min(constr.upper, mc_eqn.upper()
