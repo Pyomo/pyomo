@@ -206,9 +206,9 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 if cvStart == float('nan') or cvStart == float('inf'):
                     convex_cut_valid = False
                 # check if the value of ccSlope and cvSlope all equals zero. if so, we skip this.
-                if not any(list(ccSlope.values())):
+                if not any(ccSlope.values()):
                     concave_cut_valid = False
-                if not any(list(cvSlope.values())):
+                if not any(cvSlope.values()):
                     convex_cut_valid = False
                 if (concave_cut_valid or convex_cut_valid) is False:
                     continue
