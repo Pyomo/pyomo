@@ -122,7 +122,7 @@ class MindtPySolver(object):
                               )
             # The epigraph constraint is very "flat" for branching rules,
             # we want to use to original model for the main mip.
-            if MindtPy.objective_list[0].expr.polynomial_degree() in (1, 0) and config.add_regularization is not None:
+            if MindtPy.objective_list[0].expr.polynomial_degree() in {1, 0} and config.add_regularization is not None:
                 MindtPy.objective_list[0].activate()
                 MindtPy.objective_constr.deactivate()
                 MindtPy.objective.deactivate()

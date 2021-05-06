@@ -62,8 +62,8 @@ def model_is_valid(solve_data, config):
     if len(MindtPy.discrete_variable_list) == 0:
         config.logger.info('Problem has no discrete decisions.')
         obj = next(m.component_data_objects(ctype=Objective, active=True))
-        if (any(c.body.polynomial_degree() not in (1, 0) for c in MindtPy.constraint_list) or
-                obj.expr.polynomial_degree() not in (1, 0)):
+        if (any(c.body.polynomial_degree() not in {1, 0} for c in MindtPy.constraint_list) or
+                obj.expr.polynomial_degree() not in {1, 0}):
             config.logger.info(
                 'Your model is a NLP (nonlinear program). '
                 'Using NLP solver %s to solve.' % config.nlp_solver)

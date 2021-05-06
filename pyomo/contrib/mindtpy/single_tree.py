@@ -107,7 +107,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         config.logger.info('Adding OA cuts')
         with time_code(solve_data.timing, 'OA cut generation'):
             for index, constr in enumerate(target_model.MindtPy_utils.constraint_list):
-                if constr.body.polynomial_degree() in (0, 1):
+                if constr.body.polynomial_degree() in {0, 1}:
                     continue
 
                 constr_vars = list(identify_variables(constr.body))
