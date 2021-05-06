@@ -174,7 +174,7 @@ def var_bound_add(solve_data, config):
     m = solve_data.working_model
     MindtPy = m.MindtPy_utils
     for c in MindtPy.nonlinear_constraint_list:
-        for var in list(EXPR.identify_variables(c.body)):
+        for var in EXPR.identify_variables(c.body):
             if var.has_lb() and var.has_ub():
                 continue
             elif not var.has_lb():

@@ -120,7 +120,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
 
                     # since the cplex requires the lazy cuts in cplex type, we need to transform the pyomo expression into cplex expression
                     pyomo_expr = copysign(1, sign_adjust * dual_values[index]) * (sum(value(jacs[constr][var]) * (
-                        var - value(var)) for var in list(EXPR.identify_variables(constr.body))) + value(constr.body) - rhs)
+                        var - value(var)) for var in EXPR.identify_variables(constr.body)) + value(constr.body) - rhs)
                     cplex_expr, _ = opt._get_expr_from_pyomo_expr(pyomo_expr)
                     cplex_rhs = -generate_standard_repn(pyomo_expr).constant
                     self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
