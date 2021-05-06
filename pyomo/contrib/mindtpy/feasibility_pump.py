@@ -34,7 +34,7 @@ def solve_fp_subproblem(solve_data, config):
     """
     Solves the feasibility pump NLP
 
-    This function sets up the 'fp_nlp' by relax integer varibales.
+    This function sets up the 'fp_nlp' by relax integer variables.
     precomputes dual values, deactivates trivial constraints, and then solves NLP model.
 
     Parameters

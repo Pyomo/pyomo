@@ -114,7 +114,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 jacs = solve_data.jacobians
 
                 # Equality constraint (makes the problem nonconvex)
-                if constr.has_ub() and constr.has_lb() and constr.upper == constr.lower:
+                if constr.has_ub() and constr.has_lb() and value(constr.lower) == value(constr.upper):
                     sign_adjust = -1 if solve_data.objective_sense == minimize else 1
                     rhs = constr.lower
 
