@@ -236,6 +236,13 @@ class TestSolvers_direct_call_min(RunAllNEOSSolvers, DirectDriver,
                                   unittest.TestCase):
     sense = pyo.minimize
 
+    # Add the CBC test to the nightly suite, but with a non-fatal
+    # (short) timeout
+    @unittest.category('nightly', '!neos')
+    @unittest.timeout(60, timeout_raises=unittest.SkipTest)
+    def test_cbc_timeout(self):
+        super(TestSolvers_direct_call_min, self).test_cbc()
+
 
 @unittest.category('neos')
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
@@ -252,30 +259,12 @@ class TestSolvers_pyomo_cmd_min(RunAllNEOSSolvers, PyomoCommandDriver,
                                 unittest.TestCase):
     sense = pyo.minimize
 
-
-# Add the CBC test to the nightly suite, but with a non-fatal
-# (short) timeout
-
-@unittest.category('nightly')
-@unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
-@unittest.skipUnless(email_set, "NEOS_EMAIL not set")
-class TestSolvers_nonfatal_timeout(unittest.TestCase):
-
-    sense = pyo.minimize
-
-    def test_cbc_pyomo_command(self):
-        try:
-            runner = unittest.timeout(60)(PyomoCommandDriver._run)
-            runner(self, 'cbc')
-        except TimeoutError:
-            self.skipTest("NEOS solve timed out")
-
-    def test_cbc_direct(self):
-        try:
-            runner = unittest.timeout(60)(DirectDriver._run)
-            runner(self, 'cbc')
-        except TimeoutError:
-            self.skipTest("NEOS solve timed out")
+    # Add the CBC test to the nightly suite, but with a non-fatal
+    # (short) timeout
+    @unittest.category('nightly', '!neos')
+    @unittest.timeout(60, timeout_raises=unittest.SkipTest)
+    def test_cbc_timeout(self):
+        super(TestSolvers_pyomo_cmd_min, self).test_cbc()
 
 if __name__ == "__main__":
     unittest.main()
