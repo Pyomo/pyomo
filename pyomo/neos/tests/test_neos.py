@@ -236,10 +236,6 @@ class TestSolvers_direct_call_min(RunAllNEOSSolvers, DirectDriver,
                                   unittest.TestCase):
     sense = pyo.minimize
 
-    # Add the CBC test to the nightly suite
-    @unittest.category('nightly')
-    def test_cbc(self):
-        super(TestSolvers_direct_call_min, self).test_cbc()
 
 @unittest.category('neos')
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
@@ -248,6 +244,7 @@ class TestSolvers_direct_call_max(RunAllNEOSSolvers, DirectDriver,
                                   unittest.TestCase):
     sense = pyo.maximize
 
+
 @unittest.category('neos')
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
 @unittest.skipUnless(email_set, "NEOS_EMAIL not set")
@@ -255,15 +252,28 @@ class TestSolvers_pyomo_cmd_min(RunAllNEOSSolvers, PyomoCommandDriver,
                                 unittest.TestCase):
     sense = pyo.minimize
 
-    # Add the CBC test to the nightly suite, but with a non-fatal
-    # (short) timeout
-    @unittest.category('nightly')
-    def test_cbc_nightly(self):
+
+# Add the CBC test to the nightly suite, but with a non-fatal
+# (short) timeout
+
+@unittest.category('nightly')
+@unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
+@unittest.skipUnless(email_set, "NEOS_EMAIL not set")
+class TestSolvers_nonfatal_timeout(unittest.TestCase):
+
+    sense = pyo.minimize
+
+    def test_cbc_pyomo_command(self):
         try:
-            test = unittest.timeout(60)(
-                super(TestSolvers_pyomo_cmd_min, self).test_cbc
-            )
-            test()
+            runner = unittest.timeout(60)(PyomoCommandDriver._run)
+            runner(self, 'cbc')
+        except TimeoutError:
+            self.skipTest("NEOS solve timed out")
+
+    def test_cbc_direct(self):
+        try:
+            runner = unittest.timeout(60)(DirectDriver._run)
+            runner(self, 'cbc')
         except TimeoutError:
             self.skipTest("NEOS solve timed out")
 
