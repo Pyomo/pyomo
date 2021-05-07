@@ -796,9 +796,13 @@ class Var(IndexedComponent):
 
     def _pprint(self):
         """Print component information."""
-        return ( [("Size", len(self)),
-                  ("Index", self._index if self.is_indexed() else None),
-                  ],
+        headers = [
+            ("Size", len(self)),
+            ("Index", self._index if self.is_indexed() else None),
+        ]
+        if self._units is not None:
+            headers.append(('Units', str(self._units)))
+        return ( headers,
                  self._data.items(),
                  ( "Lower","Value","Upper","Fixed","Stale","Domain"),
                  lambda k, v: [ value(v.lb),

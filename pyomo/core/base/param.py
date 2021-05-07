@@ -988,12 +988,16 @@ This has resulted in the conversion of the source to dense form.
             dataGen = lambda k, v: [ v._value, ]
         else:
             dataGen = lambda k, v: [ v, ]
-        return ( [("Size", len(self)),
-                  ("Index", self._index if self.is_indexed() else None),
-                  ("Domain", self.domain.name),
-                  ("Default", default),
-                  ("Mutable", self._mutable),
-                  ],
+        headers = [
+            ("Size", len(self)),
+            ("Index", self._index if self.is_indexed() else None),
+            ("Domain", self.domain.name),
+            ("Default", default),
+            ("Mutable", self._mutable),
+        ]
+        if self._units is not None:
+            headers.append(('Units', str(self._units)))
+        return ( headers,
                  self.sparse_iteritems(),
                  ("Value",),
                  dataGen,
