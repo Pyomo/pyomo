@@ -26,8 +26,6 @@ import random
 
 from io import StringIO
 
-from nose.tools import set_trace
-
 class CommonTests:
     def diff_apply_to_and_create_using(self, model):
         ct.diff_apply_to_and_create_using(self, model, 'gdp.bigm')
@@ -1805,7 +1803,6 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.assertEqual(l_val, -11)
         self.assertEqual(u_val, 7)
 
-        set_trace()
         ((l_val, l_src, l_key),
          (u_val, u_src, u_key)) = bigm.get_M_value_src(m.disjunct[1].c)
         self.assertIsNone(l_src)

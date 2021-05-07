@@ -37,8 +37,6 @@ from pyomo.repn import generate_standard_repn
 from functools import wraps
 from weakref import ref as weakref_ref
 
-from nose.tools import set_trace
-
 logger = logging.getLogger('pyomo.gdp.bigm')
 
 NAME_BUFFER = {}
@@ -469,21 +467,13 @@ class BigM_Transformation(Transformation):
 
     def _transform_block_components(self, block, disjunct, bigM, arg_list,
                                     suffix_list):
-        # Find all the variables declared here (including the indicator_var) and
-        # add a reference on the transformation block so these will be
-        # accessible when the Disjunct is deactivated. We don't descend into
-        # Disjuncts because we'll just reference the references which are
-        # already on their transformation blocks.
+        # We find any transformed disjunctions that might be here because we
+        # need to move their transformation blocks up onto the parent block
+        # before we transform anything else on this block. Note that we do this
+        # before we create references to local variables because we do not want
+        # duplicate references to indicator variables and local variables on
+        # nested disjuncts.
         disjunctBlock = disjunct._transformation_block()
-        varRefBlock = disjunctBlock.localVarReferences
-        for v in block.component_objects(Var, descend_into=Block, active=None):
-            varRefBlock.add_component(unique_component_name(
-                varRefBlock, v.getname(fully_qualified=True,
-                                       name_buffer=NAME_BUFFER)), Reference(v))
-
-        # Now need to find any transformed disjunctions that might be here
-        # because we need to move their transformation blocks up onto the parent
-        # block before we transform anything else on this block
         destinationBlock = disjunctBlock.parent_block()
         for obj in block.component_data_objects(
                 Disjunction,
@@ -495,18 +485,22 @@ class BigM_Transformation(Transformation):
                 continue
             # get this disjunction's relaxation block.
             transBlock = obj.algebraic_constraint().parent_block()
-            # ESJ TODO: I'm confused. Since we created references above, what is
-            # here that we still need to make a reference to? Why is this
-            # breaking the constraint mapping and causing us to not recognize an
-            # untransformed inner disjunction?
-            for block in transBlock.relaxedDisjuncts.values():
-                block.localVarReferences.deactivate()
 
-            transBlock.pprint()
             # move transBlock up to parent component
             self._transfer_transBlock_data(transBlock, destinationBlock)
             # we leave the transformation block because it still has the XOR
             # constraints, which we want to be on the parent disjunct.
+
+        # Find all the variables declared here (including the indicator_var) and
+        # add a reference on the transformation block so these will be
+        # accessible when the Disjunct is deactivated. We don't descend into
+        # Disjuncts because we just moved the references to their local
+        # variables up in the previous loop.
+        varRefBlock = disjunctBlock.localVarReferences
+        for v in block.component_objects(Var, descend_into=Block, active=None):
+            varRefBlock.add_component(unique_component_name(
+                varRefBlock, v.getname(fully_qualified=True,
+                                       name_buffer=NAME_BUFFER)), Reference(v))
 
         # Now look through the component map of block and transform everything
         # we have a handler for. Yell if we don't know how to handle it. (Note
