@@ -460,13 +460,24 @@ class _GeneralVarData(_VarData):
         the value is fixed (or None).
         """
         # Note: is_fixed(None) returns True
-        if is_fixed(val):
-            self._lb = val
-        else:
+        if not is_fixed(val):
             raise ValueError(
                 "Non-fixed input of type '%s' supplied as variable lower "
                 "bound - legal types must be fixed expressions or variables."
                 % (type(val),))
+        if type(val) in native_numeric_types or val is None
+            # TODO: warn/error: check if this Param has units: assigning
+            # a dimensionless value to a united param should be an error
+            pass
+        else:
+            if self.parent_component()._units is not None:
+                _src_magnitude = value(val)
+                _src_units = units.get_units(val)
+                val = units.convert_value(
+                    num_value=_src_magnitude, from_units=_src_units,
+                    to_units=self.parent_component()._units)
+        self._lb = val
+
 
     def setub(self, val):
         """
@@ -474,14 +485,24 @@ class _GeneralVarData(_VarData):
         the value is fixed (or None).
         """
         # Note: is_fixed(None) returns True
-        if is_fixed(val):
-            self._ub = val
-        else:
+        if not is_fixed(val):
             raise ValueError(
                 "Non-fixed input of type '%s' supplied as variable upper "
                 "bound - legal types are fixed expressions or variables."
                 "parameters"
                 % (type(val),))
+        if type(val) in native_numeric_types or val is None
+            # TODO: warn/error: check if this Param has units: assigning
+            # a dimensionless value to a united param should be an error
+            pass
+        else:
+            if self.parent_component()._units is not None:
+                _src_magnitude = value(val)
+                _src_units = units.get_units(val)
+                val = units.convert_value(
+                    num_value=_src_magnitude, from_units=_src_units,
+                    to_units=self.parent_component()._units)
+        self._ub = val
 
     def fix(self, value=NoArgumentGiven):
         """
