@@ -1063,7 +1063,6 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
     def test_unique_reference_to_nested_indicator_var(self):
         ct.check_unique_reference_to_nested_indicator_var(self, 'hull')
 
-
     def test_disjunct_targets_inactive(self):
         ct.check_disjunct_targets_inactive(self, 'hull')
 
