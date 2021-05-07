@@ -44,12 +44,18 @@ class BlockVector(np.ndarray, BaseBlockVector):
     Structured vector interface. This interface can be used to
     performe operations on vectors composed by vectors. For example,
 
-    bv = BlockVector(3)
-    bv.set_block(0, v0)
-    bv.set_block(1, v1)
-    bv.set_block(2, v2)
-
-    where vi are numpy.ndarrays or BlockVectors.
+    >> import numpy as np
+    >> from pyomo.contrib.pynumero.sparse import BlockVector
+    >> bv = BlockVector(3)
+    >> v0 = np.ones(3)
+    >> v1 = v0*2
+    >> v2 = np.random.normal(size=4)
+    >> bv.set_block(0, v0)
+    >> bv.set_block(1, v1)
+    >> bv.set_block(2, v2)
+    >> bv2 = BlockVector(2)
+    >> bv2.set_block(0, v0)
+    >> bv2.set_block(1, bv)
 
     Attributes
     ----------
@@ -572,18 +578,18 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def flatten(self, order='C'):
         """
-        Returns a copy of the array collapsed into one dimension.
+        Converts the BlockVector to a NumPy array. This will also call flatten on the underlying NumPy arrays in 
+        the BlockVector. 
+
         Parameters
         ----------
-        order: : {C, F, A, K}, optional
-            C means to flatten in row-major (C-style) order. F means to flatten in column-major (Fortran- style)
-            order. A means to flatten in column-major order if a is Fortran contiguous in memory, row-major
-            order otherwise. K means to flatten a in the order the elements occur in memory. The default is C.
+        order: str: {C, F, A, K}, optional
+            See NumPy array documentation.
 
         Returns
         -------
-        numpy.ndarray
-
+        flat_array: numpy.ndarray
+            The NumPy array resulting from concatenating all of the blocks
         """
         assert_block_structure(self)
         all_blocks = tuple(self.get_block(i).flatten(order=order) for i in range(self.nblocks))
@@ -591,18 +597,17 @@ class BlockVector(np.ndarray, BaseBlockVector):
 
     def ravel(self, order='C'):
         """
-        Returns a copy of the array collapsed into one dimension.
+        Converts the BlockVector into a NumPy array. Note that ravel is also called
+        on all of the NumPy arrays in the BlockVector before concatenating them.
+        
         Parameters
         ----------
-        order: : {C, F, A, K}, optional
-            C means to flatten in row-major (C-style) order. F means to flatten in column-major (Fortran- style)
-            order. A means to flatten in column-major order if a is Fortran contiguous in memory, row-major
-            order otherwise. K means to flatten a in the order the elements occur in memory. The default is C.
+        order: str
+            See NumPy documentation.
 
         Returns
         -------
-        numpy.ndarray
-
+        res: numpy.ndarray
         """
         assert_block_structure(self)
         all_blocks = tuple(self.get_block(i).ravel(order=order) for i in range(self.nblocks))
@@ -1228,9 +1233,32 @@ class BlockVector(np.ndarray, BaseBlockVector):
         return '{}{}'.format(self.__class__.__name__, self.bshape)
 
     def get_block(self, key):
+        """
+        Access a block.
+
+        Parameters
+        ----------
+        key: int
+            This is the block index
+
+        Returns
+        -------
+        block: np.ndarray or BlockVector
+            The block corresponding to the index key.
+        """
         return super(BlockVector, self).__getitem__(key)
 
     def set_block(self, key, value):
+        """
+        Set a block. The value can be a NumPy array or another BlockVector.
+
+        Parameters
+        ----------
+        key: int
+            This is the block index
+        value:
+            This is the block. It can be a NumPy array or another BlockVector.
+        """
         assert -self.nblocks < key < self.nblocks, 'out of range'
         assert isinstance(value, np.ndarray) or \
             isinstance(value, BaseBlockVector), \

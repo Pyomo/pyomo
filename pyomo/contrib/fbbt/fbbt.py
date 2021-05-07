@@ -148,7 +148,7 @@ def _prop_bnds_leaf_to_root_PowExpression(node, bnds_dict, feasibility_tol):
     arg1, arg2 = node.args
     lb1, ub1 = bnds_dict[arg1]
     lb2, ub2 = bnds_dict[arg2]
-    bnds_dict[node] = interval.power(lb1, ub1, lb2, ub2)
+    bnds_dict[node] = interval.power(lb1, ub1, lb2, ub2, feasibility_tol=feasibility_tol)
 
 
 def _prop_bnds_leaf_to_root_ReciprocalExpression(node, bnds_dict, feasibility_tol):
@@ -388,7 +388,7 @@ def _prop_bnds_leaf_to_root_sqrt(node, bnds_dict, feasibility_tol):
     assert len(node.args) == 1
     arg = node.args[0]
     lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.power(lb1, ub1, 0.5, 0.5)
+    bnds_dict[node] = interval.power(lb1, ub1, 0.5, 0.5, feasibility_tol=feasibility_tol)
 
 
 _unary_leaf_to_root_map = dict()
@@ -792,7 +792,7 @@ def _prop_bnds_root_to_leaf_log10(node, bnds_dict, feasibility_tol):
     arg = node.args[0]
     lb0, ub0 = bnds_dict[node]
     lb1, ub1 = bnds_dict[arg]
-    _lb1, _ub1 = interval.power(10, 10, lb0, ub0)
+    _lb1, _ub1 = interval.power(10, 10, lb0, ub0, feasibility_tol=feasibility_tol)
     if _lb1 > lb1:
         lb1 = _lb1
     if _ub1 < ub1:

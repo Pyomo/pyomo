@@ -16,13 +16,15 @@ from __future__ import division
 import logging
 
 import pyomo.common.unittest as unittest
-from six import StringIO
+from io import StringIO
 
-from pyomo.common.dependencies import networkx_available
+from pyomo.common.dependencies import networkx_available, matplotlib_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import ConcreteModel, Constraint, Objective, Var, Integers, minimize, RangeSet, Block, ConstraintList
-from pyomo.contrib.community_detection.detection import detect_communities, CommunityMap, \
-    community_louvain_available, matplotlib_available, community_louvain, matplotlib
+from pyomo.contrib.community_detection.detection import (
+    detect_communities, CommunityMap,
+    community_louvain_available, community_louvain
+)
 from pyomo.contrib.community_detection.community_graph import generate_model_graph
 
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded

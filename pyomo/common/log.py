@@ -252,11 +252,11 @@ _handler.addFilter(_GlobalLogFilter())
 _pyomoLogger.addHandler(_handler)
 
 
+@deprecated('The pyomo.common.log.LogHandler class has been deprecated '
+            'in favor of standard Handlers from the Python logging module '
+            'combined with the pyomo.common.log.WrappingFormatter.',
+            version='5.7.3')
 class LogHandler(logging.StreamHandler):
-    @deprecated('The pyomo.common.log.LogHandler class has been deprecated '
-                'in favor of standard Handlers from the Python logging module '
-                'combined with the pyomo.common.log.WrappingFormatter.',
-                version='5.7.3')
     def __init__(self, base='', stream=None,
                  level=logging.NOTSET, verbosity=None):
         super(LogHandler, self).__init__(stream)
@@ -286,9 +286,9 @@ class LoggingIntercept(object):
         level (int): the logging level to intercept
 
     Examples:
-        >>> import six, logging
+        >>> import io, logging
         >>> from pyomo.common.log import LoggingIntercept
-        >>> buf = six.StringIO()
+        >>> buf = io.StringIO()
         >>> with LoggingIntercept(buf, 'pyomo.core', logging.WARNING):
         ...     logging.getLogger('pyomo.core').warning('a simple message')
         >>> buf.getvalue()

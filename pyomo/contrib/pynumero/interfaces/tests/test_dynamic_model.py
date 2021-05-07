@@ -14,8 +14,10 @@ import pyomo.environ as pyo
 import math
 
 from pyomo.contrib.pynumero.dependencies import (
-    numpy as np, numpy_available, scipy_sparse as spa, scipy_available
+    numpy as np, numpy_available, scipy, scipy_available
 )
+from pyomo.common.dependencies.scipy import sparse as spa
+
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
@@ -25,7 +27,7 @@ if not AmplInterface.available():
         "Pynumero needs the ASL extension to run CyIpoptSolver tests")
 
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    CyIpoptSolver, CyIpoptNLP, ipopt, ipopt_available,
+    CyIpoptSolver, CyIpoptNLP, cyipopt_available,
 )
 
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxModel, ExternalGreyBoxBlock
@@ -368,9 +370,12 @@ def create_pyomo_external_grey_box_model(A1, A2, c1, c2, N, dt):
 
     return m2
 
+
 class TestGreyBoxModel(unittest.TestCase):
 
-    @unittest.skipIf(not ipopt_available, "CyIpopt needed to run tests with solve")
+    @unittest.skipIf(
+        not pyo.SolverFactory('ipopt').available(exception_flag=False),
+        "Ipopt needed to run tests with solve")
     def test_compare_evaluations(self):
         A1 = 5
         A2 = 10
@@ -471,7 +476,9 @@ class TestGreyBoxModel(unittest.TestCase):
         mex_nlp.evaluate_hessian_lag(out=mex_h)
         check_sparse_matrix_specific_order(self, m_h, m_x_order, m_x_order, mex_h, mex_x_order, mex_x_order, x1_x2_map, x1_x2_map)
 
-    @unittest.skipIf(not ipopt_available, "CyIpopt needed to run tests with solve")
+
+    @unittest.skipIf(not cyipopt_available,
+                     "CyIpopt needed to run tests with solve")
     def test_solve(self):
         A1 = 5
         A2 = 10

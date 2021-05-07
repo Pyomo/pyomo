@@ -23,7 +23,7 @@ from .errors import DeveloperError
 import pyomo.common
 from pyomo.common.dependencies import attempt_import
 
-request = attempt_import('six.moves.urllib.request')[0]
+request = attempt_import('urllib.request')[0]
 ssl = attempt_import('ssl')[0]
 zipfile = attempt_import('zipfile')[0]
 gzip = attempt_import('gzip')[0]

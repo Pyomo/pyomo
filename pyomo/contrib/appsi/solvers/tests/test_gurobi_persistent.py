@@ -1,4 +1,4 @@
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import pyomo.environ as pe
 from pyomo.contrib.appsi.solvers.gurobi import Gurobi
 from pyomo.contrib.appsi.base import TerminationCondition
@@ -68,8 +68,8 @@ class TestGurobiPersistentSimpleLPUpdates(unittest.TestCase):
         self.assertAlmostEqual(x, self.m.x.value)
         self.assertAlmostEqual(y, self.m.y.value)
         x, y = self.get_solution()
-        self.assertNotAlmostEquals(x, self.m.x.value)
-        self.assertNotAlmostEquals(y, self.m.y.value)
+        self.assertNotAlmostEqual(x, self.m.x.value)
+        self.assertNotAlmostEqual(y, self.m.y.value)
         opt.load_vars()
         self.assertAlmostEqual(x, self.m.x.value)
         self.assertAlmostEqual(y, self.m.y.value)

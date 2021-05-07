@@ -64,28 +64,25 @@ class TestInterval(unittest.TestCase):
         self.assertAlmostEqual(ub, 10)
 
         lb, ub = interval.inv(0, 0.1, feasibility_tol=1e-8)
-        self.assertEqual(lb, -interval.inf)
+        self.assertEqual(lb, 10)
         self.assertEqual(ub, interval.inf)
 
-        lb, ub = interval.inv(0, 0, feasibility_tol=1e-8)
-        self.assertEqual(lb, -interval.inf)
-        self.assertEqual(ub, interval.inf)
+        with self.assertRaises(interval.IntervalException):
+            lb, ub = interval.inv(0, 0, feasibility_tol=1e-8)
 
         lb, ub = interval.inv(-0.1, 0, feasibility_tol=1e-8)
         self.assertEqual(lb, -interval.inf)
-        self.assertEqual(ub, interval.inf)
+        self.assertEqual(ub, -10)
 
         lb, ub = interval.inv(-0.2, -0.1, feasibility_tol=1e-8)
         self.assertAlmostEqual(lb, -10)
         self.assertAlmostEqual(ub, -5)
 
-        lb, ub = interval.inv(0, -1e-16, feasibility_tol=1e-8)
-        self.assertEqual(lb, -interval.inf)
-        self.assertEqual(ub, interval.inf)
+        with self.assertRaises(interval.IntervalException):
+            lb, ub = interval.inv(0, -1e-16, feasibility_tol=1e-8)
 
-        lb, ub = interval.inv(1e-16, 0, feasibility_tol=1e-8)
-        self.assertEqual(lb, -interval.inf)
-        self.assertAlmostEqual(ub, interval.inf)
+        with self.assertRaises(interval.IntervalException):
+            lb, ub = interval.inv(1e-16, 0, feasibility_tol=1e-8)
 
         lb, ub = interval.inv(-1, 1, feasibility_tol=1e-8)
         self.assertAlmostEqual(lb, -interval.inf)
@@ -121,7 +118,12 @@ class TestInterval(unittest.TestCase):
                     (np.random.uniform(-5, -2), np.random.uniform(-2, 0))]
         for xl, xu in x_bounds:
             for yl, yu in y_bounds:
-                zl, zu = interval.power(xl, xu, yl, yu)
+                if xl == 0 and xu == 0 and yu < 0:
+                    with self.assertRaises(interval.IntervalException):
+                        zl, zu = interval.power(xl, xu, yl, yu, feasibility_tol=1e-8)
+                    continue
+                else:
+                    zl, zu = interval.power(xl, xu, yl, yu, feasibility_tol=1e-8)
                 x = np.linspace(xl, xu, 100)
                 y = np.linspace(yl, yu, 100)
                 for _x in x:
@@ -136,7 +138,7 @@ class TestInterval(unittest.TestCase):
         for xl, xu in x_bounds:
             for yl in y_bounds:
                 yu = yl
-                zl, zu = interval.power(xl, xu, yl, yu)
+                zl, zu = interval.power(xl, xu, yl, yu, feasibility_tol=1e-8)
                 x = np.linspace(xl, xu, 100, endpoint=False)
                 y = yl
                 _z = x ** y
@@ -145,10 +147,10 @@ class TestInterval(unittest.TestCase):
 
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_pow2(self):
-        xl = np.linspace(-2, 2, 17)
-        xu = np.linspace(-2, 2, 17)
-        yl = np.linspace(-2, 2, 17)
-        yu = np.linspace(-2, 2, 17)
+        xl = np.linspace(-2, 2, 9)
+        xu = np.linspace(-2, 2, 9)
+        yl = np.linspace(-2, 2, 9)
+        yu = np.linspace(-2, 2, 9)
         for _xl in xl:
             for _xu in xu:
                 if _xl > _xu:
@@ -157,11 +159,14 @@ class TestInterval(unittest.TestCase):
                     for _yu in yu:
                         if _yl > _yu:
                             continue
-                        if _yl == _yu and _yl != round(_yl) and _xu < 0:
-                            with self.assertRaises(InfeasibleConstraintException):
-                                lb, ub = interval.power(_xl, _xu, _yl, _yu)
+                        if _xl == 0 and _xu == 0 and _yu < 0:
+                            with self.assertRaises(interval.IntervalException):
+                                lb, ub = interval.power(_xl, _xu, _yl, _yu, feasibility_tol=1e-8)
+                        elif _yl == _yu and _yl != round(_yl) and (_xu < 0 or (_xu <= 0 and _yu < 0)):
+                            with self.assertRaises((InfeasibleConstraintException, interval.IntervalException)):
+                                lb, ub = interval.power(_xl, _xu, _yl, _yu, feasibility_tol=1e-8)
                         else:
-                            lb, ub = interval.power(_xl, _xu, _yl, _yu)
+                            lb, ub = interval.power(_xl, _xu, _yl, _yu, feasibility_tol=1e-8)
                             if isfinite(lb) and isfinite(ub):
                                 nan_fill = 0.5*(lb + ub)
                             elif isfinite(lb):
@@ -170,20 +175,11 @@ class TestInterval(unittest.TestCase):
                                 nan_fill = ub - 1
                             else:
                                 nan_fill = 0
-                            x = np.linspace(_xl, _xu, 17)
-                            y = np.linspace(_yl, _yu, 17)
-                            all_values = list()
-                            for _x in x:
-                                z = _x**y
-                                #np.nan_to_num(z, copy=False, nan=nan_fill, posinf=np.inf, neginf=-np.inf)
-                                tmp = []
-                                for _z in z:
-                                    if math.isnan(_z):
-                                        tmp.append(nan_fill)
-                                    else:
-                                        tmp.append(_z)
-                                all_values.append(np.array(tmp))
-                            all_values = np.array(all_values)
+                            x = np.linspace(_xl, _xu, 30)
+                            y = np.linspace(_yl, _yu, 30)
+                            z = x**np.split(y, len(y))
+                            z[np.isnan(z)] = nan_fill
+                            all_values = z
                             estimated_lb = all_values.min()
                             estimated_ub = all_values.max()
                             self.assertTrue(lb - 1e-8 <= estimated_lb)

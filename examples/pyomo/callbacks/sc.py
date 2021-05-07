@@ -12,7 +12,6 @@ from pyomo.common.collections import Bunch
 from pyomo.core import *
 import math
 import random
-from six.moves import xrange
 
 def print_model_stats(options,model):
     print("-"*40)
@@ -73,7 +72,7 @@ def pyomo_create_model(options=None, model_options=None):
         #
         def S_rule(model):
             ans = set()
-            for j in xrange(1,n+1):
+            for j in range(1,n+1):
                 tmp = list(range(1,m+1))
                 random.shuffle( tmp )
                 for i in range(0,p):
@@ -93,7 +92,7 @@ def pyomo_create_model(options=None, model_options=None):
         #
         def S_rule(model):
             ans = set()
-            for i in xrange(1,m+1):
+            for i in range(1,m+1):
                 tmp = list(range(1,n+1))
                 random.shuffle( tmp )
                 for j in range(0,p):
@@ -107,8 +106,8 @@ def pyomo_create_model(options=None, model_options=None):
         #
         def S_rule(model):
             ans = set()
-            for j in xrange(1,n+1):
-                for i in xrange(1,m+1):
+            for j in range(1,n+1):
+                for i in range(1,m+1):
                     if random.uniform(0,1) < rho:
                         ans.add( (i, j) )
             return ans
@@ -120,8 +119,8 @@ def pyomo_create_model(options=None, model_options=None):
         #
         def S_rule(model):
             ans = set()
-            for j in xrange(1,n+1):
-                for i in xrange(1,m+1):
+            for j in range(1,n+1):
+                for i in range(1,m+1):
                     if random.uniform(0,1) < rho:
                         ans.add( (i, j) )
             return ans

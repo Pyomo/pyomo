@@ -9,8 +9,6 @@
 #  ___________________________________________________________________________
 import copy
 import itertools
-from six import iteritems
-from six.moves import xrange
 
 from pyomo.core import Block, ConstraintList, Set, Constraint
 from pyomo.core.base import Reference
@@ -59,11 +57,11 @@ def apply_basic_step(disjunctions_or_constraints):
                            "deactivated disjunction (%s)" % (d.name,))
 
     ans = Block(concrete=True)
-    ans.DISJUNCTIONS = Set(initialize=xrange(len(disjunctions)))
+    ans.DISJUNCTIONS = Set(initialize=range(len(disjunctions)))
     ans.INDEX = Set(
         dimen=len(disjunctions),
         initialize=_squish_singletons(itertools.product(
-            *tuple( xrange(len(d.disjuncts)) for d in disjunctions ))))
+            *tuple( range(len(d.disjuncts)) for d in disjunctions ))))
 
     #
     # Form the individual disjuncts for the new basic step
@@ -78,7 +76,7 @@ def apply_basic_step(disjunctions_or_constraints):
         for i in ans.DISJUNCTIONS:
             tmp = _pseudo_clone(disjunctions[i].disjuncts[
                 idx[i] if isinstance(idx, tuple) else idx])
-            for k,v in list(iteritems( tmp.component_map() )):
+            for k,v in list(tmp.component_map().items()):
                 if k == 'indicator_var':
                     continue
                 tmp.del_component(k)
@@ -107,7 +105,7 @@ def apply_basic_step(disjunctions_or_constraints):
     NAME_BUFFER = {}
     ans.indicator_links = ConstraintList()
     for i in ans.DISJUNCTIONS:
-        for j in xrange(len(disjunctions[i].disjuncts)):
+        for j in range(len(disjunctions[i].disjuncts)):
             orig_var = disjunctions[i].disjuncts[j].indicator_var
             ans.indicator_links.add(
                 orig_var ==
@@ -137,11 +135,11 @@ if __name__ == '__main__':
     from pyomo.environ import ConcreteModel, Constraint, Var
     m = ConcreteModel()
     def _d(d, i):
-        d.x = Var(xrange(i))
+        d.x = Var(range(i))
         d.silly = Constraint(expr=d.indicator_var == i)
     m.d = Disjunct([1,2], rule=_d)
     def _e(e, i):
-        e.y = Var(xrange(2,i))
+        e.y = Var(range(2,i))
     m.e = Disjunct([3,4,5], rule=_e)
 
     m.dd = Disjunction(expr=[m.d[1], m.d[2]])

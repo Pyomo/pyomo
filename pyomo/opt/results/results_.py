@@ -28,8 +28,7 @@ from pyomo.opt.results.solution import default_print_options as dpo
 import pyomo.opt.results.problem
 import pyomo.opt.results.solver
 
-from six import iteritems, StringIO
-from six.moves import xrange
+from io import StringIO
 
 logger = logging.getLogger(__name__)
 
@@ -138,12 +137,12 @@ class SolverResults(MapContainer):
                     # extracted in a solution.
                     soln[data] = "No values"
                     continue
-                for kk,vv in iteritems(data_value):
+                for kk,vv in data_value.items():
                     # TODO: remove this if-block.  This is a hack
                     if not type(vv) is dict:
                         vv = {'Value':vv}
                     tmp = {}
-                    for k,v in iteritems(vv):
+                    for k,v in vv.items():
                         # TODO: remove this if-block.  This is a hack
                         if v is not None and math.fabs(v) > 1e-16:
                             tmp[k] = v
@@ -171,7 +170,7 @@ class SolverResults(MapContainer):
         ostream.write("# ==========================================================\n")
         ostream.write("# = Solver Results                                         =\n")
         ostream.write("# ==========================================================\n")
-        for i in xrange(len(self._order)):
+        for i in range(len(self._order)):
             key = self._order[i]
             if not key in repn:
                 continue
@@ -203,7 +202,7 @@ class SolverResults(MapContainer):
             repn = yaml.load(istream, **yaml_load_args)
         else:
             repn = json.load(istream)
-        for i in xrange(len(self._order)):
+        for i in range(len(self._order)):
             key = self._order[i]
             if not key in repn:
                 continue

@@ -42,30 +42,30 @@ class TestNumericRange(unittest.TestCase):
         self.assertEqual(a.end, 0)
         self.assertEqual(a.step, 0)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, '.*start must be <= end for continuous ranges'):
             NR(0, -1, 0)
 
 
-        with self.assertRaisesRegexp(ValueError, '.*start must not be None'):
+        with self.assertRaisesRegex(ValueError, '.*start must not be None'):
             NR(None, None, 1)
 
-        with self.assertRaisesRegexp(ValueError, '.*step must be int'):
+        with self.assertRaisesRegex(ValueError, '.*step must be int'):
             NR(None, None, 1.5)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
                 '.*start, end ordering incompatible with step direction'):
             NR(0, 1, -1)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
                 '.*start, end ordering incompatible with step direction'):
             NR(1, 0, 1)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
-                '\[0:1\] is discrete, but passed closed=\(False, True\)'):
+                r'\[0:1\] is discrete, but passed closed=\(False, True\)'):
             NR(0, 1, 1, "(]")
 
         a = NR(0, None, 1)
@@ -98,11 +98,11 @@ class TestNumericRange(unittest.TestCase):
         self.assertEqual(a.end, 5.5)
         self.assertEqual(a.step, 1)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, '.*start, end ordering incompatible with step'):
             NR(0, -1, 1)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, '.*start, end ordering incompatible with step'):
             NR(0, 1, -2)
 
@@ -468,7 +468,7 @@ class TestNumericRange(unittest.TestCase):
             NR(0,None,2).range_difference([NR(10,None,3)]),
             [NR(0,None,6), NR(2,None,6), NR(4,4,0)],
         )
-        with self.assertRaisesRegexp(ValueError, "Unknown range type, list"):
+        with self.assertRaisesRegex(ValueError, "Unknown range type, list"):
             NR(0,None,0).range_difference([[0]])
 
         # test relatively prime ranges that don't expand to all offsets
@@ -563,8 +563,8 @@ class TestNumericRange(unittest.TestCase):
         # And the onee thing we don't support:
         with self.assertRaisesRegex(
                 RangeDifferenceError, 'We do not support subtracting an '
-                'infinite discrete range \[0:None\] from an infinite '
-                'continuous range \[None..None\]'):
+                r'infinite discrete range \[0:None\] from an infinite '
+                r'continuous range \[None..None\]'):
             NR(None,None,0).range_difference([NR(0,None,1)])
 
     def test_range_intersection(self):
@@ -584,7 +584,7 @@ class TestNumericRange(unittest.TestCase):
             NR(0,None,2).range_intersection([NR(1,None,3)]),
             [NR(4,None,6)],
         )
-        with self.assertRaisesRegexp(ValueError, "Unknown range type, list"):
+        with self.assertRaisesRegex(ValueError, "Unknown range type, list"):
             NR(0,None,0).range_intersection([[0]])
 
         # Test non-overlapping ranges

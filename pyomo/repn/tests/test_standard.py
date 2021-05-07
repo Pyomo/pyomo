@@ -25,15 +25,13 @@ from pyomo.environ import AbstractModel, ConcreteModel, Var, Param, Set, Express
 import pyomo.kernel
 from pyomo.core.base.numvalue import native_numeric_types, as_numeric
 
-from six import iteritems
-from six.moves import range
 
 class frozendict(dict):
     __slots__ = ('_hash',)
     def __hash__(self):
         rval = getattr(self, '_hash', None)
         if rval is None:
-            rval = self._hash = hash(frozenset(iteritems(self)))
+            rval = self._hash = hash(frozenset(self.items()))
         return rval
 
 

@@ -22,7 +22,7 @@ from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.testcases import test_scenarios
 from pyomo.common.log import LoggingIntercept
 
-from six import StringIO
+from io import StringIO
 
 # The test directory
 thisDir = os.path.dirname(os.path.abspath( __file__ ))
@@ -74,15 +74,6 @@ def create_test_method(model,
             # Note ASL solvers might still return a solution
             # file with garbage values in it for a failed solve
             self.assertEqual(len(results.solution), 1)
-
-    # 03/23/2021: IDAES-ext added CBC 2.10.4 to their official release
-    #             This is causing failures in this test.
-    #             Manually turning off CBC tests until a solution can be found.
-    #             - mrmundt
-    if solver == 'cbc':
-        def skipping_test(self):
-            self.skipTest('SKIP: cbc currently does not work.')
-        return skipping_test
 
     # Skip this test if the status is 'skip'
     if test_case.status == 'skip':

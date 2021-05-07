@@ -13,8 +13,10 @@ import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 
 from pyomo.contrib.pynumero.dependencies import (
-    numpy as np, numpy_available, scipy_sparse as spa, scipy_available
+    numpy as np, numpy_available, scipy, scipy_available
 )
+from pyomo.common.dependencies.scipy import sparse as spa
+
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
@@ -24,7 +26,7 @@ if not AmplInterface.available():
         "Pynumero needs the ASL extension to run cyipopt tests")
 
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    ipopt, ipopt_available,
+    cyipopt_available,
 )
 
 from pyomo.contrib.pynumero.interfaces.external_grey_box import ExternalGreyBoxBlock
@@ -1419,7 +1421,8 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
             with self.assertRaises(NotImplementedError):
                 h = pyomo_nlp.evaluate_hessian_lag()
 
-    @unittest.skipIf(not ipopt_available, "CyIpopt needed to run tests with solve")
+    @unittest.skipIf(not cyipopt_available,
+                     "CyIpopt needed to run tests with solve")
     def test_external_greybox_solve(self):
         self._test_external_greybox_solve(ex_models.PressureDropTwoEqualitiesTwoOutputs(), False)
         self._test_external_greybox_solve(ex_models.PressureDropTwoEqualitiesTwoOutputsWithHessian(), True)
@@ -1623,7 +1626,8 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         comparison_cs = np.asarray([3.1, 3.2, 4.1, 4.2, 1, 2.2], dtype=np.float64)
         check_vectors_specific_order(self, cs, c_order, comparison_cs, comparison_c_order)
 
-    @unittest.skipIf(not ipopt_available, "CyIpopt needed to run tests with solve")
+    @unittest.skipIf(not cyipopt_available,
+                     "CyIpopt needed to run tests with solve")
     def test_external_greybox_solve_scaling(self):
         m = pyo.ConcreteModel()
         m.mu = pyo.Var(bounds=(0,None), initialize=1)
@@ -1706,7 +1710,8 @@ class TestPyomoNLPWithGreyBoxModels(unittest.TestCase):
         self.assertIn('DenseVector "d scaling vector" with 1 elements:', solver_trace)
         self.assertIn('d scaling vector[    1]= 1.0000000000000000e+00', solver_trace) # pcon
 
-    @unittest.skipIf(not ipopt_available, "CyIpopt needed to run tests with solve")
+    @unittest.skipIf(not cyipopt_available,
+                     "CyIpopt needed to run tests with solve")
     def test_duals_after_solve(self):
         m = pyo.ConcreteModel()
         m.p = pyo.Var(initialize=1)

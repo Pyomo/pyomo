@@ -18,8 +18,8 @@ Optimization: Unifying framework and Extensions (Vielma, \
 Nemhauser 2008)
 """
 
+from collections.abc import Sized
 import logging
-import collections
 
 from pyomo.core.kernel.block import block
 from pyomo.core.kernel.set_types import IntegerSet
@@ -199,7 +199,7 @@ class PiecewiseLinearFunctionND(object):
         For the vectorized case, the argument x should be
         a (n,D)-shaped numpy array.
         """
-        assert isinstance(x, collections.Sized)
+        assert isinstance(x, Sized)
         if isinstance(x, pyomo.core.kernel.piecewise_library.\
                       util.numpy.ndarray):
             if x.shape != self._tri.points.shape[1:]:
