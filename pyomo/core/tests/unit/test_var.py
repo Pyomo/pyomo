@@ -21,7 +21,12 @@ currdir = dirname(abspath(__file__))+os.sep
 import pyomo.common.unittest as unittest
 
 from pyomo.core.base import IntegerSet
-from pyomo.environ import AbstractModel, ConcreteModel, Set, Param, Var, VarList, RangeSet, Suffix, Expression, NonPositiveReals, PositiveReals, Reals, RealSet, NonNegativeReals, Integers, Binary, value
+from pyomo.environ import (
+    AbstractModel, ConcreteModel, Set, Param, Var, VarList, RangeSet,
+    Suffix, Expression, NonPositiveReals, PositiveReals, Reals, RealSet,
+    NonNegativeReals, Integers, Binary, value
+)
+from pyomo.core.base.units_container import units, pint_available, UnitsError
 
 class PyomoModel(unittest.TestCase):
 
@@ -1368,6 +1373,40 @@ class MiscVarTests(unittest.TestCase):
         model.C = model.A | model.B
         model.x = Var(model.C)
 
+    @unittest.skipUnless(pint_available, "units tests requires pint module")
+    def test_set_value_units(self):
+        m = ConcreteModel()
+        m.x = Var(units=units.g)
+        m.x = 5
+        self.assertEqual(value(m.x), 5)
+        m.x = 6*units.g
+        self.assertEqual(value(m.x), 6)
+        m.x = 7*units.kg
+        self.assertEqual(value(m.x), 7000)
+        with self.assertRaises(UnitsError):
+            m.x = 1*units.s
+
+    @unittest.skipUnless(pint_available, "units tests requires pint module")
+    def test_set_bounds_units(self):
+        m = ConcreteModel()
+        m.x = Var(units=units.g)
+        m.x.setlb(5)
+        self.assertEqual(m.x.lb, 5)
+        m.x.setlb(6*units.g)
+        self.assertEqual(m.x.lb, 6)
+        m.x.setlb(7*units.kg)
+        self.assertEqual(m.x.lb, 7000)
+        with self.assertRaises(UnitsError):
+            m.x.setlb(1*units.s)
+
+        m.x.setub(2)
+        self.assertEqual(m.x.ub, 2)
+        m.x.setub(3*units.g)
+        self.assertEqual(m.x.ub, 3)
+        m.x.setub(4*units.kg)
+        self.assertEqual(m.x.ub, 4000)
+        with self.assertRaises(UnitsError):
+            m.x.setlb(1*units.s)
 
 if __name__ == "__main__":
     unittest.main()
