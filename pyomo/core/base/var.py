@@ -465,7 +465,7 @@ class _GeneralVarData(_VarData):
                 "Non-fixed input of type '%s' supplied as variable lower "
                 "bound - legal types must be fixed expressions or variables."
                 % (type(val),))
-        if type(val) in native_numeric_types or val is None
+        if type(val) in native_numeric_types or val is None:
             # TODO: warn/error: check if this Param has units: assigning
             # a dimensionless value to a united param should be an error
             pass
@@ -491,7 +491,7 @@ class _GeneralVarData(_VarData):
                 "bound - legal types are fixed expressions or variables."
                 "parameters"
                 % (type(val),))
-        if type(val) in native_numeric_types or val is None
+        if type(val) in native_numeric_types or val is None:
             # TODO: warn/error: check if this Param has units: assigning
             # a dimensionless value to a united param should be an error
             pass
