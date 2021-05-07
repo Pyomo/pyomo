@@ -161,8 +161,8 @@ class RunAllNEOSSolvers(object):
 class DirectDriver(object):
     def _run(self, opt, constrained=True):
         m = _model(self.sense)
-        solver_manager = pyo.SolverManagerFactory('neos')
-        results = solver_manager.solve(m, opt=opt)
+        with pyo.SolverManagerFactory('neos') as solver_manager:
+            results = solver_manager.solve(m, opt=opt)
 
         expected_y = {
             (pyo.minimize, True): -1,
@@ -238,6 +238,12 @@ class TestSolvers_direct_call_min(RunAllNEOSSolvers, DirectDriver,
 
     # Add the CBC test to the nightly suite, but with a non-fatal
     # (short) timeout
+    #
+    # TODO: remove queued job from NEOS servers.  Using timeout() leaves
+    # the queued problem on the NEOS servers, because timeout kills the
+    # forked process with SIGTERM.  Implementing a proper timeout will
+    # likely require reworking the AsynchronousSolverManager to accept a
+    # timeout through _perform_wait_any()
     @unittest.category('nightly', '!neos')
     @unittest.timeout(60, timeout_raises=unittest.SkipTest)
     def test_cbc_timeout(self):
@@ -261,6 +267,12 @@ class TestSolvers_pyomo_cmd_min(RunAllNEOSSolvers, PyomoCommandDriver,
 
     # Add the CBC test to the nightly suite, but with a non-fatal
     # (short) timeout
+    #
+    # TODO: remove queued job from NEOS servers.  Using timeout() leaves
+    # the queued problem on the NEOS servers, because timeout kills the
+    # forked process with SIGTERM.  Implementing a proper timeout will
+    # likely require reworking the AsynchronousSolverManager to accept a
+    # timeout through _perform_wait_any()
     @unittest.category('nightly', '!neos')
     @unittest.timeout(60, timeout_raises=unittest.SkipTest)
     def test_cbc_timeout(self):
