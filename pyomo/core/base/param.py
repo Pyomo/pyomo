@@ -19,6 +19,7 @@ from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
+import pyomo.core.expr.current as expr
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent, \
@@ -131,10 +132,26 @@ class _ParamData(ComponentData, NumericValue):
     # set_value is called without specifying an index, this call
     # involves a linear scan of the _data dict.
     def set_value(self, value, idx=NoArgumentGiven):
+        #
+        # If this param has units, then we need to check the incoming
+        # value and see if it is "units compatible".  We only need to
+        # check here in set_value, because all united Params are
+        # required to be mutable.
+        #
+        _comp = self.parent_component()
+        if type(value) in native_types:
+            # TODO: warn/error: check if this Param has units: assigning
+            # a dimensionless value to a united param should be an error
+            pass
+        elif _comp._units is not None:
+            _src_magnitude = expr.value(value)
+            _src_units = units.get_units(value)
+            value = units.convert_value(
+                num_value=_src_magnitude, from_units=_src_units,
+                to_units=_comp._units)
+
         self._value = value
-        if idx is NoArgumentGiven:
-            idx = self.index()
-        self.parent_component()._validate_value(idx, value)
+        _comp._validate_value(idx, value, data=self)
 
     def __call__(self, exception=True):
         """
@@ -642,7 +659,7 @@ class Param(IndexedComponent):
             raise
 
 
-    def _validate_value(self, index, value, validate_domain=True):
+    def _validate_value(self, index, value, validate_domain=True, data=None):
         """
         Validate a given input/value pair.
         """
@@ -650,11 +667,15 @@ class Param(IndexedComponent):
         # Check if the value is valid within the current domain
         #
         if validate_domain and not value in self.domain:
+            if index is NoArgumentGiven:
+                index = data.index()
             raise ValueError(
                 "Invalid parameter value: %s[%s] = '%s', value type=%s.\n"
                 "\tValue not in parameter domain %s" %
                 (self.name, index, value, type(value), self.domain.name))
         if self._validate:
+            if index is NoArgumentGiven:
+                index = data.index()
             valid = apply_parameterized_indexed_rule(
                 self, self._validate, self.parent_block(), value, index )
             if not valid:
