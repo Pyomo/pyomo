@@ -1394,6 +1394,17 @@ q : Size=3, Index=Any, Domain=Any, Default=None, Mutable=True
         with self.assertRaises(UnitsError):
             m.p = 1*units.s
 
+        out = StringIO()
+        m.pprint(ostream=out)
+        self.assertEqual(out.getvalue().strip(), """
+1 Param Declarations
+    p : Size=1, Index=None, Domain=Any, Default=None, Mutable=True, Units=g
+        Key  : Value
+        None : 7000.0
+
+1 Declarations: p
+        """.strip())
+
 
 def createNonIndexedParamMethod(func, init_xy, new_xy, tol=1e-10):
 

@@ -18,6 +18,8 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
+from io import StringIO
+
 import pyomo.common.unittest as unittest
 
 from pyomo.core.base import IntegerSet
@@ -1386,6 +1388,17 @@ class MiscVarTests(unittest.TestCase):
         with self.assertRaises(UnitsError):
             m.x = 1*units.s
 
+        out = StringIO()
+        m.pprint(ostream=out)
+        self.assertEqual(out.getvalue().strip(), """
+1 Var Declarations
+    x : Size=1, Index=None, Units=g
+        Key  : Lower : Value  : Upper : Fixed : Stale : Domain
+        None :  None : 7000.0 :  None : False : False :  Reals
+
+1 Declarations: x
+        """.strip())
+
     @unittest.skipUnless(pint_available, "units tests requires pint module")
     def test_set_bounds_units(self):
         m = ConcreteModel()
@@ -1407,6 +1420,7 @@ class MiscVarTests(unittest.TestCase):
         self.assertEqual(m.x.ub, 4000)
         with self.assertRaises(UnitsError):
             m.x.setlb(1*units.s)
+
 
 if __name__ == "__main__":
     unittest.main()
