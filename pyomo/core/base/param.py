@@ -19,13 +19,14 @@ from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
-import pyomo.core.expr.current as expr
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent, \
     UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
-from pyomo.core.base.numvalue import NumericValue, native_types
+from pyomo.core.base.numvalue import (
+    NumericValue, native_types, value as expr_value
+)
 from pyomo.core.base.set_types import Any, Reals
 from pyomo.core.base.units_container import units
 
@@ -144,7 +145,7 @@ class _ParamData(ComponentData, NumericValue):
             # a dimensionless value to a united param should be an error
             pass
         elif _comp._units is not None:
-            _src_magnitude = expr.value(value)
+            _src_magnitude = expr_value(value)
             _src_units = units.get_units(value)
             value = units.convert_value(
                 num_value=_src_magnitude, from_units=_src_units,
