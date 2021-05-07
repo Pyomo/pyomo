@@ -16,7 +16,9 @@ from weakref import ref as weakref_ref
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base.numvalue import NumericValue, value, is_fixed
+from pyomo.core.base.numvalue import (
+    NumericValue, value, is_fixed, native_numeric_types,
+)
 from pyomo.core.base.set_types import Reals, Binary
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ComponentData
@@ -173,9 +175,24 @@ class _VarData(ComponentData, NumericValue):
         validating its value. If the 'valid' flag is True,
         then the validation step is skipped.
         """
-        if valid or self._valid_value(val):
-            self.value = val
-            self.stale = False
+        if not valid and val is not None:
+            # TODO: warn/error: check if this Param has units: assigning
+            # a dimensionless value to a united param should be an error
+            if type(val) not in native_numeric_types:
+                if self.parent_component()._units is not None:
+                    _src_magnitude = value(val)
+                    _src_units = units.get_units(val)
+                    val = units.convert_value(
+                        num_value=_src_magnitude, from_units=_src_units,
+                        to_units=self.parent_component()._units)
+
+            if val not in self.domain:
+                raise ValueError("Numeric value `%s` (%s) is not in "
+                                 "domain %s for Var %s" %
+                                 (val, type(val), self.domain, self.name))
+                
+        self.value = val
+        self.stale = False
 
     def _valid_value(self, val, use_exception=True):
         """
@@ -371,6 +388,16 @@ class _GeneralVarData(_VarData):
     @value.setter
     def value(self, val):
         """Set the value for this variable."""
+        if type(val) in native_numeric_types:
+            # TODO: warn/error: check if this Param has units: assigning
+            # a dimensionless value to a united param should be an error
+            pass
+        elif self.parent_component()._units is not None:
+            _src_magnitude = value(val)
+            _src_units = units.get_units(val)
+            val = units.convert_value(
+                num_value=_src_magnitude, from_units=_src_units,
+                to_units=self.parent_component()._units)
         self._value = val
 
     @property
