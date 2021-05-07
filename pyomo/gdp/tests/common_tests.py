@@ -12,6 +12,7 @@
 from pyomo.environ import TransformationFactory, ConcreteModel, Constraint, Var, Objective, Block, Any, RangeSet, Expression, value
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.core.base import constraint, ComponentUID
+from pyomo.core.base.block import _BlockData
 from pyomo.repn import generate_standard_repn
 import pyomo.gdp.tests.models as models
 from io import StringIO
@@ -1496,6 +1497,21 @@ def check_disjunctData_only_targets_transformed(self, transformation):
                       m.disjunct[1].innerdisjunct[i])
         self.assertIs(m.disjunct[1].innerdisjunct[i].transformation_block(),
                       disjBlock[j])
+
+def check_nested_disjunction_target(self, transformation):
+    m = models.makeNestedDisjunctions_NestedDisjuncts()
+    transform = TransformationFactory('gdp.%s' % transformation)
+    transform.apply_to(m, targets=[m.disj])
+
+    # the bug that inspired this test throws an error while doing the
+    # transformation, so we'll just do a quick check that all the GDP
+    # components think they are transformed.
+    self.assertIsInstance(m.disj.algebraic_constraint(), Constraint)
+    self.assertIsInstance(m.d1.disj2.algebraic_constraint(), Constraint)
+    self.assertIsInstance(m.d1.transformation_block(), _BlockData)
+    self.assertIsInstance(m.d2.transformation_block(), _BlockData)
+    self.assertIsInstance(m.d1.d3.transformation_block(), _BlockData)
+    self.assertIsInstance(m.d1.d4.transformation_block(), _BlockData)
 
 # checks for handling of benign types that could be on disjuncts we're
 # transforming

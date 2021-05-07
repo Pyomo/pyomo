@@ -1075,6 +1075,9 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
     def test_disjunction_target_err(self):
         ct.check_disjunction_target_err(self, 'hull')
 
+    def test_nested_disjunction_target(self):
+        ct.check_nested_disjunction_target(self, 'hull')
+
     @unittest.skipIf(not linear_solvers, "No linear solver available")
     def test_relaxation_feasibility(self):
         m = models.makeNestedDisjunctions_FlatDisjuncts()

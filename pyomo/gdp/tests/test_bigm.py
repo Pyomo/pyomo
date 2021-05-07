@@ -1974,6 +1974,9 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
     def test_disjunction_target_err(self):
         ct.check_disjunction_target_err(self, 'bigm')
 
+    def test_nested_disjunction_target(self):
+        ct.check_nested_disjunction_target(self, 'bigm')
+
     def test_create_using(self):
         m = models.makeNestedDisjunctions()
         self.diff_apply_to_and_create_using(m)
