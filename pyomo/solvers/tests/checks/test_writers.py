@@ -89,7 +89,7 @@ def create_test_method(model,
 
         if is_expected_failure:
             if rc[0]:
-                warnings.warn("\nTest model '%s' was marked as an expected "
+                warnings.warning("\nTest model '%s' was marked as an expected "
                               "failure but no failure occured. The "
                               "reason given for the expected failure "
                               "is:\n\n****\n%s\n****\n\n"
@@ -117,15 +117,6 @@ def create_test_method(model,
             os.remove(save_filename)
         except OSError:
             pass
-
-    # 03/23/2021: IDAES-ext added CBC 2.10.4 to their official release
-    #             This is causing failures in this test.
-    #             Manually turning off CBC tests until a solution can be found.
-    #             - mrmundt
-    if solver == 'cbc':
-        def skipping_test(self):
-            self.skipTest('SKIP: cbc currently does not work.')
-        return skipping_test
 
     # Skip this test if the status is 'skip'
     if test_case.status == 'skip':

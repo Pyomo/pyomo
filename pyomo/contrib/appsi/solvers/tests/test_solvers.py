@@ -1,5 +1,5 @@
 import pyomo.environ as pe
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from parameterized import parameterized
 from pyomo.contrib.appsi.base import TerminationCondition, Results, Solver
 from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc

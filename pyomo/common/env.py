@@ -11,13 +11,10 @@
 import ctypes
 import multiprocessing
 import os
-import six
-
-from six import iteritems
 
 def _as_bytes(val):
     """Helper function to coerce a string to a bytes() object"""
-    if isinstance(val, six.binary_type):
+    if isinstance(val, bytes):
         return val
     elif val is not None:
         return val.encode('utf-8')
@@ -26,7 +23,7 @@ def _as_bytes(val):
 
 def _as_unicode(val):
     """Helper function to coerce a string to a unicode() object"""
-    if isinstance(val, six.text_type):
+    if isinstance(val, str):
         return val
     elif val is not None:
         return val.decode()
@@ -96,7 +93,7 @@ class _RestorableEnvironInterface(object):
         self._original_state = {}
 
         # Transfer over the current os.environ
-        for key, val in list(iteritems(os.environ)):
+        for key, val in list(os.environ.items()):
             if val != self[key]:
                 self[key] = val
 
@@ -110,7 +107,7 @@ class _RestorableEnvironInterface(object):
                     del self[key]
 
     def restore(self):
-        for key, val in iteritems(self._original_state):
+        for key, val in self._original_state.items():
             if not val:
                 if self[key] is not None:
                     del self[key]
@@ -119,7 +116,7 @@ class _RestorableEnvironInterface(object):
         self._original_state = {}
 
     def __getitem__(self, key):
-        if isinstance(key, six.text_type):
+        if isinstance(key, str):
             return self.dll.wgetenv(key)
         else:
             return self.dll.getenv(key)
@@ -128,12 +125,12 @@ class _RestorableEnvironInterface(object):
         if key not in self._original_state:
             self._original_state[key] = self[key]
 
-        if isinstance(key, six.text_type):
-            if isinstance(val, six.text_type):
+        if isinstance(key, str):
+            if isinstance(val, str):
                 self.dll.wputenv_s(key, val)
             else:
                 self.dll.wputenv_s(key, _as_unicode(val))
-        elif isinstance(val, six.text_type):
+        elif isinstance(val, str):
             self.dll.wputenv_s(_as_unicode(key), val)
         else:
             self.dll.putenv_s(key, val)
@@ -142,7 +139,7 @@ class _RestorableEnvironInterface(object):
         if key not in self._original_state:
             self._original_state[key] = self[key]
 
-        if isinstance(key, six.text_type):
+        if isinstance(key, str):
             self.dll.wputenv_s(key, u'')
         else:
             self.dll.putenv_s(key, b'')
@@ -160,16 +157,13 @@ class _OSEnviron(object):
         return dict(os.environ)
 
     def getenv(self, key):
-        if six.PY2:
-            return _as_bytes(os.environ.get(key, None))
-        else:
-            # environb is not always present and depends on how the
-            # interpreter was compiled.  Fall back on casting environ if
-            # it is not available.
-            try:
-                return os.environb.get(key, None)
-            except AttributeError:
-                return _as_bytes(os.environ.get(_as_unicode(key),None))
+        # environb is not always present and depends on how the
+        # interpreter was compiled.  Fall back on casting environ if
+        # it is not available.
+        try:
+            return os.environb.get(key, None)
+        except AttributeError:
+            return _as_bytes(os.environ.get(_as_unicode(key),None))
 
     def wgetenv(self, key):
         # PY2 doesn't distinguish, and PY3's environ is nominally
@@ -184,10 +178,7 @@ class _OSEnviron(object):
                 del os.environ[key]
             return
 
-        if six.PY2:
-            os.environ[key] = val
-        else:
-            os.environb[key] = val
+        os.environb[key] = val
 
     def wputenv_s(self, key, val):
         # Win32 convention deletes environ entries when the string is empty
@@ -196,10 +187,7 @@ class _OSEnviron(object):
                 del os.environ[key]
             return
 
-        if six.PY2:
-            os.environ[key] = val
-        else:
-            os.environ[key] = val
+        os.environ[key] = val
 
 
 class _MsvcrtDLL(object):
@@ -458,7 +446,7 @@ class CtypesEnviron(object):
              _load_dll.pool.terminate()
              _load_dll.pool = None
         # Set the incoming env strings on all interfaces...
-        for k, v in iteritems(kwds):
+        for k, v in kwds.items():
             self[k] = v
 
     def __enter__(self):

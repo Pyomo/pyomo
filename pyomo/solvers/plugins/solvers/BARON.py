@@ -26,8 +26,6 @@ from pyomo.opt.results import (
 )
 from pyomo.opt.solver import SystemCallSolver
 
-from six.moves import zip
-
 logger = logging.getLogger('pyomo.solvers')
 
 @SolverFactory.register('baron',  doc='The BARON MINLP solver')
@@ -476,8 +474,8 @@ class BARONSHELL(SystemCallSolver):
             #
             # Scan through the first part of the solution file, until the
             # termination message '*** Normal completion ***'
-            line = ''
-            while '***' not in line:
+            line = '\n'
+            while line and '***' not in line:
                 line = INPUT.readline()
                 if 'Problem solved during preprocessing' in line:
                     SolvedDuringPreprocessing = True

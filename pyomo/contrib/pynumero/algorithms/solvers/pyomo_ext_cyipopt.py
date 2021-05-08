@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 import numpy as np
-import six
 import abc
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptProblemInterface
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
@@ -41,8 +40,8 @@ Todo:
    * Remove the dummy variable and constraint once Pyomo supports non-removal of certain
      variables
 """
-@six.add_metaclass(abc.ABCMeta)
-class ExternalInputOutputModel(object):
+
+class ExternalInputOutputModel(object, metaclass=abc.ABCMeta):
     """
     This is the base class for building external input output models
     for use with Pyomo and CyIpopt

@@ -20,9 +20,6 @@ from pyomo.gdp import Disjunct, GDP_Error, Disjunction
 from pyomo.core import TraversalStrategy, TransformationFactory
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
 from pyomo.common.deprecation import deprecated
-from pyomo.common.modeling import unique_component_name
-
-from six import itervalues
 
 logger = logging.getLogger('pyomo.gdp')
                 
@@ -50,7 +47,7 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
         for disjunct_component in disjunct_generator:
             # Check that the disjuncts being reclassified are all relaxed or
             # are not on an active block.
-            for disjunct in itervalues(disjunct_component):
+            for disjunct in disjunct_component.values():
                 if (disjunct.active and
                         self._disjunct_not_relaxed(disjunct) and
                         self._disjunct_on_active_block(disjunct) and
@@ -111,7 +108,7 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
             # block, as the component_objects generator will not
             # return anything when active=True and the block is
             # deactivated.
-            for disjunct in itervalues(disjunct_component._data):
+            for disjunct in disjunct_component._data.values():
                 if self._disjunct_not_relaxed(disjunct):
                     disjunct._deactivate_without_fixing_indicator()
                 else:

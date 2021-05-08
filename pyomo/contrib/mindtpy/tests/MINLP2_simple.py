@@ -35,8 +35,6 @@ Ref:
 """
 from __future__ import division
 
-from six import iteritems
-
 from pyomo.environ import (Binary, ConcreteModel, Constraint, NonNegativeReals,
                            Objective, RangeSet, Var, minimize, log)
 
@@ -86,5 +84,5 @@ class SimpleMINLP(ConcreteModel):
         """Bound definitions"""
         # x (continuous) upper bounds
         x_ubs = {1: 2, 2: 2, 3: 1, 4: 100}
-        for i, x_ub in iteritems(x_ubs):
+        for i, x_ub in x_ubs.items():
             X[i].setub(x_ub)

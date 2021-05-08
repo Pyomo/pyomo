@@ -5,7 +5,6 @@
 # Scaling in Continuous Set
 from pyomo.environ import *
 from pyomo.dae import *
-from six.moves import xrange
 
 years = 20
 beta_py = 26
@@ -41,10 +40,10 @@ model.S_TRI = RangeSet(1,model.P_TRI)
 # Define indexed parameters
 beta_ndx = {}
 if (beta_py > 26) or (fepr > 1):
-    for i in xrange(1,fe+1):
+    for i in range(1,fe+1):
         beta_ndx[i] = (((i+1)/fepr)-1)%beta_py+1
 else:
-    for i in xrange(1,fe+1):
+    for i in range(1,fe+1):
         beta_ndx[i] = ((i-1)%beta_py)+1
 model.P_BETA_NDX = Param(model.S_FE, initialize=beta_ndx, default=1.0)
 

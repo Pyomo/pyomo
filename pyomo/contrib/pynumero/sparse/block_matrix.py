@@ -804,7 +804,7 @@ class BlockMatrix(BaseBlockMatrix):
                     raise ValueError(msg)
                 msg = 'blocks need to be sparse matrices or BlockMatrices; a numpy array was given; copying the numpy array to a coo_matrix'
                 logger.warning(msg)
-                warnings.warn(msg)
+                warnings.warning(msg)
                 value = coo_matrix(value)
             else:
                 assert isspmatrix(value), 'blocks need to be sparse matrices or BlockMatrices'

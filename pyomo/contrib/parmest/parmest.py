@@ -7,6 +7,25 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+#### Using mpi-sppy instead of PySP; May 2020
+#### Adding option for "local" EF starting Sept 2020
+#### Wrapping mpi-sppy functionality and local option Jan 2021, Feb 2021
+
+# False implies always use the EF that is local to parmest
+use_mpisppy = True  # Use it if we can but use local if not.
+if use_mpisppy:
+    try:
+        import mpisppy.utils.sputils as sputils
+    except:
+        use_mpisppy = False  # we can't use it
+if use_mpisppy:
+    # These things should be outside the try block.
+    sputils.disable_tictoc_output()
+    import mpisppy.opt.ef as st
+    import mpisppy.scenario_tree as scenario_tree
+else:
+    import pyomo.contrib.parmest.create_ef as local_ef
+    import pyomo.contrib.parmest.scenario_tree as scenario_tree
 
 import re
 import importlib as im
@@ -23,6 +42,7 @@ from pyomo.common.dependencies import (
 )
 
 import pyomo.environ as pyo
+
 from pyomo.opt import SolverFactory
 from pyomo.environ import Block, ComponentUID
 
@@ -30,126 +50,38 @@ import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
 import pyomo.contrib.parmest.graphics as graphics
 
-pysp, pysp_available = attempt_import('pysp')
-
-parmest_available = numpy_available & pandas_available & scipy_available & \
-                    pysp_available
+parmest_available = numpy_available & pandas_available & scipy_available
 
 inverse_reduced_hessian, inverse_reduced_hessian_available = attempt_import(
     'pyomo.contrib.interior_point.inverse_reduced_hessian')
 
-st = attempt_import('pysp.util.rapper')[0]
-scenariotree = attempt_import('pysp.scenariotree')[0]
-
 logger = logging.getLogger(__name__)
 
-__version__ = 0.1
-
-
-#=============================================
-def _object_from_string(instance, vstr):
-    """
-    Create a Pyomo object from a string; it is attached to instance
-    args:
-        instance: a concrete pyomo model
-        vstr: a particular Var or Param (e.g. "pp.Keq_a[2]")
-    output:
-        the object
-    NOTE: We need to deal with blocks
-          and with indexes that might really be strings or ints
-    """
-    # pull off the index
-    l = vstr.find('[')
-    if l == -1:
-        indexstr = None
-        basestr = vstr
+def ef_nonants(ef):
+    # Wrapper to call someone's ef_nonants
+    # (the function being called is very short, but it might be changed)
+    if use_mpisppy:
+        return sputils.ef_nonants(ef)
     else:
-        r = vstr.find(']')
-        indexstr = vstr[l+1:r]
-        basestr = vstr[:l]
-    # get the blocks and the name
-    parts = basestr.split('.')
-    name = parts[-1]
-    retval = instance
-    for i in range(len(parts)-1):
-        retval = getattr(retval, parts[i])
-    retval = getattr(retval, name)
-    if indexstr is None:
-        return retval
-    # dlw jan 2018: TBD improve index handling... multiple indexes, e.g.
-    try:
-        indexstr = int(indexstr)  # hack...
-    except:
-        pass
-    return retval[indexstr]
+        return local_ef.ef_nonants(ef)
 
-#=============================================
-def _ef_ROOT_node_Object_from_string(efinstance, vstr):
-    """
-    Wrapper for _object_from_string for PySP extensive forms
-    but only for Vars at the node named RootNode.
-    DLW April 2018: needs work to be generalized.
-    """
-    efvstr = "MASTER_BLEND_VAR_RootNode["+vstr+"]"
-    return _object_from_string(efinstance, efvstr)
 
-#=============================================
-###def _build_compdatalists(model, complist):
-    # March 2018: not used
+def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_data=None):
     """
-    Convert a list of names of pyomo components (Var and Param)
-    into two lists of so-called data objects found on model.
-
-    args:
-        model: ConcreteModel
-        complist: pyo.Var and pyo.Param names in model
-    return:
-        vardatalist: a list of Vardata objects (perhaps empty)
-        paramdatalist: a list of Paramdata objects or (perhaps empty)
-    """
-    """
-    vardatalist = list()
-    paramdatalist = list()
-
-    if complist is None:
-        raise RuntimeError("Internal: complist cannot be empty")
-    # TBD: require a list (even if it there is only a single element
-    
-    for comp in complist:
-        c = getattr(model, comp)
-        if c.is_indexed() and isinstance(c, pyo.Var):
-            vardatalist.extend([c[i] for i in sorted(c.keys())])
-        elif isinstance(c, pyo.Var):
-            vardatalist.append(c)
-        elif c.is_indexed() and isinstance(c, pyo.Param):
-            paramdatalist.extend([c[i] for i in sorted(c.keys())])
-        elif isinstance(c, pyo.Param):
-            paramdatalist.append(c)
-        else:
-            raise RuntimeError("Invalid component list entry= "+\
-                               (str(c)) + " Expecting Param or Var")
-    
-    return vardatalist, paramdatalist
-    """    
-
-def _pysp_instance_creation_callback(scenario_tree_model,
-                                    scenario_name, node_names):
-    """
-    This is going to be called by PySP and it will call into
+    This is going to be called by mpi-sppy or the local EF and it will call into
     the user's model's callback.
 
     Parameters:
     -----------
-    scenario_tree_model: `pysp scenario tree`
-        Standard pysp scenario tree, but with things tacked on:
-        `CallbackModule` : `str` or `types.ModuleType`
-        `CallbackFunction`: `str` or `callable`
-        NOTE: if CallbackFunction is callable, you don't need a module.
-    scenario_name: `str`
-         `cb_data`: optional to pass through to user's callback function
-        Scenario name should end with a number
-    node_names: `None`
-        Not used here 
+    scenario_name: `str` Scenario name should end with a number
+    node_names: `None` ( Not used here )
+    cb_data : dict with ["callback"], ["BootList"], 
+              ["theta_names"], ["cb_data"], etc.
+              "cb_data" is passed through to user's callback function
+                        that is the "callback" value.
+              "BootList" is None or bootstrap experiment number list.
+                       (called cb_data by mpisppy)
+ 
 
     Returns:
     --------
@@ -160,25 +92,24 @@ def _pysp_instance_creation_callback(scenario_tree_model,
     ----
     There is flexibility both in how the function is passed and its signature.
     """
+    assert(cb_data is not None)
+    outer_cb_data = cb_data
     scen_num_str = re.compile(r'(\d+)$').search(scenario_name).group(1)
     scen_num = int(scen_num_str)
     basename = scenario_name[:-len(scen_num_str)] # to reconstruct name
-    
-    # The module and callback function names need to have been on tacked on the tree.
-    # We allow a lot of flexibility in these things.
-    if not hasattr(scenario_tree_model, "CallbackFunction"):
-        raise RuntimeError(\
-            "Internal Error: tree needs callback in parmest callback function")
-    elif callable(scenario_tree_model.CallbackFunction):
-        callback = scenario_tree_model.CallbackFunction
-    else:
-        cb_name = scenario_tree_model.CallbackFunction
 
-        if not hasattr(scenario_tree_model, "CallbackModule"):
+    CallbackFunction = outer_cb_data["callback"]
+    
+    if callable(CallbackFunction):
+        callback = CallbackFunction
+    else:
+        cb_name = CallbackFunction
+
+        if "CallbackModule" not in outer_cb_data:
             raise RuntimeError(\
-                "Internal Error: tree needs CallbackModule in parmest callback")
+                "Internal Error: need CallbackModule in parmest callback")
         else:
-            modname = scenario_tree_model.CallbackModule
+            modname = outer_cb_data["CallbackModule"]
 
         if isinstance(modname, str):
             cb_module = im.import_module(modname, package=None)
@@ -193,9 +124,9 @@ def _pysp_instance_creation_callback(scenario_tree_model,
         except:
             print("Error getting function="+cb_name+" from module="+str(modname))
             raise
-    
-    if hasattr(scenario_tree_model, "BootList"):
-        bootlist = scenario_tree_model.BootList
+
+    if "BootList" in outer_cb_data:
+        bootlist = outer_cb_data["BootList"]
         #print("debug in callback: using bootlist=",str(bootlist))
         # assuming bootlist itself is zero based
         exp_num = bootlist[scen_num]
@@ -204,12 +135,15 @@ def _pysp_instance_creation_callback(scenario_tree_model,
 
     scen_name = basename + str(exp_num)
 
-    cb_data = scenario_tree_model.cb_data # cb_data might be None.
+    cb_data = outer_cb_data["cb_data"] # cb_data might be None.
 
     # at least three signatures are supported. The first is preferred
     try:
         instance = callback(experiment_number = exp_num, cb_data = cb_data)
     except TypeError:
+        raise RuntimeError("Only one callback signature is supported: "
+                           "callback(experiment_number, cb_data) ")
+        """
         try:
             instance = callback(scenario_tree_model, scen_name, node_names)
         except TypeError:  # deprecated signature?
@@ -221,13 +155,27 @@ def _pysp_instance_creation_callback(scenario_tree_model,
         except:
             print("Failed to create instance using callback.")
             raise
+        """
+    if hasattr(instance, "_mpisppy_node_list"):
+        raise RuntimeError (f"scenario for experiment {exp_num} has _mpisppy_node_list")
+    nonant_list = [instance.find_component(vstr) for vstr in\
+                   outer_cb_data["theta_names"]]
+    instance._mpisppy_node_list = [scenario_tree.ScenarioNode(
+                                                name="ROOT",
+                                                cond_prob=1.0,
+                                                stage=1,
+                                                cost_expression=instance.FirstStageCost,
+                                                scen_name_list=None, # Deprecated?
+                                                nonant_list=nonant_list,
+                                                scen_model=instance)]
 
-    if hasattr(scenario_tree_model, "ThetaVals"):
-        thetavals = scenario_tree_model.ThetaVals
+
+    if "ThetaVals" in outer_cb_data:
+        thetavals = outer_cb_data["ThetaVals"]
 
         # dlw august 2018: see mea code for more general theta
         for vstr in thetavals:
-            object = _object_from_string(instance, vstr)
+            object = instance.find_component(vstr)
             if thetavals[vstr] is not None:
                 #print("Fixing",vstr,"at",str(thetavals[vstr]))
                 object.fix(thetavals[vstr])
@@ -335,8 +283,7 @@ class Estimator(object):
         sum of squared error between measurements and model variables.  
         If no function is specified, the model is used 
         "as is" and should be defined with a "FirstStateCost" and 
-        "SecondStageCost" expression that are used to build an objective 
-        for pysp.
+        "SecondStageCost" expression that are used to build an objective.
     tee: bool, optional
         Indicates that ef solver output should be teed
     diagnostic_mode: bool, optional
@@ -392,8 +339,7 @@ class Estimator(object):
                     # in the 'except')
                     var_validate.fixed = False
                     # We want to standardize on the CUID string
-                    # representation (which is what PySP will use
-                    # internally)
+                    # representation
                     self.theta_names[i] = repr(var_cuid)
                 except:
                     logger.warning(theta + ' is not a variable')
@@ -433,11 +379,9 @@ class Estimator(object):
                     with open(exp_data,'r') as infile:
                         exp_data = json.load(infile)
                 except:
-                    print('Unexpected data format')
-                    return
+                    raise RuntimeError(f'Could not read {exp_data} as json')
         else:
-            print('Unexpected data format')
-            return
+            raise RuntimeError(f'Unexpected data format for cb_data={cb_data}')
         model = self._create_parmest_model(exp_data)
         
         return model
@@ -449,65 +393,46 @@ class Estimator(object):
         Set up all thetas as first stage Vars, return resulting theta
         values as well as the objective function value.
 
-        NOTE: If thetavals is present it will be attached to the
-        scenario tree so it can be used by the scenario creation
-        callback.  Side note (feb 2018, dlw): if you later decide to
-        construct the tree just once and reuse it, then remember to
-        remove thetavals from it when none is desired.
         """
-        
-        assert(solver != "k_aug" or ThetaVals == None)
-        # Create a tree with dummy scenarios (callback will supply when needed).
-        # Which names to use (i.e., numbers) depends on if it is for bootstrap.
+        if (solver == "k_aug"):
+            raise RuntimeError("k_aug no longer supported.")
+
         # (Bootstrap scenarios will use indirection through the bootlist)
         if bootlist is None:
-            tree_model = _treemaker(self._numbers_list)
+            scen_names = ["Scenario{}".format(i) for i in self._numbers_list]
         else:
-            tree_model = _treemaker(range(len(self._numbers_list)))
-        stage1 = tree_model.Stages[1]
-        stage2 = tree_model.Stages[2]
-        tree_model.StageVariables[stage1] = self.theta_names
-        tree_model.StageVariables[stage2] = []
-        tree_model.StageCost[stage1] = "FirstStageCost"
-        tree_model.StageCost[stage2] = "SecondStageCost"
+            scen_names = ["Scenario{}".format(i)\
+                         for i in range(len(self._numbers_list))]
 
-        # Now attach things to the tree_model to pass them to the callback
-        tree_model.CallbackModule = None
-        tree_model.CallbackFunction = self._instance_creation_callback
+        # tree_model.CallbackModule = None
+        outer_cb_data = dict()
+        outer_cb_data["callback"] = self._instance_creation_callback
         if ThetaVals is not None:
-            tree_model.ThetaVals = ThetaVals
+            outer_cb_data["ThetaVals"] = ThetaVals
         if bootlist is not None:
-            tree_model.BootList = bootlist
-        tree_model.cb_data = self.callback_data  # None is OK
+            outer_cb_data["BootList"] = bootlist
+        outer_cb_data["cb_data"] = self.callback_data  # None is OK
+        outer_cb_data["theta_names"] = self.theta_names
 
-        try:
-            # For structured models, it is important that we use the
-            # updated version of the CUID representation.  PySP (for
-            # backwards compatibility reasons, and so a ton of tests
-            # don't have to be updated) still defaults to the old
-            # representation.
-            _cuidver = scenariotree.tree_structure.CUID_repr_version
-            scenariotree.tree_structure.CUID_repr_version = 2
-            stsolver = st.StochSolver(
-                fsfile = "pyomo.contrib.parmest.parmest",
-                fsfct = "_pysp_instance_creation_callback",
-                tree_model = tree_model
-            )
-        finally:
-            scenariotree.tree_structure.CUID_repr_version = _cuidver
-                
+        options = {"solver": "ipopt"}
+        scenario_creator_options = {"cb_data": outer_cb_data}
+        if use_mpisppy:
+            ef = sputils.create_EF(scen_names,
+                              _experiment_instance_creation_callback,
+                              EF_name = "_Q_opt",
+                              suppress_warnings=True,
+                              scenario_creator_kwargs=scenario_creator_options)
+        else:
+            ef = local_ef.create_EF(scen_names,
+                                    _experiment_instance_creation_callback,
+                                    EF_name = "_Q_opt",
+                                    suppress_warnings=True,
+                                    scenario_creator_kwargs=scenario_creator_options)
+        self.ef_instance = ef
+        
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
         
-            # Generate the extensive form of the stochastic program using pysp
-            self.ef_instance = stsolver.make_ef()
-
-            # need_gap is a holdover from solve_ef in rapper.py. Would we ever want
-            # need_gap = True with parmest?
-            need_gap = False
-            
-            assert not (need_gap and self.calc_cov), "Calculating both the gap and reduced hessian (covariance) is not currently supported."
-
             if not calc_cov:
                 # Do not calculate the reduced hessian
 
@@ -516,15 +441,7 @@ class Estimator(object):
                     for key in self.solver_options:
                         solver.options[key] = self.solver_options[key]
 
-                if need_gap:
-                    solve_result = solver.solve(self.ef_instance, tee = self.tee, load_solutions=False)
-                    if len(solve_result.solution) > 0:
-                        absgap = solve_result.solution(0).gap
-                    else:
-                        absgap = None
-                    self.ef_instance.solutions.load_from(solve_result)
-                else:
-                    solve_result = solver.solve(self.ef_instance, tee = self.tee)
+                solve_result = solver.solve(ef, tee = self.tee)
 
             # The import error will be raised when we attempt to use
             # inv_reduced_hessian_barrier below.
@@ -534,14 +451,9 @@ class Estimator(object):
             #                      "covariance matrix with solver 'ipopt'")
             else:
                 # parmest makes the fitted parameters stage 1 variables
-                # thus we need to convert from var names (string) to 
-                # Pyomo vars
                 ind_vars = []
-                for v in self.theta_names:
-
-                    #ind_vars.append(eval('ef.'+v))
-                    ind_vars.append(self.ef_instance.MASTER_BLEND_VAR_RootNode[v])
-        
+                for ndname, Var, solval in ef_nonants(ef):
+                    ind_vars.append(Var)
                 # calculate the reduced hessian
                 solve_result, inv_red_hes = \
                     inverse_reduced_hessian.inv_reduced_hessian_barrier(
@@ -550,20 +462,19 @@ class Estimator(object):
                         solver_options=self.solver_options,
                         tee=self.tee)
             
-            # Extract solution from pysp
-            stsolver.scenario_tree.pullScenarioSolutionsFromInstances()
-            stsolver.scenario_tree.snapshotSolutionFromScenarios() # update nodes
-                                
             if self.diagnostic_mode:
                 print('    Solver termination condition = ',
                        str(solve_result.solver.termination_condition))
 
             # assume all first stage are thetas...
             thetavals = {}
-            for name, solval in stsolver.root_Var_solution():
-                 thetavals[name] = solval
+            for ndname, Var, solval in ef_nonants(ef):
+                # process the name
+                # the scenarios are blocks, so strip the scenario name
+                vname  = Var.name[Var.name.find(".")+1:]
+                thetavals[vname] = solval
 
-            objval = stsolver.root_E_obj()
+            objval = pyo.value(ef.EF_Obj)
             
             if calc_cov:
                 # Calculate the covariance matrix
@@ -585,7 +496,7 @@ class Estimator(object):
                 (7-5-16) in "Nonlinear Parameter Estimation", Y. Bard, 1974.
                 
                 This formula is also applicable if the objective is scaled by a constant;
-                the constant cancels out. (PySP scaled by 1/n because it computes an
+                the constant cancels out. (was scaled by 1/n because it computes an
                 expected value.)
                 '''
                 cov = 2 * sse / (n - l) * inv_red_hes
@@ -597,12 +508,15 @@ class Estimator(object):
                     vals = {}
                     for var in return_values:
                         exp_i_var = exp_i.find_component(str(var))
-                        temp = [pyo.value(_) for _ in exp_i_var.itervalues()]
+                        if exp_i_var is None:  # we might have a block such as _mpisppy_data
+                            continue
+                        temp = [pyo.value(_) for _ in exp_i_var.values()]
                         if len(temp) == 1:
                             vals[var] = temp[0]
                         else:
-                            vals[var] = temp                    
-                    var_values.append(vals)                    
+                            vals[var] = temp
+                    if len(vals) > 0:
+                        var_values.append(vals)                    
                 var_values = pd.DataFrame(var_values)
                 if calc_cov:
                     return objval, thetavals, var_values, cov
@@ -615,82 +529,6 @@ class Estimator(object):
             else:
                 return objval, thetavals
         
-        # Solve with sipopt and k_aug
-        elif solver == "k_aug":
-            # Just hope for the best with respect to degrees of freedom.
-
-            model = stsolver.make_ef()
-            stream_solver = True
-            ipopt = SolverFactory('ipopt')
-            sipopt = SolverFactory('ipopt_sens')
-            kaug = SolverFactory('k_aug')
-
-            #: ipopt suffixes  REQUIRED FOR K_AUG!
-            model.dual = pyo.Suffix(direction=pyo.Suffix.IMPORT_EXPORT)
-            model.ipopt_zL_out = pyo.Suffix(direction=pyo.Suffix.IMPORT)
-            model.ipopt_zU_out = pyo.Suffix(direction=pyo.Suffix.IMPORT)
-            model.ipopt_zL_in = pyo.Suffix(direction=pyo.Suffix.EXPORT)
-            model.ipopt_zU_in = pyo.Suffix(direction=pyo.Suffix.EXPORT)
-
-            # declare the suffix to be imported by the solver
-            model.red_hessian = pyo.Suffix(direction=pyo.Suffix.EXPORT)
-            #: K_AUG SUFFIXES
-            model.dof_v = pyo.Suffix(direction=pyo.Suffix.EXPORT) 
-            model.rh_name = pyo.Suffix(direction=pyo.Suffix.IMPORT)
-
-            for vstrindex in range(len(self.theta_names)):
-                vstr = self.theta_names[vstrindex]
-                varobject = _ef_ROOT_node_Object_from_string(model, vstr)
-                varobject.set_suffix_value(model.red_hessian, vstrindex+1)
-                varobject.set_suffix_value(model.dof_v, 1)
-            
-            #: rh_name will tell us which position the corresponding variable has on the reduced hessian text file.
-            #: be sure to declare the suffix value (order)
-            # dof_v is "degree of freedom variable"
-            kaug.options["compute_inv"] = ""  #: if the reduced hessian is desired.
-            #: please check the inv_.in file if the compute_inv option was used
-
-            #: write some options for ipopt sens
-            with open('ipopt.opt', 'w') as f:
-                f.write('compute_red_hessian yes\n')  #: computes the reduced hessian (sens_ipopt)
-                f.write('output_file my_ouput.txt\n')
-                f.write('rh_eigendecomp yes\n')
-                f.close()
-            #: Solve
-            sipopt.solve(model, tee=stream_solver)
-            with open('ipopt.opt', 'w') as f:
-                f.close()
-
-            ipopt.solve(model, tee=stream_solver)
-
-            model.ipopt_zL_in.update(model.ipopt_zL_out)
-            model.ipopt_zU_in.update(model.ipopt_zU_out)
-
-            #: k_aug
-            print('k_aug \n\n\n')
-            #m.write('problem.nl', format=ProblemFormat.nl)
-            kaug.solve(model, tee=stream_solver)
-            HessDict = {}
-            thetavals = {}
-            print('k_aug red_hess')
-            with open('result_red_hess.txt', 'r') as f:
-                lines = f.readlines()
-            # asseble the return values
-            objval = model.MASTER_OBJECTIVE_EXPRESSION.expr()
-            for i in range(len(lines)):
-                HessDict[self.theta_names[i]] = {}
-                linein = lines[i]
-                print(linein)
-                parts = linein.split()
-                for j in range(len(parts)):
-                    HessDict[self.theta_names[i]][self.theta_names[j]] = \
-                        float(parts[j])
-                # Get theta value (there is probably a better way...)
-                vstr = self.theta_names[i]
-                varobject = _ef_ROOT_node_Object_from_string(model, vstr)
-                thetavals[self.theta_names[i]] = pyo.value(varobject)
-            return objval, thetavals, HessDict
-
         else:
             raise RuntimeError("Unknown solver in Q_Opt="+solver)
         
@@ -716,19 +554,19 @@ class Estimator(object):
             pyo.TerminationCondition.infeasible is the worst.
         """
 
+        dummy_cb = {"callback": self._instance_creation_callback,
+                    "ThetaVals": thetavals,
+                    "theta_names": self.theta_names,
+                    "cb_data": self.callback_data}
+        
         optimizer = pyo.SolverFactory('ipopt')
-        dummy_tree = lambda: None # empty object (we don't need a tree)
-        dummy_tree.CallbackModule = None
-        dummy_tree.CallbackFunction = self._instance_creation_callback
-        dummy_tree.ThetaVals = thetavals
-        dummy_tree.cb_data = self.callback_data
         
         if self.diagnostic_mode:
             print('    Compute objective at theta = ',str(thetavals))
 
         # start block of code to deal with models with no constraints
         # (ipopt will crash or complain on such problems without special care)
-        instance = _pysp_instance_creation_callback(dummy_tree, "FOO1", None)    
+        instance = _experiment_instance_creation_callback("FOO1", None, dummy_cb)
         try: # deal with special problems so Ipopt will not crash
             first = next(instance.component_objects(pyo.Constraint, active=True))
         except:
@@ -741,8 +579,7 @@ class Estimator(object):
         totobj = 0
         for snum in self._numbers_list:
             sname = "scenario_NODE"+str(snum)
-            instance = _pysp_instance_creation_callback(dummy_tree,
-                                                        sname, None)
+            instance = _experiment_instance_creation_callback(sname, None, dummy_cb)
             if not sillylittle:
                 if self.diagnostic_mode:
                     print('      Experiment = ',snum)
@@ -1084,7 +921,7 @@ class Estimator(object):
     
     def likelihood_ratio_test(self, obj_at_theta, obj_value, alphas, 
                               return_thresholds=False):
-        """
+        r"""
         Likelihood ratio test to identify theta values within a confidence 
         region using the :math:`\chi^2` distribution
         

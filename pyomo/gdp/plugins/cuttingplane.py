@@ -16,7 +16,7 @@ convex GDPs.
 """
 from __future__ import division
 
-from pyomo.common.config import (ConfigBlock, ConfigValue, PositiveFloat,
+from pyomo.common.config import (ConfigBlock, ConfigValue,
                                  NonNegativeFloat, PositiveInt, In)
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import ( Any, Block, Constraint, Objective, Param, Var,
@@ -34,8 +34,6 @@ from pyomo.gdp.util import ( verify_successful_solve, NORMAL,
 
 from pyomo.contrib.fme.fourier_motzkin_elimination import \
     Fourier_Motzkin_Elimination_Transformation
-
-from six import iteritems
 
 import logging
 
@@ -193,7 +191,7 @@ def create_cuts_fme(transBlock_rHull, var_info, hull_to_bigm_map,
                  do_integer_arithmetic=integer_arithmetic,
                  projected_constraints_name="fme_constraints")
     fme_results = tight_constraints.fme_constraints
-    projected_constraints = [cons for i, cons in iteritems(fme_results)]
+    projected_constraints = [cons for i, cons in fme_results.items()]
 
     # we created these constraints with the variables from rHull. We
     # actually need constraints for BigM and rBigM now!

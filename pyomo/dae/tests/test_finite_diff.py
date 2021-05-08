@@ -16,7 +16,7 @@ from pyomo.environ import (Var, Set, ConcreteModel,
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 
-from six import StringIO
+from io import StringIO
 
 from pyomo.common.log import LoggingIntercept
 

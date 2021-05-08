@@ -13,7 +13,6 @@ from __future__ import division
 
 from collections import namedtuple
 from math import copysign, fabs
-from six import iteritems
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
 from pyomo.contrib.gdpopt.util import time_code, constraints_in_True_disjuncts
@@ -121,10 +120,10 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
                     copysign(1, sign_adjust * dual_value) * (
                         value(constr.body) - rhs + sum(
                             value(jac) * (var - value(var))
-                            for var, jac in iteritems(jacobian.jac))
+                            for var, jac in jacobian.jac.items())
                         ) - slack_var <= 0)
                 if new_oa_cut.polynomial_degree() not in (1, 0):
-                    for var, jac in iteritems(jacobian.jac):
+                    for var, jac in jacobian.jac.items():
                         print(var.name, value(jac))
                 oa_cuts.add(expr=new_oa_cut)
                 counter += 1
