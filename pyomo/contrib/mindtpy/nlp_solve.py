@@ -75,7 +75,7 @@ def solve_subproblem(solve_data, config):
             # considering c by default a (hopefully) convex function, which would make
             # c >= lb a nonconvex inequality which we wouldn't like to add linearizations
             # if we don't have to
-            rhs = c.upper if c.has_ub() else c.lower
+            rhs = value(c.upper) if c.has_ub() else value(c.lower)
             c_geq = -1 if c.has_ub() else 1
             # c_leq = 1 if c.has_ub else -1
             try:
@@ -225,7 +225,7 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config):
     solve_data.nlp_infeasible_counter += 1
     if config.calculate_dual:
         for c in fixed_nlp.component_data_objects(ctype=Constraint):
-            rhs = c.upper if c. has_ub() else c.lower
+            rhs = value(c.upper) if c. has_ub() else value(c.lower)
             c_geq = -1 if c.has_ub() else 1
             fixed_nlp.dual[c] = (c_geq
                                  * max(0, c_geq * (rhs - value(c.body))))

@@ -78,7 +78,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                         expr=(sum(value(jacs[constr][var])*(var - var.value)
                                   for var in constr_vars) + value(constr.body)
                               - (slack_var if config.add_slack else 0)
-                              <= constr.upper)
+                              <= value(constr.upper))
                     )
 
                 if (constr.has_lb()
@@ -92,7 +92,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                         expr=(sum(value(jacs[constr][var])*(var - var.value)
                                   for var in constr_vars) + value(constr.body)
                               + (slack_var if config.add_slack else 0)
-                              >= constr.lower)
+                              >= value(constr.lower))
                     )
 
 
@@ -286,9 +286,9 @@ def add_affine_cuts(solve_data, config):
             if not (concave_cut_valid or convex_cut_valid):
                 continue
 
-            ub_int = min(constr.upper, mc_eqn.upper()
+            ub_int = min(value(constr.upper), mc_eqn.upper()
                          ) if constr.has_ub() else mc_eqn.upper()
-            lb_int = max(constr.lower, mc_eqn.lower()
+            lb_int = max(value(constr.lower), mc_eqn.lower()
                          ) if constr.has_lb() else mc_eqn.lower()
 
             aff_cuts = m.MindtPy_utils.cuts.aff_cuts

@@ -140,7 +140,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                             pyomo_expr)
                         self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
                                  sense='L',
-                                 rhs=constr.upper.value + cplex_rhs)
+                                 rhs=value(constr.upper) + cplex_rhs)
                     if (constr.has_lb()
                         and (linearize_active and abs(constr.lslack()) < config.zero_tolerance)
                             or (linearize_violated and constr.lslack() < 0)
@@ -153,7 +153,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                             pyomo_expr)
                         self.add(constraint=cplex.SparsePair(ind=cplex_expr.variables, val=cplex_expr.coefficients),
                                  sense='G',
-                                 rhs=constr.lower.value + cplex_rhs)
+                                 rhs=value(constr.lower) + cplex_rhs)
 
     def add_lazy_affine_cuts(self, solve_data, config, opt):
         """
@@ -213,9 +213,9 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                 if not (concave_cut_valid or convex_cut_valid):
                     continue
 
-                ub_int = min(constr.upper, mc_eqn.upper()
+                ub_int = min(value(constr.upper), mc_eqn.upper()
                              ) if constr.has_ub() else mc_eqn.upper()
-                lb_int = max(constr.lower, mc_eqn.lower()
+                lb_int = max(value(constr.lower), mc_eqn.lower()
                              ) if constr.has_lb() else mc_eqn.lower()
 
                 if concave_cut_valid:
@@ -427,7 +427,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             for c in fixed_nlp.component_data_objects(ctype=Constraint):
                 rhs = ((0 if c.upper is None else c.upper)
                        + (0 if c.lower is None else c.lower))
-                sign_adjust = 1 if value(c.upper) is None else -1
+                sign_adjust = 1 if c.upper is None else -1
                 fixed_nlp.dual[c] = (sign_adjust
                                      * max(0, sign_adjust * (rhs - value(c.body))))
             dual_values = list(fixed_nlp.dual[c]
