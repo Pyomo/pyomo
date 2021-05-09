@@ -474,8 +474,8 @@ class BARONSHELL(SystemCallSolver):
             #
             # Scan through the first part of the solution file, until the
             # termination message '*** Normal completion ***'
-            line = ''
-            while '***' not in line:
+            line = '\n'
+            while line and '***' not in line:
                 line = INPUT.readline()
                 if 'Problem solved during preprocessing' in line:
                     SolvedDuringPreprocessing = True

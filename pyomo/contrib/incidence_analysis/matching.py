@@ -1,15 +1,24 @@
-import networkx as nx
-import networkx.algorithms.bipartite as nxb
-import networkx.algorithms.components as nxc
-from networkx.algorithms.bipartite.matrix import (
-        from_biadjacency_matrix,
-        )
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+from pyomo.common.dependencies import networkx as nx
 
 def maximum_matching(matrix):
     """
-    Returns a maximum matching of the matrix as a dict
-    from row indices to column indices.
+    Returns a maximum matching of the rows and columns of the 
+    matrix as a dict from row indices to column indices.
     """
+    nxb = nx.algorithms.bipartite
+    nxc = nx.algorithms.components
+    from_biadjacency_matrix = nxb.matrix.from_biadjacency_matrix
+
     M, N = matrix.shape
     bg = from_biadjacency_matrix(matrix)
 

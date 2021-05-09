@@ -1,26 +1,45 @@
-import networkx as nx
-import networkx.algorithms.bipartite as nxb
-import networkx.algorithms.components as nxc
-from networkx.algorithms.bipartite.matrix import (
-        from_biadjacency_matrix,
-        )
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
-from pyomo.contrib.matching.maximum_matching import maximum_matching
+from pyomo.contrib.incidence_analysis.matching import maximum_matching
+from pyomo.common.dependencies import networkx as nx
 
 def block_triangularize(matrix, matching=None):
     """
+    Computes the necessary information to permute a matrix to block-lower
+    triangular form, i.e. a partition of rows and columns an ordered set
+    of diagonal blocks in such a permutation.
+
     Arguments
     ---------
     matrix: A SciPy sparse matrix
-    matching: A perfect matching of rows and columsn, in the form of a dict
+    matching: A perfect matching of rows and columns, in the form of a dict
               mapping row indices to column indices
+
+    Returns
+    -------
+    Two dicts. The first maps each row index to the index of its block in a
+    block-lower triangular permutation of the matrix. The second maps each
+    column index to the index of its block in a block-lower triangular
+    permutation of the matrix.
     """
+    nxb = nx.algorithms.bipartite
+    nxc = nx.algorithms.components
+    nxd = nx.algorithms.dag
+    from_biadjacency_matrix = nxb.matrix.from_biadjacency_matrix
 
     M, N = matrix.shape
     if M != N:
         raise ValueError("block_triangularize does not currently "
            "support non-square matrices. Got matrix with shape %s."
-           % matrix.shape
+           % (matrix.shape,)
            )
     bg = from_biadjacency_matrix(matrix)
 
@@ -67,16 +86,13 @@ def block_triangularize(matrix, matching=None):
     scc_order = list(nxd.topological_sort(dag))
 
     scc_block_map = {c: i for i, c in enumerate(scc_order)}
-    node_block_map = {n: scc_block_map[c] for n, c in node_scc_map.items()}
+    row_block_map = {n: scc_block_map[c] for n, c in node_scc_map.items()}
+    # ^ This maps row indices to the blocks they belong to.
 
-    sym_perm_new2old = list(n for i in scc_order for n in scc_list[i])
-    sym_perm_old2new = {o: n for n, o in sym_perm_new2old.items()}
-    assert len(sym_perm_old2new) == M
+    # Invert the matching to map row indices to column indices
+    col_row_map = {c: r for r, c in matching.items()}
+    assert len(col_row_map) == M
 
-    match_col_perm = {c: r for r, c in enumerate(matching)}
-    assert len(match_col_perm) == M
+    col_block_map = {c: row_block_map[col_row_map[c]] for c in range(N)}
 
-    col_perm = [sym_perm_old2new[match_col_perm[j]] for j in range(N)]
-    row_perm = sym_perm_old2new
-
-    return row_perm, col_perm
+    return row_block_map, col_block_map
