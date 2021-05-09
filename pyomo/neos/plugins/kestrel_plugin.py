@@ -270,3 +270,9 @@ class SolverManager_NEOS(AsynchronousSolverManager):
 
         return None
 
+    def _kill_all_pending_jobs(self):
+        for ah in self._ah.values():
+            self.kestrel.kill(ah.job, ah.password)
+
+    def __exit__(self, t, v, traceback):
+        self._kill_all_pending_jobs()
