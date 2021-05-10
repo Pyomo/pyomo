@@ -701,21 +701,13 @@ class Hull_Reformulation(Transformation):
         # As opposed to bigm, in hull the only special thing we need to do for
         # nested Disjunctions is to make sure that we move up local var
         # references and also references to the disaggregated variables so that
-        # all will be accessible after we transform this Disjunct.The indicator
+        # all will be accessible after we transform this Disjunct. The indicator
         # variables and disaggregated variables of the inner disjunction will
         # need to be disaggregated again, but the transformed constraints will
         # not be. But this way nothing will get double-bigm-ed. (If an
         # untransformed disjunction is lurking here, we will catch it below).
 
-        # add references to all local variables on block (including the
-        # indicator_var)
         disjunctBlock = disjunct._transformation_block()
-        varRefBlock = disjunctBlock.localVarReferences
-        for v in block.component_objects(Var, descend_into=Block, active=None):
-            varRefBlock.add_component(unique_component_name(
-                varRefBlock, v.getname(fully_qualified=True,
-                                       name_buffer=NAME_BUFFER)), Reference(v))
-
         destinationBlock = disjunctBlock.parent_block()
         for obj in block.component_data_objects(
                 Disjunction,
@@ -729,6 +721,16 @@ class Hull_Reformulation(Transformation):
             transBlock = obj.algebraic_constraint().parent_block()
 
             self._transfer_var_references(transBlock, destinationBlock)
+
+        # add references to all local variables on block (including the
+        # indicator_var). Note that we do this after we have moved up the
+        # transformation blocks for nested disjunctions, so that we don't have
+        # duplicate references.
+        varRefBlock = disjunctBlock.localVarReferences
+        for v in block.component_objects(Var, descend_into=Block, active=None):
+            varRefBlock.add_component(unique_component_name(
+                varRefBlock, v.getname(fully_qualified=True,
+                                       name_buffer=NAME_BUFFER)), Reference(v))
 
         # Look through the component map of block and transform everything we
         # have a handler for. Yell if we don't know how to handle it. (Note that

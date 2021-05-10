@@ -9,7 +9,9 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.environ import TransformationFactory, ConcreteModel, Constraint, Var, Objective, Block, Any, RangeSet, Expression, value
+from pyomo.environ import (TransformationFactory, ConcreteModel, Constraint,
+                           Var, Objective, Block, Any, RangeSet, Expression,
+                           value)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.core.base import constraint, ComponentUID
 from pyomo.core.base.block import _BlockData
@@ -69,8 +71,8 @@ def checkb0TargetsInactive(self, m):
 
 def checkb0TargetsTransformed(self, m, transformation):
     trans = TransformationFactory('gdp.%s' % transformation)
-    disjBlock = m.b[0].component("_pyomo_gdp_%s_reformulation" % transformation).\
-                relaxedDisjuncts
+    disjBlock = m.b[0].component(
+        "_pyomo_gdp_%s_reformulation" % transformation).relaxedDisjuncts
     self.assertEqual(len(disjBlock), 2)
     self.assertIsInstance(disjBlock[0].component("b[0].disjunct[0].c"),
                           Constraint)
@@ -709,15 +711,15 @@ def check_indexedBlock_only_targets_transformed(self, transformation):
         m,
         targets=[m.b])
 
-    disjBlock1 = m.b[0].component("_pyomo_gdp_%s_reformulation" % transformation).\
-                 relaxedDisjuncts
+    disjBlock1 = m.b[0].component(
+        "_pyomo_gdp_%s_reformulation" % transformation).relaxedDisjuncts
     self.assertEqual(len(disjBlock1), 2)
     self.assertIsInstance(disjBlock1[0].component("b[0].disjunct[0].c"),
                           Constraint)
     self.assertIsInstance(disjBlock1[1].component("b[0].disjunct[1].c"),
                           Constraint)
-    disjBlock2 = m.b[1].component("_pyomo_gdp_%s_reformulation" % transformation).\
-                 relaxedDisjuncts
+    disjBlock2 = m.b[1].component(
+        "_pyomo_gdp_%s_reformulation" % transformation).relaxedDisjuncts
     self.assertEqual(len(disjBlock2), 2)
     self.assertIsInstance(disjBlock2[0].component("b[1].disjunct0.c"),
                           Constraint)
@@ -859,7 +861,8 @@ def check_trans_block_created(self, transformation):
     self.assertIsInstance(disjBlock, Block)
     self.assertEqual(len(disjBlock), 2)
     # and that it didn't get created on the model
-    self.assertIsNone(m.component('_pyomo_gdp_%s_reformulation' % transformation))
+    self.assertIsNone(
+        m.component('_pyomo_gdp_%s_reformulation' % transformation))
 
 
 # disjunction generation tests: These all suppose that you are doing some sort
@@ -1014,7 +1017,8 @@ def check_transformation_simple_block(self, transformation):
     TransformationFactory('gdp.%s' % transformation).apply_to(m.b)
 
     # transformation block not on m
-    self.assertIsNone(m.component("_pyomo_gdp_%s_reformulation" % transformation))
+    self.assertIsNone(
+        m.component("_pyomo_gdp_%s_reformulation" % transformation))
 
     # transformation block on m.b
     self.assertIsInstance(m.b.component("_pyomo_gdp_%s_reformulation" %
@@ -1024,7 +1028,8 @@ def check_transform_block_data(self, transformation):
     m = models.makeDisjunctionsOnIndexedBlock()
     TransformationFactory('gdp.%s' % transformation).apply_to(m.b[0])
 
-    self.assertIsNone(m.component("_pyomo_gdp_%s_reformulation" % transformation))
+    self.assertIsNone(
+        m.component("_pyomo_gdp_%s_reformulation" % transformation))
 
     self.assertIsInstance(m.b[0].component("_pyomo_gdp_%s_reformulation" %
                                            transformation), Block)
@@ -1034,7 +1039,8 @@ def check_simple_block_target(self, transformation):
     TransformationFactory('gdp.%s' % transformation).apply_to(m, targets=[m.b])
 
     # transformation block not on m
-    self.assertIsNone(m.component("_pyomo_gdp_%s_reformulation" % transformation))
+    self.assertIsNone(
+        m.component("_pyomo_gdp_%s_reformulation" % transformation))
 
     # transformation block on m.b
     self.assertIsInstance(m.b.component("_pyomo_gdp_%s_reformulation" %
@@ -1045,7 +1051,8 @@ def check_block_data_target(self, transformation):
     TransformationFactory('gdp.%s' % transformation).apply_to(m,
                                                               targets=[m.b[0]])
 
-    self.assertIsNone(m.component("_pyomo_gdp_%s_reformulation" % transformation))
+    self.assertIsNone(
+        m.component("_pyomo_gdp_%s_reformulation" % transformation))
 
     self.assertIsInstance(m.b[0].component("_pyomo_gdp_%s_reformulation" %
                                            transformation), Block)
@@ -1057,7 +1064,8 @@ def check_indexed_block_target(self, transformation):
     # We expect the transformation block on each of the BlockDatas. Because
     # it is always going on the parent block of the disjunction.
 
-    self.assertIsNone(m.component("_pyomo_gdp_%s_reformulation" % transformation))
+    self.assertIsNone(
+        m.component("_pyomo_gdp_%s_reformulation" % transformation))
 
     for i in [0,1]:
         self.assertIsInstance( m.b[i].component("_pyomo_gdp_%s_reformulation" %
@@ -1480,6 +1488,20 @@ def check_nested_disjunction_target(self, transformation):
     self.assertIsInstance(m.d2.transformation_block(), _BlockData)
     self.assertIsInstance(m.d1.d3.transformation_block(), _BlockData)
     self.assertIsInstance(m.d1.d4.transformation_block(), _BlockData)
+
+def check_unique_reference_to_nested_indicator_var(self, transformation):
+    m = models.makeNestedDisjunctions_NestedDisjuncts()
+    TransformationFactory('gdp.%s' % transformation).apply_to(m)
+    # find the references to the nested indicator var
+    num_references_d3 = 0
+    num_references_d4 = 0
+    for v in m.component_data_objects(Var, active=True, descend_into=Block):
+        if v is m.d1.d3.indicator_var:
+            num_references_d3 += 1
+        if v is m.d1.d4.indicator_var:
+            num_references_d4 += 1
+    self.assertEqual(num_references_d3, 1)
+    self.assertEqual(num_references_d4, 1)
 
 # checks for handling of benign types that could be on disjuncts we're
 # transforming
