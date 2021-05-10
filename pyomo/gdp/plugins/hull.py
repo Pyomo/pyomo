@@ -237,6 +237,28 @@ class Hull_Reformulation(Transformation):
         targets = self._config.targets
         if targets is None:
             targets = ( instance, )
+        else:
+            # we need to preprocess targets to make sure that if there are any
+            # disjunctions in targets that their disjuncts appear before them in
+            # the list.
+            preprocessed_targets = []
+            for t in targets:
+                if t.ctype is Disjunction:
+                    if t.is_indexed():
+                        for disjunction in t.values():
+                            for disj in disjunction.disjuncts:
+                                print("adding Disjunct %s" % disj.name)
+                                preprocessed_targets.append(disj)
+                    else:
+                        for disj in t.disjuncts:
+                            print("adding Disjunct %s" % disj.name)
+                            preprocessed_targets.append(disj)
+                # now we are safe to put the disjunction, and if the target was
+                # anything else, then we don't need to worry because disjuncts
+                # are declared before disjunctions they appear in
+                print("adding target %s of type %s" % (t.name, t.ctype))
+                preprocessed_targets.append(t)
+            targets = preprocessed_targets
         knownBlocks = {}
         for t in targets:
             # check that t is in fact a child of instance
