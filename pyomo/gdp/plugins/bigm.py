@@ -213,6 +213,12 @@ class BigM_Transformation(Transformation):
             self.used_args.clear()
 
     def _apply_to_impl(self, instance, **kwds):
+        if not instance.ctype in (Block, Disjunct):
+            raise GDP_Error("Transformation called on %s of type %s. 'instance' "
+                            "must be a ConcreteModel, Block, or Disjunct (in "
+                            "the case of nested disjunctions)." %
+                            (instance.name, instance.ctype))
+
         config = self.CONFIG(kwds.pop('options', {}))
 
         # We will let args override suffixes and estimate as a last

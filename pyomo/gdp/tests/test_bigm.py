@@ -702,9 +702,6 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
         m = models.makeTwoTermMultiIndexedDisjunction()
         self.diff_apply_to_and_create_using(m)
 
-    def test_targets_with_container_as_arg(self):
-        ct.check_targets_with_container_as_arg(self, 'bigm')
-
 class DisjOnBlock(unittest.TestCase, CommonTests):
     # when the disjunction is on a block, we want all of the stuff created by
     # the transformation to go on that block also so that solving the block
@@ -1971,6 +1968,9 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
     def test_disjunctData_only_targets_transformed(self):
         ct.check_disjunctData_only_targets_transformed(self, 'bigm')
 
+    def test_cannot_call_transformation_on_disjunction(self):
+        ct.check_cannot_call_transformation_on_disjunction(self, 'bigm')
+
     def test_disjunction_target_err(self):
         ct.check_disjunction_target_err(self, 'bigm')
 
@@ -2159,10 +2159,6 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertEqual(repn.linear_coefs[0], 1)
         self.assertIs(repn.linear_vars[1], m.b.d.indicator_var)
         self.assertEqual(repn.linear_coefs[1], -10)
-
-class InnerDisjunctionSharedDisjuncts(unittest.TestCase):
-    def test_activeInnerDisjunction_err(self):
-        ct.check_activeInnerDisjunction_err(self, 'bigm')
 
 class UntransformableObjectsOnDisjunct(unittest.TestCase):
     def test_RangeSet(self):

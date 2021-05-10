@@ -751,8 +751,8 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
     def test_disjunction_data_target_any_index(self):
         ct.check_disjunction_data_target_any_index(self, 'hull')
 
-    def test_targets_with_container_as_arg(self):
-        ct.check_targets_with_container_as_arg(self, 'hull')
+    def test_cannot_call_transformation_on_disjunction(self):
+        ct.check_cannot_call_transformation_on_disjunction(self, 'hull')
 
     def check_trans_block_disjunctions_of_disjunct_datas(self, m):
         transBlock1 = m.component("_pyomo_gdp_hull_reformulation")
@@ -1538,7 +1538,7 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
 
         # transform inner problem with bigm, outer with hull and make sure it
         # still works
-        TransformationFactory('gdp.bigm').apply_to(m.d1.disj2)
+        TransformationFactory('gdp.bigm').apply_to(m, targets=(m.d1.disj2))
         hull.apply_to(m)
 
         SolverFactory(linear_solvers[0]).solve(m)
@@ -1914,10 +1914,6 @@ class TestErrors(unittest.TestCase):
             hull.get_disaggregated_var,
             m.w,
             m.random_disjunction.disjuncts[0])
-
-class InnerDisjunctionSharedDisjuncts(unittest.TestCase):
-    def test_activeInnerDisjunction_err(self):
-        ct.check_activeInnerDisjunction_err(self, 'hull')
 
 class BlocksOnDisjuncts(unittest.TestCase):
     def setUp(self):

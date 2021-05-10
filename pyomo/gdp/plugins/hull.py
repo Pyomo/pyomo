@@ -230,6 +230,12 @@ class Hull_Reformulation(Transformation):
             NAME_BUFFER.clear()
 
     def _apply_to_impl(self, instance, **kwds):
+        if not instance.ctype in (Block, Disjunct):
+            raise GDP_Error("Transformation called on %s of type %s. 'instance' "
+                            "must be a ConcreteModel, Block, or Disjunct (in "
+                            "the case of nested disjunctions)." %
+                            (instance.name, instance.ctype))
+
         self._config = self.CONFIG(kwds.pop('options', {}))
         self._config.set_value(kwds)
         self._generate_debug_messages = is_debug_set(logger)
