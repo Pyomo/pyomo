@@ -25,6 +25,7 @@ from pyomo.core.expr.current import ExpressionReplacementVisitor
 
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecated
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt import SolverFactory, SolverStatus
 import logging
 import os
@@ -158,17 +159,27 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
         raise ValueError("Only methods 'k_aug' and 'sipopt' are supported'")
     
     if method == 'k_aug':
-        k_aug = SolverFactory('k_aug', solver_io='nl')
-        dotsens = SolverFactory('dot_sens', solver_io='nl')
-        ipopt = SolverFactory('ipopt', solver_io='nl')
+        try:
+            wd = os.getcwd()
+            k_aug_dir = TempfileManager.create_tempdir(dir=wd)
+            os.chdir(k_aug_dir)
 
-        ipopt.solve(m, tee=tee)
-        m.ipopt_zL_in.update(m.ipopt_zL_out)  #: important!
-        m.ipopt_zU_in.update(m.ipopt_zU_out)  #: important!    
+            k_aug = SolverFactory('k_aug', solver_io='nl')
+            dotsens = SolverFactory('dot_sens', solver_io='nl')
+            ipopt = SolverFactory('ipopt', solver_io='nl')
 
-        k_aug.options['dsdp_mode'] = ""  #: sensitivity mode!
-        k_aug.solve(m, tee=tee)
-        m.write('col_row.nl', format='nl', io_options={'symbolic_solver_labels':True})
+            ipopt.solve(m, tee=tee)
+            m.ipopt_zL_in.update(m.ipopt_zL_out)  #: important!
+            m.ipopt_zU_in.update(m.ipopt_zU_out)  #: important!    
+
+            k_aug.options['dsdp_mode'] = ""  #: sensitivity mode!
+            k_aug.solve(m, tee=tee)
+            m.write('col_row.nl', format='nl', io_options={'symbolic_solver_labels':True})
+        finally:
+            # Need to navigate out of new directory before popping the
+            # tempdir, otherwise the directory will not get deleted.
+            os.chdir(wd)
+            TempfileManager.pop()
 
     sens.perturb_parameters(perturbList)
 
@@ -180,25 +191,26 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
         results = ipopt_sens.solve(m, keepfiles=keepfiles, tee=tee)
 
     elif method == 'k_aug':
-        dotsens.options["dsdp_mode"] = ""
-        dotsens.solve(m, tee=tee)
         try:
-            os.makedirs("dsdp")
-        except FileExistsError:
-            # directory already exists
-            pass
-        try:
-            shutil.move("dsdp_in_.in","./dsdp/")
-            shutil.move("col_row.nl","./dsdp/")
-            shutil.move("col_row.col","./dsdp/")
-            shutil.move("col_row.row","./dsdp/")
-            shutil.move("conorder.txt","./dsdp/")
-            shutil.move("delta_p.out","./dsdp/")
-            shutil.move("dot_out.out","./dsdp/")
-            shutil.move("timings_dot_driver_dsdp.txt", "./dsdp/")
-            shutil.move("timings_k_aug_dsdp.txt", "./dsdp/")
-        except OSError:
-            pass
+            wd = os.getcwd()
+            k_aug_dir = TempfileManager.create_tempdir(dir=wd)
+            os.chdir(k_aug_dir)
+            dotsens.options["dsdp_mode"] = ""
+            dotsens.solve(m, tee=tee)
+
+            #shutil.move("dsdp_in_.in","./dsdp/")
+            #shutil.move("col_row.nl","./dsdp/")
+            #shutil.move("col_row.col","./dsdp/")
+            #shutil.move("col_row.row","./dsdp/")
+            #shutil.move("conorder.txt","./dsdp/")
+            #shutil.move("delta_p.out","./dsdp/")
+            #shutil.move("dot_out.out","./dsdp/")
+            #shutil.move("timings_dot_driver_dsdp.txt", "./dsdp/")
+            #shutil.move("timings_k_aug_dsdp.txt", "./dsdp/")
+
+        finally:
+            os.chdir(wd)
+            TempfileManager.pop()
 
     return m
 
