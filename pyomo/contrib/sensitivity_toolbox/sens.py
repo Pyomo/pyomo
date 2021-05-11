@@ -351,11 +351,15 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     Returns
     -------
     gradient_f: numpy.ndarray
-        Length Nvar array. A gradient vector of the objective function with respect to the (decision variables, parameters) at the optimal solution
+        Length Nvar array. A gradient vector of the objective function
+        with respect to the (decision variables, parameters) at the optimal
+        solution
     gradient_c: scipy.sparse.csr.csr_matrix
-        Ncon by Nvar size sparse matrix. A Jacobian matrix of the constraints with respect to the (decision variables, parameters) at the optimal solution
-        Each row contains [column number, row number, and value], colum order follows variable order in col and index starts from 1. 
-        Note that it follows k_aug.
+        Ncon by Nvar size sparse matrix. A Jacobian matrix of the
+        constraints with respect to the (decision variables, parameters)
+        at the optimal solution. Each row contains [column number,
+        row number, and value], colum order follows variable order in col
+        and index starts from 1. Note that it follows k_aug.
         If no constraint exists, return []
     col: list
         Size Nvar. list of variable names
@@ -433,7 +437,8 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
         row_idx = gradient_c[:,1]-1
         col_idx = gradient_c[:,0]-1
         data = gradient_c[:,2]
-        gradient_c = sparse.csr_matrix((data, (row_idx, col_idx)), shape=(len(row)-1, len(col)))
+        gradient_c = sparse.csr_matrix((data, (row_idx, col_idx)),
+                shape=(len(row)-1, len(col)))
     else:
         gradient_c = np.array([])
     # remove all generated files
@@ -446,8 +451,9 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     return gradient_f, gradient_c, col,row, line_dic
 
 def line_num(file_name, target):
-    """This function returns the line inumber contains 'target' in the file_name.
-    This function identities constraints that have variables in theta_names.
+    """This function returns the line inumber contains 'target' in the
+    file_name. This function identities constraints that have variables
+    in theta_names.
 
     Parameters
     ----------
