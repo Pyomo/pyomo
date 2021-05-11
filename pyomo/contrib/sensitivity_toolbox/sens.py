@@ -160,9 +160,9 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
     
     if method == 'k_aug':
         try:
-            wd = os.getcwd()
-            k_aug_dir = TempfileManager.create_tempdir(dir=wd)
-            os.chdir(k_aug_dir)
+            #wd = os.getcwd()
+            #k_aug_dir = TempfileManager.create_tempdir(dir=wd)
+            #os.chdir(k_aug_dir)
 
             k_aug = SolverFactory('k_aug', solver_io='nl')
             dotsens = SolverFactory('dot_sens', solver_io='nl')
@@ -174,12 +174,14 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
 
             k_aug.options['dsdp_mode'] = ""  #: sensitivity mode!
             k_aug.solve(m, tee=tee)
-            m.write('col_row.nl', format='nl', io_options={'symbolic_solver_labels':True})
+            m.write('col_row.nl', format='nl',
+                    io_options={'symbolic_solver_labels':True})
         finally:
             # Need to navigate out of new directory before popping the
             # tempdir, otherwise the directory will not get deleted.
-            os.chdir(wd)
-            TempfileManager.pop()
+            #os.chdir(wd)
+            #TempfileManager.pop()
+            pass
 
     sens.perturb_parameters(perturbList)
 
@@ -192,25 +194,26 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
 
     elif method == 'k_aug':
         try:
-            wd = os.getcwd()
-            k_aug_dir = TempfileManager.create_tempdir(dir=wd)
-            os.chdir(k_aug_dir)
+            #wd = os.getcwd()
+            #k_aug_dir = TempfileManager.create_tempdir(dir=wd)
+            #os.chdir(k_aug_dir)
             dotsens.options["dsdp_mode"] = ""
             dotsens.solve(m, tee=tee)
 
-            #shutil.move("dsdp_in_.in","./dsdp/")
-            #shutil.move("col_row.nl","./dsdp/")
-            #shutil.move("col_row.col","./dsdp/")
-            #shutil.move("col_row.row","./dsdp/")
-            #shutil.move("conorder.txt","./dsdp/")
-            #shutil.move("delta_p.out","./dsdp/")
-            #shutil.move("dot_out.out","./dsdp/")
-            #shutil.move("timings_dot_driver_dsdp.txt", "./dsdp/")
-            #shutil.move("timings_k_aug_dsdp.txt", "./dsdp/")
+            shutil.move("dsdp_in_.in","./dsdp/")
+            shutil.move("col_row.nl","./dsdp/")
+            shutil.move("col_row.col","./dsdp/")
+            shutil.move("col_row.row","./dsdp/")
+            shutil.move("conorder.txt","./dsdp/")
+            shutil.move("delta_p.out","./dsdp/")
+            shutil.move("dot_out.out","./dsdp/")
+            shutil.move("timings_dot_driver_dsdp.txt", "./dsdp/")
+            shutil.move("timings_k_aug_dsdp.txt", "./dsdp/")
 
         finally:
-            os.chdir(wd)
-            TempfileManager.pop()
+            #os.chdir(wd)
+            #TempfileManager.pop()
+            pass
 
     return m
 
@@ -247,14 +250,20 @@ def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=Non
     var_dic: dictionary
         If any original variable contains "'", need an auxiliary dictionary 
         with keys theta_names without "'", values with "'".
-        e.g) var_dic: {'fs.properties.tau[benzene,toluene]': "fs.properties.tau['benzene','toluene']",
-                       'fs.properties.tau[toluene,benzene]': "fs.properties.tau['toluene','benzene']"}
+        e.g) var_dic: {
+                'fs.properties.tau[benzene,toluene]': 
+                    "fs.properties.tau['benzene','toluene']",
+                'fs.properties.tau[toluene,benzene]':
+                    "fs.properties.tau['toluene','benzene']",
+                }
 
     Returns
     -------
     dsdp: scipy.sparse.csr.csr_matrix
-        Ntheta by Nvar size sparse matrix. A Jacobian matrix of the (decision variables, parameters) 
-        with respect to paramerters (=theta_name). number of rows = len(theta_name), number of columns= len(col)
+        Ntheta by Nvar size sparse matrix. A Jacobian matrix of the
+        (decision variables, parameters) with respect to paramerters
+        (=theta_name). number of rows = len(theta_name), number of
+        columns= len(col)
     col: list
         List of variable names
     """
