@@ -293,7 +293,7 @@ class TestAddSlacks(unittest.TestCase):
         m.indexedVar = Var([1, 2])
         self.assertRaisesRegex(
             ValueError,
-            "Expected Constraint or list of Constraints.\n\tRecieved "
+            "Expected Constraint or list of Constraints.\n\tReceived "
             "<class 'pyomo.core.base.var._GeneralVarData'>",
             TransformationFactory('core.add_slack_variables').apply_to,
             m,
@@ -304,7 +304,7 @@ class TestAddSlacks(unittest.TestCase):
         m = self.makeModel()
         self.assertRaisesRegex(
             ValueError,
-            "Expected Constraint or list of Constraints.\n\tRecieved "
+            "Expected Constraint or list of Constraints.\n\tReceived "
             "<class 'pyomo.core.base.var.SimpleVar'>",
             TransformationFactory('core.add_slack_variables').apply_to,
             m,

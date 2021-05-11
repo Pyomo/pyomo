@@ -1034,7 +1034,7 @@ class ScalarParam(_ParamData, Param):
         return self._constructed and not self._mutable
 
 
-SingleParam = ScalarParam
+SimpleParam = ScalarParam
 
 
 class IndexedParam(Param):

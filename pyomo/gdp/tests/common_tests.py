@@ -543,7 +543,7 @@ def check_targets_cannot_be_cuids(self, transformation):
         r"\tFailed casting \[disjunction\]\n"
         r"\tto target_list\n"
         r"\tError: Expected Component or list of Components."
-        r"\n\tRecieved %s" % type(ComponentUID(m.disjunction)),
+        r"\n\tReceived %s" % type(ComponentUID(m.disjunction)),
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m,
         targets=[ComponentUID(m.disjunction)])
