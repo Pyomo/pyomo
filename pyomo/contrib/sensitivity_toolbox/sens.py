@@ -56,7 +56,7 @@ def sipopt(instance, paramSubList, perturbList,
 def kaug(instance, paramSubList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None,
          streamSoln=False):
-    m = sensitivity_calculation('kaug', instance, paramSubList, perturbList,
+    m = sensitivity_calculation('k_aug', instance, paramSubList, perturbList,
          cloneModel, tee, keepfiles, solver_options)
 
     return m
@@ -200,15 +200,23 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
             dotsens.options["dsdp_mode"] = ""
             dotsens.solve(m, tee=tee)
 
-            shutil.move("dsdp_in_.in","./dsdp/")
-            shutil.move("col_row.nl","./dsdp/")
-            shutil.move("col_row.col","./dsdp/")
-            shutil.move("col_row.row","./dsdp/")
-            shutil.move("conorder.txt","./dsdp/")
-            shutil.move("delta_p.out","./dsdp/")
-            shutil.move("dot_out.out","./dsdp/")
-            shutil.move("timings_dot_driver_dsdp.txt", "./dsdp/")
-            shutil.move("timings_k_aug_dsdp.txt", "./dsdp/")
+            try:
+                os.makedirs("dsdp")
+            except FileExistsError:
+                pass
+
+            try:
+                shutil.move("dsdp_in_.in","./dsdp/")
+                shutil.move("col_row.nl","./dsdp/")
+                shutil.move("col_row.col","./dsdp/")
+                shutil.move("col_row.row","./dsdp/")
+                shutil.move("conorder.txt","./dsdp/")
+                shutil.move("delta_p.out","./dsdp/")
+                shutil.move("dot_out.out","./dsdp/")
+                shutil.move("timings_dot_driver_dsdp.txt", "./dsdp/")
+                shutil.move("timings_k_aug_dsdp.txt", "./dsdp/")
+            except OSError:
+                pass
 
         finally:
             #os.chdir(wd)
