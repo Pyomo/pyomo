@@ -181,7 +181,7 @@ class TestAddSlacks(unittest.TestCase):
         self.assertFalse(cons.active)
         self.assertEqual(cons.lower, 1)
         self.assertEqual(cons.upper, 3)
-        # cons.body is a SimpleVar
+        # cons.body is a ScalarVar
         self.assertIs(cons.body, m.y)
 
     def checkTargetSlackVars(self, transBlock):
@@ -216,7 +216,7 @@ class TestAddSlacks(unittest.TestCase):
         cons = m.rule2
         self.assertEqual(cons.lower, 1)
         self.assertEqual(cons.upper, 3)
-        # cons.body is a SimpleVar
+        # cons.body is a ScalarVar
         self.assertIs(cons.body, m.y)
 
     def test_nontarget_constraint_same(self):
@@ -305,7 +305,7 @@ class TestAddSlacks(unittest.TestCase):
         self.assertRaisesRegex(
             ValueError,
             "Expected Constraint or list of Constraints.\n\tReceived "
-            "<class 'pyomo.core.base.var.SimpleVar'>",
+            "<class 'pyomo.core.base.var.ScalarVar'>",
             TransformationFactory('core.add_slack_variables').apply_to,
             m,
             targets=[m.rule1, m.x]

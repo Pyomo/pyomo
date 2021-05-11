@@ -1238,7 +1238,7 @@ def check_silly_target(self, transformation):
         GDP_Error,
         r"Target 'd\[1\].c1' was not a Block, Disjunct, or Disjunction. "
         r"It was of type "
-        r"<class 'pyomo.core.base.constraint.SimpleConstraint'> and "
+        r"<class 'pyomo.core.base.constraint.ScalarConstraint'> and "
         r"can't be transformed.",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m,
