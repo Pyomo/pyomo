@@ -8,7 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar']
+__all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar',
+           'ScalarVar']
 
 import logging
 from weakref import ref as weakref_ref
@@ -501,7 +502,7 @@ class Var(IndexedComponent):
         if cls != Var:
             return super(Var, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
-            return SimpleVar.__new__(SimpleVar)
+            return ScalarVar.__new__(ScalarVar)
         else:
             return IndexedVar.__new__(IndexedVar)
 
@@ -783,7 +784,7 @@ class Var(IndexedComponent):
                                 ]
                  )
 
-class SimpleVar(_GeneralVarData, Var):
+class ScalarVar(_GeneralVarData, Var):
     """A single variable."""
 
     def __init__(self, *args, **kwd):
@@ -932,6 +933,9 @@ class SimpleVar(_GeneralVarData, Var):
             % (self.name))
 
     free=unfix
+
+SimpleVar = ScalarVar
+
 
 class IndexedVar(Var):
     """An array of variables."""

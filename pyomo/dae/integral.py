@@ -13,7 +13,7 @@ from pyomo.dae.contset import ContinuousSet
 from pyomo.dae.diffvar import DAE_Error
 from pyomo.core.base.expression import (Expression,
                                         _GeneralExpressionData,
-                                        SimpleExpression,
+                                        ScalarExpression,
                                         IndexedExpression)
 
 __all__ = ('Integral', )
@@ -50,7 +50,7 @@ class Integral(Expression):
         if len(args) == 0:
             raise ValueError("Integral must be indexed by a ContinuousSet")
         elif len(args) == 1:
-            return SimpleIntegral.__new__(SimpleIntegral)
+            return ScalarIntegral.__new__(ScalarIntegral)
         else:
             return IndexedIntegral.__new__(IndexedIntegral)
 
@@ -127,7 +127,7 @@ class Integral(Expression):
         return self._wrt
 
 
-class SimpleIntegral(SimpleExpression, Integral):
+class ScalarIntegral(ScalarExpression, Integral):
     """
         An integral that will have no indexing sets after applying a numerical
         integration transformation
@@ -145,6 +145,8 @@ class SimpleIntegral(SimpleExpression, Integral):
         if 'scheme' not in self._wrt.get_discretization_info():
             return False
         return True
+
+SimpleIntegral = ScalarIntegral
 
 
 class IndexedIntegral(IndexedExpression, Integral):

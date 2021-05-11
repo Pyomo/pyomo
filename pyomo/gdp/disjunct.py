@@ -115,7 +115,7 @@ class Disjunct(Block):
         if cls != Disjunct:
             return super(Disjunct, cls).__new__(cls)
         if args == ():
-            return SimpleDisjunct.__new__(SimpleDisjunct)
+            return ScalarDisjunct.__new__(ScalarDisjunct)
         else:
             return IndexedDisjunct.__new__(IndexedDisjunct)
 
@@ -154,7 +154,7 @@ class Disjunct(Block):
                 component_data._activate_without_unfixing_indicator()
 
 
-class SimpleDisjunct(_DisjunctData, Disjunct):
+class ScalarDisjunct(_DisjunctData, Disjunct):
 
     def __init__(self, *args, **kwds):
         ## FIXME: This is a HACK to get around a chicken-and-egg issue
@@ -167,6 +167,7 @@ class SimpleDisjunct(_DisjunctData, Disjunct):
         Disjunct.__init__(self, *args, **kwds)
         self._data[None] = self
 
+SimpleDisjunct = ScalarDisjunct
 
 class IndexedDisjunct(Disjunct):
     #
@@ -293,7 +294,7 @@ class Disjunction(ActiveIndexedComponent):
         if cls != Disjunction:
             return super(Disjunction, cls).__new__(cls)
         if args == ():
-            return SimpleDisjunction.__new__(SimpleDisjunction)
+            return ScalarDisjunction.__new__(ScalarDisjunction)
         else:
             return IndexedDisjunction.__new__(IndexedDisjunction)
 
@@ -428,7 +429,7 @@ class Disjunction(ActiveIndexedComponent):
             )
 
 
-class SimpleDisjunction(_DisjunctionData, Disjunction):
+class ScalarDisjunction(_DisjunctionData, Disjunction):
 
     def __init__(self, *args, **kwds):
         _DisjunctionData.__init__(self, component=self)
@@ -459,7 +460,9 @@ class SimpleDisjunction(_DisjunctionData, Disjunction):
         if expr is Disjunction.Skip:
             del self[None]
             return None
-        return super(SimpleDisjunction, self).set_value(expr)
+        return super(ScalarDisjunction, self).set_value(expr)
+
+SimpleDisjunction = ScalarDisjunction
 
 class IndexedDisjunction(Disjunction):
     #

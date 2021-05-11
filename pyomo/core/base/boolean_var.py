@@ -270,7 +270,7 @@ class BooleanVar(IndexedComponent):
         if cls != BooleanVar:
             return super(BooleanVar, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
-            return SimpleBooleanVar.__new__(SimpleBooleanVar)
+            return ScalarBooleanVar.__new__(ScalarBooleanVar)
         else:
             return IndexedBooleanVar.__new__(IndexedBooleanVar) 
 
@@ -452,7 +452,7 @@ class BooleanVar(IndexedComponent):
                  )
 
 
-class SimpleBooleanVar(_GeneralBooleanVarData, BooleanVar):
+class ScalarBooleanVar(_GeneralBooleanVarData, BooleanVar):
     
     """A single variable."""
     def __init__(self, *args, **kwd):
@@ -527,6 +527,9 @@ class SimpleBooleanVar(_GeneralBooleanVarData, BooleanVar):
             % (self.name))
 
     free=unfix
+
+
+SimpleBooleanVar = ScalarBooleanVar
 
 
 class IndexedBooleanVar(BooleanVar):

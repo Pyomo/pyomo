@@ -167,7 +167,7 @@ class _GeneralExpressionDataImpl(_ExpressionData):
         This class provides a consistent interface for constructing a
         node, which is used in tree visitor scripts.
         """
-        obj = SimpleExpression()
+        obj = ScalarExpression()
         obj.construct()
         obj.expr = values[0]
         return obj
@@ -267,7 +267,7 @@ class Expression(IndexedComponent):
         if cls != Expression:
             return super(Expression, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
-            return SimpleExpression.__new__(SimpleExpression)
+            return ScalarExpression.__new__(ScalarExpression)
         else:
             return IndexedExpression.__new__(IndexedExpression)
 
@@ -408,7 +408,7 @@ class Expression(IndexedComponent):
                     self.add(key, _init_expr)
         timer.report()
 
-class SimpleExpression(_GeneralExpressionData, Expression):
+class ScalarExpression(_GeneralExpressionData, Expression):
 
     def __init__(self, *args, **kwds):
         _GeneralExpressionData.__init__(self, expr=None, component=self)
@@ -446,14 +446,14 @@ class SimpleExpression(_GeneralExpressionData, Expression):
 
     # for backwards compatibility reasons
     @property
-    @deprecated("The .value property getter on SimpleExpression "
+    @deprecated("The .value property getter on ScalarExpression "
                 "is deprecated. Use the .expr property getter instead",
                 version='4.3.11323')
     def value(self):
         return self.expr
 
     @value.setter
-    @deprecated("The .value property setter on SimpleExpression "
+    @deprecated("The .value property setter on ScalarExpression "
                 "is deprecated. Use the set_value(expr) method instead",
                 version='4.3.11323')
     def value(self, expr):
@@ -497,7 +497,7 @@ class SimpleExpression(_GeneralExpressionData, Expression):
         """Add an expression with a given index."""
         if index is not None:
             raise KeyError(
-                "SimpleExpression object '%s' does not accept "
+                "ScalarExpression object '%s' does not accept "
                 "index values other than None. Invalid value: %s"
                 % (self.name, index))
         if (type(expr) is tuple) and \
@@ -508,6 +508,9 @@ class SimpleExpression(_GeneralExpressionData, Expression):
                 % (self.name))
         self.set_value(expr)
         return self
+
+SimpleExpression = ScalarExpression
+
 
 class IndexedExpression(Expression):
 

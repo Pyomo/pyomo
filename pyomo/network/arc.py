@@ -268,7 +268,7 @@ class Arc(ActiveIndexedComponent):
         if cls != Arc:
             return super(Arc, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
-            return SimpleArc.__new__(SimpleArc)
+            return ScalarArc.__new__(ScalarArc)
         else:
             return IndexedArc.__new__(IndexedArc)
 
@@ -357,7 +357,7 @@ class Arc(ActiveIndexedComponent):
                           v.active])
 
 
-class SimpleArc(_ArcData, Arc):
+class ScalarArc(_ArcData, Arc):
 
     def __init__(self, *args, **kwds):
         _ArcData.__init__(self, self)
@@ -377,11 +377,13 @@ class SimpleArc(_ArcData, Arc):
         if len(self._data) == 0:
             self._data[None] = self
         try:
-            super(SimpleArc, self).set_value(vals)
+            super(ScalarArc, self).set_value(vals)
         except:
             # don't allow model walker to find poorly constructed arcs
             del self._data[None]
             raise
+
+SimpleArc = ScalarArc
 
 
 class IndexedArc(Arc):

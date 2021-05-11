@@ -254,7 +254,7 @@ class _PiecewiseData(_BlockData):
 
 class _SimpleSinglePiecewise(object):
     """
-    Called when the piecwise points list has only two points
+    Called when the piecewise points list has only two points
     """
 
     def construct(self,pblock,x_var,y_var):

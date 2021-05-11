@@ -239,7 +239,7 @@ class LogicalConstraint(ActiveIndexedComponent):
         if cls != LogicalConstraint:
             return super(LogicalConstraint, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
-            return SimpleLogicalConstraint.__new__(SimpleLogicalConstraint)
+            return ScalarLogicalConstraint.__new__(ScalarLogicalConstraint)
         else:
             return IndexedLogicalConstraint.__new__(IndexedLogicalConstraint)
 
@@ -413,9 +413,9 @@ class LogicalConstraint(ActiveIndexedComponent):
         return expr
 
 
-class SimpleLogicalConstraint(_GeneralLogicalConstraintData, LogicalConstraint):
+class ScalarLogicalConstraint(_GeneralLogicalConstraintData, LogicalConstraint):
     """
-    SimpleLogicalConstraint is the implementation representing a single,
+    ScalarLogicalConstraint is the implementation representing a single,
     non-indexed logical constraint.
     """
 
@@ -445,7 +445,7 @@ class SimpleLogicalConstraint(_GeneralLogicalConstraintData, LogicalConstraint):
         if self._constructed:
             if len(self._data) == 0:
                 raise ValueError(
-                    "Accessing the body of SimpleLogicalConstraint "
+                    "Accessing the body of ScalarLogicalConstraint "
                     "'%s' before the LogicalConstraint has been assigned "
                     "an expression. There is currently "
                     "nothing to access." % self.name)
@@ -481,7 +481,7 @@ class SimpleLogicalConstraint(_GeneralLogicalConstraintData, LogicalConstraint):
         if self._check_skip_add(None, expr) is None:
             del self[None]
             return None
-        return super(SimpleLogicalConstraint, self).set_value(expr)
+        return super(ScalarLogicalConstraint, self).set_value(expr)
 
     #
     # Leaving this method for backward compatibility reasons.
@@ -491,11 +491,13 @@ class SimpleLogicalConstraint(_GeneralLogicalConstraintData, LogicalConstraint):
         """Add a logical constraint with a given index."""
         if index is not None:
             raise ValueError(
-                "SimpleLogicalConstraint object '%s' does not accept "
+                "ScalarLogicalConstraint object '%s' does not accept "
                 "index values other than None. Invalid value: %s"
                 % (self.name, index))
         self.set_value(expr)
         return self
+
+SimpleLogicalConstraint = ScalarLogicalConstraint
 
 
 class IndexedLogicalConstraint(LogicalConstraint):

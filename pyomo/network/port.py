@@ -326,7 +326,7 @@ class Port(IndexedComponent):
         if cls != Port:
             return super(Port, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
-            return SimplePort.__new__(SimplePort)
+            return ScalarPort.__new__(ScalarPort)
         else:
             return IndexedPort.__new__(IndexedPort)
 
@@ -723,11 +723,13 @@ class Port(IndexedComponent):
             evar = create_var(member, name, eblock, index_set)
         return evar
 
-class SimplePort(Port, _PortData):
+class ScalarPort(Port, _PortData):
 
     def __init__(self, *args, **kwd):
         _PortData.__init__(self, component=self)
         Port.__init__(self, *args, **kwd)
+
+SimplePort = ScalarPort
 
 
 class IndexedPort(Port):

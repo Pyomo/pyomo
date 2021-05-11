@@ -342,15 +342,15 @@ class StreamBasedExpressionVisitor(object):
                         ptr[2].__exit__(None, None, None)
                 ptr = ptr[0]
 
-class SimpleExpressionVisitor(object):
+class ScalarExpressionVisitor(object):
 
     """
     Note:
-        This class is a customization of the PyUtilib :class:`SimpleVisitor
-        <pyutilib.misc.visitor.SimpleVisitor>` class that is tailored
+        This class is a customization of the PyUtilib :class:`ScalarVisitor
+        <pyutilib.misc.visitor.ScalarVisitor>` class that is tailored
         to efficiently walk Pyomo expression trees.  However, this class
-        is not a subclass of the PyUtilib :class:`SimpleVisitor
-        <pyutilib.misc.visitor.SimpleVisitor>` class because all key methods
+        is not a subclass of the PyUtilib :class:`ScalarVisitor
+        <pyutilib.misc.visitor.ScalarVisitor>` class because all key methods
         are reimplemented.
     """
 
@@ -389,7 +389,7 @@ class SimpleExpressionVisitor(object):
 
         Note:
             This method has the same functionality as the
-            PyUtilib :class:`SimpleVisitor.xbfs <pyutilib.misc.visitor.SimpleVisitor.xbfs>`
+            PyUtilib :class:`ScalarVisitor.xbfs <pyutilib.misc.visitor.ScalarVisitor.xbfs>`
             method.  The difference is that this method
             is tailored to efficiently walk Pyomo expression trees.
 
@@ -420,7 +420,7 @@ class SimpleExpressionVisitor(object):
 
         Note:
             This method has the same functionality as the
-            PyUtilib :class:`SimpleVisitor.xbfs_yield_leaves <pyutilib.misc.visitor.SimpleVisitor.xbfs_yield_leaves>`
+            PyUtilib :class:`ScalarVisitor.xbfs_yield_leaves <pyutilib.misc.visitor.ScalarVisitor.xbfs_yield_leaves>`
             method.  The difference is that this method
             is tailored to efficiently walk Pyomo expression trees.
 
@@ -456,6 +456,8 @@ class SimpleExpressionVisitor(object):
                         yield ans
                 else:
                     dq.append(c)
+
+SimpleExpressionVisitor = ScalarExpressionVisitor
 
 
 class ExpressionValueVisitor(object):
@@ -1064,7 +1066,7 @@ def evaluate_expression(exp, exception=True, constant=False):
 #  identify_components
 # =====================================================
 
-class _ComponentVisitor(SimpleExpressionVisitor):
+class _ComponentVisitor(ScalarExpressionVisitor):
 
     def __init__(self, types):
         self.seen = set()
@@ -1108,7 +1110,7 @@ def identify_components(expr, component_types):
 #  identify_variables
 # =====================================================
 
-class _VariableVisitor(SimpleExpressionVisitor):
+class _VariableVisitor(ScalarExpressionVisitor):
 
     def __init__(self):
         self.seen = set()
@@ -1174,7 +1176,7 @@ def identify_variables(expr, include_fixed=True):
 #  identify_mutable_parameters
 # =====================================================
 
-class _MutableParamVisitor(SimpleExpressionVisitor):
+class _MutableParamVisitor(ScalarExpressionVisitor):
 
     def __init__(self):
         self.seen = set()

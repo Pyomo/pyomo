@@ -146,7 +146,7 @@ class Connector(IndexedComponent):
         if cls != Connector:
             return super(Connector, cls).__new__(cls)
         if args == ():
-            return SimpleConnector.__new__(SimpleConnector)
+            return ScalarConnector.__new__(ScalarConnector)
         else:
             return IndexedConnector.__new__(IndexedConnector)
 
@@ -256,7 +256,7 @@ class Connector(IndexedComponent):
                         ( "Name","Value" ), _line_generator )
 
 
-class SimpleConnector(Connector, _ConnectorData):
+class ScalarConnector(Connector, _ConnectorData):
 
     def __init__(self, *args, **kwd):
         _ConnectorData.__init__(self, component=self)
@@ -270,6 +270,9 @@ class SimpleConnector(Connector, _ConnectorData):
     # get/set state methods rely on super() to traverse the MRO, this
     # will automatically pick up both the Component and Data base classes.
     #
+
+
+SimpleConnector = ScalarConnector
 
 
 class IndexedConnector(Connector):

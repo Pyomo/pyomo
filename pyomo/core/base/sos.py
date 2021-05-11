@@ -152,7 +152,7 @@ class SOSConstraint(ActiveIndexedComponent):
         if cls != SOSConstraint:
             return super(SOSConstraint, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
-            return SimpleSOSConstraint.__new__(SimpleSOSConstraint)
+            return ScalarSOSConstraint.__new__(ScalarSOSConstraint)
         else:
             return IndexedSOSConstraint.__new__(IndexedSOSConstraint)
 
@@ -295,7 +295,7 @@ class SOSConstraint(ActiveIndexedComponent):
         Add a component data for the specified index.
         """
         if index is None:
-            # because SimpleSOSConstraint already makes an _SOSConstraintData instance
+            # because ScalarSOSConstraint already makes an _SOSConstraintData instance
             soscondata = self
         else:
             soscondata = _SOSConstraintData(self)
@@ -338,11 +338,13 @@ class SOSConstraint(ActiveIndexedComponent):
 # rely on super() to traverse the MRO, this will automatically pick
 # up both the Component and Data base classes.
 
-class SimpleSOSConstraint(SOSConstraint, _SOSConstraintData):
+class ScalarSOSConstraint(SOSConstraint, _SOSConstraintData):
 
     def __init__(self, *args, **kwd):
         _SOSConstraintData.__init__(self, self)
         SOSConstraint.__init__(self, *args, **kwd)
+
+SimpleSOSConstraint = ScalarSOSConstraint
 
 
 class IndexedSOSConstraint(SOSConstraint):
