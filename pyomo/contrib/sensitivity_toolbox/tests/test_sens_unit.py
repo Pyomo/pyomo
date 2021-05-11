@@ -695,8 +695,7 @@ class TestSensitivityInterface(unittest.TestCase):
             getattr(m, v).setlb(theta[v])
             getattr(m, v).setub(theta[v])
         dsdp, col = get_dsdp(m, variable_name, theta)
-        np.testing.assert_almost_equal(dsdp,[[-1.,  0., -1.,  0., -1.,  0.],
-                                                 [ 0., -1.,  0., -1.,  0., -1.]])
+        np.testing.assert_almost_equal(dsdp.toarray(),[[1., 0., 1., 0.],[0., 1., 0., 1.]])
 
         assert col == ['x1', 'x2', 'p1', 'p2']
 
@@ -719,8 +718,8 @@ class TestSensitivityInterface(unittest.TestCase):
             getattr(model_uncertain, v).setlb(theta[v])
             getattr(model_uncertain, v).setub(theta[v])
         dsdp, col =  get_dsdp(model_uncertain, variable_name, theta, {})
-        np.testing.assert_almost_equal(dsdp , [[-1.,  0., -1.,  0.],
-                                               [ 0., -1.,  0., -1.]])
+        np.testing.assert_almost_equal(dsdp.toarray() , [[ 1.,  0.],
+                                                         [ 0.,  1.]])
         assert col == ['asymptote', 'rate_constant']
 
     
@@ -750,10 +749,11 @@ class TestSensitivityInterface(unittest.TestCase):
         for v in variable_name:
             getattr(m, v).setlb(theta[v])
             getattr(m, v).setub(theta[v])
-        gradient_f, gradient_c, col =  get_dfds_dcds(m, variable_name)
+        gradient_f, gradient_c, col ,row, line_dic=  get_dfds_dcds(m, variable_name)
         np.testing.assert_almost_equal( gradient_f, [10., 50., 15., 35.])
-        np.testing.assert_almost_equal( gradient_c ,)[[ 1.,  1.,  1.], [ 3.,  1., -1.], [ 2.,  2.,  1.], [ 4.,  2., -1.]]
+        np.testing.assert_almost_equal( gradient_c.toarray(), [[ 1.,  0.,  -1., 0.], [ 0.,  1., 0., -1.]])
         assert col == ['x1', 'x2', 'p1', 'p2']
+        assert row == ['c1', 'c2', 'obj']
 
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")
@@ -772,10 +772,11 @@ class TestSensitivityInterface(unittest.TestCase):
         for v in variable_name:
             getattr(model_uncertain, v).setlb(theta[v])
             getattr(model_uncertain, v).setub(theta[v])
-        gradient_f,gradient_f_dic, gradient_c,gradient_c_dic, line_dic =  get_dfds_dcds(model_uncertain, variable_name)
+        gradient_f, gradient_c, col,row, line_dic=  get_dfds_dcds(model_uncertain, variable_name)
         np.testing.assert_almost_equal( gradient_f , [0.99506259, 0.945148])
         np.testing.assert_almost_equal( gradient_c , np.array([]))
         assert col == ['asymptote', 'rate_constant']
+        assert row == ['obj']
 
     def test_line_num1(self):
         '''
