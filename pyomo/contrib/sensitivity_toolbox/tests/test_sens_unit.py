@@ -668,6 +668,7 @@ class TestSensitivityInterface(unittest.TestCase):
                 self.assertEqual(instance.sens_state_value_1[var], ptb)
                 self.assertEqual(instance.DeltaP[con], obj.value-ptb)
 
+    @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_ipopt.available(False), "ipopt is not available")
     def test_get_dsdp1(self):
         '''
@@ -699,6 +700,7 @@ class TestSensitivityInterface(unittest.TestCase):
 
         assert col == ['x1', 'x2', 'p1', 'p2']
 
+    @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_ipopt.available(False), "ipopt is not available")
     def test_get_dsdp2(self):
         '''
