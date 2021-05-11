@@ -9,6 +9,8 @@
 #  ___________________________________________________________________________
 #
 
+from io import StringIO
+
 import pyomo.common.unittest as unittest
 
 from pyomo.common.getGSL import find_GSL
@@ -16,6 +18,7 @@ from pyomo.environ import ConcreteModel, Var, Objective, SolverFactory, value
 from pyomo.core.base.external import (PythonCallbackFunction,
                                       ExternalFunction,
                                       AMPLExternalFunction)
+from pyomo.core.base.units_container import pint_available, units
 from pyomo.opt import check_available_solvers
 
 def _g(*args):
@@ -176,6 +179,33 @@ class TestAMPLExternalFunction(unittest.TestCase):
         model3 = m.clone()
         res = opt.solve(model3, tee=True)
         self.assertAlmostEqual(value(model3.o), 0.885603194411, 7)
+
+    def test_pprint(self):
+        m = ConcreteModel()
+        m.f = ExternalFunction(library="junk.so", function="junk")
+
+        out = StringIO()
+        m.pprint(ostream=out)
+        self.assertEqual(out.getvalue().strip(), """
+1 ExternalFunction Declarations
+    f : function=junk, library=junk.so, units=None, arg_units=None
+
+1 Declarations: f
+        """.strip())
+
+        if not pint_available:
+            return
+        m.g = ExternalFunction(library="junk.so", function="junk",
+                               units=units.kg, arg_units=[units.m, units.s])
+        out = StringIO()
+        m.pprint(ostream=out)
+        self.assertEqual(out.getvalue().strip(), """
+2 ExternalFunction Declarations
+    f : function=junk, library=junk.so, units=None, arg_units=None
+    g : function=junk, library=junk.so, units=kg, arg_units=['m', 's']
+
+2 Declarations: f g
+        """.strip())
 
 
 if __name__ == "__main__":

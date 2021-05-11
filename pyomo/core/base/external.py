@@ -189,6 +189,17 @@ class AMPLExternalFunction(ExternalFunction):
         FUNCADD = CFUNCTYPE( None, POINTER(_AMPLEXPORTS) )
         FUNCADD(('funcadd_ASL', self._so))(byref(AE))
 
+    def _pprint(self):
+        return (
+            [ ('function', self._function),
+              ('library', self._library),
+              ('units', str(self._units)),
+              ('arg_units', [ str(u) for u in self._arg_units ]
+               if self._arg_units is not None else None),
+            ],
+            (), None, None
+        )
+
 
 class PythonCallbackFunction(ExternalFunction):
     global_registry = {}
@@ -237,6 +248,16 @@ class PythonCallbackFunction(ExternalFunction):
             raise RuntimeError(
                 "PythonCallbackFunction called with invalid Global ID" )
         return self._fcn(*args_[1:])
+
+    def _pprint(self):
+        return (
+            [ ('function', self._fcn.__qualname__),
+              ('units', str(self._units)),
+              ('arg_units', [ str(u) for u in self._arg_units[1:] ]
+               if self._arg_units is not None else None),
+            ],
+            (), None, None
+        )
 
 
 class _ARGLIST(Structure):

@@ -556,7 +556,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 for arg in exp.args:
                     if isinstance(arg, str):
                         OUTPUT.write(string_arg_str % (len(arg), arg))
-                    elif isinstance(arg, (float, int)):
+                    elif type(arg) in native_numeric_types:
                         self._print_nonlinear_terms_NL(arg)
                     elif arg.is_fixed():
                         self._print_nonlinear_terms_NL(arg())
