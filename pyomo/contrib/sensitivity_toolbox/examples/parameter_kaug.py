@@ -51,7 +51,7 @@ def run_example(print_flag=True):
     m.perturbed_eta2 = Param(initialize = 1.0)
 
 
-    m_kaug_dsdp = sensitivity_calculation('kaug',m,[m.eta1,m.eta2],
+    m_kaug_dsdp = sensitivity_calculation('k_aug',m,[m.eta1,m.eta2],
                                           [m.perturbed_eta1,m.perturbed_eta2],
                                           tee=True)    
 
