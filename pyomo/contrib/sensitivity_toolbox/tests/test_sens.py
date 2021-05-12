@@ -13,6 +13,7 @@ Unit Tests for interfacing with sIPOPT and k_aug
 """
 
 from six import StringIO
+import shutil # Temporary. TODO: remove this import once not necessary
 import logging
 import pyomo.common.unittest as unittest
 
@@ -23,7 +24,11 @@ from pyomo.common.dependencies import scipy_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import ComponentMap
 from pyomo.core.expr.current import identify_variables
-from pyomo.contrib.sensitivity_toolbox.sens import sipopt, kaug, sensitivity_calculation
+from pyomo.contrib.sensitivity_toolbox.sens import (
+        sipopt,
+        kaug,
+        sensitivity_calculation,
+        )
 import pyomo.contrib.sensitivity_toolbox.examples.parameter as param_ex
 import pyomo.contrib.sensitivity_toolbox.examples.parameter_kaug as param_kaug_ex
 import pyomo.contrib.sensitivity_toolbox.examples.feedbackController as fc
@@ -91,6 +96,20 @@ class FunctionDeprecationTest(unittest.TestCase):
                       "sensitivity_calculation() function with method='k_aug'",
                       output.getvalue().replace('\n', ' '))
 
+        try:
+            # TODO:
+            # Each call to sensitivity_calculation with the "k_aug"
+            # argument creates a "./dsdp" directory. This is currently
+            # necessary for the get_dsdp function, but it gets thrown
+            # off if this dir already exists.
+            # We remote the dir here to hopefully avoid problems in the
+            # other tests. This is a temporary hack until we redesign
+            # the get_dsdp function to use cached data in the K_augInterface
+            # class.
+            shutil.rmtree("dsdp", ignore_errors=True)
+        except OSError:
+            pass
+
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")  
     def test_kaug_equivalent(self):
@@ -113,6 +132,20 @@ class FunctionDeprecationTest(unittest.TestCase):
         m11._SENSITIVITY_TOOLBOX_DATA.constList.pprint(ostream=out1)
         m22._SENSITIVITY_TOOLBOX_DATA.constList.pprint(ostream=out2)
         self.assertMultiLineEqual(out1.getvalue(), out2.getvalue())
+
+        try:
+            # TODO:
+            # Each call to sensitivity_calculation with the "k_aug"
+            # argument creates a "./dsdp" directory. This is currently
+            # necessary for the get_dsdp function, but it gets thrown
+            # off if this dir already exists.
+            # We remote the dir here to hopefully avoid problems in the
+            # other tests. This is a temporary hack until we redesign
+            # the get_dsdp function to use cached data in the K_augInterface
+            # class.
+            shutil.rmtree("dsdp", ignore_errors=True)
+        except OSError:
+            pass
 
 
 class TestSensitivityToolbox(unittest.TestCase):
@@ -568,6 +601,20 @@ class TestSensitivityToolbox(unittest.TestCase):
         # 0.00263 is the value we get after sensitivity update with k_aug
         # using MA57 and k_aug's default regularization strategy.
 
+        try:
+            # TODO:
+            # Each call to sensitivity_calculation with the "k_aug"
+            # argument creates a "./dsdp" directory. This is currently
+            # necessary for the get_dsdp function, but it gets thrown
+            # off if this dir already exists.
+            # We remote the dir here to hopefully avoid problems in the
+            # other tests. This is a temporary hack until we redesign
+            # the get_dsdp function to use cached data in the K_augInterface
+            # class.
+            shutil.rmtree("dsdp", ignore_errors=True)
+        except OSError:
+            pass
+
     @unittest.skipIf(not scipy_available, "scipy is required for this test")
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")
@@ -659,6 +706,20 @@ class TestSensitivityToolbox(unittest.TestCase):
         # 0.00263 is the value we get after sensitivity update with k_aug
         # using MA57 and k_aug's default regularization strategy.
 
+        try:
+            # TODO:
+            # Each call to sensitivity_calculation with the "k_aug"
+            # argument creates a "./dsdp" directory. This is currently
+            # necessary for the get_dsdp function, but it gets thrown
+            # off if this dir already exists.
+            # We remote the dir here to hopefully avoid problems in the
+            # other tests. This is a temporary hack until we redesign
+            # the get_dsdp function to use cached data in the K_augInterface
+            # class.
+            shutil.rmtree("dsdp", ignore_errors=True)
+        except OSError:
+            pass
+
 
     # test indexed param mapping to var and perturbed values
     @unittest.skipIf(not scipy_available, "scipy is required for this test")
@@ -711,6 +772,20 @@ class TestSensitivityToolbox(unittest.TestCase):
             m_kaug._SENSITIVITY_TOOLBOX_DATA.paramConst[10].body.to_string(),
             '_SENSITIVITY_TOOLBOX_DATA.aa - aa')
 
+        try:
+            # TODO:
+            # Each call to sensitivity_calculation with the "k_aug"
+            # argument creates a "./dsdp" directory. This is currently
+            # necessary for the get_dsdp function, but it gets thrown
+            # off if this dir already exists.
+            # We remote the dir here to hopefully avoid problems in the
+            # other tests. This is a temporary hack until we redesign
+            # the get_dsdp function to use cached data in the K_augInterface
+            # class.
+            shutil.rmtree("dsdp", ignore_errors=True)
+        except OSError:
+            pass
+
 
     # test Constraint substitution 
     # Constraint substitution should be performed regardless of whether k_aug
@@ -744,6 +819,20 @@ class TestSensitivityToolbox(unittest.TestCase):
             # Check each element of the 'correct' dictionary against the returned 
             # dictionary to 3 decimal places
             self.assertAlmostEqual(d[k],d_correct[k],3)
+
+        try:
+            # TODO:
+            # Each call to sensitivity_calculation with the "k_aug"
+            # argument creates a "./dsdp" directory. This is currently
+            # necessary for the get_dsdp function, but it gets thrown
+            # off if this dir already exists.
+            # We remote the dir here to hopefully avoid problems in the
+            # other tests. This is a temporary hack until we redesign
+            # the get_dsdp function to use cached data in the K_augInterface
+            # class.
+            shutil.rmtree("dsdp", ignore_errors=True)
+        except OSError:
+            pass
 
 if __name__=="__main__":
     unittest.main()
