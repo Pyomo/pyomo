@@ -8,7 +8,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-"""Decorator for deprecating functions."""
+"""This module provides utilities for deprecating functionality.
+
+.. autosummary::
+
+   deprecated
+   deprecation_warning
+   relocated_module_attribute
+   RenamedClass
+"""
 
 import logging
 import functools
@@ -167,7 +175,7 @@ def deprecation_warning(msg, logger=None, version=None,
 
 
 def deprecated(msg=None, logger=None, version=None, remove_in=None):
-    """Indicate that a function, method or class is deprecated.
+    """Decorator to indicate that a function, method or class is deprecated.
 
     This decorator will cause a warning to be logged when the wrapped
     function or method is called, or when the deprecated class is
