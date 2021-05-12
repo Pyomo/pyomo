@@ -406,7 +406,7 @@ class RenamedClass(type):
 
         # Add the new class as a "base class" of the renamed class (this
         # makes issubclass(renamed, new_class) work correctly).  As we
-        # sill never create an actual instance of renamed, this doesn't
+        # still never create an actual instance of renamed, this doesn't
         # affect the API)
         if new_class is not None and new_class not in renamed_bases:
             renamed_bases.append(new_class)
