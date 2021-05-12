@@ -556,14 +556,14 @@ class TestSensitivityInterface(unittest.TestCase):
             self.assertEqual(model.sens_init_constr[con], i+1)
             self.assertEqual(model.dcdp[con], i+1)
 
-        self.assertTrue(type(model.sens_sol_state_1_z_L) is Suffix)
-        self.assertTrue(type(model.sens_sol_state_1_z_U) is Suffix)
-        self.assertTrue(type(model.ipopt_zL_out) is Suffix)
-        self.assertTrue(type(model.ipopt_zU_out) is Suffix)
-        self.assertTrue(type(model.ipopt_zL_in) is Suffix)
-        self.assertTrue(type(model.ipopt_zU_in) is Suffix)
-        self.assertTrue(type(model.dual) is Suffix)
-        self.assertTrue(type(model.DeltaP) is Suffix)
+        self.assertIs(type(model.sens_sol_state_1_z_L), Suffix)
+        self.assertIs(type(model.sens_sol_state_1_z_U), Suffix)
+        self.assertIs(type(model.ipopt_zL_out), Suffix)
+        self.assertIs(type(model.ipopt_zU_out), Suffix)
+        self.assertIs(type(model.ipopt_zL_in), Suffix)
+        self.assertIs(type(model.ipopt_zU_in), Suffix)
+        self.assertIs(type(model.dual), Suffix)
+        self.assertIs(type(model.DeltaP), Suffix)
 
     def test_perturb_parameters_unindexed(self):
         delta = 1.0
