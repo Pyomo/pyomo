@@ -17,7 +17,7 @@ import pyomo.common.unittest as unittest
 
 from pyomo.common import DeveloperError
 from pyomo.common.deprecation import (
-    deprecated, deprecation_warning, relocated_module_attribute,
+    deprecated, deprecation_warning, relocated_module_attribute, RenamedClass
 )
 from pyomo.common.log import LoggingIntercept
 
@@ -383,6 +383,153 @@ class TestRelocated(unittest.TestCase):
                 "(?:module 'pyomo.common.tests.relocated')|"
                 "(?:'module' object) has no attribute 'Baz'"):
             relocated.Baz.data
+
+
+class TestRenamedClass(unittest.TestCase):
+    def test_renamed(self):
+        class NewClass(object):
+            attr = 'NewClass'
+
+        class NewClassSubclass(NewClass):
+            pass
+
+        # The deprecated class does not generate a warning
+        out = StringIO()
+        with LoggingIntercept(out):
+            class DeprecatedClass(metaclass=RenamedClass):
+                __renamed__new_class__ = NewClass
+                __renamed__version__ = 'TBD'
+        self.assertEqual(out.getvalue(), "")
+
+        # Inheriting from the deprecated class generates the warning
+        out = StringIO()
+        with LoggingIntercept(out):
+            class DeprecatedClassSubclass(DeprecatedClass):
+                attr = 'DeprecatedClassSubclass'
+        self.assertRegex(
+            out.getvalue().replace("\n", " ").strip(),
+            r"^DEPRECATED: Declaring class 'DeprecatedClassSubclass' "
+            r"derived from 'DeprecatedClass'.  "
+            r"The class 'DeprecatedClass' has been renamed to 'NewClass'  "
+            r"\(deprecated in TBD\) \(called from [^\)]*\)$",
+        )
+
+        # Inheriting from a class derived from the deprecated class does
+        # not generate a warning
+        out = StringIO()
+        with LoggingIntercept(out):
+            class DeprecatedClassSubSubclass(DeprecatedClassSubclass):
+                attr = 'DeprecatedClassSubSubclass'
+        self.assertEqual(out.getvalue(), "")
+
+        #
+        # Test class creation
+        #
+
+        out = StringIO()
+        with LoggingIntercept(out):
+            newclass = NewClass()
+            newclasssubclass = NewClassSubclass()
+        self.assertEqual(out.getvalue(), "")
+
+        out = StringIO()
+        with LoggingIntercept(out):
+            deprecatedclass = DeprecatedClass()
+        self.assertRegex(
+            out.getvalue().replace("\n", " ").strip(),
+            r"^DEPRECATED: Instantiating class 'DeprecatedClass'.  "
+            r"The class 'DeprecatedClass' has been renamed to 'NewClass'  "
+            r"\(deprecated in TBD\) \(called from [^\)]*\)$",
+        )
+
+        # Instantiating a class derived from the deprecaed class does
+        # not generate a warning (the warning is generated when the
+        # class is declared)
+        out = StringIO()
+        with LoggingIntercept(out):
+            deprecatedsubclass = DeprecatedClassSubclass()
+            deprecatedsubsubclass = DeprecatedClassSubSubclass()
+        self.assertEqual(out.getvalue(), "")
+
+        #
+        # Test isinstance
+        #
+        out = StringIO()
+        with LoggingIntercept(out):
+            self.assertIsInstance(deprecatedsubclass, NewClass)
+            self.assertIsInstance(deprecatedsubsubclass, NewClass)
+        self.assertEqual(out.getvalue(), "")
+
+        for obj in (newclass, newclasssubclass, deprecatedclass,
+                    deprecatedsubclass, deprecatedsubsubclass):
+            out = StringIO()
+            with LoggingIntercept(out):
+                self.assertIsInstance(obj, DeprecatedClass)
+            self.assertRegex(
+                out.getvalue().replace("\n", " ").strip(),
+                r"^DEPRECATED: Checking type relative to 'DeprecatedClass'.  "
+                r"The class 'DeprecatedClass' has been renamed to 'NewClass'  "
+                r"\(deprecated in TBD\) \(called from [^\)]*\)$",
+            )
+
+        #
+        # Test issubclass
+        #
+
+        out = StringIO()
+        with LoggingIntercept(out):
+            self.assertTrue(issubclass(DeprecatedClass, NewClass))
+            self.assertTrue(issubclass(DeprecatedClassSubclass, NewClass))
+            self.assertTrue(issubclass(DeprecatedClassSubSubclass, NewClass))
+        self.assertEqual(out.getvalue(), "")
+
+        for cls in (NewClass, NewClassSubclass, DeprecatedClass,
+                    DeprecatedClassSubclass, DeprecatedClassSubSubclass):
+            out = StringIO()
+            with LoggingIntercept(out):
+                self.assertTrue(issubclass(cls, DeprecatedClass))
+            self.assertRegex(
+                out.getvalue().replace("\n", " ").strip(),
+                r"^DEPRECATED: Checking type relative to 'DeprecatedClass'.  "
+                r"The class 'DeprecatedClass' has been renamed to 'NewClass'  "
+                r"\(deprecated in TBD\) \(called from [^\)]*\)$",
+            )
+
+        #
+        # Test class attributes
+        #
+        self.assertEqual(newclass.attr, 'NewClass')
+        self.assertEqual(newclasssubclass.attr, 'NewClass')
+        self.assertEqual(deprecatedclass.attr, 'NewClass')
+        self.assertEqual(deprecatedsubclass.attr,
+                         'DeprecatedClassSubclass')
+        self.assertEqual(deprecatedsubsubclass.attr,
+                         'DeprecatedClassSubSubclass')
+        self.assertEqual(NewClass.attr, 'NewClass')
+        self.assertEqual(NewClassSubclass.attr, 'NewClass')
+        self.assertEqual(DeprecatedClass.attr, 'NewClass')
+        self.assertEqual(DeprecatedClassSubclass.attr,
+                         'DeprecatedClassSubclass')
+        self.assertEqual(DeprecatedClassSubSubclass.attr,
+                         'DeprecatedClassSubSubclass')
+
+    def test_renamed_errors(self):
+        class NewClass(object):
+            pass
+
+        with self.assertRaisesRegex(
+                TypeError, "Declaring class 'DeprecatedClass' using the "
+                "RenamedClass metaclass, but without specifying the "
+                "__renamed__new_class__ class attribute"):
+            class DeprecatedClass(metaclass=RenamedClass):
+                __renamed_new_class__ = NewClass
+
+        with self.assertRaisesRegex(
+                TypeError, "Declaring class 'DeprecatedClass' using the "
+                "RenamedClass metaclass, but without specifying the "
+                "__renamed__version__ class attribute"):
+            class DeprecatedClass(metaclass=RenamedClass):
+                __renamed__new_class__ = NewClass
 
 if __name__ == '__main__':
     unittest.main()
