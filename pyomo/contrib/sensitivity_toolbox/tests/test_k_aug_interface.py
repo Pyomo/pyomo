@@ -23,9 +23,9 @@ from pyomo.common.dependencies import (
 from pyomo.contrib.sensitivity_toolbox.sens import SensitivityInterface
 from pyomo.contrib.sensitivity_toolbox.k_aug import K_augInterface
 
-opt_ipopt = pyo.SolverFactory('ipopt', solver_io='nl')
-opt_k_aug = pyo.SolverFactory('k_aug', solver_io='nl')
-opt_dot_sens = pyo.SolverFactory('dot_sens', solver_io='nl')
+opt_ipopt = pyo.SolverFactory('ipopt', solver_io='nl', validate=False)
+opt_k_aug = pyo.SolverFactory('k_aug', solver_io='nl', validate=False)
+opt_dot_sens = pyo.SolverFactory('dot_sens', solver_io='nl', validate=False)
 
 
 def simple_model_1():
