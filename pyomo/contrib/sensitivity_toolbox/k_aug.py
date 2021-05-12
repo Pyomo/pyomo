@@ -35,14 +35,14 @@ debug_dir = "kaug_debug"
 known_files = {
         "dsdp_in_.in": {FT.K_AUG_OUTPUT, FT.DOT_SENS_INPUT},
         "conorder.txt": {FT.K_AUG_OUTPUT},
-        "timings_k_aug_dsdp": {FT.K_AUG_OUTPUT},
+        "timings_k_aug_dsdp.txt": {FT.K_AUG_OUTPUT},
         "col_row.nl": {FT.K_AUG_OUTPUT},
         "col_row.col": {FT.K_AUG_OUTPUT},
         "col_row.row": {FT.K_AUG_OUTPUT},
         os.path.join(debug_dir, "kkt.in"): {FT.K_AUG_OUTPUT},
-        "dot_out.out": {FT.DOT_DRIVER_OUTPUT},
-        "delta_p.out": {FT.DOT_DRIVER_OUTPUT},
-        "timings_dot_driver_dsdp.txt": {FT.DOT_DIRVER_OUTPUT},
+        "dot_out.out": {FT.DOT_SENS_OUTPUT},
+        "delta_p.out": {FT.DOT_SENS_OUTPUT},
+        "timings_dot_driver_dsdp.txt": {FT.DOT_SENS_OUTPUT},
         }
 
 file_attr_map = {name: _attribute_from_filename(name) for name in known_files}
