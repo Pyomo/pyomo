@@ -1,0 +1,122 @@
+# ____________________________________________________________________________
+#
+# Pyomo: Python Optimization Modeling Objects
+# Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+# Under the terms of Contract DE-NA0003525 with National Technology and
+# Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+# rights in this software.
+# This software is distributed under the 3-clause BSD License.
+# ____________________________________________________________________________
+
+"""
+"""
+import os
+import pyutilib.th as unittest
+from six import StringIO
+import logging
+
+import pyomo.environ as pyo
+from pyomo.common.dependencies import (
+    numpy as np, numpy_available,
+    pandas as pd, pandas_available,
+)
+from pyomo.contrib.sensitivity_toolbox.sens import SensitivityInterface
+from pyomo.contrib.sensitivity_toolbox.k_aug import K_augInterface
+
+opt_ipopt = pyo.SolverFactory('ipopt', solver_io='nl')
+opt_k_aug = pyo.SolverFactory('k_aug', solver_io='nl')
+opt_dot_sens = pyo.SolverFactory('dot_sens', solver_io='nl')
+
+
+def simple_model_1():
+    m = pyo.ConcreteModel()
+    m.v1 = pyo.Var(initialize=10.0)
+    m.v2 = pyo.Var(initialize=10.0)
+
+    m.p = pyo.Param(mutable=True, initialize=1.0)
+
+    m.eq_con = pyo.Constraint(expr=m.v1*m.v2 - m.p == 0)
+
+    m.obj = pyo.Objective(expr=m.v1**2 + m.v2**2, sense=pyo.minimize)
+
+    return m
+
+
+class TestK_augInterface(unittest.TestCase):
+
+    def test_clear_dir_k_aug(self):
+        m = simple_model_1()
+        sens = SensitivityInterface(m, clone_model=False)
+        k_aug = K_augInterface()
+
+        opt_ipopt.solve(m, tee=True)
+        m.ptb = pyo.Param(mutable=True, initialize=1.5)
+
+        cwd = os.getcwd()
+        dir_contents = os.listdir(cwd)
+
+        sens_param = [m.p]
+        sens.setup_sensitivity(sens_param)
+        
+        k_aug.k_aug(m, tee=True)
+
+        # We are back in our working directory
+        self.assertEqual(cwd, os.getcwd())
+
+        # The contents of this directory have not changed
+        self.assertEqual(dir_contents, os.listdir(cwd))
+
+        # In particular, the following files do not exist
+        self.assertFalse(os.path.exists("dsdp_in_.in"))
+        self.assertFalse(os.path.exists("kaug_debug"))
+
+        # But they have been transferred to our k_aug interface object
+        # as strings.
+        self.assertIsInstance(k_aug.dsdp_in_, str)
+
+    def test_clear_dir_dot_sens(self):
+        m = simple_model_1()
+        sens = SensitivityInterface(m, clone_model=False)
+        k_aug = K_augInterface()
+        opt_ipopt.solve(m, tee=True)
+        m.ptb = pyo.Param(mutable=True, initialize=1.5)
+
+        cwd = os.getcwd()
+        dir_contents = os.listdir(cwd)
+
+        sens_param = [m.p]
+        sens.setup_sensitivity(sens_param)
+        
+        # Call k_aug
+        k_aug.k_aug(m, tee=True)
+        self.assertIsInstance(k_aug.dsdp_in_, str)
+
+        sens.perturb_parameters([m.ptb])
+
+        # Call dot_sens. In the process, we re-write dsdp_in_.in
+        k_aug.dot_sens(m, tee=True)
+
+        # Make sure we get the values we expect. This problem is easy enough
+        # to solve by hand:
+        # x = [1, 1, -2] = [v1, v2, dual]
+        # Sensitivity system:
+        # | 2 -2  1 |
+        # |-2  2  1 | dx/dp = -[dL/dxdp, dc/dp]^T = -[0, 0, -1]^T
+        # | 1  1  0 |
+        # => dx/dp = [0.5, 0.5, 0]^T
+        # Here, dp = [0.5]
+        # => dx = [0.25, 0.25, 0]^T
+        # => x_new = [1.25, 1.25, -2]
+        self.assertAlmostEqual(m.v1.value, 1.25, 7)
+        self.assertAlmostEqual(m.v2.value, 1.25, 7)
+
+        # We are back in our working directory
+        self.assertEqual(cwd, os.getcwd())
+
+        # The contents of this directory have not changed
+        self.assertEqual(dir_contents, os.listdir(cwd))
+        self.assertFalse(os.path.exists("dsdp_in_.in"))
+
+
+if __name__ == "__main__":
+    unittest.main()
