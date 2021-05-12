@@ -155,13 +155,13 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
 
     m = sens.model_instance
     
-    if method is not 'k_aug' and method is not 'sipopt':
+    if method not in {"k_aug", "sipopt"}:
         raise ValueError("Only methods 'k_aug' and 'sipopt' are supported'")
     
     if method == 'k_aug':
         try:
             #wd = os.getcwd()
-            #k_aug_dir = TempfileManager.create_tempdir(dir=wd)
+            #k_aug_dir = TempfileManager.create_tempdir()
             #os.chdir(k_aug_dir)
 
             k_aug = SolverFactory('k_aug', solver_io='nl')
@@ -195,7 +195,7 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
     elif method == 'k_aug':
         try:
             #wd = os.getcwd()
-            #k_aug_dir = TempfileManager.create_tempdir(dir=wd)
+            #k_aug_dir = TempfileManager.create_tempdir()
             #os.chdir(k_aug_dir)
             dotsens.options["dsdp_mode"] = ""
             dotsens.solve(m, tee=tee)
