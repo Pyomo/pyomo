@@ -27,6 +27,10 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecated
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt import SolverFactory, SolverStatus
+from pyomo.contrib.sensitivity_toolbox.k_aug import (
+        K_augInterface,
+        file_attr_map,
+        )
 import logging
 import os
 import shutil
@@ -159,29 +163,20 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
         raise ValueError("Only methods 'k_aug' and 'sipopt' are supported'")
     
     if method == 'k_aug':
-        try:
-            #wd = os.getcwd()
-            #k_aug_dir = TempfileManager.create_tempdir()
-            #os.chdir(k_aug_dir)
+        k_aug = SolverFactory('k_aug', solver_io='nl')
+        dot_sens = SolverFactory('dot_sens', solver_io='nl')
+        ipopt = SolverFactory('ipopt', solver_io='nl')
 
-            k_aug = SolverFactory('k_aug', solver_io='nl')
-            dotsens = SolverFactory('dot_sens', solver_io='nl')
-            ipopt = SolverFactory('ipopt', solver_io='nl')
+        k_aug_interface = K_augInterface(k_aug=k_aug, dot_sens=dot_sens)
 
-            ipopt.solve(m, tee=tee)
-            m.ipopt_zL_in.update(m.ipopt_zL_out)  #: important!
-            m.ipopt_zU_in.update(m.ipopt_zU_out)  #: important!    
+        ipopt.solve(m, tee=tee)
+        m.ipopt_zL_in.update(m.ipopt_zL_out)  #: important!
+        m.ipopt_zU_in.update(m.ipopt_zU_out)  #: important!    
 
-            k_aug.options['dsdp_mode'] = ""  #: sensitivity mode!
-            k_aug.solve(m, tee=tee)
-            m.write('col_row.nl', format='nl',
-                    io_options={'symbolic_solver_labels':True})
-        finally:
-            # Need to navigate out of new directory before popping the
-            # tempdir, otherwise the directory will not get deleted.
-            #os.chdir(wd)
-            #TempfileManager.pop()
-            pass
+        k_aug.options['dsdp_mode'] = ""  #: sensitivity mode!
+        k_aug_interface.k_aug(m, tee=tee)
+        m.write('col_row.nl', format='nl',
+                io_options={'symbolic_solver_labels':True})
 
     sens.perturb_parameters(perturbList)
 
@@ -193,34 +188,32 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
         results = ipopt_sens.solve(m, keepfiles=keepfiles, tee=tee)
 
     elif method == 'k_aug':
+        dot_sens.options["dsdp_mode"] = ""
+        k_aug_interface.dot_sens(m, tee=tee)
+
         try:
-            #wd = os.getcwd()
-            #k_aug_dir = TempfileManager.create_tempdir()
-            #os.chdir(k_aug_dir)
-            dotsens.options["dsdp_mode"] = ""
-            dotsens.solve(m, tee=tee)
+            os.makedirs("dsdp")
+        except FileExistsError:
+            pass
 
-            try:
-                os.makedirs("dsdp")
-            except FileExistsError:
-                pass
+        for fname, attr in file_attr_map.items():
+            # TODO: accessing these by attr name is not great.
+            # Should come up with a better data structure. Probably
+            # just a dict from filename to the string object.
+            contents = getattr(k_aug_interface, attr)
+            if contents is not None:
+                fpath = os.path.join("dsdp", fname)
+                with open(fpath, "w") as fp:
+                    fp.write(contents)
 
-            try:
-                shutil.move("dsdp_in_.in","./dsdp/")
-                shutil.move("col_row.nl","./dsdp/")
-                shutil.move("col_row.col","./dsdp/")
-                shutil.move("col_row.row","./dsdp/")
-                shutil.move("conorder.txt","./dsdp/")
-                shutil.move("delta_p.out","./dsdp/")
-                shutil.move("dot_out.out","./dsdp/")
-                shutil.move("timings_dot_driver_dsdp.txt", "./dsdp/")
-                shutil.move("timings_k_aug_dsdp.txt", "./dsdp/")
-            except OSError:
-                pass
-
-        finally:
-            #os.chdir(wd)
-            #TempfileManager.pop()
+        try:
+            # TODO: These files are created in this function, not by
+            # k_aug. Therefore we should remove them from the list
+            # of k_aug's known files in the interface module.
+            shutil.move("col_row.nl","./dsdp/")
+            shutil.move("col_row.col","./dsdp/")
+            shutil.move("col_row.row","./dsdp/")
+        except OSError:
             pass
 
     return m
