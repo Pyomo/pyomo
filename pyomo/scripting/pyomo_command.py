@@ -366,10 +366,4 @@ def run_pyomo(options=Bunch(), parser=None):
                          results=opt_data.results,
                          local=opt_data.local)
 
-def run(args=None):
-    from pyomo.scripting.pyomo_main import main
-    if args is None:
-        return main()
-    else:
-        return main(['solve']+args)
 
