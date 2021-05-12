@@ -68,11 +68,14 @@ class TestK_augInterface(unittest.TestCase):
 
         # In particular, the following files do not exist
         self.assertFalse(os.path.exists("dsdp_in_.in"))
-        self.assertFalse(os.path.exists("kaug_debug"))
+        self.assertFalse(os.path.exists("conorder.txt"))
+        self.assertFalse(os.path.exists("timings_k_aug_dsdp.txt"))
 
         # But they have been transferred to our k_aug interface object
         # as strings.
         self.assertIsInstance(k_aug.dsdp_in_, str)
+        self.assertIsInstance(k_aug.conorder, str)
+        self.assertIsInstance(k_aug.timings_k_aug_dsdp, str)
 
     def test_clear_dir_dot_sens(self):
         m = simple_model_1()
@@ -116,6 +119,15 @@ class TestK_augInterface(unittest.TestCase):
         # The contents of this directory have not changed
         self.assertEqual(dir_contents, os.listdir(cwd))
         self.assertFalse(os.path.exists("dsdp_in_.in"))
+        self.assertFalse(os.path.exists("delta_p.out"))
+        self.assertFalse(os.path.exists("dot_out.out"))
+        self.assertFalse(os.path.exists("timings_dot_driver_dsdp.txt"))
+
+        # And we have saved strings of the file contents.
+        self.assertIsInstance(k_aug.dsdp_in_, str)
+        self.assertIsInstance(k_aug.delta_p, str)
+        self.assertIsInstance(k_aug.dot_out, str)
+        self.assertIsInstance(k_aug.timings_dot_driver_dsdp, str)
 
 
 if __name__ == "__main__":
