@@ -37,7 +37,7 @@ import shutil
 from pyomo.common.dependencies import (
     numpy as np, numpy_available
     )
-from scipy import sparse
+from pyomo.common.dependencies import scipy, scipy_available
 
 logger = logging.getLogger('pyomo.contrib.sensitivity_toolbox')
 
@@ -309,7 +309,7 @@ def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=Non
             if SensitivityInterface.get_default_block_name() not in col[j]:
                 dsdp_out[i,j] =  -dsdp[i, j] # e.g) k_aug dsdp returns -dx1/dx1 = -1.0
 
-    return sparse.csr_matrix(dsdp_out), col
+    return scipy.sparse.csr_matrix(dsdp_out), col
 
 def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     """This function calculates gradient vector of the objective function 
@@ -430,7 +430,7 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
         row_idx = gradient_c[:,1]-1
         col_idx = gradient_c[:,0]-1
         data = gradient_c[:,2]
-        gradient_c = sparse.csr_matrix((data, (row_idx, col_idx)),
+        gradient_c = scipy.sparse.csr_matrix((data, (row_idx, col_idx)),
                 shape=(len(row)-1, len(col)))
     else:
         gradient_c = np.array([])

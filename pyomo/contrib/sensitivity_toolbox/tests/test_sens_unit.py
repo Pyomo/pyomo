@@ -50,6 +50,7 @@ from pyomo.common.dependencies import (
     numpy as np, numpy_available,
     pandas as pd, pandas_available,
 )
+from pyomo.common.dependencies import scipy_available
 
 opt_ipopt = SolverFactory('ipopt',solver_io='nl')
 opt_kaug = SolverFactory('k_aug',solver_io='nl')
@@ -670,6 +671,7 @@ class TestSensitivityInterface(unittest.TestCase):
 
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_ipopt.available(False), "ipopt is not available")
+    @unittest.skipIf(not scipy_available, "scipy is not available")
     def test_get_dsdp1(self):
         '''
         It tests the function get_dsdp with a simple nonlinear programming example.
@@ -701,6 +703,7 @@ class TestSensitivityInterface(unittest.TestCase):
 
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_ipopt.available(False), "ipopt is not available")
+    @unittest.skipIf(not scipy_available, "scipy is not available")
     def test_get_dsdp2(self):
         '''
         It tests the function get_dsdp with rooney & biegler's model.
