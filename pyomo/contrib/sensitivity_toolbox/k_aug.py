@@ -102,7 +102,7 @@ class K_augInterface(object):
         try:
             # Create a tempdir and descend into it
             cwd = os.getcwd()
-            tempdir = TempfileManager.create_tempdir(dir=cwd)
+            tempdir = TempfileManager.create_tempdir()
             os.chdir(tempdir)
 
             # Write any files k_aug may use as input
@@ -133,7 +133,7 @@ class K_augInterface(object):
         try:
             # Create a tempdir and descend into it
             cwd = os.getcwd()
-            tempdir = TempfileManager.create_tempdir(dir=cwd)
+            tempdir = TempfileManager.create_tempdir()
             os.chdir(tempdir)
 
             # Write any files dot_sens may use as input
