@@ -26,7 +26,6 @@ def fp_converged(solve_data, config, discrete_only=True):
                     zip(solve_data.working_model.MindtPy_utils.variable_list,
                         solve_data.mip.MindtPy_utils.variable_list)
                     if (not discrete_only) or milp_var.is_integer()))
-    #
     return distance <= config.fp_projzerotol
 
 

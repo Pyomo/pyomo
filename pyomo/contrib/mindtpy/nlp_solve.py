@@ -113,6 +113,26 @@ def solve_subproblem(solve_data, config):
     return fixed_nlp, results
 
 
+def handle_nlp_subproblem_tc(fixed_nlp, result, solve_data, config):
+    if result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
+        handle_subproblem_optimal(fixed_nlp, solve_data, config)
+    elif result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
+        handle_subproblem_infeasible(fixed_nlp, solve_data, config)
+    elif result.solver.termination_condition is tc.maxTimeLimit:
+        config.logger.info(
+            'NLP subproblem failed to converge within the time limit.')
+        solve_data.results.solver.termination_condition = tc.maxTimeLimit
+        solve_data.should_terminate = True
+    elif result.solver.termination_condition is tc.maxEvaluations:
+        config.logger.info(
+            'NLP subproblem failed due to maxEvaluations.')
+        solve_data.results.solver.termination_condition = tc.maxEvaluations
+        solve_data.should_terminate = True
+    else:
+        handle_subproblem_other_termination(fixed_nlp, result.solver.termination_condition,
+                                            solve_data, config)
+
+
 # The next few functions deal with handling the solution we get from the above NLP solver function
 
 
@@ -247,6 +267,7 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config):
         config.logger.info('Solving feasibility problem')
         feas_subproblem, feas_subproblem_results = solve_feasibility_subproblem(
             solve_data, config)
+        # TODO: do we really need this?
         if solve_data.should_terminate:
             return
         copy_var_list_values(feas_subproblem.MindtPy_utils.variable_list,

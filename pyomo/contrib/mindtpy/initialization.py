@@ -20,10 +20,7 @@ from pyomo.core import (ConstraintList, Objective,
                         value, Var)
 from pyomo.opt import SolverFactory, TerminationCondition as tc
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
-                                             handle_subproblem_optimal,
-                                             handle_subproblem_infeasible,
-                                             handle_subproblem_other_termination)
+from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, handle_nlp_subproblem_tc
 import math
 from pyomo.contrib.mindtpy.feasibility_pump import fp_loop
 import logging
@@ -105,13 +102,8 @@ def MindtPy_initialize_main(solve_data, config):
         if config.strategy != 'ECP':
             fixed_nlp, fixed_nlp_result = solve_subproblem(
                 solve_data, config)
-            if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
-                handle_subproblem_optimal(fixed_nlp, solve_data, config)
-            elif fixed_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
-                handle_subproblem_infeasible(fixed_nlp, solve_data, config)
-            else:
-                handle_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
-                                                    solve_data, config)
+            handle_nlp_subproblem_tc(
+                fixed_nlp, fixed_nlp_result, solve_data, config)
     elif config.init_strategy == 'FP':
         init_rNLP(solve_data, config)
         fp_loop(solve_data, config)

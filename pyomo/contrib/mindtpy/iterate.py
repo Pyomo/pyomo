@@ -16,10 +16,8 @@ from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 
 from pyomo.contrib.mindtpy.mip_solve import (solve_main,
                                              handle_main_optimal, handle_main_infeasible, handle_main_other_conditions)
-from pyomo.contrib.mindtpy.nlp_solve import (solve_subproblem,
-                                             handle_subproblem_optimal, handle_subproblem_infeasible,
-                                             handle_subproblem_other_termination)
-from pyomo.core import minimize, maximize, Var
+from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, handle_nlp_subproblem_tc
+from pyomo.core import minimize, maximize
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
@@ -131,23 +129,8 @@ def MindtPy_iteration_loop(solve_data, config):
             if solve_data.curr_int_sol not in set(solve_data.integer_list):
                 fixed_nlp, fixed_nlp_result = solve_subproblem(
                     solve_data, config)
-                if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
-                    handle_subproblem_optimal(fixed_nlp, solve_data, config)
-                elif fixed_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
-                    handle_subproblem_infeasible(fixed_nlp, solve_data, config)
-                elif fixed_nlp_result.solver.termination_condition is tc.maxTimeLimit:
-                    config.logger.info(
-                        'NLP subproblem failed to converge within the time limit.')
-                    solve_data.results.solver.termination_condition = tc.maxTimeLimit
-                    break
-                elif fixed_nlp_result.solver.termination_condition is tc.maxEvaluations:
-                    config.logger.info(
-                        'NLP subproblem failed due to maxEvaluations.')
-                    solve_data.results.solver.termination_condition = tc.maxEvaluations
-                    break
-                else:
-                    handle_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
-                                                        solve_data, config)
+                handle_nlp_subproblem_tc(
+                    fixed_nlp, fixed_nlp_result, solve_data, config)
 
         if algorithm_should_terminate(solve_data, config, check_cycling=True):
             last_iter_cuts = False
@@ -158,23 +141,9 @@ def MindtPy_iteration_loop(solve_data, config):
             # The constraint linearization happens in the handlers
             fixed_nlp, fixed_nlp_result = solve_subproblem(
                 solve_data, config)
-            if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
-                handle_subproblem_optimal(fixed_nlp, solve_data, config)
-            elif fixed_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
-                handle_subproblem_infeasible(fixed_nlp, solve_data, config)
-            elif fixed_nlp_result.solver.termination_condition is tc.maxTimeLimit:
-                config.logger.info(
-                    'NLP subproblem failed to converge within the time limit.')
-                solve_data.results.solver.termination_condition = tc.maxTimeLimit
-                break
-            elif fixed_nlp_result.solver.termination_condition is tc.maxEvaluations:
-                config.logger.info(
-                    'NLP subproblem failed due to maxEvaluations.')
-                solve_data.results.solver.termination_condition = tc.maxEvaluations
-                break
-            else:
-                handle_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
-                                                    solve_data, config)
+            handle_nlp_subproblem_tc(
+                fixed_nlp, fixed_nlp_result, solve_data, config)
+
             # Call the NLP post-solve callback
             with time_code(solve_data.timing, 'Call after subproblem solve'):
                 config.call_after_subproblem_solve(fixed_nlp, solve_data)
@@ -421,21 +390,8 @@ def bound_fix(solve_data, config, last_iter_cuts):
         if not last_iter_cuts:
             fixed_nlp, fixed_nlp_result = solve_subproblem(
                 solve_data, config)
-            if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
-                handle_subproblem_optimal(fixed_nlp, solve_data, config)
-            elif fixed_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
-                handle_subproblem_infeasible(fixed_nlp, solve_data, config)
-            elif fixed_nlp_result.solver.termination_condition is tc.maxTimeLimit:
-                config.logger.info(
-                    'NLP subproblem failed to converge within the time limit.')
-                solve_data.results.solver.termination_condition = tc.maxTimeLimit
-            elif fixed_nlp_result.solver.termination_condition is tc.maxEvaluations:
-                config.logger.info(
-                    'NLP subproblem failed due to maxEvaluations.')
-                solve_data.results.solver.termination_condition = tc.maxEvaluations
-            else:
-                handle_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
-                                                    solve_data, config)
+            handle_nlp_subproblem_tc(
+                fixed_nlp, fixed_nlp_result, solve_data, config)
 
         MindtPy = solve_data.mip.MindtPy_utils
         # deactivate the integer cuts generated after the best solution was found.
