@@ -44,6 +44,7 @@ def simple_model_1():
 
 class TestK_augInterface(unittest.TestCase):
 
+    @unittest.skipIf(not opt_k_aug.available(), "k_aug is not available")
     def test_clear_dir_k_aug(self):
         m = simple_model_1()
         sens = SensitivityInterface(m, clone_model=False)
@@ -77,6 +78,8 @@ class TestK_augInterface(unittest.TestCase):
         self.assertIsInstance(k_aug.conorder, str)
         self.assertIsInstance(k_aug.timings_k_aug_dsdp, str)
 
+    @unittest.skipIf(not opt_k_aug.available(), "k_aug is not available")
+    @unittest.skipIf(not opt_dot_sens.available(), "dot_sens is not available")
     def test_clear_dir_dot_sens(self):
         m = simple_model_1()
         sens = SensitivityInterface(m, clone_model=False)
