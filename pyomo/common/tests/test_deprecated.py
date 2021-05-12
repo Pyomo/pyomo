@@ -24,7 +24,7 @@ from pyomo.common.log import LoggingIntercept
 from io import StringIO
 
 import logging
-logger = logging.getLogger('pyomo.common')
+logger = logging.getLogger('local')
 
 
 class TestDeprecated(unittest.TestCase):
@@ -32,7 +32,7 @@ class TestDeprecated(unittest.TestCase):
 
     def test_deprecation_warning(self):
         DEP_OUT = StringIO()
-        with LoggingIntercept(DEP_OUT, 'pyomo.core'):
+        with LoggingIntercept(DEP_OUT, 'pyomo'):
             deprecation_warning(None, version='1.2', remove_in='3.4')
 
         self.assertIn('DEPRECATED: This has been deprecated',
@@ -41,7 +41,7 @@ class TestDeprecated(unittest.TestCase):
                       DEP_OUT.getvalue().replace('\n',' '))
 
         DEP_OUT = StringIO()
-        with LoggingIntercept(DEP_OUT, 'pyomo.core'):
+        with LoggingIntercept(DEP_OUT, 'pyomo'):
             deprecation_warning("custom message here", version='1.2', remove_in='3.4')
 
         self.assertIn('DEPRECATED: custom message here',
@@ -87,8 +87,8 @@ class TestDeprecated(unittest.TestCase):
         # Test the default argument
         DEP_OUT = StringIO()
         FCN_OUT = StringIO()
-        with LoggingIntercept(DEP_OUT, 'pyomo.core'):
-            with LoggingIntercept(FCN_OUT, 'pyomo.common'):
+        with LoggingIntercept(DEP_OUT, 'pyomo'):
+            with LoggingIntercept(FCN_OUT, 'local'):
                 foo()
         # Test that the function produces output
         self.assertIn('yeah', FCN_OUT.getvalue())
@@ -100,8 +100,8 @@ class TestDeprecated(unittest.TestCase):
         # Test that the function argument gets passed in
         DEP_OUT = StringIO()
         FCN_OUT = StringIO()
-        with LoggingIntercept(DEP_OUT, 'pyomo.core'):
-            with LoggingIntercept(FCN_OUT, 'pyomo.common'):
+        with LoggingIntercept(DEP_OUT, 'pyomo'):
+            with LoggingIntercept(FCN_OUT, 'local'):
                 foo("custom")
         # Test that the function produces output
         self.assertNotIn('yeah', FCN_OUT.getvalue())
@@ -130,8 +130,8 @@ class TestDeprecated(unittest.TestCase):
         # Test the default argument
         DEP_OUT = StringIO()
         FCN_OUT = StringIO()
-        with LoggingIntercept(DEP_OUT, 'pyomo.core'):
-            with LoggingIntercept(FCN_OUT, 'pyomo.common'):
+        with LoggingIntercept(DEP_OUT, 'pyomo'):
+            with LoggingIntercept(FCN_OUT, 'local'):
                 foo()
         # Test that the function produces output
         self.assertIn('yeah', FCN_OUT.getvalue())
@@ -143,8 +143,8 @@ class TestDeprecated(unittest.TestCase):
         # Test that the function argument gets passed in
         DEP_OUT = StringIO()
         FCN_OUT = StringIO()
-        with LoggingIntercept(DEP_OUT, 'pyomo.core'):
-            with LoggingIntercept(FCN_OUT, 'pyomo.common'):
+        with LoggingIntercept(DEP_OUT, 'pyomo'):
+            with LoggingIntercept(FCN_OUT, 'local'):
                 foo("custom")
         # Test that the function produces output
         self.assertNotIn('yeah', FCN_OUT.getvalue())
@@ -173,8 +173,8 @@ class TestDeprecated(unittest.TestCase):
         # Test the default argument
         DEP_OUT = StringIO()
         FCN_OUT = StringIO()
-        with LoggingIntercept(DEP_OUT, 'pyomo.core'):
-            with LoggingIntercept(FCN_OUT, 'pyomo.common'):
+        with LoggingIntercept(DEP_OUT, 'pyomo'):
+            with LoggingIntercept(FCN_OUT, 'local'):
                 foo()
         # Test that the function produces output
         self.assertIn('yeah', FCN_OUT.getvalue())
@@ -186,8 +186,8 @@ class TestDeprecated(unittest.TestCase):
         # Test that the function argument gets passed in
         DEP_OUT = StringIO()
         FCN_OUT = StringIO()
-        with LoggingIntercept(DEP_OUT, 'pyomo.core'):
-            with LoggingIntercept(FCN_OUT, 'pyomo.common'):
+        with LoggingIntercept(DEP_OUT, 'pyomo'):
+            with LoggingIntercept(FCN_OUT, 'local'):
                 foo("custom")
         # Test that the function produces output
         self.assertNotIn('yeah', FCN_OUT.getvalue())
@@ -199,7 +199,7 @@ class TestDeprecated(unittest.TestCase):
 
 
     def test_with_custom_logger(self):
-        @deprecated('This is a custom message', logger='pyomo.common',
+        @deprecated('This is a custom message', logger='local',
                     version='test')
         def foo(bar='yeah'):
             """Show that I am a good person.
@@ -217,8 +217,8 @@ class TestDeprecated(unittest.TestCase):
         # Test the default argument
         DEP_OUT = StringIO()
         FCN_OUT = StringIO()
-        with LoggingIntercept(DEP_OUT, 'pyomo.core'):
-            with LoggingIntercept(FCN_OUT, 'pyomo.common'):
+        with LoggingIntercept(DEP_OUT, 'pyomo'):
+            with LoggingIntercept(FCN_OUT, 'local'):
                 foo()
         # Test that the function produces output
         self.assertIn('yeah', FCN_OUT.getvalue())
@@ -231,8 +231,8 @@ class TestDeprecated(unittest.TestCase):
         # Test that the function argument gets passed in
         DEP_OUT = StringIO()
         FCN_OUT = StringIO()
-        with LoggingIntercept(DEP_OUT, 'pyomo.core'):
-            with LoggingIntercept(FCN_OUT, 'pyomo.common'):
+        with LoggingIntercept(DEP_OUT, 'pyomo'):
+            with LoggingIntercept(FCN_OUT, 'local'):
                 foo("custom")
         # Test that the function produces output
         self.assertNotIn('yeah', FCN_OUT.getvalue())
@@ -257,8 +257,8 @@ class TestDeprecated(unittest.TestCase):
         # Test the default argument
         DEP_OUT = StringIO()
         FCN_OUT = StringIO()
-        with LoggingIntercept(DEP_OUT, 'pyomo.core'):
-            with LoggingIntercept(FCN_OUT, 'pyomo.common'):
+        with LoggingIntercept(DEP_OUT, 'pyomo'):
+            with LoggingIntercept(FCN_OUT, 'local'):
                 foo()
         # Test that the function produces output
         self.assertIn('yeah', FCN_OUT.getvalue())
@@ -283,8 +283,8 @@ class TestDeprecated(unittest.TestCase):
         # Test the default argument
         DEP_OUT = StringIO()
         FCN_OUT = StringIO()
-        with LoggingIntercept(DEP_OUT, 'pyomo.core'):
-            with LoggingIntercept(FCN_OUT, 'pyomo.common'):
+        with LoggingIntercept(DEP_OUT, 'pyomo'):
+            with LoggingIntercept(FCN_OUT, 'local'):
                 foo().bar()
         # Test that the function produces output
         self.assertIn('yeah', FCN_OUT.getvalue())
@@ -310,8 +310,8 @@ class TestDeprecated(unittest.TestCase):
         # Test the default argument
         DEP_OUT = StringIO()
         FCN_OUT = StringIO()
-        with LoggingIntercept(DEP_OUT, 'pyomo.core'):
-            with LoggingIntercept(FCN_OUT, 'pyomo.common'):
+        with LoggingIntercept(DEP_OUT, 'pyomo'):
+            with LoggingIntercept(FCN_OUT, 'local'):
                 foo().bar()
         # Test that the function produces output
         self.assertIn('yeah', FCN_OUT.getvalue())
@@ -337,7 +337,7 @@ class TestRelocated(unittest.TestCase):
         warning = "DEPRECATED: the 'myFoo' class has been moved to " \
                   "'pyomo.common.tests.relocated.Bar'"
         OUT = StringIO()
-        with LoggingIntercept(OUT, 'pyomo.core'):
+        with LoggingIntercept(OUT, 'pyomo'):
             from pyomo.common.tests.test_deprecated import myFoo
         self.assertEqual(myFoo.data, 42)
         self.assertIn(warning, OUT.getvalue().replace('\n', ' '))
@@ -356,7 +356,7 @@ class TestRelocated(unittest.TestCase):
                   "'pyomo.common.tests.relocated.Bar'"
 
         OUT = StringIO()
-        with LoggingIntercept(OUT, 'pyomo.core'):
+        with LoggingIntercept(OUT, 'pyomo'):
             self.assertIs(relocated.Foo_2, relocated.Bar)
             self.assertEqual(relocated.Foo_2.data, 42)
         self.assertIn(warning, OUT.getvalue().replace('\n', ' '))
@@ -369,7 +369,7 @@ class TestRelocated(unittest.TestCase):
                   "'pyomo.common.tests.test_deprecated.Bar'"
 
         OUT = StringIO()
-        with LoggingIntercept(OUT, 'pyomo.core'):
+        with LoggingIntercept(OUT, 'pyomo'):
             from pyomo.common.tests.relocated import Foo
             self.assertEqual(Foo.data, 21)
         self.assertIn(warning, OUT.getvalue().replace('\n', ' '))

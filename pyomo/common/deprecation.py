@@ -116,7 +116,7 @@ def _wrap_func(func, msg, logger, version, remove_in):
     return wrapper
 
 
-def deprecation_warning(msg, logger='pyomo.core', version=None,
+def deprecation_warning(msg, logger=None, version=None,
                         remove_in=None, calling_frame=None):
     """Standardized formatter for deprecation warnings
 
@@ -125,6 +125,21 @@ def deprecation_warning(msg, logger='pyomo.core', version=None,
 
     Args:
         msg (str): the deprecation message to format
+
+        logger (str): the logger to use for emitting the warning
+            (default: the calling pyomo package, or "pyomo")
+
+        version (str): [required] the version in which the decorated
+            object was deprecated.  General practice is to set version
+            to '' or 'TBD' during development and update it to the
+            actual release as part of the release process.
+
+        remove_in (str): the version in which the decorated object will be
+            removed from the code.
+
+        calling_frame (frame): the original frame context that triggered
+            the deprecation warning.
+
     """
     msg = textwrap.fill(
         'DEPRECATED: %s' % (_default_msg(None, msg, version, remove_in),),
@@ -141,10 +156,17 @@ def deprecation_warning(msg, logger='pyomo.core', version=None,
         info = inspect.getframeinfo(calling_frame)
         msg += "\n(called from %s:%s)" % (info.filename.strip(), info.lineno)
 
+    if logger is None:
+        if calling_frame is not None:
+            logger = calling_frame.f_globals['__package__']
+            if not logger.startswith('pyomo'):
+                logger = None
+        if logger is None:
+            logger = 'pyomo'
     logging.getLogger(logger).warning(msg)
 
 
-def deprecated(msg=None, logger='pyomo.core', version=None, remove_in=None):
+def deprecated(msg=None, logger=None, version=None, remove_in=None):
     """Indicate that a function, method or class is deprecated.
 
     This decorator will cause a warning to be logged when the wrapped
@@ -158,7 +180,7 @@ def deprecated(msg=None, logger='pyomo.core', version=None, remove_in=None):
             removed in a future release.")
 
         logger (str): the logger to use for emitting the warning
-            (default: "pyomo")
+            (default: the calling pyomo package, or "pyomo")
 
         version (str): [required] the version in which the decorated
             object was deprecated.  General practice is to set version
