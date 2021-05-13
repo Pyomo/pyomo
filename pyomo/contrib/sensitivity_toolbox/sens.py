@@ -205,6 +205,8 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
                 fpath = os.path.join("dsdp", fname)
                 with open(fpath, "w") as fp:
                     fp.write(contents)
+        # Typical usage is to access k_aug data by filename
+        # Maybe store the data in a dict from filename to string?
 
         try:
             # TODO: These files are created in this function, not by
