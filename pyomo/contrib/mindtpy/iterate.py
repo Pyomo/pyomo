@@ -275,8 +275,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
                     config.logger.info(
                         'MindtPy-ECP continuing as {} has not met the '
                         'nonlinear constraints satisfaction.'
-                        '\n'.format(
-                            nlc))
+                        '\n'.format(nlc))
                     return False
             if nlc.has_ub():
                 try:
@@ -287,8 +286,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
                     config.logger.info(
                         'MindtPy-ECP continuing as {} has not met the '
                         'nonlinear constraints satisfaction.'
-                        '\n'.format(
-                            nlc))
+                        '\n'.format(nlc))
                     return False
         # For ECP to know whether to know which bound to copy over (primal or dual)
         if solve_data.objective_sense == minimize:
@@ -297,8 +295,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
             solve_data.LB = solve_data.UB
         config.logger.info(
             'MindtPy-ECP exiting on nonlinear constraints satisfaction. '
-            'LB: {} UB: {}\n'.format(
-                solve_data.LB, solve_data.UB))
+            'LB: {} UB: {}\n'.format(solve_data.LB, solve_data.UB))
 
         solve_data.best_solution_found = solve_data.working_model.clone()
         solve_data.results.solver.termination_condition = tc.optimal

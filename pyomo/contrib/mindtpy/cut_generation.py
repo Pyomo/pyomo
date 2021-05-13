@@ -216,8 +216,8 @@ def add_no_good_cuts(var_values, solve_data, config, feasible=False):
         # check to make sure that binary variables are all 0 or 1
         for v in binary_vars:
             if value(abs(v - 1)) > int_tol and value(abs(v)) > int_tol:
-                raise ValueError('Binary {} = {} is not 0 or 1'.format(
-                    v.name, value(v)))
+                raise ValueError(
+                    'Binary {} = {} is not 0 or 1'.format(v.name, value(v)))
 
         if not binary_vars:  # if no binary variables, skip
             return
