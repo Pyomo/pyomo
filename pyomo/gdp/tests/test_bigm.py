@@ -1961,6 +1961,9 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.assertEqual(cons8.upper, 2)
         self.check_bigM_constraint(cons8, m.a, 21, m.disjunct[1].indicator_var)
 
+    def test_unique_reference_to_nested_indicator_var(self):
+        ct.check_unique_reference_to_nested_indicator_var(self, 'bigm')
+
     def test_disjunct_targets_inactive(self):
         ct.check_disjunct_targets_inactive(self, 'bigm')
 

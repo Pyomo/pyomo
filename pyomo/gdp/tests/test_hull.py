@@ -1057,6 +1057,9 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         # version. (But this behaves the same as bigm)
         ct.check_mappings_between_disjunctions_and_xors(self, 'hull')
 
+    def test_unique_reference_to_nested_indicator_var(self):
+        ct.check_unique_reference_to_nested_indicator_var(self, 'hull')
+
     def test_disjunct_targets_inactive(self):
         ct.check_disjunct_targets_inactive(self, 'hull')
 
