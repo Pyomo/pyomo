@@ -1381,7 +1381,7 @@ q : Size=3, Index=Any, Domain=Any, Default=None, Mutable=True
             log.getvalue())
         self.assertEqual(value(m.p), 'a')
 
-    @unittest.skipUnless(pint_available, "units tests requires pint module")
+    @unittest.skipUnless(pint_available, "units test requires pint module")
     def test_set_value_units(self):
         m = ConcreteModel()
         m.p = Param(units=units.g)

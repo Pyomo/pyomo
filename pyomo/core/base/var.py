@@ -176,7 +176,7 @@ class _VarData(ComponentData, NumericValue):
         then the validation step is skipped.
         """
         if not valid and val is not None:
-            # TODO: warn/error: check if this Param has units: assigning
+            # TODO: warn/error: check if this Var has units: assigning
             # a dimensionless value to a united param should be an error
             if type(val) not in native_numeric_types:
                 if self.parent_component()._units is not None:
@@ -389,7 +389,7 @@ class _GeneralVarData(_VarData):
     def value(self, val):
         """Set the value for this variable."""
         if type(val) in native_numeric_types:
-            # TODO: warn/error: check if this Param has units: assigning
+            # TODO: warn/error: check if this Var has units: assigning
             # a dimensionless value to a united param should be an error
             pass
         elif self.parent_component()._units is not None:
@@ -466,7 +466,7 @@ class _GeneralVarData(_VarData):
                 "bound - legal types must be fixed expressions or variables."
                 % (type(val),))
         if type(val) in native_numeric_types or val is None:
-            # TODO: warn/error: check if this Param has units: assigning
+            # TODO: warn/error: check if this Var has units: assigning
             # a dimensionless value to a united param should be an error
             pass
         else:
@@ -492,7 +492,7 @@ class _GeneralVarData(_VarData):
                 "parameters"
                 % (type(val),))
         if type(val) in native_numeric_types or val is None:
-            # TODO: warn/error: check if this Param has units: assigning
+            # TODO: warn/error: check if this Var has units: assigning
             # a dimensionless value to a united param should be an error
             pass
         else:

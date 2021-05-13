@@ -1375,7 +1375,7 @@ class MiscVarTests(unittest.TestCase):
         model.C = model.A | model.B
         model.x = Var(model.C)
 
-    @unittest.skipUnless(pint_available, "units tests requires pint module")
+    @unittest.skipUnless(pint_available, "units test requires pint module")
     def test_set_value_units(self):
         m = ConcreteModel()
         m.x = Var(units=units.g)
@@ -1399,7 +1399,7 @@ class MiscVarTests(unittest.TestCase):
 1 Declarations: x
         """.strip())
 
-    @unittest.skipUnless(pint_available, "units tests requires pint module")
+    @unittest.skipUnless(pint_available, "units test requires pint module")
     def test_set_bounds_units(self):
         m = ConcreteModel()
         m.x = Var(units=units.g)
