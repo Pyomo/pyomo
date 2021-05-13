@@ -1519,9 +1519,9 @@ def check_unique_reference_to_nested_indicator_var(self, transformation):
     num_references_d3 = 0
     num_references_d4 = 0
     for v in m.component_data_objects(Var, active=True, descend_into=Block):
-        if v is m.d1.d3.indicator_var:
+        if v is m.d1.d3.binary_indicator_var:
             num_references_d3 += 1
-        if v is m.d1.d4.indicator_var:
+        if v is m.d1.d4.binary_indicator_var:
             num_references_d4 += 1
     self.assertEqual(num_references_d3, 1)
     self.assertEqual(num_references_d4, 1)
