@@ -332,7 +332,7 @@ class Test(unittest.TestCase):
             TempfileManager.tempdir = None
 
             log = StringIO()
-            with LoggingIntercept(log, 'pyomo.core'):
+            with LoggingIntercept(log, 'pyomo'):
                 fname = TempfileManager.create_tempfile()
             self.assertIn(
                 "The use of the PyUtilib TempfileManager.tempdir "
@@ -340,7 +340,7 @@ class Test(unittest.TestCase):
                 "temporary files", log.getvalue().replace("\n", " "))
 
             log = StringIO()
-            with LoggingIntercept(log, 'pyomo.core'):
+            with LoggingIntercept(log, 'pyomo'):
                 dname = TempfileManager.create_tempdir()
             self.assertIn(
                 "The use of the PyUtilib TempfileManager.tempdir "

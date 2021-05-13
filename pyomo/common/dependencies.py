@@ -330,7 +330,7 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
     the module scope but not imported until they are actually used by
     the module (thereby speeding up the initial package import).
     Deferred imports are handled by two helper classes
-    (:py:class`DeferredImportModule` and
+    (:py:class:`DeferredImportModule` and
     :py:class:`DeferredImportIndicator`).  Upon actual import,
     :py:meth:`DeferredImportIndicator.resolve()` attempts to replace
     those objects (in both the local and original global namespaces)
@@ -529,7 +529,7 @@ def declare_deferred_modules_as_importable(globals_dict):
     :py:class:`DeferredImportModule` is returned and named ``spa``.
     However, if the import has already been triggered, then ``spa`` will
     either be the ``scipy.sparse`` module, or a
-    py:class:`ModuleUnavailable` instance.
+    :py:class:`ModuleUnavailable` instance.
 
     """
     _global_name = globals_dict['__name__'] + '.'
