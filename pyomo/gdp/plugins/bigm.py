@@ -31,9 +31,8 @@ from pyomo.gdp.util import ( _warn_for_active_logical_constraint, target_list,
                              get_src_constraint, get_transformed_constraints,
                              _get_constraint_transBlock, get_src_disjunct,
                              _warn_for_active_disjunction,
-                             _warn_for_active_disjunct, )
+                             _warn_for_active_disjunct, preprocess_targets)
 from pyomo.repn import generate_standard_repn
-
 from functools import wraps
 from weakref import ref as weakref_ref
 
@@ -241,21 +240,7 @@ class BigM_Transformation(Transformation):
             # we need to preprocess targets to make sure that if there are any
             # disjunctions in targets that their disjuncts appear before them in
             # the list.
-            preprocessed_targets = []
-            for t in targets:
-                if t.ctype is Disjunction:
-                    if t.is_indexed():
-                        for disjunction in t.values():
-                            for disj in disjunction.disjuncts:
-                                preprocessed_targets.append(disj)
-                    else:
-                        for disj in t.disjuncts:
-                            preprocessed_targets.append(disj)
-                # now we are safe to put the disjunction, and if the target was
-                # anything else, then we don't need to worry because disjuncts
-                # are declared before disjunctions they appear in
-                preprocessed_targets.append(t)
-            targets = preprocessed_targets
+            targets = preprocess_targets(targets)
 
         #  We need to check that all the targets are in fact on
         # instance. As we do this, we will use the set below to cache components
