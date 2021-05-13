@@ -51,7 +51,7 @@ class AutoLinkedBinaryVar(SimpleVar):
     """A binary variable implicitly linked to its equivalent Boolean variable.
 
     Basic oprerations like setting values and fixing/unfixing this
-    variable are also automatically applied to the assiciated binary
+    variable are also automatically applied to the associated binary
     variable.
 
     As this class is only intended to provide a deprecation path for
@@ -128,7 +128,7 @@ class AutoLinkedBooleanVar(SimpleBooleanVar):
     warning) into their equivalent binary varriable.
 
     Basic oprerations like setting values and fixing/unfixing this
-    variable are also automatically applied to the assiciated binary
+    variable are also automatically applied to the associated binary
     variable.
 
     As this class is only intended to provide a deprecation path for
