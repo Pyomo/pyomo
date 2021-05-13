@@ -1980,6 +1980,9 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
     def test_nested_disjunction_target(self):
         ct.check_nested_disjunction_target(self, 'bigm')
 
+    def test_target_appears_twice(self):
+        ct.check_target_appears_twice(self, 'bigm')
+
     def test_create_using(self):
         m = models.makeNestedDisjunctions()
         self.diff_apply_to_and_create_using(m)

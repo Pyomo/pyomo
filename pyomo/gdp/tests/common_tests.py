@@ -1474,6 +1474,34 @@ def check_disjunctData_only_targets_transformed(self, transformation):
         self.assertIs(m.disjunct[1].innerdisjunct[i].transformation_block(),
                       disjBlock[j])
 
+def check_all_components_transformed(self, m):
+    # checks that all the disjunctive components claim to be transformed in the
+    # makeNestedDisjunctions_NestedDisjuncts model.
+    self.assertIsInstance(m.disj.algebraic_constraint(), Constraint)
+    self.assertIsInstance(m.d1.disj2.algebraic_constraint(), Constraint)
+    self.assertIsInstance(m.d1.transformation_block(), _BlockData)
+    self.assertIsInstance(m.d2.transformation_block(), _BlockData)
+    self.assertIsInstance(m.d1.d3.transformation_block(), _BlockData)
+    self.assertIsInstance(m.d1.d4.transformation_block(), _BlockData)
+
+def check_transformation_blocks_nestedDisjunctions(self, m, transformation):
+    disjunctionTransBlock = m.disj.algebraic_constraint().parent_block()
+    transBlocks = disjunctionTransBlock.relaxedDisjuncts
+    self.assertTrue(len(transBlocks), 4)
+    self.assertIs(transBlocks[0], m.d1.transformation_block())
+    self.assertIs(transBlocks[3], m.d2.transformation_block())
+    if transformation == 'bigm':
+        # we moved the blocks up
+        self.assertIs(transBlocks[1], m.d1.d3.transformation_block())
+        self.assertIs(transBlocks[2], m.d1.d4.transformation_block())
+    if transformation == 'hull':
+        # we only moved the references up, these still point to the inner
+        # transformation blocks
+        inner = m.d1.disj2.algebraic_constraint().parent_block().\
+                relaxedDisjuncts
+        self.assertIs(inner[0], m.d1.d3.transformation_block())
+        self.assertIs(inner[1], m.d1.d4.transformation_block())
+
 def check_nested_disjunction_target(self, transformation):
     m = models.makeNestedDisjunctions_NestedDisjuncts()
     transform = TransformationFactory('gdp.%s' % transformation)
@@ -1482,12 +1510,29 @@ def check_nested_disjunction_target(self, transformation):
     # the bug that inspired this test throws an error while doing the
     # transformation, so we'll just do a quick check that all the GDP
     # components think they are transformed.
-    self.assertIsInstance(m.disj.algebraic_constraint(), Constraint)
-    self.assertIsInstance(m.d1.disj2.algebraic_constraint(), Constraint)
-    self.assertIsInstance(m.d1.transformation_block(), _BlockData)
-    self.assertIsInstance(m.d2.transformation_block(), _BlockData)
-    self.assertIsInstance(m.d1.d3.transformation_block(), _BlockData)
-    self.assertIsInstance(m.d1.d4.transformation_block(), _BlockData)
+    check_all_components_transformed(self, m)
+    check_transformation_blocks_nestedDisjunctions(self, m, transformation)
+
+def check_target_appears_twice(self, transformation):
+    m = models.makeNestedDisjunctions_NestedDisjuncts()
+    # Because of the way we preprocess targets, the result here will be that
+    # m.d1 appears twice in the list of targets. However, this is fine because
+    # the transformation will not try to retransform anything that has already
+    # been transformed.
+    m1 = TransformationFactory('gdp.%s' % transformation).create_using(
+        m, targets=[m.d1, m.disj])
+    
+    check_all_components_transformed(self, m1)
+    # check we have correct number of transformation blocks
+    check_transformation_blocks_nestedDisjunctions(self, m1, transformation)
+
+    # Now check the same thing, but if the already-transformed disjunct appears
+    # after its disjunction.
+    TransformationFactory('gdp.%s' % transformation).apply_to( m,
+                                                               targets=[m.disj,
+                                                                        m.d1])
+    check_all_components_transformed(self, m)
+    check_transformation_blocks_nestedDisjunctions(self, m, transformation)
 
 def check_unique_reference_to_nested_indicator_var(self, transformation):
     m = models.makeNestedDisjunctions_NestedDisjuncts()
