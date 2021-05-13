@@ -62,43 +62,8 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
 
     # setup main problem
     setup_main(solve_data, config, fp, regularization_problem)
+    mainopt = setup_mip_solver(solve_data, config, regularization_problem)
 
-    # Deactivate extraneous IMPORT/EXPORT suffixes
-    if config.nlp_solver == 'ipopt':
-        getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
-        getattr(solve_data.mip, 'ipopt_zU_out', _DoNothing()).deactivate()
-    if regularization_problem:
-        mainopt = SolverFactory(config.mip_regularization_solver)
-    else:
-        mainopt = SolverFactory(config.mip_solver)
-    # determine if persistent solver is called.
-    if isinstance(mainopt, PersistentSolver):
-        mainopt.set_instance(solve_data.mip, symbolic_solver_labels=True)
-    if config.single_tree and not regularization_problem:
-        # Configuration of lazy callback
-        lazyoa = mainopt._solver_model.register_callback(
-            single_tree.LazyOACallback_cplex)
-        # pass necessary data and parameters to lazyoa
-        lazyoa.main_mip = solve_data.mip
-        lazyoa.solve_data = solve_data
-        lazyoa.config = config
-        lazyoa.opt = mainopt
-        mainopt._solver_model.set_warning_stream(None)
-        mainopt._solver_model.set_log_stream(None)
-        mainopt._solver_model.set_error_stream(None)
-    if config.use_tabu_list:
-        tabulist = mainopt._solver_model.register_callback(
-            tabu_list.IncumbentCallback_cplex)
-        tabulist.solve_data = solve_data
-        tabulist.opt = mainopt
-        tabulist.config = config
-        mainopt._solver_model.parameters.preprocessing.reduce.set(1)
-        # If the callback is used to reject incumbents, the user must set the
-        # parameter c.parameters.preprocessing.reduce either to the value 1 (one)
-        # to restrict presolve to primal reductions only or to 0 (zero) to disable all presolve reductions
-        mainopt._solver_model.set_warning_stream(None)
-        mainopt._solver_model.set_log_stream(None)
-        mainopt._solver_model.set_error_stream(None)
     mip_args = dict(config.mip_solver_args)
     if config.mip_solver in {'cplex', 'cplex_persistent', 'gurobi', 'gurobi_persistent'}:
         mip_args['warmstart'] = True
@@ -152,6 +117,46 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
                 'L_infinity_obj')
 
     return solve_data.mip, main_mip_results
+
+
+def setup_mip_solver(solve_data, config, regularization_problem):
+    # Deactivate extraneous IMPORT/EXPORT suffixes
+    if config.nlp_solver == 'ipopt':
+        getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
+        getattr(solve_data.mip, 'ipopt_zU_out', _DoNothing()).deactivate()
+    if regularization_problem:
+        mainopt = SolverFactory(config.mip_regularization_solver)
+    else:
+        mainopt = SolverFactory(config.mip_solver)
+    # determine if persistent solver is called.
+    if isinstance(mainopt, PersistentSolver):
+        mainopt.set_instance(solve_data.mip, symbolic_solver_labels=True)
+    if config.single_tree and not regularization_problem:
+        # Configuration of lazy callback
+        lazyoa = mainopt._solver_model.register_callback(
+            single_tree.LazyOACallback_cplex)
+        # pass necessary data and parameters to lazyoa
+        lazyoa.main_mip = solve_data.mip
+        lazyoa.solve_data = solve_data
+        lazyoa.config = config
+        lazyoa.opt = mainopt
+        mainopt._solver_model.set_warning_stream(None)
+        mainopt._solver_model.set_log_stream(None)
+        mainopt._solver_model.set_error_stream(None)
+    if config.use_tabu_list:
+        tabulist = mainopt._solver_model.register_callback(
+            tabu_list.IncumbentCallback_cplex)
+        tabulist.solve_data = solve_data
+        tabulist.opt = mainopt
+        tabulist.config = config
+        mainopt._solver_model.parameters.preprocessing.reduce.set(1)
+        # If the callback is used to reject incumbents, the user must set the
+        # parameter c.parameters.preprocessing.reduce either to the value 1 (one)
+        # to restrict presolve to primal reductions only or to 0 (zero) to disable all presolve reductions
+        mainopt._solver_model.set_warning_stream(None)
+        mainopt._solver_model.set_log_stream(None)
+        mainopt._solver_model.set_error_stream(None)
+    return mainopt
 
 
 # The following functions deal with handling the solution we get from the above MIP solver function
