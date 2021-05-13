@@ -243,7 +243,11 @@ texinfo_documents = [
 
 # -- Check which conditional dependencies are available ------------------
 # Used for skipping certain doctests
-
+from sphinx.ext.doctest import doctest
+doctest_default_flags = (
+    doctest.ELLIPSIS + doctest.NORMALIZE_WHITESPACE +
+    doctest.IGNORE_EXCEPTION_DETAIL + doctest.DONT_ACCEPT_TRUE_FOR_1
+)
 doctest_global_setup = '''
 
 from pyomo.common.dependencies import (
