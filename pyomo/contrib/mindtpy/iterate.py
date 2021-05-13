@@ -84,41 +84,8 @@ def MindtPy_iteration_loop(solve_data, config):
             if (solve_data.objective_sense == minimize and solve_data.LB != float('-inf')) or (solve_data.objective_sense == maximize and solve_data.UB != float('inf')):
                 main_mip, main_mip_results = solve_main(
                     solve_data, config, regularization_problem=True)
-                if main_mip_results is None:
-                    config.logger.info(
-                        'Failed to solve the regularization problem.'
-                        'The solution of the OA main problem will be adopted.')
-                elif main_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
-                    handle_main_optimal(
-                        main_mip, solve_data, config, update_bound=False)
-                elif main_mip_results.solver.termination_condition is tc.maxTimeLimit:
-                    config.logger.info(
-                        'Regularization problem failed to converge within the time limit.')
-                    solve_data.results.solver.termination_condition = tc.maxTimeLimit
-                    break
-                elif main_mip_results.solver.termination_condition is tc.infeasible:
-                    config.logger.info(
-                        'Regularization problem infeasible.')
-                elif main_mip_results.solver.termination_condition is tc.unbounded:
-                    config.logger.info(
-                        'Regularization problem ubounded.'
-                        'Sometimes solving MIQP in cplex, unbounded means infeasible.')
-                elif main_mip_results.solver.termination_condition is tc.unknown:
-                    config.logger.info(
-                        'Termination condition of the regularization problem is unknown.')
-                    if main_mip_results.problem.lower_bound != float('-inf'):
-                        config.logger.info('Solution limit has been reached.')
-                        handle_main_optimal(
-                            main_mip, solve_data, config, update_bound=False)
-                    else:
-                        config.logger.info('No solution obtained from the regularization subproblem.'
-                                           'Please set mip_solver_tee to True for more informations.'
-                                           'The solution of the OA main problem will be adopted.')
-                else:
-                    raise ValueError(
-                        'MindtPy unable to handle regularization problem termination condition '
-                        'of %s. Solver message: %s' %
-                        (main_mip_results.solver.termination_condition, main_mip_results.solver.message))
+                handle_regularization_main_tc(
+                    main_mip, main_mip_results, solve_data, config)
         if config.add_regularization is not None and config.single_tree:
             solve_data.curr_int_sol = get_integer_solution(
                 solve_data.mip, string_zero=True)
@@ -194,6 +161,44 @@ def MindtPy_iteration_loop(solve_data, config):
     # we correct it after the iteration.
     if (config.add_no_good_cuts or config.use_tabu_list) and config.strategy is not 'FP' and not solve_data.should_terminate and config.add_regularization is None:
         bound_fix(solve_data, config, last_iter_cuts)
+
+
+def handle_regularization_main_tc(main_mip, main_mip_results, solve_data, config):
+    if main_mip_results is None:
+        config.logger.info(
+            'Failed to solve the regularization problem.'
+            'The solution of the OA main problem will be adopted.')
+    elif main_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
+        handle_main_optimal(
+            main_mip, solve_data, config, update_bound=False)
+    elif main_mip_results.solver.termination_condition is tc.maxTimeLimit:
+        config.logger.info(
+            'Regularization problem failed to converge within the time limit.')
+        solve_data.results.solver.termination_condition = tc.maxTimeLimit
+        # break
+    elif main_mip_results.solver.termination_condition is tc.infeasible:
+        config.logger.info(
+            'Regularization problem infeasible.')
+    elif main_mip_results.solver.termination_condition is tc.unbounded:
+        config.logger.info(
+            'Regularization problem ubounded.'
+            'Sometimes solving MIQP in cplex, unbounded means infeasible.')
+    elif main_mip_results.solver.termination_condition is tc.unknown:
+        config.logger.info(
+            'Termination condition of the regularization problem is unknown.')
+        if main_mip_results.problem.lower_bound != float('-inf'):
+            config.logger.info('Solution limit has been reached.')
+            handle_main_optimal(
+                main_mip, solve_data, config, update_bound=False)
+        else:
+            config.logger.info('No solution obtained from the regularization subproblem.'
+                               'Please set mip_solver_tee to True for more informations.'
+                               'The solution of the OA main problem will be adopted.')
+    else:
+        raise ValueError(
+            'MindtPy unable to handle regularization problem termination condition '
+            'of %s. Solver message: %s' %
+            (main_mip_results.solver.termination_condition, main_mip_results.solver.message))
 
 
 def algorithm_should_terminate(solve_data, config, check_cycling):
