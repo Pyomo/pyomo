@@ -54,20 +54,18 @@ def MindtPy_iteration_loop(solve_data, config):
         solve_data.mip_subiter = 0
         # solve MILP main problem
         if config.strategy in {'OA', 'GOA', 'ECP'}:
-            main_mip, main_mip_results = solve_main(
-                solve_data, config)
+            main_mip, main_mip_results = solve_main(solve_data, config)
             if main_mip_results is not None:
                 if not config.single_tree:
                     if main_mip_results.solver.termination_condition is tc.optimal:
                         handle_main_optimal(main_mip, solve_data, config)
                     elif main_mip_results.solver.termination_condition is tc.infeasible:
-                        handle_main_infeasible(
-                            main_mip, solve_data, config)
+                        handle_main_infeasible(main_mip, solve_data, config)
                         last_iter_cuts = True
                         break
                     else:
-                        handle_main_other_conditions(main_mip, main_mip_results,
-                                                     solve_data, config)
+                        handle_main_other_conditions(
+                            main_mip, main_mip_results, solve_data, config)
                     # Call the MILP post-solve callback
                     with time_code(solve_data.timing, 'Call after main solve'):
                         config.call_after_main_solve(main_mip, solve_data)
@@ -105,8 +103,7 @@ def MindtPy_iteration_loop(solve_data, config):
         if not config.single_tree and config.strategy != 'ECP':  # if we don't use lazy callback, i.e. LP_NLP
             # Solve NLP subproblem
             # The constraint linearization happens in the handlers
-            fixed_nlp, fixed_nlp_result = solve_subproblem(
-                solve_data, config)
+            fixed_nlp, fixed_nlp_result = solve_subproblem(solve_data, config)
             handle_nlp_subproblem_tc(
                 fixed_nlp, fixed_nlp_result, solve_data, config)
 
@@ -354,8 +351,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
         # Solve NLP subproblem
         # The constraint linearization happens in the handlers
         if not last_iter_cuts:
-            fixed_nlp, fixed_nlp_result = solve_subproblem(
-                solve_data, config)
+            fixed_nlp, fixed_nlp_result = solve_subproblem(solve_data, config)
             handle_nlp_subproblem_tc(
                 fixed_nlp, fixed_nlp_result, solve_data, config)
 
@@ -368,10 +364,8 @@ def bound_fix(solve_data, config, last_iter_cuts):
                 else:
                     valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.LB]
                 if config.add_no_good_cuts:
-                    for i in range(valid_no_good_cuts_num+1, len(
-                            MindtPy.cuts.no_good_cuts)+1):
-                        MindtPy.cuts.no_good_cuts[i].deactivate(
-                        )
+                    for i in range(valid_no_good_cuts_num+1, len(MindtPy.cuts.no_good_cuts)+1):
+                        MindtPy.cuts.no_good_cuts[i].deactivate()
                 if config.use_tabu_list:
                     solve_data.integer_list = solve_data.integer_list[:valid_no_good_cuts_num]
             except KeyError:

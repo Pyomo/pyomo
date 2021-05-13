@@ -69,8 +69,8 @@ def model_is_valid(solve_data, config):
                 'Using NLP solver %s to solve.' % config.nlp_solver)
             nlpopt = SolverFactory(config.nlp_solver)
             set_solver_options(nlpopt, solve_data, config, solver_type='nlp')
-            nlpopt.solve(
-                solve_data.original_model, tee=config.nlp_solver_tee, **config.nlp_solver_args)
+            nlpopt.solve(solve_data.original_model,
+                         tee=config.nlp_solver_tee, **config.nlp_solver_args)
             return False
         else:
             config.logger.info(

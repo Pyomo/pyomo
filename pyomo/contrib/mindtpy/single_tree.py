@@ -453,8 +453,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         if config.add_no_good_cuts:
             var_values = list(
                 v.value for v in fixed_nlp.MindtPy_utils.variable_list)
-            self.add_lazy_no_good_cuts(
-                var_values, solve_data, config, opt)
+            self.add_lazy_no_good_cuts(var_values, solve_data, config, opt)
 
     def handle_lazy_subproblem_other_termination(self, fixed_nlp, termination_condition,
                                                  solve_data, config):
@@ -510,8 +509,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
                     config.logger.info(
                         'Termination condition of the regularization problem is unknown.')
                     if main_mip_results.problem.lower_bound != float('-inf'):
-                        config.logger.info(
-                            'Solution limit has been reached.')
+                        config.logger.info('Solution limit has been reached.')
                         handle_main_optimal(
                             main_mip, solve_data, config, update_bound=False)
                     else:
@@ -538,10 +536,9 @@ class LazyOACallback_cplex(LazyConstraintCallback):
             config.logger.info(
                 'Termination condition of the regularization problem is unknown.')
             if main_mip_results.problem.lower_bound != float('-inf'):
-                config.logger.info(
-                    'Solution limit has been reached.')
-                handle_main_optimal(
-                    main_mip, solve_data, config, update_bound=False)
+                config.logger.info('Solution limit has been reached.')
+                handle_main_optimal(main_mip, solve_data,
+                                    config, update_bound=False)
         else:
             raise ValueError(
                 'MindtPy unable to handle regularization problem termination condition '
@@ -620,8 +617,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
 
         # solve subproblem
         # The constraint linearization happens in the handlers
-        fixed_nlp, fixed_nlp_result = solve_subproblem(
-            solve_data, config)
+        fixed_nlp, fixed_nlp_result = solve_subproblem(solve_data, config)
 
         # add oa cuts
         if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:

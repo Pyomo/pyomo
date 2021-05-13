@@ -62,15 +62,12 @@ def MindtPy_initialize_main(solve_data, config):
                 doc='Orthogonality cuts in feasibility pump')
     if config.strategy == 'OA' or config.init_strategy == 'FP':
         calc_jacobians(solve_data, config)  # preload jacobians
-        MindtPy.cuts.oa_cuts = ConstraintList(
-            doc='Outer approximation cuts')
+        MindtPy.cuts.oa_cuts = ConstraintList(doc='Outer approximation cuts')
     elif config.strategy == 'ECP':
         calc_jacobians(solve_data, config)  # preload jacobians
-        MindtPy.cuts.ecp_cuts = ConstraintList(
-            doc='Extended Cutting Planes')
+        MindtPy.cuts.ecp_cuts = ConstraintList(doc='Extended Cutting Planes')
     elif config.strategy == 'GOA':
-        MindtPy.cuts.aff_cuts = ConstraintList(
-            doc='Affine cuts')
+        MindtPy.cuts.aff_cuts = ConstraintList(doc='Affine cuts')
     # elif config.strategy == 'PSC':
     #     detect_nonlinear_vars(solve_data, config)
     #     MindtPy.cuts.psc_cuts = ConstraintList(
@@ -88,8 +85,7 @@ def MindtPy_initialize_main(solve_data, config):
 
     config.logger.info(
         '{} is the initial strategy being used.'
-        '\n'.format(
-            config.init_strategy))
+        '\n'.format(config.init_strategy))
     # Do the initialization
     if config.init_strategy == 'rNLP':
         init_rNLP(solve_data, config)
@@ -100,8 +96,7 @@ def MindtPy_initialize_main(solve_data, config):
             solve_data.working_model)
         solve_data.integer_list.append(solve_data.curr_int_sol)
         if config.strategy != 'ECP':
-            fixed_nlp, fixed_nlp_result = solve_subproblem(
-                solve_data, config)
+            fixed_nlp, fixed_nlp_result = solve_subproblem(solve_data, config)
             handle_nlp_subproblem_tc(
                 fixed_nlp, fixed_nlp_result, solve_data, config)
     elif config.init_strategy == 'FP':
@@ -214,9 +209,8 @@ def init_max_binaries(solve_data, config):
         c.deactivate()
     objective = next(m.component_data_objects(Objective, active=True))
     objective.deactivate()
-    binary_vars = (
-        v for v in m.component_data_objects(ctype=Var)
-        if v.is_binary() and not v.fixed)
+    binary_vars = (v for v in m.component_data_objects(ctype=Var)
+                   if v.is_binary() and not v.fixed)
     MindtPy.MindtPy_max_binary_obj = Objective(
         expr=sum(v for v in binary_vars), sense=maximize)
 
@@ -236,8 +230,6 @@ def init_max_binaries(solve_data, config):
             MindtPy.variable_list,
             solve_data.working_model.MindtPy_utils.variable_list,
             config)
-
-        pass  # good
     elif solve_terminate_cond is tc.infeasible:
         raise ValueError(
             'MILP main problem is infeasible. '
