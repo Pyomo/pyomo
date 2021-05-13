@@ -247,16 +247,13 @@ class BigM_Transformation(Transformation):
                     if t.is_indexed():
                         for disjunction in t.values():
                             for disj in disjunction.disjuncts:
-                                print("adding Disjunct %s" % disj.name)
                                 preprocessed_targets.append(disj)
                     else:
                         for disj in t.disjuncts:
-                            print("adding Disjunct %s" % disj.name)
                             preprocessed_targets.append(disj)
                 # now we are safe to put the disjunction, and if the target was
                 # anything else, then we don't need to worry because disjuncts
                 # are declared before disjunctions they appear in
-                print("adding target %s of type %s" % (t.name, t.ctype))
                 preprocessed_targets.append(t)
             targets = preprocessed_targets
 
