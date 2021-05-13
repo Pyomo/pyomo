@@ -15,7 +15,7 @@ import types
 import logging
 from weakref import ref as weakref_ref
 
-from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
@@ -1034,7 +1034,9 @@ class ScalarParam(_ParamData, Param):
         return self._constructed and not self._mutable
 
 
-SimpleParam = ScalarParam
+class SimpleParam(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarParam
+    __renamed__version__ = 'TBD'
 
 
 class IndexedParam(Param):

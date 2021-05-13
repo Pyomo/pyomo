@@ -18,6 +18,7 @@ import logging
 import math
 from weakref import ref as weakref_ref
 
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr import logical_expr
@@ -1008,7 +1009,10 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
         self.set_value(expr)
         return self
 
-SimpleConstraint = ScalarConstraint
+
+class SimpleConstraint(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarConstraint
+    __renamed__version__ = 'TBD'
 
 
 @disable_methods({'add', 'set_value', 'body', 'lower', 'upper', 'equality',
@@ -1016,7 +1020,11 @@ SimpleConstraint = ScalarConstraint
 class AbstractScalarConstraint(ScalarConstraint):
     pass
 
-AbstractSimpleConstraint = AbstractScalarConstraint
+
+class AbstractSimpleConstraint(metaclass=RenamedClass):
+    __renamed__new_class__ = AbstractScalarConstraint
+    __renamed__version__ = 'TBD'
+
 
 class IndexedConstraint(Constraint):
 

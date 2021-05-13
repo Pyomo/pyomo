@@ -13,6 +13,7 @@ __all__ = ['SOSConstraint']
 import sys
 import logging
 
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.misc import apply_indexed_rule
@@ -344,7 +345,10 @@ class ScalarSOSConstraint(SOSConstraint, _SOSConstraintData):
         _SOSConstraintData.__init__(self, self)
         SOSConstraint.__init__(self, *args, **kwd)
 
-SimpleSOSConstraint = ScalarSOSConstraint
+
+class SimpleSOSConstraint(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarSOSConstraint
+    __renamed__version__ = 'TBD'
 
 
 class IndexedSOSConstraint(SOSConstraint):

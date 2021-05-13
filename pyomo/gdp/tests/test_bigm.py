@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
+from pyomo.common.deprecation import RenamedClass
 
 from pyomo.environ import (TransformationFactory, Block, Set, Constraint,
                            ComponentMap, Suffix, ConcreteModel, Var,
@@ -1431,7 +1432,11 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
         m.BigM[None] = 100
         self.diff_apply_to_and_create_using(m)
 
-SimpleDisjIndexedConstraints = ScalarDisjIndexedConstraints
+
+class SimpleDisjIndexedConstraints(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarDisjIndexedConstraints
+    __renamed__version__ = 'TBD'
+
 
 class MultiTermDisj(unittest.TestCase, CommonTests):
     def setUp(self):

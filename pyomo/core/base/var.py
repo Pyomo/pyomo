@@ -14,6 +14,7 @@ __all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar',
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
@@ -934,7 +935,10 @@ class ScalarVar(_GeneralVarData, Var):
 
     free=unfix
 
-SimpleVar = ScalarVar
+
+class SimpleVar(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarVar
+    __renamed__version__ = 'TBD'
 
 
 class IndexedVar(Var):

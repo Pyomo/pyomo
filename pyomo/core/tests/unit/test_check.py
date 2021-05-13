@@ -11,7 +11,7 @@
 # Unit Tests for BuildCheck() Objects
 #
 # PyomoModel                Base test class
-# Scalar                    Test scalar parameter (alias: Simple)
+# Scalar                    Test scalar parameter
 # Array1                    Test arrays of parameters
 #
 
@@ -89,7 +89,6 @@ class Scalar(PyomoModel):
         except ValueError:
             pass
 
-Simple = Scalar
 
 class Array1(PyomoModel):
 

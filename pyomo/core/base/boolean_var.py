@@ -11,6 +11,7 @@
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.boolean_value import BooleanValue
@@ -529,7 +530,9 @@ class ScalarBooleanVar(_GeneralBooleanVarData, BooleanVar):
     free=unfix
 
 
-SimpleBooleanVar = ScalarBooleanVar
+class SimpleBooleanVar(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarBooleanVar
+    __renamed__version__ = 'TBD'
 
 
 class IndexedBooleanVar(BooleanVar):

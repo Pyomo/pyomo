@@ -14,7 +14,7 @@ import logging
 import sys
 from weakref import ref as weakref_ref
 
-from pyomo.common import deprecated
+from pyomo.common import deprecated, RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.plugin import Plugin, implements
 from pyomo.common.timing import ConstructionTimer
@@ -272,7 +272,9 @@ class ScalarConnector(Connector, _ConnectorData):
     #
 
 
-SimpleConnector = ScalarConnector
+class SimpleConnector(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarConnector
+    __renamed__version__ = 'TBD'
 
 
 class IndexedConnector(Connector):

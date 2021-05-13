@@ -22,7 +22,7 @@ from weakref import ref as weakref_ref
 import inspect
 
 from pyomo.common.log import is_debug_set
-from pyomo.common.deprecation import deprecated
+from pyomo.common.deprecation import deprecated, RenamedClass
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.plugin import ModelComponentFactory
@@ -588,7 +588,9 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
         return self
 
 
-SimpleObjective = ScalarObjective
+class SimpleObjective(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarObjective
+    __renamed__version__ = 'TBD'
 
 
 class IndexedObjective(Objective):

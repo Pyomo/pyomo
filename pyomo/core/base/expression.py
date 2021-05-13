@@ -15,7 +15,7 @@ import logging
 from weakref import ref as weakref_ref
 
 from pyomo.common.log import is_debug_set
-from pyomo.common.deprecation import deprecated
+from pyomo.common.deprecation import deprecated, RenamedClass
 from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.base.component import ComponentData
@@ -509,7 +509,10 @@ class ScalarExpression(_GeneralExpressionData, Expression):
         self.set_value(expr)
         return self
 
-SimpleExpression = ScalarExpression
+
+class SimpleExpression(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarExpression
+    __renamed__version__ = 'TBD'
 
 
 class IndexedExpression(Expression):

@@ -23,7 +23,7 @@ from operator import itemgetter
 from io import StringIO
 
 from pyomo.common.collections import Mapping
-from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedClass
 from pyomo.common.fileutils import StreamIndenter
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
@@ -2042,7 +2042,10 @@ class ScalarBlock(_BlockData, Block):
     # We want scalar Blocks to pick up the Block display method
     display = Block.display
 
-SimpleBlock = ScalarBlock
+
+class SimpleBlock(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarBlock
+    __renamed__version__ = 'TBD'
 
 
 class IndexedBlock(Block):

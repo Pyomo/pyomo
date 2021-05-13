@@ -11,7 +11,7 @@
 # Unit Tests for BuildAction() Objects
 #
 # PyomoModel                Base test class
-# Scalar                    Test scalar parameter (alias: Simple)
+# Scalar                    Test scalar parameter
 # Array1                    Test arrays of parameters
 #
 
@@ -61,9 +61,6 @@ class Scalar(unittest.TestCase):
     def test_getattr(self):
         """Check the use of the __getattr__ method"""
         self.assertEqual( self.instance.A.value, 4.3)
-
-
-Simple = Scalar
 
 
 class Array_Param(unittest.TestCase):

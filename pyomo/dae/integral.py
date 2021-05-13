@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.deprecation import RenamedClass
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.dae.contset import ContinuousSet
 from pyomo.dae.diffvar import DAE_Error
@@ -146,7 +147,10 @@ class ScalarIntegral(ScalarExpression, Integral):
             return False
         return True
 
-SimpleIntegral = ScalarIntegral
+
+class SimpleIntegral(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarIntegral
+    __renamed__version__ = 'TBD'
 
 
 class IndexedIntegral(IndexedExpression, Integral):

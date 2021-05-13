@@ -14,6 +14,7 @@ import types
 
 from weakref import ref as weakref_ref
 
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.errors import PyomoException
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
@@ -167,7 +168,11 @@ class ScalarDisjunct(_DisjunctData, Disjunct):
         Disjunct.__init__(self, *args, **kwds)
         self._data[None] = self
 
-SimpleDisjunct = ScalarDisjunct
+
+class SimpleDisjunct(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarDisjunct
+    __renamed__version__ = 'TBD'
+
 
 class IndexedDisjunct(Disjunct):
     #
@@ -462,7 +467,11 @@ class ScalarDisjunction(_DisjunctionData, Disjunction):
             return None
         return super(ScalarDisjunction, self).set_value(expr)
 
-SimpleDisjunction = ScalarDisjunction
+
+class SimpleDisjunction(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarDisjunction
+    __renamed__version__ = 'TBD'
+
 
 class IndexedDisjunction(Disjunction):
     #

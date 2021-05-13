@@ -7,11 +7,13 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 import abc
 import logging
 import numpy as np
 from scipy.sparse import coo_matrix
 
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base import Var, Set, Constraint, value
@@ -364,7 +366,10 @@ class ScalarExternalGreyBoxBlock(ExternalGreyBoxBlockData, ExternalGreyBoxBlock)
     # Pick up the display() from Block and not BlockData
     display = ExternalGreyBoxBlock.display
 
-SimpleExternalGreyBoxBlock = ScalarExternalGreyBoxBlock
+
+class SimpleExternalGreyBoxBlock(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarExternalGreyBoxBlock
+    __renamed__version__ = 'TBD'
 
 
 class IndexedExternalGreyBoxBlock(Block):

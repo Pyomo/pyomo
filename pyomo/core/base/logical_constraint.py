@@ -15,6 +15,7 @@ import sys
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.constraint import Constraint
@@ -497,7 +498,10 @@ class ScalarLogicalConstraint(_GeneralLogicalConstraintData, LogicalConstraint):
         self.set_value(expr)
         return self
 
-SimpleLogicalConstraint = ScalarLogicalConstraint
+
+class SimpleLogicalConstraint(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarLogicalConstraint
+    __renamed__version__ = 'TBD'
 
 
 class IndexedLogicalConstraint(LogicalConstraint):

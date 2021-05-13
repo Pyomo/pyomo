@@ -14,6 +14,7 @@ import logging, sys
 from weakref import ref as weakref_ref
 
 from pyomo.common.collections import ComponentMap
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.timing import ConstructionTimer
@@ -729,7 +730,10 @@ class ScalarPort(Port, _PortData):
         _PortData.__init__(self, component=self)
         Port.__init__(self, *args, **kwd)
 
-SimplePort = ScalarPort
+
+class SimplePort(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarPort
+    __renamed__version__ = 'TBD'
 
 
 class IndexedPort(Port):

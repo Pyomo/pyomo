@@ -16,6 +16,7 @@ from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
     UnindexedComponent_set)
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.plugin import ModelComponentFactory
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from weakref import ref as weakref_ref
@@ -383,7 +384,10 @@ class ScalarArc(_ArcData, Arc):
             del self._data[None]
             raise
 
-SimpleArc = ScalarArc
+
+class SimpleArc(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarArc
+    __renamed__version__ = 'TBD'
 
 
 class IndexedArc(Arc):
