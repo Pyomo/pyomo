@@ -578,7 +578,7 @@ class SequentialDecomposition(FOQUSGraph):
                             break
                         has_evars = True
                         # even if idx is None, we know evar is a Var and
-                        # indexing by None into SimpleVars returns itself
+                        # indexing by None into ScalarVars returns itself
                         evar = evar[idx]
                         if evar.is_fixed():
                             # silently ignore vars already fixed

@@ -783,7 +783,7 @@ class Hull_Reformulation(Transformation):
         if obj.is_indexed():
             constraintMap['transformedConstraints'][obj] = newConstraint
         # add mapping of transformed constraint container back to original
-        # constraint container (or SimpleConstraint)
+        # constraint container (or ScalarConstraint)
         constraintMap['srcConstraints'][newConstraint] = obj
 
         for i in sorted(obj.keys()):
@@ -868,9 +868,9 @@ class Hull_Reformulation(Transformation):
                 else:
                     newConstraint.add('eq', newConsExpr)
                     # map to the _ConstraintData (And yes, for
-                    # SimpleConstraints, this is overwriting the map to the
+                    # ScalarConstraints, this is overwriting the map to the
                     # container we made above, and that is what I want to
-                    # happen. SimpleConstraints will map to lists. For
+                    # happen. ScalarConstraints will map to lists. For
                     # IndexedConstraints, we can map the container to the
                     # container, but more importantly, we are mapping the
                     # _ConstraintDatas to each other above)
