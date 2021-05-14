@@ -213,8 +213,11 @@ class TestExpression_EvaluateNumericValue(TestExpression_EvaluateNumericConstant
         #
         # Check that the expression evaluates to 'val'
         #
-        with self.assertRaises(PyomoException):
-            bool(exp)
+        if isinstance(exp, logical_expr.EqualityExpression) and exp.args[0] is exp.args[1]:
+            self.assertEqual(bool(exp), val)
+        else:
+            with self.assertRaises(PyomoException):
+                bool(exp)
 
     @unittest.nottest
     def value_test(self, exp, val):
