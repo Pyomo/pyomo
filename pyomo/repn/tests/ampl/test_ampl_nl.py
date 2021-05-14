@@ -126,9 +126,10 @@ class TestNLWriter(unittest.TestCase):
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True})
-        self.assertTrue(cmp(
+        self.assertTrue(file_compare(
             test_fname,
-            baseline_fname),
+            baseline_fname,
+            allow_eol_mismatch=True),
             msg="Files %s and %s differ" % (test_fname, baseline_fname))
         self._cleanup(test_fname)
 
