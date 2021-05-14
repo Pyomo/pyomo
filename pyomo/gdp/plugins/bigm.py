@@ -31,9 +31,8 @@ from pyomo.gdp.util import ( _warn_for_active_logical_constraint, target_list,
                              get_src_constraint, get_transformed_constraints,
                              _get_constraint_transBlock, get_src_disjunct,
                              _warn_for_active_disjunction,
-                             _warn_for_active_disjunct, )
+                             _warn_for_active_disjunct, preprocess_targets)
 from pyomo.repn import generate_standard_repn
-
 from functools import wraps
 from weakref import ref as weakref_ref
 
@@ -213,6 +212,12 @@ class BigM_Transformation(Transformation):
             self.used_args.clear()
 
     def _apply_to_impl(self, instance, **kwds):
+        if not instance.ctype in (Block, Disjunct):
+            raise GDP_Error("Transformation called on %s of type %s. 'instance' "
+                            "must be a ConcreteModel, Block, or Disjunct (in "
+                            "the case of nested disjunctions)." %
+                            (instance.name, instance.ctype))
+
         config = self.CONFIG(kwds.pop('options', {}))
 
         # We will let args override suffixes and estimate as a last
@@ -231,9 +236,15 @@ class BigM_Transformation(Transformation):
         targets = config.targets
         if targets is None:
             targets = (instance, )
-        # We need to check that all the targets are in fact on instance. As we
-        # do this, we will use the set below to cache components we know to be
-        # in the tree rooted at instance.
+        else:
+            # we need to preprocess targets to make sure that if there are any
+            # disjunctions in targets that their disjuncts appear before them in
+            # the list.
+            targets = preprocess_targets(targets)
+
+        #  We need to check that all the targets are in fact on
+        # instance. As we do this, we will use the set below to cache components
+        # we know to be in the tree rooted at instance.
         knownBlocks = {}
         for t in targets:
             # check that t is in fact a child of instance
