@@ -268,7 +268,10 @@ class EqualityExpression(_LinearOperatorExpression):
     def nargs(self):
         return 2
 
-    def __nonzero__(self):
+    def __bool__(self):
+        lhs, rhs = self.args
+        if lhs is rhs:
+            return True
         if not self.is_constant():
             raise PyomoException('Cannot convert non-constant expression '
                                  'to bool. This error usually arises for '
@@ -280,8 +283,6 @@ class EqualityExpression(_LinearOperatorExpression):
                                  'would cause this exception.')
 
         return bool(self())
-
-    __bool__ = __nonzero__
 
     def is_relational(self):
         return True
