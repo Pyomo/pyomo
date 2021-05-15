@@ -396,19 +396,28 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     model.ipopt_zU_in.update(model.ipopt_zU_out)
     #: run k_aug
     k_aug.solve(model, tee=tee)  #: always call k_aug AFTER ipopt.
-    model.write('col_row.nl', format='nl', io_options={'symbolic_solver_labels':True})
-    # get the column numbers of theta
-    line_dic = {}
+
+    nl_data = {}
+    with InTempDir():
+        base_fname = "col_row"
+        nl_file = ".".join((base_fname, "nl"))
+        row_file = ".".join((base_fname, "row"))
+        col_file = ".".join((base_fname, "col"))
+        model.write(nl_file, io_options={"symbolic_solver_labels": True})
+        for fname in [nl_file, row_file, col_file]:
+            with open(fname, "r") as fp:
+                nl_data[fname] = fp.read()
+
+    col = nl_data[col_file].strip("\n").split("\n")
+    row = nl_data[row_file].strip("\n").split("\n")
+
+    # get the column numbers of "parameters"
+    line_dic = {name: col.index(name) for name in theta_names}
+
     try:
-        for v in theta_names:
-            line_dic[v] = line_num('col_row.col', v)
         # load gradient of the objective function
         gradient_f = np.loadtxt("./GJH/gradient_f_print.txt")
-        with open ("col_row.col", "r") as myfile:
-            col = myfile.read().splitlines()
         col = [i for i in col if SensitivityInterface.get_default_block_name() not in i]
-        with open ("col_row.row", "r") as myfile:
-            row = myfile.read().splitlines()
     except Exception as e:
          print('File not found.')
          raise e
@@ -429,18 +438,15 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
                 shape=(len(row)-1, len(col)))
     else:
         gradient_c = np.array([])
+
     # remove all generated files
-    
-    shutil.move("col_row.nl", "./GJH/")
-    shutil.move("col_row.col", "./GJH/")
-    shutil.move("col_row.row", "./GJH/")
     shutil.rmtree('GJH', ignore_errors=True)
-    
+
     return gradient_f, gradient_c, col,row, line_dic
 
 def line_num(file_name, target):
-    """This function returns the line inumber contains 'target' in the
-    file_name. This function identities constraints that have variables
+    """This function returns the line number that contains 'target' in the
+    file_name. This function identifies constraints that have variables
     in theta_names.
 
     Parameters
