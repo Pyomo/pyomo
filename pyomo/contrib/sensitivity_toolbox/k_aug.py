@@ -15,6 +15,7 @@ from pyomo.common.tempfiles import TempfileManager
 
 
 debug_dir = "kaug_debug"
+gjh_dir = "GJH"
 # These are files we would like to save from a call to k_aug
 # or dot_sens. Other files generated will still be deleted,
 # but not saved on the K_augInterface object.
@@ -22,10 +23,12 @@ known_files = [
         "dsdp_in_.in",
         "conorder.txt",
         "timings_k_aug_dsdp.txt",
-        os.path.join(debug_dir, "kkt.in"),
         "dot_out.out",
         "delta_p.out",
         "timings_dot_driver_dsdp.txt",
+        os.path.join(debug_dir, "kkt.in"),
+        os.path.join(gjh_dir, "gradient_f_print.txt"),
+        os.path.join(gjh_dir, "A_print.txt"),
         ]
 
 
