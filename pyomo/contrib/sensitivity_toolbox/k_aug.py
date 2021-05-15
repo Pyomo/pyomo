@@ -29,6 +29,27 @@ known_files = [
         ]
 
 
+class InTempDir(object):
+
+    def __init__(self, suffix=None, prefix=None, dir=None):
+        self._suffix = suffix
+        self._prefix = prefix
+        self._dir = dir
+
+    def __enter__(self):
+        self._cwd = os.getcwd()
+        self._tempdir = TempfileManager.create_tempdir(
+                suffix=self._suffix,
+                prefix=self._prefix,
+                dir=self._dir,
+                )
+        os.chdir(self._tempdir)
+
+    def __exit__(self, ex_type, ex_val, ex_bt):
+        os.chdir(self._cwd)
+        TempfileManager.pop()
+
+
 class K_augInterface(object):
     """
     k_aug and dot_sens store information in the user's filesystem,
@@ -70,12 +91,7 @@ class K_augInterface(object):
         self.data = {fname: None for fname in known_files}
 
     def k_aug(self, model, **kwargs):
-        try:
-            # Create a tempdir and descend into it
-            cwd = os.getcwd()
-            tempdir = TempfileManager.create_tempdir()
-            os.chdir(tempdir)
-
+        with InTempDir():
             # Assume that k_aug doesn't need any files as inputs
             # (except the nl file, which is handled by solve).
 
@@ -87,20 +103,11 @@ class K_augInterface(object):
                 if os.path.exists(fname):
                     with open(fname, "r") as fp:
                         self.data[fname] = fp.read()
-        finally:
-            # Exit tempdir and delete
-            os.chdir(cwd)
-            TempfileManager.pop()
 
         return results
 
     def dot_sens(self, model, **kwargs):
-        try:
-            # Create a tempdir and descend into it
-            cwd = os.getcwd()
-            tempdir = TempfileManager.create_tempdir()
-            os.chdir(tempdir)
-
+        with InTempDir():
             # Write cached files, some of which dot_sens may use as input
             for fname, contents in self.data.items():
                 if contents is not None:
@@ -108,7 +115,7 @@ class K_augInterface(object):
                         fp.write(contents)
 
             # Call dot_sens
-            self._dot_sens.solve(model, **kwargs)
+            results = self._dot_sens.solve(model, **kwargs)
 
             # Read expected files, some of which may have been created
             # or overwritten by dot_sens.
@@ -116,9 +123,8 @@ class K_augInterface(object):
                 if os.path.exists(fname):
                     with open(fname, "r") as fp:
                         self.data[fname] = fp.read()
-        finally:
-            os.chdir(cwd)
-            TempfileManager.pop()
+
+        return results
 
     def set_k_aug_options(self, **options):
         for key, val in options.items():
