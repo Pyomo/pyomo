@@ -30,6 +30,7 @@ from pyomo.opt import SolverFactory, SolverStatus
 from pyomo.contrib.sensitivity_toolbox.k_aug import K_augInterface
 import logging
 import os
+import io
 import shutil
 from pyomo.common.dependencies import (
     numpy as np, numpy_available
@@ -172,8 +173,11 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
 
         k_aug.options['dsdp_mode'] = ""  #: sensitivity mode!
         k_aug_interface.k_aug(m, tee=tee)
-        m.write('col_row.nl', format='nl',
-                io_options={'symbolic_solver_labels':True})
+        m.write(
+                'col_row.nl',
+                format='nl',
+                io_options={'symbolic_solver_labels': True},
+                )
 
     sens.perturb_parameters(perturbList)
 
@@ -188,9 +192,11 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
         dot_sens.options["dsdp_mode"] = ""
         k_aug_interface.dot_sens(m, tee=tee)
 
+        dsdp_dir = "dsdp"
+
         try:
-            os.makedirs("dsdp")
-        except FileExistsError:
+            os.makedirs(dsdp_dir)
+        except OSError:
             pass
 
         for fname, contents in k_aug_interface.data.items():
@@ -260,25 +266,49 @@ def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=Non
     col: list
         List of variable names
     """
-    m = model.clone()
-    original_Param = []
-    perturbed_Param = []
-    m.extra = ConstraintList()
-    kk = 0
-    if var_dic == {}:
-        for i in theta_names:
-            var_dic[i] = i
-    for v in theta_names:
-        v_tmp = str(kk)
-        original_param_object = Param(initialize=theta[v], mutable=True)
-        perturbed_param_object = Param(initialize=theta[v])
-        m.add_component("original_"+v_tmp, original_param_object)
-        m.add_component("perturbed_"+v_tmp, perturbed_param_object)
-        m.extra.add(eval('m.'+var_dic[v]) - eval('m.original_'+v_tmp) == 0 )
-        original_Param.append(original_param_object)
-        perturbed_Param.append(perturbed_param_object)
-        kk = kk + 1
-    m_k_aug_dsdp = sensitivity_calculation('k_aug',m,original_Param,perturbed_Param, tee)
+    param_list = []
+    for name in theta_names:
+        comp = model.find_component(name)
+        if comp is None:
+            raise RuntimeError("Cannot find component %s on model" % name)
+        if comp.ctype is Var:
+            # If theta_names correspond to Vars in the model, these vars
+            # need to be fixed.
+            comp.fix()
+        param_list.append(comp)
+
+    sens = SensitivityInterface(model, clone_model=True)
+    m = sens.model_instance
+
+    sens.setup_sensitivity(param_list)
+    k_aug = K_augInterface()
+    k_aug.k_aug(m, tee=tee)
+
+    ### Temporary code while I rewrite this function ###
+    dsdp_dir = "dsdp"
+    try:
+        os.makedirs(dsdp_dir)
+    except OSError:
+        pass
+
+    for fname, contents in k_aug.data.items():
+        if contents is not None:
+            fpath = os.path.join("dsdp", fname)
+            with open(fpath, "w") as fp:
+                fp.write(contents)
+
+    # Fragile: What if current working directory is not writable
+    m.write("col_row.nl", io_options={"symbolic_solver_labels": True})
+
+    try:
+        # TODO: Don't create dsdp directory. Add these files
+        # to the k_aug_interface.data dict instead.
+        shutil.move("col_row.nl","./dsdp/")
+        shutil.move("col_row.col","./dsdp/")
+        shutil.move("col_row.row","./dsdp/")
+    except OSError:
+        pass
+    ###
 
     try:
         with open ("./dsdp/col_row.col", "r") as myfile:
@@ -299,7 +329,7 @@ def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=Non
     for i in range(len(theta_names)):
         for j in range(len(col)):
             if SensitivityInterface.get_default_block_name() not in col[j]:
-                dsdp_out[i,j] =  -dsdp[i, j] # e.g) k_aug dsdp returns -dx1/dx1 = -1.0
+                dsdp_out[i,j] = -dsdp[i, j] # e.g) k_aug dsdp returns -dx1/dx1 = -1.0
 
     return scipy.sparse.csr_matrix(dsdp_out), col
 
