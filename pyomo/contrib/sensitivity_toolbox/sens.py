@@ -173,11 +173,6 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
 
         k_aug.options['dsdp_mode'] = ""  #: sensitivity mode!
         k_aug_interface.k_aug(m, tee=tee)
-        m.write(
-                'col_row.nl',
-                format='nl',
-                io_options={'symbolic_solver_labels': True},
-                )
 
     sens.perturb_parameters(perturbList)
 
@@ -191,28 +186,6 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
     elif method == 'k_aug':
         dot_sens.options["dsdp_mode"] = ""
         k_aug_interface.dot_sens(m, tee=tee)
-
-        dsdp_dir = "dsdp"
-
-        try:
-            os.makedirs(dsdp_dir)
-        except OSError:
-            pass
-
-        for fname, contents in k_aug_interface.data.items():
-            if contents is not None:
-                fpath = os.path.join("dsdp", fname)
-                with open(fpath, "w") as fp:
-                    fp.write(contents)
-
-        try:
-            # TODO: Don't create dsdp directory. Add these files
-            # to the k_aug_interface.data dict instead.
-            shutil.move("col_row.nl","./dsdp/")
-            shutil.move("col_row.col","./dsdp/")
-            shutil.move("col_row.row","./dsdp/")
-        except OSError:
-            pass
 
     return m
 
