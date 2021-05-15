@@ -255,6 +255,8 @@ def get_dsdp(model, theta_names, theta, tee=False):
     col: list
         List of variable names
     """
+    # Get parameters from names. In SensitivityInterface, we expect
+    # these to be parameters on the original model.
     param_list = []
     for name in theta_names:
         comp = model.find_component(name)
@@ -269,10 +271,14 @@ def get_dsdp(model, theta_names, theta, tee=False):
     sens = SensitivityInterface(model, clone_model=True)
     m = sens.model_instance
 
+    # Setup model and calculate sensitivity matrix with k_aug
     sens.setup_sensitivity(param_list)
     k_aug = K_augInterface()
     k_aug.k_aug(m, tee=tee)
 
+    # Write row and col files in a temp dir, then immediately
+    # read into a Python data structure.
+    nl_data = {}
     with InTempDir():
         base_fname = "col_row"
         nl_file = ".".join((base_fname, "nl"))
@@ -281,20 +287,21 @@ def get_dsdp(model, theta_names, theta, tee=False):
         m.write(nl_file, io_options={"symbolic_solver_labels": True})
         for fname in [nl_file, row_file, col_file]:
             with open(fname, "r") as fp:
-                k_aug.data[fname] = fp.read()
+                nl_data[fname] = fp.read()
 
+    # Create more useful data structures from strings
     dsdp = np.fromstring(k_aug.data["dsdp_in_.in"], sep="\n\t")
-    col = k_aug.data[col_file].strip("\n").split("\n")
-    row = k_aug.data[row_file].strip("\n").split("\n")
+    col = nl_data[col_file].strip("\n").split("\n")
+    row = nl_data[row_file].strip("\n").split("\n")
 
     dsdp = dsdp.reshape((len(theta_names), int(len(dsdp)/len(theta_names))))
     dsdp = dsdp[:len(theta_names), :len(col)]
 
-    col = [i for i in col if SensitivityInterface.get_default_block_name() not in i]
+    col = [i for i in col if sens.get_default_block_name() not in i]
     dsdp_out = np.zeros((len(theta_names),len(col)))
     for i in range(len(theta_names)):
         for j in range(len(col)):
-            if SensitivityInterface.get_default_block_name() not in col[j]:
+            if sens.get_default_block_name() not in col[j]:
                 dsdp_out[i,j] = -dsdp[i, j] # e.g) k_aug dsdp returns -dx1/dx1 = -1.0
 
     return scipy.sparse.csr_matrix(dsdp_out), col
