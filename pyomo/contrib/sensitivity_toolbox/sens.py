@@ -306,6 +306,7 @@ def get_dsdp(model, theta_names, theta, tee=False):
 
     return scipy.sparse.csr_matrix(dsdp_out), col
 
+
 def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     """This function calculates gradient vector of the objective function 
        and constraints with respect to the variables in theta_names.
@@ -369,13 +370,10 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     if solver_options is not None:
         ipopt.options = solver_options
     k_aug = SolverFactory('k_aug',solver_io='nl')
-    dotsens = SolverFactory('dot_sens',solver_io='nl')
     if not ipopt.available(False):
         raise RuntimeError('ipopt is not available')
     if not k_aug.available(False):
         raise RuntimeError('k_aug is not available')
-    if not dotsens.available(False):
-        raise RuntimeError('dotsens is not available')
 
     # Declare Suffixes
     _add_sensitivity_suffixes(model)
@@ -384,6 +382,7 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     model.dof_v = Suffix(direction=Suffix.EXPORT)  #: SUFFIX FOR K_AUG
     model.rh_name = Suffix(direction=Suffix.IMPORT)  #: SUFFIX FOR K_AUG AS WELL
     k_aug.options["print_kkt"] = ""
+
     results = ipopt.solve(model,tee=tee)
 
     # Rasie Exception if ipopt fails 
@@ -394,8 +393,10 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
         f_mean = value(o)
     model.ipopt_zL_in.update(model.ipopt_zL_out)
     model.ipopt_zU_in.update(model.ipopt_zU_out)
-    #: run k_aug
-    k_aug.solve(model, tee=tee)  #: always call k_aug AFTER ipopt.
+
+    # run k_aug
+    k_aug_interface = K_augInterface(k_aug=k_aug)
+    k_aug_interface.k_aug(model, tee=tee)  #: always call k_aug AFTER ipopt.
 
     nl_data = {}
     with InTempDir():
@@ -414,35 +415,31 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     # get the column numbers of "parameters"
     line_dic = {name: col.index(name) for name in theta_names}
 
-    try:
-        # load gradient of the objective function
-        gradient_f = np.loadtxt("./GJH/gradient_f_print.txt")
-        col = [i for i in col if SensitivityInterface.get_default_block_name() not in i]
-    except Exception as e:
-         print('File not found.')
-         raise e
-    # load gradient of all constraints (sparse)
-    # If no constraint exists, return []
-    num_constraints = len(list(model.component_data_objects(Constraint,
-                                                            active=True,
-                                                            descend_into=True)))
+    grad_f_file = os.path.join("GJH", "gradient_f_print.txt")
+    grad_f_string = k_aug_interface.data[grad_f_file]
+    gradient_f = np.fromstring(grad_f_string, sep="\n\t")
+    col = [i for i in col if SensitivityInterface.get_default_block_name() not in i]
+
+    grad_c_file = os.path.join("GJH", "A_print.txt")
+    grad_c_string = k_aug_interface.data[grad_c_file]
+    gradient_c = np.fromstring(grad_c_string, sep="\n\t")
+
+    # Jacobian file is in "COO format," i.e. an nnz-by-3 array.
+    # Reshape to a numpy array that matches this format.
+    gradient_c = gradient_c.reshape((-1, 3))
+
+    num_constraints = len(row)-1 # Objective is included as a row
     if num_constraints > 0 :
-        try:
-            gradient_c = np.loadtxt("./GJH/A_print.txt")
-        except Exception as e:
-            print('./GJH/A_print.txt not found.')
         row_idx = gradient_c[:,1]-1
         col_idx = gradient_c[:,0]-1
         data = gradient_c[:,2]
         gradient_c = scipy.sparse.csr_matrix((data, (row_idx, col_idx)),
-                shape=(len(row)-1, len(col)))
+                shape=(num_constraints, len(col)))
     else:
         gradient_c = np.array([])
 
-    # remove all generated files
-    shutil.rmtree('GJH', ignore_errors=True)
-
     return gradient_f, gradient_c, col,row, line_dic
+
 
 def line_num(file_name, target):
     """This function returns the line number that contains 'target' in the
@@ -472,6 +469,7 @@ def line_num(file_name, target):
                 return int(count)
             count += 1
     raise Exception(file_name + " does not include "+target)
+
 
 class SensitivityInterface(object):
 
