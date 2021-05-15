@@ -2668,7 +2668,9 @@ class TestGeneralExpressionGeneration(unittest.TestCase):
 class TestExprConditionalContext(unittest.TestCase):
 
 
-    def checkCondition(self, expr, expectedValue):
+    def checkCondition(self, expr, expectedValue, use_value=False):
+        if use_value:
+            expr = value(expr)
         try:
             if expr:
                 if expectedValue != True:
@@ -2680,7 +2682,7 @@ class TestExprConditionalContext(unittest.TestCase):
                               " (expected %s)" % expectedValue)
             if expectedValue is None:
                 self.fail("Expected ValueError because component was undefined")
-        except ValueError:
+        except (ValueError, PyomoException):
             if expectedValue is not None:
                 raise
 
@@ -2740,6 +2742,11 @@ class TestExprConditionalContext(unittest.TestCase):
             self.checkCondition(1 >= model.p, True)
         with self.assertRaises(PyomoException):
             self.checkCondition(0 == model.p, None)
+        self.checkCondition(0 < model.p, True, use_value=True)
+        self.checkCondition(0 <= model.p, True, use_value=True)
+        self.checkCondition(1 > model.p, True, use_value=True)
+        self.checkCondition(1 >= model.p, True, use_value=True)
+        self.checkCondition(0 == model.p, None, use_value=True)
 
         instance = model.create_instance()
         #
@@ -2823,6 +2830,16 @@ class TestExprConditionalContext(unittest.TestCase):
             self.checkCondition(instance.p == 1, True)
         with self.assertRaises(PyomoException):
             self.checkCondition(instance.p == 2, False)
+        self.checkCondition(instance.p > 0, True, use_value=True)
+        self.checkCondition(instance.p > 2, False, use_value=True)
+        self.checkCondition(instance.p >= 1, True, use_value=True)
+        self.checkCondition(instance.p >= 2, False, use_value=True)
+        self.checkCondition(instance.p < 2, True, use_value=True)
+        self.checkCondition(instance.p < 0, False, use_value=True)
+        self.checkCondition(instance.p <= 1, True, use_value=True)
+        self.checkCondition(instance.p <= 0, False, use_value=True)
+        self.checkCondition(instance.p == 1, True, use_value=True)
+        self.checkCondition(instance.p == 2, False, use_value=True)
 
     def test_mutable_paramConditional_reversed(self):
         model = AbstractModel()
@@ -2859,6 +2876,16 @@ class TestExprConditionalContext(unittest.TestCase):
             self.checkCondition(1 == instance.p, True)
         with self.assertRaises(PyomoException):
             self.checkCondition(2 == instance.p, False)
+        self.checkCondition(0 < instance.p, True, use_value=True)
+        self.checkCondition(2 < instance.p, False, use_value=True)
+        self.checkCondition(1 <= instance.p, True, use_value=True)
+        self.checkCondition(2 <= instance.p, False, use_value=True)
+        self.checkCondition(2 > instance.p, True, use_value=True)
+        self.checkCondition(0 > instance.p, False, use_value=True)
+        self.checkCondition(1 >= instance.p, True, use_value=True)
+        self.checkCondition(0 >= instance.p, False, use_value=True)
+        self.checkCondition(1 == instance.p, True, use_value=True)
+        self.checkCondition(2 == instance.p, False, use_value=True)
 
     def test_varConditional(self):
         model = AbstractModel()
@@ -2898,6 +2925,16 @@ class TestExprConditionalContext(unittest.TestCase):
             self.checkCondition(instance.v == 1, True)
         with self.assertRaises(PyomoException):
             self.checkCondition(instance.v == 2, False)
+        self.checkCondition(instance.v > 0, True, use_value=True)
+        self.checkCondition(instance.v > 2, False, use_value=True)
+        self.checkCondition(instance.v >= 1, True, use_value=True)
+        self.checkCondition(instance.v >= 2, False, use_value=True)
+        self.checkCondition(instance.v < 2, True, use_value=True)
+        self.checkCondition(instance.v < 0, False, use_value=True)
+        self.checkCondition(instance.v <= 1, True, use_value=True)
+        self.checkCondition(instance.v <= 0, False, use_value=True)
+        self.checkCondition(instance.v == 1, True, use_value=True)
+        self.checkCondition(instance.v == 2, False, use_value=True)
 
     def test_varConditional_reversed(self):
         model = AbstractModel()
@@ -2937,6 +2974,16 @@ class TestExprConditionalContext(unittest.TestCase):
             self.checkCondition(1 == instance.v, True)
         with self.assertRaises(PyomoException):
             self.checkCondition(2 == instance.v, False)
+        self.checkCondition(0 < instance.v, True, use_value=True)
+        self.checkCondition(2 < instance.v, False, use_value=True)
+        self.checkCondition(1 <= instance.v, True, use_value=True)
+        self.checkCondition(2 <= instance.v, False, use_value=True)
+        self.checkCondition(2 > instance.v, True, use_value=True)
+        self.checkCondition(0 > instance.v, False, use_value=True)
+        self.checkCondition(1 >= instance.v, True, use_value=True)
+        self.checkCondition(0 >= instance.v, False, use_value=True)
+        self.checkCondition(1 == instance.v, True, use_value=True)
+        self.checkCondition(2 == instance.v, False, use_value=True)
 
     def test_eval_sub_varConditional(self):
         model = AbstractModel()
