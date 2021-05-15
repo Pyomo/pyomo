@@ -27,7 +27,7 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecated
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt import SolverFactory, SolverStatus
-from pyomo.contrib.sensitivity_toolbox.k_aug import K_augInterface
+from pyomo.contrib.sensitivity_toolbox.k_aug import K_augInterface, InTempDir
 import logging
 import os
 import io
@@ -284,46 +284,23 @@ def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=Non
     k_aug = K_augInterface()
     k_aug.k_aug(m, tee=tee)
 
-    ### Temporary code while I rewrite this function ###
-    dsdp_dir = "dsdp"
-    try:
-        os.makedirs(dsdp_dir)
-    except OSError:
-        pass
+    with InTempDir():
+        base_fname = "col_row"
+        nl_file = ".".join((base_fname, "nl"))
+        row_file = ".".join((base_fname, "row"))
+        col_file = ".".join((base_fname, "col"))
+        m.write(nl_file, io_options={"symbolic_solver_labels": True})
+        for fname in [nl_file, row_file, col_file]:
+            with open(fname, "r") as fp:
+                k_aug.data[fname] = fp.read()
 
-    for fname, contents in k_aug.data.items():
-        if contents is not None:
-            fpath = os.path.join("dsdp", fname)
-            with open(fpath, "w") as fp:
-                fp.write(contents)
+    dsdp = np.fromstring(k_aug.data["dsdp_in_.in"], sep="\n\t")
+    col = k_aug.data[col_file].strip("\n").split("\n")
+    row = k_aug.data[row_file].strip("\n").split("\n")
 
-    # Fragile: What if current working directory is not writable
-    m.write("col_row.nl", io_options={"symbolic_solver_labels": True})
-
-    try:
-        # TODO: Don't create dsdp directory. Add these files
-        # to the k_aug_interface.data dict instead.
-        shutil.move("col_row.nl","./dsdp/")
-        shutil.move("col_row.col","./dsdp/")
-        shutil.move("col_row.row","./dsdp/")
-    except OSError:
-        pass
-    ###
-
-    try:
-        with open ("./dsdp/col_row.col", "r") as myfile:
-            col = myfile.read().splitlines()
-        with open ("./dsdp/col_row.row", "r") as myfile:
-            row = myfile.read().splitlines()
-        dsdp = np.loadtxt("./dsdp/dsdp_in_.in")
-    except Exception as e:
-        print('File not found.')
     dsdp = dsdp.reshape((len(theta_names), int(len(dsdp)/len(theta_names))))
     dsdp = dsdp[:len(theta_names), :len(col)]
-    try:
-        shutil.rmtree('dsdp', ignore_errors=True)
-    except OSError:
-        pass
+
     col = [i for i in col if SensitivityInterface.get_default_block_name() not in i]
     dsdp_out = np.zeros((len(theta_names),len(col)))
     for i in range(len(theta_names)):
