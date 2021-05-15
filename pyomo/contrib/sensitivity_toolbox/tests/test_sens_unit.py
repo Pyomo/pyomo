@@ -730,6 +730,7 @@ class TestSensitivityInterface(unittest.TestCase):
     
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available") 
+    @unittest.skipIf(not scipy_available, "scipy is not available")
     def test_get_dfds_dcds(self):
         '''
         It tests the function get_sensitivity with a simple nonlinear programming example.
@@ -762,6 +763,7 @@ class TestSensitivityInterface(unittest.TestCase):
 
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")
+    @unittest.skipIf(not scipy_available, "scipy is not available")
     def test_get_dfds_dcds2(self):
         '''
         It tests the function get_sensitivity with rooney & biegler's model.
