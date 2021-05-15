@@ -216,7 +216,7 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
 
     return m
 
-def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=None):
+def get_dsdp(model, theta_names, theta, tee=False):
     """This function calculates gradient vector of the (decision variables, parameters)
         with respect to the paramerters (theta_names). 
 
@@ -227,7 +227,7 @@ def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=Non
               p1 = 10
               p2 = 5
     the function retuns dx/dp and dp/dp, and colum orders.
-    
+
     The following terms are used to define the output dimensions:
     Ncon   = number of constraints
     Nvar   = number of variables (Nx + Ntheta)
@@ -244,17 +244,6 @@ def get_dsdp(model, theta_names, theta, var_dic={},tee=False, solver_options=Non
         Estimated parameters e.g) from parmest
     tee: bool, optional
         Indicates that ef solver output should be teed
-    solver_options: dict, optional
-        Provides options to the solver (also the name of an attribute)
-    var_dic: dictionary
-        If any original variable contains "'", need an auxiliary dictionary 
-        with keys theta_names without "'", values with "'".
-        e.g) var_dic: {
-                'fs.properties.tau[benzene,toluene]': 
-                    "fs.properties.tau['benzene','toluene']",
-                'fs.properties.tau[toluene,benzene]':
-                    "fs.properties.tau['toluene','benzene']",
-                }
 
     Returns
     -------
