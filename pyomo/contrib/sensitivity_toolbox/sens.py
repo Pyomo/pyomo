@@ -27,10 +27,7 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecated
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt import SolverFactory, SolverStatus
-from pyomo.contrib.sensitivity_toolbox.k_aug import (
-        K_augInterface,
-        file_attr_map,
-        )
+from pyomo.contrib.sensitivity_toolbox.k_aug import K_augInterface
 import logging
 import os
 import shutil
@@ -196,22 +193,15 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
         except FileExistsError:
             pass
 
-        for fname, attr in file_attr_map.items():
-            # TODO: accessing these by attr name is not great.
-            # Should come up with a better data structure. Probably
-            # just a dict from filename to the string object.
-            contents = getattr(k_aug_interface, attr)
+        for fname, contents in k_aug_interface.data.items():
             if contents is not None:
                 fpath = os.path.join("dsdp", fname)
                 with open(fpath, "w") as fp:
                     fp.write(contents)
-        # Typical usage is to access k_aug data by filename
-        # Maybe store the data in a dict from filename to string?
 
         try:
-            # TODO: These files are created in this function, not by
-            # k_aug. Therefore we should remove them from the list
-            # of k_aug's known files in the interface module.
+            # TODO: Don't create dsdp directory. Add these files
+            # to the k_aug_interface.data dict instead.
             shutil.move("col_row.nl","./dsdp/")
             shutil.move("col_row.col","./dsdp/")
             shutil.move("col_row.row","./dsdp/")

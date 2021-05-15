@@ -8,53 +8,25 @@
 # This software is distributed under the 3-clause BSD License
 # ______________________________________________________________________________
 import os
-import enum
 from pyomo.environ import (
         SolverFactory,
         )
 from pyomo.common.tempfiles import TempfileManager
 
 
-class FileType(enum.Enum):
-    K_AUG_INPUT = 1
-    K_AUG_OUTPUT = 2
-    DOT_SENS_INPUT = 3
-    DOT_SENS_OUTPUT = 4
-FT = FileType
-
-
-def _attribute_from_filename(filename):
-    base_name = os.path.basename(filename)
-    return base_name.split(".")[0]
-
-
 debug_dir = "kaug_debug"
 # These are files we would like to save from a call to k_aug
 # or dot_sens. Other files generated will still be deleted,
 # but not saved on the K_augInterface object.
-known_files = {
-        "dsdp_in_.in": {FT.K_AUG_OUTPUT, FT.DOT_SENS_INPUT},
-        "conorder.txt": {FT.K_AUG_OUTPUT},
-        "timings_k_aug_dsdp.txt": {FT.K_AUG_OUTPUT},
-        "col_row.nl": {FT.K_AUG_OUTPUT},
-        "col_row.col": {FT.K_AUG_OUTPUT},
-        "col_row.row": {FT.K_AUG_OUTPUT},
-        os.path.join(debug_dir, "kkt.in"): {FT.K_AUG_OUTPUT},
-        "dot_out.out": {FT.DOT_SENS_OUTPUT},
-        "delta_p.out": {FT.DOT_SENS_OUTPUT},
-        "timings_dot_driver_dsdp.txt": {FT.DOT_SENS_OUTPUT},
-        }
-
-file_attr_map = {name: _attribute_from_filename(name) for name in known_files}
-
-k_aug_input_files = [name for name, types in known_files.items()
-        if FT.K_AUG_INPUT in types]
-k_aug_output_files = [name for name, types in known_files.items()
-        if FT.K_AUG_OUTPUT in types]
-dot_sens_input_files = [name for name, types in known_files.items()
-        if FT.DOT_SENS_INPUT in types]
-dot_sens_output_files = [name for name, types in known_files.items()
-        if FT.DOT_SENS_OUTPUT in types]
+known_files = [
+        "dsdp_in_.in",
+        "conorder.txt",
+        "timings_k_aug_dsdp.txt",
+        os.path.join(debug_dir, "kkt.in"),
+        "dot_out.out",
+        "delta_p.out",
+        "timings_dot_driver_dsdp.txt",
+        ]
 
 
 class K_augInterface(object):
@@ -95,8 +67,7 @@ class K_augInterface(object):
         else:
             raise RuntimeError("dot_sens is not available")
 
-        for fname, attr in file_attr_map.items():
-            self.__setattr__(attr, None)
+        self.data = {fname: None for fname in known_files}
 
     def k_aug(self, model, **kwargs):
         try:
@@ -105,23 +76,17 @@ class K_augInterface(object):
             tempdir = TempfileManager.create_tempdir()
             os.chdir(tempdir)
 
-            # Write any files k_aug may use as input
-            for fname in k_aug_input_files:
-                attr = file_attr_map[fname]
-                contents = self.__getattribute__(attr)
-                if contents is not None:
-                    with open(fname, "w") as fp:
-                        fp.write(contents)
+            # Assume that k_aug doesn't need any files as inputs
+            # (except the nl file, which is handled by solve).
 
             # Call k_aug
             results = self._k_aug.solve(model, **kwargs)
 
             # Read any files we expect as output
-            for fname in k_aug_output_files:
-                attr = file_attr_map[fname]
+            for fname in known_files:
                 if os.path.exists(fname):
                     with open(fname, "r") as fp:
-                        self.__setattr__(attr, fp.read())
+                        self.data[fname] = fp.read()
         finally:
             # Exit tempdir and delete
             os.chdir(cwd)
@@ -136,10 +101,8 @@ class K_augInterface(object):
             tempdir = TempfileManager.create_tempdir()
             os.chdir(tempdir)
 
-            # Write any files dot_sens may use as input
-            for fname in dot_sens_input_files:
-                attr = file_attr_map[fname]
-                contents = self.__getattribute__(attr)
+            # Write cached files, some of which dot_sens may use as input
+            for fname, contents in self.data.items():
                 if contents is not None:
                     with open(fname, "w") as fp:
                         fp.write(contents)
@@ -147,12 +110,12 @@ class K_augInterface(object):
             # Call dot_sens
             self._dot_sens.solve(model, **kwargs)
 
-            # Read any files we expect as output
-            for fname in dot_sens_output_files:
-                attr = file_attr_map[fname]
+            # Read expected files, some of which may have been created
+            # or overwritten by dot_sens.
+            for fname in known_files:
                 if os.path.exists(fname):
                     with open(fname, "r") as fp:
-                        self.__setattr__(attr, fp.read())
+                        self.data[fname] = fp.read()
         finally:
             os.chdir(cwd)
             TempfileManager.pop()

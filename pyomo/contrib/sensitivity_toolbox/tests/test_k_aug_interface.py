@@ -72,11 +72,11 @@ class TestK_augInterface(unittest.TestCase):
         self.assertFalse(os.path.exists("conorder.txt"))
         self.assertFalse(os.path.exists("timings_k_aug_dsdp.txt"))
 
-        # But they have been transferred to our k_aug interface object
-        # as strings.
-        self.assertIsInstance(k_aug.dsdp_in_, str)
-        self.assertIsInstance(k_aug.conorder, str)
-        self.assertIsInstance(k_aug.timings_k_aug_dsdp, str)
+        # But they have been transferred to our k_aug interface's data
+        # dict as strings.
+        self.assertIsInstance(k_aug.data["dsdp_in_.in"], str)
+        self.assertIsInstance(k_aug.data["conorder.txt"], str)
+        self.assertIsInstance(k_aug.data["timings_k_aug_dsdp.txt"], str)
 
     @unittest.skipIf(not opt_k_aug.available(), "k_aug is not available")
     @unittest.skipIf(not opt_dot_sens.available(), "dot_sens is not available")
@@ -95,7 +95,7 @@ class TestK_augInterface(unittest.TestCase):
         
         # Call k_aug
         k_aug.k_aug(m, tee=True)
-        self.assertIsInstance(k_aug.dsdp_in_, str)
+        self.assertIsInstance(k_aug.data["dsdp_in_.in"], str)
 
         sens.perturb_parameters([m.ptb])
 
@@ -127,10 +127,10 @@ class TestK_augInterface(unittest.TestCase):
         self.assertFalse(os.path.exists("timings_dot_driver_dsdp.txt"))
 
         # And we have saved strings of the file contents.
-        self.assertIsInstance(k_aug.dsdp_in_, str)
-        self.assertIsInstance(k_aug.delta_p, str)
-        self.assertIsInstance(k_aug.dot_out, str)
-        self.assertIsInstance(k_aug.timings_dot_driver_dsdp, str)
+        self.assertIsInstance(k_aug.data["dsdp_in_.in"], str)
+        self.assertIsInstance(k_aug.data["delta_p.out"], str)
+        self.assertIsInstance(k_aug.data["dot_out.out"], str)
+        self.assertIsInstance(k_aug.data["timings_dot_driver_dsdp.txt"], str)
 
 
 if __name__ == "__main__":
