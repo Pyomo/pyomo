@@ -95,7 +95,7 @@ class TestTiming(unittest.TestCase):
 
     def test_TicTocTimer_tictoc(self):
         SLEEP = 0.1
-        RES = 0.01 # resolution (seconds): 1/10 the sleep
+        RES = 0.02 # resolution (seconds): 1/5 the sleep
         abs_time = time.time()
         timer = TicTocTimer()
 
@@ -155,8 +155,11 @@ class TestTiming(unittest.TestCase):
 
         # Note: pypy and osx (py3.8) on GHA occasionally have timing
         # differences of >0.01s for the following tests
-        if 'pypy_version_info' in dir(sys) or sys.platform == 'darwin':
-            RES *= 2
+        #
+        # Update: we relaxed the resolution for all tests to 0.2
+        #
+        # if 'pypy_version_info' in dir(sys) or sys.platform == 'darwin':
+        #     RES *= 2
 
         with capture_output() as out:
             ref += time.time()

@@ -22,6 +22,8 @@ currdir = dirname(abspath(__file__))+os.sep
 
 from filecmp import cmp
 import pyomo.common.unittest as unittest
+from pyomo.common.log import LoggingIntercept
+from io import StringIO
 
 from pyomo.environ import ConcreteModel, AbstractModel, RangeSet, Var, Param, Set, Constraint, ConstraintList, Expression, Objective, Reals, ExternalFunction, PositiveReals, log10, exp, floor, ceil, log, cos, sin, tan, acos, asin, atan, sinh, cosh, tanh, acosh, asinh, atanh, sqrt, value, quicksum, sum_product, is_fixed, is_constant
 from pyomo.kernel import variable, expression, objective
@@ -5277,6 +5279,18 @@ class TestDirect_LinearExpression(unittest.TestCase):
 
         self.assertFalse(is_fixed(m.c1.body))
         self.assertEqual(polynomial_degree(m.c1.body), 1)
+
+
+class TestEvaluation(unittest.TestCase):
+    def test_log_error(self):
+        m = ConcreteModel()
+        m.x = Var()
+        e = m.x**2
+        os = StringIO()
+        with LoggingIntercept(os, 'pyomo'):
+            e_val = value(e, exception=False)
+            self.assertIsNone(e_val)
+        self.assertEqual(os.getvalue(), '')
 
 
 if __name__ == "__main__":

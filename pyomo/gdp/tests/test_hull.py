@@ -751,8 +751,8 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
     def test_disjunction_data_target_any_index(self):
         ct.check_disjunction_data_target_any_index(self, 'hull')
 
-    def test_targets_with_container_as_arg(self):
-        ct.check_targets_with_container_as_arg(self, 'hull')
+    def test_cannot_call_transformation_on_disjunction(self):
+        ct.check_cannot_call_transformation_on_disjunction(self, 'hull')
 
     def check_trans_block_disjunctions_of_disjunct_datas(self, m):
         transBlock1 = m.component("_pyomo_gdp_hull_reformulation")
@@ -1060,6 +1060,9 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         # version. (But this behaves the same as bigm)
         ct.check_mappings_between_disjunctions_and_xors(self, 'hull')
 
+    def test_unique_reference_to_nested_indicator_var(self):
+        ct.check_unique_reference_to_nested_indicator_var(self, 'hull')
+
     def test_disjunct_targets_inactive(self):
         ct.check_disjunct_targets_inactive(self, 'hull')
 
@@ -1074,6 +1077,12 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
 
     def test_disjunction_target_err(self):
         ct.check_disjunction_target_err(self, 'hull')
+
+    def test_nested_disjunction_target(self):
+        ct.check_nested_disjunction_target(self, 'hull')
+
+    def test_target_appears_twice(self):
+        ct.check_target_appears_twice(self, 'hull')
 
     @unittest.skipIf(not linear_solvers, "No linear solver available")
     def test_relaxation_feasibility(self):
@@ -1535,7 +1544,7 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
 
         # transform inner problem with bigm, outer with hull and make sure it
         # still works
-        TransformationFactory('gdp.bigm').apply_to(m.d1.disj2)
+        TransformationFactory('gdp.bigm').apply_to(m, targets=(m.d1.disj2))
         hull.apply_to(m)
 
         SolverFactory(linear_solvers[0]).solve(m)
@@ -1911,10 +1920,6 @@ class TestErrors(unittest.TestCase):
             hull.get_disaggregated_var,
             m.w,
             m.random_disjunction.disjuncts[0])
-
-class InnerDisjunctionSharedDisjuncts(unittest.TestCase):
-    def test_activeInnerDisjunction_err(self):
-        ct.check_activeInnerDisjunction_err(self, 'hull')
 
 class BlocksOnDisjuncts(unittest.TestCase):
     def setUp(self):

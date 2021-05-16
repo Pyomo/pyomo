@@ -32,25 +32,10 @@ import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()
 
+from pyomo.common.fileutils import find_library
+pynumero_ASL_available = False if find_library('pynumero_ASL') is None else True
+
 testdir = os.path.dirname(os.path.abspath(__file__))
-
-class Object_from_string_Tester(unittest.TestCase):
-    def setUp(self):
-        self.instance = pyo.ConcreteModel()
-        self.instance.IDX = pyo.Set(initialize=['a', 'b', 'c'])
-        self.instance.x = pyo.Var(self.instance.IDX, initialize=1134)
-        # TBD add a block
-        if parmest.parmest_available:
-            np.random.seed(1134)
-
-    def tearDown(self):
-        pass
-
-    def test_Var(self):
-        # just making sure it executes
-        pyo_Var_obj = parmest._object_from_string(self.instance, "x[b]")
-        fixstatus = pyo_Var_obj.fixed
-        self.assertEqual(fixstatus, False)
 
 
 @unittest.skipIf(not parmest.parmest_available,
@@ -231,6 +216,7 @@ class parmest_object_Tester_RB_match_paper(unittest.TestCase):
         self.assertAlmostEqual(thetavals['asymptote'], 19.1426, places=2) # 19.1426 from the paper
         self.assertAlmostEqual(thetavals['rate_constant'], 0.5311, places=2) # 0.5311 from the paper
 
+    @unittest.skipIf(not pynumero_ASL_available, "pynumero ASL is not available")
     @unittest.skipIf(not parmest.inverse_reduced_hessian_available,
                      "Cannot test covariance matrix: required ASL dependency is missing")
     def test_theta_est_cov(self):
@@ -317,6 +303,7 @@ class Test_parmest_indexed_variables(unittest.TestCase):
         self.assertAlmostEqual(thetavals['theta[rate_constant]'], 0.5311, places=2) # 0.5311 from the paper
 
 
+    @unittest.skipIf(not pynumero_ASL_available, "pynumero ASL is not available")
     @unittest.skipIf(
         not parmest.inverse_reduced_hessian_available,
         "Cannot test covariance matrix: required ASL dependency is missing")
@@ -384,6 +371,7 @@ class parmest_object_Tester_reactor_design(unittest.TestCase):
                                       theta_names, SSE, solver_options)
 
     def test_theta_est(self):
+        # used in data reconciliation
         objval, thetavals = self.pest.theta_est()
 
         self.assertAlmostEqual(thetavals['k1'], 5.0/6.0, places=4)
@@ -394,7 +382,6 @@ class parmest_object_Tester_reactor_design(unittest.TestCase):
         objval, thetavals, data_rec =\
             self.pest.theta_est(return_values=['ca', 'cb', 'cc', 'cd', 'caf'])
         self.assertAlmostEqual(data_rec["cc"].loc[18], 893.84924, places=3)
-
 
 
 @unittest.skipIf(not parmest.parmest_available,
