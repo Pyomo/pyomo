@@ -1302,6 +1302,17 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertTrue(RangeSet(4,6,0).isdisjoint(i))
         self.assertFalse(RangeSet(3,6,0).isdisjoint(i))
 
+        # It can even work for non-hashable objects (that can't be cast
+        # to set())
+        m = ConcreteModel()
+        m.p = Param(initialize=2)
+        m.q = Var(initialize=2)
+        _NonHashable = (1, 3, 5, [2, 3])
+        self.assertFalse(SetOf([[2, 3], 4]).isdisjoint(_NonHashable))
+        self.assertTrue(SetOf({0, 4}).isdisjoint(_NonHashable))
+        self.assertFalse(SetOf(_NonHashable).isdisjoint(_NonHashable))
+        self.assertFalse(SetOf((1, 3, 5)).isdisjoint(_NonHashable))
+
         # It can even work for non-iterable objects (that can't be cast
         # to set())
         class _NonIterable(object):
@@ -1333,6 +1344,18 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertTrue(RangeSet(1,3,0).issubset(RangeSet(0,100,0)))
         self.assertFalse(RangeSet(1,3,0).issubset(i))
         self.assertFalse(RangeSet(3,6,0).issubset(i))
+
+        # It can even work for non-hashable objects (that can't be cast
+        # to set())
+        m = ConcreteModel()
+        m.p = Param(initialize=2)
+        m.q = Var(initialize=2)
+        _NonHashable = (1, 3, 5, [2, 3])
+        self.assertFalse(SetOf({0, 1, 3, 5}).issubset(_NonHashable))
+        self.assertTrue(SetOf({1, 3, 5}).issubset(_NonHashable))
+        self.assertTrue(SetOf(_NonHashable).issubset(_NonHashable))
+        self.assertTrue(SetOf((1, 3, 5, [2, 3])).issubset(_NonHashable))
+        self.assertFalse(SetOf(([2, 4])).issubset(_NonHashable))
 
         # It can even work for non-iterable objects (that can't be cast
         # to set())
