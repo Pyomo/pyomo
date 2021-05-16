@@ -147,7 +147,7 @@ class _RunnerResult(enum.Enum):
     unittest = 2
 
 
-def timeout(seconds, require_fork=False):
+def timeout(seconds, require_fork=False, timeout_raises=TimeoutError):
     """Function decorator to timeout the decorated function.
 
     This decorator will wrap a function call with a timeout, returning
@@ -167,6 +167,13 @@ def timeout(seconds, require_fork=False):
     ----------
     seconds: float
         Number of seconds to wait before timing out the function
+
+    require_fork: bool
+        Require support of the 'fork' interface.  If not present,
+        immediately raises unittest.SkipTest
+
+    timeout_raises: Exception
+        Exception class to raise in the event of a timeout
 
     Examples
     --------
@@ -238,7 +245,7 @@ def timeout(seconds, require_fork=False):
                 resultType, result, stdout = q.get(True, seconds)
             except queue.Empty:
                 test_proc.terminate()
-                raise TimeoutError(
+                raise timeout_raises(
                     "test timed out after %s seconds" % (seconds,)) from None
             finally:
                 _runner.data.pop(q, None)

@@ -541,9 +541,7 @@ def makeDisjunctInMultipleDisjunctions():
 def makeDuplicatedNestedDisjunction():
     """Not a transformable model (because of disjuncts shared between 
     disjunctions): A SimpleDisjunction where one of the disjuncts contains
-    two SimpleDisjunctions with the same Disjuncts. This is a lazy
-    way to test that we complain about untransformed disjunctions we encounter
-    while transforming a disjunct.
+    two SimpleDisjunctions with the same Disjuncts.
     """
     m = ConcreteModel()
     m.x = Var(bounds=(0, 8))

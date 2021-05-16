@@ -241,7 +241,7 @@ class TestDependencies(unittest.TestCase):
         # Test generate warning
         log = StringIO()
         dep = StringIO()
-        with LoggingIntercept(dep, 'pyomo'):
+        with LoggingIntercept(dep, 'pyomo.common.tests'):
             with LoggingIntercept(log, 'pyomo.common'):
                 mod.generate_import_warning()
         self.assertIn(
