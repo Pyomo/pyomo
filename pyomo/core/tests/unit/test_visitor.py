@@ -99,40 +99,40 @@ class TestExpressionUtilities(unittest.TestCase):
         #
         # Identify variables in various algebraic expressions
         #
-        self.assertEqual( ComponentSet(identify_variables(m.a)), ComponentSet([m.a]) )
-        self.assertEqual( ComponentSet(identify_variables(m.b[1])), ComponentSet([m.b[1]]) )
-        self.assertEqual( ComponentSet(identify_variables(m.a+m.b[1])),
-                          ComponentSet([ m.a, m.b[1] ]) )
-        self.assertEqual( ComponentSet(identify_variables(m.a**m.b[1])),
-                          ComponentSet([ m.a, m.b[1] ]) )
-        self.assertEqual( ComponentSet(identify_variables(m.a**m.b[1] + m.b[2])),
-                          ComponentSet([ m.a, m.b[1], m.b[2] ]) )
-        self.assertEqual( ComponentSet(identify_variables(
+        self.assertEqual( list(identify_variables(m.a)), [m.a] )
+        self.assertEqual( list(identify_variables(m.b[1])), [m.b[1]] )
+        self.assertEqual( list(identify_variables(m.a+m.b[1])),
+                          [ m.a, m.b[1] ] )
+        self.assertEqual( list(identify_variables(m.a**m.b[1])),
+                          [ m.a, m.b[1] ] )
+        self.assertEqual( list(identify_variables(m.a**m.b[1] + m.b[2])),
+                          [ m.b[2], m.a, m.b[1]] )
+        self.assertEqual( list(identify_variables(
             m.a**m.b[1] + m.b[2]*m.b[3]*m.b[2])),
-                          ComponentSet([ m.a, m.b[1], m.b[2], m.b[3] ]) )
-        self.assertEqual( ComponentSet(identify_variables(
+                          [ m.a, m.b[1], m.b[2], m.b[3] ] )
+        self.assertEqual( list(identify_variables(
             m.a**m.b[1] + m.b[2]/m.b[3]*m.b[2])),
-                          ComponentSet([ m.a, m.b[1], m.b[2], m.b[3] ]) )
+                          [ m.a, m.b[1], m.b[2], m.b[3] ] )
         #
         # Identify variables in the arguments to functions
         #
-        self.assertEqual( ComponentSet(identify_variables(
-            m.x(m.a, 'string_param', 1, [])*m.b[1] )),
-                          ComponentSet([ m.a, m.b[1] ]) )
-        self.assertEqual( ComponentSet(identify_variables(
+        self.assertEqual( list(identify_variables(
+            m.x(m.a, 'string_param', 1, []) * m.b[1] )),
+                          [ m.b[1], m.a ] )
+        self.assertEqual( list(identify_variables(
             m.x(m.p, 'string_param', 1, [])*m.b[1] )),
-                          ComponentSet([ m.b[1] ]) )
-        self.assertEqual( ComponentSet(identify_variables(
-            tanh(m.a)*m.b[1] )), ComponentSet([ m.a, m.b[1] ]) )
-        self.assertEqual( ComponentSet(identify_variables(
-            abs(m.a)*m.b[1] )), ComponentSet([ m.a, m.b[1] ]) )
+                          [ m.b[1] ] )
+        self.assertEqual( list(identify_variables(
+            tanh(m.a)*m.b[1] )), [ m.b[1], m.a ] )
+        self.assertEqual( list(identify_variables(
+            abs(m.a) * m.b[1] )), [ m.b[1], m.a ] )
         #
         # Check logic for allowing duplicates
         #
-        self.assertEqual( ComponentSet(identify_variables(m.a**m.a + m.a)),
-                          ComponentSet([ m.a ]) )
-        #self.assertEqual( ComponentSet(identify_variables(m.a**m.a + m.a, allow_duplicates=True)),
-        #                  ComponentSet([ m.a, m.a, m.a,  ]) )
+        self.assertEqual( list(identify_variables(m.a**m.a + m.a)),
+                          [ m.a ] )
+        #self.assertEqual( list(identify_variables(m.a**m.a + m.a, allow_duplicates=True)),
+        #                  [ m.a, m.a, m.a,  ] )
 
     def test_identify_vars_linear_expression(self):
         m = ConcreteModel()
@@ -230,38 +230,38 @@ class TestIdentifyParams(unittest.TestCase):
         #
         # Identify variables in various algebraic expressions
         #
-        self.assertEqual( ComponentSet(identify_mutable_parameters(m.a)), ComponentSet([m.a]) )
-        self.assertEqual( ComponentSet(identify_mutable_parameters(m.b[1])), ComponentSet([m.b[1]]) )
-        self.assertEqual( ComponentSet(identify_mutable_parameters(m.a+m.b[1])),
-                          ComponentSet([ m.a, m.b[1] ]) )
-        self.assertEqual( ComponentSet(identify_mutable_parameters(m.a**m.b[1])),
-                          ComponentSet([ m.a, m.b[1] ]) )
-        self.assertEqual( ComponentSet(identify_mutable_parameters(m.a**m.b[1] + m.b[2])),
-                          ComponentSet([ m.a, m.b[1], m.b[2] ]) )
-        self.assertEqual( ComponentSet(identify_mutable_parameters(
+        self.assertEqual( list(identify_mutable_parameters(m.a)), [m.a] )
+        self.assertEqual( list(identify_mutable_parameters(m.b[1])), [m.b[1]] )
+        self.assertEqual( list(identify_mutable_parameters(m.a+m.b[1])),
+                          [ m.a, m.b[1] ] )
+        self.assertEqual( list(identify_mutable_parameters(m.a**m.b[1])),
+                          [ m.a, m.b[1] ] )
+        self.assertEqual( list(identify_mutable_parameters(m.a**m.b[1] + m.b[2])),
+                          [ m.b[2], m.a, m.b[1] ] )
+        self.assertEqual( list(identify_mutable_parameters(
             m.a**m.b[1] + m.b[2]*m.b[3]*m.b[2])),
-                          ComponentSet([ m.a, m.b[1], m.b[2], m.b[3] ]) )
-        self.assertEqual( ComponentSet(identify_mutable_parameters(
+                          [ m.a, m.b[1], m.b[2], m.b[3] ] )
+        self.assertEqual( list(identify_mutable_parameters(
             m.a**m.b[1] + m.b[2]/m.b[3]*m.b[2])),
-                          ComponentSet([ m.a, m.b[1], m.b[2], m.b[3] ]) )
+                          [ m.a, m.b[1], m.b[2], m.b[3] ] )
         #
         # Identify variables in the arguments to functions
         #
-        self.assertEqual( ComponentSet(identify_mutable_parameters(
+        self.assertEqual( list(identify_mutable_parameters(
             m.x(m.a, 'string_param', 1, [])*m.b[1] )),
-                          ComponentSet([ m.a, m.b[1] ]) )
-        self.assertEqual( ComponentSet(identify_mutable_parameters(
+                          [ m.b[1], m.a ] )
+        self.assertEqual( list(identify_mutable_parameters(
             m.x(m.p, 'string_param', 1, [])*m.b[1] )),
-                          ComponentSet([ m.b[1] ]) )
-        self.assertEqual( ComponentSet(identify_mutable_parameters(
-            tanh(m.a)*m.b[1] )), ComponentSet([ m.a, m.b[1] ]) )
-        self.assertEqual( ComponentSet(identify_mutable_parameters(
-            abs(m.a)*m.b[1] )), ComponentSet([ m.a, m.b[1] ]) )
+                          [ m.b[1] ] )
+        self.assertEqual( list(identify_mutable_parameters(
+            tanh(m.a)*m.b[1] )), [ m.b[1], m.a ] )
+        self.assertEqual( list(identify_mutable_parameters(
+            abs(m.a)*m.b[1] )), [ m.b[1], m.a ] )
         #
         # Check logic for allowing duplicates
         #
-        self.assertEqual( ComponentSet(identify_mutable_parameters(m.a**m.a + m.a)),
-                          ComponentSet([ m.a ]) )
+        self.assertEqual( list(identify_mutable_parameters(m.a**m.a + m.a)),
+                          [ m.a ] )
 
 
 #
