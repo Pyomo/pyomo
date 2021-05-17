@@ -17,7 +17,7 @@ from itertools import islice
 logger = logging.getLogger('pyomo.core')
 
 from math import isclose
-from pyomo.common.deprecation import deprecated
+from pyomo.common.deprecation import deprecated, deprecation_warning
 
 from .expr_common import (
     _add, _sub, _mul, _div,
@@ -1572,17 +1572,30 @@ def _decompose_linear_terms(expr, multiplier=1):
 def _process_arg(obj):
     # Note: caller is responsible for filtering out native types and
     # expressions.
-    if obj.is_numeric_type() and obj.is_constant():
+    if not obj.is_numeric_type():
+        if hasattr(obj, 'as_binary'):
+            # We assume non-numeric types that have an as_binary method
+            # are instances of AutoLinkedBooleanVar.  Calling as_binary
+            # will return a valid Binary Var (and issue the appropriate
+            # deprecation warning)
+            obj = obj.as_binary()
+        else:
+            # User assistance: provide a helpful exception when using an
+            # indexed object in an expression
+            if obj.is_component_type() and obj.is_indexed():
+                raise TypeError(
+                    "Argument for expression is an indexed numeric "
+                    "value\nspecified without an index:\n\t%s\nIs this "
+                    "value defined over an index that you did not specify?"
+                    % (obj.name, ) )
+
+            raise TypeError(
+                "Attempting to use a non-numeric type (%s) in a "
+                "numeric context" % (obj,))
+
+    if obj.is_constant():
         # Resolve constants (e.g., immutable scalar Params & NumericConstants)
         return value(obj)
-    # User assistance: provide a helpful exception when using an indexed
-    # object in an expression
-    if obj.is_component_type() and obj.is_indexed():
-        raise TypeError(
-            "Argument for expression is an indexed numeric "
-            "value\nspecified without an index:\n\t%s\nIs this "
-            "value defined over an index that you did not specify?"
-            % (obj.name, ) )
     return obj
 
 

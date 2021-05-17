@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import logging
+import os
 import re
 import sys
 import time
@@ -59,6 +60,7 @@ class XpressDirect(DirectSolver):
         self._solver_con_to_pyomo_con_map = ComponentMap()
 
         self._name = None
+        _cwd = os.getcwd()
         try:
             import xpress 
             self._xpress = xpress
@@ -84,7 +86,13 @@ class XpressDirect(DirectSolver):
             # exception above!
             print("Import of xpress failed - xpress message=" + str(e) + "\n")
             self._python_api_exists = False
-            
+        finally:
+            # In some versions of XPRESS (notably 8.9.0), `import
+            # xpress` temporarily changes the CWD.  If the import fails
+            # (e.g., due to an expired license), the CWD is not always
+            # restored.  This block ensures that the CWD is preserved.
+            os.chdir(_cwd)
+
         self._range_constraints = set()
 
         # TODO: this isn't a limit of XPRESS, which implements an SLP

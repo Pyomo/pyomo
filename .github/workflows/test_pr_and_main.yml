@@ -25,7 +25,7 @@ env:
   PYTHON_BASE_PKGS: >
       ply dill ipython networkx openpyxl pathos
       pint pyro4 pyyaml sphinx_rtd_theme sympy xlrd
-      python-louvain
+      python-louvain sphinx-copybutton
   PYTHON_NUMPY_PKGS: >
       numpy scipy pyodbc pandas matplotlib seaborn numdifftools 
       parameterized casadi

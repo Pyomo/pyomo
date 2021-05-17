@@ -1082,8 +1082,12 @@ class ImplicationExpression(BinaryBooleanExpression):
 
 class NaryBooleanExpression(BooleanExpressionBase):
     """
-    The abstract class for NaryBooleanExpression. This class should never be initialized.
+    The abstract class for NaryBooleanExpression.
+
+    This class should never be initialized.
     """
+    __slots__ = ('_nargs',)
+
     def __init__(self, args):
         self._args_ = args
         self._nargs = len(self._args_)
@@ -1096,6 +1100,18 @@ class NaryBooleanExpression(BooleanExpressionBase):
 
     def getname(self, *arg, **kwd):
         return 'NaryBooleanExpression'
+
+    def __getstate__(self):
+        """
+        Pickle the expression object
+
+        Returns:
+            The pickled state.
+        """
+        state = super().__getstate__()
+        for i in NaryBooleanExpression.__slots__:
+           state[i] = getattr(self, i)
+        return state
 
 
 def _add_to_and_or_expression(orig_expr, new_arg):

@@ -122,7 +122,7 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
     def _disjunct_not_fixed_true(self, disjunct):
         # Return true if the disjunct indicator variable is not fixed to True
         return not (disjunct.indicator_var.fixed and
-                    disjunct.indicator_var.value == 1)
+                    disjunct.indicator_var.value)
 
     def _disjunct_not_relaxed(self, disjunct):
         # Return True if the disjunct was not relaxed by a transformation.
@@ -137,7 +137,7 @@ class HACK_GDP_Disjunct_Reclassifier(Transformation):
             if parent_block.ctype is Block and not parent_block.active:
                 return False
             elif (parent_block.ctype is Disjunct and not parent_block.active
-                  and parent_block.indicator_var.value == 0
+                  and parent_block.indicator_var.value == False
                   and parent_block.indicator_var.fixed):
                 return False
             else:

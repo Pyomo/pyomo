@@ -26,14 +26,13 @@ from pyomo.core.base.external import ExternalFunction
 from pyomo.core.base import Transformation, TransformationFactory, Reference
 import pyomo.core.expr.current as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import (
-    _warn_for_active_logical_constraint, target_list, is_child_of, get_src_disjunction,
-    get_src_constraint, get_transformed_constraints,
-    _get_constraint_transBlock, get_src_disjunct,
-    _warn_for_active_disjunction,
-    _warn_for_active_disjunct, )
+from pyomo.gdp.util import ( _warn_for_active_logical_constraint, target_list,
+                             is_child_of, get_src_disjunction,
+                             get_src_constraint, get_transformed_constraints,
+                             _get_constraint_transBlock, get_src_disjunct,
+                             _warn_for_active_disjunction,
+                             _warn_for_active_disjunct, preprocess_targets)
 from pyomo.repn import generate_standard_repn
-
 from functools import wraps
 from weakref import ref as weakref_ref
 
@@ -213,6 +212,12 @@ class BigM_Transformation(Transformation):
             self.used_args.clear()
 
     def _apply_to_impl(self, instance, **kwds):
+        if not instance.ctype in (Block, Disjunct):
+            raise GDP_Error("Transformation called on %s of type %s. 'instance' "
+                            "must be a ConcreteModel, Block, or Disjunct (in "
+                            "the case of nested disjunctions)." %
+                            (instance.name, instance.ctype))
+
         config = self.CONFIG(kwds.pop('options', {}))
 
         # We will let args override suffixes and estimate as a last
@@ -231,9 +236,15 @@ class BigM_Transformation(Transformation):
         targets = config.targets
         if targets is None:
             targets = (instance, )
-        # We need to check that all the targets are in fact on instance. As we
-        # do this, we will use the set below to cache components we know to be
-        # in the tree rooted at instance.
+        else:
+            # we need to preprocess targets to make sure that if there are any
+            # disjunctions in targets that their disjuncts appear before them in
+            # the list.
+            targets = preprocess_targets(targets)
+
+        #  We need to check that all the targets are in fact on
+        # instance. As we do this, we will use the set below to cache components
+        # we know to be in the tree rooted at instance.
         knownBlocks = {}
         for t in targets:
             # check that t is in fact a child of instance
@@ -380,7 +391,7 @@ class BigM_Transformation(Transformation):
                             obj.getname(fully_qualified=True,
                                         name_buffer=NAME_BUFFER))
         for disjunct in obj.disjuncts:
-            or_expr += disjunct.indicator_var
+            or_expr += disjunct.binary_indicator_var
             # make suffix list. (We don't need it until we are
             # transforming constraints, but it gets created at the
             # disjunct level, so more efficient to make it here and
@@ -407,7 +418,7 @@ class BigM_Transformation(Transformation):
         # deactivated -> either we've already transformed or user deactivated
         if not obj.active:
             if obj.indicator_var.is_fixed():
-                if value(obj.indicator_var) == 0:
+                if not value(obj.indicator_var):
                     # The user cleanly deactivated the disjunct: there
                     # is nothing for us to do here.
                     return
@@ -422,7 +433,7 @@ class BigM_Transformation(Transformation):
                     "indicator_var is not fixed and the disjunct does not "
                     "appear to have been relaxed. This makes no sense. "
                     "(If the intent is to deactivate the disjunct, fix its "
-                    "indicator_var to 0.)"
+                    "indicator_var to False.)"
                     % ( obj.name, ))
 
         if obj._transformation_block is not None:
@@ -467,21 +478,13 @@ class BigM_Transformation(Transformation):
 
     def _transform_block_components(self, block, disjunct, bigM, arg_list,
                                     suffix_list):
-        # Find all the variables declared here (including the indicator_var) and
-        # add a reference on the transformation block so these will be
-        # accessible when the Disjunct is deactivated. We don't descend into
-        # Disjuncts because we'll just reference the references which are
-        # already on their transformation blocks.
+        # We find any transformed disjunctions that might be here because we
+        # need to move their transformation blocks up onto the parent block
+        # before we transform anything else on this block. Note that we do this
+        # before we create references to local variables because we do not want
+        # duplicate references to indicator variables and local variables on
+        # nested disjuncts.
         disjunctBlock = disjunct._transformation_block()
-        varRefBlock = disjunctBlock.localVarReferences
-        for v in block.component_objects(Var, descend_into=Block, active=None):
-            varRefBlock.add_component(unique_component_name(
-                varRefBlock, v.getname(fully_qualified=True,
-                                       name_buffer=NAME_BUFFER)), Reference(v))
-
-        # Now need to find any transformed disjunctions that might be here
-        # because we need to move their transformation blocks up onto the parent
-        # block before we transform anything else on this block
         destinationBlock = disjunctBlock.parent_block()
         for obj in block.component_data_objects(
                 Disjunction,
@@ -498,6 +501,17 @@ class BigM_Transformation(Transformation):
             self._transfer_transBlock_data(transBlock, destinationBlock)
             # we leave the transformation block because it still has the XOR
             # constraints, which we want to be on the parent disjunct.
+
+        # Find all the variables declared here (including the indicator_var) and
+        # add a reference on the transformation block so these will be
+        # accessible when the Disjunct is deactivated. We don't descend into
+        # Disjuncts because we just moved the references to their local
+        # variables up in the previous loop.
+        varRefBlock = disjunctBlock.localVarReferences
+        for v in block.component_objects(Var, descend_into=Block, active=None):
+            varRefBlock.add_component(unique_component_name(
+                varRefBlock, v.getname(fully_qualified=True,
+                                       name_buffer=NAME_BUFFER)), Reference(v))
 
         # Now look through the component map of block and transform everything
         # we have a handler for. Yell if we don't know how to handle it. (Note
@@ -555,7 +569,8 @@ class BigM_Transformation(Transformation):
 
     def _warn_for_active_logical_statement(
             self, logical_statment, disjunct, infodict, bigMargs, suffix_list):
-        _warn_for_active_logical_constraint(logical_statment, disjunct, NAME_BUFFER)
+        _warn_for_active_logical_constraint(logical_statment, disjunct,
+                                            NAME_BUFFER)
 
     def _transform_block_on_disjunct(self, block, disjunct, bigMargs, arg_list,
                                      suffix_list):
@@ -696,7 +711,7 @@ class BigM_Transformation(Transformation):
                 if M[0] is None:
                     raise GDP_Error("Cannot relax disjunctive constraint '%s' "
                                     "because M is not defined." % name)
-                M_expr = M[0] * (1 - disjunct.indicator_var)
+                M_expr = M[0] * (1 - disjunct.binary_indicator_var)
                 newConstraint.add(i_lb, c.lower <= c. body - M_expr)
                 constraintMap[
                     'transformedConstraints'][c] = [newConstraint[i_lb]]
@@ -705,7 +720,7 @@ class BigM_Transformation(Transformation):
                 if M[1] is None:
                     raise GDP_Error("Cannot relax disjunctive constraint '%s' "
                                     "because M is not defined." % name)
-                M_expr = M[1] * (1 - disjunct.indicator_var)
+                M_expr = M[1] * (1 - disjunct.binary_indicator_var)
                 newConstraint.add(i_ub, c.body - M_expr <= c.upper)
                 transformed = constraintMap['transformedConstraints'].get(c)
                 if transformed is not None:
