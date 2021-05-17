@@ -211,7 +211,8 @@ def add_integer_cut(var_values, target_model, solve_data, config, feasible=False
         GDPopt = m.GDPopt_utils
         var_value_is_one = ComponentSet()
         var_value_is_zero = ComponentSet()
-        indicator_vars = ComponentSet(disj.indicator_var for disj in GDPopt.disjunct_list)
+        indicator_vars = ComponentSet(
+            disj.binary_indicator_var for disj in GDPopt.disjunct_list)
         for var, val in zip(GDPopt.variable_list, var_values):
             if not var.is_binary():
                 continue
