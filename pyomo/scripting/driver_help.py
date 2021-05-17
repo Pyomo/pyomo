@@ -78,7 +78,6 @@ included with Python.
 # help
 #   --components
 #   --command
-#   --api
 #   --transformations
 #   --solvers
 #--------------------------------------------------
@@ -138,88 +137,6 @@ def help_datamanagers(options):
     for xform in sorted(DataManagerFactory):
         print("  "+xform)
         print(wrapper.fill(DataManagerFactory.doc(xform)))
-
-def help_api(options):
-    from pyomo.common._task import PyomoAPIFactory
-    services = PyomoAPIFactory.services()
-    #
-    f = {}
-    for name in services:
-        f[name] = PyomoAPIFactory(name)
-    #
-    ns = {}
-    for name in services:
-        ns_set = ns.setdefault(f[name].__namespace__, set())
-        ns_set.add(name)
-    #
-    if options.asciidoc:
-        print("//")
-        print("// Pyomo Library API Documentation")
-        print("//")
-        print("// Generated with 'pyomo api' on ",datetime.date.today())
-        print("//")
-        print("")
-        print("== Pyomo Functor API ==")
-        for ns_ in sorted(ns.keys()):
-            print("")
-            level = ns_+" Functors"
-            print('=== %s ===' % level)
-            for name in sorted(ns[ns_]):
-                if ns_ != '':
-                    tname = name[len(ns_)+1:]
-                else:
-                    tname = name
-                print("")
-                print('==== %s ====' % tname)
-                print(f[name].__short_doc__)
-                if f[name].__long_doc__ != '':
-                    print("")
-                    print(f[name].__long_doc__)
-                print("")
-                flag=False
-                print("- [underline]#Required Keyword Arguments:#")
-                for port in sorted(f[name].inputs):
-                    if f[name].inputs[port].optional:
-                        flag=True
-                        continue
-                    print("")
-                    print('*%s*::\n %s' % (port, f[name].inputs[port].doc))
-                if flag:
-                    # A function may not have optional arguments
-                    print("")
-                    print("- [underline]#Optional Keyword Arguments:#")
-                    for port in sorted(f[name].inputs):
-                        if not f[name].inputs[port].optional:
-                            continue
-                        print("")
-                        print('*%s*::\n %s' % (port, f[name].inputs[port].doc))
-                print("")
-                print("- [underline]#Return Values:#")
-                for port in sorted(f[name].outputs):
-                    print("")
-                    print('*%s*::\n %s' % (port, f[name].outputs[port].doc))
-                print("")
-    else:
-        print("")
-        print("Pyomo Functor API")
-        print("-----------------")
-        wrapper = textwrap.TextWrapper(subsequent_indent='')
-        print(wrapper.fill("The Pyomo library contains a set of functors that define operations that are likely to be major steps in Pyomo scripts.  This API is defined with functors to ensure a consistent function syntax.  Additionally, these functors can be accessed with a factory, thereby avoiding the need to import modules throughout Pyomo."))
-        print("")
-        for ns_ in sorted(ns.keys()):
-            print("")
-            level = ns_+" Functors"
-            print("-"*len(level))
-            print(level)
-            print("-"*len(level))
-            for name in sorted(ns[ns_]):
-                if ns_ != '':
-                    tname = name[len(ns_)+1:]
-                else:
-                    tname = name
-                print(tname+':')
-                for line in f[name].__short_doc__.split('\n'):
-                    print("    "+line)
 
 def help_environment():
     info = Bunch()
@@ -424,9 +341,6 @@ def help_exec(options):
             print("The '--components' help information is not printed in an asciidoc format.")
         flag=True
         print_components(None)
-    if options.api:
-        flag=True
-        help_api(options)
     if options.datamanager:
         flag=True
         help_datamanagers(options)
@@ -460,8 +374,6 @@ def help_exec(options):
 # Add a subparser for the pyomo command
 #
 def setup_help_parser(parser):
-    parser.add_argument("-a", "--api", dest="api", action='store_true', default=False,
-                        help="Print a summary of the Pyomo Library API")
     parser.add_argument("--asciidoc", dest="asciidoc", action='store_true', default=False,
                         help="Generate output that is compatible with asciidoc's markup language")
     parser.add_argument("--checkers", dest="checkers", action='store_true', default=False,
