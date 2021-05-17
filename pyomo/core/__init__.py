@@ -32,7 +32,6 @@ from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.expr.taylor_series import taylor_series_expansion
 
 import pyomo.core.kernel
-import pyomo.core.base._pyomo
 
 from pyomo.common.collections import ComponentMap
 from pyomo.core.expr.symbol_map import SymbolMap
@@ -133,8 +132,6 @@ from pyomo.core.base.plugin import (pyomo_callback,
                                     IPyomoScriptPostprocess,
                                     Transformation,
                                     TransformationFactory)
-#
-import pyomo.core.base._pyomo
 #
 from pyomo.core.base import util
 

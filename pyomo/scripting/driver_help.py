@@ -397,23 +397,19 @@ def print_components(data):
     print("----------------------------------------------------------------")
     print("Pyomo Model Components:")
     print("----------------------------------------------------------------")
-    components = pyomo.core.base._pyomo.model_components()
-    index = list(idx for idx, item in sorted(enumerate(components), key=lambda item: item[1]))
-    for i in index:
+    for name in sorted(ModelComponentFactory):
         print("")
-        print(" "+components[i][0])
-        for line in textwrap.wrap(components[i][1], 59):
+        print(" "+name)
+        for line in textwrap.wrap(ModelComponentFactory.doc(name), 59):
             print("    "+line)
     print("")
     print("----------------------------------------------------------------")
     print("Pyomo Virtual Sets:")
     print("----------------------------------------------------------------")
-    pyomo_sets = pyomo.core.base._pyomo.predefined_sets()
-    index = list(idx for idx, item in sorted(enumerate(pyomo_sets), key=lambda item: item[1]))
-    for i in index:
+    for name, obj in sorted(GlobalSets.items()):
         print("")
-        print(" "+pyomo_sets[i][0])
-        print("    "+pyomo_sets[i][1])
+        print(" "+name)
+        print("    "+obj.doc)
 
 def help_exec(options):
     flag=False

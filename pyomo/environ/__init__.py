@@ -107,10 +107,8 @@ _import_packages()
 #
 from pyomo.dataportal import DataPortal
 import pyomo.core.kernel
-import pyomo.core.base._pyomo
 from pyomo.common.collections import ComponentMap
 import pyomo.core.base.indexed_component
-import pyomo.core.base._pyomo
 from six import iterkeys, iteritems
 import pyomo.core.base.util
 from pyomo.core import expr, base, beta, kernel, plugins, preprocess

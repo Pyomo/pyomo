@@ -131,8 +131,6 @@ from pyomo.core.base.plugin import (pyomo_callback,
                                     Transformation,
                                     TransformationFactory)
 #
-import pyomo.core.base._pyomo
-#
 import pyomo.core.base.util
 
 from pyomo.core.base.instance2dat import instance2dat
