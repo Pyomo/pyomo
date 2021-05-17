@@ -111,26 +111,26 @@ def _generate_component_items(components):
 
 def sensitivity_calculation(method, instance, paramList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None):
-    """This function accepts a Pyomo ConcreteModel, a list of parameters, along
-    with their corresponding perterbation list. The model is then converted
-    into the design structure required to call sipopt or k_aug to get an 
-    approximation perturbed solution with updated bounds on the decision variable. 
+    """This function accepts a Pyomo ConcreteModel, a list of parameters, and
+    their corresponding perterbation list. The model is then augmented with
+    dummy constraints required to call sipopt or k_aug to get an approximation
+    of the perturbed solution.
     
     Parameters
     ----------
     method: string
         'sipopt' or 'k_aug'
-    instance: ConcreteModel
-        pyomo model object
+    instance: Block
+        pyomo block or model object
     paramSubList: list
-        list of mutable parameters
+        list of mutable parameters or fixed variables
     perturbList: list
         list of perturbed parameter values
     cloneModel: bool, optional
         indicator to clone the model. If set to False, the original
         model will be altered
     tee: bool, optional
-        indicator to stream IPOPT solution
+        indicator to stream solver log
     keepfiles: bool, optional
         preserve solver interface files
     solver_options: dict, optional
@@ -190,8 +190,8 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
     return m
 
 def get_dsdp(model, theta_names, theta, tee=False):
-    """This function calculates gradient vector of the (decision variables, parameters)
-        with respect to the paramerters (theta_names). 
+    """This function calculates gradient vector of the variables
+        with respect to the parameters (theta_names).
 
     e.g) min f:  p1*x1+ p2*(x2^2) + p1*p2
          s.t  c1: x1 + x2 = p1
@@ -199,7 +199,7 @@ def get_dsdp(model, theta_names, theta, tee=False):
               0 <= x1, x2, x3 <= 10
               p1 = 10
               p2 = 5
-    the function retuns dx/dp and dp/dp, and colum orders.
+    the function retuns dx/dp and dp/dp, and column orders.
 
     The following terms are used to define the output dimensions:
     Ncon   = number of constraints
@@ -222,9 +222,9 @@ def get_dsdp(model, theta_names, theta, tee=False):
     -------
     dsdp: scipy.sparse.csr.csr_matrix
         Ntheta by Nvar size sparse matrix. A Jacobian matrix of the
-        (decision variables, parameters) with respect to paramerters
-        (=theta_name). number of rows = len(theta_name), number of
-        columns= len(col)
+        (decision variables, parameters) with respect to parameters
+        (theta_names). number of rows = len(theta_name), number of
+        columns = len(col)
     col: list
         List of variable names
     """
@@ -282,7 +282,7 @@ def get_dsdp(model, theta_names, theta, tee=False):
 
 def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     """This function calculates gradient vector of the objective function 
-       and constraints with respect to the variables in theta_names.
+       and constraints with respect to the variables and parameters.
 
     e.g) min f:  p1*x1+ p2*(x2^2) + p1*p2
          s.t  c1: x1 + x2 = p1
@@ -302,14 +302,14 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     Parameters
     ----------
     model: Pyomo ConcreteModel
-        model should includes an objective function 
+        model should includes an objective function
     theta_names: list of strings
         List of Var names
     tee: bool, optional
         Indicates that ef solver output should be teed
     solver_options: dict, optional
         Provides options to the solver (also the name of an attribute)
-    
+
     Returns
     -------
     gradient_f: numpy.ndarray
@@ -422,18 +422,19 @@ def line_num(file_name, target):
     Parameters
     ----------
     file_name: string
-        file name includes information of variabe order (col_row.col)
+        file includes the variable order (i.e. col file)
     target: string
         variable name to check
+
     Returns
     -------
     count: int
-        line number of target in the file_name
+        line number of target in the file
 
     Raises
     ------
     Exception
-        When col_row.col does not include target
+        When file does not include target
     """
     with open(file_name) as f:
         count = int(1)
