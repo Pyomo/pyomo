@@ -30,6 +30,7 @@ import os.path
 import pickle
 import re
 import sys
+import types
 import pyomo.common.unittest as unittest
 
 from io import StringIO
@@ -44,7 +45,7 @@ from pyomo.common.config import (
     PositiveInt, NegativeInt, NonPositiveInt, NonNegativeInt,
     PositiveFloat, NegativeFloat, NonPositiveFloat, NonNegativeFloat,
     In, Path, PathList, ConfigEnum,
-    _UnpickleableDomain,
+    _UnpickleableDomain, _picklable,
 )
 from pyomo.common.log import LoggingIntercept
 
@@ -53,6 +54,11 @@ def _display(obj, *args):
     test = StringIO()
     obj.display(ostream=test, *args)
     return test.getvalue()
+
+
+class GlobalClass(object):
+    "test class for test_known_types"
+    pass
 
 
 class TestConfigDomains(unittest.TestCase):
@@ -2244,6 +2250,67 @@ c: 1.0
             self.assertEqual(out.getvalue(), "")
             self.assertIn('dill', sys.modules)
             self.assertEqual(cfg2['lambda'], 6)
+
+    def test_unknowable_types(self):
+        obj = ConfigValue()
+        def local_fcn():
+            pass
+        try:
+            pickle.dumps(local_fcn)
+            local_picklable = True
+        except:
+            local_picklable = False
+
+        # Test that _picklable does not cache the picklability of
+        # function types
+        self.assertIs(_picklable(_display, obj), _display)
+        if local_picklable:
+            self.assertIs(_picklable(local_fcn, obj), local_fcn)
+        else:
+            self.assertIsNot(_picklable(local_fcn, obj), local_fcn)
+
+        # Twice: implicit test that the result is not cached
+        self.assertIs(_picklable(_display, obj), _display)
+        if local_picklable:
+            self.assertIs(_picklable(local_fcn, obj), local_fcn)
+        else:
+            self.assertIsNot(_picklable(local_fcn, obj), local_fcn)
+
+        self.assertIn(types.FunctionType, _picklable.unknowable_types)
+        self.assertNotIn(types.FunctionType, _picklable.known)
+
+    def test_known_types(self):
+        def local_fcn():
+            class LocalClass(object):
+                pass
+            return LocalClass
+        local_class = local_fcn()
+
+        self.assertIsNone(_picklable.known.get(local_class, None))
+        self.assertIsNone(_picklable.known.get(GlobalClass, None))
+
+        obj = ConfigValue()
+
+        # Test that a global class is picklable
+        self.assertIs(_picklable(GlobalClass, obj), GlobalClass)
+        self.assertEqual(_picklable.known.get(GlobalClass, None), True)
+
+        # Test that a local class is (most likely) not picklable
+        try:
+            pickle.dumps(local_class)
+            local_picklable = True
+        except:
+            local_picklable = False
+        if local_picklable:
+            self.assertIs(_picklable(local_class, obj), local_class)
+            self.assertEqual(_picklable.known.get(local_class, None), True)
+        else:
+            self.assertIsNot(_picklable(local_class, obj), local_class)
+            self.assertEqual(_picklable.known.get(local_class, None), False)
+
+        # Ensure that none of the above added the type `type` to the
+        # "known" dict
+        self.assertNotIn(type, _picklable.known)
 
 
     def test_self_assignment(self):
