@@ -53,6 +53,8 @@ class TestPlugin(TestCase):
         })
         self.assertEqual(len(ep), 0)
 
+        # Free a and make sure the garbage collector collects it (so
+        # that the weakref will be rmoved from IFoo._plugins)
         a = None
         gc.collect()
         gc.collect()
@@ -200,6 +202,12 @@ class TestPlugin(TestCase):
         self.assertFalse(a.enabled())
         self.assertTrue(b.enabled())
         self.assertIs(ep.service(), b)
+
+        # Note: Run the GC to ensure the instance created by
+        # factory('my_foo') above has been removed.
+        gc.collect()
+        gc.collect()
+        gc.collect()
 
         factory.activate('my_foo')
         self.assertTrue(a.enabled())
