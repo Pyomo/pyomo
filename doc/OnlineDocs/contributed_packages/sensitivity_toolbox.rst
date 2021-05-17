@@ -61,31 +61,8 @@ And finally we call sIPOPT or k_aug:
 
 .. doctest:: python
 
-
-    >>> m_sipopt = sensitivity_calculation('sipopt',m,[m.eta1,m.eta2], [m.perturbed_eta1,m.perturbed_eta2], tee=True)
-
-    Ipopt 3.13.2: run_sens=yes
-    
-    ******************************************************************************
-    This program contains Ipopt, a library for large-scale nonlinear optimization.
-     Ipopt is released as open source code under the Eclipse Public License (EPL).
-             For more information visit http://projects.coin-or.org/Ipopt
-    ******************************************************************************
-    ...
-    EXIT: Optimal Solution Found.
-
-    >>> m_kaug_dsdp = sensitivity_calculation('k_aug',m,[m.eta1,m.eta2], [m.perturbed_eta1,m.perturbed_eta2], tee=True)
-    Ipopt 3.12.13:  
-    
-    ******************************************************************************
-    This program contains Ipopt, a library for large-scale nonlinear optimization.
-     Ipopt is released as open source code under the Eclipse Public License (EPL).
-             For more information visit http://projects.coin-or.org/Ipopt
-    ******************************************************************************
-    EXIT: Optimal Solution Found.
-    W[K_AUG]...	[K_AUG_ASL]No n_rhs declared
-    ...
-    I[[DOT_SENS]]...	[MAIN]Timing..0.000143 sec.
+    >>> m_sipopt = sensitivity_calculation('sipopt',m,[m.eta1,m.eta2], [m.perturbed_eta1,m.perturbed_eta2], tee=False)
+    >>> m_kaug_dsdp = sensitivity_calculation('k_aug',m,[m.eta1,m.eta2], [m.perturbed_eta1,m.perturbed_eta2], tee=False)
 
 The first argument specify the method, either 'sipopt' or 'k_aug'. The second argument is the Pyomo model. The third argument is a list of the original parameters. The fourth argument is a list of the perturbed parameters. Both sIPOPT and k_aug model require these two lists are the same length. The ```...``` represents extra lines of output that were cut from this page for brevity.
 
@@ -193,8 +170,8 @@ The sensitivity toolbox requires either sIPOPT or k_aug to be installed and avai
 * https://github.com/dthierry/k_aug
 
 .. note:: 
-1) If you get an error that ``ipopt_sens`` cannot be found, you need to make sure sIPOPT was installed and that it is in the system path. 
-2) If you get an error that ``k_aug`` and ``dot_sens`` cannot be found, you need to make sure k_aug was installed and that it is in the system path.
+   1) If you get an error that ``ipopt_sens`` cannot be found, you need to make sure sIPOPT was installed and that it is in the system path. 
+   2) If you get an error that ``k_aug`` and ``dot_sens`` cannot be found, you need to make sure k_aug was installed and that it is in the system path.
 
 Sensitivity Toolbox Interface
 -----------------------------
