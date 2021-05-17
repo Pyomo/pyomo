@@ -112,8 +112,8 @@ def minlp_config_block(init=False):
         'the effort level for ensuring the file creation process is '
         'determistic. The default (1) sorts the index of components '
         'when transforming the model. Anything less than 1 disables '
-        'index sorting. Anything greater than 1 additionaly sorts '
-        'by component name to override declartion order.',
+        'index sorting. Anything greater than 1 additionally sorts '
+        'by component name to override declaration order.',
         None,
     )).declare_as_argument(dest='file_determinism')
 

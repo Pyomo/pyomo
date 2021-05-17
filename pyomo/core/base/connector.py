@@ -116,7 +116,7 @@ class _ConnectorData(ComponentData, NumericValue):
 
 
 @ModelComponentFactory.register(
-    "A bundle of variables that can be manipilated together.")
+    "A bundle of variables that can be manipulated together.")
 @deprecated("Use of pyomo.connectors is deprecated. "
             "Its functionality has been replaced by pyomo.network.",
             version='5.6.9')
