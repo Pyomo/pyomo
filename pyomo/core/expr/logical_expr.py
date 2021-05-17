@@ -86,20 +86,17 @@ class RangedExpression(_LinearOperatorExpression):
             state[i] = getattr(self, i)
         return state
 
-    def __nonzero__(self):
+    def __bool__(self):
         if not self.is_constant():
             raise PyomoException('Cannot convert non-constant expression '
-                                 'to bool. This error usually arises for '
+                                 'to bool. This error is usually caused by '
                                  'using an expression in a boolean context '
                                  'such as an if statement. For example, \n'
                                  '    m.x = Var()\n'
-                                 '    e = inequality(-1, m.x, 1)'
-                                 '    if e:\n'
+                                 '    if m.x <= 0:\n'
                                  '        ...\n'
                                  'would cause this exception.')
         return bool(self())
-
-    __bool__ = __nonzero__
 
     def is_relational(self):
         return True
@@ -169,15 +166,16 @@ class InequalityExpression(_LinearOperatorExpression):
         return state
 
     def __bool__(self):
-        raise PyomoException('Cannot convert non-constant expression '
-                             'to bool. This error usually arises for '
-                             'one of two reasons. One possibility is '
-                             'using an expression in a boolean context '
-                             'such as an if statement. For example, \n'
-                             '    m.x = Var()\n'
-                             '    if m.x <= 0:\n'
-                             '        ...\n'
-                             'would cause this exception.')
+        if not self.is_constant():
+            raise PyomoException('Cannot convert non-constant expression '
+                                 'to bool. This error is usually caused by '
+                                 'using an expression in a boolean context '
+                                 'such as an if statement. For example, \n'
+                                 '    m.x = Var()\n'
+                                 '    if m.x <= 0:\n'
+                                 '        ...\n'
+                                 'would cause this exception.')
+        return bool(self())
 
     def is_relational(self):
         return True
@@ -274,14 +272,13 @@ class EqualityExpression(_LinearOperatorExpression):
             return True
         if not self.is_constant():
             raise PyomoException('Cannot convert non-constant expression '
-                                 'to bool. This error usually arises for '
+                                 'to bool. This error is usually caused by '
                                  'using an expression in a boolean context '
                                  'such as an if statement. For example, \n'
                                  '    m.x = Var()\n'
-                                 '    if m.x == 0:\n'
+                                 '    if m.x <= 0:\n'
                                  '        ...\n'
                                  'would cause this exception.')
-
         return bool(self())
 
     def is_relational(self):
