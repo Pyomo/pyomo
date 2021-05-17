@@ -39,7 +39,7 @@ from pyomo.core.expr import (numvalue, numeric_expr, boolean_value,
                              logical_expr, current, symbol_map, sympy_tools, 
                              taylor_series, visitor, expr_common, expr_errors,
                              calculus)
-from pyomo.core import expr, preprocess, util, kernel
+from pyomo.core import expr, util, kernel
 
 from pyomo.core.expr.numvalue import (nonpyomo_leaf_types,
                                       PyomoObject,
@@ -114,24 +114,10 @@ from pyomo.core.base.block import (SortComponents, TraversalStrategy,
 from pyomo.core.base.PyomoModel import (global_option,
                                         Model, ConcreteModel,
                                         AbstractModel)
-from pyomo.core.base.plugin import (pyomo_callback,
-                                    IPyomoExpression, ExpressionFactory,
-                                    ExpressionRegistration, IPyomoPresolver,
-                                    IPyomoPresolveAction,
-                                    IParamRepresentation,
-                                    ParamRepresentationFactory,
-                                    IPyomoScriptPreprocess,
-                                    IPyomoScriptCreateModel,
-                                    IPyomoScriptCreateDataPortal,
-                                    IPyomoScriptModifyInstance,
-                                    IPyomoScriptPrintModel,
-                                    IPyomoScriptPrintInstance,
-                                    IPyomoScriptSaveInstance,
-                                    IPyomoScriptPrintResults,
-                                    IPyomoScriptSaveResults,
-                                    IPyomoScriptPostprocess,
-                                    Transformation,
-                                    TransformationFactory)
+from pyomo.core.base.transformation import (
+    Transformation,
+    TransformationFactory,
+)
 #
 from pyomo.core.base import util
 
@@ -142,9 +128,9 @@ from pyomo.core.base.set import (
     set_options, RealSet, IntegerSet, BooleanSet,
 )
 
-import pyomo.core.preprocess
-
 from pyomo.core.util import (prod, quicksum, sum_product, dot_product,
                              summation, sequence)
+
+import pyomo.core.preprocess
 
 from weakref import ref as weakref_ref

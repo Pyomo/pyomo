@@ -29,7 +29,6 @@ import pyomo.core.base.label
 import pyomo.core.base.logical_constraint
 import pyomo.core.base.misc
 import pyomo.core.base.param
-import pyomo.core.base.plugin
 import pyomo.core.base.range
 import pyomo.core.base.set_types
 import pyomo.core.base.set
@@ -112,24 +111,10 @@ from pyomo.core.base.PyomoModel import (global_option,
                                         ModelSolution,
                                         ModelSolutions, Model, ConcreteModel,
                                         AbstractModel)
-from pyomo.core.base.plugin import (pyomo_callback,
-                                    IPyomoExpression, ExpressionFactory,
-                                    ExpressionRegistration, IPyomoPresolver,
-                                    IPyomoPresolveAction,
-                                    IParamRepresentation,
-                                    ParamRepresentationFactory,
-                                    IPyomoScriptPreprocess,
-                                    IPyomoScriptCreateModel,
-                                    IPyomoScriptCreateDataPortal,
-                                    IPyomoScriptModifyInstance,
-                                    IPyomoScriptPrintModel,
-                                    IPyomoScriptPrintInstance,
-                                    IPyomoScriptSaveInstance,
-                                    IPyomoScriptPrintResults,
-                                    IPyomoScriptSaveResults,
-                                    IPyomoScriptPostprocess,
-                                    Transformation,
-                                    TransformationFactory)
+from pyomo.core.base.transformation import (
+    Transformation,
+    TransformationFactory,
+)
 #
 import pyomo.core.base.util
 

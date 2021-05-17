@@ -22,8 +22,6 @@ import pyutilib.workflow
 from pyomo.common import plugin
 
 
-plugin.PluginGlobals.add_env("pyomo")
-
 logger = logging.getLogger('pyomo.common')
 
 

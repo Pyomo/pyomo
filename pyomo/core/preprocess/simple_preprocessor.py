@@ -9,11 +9,12 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.plugin
-import pyomo.common
-from pyomo.core.base import IPyomoPresolveAction
+import pyomo.common._task
+from pyomo.scripting.interface import IPyomoPresolveAction
+from pyomo.repn.standard_aux import compute_standard_repn
 
 
-@pyomo.common.pyomo_api(namespace='pyomo.model')
+@pyomo.common._task.pyomo_api(namespace='pyomo.model')
 def simple_preprocessor(data, model=None):
     """
     This plugin simply applies preprocess actions in a fixed order.
@@ -21,7 +22,7 @@ def simple_preprocessor(data, model=None):
     Required:
         model:      A concrete model instance.
     """
-    pyomo.common.PyomoAPIFactory('pyomo.repn.compute_standard_repn')(data, model=model)
+    compute_standard_repn(data, model=model)
     #
     # Process the presolver actions
     #

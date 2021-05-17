@@ -14,7 +14,7 @@ from __future__ import division
 
 from pyomo.core import quicksum
 from pyomo.core.base.constraint import Constraint
-from pyomo.core.base.plugin import TransformationFactory
+from pyomo.core.base.transformation import TransformationFactory
 from pyomo.core.expr import current as EXPR
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn

@@ -16,25 +16,23 @@ from weakref import ref as weakref_ref
 import gc
 import math
 
-from pyomo.common import timing, PyomoAPIFactory
+from pyomo.common import timing
 from pyomo.common.collections import Bunch
 from pyomo.common.dependencies import pympler, pympler_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import is_debug_set
-from pyomo.common.plugin import ExtensionPoint
 from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.suffix import active_import_suffix_generator
-from pyomo.core.base.plugin import IPyomoPresolver
 from pyomo.core.base.numvalue import value
 from pyomo.core.base.block import SimpleBlock
 from pyomo.core.base.set import Set
 from pyomo.core.base.componentuid import ComponentUID
-from pyomo.core.base.plugin import TransformationFactory
+from pyomo.core.base.transformation import TransformationFactory
 from pyomo.core.base.label import CNameLabeler, CuidLabeler
 from pyomo.dataportal.DataPortal import DataPortal
 
@@ -549,8 +547,6 @@ class Model(SimpleBlock):
     until data is loaded.
     """
 
-    preprocessor_ep = ExtensionPoint(IPyomoPresolver)
-
     _Block_reserved_words = set()
 
     def __new__(cls, *args, **kwds):
@@ -577,7 +573,6 @@ class Model(SimpleBlock):
         self.statistics = Bunch()
         self.config = PyomoConfig()
         self.solutions = ModelSolutions(self)
-        self.config.preprocessor = 'pyomo.model.simple_preprocessor'
 
     def compute_statistics(self, active=True):
         """
@@ -725,12 +720,10 @@ arguments (which have been ignored):"""
         return instance
 
 
+    @deprecated("The Model.preprocess() method is deprecated and no "
+                "longer performs any actions", version='TBD')
     def preprocess(self, preprocessor=None):
-        """Apply the preprocess plugins defined by the user"""
-        with PauseGC() as pgc:
-            if preprocessor is None:
-                preprocessor = self.config.preprocessor
-            PyomoAPIFactory(preprocessor)(self.config, model=self)
+        return
 
     def load(self, arg, namespaces=[None], profile_memory=0, report_timing=None):
         """

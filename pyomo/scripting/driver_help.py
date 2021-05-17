@@ -140,11 +140,12 @@ def help_datamanagers(options):
         print(wrapper.fill(DataManagerFactory.doc(xform)))
 
 def help_api(options):
-    services = pyomo.common.PyomoAPIFactory.services()
+    from pyomo.common._task import PyomoAPIFactory
+    services = PyomoAPIFactory.services()
     #
     f = {}
     for name in services:
-        f[name] = pyomo.common.PyomoAPIFactory(name)
+        f[name] = PyomoAPIFactory(name)
     #
     ns = {}
     for name in services:
