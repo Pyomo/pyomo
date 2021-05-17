@@ -168,22 +168,20 @@ class TestSensitivityToolbox(unittest.TestCase):
 
         # verify ValueError thrown when param and perturb list are different
         # lengths
-        with self.assertRaises(ValueError) as context:
+        msg = ("Length of paramList argument does"
+                " not equal length of perturbList")
+        with self.assertRaisesRegex(ValueError, msg):
             Result = sensitivity_calculation('sipopt', m, list_one, list_two)
-        self.assertTrue("Length of paramList argument does not equal "
-                        "length of perturbList" in str(context.exception))
 
         # verify ValueError thrown when param list has an unmutable param
-        with self.assertRaises(ValueError) as context:
+        msg = ("Parameters within paramList must be mutable")
+        with self.assertRaisesRegex(ValueError, msg):
             Result = sensitivity_calculation('sipopt', m, list_four, list_one)
-        self.assertTrue("Parameters within paramList must be mutable"
-                in str(context.exception))
 
         # verify ValueError thrown when param list has an unfixed var.
-        with self.assertRaises(ValueError) as context:
+        msg = ("Specified \"parameter\" variables must be fixed")
+        with self.assertRaisesRegex(ValueError, msg) as context:
             Result = sensitivity_calculation('sipopt', m, list_three, list_one)
-        self.assertTrue("Specified \"parameter\" variables must be fixed"
-                in str(context.exception))
 
     # test feedbackController Solution when the model gets cloned
     @unittest.skipIf(not scipy_available, "scipy is required for this test")
