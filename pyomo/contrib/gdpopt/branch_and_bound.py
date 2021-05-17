@@ -58,9 +58,9 @@ def _perform_branch_and_bound(solve_data):
         # categorize the disjuncts in the disjunction
         for disjunct in disjunction.disjuncts:
             if disjunct.indicator_var.fixed:
-                if disjunct.indicator_var.value == 1:
+                if disjunct.indicator_var.value:
                     disjuncts_fixed_True.append(disjunct)
-                elif disjunct.indicator_var.value == 0:
+                elif not disjunct.indicator_var.value:
                     disjuncts_fixed_False.append(disjunct)
                 else:
                     pass  # raise error for fractional value?
@@ -74,7 +74,7 @@ def _perform_branch_and_bound(solve_data):
             if not disjuncts_fixed_True:
                 disjuncts_fixed_True = unfixed_disjuncts
                 unfixed_disjuncts = []
-                disjuncts_fixed_True[0].indicator_var.fix(1)
+                disjuncts_fixed_True[0].indicator_var.fix(True)
         elif disjuncts_fixed_True and disjunction.xor:
             assert len(disjuncts_fixed_True) == 1, "XOR (only one True) violated: %s" % disjunction.name
             disjuncts_fixed_False.extend(unfixed_disjuncts)
@@ -199,7 +199,7 @@ def _branch_on_node(node_data, node_model, solve_data):
         child_unfixed_disjuncts = child_model.GDPopt_utils.disjunction_to_unfixed_disjuncts[child_disjunction_to_branch]
         for idx, child_disjunct in enumerate(child_unfixed_disjuncts):
             if idx == disjunct_index_to_fix_True:
-                child_disjunct.indicator_var.fix(1)
+                child_disjunct.indicator_var.fix(True)
             else:
                 child_disjunct.deactivate()
         if not child_disjunction_to_branch.xor:

@@ -325,7 +325,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 2)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.on.indicator_var)
+        self.assertIs(body.linear_vars[0], m.on.binary_indicator_var)
         self.assertEqual(body.linear_coefs[0], -1)
         self.assertIs(body.linear_vars[1], m.p[1])
         self.assertEqual(body.linear_coefs[1], 1)
@@ -338,9 +338,9 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 3)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.off.indicator_var)
+        self.assertIs(body.linear_vars[0], m.off.binary_indicator_var)
         self.assertEqual(body.linear_coefs[0], 10)
-        self.assertIs(body.linear_vars[1], m.on.indicator_var)
+        self.assertIs(body.linear_vars[1], m.on.binary_indicator_var)
         self.assertEqual(body.linear_coefs[1], 10)
         self.assertIs(body.linear_vars[2], m.p[1])
         self.assertEqual(body.linear_coefs[2], -1)
@@ -353,7 +353,8 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 2)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[1], m.time1_disjuncts[0].indicator_var)
+        self.assertIs(
+            body.linear_vars[1], m.time1_disjuncts[0].binary_indicator_var)
         self.assertEqual(body.linear_coefs[1], -1)
         self.assertIs(body.linear_vars[0], m.p[1])
         self.assertEqual(body.linear_coefs[0], 1)
@@ -368,7 +369,8 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertTrue(body.is_linear())
         self.assertIs(body.linear_vars[0], m.p[1])
         self.assertEqual(body.linear_coefs[0], -1)
-        self.assertIs(body.linear_vars[1], m.time1_disjuncts[0].indicator_var)
+        self.assertIs(
+            body.linear_vars[1], m.time1_disjuncts[0].binary_indicator_var)
         self.assertEqual(body.linear_coefs[1], 10)
 
         # p[2] - p[1] <= 3*on.ind_var + 2*startup.ind_var
@@ -379,13 +381,13 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 4)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.on.indicator_var)
+        self.assertIs(body.linear_vars[0], m.on.binary_indicator_var)
         self.assertEqual(body.linear_coefs[0], 3)
         self.assertIs(body.linear_vars[1], m.p[1])
         self.assertEqual(body.linear_coefs[1], 1)
         self.assertIs(body.linear_vars[2], m.p[2])
         self.assertEqual(body.linear_coefs[2], -1)
-        self.assertIs(body.linear_vars[3], m.startup.indicator_var)
+        self.assertIs(body.linear_vars[3], m.startup.binary_indicator_var)
         self.assertEqual(body.linear_coefs[3], 2)
 
         # p[2] >= on.ind_var + startup.ind_var
@@ -396,11 +398,11 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 3)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.on.indicator_var)
+        self.assertIs(body.linear_vars[0], m.on.binary_indicator_var)
         self.assertEqual(body.linear_coefs[0], -1)
         self.assertIs(body.linear_vars[1], m.p[2])
         self.assertEqual(body.linear_coefs[1], 1)
-        self.assertIs(body.linear_vars[2], m.startup.indicator_var)
+        self.assertIs(body.linear_vars[2], m.startup.binary_indicator_var)
         self.assertEqual(body.linear_coefs[2], -1)
 
         # p[2] <= 10*on.ind_var + 2*startup.ind_var
@@ -411,11 +413,11 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 3)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.on.indicator_var)
+        self.assertIs(body.linear_vars[0], m.on.binary_indicator_var)
         self.assertEqual(body.linear_coefs[0], 10)
         self.assertIs(body.linear_vars[1], m.p[2])
         self.assertEqual(body.linear_coefs[1], -1)
-        self.assertIs(body.linear_vars[2], m.startup.indicator_var)
+        self.assertIs(body.linear_vars[2], m.startup.binary_indicator_var)
         self.assertEqual(body.linear_coefs[2], 2)
 
         # 1 <= time1_disjuncts[0].ind_var + time_1.disjuncts[1].ind_var
@@ -426,9 +428,11 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 2)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.time1_disjuncts[0].indicator_var)
+        self.assertIs(
+            body.linear_vars[0], m.time1_disjuncts[0].binary_indicator_var)
         self.assertEqual(body.linear_coefs[0], 1)
-        self.assertIs(body.linear_vars[1], m.time1_disjuncts[1].indicator_var)
+        self.assertIs(
+            body.linear_vars[1], m.time1_disjuncts[1].binary_indicator_var)
         self.assertEqual(body.linear_coefs[1], 1)
 
         # 1 >= time1_disjuncts[0].ind_var + time_1.disjuncts[1].ind_var
@@ -439,9 +443,11 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 2)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.time1_disjuncts[0].indicator_var)
+        self.assertIs(
+            body.linear_vars[0], m.time1_disjuncts[0].binary_indicator_var)
         self.assertEqual(body.linear_coefs[0], -1)
-        self.assertIs(body.linear_vars[1], m.time1_disjuncts[1].indicator_var)
+        self.assertIs(
+            body.linear_vars[1], m.time1_disjuncts[1].binary_indicator_var)
         self.assertEqual(body.linear_coefs[1], -1)
 
         # 1 <= on.ind_var + startup.ind_var + off.ind_var
@@ -452,11 +458,11 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 3)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.off.indicator_var)
+        self.assertIs(body.linear_vars[0], m.off.binary_indicator_var)
         self.assertEqual(body.linear_coefs[0], 1)
-        self.assertIs(body.linear_vars[1], m.on.indicator_var)
+        self.assertIs(body.linear_vars[1], m.on.binary_indicator_var)
         self.assertEqual(body.linear_coefs[1], 1)
-        self.assertIs(body.linear_vars[2], m.startup.indicator_var)
+        self.assertIs(body.linear_vars[2], m.startup.binary_indicator_var)
         self.assertEqual(body.linear_coefs[2], 1)
         
         # 1 >= on.ind_var + startup.ind_var + off.ind_var
@@ -467,11 +473,11 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 3)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.off.indicator_var)
+        self.assertIs(body.linear_vars[0], m.off.binary_indicator_var)
         self.assertEqual(body.linear_coefs[0], -1)
-        self.assertIs(body.linear_vars[1], m.on.indicator_var)
+        self.assertIs(body.linear_vars[1], m.on.binary_indicator_var)
         self.assertEqual(body.linear_coefs[1], -1)
-        self.assertIs(body.linear_vars[2], m.startup.indicator_var)
+        self.assertIs(body.linear_vars[2], m.startup.binary_indicator_var)
         self.assertEqual(body.linear_coefs[2], -1)
 
     def create_hull_model(self):
@@ -556,7 +562,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
         # and check that we didn't change the model
         for disj in m.component_data_objects(Disjunct):
-            self.assertIs(disj.indicator_var.domain, Binary)
+            self.assertIs(disj.binary_indicator_var.domain, Binary)
         self.assertEqual(len([o for o in m.component_data_objects(Objective)]),
                          1)
         self.assertIsInstance(m.component("obj"), Objective)
