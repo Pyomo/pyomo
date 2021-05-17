@@ -172,16 +172,6 @@ def ExpressionFactory(name=None, args=[]):
 ExpressionFactory.ep = ExtensionPoint(IPyomoExpression)
 
 
-class ModelComponentFactoryClass(Factory):
-
-    def register(self, doc=None):
-        def fn(cls):
-            return super(ModelComponentFactoryClass, self).register(cls.__name__, doc)(cls)
-        return fn
-
-ModelComponentFactory = ModelComponentFactoryClass('model component')
-
-
 class IParamRepresentation(Interface):
     pass
 

@@ -27,9 +27,8 @@ from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.fileutils import StreamIndenter
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import (
-    Component, ActiveComponentData,
+    Component, ActiveComponentData, ModelComponentFactory,
 )
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.set import GlobalSetBase, _SetDataBase

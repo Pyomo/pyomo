@@ -19,11 +19,11 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.plugin import Plugin, implements
 from pyomo.common.timing import ConstructionTimer
 
-from pyomo.core.base.component import ComponentData
+from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.numvalue import NumericValue, value
-from pyomo.core.base.plugin import ModelComponentFactory, \
+from pyomo.core.base.plugin import \
     IPyomoScriptModifyInstance, TransformationFactory
 
 logger = logging.getLogger('pyomo.core')

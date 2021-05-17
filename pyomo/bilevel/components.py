@@ -10,8 +10,7 @@
 
 __all__ = ['SubModel']
 
-from pyomo.core.base.plugin import ModelComponentFactory
-from pyomo.core.base.component import Component
+from pyomo.core.base.component import Component, ModelComponentFactory
 from pyomo.core.base.block import SimpleBlock
 from pyomo.common.deprecation import deprecated
 

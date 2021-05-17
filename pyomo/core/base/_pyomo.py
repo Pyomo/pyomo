@@ -26,11 +26,13 @@ from pyomo.core.base.plugin import (unique_component_name, Factory, implements,
                                     IPyomoScriptPrintResults,
                                     IPyomoScriptSaveResults,
                                     IPyomoScriptPostprocess,
-                                    ModelComponentFactory, Transformation,
+                                    Transformation,
                                     TransformationFactory,
-                                    ModelComponentFactoryClass,
                                     TransformationInfo, TransformationData,
                                     apply_transformation)
+
+
+from pyomo.core.base.component import ModelComponentFactory
 
 def predefined_sets():
     from pyomo.core.base.set import GlobalSets

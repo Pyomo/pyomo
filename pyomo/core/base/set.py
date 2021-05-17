@@ -22,7 +22,6 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import (
     native_types, native_numeric_types, as_numeric, value,
 )
-from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.util import (
     disable_methods, InitializerBase, Initializer, 
     CountedCallInitializer, IndexedCallInitializer,
@@ -31,7 +30,9 @@ from pyomo.core.base.range import (
     NumericRange, NonNumericRange, AnyRange, RangeProduct,
     RangeDifferenceError,
 )
-from pyomo.core.base.component import Component, ComponentData
+from pyomo.core.base.component import (
+    Component, ComponentData, ModelComponentFactory,
+)
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, normalize_index,
 )

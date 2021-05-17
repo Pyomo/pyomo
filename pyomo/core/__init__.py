@@ -68,7 +68,7 @@ from pyomo.core.base.label import (CuidLabeler,
 #
 # Components
 #
-from pyomo.core.base.component import (name, Component)
+from pyomo.core.base.component import (name, Component, ModelComponentFactory)
 from pyomo.core.base.componentuid import ComponentUID
 import pyomo.core.base.indexed_component
 from pyomo.core.base.action import BuildAction
@@ -131,7 +131,7 @@ from pyomo.core.base.plugin import (pyomo_callback,
                                     IPyomoScriptPrintResults,
                                     IPyomoScriptSaveResults,
                                     IPyomoScriptPostprocess,
-                                    ModelComponentFactory, Transformation,
+                                    Transformation,
                                     TransformationFactory)
 #
 import pyomo.core.base._pyomo
