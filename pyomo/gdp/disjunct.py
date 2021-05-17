@@ -50,8 +50,8 @@ class GDP_Error(PyomoException):
 class AutoLinkedBinaryVar(SimpleVar):
     """A binary variable implicitly linked to its equivalent Boolean variable.
 
-    Basic oprerations like setting values and fixing/unfixing this
-    variable are also automatically applied to the associated binary
+    Basic operations like setting values and fixing/unfixing this
+    variable are also automatically applied to the associated Boolean
     variable.
 
     As this class is only intended to provide a deprecation path for
@@ -78,7 +78,7 @@ class AutoLinkedBinaryVar(SimpleVar):
         # the property setter explicitly.
         SimpleVar.value.fset(self, val)
         bool_var = self.get_associated_boolean()
-        # Only update the associated boolean value if it is needed
+        # Only update the associated Boolean value if it is needed
         # to match the current (potentially fractional) binary value.
         # (This prevents infinite recursion.)
         if val is None:
@@ -115,7 +115,7 @@ class AutoLinkedBinaryVar(SimpleVar):
 
 
 class AutoLinkedBooleanVar(SimpleBooleanVar):
-    """A boolean variable implicitly linked to its equivalent binary variable.
+    """A Boolean variable implicitly linked to its equivalent binary variable.
 
     This class provides a deprecation path for GDP.  Originally,
     Disjunct indicator_var was a binary variable.  This simplified early
@@ -125,9 +125,9 @@ class AutoLinkedBooleanVar(SimpleBooleanVar):
     part of the transition, indicator_var attributes are instances of
     AutoLinkedBooleanVar, which allow the indicator_var to be used in
     logical expressions, but also implicitly converted (with deprecation
-    warning) into their equivalent binary varriable.
+    warning) into their equivalent binary variable.
 
-    Basic oprerations like setting values and fixing/unfixing this
+    Basic operations like setting values and fixing/unfixing this
     variable are also automatically applied to the associated binary
     variable.
 
