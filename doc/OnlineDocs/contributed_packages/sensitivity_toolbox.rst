@@ -74,7 +74,7 @@ And finally we call sIPOPT or k_aug:
     ...
     EXIT: Optimal Solution Found.
 
-    >>> m_kaug_dsdp = sensitivity_calculation('kaug',m,[m.eta1,m.eta2], [m.perturbed_eta1,m.perturbed_eta2], tee=True)
+    >>> m_kaug_dsdp = sensitivity_calculation('k_aug',m,[m.eta1,m.eta2], [m.perturbed_eta1,m.perturbed_eta2], tee=True)
     Ipopt 3.12.13:  
     
     ******************************************************************************
