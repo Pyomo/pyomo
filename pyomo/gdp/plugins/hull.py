@@ -29,7 +29,7 @@ from pyomo.gdp.util import ( _warn_for_active_logical_constraint,
                              is_child_of, get_src_disjunction,
                              get_src_constraint, get_transformed_constraints,
                              get_src_disjunct, _warn_for_active_disjunction,
-                             _warn_for_active_disjunct, )
+                             _warn_for_active_disjunct, preprocess_targets)
 from functools import wraps
 from weakref import ref as weakref_ref
 
@@ -230,6 +230,12 @@ class Hull_Reformulation(Transformation):
             NAME_BUFFER.clear()
 
     def _apply_to_impl(self, instance, **kwds):
+        if not instance.ctype in (Block, Disjunct):
+            raise GDP_Error("Transformation called on %s of type %s. 'instance' "
+                            "must be a ConcreteModel, Block, or Disjunct (in "
+                            "the case of nested disjunctions)." %
+                            (instance.name, instance.ctype))
+
         self._config = self.CONFIG(kwds.pop('options', {}))
         self._config.set_value(kwds)
         self._generate_debug_messages = is_debug_set(logger)
@@ -237,6 +243,11 @@ class Hull_Reformulation(Transformation):
         targets = self._config.targets
         if targets is None:
             targets = ( instance, )
+        else:
+            # we need to preprocess targets to make sure that if there are any
+            # disjunctions in targets that their disjuncts appear before them in
+            # the list.
+            targets = preprocess_targets(targets)
         knownBlocks = {}
         for t in targets:
             # check that t is in fact a child of instance

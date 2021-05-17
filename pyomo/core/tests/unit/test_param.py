@@ -34,6 +34,7 @@ from pyomo.environ import (Set, RangeSet, Param, ConcreteModel,
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base.param import _ParamData 
+from pyomo.core.base.units_container import units, pint_available, UnitsError
 
 from io import StringIO
 
@@ -1379,6 +1380,30 @@ q : Size=3, Index=Any, Domain=Any, Default=None, Mutable=True
             "domain of this Param (p) to be 'Any'",
             log.getvalue())
         self.assertEqual(value(m.p), 'a')
+
+    @unittest.skipUnless(pint_available, "units test requires pint module")
+    def test_set_value_units(self):
+        m = ConcreteModel()
+        m.p = Param(units=units.g)
+        m.p = 5
+        self.assertEqual(value(m.p), 5)
+        m.p = 6*units.g
+        self.assertEqual(value(m.p), 6)
+        m.p = 7*units.kg
+        self.assertEqual(value(m.p), 7000)
+        with self.assertRaises(UnitsError):
+            m.p = 1*units.s
+
+        out = StringIO()
+        m.pprint(ostream=out)
+        self.assertEqual(out.getvalue().strip(), """
+1 Param Declarations
+    p : Size=1, Index=None, Domain=Any, Default=None, Mutable=True, Units=g
+        Key  : Value
+        None : 7000.0
+
+1 Declarations: p
+        """.strip())
 
 
 def createNonIndexedParamMethod(func, init_xy, new_xy, tol=1e-10):
