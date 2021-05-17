@@ -24,7 +24,7 @@ We will start with a motivating example:
 
 Here :math:`x_1`, :math:`x_2`, and :math:`x_3` are the decision variables while :math:`p_1` and :math:`p_2` are parameters. At first, let's consider :math:`p_1 = 4.5` and :math:`p_2 = 1.0`. Below is the model implemented in Pyomo.
 
-.. code:: python
+.. doctest:: python
 
     # Import Pyomo and sipopt from the sensitivity toolbox
     >>> from pyomo.environ import *
@@ -52,14 +52,14 @@ The solution of this optimization problem is :math:`x_1^* = 0.5`, :math:`x_2^* =
 
 Next we define the perturbed parameter values :math:`\hat{p}_1` and :math:`\hat{p}_2`:
 
-.. code:: python
+.. doctest:: python
 
     >>> m.perturbed_eta1 = Param(initialize = 4.0)
     >>> m.perturbed_eta2 = Param(initialize = 1.0)
 
 And finally we call sIPOPT or k_aug:
 
-.. code:: python
+.. doctest:: python
 
 
     >>> m_sipopt = sensitivity_calculation('sipopt',m,[m.eta1,m.eta2], [m.perturbed_eta1,m.perturbed_eta2], tee=True)
@@ -91,7 +91,7 @@ The first argument specify the method, either 'sipopt' or 'k_aug'. The second ar
 
 First, we can inspect the initial point:
 
-.. code:: python    
+.. doctest:: python    
 
     >>> print("eta1 = %0.3f" % m.eta1())
     eta1 = 4.500
@@ -114,7 +114,7 @@ First, we can inspect the initial point:
 
 Next, we inspect the solution :math:`x_1^*`, :math:`x_2^*`, and :math:`x_3^*`:
 
-.. code:: python
+.. doctest:: python
 
     # Solution with the original parameter values:
     >>> print("Objective = %0.3f" % m_sipopt.cost())
@@ -131,7 +131,7 @@ Next, we inspect the solution :math:`x_1^*`, :math:`x_2^*`, and :math:`x_3^*`:
 
 Note that k_aug does not save solution with the original parameter values. Finally, we inspect the approximate solution :math:`\hat{x}_1^*`, :math:`\hat{x}_2^*`, and :math:`\hat{x}_3^*`:
 
-.. code:: python
+.. doctest:: python
     
     # *sIPOPT*
     # New parameter values:
