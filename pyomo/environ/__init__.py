@@ -47,6 +47,7 @@ _packages = [
 # packages are optional and/or under development.
 #
 _optional_packages = {
+    'pyomo.contrib.ampl_function_demo',
     'pyomo.contrib.appsi',
     'pyomo.contrib.example',
     'pyomo.contrib.fme',
@@ -58,7 +59,6 @@ _optional_packages = {
     'pyomo.contrib.multistart',
     'pyomo.contrib.petsc',
     'pyomo.contrib.preprocessing',
-    'pyomo.contrib.ampl_function_demo',
     'pyomo.contrib.pynumero',
     'pyomo.contrib.trustregion',
     'pyomo.contrib.community_detection',

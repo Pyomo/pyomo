@@ -65,6 +65,33 @@ class TestPythonCallbackFunction(unittest.TestCase):
         with self.assertRaises(ValueError):
             m.f = ExternalFunction(_g, this_should_raise_error='foo')
 
+    def test_pprint(self):
+        m = ConcreteModel()
+        m.h = ExternalFunction(_g)
+        out = StringIO()
+        m.pprint()
+        m.pprint(ostream=out)
+        self.assertEqual(out.getvalue().strip(), """
+1 ExternalFunction Declarations
+    h : function=_g, units=None, arg_units=None
+
+1 Declarations: h
+        """.strip())
+
+        if not pint_available:
+            return
+        m.i = ExternalFunction(function=_h,
+                               units=units.kg, arg_units=[units.m, units.s])
+        out = StringIO()
+        m.pprint(ostream=out)
+        self.assertEqual(out.getvalue().strip(), """
+2 ExternalFunction Declarations
+    h : function=_g, units=None, arg_units=None
+    i : function=_h, units=kg, arg_units=['m', 's']
+
+2 Declarations: h i
+        """.strip())
+
 
 class TestAMPLExternalFunction(unittest.TestCase):
     def assertListsAlmostEqual(self, first, second, places=7, msg=None):
