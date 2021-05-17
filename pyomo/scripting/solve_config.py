@@ -9,11 +9,9 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.config import ConfigBlock, ConfigList, ConfigValue
-from pyomo.opt.base.problem import ProblemConfigFactory, BaseProblemConfig
 
 
-@ProblemConfigFactory.register('default')
-class Default_Config(BaseProblemConfig):
+class Default_Config(object):
 
     def config_block(self, init=False):
         config, blocks = minlp_config_block(init=init)
@@ -246,7 +244,7 @@ def minlp_config_block(init=False):
 
 
 def default_config_block(solver, init=False):
-    config, blocks = ProblemConfigFactory('default').config_block(init)
+    config, blocks = Default_Config().config_block(init)
 
     #
     # Solver

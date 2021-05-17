@@ -773,4 +773,5 @@ class OptSolver(object):
             self._callback[name] = callback_fn
 
     def config_block(self, init=False):
-        return ConfigDict()
+        from pyomo.scripting.solve_config import default_config_block
+        return default_config_block(self, init)[0]
