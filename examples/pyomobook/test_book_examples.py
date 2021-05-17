@@ -115,6 +115,7 @@ package_dependencies =  {
     # gdp_ch
     'test_gdp_ch_pyomo_scont': ['yaml'],
     'test_gdp_ch_pyomo_scont2': ['yaml'],
+    'test_gdp_ch_pyomo_gdp_uc': ['sympy'],
 
     # overview_ch'
     'test_overview_ch_wl_excel': ['pandas', 'xlrd'],
