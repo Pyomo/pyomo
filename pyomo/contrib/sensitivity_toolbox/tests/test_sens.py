@@ -784,24 +784,6 @@ class TestSensitivityToolbox(unittest.TestCase):
         except OSError:
             pass
 
-
-    # test Constraint substitution 
-    # Constraint substitution should be performed regardless of whether k_aug
-    # is used. k_aug should have some internal check for inequality constraints
-    # if it does not support them.
-#    @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
-#    @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")
-#    def test_constraintSub_kaug(self):
-#        m = ri.create_model()
-#
-#        m.pert_a = Param(initialize=0.01)
-#        m.pert_b = Param(initialize=1.01)
-#
-#        with self.assertRaises(Exception) as context:
-#            m_kaug = sensitivity_calculation('k_aug',m,[m.a,m.b], [m.pert_a,m.pert_b])
-#        self.assertTrue('kaug does not support inequality constraints.'
-#                in str(context.exception))
-
     # Test example `parameter_kaug.py`
     @unittest.skipIf(not opt_kaug.available(False), "k_aug is not available")
     @unittest.skipIf(not opt_dotsens.available(False), "dot_sens is not available")    
