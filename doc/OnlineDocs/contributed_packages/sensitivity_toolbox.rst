@@ -185,7 +185,7 @@ Note that k_aug does not save solution with the original parameter values. Final
 Installing sIPOPT and k_aug
 ---------------------------
 
-The sensitivity toolbox requires either sIPOPT or k_aug is installed and available in your system PATH. See the IPOPT and k_aug documentations for detailed instructions:
+The sensitivity toolbox requires either sIPOPT or k_aug to be installed and available in your system PATH. See the IPOPT and k_aug documentation for detailed instructions:
 
 * https://coin-or.github.io/Ipopt/INSTALL.html
 * https://projects.coin-or.org/Ipopt/wiki/sIpopt
