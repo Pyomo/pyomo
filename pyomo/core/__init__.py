@@ -131,6 +131,4 @@ from pyomo.core.base.set import (
 from pyomo.core.util import (prod, quicksum, sum_product, dot_product,
                              summation, sequence)
 
-import pyomo.core.preprocess
-
 from weakref import ref as weakref_ref
