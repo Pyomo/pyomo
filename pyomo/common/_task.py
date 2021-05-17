@@ -377,5 +377,3 @@ def parse_docstring(fn):
         retval['long_doc'] = ''
     return retval
 
-
-plugin.PluginGlobals.pop_env()
