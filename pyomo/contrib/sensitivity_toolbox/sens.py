@@ -138,18 +138,8 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
     
     Returns
     -------
-    model: ConcreteModel
-        if method == 'sipopt', 
-        the model modified for use with sipopt.  The returned model has
-        three :class:`Suffix` members defined:
-        - ``model.sol_state_1``: the approximated results at the
-          perturbation point
-        - ``model.sol_state_1_z_L``: the updated lower bound
-        - ``model.sol_state_1_z_U``: the updated upper bound
-        
-        if method == 'k_aug', 
-        the model modified for use with k_aug. The model includes 
-        approximate solution with the new parameter values.    
+    The model that was manipulated by the sensitivity interface
+
     """
     
     sens = SensitivityInterface(instance, clone_model=cloneModel)
