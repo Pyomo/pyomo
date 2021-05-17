@@ -30,6 +30,10 @@ Here :math:`x_1`, :math:`x_2`, and :math:`x_3` are the decision variables while 
     >>> from pyomo.environ import *
     >>> from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation
 
+    >>> sipopt_available = SolverFactory("ipopt_sens", validate=False).available()
+    >>> k_aug_available = SolverFactory("k_aug", validate=False).available()
+    >>> dot_sens_available = SolverFactory("dot_sens", validate=False).available()
+
     # Create a concrete model
     >>> m = ConcreteModel()
 
@@ -60,6 +64,7 @@ Next we define the perturbed parameter values :math:`\hat{p}_1` and :math:`\hat{
 And finally we call sIPOPT or k_aug:
 
 .. doctest:: python
+    :skipif: not sipopt_available or not k_aug_available or not dot_sens_available
 
     >>> m_sipopt = sensitivity_calculation('sipopt',m,[m.eta1,m.eta2], [m.perturbed_eta1,m.perturbed_eta2], tee=False)
     >>> m_kaug_dsdp = sensitivity_calculation('k_aug',m,[m.eta1,m.eta2], [m.perturbed_eta1,m.perturbed_eta2], tee=False)
@@ -69,6 +74,7 @@ The first argument specify the method, either 'sipopt' or 'k_aug'. The second ar
 First, we can inspect the initial point:
 
 .. doctest:: python    
+    :skipif: not sipopt_available or not k_aug_available or not dot_sens_available
 
     >>> print("eta1 = %0.3f" % m.eta1())
     eta1 = 4.500
@@ -92,6 +98,7 @@ First, we can inspect the initial point:
 Next, we inspect the solution :math:`x_1^*`, :math:`x_2^*`, and :math:`x_3^*`:
 
 .. doctest:: python
+    :skipif: not sipopt_available or not k_aug_available or not dot_sens_available
 
     # Solution with the original parameter values:
     >>> print("Objective = %0.3f" % m_sipopt.cost())
@@ -109,6 +116,7 @@ Next, we inspect the solution :math:`x_1^*`, :math:`x_2^*`, and :math:`x_3^*`:
 Note that k_aug does not save solution with the original parameter values. Finally, we inspect the approximate solution :math:`\hat{x}_1^*`, :math:`\hat{x}_2^*`, and :math:`\hat{x}_3^*`:
 
 .. doctest:: python
+    :skipif: not sipopt_available or not k_aug_available or not dot_sens_available
     
     # *sIPOPT*
     # New parameter values:
