@@ -15,7 +15,7 @@ from .numeric_expr import (LinearExpression, MonomialTermExpression, SumExpressi
                            NPV_ProductExpression, NPV_DivisionExpression, NPV_ReciprocalExpression,
                            NPV_PowExpression, NPV_SumExpression, NPV_NegationExpression,
                            NPV_UnaryFunctionExpression, NPV_ExternalFunctionExpression, Expr_ifExpression,
-                           AbsExpression, NPV_AbsExpression)
+                           AbsExpression, NPV_AbsExpression, NumericValue)
 from pyomo.core.expr.logical_expr import RangedExpression, InequalityExpression, EqualityExpression
 from typing import List
 from pyomo.common.errors import PyomoException
@@ -110,11 +110,70 @@ class PrefixVisitor(StreamBasedExpressionVisitor):
 
 
 def convert_expression_to_prefix_notation(expr):
+    """
+    This function converts pyomo expressions to a list that looks very
+    much like prefix notation.  The result can be used in equality
+    comparisons to compare expression trees.
+
+    Note that the data structure returned by this function might be
+    changed in the future. However, we will maintain that the result
+    can be used in equality comparisons.
+
+    Also note that the result should really only be used in equality
+    comparisons if the equality comparison is expected to return
+    True. If the expressions being compared are expected to be
+    different, then the equality comparison will often result in an
+    error rather than returning False.
+
+    m = ConcreteModel()
+    m.x = Var()
+    m.y = Var()
+
+    e1 = m.x * m.y
+    e2 = m.x * m.y
+    e3 = m.x + m.y
+
+    convert_expression_to_prefix_notation(e1) == convert_expression_to_prefix_notation(e2)  # True
+    convert_expression_to_prefix_notation(e1) == convert_expression_to_prefix_notation(e3)  # Error
+
+    However, the compare_expressions function can be used:
+
+    compare_expressions(e1, e2)  # True
+    compare_expressions(e1, e3)  # False
+
+    Parameters
+    ----------
+    expr: NumericValue
+        A Pyomo expression, Var, or Param
+
+    Returns
+    -------
+    prefix_notation: list
+        The expression in prefix notation
+
+    """
     visitor = PrefixVisitor()
     return visitor.walk_expression(expr)
 
 
 def compare_expressions(expr1, expr2):
+    """
+    Returns True if 2 expression trees are identical. Returns False
+    otherwise.
+    
+    Parameters
+    ----------
+    expr1: NumericValue
+        A Pyomo Var, Param, or expression
+    expr2: NumericValue
+        A PYomo Var, Param, or expression
+
+    Returns
+    -------
+    res: bool
+        A bool indicating whether or not the expressions are identical.
+
+    """
     pn1 = convert_expression_to_prefix_notation(expr1)
     pn2 = convert_expression_to_prefix_notation(expr2)
     try:
