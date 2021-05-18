@@ -15,7 +15,7 @@ import math
 import sys
 import weakref
 
-from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedClass
 from pyomo.common.errors import DeveloperError, PyomoException
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
@@ -440,7 +440,7 @@ class _NotFound(object):
 
 
 # A trivial class that we can use to test if an object is a "legitimate"
-# set (either SimpleSet, or a member of an IndexedSet)
+# set (either ScalarSet, or a member of an IndexedSet)
 class _SetDataBase(ComponentData):
     """The base for all objects that can be used as a component indexing set.
     """
@@ -1878,11 +1878,11 @@ class Set(IndexedComponent):
                     ))))
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
             if ordered is Set.InsertionOrder:
-                return super(Set, cls).__new__(AbstractOrderedSimpleSet)
+                return super(Set, cls).__new__(AbstractOrderedScalarSet)
             elif ordered is Set.SortedOrder:
-                return super(Set, cls).__new__(AbstractSortedSimpleSet)
+                return super(Set, cls).__new__(AbstractSortedScalarSet)
             else:
-                return super(Set, cls).__new__(AbstractFiniteSimpleSet)
+                return super(Set, cls).__new__(AbstractFiniteScalarSet)
         else:
             newObj = super(Set, cls).__new__(IndexedSet)
             if ordered is Set.InsertionOrder:
@@ -2201,12 +2201,18 @@ class IndexedSet(Set):
         return {k: v.data() for k,v in self.items()}
 
 
-class FiniteSimpleSet(_FiniteSetData, Set):
+class FiniteScalarSet(_FiniteSetData, Set):
     def __init__(self, **kwds):
         _FiniteSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
 
-class OrderedSimpleSet(_InsertionOrderSetData, Set):
+
+class FiniteSimpleSet(metaclass=RenamedClass):
+    __renamed__new_class__ = FiniteScalarSet
+    __renamed__version__ = 'TBD'
+
+
+class OrderedScalarSet(_InsertionOrderSetData, Set):
     def __init__(self, **kwds):
         # In case someone inherits from us, we will provide a rational
         # default for the "ordered" flag
@@ -2215,7 +2221,13 @@ class OrderedSimpleSet(_InsertionOrderSetData, Set):
         _InsertionOrderSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
 
-class SortedSimpleSet(_SortedSetData, Set):
+
+class OrderedSimpleSet(metaclass=RenamedClass):
+    __renamed__new_class__ = OrderedScalarSet
+    __renamed__version__ = 'TBD'
+
+
+class SortedScalarSet(_SortedSetData, Set):
     def __init__(self, **kwds):
         # In case someone inherits from us, we will provide a rational
         # default for the "ordered" flag
@@ -2224,17 +2236,40 @@ class SortedSimpleSet(_SortedSetData, Set):
         _SortedSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
 
+
+class SortedSimpleSet(metaclass=RenamedClass):
+    __renamed__new_class__ = SortedScalarSet
+    __renamed__version__ = 'TBD'
+
+
 @disable_methods(_FINITESET_API + _SETDATA_API)
-class AbstractFiniteSimpleSet(FiniteSimpleSet):
+class AbstractFiniteScalarSet(FiniteScalarSet):
     pass
 
-@disable_methods(_ORDEREDSET_API + _SETDATA_API)
-class AbstractOrderedSimpleSet(OrderedSimpleSet):
-    pass
+
+class AbstractFiniteSimpleSet(metaclass=RenamedClass):
+    __renamed__new_class__ = AbstractFiniteScalarSet
+    __renamed__version__ = 'TBD'
+
 
 @disable_methods(_ORDEREDSET_API + _SETDATA_API)
-class AbstractSortedSimpleSet(SortedSimpleSet):
+class AbstractOrderedScalarSet(OrderedScalarSet):
     pass
+
+
+class AbstractOrderedSimpleSet(metaclass=RenamedClass):
+    __renamed__new_class__ = AbstractOrderedScalarSet
+    __renamed__version__ = 'TBD'
+
+
+@disable_methods(_ORDEREDSET_API + _SETDATA_API)
+class AbstractSortedScalarSet(SortedScalarSet):
+    pass
+
+
+class AbstractSortedSimpleSet(metaclass=RenamedClass):
+    __renamed__new_class__ = AbstractSortedScalarSet
+    __renamed__version__ = 'TBD'
 
 
 ############################################################################
@@ -2634,9 +2669,9 @@ class RangeSet(Component):
                 finite = True
 
         if finite:
-            return super(RangeSet, cls).__new__(AbstractFiniteSimpleRangeSet)
+            return super(RangeSet, cls).__new__(AbstractFiniteScalarRangeSet)
         else:
-            return super(RangeSet, cls).__new__(AbstractInfiniteSimpleRangeSet)
+            return super(RangeSet, cls).__new__(AbstractInfiniteScalarRangeSet)
 
 
     def __init__(self, *args, **kwds):
@@ -2889,7 +2924,7 @@ class RangeSet(Component):
             ])
 
 
-class InfiniteSimpleRangeSet(_InfiniteRangeSetData, RangeSet):
+class InfiniteScalarRangeSet(_InfiniteRangeSetData, RangeSet):
     def __init__(self, *args, **kwds):
         _InfiniteRangeSetData.__init__(self, component=self)
         RangeSet.__init__(self, *args, **kwds)
@@ -2897,7 +2932,13 @@ class InfiniteSimpleRangeSet(_InfiniteRangeSetData, RangeSet):
     # We want the RangeSet.__str__ to override the one in _FiniteSetMixin
     __str__ = RangeSet.__str__
 
-class FiniteSimpleRangeSet(_FiniteRangeSetData, RangeSet):
+
+class InfiniteSimpleRangeSet(metaclass=RenamedClass):
+    __renamed__new_class__ = InfiniteScalarRangeSet
+    __renamed__version__ = 'TBD'
+
+
+class FiniteScalarRangeSet(_FiniteRangeSetData, RangeSet):
     def __init__(self, *args, **kwds):
         _FiniteRangeSetData.__init__(self, component=self)
         RangeSet.__init__(self, *args, **kwds)
@@ -2906,14 +2947,29 @@ class FiniteSimpleRangeSet(_FiniteRangeSetData, RangeSet):
     __str__ = RangeSet.__str__
 
 
+class FiniteSimpleRangeSet(metaclass=RenamedClass):
+    __renamed__new_class__ = FiniteScalarRangeSet
+    __renamed__version__ = 'TBD'
+
+
 @disable_methods(_SET_API)
-class AbstractInfiniteSimpleRangeSet(InfiniteSimpleRangeSet):
+class AbstractInfiniteScalarRangeSet(InfiniteScalarRangeSet):
     pass
+
+
+class AbstractInfiniteSimpleRangeSet(metaclass=RenamedClass):
+    __renamed__new_class__ = AbstractInfiniteScalarRangeSet
+    __renamed__version__ = 'TBD'
+
 
 @disable_methods(_ORDEREDSET_API)
-class AbstractFiniteSimpleRangeSet(FiniteSimpleRangeSet):
+class AbstractFiniteScalarRangeSet(FiniteScalarRangeSet):
     pass
 
+
+class AbstractFiniteSimpleRangeSet(metaclass=RenamedClass):
+    __renamed__new_class__ = AbstractFiniteScalarRangeSet
+    __renamed__version__ = 'TBD'
 
 ############################################################################
 # Set Operators

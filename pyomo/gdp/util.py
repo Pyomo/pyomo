@@ -80,7 +80,22 @@ def clone_without_expression_components(expr, substitute=None):
                                                 remove_named_expressions=True)
     return visitor.dfs_postorder_stack(expr)
 
-
+def preprocess_targets(targets):
+    preprocessed_targets = []
+    for t in targets:
+        if t.ctype is Disjunction:
+            if t.is_indexed():
+                for disjunction in t.values():
+                    for disj in disjunction.disjuncts:
+                        preprocessed_targets.append(disj)
+            else:
+                for disj in t.disjuncts:
+                    preprocessed_targets.append(disj)
+        # now we are safe to put the disjunction, and if the target was
+        # anything else, then we don't need to worry because disjuncts
+        # are declared before disjunctions they appear in
+        preprocessed_targets.append(t)
+    return preprocessed_targets
 
 def target_list(x):
     if isinstance(x, _ComponentBase):
@@ -378,7 +393,7 @@ def check_model_algebraic(instance):
 def _disjunct_not_fixed_true(disjunct):
     # Return true if the disjunct indicator variable is not fixed to True
     return not (disjunct.indicator_var.fixed and
-                disjunct.indicator_var.value == 1)
+                disjunct.indicator_var.value)
 
 def _disjunct_on_active_block(disjunct):
     # Check first to make sure that the disjunct is not a descendent of an
@@ -391,7 +406,7 @@ def _disjunct_on_active_block(disjunct):
             return False
         # properly deactivated Disjunct
         elif (parent_block.ctype is Disjunct and not parent_block.active
-              and parent_block.indicator_var.value == 0
+              and parent_block.indicator_var.value == False
               and parent_block.indicator_var.fixed):
             return False
         else:

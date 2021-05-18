@@ -180,7 +180,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
         self._associated_binary = None
 
     def __getstate__(self):
-        state = super(_GeneralBooleanVarData, self).__getstate__()
+        state = super().__getstate__()
         for i in _GeneralBooleanVarData.__slots__:
             state[i] = getattr(self, i)
         if self._associated_binary is not None:
@@ -193,18 +193,9 @@ class _GeneralBooleanVarData(_BooleanVarData):
         Note: adapted from class ComponentData in pyomo.core.base.component
 
         """
-        if state['_associated_binary'] is not None and type(state['_associated_binary']) is not weakref_ref:
-            state['_associated_binary'] = weakref_ref(state['_associated_binary'])
-
-        _base = super(_GeneralBooleanVarData, self)
-        if hasattr(_base, '__setstate__'):
-            _base.__setstate__(state)
-        else:
-            for key, val in state.items():
-                # Note: per the Python data model docs, we explicitly
-                # set the attribute using object.__setattr__() instead
-                # of setting self.__dict__[key] = val.
-                object.__setattr__(self, key, val)
+        super().__setstate__(state)
+        if self._associated_binary is not None:
+            self._associated_binary = weakref_ref(self._associated_binary)
 
     #
     # Abstract Interface
@@ -219,6 +210,10 @@ class _GeneralBooleanVarData(_BooleanVarData):
     @value.setter
     def value(self, val):
         """Set the value for this variable."""
+        if type(val) not in {bool, type(None)}:
+            logger.warning("implicitly casting '%s' value %s to bool"
+                           % (self.name, val))
+            val = bool(val)
         self._value = val
 
     @property
@@ -249,7 +244,16 @@ class _GeneralBooleanVarData(_BooleanVarData):
 
     def associate_binary_var(self, binary_var):
         """Associate a binary _VarData to this _GeneralBooleanVarData"""
-        self._associated_binary = weakref_ref(binary_var) if binary_var is not None else None
+        if self._associated_binary is not None:
+            raise RuntimeError(
+                "Reassociating BooleanVar '%s' (currently associated "
+                "with '%s') with '%s' is not allowed" % (
+                    self.name,
+                    self._associated_binary.name
+                    if self._associated_binary is not None else None,
+                    binary_var.name if binary_var is not None else None))
+        if binary_var is not None:
+            self._associated_binary = weakref_ref(binary_var)
 
 
 @ModelComponentFactory.register("Logical decision variables.")

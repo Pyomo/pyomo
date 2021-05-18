@@ -18,7 +18,9 @@ from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base.numvalue import NumericValue, value, is_fixed
+from pyomo.core.base.numvalue import (
+    NumericValue, value, is_fixed, native_numeric_types,
+)
 from pyomo.core.base.set_types import Reals, Binary
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import ComponentData
@@ -175,9 +177,24 @@ class _VarData(ComponentData, NumericValue):
         validating its value. If the 'valid' flag is True,
         then the validation step is skipped.
         """
-        if valid or self._valid_value(val):
-            self.value = val
-            self.stale = False
+        if not valid and val is not None:
+            # TODO: warn/error: check if this Var has units: assigning
+            # a dimensionless value to a united variable should be an error
+            if type(val) not in native_numeric_types:
+                if self.parent_component()._units is not None:
+                    _src_magnitude = value(val)
+                    _src_units = units.get_units(val)
+                    val = units.convert_value(
+                        num_value=_src_magnitude, from_units=_src_units,
+                        to_units=self.parent_component()._units)
+
+            if val not in self.domain:
+                raise ValueError("Numeric value `%s` (%s) is not in "
+                                 "domain %s for Var %s" %
+                                 (val, type(val), self.domain, self.name))
+                
+        self.value = val
+        self.stale = False
 
     def _valid_value(self, val, use_exception=True):
         """
@@ -373,6 +390,16 @@ class _GeneralVarData(_VarData):
     @value.setter
     def value(self, val):
         """Set the value for this variable."""
+        if type(val) in native_numeric_types:
+            # TODO: warn/error: check if this Var has units: assigning
+            # a dimensionless value to a united variable should be an error
+            pass
+        elif val is not None and self.parent_component()._units is not None:
+            _src_magnitude = value(val)
+            _src_units = units.get_units(val)
+            val = units.convert_value(
+                num_value=_src_magnitude, from_units=_src_units,
+                to_units=self.parent_component()._units)
         self._value = val
 
     @property
@@ -435,13 +462,24 @@ class _GeneralVarData(_VarData):
         the value is fixed (or None).
         """
         # Note: is_fixed(None) returns True
-        if is_fixed(val):
-            self._lb = val
-        else:
+        if not is_fixed(val):
             raise ValueError(
                 "Non-fixed input of type '%s' supplied as variable lower "
                 "bound - legal types must be fixed expressions or variables."
                 % (type(val),))
+        if type(val) in native_numeric_types or val is None:
+            # TODO: warn/error: check if this Var has units: assigning
+            # a dimensionless value to a united variable should be an error
+            pass
+        else:
+            if self.parent_component()._units is not None:
+                _src_magnitude = value(val)
+                _src_units = units.get_units(val)
+                val = units.convert_value(
+                    num_value=_src_magnitude, from_units=_src_units,
+                    to_units=self.parent_component()._units)
+        self._lb = val
+
 
     def setub(self, val):
         """
@@ -449,14 +487,24 @@ class _GeneralVarData(_VarData):
         the value is fixed (or None).
         """
         # Note: is_fixed(None) returns True
-        if is_fixed(val):
-            self._ub = val
-        else:
+        if not is_fixed(val):
             raise ValueError(
                 "Non-fixed input of type '%s' supplied as variable upper "
                 "bound - legal types are fixed expressions or variables."
                 "parameters"
                 % (type(val),))
+        if type(val) in native_numeric_types or val is None:
+            # TODO: warn/error: check if this Var has units: assigning
+            # a dimensionless value to a united variable should be an error
+            pass
+        else:
+            if self.parent_component()._units is not None:
+                _src_magnitude = value(val)
+                _src_units = units.get_units(val)
+                val = units.convert_value(
+                    num_value=_src_magnitude, from_units=_src_units,
+                    to_units=self.parent_component()._units)
+        self._ub = val
 
     def fix(self, value=NoArgumentGiven):
         """
@@ -771,9 +819,13 @@ class Var(IndexedComponent):
 
     def _pprint(self):
         """Print component information."""
-        return ( [("Size", len(self)),
-                  ("Index", self._index if self.is_indexed() else None),
-                  ],
+        headers = [
+            ("Size", len(self)),
+            ("Index", self._index if self.is_indexed() else None),
+        ]
+        if self._units is not None:
+            headers.append(('Units', str(self._units)))
+        return ( headers,
                  self._data.items(),
                  ( "Lower","Value","Upper","Fixed","Stale","Domain"),
                  lambda k, v: [ value(v.lb),

@@ -314,7 +314,7 @@ def build_ordered_component_lists(model, solve_data):
     # active algebraic constraints. For now, they need to be added to the
     # variable set.
     for disj in getattr(util_blk, 'disjunct_list'):
-        var_set.add(disj.indicator_var)
+        var_set.add(disj.binary_indicator_var)
 
     # We use component_data_objects rather than list(var_set) in order to
     # preserve a deterministic ordering.
@@ -395,7 +395,8 @@ def constraints_in_True_disjuncts(model, config):
             if disj in observed_disjuncts:
                 continue
             observed_disjuncts.add(disj)
-            if fabs(disj.indicator_var.value - 1) <= config.integer_tolerance:
+            if fabs(disj.binary_indicator_var.value - 1) \
+               <= config.integer_tolerance:
                 for constr in disj.component_data_objects(Constraint):
                     yield constr
 
