@@ -1,0 +1,17 @@
+# An empty set
+set A := ;
+
+# A set of numbers
+set A := 1 2 3;
+
+# A set of strings
+set B := north south east west;
+
+# A set of mixed types
+set C :=
+0
+-1.0e+10
+'foo bar'
+infinity
+"100"
+;

@@ -1383,6 +1383,8 @@ class MiscVarTests(unittest.TestCase):
         self.assertEqual(value(m.x), 5)
         m.x = 6*units.g
         self.assertEqual(value(m.x), 6)
+        m.x = None
+        self.assertIsNone(m.x.value, None)
         m.x = 7*units.kg
         self.assertEqual(value(m.x), 7000)
         with self.assertRaises(UnitsError):

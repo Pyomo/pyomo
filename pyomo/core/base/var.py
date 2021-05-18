@@ -391,7 +391,7 @@ class _GeneralVarData(_VarData):
             # TODO: warn/error: check if this Var has units: assigning
             # a dimensionless value to a united variable should be an error
             pass
-        elif self.parent_component()._units is not None:
+        elif val is not None and self.parent_component()._units is not None:
             _src_magnitude = value(val)
             _src_units = units.get_units(val)
             val = units.convert_value(

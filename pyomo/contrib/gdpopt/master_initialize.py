@@ -70,7 +70,7 @@ def init_custom_disjuncts(solve_data, config):
                 linear_GDP.GDPopt_utils.disjunct_list
         ):
             if orig_disj in active_disjunct_set:
-                clone_disj.indicator_var.fix(1)
+                clone_disj.indicator_var.fix(True)
         mip_result = solve_linear_GDP(linear_GDP, solve_data, config)
         if mip_result.feasible:
             nlp_result = solve_disjunctive_subproblem(mip_result, solve_data, config)
@@ -235,7 +235,7 @@ def solve_set_cover_mip(model, disj_needs_cover, solve_data, config):
     if hasattr(GDPopt, "set_cover_obj"):
         del GDPopt.set_cover_obj
     GDPopt.set_cover_obj = Objective(
-        expr=sum(weight * disj.indicator_var
+        expr=sum(weight * disj.binary_indicator_var
                  for (weight, disj) in zip(
             weights, GDPopt.disjunct_list)),
         sense=maximize)

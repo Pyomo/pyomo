@@ -1,0 +1,9 @@
+# @decl:
+set A := 1 aaa 'a b';
+
+set B[1] := 0 1 2;
+set B[aaa] := aa bb cc;
+set B['a b'] := 'aa bb cc';
+# @:decl
+
+set C['a b',"a b"] := 1 2;

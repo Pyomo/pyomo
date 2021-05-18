@@ -41,7 +41,6 @@ from pyomo.scripting.interface import (
     IPyomoScriptPrintResults, IPyomoScriptSaveResults,
     IPyomoScriptPostprocess, IPyomoScriptPreprocess,
 )
-from pyomo.core import Model, TransformationFactory, Suffix, display
 
 
 memory_data = Bunch()
@@ -657,10 +656,12 @@ def process_results(data, instance=None, results=None, opt=None):
     if not data.options.postsolve.show_results:
         if data.options.postsolve.save_results:
             results_file = data.options.postsolve.save_results
-        elif data.options.postsolve.results_format == 'yaml':
-            results_file = 'results.yml'
-        else:
+        elif data.options.postsolve.results_format == 'json':
             results_file = 'results.json'
+        else:
+            # The ordering of the elif and else conditions is important here
+            # to ensure that the default file format is yaml
+            results_file = 'results.yml'
         results.write(filename=results_file,
                       format=data.options.postsolve.results_format)
         if not data.options.runtime.logging == 'quiet':

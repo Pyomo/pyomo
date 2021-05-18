@@ -162,7 +162,7 @@ class SMTSatSolver(object):
         disjuncts = []
         for disj in djn.disjuncts:
             constraints = []
-            iv = disj.indicator_var
+            iv = disj.binary_indicator_var
             label = self.add_var(iv)
             or_expr = "(+ " + or_expr + " " + label + ")"
             for c in disj.component_data_objects(ctype=Constraint, active=True):
@@ -182,7 +182,7 @@ class SMTSatSolver(object):
     def _process_inactive_disjunction(self, djn):
         or_expr = "0"
         for disj in djn.disjuncts:
-            iv = disj.indicator_var
+            iv = disj.binary_indicator_var
             label = self.add_var(iv)
             or_expr = "(+ " + or_expr + " " + label + ")"
         if djn.xor:
