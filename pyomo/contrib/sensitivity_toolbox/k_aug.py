@@ -41,6 +41,9 @@ class InTempDir(object):
 
     def __enter__(self):
         self._cwd = os.getcwd()
+        # Add a new context
+        TempfileManager.push()
+        # Create a new tempdir in this context
         self._tempdir = TempfileManager.create_tempdir(
                 suffix=self._suffix,
                 prefix=self._prefix,
