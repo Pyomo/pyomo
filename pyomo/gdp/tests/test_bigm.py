@@ -22,6 +22,8 @@ import logging
 import pyomo.gdp.tests.models as models
 import pyomo.gdp.tests.common_tests as ct
 
+import pyomo.network as ntwk
+
 import random
 
 from io import StringIO
@@ -2377,6 +2379,9 @@ class TestErrors(unittest.TestCase):
     def test_silly_target(self):
         ct.check_silly_target(self, 'bigm')
 
+    def test_untransformed_arcs(self):
+        ct.check_untransformed_network_raises_GDPError(self, 'bigm')
+
 class EstimatingMwithFixedVars(unittest.TestCase):
     def test_tighter_Ms_when_vars_fixed_forever(self):
         m = ConcreteModel()
@@ -2416,6 +2421,16 @@ class EstimatingMwithFixedVars(unittest.TestCase):
         self.assertEqual(len(repn.linear_vars), 2)
         ct.check_linear_coef(self, repn, promise.x, 1)
         ct.check_linear_coef(self, repn, promise.d.indicator_var, 7)
+
+class NetworkDisjuncts(unittest.TestCase, CommonTests):
+
+    @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
+    def test_solution_maximize(self):
+        ct.check_network_disjucts(self, minimize=False, transformation='bigm')
+
+    @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
+    def test_solution_minimize(self):
+        ct.check_network_disjucts(self, minimize=True, transformation='bigm')
 
 if __name__ == '__main__':
     unittest.main()

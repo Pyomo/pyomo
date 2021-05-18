@@ -11,7 +11,8 @@
 
 from pyomo.environ import (
     TransformationFactory, ConcreteModel, Constraint, Var, Objective,
-    Block, Any, RangeSet, Expression, value, BooleanVar,
+    Block, Any, RangeSet, Expression, value, BooleanVar, SolverFactory,
+    TerminationCondition
 )
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.core.base import constraint, ComponentUID
@@ -20,6 +21,10 @@ from pyomo.repn import generate_standard_repn
 import pyomo.gdp.tests.models as models
 from io import StringIO
 import random
+
+import pyomo.opt
+linear_solvers = pyomo.opt.check_available_solvers(
+    'glpk','cbc','gurobi','cplex')
 
 # utility functions
 
@@ -1567,3 +1572,29 @@ def check_Expression(self, transformation):
     m = models.makeDisjunctWithExpression()
     TransformationFactory('gdp.%s' % transformation).apply_to(m)
     self.assertIsInstance(m.d1.e, Expression)
+
+def check_untransformed_network_raises_GDPError(self, transformation):
+    m = models.makeNetworkDisjunction()
+    if transformation == 'bigm':
+        error_name = 'BigM'
+    else:
+        error_name = 'hull'
+    self.assertRaisesRegex(
+        GDP_Error,
+        "No %s transformation handler registered for modeling "
+        "components of type <class 'pyomo.network.arc.Arc'>. If "
+        "your disjuncts contain non-GDP Pyomo components that require "
+        "transformation, please transform them first." % error_name,
+        TransformationFactory('gdp.%s' % transformation).apply_to,
+        m)
+
+def check_network_disjucts(self, minimize, transformation):
+    m = models.makeExpandedNetworkDisjunction(minimize=minimize)
+    TransformationFactory('gdp.%s' % transformation).apply_to(m)
+    results = SolverFactory(linear_solvers[0]).solve(m)
+    self.assertEqual(results.solver.termination_condition,
+                     TerminationCondition.optimal)
+    if minimize:
+        self.assertAlmostEqual(value(m.dest.x), 0.42)
+    else:
+        self.assertAlmostEqual(value(m.dest.x), 0.84)

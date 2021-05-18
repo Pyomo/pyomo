@@ -32,6 +32,7 @@ from pyomo.gdp.util import ( _warn_for_active_logical_constraint, target_list,
                              _get_constraint_transBlock, get_src_disjunct,
                              _warn_for_active_disjunction,
                              _warn_for_active_disjunct, preprocess_targets)
+from pyomo.network import Port
 from pyomo.repn import generate_standard_repn
 from functools import wraps
 from weakref import ref as weakref_ref
@@ -160,6 +161,8 @@ class BigM_Transformation(Transformation):
             Block:       self._transform_block_on_disjunct,
             LogicalConstraint: self._warn_for_active_logical_statement,
             ExternalFunction: False,
+            Port:        False, # not Arcs, because those are deactivated after
+                                # the network.expand_arcs transformation
         }
         self._generate_debug_messages = False
 

@@ -30,6 +30,7 @@ from pyomo.gdp.util import ( _warn_for_active_logical_constraint,
                              get_src_constraint, get_transformed_constraints,
                              get_src_disjunct, _warn_for_active_disjunction,
                              _warn_for_active_disjunct, preprocess_targets)
+from pyomo.network import Port
 from functools import wraps
 from weakref import ref as weakref_ref
 
@@ -190,6 +191,7 @@ class Hull_Reformulation(Transformation):
             Disjunct:    self._warn_for_active_disjunct,
             Block:       self._transform_block_on_disjunct,
             LogicalConstraint: self._warn_for_active_logical_statement,
+            Port:        False,
             }
         self._generate_debug_messages = False
 

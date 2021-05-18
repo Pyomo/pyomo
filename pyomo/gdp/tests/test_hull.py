@@ -22,14 +22,11 @@ from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 import pyomo.gdp.tests.models as models
 import pyomo.gdp.tests.common_tests as ct
 
-import pyomo.opt
-linear_solvers = pyomo.opt.check_available_solvers(
-    'glpk','cbc','gurobi','cplex')
-
 import random
 from io import StringIO
 
 EPS = TransformationFactory('gdp.hull').CONFIG.EPS
+linear_solvers = ct.linear_solvers
 
 class CommonTests:
     def setUp(self):
@@ -1111,10 +1108,10 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
             results = solver.solve(m)
             if case[4] is None:
                 self.assertEqual(results.solver.termination_condition,
-                                 pyomo.opt.TerminationCondition.infeasible)
+                                 TerminationCondition.infeasible)
             else:
                 self.assertEqual(results.solver.termination_condition,
-                                 pyomo.opt.TerminationCondition.optimal)
+                                 TerminationCondition.optimal)
                 self.assertEqual(value(m.obj), case[4])
 
     @unittest.skipIf(not linear_solvers, "No linear solver available")
@@ -1149,10 +1146,10 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
             results = solver.solve(m)
             if case[4] is None:
                 self.assertEqual(results.solver.termination_condition,
-                                 pyomo.opt.TerminationCondition.infeasible)
+                                 TerminationCondition.infeasible)
             else:
                 self.assertEqual(results.solver.termination_condition,
-                                 pyomo.opt.TerminationCondition.optimal)
+                                 TerminationCondition.optimal)
                 self.assertEqual(value(m.obj), case[4])
 
     def test_create_using(self):
@@ -1929,6 +1926,9 @@ class TestErrors(unittest.TestCase):
             m.w,
             m.random_disjunction.disjuncts[0])
 
+    def test_untransformed_arcs(self):
+        ct.check_untransformed_network_raises_GDPError(self, 'hull')
+
 class BlocksOnDisjuncts(unittest.TestCase):
     def setUp(self):
         # set seed so we can test name collisions predictably
@@ -2162,3 +2162,13 @@ class KmeansTest(unittest.TestCase):
                 self.assertGreaterEqual(value(c.body) + TOL, value(c.lower))
             if c.upper is not None:
                 self.assertLessEqual(value(c.body) - TOL, value(c.upper))
+
+class NetworkDisjuncts(unittest.TestCase, CommonTests):
+
+    @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
+    def test_solution_maximize(self):
+        ct.check_network_disjucts(self, minimize=False, transformation='hull')
+
+    @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
+    def test_solution_minimize(self):
+        ct.check_network_disjucts(self, minimize=True, transformation='hull')
