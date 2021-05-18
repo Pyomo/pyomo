@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -17,8 +17,8 @@ The expected optimal solution value is -5.512.
 
 Ref:
     Quesada, Ignacio, and Ignacio E. Grossmann.
-    "An LP/NLP based branch and bound algorithm
-    for convex MINLP optimization problems."
+    'An LP/NLP based branch and bound algorithm
+    for convex MINLP optimization problems.'
     Computers & chemical engineering 16.10-11 (1992): 937-947.
 
     Problem type:    convex MINLP
@@ -43,8 +43,8 @@ class SimpleMINLP(ConcreteModel):
         m = self
 
         """Set declarations"""
-        I = m.I = RangeSet(1, 2, doc="continuous variables")
-        J = m.J = RangeSet(1, 1, doc="discrete variables")
+        I = m.I = RangeSet(1, 2, doc='continuous variables')
+        J = m.J = RangeSet(1, 1, doc='discrete variables')
 
         # initial point information for discrete variables
         initY = {1: 1}
@@ -61,9 +61,9 @@ class SimpleMINLP(ConcreteModel):
         # CONSTRAINTS
         m.const1 = Constraint(expr=-X[2] + 5*log(X[1] + 1) + 3*Y[1] >= 0)
         m.const2 = Constraint(expr=-X[2] + X[1]**2 - Y[1] <= 1)
-        m.const3 = Constraint(expr=X[1] + X[2] +20*Y[1] <= 24)
+        m.const3 = Constraint(expr=X[1] + X[2] + 20*Y[1] <= 24)
         m.const4 = Constraint(expr=2*X[2] + 3*X[1] <= 10)
 
         """Cost (objective) function definition"""
         m.cost = Objective(expr=10*X[1]**2 - X[2] + 5*(Y[1] - 1),
-         sense=minimize)
+                           sense=minimize)
