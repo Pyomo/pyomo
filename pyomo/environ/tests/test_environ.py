@@ -128,6 +128,7 @@ class TestPyomoEnviron(unittest.TestCase):
             'pickle',
             'platform',
             'pprint',
+            'pyutilib',
             'textwrap',
             'tempfile',
             'xml',
