@@ -125,7 +125,6 @@ def run_setup():
         'Topic :: Software Development :: Libraries :: Python Modules' ],
       python_requires='>=3.6',
       install_requires=[
-          'PyUtilib>=6.0.1.dev0',
           'ply',
       ],
       packages=find_packages(exclude=("scripts",)),

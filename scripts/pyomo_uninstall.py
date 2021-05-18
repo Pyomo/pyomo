@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 #
-# A script to uninstall Coopr, Pyomo and PyUtilib.
+# A script to uninstall Coopr and Pyomo.
 #
 
 try:
@@ -21,7 +21,6 @@ except ImportError:
 packages = [
 'Pyomo',
 'Coopr',
-'PyUtilib',
 'coopr.age',
 'coopr.bilevel',
 'coopr.core',
@@ -39,26 +38,6 @@ packages = [
 'coopr.pysp',
 'coopr.solvers',
 'coopr.sucasa',
-'pyutilib.R',
-'pyutilib.autotest',
-'pyutilib.common',
-'pyutilib.component.app',
-'pyutilib.component.config',
-'pyutilib.component.core',
-'pyutilib.component.executables',
-'pyutilib.component.loader',
-'pyutilib.dev',
-'pyutilib.excel',
-'pyutilib.math',
-'pyutilib.misc',
-'pyutilib.ply',
-'pyutilib.pyro',
-'pyutilib.services',
-'pyutilib.subprocess',
-'pyutilib.svn',
-'pyutilib.th',
-'pyutilib.virtualenv',
-'pyutilib.workflow',
 ]
 
 print("Uninstalling...")
