@@ -48,7 +48,7 @@ class TestSimpleObj(unittest.TestCase):
         a = Objective()
         a.construct()
         #
-        # Even though we construct a SimpleObjective,
+        # Even though we construct a ScalarObjective,
         # if it is not initialized that means it is "empty"
         # and we should encounter errors when trying to access the
         # _ObjectiveData interface methods until we assign

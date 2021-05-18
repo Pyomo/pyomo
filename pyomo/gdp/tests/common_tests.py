@@ -9,9 +9,11 @@
 #  ___________________________________________________________________________
 
 
-from pyomo.environ import (TransformationFactory, ConcreteModel, Constraint,
-                           Var, Objective, Block, Any, RangeSet, Expression,
-                           value)
+from pyomo.environ import (
+    TransformationFactory, ConcreteModel, Constraint, Var, Objective,
+    Block, Any, RangeSet, Expression, value, BooleanVar, SolverFactory,
+    TerminationCondition
+)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.core.base import constraint, ComponentUID
 from pyomo.core.base.block import _BlockData
@@ -20,9 +22,17 @@ import pyomo.gdp.tests.models as models
 from io import StringIO
 import random
 
+import pyomo.opt
+linear_solvers = pyomo.opt.check_available_solvers(
+    'glpk','cbc','gurobi','cplex')
+
 # utility functions
 
 def check_linear_coef(self, repn, var, coef):
+    # Map logical variables to their Boolean counterparts
+    if isinstance(var, BooleanVar):
+        var = var.get_associated_binary()
+
     # utility used to check a variable-coefficient pair in a standard_repn
     var_id = None
     for i,v in enumerate(repn.linear_vars):
@@ -121,7 +131,7 @@ def check_improperly_deactivated_disjuncts(self, transformation):
     self.assertRaisesRegex(
         GDP_Error,
         r"The disjunct 'd\[0\]' is deactivated, but the "
-        r"indicator_var is fixed to 1. This makes no sense.",
+        r"indicator_var is fixed to True. This makes no sense.",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m)
 
@@ -306,12 +316,14 @@ def check_indicator_vars(self, transformation):
     oldblock = m.component("d")
     # have indicator variables on original disjuncts and they are still
     # active.
-    self.assertIsInstance(oldblock[0].indicator_var, Var)
-    self.assertTrue(oldblock[0].indicator_var.active)
-    self.assertTrue(oldblock[0].indicator_var.is_binary())
-    self.assertIsInstance(oldblock[1].indicator_var, Var)
-    self.assertTrue(oldblock[1].indicator_var.active)
-    self.assertTrue(oldblock[1].indicator_var.is_binary())
+    _binary0 = oldblock[0].binary_indicator_var
+    self.assertIsInstance(_binary0, Var)
+    self.assertTrue(_binary0.active)
+    self.assertTrue(_binary0.is_binary())
+    _binary1 = oldblock[1].binary_indicator_var
+    self.assertIsInstance(_binary1, Var)
+    self.assertTrue(_binary1.active)
+    self.assertTrue(_binary1.is_binary())
 
 def check_xor_constraint(self, transformation):
     # verify xor constraint for a SimpleDisjunction
@@ -323,8 +335,8 @@ def check_xor_constraint(self, transformation):
     xor = rBlock.component("disjunction_xor")
     self.assertIsInstance(xor, Constraint)
     self.assertEqual(len(xor), 1)
-    self.assertIs(m.d[0].indicator_var, xor.body.arg(0))
-    self.assertIs(m.d[1].indicator_var, xor.body.arg(1))
+    self.assertIs(m.d[0].binary_indicator_var, xor.body.arg(0))
+    self.assertIs(m.d[1].binary_indicator_var, xor.body.arg(1))
     repn = generate_standard_repn(xor.body)
     self.assertTrue(repn.is_linear())
     self.assertEqual(repn.constant, 0)
@@ -1134,7 +1146,7 @@ def check_deactivated_disjunct_nonzero_indicator_var(self, transformation):
     self.assertRaisesRegex(
         GDP_Error,
         r"The disjunct 'disjunction_disjuncts\[0\]' is deactivated, but the "
-        r"indicator_var is fixed to 1. This makes no sense.",
+        r"indicator_var is fixed to True. This makes no sense.",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m)
 
@@ -1152,7 +1164,7 @@ def check_deactivated_disjunct_unfixed_indicator_var(self, transformation):
         r"indicator_var is not fixed and the disjunct does not "
         r"appear to have been relaxed. This makes no sense. "
         r"\(If the intent is to deactivate the disjunct, fix its "
-        r"indicator_var to 0.\)",
+        r"indicator_var to False.\)",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m)
 
@@ -1363,7 +1375,7 @@ def check_mappings_between_disjunctions_and_xors(self, transformation):
     disjunctionPairs = [
         (m.disjunction, transBlock.disjunction_xor),
         (m.disjunct[1].innerdisjunction[0],
-         m.disjunct[1].component("_pyomo_gdp_%s_reformulation" 
+         m.disjunct[1].component("_pyomo_gdp_%s_reformulation"
                                  % transformation).\
          component("disjunct[1].innerdisjunction_xor")[0]),
         (m.simpledisjunct.innerdisjunction,
@@ -1541,9 +1553,9 @@ def check_unique_reference_to_nested_indicator_var(self, transformation):
     num_references_d3 = 0
     num_references_d4 = 0
     for v in m.component_data_objects(Var, active=True, descend_into=Block):
-        if v is m.d1.d3.indicator_var:
+        if v is m.d1.d3.binary_indicator_var:
             num_references_d3 += 1
-        if v is m.d1.d4.indicator_var:
+        if v is m.d1.d4.binary_indicator_var:
             num_references_d4 += 1
     self.assertEqual(num_references_d3, 1)
     self.assertEqual(num_references_d4, 1)
@@ -1560,3 +1572,29 @@ def check_Expression(self, transformation):
     m = models.makeDisjunctWithExpression()
     TransformationFactory('gdp.%s' % transformation).apply_to(m)
     self.assertIsInstance(m.d1.e, Expression)
+
+def check_untransformed_network_raises_GDPError(self, transformation):
+    m = models.makeNetworkDisjunction()
+    if transformation == 'bigm':
+        error_name = 'BigM'
+    else:
+        error_name = 'hull'
+    self.assertRaisesRegex(
+        GDP_Error,
+        "No %s transformation handler registered for modeling "
+        "components of type <class 'pyomo.network.arc.Arc'>. If "
+        "your disjuncts contain non-GDP Pyomo components that require "
+        "transformation, please transform them first." % error_name,
+        TransformationFactory('gdp.%s' % transformation).apply_to,
+        m)
+
+def check_network_disjucts(self, minimize, transformation):
+    m = models.makeExpandedNetworkDisjunction(minimize=minimize)
+    TransformationFactory('gdp.%s' % transformation).apply_to(m)
+    results = SolverFactory(linear_solvers[0]).solve(m)
+    self.assertEqual(results.solver.termination_condition,
+                     TerminationCondition.optimal)
+    if minimize:
+        self.assertAlmostEqual(value(m.dest.x), 0.42)
+    else:
+        self.assertAlmostEqual(value(m.dest.x), 0.84)

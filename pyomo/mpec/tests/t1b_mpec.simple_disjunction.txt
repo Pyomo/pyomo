@@ -4,7 +4,7 @@ cc : Size=1, Index=None, Active=True
     2 Disjunct Declarations
         expr1 : Size=1, Index=None, Active=True
             1 Var Declarations
-                indicator_var : Size=1, Index=None
+                binary_indicator_var : Size=1, Index=None
                     Key  : Lower : Value : Upper : Fixed : Stale : Domain
                     None :     0 :  None :     1 : False :  True : Binary
 
@@ -16,10 +16,15 @@ cc : Size=1, Index=None, Active=True
                     Key  : Lower : Body   : Upper : Active
                     None :   0.0 : y + x1 :   0.0 :   True
 
-            3 Declarations: indicator_var c0 c1
+            1 BooleanVar Declarations
+                indicator_var : Size=1, Index=None
+                    Key  : Value : Fixed : Stale
+                    None :  None : False :  True
+
+            4 Declarations: indicator_var binary_indicator_var c0 c1
         expr2 : Size=1, Index=None, Active=True
             1 Var Declarations
-                indicator_var : Size=1, Index=None
+                binary_indicator_var : Size=1, Index=None
                     Key  : Lower : Value : Upper : Fixed : Stale : Domain
                     None :     0 :  None :     1 : False :  True : Binary
 
@@ -31,7 +36,12 @@ cc : Size=1, Index=None, Active=True
                     Key  : Lower : Body   : Upper : Active
                     None :   0.0 : y + x1 :  +Inf :   True
 
-            3 Declarations: indicator_var c0 c1
+            1 BooleanVar Declarations
+                indicator_var : Size=1, Index=None
+                    Key  : Value : Fixed : Stale
+                    None :  None : False :  True
+
+            4 Declarations: indicator_var binary_indicator_var c0 c1
 
     1 Disjunction Declarations
         complements : Size=1, Index=None, Active=True
