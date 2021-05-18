@@ -154,12 +154,12 @@ def build_eight_process_flowsheet():
 
     # pure integer constraints
     m.use4implies6or7 = Constraint(
-        expr=m.use_unit_6or7ornot.disjuncts[0].indicator_var +
-        m.use_unit_6or7ornot.disjuncts[1].indicator_var -
-        m.use_unit_4or5ornot.disjuncts[0].indicator_var == 0)
+        expr=m.use_unit_6or7ornot.disjuncts[0].binary_indicator_var +
+        m.use_unit_6or7ornot.disjuncts[1].binary_indicator_var -
+        m.use_unit_4or5ornot.disjuncts[0].binary_indicator_var == 0)
     m.use3implies8 = Constraint(
-        expr=m.use_unit_3ornot.disjuncts[0].indicator_var
-        - m.use_unit_8ornot.disjuncts[0].indicator_var <= 0)
+        expr=m.use_unit_3ornot.disjuncts[0].binary_indicator_var
+        - m.use_unit_8ornot.disjuncts[0].binary_indicator_var <= 0)
 
     """Profit (objective) function definition"""
     m.profit = Objective(expr=sum(

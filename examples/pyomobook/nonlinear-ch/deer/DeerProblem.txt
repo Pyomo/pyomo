@@ -1,0 +1,87 @@
+10 Param Declarations
+    p1 : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :  0.88
+    p2 : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :  0.82
+    p3 : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :  0.92
+    p4 : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :  0.84
+    p5 : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :  0.73
+    p6 : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :  0.87
+    p7 : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :  2700
+    p8 : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :  2300
+    p9 : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :   540
+    ps : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None : 700000
+
+8 Var Declarations
+    b : Size=1, Index=None
+        Key  : Lower : Value             : Upper : Fixed : Stale : Domain
+        None :     0 : 54.36972761241992 :  None : False : False : PositiveReals
+    br : Size=1, Index=None
+        Key  : Lower : Value              : Upper : Fixed : Stale : Domain
+        None :     0 : 1.0999999920111345 :  None : False : False : PositiveReals
+    c : Size=1, Index=None
+        Key  : Lower : Value             : Upper : Fixed : Stale : Domain
+        None :     0 : 700000.0069902573 :  None : False : False : PositiveReals
+    d : Size=1, Index=None
+        Key  : Lower : Value              : Upper : Fixed : Stale : Domain
+        None :     0 : 196.00640104188517 :  None : False : False : PositiveReals
+    f : Size=1, Index=None
+        Key  : Lower : Value              : Upper : Fixed : Stale : Domain
+        None :     0 : 189.60559266738449 :  None : False : False : PositiveReals
+    hb : Size=1, Index=None
+        Key  : Lower : Value             : Upper : Fixed : Stale : Domain
+        None :     0 : 62.13797673398074 :  None : False : False : PositiveReals
+    hd : Size=1, Index=None
+        Key  : Lower : Value             : Upper : Fixed : Stale : Domain
+        None :     0 : 37.84501715689371 :  None : False : False : PositiveReals
+    hf : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :   0.0 :  None : False : False : PositiveReals
+
+1 Objective Declarations
+    obj : Size=1, Index=None, Active=True
+        Key  : Active : Sense    : Expression
+        None :   True : maximize : 10*hb + hd + hf
+
+7 Constraint Declarations
+    b_bal : Size=1, Index=None, Active=True
+        Key  : Lower : Body                        : Upper : Active
+        None :   0.0 : b - (0.87*b + 0.365*f - hb) :   0.0 :   True
+    birth : Size=1, Index=None, Active=True
+        Key  : Lower : Body                                 : Upper : Active
+        None :   0.0 : br - (1.1 + 0.8*(700000 - c)/700000) :   0.0 :   True
+    d_bal : Size=1, Index=None, Active=True
+        Key  : Lower : Body                        : Upper : Active
+        None :   0.0 : d - (0.84*d + 0.365*f - hd) :   0.0 :   True
+    f_bal : Size=1, Index=None, Active=True
+        Key  : Lower : Body                                                : Upper : Active
+        None :   0.0 : f - (0.88*br*(0.08199999999999999*f + 0.92*d) - hf) :   0.0 :   True
+    food_cons : Size=1, Index=None, Active=True
+        Key  : Lower : Body                          : Upper : Active
+        None :   0.0 : c - (2700*b + 2300*d + 540*f) :   0.0 :   True
+    minbuck : Size=1, Index=None, Active=True
+        Key  : Lower : Body                : Upper : Active
+        None :  -Inf : 0.2*(0.4*f + d) - b :   0.0 :   True
+    supply : Size=1, Index=None, Active=True
+        Key  : Lower : Body : Upper    : Active
+        None :  -Inf :    c : 700000.0 :   True
+
+26 Declarations: p1 p2 p3 p4 p5 p6 p7 p8 p9 ps f d b hf hd hb br c obj f_bal d_bal b_bal food_cons supply birth minbuck

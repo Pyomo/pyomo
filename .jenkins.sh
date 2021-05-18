@@ -38,7 +38,7 @@ if test -z "$CATEGORY"; then
     export CATEGORY=nightly
 fi
 if test -z "$TEST_SUITES"; then
-    export TEST_SUITES="pyomo ${WORKSPACE}/pyomo-model-libraries"
+    export TEST_SUITES="pyomo ${WORKSPACE}/pyomo-model-libraries ${WORKSPACE}/pyomo/examples/pyomobook"
 fi
 if test -z "$SLIM"; then
     export VENV_SYSTEM_PACKAGES='--system-site-packages'

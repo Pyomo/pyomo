@@ -1,0 +1,74 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+[    0.49] Applying solver
+[    0.51] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: 0.0
+      Status: optimal
+      Function Value: 45.0
+    Solver results file: results.yml
+[    0.52] Applying Pyomo postprocessing actions
+[    0.52] Pyomo Finished
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Name: unknown
+  Lower bound: 45.0
+  Upper bound: 45.0
+  Number of objectives: 1
+  Number of constraints: 59
+  Number of variables: 25
+  Number of nonzeros: 125
+  Sense: minimize
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Termination condition: optimal
+  Statistics: 
+    Branch and bound: 
+      Number of bounded subproblems: 15
+      Number of created subproblems: 15
+  Error rc: 0
+  Time: 0.007754325866699219
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: optimal
+  Message: None
+  Objective:
+    obj:
+      Value: 45
+  Variable:
+    GenOff[g1,2].binary_indicator_var:
+      Value: 1
+    GenOff[g2,1].binary_indicator_var:
+      Value: 1
+    GenOn[g1,1].binary_indicator_var:
+      Value: 1
+    GenOn[g2,3].binary_indicator_var:
+      Value: 1
+    GenStartup[g1,3].binary_indicator_var:
+      Value: 1
+    GenStartup[g2,2].binary_indicator_var:
+      Value: 1
+    Power[g1,1]:
+      Value: 10
+    Power[g1,3]:
+      Value: 5
+    Power[g2,2]:
+      Value: 10
+    Power[g2,3]:
+      Value: 20
+  Constraint: No values
