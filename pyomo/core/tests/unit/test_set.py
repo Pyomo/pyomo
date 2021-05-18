@@ -1304,9 +1304,6 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         # It can even work for non-hashable objects (that can't be cast
         # to set())
-        m = ConcreteModel()
-        m.p = Param(initialize=2)
-        m.q = Var(initialize=2)
         _NonHashable = (1, 3, 5, [2, 3])
         self.assertFalse(SetOf([[2, 3], 4]).isdisjoint(_NonHashable))
         self.assertTrue(SetOf({0, 4}).isdisjoint(_NonHashable))
@@ -1347,9 +1344,6 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         # It can even work for non-hashable objects (that can't be cast
         # to set())
-        m = ConcreteModel()
-        m.p = Param(initialize=2)
-        m.q = Var(initialize=2)
         _NonHashable = (1, 3, 5, [2, 3])
         self.assertFalse(SetOf({0, 1, 3, 5}).issubset(_NonHashable))
         self.assertTrue(SetOf({1, 3, 5}).issubset(_NonHashable))
@@ -1388,6 +1382,15 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertTrue(RangeSet(1,3,0).issuperset(RangeSet(1,2,0)))
         self.assertTrue(RangeSet(1,3,0).issuperset(i))
         self.assertFalse(RangeSet(3,6,0).issuperset(i))
+
+        # It can even work for non-hashable objects (that can't be cast
+        # to set())
+        _NonHashable = (1, 3, 5, [2, 3])
+        self.assertFalse(SetOf({0, 1, 3, 5}).issuperset(_NonHashable))
+        self.assertTrue(SetOf(([2, 3], 1, 2, 3, 5)).issuperset(_NonHashable))
+        self.assertTrue(SetOf(_NonHashable).issuperset(_NonHashable))
+        self.assertTrue(SetOf((1, 3, 5, [2, 3])).issuperset(_NonHashable))
+        self.assertFalse(SetOf((1, 3, 5, [2, 4])).issuperset(_NonHashable))
 
         # But NOT non-iterable objects: we assume that everything that
         # does not implement isfinite() is a discrete set.
