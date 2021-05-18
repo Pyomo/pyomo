@@ -117,29 +117,26 @@ class TestPyomoEnviron(unittest.TestCase):
         # of slow-loading TPLs can vary from platform to platform.
         ref = {
             'argparse',
+            'copy',
             'cPickle',
             'csv',
             'ctypes',
-            'decimal',
             'glob',
             'inspect',
             'json',
             'logging',
             'pickle',
             'platform',
-            'pprint',
             'pyutilib',
+            'shlex',
             'textwrap',
             'tempfile',
-            'xml',
             'typing',
         }
         # Non-standard-library TPLs that Pyomo will load unconditionally
         ref.add('ply')
         if numpy_available:
             ref.add('numpy')
-        if pyro4_available:
-            ref.add('Pyro4')
         diff = set(_[0] for _ in tpl_by_time[-5:]).difference(ref)
         self.assertEqual(
             diff, set(),
