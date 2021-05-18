@@ -41,7 +41,7 @@ from pyomo.scripting.interface import (
     IPyomoScriptPrintResults, IPyomoScriptSaveResults,
     IPyomoScriptPostprocess, IPyomoScriptPreprocess,
 )
-
+from pyomo.core import Model, TransformationFactory, Suffix, display
 
 memory_data = Bunch()
 # Importing IPython is slow; defer the import to the point that it is
