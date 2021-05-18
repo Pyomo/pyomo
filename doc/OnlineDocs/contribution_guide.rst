@@ -265,7 +265,7 @@ You may change the environment name from ``pyomodev`` as you see fit. Then activ
 
 Step 2: (OPTIONAL) Install PyUtilib
 
-The hard dependency on PyUtilib was removed in Pyomo 6.0.0. There is still a soft dependency for any code relates to `pyomo.dataportal.plugins.sheet`.
+The hard dependency on PyUtilib was removed in Pyomo 6.0.0. There is still a soft dependency for any code relates to ``pyomo.dataportal.plugins.sheet``.
 
 If your contribution requires PyUtilib, you will likely need the main branch of PyUtilib to contribute. Clone a copy of the repository in a new directory:
 
