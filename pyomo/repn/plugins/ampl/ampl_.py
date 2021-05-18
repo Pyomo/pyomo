@@ -556,6 +556,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 for arg in exp.args:
                     if isinstance(arg, str):
                         OUTPUT.write(string_arg_str % (len(arg), arg))
+                    elif type(arg) in native_numeric_types:
+                        self._print_nonlinear_terms_NL(arg)
                     elif arg.is_fixed():
                         self._print_nonlinear_terms_NL(arg())
                     else:
@@ -1819,7 +1821,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             else:
                 _parent = v.parent_block()
                 while _parent is not None and _parent is not model:
-                    if _parent.ctype is not model.type():
+                    if _parent.ctype is not model.ctype:
                         _errors.append(
                             "Variable '%s' exists within %s '%s', "
                             "but is used by an active "

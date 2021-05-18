@@ -25,7 +25,7 @@ env:
   PYTHON_BASE_PKGS: >
       ply dill ipython networkx openpyxl pathos
       pint pyro4 pyyaml sphinx_rtd_theme sympy xlrd
-      python-louvain
+      python-louvain sphinx-copybutton
   PYTHON_NUMPY_PKGS: >
       numpy scipy pyodbc pandas matplotlib seaborn numdifftools 
       parameterized casadi
@@ -250,9 +250,8 @@ jobs:
         python -m pip install --cache-dir cache/pip --upgrade pip
         pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS}
         pip install --cache-dir cache/pip ${PYTHON_PACKAGES}
-        # pymysql 1.0.0: No longer supports Python 2 or pypy2
         pip install --cache-dir cache/pip pymysql || \
-            pip install --cache-dir cache/pip pymysql==0.10.1
+            pip install --cache-dir cache/pip pymysql
         if test -z "${{matrix.slim}}"; then
             pip install --cache-dir cache/pip cplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
@@ -514,7 +513,9 @@ jobs:
         for cat in ${{matrix.category}}; do
             CATEGORY+=" --cat $cat"
         done
-        $PYTHON_EXE -m pyomo.common.unittest pyomo `pwd`/pyomo-model-libraries -v $CATEGORY
+        $PYTHON_EXE -m pyomo.common.unittest \
+            pyomo `pwd`/pyomo-model-libraries \
+             `pwd`/examples/pyomobook -v $CATEGORY
 
     - name: Run Pyomo MPI tests
       if: matrix.mpi != 0

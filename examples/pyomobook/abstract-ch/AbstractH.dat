@@ -1,0 +1,9 @@
+# Pyomo data file for AbstractH.py
+set A := I_C_Scoops Peanuts ;
+param h := I_C_Scoops 1 Peanuts 0.1 ;
+param d := 
+  I_C_Scoops 5
+  Peanuts 27 ;
+param c := I_C_Scoops 3.14 Peanuts 0.2718 ;
+param b := 12 ;
+param u := I_C_Scoops 100 Peanuts 40.6 ;

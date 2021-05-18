@@ -228,12 +228,11 @@ class LogicalConstraint(ActiveIndexedComponent):
     """
 
     _ComponentDataClass = _GeneralLogicalConstraintData
-    NoConstraint = (1000,)
-    Skip = (1000,)
-    Infeasible = (1001,)
-    Violated = (1001,)
-    Feasible = (1002,)
-    Satisfied = (1002,)
+    class Infeasible(object): pass
+    Feasible = ActiveIndexedComponent.Skip
+    NoConstraint = ActiveIndexedComponent.Skip
+    Violated = Infeasible
+    Satisfied = Feasible
 
     def __new__(cls, *args, **kwds):
         if cls != LogicalConstraint:
@@ -402,10 +401,10 @@ class LogicalConstraint(ActiveIndexedComponent):
                 % (_get_indexed_component_data_name(self, index),))
 
         if _expr_type is tuple and len(expr) == 1:
-            if (expr == Constraint.Skip) or \
-               (expr == Constraint.Feasible):
+            if expr is LogicalConstraint.Skip:
+                # Note: LogicalConstraint.Feasible is Skip
                 return None
-            if expr == Constraint.Infeasible:
+            if expr is LogicalConstraint.Infeasible:
                 raise ValueError(
                     "LogicalConstraint '%s' cannot be passed 'Infeasible' as a value."
                     % (_get_indexed_component_data_name(self, index),))
