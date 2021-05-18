@@ -22,7 +22,7 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import (
     ModelComponentFactory, Binary, Block, ConstraintList, Any,
-    LogicalConstraintList, BooleanValue, SimpleBooleanVar, SimpleVar,
+    LogicalConstraintList, BooleanValue, ScalarBooleanVar, ScalarVar,
     value)
 from pyomo.core.base.component import (
     ActiveComponent, ActiveComponentData, ComponentData
@@ -47,7 +47,7 @@ class GDP_Error(PyomoException):
     """Exception raised while processing GDP Models"""
 
 
-class AutoLinkedBinaryVar(SimpleVar):
+class AutoLinkedBinaryVar(ScalarVar):
     """A binary variable implicitly linked to its equivalent Boolean variable.
 
     Basic operations like setting values and fixing/unfixing this
@@ -76,7 +76,7 @@ class AutoLinkedBinaryVar(SimpleVar):
     def value(self, val):
         # super() does not work as expected for properties; we will call
         # the property setter explicitly.
-        SimpleVar.value.fset(self, val)
+        ScalarVar.value.fset(self, val)
         bool_var = self.get_associated_boolean()
         # Only update the associated Boolean value if it is needed
         # to match the current (potentially fractional) binary value.
@@ -114,7 +114,7 @@ class AutoLinkedBinaryVar(SimpleVar):
             self._associated_boolean = weakref_ref(self._associated_boolean)
 
 
-class AutoLinkedBooleanVar(SimpleBooleanVar):
+class AutoLinkedBooleanVar(ScalarBooleanVar):
     """A Boolean variable implicitly linked to its equivalent binary variable.
 
     This class provides a deprecation path for GDP.  Originally,
@@ -162,7 +162,7 @@ class AutoLinkedBooleanVar(SimpleBooleanVar):
     def value(self, val):
         # super() does not work as expected for properties; we will call
         # the property setter explicitly.
-        SimpleBooleanVar.value.fset(self, val)
+        ScalarBooleanVar.value.fset(self, val)
         bin_var = self.get_associated_binary()
         bin_val = bin_var.value
         if bin_val is None:

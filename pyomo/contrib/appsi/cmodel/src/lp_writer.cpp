@@ -362,7 +362,7 @@ void process_lp_constraints(py::list cons, py::object writer)
 {
   py::object generate_standard_repn = py::module_::import("pyomo.repn.standard_repn").attr("generate_standard_repn");
   py::object id = py::module_::import("pyomo.contrib.appsi.writers.lp_writer").attr("id");
-  py::object SimpleParam = py::module_::import("pyomo.core.base.param").attr("SimpleParam");
+  py::object ScalarParam = py::module_::import("pyomo.core.base.param").attr("ScalarParam");
   py::object _ParamData = py::module_::import("pyomo.core.base.param").attr("_ParamData");
   py::object NumericConstant = py::module_::import("pyomo.core.expr.numvalue").attr("NumericConstant");
   py::str cname;
@@ -414,7 +414,7 @@ void process_lp_constraints(py::list cons, py::object writer)
         {
           _const = std::make_shared<Constant>(repn_constant.cast<double>());
         }
-      else if(tmp_type.is(SimpleParam) || tmp_type.is(_ParamData))
+      else if(tmp_type.is(ScalarParam) || tmp_type.is(_ParamData))
         {
           _const = param_map[id(repn_constant)].cast<std::shared_ptr<ExpressionBase> >();
         }
@@ -431,7 +431,7 @@ void process_lp_constraints(py::list cons, py::object writer)
             {
               lin_coef.push_back(std::make_shared<Constant>(coef.cast<double>()));
             }
-          else if(tmp_type.is(SimpleParam) || tmp_type.is(_ParamData))
+          else if(tmp_type.is(ScalarParam) || tmp_type.is(_ParamData))
             {
               lin_coef.push_back(param_map[id(coef)].cast<std::shared_ptr<ExpressionBase> >());
             }
@@ -455,7 +455,7 @@ void process_lp_constraints(py::list cons, py::object writer)
             {
               quad_coef.push_back(std::make_shared<Constant>(coef.cast<double>()));
             }
-          else if(tmp_type.is(SimpleParam) || tmp_type.is(_ParamData))
+          else if(tmp_type.is(ScalarParam) || tmp_type.is(_ParamData))
             {
               quad_coef.push_back(param_map[id(coef)].cast<std::shared_ptr<ExpressionBase> >());
             }
@@ -490,7 +490,7 @@ void process_lp_constraints(py::list cons, py::object writer)
             {
               lp_con->lb = std::make_shared<Constant>(lb.cast<double>());
             }
-          else if(tmp_type.is(SimpleParam) || tmp_type.is(_ParamData))
+          else if(tmp_type.is(ScalarParam) || tmp_type.is(_ParamData))
             {
               lp_con->lb = param_map[id(lb)].cast<std::shared_ptr<ExpressionBase> >();
             }
@@ -510,7 +510,7 @@ void process_lp_constraints(py::list cons, py::object writer)
             {
               lp_con->ub = std::make_shared<Constant>(ub.cast<double>());
             }
-          else if(tmp_type.is(SimpleParam) || tmp_type.is(_ParamData))
+          else if(tmp_type.is(ScalarParam) || tmp_type.is(_ParamData))
             {
               lp_con->ub = param_map[id(ub)].cast<std::shared_ptr<ExpressionBase> >();
             }
