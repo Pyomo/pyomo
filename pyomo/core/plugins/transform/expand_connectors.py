@@ -16,7 +16,7 @@ from pyomo.common.log import is_debug_set
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base import Transformation, TransformationFactory, Connector, Constraint, \
     ConstraintList, Var, SortComponents
-from pyomo.core.base.connector import _ConnectorData, SimpleConnector
+from pyomo.core.base.connector import _ConnectorData, ScalarConnector
 
 
 @TransformationFactory.register('core.expand_connectors', 
@@ -61,7 +61,7 @@ class ExpandConnectors(Transformation):
         # The set of connectors found in the current constraint
         found = ComponentSet()
 
-        connector_types = set([SimpleConnector, _ConnectorData])
+        connector_types = set([ScalarConnector, _ConnectorData])
         for constraint in instance.component_data_objects(
                 Constraint, sort=SortComponents.deterministic):
             ref = None

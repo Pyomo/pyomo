@@ -26,7 +26,7 @@ from pyomo.core.base.numvalue import (is_fixed,
 from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.constraint import (Constraint,
                                         IndexedConstraint,
-                                        SimpleConstraint,
+                                        ScalarConstraint,
                                         _ConstraintData)
 from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.repn import generate_standard_repn
@@ -153,7 +153,7 @@ def compile_block_linear_constraints(parent_block,
 
             else:
 
-                singleton = isinstance(constraint, SimpleConstraint)
+                singleton = isinstance(constraint, ScalarConstraint)
 
                 # Note that as we may be removing items from the _data
                 # dictionary, we need to make a copy of the items list

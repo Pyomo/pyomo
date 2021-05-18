@@ -30,7 +30,7 @@ from pyomo.core.expr.visitor import (
     sizeof_expression,
     identify_variables, identify_components, identify_mutable_parameters,
 )
-from pyomo.core.base.param import _ParamData, SimpleParam
+from pyomo.core.base.param import _ParamData, ScalarParam
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.common.collections import ComponentSet
@@ -170,7 +170,7 @@ class TestIdentifyParams(unittest.TestCase):
 
     def test_identify_mutable_parameters_constants(self):
         #
-        # SimpleParams and NumericConstants are not recognized
+        # ScalarParams and NumericConstants are not recognized
         #
         m = ConcreteModel()
         m.x = Var(initialize=1)
@@ -524,7 +524,7 @@ class ReplacementWalkerTest3(ExpressionReplacementVisitor):
         self.model = model
 
     def visiting_potential_leaf(self, node):
-        if node.__class__ in (_ParamData, SimpleParam):
+        if node.__class__ in (_ParamData, ScalarParam):
             if id(node) in self.substitute:
                 return True, self.substitute[id(node)]
             self.substitute[id(node)] = 2*self.model.w.add()
