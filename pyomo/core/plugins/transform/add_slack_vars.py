@@ -26,7 +26,7 @@ def target_list(x):
                       "list of Constraints.")
     if isinstance(x, ComponentUID):
         if deprecation_msg:
-            deprecation_warning(deprecation_msg)
+            deprecation_warning(deprecation_msg, version='5.7.1')
             # only emit the message once
             deprecation_msg = None
         # [ESJ 07/15/2020] We have to just pass it through because we need the
@@ -39,7 +39,7 @@ def target_list(x):
         for i in x:
             if isinstance(i, ComponentUID):
                 if deprecation_msg:
-                    deprecation_warning(deprecation_msg)
+                    deprecation_warning(deprecation_msg, version='5.7.1')
                     deprecation_msg = None
                 # same as above...
                 ans.append(i)

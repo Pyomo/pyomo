@@ -1,7 +1,6 @@
 import sys
 import logging
 
-from pyomo.common.deprecation import deprecated
 from pyomo.core.expr.numvalue import native_types, native_logical_types
 from pyomo.core.expr.expr_common import _and, _or, _equiv, _inv, _xor, _impl
 from pyomo.core.pyomoobject import PyomoObject
@@ -98,11 +97,6 @@ class BooleanValue(PyomoObject):
     @property
     def local_name(self):
         return self.getname(fully_qualified=False)
-
-    @deprecated("The cname() method has been renamed to getname().",
-                version='5.0')
-    def cname(self, *args, **kwds):
-        return self.getname(*args, **kwds)
 
     def is_constant(self):
         """Return True if this Logical value is a constant value"""

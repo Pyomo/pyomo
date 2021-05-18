@@ -437,9 +437,6 @@ class Objective(ActiveIndexedComponent):
     # is returned or an exception is raised.
     #
     def _check_skip_add(self, index, expr, objdata=None):
-        #
-        # Convert deprecated expression values
-        #
         if expr is None:
             raise ValueError(
                 _rule_returned_none_error %
@@ -498,19 +495,6 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
     @expr.setter
     def expr(self, expr):
         """Set the expression of this objective."""
-        self.set_value(expr)
-
-    # for backwards compatibility reasons
-    @property
-    @deprecated("The .value property getter on SimpleObjective is deprecated. "
-                "Use the .expr property getter instead", version='4.3.11323')
-    def value(self):
-        return self.expr
-
-    @value.setter
-    @deprecated("The .value property setter on SimpleObjective is deprecated. "
-                "Use the set_value(expr) method instead", version='4.3.11323')
-    def value(self, expr):
         self.set_value(expr)
 
     @property

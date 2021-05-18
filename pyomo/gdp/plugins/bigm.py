@@ -227,11 +227,6 @@ class BigM_Transformation(Transformation):
         # resort. More specific args/suffixes override ones anywhere in
         # the tree. Suffixes lower down in the tree override ones higher
         # up.
-        if 'default_bigM' in kwds:
-            deprecation_warning("the 'default_bigM=' argument has been "
-                                "replaced by 'bigM='", version='5.4')
-            config.bigM = kwds.pop('default_bigM')
-
         config.set_value(kwds)
         bigM = config.bigM
         self.assume_fixed_vars_permanent = config.assume_fixed_vars_permanent
@@ -951,7 +946,7 @@ class BigM_Transformation(Transformation):
         return get_transformed_constraints(srcConstraint)
 
     @deprecated("The get_m_value_src function is deprecated. Use "
-                "the get_M_value_src function is you need source "
+                "the get_M_value_src function if you need source "
                 "information or the get_M_value function if you "
                 "only need values.", version='5.7.1')
     def get_m_value_src(self, constraint):

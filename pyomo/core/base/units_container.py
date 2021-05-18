@@ -593,28 +593,6 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         # this operation can create a quantity, but we want a pint unit object
         return child_units[0] / child_units[1]
 
-    def _get_unit_for_reciprocal(self, node, child_units):
-        """
-        Return (and test) the units corresponding to a reciprocal expression node
-        in the expression tree.
-
-        Parameters
-        ----------
-        node : Pyomo expression node
-            The parent node of the children
-
-        child_units : list
-           This is a list of pint units (one for each of the children)
-
-        Returns
-        -------
-        : pint unit
-        """
-        assert len(child_units) == 1
-
-        # this operation can create a quantity, but we want a pint unit object
-        return (1.0 / child_units).units
-
     def _get_unit_for_pow(self, node, child_units):
         """
         Return (and test) the units corresponding to a pow expression node
@@ -913,8 +891,6 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         EXPR.NPV_ProductExpression: _get_unit_for_product,
         EXPR.DivisionExpression: _get_unit_for_division,
         EXPR.NPV_DivisionExpression: _get_unit_for_division,
-        EXPR.ReciprocalExpression: _get_unit_for_reciprocal,
-        EXPR.NPV_ReciprocalExpression: _get_unit_for_reciprocal,
         EXPR.PowExpression: _get_unit_for_pow,
         EXPR.NPV_PowExpression: _get_unit_for_pow,
         EXPR.NegationExpression: _get_unit_for_single_child,
