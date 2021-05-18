@@ -121,6 +121,7 @@ class TestPyomoEnviron(unittest.TestCase):
             'cPickle',
             'csv',
             'ctypes',
+            'decimal',
             'glob',
             'inspect',
             'json',
