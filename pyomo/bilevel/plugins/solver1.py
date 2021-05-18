@@ -13,7 +13,7 @@ from pyomo.core import TransformationFactory, Var, ComponentUID, Block, Objectiv
 import pyomo.opt
 import pyomo.common
 from pyomo.common.collections import Bunch
-
+from pyomo.repn.standard_aux import compute_standard_repn
 
 @pyomo.opt.SolverFactory.register('bilevel_ld',
     doc='Solver for bilevel problems using linear duality')
@@ -117,7 +117,7 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
                         data.activate()
                 dual_submodel = getattr(self._instance, name_+'_dual')
                 dual_submodel.deactivate()
-                pyomo.common.PyomoAPIFactory('pyomo.repn.compute_standard_repn')({}, model=submodel)
+                compute_standard_repn({}, model=submodel)
                 self._instance.reclassify_component_type(name_, Block)
                 # use the with block here so that deactivation of the
                 # solver plugin always occurs thereby avoiding memory

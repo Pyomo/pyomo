@@ -25,8 +25,9 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.deprecation import deprecated
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import value
-from pyomo.core.base.plugin import ModelComponentFactory
-from pyomo.core.base.component import ActiveComponentData
+from pyomo.core.base.component import (
+    ActiveComponentData, ModelComponentFactory,
+)
 from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
                                                UnindexedComponent_set,
                                                _get_indexed_component_data_name)

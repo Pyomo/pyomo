@@ -12,15 +12,15 @@
 import logging
 import weakref
 
+from pyomo.common.gc_manager import PauseGC
+from pyomo.common.log import is_debug_set
 from pyomo.core.base.set_types import Any
 from pyomo.core.expr.numvalue import value
 from pyomo.core.expr.numeric_expr import LinearExpression
-from pyomo.core.base.plugin import ModelComponentFactory
-from pyomo.repn.standard_repn import StandardRepn
+from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.constraint import (IndexedConstraint,
                                         _ConstraintData)
-from pyomo.common.gc_manager import PauseGC
-from pyomo.common.log import is_debug_set
+from pyomo.repn.standard_repn import StandardRepn
 
 from collections.abc import Mapping
 

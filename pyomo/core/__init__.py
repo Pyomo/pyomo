@@ -32,7 +32,6 @@ from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.expr.taylor_series import taylor_series_expansion
 
 import pyomo.core.kernel
-import pyomo.core.base._pyomo
 
 from pyomo.common.collections import ComponentMap
 from pyomo.core.expr.symbol_map import SymbolMap
@@ -40,7 +39,7 @@ from pyomo.core.expr import (numvalue, numeric_expr, boolean_value,
                              logical_expr, current, symbol_map, sympy_tools, 
                              taylor_series, visitor, expr_common, expr_errors,
                              calculus)
-from pyomo.core import expr, preprocess, util, kernel
+from pyomo.core import expr, util, kernel
 
 from pyomo.core.expr.numvalue import (nonpyomo_leaf_types,
                                       PyomoObject,
@@ -68,7 +67,7 @@ from pyomo.core.base.label import (CuidLabeler,
 #
 # Components
 #
-from pyomo.core.base.component import (name, Component)
+from pyomo.core.base.component import (name, Component, ModelComponentFactory)
 from pyomo.core.base.componentuid import ComponentUID
 import pyomo.core.base.indexed_component
 from pyomo.core.base.action import BuildAction
@@ -115,26 +114,10 @@ from pyomo.core.base.block import (SortComponents, TraversalStrategy,
 from pyomo.core.base.PyomoModel import (global_option,
                                         Model, ConcreteModel,
                                         AbstractModel)
-from pyomo.core.base.plugin import (pyomo_callback,
-                                    IPyomoExpression, ExpressionFactory,
-                                    ExpressionRegistration, IPyomoPresolver,
-                                    IPyomoPresolveAction,
-                                    IParamRepresentation,
-                                    ParamRepresentationFactory,
-                                    IPyomoScriptPreprocess,
-                                    IPyomoScriptCreateModel,
-                                    IPyomoScriptCreateDataPortal,
-                                    IPyomoScriptModifyInstance,
-                                    IPyomoScriptPrintModel,
-                                    IPyomoScriptPrintInstance,
-                                    IPyomoScriptSaveInstance,
-                                    IPyomoScriptPrintResults,
-                                    IPyomoScriptSaveResults,
-                                    IPyomoScriptPostprocess,
-                                    ModelComponentFactory, Transformation,
-                                    TransformationFactory)
-#
-import pyomo.core.base._pyomo
+from pyomo.core.base.transformation import (
+    Transformation,
+    TransformationFactory,
+)
 #
 from pyomo.core.base import util
 
@@ -144,8 +127,6 @@ from pyomo.core.base.instance2dat import instance2dat
 from pyomo.core.base.set import (
     set_options, RealSet, IntegerSet, BooleanSet,
 )
-
-import pyomo.core.preprocess
 
 from pyomo.core.util import (prod, quicksum, sum_product, dot_product,
                              summation, sequence)

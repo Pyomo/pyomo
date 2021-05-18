@@ -23,7 +23,7 @@ from pyomo.core.base import (SortComponents,
 from pyomo.core.base.numvalue import (is_fixed,
                                       value,
                                       ZeroConstant)
-from pyomo.core.base.plugin import ModelComponentFactory
+from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.constraint import (Constraint,
                                         IndexedConstraint,
                                         SimpleConstraint,
