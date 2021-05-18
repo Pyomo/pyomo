@@ -117,8 +117,8 @@ class TestPyomoEnviron(unittest.TestCase):
         # of slow-loading TPLs can vary from platform to platform.
         ref = {
             'argparse',
-            'copy',
             'cPickle',
+            'copy',
             'csv',
             'ctypes',
             'decimal',
@@ -133,8 +133,8 @@ class TestPyomoEnviron(unittest.TestCase):
             'random',
             'shlex',
             'socket',
-            'textwrap',
             'tempfile',
+            'textwrap',
             'typing',
         }
         # Non-standard-library TPLs that Pyomo will load unconditionally
