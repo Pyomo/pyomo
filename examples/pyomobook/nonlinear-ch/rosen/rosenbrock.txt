@@ -1,0 +1,14 @@
+2 Var Declarations
+    x : Size=1, Index=None
+        Key  : Lower : Value              : Upper : Fixed : Stale : Domain
+        None :  None : 1.0000000000008233 :  None : False : False :  Reals
+    y : Size=1, Index=None
+        Key  : Lower : Value              : Upper : Fixed : Stale : Domain
+        None :  None : 1.0000000000016314 :  None : False : False :  Reals
+
+1 Objective Declarations
+    obj : Size=1, Index=None, Active=True
+        Key  : Active : Sense    : Expression
+        None :   True : minimize : (1.0 - x)**2 + 100.0*(y - x**2)**2
+
+3 Declarations: x y obj

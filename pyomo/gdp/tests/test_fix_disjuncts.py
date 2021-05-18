@@ -65,11 +65,12 @@ class TestFixDisjuncts(unittest.TestCase):
         m.d1 = Disjunct()
         m.d2 = Disjunct()
         m.d = Disjunction(expr=[m.d1, m.d2])
-        m.d1.indicator_var.domain = NonNegativeReals
-        m.d2.indicator_var.domain = NonNegativeReals
-        m.d1.indicator_var.set_value(0.5)
-        m.d2.indicator_var.set_value(0.5)
-        with self.assertRaises(ValueError):
+        m.d1.binary_indicator_var.domain = NonNegativeReals
+        m.d2.binary_indicator_var.domain = NonNegativeReals
+        m.d1.binary_indicator_var.set_value(0.5)
+        m.d2.binary_indicator_var.set_value(0.5)
+        with self.assertRaisesRegex(
+                ValueError, "Non-binary indicator variable value"):
             TransformationFactory('gdp.fix_disjuncts').apply_to(m)
 
 

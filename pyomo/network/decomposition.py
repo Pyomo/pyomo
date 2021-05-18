@@ -373,6 +373,7 @@ class SequentialDecomposition(FOQUSGraph):
         fixed_inputs = self.fixed_inputs()
         fixed_outputs = ComponentSet()
         edge_map = self.edge_to_idx(G)
+        arc_map = self.arc_to_edge(G)
         guesses = self.options["guesses"]
         default = self.options["default_guess"]
         for lev in order:
@@ -405,8 +406,9 @@ class SequentialDecomposition(FOQUSGraph):
                         fixed_outputs.add(var)
                         var.fix()
                     for arc in dests:
-                        arc_map = self.arc_to_edge(G)
-                        if edge_map[arc_map[arc]] not in ignore:
+                        # arc might not be in the arc_map if
+                        # it is on a deactivated block
+                        if arc in arc_map and edge_map[arc_map[arc]] not in ignore:
                             self.pass_values(arc, fixed_inputs)
                     for var in fixed_outputs:
                         var.free()
@@ -704,17 +706,18 @@ class SequentialDecomposition(FOQUSGraph):
         """
         G = nx.MultiDiGraph()
 
-        for arc in model.component_data_objects(Arc):
-            if not arc.directed:
-                raise ValueError("All Arcs must be directed when creating "
-                                 "a graph for a model. Found undirected "
-                                 "Arc: '%s'" % arc.name)
-            if arc.expanded_block is None:
-                raise ValueError("All Arcs must be expanded when creating "
-                                 "a graph for a model. Found unexpanded "
-                                 "Arc: '%s'" % arc.name)
-            src, dest = arc.src.parent_block(), arc.dest.parent_block()
-            G.add_edge(src, dest, arc=arc)
+        for blk in model.block_data_objects(descend_into=True, active=True):
+            for arc in blk.component_data_objects(Arc, descend_into=False):
+                if not arc.directed:
+                    raise ValueError("All Arcs must be directed when creating "
+                                     "a graph for a model. Found undirected "
+                                     "Arc: '%s'" % arc.name)
+                if arc.expanded_block is None:
+                    raise ValueError("All Arcs must be expanded when creating "
+                                     "a graph for a model. Found unexpanded "
+                                     "Arc: '%s'" % arc.name)
+                src, dest = arc.src.parent_block(), arc.dest.parent_block()
+                G.add_edge(src, dest, arc=arc)
 
         return G
 
