@@ -30,10 +30,6 @@ Here :math:`x_1`, :math:`x_2`, and :math:`x_3` are the decision variables while 
     >>> from pyomo.environ import *
     >>> from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation
 
-    >>> sipopt_available = SolverFactory("ipopt_sens", validate=False).available()
-    >>> k_aug_available = SolverFactory("k_aug", validate=False).available()
-    >>> dot_sens_available = SolverFactory("dot_sens", validate=False).available()
-
     # Create a concrete model
     >>> m = ConcreteModel()
 
