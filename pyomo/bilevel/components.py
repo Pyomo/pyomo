@@ -10,9 +10,8 @@
 
 __all__ = ['SubModel']
 
-from pyomo.core.base.plugin import ModelComponentFactory
-from pyomo.core.base.component import Component
 from pyomo.core.base.block import ScalarBlock
+from pyomo.core.base.component import Component, ModelComponentFactory
 from pyomo.common.deprecation import deprecated
 
 # TODO: Do we need to have ScalarSubModel and IndexedSubModel classes?

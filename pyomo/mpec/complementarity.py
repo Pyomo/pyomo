@@ -16,7 +16,7 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import ZeroConstant, native_numeric_types, as_numeric
 from pyomo.core import Constraint, Var, Block, Set
-from pyomo.core.base.plugin import ModelComponentFactory
+from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.util import (
     disable_methods, Initializer, IndexedCallInitializer, CountedCallInitializer

@@ -12,7 +12,7 @@
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.config import ConfigBlock, ConfigValue, add_docstring_list
-from pyomo.core.base.plugin import TransformationFactory
+from pyomo.core.base.transformation import TransformationFactory
 from pyomo.core.base.var import Var
 from pyomo.core.base.set_types import Reals
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation

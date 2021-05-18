@@ -15,7 +15,7 @@ __all__ = [
 
 import logging
 from pyomo.common import Factory
-from pyutilib.component.core import PluginError
+from pyomo.common.plugin import PluginError
 
 logger = logging.getLogger('pyomo.core')
 

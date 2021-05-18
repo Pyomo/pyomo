@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.deprecation import RenamedClass
-from pyomo.core.base.plugin import ModelComponentFactory
+from pyomo.core.base.component import ModelComponentFactory
 from pyomo.dae.contset import ContinuousSet
 from pyomo.dae.diffvar import DAE_Error
 from pyomo.core.base.expression import (Expression,

@@ -29,7 +29,6 @@ import pyomo.core.base.label
 import pyomo.core.base.logical_constraint
 import pyomo.core.base.misc
 import pyomo.core.base.param
-import pyomo.core.base.plugin
 import pyomo.core.base.range
 import pyomo.core.base.set_types
 import pyomo.core.base.set
@@ -63,7 +62,7 @@ from pyomo.core.base.label import (CuidLabeler,
 #
 # Components
 #
-from pyomo.core.base.component import (name, Component)
+from pyomo.core.base.component import (name, Component, ModelComponentFactory)
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.action import BuildAction
 from pyomo.core.base.check import BuildCheck
@@ -112,26 +111,10 @@ from pyomo.core.base.PyomoModel import (global_option,
                                         ModelSolution,
                                         ModelSolutions, Model, ConcreteModel,
                                         AbstractModel)
-from pyomo.core.base.plugin import (pyomo_callback,
-                                    IPyomoExpression, ExpressionFactory,
-                                    ExpressionRegistration, IPyomoPresolver,
-                                    IPyomoPresolveAction,
-                                    IParamRepresentation,
-                                    ParamRepresentationFactory,
-                                    IPyomoScriptPreprocess,
-                                    IPyomoScriptCreateModel,
-                                    IPyomoScriptCreateDataPortal,
-                                    IPyomoScriptModifyInstance,
-                                    IPyomoScriptPrintModel,
-                                    IPyomoScriptPrintInstance,
-                                    IPyomoScriptSaveInstance,
-                                    IPyomoScriptPrintResults,
-                                    IPyomoScriptSaveResults,
-                                    IPyomoScriptPostprocess,
-                                    ModelComponentFactory, Transformation,
-                                    TransformationFactory)
-#
-import pyomo.core.base._pyomo
+from pyomo.core.base.transformation import (
+    Transformation,
+    TransformationFactory,
+)
 #
 import pyomo.core.base.util
 
