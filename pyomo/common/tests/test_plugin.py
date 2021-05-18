@@ -54,7 +54,7 @@ class TestPlugin(TestCase):
         self.assertEqual(len(ep), 0)
 
         # Free a and make sure the garbage collector collects it (so
-        # that the weakref will be rmoved from IFoo._plugins)
+        # that the weakref will be removed from IFoo._plugins)
         a = None
         gc.collect()
         gc.collect()
