@@ -882,7 +882,8 @@ class Test(unittest.TestCase):
     def test_error1(self):
         model = ConcreteModel()
         model.x = Var()
-        instance = model.create_instance()
+        with self.assertRaises(RuntimeError):
+            instance = model.create_instance()
 
 if __name__ == "__main__":
     unittest.main()
