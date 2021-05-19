@@ -547,6 +547,11 @@ def buildParser():
         action='store_true',
         dest='xunit',
         help='Enable the nose XUnit plugin')
+    parser.add_argument('-x',
+        '--stop',
+        action='store_true',
+        dest='stop',
+        help='Stop running tests after the first error or failure.')
     parser.add_argument('--dry-run',
         action='store_true',
         dest='dryrun',
@@ -587,6 +592,8 @@ def runtests(options):
 
     if options.verbose:
         cmd.append('-v')
+    if options.stop:
+        cmd.append('-x')
     if options.dryrun:
         cmd.append('--collect-only')
 
