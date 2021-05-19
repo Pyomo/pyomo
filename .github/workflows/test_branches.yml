@@ -95,6 +95,11 @@ jobs:
           PYENV: pip
           PACKAGES: cython
 
+        - os: ubuntu-18.04
+          python: pypy3
+          TARGET: linux
+          PYENV: pip
+
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v2
