@@ -19,6 +19,7 @@ import math
 from pyomo.common import timing
 from pyomo.common.collections import Bunch
 from pyomo.common.dependencies import pympler, pympler_available
+from pyomo.common.deprecation import deprecated
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import is_debug_set
 from pyomo.core.expr.symbol_map import SymbolMap
