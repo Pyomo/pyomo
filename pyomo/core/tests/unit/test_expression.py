@@ -429,18 +429,18 @@ E : Size=2
         model = ConcreteModel()
         model.E = Expression([1])
         model.E[1] = 1
-        self.assertEqual(model.E[1], 1)
+        self.assertEqual(value(model.E[1]), 1)
         with self.assertRaises(KeyError):
             model.E[2] = 1
         model.del_component(model.E)
         model.Index = Set(dimen=3, initialize=[(1,2,3)])
         model.E = Expression(model.Index)
         model.E[(1,2,3)] = 1
-        self.assertEqual(model.E[(1,2,3)], 1)
+        self.assertEqual(value(model.E[(1,2,3)]), 1)
         # GH: testing this ludicrous behavior simply for
         #     coverage in expression.py.
         model.E[(1,(2,3))] = 1
-        self.assertEqual(model.E[(1,2,3)], 1)
+        self.assertEqual(value(model.E[(1,2,3)]), 1)
         with self.assertRaises(KeyError):
             model.E[2] = 1
 

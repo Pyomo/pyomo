@@ -8,24 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.plugin import PluginGlobals
-PluginGlobals.add_env("pyomo")
-
-from pyomo.checker.checker import Interface, IModelChecker
-from pyomo.checker.runner import ExtensionPoint, CheckingNodeVisitor, ModelCheckRunner
+from pyomo.checker.checker import IModelChecker
+from pyomo.checker.runner import CheckingNodeVisitor, ModelCheckRunner
 from pyomo.checker.script import ModelScript
 from pyomo.checker.hooks import IPreCheckHook, IPostCheckHook
-
-# Modules
-__all__ = []
-
-# Checker classes
-__all__.extend(['IModelChecker'])
-
-# Other builtins
-__all__.extend(['ModelCheckRunner', 'ModelScript'])
-
-# Hooks
-__all__.extend(['IPreCheckHook', 'IPostCheckHook'])
-
-PluginGlobals.pop_env()

@@ -22,7 +22,7 @@ import os.path
 
 import pyomo.common.unittest as unittest
 
-import pyomo.scripting.pyomo_command as main
+from pyomo.scripting.pyomo_main import main
 from pyomo.scripting.util import cleanup
 from pyomo.neos.kestrel import kestrelAMPL
 import pyomo.neos
@@ -193,6 +193,7 @@ class PyomoCommandDriver(object):
 
         results = os.path.join(currdir, 'result.json')
         args = [
+            'solve',
             os.path.join(currdir, filename),
             '--solver-manager=neos',
             '--solver=%s' % opt,
@@ -202,7 +203,7 @@ class PyomoCommandDriver(object):
             '-c'
             ]
         try:
-            output = main.run(args)
+            output = main(args)
             self.assertEqual(output.errorcode, 0)
 
             with open(results) as FILE:

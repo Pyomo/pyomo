@@ -1,7 +1,7 @@
 g3 0 1 0	# problem tmpxddp2g40
  20 9 1 0 9	# vars, constraints, objectives, ranges, eqns
  0 0	# nonlinear constraints, objectives
- 0 0	# network constraints: nonlinear, linear
+ 0 0 	# network constraints: nonlinear, linear
  0 0 0	# nonlinear vars in constraints, objectives, both
  0 0 0 1	# linear network variables; functions; arith, flags
  0 0 0 0 0	# discrete variables: binary, integer, nonlinear (b,c,o)

@@ -17,7 +17,6 @@ import traceback
 import types
 import time
 import json
-from pyomo.common import pyomo_api
 from pyomo.common.deprecation import deprecated
 from pyomo.common.log import is_debug_set
 from pyomo.common.tempfiles import TempfileManager
@@ -28,19 +27,21 @@ from pyomo.common.dependencies import (
     yaml, yaml_available, yaml_load_args,
     pympler, pympler_available,
 )
-from pyomo.common.plugin import ExtensionPoint, Plugin, implements
 from pyomo.common.collections import Bunch
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
 from pyomo.dataportal import DataPortal
-from pyomo.core import (
-    IPyomoScriptCreateModel, IPyomoScriptCreateDataPortal, IPyomoScriptPrintModel, 
-    IPyomoScriptModifyInstance, IPyomoScriptPrintInstance, IPyomoScriptSaveInstance, 
-    IPyomoScriptPrintResults, IPyomoScriptSaveResults, IPyomoScriptPostprocess, 
-    IPyomoScriptPreprocess, Model, TransformationFactory, Suffix, display
+from pyomo.scripting.interface import (
+    ExtensionPoint, Plugin, implements,
+    registered_callback,
+    IPyomoScriptCreateModel, IPyomoScriptCreateDataPortal,
+    IPyomoScriptPrintModel, IPyomoScriptModifyInstance,
+    IPyomoScriptPrintInstance, IPyomoScriptSaveInstance,
+    IPyomoScriptPrintResults, IPyomoScriptSaveResults,
+    IPyomoScriptPostprocess, IPyomoScriptPreprocess,
 )
-
+from pyomo.core import Model, TransformationFactory, Suffix, display
 
 memory_data = Bunch()
 # Importing IPython is slow; defer the import to the point that it is
@@ -63,7 +64,6 @@ logger = logging.getLogger('pyomo.scripting')
 start_time = 0.0
 
 
-@pyomo_api(namespace='pyomo.script')
 def setup_environment(data):
     """
     Setup Pyomo execution environment
@@ -149,7 +149,6 @@ def setup_environment(data):
     sys.excepthook = pyomo_excepthook
 
 
-@pyomo_api(namespace='pyomo.script')
 def apply_preprocessing(data, parser=None):
     """
     Execute preprocessing files
@@ -219,7 +218,6 @@ def apply_preprocessing(data, parser=None):
     #
     return data
 
-@pyomo_api(namespace='pyomo.script')
 def create_model(data):
     """
     Create instance of Pyomo model.
@@ -481,7 +479,6 @@ def create_model(data):
     return Bunch(model=model, instance=instance,
                  smap_id=smap_id, filename=fname, local=data.local )
 
-@pyomo_api(namespace='pyomo.script')
 def apply_optimizer(data, instance=None):
     """
     Perform optimization with a concrete instance
@@ -577,7 +574,6 @@ def apply_optimizer(data, instance=None):
                 if opt is None:
                     raise ValueError("Problem constructing solver `%s`" % str(solver))
 
-                from pyomo.core.base.plugin import registered_callback
                 for name in registered_callback:
                     opt.set_callback(name, registered_callback[name])
 
@@ -623,7 +619,6 @@ def apply_optimizer(data, instance=None):
     return Bunch(results=results, opt=solver, local=data.local)
 
 
-@pyomo_api(namespace='pyomo.script')
 def process_results(data, instance=None, results=None, opt=None):
     """
     Process optimization results.
@@ -711,7 +706,6 @@ def process_results(data, instance=None, results=None, opt=None):
             data.local.max_memory = mem_used
         print("   Total memory = %d bytes following results processing" % mem_used)
 
-@pyomo_api(namespace='pyomo.script')
 def apply_postprocessing(data, instance=None, results=None):
     """
     Apply post-processing steps.
@@ -740,7 +734,6 @@ def apply_postprocessing(data, instance=None, results=None):
             data.local.max_memory = mem_used
         print("   Total memory = %d bytes upon termination" % mem_used)
 
-@pyomo_api(namespace='pyomo.script')
 def finalize(data, model=None, instance=None, results=None):
     """
     Perform final actions to finish the execution of the pyomo script.
@@ -770,8 +763,7 @@ def finalize(data, model=None, instance=None, results=None):
     data.local._usermodel_plugins = []
     ##gc.collect()
     ##print gc.get_referrers(_tmp)
-    ##import pyomo.core.base.plugin
-    ##print pyomo.common.plugin.interface_services[pyomo.core.base.plugin.IPyomoScriptSaveResults]
+    ##print pyomo.common.plugin.interface_services[pyomo.scripting.interface.IPyomoScriptSaveResults]
     ##print "HERE - usermodel_plugins"
     ##
     if not data.options.runtime.logging == 'quiet':
@@ -889,7 +881,6 @@ class PyomoCommandLogContext(object):
             self.capture.reset()
 
 
-@pyomo_api(namespace='pyomo.script')
 def run_command(command=None, parser=None, args=None, name='unknown', data=None, options=None):
     """
     Execute a function that processes command-line arguments and

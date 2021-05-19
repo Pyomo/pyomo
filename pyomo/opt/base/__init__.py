@@ -17,7 +17,7 @@ from pyomo.opt.base.solvers import (
 )
 from pyomo.opt.base.results import ReaderFactory, AbstractResultsReader
 from pyomo.opt.base.problem import (
-    ProblemConfigFactory, BaseProblemConfig, AbstractProblemWriter,
+    AbstractProblemWriter,
     BranchDirection, WriterFactory
 )
 from pyomo.opt.base.formats import (

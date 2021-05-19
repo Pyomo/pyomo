@@ -168,7 +168,7 @@ class BigM_Transformation(Transformation):
 
     def _get_bigm_suffix_list(self, block, stopping_block=None):
         # Note that you can only specify suffixes on BlockData objects or
-        # SimpleBlocks. Though it is possible at this point to stick them
+        # ScalarBlocks. Though it is possible at this point to stick them
         # on whatever components you want, we won't pick them up.
         suffix_list = []
 
@@ -627,7 +627,7 @@ class BigM_Transformation(Transformation):
             newConstraint = Constraint(obj.index_set(),
                                        disjunctionRelaxationBlock.lbub)
             # we map the container of the original to the container of the
-            # transformed constraint. Don't do this if obj is a SimpleConstraint
+            # transformed constraint. Don't do this if obj is a ScalarConstraint
             # because we will treat that like a _ConstraintData and map to a
             # list of transformed _ConstraintDatas
             constraintMap['transformedConstraints'][obj] = newConstraint
@@ -694,7 +694,7 @@ class BigM_Transformation(Transformation):
             # save the source information
             bigm_src[c] = (lower, upper)
 
-            # Handle indices for both SimpleConstraint and IndexedConstraint
+            # Handle indices for both ScalarConstraint and IndexedConstraint
             if i.__class__ is tuple:
                 i_lb = i + ('lb',)
                 i_ub = i + ('ub',)

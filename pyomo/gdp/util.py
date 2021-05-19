@@ -108,12 +108,12 @@ def target_list(x):
             else:
                 raise ValueError(
                     "Expected Component or list of Components."
-                    "\n\tRecieved %s" % (type(i),))
+                    "\n\tReceived %s" % (type(i),))
         return ans
     else:
         raise ValueError(
             "Expected Component or list of Components."
-            "\n\tRecieved %s" % (type(x),))
+            "\n\tReceived %s" % (type(x),))
 
 # [ESJ 07/09/2019 Should this be a more general utility function elsewhere?  I'm
 #  putting it here for now so that all the gdp transformations can use it.
@@ -243,12 +243,12 @@ def get_transformed_constraints(srcConstraint):
 
     Parameters
     ----------
-    srcConstraint: SimpleConstraint or _ConstraintData, which must be in
+    srcConstraint: ScalarConstraint or _ConstraintData, which must be in
     the subtree of a transformed Disjunct
     """
     if srcConstraint.is_indexed():
         raise GDP_Error("Argument to get_transformed_constraint should be "
-                        "a SimpleConstraint or _ConstraintData. (If you "
+                        "a ScalarConstraint or _ConstraintData. (If you "
                         "want the container for all transformed constraints "
                         "from an IndexedDisjunction, this is the parent "
                         "component of a transformed constraint originating "

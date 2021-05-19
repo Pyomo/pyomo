@@ -48,12 +48,12 @@ def target_list(x):
             else:
                 raise ValueError(
                     "Expected Constraint or list of Constraints."
-                    "\n\tRecieved %s" % (type(i),))
+                    "\n\tReceived %s" % (type(i),))
         return ans
     else:
         raise ValueError(
             "Expected Constraint or list of Constraints."
-            "\n\tRecieved %s" % (type(x),))
+            "\n\tReceived %s" % (type(x),))
 
 import logging
 logger = logging.getLogger('pyomo.core')

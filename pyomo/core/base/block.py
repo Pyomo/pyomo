@@ -10,7 +10,7 @@
 
 __all__ = ['Block', 'TraversalStrategy', 'SortComponents',
            'active_components', 'components', 'active_components_data',
-           'components_data', 'SimpleBlock']
+           'components_data', 'SimpleBlock', 'ScalarBlock']
 
 import copy
 import logging
@@ -23,13 +23,12 @@ from operator import itemgetter
 from io import StringIO
 
 from pyomo.common.collections import Mapping
-from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedClass
 from pyomo.common.fileutils import StreamIndenter
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import (
-    Component, ActiveComponentData,
+    Component, ActiveComponentData, ModelComponentFactory,
 )
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.set import GlobalSetBase, _SetDataBase
@@ -1851,7 +1850,7 @@ class Block(ActiveIndexedComponent):
         if cls != Block:
             return super(Block, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
-            return SimpleBlock.__new__(SimpleBlock)
+            return ScalarBlock.__new__(ScalarBlock)
         else:
             return IndexedBlock.__new__(IndexedBlock)
 
@@ -2028,7 +2027,7 @@ class Block(ActiveIndexedComponent):
             _BlockData.display(self[key], filename, ostream, prefix)
 
 
-class SimpleBlock(_BlockData, Block):
+class ScalarBlock(_BlockData, Block):
 
     def __init__(self, *args, **kwds):
         _BlockData.__init__(self, component=self)
@@ -2041,6 +2040,11 @@ class SimpleBlock(_BlockData, Block):
 
     # We want scalar Blocks to pick up the Block display method
     display = Block.display
+
+
+class SimpleBlock(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarBlock
+    __renamed__version__ = 'TBD'
 
 
 class IndexedBlock(Block):

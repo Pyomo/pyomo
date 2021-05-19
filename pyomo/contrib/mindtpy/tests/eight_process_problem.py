@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Re-implementation of eight-process problem.
 
 Re-implementation of Duran example 3 superstructure synthesis problem in Pyomo
@@ -37,17 +38,17 @@ class EightProcessFlowsheet(ConcreteModel):
         m = self
 
         """Set declarations"""
-        I = m.I = RangeSet(2, 25, doc="process streams")
-        J = m.J = RangeSet(1, 8, doc="process units")
-        m.PI = RangeSet(1, 4, doc="integer constraints")
-        m.DS = RangeSet(1, 4, doc="design specifications")
+        I = m.I = RangeSet(2, 25, doc='process streams')
+        J = m.J = RangeSet(1, 8, doc='process units')
+        m.PI = RangeSet(1, 4, doc='integer constraints')
+        m.DS = RangeSet(1, 4, doc='design specifications')
         """
         1: Unit 8
         2: Unit 8
         3: Unit 4
         4: Unit 4
         """
-        m.MB = RangeSet(1, 7, doc="mass balances")
+        m.MB = RangeSet(1, 7, doc='mass balances')
         """Material balances:
         1: 4-6-7
         2: 3-5-8

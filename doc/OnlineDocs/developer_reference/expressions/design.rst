@@ -200,9 +200,9 @@ The following classes are valid leaf nodes:
 
 * Members of :data:`nonpyomo_leaf_types <pyomo.core.expr.numvalue.nonpyomo_leaf_types>`, which includes standard numeric data types like :const:`int`, :const:`float` and :const:`long`, as well as numeric data types defined by `numpy` and other commonly used packages.  This set also includes :class:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>`, which is used to wrap non-numeric arguments to the :class:`ExternalFunctionExpression <pyomo.core.expr.current.current.ExternalFunctionExpression>` class.
 
-* Parameter component classes like :class:`SimpleParam <pyomo.core.base.param.SimpleParam>` and :class:`_ParamData <pyomo.core.base.param._ParamData>`, which arise in expression trees when the parameters are declared as mutable.  (Immutable parameters are identified when generating expressions, and they are replaced with their associated numeric value.)
+* Parameter component classes like :class:`ScalarParam <pyomo.core.base.param.ScalarParam>` and :class:`_ParamData <pyomo.core.base.param._ParamData>`, which arise in expression trees when the parameters are declared as mutable.  (Immutable parameters are identified when generating expressions, and they are replaced with their associated numeric value.)
 
-* Variable component classes like :class:`SimpleVar <pyomo.core.base.var.SimpleVar>` and :class:`_GeneralVarData <pyomo.core.base.var._GeneralVarData>`, which often arise in expression trees.  <pyomo.core.expr.current.pyomo5_variable_types>`.
+* Variable component classes like :class:`ScalarVar <pyomo.core.base.var.ScalarVar>` and :class:`_GeneralVarData <pyomo.core.base.var._GeneralVarData>`, which often arise in expression trees.  <pyomo.core.expr.current.pyomo5_variable_types>`.
 
 .. note::
 

@@ -28,11 +28,9 @@ else:
 if False:
   # WEH: I don't think we should complain about this.
 
-  class ModelShadowing(IterativeTreeChecker):
+  class ModelShadowing(IterativeTreeChecker, ModelTrackerHook):
 
     pyomo.common.plugin.alias('model.rule.shadowing', 'Ignoring for now')
-
-    ModelTrackerHook()
 
     def checkerDoc(self):
         return """\
@@ -49,11 +47,9 @@ if False:
                         self.problem("Function {0} may shadow model variable {1}".format(info.name, arg.id), lineno=info.lineno)
 
 
-class ModelAccess(IterativeTreeChecker):
+class ModelAccess(IterativeTreeChecker, ModelTrackerHook):
 
     pyomo.common.plugin.alias('model.rule.model_access', 'Check that a rule does not reference a global model instance.')
-
-    ModelTrackerHook()
 
     def checkerDoc(self):
         return """\
