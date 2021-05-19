@@ -76,9 +76,9 @@ from pyomo.core.base.set import (
     Set, SetOf, simple_set_rule, RangeSet,
 )
 from pyomo.core.base.param import Param
-from pyomo.core.base.var import (Var, SimpleVar, VarList)
+from pyomo.core.base.var import (Var, ScalarVar, VarList)
 from pyomo.core.base.boolean_var import (
-    BooleanVar, BooleanVarList, SimpleBooleanVar)
+    BooleanVar, BooleanVarList, ScalarBooleanVar)
 from pyomo.core.base.constraint import (logical_expr,
                                         simple_constraint_rule,
                                         simple_constraintlist_rule,
@@ -107,7 +107,7 @@ from pyomo.core.base.set import (Reals, PositiveReals, NonPositiveReals,
                                  IntegerInterval)
 from pyomo.core.base.misc import display
 from pyomo.core.base.block import (SortComponents, TraversalStrategy,
-                                   Block, SimpleBlock,
+                                   Block, ScalarBlock,
                                    active_components,
                                    components, active_components_data,
                                    components_data)

@@ -147,7 +147,7 @@ class ParamTester(object):
             return
 
         idx = sorted(keys)[0]
-        self.assertEqual(self.instance.A[idx], self.data[idx])
+        self.assertEqual(value(self.instance.A[idx]), self.data[idx])
         if self.instance.A.mutable:
             self.assertTrue( isinstance( self.instance.A[idx],
                                          _ParamData ) )
@@ -159,7 +159,7 @@ class ParamTester(object):
             if not self.instance.A.mutable:
                 self.fail("Expected setitem[%s] to fail for immutable Params"
                           % (idx,))
-            self.assertEqual( self.instance.A[idx], 4.3)
+            self.assertEqual( value(self.instance.A[idx]), 4.3)
             self.assertTrue( isinstance(self.instance.A[idx],
                                         _ParamData ) )
         except TypeError:
@@ -175,7 +175,7 @@ class ParamTester(object):
             if self.expectNegativeDomainError:
                 self.fail("Expected setitem[%s] to fail with negative data"
                           % (idx,))
-            self.assertEqual( self.instance.A[idx], -4.3 )
+            self.assertEqual( value(self.instance.A[idx]), -4.3 )
         except ValueError:
             if not self.expectNegativeDomainError:
                 self.fail(
@@ -234,7 +234,7 @@ class ParamTester(object):
             if not self.instance.A.mutable:
                 self.fail("Expected setitem[%s] to fail for immutable Params"
                           % (idx,))
-            self.assertEqual( self.instance.A[idx], 4.3)
+            self.assertEqual( self.instance.A[idx].value, 4.3)
             self.assertIsInstance( self.instance.A[idx],
                                    _ParamData )
         except TypeError:
@@ -250,7 +250,7 @@ class ParamTester(object):
             if self.expectNegativeDomainError:
                 self.fail("Expected setitem[%s] to fail with negative data"
                           % (idx,))
-            self.assertEqual( self.instance.A[idx], -4.3 )
+            self.assertEqual( self.instance.A[idx].value, -4.3 )
         except ValueError:
             if not self.expectNegativeDomainError:
                 self.fail(
@@ -863,7 +863,7 @@ class ScalarTester(ParamTester):
             except ValueError:
                 pass
         else:
-            self.assertEqual( self.instance.A, self.data[None])
+            self.assertEqual( self.instance.A.value, self.data[None])
 
     def test_set_value(self):
         self.instance.A = 4.3
@@ -1501,39 +1501,39 @@ class MiscNonIndexedParamBehaviorTests(unittest.TestCase):
         tmp_stream = TempfileManager.create_tempfile(suffix = '.param_display.test')
         model = ConcreteModel()
         model.Q = Param(initialize=0.0, mutable=True)
-        self.assertEqual(model.Q, 0.0)
+        self.assertEqual(model.Q.value, 0.0)
         #print model.Q._data
         #print value(model.Q)
         f = StringIO()
         display(model.Q, f)
         tmp = f.getvalue().splitlines()
         val = float(tmp[-1].split(':')[-1].strip())
-        self.assertEqual(model.Q, val)
+        self.assertEqual(model.Q.value, val)
 
         model.Q = 1.0
-        self.assertEqual(model.Q,1.0)
+        self.assertEqual(model.Q.value,1.0)
         f = StringIO()
         display(model.Q,f)
         tmp = f.getvalue().splitlines()
         val = float(tmp[-1].split(':')[-1].strip())
-        self.assertEqual(model.Q, val)
+        self.assertEqual(model.Q.value, val)
 
     # Test that pprint actually displays the correct param value
     def test_mutable_pprint(self):
         model = ConcreteModel()
         model.Q = Param(initialize=0.0, mutable=True)
-        self.assertEqual(model.Q, 0.0)
+        self.assertEqual(model.Q.value, 0.0)
         buf = StringIO()
         model.Q.pprint(ostream=buf)
         val = float(buf.getvalue().splitlines()[-1].split(':')[-1].strip())
-        self.assertEqual(model.Q, val)
+        self.assertEqual(model.Q.value, val)
 
         buf.buf = ''
         model.Q = 1.0
-        self.assertEqual(model.Q,1.0)
+        self.assertEqual(model.Q.value,1.0)
         model.Q.pprint(ostream=buf)
         val = float(buf.getvalue().splitlines()[-1].split(':')[-1].strip())
-        self.assertEqual(model.Q, val)
+        self.assertEqual(model.Q.value, val)
 
     # Test mutability of non-indexed
     # params involved in sum expression
@@ -1652,18 +1652,18 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         model = ConcreteModel()
         model.P = Param([1,2],default=1.0, mutable=True)
 
-        self.assertEqual(model.P[1],1.0)
-        self.assertEqual(model.P[2],1.0)
+        self.assertEqual(model.P[1].value,1.0)
+        self.assertEqual(model.P[2].value,1.0)
         model.P[1].value = 0.0
-        self.assertEqual(model.P[1],0.0)
-        self.assertEqual(model.P[2],1.0)
+        self.assertEqual(model.P[1].value,0.0)
+        self.assertEqual(model.P[2].value,1.0)
 
         model.Q = Param([1,2],default=1.0, mutable=True)
-        self.assertEqual(model.Q[1],1.0)
-        self.assertEqual(model.Q[2],1.0)
+        self.assertEqual(model.Q[1].value,1.0)
+        self.assertEqual(model.Q[2].value,1.0)
         model.Q[1] = 0.0
-        self.assertEqual(model.Q[1],0.0)
-        self.assertEqual(model.Q[2],1.0)
+        self.assertEqual(model.Q[1].value,0.0)
+        self.assertEqual(model.Q[2].value,1.0)
 
     # Test that display actually displays the correct param value
     def test_mutable_display(self):
@@ -1698,7 +1698,7 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         #     changes display output
         for Item in [model.P, model.Q, model.R]:
             for i in [1,2]:
-                self.assertEqual(Item[i],0.0)
+                self.assertEqual(Item[i].value,0.0)
 
         # check that the correct value is printed
         # Treat the param using default a little differently
@@ -1761,7 +1761,7 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         #     changes pprint output
         for Item in [model.P, model.Q, model.R]:
             for i in [1,2]:
-                self.assertEqual(Item[i],0.0)
+                self.assertEqual(Item[i].value,0.0)
 
         for Item in [model.P, model.Q, model.R]:
             f = StringIO()

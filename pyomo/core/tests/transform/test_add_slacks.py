@@ -181,7 +181,7 @@ class TestAddSlacks(unittest.TestCase):
         self.assertFalse(cons.active)
         self.assertEqual(cons.lower, 1)
         self.assertEqual(cons.upper, 3)
-        # cons.body is a SimpleVar
+        # cons.body is a ScalarVar
         self.assertIs(cons.body, m.y)
 
     def checkTargetSlackVars(self, transBlock):
@@ -216,7 +216,7 @@ class TestAddSlacks(unittest.TestCase):
         cons = m.rule2
         self.assertEqual(cons.lower, 1)
         self.assertEqual(cons.upper, 3)
-        # cons.body is a SimpleVar
+        # cons.body is a ScalarVar
         self.assertIs(cons.body, m.y)
 
     def test_nontarget_constraint_same(self):
@@ -293,7 +293,7 @@ class TestAddSlacks(unittest.TestCase):
         m.indexedVar = Var([1, 2])
         self.assertRaisesRegex(
             ValueError,
-            "Expected Constraint or list of Constraints.\n\tRecieved "
+            "Expected Constraint or list of Constraints.\n\tReceived "
             "<class 'pyomo.core.base.var._GeneralVarData'>",
             TransformationFactory('core.add_slack_variables').apply_to,
             m,
@@ -304,8 +304,8 @@ class TestAddSlacks(unittest.TestCase):
         m = self.makeModel()
         self.assertRaisesRegex(
             ValueError,
-            "Expected Constraint or list of Constraints.\n\tRecieved "
-            "<class 'pyomo.core.base.var.SimpleVar'>",
+            "Expected Constraint or list of Constraints.\n\tReceived "
+            "<class 'pyomo.core.base.var.ScalarVar'>",
             TransformationFactory('core.add_slack_variables').apply_to,
             m,
             targets=[m.rule1, m.x]
@@ -357,7 +357,7 @@ class TestAddSlacks(unittest.TestCase):
 
     def test_transformed_constraint_scalar_body(self):
         m = self.makeModel()
-        m.p = Param(initialize=6)
+        m.p = Param(initialize=6, mutable=True)
         m.rule4 = Constraint(expr=m.p <= 9)
         TransformationFactory('core.add_slack_variables').apply_to(
             m,
@@ -368,7 +368,7 @@ class TestAddSlacks(unittest.TestCase):
         self.assertIsNone(c.lower)
         self.assertEqual(c.upper, 9)
         self.assertEqual(c.body.nargs(), 2)
-        self.assertEqual(c.body.arg(0), 6)
+        self.assertEqual(c.body.arg(0).value, 6)
         self.assertIs(c.body.arg(1).__class__, EXPR.MonomialTermExpression)
         self.assertEqual(c.body.arg(1).arg(0), -1)
         self.assertIs(c.body.arg(1).arg(1), transBlock._slack_minus_rule4)

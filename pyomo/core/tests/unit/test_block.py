@@ -32,7 +32,7 @@ from pyomo.environ import (AbstractModel, ConcreteModel, Var, Set,
                            value, sum_product)
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
-from pyomo.core.base.block import SimpleBlock, SubclassOf, _BlockData, declare_custom_block
+from pyomo.core.base.block import ScalarBlock, SubclassOf, _BlockData, declare_custom_block
 from pyomo.core.expr import current as EXPR
 from pyomo.opt import check_available_solvers
 
@@ -40,7 +40,7 @@ from pyomo.gdp import Disjunct
 
 solvers = check_available_solvers('glpk')
 
-class DerivedBlock(SimpleBlock):
+class DerivedBlock(ScalarBlock):
     def __init__(self, *args, **kwargs):
         """Constructor"""
         kwargs['ctype'] = DerivedBlock
@@ -686,7 +686,7 @@ class TestBlock(unittest.TestCase):
             b.b = 5
 
     def test_clear(self):
-        class DerivedBlock(SimpleBlock):
+        class DerivedBlock(ScalarBlock):
             _Block_reserved_words = None
 
         DerivedBlock._Block_reserved_words \
@@ -742,7 +742,7 @@ class TestBlock(unittest.TestCase):
         self.assertIs(b.x, c_x)
         self.assertIs(b.y, c_y)
 
-        class DerivedBlock(SimpleBlock):
+        class DerivedBlock(ScalarBlock):
             _Block_reserved_words = set()
             def __init__(self, *args, **kwds):
                 super(DerivedBlock, self).__init__(*args, **kwds)

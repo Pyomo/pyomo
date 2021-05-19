@@ -15,7 +15,7 @@ import types
 import logging
 from weakref import ref as weakref_ref
 
-from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
@@ -255,7 +255,7 @@ class Param(IndexedComponent):
         if cls != Param:
             return super(Param, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
-            return SimpleParam.__new__(SimpleParam)
+            return ScalarParam.__new__(ScalarParam)
         else:
             return IndexedParam.__new__(IndexedParam)
 
@@ -1004,7 +1004,7 @@ This has resulted in the conversion of the source to dense form.
                  )
 
 
-class SimpleParam(_ParamData, Param):
+class ScalarParam(_ParamData, Param):
 
     def __init__(self, *args, **kwds):
         Param.__init__(self, *args, **kwds)
@@ -1033,7 +1033,7 @@ class SimpleParam(_ParamData, Param):
                     # Immutable Param defaults never get added to the
                     # _data dict
                     return self[None]
-            return super(SimpleParam, self).__call__(exception=exception)
+            return super(ScalarParam, self).__call__(exception=exception)
         if exception:
             raise ValueError(
                 "Evaluating the numeric value of parameter '%s' before\n\t"
@@ -1047,16 +1047,21 @@ class SimpleParam(_ParamData, Param):
             _raise_modifying_immutable_error(self, index)
         if not self._data:
             self._data[index] = self
-        super(SimpleParam, self).set_value(value, index)
+        super(ScalarParam, self).set_value(value, index)
 
     def is_constant(self):
-        """Determine if this SimpleParam is constant (and can be eliminated)
+        """Determine if this ScalarParam is constant (and can be eliminated)
 
         Returns False if either unconstructed or mutable, as it must be kept
         in expressions (as it either doesn't have a value yet or the value
         can change later.
         """
         return self._constructed and not self._mutable
+
+
+class SimpleParam(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarParam
+    __renamed__version__ = 'TBD'
 
 
 class IndexedParam(Param):

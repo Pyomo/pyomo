@@ -10,6 +10,7 @@
 
 from collections import namedtuple
 
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr import current as EXPR
@@ -171,7 +172,7 @@ class Complementarity(Block):
         if cls != Complementarity:
             return super(Complementarity, cls).__new__(cls)
         if args == ():
-            return super(Complementarity, cls).__new__(AbstractSimpleComplementarity)
+            return super(Complementarity, cls).__new__(AbstractScalarComplementarity)
         else:
             return super(Complementarity, cls).__new__(IndexedComplementarity)
 
@@ -272,7 +273,7 @@ Error thrown for Complementarity "%s".""" % ( b.name, ) )
             )
 
 
-class SimpleComplementarity(_ComplementarityData, Complementarity):
+class ScalarComplementarity(_ComplementarityData, Complementarity):
 
     def __init__(self, *args, **kwds):
         _ComplementarityData.__init__(self, self)
@@ -280,9 +281,19 @@ class SimpleComplementarity(_ComplementarityData, Complementarity):
         self._data[None] = self
 
 
+class SimpleComplementarity(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarComplementarity
+    __renamed__version__ = 'TBD'
+
+
 @disable_methods({'add', 'set_value', 'to_standard_form'})
-class AbstractSimpleComplementarity(SimpleComplementarity):
+class AbstractScalarComplementarity(ScalarComplementarity):
     pass
+
+
+class AbstractSimpleComplementarity(metaclass=RenamedClass):
+    __renamed__new_class__ = AbstractScalarComplementarity
+    __renamed__version__ = 'TBD'
 
 
 class IndexedComplementarity(Complementarity):

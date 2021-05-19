@@ -167,7 +167,7 @@ def deprecation_warning(msg, logger=None, version=None,
     if logger is None:
         if calling_frame is not None:
             logger = calling_frame.f_globals['__package__']
-            if not logger.startswith('pyomo'):
+            if logger is not None and not logger.startswith('pyomo'):
                 logger = None
         if logger is None:
             logger = 'pyomo'
@@ -437,9 +437,12 @@ class RenamedClass(type):
             for c in {type(instance), instance.__class__})
 
     def __subclasscheck__(cls, subclass):
-        cls.__renamed__warning__(
-            "Checking type relative to '%s'." % (cls.__name__,))
+        if hasattr(cls, '__renamed__warning__'):
+            cls.__renamed__warning__(
+                "Checking type relative to '%s'." % (cls.__name__,))
         if subclass is cls:
             return True
-        else:
+        elif getattr(cls, '__renamed__new_class__') is not None:
             return issubclass(subclass, getattr(cls, '__renamed__new_class__'))
+        else:
+            return super().__subclasscheck__(subclass)
