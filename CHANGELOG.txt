@@ -64,6 +64,7 @@ BREAKING CHANGES
   - Rename "Simple" components to "Scalar" components (#1971)
   - Add utility for comparing expressions (#1981)
   - Improve quoting in component names and indices (#1982)
+  - Remove component.reconstruct() (#1983)
 - Documentation 
   - Add documentation and doctests for pyomo.common.timing (#1924)
   - Update the ReadTheDocs configuration (#1929)
