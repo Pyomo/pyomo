@@ -331,13 +331,6 @@ class Objective(ActiveIndexedComponent):
         _init_expr = self._init_expr
         _init_sense = self._init_sense
         _init_rule = self.rule
-        #
-        # We no longer need these
-        #
-        self._init_expr = None
-        self._init_sense = None
-        # Utilities like DAE assume this stays around
-        #self.rule = None
 
         if (_init_rule is None) and \
            (_init_expr is None):
