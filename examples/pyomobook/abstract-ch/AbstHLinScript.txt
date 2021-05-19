@@ -1,4 +1,4 @@
-Model Simple Linear (H)
+Model 'Simple Linear (H)'
 
   Variables:
     x : Size=2, Index=A

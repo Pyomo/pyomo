@@ -15,6 +15,10 @@ import ply.lex
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import pickle
 from pyomo.common.deprecation import deprecated
+from pyomo.core.base.component_namer import (
+    literals, name_repr as __name_repr, index_repr as __index_repr,
+    re_number as _re_number,
+)
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.reference import Reference
 
@@ -22,6 +26,14 @@ from pyomo.core.base.reference import Reference
 class _NotSpecified(object):
     pass
 
+def _pickle(x):
+    return '|'+repr(pickle.dumps(x, protocol=2))
+
+def _name_repr(x):
+    return __name_repr(x, _pickle)
+
+def _index_repr(x):
+    return __index_repr(x, _pickle)
 
 class ComponentUID(object):
     """
@@ -44,39 +56,7 @@ class ComponentUID(object):
 
     __slots__ = ( '_cids', )
 
-    @staticmethod
-    def _safe_str_tuple(x):
-        return '(' + ','.join(ComponentUID._safe_str(_) for _ in x) + ',)'
-
-    @staticmethod
-    def _pickle(x):
-        return '|'+repr(pickle.dumps(x, protocol=2))
-
-    @staticmethod
-    def _safe_str(x):
-        if not isinstance(x, str):
-            return ComponentUID._repr_map.get(
-                x.__class__, ComponentUID._pickle)(x)
-        else:
-            x = repr(x)
-            if x[1] == '|':
-                return x
-            if any(_ in x for _ in ('\\ ' + literals)):
-                return x
-            if _re_number.match(x[1:-1]):
-                return x
-            return x[1:-1]
-
     _lex = None
-    _repr_map = {
-        slice: lambda x: '*',
-        Ellipsis.__class__: lambda x: '**',
-        int: repr,
-        float: repr,
-        str: repr,
-        # Note: the function is unbound at this point; extract with __func__
-        tuple: _safe_str_tuple.__func__,
-    }
     _repr_v1_map = {
         slice: lambda x: '*',
         Ellipsis.__class__: lambda x: '**',
@@ -110,9 +90,9 @@ class ComponentUID(object):
         "Return a 'nicely formatted' string representation of the CUID"
         a = ""
         for name, args in self._cids:
-            a += '.' + self._safe_str(name)
+            a += '.' + _name_repr(name)
             if args:
-                a += '[' + ','.join(self._safe_str(x) for x in args) + ']'
+                a += '[' + ','.join(_name_repr(x) for x in args) + ']'
         return a[1:]  # Strip off the leading '.'
 
     # str() is sufficiently safe / unique to be usable as repr()
@@ -251,12 +231,7 @@ class ComponentUID(object):
 
         def _record_indexed_object_cuid_strings_v2(obj, cuid_str):
             for idx, data in obj.items():
-                if idx.__class__ is tuple and len(idx) > 1:
-                    cuid_strings[data] = cuid_str + '[' + ','.join(
-                        ComponentUID._safe_str(x) for x in idx) + ']'
-                else:
-                    cuid_strings[data] \
-                        = cuid_str + '[' + ComponentUID._safe_str(idx) + ']'
+                cuid_strings[data] = cuid_str + _index_repr(idx)
 
         _record_indexed_object_cuid_strings = {
             1: _record_indexed_object_cuid_strings_v1,
@@ -264,7 +239,7 @@ class ComponentUID(object):
         }[repr_version]
         _record_name = {
             1: str,
-            2: ComponentUID._safe_str,
+            2: _name_repr,
         }[repr_version]
 
         model = block.model()
@@ -640,8 +615,8 @@ def _match_escape(match):
 _re_number = re.compile(
     r'(?:[-+]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?|-?inf|nan)')
 
-# Ignore whitespace (space, tab, and linefeed)
-t_ignore = " \t\r"
+# Ignore whitespace (tab, and linefeed)
+t_ignore = "\t\r"
 
 literals = '()[],.'
 
@@ -653,9 +628,9 @@ tokens = [
     "PICKLE", # a pickled index object
 ]
 
-# Numbers only appear in getitem lists, so they must be followed by a
-# delimiter token (one of ' ,]')
-@ply.lex.TOKEN(_re_number.pattern+r'(?=[\s\],])')
+# Numbers should only appear in getitem lists, so they must be followed
+# by a delimiter token (one of ',]')
+@ply.lex.TOKEN(_re_number.pattern+r'(?=[,\]])')
 def t_NUMBER(t):
     t.value = _int_or_float(t.value)
     return t

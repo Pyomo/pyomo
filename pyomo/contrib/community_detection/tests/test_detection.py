@@ -644,8 +644,8 @@ class TestDecomposition(unittest.TestCase):
 
         community_map_object = cmo = detect_communities(model, random_seed=5)
         correct_partition = {3: 0, 4: 1, 5: 0, 6: 0, 7: 1, 8: 0}
-        correct_components = {'b[0].B[2].c', 'b[0].c2[1]', 'b[0].c1[3]', 'equality_constraint_list[1]',
-                              'b[1].c2[2]', 'b[1].x', 'b[0].x', 'b[0].y', 'b[0].z', 'b[0].obj[2]', 'b[1].c1[2]'}
+        correct_components = {"b[0].'B[2].c'", "b[0].'c2[1]'", "b[0].'c1[3]'", 'equality_constraint_list[1]',
+                              "b[1].'c2[2]'", 'b[1].x', 'b[0].x', 'b[0].y', 'b[0].z', "b[0].'obj[2]'", "b[1].'c1[2]'"}
 
         structured_model = cmo.generate_structured_model()
         self.assertIsInstance(structured_model, Block)
