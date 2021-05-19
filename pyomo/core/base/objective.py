@@ -546,6 +546,9 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
     # Objective.Skip but expects a valid expression or None
     #
 
+    def clear(self):
+        self._data = {}
+
     def set_value(self, expr):
         """Set the expression of this objective."""
         if not self._constructed:

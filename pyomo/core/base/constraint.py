@@ -943,6 +943,8 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
                 "nothing to access." % (self.name))
         return _GeneralConstraintData.strict_upper.fget(self)
 
+    def clear(self):
+        self._data = {}
 
     def set_value(self, expr):
         """Set the expression on this constraint."""
