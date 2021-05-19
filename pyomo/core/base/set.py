@@ -2471,8 +2471,7 @@ class _FiniteRangeSetData( _SortedSetMixin,
         # iterate over it
         nIters = len(self._ranges) - 1
         if not nIters:
-            for x in _FiniteRangeSetData._range_gen(self._ranges[0]):
-                yield x
+            yield from _FiniteRangeSetData._range_gen(self._ranges[0])
             return
 
         # The trick here is that we need to remove any duplicates from
@@ -3128,9 +3127,8 @@ class SetOperator(_SetData, Set):
                 yield self
                 return
         for s in self._sets:
-            for ss in s.subsets(
-                    expand_all_set_operators=expand_all_set_operators):
-                yield ss
+            yield from s.subsets(
+                expand_all_set_operators=expand_all_set_operators)
 
     @property
     @deprecated("SetProduct.set_tuple is deprecated.  "
@@ -3319,8 +3317,7 @@ class SetIntersection(SetOperator):
 
     def ranges(self):
         for a in self._sets[0].ranges():
-            for r in a.range_intersection(self._sets[1].ranges()):
-                yield r
+            yield from a.range_intersection(self._sets[1].ranges())
 
     @property
     def dimen(self):
@@ -3434,8 +3431,7 @@ class SetDifference(SetOperator):
 
     def ranges(self):
         for a in self._sets[0].ranges():
-            for r in a.range_difference(self._sets[1].ranges()):
-                yield r
+            yield from a.range_difference(self._sets[1].ranges())
 
     @property
     def dimen(self):
@@ -3527,8 +3523,7 @@ class SetSymmetricDifference(SetOperator):
         assert len(self._sets) == 2
         for set_a, set_b in (self._sets, reversed(self._sets)):
             for a_r in set_a.ranges():
-                for r in a_r.range_difference(set_b.ranges()):
-                    yield r
+                yield from a_r.range_difference(set_b.ranges())
 
     @property
     def dimen(self):

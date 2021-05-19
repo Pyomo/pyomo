@@ -163,13 +163,11 @@ class block(IBlock):
         ctype = _convert_ctype.get(ctype, ctype)
 
         if ctype is _no_ctype:
-            for child in self.__order.values():
-                yield child
+            yield from self.__order.values()
         elif self_byctype.__class__ is _ordered_dict_:
             # large-block storage
             if ctype in self_byctype:
-                for child in self_byctype[ctype].values():
-                    yield child
+                yield from self_byctype[ctype].values()
         elif self_byctype.__class__ is int:
             # small-block storage
             # (self_byctype is a union of hash bytes)
@@ -180,8 +178,7 @@ class block(IBlock):
                         yield child
         elif self_byctype is ctype:
             # storing a single ctype
-            for child in self.__order.values():
-                yield child
+            yield from self.__order.values()
 
     #
     # Interface
