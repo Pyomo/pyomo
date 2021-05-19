@@ -476,9 +476,23 @@ class Component(_ComponentBase):
         return self._constructed
 
     def reconstruct(self, data=None):
-        """Re-construct model expressions"""
-        self._constructed = False
-        self.construct(data=data)
+        """REMOVED: reconstruct() was removed in Pyomo 6.0.
+
+        Re-constructing model components was fragile and did not
+        correctly update instances of the component used in other
+        components or contexts (this was particularly problemmatic for
+        Var, Param, and Set).  Users who wish to reproduce the old
+        behavior of reconstruct(), are comfortable manipulating
+        non-public interfaces, and who take the time to verify that the
+        correct thing happens to their model can approximate the old
+        behavior of reconstruct with:
+
+            component.clear()
+            component._constructed = False
+            component.construct()
+
+        """
+        raise AttributeError(self.reconstruct.__doc__)
 
     def valid_model_component(self):
         """Return True if this can be used as a model component."""
