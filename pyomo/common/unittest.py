@@ -561,7 +561,7 @@ def buildParser():
 
 def runtests(options):
 
-    from pyomo.common.fileutils import PYOMO_ROOT_DIR as basedir
+    from pyomo.common.fileutils import PYOMO_ROOT_DIR as basedir, Executable
     env = os.environ.copy()
     os.chdir(basedir)
 
@@ -577,7 +577,8 @@ def runtests(options):
     if os.path.exists(nosetests):
         cmd = [nosetests]
     else:
-        cmd = ['nosetests']
+        nose = Executable('nosetests')
+        cmd = [sys.executable, nose.path()]
 
     if (sys.platform.startswith('win') and sys.version_info[0:2] >= (3, 8)):
         #######################################################
