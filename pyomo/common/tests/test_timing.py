@@ -46,7 +46,7 @@ class TestTiming(unittest.TestCase):
 
         ref = r"""
            (0(\.\d+)?) seconds to construct Block ConcreteModel; 1 index total
-           (0(\.\d+)?) seconds to construct RangeSet FiniteSimpleRangeSet; 1 index total
+           (0(\.\d+)?) seconds to construct RangeSet FiniteScalarRangeSet; 1 index total
            (0(\.\d+)?) seconds to construct Var x; 2 indices total
            (0(\.\d+)?) seconds to construct Suffix Suffix; 1 index total
            (0(\.\d+)?) seconds to apply Transformation RelaxIntegerVars \(in-place\)

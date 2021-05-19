@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
+from pyomo.common.deprecation import RenamedClass
 
 from pyomo.environ import (TransformationFactory, Block, Set, Constraint,
                            ComponentMap, Suffix, ConcreteModel, Var,
@@ -1292,7 +1293,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         ct.diff_apply_to_and_create_using(self, m, 'gdp.bigm')
 
 
-class SimpleDisjIndexedConstraints(unittest.TestCase, CommonTests):
+class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
     def setUp(self):
         # set seed so we can test name collisions predictably
         random.seed(666)
@@ -1429,6 +1430,11 @@ class SimpleDisjIndexedConstraints(unittest.TestCase, CommonTests):
         m.BigM = Suffix(direction=Suffix.LOCAL)
         m.BigM[None] = 100
         self.diff_apply_to_and_create_using(m)
+
+
+class SimpleDisjIndexedConstraints(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarDisjIndexedConstraints
+    __renamed__version__ = 'TBD'
 
 
 class MultiTermDisj(unittest.TestCase, CommonTests):
@@ -2210,7 +2216,7 @@ class IndexedDisjunctions(unittest.TestCase):
         transBlock1 = m.component("_pyomo_gdp_bigm_reformulation")
         self.assertIsInstance(transBlock1, Block)
         self.assertIsInstance(transBlock1.component("relaxedDisjuncts"), Block)
-        # We end up with a transformation block for every SimpleDisjunction or
+        # We end up with a transformation block for every ScalarDisjunction or
         # IndexedDisjunction.
         self.assertEqual(len(transBlock1.relaxedDisjuncts), 2)
         self.assertIsInstance(transBlock1.relaxedDisjuncts[0].component(

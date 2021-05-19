@@ -29,7 +29,7 @@ from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.suffix import active_import_suffix_generator
 from pyomo.core.base.numvalue import value
-from pyomo.core.base.block import SimpleBlock
+from pyomo.core.base.block import ScalarBlock
 from pyomo.core.base.set import Set
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.transformation import TransformationFactory
@@ -541,7 +541,7 @@ class ModelSolutions(object):
 
 
 @ModelComponentFactory.register('Model objects can be used as a component of other models.')
-class Model(SimpleBlock):
+class Model(ScalarBlock):
     """
     An optimization model.  By default, this defers construction of components
     until data is loaded.
@@ -568,7 +568,7 @@ class Model(SimpleBlock):
         # Model and Block objects as the same.  Similarly, this avoids
         # the requirement to import PyomoModel.py in the block.py file.
         #
-        SimpleBlock.__init__(self, **kwargs)
+        ScalarBlock.__init__(self, **kwargs)
         self._name = name
         self.statistics = Bunch()
         self.config = PyomoConfig()
