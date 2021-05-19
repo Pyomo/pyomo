@@ -5,10 +5,12 @@ Pyomo CHANGELOG
 -------------------------------------------------------------------------------
 Pyomo 6.0    19 May 2021
 -------------------------------------------------------------------------------
-BREAKING CHANGES
+
+BACKWARDS COMPATIBILITY WARNING
+  - Support for Python 2.7, 3.5, and pypy2
   - Removing PySP
   - Support for implicit ranged inequalities
-
+  - Support for component reconstruct method
 
 - Drop PyUtilib Dependency
   - Replace pyutilib.misc.import_file using standard Python 3 libraries (#1815)
@@ -18,7 +20,7 @@ BREAKING CHANGES
   - Replace pyutilib.th with unittest and pyomo.common.unittest (#1859, #1898)
   - Remove pyutilib.pyro (#1869)
   - Remove pyutilib dependencies from Pyomo script (#1976)
-  - Remove hard pytilib dependency (#1980)
+  - Remove hard pyutilib dependency (#1980)
 
 - General
   - Drop support and testing for Python 2.7, 3.5, and pypy2 (#1763, #1818)
@@ -55,7 +57,7 @@ BREAKING CHANGES
   - Fix inequality function to work with floats (#1841)
   - Update test_model to skip tests if GLPK is not available (#1917)
   - Rename param._NotValid to param.Param.NoValue (#1927)
-  - Improve error message for disables methods on Abstract components (#1896)
+  - Improve error message for disabled methods on Abstract components (#1896)
   - Propagate exception flag to _EvaluationVisitor (#1946)
   - Define pprint() for ExternalFunction components (#1965)
   - Support setting Var and Param values with unit expressions (#1966)
