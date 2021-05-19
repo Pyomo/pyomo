@@ -263,7 +263,7 @@ You may change the environment name from ``pyomodev`` as you see fit. Then activ
    
    conda activate pyomodev
 
-Step 2: (OPTIONAL) Install PyUtilib
+Step 2 (optional): Install PyUtilib
 
 The hard dependency on PyUtilib was removed in Pyomo 6.0.0. There is still a soft dependency for any code related to ``pyomo.dataportal.plugins.sheet``.
 

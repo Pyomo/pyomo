@@ -81,7 +81,7 @@ if test -z "$MODE" -o "$MODE" == setup; then
     echo ""
     # configure the Pyomo configuration directory
     echo "#"
-    echo "# Installing python modules"
+    echo "# Installing pyomo modules"
     echo "#"
     popd
     pushd "$WORKSPACE/pyomo" || exit 1
