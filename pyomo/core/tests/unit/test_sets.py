@@ -1515,7 +1515,8 @@ class TestRealSet(unittest.TestCase):
 
     def test_RealInterval(self):
         x = RealInterval()
-        self.assertEqual(x.name, "RealInterval(None, None)")
+        self.assertEqual(x.name, "'RealInterval(None, None)'")
+        self.assertEqual(x.local_name, "RealInterval(None, None)")
         self.assertFalse(None in x)
         self.assertTrue(10 in x)
         self.assertTrue(1.1 in x)
@@ -1528,7 +1529,8 @@ class TestRealSet(unittest.TestCase):
         self.assertTrue(-10 in x)
 
         x = RealInterval(bounds=(-1,1))
-        self.assertEqual(x.name, "RealInterval(-1, 1)")
+        self.assertEqual(x.name, "'RealInterval(-1, 1)'")
+        self.assertEqual(x.local_name, "RealInterval(-1, 1)")
         self.assertFalse(10 in x)
         self.assertFalse(1.1 in x)
         self.assertTrue(1 in x)
@@ -1668,7 +1670,8 @@ class TestIntegerSet(unittest.TestCase):
     def test_IntegerInterval(self):
         x = IntegerInterval()
         self.assertFalse(None in x)
-        self.assertEqual(x.name, "IntegerInterval(None, None)")
+        self.assertEqual(x.name, "'IntegerInterval(None, None)'")
+        self.assertEqual(x.local_name, "IntegerInterval(None, None)")
         self.assertTrue(10 in x)
         self.assertFalse(1.1 in x)
         self.assertTrue(1 in x)
@@ -1681,7 +1684,8 @@ class TestIntegerSet(unittest.TestCase):
 
         x = IntegerInterval(bounds=(-1,1))
         self.assertFalse(None in x)
-        self.assertEqual(x.name, "IntegerInterval(-1, 1)")
+        self.assertEqual(x.name, "'IntegerInterval(-1, 1)'")
+        self.assertEqual(x.local_name, "IntegerInterval(-1, 1)")
         self.assertFalse(10 in x)
         self.assertFalse(1.1 in x)
         self.assertTrue(1 in x)
