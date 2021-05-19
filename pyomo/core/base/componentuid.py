@@ -615,7 +615,7 @@ def _match_escape(match):
 _re_number = re.compile(
     r'(?:[-+]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?|-?inf|nan)')
 
-# Ignore whitespace (space, tab, and linefeed)
+# Ignore whitespace (tab, and linefeed)
 t_ignore = "\t\r"
 
 literals = '()[],.'
