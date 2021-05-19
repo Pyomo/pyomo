@@ -125,7 +125,6 @@ def run_setup():
         'Topic :: Software Development :: Libraries :: Python Modules' ],
       python_requires='>=3.6',
       install_requires=[
-          'PyUtilib>=6.0.1.dev0',
           'ply',
       ],
       packages=find_packages(exclude=("scripts",)),
@@ -135,7 +134,6 @@ def run_setup():
       entry_points="""
         [console_scripts]
         pyomo = pyomo.scripting.pyomo_main:main_console_script
-        pyomo_python = pyomo.scripting.commands:pyomo_python
 
         [pyomo.command]
         pyomo.help = pyomo.scripting.driver_help

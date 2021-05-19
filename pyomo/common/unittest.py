@@ -547,6 +547,11 @@ def buildParser():
         action='store_true',
         dest='xunit',
         help='Enable the nose XUnit plugin')
+    parser.add_argument('-x',
+        '--stop',
+        action='store_true',
+        dest='stop',
+        help='Stop running tests after the first error or failure.')
     parser.add_argument('--dry-run',
         action='store_true',
         dest='dryrun',
@@ -556,7 +561,7 @@ def buildParser():
 
 def runtests(options):
 
-    from pyomo.common.fileutils import PYOMO_ROOT_DIR as basedir
+    from pyomo.common.fileutils import PYOMO_ROOT_DIR as basedir, Executable
     env = os.environ.copy()
     os.chdir(basedir)
 
@@ -572,7 +577,8 @@ def runtests(options):
     if os.path.exists(nosetests):
         cmd = [nosetests]
     else:
-        cmd = ['nosetests']
+        nose = Executable('nosetests')
+        cmd = [sys.executable, nose.path()]
 
     if (sys.platform.startswith('win') and sys.version_info[0:2] >= (3, 8)):
         #######################################################
@@ -587,6 +593,8 @@ def runtests(options):
 
     if options.verbose:
         cmd.append('-v')
+    if options.stop:
+        cmd.append('-x')
     if options.dryrun:
         cmd.append('--collect-only')
 

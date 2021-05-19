@@ -12,8 +12,6 @@ Ref:
 """
 from __future__ import division
 
-from six import iteritems
-
 from pyomo.environ import (Binary, ConcreteModel, Constraint,
                            NonNegativeReals, Objective, Param,
                            RangeSet, Var, exp, minimize, Reals)

@@ -956,24 +956,6 @@ This has resulted in the conversion of the source to dense form.
             self.to_dense_data()
         timer.report()
 
-    def reconstruct(self, data=None):
-        """
-        Reconstruct this parameter object.  This is particularly useful
-        for cases where an initialize rule is provided.  An initialize
-        rule can return an expression that is a function of other
-        parameters, so reconstruction can account for changes in dependent
-        parameters.
-
-        Only mutable parameters can be reconstructed.  Otherwise, the
-        changes would not be propagated into expressions in objectives
-        or constraints.
-        """
-        if not self._mutable:
-            raise RuntimeError(
-                "Cannot invoke reconstruct method of immutable Param %s"
-                % (self.name,))
-        IndexedComponent.reconstruct(self, data=data)
-
     def _pprint(self):
         """
         Return data that will be printed for this component.

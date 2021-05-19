@@ -1,5 +1,5 @@
 from pyomo.environ import *
-from pyutilib.math import isclose
+from math import isclose
 import math
 import copy
 

@@ -458,6 +458,9 @@ class ScalarExpression(_GeneralExpressionData, Expression):
     def value(self, expr):
         self.set_value(expr)
 
+    def clear(self):
+        self._data = {}
+
     def set_value(self, expr):
         """Set the expression on this expression."""
         if self._constructed:
