@@ -10,7 +10,7 @@
 
 from pyomo.core.base import Constraint, Objective, Block
 from pyomo.repn import generate_standard_repn
-from pyomo.core.base.plugin import TransformationFactory
+from pyomo.core.base.transformation import TransformationFactory
 from pyomo.core.base import Var, Set
 from pyomo.bilevel.plugins.transform import Base_BilevelTransformation
 

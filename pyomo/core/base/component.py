@@ -16,6 +16,7 @@ from weakref import ref as weakref_ref
 
 import pyomo.common
 from pyomo.common.deprecation import deprecated, relocated_module_attribute
+from pyomo.common.factory import Factory
 from pyomo.common.fileutils import StreamIndenter
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base.misc import tabular_writer, sorted_robust
@@ -25,6 +26,18 @@ logger = logging.getLogger('pyomo.core')
 relocated_module_attribute(
     'ComponentUID', 'pyomo.core.base.componentuid.ComponentUID',
     version='5.7.2')
+
+
+class ModelComponentFactoryClass(Factory):
+
+    def register(self, doc=None):
+        def fn(cls):
+            return super(ModelComponentFactoryClass, self).register(
+                cls.__name__, doc)(cls)
+        return fn
+
+ModelComponentFactory = ModelComponentFactoryClass('model component')
+
 
 def _name_index_generator(idx):
     """

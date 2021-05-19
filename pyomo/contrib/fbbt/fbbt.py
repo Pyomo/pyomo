@@ -19,7 +19,7 @@ from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 from pyomo.gdp import Disjunct
-from pyomo.core.base.expression import _GeneralExpressionData, SimpleExpression
+from pyomo.core.base.expression import _GeneralExpressionData, ScalarExpression
 import logging
 from pyomo.common.errors import InfeasibleConstraintException, PyomoException
 from pyomo.common.config import ConfigBlock, ConfigValue, In, NonNegativeFloat, NonNegativeInt
@@ -462,7 +462,7 @@ _prop_bnds_leaf_to_root_map[numeric_expr.NPV_NegationExpression] = _prop_bnds_le
 _prop_bnds_leaf_to_root_map[numeric_expr.NPV_UnaryFunctionExpression] = _prop_bnds_leaf_to_root_UnaryFunctionExpression
 
 _prop_bnds_leaf_to_root_map[_GeneralExpressionData] = _prop_bnds_leaf_to_root_GeneralExpression
-_prop_bnds_leaf_to_root_map[SimpleExpression] = _prop_bnds_leaf_to_root_GeneralExpression
+_prop_bnds_leaf_to_root_map[ScalarExpression] = _prop_bnds_leaf_to_root_GeneralExpression
 
 
 def _prop_bnds_root_to_leaf_ProductExpression(node, bnds_dict, feasibility_tol):
@@ -1029,7 +1029,7 @@ _prop_bnds_root_to_leaf_map[numeric_expr.NPV_NegationExpression] = _prop_bnds_ro
 _prop_bnds_root_to_leaf_map[numeric_expr.NPV_UnaryFunctionExpression] = _prop_bnds_root_to_leaf_UnaryFunctionExpression
 
 _prop_bnds_root_to_leaf_map[_GeneralExpressionData] = _prop_bnds_root_to_leaf_GeneralExpression
-_prop_bnds_root_to_leaf_map[SimpleExpression] = _prop_bnds_root_to_leaf_GeneralExpression
+_prop_bnds_root_to_leaf_map[ScalarExpression] = _prop_bnds_root_to_leaf_GeneralExpression
 
 
 def _check_and_reset_bounds(var, lb, ub):
