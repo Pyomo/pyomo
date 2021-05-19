@@ -157,7 +157,8 @@ class ShortNameLabeler(object):
             self.labeler = labeler
         else:
             self.labeler = AlphaNumericTextLabeler()
-        self.known_labels = set() if caseInsensitive else None
+        self.known_labels = set()
+        self.caseInsensitive = caseInsensitive
         if isinstance(legalRegex, str):
             self.legalRegex = re.compile(legalRegex)
         else:
@@ -172,7 +173,7 @@ class ShortNameLabeler(object):
         elif lbl_len == self.limit and lbl.startswith(self.prefix) \
              and lbl.endswith(self.suffix):
             shorten = True
-        elif self.known_labels is not None and lbl.upper() in self.known_labels:
+        elif (lbl.upper() if self.caseInsensitive else lbl) in self.known_labels:
             shorten = True
         elif self.legalRegex and not self.legalRegex.match(lbl):
             shorten = True
@@ -187,5 +188,5 @@ class ShortNameLabeler(object):
                     "label limited to %d characters" % (self.limit,)) 
             lbl = self.prefix + lbl[tail:] + suffix
         if self.known_labels is not None:
-            self.known_labels.add(lbl.upper())
+            self.known_labels.add(lbl.upper() if self.caseInsensitive else lbl)
         return lbl
