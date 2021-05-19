@@ -9,14 +9,17 @@
 #  ___________________________________________________________________________
 from .visitor import StreamBasedExpressionVisitor
 from .numvalue import nonpyomo_leaf_types
-from .numeric_expr import (LinearExpression, MonomialTermExpression, SumExpression, ExpressionBase,
-                           ProductExpression, DivisionExpression, ReciprocalExpression, PowExpression,
-                           NegationExpression, UnaryFunctionExpression, ExternalFunctionExpression,
-                           NPV_ProductExpression, NPV_DivisionExpression, NPV_ReciprocalExpression,
-                           NPV_PowExpression, NPV_SumExpression, NPV_NegationExpression,
-                           NPV_UnaryFunctionExpression, NPV_ExternalFunctionExpression, Expr_ifExpression,
-                           AbsExpression, NPV_AbsExpression, NumericValue)
-from pyomo.core.expr.logical_expr import RangedExpression, InequalityExpression, EqualityExpression
+from .numeric_expr import (
+    LinearExpression, MonomialTermExpression, SumExpression, ExpressionBase,
+    ProductExpression, DivisionExpression, ReciprocalExpression, PowExpression,
+    NegationExpression, UnaryFunctionExpression, ExternalFunctionExpression,
+    NPV_ProductExpression, NPV_DivisionExpression, NPV_ReciprocalExpression,
+    NPV_PowExpression, NPV_SumExpression, NPV_NegationExpression,
+    NPV_UnaryFunctionExpression, NPV_ExternalFunctionExpression,
+    Expr_ifExpression, AbsExpression, NPV_AbsExpression, NumericValue)
+from pyomo.core.expr.logical_expr import (
+    RangedExpression, InequalityExpression, EqualityExpression
+)
 from typing import List
 from pyomo.common.errors import PyomoException
 
@@ -160,7 +163,7 @@ def compare_expressions(expr1, expr2):
     """
     Returns True if 2 expression trees are identical. Returns False
     otherwise.
-    
+
     Parameters
     ----------
     expr1: NumericValue

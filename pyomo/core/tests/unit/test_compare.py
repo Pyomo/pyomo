@@ -9,12 +9,18 @@
 #  ___________________________________________________________________________
 from pyomo.common import unittest
 import pyomo.environ as pe
-from pyomo.core.expr.numeric_expr import (LinearExpression, MonomialTermExpression, SumExpression,
-                                          ProductExpression, DivisionExpression, PowExpression,
-                                          NegationExpression, UnaryFunctionExpression, ExternalFunctionExpression,
-                                          Expr_ifExpression)
-from pyomo.core.expr.logical_expr import InequalityExpression, EqualityExpression, RangedExpression
-from pyomo.core.expr.compare import convert_expression_to_prefix_notation, compare_expressions
+from pyomo.core.expr.numeric_expr import (
+    LinearExpression, MonomialTermExpression, SumExpression,
+    ProductExpression, DivisionExpression, PowExpression,
+    NegationExpression, UnaryFunctionExpression, ExternalFunctionExpression,
+    Expr_ifExpression
+)
+from pyomo.core.expr.logical_expr import (
+    InequalityExpression, EqualityExpression, RangedExpression
+)
+from pyomo.core.expr.compare import (
+    convert_expression_to_prefix_notation, compare_expressions
+)
 from pyomo.common.getGSL import find_GSL
 
 
