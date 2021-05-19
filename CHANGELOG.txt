@@ -3,6 +3,96 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.0    19 May 2021
+-------------------------------------------------------------------------------
+BREAKING CHANGES
+  - Removing PySP
+  - Support for implicit ranged inequalities
+
+
+- Drop PyUtilib Dependency
+  - Replace pyutilib.misc.import_file using standard Python 3 libraries (#1815)
+  - Replace pyutilib.math with Python math package (#1809)
+  - Remove or replace pyutilib.misc items (#1814, #1822)
+  - Replace pyutilib.subprocess with Python subprocess (#1812)
+  - Replace pyutilib.th with unittest and pyomo.common.unittest (#1859)
+  - Remove pyutilib.pyro (#1869)
+
+- General
+  - Drop support and testing for Python 2.7, 3.5, and pypy2 (#1763, #1818)
+  - Remove PySP (#1819)
+  - Clean up code for Python 2/3 cross-compatibility, remove use of six (#1829, 
+    #1833, #1901, #1908, #1910, #1911, #1876, #1915, #1919, #1931)
+  - Standardize usage of string type comparison (#1826)
+  - Switch default branch of Pyomo from master to main (#1843)
+  - Cleanup console scripts (#1830)
+  - Update import_file to recognize module context (#1871)
+  - Remove 2nd edition Pyomo Book examples (#1883)
+  - Move Container/Options/Bunch into just Bunch (#1838)
+  - Improve handling of enum.Enum domains in ConfigValue (#1893)
+  - Add MANIFEST.in file to include cpp files in PyPI package (#1851)
+  - Add GitHub issue templates for bug reports and feature requests (#1920)
+  - Fix identification of Pyomo root dir in unittest.runtests (#1922)
+  - Update the Config system (#1916)
+  - Resolve numerous deprecation warnings (#1935)
+  - Timing and timing test improvements (#1939, #1894, #1945)
+  - Overhaul @deprecated decorator to work better with class, enum, and sphinx (#1906)
+  - Improve attempt_import mechanism (#1940, #1948)
+
+- Core
+  - Improve sorted_robust for (nested) tuple items (#1842)
+  - Update _component_data_iter to use sorted_robust (#1852)
+  - Disable implicit ranged inequalities (#1840)
+  - Improve error message when constructing a RangeSet with external data (#1875)
+  - Fix bug in scaling transformation (#1854)
+  - Fix bug in identify_mutable_parameters (#1878)
+  - Fix inequality function to work with floats (#1841)
+  - Update test_model to skip tests if GLPK is not available (#1917)
+  - Rename param._NotValid to param.Param.NoValue (#1927)
+  - Improve error message for disables methods on Abstract components (#1896)
+  - Propagate exception flag to _EvaluationVisitor (#1946)
+- Documentation 
+  - Add documentation and doctests for pyomo.common.timing (#1924)
+  - Update the ReadTheDocs configuration (#1929)
+  - Improve robustness of doctest tests (#1942)
+- Solver Interfaces
+  - Track changes in NEOS/RAPOSa expected behavior (#1816)
+  - Fix quadratic term handling for QCQO problems in mosek_direct (#1835)
+  - Remove pyomo.opt.blackbox and the COLIN solver interface (#1872)
+  - Add support for SHOT solver to GAMS interface (#1889)
+  - Fix sign convention in CBC for maximization problems (#1848)
+  - Update gurobi available() checks (#1921)
+  - Update CBC interface to handle infinite gap (#1907)
+- Testing
+  - Clean up Jenkins test driver (#1813)
+  - Update  unittest.timeout to work on Windows (#1825)
+  - Manually add commit HASH to codecov upload on GitHub Actions (#1824)
+  - Relax tee/timeout test timing to improve robustness (#1831)
+  - Update Mosek tests (#1844)
+  - Add Casadi to GitHub Actions test environment (#1849)
+  - Disable codecov uploads from forks (#1863)
+  - Update IDAES-ext version used in our GitHub Actions jobs workflows (#1882)
+  - Rewrite test driver script (#1870, #1902)
+  - Rebuild GitHub Actions caches (#1934)
+  - Update expected CBC test failures (#1943)
+  - Update merged reader test to reduce failures in OSX (#1953)
+- DAE Updates
+  - Split get_index_set_except into two functions (#1879)
+- Network Updates
+  - Fix bug in cloning Ports (#1899)
+- Contributed Packages
+  - PyNumero: add Hessian support for grey box models, support multiple grey box 
+    models in a single Pyomo model, add callback functionality to cyipopt interface, 
+    track changes in cyipopt API, expose nl file options in PyomoNLP, add documentation 
+    and doctests (#1810, #1832, #1873, #1913, #1930, #1936)
+  - Update contrib.viewer tests (#1820)
+  - Add new Auto-Persistent Pyomo Solver Interfaces (APPSI) package (#1793)
+  - GDPopt: add option to solve a relaxation with integer cuts, remove default
+    strategy (#1837)
+  - Benders: rename master problem to root problem (#1828)
+  - FBBT: Improve interval arithmetic for some special cases (#1949)
+
+-------------------------------------------------------------------------------
 Pyomo 5.7.3   29 Jan 2021
 -------------------------------------------------------------------------------
 
@@ -43,7 +133,7 @@ ADVANCE CHANGE NOTICE:
 - Testing
   - Fix Jenkins test script (#1771)
   - Fix GHA tests to work with PyMySQL 1.0.0 (#1777)
-- Contrib
+- Contributed Packages
   - PyNumero: resolve portability issue with Cyipopt exception handling, 
     add PyomoNLP methods for accessing equality/inequality constraints (#1781, 
     #1791)
