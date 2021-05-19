@@ -77,24 +77,11 @@ handler[EqualityExpression] = handle_expression
 class PrefixVisitor(StreamBasedExpressionVisitor):
     def __init__(self):
         super().__init__()
-        self._result = list()
+        self._result = None
 
     def initializeWalker(self, expr):
-        self._result = list()
-        etype = type(expr)
-
-        if etype in nonpyomo_leaf_types:
-            self._result.append(expr)
-            return False, self._result
-
-        if expr.is_expression_type():
-            if etype is LinearExpression:
-                handle_linear_expression(expr, self._result)
-                return False, self._result
-            return True, None
-
-        self._result.append(expr)
-        return False, self._result
+        self._result = []
+        return True, None
 
     def enterNode(self, node):
         ntype = type(node)
@@ -109,7 +96,9 @@ class PrefixVisitor(StreamBasedExpressionVisitor):
             return tuple(), None
 
     def finalizeResult(self, result):
-        return self._result
+        ans = self._result
+        self._result = None
+        return ans
 
 
 def convert_expression_to_prefix_notation(expr):
