@@ -750,6 +750,7 @@ class Constraint(ActiveIndexedComponent):
 
         try:
             # We do not (currently) accept data for constructing Constraints
+            index = None
             assert data is None
 
             if self.rule is None:
@@ -762,7 +763,6 @@ class Constraint(ActiveIndexedComponent):
                     "of a constraint with a single expression" %
                     (self.name,) )
 
-            index = None
             block = self.parent_block()
             if self.rule.contains_indices():
                 # The index is coming in externally; we need to validate it
@@ -943,6 +943,8 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
                 "nothing to access." % (self.name))
         return _GeneralConstraintData.strict_upper.fget(self)
 
+    def clear(self):
+        self._data = {}
 
     def set_value(self, expr):
         """Set the expression on this constraint."""
