@@ -594,6 +594,7 @@ scipy, scipy_available = attempt_import(
 networkx, networkx_available = attempt_import('networkx')
 pandas, pandas_available = attempt_import('pandas')
 dill, dill_available = attempt_import('dill')
+pyutilib, pyutilib_available = attempt_import('pyutilib')
 
 # Note that matplotlib.pyplot can generate a runtime error on OSX when
 # not installed as a Framework (as is the case in the CI systems)

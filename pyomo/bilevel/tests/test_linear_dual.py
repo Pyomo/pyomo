@@ -65,17 +65,20 @@ class CommonTests:
             args.append('--logging=debug')
 
         args = args + list(_args)
-        os.chdir(currdir)
+        _cwd = os.getcwd()
 
         print('***')
         # print(' '.join(args))
         try:
+            os.chdir(currdir)
             output = pyomo_main.main(args)
         except SystemExit:
             output = None
         except:
             output = None
             raise
+        finally:
+            os.chdir(_cwd)
         cleanup()
         print('***')
         return output

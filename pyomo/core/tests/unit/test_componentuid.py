@@ -79,7 +79,7 @@ class TestComponentUID(unittest.TestCase):
             (('c',tuple()), ('a',())) )
         with self.assertRaisesRegex(
                 ValueError,
-                r"Context 'b\[1,2\]' does not apply to component 's'"):
+                r"Context 'b\[1,'2'\]' does not apply to component 's'"):
             ComponentUID(self.m.s, context=self.m.b[1,'2'])
         with self.assertRaisesRegex(
                 ValueError,

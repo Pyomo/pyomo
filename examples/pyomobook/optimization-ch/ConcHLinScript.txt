@@ -1,4 +1,4 @@
-Model Linear (H)
+Model 'Linear (H)'
 
   Variables:
     x : Size=2, Index=x_index

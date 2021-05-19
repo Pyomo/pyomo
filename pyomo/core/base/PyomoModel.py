@@ -669,7 +669,9 @@ arguments (which have been ignored):"""
             timing.report_timing()
 
         if name is None:
-            name = self.name
+            # Preserve only the local name (not the FQ name, as that may
+            # have been quoted or otherwise escaped)
+            name = self.local_name
         if filename is not None:
             if data is not None:
                 logger.warning("Model.create_instance() passed both 'filename' "
