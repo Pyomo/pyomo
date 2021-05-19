@@ -138,6 +138,9 @@ class ScalarIntegral(ScalarExpression, Integral):
         _GeneralExpressionData.__init__(self, None, component=self)
         Integral.__init__(self, *args, **kwds)
 
+    def clear(self):
+        self._data = {}
+
     def is_fully_discretized(self):
         """
         Checks to see if all ContinuousSets indexing this Integral have been
