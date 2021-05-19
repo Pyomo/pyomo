@@ -27,12 +27,6 @@ import pyomo.opt
 
 old_tempdir = TempfileManager.tempdir
 
-def filter(text):
-    return 'Problem:' in text or text.startswith('NAME')
-
-def filter_nl(text):
-    return '# problem'
-
 solver = None
 class Test(unittest.TestCase):
 
@@ -67,9 +61,18 @@ class Test(unittest.TestCase):
                 self.fail("Unexpected ConverterError - ampl is enabled "
                           "but not available: '%s'" % str(err))
             return
-        _out, _log = join(currdir, 'test3.nl'), join(currdir, 'test3.baseline.nl')
-        self.assertTrue(cmp(_out, _log),
-                        msg="Files %s and %s differ" % (_out, _log))
+        _test = join(currdir, 'test3.nl')
+        _base = join(currdir, 'test3.baseline.nl')
+        with open(_test, 'r') as run, open(_base, 'r') as baseline:
+            for line1, line2 in zip_longest(run, baseline):
+                for _pattern in ('# problem',):
+                    if line1.find(_pattern) >= 0:
+                        line1 = line1[:line1.find(_pattern)+len(_pattern)]
+                        line2 = line2[:line2.find(_pattern)+len(_pattern)]
+                self.assertEqual(
+                    line1, line2,
+                    msg="Files %s and %s differ" % (_test, _base)
+                )
 
     def test3_write_lp(self):
         """ Convert from AMPL to LP """
@@ -88,11 +91,18 @@ class Test(unittest.TestCase):
                 self.fail("Unexpected ConverterError - glpsol is enabled "
                           "but not available: '%s'" % str(err))
             return
-        with open(join(currdir, 'test3.lp'), 'r') as run, \
-            open(join(currdir, 'test3.baseline.lp'), 'r') as baseline:
-                for line1, line2 in zip_longest(run, baseline):
-                    if 'Problem' not in line1:
-                        self.assertEqual(line1, line2)
+        _test = join(currdir, 'test3.lp')
+        _base = join(currdir, 'test3.baseline.lp')
+        with open(_test, 'r') as run, open(_base, 'r') as baseline:
+            for line1, line2 in zip_longest(run, baseline):
+                for _pattern in ('Problem:',):
+                    if line1.find(_pattern) >= 0:
+                        line1 = line1[:line1.find(_pattern)+len(_pattern)]
+                        line2 = line2[:line2.find(_pattern)+len(_pattern)]
+                self.assertEqual(
+                    line1, line2,
+                    msg="Files %s and %s differ" % (_test, _base)
+                )
 
     def test3_write_mps(self):
         """ Convert from AMPL to MPS """
@@ -113,9 +123,18 @@ class Test(unittest.TestCase):
                 self.fail("Unexpected ConverterError - ampl is enabled "
                           "but not available: '%s'" % str(err))
             return
-        _out, _log = join(currdir, 'test3.mps'), join(currdir, 'test3.baseline.mps')
-        self.assertTrue(cmp(_out, _log),
-                        msg="Files %s and %s differ" % (_out, _log))
+        _test = join(currdir, 'test3.mps')
+        _base = join(currdir, 'test3.baseline.mps')
+        with open(_test, 'r') as run, open(_base, 'r') as baseline:
+            for line1, line2 in zip_longest(run, baseline):
+                for _pattern in ('NAME',):
+                    if line1.find(_pattern) >= 0:
+                        line1 = line1[:line1.find(_pattern)+len(_pattern)]
+                        line2 = line2[:line2.find(_pattern)+len(_pattern)]
+                self.assertEqual(
+                    line1, line2,
+                    msg="Files %s and %s differ" % (_test, _base)
+                )
 
     def test3a_write_nl(self):
         """ Convert from AMPL to NL """
@@ -134,9 +153,18 @@ class Test(unittest.TestCase):
                 self.fail("Unexpected ConverterError - ampl is enabled "
                           "but not available: '%s'" % str(err))
             return
-        _out, _log = join(currdir, 'test3a.nl'), join(currdir, 'test3.baseline.nl')
-        self.assertTrue(cmp(_out, _log),
-                        msg="Files %s and %s differ" % (_out, _log))
+        _test = join(currdir, 'test3a.nl')
+        _base = join(currdir, 'test3.baseline.nl')
+        with open(_test, 'r') as run, open(_base, 'r') as baseline:
+            for line1, line2 in zip_longest(run, baseline):
+                for _pattern in ('# problem',):
+                    if line1.find(_pattern) >= 0:
+                        line1 = line1[:line1.find(_pattern)+len(_pattern)]
+                        line2 = line2[:line2.find(_pattern)+len(_pattern)]
+                self.assertEqual(
+                    line1, line2,
+                    msg="Files %s and %s differ" % (_test, _base)
+                )
 
     def test3a_write_lp(self):
         """ Convert from AMPL to LP """
@@ -155,11 +183,18 @@ class Test(unittest.TestCase):
                 self.fail("Unexpected ConverterError - glpsol is enabled "
                           "but not available: '%s'" % str(err))
             return
-        with open(join(currdir, 'test3a.lp'), 'r') as run, \
-            open(join(currdir, 'test3.baseline.lp'), 'r') as baseline:
-                for line1, line2 in zip_longest(run, baseline):
-                    if 'Problem' not in line1:
-                        self.assertEqual(line1, line2)
+        _test = join(currdir, 'test3a.lp')
+        _base = join(currdir, 'test3.baseline.lp')
+        with open(_test, 'r') as run, open(_base, 'r') as baseline:
+            for line1, line2 in zip_longest(run, baseline):
+                for _pattern in ('Problem:',):
+                    if line1.find(_pattern) >= 0:
+                        line1 = line1[:line1.find(_pattern)+len(_pattern)]
+                        line2 = line2[:line2.find(_pattern)+len(_pattern)]
+                self.assertEqual(
+                    line1, line2,
+                    msg="Files %s and %s differ" % (_test, _base)
+                )
 
     def test3a_write_mps(self):
         """ Convert from AMPL to MPS """
@@ -180,9 +215,18 @@ class Test(unittest.TestCase):
                 self.fail("Unexpected ConverterError - ampl is enabled "
                           "but not available: '%s'" % str(err))
             return
-        _out, _log = join(currdir, 'test3a.mps'), join(currdir, 'test3.baseline.mps')
-        self.assertTrue(cmp(_out, _log),
-                        msg="Files %s and %s differ" % (_out, _log))
+        _test = join(currdir, 'test3a.mps')
+        _base = join(currdir, 'test3.baseline.mps')
+        with open(_test, 'r') as run, open(_base, 'r') as baseline:
+            for line1, line2 in zip_longest(run, baseline):
+                for _pattern in ('NAME',):
+                    if line1.find(_pattern) >= 0:
+                        line1 = line1[:line1.find(_pattern)+len(_pattern)]
+                        line2 = line2[:line2.find(_pattern)+len(_pattern)]
+                self.assertEqual(
+                    line1, line2,
+                    msg="Files %s and %s differ" % (_test, _base)
+                )
 
     def test3_solve(self):
         if not 'glpk' in solvers:

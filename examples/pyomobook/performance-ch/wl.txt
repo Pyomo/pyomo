@@ -3,18 +3,18 @@ Building model
            0 seconds to construct Block ConcreteModel; 1 index total
            0 seconds to construct Set Any; 1 index total
            0 seconds to construct Param P; 1 index total
-           0 seconds to construct Set OrderedSimpleSet; 1 index total
-           0 seconds to construct Set OrderedSimpleSet; 1 index total
+           0 seconds to construct Set OrderedScalarSet; 1 index total
+           0 seconds to construct Set OrderedScalarSet; 1 index total
            0 seconds to construct Set SetProduct_OrderedSet; 1 index total
            0 seconds to construct Set SetProduct_OrderedSet; 1 index total
         0.15 seconds to construct Var x; 40000 indices total
-           0 seconds to construct Set OrderedSimpleSet; 1 index total
+           0 seconds to construct Set OrderedScalarSet; 1 index total
            0 seconds to construct Var y; 200 indices total
         0.26 seconds to construct Objective obj; 1 index total
-           0 seconds to construct Set OrderedSimpleSet; 1 index total
+           0 seconds to construct Set OrderedScalarSet; 1 index total
         0.13 seconds to construct Constraint demand; 200 indices total
-           0 seconds to construct Set OrderedSimpleSet; 1 index total
-           0 seconds to construct Set OrderedSimpleSet; 1 index total
+           0 seconds to construct Set OrderedScalarSet; 1 index total
+           0 seconds to construct Set OrderedScalarSet; 1 index total
            0 seconds to construct Set SetProduct_OrderedSet; 1 index total
            0 seconds to construct Set SetProduct_OrderedSet; 1 index total
         0.82 seconds to construct Constraint warehouse_active; 40000 indices total
@@ -24,18 +24,18 @@ Building model with LinearExpression
            0 seconds to construct Block ConcreteModel; 1 index total
            0 seconds to construct Set Any; 1 index total
            0 seconds to construct Param P; 1 index total
-           0 seconds to construct Set OrderedSimpleSet; 1 index total
-           0 seconds to construct Set OrderedSimpleSet; 1 index total
+           0 seconds to construct Set OrderedScalarSet; 1 index total
+           0 seconds to construct Set OrderedScalarSet; 1 index total
            0 seconds to construct Set SetProduct_OrderedSet; 1 index total
            0 seconds to construct Set SetProduct_OrderedSet; 1 index total
         0.08 seconds to construct Var x; 40000 indices total
-           0 seconds to construct Set OrderedSimpleSet; 1 index total
+           0 seconds to construct Set OrderedScalarSet; 1 index total
            0 seconds to construct Var y; 200 indices total
         0.33 seconds to construct Objective obj; 1 index total
-           0 seconds to construct Set OrderedSimpleSet; 1 index total
+           0 seconds to construct Set OrderedScalarSet; 1 index total
         0.13 seconds to construct Constraint demand; 200 indices total
-           0 seconds to construct Set OrderedSimpleSet; 1 index total
-           0 seconds to construct Set OrderedSimpleSet; 1 index total
+           0 seconds to construct Set OrderedScalarSet; 1 index total
+           0 seconds to construct Set OrderedScalarSet; 1 index total
            0 seconds to construct Set SetProduct_OrderedSet; 1 index total
            0 seconds to construct Set SetProduct_OrderedSet; 1 index total
         0.59 seconds to construct Constraint warehouse_active; 40000 indices total

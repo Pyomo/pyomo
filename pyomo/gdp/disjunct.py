@@ -15,14 +15,14 @@ import types
 from math import fabs
 from weakref import ref as weakref_ref
 
-from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.deprecation import RenamedClass,  deprecation_warning
 from pyomo.common.errors import PyomoException
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import (
-    ModelComponentFactory, Binary, Block, Var, ConstraintList, Any,
-    LogicalConstraintList, BooleanValue, SimpleBooleanVar, SimpleVar,
+    ModelComponentFactory, Binary, Block, ConstraintList, Any,
+    LogicalConstraintList, BooleanValue, ScalarBooleanVar, ScalarVar,
     value)
 from pyomo.core.base.component import (
     ActiveComponent, ActiveComponentData, ComponentData
@@ -47,7 +47,7 @@ class GDP_Error(PyomoException):
     """Exception raised while processing GDP Models"""
 
 
-class AutoLinkedBinaryVar(SimpleVar):
+class AutoLinkedBinaryVar(ScalarVar):
     """A binary variable implicitly linked to its equivalent Boolean variable.
 
     Basic operations like setting values and fixing/unfixing this
@@ -76,7 +76,7 @@ class AutoLinkedBinaryVar(SimpleVar):
     def value(self, val):
         # super() does not work as expected for properties; we will call
         # the property setter explicitly.
-        SimpleVar.value.fset(self, val)
+        ScalarVar.value.fset(self, val)
         bool_var = self.get_associated_boolean()
         # Only update the associated Boolean value if it is needed
         # to match the current (potentially fractional) binary value.
@@ -114,7 +114,7 @@ class AutoLinkedBinaryVar(SimpleVar):
             self._associated_boolean = weakref_ref(self._associated_boolean)
 
 
-class AutoLinkedBooleanVar(SimpleBooleanVar):
+class AutoLinkedBooleanVar(ScalarBooleanVar):
     """A Boolean variable implicitly linked to its equivalent binary variable.
 
     This class provides a deprecation path for GDP.  Originally,
@@ -162,7 +162,7 @@ class AutoLinkedBooleanVar(SimpleBooleanVar):
     def value(self, val):
         # super() does not work as expected for properties; we will call
         # the property setter explicitly.
-        SimpleBooleanVar.value.fset(self, val)
+        ScalarBooleanVar.value.fset(self, val)
         bin_var = self.get_associated_binary()
         bin_val = bin_var.value
         if bin_val is None:
@@ -386,7 +386,7 @@ class Disjunct(Block):
         if cls != Disjunct:
             return super(Disjunct, cls).__new__(cls)
         if args == ():
-            return SimpleDisjunct.__new__(SimpleDisjunct)
+            return ScalarDisjunct.__new__(ScalarDisjunct)
         else:
             return IndexedDisjunct.__new__(IndexedDisjunct)
 
@@ -425,7 +425,7 @@ class Disjunct(Block):
                 component_data._activate_without_unfixing_indicator()
 
 
-class SimpleDisjunct(_DisjunctData, Disjunct):
+class ScalarDisjunct(_DisjunctData, Disjunct):
 
     def __init__(self, *args, **kwds):
         ## FIXME: This is a HACK to get around a chicken-and-egg issue
@@ -437,6 +437,11 @@ class SimpleDisjunct(_DisjunctData, Disjunct):
         _DisjunctData.__init__(self, self)
         Disjunct.__init__(self, *args, **kwds)
         self._data[None] = self
+
+
+class SimpleDisjunct(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarDisjunct
+    __renamed__version__ = 'TBD'
 
 
 class IndexedDisjunct(Disjunct):
@@ -564,7 +569,7 @@ class Disjunction(ActiveIndexedComponent):
         if cls != Disjunction:
             return super(Disjunction, cls).__new__(cls)
         if args == ():
-            return SimpleDisjunction.__new__(SimpleDisjunction)
+            return ScalarDisjunction.__new__(ScalarDisjunction)
         else:
             return IndexedDisjunction.__new__(IndexedDisjunction)
 
@@ -699,7 +704,7 @@ class Disjunction(ActiveIndexedComponent):
             )
 
 
-class SimpleDisjunction(_DisjunctionData, Disjunction):
+class ScalarDisjunction(_DisjunctionData, Disjunction):
 
     def __init__(self, *args, **kwds):
         _DisjunctionData.__init__(self, component=self)
@@ -730,7 +735,13 @@ class SimpleDisjunction(_DisjunctionData, Disjunction):
         if expr is Disjunction.Skip:
             del self[None]
             return None
-        return super(SimpleDisjunction, self).set_value(expr)
+        return super(ScalarDisjunction, self).set_value(expr)
+
+
+class SimpleDisjunction(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarDisjunction
+    __renamed__version__ = 'TBD'
+
 
 class IndexedDisjunction(Disjunction):
     #

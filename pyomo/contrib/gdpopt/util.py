@@ -111,7 +111,7 @@ def presolve_lp_nlp(solve_data, config):
     return False, None
 
 
-def process_objective(solve_data, config, move_linear_objective=False, use_mcpp=True):
+def process_objective(solve_data, config, move_linear_objective=False, use_mcpp=True, updata_var_con_list=True):
     """Process model objective function.
 
     Check that the model has only 1 valid objective.
@@ -177,8 +177,16 @@ def process_objective(solve_data, config, move_linear_objective=False, use_mcpp=
         util_blk.objective = Objective(
             expr=util_blk.objective_value, sense=main_obj.sense)
         # Add the new variable and constraint to the working lists
-        util_blk.variable_list.append(util_blk.objective_value)
-        util_blk.constraint_list.append(util_blk.objective_constr)
+        if main_obj.expr.polynomial_degree() not in (1, 0) or (move_linear_objective and updata_var_con_list):
+            util_blk.variable_list.append(util_blk.objective_value)
+            util_blk.continuous_variable_list.append(util_blk.objective_value)
+            util_blk.constraint_list.append(util_blk.objective_constr)
+            util_blk.objective_list.append(util_blk.objective)
+            if util_blk.objective_constr.body.polynomial_degree() in (0, 1):
+                util_blk.linear_constraint_list.append(util_blk.objective_constr)
+            else:
+                util_blk.nonlinear_constraint_list.append(
+                    util_blk.objective_constr)
 
 
 def a_logger(str_or_logger):
@@ -290,6 +298,17 @@ def build_ordered_component_lists(model, solve_data):
             model.component_data_objects(
                 ctype=Constraint, active=True,
                 descend_into=(Block, Disjunct))))
+    # print(util_blk.constraint_list)
+    setattr(
+        util_blk, 'linear_constraint_list', list(c for c in model.component_data_objects(
+            ctype=Constraint, active=True, descend_into=(Block, Disjunct))
+            if c.body.polynomial_degree() in (0, 1)))
+    # print(util_blk.linear_constraint_list)
+    setattr(
+        util_blk, 'nonlinear_constraint_list', list(c for c in model.component_data_objects(
+            ctype=Constraint, active=True, descend_into=(Block, Disjunct))
+            if c.body.polynomial_degree() not in (0, 1)))
+    # print(util_blk.nonlinear_constraint_list)
     setattr(
         util_blk, 'disjunct_list', list(
             model.component_data_objects(
@@ -300,6 +319,11 @@ def build_ordered_component_lists(model, solve_data):
             model.component_data_objects(
                 ctype=Disjunction, active=True,
                 descend_into=(Disjunct, Block))))
+    setattr(
+        util_blk, 'objective_list', list(
+            model.component_data_objects(
+                ctype=Objective, active=True,
+                descend_into=(Block))))
 
     # Identify the non-fixed variables in (potentially) active constraints and
     # objective functions
@@ -323,6 +347,16 @@ def build_ordered_component_lists(model, solve_data):
             ctype=Var, descend_into=(Block, Disjunct))
         if v in var_set)
     setattr(util_blk, 'variable_list', var_list)
+    discrete_variable_list = list(
+        v for v in model.component_data_objects(
+            ctype=Var, descend_into=(Block, Disjunct))
+        if v in var_set and v.is_integer())
+    setattr(util_blk, 'discrete_variable_list', discrete_variable_list)
+    continuous_variable_list = list(
+        v for v in model.component_data_objects(
+            ctype=Var, descend_into=(Block, Disjunct))
+        if v in var_set and v.is_continuous())
+    setattr(util_blk, 'continuous_variable_list', continuous_variable_list)
 
 
 def setup_results_object(solve_data, config):

@@ -1182,7 +1182,7 @@ class MiscConTests(unittest.TestCase):
         a = Constraint()
         a.construct()
         #
-        # Even though we construct a SimpleConstraint,
+        # Even though we construct a ScalarConstraint,
         # if it is not initialized that means it is "empty"
         # and we should encounter errors when trying to access the
         # _ConstraintData interface methods until we assign
@@ -1242,31 +1242,31 @@ class MiscConTests(unittest.TestCase):
         self.assertEqual(a._constructed, False)
         self.assertEqual(len(a), 0)
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a()
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a.body
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a.lower
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a.upper
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a.equality
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a.strict_lower
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a.strict_upper
 

@@ -18,19 +18,19 @@ import logging
 import math
 from weakref import ref as weakref_ref
 
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr import logical_expr
-from pyomo.core.expr.numvalue import (ZeroConstant,
-                                      value,
-                                      as_numeric,
-                                      is_constant,
-                                      native_numeric_types)
-from pyomo.core.base.plugin import ModelComponentFactory
-from pyomo.core.base.component import ActiveComponentData
-from pyomo.core.base.indexed_component import \
-    ( ActiveIndexedComponent,
-      UnindexedComponent_set)
+from pyomo.core.expr.numvalue import (
+    ZeroConstant, value, as_numeric, is_constant, native_numeric_types,
+)
+from pyomo.core.base.component import (
+    ActiveComponentData, ModelComponentFactory,
+)
+from pyomo.core.base.indexed_component import (
+    ActiveIndexedComponent, UnindexedComponent_set,
+)
 from pyomo.core.base.misc import (tabular_writer)
 from pyomo.core.base.set import Set
 from pyomo.core.base.util import (
@@ -714,7 +714,7 @@ class Constraint(ActiveIndexedComponent):
         if cls != Constraint:
             return super(Constraint, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
-            return super(Constraint, cls).__new__(AbstractSimpleConstraint)
+            return super(Constraint, cls).__new__(AbstractScalarConstraint)
         else:
             return super(Constraint, cls).__new__(IndexedConstraint)
 
@@ -845,9 +845,9 @@ class Constraint(ActiveIndexedComponent):
                                        ] )
 
 
-class SimpleConstraint(_GeneralConstraintData, Constraint):
+class ScalarConstraint(_GeneralConstraintData, Constraint):
     """
-    SimpleConstraint is the implementation representing a single,
+    ScalarConstraint is the implementation representing a single,
     non-indexed constraint.
     """
 
@@ -882,7 +882,7 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
         """Access the body of a constraint expression."""
         if not self._data:
             raise ValueError(
-                "Accessing the body of SimpleConstraint "
+                "Accessing the body of ScalarConstraint "
                 "'%s' before the Constraint has been assigned "
                 "an expression. There is currently "
                 "nothing to access." % (self.name))
@@ -893,7 +893,7 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
         """Access the lower bound of a constraint expression."""
         if not self._data:
             raise ValueError(
-                "Accessing the lower bound of SimpleConstraint "
+                "Accessing the lower bound of ScalarConstraint "
                 "'%s' before the Constraint has been assigned "
                 "an expression. There is currently "
                 "nothing to access." % (self.name))
@@ -904,7 +904,7 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
         """Access the upper bound of a constraint expression."""
         if not self._data:
             raise ValueError(
-                "Accessing the upper bound of SimpleConstraint "
+                "Accessing the upper bound of ScalarConstraint "
                 "'%s' before the Constraint has been assigned "
                 "an expression. There is currently "
                 "nothing to access." % (self.name))
@@ -915,7 +915,7 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
         """A boolean indicating whether this is an equality constraint."""
         if not self._data:
             raise ValueError(
-                "Accessing the equality flag of SimpleConstraint "
+                "Accessing the equality flag of ScalarConstraint "
                 "'%s' before the Constraint has been assigned "
                 "an expression. There is currently "
                 "nothing to access." % (self.name))
@@ -926,7 +926,7 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
         """A boolean indicating whether this constraint has a strict lower bound."""
         if not self._data:
             raise ValueError(
-                "Accessing the strict_lower flag of SimpleConstraint "
+                "Accessing the strict_lower flag of ScalarConstraint "
                 "'%s' before the Constraint has been assigned "
                 "an expression. There is currently "
                 "nothing to access." % (self.name))
@@ -937,7 +937,7 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
         """A boolean indicating whether this constraint has a strict upper bound."""
         if not self._data:
             raise ValueError(
-                "Accessing the strict_upper flag of SimpleConstraint "
+                "Accessing the strict_upper flag of ScalarConstraint "
                 "'%s' before the Constraint has been assigned "
                 "an expression. There is currently "
                 "nothing to access." % (self.name))
@@ -948,7 +948,7 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
         """Set the expression on this constraint."""
         if not self._data:
             self._data[None] = self
-        return super(SimpleConstraint, self).set_value(expr)
+        return super(ScalarConstraint, self).set_value(expr)
 
     #
     # Leaving this method for backward compatibility reasons.
@@ -958,17 +958,27 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
         """Add a constraint with a given index."""
         if index is not None:
             raise ValueError(
-                "SimpleConstraint object '%s' does not accept "
+                "ScalarConstraint object '%s' does not accept "
                 "index values other than None. Invalid value: %s"
                 % (self.name, index))
         self.set_value(expr)
         return self
 
 
+class SimpleConstraint(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarConstraint
+    __renamed__version__ = 'TBD'
+
+
 @disable_methods({'add', 'set_value', 'body', 'lower', 'upper', 'equality',
                   'strict_lower', 'strict_upper'})
-class AbstractSimpleConstraint(SimpleConstraint):
+class AbstractScalarConstraint(ScalarConstraint):
     pass
+
+
+class AbstractSimpleConstraint(metaclass=RenamedClass):
+    __renamed__new_class__ = AbstractScalarConstraint
+    __renamed__version__ = 'TBD'
 
 
 class IndexedConstraint(Constraint):

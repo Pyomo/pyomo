@@ -15,7 +15,7 @@ from __future__ import division
 from math import fabs
 import math
 
-from pyomo.core.base.plugin import TransformationFactory
+from pyomo.core.base.transformation import TransformationFactory
 from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
                                  add_docstring_list)
 from pyomo.core.base.constraint import Constraint
