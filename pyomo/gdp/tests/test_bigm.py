@@ -1707,13 +1707,13 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         # All the outer and inner disjuncts should be on Block:
         self.assertEqual(len(disjBlock), 7)
         pairs = [
-            (0, ["simpledisjunct._pyomo_gdp_bigm_reformulation.simpledisjunct."
-                 "innerdisjunction_xor"]),
+            (0, ["simpledisjunct._pyomo_gdp_bigm_reformulation.'simpledisjunct."
+                 "innerdisjunction_xor'"]),
             (1, ["simpledisjunct.innerdisjunct0.c"]),
             (2, ["simpledisjunct.innerdisjunct1.c"]),
             (3, ["disjunct[0].c"]),
-            (4, ["disjunct[1]._pyomo_gdp_bigm_reformulation.disjunct[1]."
-                 "innerdisjunction_xor",
+            (4, ["disjunct[1]._pyomo_gdp_bigm_reformulation.'disjunct[1]."
+                 "innerdisjunction_xor'",
                  "disjunct[1].c"]),
             (5, ["disjunct[1].innerdisjunct[0].c"]),
             (6, ["disjunct[1].innerdisjunct[1].c"]),
@@ -1908,9 +1908,10 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
 
         # Here we check that the xor constraint from
         # simpledisjunct.innerdisjunction is transformed.
+        m.simpledisjunct.transformation_block().pprint()
         cons5 = m.simpledisjunct.transformation_block().component(
-            "simpledisjunct._pyomo_gdp_bigm_reformulation.simpledisjunct."
-            "innerdisjunction_xor")
+            "simpledisjunct._pyomo_gdp_bigm_reformulation.'simpledisjunct."
+            "innerdisjunction_xor'")
         cons5lb = cons5['lb']
         self.check_xor_relaxation(
             cons5lb,
@@ -1941,8 +1942,8 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         # disjunct[1].innerdisjunction gets transformed alongside the
         # other constraint in disjunct[1].
         cons7 = m.disjunct[1].transformation_block().component(
-            "disjunct[1]._pyomo_gdp_bigm_reformulation.disjunct[1]."
-            "innerdisjunction_xor")
+            "disjunct[1]._pyomo_gdp_bigm_reformulation.'disjunct[1]."
+            "innerdisjunction_xor'")
         cons7lb = cons7[0,'lb']
         self.check_xor_relaxation(
             cons7lb,
@@ -2056,11 +2057,12 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertEqual(len(disjBlock[0].component_map()), 2)
         self.assertEqual(len(disjBlock[1].component_map()), 5)
         self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
-        self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
+        self.assertIsInstance(disjBlock[1].component("evil[1].'b.c'"),
+                              Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].bb[1].c"),
                               Constraint)
         self.assertIsInstance(
-            disjBlock[1].component("evil[1].b.c_4"), Constraint)
+            disjBlock[1].component("evil[1].'b.c'"), Constraint)
         self.assertIsInstance(
             disjBlock[1].component("evil[1].b.anotherblock.c"),
                                                      Constraint)
@@ -2083,11 +2085,12 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertEqual(len(disjBlock[0].component_map()), 2)
         self.assertEqual(len(disjBlock[1].component_map()), 4)
         self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
-        self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
+        self.assertIsInstance(disjBlock[1].component("evil[1].'b.c'"),
+                              Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].bb[1].c"),
                               Constraint)
         self.assertIsInstance(
-            disjBlock[1].component("evil[1].b.c_4"), Constraint)
+            disjBlock[1].component("evil[1].'b.c'"), Constraint)
         self.assertIsInstance(disjBlock[0].component("localVarReferences"),
                               Block)
         self.assertIsInstance(disjBlock[1].component("localVarReferences"),
@@ -2107,11 +2110,12 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertEqual(len(disjBlock[0].component_map()), 2)
         self.assertEqual(len(disjBlock[1].component_map()), 4)
         self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
-        self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
+        self.assertIsInstance(disjBlock[1].component("evil[1].'b.c'"),
+                              Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].bb[1].c"),
                               Constraint)
         self.assertIsInstance(
-            disjBlock[1].component("evil[1].b.c_4"), Constraint)
+            disjBlock[1].component("evil[1].'b.c'"), Constraint)
         self.assertIsInstance(disjBlock[0].component("localVarReferences"),
                               Block)
         self.assertIsInstance(disjBlock[1].component("localVarReferences"),
@@ -2286,14 +2290,20 @@ class IndexedDisjunctions(unittest.TestCase):
         self.assertIsInstance(transBlock, Block)
         self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
         self.assertEqual(len(transBlock.relaxedDisjuncts), 4)
+        if model.component('firstTerm') is None:
+            firstTerm = "'firstTerm[1]'.cons"
+            secondTerm = "'secondTerm[1]'.cons"
+        else:
+            firstTerm = "firstTerm[1].cons"
+            secondTerm = "secondTerm[1].cons"
         self.assertIsInstance(transBlock.relaxedDisjuncts[2].component(
-            "firstTerm[1].cons"), Constraint)
+            firstTerm), Constraint)
         self.assertEqual(len(transBlock.relaxedDisjuncts[2].component(
-            "firstTerm[1].cons")), 2)
+            firstTerm)), 2)
         self.assertIsInstance(transBlock.relaxedDisjuncts[3].component(
-            "secondTerm[1].cons"), Constraint)
+            secondTerm), Constraint)
         self.assertEqual(len(transBlock.relaxedDisjuncts[3].component(
-            "secondTerm[1].cons")), 1)
+            secondTerm)), 1)
         self.assertEqual(
             len(model._pyomo_gdp_bigm_reformulation.disjunctionList_xor), 2)
         self.assertFalse(model.disjunctionList[1].active)
@@ -2337,7 +2347,7 @@ class TestErrors(unittest.TestCase):
         # longest constraint name EVER...
         relaxed_xor = disjunct1.component(
             "disjunction_disjuncts[0]._pyomo_gdp_bigm_reformulation."
-            "disjunction_disjuncts[0].nestedDisjunction_xor")
+            "'disjunction_disjuncts[0].nestedDisjunction_xor'")
         self.assertIsInstance(relaxed_xor, Constraint)
         repn = generate_standard_repn(relaxed_xor['lb'].body)
         self.assertEqual(relaxed_xor['lb'].lower, 1)
