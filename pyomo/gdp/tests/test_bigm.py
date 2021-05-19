@@ -1908,7 +1908,6 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
 
         # Here we check that the xor constraint from
         # simpledisjunct.innerdisjunction is transformed.
-        m.simpledisjunct.transformation_block().pprint()
         cons5 = m.simpledisjunct.transformation_block().component(
             "simpledisjunct._pyomo_gdp_bigm_reformulation.'simpledisjunct."
             "innerdisjunction_xor'")
