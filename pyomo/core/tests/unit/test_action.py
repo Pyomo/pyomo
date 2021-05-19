@@ -118,7 +118,7 @@ class Array_Param(unittest.TestCase):
         model.action2 = BuildAction(model.Z, rule=action2_fn)
         instance = model.create_instance()
         #
-        self.assertEqual( instance.A[1], 2.3)
+        self.assertEqual( instance.A[1].value, 2.3)
         self.assertEqual( value(instance.A[3]), 4.3)
         #
         buf = StringIO()

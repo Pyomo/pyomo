@@ -106,7 +106,7 @@ class TestExpressionUtilities(unittest.TestCase):
         self.assertEqual( list(identify_variables(m.a**m.b[1])),
                           [ m.a, m.b[1] ] )
         self.assertEqual( list(identify_variables(m.a**m.b[1] + m.b[2])),
-                          [ m.a, m.b[1], m.b[2] ] )
+                          [ m.b[2], m.a, m.b[1]] )
         self.assertEqual( list(identify_variables(
             m.a**m.b[1] + m.b[2]*m.b[3]*m.b[2])),
                           [ m.a, m.b[1], m.b[2], m.b[3] ] )
@@ -117,15 +117,15 @@ class TestExpressionUtilities(unittest.TestCase):
         # Identify variables in the arguments to functions
         #
         self.assertEqual( list(identify_variables(
-            m.x(m.a, 'string_param', 1, [])*m.b[1] )),
-                          [ m.a, m.b[1] ] )
+            m.x(m.a, 'string_param', 1, []) * m.b[1] )),
+                          [ m.b[1], m.a ] )
         self.assertEqual( list(identify_variables(
             m.x(m.p, 'string_param', 1, [])*m.b[1] )),
                           [ m.b[1] ] )
         self.assertEqual( list(identify_variables(
-            tanh(m.a)*m.b[1] )), [ m.a, m.b[1] ] )
+            tanh(m.a)*m.b[1] )), [ m.b[1], m.a ] )
         self.assertEqual( list(identify_variables(
-            abs(m.a)*m.b[1] )), [ m.a, m.b[1] ] )
+            abs(m.a) * m.b[1] )), [ m.b[1], m.a ] )
         #
         # Check logic for allowing duplicates
         #
@@ -237,7 +237,7 @@ class TestIdentifyParams(unittest.TestCase):
         self.assertEqual( list(identify_mutable_parameters(m.a**m.b[1])),
                           [ m.a, m.b[1] ] )
         self.assertEqual( list(identify_mutable_parameters(m.a**m.b[1] + m.b[2])),
-                          [ m.a, m.b[1], m.b[2] ] )
+                          [ m.b[2], m.a, m.b[1] ] )
         self.assertEqual( list(identify_mutable_parameters(
             m.a**m.b[1] + m.b[2]*m.b[3]*m.b[2])),
                           [ m.a, m.b[1], m.b[2], m.b[3] ] )
@@ -249,14 +249,14 @@ class TestIdentifyParams(unittest.TestCase):
         #
         self.assertEqual( list(identify_mutable_parameters(
             m.x(m.a, 'string_param', 1, [])*m.b[1] )),
-                          [ m.a, m.b[1] ] )
+                          [ m.b[1], m.a ] )
         self.assertEqual( list(identify_mutable_parameters(
             m.x(m.p, 'string_param', 1, [])*m.b[1] )),
                           [ m.b[1] ] )
         self.assertEqual( list(identify_mutable_parameters(
-            tanh(m.a)*m.b[1] )), [ m.a, m.b[1] ] )
+            tanh(m.a)*m.b[1] )), [ m.b[1], m.a ] )
         self.assertEqual( list(identify_mutable_parameters(
-            abs(m.a)*m.b[1] )), [ m.a, m.b[1] ] )
+            abs(m.a)*m.b[1] )), [ m.b[1], m.a ] )
         #
         # Check logic for allowing duplicates
         #

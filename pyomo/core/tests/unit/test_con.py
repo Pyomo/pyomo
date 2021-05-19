@@ -1320,18 +1320,6 @@ class MiscConTests(unittest.TestCase):
         except ValueError:
             pass
 
-    @unittest.skipIf(not logical_expr._using_chained_inequality, "Chained inequalities are not supported.")
-    def test_chainedInequalityError(self):
-        m = ConcreteModel()
-        m.x = Var()
-        a = m.x <= 0
-        if m.x <= 0:
-            pass
-        m.c = Constraint()
-        self.assertRaisesRegex(
-            TypeError, "Relational expression used in an unexpected "
-            "Boolean context.", m.c.set_value, a)
-
     def test_tuple_constraint_create(self):
         def rule1(model):
             return (0.0,model.x)
