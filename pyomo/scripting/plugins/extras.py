@@ -25,7 +25,6 @@ def get_packages():
         #'FuncDesigner', 
         #'DerApproximator', 
         ('ipython[notebook]', 'IPython'),
-        ('pyro4', 'Pyro4'),
     ]
     return packages
 

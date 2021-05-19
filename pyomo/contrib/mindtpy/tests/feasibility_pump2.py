@@ -12,7 +12,6 @@ Ref:
 """
 from __future__ import division
 
-from six import iteritems
 from math import pi
 
 from pyomo.environ import (Binary, ConcreteModel, Constraint,
