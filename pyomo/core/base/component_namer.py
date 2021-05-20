@@ -10,10 +10,21 @@
 
 import re
 
+# Literals are used in parsing string names (and indicate tuples,
+# indexing, and token separators)
 literals = '()[],.'
+# Special characters are additional characters that if they appear in
+# the string force us to quote the string.  This includes the obvious
+# things like single and double quote characters, but also backslash
+# (indicates that the string contains escaped - possibly unicode -
+# characters), and the colon (used as a token separator in the old
+# ComponentUID "v1" format).
+special_chars = literals + '\'":\\'
 
 re_number = re.compile(
     r'(?:[-+]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?|-?inf|nan)')
+re_special_char = re.compile(
+    r'[' + re.escape(special_chars) + ']')
 
 def name_repr(x, unknown_handler=str):
     if not isinstance(x, str):
@@ -22,11 +33,12 @@ def name_repr(x, unknown_handler=str):
         x = repr(x)
         if x[1] == '|':
             return x
-        if any(_ in x for _ in ('\\' + literals)):
+        unquoted = x[1:-1]
+        if re_special_char.search(unquoted):
             return x
-        if re_number.fullmatch(x[1:-1]):
+        if re_number.fullmatch(unquoted):
             return x
-        return x[1:-1]
+        return unquoted
 
 def tuple_repr(x, unknown_handler=str):
     return '(' + ','.join(name_repr(_, unknown_handler) for _ in x) \
