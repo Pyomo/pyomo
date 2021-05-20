@@ -105,8 +105,7 @@ class TestCBC(unittest.TestCase):
         self.model.X = Var(within=Integers)
         self.model.Obj = Objective(expr=self.model.X, sense=minimize)
 
-        instance = self.model.create_instance()
-        results = self.opt.solve(instance)
+        results = self.opt.solve(self.model)
 
         self.assertEqual(ProblemSense.minimize, results.problem.sense)
         self.assertEqual(TerminationCondition.unbounded, results.solver.termination_condition)
