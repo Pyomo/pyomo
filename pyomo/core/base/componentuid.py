@@ -75,7 +75,7 @@ class ComponentUID(object):
                                  "ComponentUID object from a string type")
             try:
                 self._cids = tuple(self._parse_cuid_v2(component))
-            except (OSError, IOError, AssertionError):
+            except (OSError, IOError):
                 self._cids = tuple(self._parse_cuid_v1(component))
 
         elif type(component) is IndexedComponent_slice:
