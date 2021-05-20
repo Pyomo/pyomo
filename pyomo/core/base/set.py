@@ -2210,7 +2210,7 @@ class FiniteScalarSet(_FiniteSetData, Set):
 
 class FiniteSimpleSet(metaclass=RenamedClass):
     __renamed__new_class__ = FiniteScalarSet
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class OrderedScalarSet(_InsertionOrderSetData, Set):
@@ -2225,7 +2225,7 @@ class OrderedScalarSet(_InsertionOrderSetData, Set):
 
 class OrderedSimpleSet(metaclass=RenamedClass):
     __renamed__new_class__ = OrderedScalarSet
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class SortedScalarSet(_SortedSetData, Set):
@@ -2240,7 +2240,7 @@ class SortedScalarSet(_SortedSetData, Set):
 
 class SortedSimpleSet(metaclass=RenamedClass):
     __renamed__new_class__ = SortedScalarSet
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 @disable_methods(_FINITESET_API + _SETDATA_API)
@@ -2250,7 +2250,7 @@ class AbstractFiniteScalarSet(FiniteScalarSet):
 
 class AbstractFiniteSimpleSet(metaclass=RenamedClass):
     __renamed__new_class__ = AbstractFiniteScalarSet
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 @disable_methods(_ORDEREDSET_API + _SETDATA_API)
@@ -2260,7 +2260,7 @@ class AbstractOrderedScalarSet(OrderedScalarSet):
 
 class AbstractOrderedSimpleSet(metaclass=RenamedClass):
     __renamed__new_class__ = AbstractOrderedScalarSet
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 @disable_methods(_ORDEREDSET_API + _SETDATA_API)
@@ -2270,7 +2270,7 @@ class AbstractSortedScalarSet(SortedScalarSet):
 
 class AbstractSortedSimpleSet(metaclass=RenamedClass):
     __renamed__new_class__ = AbstractSortedScalarSet
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 ############################################################################
@@ -2936,7 +2936,7 @@ class InfiniteScalarRangeSet(_InfiniteRangeSetData, RangeSet):
 
 class InfiniteSimpleRangeSet(metaclass=RenamedClass):
     __renamed__new_class__ = InfiniteScalarRangeSet
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class FiniteScalarRangeSet(_FiniteRangeSetData, RangeSet):
@@ -2950,7 +2950,7 @@ class FiniteScalarRangeSet(_FiniteRangeSetData, RangeSet):
 
 class FiniteSimpleRangeSet(metaclass=RenamedClass):
     __renamed__new_class__ = FiniteScalarRangeSet
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 @disable_methods(_SET_API)
@@ -2960,7 +2960,7 @@ class AbstractInfiniteScalarRangeSet(InfiniteScalarRangeSet):
 
 class AbstractInfiniteSimpleRangeSet(metaclass=RenamedClass):
     __renamed__new_class__ = AbstractInfiniteScalarRangeSet
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 @disable_methods(_ORDEREDSET_API)
@@ -2970,7 +2970,7 @@ class AbstractFiniteScalarRangeSet(FiniteScalarRangeSet):
 
 class AbstractFiniteSimpleRangeSet(metaclass=RenamedClass):
     __renamed__new_class__ = AbstractFiniteScalarRangeSet
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 ############################################################################
 # Set Operators

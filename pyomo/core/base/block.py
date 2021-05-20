@@ -418,7 +418,7 @@ class PseudoMap(object):
             yield (obj._name, obj)
 
     @deprecated('The iterkeys method is deprecated. Use dict.keys().',
-                version='TBD')
+                version='6.0')
     def iterkeys(self):
         """
         Generator returning the component names defined on the Block
@@ -426,7 +426,7 @@ class PseudoMap(object):
         return self.keys()
 
     @deprecated('The itervalues method is deprecated. Use dict.values().',
-                version='TBD')
+                version='6.0')
     def itervalues(self):
         """
         Generator returning the components defined on the Block
@@ -434,7 +434,7 @@ class PseudoMap(object):
         return self.values()
 
     @deprecated('The iteritems method is deprecated. Use dict.items().',
-                version='TBD')
+                version='6.0')
     def iteritems(self):
         """
         Generator returning (name, component) tuples for components
@@ -2044,7 +2044,7 @@ class ScalarBlock(_BlockData, Block):
 
 class SimpleBlock(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarBlock
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class IndexedBlock(Block):

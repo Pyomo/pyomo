@@ -989,7 +989,7 @@ class ScalarVar(_GeneralVarData, Var):
 
 class SimpleVar(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarVar
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class IndexedVar(Var):
