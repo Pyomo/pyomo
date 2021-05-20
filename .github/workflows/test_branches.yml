@@ -480,7 +480,7 @@ jobs:
 
     - name: Download and install extensions
       run: |
-        if ! "${{matrix.slim}}"; then
+        if [[ ! "${{matrix.slim}}" ]]; then
             echo ""
             echo "Pyomo download-extensions"
             echo ""
