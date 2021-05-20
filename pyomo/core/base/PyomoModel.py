@@ -723,7 +723,7 @@ arguments (which have been ignored):"""
 
 
     @deprecated("The Model.preprocess() method is deprecated and no "
-                "longer performs any actions", version='TBD')
+                "longer performs any actions", version='6.0')
     def preprocess(self, preprocessor=None):
         return
 

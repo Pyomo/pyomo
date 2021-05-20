@@ -1434,7 +1434,7 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
 
 class SimpleDisjIndexedConstraints(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarDisjIndexedConstraints
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class MultiTermDisj(unittest.TestCase, CommonTests):

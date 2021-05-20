@@ -969,7 +969,7 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
 
 class SimpleConstraint(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarConstraint
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 @disable_methods({'add', 'set_value', 'body', 'lower', 'upper', 'equality',
@@ -980,7 +980,7 @@ class AbstractScalarConstraint(ScalarConstraint):
 
 class AbstractSimpleConstraint(metaclass=RenamedClass):
     __renamed__new_class__ = AbstractScalarConstraint
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class IndexedConstraint(Constraint):

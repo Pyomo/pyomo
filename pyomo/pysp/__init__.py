@@ -24,7 +24,7 @@ if 'nose' not in sys.modules and 'nose2' not in sys.modules:
         deprecation_warning(
             "PySP has been removed from pyomo.pysp namespace.  "
             "Please import PySP directly from the pysp namespace.",
-            version='TBD')
+            version='6.0')
     except ImportError:
         raise ImportError(
             "No module named 'pyomo.pysp'.  "

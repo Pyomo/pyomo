@@ -501,7 +501,7 @@ class ScalarLogicalConstraint(_GeneralLogicalConstraintData, LogicalConstraint):
 
 class SimpleLogicalConstraint(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarLogicalConstraint
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class IndexedLogicalConstraint(LogicalConstraint):

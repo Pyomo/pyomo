@@ -341,19 +341,19 @@ You can silence this warning by one of three ways:
                 return _sparse_iter_gen(self)
 
     @deprecated('The iterkeys method is deprecated. Use dict.keys().',
-                version='TBD')
+                version='6.0')
     def iterkeys(self):
         """Return a list of keys in the dictionary"""
         return self.keys()
 
     @deprecated('The itervalues method is deprecated. Use dict.values().',
-                version='TBD')
+                version='6.0')
     def itervalues(self):
         """Return a list of the component data objects in the dictionary"""
         return self.values()
 
     @deprecated('The iteritems method is deprecated. Use dict.items().',
-                version='TBD')
+                version='6.0')
     def iteritems(self):
         """Return a list (index,data) tuples from the dictionary"""
         return self.items()

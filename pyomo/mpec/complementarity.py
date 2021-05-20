@@ -283,7 +283,7 @@ class ScalarComplementarity(_ComplementarityData, Complementarity):
 
 class SimpleComplementarity(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarComplementarity
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 @disable_methods({'add', 'set_value', 'to_standard_form'})
@@ -293,7 +293,7 @@ class AbstractScalarComplementarity(ScalarComplementarity):
 
 class AbstractSimpleComplementarity(metaclass=RenamedClass):
     __renamed__new_class__ = AbstractScalarComplementarity
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class IndexedComplementarity(Complementarity):
