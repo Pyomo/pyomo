@@ -9,8 +9,10 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.deprecation import deprecated
-from pyomo.common.plugin import Plugin, implements
-from pyomo.core import IPyomoScriptModifyInstance, TransformationFactory
+from pyomo.scripting.interface import (
+    Plugin, implements, IPyomoScriptModifyInstance,
+)
+from pyomo.core import TransformationFactory
 
 # This is now deprecated in so many ways...
 
@@ -26,7 +28,7 @@ class ConvexHull_Transformation_PyomoScript_Plugin(Plugin):
     the Pyomo script.
 
     """
-
+    __singleton__ = True
     implements(IPyomoScriptModifyInstance, service=True)
 
     def apply(self, **kwds):
@@ -36,6 +38,3 @@ class ConvexHull_Transformation_PyomoScript_Plugin(Plugin):
         model = kwds.pop('model', None)
         xform = TransformationFactory('gdp.hull')
         return xform.apply_to(instance, **kwds)
-
-
-transform = ConvexHull_Transformation_PyomoScript_Plugin()

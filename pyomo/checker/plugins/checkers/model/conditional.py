@@ -15,12 +15,10 @@ from pyomo.checker.plugins.model import ModelTrackerHook
 from pyomo.checker.plugins.checkers.model._rulebase import _ModelRuleChecker
 
 
-class ModelValue(_ModelRuleChecker):
+class ModelValue(_ModelRuleChecker, ModelTrackerHook):
 
     pyomo.common.plugin.alias('model.value', 'Check if comparisons are done using the "value()" function.')
 
-    ModelTrackerHook()
-    
     def checkerDoc(self):
         return """\
         Comparisons done on model objects should generally be wrapped in

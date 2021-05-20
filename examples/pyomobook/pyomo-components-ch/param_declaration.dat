@@ -1,0 +1,24 @@
+param Z := 1z2y;
+
+param Y := 2;
+
+param X := 1.1;
+
+param W := True;
+
+set B := A B C;
+
+param : U :=
+A 10
+B 20
+C 30
+;
+
+set C := A B C ;
+
+param : T :=
+1 A 10
+2 B 20
+3 C 30
+;
+

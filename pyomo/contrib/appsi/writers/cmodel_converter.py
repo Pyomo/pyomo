@@ -1,5 +1,5 @@
 from typing import Dict
-from pyomo.core.base.expression import _GeneralExpressionData, SimpleExpression
+from pyomo.core.base.expression import _GeneralExpressionData, ScalarExpression
 from pyomo.core.expr.visitor import ExpressionValueVisitor, nonpyomo_leaf_types
 from pyomo.core.expr.numvalue import value, is_constant
 from pyomo.core.expr import current as _expr
@@ -180,6 +180,6 @@ _pyomo_to_cmodel_map[_expr.NPV_NegationExpression] = _pyomo_to_cmodel_NegationEx
 _pyomo_to_cmodel_map[_expr.NPV_UnaryFunctionExpression] = _pyomo_to_cmodel_UnaryFunctionExpression
 
 _pyomo_to_cmodel_map[_GeneralExpressionData] = _pyomo_to_cmodel_GeneralExpression
-_pyomo_to_cmodel_map[SimpleExpression] = _pyomo_to_cmodel_GeneralExpression
+_pyomo_to_cmodel_map[ScalarExpression] = _pyomo_to_cmodel_GeneralExpression
 
 

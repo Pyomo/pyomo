@@ -1,0 +1,12 @@
+3 Set Declarations
+    A : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    3 : {'AA', 'BB', 'CC'}
+    B : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :      A :    1 : {'BB',}
+    C : Size=1, Index=None, Ordered=Insertion
+        Key  : Dimen : Domain : Size : Members
+        None :     1 :    Any :    1 : {'CC',}
+
+3 Declarations: A B C

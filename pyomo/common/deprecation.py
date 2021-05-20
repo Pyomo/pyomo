@@ -8,11 +8,20 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-"""Decorator for deprecating functions."""
+"""This module provides utilities for deprecating functionality.
+
+.. autosummary::
+
+   deprecated
+   deprecation_warning
+   relocated_module_attribute
+   RenamedClass
+"""
 
 import logging
 import functools
 import inspect
+import itertools
 import sys
 import textwrap
 import types
@@ -115,7 +124,7 @@ def _wrap_func(func, msg, logger, version, remove_in):
     return wrapper
 
 
-def deprecation_warning(msg, logger='pyomo.core', version=None,
+def deprecation_warning(msg, logger=None, version=None,
                         remove_in=None, calling_frame=None):
     """Standardized formatter for deprecation warnings
 
@@ -124,6 +133,21 @@ def deprecation_warning(msg, logger='pyomo.core', version=None,
 
     Args:
         msg (str): the deprecation message to format
+
+        logger (str): the logger to use for emitting the warning
+            (default: the calling pyomo package, or "pyomo")
+
+        version (str): [required] the version in which the decorated
+            object was deprecated.  General practice is to set version
+            to '' or 'TBD' during development and update it to the
+            actual release as part of the release process.
+
+        remove_in (str): the version in which the decorated object will be
+            removed from the code.
+
+        calling_frame (frame): the original frame context that triggered
+            the deprecation warning.
+
     """
     msg = textwrap.fill(
         'DEPRECATED: %s' % (_default_msg(None, msg, version, remove_in),),
@@ -140,11 +164,18 @@ def deprecation_warning(msg, logger='pyomo.core', version=None,
         info = inspect.getframeinfo(calling_frame)
         msg += "\n(called from %s:%s)" % (info.filename.strip(), info.lineno)
 
+    if logger is None:
+        if calling_frame is not None:
+            logger = calling_frame.f_globals['__package__']
+            if logger is not None and not logger.startswith('pyomo'):
+                logger = None
+        if logger is None:
+            logger = 'pyomo'
     logging.getLogger(logger).warning(msg)
 
 
-def deprecated(msg=None, logger='pyomo.core', version=None, remove_in=None):
-    """Indicate that a function, method or class is deprecated.
+def deprecated(msg=None, logger=None, version=None, remove_in=None):
+    """Decorator to indicate that a function, method or class is deprecated.
 
     This decorator will cause a warning to be logged when the wrapped
     function or method is called, or when the deprecated class is
@@ -157,7 +188,7 @@ def deprecated(msg=None, logger='pyomo.core', version=None, remove_in=None):
             removed in a future release.")
 
         logger (str): the logger to use for emitting the warning
-            (default: "pyomo")
+            (default: the calling pyomo package, or "pyomo")
 
         version (str): [required] the version in which the decorated
             object was deprecated.  General practice is to set version
@@ -297,3 +328,121 @@ def relocated_module_attribute(local, target, version, remove_in=None):
             _module = sys.modules[_module.__name__] \
                       = _ModuleGetattrBackport_27(_module)
     _module.__relocated_attrs__[local] = (target, version, remove_in)
+
+
+class RenamedClass(type):
+    """Metaclass to provide a deprecation path for renamed classes
+
+    This metaclass provides a mechanism for renaming old classes while
+    still preserving isinstance / issubclass relationships.
+
+    Example
+    -------
+        >>> from pyomo.common.deprecation import RenamedClass
+        >>> class NewClass(object):
+        ...     pass
+        >>> class OldClass(metaclass=RenamedClass):
+        ...     __renamed__new_class__ = NewClass
+        ...     __renamed__version__ = '6.0'
+
+        Deriving from the old class generates a warning:
+
+        >>> class DerivedOldClass(OldClass):
+        ...     pass
+        WARNING: DEPRECATED: Declaring class 'DerivedOldClass' derived from
+            'OldClass'. The class 'OldClass' has been renamed to 'NewClass'
+            (deprecated in 6.0) ...
+
+        As does instantiating the old class:
+
+        >>> old = OldClass()
+        WARNING: DEPRECATED: Instantiating class 'OldClass'.  The class
+            'OldClass' has been renamed to 'NewClass'  (deprecated in 6.0) ...
+
+        Finally, isinstance and issubclass still work, for example:
+
+        >>> isinstance(old, NewClass)
+        True
+        >>> class NewSubclass(NewClass):
+        ...     pass
+        >>> new = NewSubclass()
+        >>> isinstance(new, OldClass)
+        WARNING: DEPRECATED: Checking type relative to 'OldClass'.  The class
+            'OldClass' has been renamed to 'NewClass'  (deprecated in 6.0) ...
+        True
+
+    """
+    def __new__(cls, name, bases, classdict, *args, **kwargs):
+        new_class = classdict.get('__renamed__new_class__', None)
+        if new_class is not None:
+            def __renamed__new__(cls, *args, **kwargs):
+                cls.__renamed__warning__(
+                    "Instantiating class '%s'." % (cls.__name__,))
+                return new_class(*args, **kwargs)
+            classdict['__new__'] = __renamed__new__
+
+            def __renamed__warning__(msg):
+                version = classdict.get('__renamed__version__')
+                remove_in = classdict.get('__renamed__remove_in__')
+                deprecation_warning(
+                    "%s  The class '%s' has been renamed to '%s'" % (
+                        msg, name, new_class.__name__),
+                    version=version, remove_in=remove_in)
+            classdict['__renamed__warning__'] = __renamed__warning__
+
+            if '__renamed__version__' not in classdict:
+                raise TypeError(
+                    "Declaring class '%s' using the RenamedClass metaclass, "
+                    "but without specifying the __renamed__version__ class "
+                    "attribute" % (name,))
+
+        renamed_bases = []
+        for base in bases:
+            new_class = getattr(base, '__renamed__new_class__', None)
+            if new_class is not None:
+                base.__renamed__warning__(
+                    "Declaring class '%s' derived from '%s'." % (
+                        name, base.__name__,))
+                base = new_class
+                # Flag that this class is derived from a renamed class
+                classdict.setdefault('__renamed__new_class__', None)
+            # Avoid duplicates (in case someone does a diamond between
+            # the renamed class and [a class dervied from] the new
+            # class)
+            if base not in renamed_bases:
+                renamed_bases.append(base)
+
+        # Add the new class as a "base class" of the renamed class (this
+        # makes issubclass(renamed, new_class) work correctly).  As we
+        # still never create an actual instance of renamed, this doesn't
+        # affect the API)
+        if new_class is not None and new_class not in renamed_bases:
+            renamed_bases.append(new_class)
+
+        if new_class is None and '__renamed__new_class__' not in classdict:
+            if not any(hasattr(base, '__renamed__new_class__') for mro in
+                       itertools.chain.from_iterable(
+                           base.__mro__ for base in renamed_bases)):
+                raise TypeError(
+                    "Declaring class '%s' using the RenamedClass metaclass, "
+                    "but without specifying the __renamed__new_class__ class "
+                    "attribute" % (name,))
+
+        return super().__new__(
+            cls, name, tuple(renamed_bases), classdict, *args, **kwargs)
+
+    def __instancecheck__(cls, instance):
+        # Note: the warning is issued by subclasscheck
+        return any(cls.__subclasscheck__(c)
+            for c in {type(instance), instance.__class__})
+
+    def __subclasscheck__(cls, subclass):
+        if hasattr(cls, '__renamed__warning__'):
+            cls.__renamed__warning__(
+                "Checking type relative to '%s'." % (cls.__name__,))
+        if subclass is cls:
+            return True
+        elif getattr(cls, '__renamed__new_class__') is not None:
+            return issubclass(subclass, getattr(cls, '__renamed__new_class__'))
+        else:
+            return super().__subclasscheck__(subclass)

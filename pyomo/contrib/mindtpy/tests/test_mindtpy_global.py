@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Tests for the MindtPy solver."""
 from math import fabs
 import pyomo.core.base.symbolic
@@ -21,7 +22,7 @@ from pyomo.solvers.tests.models.QCP_simple import QCP_simple
 from pyomo.solvers.tests.models.MIQCP_simple import MIQCP_simple
 from pyomo.opt import TerminationCondition
 
-required_solvers = ('baron', 'cplex')
+required_solvers = ('baron', 'cplex_persistent')
 if not all(SolverFactory(s).available(False) for s in required_solvers):
     subsolvers_available = False
 elif not SolverFactory('baron').license_is_valid():
@@ -31,25 +32,25 @@ else:
 
 
 @unittest.skipIf(not subsolvers_available,
-                 "Required subsolvers %s are not available"
+                 'Required subsolvers %s are not available'
                  % (required_solvers,))
 @unittest.skipIf(not pyomo.core.base.symbolic.differentiate_available,
-                 "Symbolic differentiation is not available")
+                 'Symbolic differentiation is not available')
 @unittest.skipIf(not pyomo.contrib.mcpp.pyomo_mcpp.mcpp_available(),
-                 "MC++ is not available")
+                 'MC++ is not available')
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 
     def test_GOA_8PP(self):
         """Test the global outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print('\n Solving 8PP problem with Outer Approximation')
             results = opt.solve(model, strategy='GOA',
                                 init_strategy='rNLP',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_nogood_cuts=True,
+                                add_no_good_cuts=True,
                                 bound_tolerance=1E-5)
 
             self.assertIn(results.solver.termination_condition, [
@@ -59,13 +60,13 @@ class TestMindtPy(unittest.TestCase):
     def test_GOA_8PP_init_max_binary(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print('\n Solving 8PP problem with Outer Approximation(max_binary)')
             results = opt.solve(model, strategy='GOA',
                                 init_strategy='max_binary',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_nogood_cuts=True)
+                                add_no_good_cuts=True)
 
             self.assertIn(results.solver.termination_condition, [
                           TerminationCondition.optimal, TerminationCondition.feasible])
@@ -74,13 +75,13 @@ class TestMindtPy(unittest.TestCase):
     def test_GOA_8PP_L2_norm(self):
         """Test the global outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print('\n Solving 8PP problem with Outer Approximation(L2_norm)')
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 feasibility_norm='L2',
-                                add_nogood_cuts=True)
+                                add_no_good_cuts=True)
 
             self.assertIn(results.solver.termination_condition, [
                           TerminationCondition.optimal, TerminationCondition.feasible])
@@ -89,13 +90,13 @@ class TestMindtPy(unittest.TestCase):
     def test_GOA_8PP_sympy(self):
         """Test the global outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            model = EightProcessFlowsheet()
+            model = EightProcessFlowsheet(convex=True)
             print('\n Solving 8PP problem with Outer Approximation(sympy)')
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 differentiate_mode='sympy',
-                                add_nogood_cuts=True)
+                                add_no_good_cuts=True)
 
             self.assertIn(results.solver.termination_condition, [
                           TerminationCondition.optimal, TerminationCondition.feasible])
@@ -110,7 +111,7 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 obj_bound=10,
-                                add_nogood_cuts=True)
+                                add_no_good_cuts=True)
 
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -124,10 +125,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='GOA',
                                 init_strategy='initial_binary',
                                 mip_solver=required_solvers[1],
-                                nlp_solver=required_solvers[0],
-                                obj_bound=10,
-                                add_nogood_cuts=True)
-
+                                nlp_solver=required_solvers[0])
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
             self.assertAlmostEqual(value(model.cost.expr), 6.00976, places=2)
@@ -141,7 +139,7 @@ class TestMindtPy(unittest.TestCase):
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 obj_bound=10,
-                                add_nogood_cuts=True,
+                                add_no_good_cuts=True,
                                 use_mcpp=True)
 
             self.assertIs(results.solver.termination_condition,
@@ -156,7 +154,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_nogood_cuts=True,
+                                add_no_good_cuts=True,
                                 integer_to_binary=True)
 
             self.assertIs(results.solver.termination_condition,
@@ -167,11 +165,11 @@ class TestMindtPy(unittest.TestCase):
         """Test the global outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
-            print('\n Solving Proposal problem with Outer Approximation(integer cuts)')
+            print('\n Solving Proposal problem with Outer Approximation(no-good cuts)')
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_nogood_cuts=True,
+                                add_no_good_cuts=True,
                                 integer_to_binary=True  # if we use lazy callback, we cannot set integer_to_binary True
                                 )
 
@@ -187,7 +185,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_nogood_cuts=True,
+                                add_no_good_cuts=True,
                                 )
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -197,11 +195,11 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
             print(
-                '\n Solving Constraint Qualification Example with global Outer Approximation(integer cut)')
+                '\n Solving Constraint Qualification Example with global Outer Approximation(no-good cuts)')
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_nogood_cuts=True
+                                add_no_good_cuts=True
                                 )
             self.assertIn(results.solver.termination_condition, [
                           TerminationCondition.optimal, TerminationCondition.feasible])
@@ -214,7 +212,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                add_nogood_cuts=True
+                                add_no_good_cuts=True
                                 )
             # self.assertIs(results.solver.termination_condition,
             #               TerminationCondition.optimal)
@@ -228,8 +226,8 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
-                                feasibility_norm="L_infinity",
-                                add_nogood_cuts=True,
+                                feasibility_norm='L_infinity',
+                                add_no_good_cuts=True,
                                 )
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -243,6 +241,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver='baron',
+                                add_no_good_cuts=True
                                 )
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -256,6 +255,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver='baron',
+                                add_no_good_cuts=True
                                 )
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -269,6 +269,7 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver='baron',
+                                add_no_good_cuts=True
                                 )
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -282,6 +283,260 @@ class TestMindtPy(unittest.TestCase):
             results = opt.solve(model, strategy='GOA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver='baron',
+                                add_no_good_cuts=True
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(
+                value(model.objective.expr), -17, places=2)
+
+    def test_GOA_8PP_tabu_list(self):
+        """Test the global outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet(convex=True)
+            print('\n Solving 8PP problem with Outer Approximation(tabu list)')
+            results = opt.solve(model, strategy='GOA',
+                                init_strategy='rNLP',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                use_tabu_list=True,
+                                bound_tolerance=1E-5)
+
+            self.assertIn(results.solver.termination_condition, [
+                          TerminationCondition.optimal, TerminationCondition.feasible])
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+
+    def test_GOA_8PP_init_max_binary_tabu_list(self):
+        """Test the outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet(convex=True)
+            print(
+                '\n Solving 8PP problem with Outer Approximation(max_binary, tabu list)')
+            results = opt.solve(model, strategy='GOA',
+                                init_strategy='max_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                use_tabu_list=True)
+
+            self.assertIn(results.solver.termination_condition, [
+                          TerminationCondition.optimal, TerminationCondition.feasible])
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+
+    def test_GOA_8PP_L2_norm_tabu_list(self):
+        """Test the global outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet(convex=True)
+            print('\n Solving 8PP problem with Outer Approximation(L2_norm, tabu list)')
+            results = opt.solve(model, strategy='GOA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                feasibility_norm='L2',
+                                use_tabu_list=True)
+
+            self.assertIn(results.solver.termination_condition, [
+                          TerminationCondition.optimal, TerminationCondition.feasible])
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+
+    def test_GOA_8PP_sympy_tabu_list(self):
+        """Test the global outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = EightProcessFlowsheet(convex=True)
+            print('\n Solving 8PP problem with Outer Approximation(sympy, tabu list)')
+            results = opt.solve(model, strategy='GOA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                differentiate_mode='sympy',
+                                use_tabu_list=True)
+
+            self.assertIn(results.solver.termination_condition, [
+                          TerminationCondition.optimal, TerminationCondition.feasible])
+            self.assertAlmostEqual(value(model.cost.expr), 68, places=1)
+
+    def test_GOA_MINLP_simple_tabu_list(self):
+        """Test the global outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = SimpleMINLP()
+            print('\n Solving MINLP_simple problem with Outer Approximation(tabu list)')
+            results = opt.solve(model, strategy='GOA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                obj_bound=10,
+                                use_tabu_list=True)
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), 3.5, places=2)
+
+    def test_GOA_MINLP2_simple_tabu_list(self):
+        """Test the global outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = SimpleMINLP2()
+            print('\n Solving MINLP2_simple problem with Outer Approximation(tabu list)')
+            results = opt.solve(model, strategy='GOA',
+                                init_strategy='initial_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0])
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), 6.00976, places=2)
+
+    def test_GOA_MINLP3_simple_tabu_list(self):
+        """Test the global outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = SimpleMINLP3()
+            print('\n Solving MINLP3_simple problem with Outer Approximation(tabu list)')
+            results = opt.solve(model, strategy='GOA', init_strategy='initial_binary',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                obj_bound=10,
+                                use_tabu_list=True,
+                                use_mcpp=True)
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.cost.expr), -5.512, places=2)
+
+    def test_GOA_Proposal_tabu_list(self):
+        """Test the global outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = ProposalModel()
+            print('\n Solving Proposal problem with Outer Approximation(tabu list)')
+            results = opt.solve(model, strategy='GOA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                use_tabu_list=True,
+                                integer_to_binary=True)
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
+
+    def test_GOA_Proposal_with_int_cuts_tabu_list(self):
+        """Test the global outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = ProposalModel()
+            print(
+                '\n Solving Proposal problem with Outer Approximation(no-good cuts, tabu list)')
+            results = opt.solve(model, strategy='GOA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                use_tabu_list=True,
+                                integer_to_binary=True  # if we use lazy callback, we cannot set integer_to_binary True
+                                )
+
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.obj.expr), 0.66555, places=2)
+
+    def test_GOA_ConstraintQualificationExample_tabu_list(self):
+        with SolverFactory('mindtpy') as opt:
+            model = ConstraintQualificationExample()
+            print(
+                '\n Solving Constraint Qualification Example with global Outer Approximation(tabu list)')
+            results = opt.solve(model, strategy='GOA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                use_tabu_list=True,
+                                )
+            # self.assertIs(results.solver.termination_condition,
+            #               TerminationCondition.optimal)
+            self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
+
+    def test_GOA_ConstraintQualificationExample_integer_cut_tabu_list(self):
+        with SolverFactory('mindtpy') as opt:
+            model = ConstraintQualificationExample()
+            print(
+                '\n Solving Constraint Qualification Example with global Outer Approximation(no-good cuts, tabu list)')
+            results = opt.solve(model, strategy='GOA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                use_tabu_list=True
+                                )
+            self.assertIn(results.solver.termination_condition, [
+                          TerminationCondition.optimal, TerminationCondition.feasible])
+            self.assertAlmostEqual(value(model.objective.expr), 3, places=2)
+
+    def test_GOA_OnlineDocExample_tabu_list(self):
+        with SolverFactory('mindtpy') as opt:
+            model = OnlineDocExample()
+            print(
+                '\n Solving Online Doc Example with global Outer Approximation(tabu list)')
+            results = opt.solve(model, strategy='GOA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                use_tabu_list=True
+                                )
+            # self.assertIs(results.solver.termination_condition,
+            #               TerminationCondition.optimal)
+            self.assertAlmostEqual(
+                value(model.objective.expr), 2.438447, places=2)
+
+    def test_GOA_OnlineDocExample_L_infinity_norm_tabu_list(self):
+        with SolverFactory('mindtpy') as opt:
+            model = OnlineDocExample()
+            print(
+                '\n Solving Online Doc Example with global Outer Approximation(tabu list)')
+            results = opt.solve(model, strategy='GOA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                feasibility_norm='L_infinity',
+                                use_tabu_list=True,
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(
+                value(model.objective.expr), 2.438447, places=2)
+
+    def test_GOA_Nonconvex1_tabu_list(self):
+        with SolverFactory('mindtpy') as opt:
+            model = Nonconvex1()
+            print('\n Solving Nonconvex1 with global Outer Approximation(tabu list)')
+            results = opt.solve(model, strategy='GOA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver='baron',
+                                use_tabu_list=True,
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(
+                value(model.objective.expr), 7.667, places=2)
+
+    def test_GOA_Nonconvex2_tabu_list(self):
+        with SolverFactory('mindtpy') as opt:
+            model = Nonconvex2()
+            print('\n Solving Nonconvex2 with global Outer Approximation(tabu list)')
+            results = opt.solve(model, strategy='GOA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver='baron',
+                                use_tabu_list=True,
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(
+                value(model.objective.expr), -0.94347, places=2)
+
+    def test_GOA_Nonconvex3_tabu_list(self):
+        with SolverFactory('mindtpy') as opt:
+            model = Nonconvex3()
+            print('\n Solving Nonconvex3 with global Outer Approximation(tabu list)')
+            results = opt.solve(model, strategy='GOA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver='baron',
+                                use_tabu_list=True,
+                                )
+            self.assertIs(results.solver.termination_condition,
+                          TerminationCondition.optimal)
+            self.assertAlmostEqual(
+                value(model.objective.expr), 31, places=2)
+
+    def test_GOA_Nonconvex4_tabu_list(self):
+        with SolverFactory('mindtpy') as opt:
+            model = Nonconvex4()
+            print('\n Solving Nonconvex4 with global Outer Approximation(tabu list)')
+            results = opt.solve(model, strategy='GOA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver='baron',
+                                use_tabu_list=True,
                                 )
             self.assertIs(results.solver.termination_condition,
                           TerminationCondition.optimal)
@@ -289,5 +544,5 @@ class TestMindtPy(unittest.TestCase):
                 value(model.objective.expr), -17, places=2)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

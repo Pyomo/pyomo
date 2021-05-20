@@ -61,10 +61,10 @@ class TestDependencies(unittest.TestCase):
 
     def test_import_success(self):
         module_obj, module_available = attempt_import(
-            'pyutilib','Testing import of PyUtilib', defer_check=False)
+            'ply', 'Testing import of ply', defer_check=False)
         self.assertTrue(module_available)
-        import pyutilib
-        self.assertTrue(module_obj is pyutilib)
+        import ply
+        self.assertTrue(module_obj is ply)
 
     def test_local_deferred_import(self):
         self.assertIs(type(bogus_available), DeferredImportIndicator)
@@ -144,7 +144,7 @@ class TestDependencies(unittest.TestCase):
 
 
     def test_and_or(self):
-        mod0, avail0 = attempt_import('pyutilib',
+        mod0, avail0 = attempt_import('ply',
                                       defer_check=True)
         mod1, avail1 = attempt_import('pyomo.common.tests.dep_mod',
                                       defer_check=True)
@@ -205,7 +205,7 @@ class TestDependencies(unittest.TestCase):
         def _record_avail(module, avail):
             ans.append(avail)
 
-        mod0, avail0 = attempt_import('pyutilib',
+        mod0, avail0 = attempt_import('ply',
                                       defer_check=True,
                                       callback=_record_avail)
         mod1, avail1 = attempt_import('pyomo.common.tests.dep_mod',
@@ -241,7 +241,7 @@ class TestDependencies(unittest.TestCase):
         # Test generate warning
         log = StringIO()
         dep = StringIO()
-        with LoggingIntercept(dep, 'pyomo'):
+        with LoggingIntercept(dep, 'pyomo.common.tests'):
             with LoggingIntercept(log, 'pyomo.common'):
                 mod.generate_import_warning()
         self.assertIn(

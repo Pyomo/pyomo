@@ -7,7 +7,7 @@ These decomposition algorithms usually rely on the solution of Mixed-Intger Line
 (MILP) and Nonlinear Programs (NLP).
 
 MindtPy currently implements the Outer Approximation (OA) algorithm originally described in
-`Duran & Grossmann, 1986`_ and the Extended Cutting Plane (ECP) algorithm originally described in `Westerlund & Petterson, 1995`_. Usage and implementation
+[`Duran & Grossmann, 1986`_] and the Extended Cutting Plane (ECP) algorithm originally described in [`Westerlund & Petterson, 1995`_]. Usage and implementation
 details for MindtPy can be found in the PSE 2018 paper Bernal et al.,
 (`ref <https://doi.org/10.1016/B978-0-444-64241-7.50144-0>`_,
 `preprint <http://egon.cheme.cmu.edu/Papers/Bernal_Chen_MindtPy_PSE2018Paper.pdf>`_).
@@ -76,7 +76,7 @@ There are three initialization strategies in MindtPy: rNLP, initial_binary, max_
 Single tree implementation
 ---------------------------------------------
 
-MindtPy also supports single tree implementation of Outer Approximation (OA) algorithm, which is known as LP/NLP algorithm originally described in `Quesada & Grossmann`_.
+MindtPy also supports single tree implementation of Outer Approximation (OA) algorithm, which is known as LP/NLP algorithm originally described in [`Quesada & Grossmann`_].
 The LP/NLP algorithm in MindtPy is implemeted based on the LazyCallback function in commercial solvers.
 
 .. _Quesada & Grossmann: https://www.sciencedirect.com/science/article/abs/pii/0098135492800288
@@ -115,6 +115,23 @@ A usage example for single tree is as follows:
   ...    mip_solver='cplex_persistent', nlp_solver='ipopt', single_tree=True)
   >>> model.objective.display()
 
+
+Global Outer Approximation
+---------------------------------------------
+
+Apart of the decomposition methods for convex MINLP problems [`Kronqvist et al., 2019`_], MindtPy provides an implementation of Global Outer Approximation (GOA) as described in [`Kesavan et al., 2004`_], to provide optimality guaranteed for nonconvex MINLP problems. Here, the validity of the Mixed-integer Linear Programming relaxation of the original problem is guaranteed via the usage of Generalized McCormick envelopes, computed using the package `MC++`_. The NLP subproblems in this case need to be solved to global optimality, which can be achieved through global NLP solvers such as BARON or SCIP. No-good cuts are added to each iteration, guaranteeing the finite convergence of the algorithm. Notice that this method is more computationally expensive than the other strategies implemented for convex MINLP like OA and ECP, which in turn can be used as heuristics for nonconvex MINLP problems.
+
+.. _Kronqvist et al., 2019: https://link.springer.com/article/10.1007/s11081-018-9411-8
+.. _Kesavan et al., 2004: https://link.springer.com/article/10.1007/s10107-004-0503-1
+.. _MC++: https://pyomo.readthedocs.io/en/stable/contributed_packages/mcpp.html
+
+
+Regularization
+---------------------------------------------
+
+As a new implementation in MindtPy, we provide a flexible regularization technique implementation. In this technique, an extra mixed-integer problem is solved in each decomposition iteration or incumbent solution of the single-tree solution methods. The extra mixed-integer program is constructed to provide a point where the NLP problem is solved closer to the feasible region described by the non-linear constraint. This approach has been proposed in [`Kronqvist et al., 2020`_] and it has shown to be efficient for highly nonlinear convex MINLP problems. In [`Kronqvist et al., 2020`_] two different regularization approaches are proposed, using an squared Euclidean norm which was proved to make the procedure equivalent to adding trust-region constraints to Outer-approximation, and a second order approximation of the Lagrangian of the problem, which showed better performance. We implement these methods, using PyomoNLP as the interface to compute the second order approximation of the Lagrangian, and extend them to consider linear norm objectives and first order approximations of the Lagrangian. Finally, we implemented an approximated second order expansion of the Lagrangian, drawing inspiration from the Sequential Quadratic Programming (SQP) literature. The details of this implementation are included in an upcoming paper.
+
+.. _Kronqvist et al., 2020: https://link.springer.com/article/10.1007/s10107-018-1356-3
 
 
 
