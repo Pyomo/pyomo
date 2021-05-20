@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.fileutils import find_library
-from pyomo.common.dependencies import numpy
+from pyomo.common.dependencies import numpy as np
 import ctypes
 import os
 
@@ -40,9 +40,9 @@ class AmplInterface(object):
         self.ASLib = ctypes.cdll.LoadLibrary(AmplInterface.libname)
 
         # define 1d array
-        array_1d_double = numpy.ctypeslib.ndpointer(
+        array_1d_double = np.ctypeslib.ndpointer(
             dtype=np.double, ndim=1, flags='CONTIGUOUS')
-        array_1d_int = numpy.ctypeslib.ndpointer(
+        array_1d_int = np.ctypeslib.ndpointer(
             dtype=np.intc, ndim=1, flags='CONTIGUOUS')
 
         # constructor
