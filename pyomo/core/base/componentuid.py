@@ -16,7 +16,8 @@ from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import pickle
 from pyomo.common.deprecation import deprecated
 from pyomo.core.base.component_namer import (
-    literals, name_repr as __name_repr, index_repr as __index_repr,
+    literals, special_chars,
+    name_repr as __name_repr, index_repr as __index_repr,
     re_number as _re_number,
 )
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
@@ -74,7 +75,7 @@ class ComponentUID(object):
                                  "ComponentUID object from a string type")
             try:
                 self._cids = tuple(self._parse_cuid_v2(component))
-            except (OSError, IOError):
+            except (OSError, IOError, AssertionError):
                 self._cids = tuple(self._parse_cuid_v1(component))
 
         elif type(component) is IndexedComponent_slice:
@@ -612,13 +613,12 @@ _re_escape_sequences = re.compile(
 def _match_escape(match):
     return codecs.decode(match.group(0), 'unicode-escape')
 
-_re_number = re.compile(
-    r'(?:[-+]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][-+]?[0-9]+)?|-?inf|nan)')
+#
+# NOTE: literals and _re_number from component_namer
+#
 
-# Ignore whitespace (tab, and linefeed)
-t_ignore = "\t\r"
-
-literals = '()[],.'
+# Ignore whitespace (space, tab, and linefeed)
+t_ignore = " \t\r"
 
 tokens = [
     "WORD",   # unquoted string
@@ -635,10 +635,16 @@ def t_NUMBER(t):
     t.value = _int_or_float(t.value)
     return t
 
-@ply.lex.TOKEN(r'[a-zA-Z_][a-zA-Z_0-9]*')
+# A "word" must start with an alphanumeric character, followed by any
+# number of "non-special" characters.  This regex matches numbers as
+# well as more traditional string names, so it is important that it is
+# declared *after* t_NUMBER.
+@ply.lex.TOKEN(r'[a-zA-Z_0-9][^' + re.escape(special_chars) + r']*')
 def t_WORD(t):
+    t.value = t.value.strip()
     return t
 
+# A "string" is a proper quoted string
 _quoted_str = r"'(?:[^'\\]|\\.)*'"
 _general_str = "|".join([_quoted_str, _quoted_str.replace("'",'"')])
 @ply.lex.TOKEN(_general_str)
