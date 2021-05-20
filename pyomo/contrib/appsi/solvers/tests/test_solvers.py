@@ -1,6 +1,10 @@
 import pyomo.environ as pe
 import pyomo.common.unittest as unittest
 from parameterized import parameterized
+try:
+    from pyomo.contrib.appsi.cmodel import cmodel
+except ImportError:
+    raise unittest.SkipTest('appsi extensions are not available')
 from pyomo.contrib.appsi.base import TerminationCondition, Results, Solver
 from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc
 from typing import Type
