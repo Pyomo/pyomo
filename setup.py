@@ -128,9 +128,14 @@ def run_setup():
           'ply',
       ],
       packages=find_packages(exclude=("scripts",)),
-      package_data={"pyomo.contrib.viewer":["*.ui"]},
+      package_data={
+          "pyomo.contrib.appsi.cmodel": ["src/*"],
+          "pyomo.contrib.mcpp": ["*.cpp"],
+          "pyomo.contrib.pynumero": ['src/*', 'src/tests/*'],
+          "pyomo.contrib.viewer": ["*.ui"],
+      },
+      #include_package_data=True,
       ext_modules = ext_modules,
-      include_package_data=True,
       entry_points="""
         [console_scripts]
         pyomo = pyomo.scripting.pyomo_main:main_console_script

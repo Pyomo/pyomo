@@ -123,6 +123,27 @@ class TestComponentUID(unittest.TestCase):
             cuid._cids,
             (('b',(_star, _star)), ('c',tuple()), ('a',(_star,))) )
 
+    def test_parseFromString_spaces(self):
+        cuid = ComponentUID('x[a b,c d]')
+        self.assertEqual(
+            cuid._cids,
+            (('x',('a b', 'c d')), ))
+
+        cuid = ComponentUID("x['a b',\"c d\"]")
+        self.assertEqual(
+            cuid._cids,
+            (('x',('a b', 'c d')), ))
+
+        cuid = ComponentUID('x[a b, c d]')
+        self.assertEqual(
+            cuid._cids,
+            (('x',('a b', 'c d')), ))
+
+        cuid = ComponentUID("x[ a b , 'c d' ]")
+        self.assertEqual(
+            cuid._cids,
+            (('x',('a b', 'c d')), ))
+
     def test_parseFromRepr1(self):
         cuid = ComponentUID('b:1,2.c.a:2')
         self.assertEqual(

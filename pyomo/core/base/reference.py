@@ -322,12 +322,12 @@ class _ReferenceDict(MutableMapping):
         return iter(self._slice)
 
     @deprecated('The iteritems method is deprecated. Use dict.items().',
-                version='TBD')
+                version='6.0')
     def iteritems(self):
         return self.items()
 
     @deprecated('The itervalues method is deprecated. Use dict.values().',
-                version='TBD')
+                version='6.0')
     def itervalues(self):
         return self.values()
 

@@ -587,7 +587,7 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
 
 class SimpleObjective(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarObjective
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class IndexedObjective(Objective):

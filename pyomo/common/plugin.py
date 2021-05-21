@@ -34,21 +34,21 @@ class PluginGlobals(object):
     @staticmethod
     @deprecated("The PluginGlobals environment manager is deprecated: "
                 "Pyomo only supports a single global environment",
-                version='TBD')
+                version='6.0')
     def add_env(name):
         pass
 
     @staticmethod
     @deprecated("The PluginGlobals environment manager is deprecated: "
                 "Pyomo only supports a single global environment",
-                version='TBD')
+                version='6.0')
     def pop_env():
         pass
 
     @staticmethod
     @deprecated("The PluginGlobals environment manager is deprecated: "
                 "Pyomo only supports a single global environment",
-                version='TBD')
+                version='6.0')
     def clear():
         pass
 
@@ -61,7 +61,7 @@ def alias(name, doc=None, subclass=None):
     if subclass is not None:
         deprecation_warning(
             "The Pyomo plugin infrastructure alias() function does "
-            "not support the subclass flag.", version='TBD')
+            "not support the subclass flag.", version='6.0')
     calling_frame = inspect.currentframe().f_back
     locals_ = calling_frame.f_locals
     #
@@ -77,7 +77,7 @@ def implements(interface, inherit=None, namespace=None, service=False):
     if namespace is not None:
         deprecation_warning(
             "The Pyomo plugin infrastructure only supports a "
-            "single global namespace.", version='TBD')
+            "single global namespace.", version='6.0')
     calling_frame = inspect.currentframe().f_back
     locals_ = calling_frame.f_locals
     #

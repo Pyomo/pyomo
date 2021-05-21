@@ -493,14 +493,16 @@ jobs:
 
     - name: Download and install extensions
       run: |
-        echo ""
-        echo "Pyomo download-extensions"
-        echo ""
-        pyomo download-extensions
-        echo ""
-        echo "Pyomo build-extensions"
-        echo ""
-        pyomo build-extensions --parallel 2
+        if [[ ! "${{matrix.slim}}" ]]; then
+            echo ""
+            echo "Pyomo download-extensions"
+            echo ""
+            pyomo download-extensions
+            echo ""
+            echo "Pyomo build-extensions"
+            echo ""
+            pyomo build-extensions --parallel 2
+        fi
 
     - name: Report pyomo plugin information
       run: |

@@ -1043,7 +1043,7 @@ class ScalarParam(_ParamData, Param):
 
 class SimpleParam(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarParam
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class IndexedParam(Param):

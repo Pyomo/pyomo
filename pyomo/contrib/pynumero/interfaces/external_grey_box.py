@@ -369,7 +369,7 @@ class ScalarExternalGreyBoxBlock(ExternalGreyBoxBlockData, ExternalGreyBoxBlock)
 
 class SimpleExternalGreyBoxBlock(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarExternalGreyBoxBlock
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class IndexedExternalGreyBoxBlock(Block):

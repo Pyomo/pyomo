@@ -514,7 +514,7 @@ class ScalarExpression(_GeneralExpressionData, Expression):
 
 class SimpleExpression(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarExpression
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class IndexedExpression(Expression):

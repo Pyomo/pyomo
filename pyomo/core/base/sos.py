@@ -351,7 +351,7 @@ class ScalarSOSConstraint(SOSConstraint, _SOSConstraintData):
 
 class SimpleSOSConstraint(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarSOSConstraint
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class IndexedSOSConstraint(SOSConstraint):

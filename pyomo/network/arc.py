@@ -386,7 +386,7 @@ class ScalarArc(_ArcData, Arc):
 
 class SimpleArc(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarArc
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class IndexedArc(Arc):

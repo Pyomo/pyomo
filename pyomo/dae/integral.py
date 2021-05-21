@@ -153,7 +153,7 @@ class ScalarIntegral(ScalarExpression, Integral):
 
 class SimpleIntegral(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarIntegral
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class IndexedIntegral(IndexedExpression, Integral):
