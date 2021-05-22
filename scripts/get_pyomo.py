@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 #
-# A script to install Pyomo and its dependencies (PyUtilib, ply, etc)
+# A script to install Pyomo and its dependencies (ply)
 #
 
 import sys

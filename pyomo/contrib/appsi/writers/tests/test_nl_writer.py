@@ -1,5 +1,9 @@
 import pyomo.common.unittest as unittest
 import pyomo.environ as pe
+try:
+    from pyomo.contrib.appsi.cmodel import cmodel
+except ImportError:
+    raise unittest.SkipTest('appsi extensions are not available')
 from pyomo.contrib import appsi
 import os
 

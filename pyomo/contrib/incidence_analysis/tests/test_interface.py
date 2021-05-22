@@ -201,7 +201,7 @@ class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
             var = all_vars[j]
             self.assertIn(var, csr_map[con])
             csr_map[con].remove(var)
-            self.assertAlmostEqual(deriv_lookup[i,j], e, 8)
+            self.assertAlmostEqual(pyo.value(deriv_lookup[i,j]), pyo.value(e), 8)
         # And no additional rows
         for con in csr_map:
             self.assertEqual(len(csr_map[con]), 0)

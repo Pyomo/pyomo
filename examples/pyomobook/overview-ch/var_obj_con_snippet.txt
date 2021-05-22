@@ -1,0 +1,25 @@
+3 Var Declarations
+    x : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :  None :  None :  None : False :  True :  Reals
+    y : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :    -2 :  None :     4 : False :  True :  Reals
+    z : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :   1.0 :  None : False : False : NonNegativeReals
+
+1 Objective Declarations
+    obj : Size=1, Index=None, Active=True
+        Key  : Active : Sense    : Expression
+        None :   True : minimize : x**2 + y + z
+
+2 Constraint Declarations
+    eq_con : Size=1, Index=None, Active=True
+        Key  : Lower : Body      : Upper : Active
+        None :   1.0 : x + y + z :   1.0 :   True
+    ineq_con : Size=1, Index=None, Active=True
+        Key  : Lower : Body  : Upper : Active
+        None :  -Inf : x + y :   0.0 :   True
+
+6 Declarations: x y z obj eq_con ineq_con

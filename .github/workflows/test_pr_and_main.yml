@@ -104,6 +104,13 @@ jobs:
           TARGET: linux
           PYENV: pip
 
+        - os: ubuntu-18.04
+          python: 3.7
+          other: /pyutilib
+          TARGET: linux
+          PYENV: pip
+          PACKAGES: pyutilib
+
         exclude:
         - {os: macos-latest, python: pypy3}
         - {os: windows-latest, python: pypy3}
@@ -452,15 +459,11 @@ jobs:
         echo "$GJH_DIR"
         ls -l $GJH_DIR
 
-    - name: Install Pyomo and PyUtilib
+    - name: Install Pyomo
       run: |
         echo ""
         echo "Clone Pyomo-model-libraries..."
         git clone https://github.com/Pyomo/pyomo-model-libraries.git
-        echo ""
-        echo "Install PyUtilib..."
-        echo ""
-        $PYTHON_EXE -m pip install git+https://github.com/PyUtilib/pyutilib
         echo ""
         echo "Install Pyomo..."
         echo ""
@@ -490,14 +493,16 @@ jobs:
 
     - name: Download and install extensions
       run: |
-        echo ""
-        echo "Pyomo download-extensions"
-        echo ""
-        pyomo download-extensions
-        echo ""
-        echo "Pyomo build-extensions"
-        echo ""
-        pyomo build-extensions --parallel 2
+        if [[ ! "${{matrix.slim}}" ]]; then
+            echo ""
+            echo "Pyomo download-extensions"
+            echo ""
+            pyomo download-extensions
+            echo ""
+            echo "Pyomo build-extensions"
+            echo ""
+            pyomo build-extensions --parallel 2
+        fi
 
     - name: Report pyomo plugin information
       run: |
@@ -514,7 +519,8 @@ jobs:
             CATEGORY+=" --cat $cat"
         done
         $PYTHON_EXE -m pyomo.common.unittest \
-            pyomo `pwd`/pyomo-model-libraries -v $CATEGORY
+            pyomo `pwd`/pyomo-model-libraries \
+             `pwd`/examples/pyomobook -v $CATEGORY
 
     - name: Run Pyomo MPI tests
       if: matrix.mpi != 0
@@ -601,15 +607,11 @@ jobs:
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
 
-    - name: Install Pyomo and PyUtilib
+    - name: Install Pyomo
       run: |
         echo ""
         echo "Clone Pyomo-model-libraries..."
         git clone https://github.com/Pyomo/pyomo-model-libraries.git
-        echo ""
-        echo "Install PyUtilib..."
-        echo ""
-        $PYTHON_EXE -m pip install git+https://github.com/PyUtilib/pyutilib
         echo ""
         echo "Install Pyomo..."
         echo ""
