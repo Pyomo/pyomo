@@ -14,43 +14,31 @@ import logging
 import sys
 from weakref import ref as weakref_ref
 import gc
-import time
 import math
 
-from pyomo.common import timing, PyomoAPIFactory
-from pyomo.common.collections import Container, OrderedDict
+from pyomo.common import timing
+from pyomo.common.collections import Bunch
 from pyomo.common.dependencies import pympler, pympler_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import is_debug_set
-from pyomo.common.plugin import ExtensionPoint
-
-from pyomo.core.expr import expr_common
 from pyomo.core.expr.symbol_map import SymbolMap
-from pyomo.core.expr.numeric_expr import clone_counter
-
+from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.suffix import active_import_suffix_generator
-from pyomo.core.base.indexed_component import IndexedComponent
-from pyomo.dataportal.DataPortal import DataPortal
-from pyomo.core.base.plugin import IPyomoPresolver
 from pyomo.core.base.numvalue import value
-from pyomo.core.base.block import SimpleBlock
+from pyomo.core.base.block import ScalarBlock
 from pyomo.core.base.set import Set
 from pyomo.core.base.componentuid import ComponentUID
-from pyomo.core.base.component import Component
-from pyomo.core.base.plugin import ModelComponentFactory, TransformationFactory
+from pyomo.core.base.transformation import TransformationFactory
 from pyomo.core.base.label import CNameLabeler, CuidLabeler
+from pyomo.dataportal.DataPortal import DataPortal
 
 from pyomo.opt.results import SolverResults, Solution, SolverStatus, UndefinedData
 
-from six import itervalues, iteritems, StringIO, string_types
-try:
-    unicode
-except:
-    basestring = unicode = str
+from io import StringIO
 
 logger = logging.getLogger('pyomo.core')
 id_func = id
@@ -72,7 +60,7 @@ def global_option(function, name, value):
     return wrapper_function
 
 
-class PyomoConfig(Container):
+class PyomoConfig(Bunch):
     """
     This is a pyomo-specific configuration object, which is a subclass of Container.
     """
@@ -80,7 +68,7 @@ class PyomoConfig(Container):
     _option = {}
 
     def __init__(self, *args, **kw):
-        Container.__init__(self, *args, **kw)
+        Bunch.__init__(self, *args, **kw)
         self.set_name('PyomoConfig')
         #
         # Create the nested options specified by the the PyomoConfig._option
@@ -90,7 +78,7 @@ class PyomoConfig(Container):
             d = self
             for attr in item[:-1]:
                 if not attr in d:
-                    d[attr] = Container()
+                    d[attr] = Bunch()
                 d = d[attr]
             d[item[-1]] = PyomoConfig._option[item]
 
@@ -129,7 +117,7 @@ class ModelSolution(object):
             '_metadata': self._metadata,
             '_entry': {}
         }
-        for (name, data) in iteritems(self._entry):
+        for (name, data) in self._entry.items():
             tmp = state['_entry'][name] = []
             # Note: We must convert all weakrefs to hard refs and
             # not indirect references like ComponentUIDs because
@@ -137,9 +125,9 @@ class ModelSolution(object):
             # model instance to have already been reconstructed --
             # so things like CUID.find_component will fail (return
             # None).
-            for obj, entry in itervalues(data):
+            for obj, entry in data.values():
                 if obj is None or obj() is None:
-                    logger.warn(
+                    logger.warning(
                         "Solution component in '%s' no longer "
                         "accessible: %s!" % ( name, entry ))
                 else:
@@ -149,7 +137,7 @@ class ModelSolution(object):
     def __setstate__(self, state):
         self._metadata = state['_metadata']
         self._entry = {}
-        for name, data in iteritems(state['_entry']):
+        for name, data in state['_entry'].items():
             tmp = self._entry[name] = {}
             for obj, entry in data:
                 tmp[ id(obj) ] = ( weakref_ref(obj), entry )
@@ -177,7 +165,7 @@ class ModelSolutions(object):
         return state
 
     def __setstate__(self, state):
-        for key, val in iteritems(state):
+        for key, val in state.items():
             setattr(self, key, val)
         # Restore the instance weakref
         self._instance = weakref_ref(self._instance)
@@ -294,7 +282,7 @@ class ModelSolutions(object):
         for soln_ in self.solutions:
             soln = Solution()
             soln._cuid = cuid
-            for key, val in iteritems(soln_._metadata):
+            for key, val in soln_._metadata.items():
                 setattr(soln, key, val)
 
             if cuid:
@@ -372,7 +360,7 @@ class ModelSolutions(object):
 
                 for name in ['problem', 'objective', 'variable', 'constraint']:
                     tmp = soln._entry[name]
-                    for cuid, val in iteritems(getattr(solution, name)):
+                    for cuid, val in getattr(solution, name).items():
                         obj = cache.get(cuid, None)
                         if obj is None:
                             if ignore_invalid_labels:
@@ -394,7 +382,7 @@ class ModelSolutions(object):
 
                 for name in ['problem', 'objective', 'variable', 'constraint']:
                     tmp = soln._entry[name]
-                    for symb, val in iteritems(getattr(solution, name)):
+                    for symb, val in getattr(solution, name).items():
                         obj = cache.get(symb, None)
                         if obj is None:
                             if ignore_invalid_labels:
@@ -409,7 +397,7 @@ class ModelSolutions(object):
             smap = self.symbol_map[smap_id]
             for name in ['problem', 'objective', 'variable', 'constraint']:
                 tmp = soln._entry[name]
-                for symb, val in iteritems(getattr(solution, name)):
+                for symb, val in getattr(solution, name).items():
                     if symb in smap.bySymbol:
                         obj = smap.bySymbol[symb]
                     elif symb in smap.aliases:
@@ -488,30 +476,30 @@ class ModelSolutions(object):
         # sparse dual values exist in the results object) we clear all active
         # import suffixes.
         #
-        for suffix in itervalues(valid_import_suffixes):
+        for suffix in valid_import_suffixes.values():
             suffix.clear_all_values()
         #
         # Load problem (model) level suffixes. These would only come from ampl
         # interfaced solution suffixes at this point in time.
         #
-        for id_, (pobj,entry) in iteritems(soln._entry['problem']):
-            for _attr_key, attr_value in iteritems(entry):
+        for id_, (pobj,entry) in soln._entry['problem'].items():
+            for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:
                     valid_import_suffixes[attr_key][pobj] = attr_value
         #
         # Load objective data (suffixes)
         #
-        for id_, (odata, entry) in iteritems(soln._entry['objective']):
+        for id_, (odata, entry) in soln._entry['objective'].items():
             odata = odata()
-            for _attr_key, attr_value in iteritems(entry):
+            for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:
                     valid_import_suffixes[attr_key][odata] = attr_value
         #
         # Load variable data (suffixes and values)
         #
-        for id_, (vdata, entry) in iteritems(soln._entry['variable']):
+        for id_, (vdata, entry) in soln._entry['variable'].items():
             vdata = vdata()
             val = entry['Value']
             if vdata.fixed is True:
@@ -535,7 +523,7 @@ class ModelSolutions(object):
             vdata.value = val
             vdata.stale = False
 
-            for _attr_key, attr_value in iteritems(entry):
+            for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key == 'value':
                     continue
@@ -544,22 +532,20 @@ class ModelSolutions(object):
         #
         # Load constraint data (suffixes)
         #
-        for id_, (cdata, entry) in iteritems(soln._entry['constraint']):
+        for id_, (cdata, entry) in soln._entry['constraint'].items():
             cdata = cdata()
-            for _attr_key, attr_value in iteritems(entry):
+            for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:
                     valid_import_suffixes[attr_key][cdata] = attr_value
 
 
 @ModelComponentFactory.register('Model objects can be used as a component of other models.')
-class Model(SimpleBlock):
+class Model(ScalarBlock):
     """
     An optimization model.  By default, this defers construction of components
     until data is loaded.
     """
-
-    preprocessor_ep = ExtensionPoint(IPyomoPresolver)
 
     _Block_reserved_words = set()
 
@@ -582,12 +568,11 @@ class Model(SimpleBlock):
         # Model and Block objects as the same.  Similarly, this avoids
         # the requirement to import PyomoModel.py in the block.py file.
         #
-        SimpleBlock.__init__(self, **kwargs)
+        ScalarBlock.__init__(self, **kwargs)
         self._name = name
-        self.statistics = Container()
+        self.statistics = Bunch()
         self.config = PyomoConfig()
         self.solutions = ModelSolutions(self)
-        self.config.preprocessor = 'pyomo.model.simple_preprocessor'
 
     def compute_statistics(self, active=True):
         """
@@ -597,11 +582,11 @@ class Model(SimpleBlock):
         self.statistics.number_of_constraints = 0
         self.statistics.number_of_objectives = 0
         for block in self.block_data_objects(active=active):
-            for data in block.component_map(Var, active=active).itervalues():
+            for data in block.component_map(Var, active=active).values():
                 self.statistics.number_of_variables += len(data)
-            for data in block.component_map(Objective, active=active).itervalues():
+            for data in block.component_map(Objective, active=active).values():
                 self.statistics.number_of_objectives += len(data)
-            for data in block.component_map(Constraint, active=active).itervalues():
+            for data in block.component_map(Constraint, active=active).values():
                 self.statistics.number_of_constraints += len(data)
 
     def nvariables(self):
@@ -649,7 +634,7 @@ class Model(SimpleBlock):
         # filename is specified.  A concrete model is already
         # constructed, so passing in a data file is a waste of time.
         #
-        if self.is_constructed() and isinstance(filename, string_types):
+        if self.is_constructed() and isinstance(filename, str):
             msg = "The filename=%s will not be loaded - supplied as an " \
                   "argument to the create_instance() method of a "\
                   "concrete instance with name=%s." % (filename, name)
@@ -684,7 +669,9 @@ arguments (which have been ignored):"""
             timing.report_timing()
 
         if name is None:
-            name = self.name
+            # Preserve only the local name (not the FQ name, as that may
+            # have been quoted or otherwise escaped)
+            name = self.local_name
         if filename is not None:
             if data is not None:
                 logger.warning("Model.create_instance() passed both 'filename' "
@@ -735,12 +722,10 @@ arguments (which have been ignored):"""
         return instance
 
 
+    @deprecated("The Model.preprocess() method is deprecated and no "
+                "longer performs any actions", version='6.0')
     def preprocess(self, preprocessor=None):
-        """Apply the preprocess plugins defined by the user"""
-        with PauseGC() as pgc:
-            if preprocessor is None:
-                preprocessor = self.config.preprocessor
-            PyomoAPIFactory(preprocessor)(self.config, model=self)
+        return
 
     def load(self, arg, namespaces=[None], profile_memory=0, report_timing=None):
         """
@@ -751,7 +736,7 @@ arguments (which have been ignored):"""
                 "The report_timing argument to Model.load() is deprecated.  "
                 "Use pyomo.common.timing.report_timing() to enable reporting "
                 "construction timing")
-        if arg is None or isinstance(arg, basestring):
+        if arg is None or isinstance(arg, str):
             dp = DataPortal(filename=arg, model=self)
         elif type(arg) is DataPortal:
             dp = arg
@@ -822,26 +807,12 @@ arguments (which have been ignored):"""
             # Initialize each component in order.
             #
 
-            for component_name, component in iteritems(self.component_map()):
+            for component_name, component in self.component_map().items():
 
                 if component.ctype is Model:
                     continue
 
                 self._initialize_component(modeldata, namespaces, component_name, profile_memory)
-                if False:
-                    total_time = time.time() - start_time
-                    if isinstance(component, IndexedComponent):
-                        clen = len(component)
-                    else:
-                        assert isinstance(component, Component)
-                        clen = 1
-                    print("    %%6.%df seconds required to construct component=%s; %d indices total" \
-                              % (total_time>=0.005 and 2 or 0, component_name, clen) \
-                              % total_time)
-                    tmp_clone_counter = expr_common.clone_counter
-                    if clone_counter != tmp_clone_counter:
-                        clone_counter = tmp_clone_counter
-                        print("             Cloning detected! (clone count: %d)" % clone_counters)
 
             # Note: As is, connectors are expanded when using command-line pyomo but not calling model.create(...) in a Python script.
             # John says this has to do with extension points which are called from commandline but not when writing scripts.

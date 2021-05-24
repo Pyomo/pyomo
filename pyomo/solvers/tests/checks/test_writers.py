@@ -18,7 +18,7 @@ try:
 except:
     new_available=False
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.testcases import test_scenarios
@@ -89,7 +89,7 @@ def create_test_method(model,
 
         if is_expected_failure:
             if rc[0]:
-                warnings.warn("\nTest model '%s' was marked as an expected "
+                warnings.warning("\nTest model '%s' was marked as an expected "
                               "failure but no failure occured. The "
                               "reason given for the expected failure "
                               "is:\n\n****\n%s\n****\n\n"

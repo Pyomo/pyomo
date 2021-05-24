@@ -8,6 +8,19 @@ code.xref.py {
     color: #8C1AFF;
 }
 
+/* method names should be bold */
+code.descname {
+    font-weight: bold !important;
+    color: black;
+}
+/* method argument lists shoult *not* be bold, argument names in black */
+dl.py.method dt {
+    font-weight: normal;
+}
+dl.py.method dt em span.n {
+    color: black;
+}
+
 /* Fix to RTD theme to allow table cell content to wrap */
 @media screen and (min-width: 767px) {
   .wy-table-responsive table td {

@@ -9,8 +9,6 @@
 #  ___________________________________________________________________________
 
 import logging
-from six.moves import xrange
-from six import next
 
 # If the user has numpy then the collocation points and the a matrix for
 # the Runge-Kutta basis formulation will be calculated as needed.
@@ -426,7 +424,7 @@ class Collocation_Discretization_Transformation(Transformation):
                 generate_finite_elements(ds, self._nfe[currentds])
                 if not ds.get_changed():
                     if len(ds) - 1 > self._nfe[currentds]:
-                        logger.warn("More finite elements were found in "
+                        logger.warning("More finite elements were found in "
                                     "ContinuousSet '%s' than the number of "
                                     "finite elements specified in apply. The "
                                     "larger number of finite elements will be "
@@ -501,14 +499,26 @@ class Collocation_Discretization_Transformation(Transformation):
 
             if block.contains_component(Integral):
                 for i in block.component_objects(Integral, descend_into=True):
-                    i.reconstruct()
                     i.parent_block().reclassify_component_type(i, Expression)
+                    # TODO: The following reproduces the old behavior of
+                    # "reconstruct()".  We should come up with an
+                    # implementation that does not rely on manipulating
+                    # private attributes
+                    i.clear()
+                    i._constructed = False
+                    i.construct()
                 # If a model contains integrals they are most likely to appear
                 # in the objective function which will need to be reconstructed
                 # after the model is discretized.
                 for k in block.component_objects(Objective, descend_into=True):
                     # TODO: check this, reconstruct might not work
-                    k.reconstruct()
+                    # TODO: The following reproduces the old behavior of
+                    # "reconstruct()".  We should come up with an
+                    # implementation that does not rely on manipulating
+                    # private attributes
+                    k.clear()
+                    k._constructed = False
+                    k.construct()
 
     def reduce_collocation_points(self, instance, var=None, ncp=None,
                                   contset=None):
@@ -617,9 +627,9 @@ class Collocation_Discretization_Transformation(Transformation):
         # Iterate over non_ds indices
         for n in tmpidx:
             # Iterate over finite elements
-            for i in xrange(0, len(fe) - 1):
+            for i in range(0, len(fe) - 1):
                 # Iterate over collocation points
-                for k in xrange(1, tot_ncp - ncp + 1):
+                for k in range(1, tot_ncp - ncp + 1):
                     if ncp == 1:
                         # Constant over each finite element
                         conlist.add(var[idx(n, i, k)] ==
@@ -632,7 +642,7 @@ class Collocation_Discretization_Transformation(Transformation):
                         coeff = self._interpolation_coeffs(ti, tfit)
                         conlist.add(var[idx(n, i, k)] ==
                                     sum(var[idx(n, i, j)] * next(coeff)
-                                        for j in xrange(tot_ncp - ncp + 1,
+                                        for j in range(tot_ncp - ncp + 1,
                                                         tot_ncp + 1)))
 
         return instance

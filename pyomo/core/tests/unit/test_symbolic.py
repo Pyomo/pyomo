@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.errors import DeveloperError, NondifferentiableError
 from pyomo.environ import (ConcreteModel, Var, Param, Set, NonNegativeReals,
@@ -335,13 +335,13 @@ class SymbolicDerivatives(unittest.TestCase):
         m = ConcreteModel()
         m.foo = Var()
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             NondifferentiableError,
             "The sub-expression '.*' is not differentiable "
             "with respect to .*foo",
             differentiate, ceil(m.foo), wrt=m.foo)
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             NondifferentiableError,
             "The sub-expression '.*' is not differentiable "
             "with respect to .*foo",
@@ -351,7 +351,7 @@ class SymbolicDerivatives(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var()
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "Must specify exactly one of wrt and wrt_list",
             differentiate, m.x, wrt=m.x, wrt_list=[m.x])
@@ -360,7 +360,7 @@ class SymbolicDerivatives(unittest.TestCase):
         class bogus(object):
             def __init__(self):
                 self._args = (obj_map.getSympySymbol(m.x),)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             DeveloperError,
             "sympy expression .* not found in the operator map",
             sympy2pyomo_expression, bogus(), obj_map)

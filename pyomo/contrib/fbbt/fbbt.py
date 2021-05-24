@@ -19,7 +19,7 @@ from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 from pyomo.gdp import Disjunct
-from pyomo.core.base.expression import _GeneralExpressionData, SimpleExpression
+from pyomo.core.base.expression import _GeneralExpressionData, ScalarExpression
 import logging
 from pyomo.common.errors import InfeasibleConstraintException, PyomoException
 from pyomo.common.config import ConfigBlock, ConfigValue, In, NonNegativeFloat, NonNegativeInt
@@ -148,7 +148,7 @@ def _prop_bnds_leaf_to_root_PowExpression(node, bnds_dict, feasibility_tol):
     arg1, arg2 = node.args
     lb1, ub1 = bnds_dict[arg1]
     lb2, ub2 = bnds_dict[arg2]
-    bnds_dict[node] = interval.power(lb1, ub1, lb2, ub2)
+    bnds_dict[node] = interval.power(lb1, ub1, lb2, ub2, feasibility_tol=feasibility_tol)
 
 
 def _prop_bnds_leaf_to_root_ReciprocalExpression(node, bnds_dict, feasibility_tol):
@@ -388,7 +388,7 @@ def _prop_bnds_leaf_to_root_sqrt(node, bnds_dict, feasibility_tol):
     assert len(node.args) == 1
     arg = node.args[0]
     lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.power(lb1, ub1, 0.5, 0.5)
+    bnds_dict[node] = interval.power(lb1, ub1, 0.5, 0.5, feasibility_tol=feasibility_tol)
 
 
 _unary_leaf_to_root_map = dict()
@@ -462,7 +462,7 @@ _prop_bnds_leaf_to_root_map[numeric_expr.NPV_NegationExpression] = _prop_bnds_le
 _prop_bnds_leaf_to_root_map[numeric_expr.NPV_UnaryFunctionExpression] = _prop_bnds_leaf_to_root_UnaryFunctionExpression
 
 _prop_bnds_leaf_to_root_map[_GeneralExpressionData] = _prop_bnds_leaf_to_root_GeneralExpression
-_prop_bnds_leaf_to_root_map[SimpleExpression] = _prop_bnds_leaf_to_root_GeneralExpression
+_prop_bnds_leaf_to_root_map[ScalarExpression] = _prop_bnds_leaf_to_root_GeneralExpression
 
 
 def _prop_bnds_root_to_leaf_ProductExpression(node, bnds_dict, feasibility_tol):
@@ -792,7 +792,7 @@ def _prop_bnds_root_to_leaf_log10(node, bnds_dict, feasibility_tol):
     arg = node.args[0]
     lb0, ub0 = bnds_dict[node]
     lb1, ub1 = bnds_dict[arg]
-    _lb1, _ub1 = interval.power(10, 10, lb0, ub0)
+    _lb1, _ub1 = interval.power(10, 10, lb0, ub0, feasibility_tol=feasibility_tol)
     if _lb1 > lb1:
         lb1 = _lb1
     if _ub1 < ub1:
@@ -1029,7 +1029,7 @@ _prop_bnds_root_to_leaf_map[numeric_expr.NPV_NegationExpression] = _prop_bnds_ro
 _prop_bnds_root_to_leaf_map[numeric_expr.NPV_UnaryFunctionExpression] = _prop_bnds_root_to_leaf_UnaryFunctionExpression
 
 _prop_bnds_root_to_leaf_map[_GeneralExpressionData] = _prop_bnds_root_to_leaf_GeneralExpression
-_prop_bnds_root_to_leaf_map[SimpleExpression] = _prop_bnds_root_to_leaf_GeneralExpression
+_prop_bnds_root_to_leaf_map[ScalarExpression] = _prop_bnds_root_to_leaf_GeneralExpression
 
 
 def _check_and_reset_bounds(var, lb, ub):

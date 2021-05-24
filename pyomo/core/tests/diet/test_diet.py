@@ -67,20 +67,26 @@ class Test(unittest.TestCase):
         os.chdir(exdir)
         output = main.main(args)
         os.chdir(old_path)
-
         return outputpath
+
+    def compare_json(self, file1, file2):
+        with open(file1, 'r') as f1, open(file2, 'r') as f2:
+            file1_contents = json.load(f1)
+            file2_contents = json.load(f2)
+        self.assertStructuredAlmostEqual(file2_contents, file1_contents,
+                                         allow_second_superset=True)
 
     def test_pyomo_dat(self):
         results_file = self.run_pyomo(os.path.join(exdir, 'diet1.py'), os.path.join(exdir, 'diet.dat'), outputpath=os.path.join(currdir, 'pyomo_dat.jsn'))
         baseline_file = os.path.join(currdir, 'baselines', 'diet1_pyomo_dat.jsn')
-        self.assertMatchesJsonBaseline(results_file, baseline_file)
+        self.compare_json(results_file, baseline_file)
 
     @unittest.category('nightly')
     @unittest.skipUnless(pyodbc_available, "Requires PyODBC")
     def test_pyomo_mdb(self):
         results_file = self.run_pyomo(os.path.join(exdir, 'diet1.py'), os.path.join(exdir, 'diet1.db.dat'), outputpath=os.path.join(currdir, 'pyomo_mdb.jsn'))
         baseline_file = os.path.join(currdir, 'baselines', 'diet1_pyomo_mdb.jsn')
-        self.assertMatchesJsonBaseline(results_file, baseline_file)
+        self.compare_json(results_file, baseline_file)
 
     @unittest.category('nightly')
     @unittest.skipUnless(pyodbc_available, "Requires PyODBC")
@@ -107,7 +113,7 @@ class Test(unittest.TestCase):
     def test_pyomo_sqlite3(self):
         results_file = self.run_pyomo(os.path.join(exdir, 'diet1.py'), os.path.join(exdir, 'diet1.sqlite.dat'), outputpath=os.path.join(currdir, 'pyomo_sqlite3.jsn'))
         baseline_file = os.path.join(currdir, 'baselines', 'diet1_pyomo_sqlite3.jsn')
-        self.assertMatchesJsonBaseline(results_file, baseline_file)
+        self.compare_json(results_file, baseline_file)
 
     @unittest.skipUnless(sqlite3_available, "Requires SQLite3")
     def test_sqlite_equality(self):

@@ -1,0 +1,59 @@
+15 Var Declarations
+    x_Ashland_Chicago : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :     1 : False :  True :  Reals
+    x_Ashland_Houston : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :     1 : False :  True :  Reals
+    x_Ashland_LA : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :     1 : False :  True :  Reals
+    x_Ashland_NYC : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :     1 : False :  True :  Reals
+    x_Harlingen_Chicago : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :     1 : False :  True :  Reals
+    x_Harlingen_Houston : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :     1 : False :  True :  Reals
+    x_Harlingen_LA : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :     1 : False :  True :  Reals
+    x_Harlingen_NYC : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :     1 : False :  True :  Reals
+    x_Memphis_Chicago : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :     1 : False :  True :  Reals
+    x_Memphis_Houston : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :     1 : False :  True :  Reals
+    x_Memphis_LA : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :     1 : False :  True :  Reals
+    x_Memphis_NYC : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :     1 : False :  True :  Reals
+    y_Ashland : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :     1 : False :  True : Binary
+    y_Harlingen : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :     1 : False :  True : Binary
+    y_Memphis : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :     1 : False :  True : Binary
+
+3 Constraint Declarations
+    maxY : Size=1, Index=None, Active=True
+        Key  : Lower : Body                                : Upper : Active
+        None :  -Inf : y_Harlingen + y_Memphis + y_Ashland :   2.0 :   True
+    one_warehouse_for_LA : Size=1, Index=None, Active=True
+        Key  : Lower : Body                                         : Upper : Active
+        None :   1.0 : x_Harlingen_LA + x_Memphis_LA + x_Ashland_LA :   1.0 :   True
+    one_warehouse_for_NYC : Size=1, Index=None, Active=True
+        Key  : Lower : Body                                            : Upper : Active
+        None :   1.0 : x_Harlingen_NYC + x_Memphis_NYC + x_Ashland_NYC :   1.0 :   True
+
+18 Declarations: x_Harlingen_NYC x_Harlingen_LA x_Harlingen_Chicago x_Harlingen_Houston x_Memphis_NYC x_Memphis_LA x_Memphis_Chicago x_Memphis_Houston x_Ashland_NYC x_Ashland_LA x_Ashland_Chicago x_Ashland_Houston y_Harlingen y_Memphis y_Ashland one_warehouse_for_NYC one_warehouse_for_LA maxY

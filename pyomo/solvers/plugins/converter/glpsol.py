@@ -9,9 +9,8 @@
 #  ___________________________________________________________________________
 
 import os
-import six
 
-import pyutilib.subprocess
+import subprocess
 import pyomo.common
 from pyomo.common.errors import ApplicationError
 from pyomo.common.tempfiles import TempfileManager
@@ -44,7 +43,7 @@ class GlpsolMIPConverter(object):
 
     def apply(self, *args, **kwargs):
         """Convert an instance of one type into another"""
-        if not isinstance(args[2],six.string_types):
+        if not isinstance(args[2], str):
             raise ConverterError("Can only apply glpsol to convert file data")
         _exec = pyomo.common.Executable("glpsol")
         if not _exec:
@@ -104,7 +103,8 @@ class GlpsolMIPConverter(object):
                 OUTPUT.write("end;\n")
             OUTPUT.close()
             cmd.append(modfile)
-        pyutilib.subprocess.run(cmd)
+        subprocess.run(cmd, stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL)
         if not os.path.exists(ofile):       #pragma:nocover
             raise ApplicationError("Problem launching 'glpsol' to create "+ofile)
         if os.path.exists(modfile):

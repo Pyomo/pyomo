@@ -12,10 +12,10 @@ import json
 import sys
 import argparse
 
-from pyomo.common.collections import Options
-from pyomo.opt import ProblemConfigFactory, guess_format
+from pyomo.common.collections import Bunch
+from pyomo.opt import guess_format
 from pyomo.scripting.pyomo_parser import add_subparser, CustomHelpFormatter
-
+from pyomo.scripting.solve_config import Default_Config
 
 def create_parser(parser=None):
     #
@@ -42,7 +42,7 @@ def create_parser(parser=None):
     return parser
 
 
-def run_convert(options=Options(), parser=None):
+def run_convert(options=Bunch(), parser=None):
     from pyomo.scripting.convert import convert, convert_dakota
     if options.model.save_format is None and options.model.save_file:
         options.model.save_format = options.model.save_file.split('.')[-1]
@@ -68,7 +68,7 @@ def convert_exec(args, unparsed):
     # Generate a template file
     #
     if not args.template is None:
-        config, blocks = ProblemConfigFactory('default').config_block(True)
+        config, blocks = Default_Config().config_block(True)
         OUTPUT = open(args.template, 'w')
         if args.template.endswith('json'):
             OUTPUT.write(json.dumps(config.value(), indent=2))
@@ -113,7 +113,7 @@ def convert_exec(args, unparsed):
         if not ('-h' in unparsed or '--help' in unparsed):
             print("ERROR: No output file or format specified!")
             print("")
-        config, blocks = ProblemConfigFactory('default').config_block()
+        config, blocks = Default_Config().config_block()
         parser = create_temporary_parser(output=True, generate=True)
         config.initialize_argparse(parser)
         parser.parse_args(args=unparsed+['-h'])
@@ -121,7 +121,7 @@ def convert_exec(args, unparsed):
     #
     # Parse previously unparsed options
     #
-    config, blocks = ProblemConfigFactory('default').config_block()
+    config, blocks = Default_Config().config_block()
     _parser = create_temporary_parser()
     config.initialize_argparse(_parser)
     _options = _parser.parse_args(args=unparsed)

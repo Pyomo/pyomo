@@ -10,9 +10,7 @@
 
 __all__ = ['TableData']
 
-from six.moves import xrange
-
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 from pyomo.dataportal.process_data import _process_data
 
 
@@ -28,7 +26,7 @@ class TableData(object):
         """
         self._info=None
         self._data=None
-        self.options = Options()
+        self.options = Bunch()
         self.options.ncolumns = 1
 
     def available(self):
@@ -111,7 +109,7 @@ class TableData(object):
 
         header_index = []
         if self.options.select is None:
-            for i in xrange(len(headers)):
+            for i in range(len(headers)):
                 header_index.append(i)
         else:
             for i in self.options.select:
@@ -227,7 +225,7 @@ class TableData(object):
             # Create column names
             if self.options.columns is None:
                 cols = []
-                for i in xrange(self.options.set.dimen):
+                for i in range(self.options.set.dimen):
                     cols.append(self.options.set.local_name+str(i))
                 tmp.append(cols)
             # Get rows
@@ -262,7 +260,7 @@ class TableData(object):
             # Create column names
             if self.options.columns is None:
                 cols = []
-                for i in xrange(len(tmp[0])-len(_param)):
+                for i in range(len(tmp[0])-len(_param)):
                     cols.append('I'+str(i))
                 for param in _param:
                     cols.append(param)

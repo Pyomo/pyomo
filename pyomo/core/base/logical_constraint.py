@@ -15,15 +15,15 @@ import sys
 import logging
 from weakref import ref as weakref_ref
 
-import pyutilib.math
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.constraint import Constraint
-from pyomo.core.expr import logical_expr
 from pyomo.core.expr.boolean_value import as_boolean, BooleanConstant
 from pyomo.core.expr.numvalue import native_types, native_logical_types
-from pyomo.core.base.plugin import ModelComponentFactory
-from pyomo.core.base.component import ActiveComponentData
+from pyomo.core.base.component import (
+    ActiveComponentData, ModelComponentFactory,
+)
 from pyomo.core.base.indexed_component import \
     (ActiveIndexedComponent,
      UnindexedComponent_set,
@@ -31,8 +31,6 @@ from pyomo.core.base.indexed_component import \
 from pyomo.core.base.misc import (apply_indexed_rule,
                                   tabular_writer)
 from pyomo.core.base.set import Set
-
-from six import StringIO, iteritems
 
 logger = logging.getLogger('pyomo.core')
 
@@ -232,18 +230,17 @@ class LogicalConstraint(ActiveIndexedComponent):
     """
 
     _ComponentDataClass = _GeneralLogicalConstraintData
-    NoConstraint = (1000,)
-    Skip = (1000,)
-    Infeasible = (1001,)
-    Violated = (1001,)
-    Feasible = (1002,)
-    Satisfied = (1002,)
+    class Infeasible(object): pass
+    Feasible = ActiveIndexedComponent.Skip
+    NoConstraint = ActiveIndexedComponent.Skip
+    Violated = Infeasible
+    Satisfied = Feasible
 
     def __new__(cls, *args, **kwds):
         if cls != LogicalConstraint:
             return super(LogicalConstraint, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
-            return SimpleLogicalConstraint.__new__(SimpleLogicalConstraint)
+            return ScalarLogicalConstraint.__new__(ScalarLogicalConstraint)
         else:
             return IndexedLogicalConstraint.__new__(IndexedLogicalConstraint)
 
@@ -358,7 +355,7 @@ class LogicalConstraint(ActiveIndexedComponent):
              ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active),
              ],
-            iteritems(self),
+            self.items(),
             ("Body", "Active"),
             lambda k, v: [v.body, v.active, ]
         )
@@ -379,7 +376,7 @@ class LogicalConstraint(ActiveIndexedComponent):
 
         ostream.write("\n")
         tabular_writer(ostream, prefix + tab,
-                       ((k, v) for k, v in iteritems(self._data) if v.active),
+                       ((k, v) for k, v in self._data.items() if v.active),
                        ("Body",),
                        lambda k, v: [v.body(), ])
 
@@ -406,10 +403,10 @@ class LogicalConstraint(ActiveIndexedComponent):
                 % (_get_indexed_component_data_name(self, index),))
 
         if _expr_type is tuple and len(expr) == 1:
-            if (expr == Constraint.Skip) or \
-               (expr == Constraint.Feasible):
+            if expr is LogicalConstraint.Skip:
+                # Note: LogicalConstraint.Feasible is Skip
                 return None
-            if expr == Constraint.Infeasible:
+            if expr is LogicalConstraint.Infeasible:
                 raise ValueError(
                     "LogicalConstraint '%s' cannot be passed 'Infeasible' as a value."
                     % (_get_indexed_component_data_name(self, index),))
@@ -417,9 +414,9 @@ class LogicalConstraint(ActiveIndexedComponent):
         return expr
 
 
-class SimpleLogicalConstraint(_GeneralLogicalConstraintData, LogicalConstraint):
+class ScalarLogicalConstraint(_GeneralLogicalConstraintData, LogicalConstraint):
     """
-    SimpleLogicalConstraint is the implementation representing a single,
+    ScalarLogicalConstraint is the implementation representing a single,
     non-indexed logical constraint.
     """
 
@@ -449,7 +446,7 @@ class SimpleLogicalConstraint(_GeneralLogicalConstraintData, LogicalConstraint):
         if self._constructed:
             if len(self._data) == 0:
                 raise ValueError(
-                    "Accessing the body of SimpleLogicalConstraint "
+                    "Accessing the body of ScalarLogicalConstraint "
                     "'%s' before the LogicalConstraint has been assigned "
                     "an expression. There is currently "
                     "nothing to access." % self.name)
@@ -485,7 +482,7 @@ class SimpleLogicalConstraint(_GeneralLogicalConstraintData, LogicalConstraint):
         if self._check_skip_add(None, expr) is None:
             del self[None]
             return None
-        return super(SimpleLogicalConstraint, self).set_value(expr)
+        return super(ScalarLogicalConstraint, self).set_value(expr)
 
     #
     # Leaving this method for backward compatibility reasons.
@@ -495,11 +492,16 @@ class SimpleLogicalConstraint(_GeneralLogicalConstraintData, LogicalConstraint):
         """Add a logical constraint with a given index."""
         if index is not None:
             raise ValueError(
-                "SimpleLogicalConstraint object '%s' does not accept "
+                "ScalarLogicalConstraint object '%s' does not accept "
                 "index values other than None. Invalid value: %s"
                 % (self.name, index))
         self.set_value(expr)
         return self
+
+
+class SimpleLogicalConstraint(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarLogicalConstraint
+    __renamed__version__ = '6.0'
 
 
 class IndexedLogicalConstraint(LogicalConstraint):

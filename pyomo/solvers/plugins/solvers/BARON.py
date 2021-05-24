@@ -15,9 +15,8 @@ import re
 import tempfile
 
 from pyomo.common import Executable
-from pyomo.common.collections import Options, Bunch
+from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
-from pyutilib.subprocess import run
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
@@ -26,8 +25,6 @@ from pyomo.opt.results import (
     SolutionStatus,
 )
 from pyomo.opt.solver import SystemCallSolver
-
-from six.moves import zip
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -51,7 +48,7 @@ class BARONSHELL(SystemCallSolver):
         self._valid_result_formats[ProblemFormat.bar] = [ResultsFormat.soln]
         self.set_problem_format(ProblemFormat.bar)
 
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -177,8 +174,11 @@ class BARONSHELL(SystemCallSolver):
         else:
             fnames = self._get_dummy_input_files(check_license=False)
             try:
-                results = run([solver_exec, fnames[0]])
-                ver = _extract_version(results[1])
+                results = subprocess.run([solver_exec, fnames[0]],
+                                         stdout=subprocess.PIPE,
+                                         stderr=subprocess.STDOUT,
+                                         universal_newlines=True)
+                ver = _extract_version(results.stdout)
             finally:
                 self._remove_dummy_input_files(fnames)
 
@@ -474,8 +474,8 @@ class BARONSHELL(SystemCallSolver):
             #
             # Scan through the first part of the solution file, until the
             # termination message '*** Normal completion ***'
-            line = ''
-            while '***' not in line:
+            line = '\n'
+            while line and '***' not in line:
                 line = INPUT.readline()
                 if 'Problem solved during preprocessing' in line:
                     SolvedDuringPreprocessing = True

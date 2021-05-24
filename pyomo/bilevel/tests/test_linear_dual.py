@@ -12,20 +12,19 @@
 # Test transformations for linear duality
 #
 
+from filecmp import cmp
 import os
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'bilevel'))
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 import pyomo.opt
 import pyomo.scripting.pyomo_main as pyomo_main
 from pyomo.scripting.util import cleanup
 import pyomo.environ
-
-from six import iteritems
 
 solvers = pyomo.opt.check_available_solvers('cplex', 'glpk')
 
@@ -66,17 +65,20 @@ class CommonTests:
             args.append('--logging=debug')
 
         args = args + list(_args)
-        os.chdir(currdir)
+        _cwd = os.getcwd()
 
         print('***')
         # print(' '.join(args))
         try:
+            os.chdir(currdir)
             output = pyomo_main.main(args)
         except SystemExit:
             output = None
         except:
             output = None
             raise
+        finally:
+            os.chdir(_cwd)
         cleanup()
         print('***')
         return output
@@ -138,8 +140,10 @@ class Reformulate(unittest.TestCase, CommonTests):
         return join(currdir, problem+"_"+solver+'.lp')
 
     def check(self, problem, solver):
-        self.assertFileEqualsBaseline( join(currdir,self.problem+'_result.lp'),
-                                           self.referenceFile(problem,solver), tolerance=1e-5 )
+        _out = join(currdir,self.problem+'_result.lp')
+        _log = self.referenceFile(problem,solver)
+        self.assertTrue(cmp(_out, _log),
+                        msg="Files %s and %s differ" % (_log, _out))
 
 
 class Solver(unittest.TestCase):
@@ -154,7 +158,7 @@ class Solver(unittest.TestCase):
         self.assertEqual(len(refObj), len(ansObj))
         for i in range(len(refObj)):
             self.assertEqual(len(refObj[i]), len(ansObj[i]))
-            for key,val in iteritems(refObj[i]):
+            for key,val in refObj[i].items():
                 #self.assertEqual(val['Id'], ansObj[i].get(key,None)['Id'])
                 self.assertAlmostEqual(val['Value'], ansObj[i].get(key,None)['Value'], places=3)
 

@@ -19,7 +19,7 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import ConcreteModel, AbstractModel, Var, Constraint, \
     ConstraintList, Param, RangeSet, Set, Expression, value, \
@@ -318,42 +318,44 @@ class TestConstraintCreation(unittest.TestCase):
     def test_expr_construct_invalid(self):
         m = ConcreteModel()
         c = Constraint(rule=lambda m: None)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError, ".*rule returned None",
             m.add_component, 'c', c)
 
         m = ConcreteModel()
         c = Constraint([1], rule=lambda m,i: None)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError, ".*rule returned None",
             m.add_component, 'c', c)
 
         m = ConcreteModel()
         c = Constraint(rule=lambda m: True)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
-            ".*resolved to a trivial Boolean \(True\).*Constraint\.Feasible",
+            r".*resolved to a trivial Boolean \(True\).*Constraint\.Feasible",
             m.add_component, 'c', c)
 
         m = ConcreteModel()
         c = Constraint([1], rule=lambda m,i: True)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
-            ".*resolved to a trivial Boolean \(True\).*Constraint\.Feasible",
+            r".*resolved to a trivial Boolean \(True\).*Constraint\.Feasible",
             m.add_component, 'c', c)
 
         m = ConcreteModel()
         c = Constraint(rule=lambda m: False)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
-            ".*resolved to a trivial Boolean \(False\).*Constraint\.Infeasible",
+            r".*resolved to a trivial Boolean \(False\).*"
+            r"Constraint\.Infeasible",
             m.add_component, 'c', c)
 
         m = ConcreteModel()
         c = Constraint([1], rule=lambda m,i: False)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
-            ".*resolved to a trivial Boolean \(False\).*Constraint\.Infeasible",
+            r".*resolved to a trivial Boolean \(False\).*"
+            r"Constraint\.Infeasible",
             m.add_component, 'c', c)
 
     def test_nondata_bounds(self):
@@ -567,6 +569,27 @@ class TestConstraintCreation(unittest.TestCase):
         self.assertTrue(model.c.upper is model.p)
         self.assertEqual(model.c.equality, True)
         model.del_component(model.c)
+
+    def test_inequality(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.c = Constraint(expr=inequality(lower=-1, body=m.x))
+        self.assertEqual(m.c.lower.value, -1)
+        self.assertIs(m.c.body, m.x)
+        self.assertIs(m.c.upper, None)
+
+        del m.c
+        m.c = Constraint(expr=inequality(body=m.x, upper=1))
+        self.assertIs(m.c.lower, None)
+        self.assertIs(m.c.body, m.x)
+        self.assertEqual(m.c.upper.value, 1)
+
+        del m.c
+        m.c = Constraint(expr=inequality(lower=-1, body=m.x, upper=1))
+        self.assertEqual(m.c.lower.value, -1)
+        self.assertIs(m.c.body, m.x)
+        self.assertEqual(m.c.upper.value, 1)
+
 
 class TestSimpleCon(unittest.TestCase):
 
@@ -899,9 +922,9 @@ class TestArrayCon(unittest.TestCase):
 
         m.c[3] = Constraint.Skip
         self.assertEqual(len(m.c), 1)
-        self.assertRaisesRegexp( KeyError, "3", m.c.__getitem__, 3)
+        self.assertRaisesRegex( KeyError, "3", m.c.__getitem__, 3)
 
-        self.assertRaisesRegexp( ValueError, "'c\[3\]': rule returned None",
+        self.assertRaisesRegex( ValueError, r"'c\[3\]': rule returned None",
                                  m.c.__setitem__, 3, None)
         self.assertEqual(len(m.c), 1)
 
@@ -1159,7 +1182,7 @@ class MiscConTests(unittest.TestCase):
         a = Constraint()
         a.construct()
         #
-        # Even though we construct a SimpleConstraint,
+        # Even though we construct a ScalarConstraint,
         # if it is not initialized that means it is "empty"
         # and we should encounter errors when trying to access the
         # _ConstraintData interface methods until we assign
@@ -1219,31 +1242,31 @@ class MiscConTests(unittest.TestCase):
         self.assertEqual(a._constructed, False)
         self.assertEqual(len(a), 0)
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a()
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a.body
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a.lower
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a.upper
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a.equality
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a.strict_lower
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a.strict_upper
 
@@ -1296,18 +1319,6 @@ class MiscConTests(unittest.TestCase):
             self.fail("Can only return tuples of length 2 or 3")
         except ValueError:
             pass
-
-    @unittest.skipIf(not logical_expr._using_chained_inequality, "Chained inequalities are not supported.")
-    def test_chainedInequalityError(self):
-        m = ConcreteModel()
-        m.x = Var()
-        a = m.x <= 0
-        if m.x <= 0:
-            pass
-        m.c = Constraint()
-        self.assertRaisesRegexp(
-            TypeError, "Relational expression used in an unexpected "
-            "Boolean context.", m.c.set_value, a)
 
     def test_tuple_constraint_create(self):
         def rule1(model):

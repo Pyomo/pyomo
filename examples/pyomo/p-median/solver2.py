@@ -8,14 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# Imports from Pyomo and PyUtilib
+# Imports from Pyomo
 from pyomo.core import *
 from pyomo.common.plugin import *
 from pyomo.opt import *
 import random
 import copy
-
-from six.moves import xrange
 
 @plugin_factory
 class MySolver(object):
@@ -28,7 +26,7 @@ class MySolver(object):
     # Solve the specified problem and return
     # a SolverResults object
     def solve(self, instance, **kwds):
-        print "Starting random heuristic"
+        print("Starting random heuristic")
         val, sol = self._random(instance)
         n = value(instance.N)
         # Setup results
@@ -50,12 +48,12 @@ class MySolver(object):
     # Perform a random search
     def _random(self, instance):
         sol = [0]*instance.N.value
-        for j in xrange(instance.P.value):
+        for j in range(instance.P.value):
             sol[j] = 1
         # Generate 100 random solutions, and keep the best
         best = None
         best_sol = []
-        for kk in xrange(100):
+        for kk in range(100):
             random.shuffle(sol)
             # Compute value
             val=0.0

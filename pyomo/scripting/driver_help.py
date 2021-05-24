@@ -16,11 +16,10 @@ import datetime
 import textwrap
 import logging
 import socket
-
-import pyutilib.subprocess
+import subprocess
 
 import pyomo.common
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 import pyomo.scripting.pyomo_parser
 
 logger = logging.getLogger('pyomo.solvers')
@@ -53,7 +52,9 @@ def command_exec(options):
     if not os.path.exists(cmddir+options.command[0]):
         print("  ERROR: the command '%s' does not exist" % (cmddir+options.command[0]))
         return 1
-    return pyutilib.subprocess.run(cmddir+' '.join(options.command), tee=True)[0]
+    return subprocess.run([cmddir] + options.command,
+                          stdout=subprocess.DEVNULL,
+                          stderr=subprocess.DEVNULL).returncode
 
 #
 # Add a subparser for the pyomo command
@@ -77,7 +78,6 @@ included with Python.
 # help
 #   --components
 #   --command
-#   --api
 #   --transformations
 #   --solvers
 #--------------------------------------------------
@@ -138,91 +138,10 @@ def help_datamanagers(options):
         print("  "+xform)
         print(wrapper.fill(DataManagerFactory.doc(xform)))
 
-def help_api(options):
-    services = pyomo.common.PyomoAPIFactory.services()
-    #
-    f = {}
-    for name in services:
-        f[name] = pyomo.common.PyomoAPIFactory(name)
-    #
-    ns = {}
-    for name in services:
-        ns_set = ns.setdefault(f[name].__namespace__, set())
-        ns_set.add(name)
-    #
-    if options.asciidoc:
-        print("//")
-        print("// Pyomo Library API Documentation")
-        print("//")
-        print("// Generated with 'pyomo api' on ",datetime.date.today())
-        print("//")
-        print("")
-        print("== Pyomo Functor API ==")
-        for ns_ in sorted(ns.keys()):
-            print("")
-            level = ns_+" Functors"
-            print('=== %s ===' % level)
-            for name in sorted(ns[ns_]):
-                if ns_ != '':
-                    tname = name[len(ns_)+1:]
-                else:
-                    tname = name
-                print("")
-                print('==== %s ====' % tname)
-                print(f[name].__short_doc__)
-                if f[name].__long_doc__ != '':
-                    print("")
-                    print(f[name].__long_doc__)
-                print("")
-                flag=False
-                print("- [underline]#Required Keyword Arguments:#")
-                for port in sorted(f[name].inputs):
-                    if f[name].inputs[port].optional:
-                        flag=True
-                        continue
-                    print("")
-                    print('*%s*::\n %s' % (port, f[name].inputs[port].doc))
-                if flag:
-                    # A function may not have optional arguments
-                    print("")
-                    print("- [underline]#Optional Keyword Arguments:#")
-                    for port in sorted(f[name].inputs):
-                        if not f[name].inputs[port].optional:
-                            continue
-                        print("")
-                        print('*%s*::\n %s' % (port, f[name].inputs[port].doc))
-                print("")
-                print("- [underline]#Return Values:#")
-                for port in sorted(f[name].outputs):
-                    print("")
-                    print('*%s*::\n %s' % (port, f[name].outputs[port].doc))
-                print("")
-    else:
-        print("")
-        print("Pyomo Functor API")
-        print("-----------------")
-        wrapper = textwrap.TextWrapper(subsequent_indent='')
-        print(wrapper.fill("The Pyomo library contains a set of functors that define operations that are likely to be major steps in Pyomo scripts.  This API is defined with functors to ensure a consistent function syntax.  Additionally, these functors can be accessed with a factory, thereby avoiding the need to import modules throughout Pyomo."))
-        print("")
-        for ns_ in sorted(ns.keys()):
-            print("")
-            level = ns_+" Functors"
-            print("-"*len(level))
-            print(level)
-            print("-"*len(level))
-            for name in sorted(ns[ns_]):
-                if ns_ != '':
-                    tname = name[len(ns_)+1:]
-                else:
-                    tname = name
-                print(tname+':')
-                for line in f[name].__short_doc__.split('\n'):
-                    print("    "+line)
-
 def help_environment():
-    info = Options()
+    info = Bunch()
     #
-    info.python = Options()
+    info.python = Bunch()
     info.python.version = '%d.%d.%d' % sys.version_info[:3]
     info.python.executable = sys.executable
     info.python.platform = sys.platform
@@ -230,13 +149,13 @@ def help_environment():
         packages = []
         import pip
         for package in pip.get_installed_distributions():
-            packages.append(Options(name=package.project_name,
+            packages.append(Bunch(name=package.project_name,
                                     version=package.version))
         info.python.packages = packages
     except:
         pass
     #
-    info.environment = Options()
+    info.environment = Bunch()
     path = os.environ.get('PATH', None)
     if not path is None:
         info.environment['shell path'] = path.split(os.pathsep)
@@ -267,7 +186,7 @@ def help_transformations():
         # is indicated here.
         _init_doc = TransformationFactory.get_class(xform).__init__.__doc__ \
                     or ""
-        if _init_doc.startswith('DEPRECATION') and 'DEPRECAT' not in _doc:
+        if _init_doc.strip().startswith('DEPRECATED') and 'DEPRECAT' not in _doc:
             _doc = ' '.join(('[DEPRECATED]', _doc))
         if _doc:
             print(wrapper.fill(_doc))
@@ -290,13 +209,13 @@ def help_solvers():
         print(wrapper.fill(format % (s , pyomo.opt.SolverManagerFactory.doc(s))))
     print("")
     wrapper = textwrap.TextWrapper(subsequent_indent='')
-    print(wrapper.fill("If no solver manager is specified, Pyomo uses the serial solver manager to execute solvers locally.  The pyro and phpyro solver managers require the installation and configuration of the pyro software.  The neos solver manager is used to execute solvers on the NEOS optimization server."))
+    print(wrapper.fill("If no solver manager is specified, Pyomo uses the serial solver manager to execute solvers locally.  The neos solver manager is used to execute solvers on the NEOS optimization server."))
     print("")
 
     print("")
     print("Serial Solver Interfaces")
     print("------------------------")
-    print(wrapper.fill("The serial, pyro and phpyro solver managers support the following solver interfaces:"))
+    print(wrapper.fill("The serial manager supports the following solver interfaces:"))
     print("")
     solver_list = list(pyomo.opt.SolverFactory)
     solver_list = sorted( filter(lambda x: '_' != x[0], solver_list) )
@@ -396,23 +315,19 @@ def print_components(data):
     print("----------------------------------------------------------------")
     print("Pyomo Model Components:")
     print("----------------------------------------------------------------")
-    components = pyomo.core.base._pyomo.model_components()
-    index = pyutilib.misc.sort_index(components)
-    for i in index:
+    for name in sorted(ModelComponentFactory):
         print("")
-        print(" "+components[i][0])
-        for line in textwrap.wrap(components[i][1], 59):
+        print(" "+name)
+        for line in textwrap.wrap(ModelComponentFactory.doc(name), 59):
             print("    "+line)
     print("")
     print("----------------------------------------------------------------")
     print("Pyomo Virtual Sets:")
     print("----------------------------------------------------------------")
-    pyomo_sets = pyomo.core.base._pyomo.predefined_sets()
-    index = pyutilib.misc.sort_index(pyomo_sets)
-    for i in index:
+    for name, obj in sorted(GlobalSets.items()):
         print("")
-        print(" "+pyomo_sets[i][0])
-        print("    "+pyomo_sets[i][1])
+        print(" "+name)
+        print("    "+obj.doc)
 
 def help_exec(options):
     flag=False
@@ -426,9 +341,6 @@ def help_exec(options):
             print("The '--components' help information is not printed in an asciidoc format.")
         flag=True
         print_components(None)
-    if options.api:
-        flag=True
-        help_api(options)
     if options.datamanager:
         flag=True
         help_datamanagers(options)
@@ -462,8 +374,6 @@ def help_exec(options):
 # Add a subparser for the pyomo command
 #
 def setup_help_parser(parser):
-    parser.add_argument("-a", "--api", dest="api", action='store_true', default=False,
-                        help="Print a summary of the Pyomo Library API")
     parser.add_argument("--asciidoc", dest="asciidoc", action='store_true', default=False,
                         help="Generate output that is compatible with asciidoc's markup language")
     parser.add_argument("--checkers", dest="checkers", action='store_true', default=False,

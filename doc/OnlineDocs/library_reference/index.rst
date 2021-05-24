@@ -10,10 +10,12 @@ Python scripts using Pyomo.
 .. toctree::
    :maxdepth: 1
 
+   common/index.rst
    aml/index.rst
    expressions/index.rst
    solvers/index.rst
    data/index.rst
+   APPSI (Auto-Persistent Pyomo Solver Interfaces) <appsi/appsi>
 
 Pyomo is under active ongoing development.  The following API
 documentation describes *Beta* functionality.

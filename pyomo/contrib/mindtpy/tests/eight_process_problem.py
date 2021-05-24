@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Re-implementation of eight-process problem.
 
 Re-implementation of Duran example 3 superstructure synthesis problem in Pyomo
@@ -23,8 +24,6 @@ http://dx.doi.org/10.1016/0098-1354(95)00219-7
 """
 from __future__ import division
 
-from six import iteritems
-
 from pyomo.environ import (Binary, ConcreteModel, Constraint, NonNegativeReals,
                            Objective, Param, RangeSet, Var, exp, minimize)
 
@@ -39,17 +38,17 @@ class EightProcessFlowsheet(ConcreteModel):
         m = self
 
         """Set declarations"""
-        I = m.I = RangeSet(2, 25, doc="process streams")
-        J = m.J = RangeSet(1, 8, doc="process units")
-        m.PI = RangeSet(1, 4, doc="integer constraints")
-        m.DS = RangeSet(1, 4, doc="design specifications")
+        I = m.I = RangeSet(2, 25, doc='process streams')
+        J = m.J = RangeSet(1, 8, doc='process units')
+        m.PI = RangeSet(1, 4, doc='integer constraints')
+        m.DS = RangeSet(1, 4, doc='design specifications')
         """
         1: Unit 8
         2: Unit 8
         3: Unit 4
         4: Unit 4
         """
-        m.MB = RangeSet(1, 7, doc="mass balances")
+        m.MB = RangeSet(1, 7, doc='mass balances')
         """Material balances:
         1: 4-6-7
         2: 3-5-8
@@ -154,5 +153,5 @@ class EightProcessFlowsheet(ConcreteModel):
         # x_ubs = {3: 2, 5: 2, 9: 2, 10: 1, 14: 1, 17: 2, 19: 2, 21: 2, 25: 3}
         x_ubs = {2: 10, 3: 2, 4: 10, 5: 2, 9: 2, 10: 1, 14: 1, 17: 2, 18: 10, 19: 2,
                  20: 10, 21: 2, 22: 10, 25: 3}  # add bounds for variables in nonlinear constraints
-        for i, x_ub in iteritems(x_ubs):
+        for i, x_ub in x_ubs.items():
             X[i].setub(x_ub)

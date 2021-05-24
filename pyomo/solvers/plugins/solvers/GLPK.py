@@ -12,17 +12,15 @@ import logging
 import re
 import sys
 import csv
+import subprocess
 
-import pyutilib.subprocess
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.common import Executable
-from pyomo.common.collections import Bunch, Options
+from pyomo.common.collections import Bunch
 from pyomo.opt import SolverFactory, OptSolver, ProblemFormat, ResultsFormat, SolverResults, TerminationCondition, SolutionStatus, ProblemSense
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.solver import SystemCallSolver
-
-from six import iteritems, string_types
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -34,10 +32,11 @@ def configure_glpk():
     _glpk_version = _extract_version("")
     if not Executable("glpsol"):
         return
-    errcode, results = pyutilib.subprocess.run(
-        [Executable('glpsol').path(), "--version"], timelimit=2)
-    if errcode == 0:
-        _glpk_version = _extract_version(results)
+    result = subprocess.run([Executable('glpsol').path(), "--version"],
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                            timeout=1, universal_newlines=True)
+    if not result.returncode:
+        _glpk_version = _extract_version(result.stdout)
 
 # Not sure how better to get these constants, but pulled from GLPK
 # documentation and source code (include/glpk.h)
@@ -135,7 +134,7 @@ class GLPKSHELL(SystemCallSolver):
         self.set_problem_format(ProblemFormat.cpxlp)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.integer = True
 
@@ -182,16 +181,12 @@ class GLPKSHELL(SystemCallSolver):
             cmd.insert(0, self._timer)
         for key in self.options:
             opt = self.options[key]
-            if opt is None or (isinstance(opt, string_types) and opt.strip() == ''):
+            if opt is None or (isinstance(opt, str) and opt.strip() == ''):
                 # Handle the case for options that must be
                 # specified without a value
                 cmd.append("--%s" % key)
             else:
                 cmd.extend(["--%s" % key, str(opt)])
-            #if isinstance(opt, basestring) and ' ' in opt:
-            #    cmd.append('--%s "%s"' % (key, str(opt)))
-            #else:
-            #    cmd.append('--%s %s' % (key, str(opt)))
 
         if self._timelimit is not None and self._timelimit > 0.0:
             cmd.extend(['--tmlim', str(self._timelimit)])
@@ -452,7 +447,7 @@ class GLPKSHELL(SystemCallSolver):
             # For the range constraints, supply only the dual with the largest
             # magnitude (at least one should always be numerically zero)
             scon = soln.Constraint
-            for key, (ld,ud) in iteritems(range_duals):
+            for key, (ld,ud) in range_duals.items():
                 if abs(ld) > abs(ud):
                     scon['r_l_'+key] = {"Dual":ld}
                 else:

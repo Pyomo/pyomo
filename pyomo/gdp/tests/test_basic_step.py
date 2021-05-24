@@ -1,12 +1,22 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+
 """Tests for applying basic steps."""
-import pyutilib.th as unittest
-from pyomo.core import Constraint, Var, SortComponents
+import pyomo.common.unittest as unittest
+from pyomo.core import Constraint, BooleanVar, SortComponents
 from pyomo.gdp.basic_step import apply_basic_step
 from pyomo.repn import generate_standard_repn
 import pyomo.gdp.tests.models as models
 import pyomo.gdp.tests.common_tests as ct
-
-from pyutilib.misc import import_file
+from pyomo.common.fileutils import import_file
 
 from os.path import abspath, dirname, normpath, join
 currdir = dirname(abspath(__file__))
@@ -123,7 +133,7 @@ class TestBasicStep(unittest.TestCase):
         m.basic_step = apply_basic_step([m.disjunction, m.simple])
 
         refs = [v for v in m.basic_step.component_data_objects(
-            Var, sort=SortComponents.deterministic)]
+            BooleanVar, sort=SortComponents.deterministic)]
         self.assertEqual(len(refs), 2)
         self.assertIs(refs[0][None], m.d[0].indicator_var)
         self.assertIs(refs[1][None], m.d[1].indicator_var)

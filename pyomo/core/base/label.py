@@ -13,12 +13,6 @@ __all__ = ['CounterLabeler', 'NumericLabeler', 'CNameLabeler', 'TextLabeler',
            'ShortNameLabeler']
 
 import re
-import six
-if six.PY3:
-    _translate = str.translate
-else:
-    import string
-    _translate = string.translate
 
 from pyomo.core.base.componentuid import ComponentUID
 
@@ -40,7 +34,7 @@ class _CharMapper(object):
                   preserve or translate
         """
         self.table = {k if isinstance(k, int) else ord(k): v
-            for k,v in six.iteritems(dict(translate)) }
+            for k,v in dict(translate).items() }
         for c in preserve:
             _c = ord(c)
             if _c in self.table and self.table[_c] != c:
@@ -73,7 +67,7 @@ def cpxlp_label_from_name(name):
         raise RuntimeError("Illegal name=None supplied to "
                            "cpxlp_label_from_name function")
 
-    return _translate(name, _cpxlp_translation_table)
+    return str.translate(name, _cpxlp_translation_table)
 
 _alphanum_translation_table = _CharMapper( preserve=_alpha+_digit+'_',
                                        translate = {},
@@ -84,7 +78,7 @@ def alphanum_label_from_name(name):
         raise RuntimeError("Illegal name=None supplied to "
                            "alphanum_label_from_name function")
 
-    return _translate(name, _alphanum_translation_table)
+    return str.translate(name, _alphanum_translation_table)
 
 class CuidLabeler(object):
 
@@ -163,8 +157,9 @@ class ShortNameLabeler(object):
             self.labeler = labeler
         else:
             self.labeler = AlphaNumericTextLabeler()
-        self.known_labels = set() if caseInsensitive else None
-        if isinstance(legalRegex, six.string_types):
+        self.known_labels = set()
+        self.caseInsensitive = caseInsensitive
+        if isinstance(legalRegex, str):
             self.legalRegex = re.compile(legalRegex)
         else:
             self.legalRegex = legalRegex
@@ -178,7 +173,7 @@ class ShortNameLabeler(object):
         elif lbl_len == self.limit and lbl.startswith(self.prefix) \
              and lbl.endswith(self.suffix):
             shorten = True
-        elif self.known_labels is not None and lbl.upper() in self.known_labels:
+        elif (lbl.upper() if self.caseInsensitive else lbl) in self.known_labels:
             shorten = True
         elif self.legalRegex and not self.legalRegex.match(lbl):
             shorten = True
@@ -193,5 +188,5 @@ class ShortNameLabeler(object):
                     "label limited to %d characters" % (self.limit,)) 
             lbl = self.prefix + lbl[tail:] + suffix
         if self.known_labels is not None:
-            self.known_labels.add(lbl.upper())
+            self.known_labels.add(lbl.upper() if self.caseInsensitive else lbl)
         return lbl

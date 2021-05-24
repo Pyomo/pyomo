@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.contrib.fbbt.fbbt import fbbt, compute_bounds_on_expr
 from pyomo.common.dependencies import numpy as np, numpy_available
@@ -17,7 +17,7 @@ from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.core.expr.numeric_expr import (ProductExpression,
                                           UnaryFunctionExpression)
 import math
-from six import StringIO
+from io import StringIO
 
 
 class DummyExpr(ProductExpression):
@@ -236,10 +236,9 @@ class TestFBBT(unittest.TestCase):
                     yu = np.inf
                 else:
                     yu = m.y.ub
-                for _x in x:
-                    _y = np.exp(np.log(abs(z)) / _x)
-                    self.assertTrue(np.all(yl <= _y))
-                    self.assertTrue(np.all(yu >= _y))
+                y = np.exp(np.split(np.log(np.abs(z)), len(z)) / x)
+                self.assertTrue(np.all(yl <= y))
+                self.assertTrue(np.all(yu >= y))
 
     def test_x_sq(self):
         m = pyo.ConcreteModel()
@@ -811,3 +810,12 @@ class TestFBBT(unittest.TestCase):
         self.assertAlmostEqual(m.x.ub, xu)
         self.assertAlmostEqual(m.y.lb, yl)
         self.assertAlmostEqual(m.y.ub, yu)
+
+    def test_negative_power(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        e = (m.x**2 + m.y**2)**(-0.5)
+        lb, ub = compute_bounds_on_expr(e)
+        self.assertAlmostEqual(lb, 0)
+        self.assertIsNone(ub)

@@ -23,16 +23,10 @@ import enum
 # mod - AMPL *.mod file
 # lpxlp - A LPSolve LP file
 # osil - An XML file defined by the COIN-OR OS project: Instance
-# FuncDesigner - A FuncDesigner problem
-# colin - A COLIN shell command
-# colin_optproblem - A Python object that inherits from
-#                   pyomo.opt.colin.OptProblem (this can wrap a COLIN shell
-#                   command, or provide a runtime optimization problem)
 # bar - A Baron input file
 # gams - A GAMS input file
 #
 class ProblemFormat(str, enum.Enum):
-    colin='colin'
     pyomo='pyomo'
     cpxlp='cpxlp'
     nl='nl'
@@ -40,8 +34,6 @@ class ProblemFormat(str, enum.Enum):
     mod='mod'
     lpxlp='lpxlp'
     osil='osil'
-    colin_optproblem='colin_optproblem'
-    FuncDesigner='FuncDesigner'
     bar='bar'
     gams='gams'
     

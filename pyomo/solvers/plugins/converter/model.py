@@ -10,7 +10,6 @@
 
 
 import os
-from six import iteritems, PY3
 
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt.base import ProblemFormat
@@ -53,17 +52,11 @@ class PyomoMIPConverter(object):
         # all non-consumed keywords are assumed to be options
         # that should be passed to the writer.
         io_options = {}
-        for kwd, value in iteritems(kwds):
+        for kwd, value in kwds.items():
             io_options[kwd] = value
         kwds.clear()
 
-        # basestring is gone in Python 3.x, merged with str.
-        if PY3:
-            compare_type = str
-        else:
-            compare_type = basestring
-
-        if isinstance(args[2], compare_type):
+        if isinstance(args[2], str):
             instance = None
         else:
             instance = args[2]
@@ -100,7 +93,7 @@ class PyomoMIPConverter(object):
                         "The following io_options will be ignored "
                         "(please create a bug report):\n\t" +
                         "\n\t".join("%s = %s" % (k,v)
-                                    for k,v in iteritems(io_options)))
+                                    for k,v in io_options.items()))
 
                 ans = pyomo.scripting.convert.\
                       pyomo2lp(['--output',problem_filename,args[2]])
@@ -146,7 +139,7 @@ class PyomoMIPConverter(object):
                         "The following io_options will be ignored "
                         "(please create a bug report):\n\t" +
                         "\n\t".join("%s = %s" % (k,v)
-                                    for k,v in iteritems(io_options)))
+                                    for k,v in io_options.items()))
 
                 ans = pyomo.scripting.convert.\
                       pyomo2bar(['--output',problem_filename,args[2]])
@@ -203,7 +196,7 @@ class PyomoMIPConverter(object):
                         "The following io_options will be ignored "
                         "(please create a bug report):\n\t" +
                         "\n\t".join("%s = %s" % (k,v)
-                                    for k,v in iteritems(io_options)))
+                                    for k,v in io_options.items()))
 
                 ans = pyomo.scripting.convert.\
                       pyomo2nl(['--output',problem_filename,args[2]])

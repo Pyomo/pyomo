@@ -11,14 +11,14 @@
 # Unit Tests for BuildCheck() Objects
 #
 # PyomoModel                Base test class
-# Simple                    Test scalar parameter
+# Scalar                    Test scalar parameter
 # Array1                    Test arrays of parameters
 #
 
 import os
-from six import StringIO
+from io import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import AbstractModel, BuildCheck, Param, Set, value
 
@@ -56,7 +56,7 @@ def action2b_fn(model, i):
     return True
 
 
-class Simple(PyomoModel):
+class Scalar(PyomoModel):
 
     def setUp(self):
         #
@@ -88,7 +88,6 @@ class Simple(PyomoModel):
             self.fail("expected failure")
         except ValueError:
             pass
-
 
 
 class Array1(PyomoModel):

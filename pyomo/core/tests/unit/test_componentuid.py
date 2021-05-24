@@ -11,12 +11,11 @@
 # Unit Tests for ComponentUID
 #
 import pickle
-import sys
 from collections import namedtuple
 from datetime import datetime
-from six import StringIO, itervalues
+from io import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.environ import (
     ConcreteModel, Block, Var, Set, Param, Constraint, Any, ComponentUID,
     Reference,
@@ -80,7 +79,7 @@ class TestComponentUID(unittest.TestCase):
             (('c',tuple()), ('a',())) )
         with self.assertRaisesRegex(
                 ValueError,
-                "Context 'b\[1,2\]' does not apply to component 's'"):
+                r"Context 'b\[1,'2'\]' does not apply to component 's'"):
             ComponentUID(self.m.s, context=self.m.b[1,'2'])
         with self.assertRaisesRegex(
                 ValueError,
@@ -123,6 +122,27 @@ class TestComponentUID(unittest.TestCase):
         self.assertEqual(
             cuid._cids,
             (('b',(_star, _star)), ('c',tuple()), ('a',(_star,))) )
+
+    def test_parseFromString_spaces(self):
+        cuid = ComponentUID('x[a b,c d]')
+        self.assertEqual(
+            cuid._cids,
+            (('x',('a b', 'c d')), ))
+
+        cuid = ComponentUID("x['a b',\"c d\"]")
+        self.assertEqual(
+            cuid._cids,
+            (('x',('a b', 'c d')), ))
+
+        cuid = ComponentUID('x[a b, c d]')
+        self.assertEqual(
+            cuid._cids,
+            (('x',('a b', 'c d')), ))
+
+        cuid = ComponentUID("x[ a b , 'c d' ]")
+        self.assertEqual(
+            cuid._cids,
+            (('x',('a b', 'c d')), ))
 
     def test_parseFromRepr1(self):
         cuid = ComponentUID('b:1,2.c.a:2')
@@ -276,14 +296,14 @@ class TestComponentUID(unittest.TestCase):
         cuid = ComponentUID('b:1,$2.c.a:*')
         comp = cuid.find_component_on(self.m)
         self.assertIs(comp.ctype, Param)
-        cList = list(itervalues(comp))
+        cList = list(comp.values())
         self.assertEqual(len(cList), 3)
         self.assertEqual(cList, list(self.m.b[1,'2'].c.a[:]))
 
         cuid = ComponentUID('b[*,*]')
         comp = cuid.find_component_on(self.m)
         self.assertIs(comp.ctype, Block)
-        cList = list(itervalues(comp))
+        cList = list(comp.values())
         self.assertEqual(len(cList), 9)
         self.assertEqual(cList, list(self.m.b.values()))
 
@@ -292,7 +312,7 @@ class TestComponentUID(unittest.TestCase):
         cuid = ComponentUID('b[*,*].c.a[**]')
         comp = cuid.find_component_on(self.m)
         self.assertIs(comp.ctype, Param)
-        cList = list(itervalues(comp))
+        cList = list(comp.values())
         self.assertEqual(len(cList), 3)
         self.assertEqual(cList, list(self.m.b[1,'2'].c.a[:]))
 
@@ -300,7 +320,7 @@ class TestComponentUID(unittest.TestCase):
         cuid = ComponentUID('b[*,*].c.a')
         comp = cuid.find_component_on(self.m)
         self.assertIs(comp.ctype, IndexedComponent)
-        cList = list(itervalues(comp))
+        cList = list(comp.values())
         self.assertEqual(len(cList), 1)
         self.assertIs(cList[0], self.m.b[1,'2'].c.a)
 
@@ -1203,7 +1223,7 @@ class TestComponentUID(unittest.TestCase):
         with self.assertRaisesRegex(
                 ValueError,
                 "Cannot create a CUID from a slice with a call to any "
-                "method other than 'component': got 'fix'\."):
+                r"method other than 'component': got 'fix'\."):
             cuid = ComponentUID(_slice)
 
         _slice = IndexedComponent_slice(m.b[:].component('v'), (
@@ -1263,9 +1283,10 @@ class TestComponentUID(unittest.TestCase):
                 ValueError,
                 "Cannot create a CUID from a slice that "
                 "contains `set` or `del` calls: got call %s "
-                "with argument \('foo',\)" % (
+                r"with argument \('foo',\)" % (
                     IndexedComponent_slice.del_attribute,)):
             cuid = ComponentUID(_slice)
+
 
 if __name__ == "__main__":
     unittest.main()

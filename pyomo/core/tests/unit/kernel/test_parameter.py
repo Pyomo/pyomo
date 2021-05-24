@@ -10,7 +10,7 @@
 
 import pickle
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.dependencies import dill, dill_available as has_dill
 from pyomo.core.expr.numvalue import (NumericValue,

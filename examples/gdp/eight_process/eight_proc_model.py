@@ -24,8 +24,6 @@ http://dx.doi.org/10.1016/0098-1354(95)00219-7
 """
 from __future__ import division
 
-from six import iteritems
-
 from pyomo.environ import (ConcreteModel, Constraint, NonNegativeReals,
                            Objective, Param, RangeSet, Var, exp, minimize)
 from pyomo.gdp import Disjunction
@@ -156,12 +154,12 @@ def build_eight_process_flowsheet():
 
     # pure integer constraints
     m.use4implies6or7 = Constraint(
-        expr=m.use_unit_6or7ornot.disjuncts[0].indicator_var +
-        m.use_unit_6or7ornot.disjuncts[1].indicator_var -
-        m.use_unit_4or5ornot.disjuncts[0].indicator_var == 0)
+        expr=m.use_unit_6or7ornot.disjuncts[0].binary_indicator_var +
+        m.use_unit_6or7ornot.disjuncts[1].binary_indicator_var -
+        m.use_unit_4or5ornot.disjuncts[0].binary_indicator_var == 0)
     m.use3implies8 = Constraint(
-        expr=m.use_unit_3ornot.disjuncts[0].indicator_var
-        - m.use_unit_8ornot.disjuncts[0].indicator_var <= 0)
+        expr=m.use_unit_3ornot.disjuncts[0].binary_indicator_var
+        - m.use_unit_8ornot.disjuncts[0].binary_indicator_var <= 0)
 
     """Profit (objective) function definition"""
     m.profit = Objective(expr=sum(
@@ -174,7 +172,7 @@ def build_eight_process_flowsheet():
     """Bound definitions"""
     # x (flow) upper bounds
     x_ubs = {3: 2, 5: 2, 9: 2, 10: 1, 14: 1, 17: 2, 19: 2, 21: 2, 25: 3}
-    for i, x_ub in iteritems(x_ubs):
+    for i, x_ub in x_ubs.items():
         m.flow[i].setub(x_ub)
 
     # Optimal solution uses units 2, 4, 6, 8 with objective value 68.

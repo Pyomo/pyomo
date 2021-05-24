@@ -16,7 +16,7 @@ from os.path import abspath, dirname
 pyomodir = dirname(abspath(__file__))+"/../.."
 currdir = dirname(abspath(__file__))+os.sep
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.tempfiles import TempfileManager
 
 import pyomo.opt
@@ -32,7 +32,7 @@ def tearDownModule():
     TempfileManager.tempdir = old_tempdir
 
 
-class TestSolver2(pyomo.opt.OptSolver):
+class MockSolver2(pyomo.opt.OptSolver):
 
     def __init__(self, **kwds):
         kwds['type'] = 'stest_type'
@@ -45,7 +45,7 @@ class TestSolver2(pyomo.opt.OptSolver):
 class OptSolverDebug(unittest.TestCase):
 
     def setUp(self):
-        pyomo.opt.SolverFactory.register('stest2')(TestSolver2)
+        pyomo.opt.SolverFactory.register('stest2')(MockSolver2)
 
     def tearDown(self):
         pyomo.opt.SolverFactory.unregister('stest2')

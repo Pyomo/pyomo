@@ -14,12 +14,14 @@ import os
 import sys
 import time
 import logging
+import subprocess
+from io import StringIO
 
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
 from pyomo.common.log import is_debug_set
 from pyomo.common.tempfiles import TempfileManager
-from pyutilib.subprocess import run
+from pyomo.common.tee import TeeStream
 
 import pyomo.common
 from pyomo.opt.base import ResultsFormat
@@ -294,19 +296,33 @@ class SystemCallSolver(OptSolver):
 
         start_time = time.time()
 
+        if 'script' in command:
+            _input = command.script
+        else:
+            _input = None
+
+        timeout = self._timelimit
+        if timeout is not None:
+            timeout += max(1, 0.01*self._timelimit)
+
+        ostreams = [StringIO()]
+        if self._tee:
+            ostreams.append(sys.stdout)
+
         try:
-            if 'script' in command:
-                _input = command.script
-            else:
-                _input = None
-            [rc, log] = run(
-                command.cmd,
-                stdin = _input,
-                timelimit = self._timelimit if self._timelimit is None else self._timelimit + max(1, 0.01*self._timelimit),
-                env   = command.env,
-                tee   = self._tee,
-                define_signal_handlers = self._define_signal_handlers
-             )
+            with TeeStream(*ostreams) as t:
+                results = subprocess.run(
+                    command.cmd,
+                    input=_input,
+                    env=command.env,
+                    stdout=t.STDOUT,
+                    stderr=t.STDERR,
+                    timeout=timeout,
+                    universal_newlines=True,
+                )
+
+            rc = results.returncode
+            log = ostreams[0].getvalue()
         except OSError:
             err = sys.exc_info()[1]
             msg = 'Could not execute the command: %s\tError message: %s'

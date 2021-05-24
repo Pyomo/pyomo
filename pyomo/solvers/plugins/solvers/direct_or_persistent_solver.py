@@ -15,7 +15,7 @@ from pyomo.opt.base.solvers import OptSolver
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 import pyomo.common
 from pyomo.common.errors import ApplicationError
-from pyomo.common.collections import ComponentMap, ComponentSet, Options
+from pyomo.common.collections import ComponentMap, ComponentSet, Bunch
 from pyomo.common.tempfiles import TempfileManager
 import pyomo.opt.base.solvers
 from pyomo.opt.base.formats import ResultsFormat
@@ -101,7 +101,7 @@ class DirectOrPersistentSolver(OptSolver):
         self._symbolic_solver_labels = False
         """A bool. If true then the solver components will be given names corresponding to the pyomo component names."""
 
-        self._capabilites = Options()
+        self._capabilites = Bunch()
 
         self._referenced_variables = ComponentMap()
         """dict: {var: count} where count is the number of constraints/objective referencing the var"""
@@ -294,14 +294,12 @@ class DirectOrPersistentSolver(OptSolver):
     def available(self, exception_flag=True):
         """True if the solver is available."""
 
-        if exception_flag is False:
-            return self._python_api_exists
-        else:
-            if self._python_api_exists is False:
-                raise ApplicationError(("No Python bindings available for {0} solver " +
-                                                        "plugin").format(type(self)))
-            else:
-                return True
+        _api = getattr(self, '_python_api_exists', False)
+        if exception_flag and not _api:
+            raise ApplicationError(
+                "No Python bindings available for %s solver plugin"
+                % (type(self),))
+        return _api
 
     def _get_version(self):
         if self._version is None:

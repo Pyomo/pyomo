@@ -1,0 +1,4 @@
+u - 1
+<class 'pyomo.core.expr.numeric_expr.SumExpression'>
+1.0
+<class 'float'>

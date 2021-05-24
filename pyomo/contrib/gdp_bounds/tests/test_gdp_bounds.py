@@ -1,5 +1,5 @@
 """Tests explicit bound to variable bound transformation module."""
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.contrib.gdp_bounds.info import (
     disjunctive_lb, disjunctive_ub)
 from pyomo.environ import (ConcreteModel, Constraint, Objective,
@@ -45,7 +45,7 @@ class TestGDPBounds(unittest.TestCase):
         m.obj = Objective(expr=m.x)
         TransformationFactory('contrib.compute_disj_var_bounds').apply_to(m, solver='cbc')
         self.assertFalse(m.d1.active)
-        self.assertEqual(m.d1.indicator_var, 0)
+        self.assertEqual(m.d1.binary_indicator_var.value, 0)
         self.assertTrue(m.d1.indicator_var.fixed)
 
     def test_compute_bounds_fbbt(self):

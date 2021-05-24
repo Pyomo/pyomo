@@ -14,8 +14,8 @@ import pyomo.opt.solver
 from pyomo.opt.base import (
     check_available_solvers, convert, convert_problem, error, formats,
     guess_format, opt_config, solvers,
-    AbstractProblemWriter, AbstractResultsReader, BaseProblemConfig,
-    BranchDirection, ConverterError, OptSolver, ProblemConfigFactory,
+    AbstractProblemWriter, AbstractResultsReader,
+    BranchDirection, ConverterError, OptSolver,
     ProblemFormat, ReaderFactory, ResultsFormat, SolverFactory,
     UnknownSolver, WriterFactory,
 )
@@ -38,7 +38,7 @@ from pyomo.opt.problem import (
 )
 
 from pyomo.opt.parallel import (
-    pyro, manager, async_solver, local,
+    manager, async_solver, local,
     SolverManagerFactory, AsynchronousSolverManager
 )
 

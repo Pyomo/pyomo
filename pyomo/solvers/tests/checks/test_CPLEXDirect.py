@@ -12,7 +12,7 @@ import sys
 from itertools import product
 from random import random, seed
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.environ import (ConcreteModel, AbstractModel, Var, Objective,
                            Block, Constraint, Suffix, NonNegativeIntegers,
@@ -336,7 +336,6 @@ class CPLEXDirectTests(unittest.TestCase):
             self.assertTrue(9 <= results.solver.deterministic_time <= 11)
 
 
-@unittest.skipIf(not unittest.mock_available, "'mock' is not available")
 @unittest.skipIf(not cplexpy_available, "The 'cplex' python bindings are not available")
 class TestIsFixedCallCount(unittest.TestCase):
     """ Tests for PR#1402 (669e7b2b) """
@@ -487,7 +486,6 @@ class TestDataContainers(unittest.TestCase):
         self.assertEqual(solver_model.linear_constraints.get_num(), 4)
 
 
-@unittest.skipIf(not unittest.mock_available, "'mock' is not available")
 @unittest.skipIf(not cplexpy_available, "The 'cplex' python bindings are not available")
 class TestAddVar(unittest.TestCase):
     def test_add_single_variable(self):
@@ -590,7 +588,6 @@ class TestAddVar(unittest.TestCase):
         self.assertEqual(opt._solver_model.variables.get_num(), 3)
 
 
-@unittest.skipIf(not unittest.mock_available, "'mock' is not available")
 @unittest.skipIf(not cplexpy_available, "The 'cplex' python bindings are not available")
 class TestAddCon(unittest.TestCase):
     def test_add_single_constraint(self):
@@ -697,7 +694,6 @@ class TestAddCon(unittest.TestCase):
         self.assertEqual(opt._solver_model.linear_constraints.get_num(), 3)
 
 
-@unittest.skipIf(not unittest.mock_available, "'mock' is not available")
 @unittest.skipIf(not cplexpy_available, "The 'cplex' python bindings are not available")
 class TestLoadVars(unittest.TestCase):
     def setUp(self):

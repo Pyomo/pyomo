@@ -12,7 +12,7 @@ import logging
 
 from pyomo.opt.base.solvers import SolverFactory
 from pyomo.common import Executable
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 from pyomo.solvers.plugins.solvers.ASL import ASL
 
 logger = logging.getLogger('pyomo.solvers')
@@ -32,7 +32,7 @@ class PATHAMPL(ASL):
         #
         # Define solver capabilities, which default to 'None'
         #
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
 
     def _default_executable(self):
