@@ -891,7 +891,7 @@ class BigM_Transformation(Transformation):
             raise GDP_Error("Cannot estimate M for unbounded "
                             "expressions.\n\t(found while processing "
                             "constraint '%s'). Please specify a value of M " 
-                            " or ensure all variables that appear in the "
+                            "or ensure all variables that appear in the "
                             "constraint are bounded." % name)
         else:
             M = (expr_lb, expr_ub)

@@ -1423,7 +1423,7 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
             r"expressions.\n\t\(found while processing "
             r"constraint 'b.simpledisj1.c'\). "
             r"Please specify a value of M "
-            r" or ensure all variables that appear in the "
+            r"or ensure all variables that appear in the "
             r"constraint are bounded.",
             TransformationFactory('gdp.bigm').apply_to,
             m)
