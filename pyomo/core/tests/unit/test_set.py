@@ -41,8 +41,8 @@ from pyomo.core.base.set import (
     Set,
     SetOf, OrderedSetOf, UnorderedSetOf,
     RangeSet, _FiniteRangeSetData, _InfiniteRangeSetData,
-    FiniteSimpleRangeSet, InfiniteSimpleRangeSet,
-    AbstractFiniteSimpleRangeSet, 
+    FiniteScalarRangeSet, InfiniteScalarRangeSet,
+    AbstractFiniteScalarRangeSet,
     SetUnion_InfiniteSet, SetUnion_FiniteSet, SetUnion_OrderedSet,
     SetIntersection_InfiniteSet, SetIntersection_FiniteSet,
     SetIntersection_OrderedSet,
@@ -342,7 +342,7 @@ class InfiniteSetTester(unittest.TestCase):
             len(Reals)
         with self.assertRaisesRegex(
                 TypeError, "'GlobalSet' object is not iterable "
-                "\(non-finite Set 'Reals' is not iterable\)"):
+                r"\(non-finite Set 'Reals' is not iterable\)"):
             list(Reals)
         self.assertEqual(list(Reals.ranges()), [NR(None,None,0)])
         self.assertEqual(Reals.bounds(), (None,None))
@@ -382,7 +382,7 @@ class InfiniteSetTester(unittest.TestCase):
             len(Integers)
         with self.assertRaisesRegex(
                 TypeError, "'GlobalSet' object is not iterable "
-                "\(non-finite Set 'Integers' is not iterable\)"):
+                r"\(non-finite Set 'Integers' is not iterable\)"):
             list(Integers)
         self.assertEqual(list(Integers.ranges()), [NR(0,None,1),NR(0,None,-1)])
         self.assertEqual(Integers.bounds(), (None,None))
@@ -422,7 +422,7 @@ class InfiniteSetTester(unittest.TestCase):
             len(Any)
         with self.assertRaisesRegex(
                 TypeError, "'GlobalSet' object is not iterable "
-                "\(non-finite Set 'Any' is not iterable\)"):
+                r"\(non-finite Set 'Any' is not iterable\)"):
             list(Any)
         self.assertEqual(list(Any.ranges()), [AnyRange()])
         self.assertEqual(Any.bounds(), (None,None))
@@ -447,7 +447,7 @@ class InfiniteSetTester(unittest.TestCase):
         with LoggingIntercept(os, 'pyomo'):
             self.assertIn(None, AnyWithNone)
             self.assertIn(1, AnyWithNone)
-        self.assertRegexpMatches(
+        self.assertRegex(
             os.getvalue(),
             "^DEPRECATED: The AnyWithNone set is deprecated")
 
@@ -850,32 +850,32 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(list(i.ranges()), [NR(1,3,1)])
 
         i = RangeSet(1,3,0)
-        with self.assertRaisesRegexp(
-                TypeError, ".*'InfiniteSimpleRangeSet' has no len"):
+        with self.assertRaisesRegex(
+                TypeError, ".*'InfiniteScalarRangeSet' has no len"):
             len(i)
         self.assertEqual(len(list(i.ranges())), 1)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError, ".*'GlobalSet' has no len"):
             len(Integers)
         self.assertEqual(len(list(Integers.ranges())), 2)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "RangeSet expects 3 or fewer positional "
-                "arguments \(received 4\)"):
+                r"arguments \(received 4\)"):
             RangeSet(1,2,3,4)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError, "'ranges' argument must be an iterable of "
                 "NumericRange objects"):
             RangeSet(ranges=(NR(1,5,1), NNR('a')))
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Constructing a finite RangeSet over a "
                 "non-finite range "):
             RangeSet(finite=True, ranges=(NR(1,5,0),))
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "RangeSet does not support unbounded ranges "
                 "with a non-integer step"):
             RangeSet(0,None,0.5)
@@ -899,16 +899,16 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         p = Param(initialize=5)
         i = RangeSet(p)
         self.assertFalse(i.is_constructed())
-        self.assertIs(type(i), AbstractFiniteSimpleRangeSet)
+        self.assertIs(type(i), AbstractFiniteScalarRangeSet)
         p.construct()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertEqual(output.getvalue(), "")
             i.construct()
-            ref = 'Constructing RangeSet, '\
-                  'name=FiniteSimpleRangeSet, from data=None\n'
+            ref = 'Constructing RangeSet, ' \
+                  'name=FiniteScalarRangeSet, from data=None\n'
             self.assertEqual(output.getvalue(), ref)
             self.assertTrue(i.is_constructed())
-            self.assertIs(type(i), FiniteSimpleRangeSet)
+            self.assertIs(type(i), FiniteScalarRangeSet)
             # Calling construct() twice bypasses construction the second
             # time around
             i.construct()
@@ -919,7 +919,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             i = SetOf([1,2,3])
             self.assertEqual(output.getvalue(), "")
             i.construct()
-            ref = 'Constructing SetOf, name=OrderedSetOf, '\
+            ref = 'Constructing SetOf, name=OrderedSetOf, ' \
                   'from data=None\n'
             self.assertEqual(output.getvalue(), ref)
             # Calling construct() twice bypasses construction the second
@@ -939,35 +939,35 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         # Test non-finite RangeSets
         i = RangeSet(1,10)
-        self.assertIs(type(i), FiniteSimpleRangeSet)
+        self.assertIs(type(i), FiniteScalarRangeSet)
         i = RangeSet(1,10,0)
-        self.assertIs(type(i), InfiniteSimpleRangeSet)
+        self.assertIs(type(i), InfiniteScalarRangeSet)
         i = RangeSet(1,1,0)
-        self.assertIs(type(i), FiniteSimpleRangeSet)
+        self.assertIs(type(i), FiniteScalarRangeSet)
         j = RangeSet(1, float('inf'))
-        self.assertIs(type(j), InfiniteSimpleRangeSet)
+        self.assertIs(type(j), InfiniteScalarRangeSet)
         i = RangeSet(1,None)
-        self.assertIs(type(i), InfiniteSimpleRangeSet)
+        self.assertIs(type(i), InfiniteScalarRangeSet)
         self.assertEqual(i,j)
         self.assertIn(1, i)
         self.assertIn(100, i)
         self.assertNotIn(0, i)
         self.assertNotIn(1.5, i)
         i = RangeSet(None,1)
-        self.assertIs(type(i), InfiniteSimpleRangeSet)
+        self.assertIs(type(i), InfiniteScalarRangeSet)
         self.assertIn(1, i)
         self.assertNotIn(100, i)
         self.assertIn(0, i)
         self.assertNotIn(0.5, i)
         i = RangeSet(None,None)
-        self.assertIs(type(i), InfiniteSimpleRangeSet)
+        self.assertIs(type(i), InfiniteScalarRangeSet)
         self.assertIn(1, i)
         self.assertIn(100, i)
         self.assertIn(0, i)
         self.assertNotIn(0.5, i)
 
         i = RangeSet(None,None,bounds=(-5,10))
-        self.assertIs(type(i), InfiniteSimpleRangeSet)
+        self.assertIs(type(i), InfiniteScalarRangeSet)
         self.assertIn(10, i)
         self.assertNotIn(11, i)
         self.assertIn(-5, i)
@@ -976,10 +976,10 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         p = Param(initialize=float('inf'))
         i = RangeSet(1, p, 1)
-        self.assertIs(type(i), AbstractFiniteSimpleRangeSet)
+        self.assertIs(type(i), AbstractFiniteScalarRangeSet)
         p.construct()
         i = RangeSet(1, p, 1)
-        self.assertIs(type(i), InfiniteSimpleRangeSet)
+        self.assertIs(type(i), InfiniteScalarRangeSet)
 
 
         # Test abstract RangeSets
@@ -988,21 +988,21 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         m.q = Param()
         m.s = Param()
         m.i = RangeSet(m.p, m.q, m.s, finite=True)
-        self.assertIs(type(m.i), AbstractFiniteSimpleRangeSet)
+        self.assertIs(type(m.i), AbstractFiniteScalarRangeSet)
         i = m.create_instance(
             data={None: {'p': {None: 1}, 'q': {None: 5}, 's': {None: 2}}})
-        self.assertIs(type(i.i), FiniteSimpleRangeSet)
+        self.assertIs(type(i.i), FiniteScalarRangeSet)
         self.assertEqual(list(i.i), [1,3,5])
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
-                "finite RangeSet over a non-finite range \(\[1..5\]\)"):
+                r"finite RangeSet over a non-finite range \(\[1..5\]\)"):
             i = m.create_instance(
                 data={None: {'p': {None: 1}, 'q': {None: 5}, 's': {None: 0}}})
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
-                "RangeSet.construct\(\) does not support the data= argument."):
+                r"RangeSet.construct\(\) does not support the data= argument."):
             i = m.create_instance(
                 data={None: {'p': {None: 1}, 'q': {None: 5}, 's': {None: 1},
                              'i': {None: [1,2,3]} }})
@@ -1032,7 +1032,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         r = RangeSet(10, filter=rFilter)
         self.assertEqual(r, [1,3,5,7,9])
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "The 'filter' keyword argument is not "
                 "valid for non-finite RangeSet component"):
             r = RangeSet(1,10,0, filter=rFilter)
@@ -1046,7 +1046,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(r, [1,3,5,7,9])
 
         # Failed validation
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "The value=2 violates the validation rule"):
             r = RangeSet(10, validate=rFilter)
 
@@ -1056,7 +1056,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         r = RangeSet(1,10,2, validate=rFilter)
         self.assertEqual(r, [1,3,5,7,9])
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "The 'validate' keyword argument is not "
                 "valid for non-finite RangeSet component"):
             r = RangeSet(1,10,0, validate=rFilter)
@@ -1065,13 +1065,13 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
             raise RuntimeError("ERROR: %s" % i)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
-            with self.assertRaisesRegexp(
+            with self.assertRaisesRegex(
                     RuntimeError, "ERROR: 1"):
                 r = RangeSet(10, validate=badRule)
         self.assertEqual(
             output.getvalue(),
             "Exception raised while validating element "
-            "'1' for Set FiniteSimpleRangeSet\n")
+            "'1' for Set FiniteScalarRangeSet\n")
 
     def test_bounds(self):
         r = RangeSet(100, bounds=(2.5, 5.5))
@@ -1278,9 +1278,9 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         b = Param(initialize=3)
         oo = RangeSet(b)
-        self.assertEqual(str(oo), "AbstractFiniteSimpleRangeSet")
+        self.assertEqual(str(oo), "AbstractFiniteScalarRangeSet")
         pp = RangeSet(b, finite=False)
-        self.assertEqual(str(pp), "AbstractInfiniteSimpleRangeSet")
+        self.assertEqual(str(pp), "AbstractInfiniteScalarRangeSet")
 
         b.construct()
         m.OO = oo
@@ -1304,18 +1304,11 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         # It can even work for non-hashable objects (that can't be cast
         # to set())
-        m = ConcreteModel()
-        m.p = Param(initialize=2)
-        m.q = Var(initialize=2)
-        _NonHashable = (1,3,5,m.p)
-        self.assertFalse(SetOf({2,4}).isdisjoint(_NonHashable))
-        self.assertTrue(SetOf({0,4}).isdisjoint(_NonHashable))
+        _NonHashable = (1, 3, 5, [2, 3])
+        self.assertFalse(SetOf([[2, 3], 4]).isdisjoint(_NonHashable))
+        self.assertTrue(SetOf({0, 4}).isdisjoint(_NonHashable))
         self.assertFalse(SetOf(_NonHashable).isdisjoint(_NonHashable))
-        self.assertFalse(SetOf((m.q,1,3,5,m.p)).isdisjoint(_NonHashable))
-        # Note: membership in tuples is done through
-        # __bool__(a.__eq__(b)), so Params/Vars with equivalent values will
-        # match
-        self.assertFalse(SetOf((m.q,)).isdisjoint(_NonHashable))
+        self.assertFalse(SetOf((1, 3, 5)).isdisjoint(_NonHashable))
 
         # It can even work for non-iterable objects (that can't be cast
         # to set())
@@ -1330,7 +1323,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertFalse(SetOf({2,3,4}).isdisjoint(_NonIterable()))
 
         # test bad type
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError, "'int' object is not iterable"):
             i.isdisjoint(1)
 
@@ -1351,18 +1344,12 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         # It can even work for non-hashable objects (that can't be cast
         # to set())
-        m = ConcreteModel()
-        m.p = Param(initialize=2)
-        m.q = Var(initialize=2)
-        _NonHashable = (1,3,5,m.p)
-        self.assertFalse(SetOf({0,1,3,5}).issubset(_NonHashable))
-        self.assertTrue(SetOf({1,3,5}).issubset(_NonHashable))
+        _NonHashable = (1, 3, 5, [2, 3])
+        self.assertFalse(SetOf({0, 1, 3, 5}).issubset(_NonHashable))
+        self.assertTrue(SetOf({1, 3, 5}).issubset(_NonHashable))
         self.assertTrue(SetOf(_NonHashable).issubset(_NonHashable))
-        self.assertTrue(SetOf((m.q,1,3,5,m.p)).issubset(_NonHashable))
-        # Note: membership in tuples is done through
-        # __bool__(a.__eq__(b)), so Params/Vars with equivalent values will
-        # match
-        self.assertTrue(SetOf((m.q,1,3,5)).issubset(_NonHashable))
+        self.assertTrue(SetOf((1, 3, 5, [2, 3])).issubset(_NonHashable))
+        self.assertFalse(SetOf(([2, 4])).issubset(_NonHashable))
 
         # It can even work for non-iterable objects (that can't be cast
         # to set())
@@ -1377,7 +1364,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertFalse(SetOf({1,3,4}).issubset(_NonIterable()))
 
         # test bad type
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError, "'int' object is not iterable"):
             i.issubset(1)
 
@@ -1398,17 +1385,12 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         # It can even work for non-hashable objects (that can't be cast
         # to set())
-        m = ConcreteModel()
-        m.p = Param(initialize=2)
-        m.q = Var(initialize=2)
-        _NonHashable = (1,3,5,m.p)
-        self.assertFalse(SetOf({1,3,5}).issuperset(_NonHashable))
+        _NonHashable = (1, 3, 5, [2, 3])
+        self.assertFalse(SetOf({0, 1, 3, 5}).issuperset(_NonHashable))
+        self.assertTrue(SetOf(([2, 3], 1, 2, 3, 5)).issuperset(_NonHashable))
         self.assertTrue(SetOf(_NonHashable).issuperset(_NonHashable))
-        self.assertTrue(SetOf((m.q,1,3,5,m.p)).issuperset(_NonHashable))
-        # Note: membership in tuples is done through
-        # __bool__(a.__eq__(b)), so Params/Vars with equivalent values will
-        # match
-        self.assertTrue(SetOf((m.q,1,3,5)).issuperset(_NonHashable))
+        self.assertTrue(SetOf((1, 3, 5, [2, 3])).issuperset(_NonHashable))
+        self.assertFalse(SetOf((1, 3, 5, [2, 4])).issuperset(_NonHashable))
 
         # But NOT non-iterable objects: we assume that everything that
         # does not implement isfinite() is a discrete set.
@@ -1419,13 +1401,13 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
                 return val in self.data
             def __len__(self):
                 return len(self.data)
-        with self.assertRaisesRegexp(TypeError, 'not iterable'):
+        with self.assertRaisesRegex(TypeError, 'not iterable'):
             SetOf({1,5}).issuperset(_NonIterable())
-        with self.assertRaisesRegexp(TypeError, 'not iterable'):
+        with self.assertRaisesRegex(TypeError, 'not iterable'):
             SetOf({1,3,4,5}).issuperset(_NonIterable())
 
         # test bad type
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError, "'int' object is not iterable"):
             i.issuperset(1)
 
@@ -1452,19 +1434,19 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         self.assertEqual(i[2], 3)
         self.assertEqual(i[-1], 0)
-        with self.assertRaisesRegexp(
-                IndexError,"valid index values for Sets are "
-                "\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]"):
+        with self.assertRaisesRegex(
+                IndexError, "valid index values for Sets are "
+                r"\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]"):
             i[0]
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError, "OrderedSetOf index out of range"):
             i[5]
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError, "OrderedSetOf index out of range"):
             i[-5]
 
         self.assertEqual(i.ord(3), 2)
-        with self.assertRaisesRegexp(ValueError, "5 is not in list"):
+        with self.assertRaisesRegex(ValueError, "5 is not in list"):
             i.ord(5)
 
         self.assertEqual(i.first(), 1)
@@ -1479,18 +1461,18 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(i.nextw(3,2), 0)
         self.assertEqual(i.prevw(2,2), 1)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError, "Cannot advance past the end of the Set"):
             i.next(0)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError, "Cannot advance before the beginning of the Set"):
             i.prev(1)
         self.assertEqual(i.nextw(0), 1)
         self.assertEqual(i.prevw(1), 0)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError, "Cannot advance past the end of the Set"):
             i.next(0,2)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError, "Cannot advance before the beginning of the Set"):
             i.prev(1,2)
         self.assertEqual(i.nextw(0,2), 3)
@@ -1507,19 +1489,19 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         self.assertEqual(i[2], 3)
         self.assertEqual(i[-1], 0)
-        with self.assertRaisesRegexp(
-                IndexError,"valid index values for Sets are "
-                "\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]"):
+        with self.assertRaisesRegex(
+                IndexError, "valid index values for Sets are "
+                r"\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]"):
             i[0]
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError, "OrderedSetOf index out of range"):
             i[5]
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError, "OrderedSetOf index out of range"):
             i[-5]
 
         self.assertEqual(i.ord(3), 2)
-        with self.assertRaisesRegexp(ValueError, "x not in tuple"):
+        with self.assertRaisesRegex(ValueError, "x not in tuple"):
             i.ord(5)
 
         i = SetOf([1, None, 'a'])
@@ -1670,30 +1652,30 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         for i,v in enumerate([2,4,6,8,10]):
             self.assertEqual(r.ord(v), i+1)
             self.assertEqual(r[i+1], v)
-        with self.assertRaisesRegexp(
-                IndexError,"valid index values for Sets are "
-                "\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]"):
+        with self.assertRaisesRegex(
+                IndexError, "valid index values for Sets are "
+                r"\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]"):
             r[0]
-        with self.assertRaisesRegexp(
-                IndexError,"FiniteSimpleRangeSet index out of range"):
+        with self.assertRaisesRegex(
+                IndexError, "FiniteScalarRangeSet index out of range"):
             r[10]
-        with self.assertRaisesRegexp(
-                ValueError,"Cannot identify position of 5 in Set"):
+        with self.assertRaisesRegex(
+                ValueError, "Cannot identify position of 5 in Set"):
             r.ord(5)
 
         r = RangeSet(ranges=(NR(2,10,2), NR(6,12,3)))
         for i,v in enumerate([2,4,6,8,9,10,12]):
             self.assertEqual(r.ord(v), i+1)
             self.assertEqual(r[i+1], v)
-        with self.assertRaisesRegexp(
-                IndexError,"valid index values for Sets are "
-                "\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]"):
+        with self.assertRaisesRegex(
+                IndexError, "valid index values for Sets are "
+                r"\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]"):
             r[0]
-        with self.assertRaisesRegexp(
-                IndexError,"FiniteSimpleRangeSet index out of range"):
+        with self.assertRaisesRegex(
+                IndexError, "FiniteScalarRangeSet index out of range"):
             r[10]
-        with self.assertRaisesRegexp(
-                ValueError,"Cannot identify position of 5 in Set"):
+        with self.assertRaisesRegex(
+                ValueError, "Cannot identify position of 5 in Set"):
             r.ord(5)
 
         so = SetOf([0, (1,), 1])
@@ -1705,9 +1687,9 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(len(a), 9)
         self.assertEqual(list(a - RangeSet(0,4,1)), [0.5, 1.5, 2.5, 3.5])
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "RangeSet: start, end ordering incompatible with "
-                "step direction \(got \[0:4:-0.5\]\)"):
+                r"step direction \(got \[0:4:-0.5\]\)"):
             RangeSet(0,4,-.5)
 
     def test_check_values(self):
@@ -1717,9 +1699,9 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertTrue(m.I.check_values())
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
-            "^DEPRECATED: check_values\(\) is deprecated:")
+            r"^DEPRECATED: check_values\(\) is deprecated:")
 
 
 class Test_SetOperator(unittest.TestCase):
@@ -1733,12 +1715,12 @@ class Test_SetOperator(unittest.TestCase):
         p.construct()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             i.construct()
-            ref = 'Constructing SetOperator, name=SetProduct_OrderedSet, '\
-                  'from data=None\n' \
-                  'Constructing RangeSet, name=FiniteSimpleRangeSet, '\
-                  'from data=None\n'\
-                  'Constructing Set, name=SetProduct_OrderedSet, '\
-                  'from data=None\n'
+            ref = ('Constructing SetOperator, name=SetProduct_OrderedSet, '
+                   'from data=None\n'
+                   'Constructing RangeSet, name=FiniteScalarRangeSet, '
+                   'from data=None\n'
+                   'Constructing Set, name=SetProduct_OrderedSet, '
+                   'from data=None\n')
             self.assertEqual(output.getvalue(), ref)
             # Calling construct() twice bypasses construction the second
             # time around
@@ -1772,11 +1754,11 @@ class Test_SetOperator(unittest.TestCase):
     def test_pandas_multiindex_set_init(self):
         # Test that TuplizeValuesInitializer does not assume truthiness
         # If it does, pandas will complain with the following error:
-        # ValueError: The truth value of a MultiIndex is ambiguous. 
+        # ValueError: The truth value of a MultiIndex is ambiguous.
         # Use a.empty, a.bool(), a.item(), a.any() or a.all().
         iterables = [['bar', 'baz', 'foo', 'qux'], ['one', 'two']]
         pandas_index = pd.MultiIndex.from_product(
-            iterables, 
+            iterables,
             names=['first', 'second']
         )
 
@@ -1788,12 +1770,12 @@ class Test_SetOperator(unittest.TestCase):
         model.b = Set(initialize=pandas_index)
 
         self.assertIsInstance(model.a, Set)
-        self.assertEquals(list(model.a), list(pandas_index))
-        self.assertEquals(model.a.dimen, pandas_index.nlevels)
+        self.assertEqual(list(model.a), list(pandas_index))
+        self.assertEqual(model.a.dimen, pandas_index.nlevels)
 
         self.assertIsInstance(model.b, Set)
-        self.assertEquals(list(model.b), list(pandas_index))
-        self.assertEquals(model.b.dimen, pandas_index.nlevels)
+        self.assertEqual(list(model.b), list(pandas_index))
+        self.assertEqual(model.b.dimen, pandas_index.nlevels)
 
 
 class TestSetUnion(unittest.TestCase):
@@ -1807,7 +1789,7 @@ class TestSetUnion(unittest.TestCase):
         a = SetOf([1,2,3])
         self.assertEqual(len(a), 3)
         b = a | Reals
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 OverflowError, 'The length of a non-finite Set is Inf'):
             len(b)
 
@@ -1843,7 +1825,7 @@ class TestSetUnion(unittest.TestCase):
         # You can always set the domain to "Any" (we will just ignore it)
         m.A._domain = Any
         self.assertIs(m.A._domain, m.A)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
                 "Setting the domain of a Set Operator is not allowed"):
             m.A._domain = None
@@ -1915,7 +1897,7 @@ A : Size=1, Index=None, Ordered=True
         self.assertEqual(x.ord(3), 2)
         self.assertEqual(x.ord(4), 5)
         self.assertEqual(x.ord(5), 4)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError,
                 "Cannot identify position of 6 in Set SetUnion_OrderedSet"):
             x.ord(6)
@@ -1925,7 +1907,7 @@ A : Size=1, Index=None, Ordered=True
         self.assertEqual(x[3], 2)
         self.assertEqual(x[4], 5)
         self.assertEqual(x[5], 4)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError,
                 "SetUnion_OrderedSet index out of range"):
             x[6]
@@ -1935,7 +1917,7 @@ A : Size=1, Index=None, Ordered=True
         self.assertEqual(x[-3], 2)
         self.assertEqual(x[-4], 3)
         self.assertEqual(x[-5], 1)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError,
                 "SetUnion_OrderedSet index out of range"):
             x[-6]
@@ -2041,23 +2023,23 @@ A : Size=1, Index=None, Ordered=True
         m = ConcreteModel()
         m.I = RangeSet(5)
         m.J = Set([1,2])
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError, "Cannot apply a Set operator to an "
-                "indexed Set component \(J\)"):
+                r"indexed Set component \(J\)"):
             m.I | m.J
         m.x = Suffix()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError, "Cannot apply a Set operator to a "
-                "non-Set Suffix component \(x\)"):
+                r"non-Set Suffix component \(x\)"):
             m.I | m.x
         m.y = Var([1,2])
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError, "Cannot apply a Set operator to an "
-                "indexed Var component \(y\)"):
+                r"indexed Var component \(y\)"):
             m.I | m.y
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError, "Cannot apply a Set operator to a "
-                "non-Set component data \(y\[1\]\)"):
+                r"non-Set component data \(y\[1\]\)"):
             m.I | m.y[1]
 
 class TestSetIntersection(unittest.TestCase):
@@ -2097,7 +2079,7 @@ class TestSetIntersection(unittest.TestCase):
         # You can always set the domain to "Any" (we will just ignore it)
         m.A._domain = Any
         self.assertIs(m.A._domain, m.A)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
                 "Setting the domain of a Set Operator is not allowed"):
             m.A._domain = None
@@ -2167,7 +2149,7 @@ A : Size=1, Index=None, Ordered=True
         self.assertEqual(x.ord(2), ref.index(2)+1)
         self.assertEqual(x.ord(3), ref.index(3)+1)
         self.assertEqual(x.ord(5), 3)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError, "Cannot identify position of 6 in Set "
                 "SetIntersection_OrderedSet"):
             x.ord(6)
@@ -2175,7 +2157,7 @@ A : Size=1, Index=None, Ordered=True
         self.assertEqual(x[1], ref[0])
         self.assertEqual(x[2], ref[1])
         self.assertEqual(x[3], 5)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError,
                 "SetIntersection_OrderedSet index out of range"):
             x[4]
@@ -2183,7 +2165,7 @@ A : Size=1, Index=None, Ordered=True
         self.assertEqual(x[-1], 5)
         self.assertEqual(x[-2], ref[-2])
         self.assertEqual(x[-3], ref[-3])
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError,
                 "SetIntersection_OrderedSet index out of range"):
             x[-4]
@@ -2301,7 +2283,7 @@ A : Size=1, Index=None, Ordered=True
         self.assertEqual(i.x[1], 6)
         self.assertEqual(i.x[2], 8)
         self.assertEqual(i.x[3], 10)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError,
                 "x index out of range"):
             i.x[4]
@@ -2309,7 +2291,7 @@ A : Size=1, Index=None, Ordered=True
         self.assertEqual(i.x[-3], 6)
         self.assertEqual(i.x[-2], 8)
         self.assertEqual(i.x[-1], 10)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError,
                 "x index out of range"):
             i.x[-4]
@@ -2380,7 +2362,7 @@ class TestSetDifference(unittest.TestCase):
         # You can always set the domain to "Any" (we will just ignore it)
         m.A._domain = Any
         self.assertIs(m.A._domain, m.A)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
                 "Setting the domain of a Set Operator is not allowed"):
             m.A._domain = None
@@ -2447,7 +2429,7 @@ A : Size=1, Index=None, Ordered=True
         self.assertEqual(x.ord(2), 2)
         self.assertEqual(x.ord(3), 1)
         self.assertEqual(x.ord(5), 3)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError, "Cannot identify position of 6 in Set "
                 "SetDifference_OrderedSet"):
             x.ord(6)
@@ -2455,7 +2437,7 @@ A : Size=1, Index=None, Ordered=True
         self.assertEqual(x[1], 3)
         self.assertEqual(x[2], 2)
         self.assertEqual(x[3], 5)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError,
                 "SetDifference_OrderedSet index out of range"):
             x[4]
@@ -2463,7 +2445,7 @@ A : Size=1, Index=None, Ordered=True
         self.assertEqual(x[-1], 5)
         self.assertEqual(x[-2], 2)
         self.assertEqual(x[-3], 3)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError,
                 "SetDifference_OrderedSet index out of range"):
             x[-4]
@@ -2582,7 +2564,7 @@ class TestSetSymmetricDifference(unittest.TestCase):
         # You can always set the domain to "Any" (we will just ignore it)
         m.A._domain = Any
         self.assertIs(m.A._domain, m.A)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
                 "Setting the domain of a Set Operator is not allowed"):
             m.A._domain = None
@@ -2650,7 +2632,7 @@ A : Size=1, Index=None, Ordered=True
         self.assertEqual(x.ord(2), 2)
         self.assertEqual(x.ord(3), 1)
         self.assertEqual(x.ord(5), 3)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError, "Cannot identify position of 6 in Set "
                 "SetSymmetricDifference_OrderedSet"):
             x.ord(6)
@@ -2659,7 +2641,7 @@ A : Size=1, Index=None, Ordered=True
         self.assertEqual(x[2], 2)
         self.assertEqual(x[3], 5)
         self.assertEqual(x[4], 0)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError,
                 "SetSymmetricDifference_OrderedSet index out of range"):
             x[5]
@@ -2668,7 +2650,7 @@ A : Size=1, Index=None, Ordered=True
         self.assertEqual(x[-2], 5)
         self.assertEqual(x[-3], 2)
         self.assertEqual(x[-4], 3)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError,
                 "SetSymmetricDifference_OrderedSet index out of range"):
             x[-5]
@@ -2837,7 +2819,7 @@ class TestSetProduct(unittest.TestCase):
         # You can always set the domain to "Any" (we will just ignore it)
         m.A._domain = Any
         self.assertIs(m.A._domain, m.A)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
                 "Setting the domain of a Set Operator is not allowed"):
             m.A._domain = None
@@ -2946,7 +2928,7 @@ J : Size=1, Index=None, Ordered=False
         os = StringIO()
         with LoggingIntercept(os, 'pyomo'):
             self.assertEqual(x.set_tuple, [a,b])
-        self.assertRegexpMatches(
+        self.assertRegex(
             os.getvalue(),
             '^DEPRECATED: SetProduct.set_tuple is deprecated.')
 
@@ -3076,8 +3058,8 @@ J : Size=1, Index=None, Ordered=False
         self.assertEqual(x.ord((1,5)), 4)
         self.assertEqual(x.ord((2,6)), 5)
         self.assertEqual(x.ord((2,5)), 6)
-        with self.assertRaisesRegexp(
-                IndexError, "Cannot identify position of \(3, 4\) in Set "
+        with self.assertRaisesRegex(
+                IndexError, r"Cannot identify position of \(3, 4\) in Set "
                 "SetProduct_OrderedSet"):
             x.ord((3,4))
 
@@ -3087,7 +3069,7 @@ J : Size=1, Index=None, Ordered=False
         self.assertEqual(x[4], (1,5))
         self.assertEqual(x[5], (2,6))
         self.assertEqual(x[6], (2,5))
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError,
                 "SetProduct_OrderedSet index out of range"):
             x[7]
@@ -3098,7 +3080,7 @@ J : Size=1, Index=None, Ordered=False
         self.assertEqual(x[-3], (1,5))
         self.assertEqual(x[-2], (2,6))
         self.assertEqual(x[-1], (2,5))
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError,
                 "SetProduct_OrderedSet index out of range"):
             x[-7]
@@ -3216,33 +3198,33 @@ J : Size=1, Index=None, Ordered=False
         with LoggingIntercept(output, 'pyomo.core'):
             m.create_instance(
                 data={None:{'J': {None: [(1,1),(1,2),(2,1),(2,2)]}}})
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue().replace('\n',' '),
             "^DEPRECATED: Providing construction data to SetOperator objects "
             "is deprecated")
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
-            with self.assertRaisesRegexp(
+            with self.assertRaisesRegex(
                     ValueError, "Constructing SetOperator J with "
-                    "incompatible data \(data=\{None: \[\(1, 1\), \(1, 2\), "
-                    "\(2, 1\)\]\}"):
+                    r"incompatible data \(data=\{None: \[\(1, 1\), \(1, 2\), "
+                    r"\(2, 1\)\]\}"):
                 m.create_instance(
                     data={None:{'J': {None: [(1,1),(1,2),(2,1)]}}})
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue().replace('\n',' '),
             "^DEPRECATED: Providing construction data to SetOperator objects "
             "is deprecated")
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
-            with self.assertRaisesRegexp(
+            with self.assertRaisesRegex(
                     ValueError, "Constructing SetOperator J with "
-                    "incompatible data \(data=\{None: \[\(1, 3\), \(1, 2\), "
-                    "\(2, 1\), \(2, 2\)\]\}"):
+                    r"incompatible data \(data=\{None: \[\(1, 3\), \(1, 2\), "
+                    r"\(2, 1\), \(2, 2\)\]\}"):
                 m.create_instance(
                     data={None:{'J': {None: [(1,3),(1,2),(2,1),(2,2)]}}})
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue().replace('\n',' '),
             "^DEPRECATED: Providing construction data to SetOperator objects "
             "is deprecated")
@@ -3294,14 +3276,14 @@ class TestGlobalSets(unittest.TestCase):
         self.assertEqual(str(Integers), 'Integers')
 
     def test_iteration(self):
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError, "'GlobalSet' object is not iterable "
-                "\(non-finite Set 'Reals' is not iterable\)"):
+                r"\(non-finite Set 'Reals' is not iterable\)"):
             iter(Reals)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError, "'GlobalSet' object is not iterable "
-                "\(non-finite Set 'Integers' is not iterable\)"):
+                r"\(non-finite Set 'Integers' is not iterable\)"):
             iter(Integers)
 
         self.assertEqual(list(iter(Binary)), [0,1])
@@ -3406,7 +3388,7 @@ class TestGlobalSets(unittest.TestCase):
         self.assertIn('DEPRECATED: The use of RealSet,', output.getvalue())
 
         with self.assertRaisesRegex(
-                RuntimeError, "Unexpected keyword arguments: \{'foo': 5\}"):
+                RuntimeError, r"Unexpected keyword arguments: \{'foo': 5\}"):
             IntegerSet(foo=5)
 
     def test_intervals(self):
@@ -3496,7 +3478,7 @@ class TestSet(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.core'):
             m.I = Set(virtual=True)
             self.assertEqual(len(m.I), 0)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: Pyomo Sets ignore the 'virtual' keyword argument")
 
@@ -3509,7 +3491,7 @@ class TestSet(unittest.TestCase):
         self.assertEqual(m.I.dimen, UnknownSetDimen)
 
         m = ConcreteModel()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 KeyError, "Cannot treat the scalar component 'I' "
                 "as an indexed component"):
             m.I = Set(initialize={1:(1,3,2,4)})
@@ -3544,8 +3526,8 @@ class TestSet(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.core'):
             m = ConcreteModel()
             m.I = Set(initialize={1,3,2,4})
-            ref = "Initializing ordered Set I with a " \
-                  "fundamentally unordered data source (type: set)."
+            ref = ("Initializing ordered Set I with a "
+                   "fundamentally unordered data source (type: set).")
             self.assertIn(ref, output.getvalue())
         self.assertEqual(m.I.sorted_data(), (1,2,3,4))
         # We can't directly compare the reversed to a reference list
@@ -3575,10 +3557,10 @@ class TestSet(unittest.TestCase):
         self.assertEqual(m.I.data(), (1,2,3,4))
         self.assertEqual(m.I.dimen, 1)
 
-        with self.assertRaisesRegexp(
-                TypeError, "Set 'ordered' argument is not valid \(must "
-                "be one of {False, True, <function>, Set.InsertionOrder, "
-                "Set.SortedOrder}\)"):
+        with self.assertRaisesRegex(
+                TypeError, r"Set 'ordered' argument is not valid \(must "
+                r"be one of {False, True, <function>, Set.InsertionOrder, "
+                r"Set.SortedOrder}\)"):
             m = ConcreteModel()
             m.I = Set(initialize=[1,3,2,4], ordered=Set)
 
@@ -3591,12 +3573,12 @@ class TestSet(unittest.TestCase):
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
-            with self.assertRaisesRegexp(
+            with self.assertRaisesRegex(
                     TypeError, "'int' object is not iterable"):
                 m = ConcreteModel()
                 m.I = Set(initialize=5)
-            ref = "Initializer for Set I returned non-iterable object " \
-                  "of type int."
+            ref = ("Initializer for Set I returned non-iterable object "
+                   "of type int.")
             self.assertIn(ref, output.getvalue())
 
     def test_insertion_deletion(self):
@@ -3605,16 +3587,16 @@ class TestSet(unittest.TestCase):
             self.assertTrue(_s.isfinite())
             for i,v in enumerate(_l):
                 self.assertEqual(_s[i+1], v)
-            with self.assertRaisesRegexp(IndexError, "I index out of range"):
+            with self.assertRaisesRegex(IndexError, "I index out of range"):
                 _s[len(_l)+1]
-            with self.assertRaisesRegexp(IndexError, "I index out of range"):
+            with self.assertRaisesRegex(IndexError, "I index out of range"):
                 _s[len(_l)+2]
 
             for i,v in enumerate(reversed(_l)):
                 self.assertEqual(_s[-(i+1)], v)
-            with self.assertRaisesRegexp(IndexError, "I index out of range"):
+            with self.assertRaisesRegex(IndexError, "I index out of range"):
                 _s[-len(_l)-1]
-            with self.assertRaisesRegexp(IndexError, "I index out of range"):
+            with self.assertRaisesRegex(IndexError, "I index out of range"):
                 _s[-len(_l)-2]
 
             for i,v in enumerate(_l):
@@ -3627,11 +3609,11 @@ class TestSet(unittest.TestCase):
             else:
                 _max = 0
                 _min = 0
-            with self.assertRaisesRegexp(ValueError, "I.ord\(x\): x not in I"):
+            with self.assertRaisesRegex(ValueError, r"I.ord\(x\): x not in I"):
                 m.I.ord(_max+1)
-            with self.assertRaisesRegexp(ValueError, "I.ord\(x\): x not in I"):
+            with self.assertRaisesRegex(ValueError, r"I.ord\(x\): x not in I"):
                 m.I.ord(_min-1)
-            with self.assertRaisesRegexp(ValueError, "I.ord\(x\): x not in I"):
+            with self.assertRaisesRegex(ValueError, r"I.ord\(x\): x not in I"):
                 m.I.ord((_max+1,))
 
         # Testing insertion order sets
@@ -3658,7 +3640,7 @@ class TestSet(unittest.TestCase):
         m.I.remove(3)
         _verify(m.I, [1,2,4])
 
-        with self.assertRaisesRegexp(KeyError, "^3$"):
+        with self.assertRaisesRegex(KeyError, "^3$"):
             m.I.remove(3)
         _verify(m.I, [1,2,4])
 
@@ -3683,7 +3665,7 @@ class TestSet(unittest.TestCase):
         tmp.add(m.I.pop())
         _verify(m.I, [])
         self.assertEqual(tmp, {5,6})
-        with self.assertRaisesRegexp(KeyError, 'pop from an empty set'):
+        with self.assertRaisesRegex(KeyError, 'pop from an empty set'):
             m.I.pop()
 
         output = StringIO()
@@ -3740,7 +3722,7 @@ class TestSet(unittest.TestCase):
         m.I.remove(3)
         _verify(m.I, [1,2,4])
 
-        with self.assertRaisesRegexp(KeyError, "^3$"):
+        with self.assertRaisesRegex(KeyError, "^3$"):
             m.I.remove(3)
         _verify(m.I, [1,2,4])
 
@@ -3765,7 +3747,7 @@ class TestSet(unittest.TestCase):
         tmp.add(m.I.pop())
         _verify(m.I, [])
         self.assertEqual(tmp, {5,6})
-        with self.assertRaisesRegexp(KeyError, 'pop from an empty set'):
+        with self.assertRaisesRegex(KeyError, 'pop from an empty set'):
             m.I.pop()
 
         output = StringIO()
@@ -3833,7 +3815,7 @@ class TestSet(unittest.TestCase):
         m.I.remove(3)
         _verify(m.I, [1,2,4])
 
-        with self.assertRaisesRegexp(KeyError, "^3$"):
+        with self.assertRaisesRegex(KeyError, "^3$"):
             m.I.remove(3)
         _verify(m.I, [1,2,4])
 
@@ -3858,7 +3840,7 @@ class TestSet(unittest.TestCase):
         tmp.add(m.I.pop())
         _verify(m.I, [])
         self.assertEqual(tmp, {5,6})
-        with self.assertRaisesRegexp(KeyError, 'pop from an empty set'):
+        with self.assertRaisesRegex(KeyError, 'pop from an empty set'):
             m.I.pop()
 
         m.I.update([5])
@@ -3966,14 +3948,14 @@ class TestSet(unittest.TestCase):
         m = ConcreteModel()
 
         i = Set()
-        self.assertEqual(str(i), "AbstractOrderedSimpleSet")
+        self.assertEqual(str(i), "AbstractOrderedScalarSet")
         i.construct()
         self.assertEqual(str(i), "{}")
         m.I = i
         self.assertEqual(str(i), "I")
 
         j = Set(initialize=[1,2,3])
-        self.assertEqual(str(j), "AbstractOrderedSimpleSet")
+        self.assertEqual(str(j), "AbstractOrderedScalarSet")
         j.construct()
         self.assertEqual(str(j), "{1, 2, 3}")
         m.J = j
@@ -3981,7 +3963,7 @@ class TestSet(unittest.TestCase):
 
         k = Set([1,2,3])
         self.assertEqual(str(k), "IndexedSet")
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, 'The component has not been constructed.'):
             str(k[1])
         m.K = k
@@ -3993,10 +3975,10 @@ class TestSet(unittest.TestCase):
         m.I = Set()
         m.I = [1, 3, 2]
         self.assertEqual(m.I[2], 3)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError, "I indices must be integers, not float"):
             m.I[2.5]
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError, "I indices must be integers, not str"):
             m.I['a']
 
@@ -4004,10 +3986,10 @@ class TestSet(unittest.TestCase):
         m = ConcreteModel()
         m.I = Set(domain=Integers)
         self.assertIs(m.I.filter, None)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
-                "Cannot add value 1.5 to Set I.\n"
-                "\tThe value is not in the domain Integers"):
+                r"Cannot add value 1.5 to Set I.\n"
+                r"\tThe value is not in the domain Integers"):
             m.I.add(1.5)
 
         # Open question: should we cast the added value into the domain
@@ -4019,29 +4001,29 @@ class TestSet(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertFalse( m.I.add(1) )
-        self.assertEquals(
+        self.assertEqual(
             output.getvalue(),
             "Element 1 already exists in Set I; no action taken\n")
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertFalse( m.I.add((1,)) )
-        self.assertEquals(
+        self.assertEqual(
             output.getvalue(),
             "Element (1,) already exists in Set I; no action taken\n")
 
         m.J = Set()
         # Note that pypy raises a different exception from cpython
-        err = "Unable to insert '{}' into Set J:\n\tTypeError: "\
-            "((unhashable type: 'dict')|('dict' objects are unhashable))"
-        with self.assertRaisesRegexp(TypeError, err):
+        err = (r"Unable to insert '{}' into Set J:\n\tTypeError: "
+               r"((unhashable type: 'dict')|('dict' objects are unhashable))")
+        with self.assertRaisesRegex(TypeError, err):
             m.J.add({})
 
         self.assertTrue( m.J.add((1,)) )
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertFalse( m.J.add(1) )
-        self.assertEquals(
+        self.assertEqual(
             output.getvalue(),
             "Element 1 already exists in Set J; no action taken\n")
 
@@ -4059,7 +4041,7 @@ class TestSet(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertTrue( m.K.add((0,0)) )
             self.assertFalse( m.K.add((0,1)) )
-        self.assertEquals(output.getvalue(), "")
+        self.assertEqual(output.getvalue(), "")
         self.assertEqual(
             list(m.K), [(1,1), (2,1), (2,2), (3,1), (3,2), (3,3), (0,0)])
 
@@ -4079,7 +4061,7 @@ class TestSet(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertTrue( m.L[2].add(0) )
             self.assertFalse( m.L[2].add((100)) )
-        self.assertEquals(output.getvalue(), "")
+        self.assertEqual(output.getvalue(), "")
         self.assertEqual(list(m.L[2]), [1,2,0])
 
 
@@ -4096,12 +4078,13 @@ class TestSet(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertTrue( m.I.add((0,1)) )
             self.assertEqual(output.getvalue(), "")
-            with self.assertRaisesRegexp(
+            with self.assertRaisesRegex(
                     ValueError,
-                    "The value=\(4, 1\) violates the validation rule of Set I"):
+                    r"The value=\(4, 1\) violates the validation rule of "
+                    r"Set I"):
                 m.I.add((4,1))
             self.assertEqual(output.getvalue(), "")
-            with self.assertRaisesRegexp(RuntimeError, "Bogus value"):
+            with self.assertRaisesRegex(RuntimeError, "Bogus value"):
                 m.I.add((2,2))
         self.assertEqual(
             output.getvalue(),
@@ -4114,13 +4097,13 @@ class TestSet(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertTrue( m.J[2,2].add((0,1)) )
             self.assertEqual(output.getvalue(), "")
-            with self.assertRaisesRegexp(
+            with self.assertRaisesRegex(
                     ValueError,
-                    "The value=\(4, 1\) violates the validation rule of "
-                    "Set J\[0,0\]"):
+                    r"The value=\(4, 1\) violates the validation rule of "
+                    r"Set J\[0,0\]"):
                 m.J[0,0].add((4,1))
             self.assertEqual(output.getvalue(), "")
-            with self.assertRaisesRegexp(RuntimeError, "Bogus value"):
+            with self.assertRaisesRegex(RuntimeError, "Bogus value"):
                 m.J[2,2].add((2,2))
         self.assertEqual(
             output.getvalue(),
@@ -4138,7 +4121,7 @@ class TestSet(unittest.TestCase):
         m.I.add(1)
         m.I.add(2.)
         self.assertEqual(list(m.I), [1, 2.])
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, 'The value is not in the domain Integers'):
             m.I.add(1.5)
 
@@ -4148,7 +4131,7 @@ class TestSet(unittest.TestCase):
         m.I.add(1)
         m.I.add(2.)
         self.assertEqual(list(m.I), [1, 2.])
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, 'The value is not in the domain Integers'):
             m.I.add(1.5)
 
@@ -4158,8 +4141,8 @@ class TestSet(unittest.TestCase):
         m.I.add(1)
         m.I.add(2.)
         self.assertEqual(list(m.I), [1, 2.])
-        with self.assertRaisesRegexp(
-                ValueError, 'The value is not in the domain \[1..5\]'):
+        with self.assertRaisesRegex(
+                ValueError, r'The value is not in the domain \[1..5\]'):
             m.I.add(5.5)
 
         m = ConcreteModel()
@@ -4167,17 +4150,17 @@ class TestSet(unittest.TestCase):
         self.assertEqual(m.I.domain, RangeSet(0,9,2))
         m.I = [0,2.,4]
         self.assertEqual(list(m.I), [0,2.,4])
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, 'The value is not in the domain '
-                '\(Integers & I_domain_index_0_index_1'):
+                r'\(Integers & I_domain_index_0_index_1'):
             m.I.add(1.5)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, 'The value is not in the domain '
-                '\(Integers & I_domain_index_0_index_1'):
+                r'\(Integers & I_domain_index_0_index_1'):
             m.I.add(1)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, 'The value is not in the domain '
-                '\(Integers & I_domain_index_0_index_1'):
+                r'\(Integers & I_domain_index_0_index_1'):
             m.I.add(10)
 
 
@@ -4274,7 +4257,7 @@ class TestSet(unittest.TestCase):
         m.K = Set(initialize=[(1,2,3)])
         self.assertEqual(m.K.dimen, 3)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
                 "The value=1 has dimension 1 and is not valid for Set K "
                 "which has dimen=3"):
@@ -4354,21 +4337,21 @@ JJ : Size=0, Index=JJ_index, Ordered=Insertion
             None: {'K': []}
         })
         self.assertEqual(list(i.K), [])
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Cannot tuplize list data for set K because "
                 "its length 3 is not a multiple of dimen=2"):
             i = m.create_instance(data={
                 None: {'K': [1,2,3]}
             })
-        with self.assertRaisesRegexp(
-                ValueError, "Cannot tuplize list data for set KK\[2\] because "
-                "its length 3 is not a multiple of dimen=2"):
+        with self.assertRaisesRegex(
+                ValueError, r"Cannot tuplize list data for set KK\[2\] "
+                "because its length 3 is not a multiple of dimen=2"):
             i = m.create_instance(data={
                 None: {'KK': {2: [1,2,3]}}
             })
 
         ref = """
-Constructing AbstractOrderedSimpleSet 'I' on [Model] from data=None
+Constructing AbstractOrderedScalarSet 'I' on [Model] from data=None
 Constructing Set, name=I, from data=None
 Constructed component ''[Model].I'':
 I : Size=1, Index=None, Ordered=Insertion
@@ -4412,61 +4395,61 @@ I : Size=1, Index=None, Ordered=Insertion
         m.J = Set(ordered=Set.InsertionOrder)
         m.K = Set(ordered=Set.SortedOrder)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
-                "Cannot iterate over AbstractFiniteSimpleSet 'I'"
-                " before it has been constructed \(initialized\)"):
+                r"Cannot iterate over AbstractFiniteScalarSet 'I'"
+                r" before it has been constructed \(initialized\)"):
             for i in m.I:
                 pass
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
-                "Cannot iterate over AbstractOrderedSimpleSet 'J'"
-                " before it has been constructed \(initialized\)"):
+                r"Cannot iterate over AbstractOrderedScalarSet 'J'"
+                r" before it has been constructed \(initialized\)"):
             for i in m.J:
                 pass
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
-                "Cannot iterate over AbstractSortedSimpleSet 'K'"
-                " before it has been constructed \(initialized\)"):
+                r"Cannot iterate over AbstractSortedScalarSet 'K'"
+                r" before it has been constructed \(initialized\)"):
             for i in m.K:
                 pass
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
-                "Cannot test membership in AbstractFiniteSimpleSet 'I'"
-                " before it has been constructed \(initialized\)"):
+                r"Cannot test membership in AbstractFiniteScalarSet 'I'"
+                r" before it has been constructed \(initialized\)"):
             1 in m.I
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
-                "Cannot test membership in AbstractOrderedSimpleSet 'J'"
-                " before it has been constructed \(initialized\)"):
+                r"Cannot test membership in AbstractOrderedScalarSet 'J'"
+                r" before it has been constructed \(initialized\)"):
             1 in m.J
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
-                "Cannot test membership in AbstractSortedSimpleSet 'K'"
-                " before it has been constructed \(initialized\)"):
+                r"Cannot test membership in AbstractSortedScalarSet 'K'"
+                r" before it has been constructed \(initialized\)"):
             1 in m.K
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
-                "Cannot access '__len__' on AbstractFiniteSimpleSet 'I'"
-                " before it has been constructed \(initialized\)"):
+                r"Cannot access '__len__' on AbstractFiniteScalarSet 'I'"
+                r" before it has been constructed \(initialized\)"):
             len(m.I)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
-                "Cannot access '__len__' on AbstractOrderedSimpleSet 'J'"
-                " before it has been constructed \(initialized\)"):
+                r"Cannot access '__len__' on AbstractOrderedScalarSet 'J'"
+                r" before it has been constructed \(initialized\)"):
             len(m.J)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError,
-                "Cannot access '__len__' on AbstractSortedSimpleSet 'K'"
-                " before it has been constructed \(initialized\)"):
+                r"Cannot access '__len__' on AbstractSortedScalarSet 'K'"
+                r" before it has been constructed \(initialized\)"):
             len(m.K)
 
     def test_set_end(self):
@@ -4505,7 +4488,7 @@ I : Size=1, Index=None, Ordered=Insertion
             if i > 3:
                 return None
             return i
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Set rule returned None instead of Set.End"):
             m.I1 = Set(initialize=_i_init)
 
@@ -4572,14 +4555,14 @@ I : Size=2, Index=I_index, Ordered=Insertion
             if i % 2:
                 return None
             return range(i)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
                 "Set rule or initializer returned None instead of Set.Skip"):
             m.I = Set([1,2,3,4,5], initialize=_i_init)
 
         def _j_init(m):
             return None
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
                 "Set rule or initializer returned None instead of Set.Skip"):
             m.J = Set(initialize=_j_init)
@@ -5403,21 +5386,21 @@ class TestDeprecation(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertIsNone(m.I.filter)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: 'filter' is no longer a public attribute")
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertIsNone(m.J.filter)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: 'filter' is no longer a public attribute")
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertIsInstance(m.K.filter, IndexedCallInitializer)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: 'filter' is no longer a public attribute")
 
@@ -5429,27 +5412,27 @@ class TestDeprecation(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertFalse(m.I.virtual)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: The 'virtual' attribute is no longer supported")
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertTrue(m.J.virtual)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: The 'virtual' attribute is no longer supported")
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             m.J.virtual = True
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: The 'virtual' attribute is no longer supported")
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
-                "Attempting to set the \(deprecated\) 'virtual' attribute on J "
-                "to an invalid value \(False\)"):
+                r"Attempting to set the \(deprecated\) 'virtual' attribute "
+                r"on J to an invalid value \(False\)"):
             m.J.virtual = False
 
     def test_concrete(self):
@@ -5460,34 +5443,34 @@ class TestDeprecation(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertTrue(m.I.concrete)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: The 'concrete' attribute is no longer supported")
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertTrue(m.J.concrete)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: The 'concrete' attribute is no longer supported")
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertFalse(Reals.concrete)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: The 'concrete' attribute is no longer supported")
 
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             m.J.concrete = True
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: The 'concrete' attribute is no longer supported.")
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
-                "Attempting to set the \(deprecated\) 'concrete' attribute on "
-                "J to an invalid value \(False\)"):
+                r"Attempting to set the \(deprecated\) 'concrete' "
+                r"attribute on J to an invalid value \(False\)"):
             m.J.concrete = False
 
     def test_ordered_attr(self):
@@ -5497,13 +5480,13 @@ class TestDeprecation(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertTrue(m.J.ordered)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: The 'ordered' attribute is no longer supported.")
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertFalse(m.K.ordered)
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
             "^DEPRECATED: The 'ordered' attribute is no longer supported.")
 
@@ -5515,9 +5498,9 @@ class TestDeprecation(unittest.TestCase):
             tmp = m.J.value
         self.assertIs(type(tmp), set)
         self.assertEqual(tmp, set([1,3,2]))
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
-            "^DEPRECATED: The 'value' attribute is deprecated.  Use .data\(\)")
+            r"^DEPRECATED: The 'value' attribute is deprecated.  Use .data\(\)")
 
     def test_value_list_attr(self):
         m = ConcreteModel()
@@ -5527,10 +5510,10 @@ class TestDeprecation(unittest.TestCase):
             tmp = m.J.value_list
         self.assertIs(type(tmp), list)
         self.assertEqual(tmp, list([1,3,2]))
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue().replace('\n',' '),
-            "^DEPRECATED: The 'value_list' attribute is deprecated.  "
-            "Use .ordered_data\(\)")
+            r"^DEPRECATED: The 'value_list' attribute is deprecated.  "
+            r"Use .ordered_data\(\)")
 
     def test_check_values(self):
         m = ConcreteModel()
@@ -5538,28 +5521,28 @@ class TestDeprecation(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertTrue(m.I.check_values())
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
-            "^DEPRECATED: check_values\(\) is deprecated: Sets only "
-            "contain valid")
+            r"^DEPRECATED: check_values\(\) is deprecated: Sets only "
+            r"contain valid")
 
         m.J = m.I*m.I
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertTrue(m.J.check_values())
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
-            "^DEPRECATED: check_values\(\) is deprecated:")
+            r"^DEPRECATED: check_values\(\) is deprecated:")
 
         # We historically supported check_values on indexed sets
         m.K = Set([1,2], ordered=True, initialize=[1,3,2])
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core'):
             self.assertTrue(m.K.check_values())
-        self.assertRegexpMatches(
+        self.assertRegex(
             output.getvalue(),
-            "^DEPRECATED: check_values\(\) is deprecated: Sets only "
-            "contain valid")
+            r"^DEPRECATED: check_values\(\) is deprecated: Sets only "
+            r"contain valid")
 
 
 class TestIssues(unittest.TestCase):
@@ -5596,11 +5579,11 @@ class TestIssues(unittest.TestCase):
             output.getvalue()
         )
         # Note that pypy raises a different exception from cpython
-        err = "((unhashable type: 'OrderedSimpleSet')" \
-            "|('OrderedSimpleSet' objects are unhashable))"
-        with self.assertRaisesRegexp(TypeError, err):
+        err = ("((unhashable type: 'OrderedScalarSet')"
+               "|('OrderedScalarSet' objects are unhashable))")
+        with self.assertRaisesRegex(TypeError, err):
             self.assertFalse(m.s in m.t)
-        with self.assertRaisesRegexp(TypeError, err):
+        with self.assertRaisesRegex(TypeError, err):
             m.x[m.s].display()
 
         self.assertEqual(list(m.x), ['one'])
@@ -5705,7 +5688,7 @@ c : Size=3, Index=CHOICES, Active=True
         m = ConcreteModel()
         m.s = Set(initialize=['a','b'], within=legal)
         self.assertEqual(set(m.s), {'a','b'})
-        with self.assertRaisesRegexp(ValueError, 'Cannot add value d to Set s'):
+        with self.assertRaisesRegex(ValueError, 'Cannot add value d to Set s'):
             m.s.add('d')
 
     def test_issue_165(self):
@@ -5789,13 +5772,13 @@ c : Size=3, Index=CHOICES, Active=True
 
         self.assertEqual(m.I.next(1), 2)
         self.assertEqual(m.I.next(4), 5)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError, "Cannot advance past the end of the Set"):
             m.I.next(5)
 
         self.assertEqual(m.I.prev(2), 1)
         self.assertEqual(m.I.prev(5), 4)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 IndexError, "Cannot advance before the beginning of the Set"):
             m.I.prev(1)
 

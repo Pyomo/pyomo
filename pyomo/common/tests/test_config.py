@@ -26,12 +26,14 @@
 import argparse
 import enum
 import os
-import sys
 import os.path
+import pickle
 import re
+import sys
+import types
 import pyomo.common.unittest as unittest
 
-from six import PY3, StringIO
+from io import StringIO
 
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 def yaml_load(arg):
@@ -39,10 +41,11 @@ def yaml_load(arg):
 
 from pyomo.common.config import (
     ConfigDict, ConfigValue,
-    ConfigList, MarkImmutable,
+    ConfigList, MarkImmutable, ImmutableConfigValue,
     PositiveInt, NegativeInt, NonPositiveInt, NonNegativeInt,
     PositiveFloat, NegativeFloat, NonPositiveFloat, NonNegativeFloat,
-    In, Path, PathList, ConfigEnum
+    In, Path, PathList, ConfigEnum,
+    _UnpickleableDomain, _picklable,
 )
 from pyomo.common.log import LoggingIntercept
 
@@ -51,6 +54,11 @@ def _display(obj, *args):
     test = StringIO()
     obj.display(ostream=test, *args)
     return test.getvalue()
+
+
+class GlobalClass(object):
+    "test class for test_known_types"
+    pass
 
 
 class TestConfigDomains(unittest.TestCase):
@@ -384,6 +392,8 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(len(c.a), 1)
         self.assertTrue(os.path.sep in c.a[0])
         self.assertEqual(c.a[0], norm('/a/b/c'))
+        c.a = None
+        self.assertIsNone(c.a)
 
         c.a = ["a/b/c", "/a/b/c", "${CWD}/a/b/c"]
         self.assertEqual(len(c.a), 3)
@@ -429,6 +439,7 @@ class TestConfigDomains(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, '.*invalid value'):
             cfg.enum ='ITEM_THREE'
 
+
 class TestImmutableConfigValue(unittest.TestCase):
     def test_immutable_config_value(self):
         config = ConfigDict()
@@ -439,9 +450,9 @@ class TestImmutableConfigValue(unittest.TestCase):
         self.assertEqual(config.a, 2)
         self.assertEqual(config.b, 3)
         locker = MarkImmutable(config.get('a'), config.get('b'))
-        with self.assertRaises(Exception):
+        with self.assertRaisesRegex(RuntimeError, 'is currently immutable'):
             config.a = 4
-        with self.assertRaises(Exception):
+        with self.assertRaisesRegex(RuntimeError, 'is currently immutable'):
             config.b = 5
         config.a = 2
         config.b = 3
@@ -452,7 +463,9 @@ class TestImmutableConfigValue(unittest.TestCase):
         config.b = 5
         self.assertEqual(config.a, 4)
         self.assertEqual(config.b, 5)
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(
+                ValueError,
+                'Only ConfigValue instances can be marked immutable'):
             locker = MarkImmutable(config.get('a'), config.b)
         self.assertEqual(type(config.get('a')), ConfigValue)
         config.a = 6
@@ -460,15 +473,58 @@ class TestImmutableConfigValue(unittest.TestCase):
 
         config.declare('c', ConfigValue(default=-1, domain=int))
         locker = MarkImmutable(config.get('a'), config.get('b'))
+        # Making a copy of an immutable config value results in a
+        # *mutable* config value
         config2 = config({'c': -2})
         self.assertEqual(config2.a, 6)
         self.assertEqual(config2.b, 5)
         self.assertEqual(config2.c, -2)
-        with self.assertRaises(Exception):
-            config3 = config({'a': 1})
-        locker.release_lock()
+        self.assertIs(type(config2.get('a')), ConfigValue)
+        self.assertIs(type(config2.get('b')), ConfigValue)
+        self.assertIs(type(config2.get('c')), ConfigValue)
+        # you can even update the original, as long as you don't change
+        # the immutable value:
+        config.set_value(config2)
+        self.assertEqual(config.a, 6)
+        self.assertEqual(config.b, 5)
+        self.assertEqual(config.c, -2)
+        self.assertIs(type(config.get('a')), ImmutableConfigValue)
+        self.assertIs(type(config.get('b')), ImmutableConfigValue)
+        self.assertIs(type(config.get('c')), ConfigValue)
+
+        # Making a copy of an immutable config value results in a
+        # *mutable* config value, even if you change the value of
+        # something that is currently immutable
         config3 = config({'a': 1})
         self.assertEqual(config3.a, 1)
+        self.assertEqual(config3.b, 5)
+        self.assertEqual(config3.c, -2)
+        self.assertIs(type(config3.get('a')), ConfigValue)
+        self.assertIs(type(config3.get('b')), ConfigValue)
+        self.assertIs(type(config3.get('c')), ConfigValue)
+        # but attempting to update the original will generate an
+        # exception
+        with self.assertRaisesRegex(RuntimeError, ' is currently immutable'):
+            config.set_value(config3)
+        locker.release_lock()
+
+        # test reset
+        config.reset()
+        self.assertEqual(config.a, 1)
+        self.assertEqual(config.b, 1)
+        with locker:
+            # Reset is OK as long as the values are all currently at
+            # their defaults
+            config.reset()
+            self.assertEqual(config.a, 1)
+            self.assertEqual(config.b, 1)
+
+        config.a = 2
+        with locker:
+            # But if reset would change an immutable value you will get
+            # an exception
+            with self.assertRaisesRegex(RuntimeError, 'is currently immutable'):
+                config.reset()
 
 
 class TestConfig(unittest.TestCase):
@@ -476,7 +532,7 @@ class TestConfig(unittest.TestCase):
     def setUp(self):
         # Save the original environment, then force a fixed column width
         # so tests do not fail on some platforms (notably, OSX)
-        self.original_environ = os.environ
+        self.original_environ, os.environ = os.environ, os.environ.copy()
         os.environ["COLUMNS"] = "80"
 
         self.config = config = ConfigDict(
@@ -824,20 +880,40 @@ flushing:
     detection: []
 """)
 
-    def test_display_userdata_block(self):
+    def test_display_userdata_add_block(self):
         self.config.add("foo", ConfigValue(0, int, None, None))
         self.config.add("bar", ConfigDict())
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
-        self.assertEqual(test, "")
+        self.assertEqual(test, """foo: 0
+bar:
+""")
 
-    def test_display_userdata_block_nonDefault(self):
+    def test_display_userdata_add_block_nonDefault(self):
         self.config.add("foo", ConfigValue(0, int, None, None))
         self.config.add("bar", ConfigDict(implicit=True)) \
                    .add("baz", ConfigDict())
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
-        self.assertEqual(test, "bar:\n")
+        self.assertEqual(test, """foo: 0
+bar:
+  baz:
+""")
+
+    def test_display_userdata_declare_block(self):
+        self.config.declare("foo", ConfigValue(0, int, None, None))
+        self.config.declare("bar", ConfigDict())
+        test = _display(self.config, 'userdata')
+        sys.stdout.write(test)
+        self.assertEqual(test, "")
+
+    def test_display_userdata_declare_block_nonDefault(self):
+        self.config.declare("foo", ConfigValue(0, int, None, None))
+        self.config.declare("bar", ConfigDict(implicit=True)) \
+                   .add("baz", ConfigDict())
+        test = _display(self.config, 'userdata')
+        sys.stdout.write(test)
+        self.assertEqual(test, "bar:\n  baz:\n")
 
     def test_unusedUserValues_default(self):
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
@@ -854,16 +930,14 @@ flushing:
         self.config['scenarios'].append()
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios
-scenarios[0]""")
+        self.assertEqual(test, """scenarios[0]""")
 
     def test_unusedUserValues_list_nonDefault(self):
         self.config['scenarios'].append()
         self.config['scenarios'].append({'merlion': True, 'detection': []})
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios
-scenarios[0]
+        self.assertEqual(test, """scenarios[0]
 scenarios[1]
 scenarios[1].merlion
 scenarios[1].detection""")
@@ -889,18 +963,33 @@ scenarios[1].detection""")
         self.assertEqual(test, """scenarios[0]
 scenarios[1].detection""")
 
-    def test_unusedUserValues_topBlock(self):
+    def test_unusedUserValues_add_topBlock(self):
         self.config.add('foo', ConfigDict())
+        test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
+        sys.stdout.write(test)
+        self.assertEqual(test, "foo")
+        test = '\n'.join(x.name(True) for x in
+                         self.config.foo.unused_user_values())
+        sys.stdout.write(test)
+        self.assertEqual(test, "foo")
+
+    def test_unusedUserValues_add_subBlock(self):
+        self.config['scenario'].add('foo', ConfigDict())
+        test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
+        sys.stdout.write(test)
+        self.assertEqual(test, """scenario.foo""")
+
+    def test_unusedUserValues_declare_topBlock(self):
+        self.config.declare('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
         sys.stdout.write(test)
         self.assertEqual(test, "")
 
-    def test_unusedUserValues_subBlock(self):
-        self.config['scenario'].add('foo', ConfigDict())
+    def test_unusedUserValues_declare_subBlock(self):
+        self.config['scenario'].declare('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.unused_user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenario
-scenario.foo""")
+        self.assertEqual(test, "")
 
     def test_UserValues_default(self):
         test = '\n'.join(x.name(True) for x in self.config.user_values())
@@ -917,16 +1006,14 @@ scenario.foo""")
         self.config['scenarios'].append()
         test = '\n'.join(x.name(True) for x in self.config.user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios
-scenarios[0]""")
+        self.assertEqual(test, """scenarios[0]""")
 
     def test_UserValues_list_nonDefault(self):
         self.config['scenarios'].append()
         self.config['scenarios'].append({'merlion': True, 'detection': []})
         test = '\n'.join(x.name(True) for x in self.config.user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios
-scenarios[0]
+        self.assertEqual(test, """scenarios[0]
 scenarios[1]
 scenarios[1].merlion
 scenarios[1].detection""")
@@ -938,8 +1025,7 @@ scenarios[1].detection""")
             pass
         test = '\n'.join(x.name(True) for x in self.config.user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios
-scenarios[0]
+        self.assertEqual(test, """scenarios[0]
 scenarios[1]
 scenarios[1].merlion
 scenarios[1].detection""")
@@ -950,24 +1036,37 @@ scenarios[1].detection""")
         self.config['scenarios'][1]['merlion']
         test = '\n'.join(x.name(True) for x in self.config.user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenarios
-scenarios[0]
+        self.assertEqual(test, """scenarios[0]
 scenarios[1]
 scenarios[1].merlion
 scenarios[1].detection""")
 
-    def test_UserValues_topBlock(self):
+    def test_UserValues_add_topBlock(self):
         self.config.add('foo', ConfigDict())
+        test = '\n'.join(x.name(True) for x in self.config.user_values())
+        sys.stdout.write(test)
+        self.assertEqual(test, "foo")
+        test = '\n'.join(x.name(True) for x in self.config.foo.user_values())
+        sys.stdout.write(test)
+        self.assertEqual(test, "foo")
+
+    def test_UserValues_add_subBlock(self):
+        self.config['scenario'].add('foo', ConfigDict())
+        test = '\n'.join(x.name(True) for x in self.config.user_values())
+        sys.stdout.write(test)
+        self.assertEqual(test, """scenario.foo""")
+
+    def test_UserValues_declare_topBlock(self):
+        self.config.declare('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.user_values())
         sys.stdout.write(test)
         self.assertEqual(test, "")
 
-    def test_UserValues_subBlock(self):
-        self.config['scenario'].add('foo', ConfigDict())
+    def test_UserValues_declare_subBlock(self):
+        self.config['scenario'].declare('foo', ConfigDict())
         test = '\n'.join(x.name(True) for x in self.config.user_values())
         sys.stdout.write(test)
-        self.assertEqual(test, """scenario
-scenario.foo""")
+        self.assertEqual(test, "")
 
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
     def test_parseDisplayAndValue_default(self):
@@ -1008,21 +1107,38 @@ scenario.foo""")
                                           'detection': []}]})
 
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
-    def test_parseDisplay_userdata_block(self):
+    def test_parseDisplay_userdata_add_block(self):
         self.config.add("foo", ConfigValue(0, int, None, None))
         self.config.add("bar", ConfigDict())
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
-        self.assertEqual(yaml_load(test), None)
+        self.assertEqual(yaml_load(test), {'foo': 0, 'bar': None})
 
     @unittest.skipIf(not yaml_available, "Test requires PyYAML")
-    def test_parseDisplay_userdata_block_nonDefault(self):
+    def test_parseDisplay_userdata_add_block_nonDefault(self):
         self.config.add("foo", ConfigValue(0, int, None, None))
         self.config.add("bar", ConfigDict(implicit=True)) \
                    .add("baz", ConfigDict())
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
-        self.assertEqual(yaml_load(test), {'bar': None})
+        self.assertEqual(yaml_load(test), {'bar': {'baz': None}, foo: 0})
+
+    @unittest.skipIf(not yaml_available, "Test requires PyYAML")
+    def test_parseDisplay_userdata_add_block(self):
+        self.config.declare("foo", ConfigValue(0, int, None, None))
+        self.config.declare("bar", ConfigDict())
+        test = _display(self.config, 'userdata')
+        sys.stdout.write(test)
+        self.assertEqual(yaml_load(test), None)
+
+    @unittest.skipIf(not yaml_available, "Test requires PyYAML")
+    def test_parseDisplay_userdata_add_block_nonDefault(self):
+        self.config.declare("foo", ConfigValue(0, int, None, None))
+        self.config.declare("bar", ConfigDict(implicit=True)) \
+                   .add("baz", ConfigDict())
+        test = _display(self.config, 'userdata')
+        sys.stdout.write(test)
+        self.assertEqual(yaml_load(test), {'bar': {'baz': None}})
 
     def test_value_ConfigValue(self):
         val = self.config['flushing']['flush nodes']['rate']
@@ -1229,12 +1345,24 @@ scenario.foo""")
         self.assertEqual(c.value(), 10)
 
         with self.assertRaisesRegex(
-                TypeError, "<lambda>\(\) .* argument"):
+                TypeError, r"<lambda>\(\) .* argument"):
             c = ConfigValue(default=lambda x: 10 * x, domain=int)
 
         with self.assertRaisesRegex(
                 ValueError, 'invalid value for configuration'):
             c = ConfigValue('a', domain=int)
+
+    def test_set_default(self):
+        c = ConfigValue()
+        self.assertIsNone(c.value())
+        c.set_default_value(10.5)
+        self.assertIsNone(c.value())
+        c.reset()
+        self.assertIs(type(c.value()), float)
+        self.assertEqual(c.value(), 10.5)
+        c.set_domain(int)
+        self.assertIs(type(c.value()), int)
+        self.assertEqual(c.value(), 10)
 
     def test_getItem_setItem(self):
         # a freshly-initialized object should not be accessed
@@ -1273,11 +1401,41 @@ scenario.foo""")
         self.assertEqual(sorted(config.keys()), ['bar'])
         config.foo = 5
         self.assertEqual(sorted(config.keys()), ['bar', 'foo'])
+        self.assertEqual(sorted(config._declared), ['bar'])
         del config['foo']
         self.assertEqual(sorted(config.keys()), ['bar'])
+        self.assertEqual(sorted(config._declared), ['bar'])
         del config['bar']
         self.assertEqual(sorted(config.keys()), [])
+        self.assertEqual(sorted(config._declared), [])
 
+        with self.assertRaisesRegex(KeyError, "'get'"):
+            del config['get']
+        with self.assertRaisesRegex(KeyError, "'foo'"):
+            del config['foo']
+
+    def test_delattr(self):
+        config = ConfigDict(implicit=True)
+        config.declare('bar', ConfigValue())
+        self.assertEqual(sorted(config.keys()), ['bar'])
+        config.foo = 5
+        self.assertEqual(sorted(config.keys()), ['bar', 'foo'])
+        self.assertEqual(sorted(config._declared), ['bar'])
+        del config.foo
+        self.assertEqual(sorted(config._declared), ['bar'])
+        self.assertEqual(sorted(config.keys()), ['bar'])
+        del config.bar
+        self.assertEqual(sorted(config.keys()), [])
+        self.assertEqual(sorted(config._declared), [])
+
+        with self.assertRaisesRegex(
+                AttributeError,
+                "'ConfigDict' object attribute 'get' is read-only"):
+            del config.get
+        with self.assertRaisesRegex(
+                AttributeError,
+                "'ConfigDict' object has no attribute 'foo'"):
+            del config.foo
 
     def test_generate_custom_documentation(self):
         reference = \
@@ -1403,16 +1561,54 @@ endBlock{}
             item_end=    "endItem\n",
         )
 
-        stripped_reference = re.sub('\{[^\}]*\}','',reference,flags=re.M)
+        stripped_reference = re.sub(r'\{[^\}]*\}','',reference,flags=re.M)
         #print(test)
         self.assertEqual(test, stripped_reference)
 
+
+    def test_generate_latex_documentation(self):
+        cfg = ConfigDict()
+        cfg.declare('int', ConfigValue(
+            domain=int, default=10,
+            doc="This is an integer parameter",
+        ))
+        cfg.declare('in', ConfigValue(
+            domain=In([1,3,5]), default=1,
+            description="This parameter must be in {1,3,5}",
+        ))
+        cfg.declare('lambda', ConfigValue(
+            domain=lambda x: int(x), default=1,
+            description="This is a float",
+            doc="This parameter is actually a float, but for testing "
+            "purposes we will use a lambda function for validation"
+        ))
+        cfg.declare('list', ConfigList(
+            domain=str,
+            description="A simple list of strings",
+        ))
+        self.assertEqual(
+            cfg.generate_documentation(format='latex').strip(),
+            """
+\\begin{description}[topsep=0pt,parsep=0.5em,itemsep=-0.4em]
+  \\item[{int}]\\hfill
+    \\\\This is an integer parameter
+  \\item[{in}]\\hfill
+    \\\\This parameter must be in {1,3,5}
+  \\item[{lambda}]\\hfill
+    \\\\This parameter is actually a float, but for testing purposes we will use
+    a lambda function for validation
+  \\item[{list}]\\hfill
+    \\\\A simple list of strings
+\\end{description}
+            """.strip())
+
+
     def test_block_get(self):
         self.assertTrue('scenario' in self.config)
-        self.assertNotEquals(
+        self.assertNotEqual(
             self.config.get('scenario', 'bogus').value(), 'bogus')
         self.assertFalse('fubar' in self.config)
-        self.assertEquals(
+        self.assertEqual(
             self.config.get('fubar', 'bogus').value(), 'bogus')
 
         cfg = ConfigDict()
@@ -1449,7 +1645,7 @@ endBlock{}
         cfg.declare('foo', ConfigValue(1, int))
         self.assertEqual( cfg.setdefault('foo', 5).value(), 1 )
         self.assertEqual( len(cfg), 1 )
-        self.assertRaisesRegexp(ValueError, '.*disallows implicit entries',
+        self.assertRaisesRegex(ValueError, '.*disallows implicit entries',
                                 cfg.setdefault, 'bar', 0)
         self.assertEqual( len(cfg), 1 )
 
@@ -1475,71 +1671,70 @@ endBlock{}
     def test_block_keys(self):
         ref = ['scenario file', 'merlion', 'detection']
 
-        # list of keys
+        # keys iterator
         keys = self.config['scenario'].keys()
         # lists are independent
-        self.assertFalse(keys is self.config['scenario'].keys())
-        if PY3:
-            self.assertIsNot(type(keys), list)
-            self.assertEqual(list(keys), ref)
-        else:
-            self.assertIs(type(keys), list)
-            self.assertEqual(keys, ref)
+        self.assertIsNot(keys, self.config['scenario'].keys())
+        self.assertIsNot(type(keys), list)
+        self.assertEqual(list(keys), ref)
 
-        # keys iterator
-        keyiter = self.config['scenario'].iterkeys()
+        # (deprecated) python 2 iterator
+        out = StringIO()
+        with LoggingIntercept(out):
+            keyiter = self.config['scenario'].iterkeys()
+            # iterators are independent
+            self.assertIsNot(keyiter, self.config['scenario'].iterkeys())
+        self.assertIn("The iterkeys method is deprecated", out.getvalue())
         self.assertIsNot(type(keyiter), list)
         self.assertEqual(list(keyiter), ref)
-        # iterators are independent
-        self.assertFalse(keyiter is self.config['scenario'].iterkeys())
 
         # default iterator
         keyiter = self.config['scenario'].__iter__()
         self.assertIsNot(type(keyiter), list)
         self.assertEqual(list(keyiter), ref)
         # iterators are independent
-        self.assertFalse(keyiter is self.config['scenario'].__iter__())
+        self.assertIsNot(keyiter, self.config['scenario'].__iter__())
 
     def test_block_values(self):
         ref = ['Net3.tsg', False, [1, 2, 3]]
 
-        # list of values
+        # values iterator
         values = self.config['scenario'].values()
-        if PY3:
-            self.assertIsNot(type(values), list)
-        else:
-            self.assertIs(type(values), list)
+        self.assertIsNot(type(values), list)
         self.assertEqual(list(values), ref)
         # lists are independent
-        self.assertFalse(values is self.config['scenario'].values())
+        self.assertIsNot(values, self.config['scenario'].values())
 
-        # values iterator
-        valueiter = self.config['scenario'].itervalues()
+        # (deprecated) python 2 iterator
+        out = StringIO()
+        with LoggingIntercept(out):
+            valueiter = self.config['scenario'].itervalues()
+            # iterators are independent
+            self.assertIsNot(valueiter, self.config['scenario'].itervalues())
+        self.assertIn("The itervalues method is deprecated", out.getvalue())
         self.assertIsNot(type(valueiter), list)
         self.assertEqual(list(valueiter), ref)
-        # iterators are independent
-        self.assertFalse(valueiter is self.config['scenario'].itervalues())
 
     def test_block_items(self):
         ref = [('scenario file', 'Net3.tsg'), ('merlion', False),
                ('detection', [1, 2, 3])]
 
-        # list of items
+        # items iterator
         items = self.config['scenario'].items()
-        if PY3:
-            self.assertIsNot(type(items), list)
-        else:
-            self.assertIs(type(items), list)
+        self.assertIsNot(type(items), list)
         self.assertEqual(list(items), ref)
         # lists are independent
-        self.assertFalse(items is self.config['scenario'].items())
+        self.assertIsNot(items, self.config['scenario'].items())
 
-        # items iterator
-        itemiter = self.config['scenario'].iteritems()
+        # (deprecated) python 2 iterator
+        out = StringIO()
+        with LoggingIntercept(out):
+            itemiter = self.config['scenario'].iteritems()
+            # iterators are independent
+            self.assertIsNot(itemiter, self.config['scenario'].iteritems())
+        self.assertIn("The iteritems method is deprecated", out.getvalue())
         self.assertIsNot(type(itemiter), list)
         self.assertEqual(list(itemiter), ref)
-        # iterators are independent
-        self.assertFalse(itemiter is self.config['scenario'].iteritems())
 
     def test_value(self):
         #print(self.config.value())
@@ -1548,25 +1743,32 @@ endBlock{}
     def test_list_manipulation(self):
         self.assertEqual(len(self.config['scenarios']), 0)
         self.config['scenarios'].append()
-        self.assertEqual(len(self.config['scenarios']), 1)
-        self.config['scenarios'].append({'merlion': True, 'detection': []})
+        os = StringIO()
+        with LoggingIntercept(os):
+            self.config['scenarios'].add()
+        self.assertIn("ConfigList.add() has been deprecated.  Use append()",
+                      os.getvalue())
         self.assertEqual(len(self.config['scenarios']), 2)
+        self.config['scenarios'].append({'merlion': True, 'detection': []})
+        self.assertEqual(len(self.config['scenarios']), 3)
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
         self.assertEqual(test, """scenarios:
+  -
   -
   -
     merlion: true
     detection: []
 """)
         self.config['scenarios'][0] = {'merlion': True, 'detection': []}
-        self.assertEqual(len(self.config['scenarios']), 2)
+        self.assertEqual(len(self.config['scenarios']), 3)
         test = _display(self.config, 'userdata')
         sys.stdout.write(test)
         self.assertEqual(test, """scenarios:
   -
     merlion: true
     detection: []
+  -
   -
     merlion: true
     detection: []
@@ -1579,23 +1781,31 @@ endBlock{}
   detection: []
 -
   scenario file: Net3.tsg
+  merlion: false
+  detection: [1, 2, 3]
+-
+  scenario file: Net3.tsg
   merlion: true
   detection: []
 """)
 
     def test_list_get(self):
         X = ConfigDict(implicit=True)
-        X.config = ConfigList()
+        X.declare('config', ConfigList())
         self.assertEqual(_display(X, 'userdata'), "")
-        self.assertIs(X.config.get(0), None )
+        with self.assertRaisesRegex(IndexError, 'list index out of range'):
+            self.assertIs(X.config.get(0), None)
         self.assertIs(X.config.get(0,None).value(), None )
-        self.assertRaisesRegexp(
+        val = X.config.get(0, 1)
+        self.assertIsInstance(val, ConfigValue)
+        self.assertEqual(val.value(), 1)
+        self.assertRaisesRegex(
             IndexError, '.*out of range', X.config.__getitem__, 0 )
         # get() shouldn't change the userdata flag...
         self.assertEqual(_display(X, 'userdata'), "")
 
         X = ConfigDict(implicit=True)
-        X.config = ConfigList([42], int)
+        X.declare('config', ConfigList([42], int))
         self.assertEqual(_display(X, 'userdata'), "")
         val = X.config.get(0)
         self.assertEqual(val.value(), 42)
@@ -1608,31 +1818,48 @@ endBlock{}
         # get() shouldn't change the userdata flag...
         self.assertEqual(_display(X, 'userdata'), "")
 
-        self.assertIs(X.config.get(1), None )
-        self.assertRaisesRegexp(
+        with self.assertRaisesRegex(IndexError, 'list index out of range'):
+            self.assertIs(X.config.get(1), None)
+        self.assertRaisesRegex(
             IndexError, '.*out of range', X.config.__getitem__, 1)
 
         # this should ONLY change the userSet flag on the item (and not
         # the list)
         X.config.get(0).set_value(20)
-        self.assertEqual(_display(X, 'userdata'), "  - 20\n")
+        self.assertEqual(_display(X, 'userdata'), "config:\n  - 20\n")
+        self.assertEqual([_.name(True) for _ in X.user_values()],
+                         ["config[0]"])
 
         # this should ONLY change the userSet flag on the item (and not
         # the list)
         X = ConfigDict(implicit=True)
-        X.config = ConfigList([42], int)
+        X.declare('config', ConfigList([42], int))
         X.config[0] = 20
-        self.assertEqual(_display(X, 'userdata'), "  - 20\n")
+        self.assertEqual(_display(X, 'userdata'), "config:\n  - 20\n")
+        self.assertEqual([_.name(True) for _ in X.user_values()],
+                         ["config[0]"])
 
-        # This should change both...
+        # this should ONLY change the userSet flag on the item (and not
+        # the list)
         X = ConfigDict(implicit=True)
-        X.config = ConfigList([42], int)
+        X.declare('config', ConfigList([42], int))
         X.config.append(20)
         self.assertEqual(_display(X, 'userdata'), "config:\n  - 20\n")
+        self.assertEqual([_.name(True) for _ in X.user_values()],
+                         ["config[1]"])
+
+        # This should change both... because the [42] was "declared" as
+        # the default for the List, it will *not* be a user-set value
+        X = ConfigDict(implicit=True)
+        X.add('config', ConfigList([42], int))
+        X.config.append(20)
+        self.assertEqual(_display(X, 'userdata'), "config:\n  - 20\n")
+        self.assertEqual([_.name(True) for _ in X.user_values()],
+                         ["config", "config[1]"])
 
     def test_implicit_entries(self):
         config = ConfigDict()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Key 'test' not defined in ConfigDict '' "
                 "and Dict disallows implicit entries"):
             config['test'] = 5
@@ -1643,10 +1870,10 @@ endBlock{}
         config['implicit_2'] = 5
         self.assertEqual(3, len(config))
         self.assertEqual(['implicit_1', 'formal', 'implicit_2'],
-                         list(config.iterkeys()))
+                         list(config.keys()))
         config.reset()
         self.assertEqual(1, len(config))
-        self.assertEqual(['formal'], list(config.iterkeys()))
+        self.assertEqual(['formal'], list(config.keys()))
 
     def test_argparse_help(self):
         parser = argparse.ArgumentParser(prog='tester')
@@ -1792,12 +2019,12 @@ Node information:
         self.assertEqual(20, foo['implicit bar'])
         self.assertEqual(20, foo.implicit_bar)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Key 'baz' not defined in ConfigDict '' "
                 "and Dict disallows implicit entries"):
             config.baz = 10
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 AttributeError, "Unknown attribute 'baz'"):
             a = config.baz
 
@@ -1855,6 +2082,45 @@ Node information:
         self.assertEqual(config.a_c, 20)
         self.assertEqual(config.a_d_e, 30)
 
+    def test_name_mapping(self):
+        config = ConfigDict(implicit=True)
+
+        config.a_b = 5
+        self.assertEqual(list(config), ['a_b'])
+        self.assertIs(config.get('a_b'), config.get('a b'))
+        config['a b'] = 10
+        self.assertEqual(config.a_b, 10)
+        self.assertEqual(list(config), ['a_b'])
+        self.assertIn('a b', config)
+        self.assertIn('a_b', config)
+
+        config['c d'] = 1
+        self.assertEqual(list(config), ['a_b', 'c d'])
+        self.assertIs(config.get('c_d'), config.get('c d'))
+        config.c_d = 2
+        self.assertEqual(config['c d'], 2)
+        self.assertEqual(list(config), ['a_b', 'c d'])
+        self.assertIn('c d', config)
+        self.assertIn('c_d', config)
+
+        config.declare('e_f', ConfigValue(5, domain=int))
+        self.assertEqual(list(config), ['a_b', 'c d', 'e_f'])
+        self.assertIs(config.get('e_f'), config.get('e f'))
+        config['e f'] = 10
+        self.assertEqual(config.e_f, 10)
+        self.assertEqual(list(config), ['a_b', 'c d', 'e_f'])
+        self.assertIn('e f', config)
+        self.assertIn('e_f', config)
+
+        config['g h'] = 1
+        self.assertEqual(list(config), ['a_b', 'c d', 'e_f', 'g h'])
+        self.assertIs(config.get('g_h'), config.get('g h'))
+        config.g_h = 2
+        self.assertEqual(config['g h'], 2)
+        self.assertEqual(list(config), ['a_b', 'c d', 'e_f', 'g h'])
+        self.assertIn('g h', config)
+        self.assertIn('g_h', config)
+
     def test_call_options(self):
         config = ConfigDict(description="base description",
                              doc="base doc",
@@ -1909,6 +2175,195 @@ c: 1.0
         self.assertEqual(mod_copy._doc, "new doc")
         self.assertEqual(mod_copy._description, "new description")
         self.assertEqual(mod_copy._visibility, 0)
+
+    def test_pickle(self):
+        def anon_domain(domain):
+            def cast(x):
+                return domain(x)
+            return cast
+        cfg = ConfigDict()
+        cfg.declare('int', ConfigValue(domain=int, default=10))
+        cfg.declare('in', ConfigValue(domain=In([1,3,5]), default=1))
+        cfg.declare('anon', ConfigValue(domain=anon_domain(int), default=1))
+        cfg.declare('lambda', ConfigValue(domain=lambda x: int(x), default=1))
+        cfg.declare('list', ConfigList(domain=str))
+
+        out = StringIO()
+        with LoggingIntercept(out, module=None):
+            cfg.set_value(
+                {'int': 100, 'in': 3, 'anon': 2.5, 'lambda': 1.5,
+                 'list': [2, 'a']}
+            )
+            self.assertEqual(
+                cfg.value(),
+                {'int': 100, 'in': 3, 'anon': 2, 'lambda': 1,
+                 'list': ['2', 'a']}
+            )
+
+            cfg2 = pickle.loads(pickle.dumps(cfg))
+            self.assertEqual(
+                cfg2.value(),
+                {'int': 100, 'in': 3, 'anon': 2, 'lambda': 1,
+                 'list': ['2', 'a']}
+            )
+
+            cfg2.list.append(10)
+            self.assertEqual(
+                cfg2.value(),
+                {'int': 100, 'in': 3, 'anon': 2, 'lambda': 1,
+                 'list': ['2', 'a', '10']}
+            )
+        # No warnings due to anything above.
+        self.assertEqual(out.getvalue(), "")
+
+        # On some platforms (notably, pypy3) if dill has been imported,
+        # then lambda and anonymous functions are actually picklable
+        # using the standard pickle.dumps() method.  We will check for
+        # one of two cases: either the domain was not picklable and was
+        # replaced by a passthrough "_UnpickleableDomain" object, OR it
+        # was picklable and the original domain was enforced.
+
+        out = StringIO()
+        with LoggingIntercept(out, module=None):
+            cfg2['anon'] = 5.5
+        if type(cfg2.get('anon')._domain) is _UnpickleableDomain:
+            self.assertIn(
+                "ConfigValue 'anon' was pickled with an unpicklable domain",
+                out.getvalue()
+            )
+            self.assertEqual(cfg2['anon'], 5.5)
+        else:
+            self.assertEqual(out.getvalue(), "")
+            self.assertIn('dill', sys.modules)
+            self.assertEqual(cfg2['anon'], 5)
+
+        out = StringIO()
+        with LoggingIntercept(out, module=None):
+            cfg2['lambda'] = 6.5
+        if type(cfg2.get('lambda')._domain) is _UnpickleableDomain:
+            self.assertIn(
+                "ConfigValue 'lambda' was pickled with an unpicklable domain",
+                out.getvalue()
+            )
+            self.assertEqual(cfg2['lambda'], 6.5)
+        else:
+            self.assertEqual(out.getvalue(), "")
+            self.assertIn('dill', sys.modules)
+            self.assertEqual(cfg2['lambda'], 6)
+
+    def test_unknowable_types(self):
+        obj = ConfigValue()
+        def local_fcn():
+            pass
+        try:
+            pickle.dumps(local_fcn)
+            local_picklable = True
+        except:
+            local_picklable = False
+
+        # Test that _picklable does not cache the picklability of
+        # function types
+        self.assertIs(_picklable(_display, obj), _display)
+        if local_picklable:
+            self.assertIs(_picklable(local_fcn, obj), local_fcn)
+        else:
+            self.assertIsNot(_picklable(local_fcn, obj), local_fcn)
+
+        # Twice: implicit test that the result is not cached
+        self.assertIs(_picklable(_display, obj), _display)
+        if local_picklable:
+            self.assertIs(_picklable(local_fcn, obj), local_fcn)
+        else:
+            self.assertIsNot(_picklable(local_fcn, obj), local_fcn)
+
+        self.assertIn(types.FunctionType, _picklable.unknowable_types)
+        self.assertNotIn(types.FunctionType, _picklable.known)
+
+    def test_known_types(self):
+        def local_fcn():
+            class LocalClass(object):
+                pass
+            return LocalClass
+        local_class = local_fcn()
+
+        self.assertIsNone(_picklable.known.get(local_class, None))
+        self.assertIsNone(_picklable.known.get(GlobalClass, None))
+
+        obj = ConfigValue()
+
+        # Test that a global class is picklable
+        self.assertIs(_picklable(GlobalClass, obj), GlobalClass)
+        self.assertEqual(_picklable.known.get(GlobalClass, None), True)
+
+        # Test that a local class is (most likely) not picklable
+        try:
+            pickle.dumps(local_class)
+            local_picklable = True
+        except:
+            local_picklable = False
+        if local_picklable:
+            self.assertIs(_picklable(local_class, obj), local_class)
+            self.assertEqual(_picklable.known.get(local_class, None), True)
+        else:
+            self.assertIsNot(_picklable(local_class, obj), local_class)
+            self.assertEqual(_picklable.known.get(local_class, None), False)
+
+        # Ensure that none of the above added the type `type` to the
+        # "known" dict
+        self.assertNotIn(type, _picklable.known)
+
+
+    def test_self_assignment(self):
+        cfg = ConfigDict()
+        self.assertNotIn('d', dir(cfg))
+        cfg.d = cfg.declare('d', ConfigValue(10, int))
+        self.assertIn('d', dir(cfg))
+        cfg.aa = cfg.declare('aa', ConfigValue(1, int))
+        self.assertIn('aa', dir(cfg))
+        # test that dir is sorted
+        self.assertEqual(dir(cfg), sorted(dir(cfg)))
+        # check that inconsistent name is flagged
+        with self.assertRaisesRegexp(
+                ValueError, "Key 'b' not defined in ConfigDict ''"):
+            cfg.b = cfg.declare('bb', ConfigValue(2, int))
+
+
+    def test_declaration_errors(self):
+        cfg = ConfigDict()
+        cfg.b = cfg.declare('b', ConfigValue(2, int))
+        with self.assertRaisesRegexp(
+                ValueError, "duplicate config 'b' defined for ConfigDict ''"):
+            cfg.b = cfg.declare('b', ConfigValue(2, int))
+        with self.assertRaisesRegexp(
+                ValueError, "config 'dd' is already assigned to ConfigDict ''"):
+            cfg.declare('dd', cfg.get('b'))
+        with self.assertRaisesRegexp(
+                ValueError, "Illegal character in config 'd\[1\]'"):
+            cfg.declare('d[1]', ConfigValue(1))
+
+
+    def test_declare_from(self):
+        cfg = ConfigDict()
+        cfg.declare('a', ConfigValue(default=1, domain=int))
+        cfg.declare('b', ConfigValue(default=2, domain=int))
+        cfg2 = ConfigDict()
+        cfg2.declare_from(cfg)
+        self.assertEqual(cfg.value(), cfg2.value())
+        self.assertIsNot(cfg.get('a'), cfg2.get('a'))
+        self.assertIsNot(cfg.get('b'), cfg2.get('b'))
+
+        cfg2 = ConfigDict()
+        cfg2.declare_from(cfg, skip={'a'})
+        self.assertEqual(cfg.value()['b'], cfg2.value()['b'])
+        self.assertNotIn('a', cfg2)
+
+        with self.assertRaisesRegex(
+                ValueError, "passed a block with a duplicate field, 'b'"):
+            cfg2.declare_from(cfg)
+
+        with self.assertRaisesRegex(
+                ValueError, "only accepts other ConfigDicts"):
+            cfg2.declare_from({})
 
 
 if __name__ == "__main__":

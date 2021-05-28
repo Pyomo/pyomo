@@ -291,14 +291,12 @@ class DirectOrPersistentSolver(OptSolver):
     def available(self, exception_flag=True):
         """True if the solver is available."""
 
-        if exception_flag is False:
-            return self._python_api_exists
-        else:
-            if self._python_api_exists is False:
-                raise ApplicationError(("No Python bindings available for {0} solver " +
-                                                        "plugin").format(type(self)))
-            else:
-                return True
+        _api = getattr(self, '_python_api_exists', False)
+        if exception_flag and not _api:
+            raise ApplicationError(
+                "No Python bindings available for %s solver plugin"
+                % (type(self),))
+        return _api
 
     def _get_version(self):
         if self._version is None:

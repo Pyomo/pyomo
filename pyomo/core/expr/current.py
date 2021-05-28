@@ -83,7 +83,7 @@ if _mode == Mode.pyomo5_trees:
     from pyomo.core.expr.logical_expr import (native_logical_types, BooleanValue,
                                               BooleanConstant, _lt, _le, _eq,
                                               _and, _or, _equiv, _inv, _xor,
-                                              _impl, _chainedInequality,
+                                              _impl,
                                               RangedExpression,
                                               InequalityExpression, inequality,
                                               EqualityExpression,

@@ -14,6 +14,7 @@ from pyomo.gdp import Disjunct
 from pyomo.network import Port
 from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.opt import TerminationCondition as tc, SolverResults
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
 
 def solve_linear_GDP(linear_GDP_model, solve_data, config):
@@ -58,7 +59,8 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
             mip_result.pyomo_results = SolverResults()
             mip_result.pyomo_results.solver.termination_condition = tc.error
             mip_result.disjunct_values = list(
-                disj.indicator_var.value for disj in GDPopt.disjunct_list)
+                disj.binary_indicator_var.value
+                for disj in GDPopt.disjunct_list)
             return mip_result
 
     # Deactivate extraneous IMPORT/EXPORT suffixes
@@ -96,7 +98,8 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
             mip_result.pyomo_results = SolverResults()
             mip_result.pyomo_results.solver.termination_condition = tc.error
             mip_result.disjunct_values = list(
-                disj.indicator_var.value for disj in GDPopt.disjunct_list)
+                disj.binary_indicator_var.value
+                for disj in GDPopt.disjunct_list)
             return mip_result
         else:
             raise
@@ -130,7 +133,7 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
     mip_result.var_values = list(v.value for v in GDPopt.variable_list)
     mip_result.pyomo_results = results
     mip_result.disjunct_values = list(
-        disj.indicator_var.value for disj in GDPopt.disjunct_list)
+        disj.binary_indicator_var.value for disj in GDPopt.disjunct_list)
 
     if terminate_cond in {tc.optimal, tc.locallyOptimal, tc.feasible}:
         pass
@@ -170,11 +173,15 @@ def distinguish_mip_infeasible_or_unbounded(m, config):
 
     """
     tmp_args = deepcopy(config.mip_solver_args)
-    # TODO This solver option is specific to Gurobi.
-    tmp_args['options'] = tmp_args.get('options', {})
-    tmp_args['options']['DualReductions'] = 0
+    if config.mip_solver == 'gurobi':
+        # This solver option is specific to Gurobi.
+        tmp_args['options'] = tmp_args.get('options', {})
+        tmp_args['options']['DualReductions'] = 0
+    mipopt = SolverFactory(config.mip_solver)
+    if isinstance(mipopt, PersistentSolver):
+        mipopt.set_instance(m)
     with SuppressInfeasibleWarning():
-        results = SolverFactory(config.mip_solver).solve(m, **tmp_args)
+        results = mipopt.solve(m, **tmp_args)
     termination_condition = results.solver.termination_condition
     return results, termination_condition
 

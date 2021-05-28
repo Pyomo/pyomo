@@ -17,8 +17,9 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import ConcreteModel, Var, Param, Set
+from pyomo.environ import ConcreteModel, Var, Param, Set, value
 from pyomo.core.base.indexed_component import normalize_index
+
 
 class TestSimpleVar(unittest.TestCase):
 
@@ -129,8 +130,8 @@ class TestIndexedComponent(unittest.TestCase):
         m = ConcreteModel()
         m.i = Param(initialize=2)
         m.x = Var([1,2,3], initialize=lambda m,x: 2*x)
-        self.assertEqual(m.x[2], 4)
-        self.assertEqual(m.x[m.i], 4)
+        self.assertEqual(value(m.x[2]), 4)
+        self.assertEqual(value(m.x[m.i]), 4)
         self.assertIs(m.x[2], m.x[m.i])
 
     def test_index_by_multiple_constant_simpleComponent(self):
@@ -138,10 +139,10 @@ class TestIndexedComponent(unittest.TestCase):
         m.i = Param(initialize=2)
         m.j = Param(initialize=3)
         m.x = Var([1,2,3], [1,2,3], initialize=lambda m,x,y: 2*x*y)
-        self.assertEqual(m.x[2,3], 12)
-        self.assertEqual(m.x[m.i,3], 12)
-        self.assertEqual(m.x[m.i,m.j], 12)
-        self.assertEqual(m.x[2,m.j], 12)
+        self.assertEqual(value(m.x[2,3]), 12)
+        self.assertEqual(value(m.x[m.i,3]), 12)
+        self.assertEqual(value(m.x[m.i,m.j]), 12)
+        self.assertEqual(value(m.x[2,m.j]), 12)
         self.assertIs(m.x[2,3], m.x[m.i,3])
         self.assertIs(m.x[2,3], m.x[m.i,m.j])
         self.assertIs(m.x[2,3], m.x[2,m.j])
@@ -150,8 +151,8 @@ class TestIndexedComponent(unittest.TestCase):
         m = ConcreteModel()
         m.i = Param(initialize=2, mutable=True)
         m.x = Var([1,2,3], initialize=lambda m,x: 2*x)
-        self.assertEqual(m.x[2], 4)
-        self.assertRaisesRegexp(
+        self.assertEqual(value(m.x[2]), 4)
+        self.assertRaisesRegex(
             RuntimeError, 'is a fixed but not constant value',
             m.x.__getitem__, m.i)
 
@@ -159,15 +160,15 @@ class TestIndexedComponent(unittest.TestCase):
         m = ConcreteModel()
         m.i = Var(initialize=2)
         m.x = Var([1,2,3], initialize=lambda m,x: 2*x)
-        self.assertEqual(m.x[2], 4)
-        self.assertRaisesRegexp(
+        self.assertEqual(value(m.x[2]), 4)
+        self.assertRaisesRegex(
             RuntimeError, 'is not a constant value',
             m.x.__getitem__, m.i)
 
     def test_index_by_unhashable_type(self):
         m = ConcreteModel()
         m.x = Var([1,2,3], initialize=lambda m,x: 2*x)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             TypeError, '.*',
             m.x.__getitem__, {})
 

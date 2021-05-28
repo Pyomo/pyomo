@@ -17,8 +17,6 @@ import traceback
 import types
 import time
 import json
-from six import iteritems
-from pyomo.common import pyomo_api
 from pyomo.common.deprecation import deprecated
 from pyomo.common.log import is_debug_set
 from pyomo.common.tempfiles import TempfileManager
@@ -29,14 +27,21 @@ from pyomo.common.dependencies import (
     yaml, yaml_available, yaml_load_args,
     pympler, pympler_available,
 )
-from pyomo.common.plugin import ExtensionPoint, Plugin, implements
 from pyomo.common.collections import Bunch
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
 from pyomo.dataportal import DataPortal
-from pyomo.core import IPyomoScriptCreateModel, IPyomoScriptCreateDataPortal, IPyomoScriptPrintModel, IPyomoScriptModifyInstance, IPyomoScriptPrintInstance, IPyomoScriptSaveInstance, IPyomoScriptPrintResults, IPyomoScriptSaveResults, IPyomoScriptPostprocess, IPyomoScriptPreprocess, Model, TransformationFactory, Suffix, display
-
+from pyomo.scripting.interface import (
+    ExtensionPoint, Plugin, implements,
+    registered_callback,
+    IPyomoScriptCreateModel, IPyomoScriptCreateDataPortal,
+    IPyomoScriptPrintModel, IPyomoScriptModifyInstance,
+    IPyomoScriptPrintInstance, IPyomoScriptSaveInstance,
+    IPyomoScriptPrintResults, IPyomoScriptSaveResults,
+    IPyomoScriptPostprocess, IPyomoScriptPreprocess,
+)
+from pyomo.core import Model, TransformationFactory, Suffix, display
 
 memory_data = Bunch()
 # Importing IPython is slow; defer the import to the point that it is
@@ -59,7 +64,6 @@ logger = logging.getLogger('pyomo.scripting')
 start_time = 0.0
 
 
-@pyomo_api(namespace='pyomo.script')
 def setup_environment(data):
     """
     Setup Pyomo execution environment
@@ -145,7 +149,6 @@ def setup_environment(data):
     sys.excepthook = pyomo_excepthook
 
 
-@pyomo_api(namespace='pyomo.script')
 def apply_preprocessing(data, parser=None):
     """
     Execute preprocessing files
@@ -215,7 +218,6 @@ def apply_preprocessing(data, parser=None):
     #
     return data
 
-@pyomo_api(namespace='pyomo.script')
 def create_model(data):
     """
     Create instance of Pyomo model.
@@ -241,7 +243,7 @@ def create_model(data):
     #
     _models = {}
     _model_IDS = set()
-    for _name, _obj in iteritems(data.local.usermodel.__dict__):
+    for _name, _obj in data.local.usermodel.__dict__.items():
         if isinstance(_obj, Model) and id(_obj) not in _model_IDS:
             _models[_name] = _obj
             _model_IDS.add(id(_obj))
@@ -477,7 +479,6 @@ def create_model(data):
     return Bunch(model=model, instance=instance,
                  smap_id=smap_id, filename=fname, local=data.local )
 
-@pyomo_api(namespace='pyomo.script')
 def apply_optimizer(data, instance=None):
     """
     Perform optimization with a concrete instance
@@ -573,7 +574,6 @@ def apply_optimizer(data, instance=None):
                 if opt is None:
                     raise ValueError("Problem constructing solver `%s`" % str(solver))
 
-                from pyomo.core.base.plugin import registered_callback
                 for name in registered_callback:
                     opt.set_callback(name, registered_callback[name])
 
@@ -619,7 +619,6 @@ def apply_optimizer(data, instance=None):
     return Bunch(results=results, opt=solver, local=data.local)
 
 
-@pyomo_api(namespace='pyomo.script')
 def process_results(data, instance=None, results=None, opt=None):
     """
     Process optimization results.
@@ -657,10 +656,12 @@ def process_results(data, instance=None, results=None, opt=None):
     if not data.options.postsolve.show_results:
         if data.options.postsolve.save_results:
             results_file = data.options.postsolve.save_results
-        elif data.options.postsolve.results_format == 'yaml':
-            results_file = 'results.yml'
-        else:
+        elif data.options.postsolve.results_format == 'json':
             results_file = 'results.json'
+        else:
+            # The ordering of the elif and else conditions is important here
+            # to ensure that the default file format is yaml
+            results_file = 'results.yml'
         results.write(filename=results_file,
                       format=data.options.postsolve.results_format)
         if not data.options.runtime.logging == 'quiet':
@@ -705,7 +706,6 @@ def process_results(data, instance=None, results=None, opt=None):
             data.local.max_memory = mem_used
         print("   Total memory = %d bytes following results processing" % mem_used)
 
-@pyomo_api(namespace='pyomo.script')
 def apply_postprocessing(data, instance=None, results=None):
     """
     Apply post-processing steps.
@@ -734,7 +734,6 @@ def apply_postprocessing(data, instance=None, results=None):
             data.local.max_memory = mem_used
         print("   Total memory = %d bytes upon termination" % mem_used)
 
-@pyomo_api(namespace='pyomo.script')
 def finalize(data, model=None, instance=None, results=None):
     """
     Perform final actions to finish the execution of the pyomo script.
@@ -764,8 +763,7 @@ def finalize(data, model=None, instance=None, results=None):
     data.local._usermodel_plugins = []
     ##gc.collect()
     ##print gc.get_referrers(_tmp)
-    ##import pyomo.core.base.plugin
-    ##print pyomo.common.plugin.interface_services[pyomo.core.base.plugin.IPyomoScriptSaveResults]
+    ##print pyomo.common.plugin.interface_services[pyomo.scripting.interface.IPyomoScriptSaveResults]
     ##print "HERE - usermodel_plugins"
     ##
     if not data.options.runtime.logging == 'quiet':
@@ -831,9 +829,7 @@ class PyomoCommandLogContext(object):
 
     def __enter__(self):
         _pyomo = logging.getLogger('pyomo')
-        _pyutilib = logging.getLogger('pyutilib')
-        self.original = ( _pyomo.level, _pyomo.handlers,
-                          _pyutilib.level, _pyutilib.handlers )
+        self.original = ( _pyomo.level, _pyomo.handlers)
 
         #
         # Configure the logger
@@ -844,13 +840,10 @@ class PyomoCommandLogContext(object):
             _pyomo.setLevel(logging.WARNING)
         elif self.options.runtime.logging == 'info':
             _pyomo.setLevel(logging.INFO)
-            _pyutilib.setLevel(logging.INFO)
         elif self.options.runtime.logging == 'verbose':
             _pyomo.setLevel(logging.DEBUG)
-            _pyutilib.setLevel(logging.DEBUG)
         elif self.options.runtime.logging == 'debug':
             _pyomo.setLevel(logging.DEBUG)
-            _pyutilib.setLevel(logging.DEBUG)
         elif _pyomo.getEffectiveLevel() == logging.NOTSET:
             _pyomo.setLevel(logging.WARNING)
 
@@ -858,9 +851,7 @@ class PyomoCommandLogContext(object):
             _logfile = self.options.runtime.logfile
             self.fileLogger = logging.FileHandler(_logfile, 'w')
             _pyomo.handlers = []
-            _pyutilib.handlers = []
             _pyomo.addHandler(self.fileLogger)
-            _pyutilib.addHandler(self.fileLogger)
             # TBD: This seems dangerous in Windows, as the process will
             # have multiple open file handles pointing to the same file.
             self.capture = capture_output(_logfile)
@@ -872,9 +863,6 @@ class PyomoCommandLogContext(object):
         _pyomo = logging.getLogger('pyomo')
         _pyomo.setLevel(self.original[0])
         _pyomo.handlers = self.original[1]
-        _pyutilib = logging.getLogger('pyutilib')
-        _pyutilib.setLevel(self.original[2])
-        _pyutilib.handlers = self.original[3]
 
         if self.fileLogger is not None:
             self.fileLogger.close()
@@ -883,7 +871,6 @@ class PyomoCommandLogContext(object):
             self.capture.reset()
 
 
-@pyomo_api(namespace='pyomo.script')
 def run_command(command=None, parser=None, args=None, name='unknown', data=None, options=None):
     """
     Execute a function that processes command-line arguments and

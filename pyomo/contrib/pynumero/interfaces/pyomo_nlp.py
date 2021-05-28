@@ -14,8 +14,6 @@ the Ampl Solver Library (ASL) implementation
 
 import os
 import numpy as np
-import six
-from six.moves import xrange
 
 from scipy.sparse import coo_matrix
 from pyomo.common.deprecation import deprecated
@@ -34,7 +32,7 @@ __all__ = ['PyomoNLP']
 
 # TODO: There are todos in the code below
 class PyomoNLP(AslNLP):
-    def __init__(self, pyomo_model):
+    def __init__(self, pyomo_model, nl_file_options=None):
         """
         Pyomo nonlinear program interface
 
@@ -67,19 +65,22 @@ class PyomoNLP(AslNLP):
                     'The ASL interface and PyomoNLP in PyNumero currently '
                     'only support single objective problems. Deactivate '
                     'any extra objectives you may have, or add a dummy '
-                    'objective (f(x)=0) if you have a square problem.')
+                    'objective (f(x)=0) if you have a square problem '
+                    '(found %s objectives).' % (len(objectives),))
             self._objective = objectives[0]
 
             # write the nl file for the Pyomo model and get the symbolMap
+            if nl_file_options is None:
+                nl_file_options = dict()
             fname, symbolMap = WriterFactory('nl')(
-                pyomo_model, nl_file, lambda x:True, {})
+                pyomo_model, nl_file, lambda x:True, nl_file_options)
 
             # create component maps from vardata to idx and condata to idx
             self._vardata_to_idx = vdidx = ComponentMap()
             self._condata_to_idx = cdidx = ComponentMap()
 
             # TODO: Are these names totally consistent?
-            for name, obj in six.iteritems(symbolMap.bySymbol):
+            for name, obj in symbolMap.bySymbol.items():
                 if name[0] == 'v':
                     vdidx[obj()] = int(name[1:])
                 elif name[0] == 'c':
@@ -105,14 +106,14 @@ class PyomoNLP(AslNLP):
             equality_mask = self._con_full_eq_mask
             self._condata_to_eq_idx = ComponentMap(
                     (con, full_to_equality[i])
-                    for con, i in six.iteritems(self._condata_to_idx)
+                    for con, i in self._condata_to_idx.items()
                     if equality_mask[i]
                     )
             full_to_inequality = self._con_full_ineq_map
             inequality_mask = self._con_full_ineq_mask
             self._condata_to_ineq_idx = ComponentMap(
                     (con, full_to_inequality[i])
-                    for con, i in six.iteritems(self._condata_to_idx)
+                    for con, i in self._condata_to_idx.items()
                     if inequality_mask[i]
                     )
 
@@ -140,7 +141,7 @@ class PyomoNLP(AslNLP):
         the order corresponding to the primals
         """
         # ToDo: is there a more efficient way to do this
-        idx_to_vardata = {i:v for v,i in six.iteritems(self._vardata_to_idx)}
+        idx_to_vardata = {i:v for v,i in self._vardata_to_idx.items()}
         return [idx_to_vardata[i] for i in range(len(idx_to_vardata))]
 
     def get_pyomo_constraints(self):
@@ -149,7 +150,7 @@ class PyomoNLP(AslNLP):
         the order corresponding to the primals
         """
         # ToDo: is there a more efficient way to do this
-        idx_to_condata = {i:v for v,i in six.iteritems(self._condata_to_idx)}
+        idx_to_condata = {i:v for v,i in self._condata_to_idx.items()}
         return [idx_to_condata[i] for i in range(len(idx_to_condata))]
 
     def get_pyomo_equality_constraints(self):
@@ -158,7 +159,7 @@ class PyomoNLP(AslNLP):
         the order corresponding to the equality constraints.
         """
         idx_to_condata = {i: c for c, i in
-                six.iteritems(self._condata_to_eq_idx)}
+                self._condata_to_eq_idx.items()}
         return [idx_to_condata[i] for i in range(len(idx_to_condata))]
 
     def get_pyomo_inequality_constraints(self):
@@ -167,7 +168,7 @@ class PyomoNLP(AslNLP):
         the order corresponding to the inequality constraints.
         """
         idx_to_condata = {i: c for c, i in
-                six.iteritems(self._condata_to_ineq_idx)}
+                self._condata_to_ineq_idx.items()}
         return [idx_to_condata[i] for i in range(len(idx_to_condata))]
 
     @deprecated(msg='This method has been replaced with primals_names', version='6.0.0.dev0', remove_in='6.0')
@@ -505,13 +506,13 @@ class PyomoGreyBoxNLP(NLP):
         self._vardata_to_idx = ComponentMap(self._pyomo_nlp._vardata_to_idx)
         for data in greybox_data:
             # check that none of the inputs / outputs are fixed
-            for v in six.itervalues(data.inputs):
+            for v in data.inputs.values():
                 if v.fixed:
                     raise NotImplementedError('Found a grey box model input that is fixed: {}.'
                                               ' This interface does not currently support fixed'
                                               ' variables. Please add a constraint instead.'
                                               ''.format(v.getname(fully_qualified=True)))
-            for v in six.itervalues(data.outputs):
+            for v in data.outputs.values():
                 if v.fixed:
                     raise NotImplementedError('Found a grey box model output that is fixed: {}.'
                                               ' This interface does not currently support fixed'
@@ -1162,13 +1163,13 @@ class _ExternalGreyBoxModelHelper(object):
         # store the map of input indices (0 .. n_inputs) to
         # the indices in the full primals vector
         self._inputs_to_primals_map = np.fromiter(
-            (vardata_to_idx[v] for v in six.itervalues(self._block.inputs)),
+            (vardata_to_idx[v] for v in self._block.inputs.values()),
             dtype=np.int64, count=n_inputs)
 
         # store the map of output indices (0 .. n_outputs) to
         # the indices in the full primals vector
         self._outputs_to_primals_map = np.fromiter(
-            (vardata_to_idx[v] for v in six.itervalues(self._block.outputs)),
+            (vardata_to_idx[v] for v in self._block.outputs.values()),
             dtype=np.int64, count=n_outputs)
 
         if self._ex_model.n_outputs() == 0 and \
@@ -1180,12 +1181,12 @@ class _ExternalGreyBoxModelHelper(object):
         self._ex_eq_duals_to_full_map = None
         if n_eq_constraints > 0:
             self._ex_eq_duals_to_full_map = \
-                list(xrange(con_offset, con_offset + n_eq_constraints))
+                list(range(con_offset, con_offset + n_eq_constraints))
 
         self._ex_output_duals_to_full_map = None
         if n_outputs > 0:
             self._ex_output_duals_to_full_map = \
-                list(xrange(con_offset + n_eq_constraints, con_offset + n_eq_constraints + n_outputs))
+                list(range(con_offset + n_eq_constraints, con_offset + n_eq_constraints + n_outputs))
 
         # we need to change the column indices in the jacobian
         # from the 0..n_inputs provided by the external model
@@ -1291,7 +1292,7 @@ class _ExternalGreyBoxModelHelper(object):
                 
                 # We also need tocreate the irow, jcol, nnz structure for the
                 # output variable portion of h(u)-o=0
-                self._additional_output_entries_irow = np.asarray(xrange(self._ex_model.n_outputs()))
+                self._additional_output_entries_irow = np.asarray(range(self._ex_model.n_outputs()))
                 self._additional_output_entries_jcol = self._outputs_to_primals_map
                 self._additional_output_entries_data = -1.0*np.ones(self._ex_model.n_outputs())
 

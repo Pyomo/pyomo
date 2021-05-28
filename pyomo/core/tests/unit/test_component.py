@@ -14,15 +14,15 @@ from io import StringIO
 import pyomo.common.unittest as unittest
 
 from pyomo.common import DeveloperError
-import pyomo.core.base._pyomo
 from pyomo.environ import (
-    ConcreteModel, Component, Block, Var, Set,
+    ConcreteModel, Component, Block, Var, Set, ModelComponentFactory
 )
+from pyomo.core.base.set import GlobalSets
 
 class TestComponent(unittest.TestCase):
 
     def test_construct_component_throws_exception(self):
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 DeveloperError,
                 "Must specify a component type for class Component"):
             Component()
@@ -106,13 +106,13 @@ class TestEnviron(unittest.TestCase):
 
     def test_components(self):
         self.assertGreaterEqual(
-            set(x[0] for x in pyomo.core.base._pyomo.model_components()),
+            set(ModelComponentFactory),
             set(['Set', 'Param', 'Var', 'Objective', 'Constraint'])
         )
 
     def test_sets(self):
         self.assertGreaterEqual(
-            set(x[0] for x in pyomo.core.base._pyomo.predefined_sets()),
+            set(GlobalSets),
             set(['Reals', 'Integers', 'Boolean'])
         )
 

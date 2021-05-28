@@ -1,4 +1,5 @@
-"""Problem D in paper "Outer approximation algorithms for separable nonconvex mixed-integer nonlinear programs"
+# -*- coding: utf-8 -*-
+"""Problem D in paper 'Outer approximation algorithms for separable nonconvex mixed-integer nonlinear programs'
 
 Ref:
 Kesavan P, Allgor R J, Gatzke E P, et al. Outer approximation algorithms for separable nonconvex mixed-integer nonlinear programs[J]. Mathematical Programming, 2004, 100(3): 517-535.

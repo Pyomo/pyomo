@@ -16,26 +16,25 @@ from weakref import ref as weakref_ref
 import gc
 import math
 
-from pyomo.common import timing, PyomoAPIFactory
+from pyomo.common import timing
 from pyomo.common.collections import Bunch
 from pyomo.common.dependencies import pympler, pympler_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import is_debug_set
-from pyomo.common.plugin import ExtensionPoint
 from pyomo.core.expr.symbol_map import SymbolMap
+from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.suffix import active_import_suffix_generator
-from pyomo.dataportal.DataPortal import DataPortal
-from pyomo.core.base.plugin import IPyomoPresolver
 from pyomo.core.base.numvalue import value
-from pyomo.core.base.block import SimpleBlock
+from pyomo.core.base.block import ScalarBlock
 from pyomo.core.base.set import Set
 from pyomo.core.base.componentuid import ComponentUID
-from pyomo.core.base.plugin import ModelComponentFactory, TransformationFactory
+from pyomo.core.base.transformation import TransformationFactory
 from pyomo.core.base.label import CNameLabeler, CuidLabeler
+from pyomo.dataportal.DataPortal import DataPortal
 
 from pyomo.opt.results import SolverResults, Solution, SolverStatus, UndefinedData
 
@@ -128,7 +127,7 @@ class ModelSolution(object):
             # None).
             for obj, entry in data.values():
                 if obj is None or obj() is None:
-                    logger.warn(
+                    logger.warning(
                         "Solution component in '%s' no longer "
                         "accessible: %s!" % ( name, entry ))
                 else:
@@ -542,13 +541,11 @@ class ModelSolutions(object):
 
 
 @ModelComponentFactory.register('Model objects can be used as a component of other models.')
-class Model(SimpleBlock):
+class Model(ScalarBlock):
     """
     An optimization model.  By default, this defers construction of components
     until data is loaded.
     """
-
-    preprocessor_ep = ExtensionPoint(IPyomoPresolver)
 
     _Block_reserved_words = set()
 
@@ -571,12 +568,11 @@ class Model(SimpleBlock):
         # Model and Block objects as the same.  Similarly, this avoids
         # the requirement to import PyomoModel.py in the block.py file.
         #
-        SimpleBlock.__init__(self, **kwargs)
+        ScalarBlock.__init__(self, **kwargs)
         self._name = name
         self.statistics = Bunch()
         self.config = PyomoConfig()
         self.solutions = ModelSolutions(self)
-        self.config.preprocessor = 'pyomo.model.simple_preprocessor'
 
     def compute_statistics(self, active=True):
         """
@@ -586,11 +582,11 @@ class Model(SimpleBlock):
         self.statistics.number_of_constraints = 0
         self.statistics.number_of_objectives = 0
         for block in self.block_data_objects(active=active):
-            for data in block.component_map(Var, active=active).itervalues():
+            for data in block.component_map(Var, active=active).values():
                 self.statistics.number_of_variables += len(data)
-            for data in block.component_map(Objective, active=active).itervalues():
+            for data in block.component_map(Objective, active=active).values():
                 self.statistics.number_of_objectives += len(data)
-            for data in block.component_map(Constraint, active=active).itervalues():
+            for data in block.component_map(Constraint, active=active).values():
                 self.statistics.number_of_constraints += len(data)
 
     def nvariables(self):
@@ -673,7 +669,9 @@ arguments (which have been ignored):"""
             timing.report_timing()
 
         if name is None:
-            name = self.name
+            # Preserve only the local name (not the FQ name, as that may
+            # have been quoted or otherwise escaped)
+            name = self.local_name
         if filename is not None:
             if data is not None:
                 logger.warning("Model.create_instance() passed both 'filename' "
@@ -724,12 +722,10 @@ arguments (which have been ignored):"""
         return instance
 
 
+    @deprecated("The Model.preprocess() method is deprecated and no "
+                "longer performs any actions", version='6.0')
     def preprocess(self, preprocessor=None):
-        """Apply the preprocess plugins defined by the user"""
-        with PauseGC() as pgc:
-            if preprocessor is None:
-                preprocessor = self.config.preprocessor
-            PyomoAPIFactory(preprocessor)(self.config, model=self)
+        return
 
     def load(self, arg, namespaces=[None], profile_memory=0, report_timing=None):
         """

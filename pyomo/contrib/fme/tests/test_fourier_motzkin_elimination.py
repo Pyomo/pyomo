@@ -27,7 +27,7 @@ from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.opt import SolverFactory, check_available_solvers
 import pyomo.contrib.fme.fourier_motzkin_elimination
 
-from six import StringIO
+from io import StringIO
 import logging
 import random
 
@@ -67,7 +67,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
     def test_no_vars_specified(self):
         m = self.makeModel()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "The Fourier-Motzkin Elimination transformation "
             "requires the argument vars_to_eliminate, a "
@@ -199,7 +199,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.cons1 = Constraint(expr=m.x >= 6)
         m.cons2 = Constraint(expr=m.x <= 2)
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "Fourier-Motzkin found the model is infeasible!",
             TransformationFactory('contrib.fourier_motzkin_elimination').\
@@ -213,7 +213,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.cons1 = Constraint(expr=m.x >= 6)
         m.cons2 = Constraint(expr=m.x <= 2)
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "Fourier-Motzkin found the model is infeasible!",
             TransformationFactory('contrib.fourier_motzkin_elimination').\
@@ -227,7 +227,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.cons = Constraint(expr=m.x**2 >= 2)
         m.cons2 = Constraint(expr=m.x<= 10)
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "Variable x appears in a nonlinear "
             "constraint. The Fourier-Motzkin "
@@ -243,7 +243,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m = self.makeModel()
         m.disj = Disjunction(expr=[m.x == 0, m.y >= 2])
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "Found active component %s of type %s. The "
             "Fourier-Motzkin Elimination transformation can only "
@@ -263,14 +263,14 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.contrib.fme', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 RuntimeError,
                 "I don't know how to do my job.",
                 fme.apply_to,
                 m,
                 vars_to_eliminate=m.x,
                 constraint_filtering_callback=not_a_callback)
-        self.assertRegexpMatches(
+        self.assertRegex(
             log.getvalue(),
             "Problem calling constraint filter callback "
             "on constraint with right-hand side -1.0 and body:*")
@@ -280,14 +280,14 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
         log = StringIO()
         with LoggingIntercept(log, 'pyomo.contrib.fme', logging.ERROR):
-            self.assertRaisesRegexp(
+            self.assertRaisesRegex(
                 TypeError,
                 "'int' object is not callable",
                 fme.apply_to,
                 m,
                 vars_to_eliminate=m.x,
                 constraint_filtering_callback=5)
-        self.assertRegexpMatches(
+        self.assertRegex(
             log.getvalue(),
             "Problem calling constraint filter callback "
             "on constraint with right-hand side -1.0 and body:*")
@@ -325,7 +325,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 2)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.on.indicator_var)
+        self.assertIs(body.linear_vars[0], m.on.binary_indicator_var)
         self.assertEqual(body.linear_coefs[0], -1)
         self.assertIs(body.linear_vars[1], m.p[1])
         self.assertEqual(body.linear_coefs[1], 1)
@@ -338,9 +338,9 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 3)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.off.indicator_var)
+        self.assertIs(body.linear_vars[0], m.off.binary_indicator_var)
         self.assertEqual(body.linear_coefs[0], 10)
-        self.assertIs(body.linear_vars[1], m.on.indicator_var)
+        self.assertIs(body.linear_vars[1], m.on.binary_indicator_var)
         self.assertEqual(body.linear_coefs[1], 10)
         self.assertIs(body.linear_vars[2], m.p[1])
         self.assertEqual(body.linear_coefs[2], -1)
@@ -353,7 +353,8 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 2)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[1], m.time1_disjuncts[0].indicator_var)
+        self.assertIs(
+            body.linear_vars[1], m.time1_disjuncts[0].binary_indicator_var)
         self.assertEqual(body.linear_coefs[1], -1)
         self.assertIs(body.linear_vars[0], m.p[1])
         self.assertEqual(body.linear_coefs[0], 1)
@@ -368,7 +369,8 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertTrue(body.is_linear())
         self.assertIs(body.linear_vars[0], m.p[1])
         self.assertEqual(body.linear_coefs[0], -1)
-        self.assertIs(body.linear_vars[1], m.time1_disjuncts[0].indicator_var)
+        self.assertIs(
+            body.linear_vars[1], m.time1_disjuncts[0].binary_indicator_var)
         self.assertEqual(body.linear_coefs[1], 10)
 
         # p[2] - p[1] <= 3*on.ind_var + 2*startup.ind_var
@@ -379,13 +381,13 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 4)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.on.indicator_var)
+        self.assertIs(body.linear_vars[0], m.on.binary_indicator_var)
         self.assertEqual(body.linear_coefs[0], 3)
         self.assertIs(body.linear_vars[1], m.p[1])
         self.assertEqual(body.linear_coefs[1], 1)
         self.assertIs(body.linear_vars[2], m.p[2])
         self.assertEqual(body.linear_coefs[2], -1)
-        self.assertIs(body.linear_vars[3], m.startup.indicator_var)
+        self.assertIs(body.linear_vars[3], m.startup.binary_indicator_var)
         self.assertEqual(body.linear_coefs[3], 2)
 
         # p[2] >= on.ind_var + startup.ind_var
@@ -396,11 +398,11 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 3)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.on.indicator_var)
+        self.assertIs(body.linear_vars[0], m.on.binary_indicator_var)
         self.assertEqual(body.linear_coefs[0], -1)
         self.assertIs(body.linear_vars[1], m.p[2])
         self.assertEqual(body.linear_coefs[1], 1)
-        self.assertIs(body.linear_vars[2], m.startup.indicator_var)
+        self.assertIs(body.linear_vars[2], m.startup.binary_indicator_var)
         self.assertEqual(body.linear_coefs[2], -1)
 
         # p[2] <= 10*on.ind_var + 2*startup.ind_var
@@ -411,11 +413,11 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 3)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.on.indicator_var)
+        self.assertIs(body.linear_vars[0], m.on.binary_indicator_var)
         self.assertEqual(body.linear_coefs[0], 10)
         self.assertIs(body.linear_vars[1], m.p[2])
         self.assertEqual(body.linear_coefs[1], -1)
-        self.assertIs(body.linear_vars[2], m.startup.indicator_var)
+        self.assertIs(body.linear_vars[2], m.startup.binary_indicator_var)
         self.assertEqual(body.linear_coefs[2], 2)
 
         # 1 <= time1_disjuncts[0].ind_var + time_1.disjuncts[1].ind_var
@@ -426,9 +428,11 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 2)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.time1_disjuncts[0].indicator_var)
+        self.assertIs(
+            body.linear_vars[0], m.time1_disjuncts[0].binary_indicator_var)
         self.assertEqual(body.linear_coefs[0], 1)
-        self.assertIs(body.linear_vars[1], m.time1_disjuncts[1].indicator_var)
+        self.assertIs(
+            body.linear_vars[1], m.time1_disjuncts[1].binary_indicator_var)
         self.assertEqual(body.linear_coefs[1], 1)
 
         # 1 >= time1_disjuncts[0].ind_var + time_1.disjuncts[1].ind_var
@@ -439,9 +443,11 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 2)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.time1_disjuncts[0].indicator_var)
+        self.assertIs(
+            body.linear_vars[0], m.time1_disjuncts[0].binary_indicator_var)
         self.assertEqual(body.linear_coefs[0], -1)
-        self.assertIs(body.linear_vars[1], m.time1_disjuncts[1].indicator_var)
+        self.assertIs(
+            body.linear_vars[1], m.time1_disjuncts[1].binary_indicator_var)
         self.assertEqual(body.linear_coefs[1], -1)
 
         # 1 <= on.ind_var + startup.ind_var + off.ind_var
@@ -452,11 +458,11 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 3)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.off.indicator_var)
+        self.assertIs(body.linear_vars[0], m.off.binary_indicator_var)
         self.assertEqual(body.linear_coefs[0], 1)
-        self.assertIs(body.linear_vars[1], m.on.indicator_var)
+        self.assertIs(body.linear_vars[1], m.on.binary_indicator_var)
         self.assertEqual(body.linear_coefs[1], 1)
-        self.assertIs(body.linear_vars[2], m.startup.indicator_var)
+        self.assertIs(body.linear_vars[2], m.startup.binary_indicator_var)
         self.assertEqual(body.linear_coefs[2], 1)
         
         # 1 >= on.ind_var + startup.ind_var + off.ind_var
@@ -467,11 +473,11 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.constant, 0)
         self.assertEqual(len(body.linear_vars), 3)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.off.indicator_var)
+        self.assertIs(body.linear_vars[0], m.off.binary_indicator_var)
         self.assertEqual(body.linear_coefs[0], -1)
-        self.assertIs(body.linear_vars[1], m.on.indicator_var)
+        self.assertIs(body.linear_vars[1], m.on.binary_indicator_var)
         self.assertEqual(body.linear_coefs[1], -1)
-        self.assertIs(body.linear_vars[2], m.startup.indicator_var)
+        self.assertIs(body.linear_vars[2], m.startup.binary_indicator_var)
         self.assertEqual(body.linear_coefs[2], -1)
 
     def create_hull_model(self):
@@ -556,7 +562,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
         # and check that we didn't change the model
         for disj in m.component_data_objects(Disjunct):
-            self.assertIs(disj.indicator_var.domain, Binary)
+            self.assertIs(disj.binary_indicator_var.domain, Binary)
         self.assertEqual(len([o for o in m.component_data_objects(Objective)]),
                          1)
         self.assertIsInstance(m.component("obj"), Objective)
@@ -688,7 +694,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.c2 = Constraint(expr=0.25*m.y >= 0.5*m.x)
 
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "The do_integer_arithmetic flag was "
             "set to True, but the coefficient of "
@@ -710,7 +716,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         m.c2 = Constraint(expr=0.25*m.y >= 5*m.x)
 
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "The do_integer_arithmetic flag was "
             "set to True, but the coefficient of "
@@ -909,7 +915,7 @@ class TestFourierMotzkinElimination(unittest.TestCase):
     def test_non_unique_constraint_name_error(self):
         m = self.make_tiny_model_where_bounds_matter()
         fme = TransformationFactory('contrib.fourier_motzkin_elimination')
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "projected_constraints_name was specified "
             "as 'c', but this is already a component on "

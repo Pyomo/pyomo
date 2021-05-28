@@ -29,7 +29,6 @@ import pyomo.core.base.label
 import pyomo.core.base.logical_constraint
 import pyomo.core.base.misc
 import pyomo.core.base.param
-import pyomo.core.base.plugin
 import pyomo.core.base.range
 import pyomo.core.base.set_types
 import pyomo.core.base.set
@@ -63,7 +62,7 @@ from pyomo.core.base.label import (CuidLabeler,
 #
 # Components
 #
-from pyomo.core.base.component import (name, Component)
+from pyomo.core.base.component import (name, Component, ModelComponentFactory)
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.action import BuildAction
 from pyomo.core.base.check import BuildCheck
@@ -72,10 +71,10 @@ from pyomo.core.base.set import (
 )
 from pyomo.core.base.param import Param
 from pyomo.core.base.var import (Var, _VarData, _GeneralVarData,
-                                 SimpleVar, VarList)
+                                 ScalarVar, VarList)
 from pyomo.core.base.boolean_var import (
     BooleanVar,  _BooleanVarData,  _GeneralBooleanVarData,
-    BooleanVarList, SimpleBooleanVar)
+    BooleanVarList, ScalarBooleanVar)
 from pyomo.core.base.constraint import (simple_constraint_rule,
                                         simple_constraintlist_rule,
                                         ConstraintList, Constraint,
@@ -105,33 +104,17 @@ from pyomo.core.base.set import (Reals, PositiveReals, NonPositiveReals,
                                  IntegerInterval)
 from pyomo.core.base.misc import display
 from pyomo.core.base.block import (SortComponents, TraversalStrategy,
-                                   Block, SimpleBlock, active_components,
+                                   Block, ScalarBlock, active_components,
                                    components, active_components_data,
                                    components_data)
 from pyomo.core.base.PyomoModel import (global_option,
                                         ModelSolution,
                                         ModelSolutions, Model, ConcreteModel,
                                         AbstractModel)
-from pyomo.core.base.plugin import (pyomo_callback,
-                                    IPyomoExpression, ExpressionFactory,
-                                    ExpressionRegistration, IPyomoPresolver,
-                                    IPyomoPresolveAction,
-                                    IParamRepresentation,
-                                    ParamRepresentationFactory,
-                                    IPyomoScriptPreprocess,
-                                    IPyomoScriptCreateModel,
-                                    IPyomoScriptCreateDataPortal,
-                                    IPyomoScriptModifyInstance,
-                                    IPyomoScriptPrintModel,
-                                    IPyomoScriptPrintInstance,
-                                    IPyomoScriptSaveInstance,
-                                    IPyomoScriptPrintResults,
-                                    IPyomoScriptSaveResults,
-                                    IPyomoScriptPostprocess,
-                                    ModelComponentFactory, Transformation,
-                                    TransformationFactory)
-#
-import pyomo.core.base._pyomo
+from pyomo.core.base.transformation import (
+    Transformation,
+    TransformationFactory,
+)
 #
 import pyomo.core.base.util
 

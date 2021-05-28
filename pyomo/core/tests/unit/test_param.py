@@ -33,9 +33,12 @@ from pyomo.environ import (Set, RangeSet, Param, ConcreteModel,
                            cosh, tanh, asinh, acosh, atanh)
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
-from pyomo.core.base.param import _NotValid, _ParamData 
+from pyomo.core.base.param import _ParamData 
+from pyomo.core.base.units_container import units, pint_available, UnitsError
 
 from io import StringIO
+
+NoValue = Param.NoValue
 
 class ParamTester(object):
 
@@ -71,7 +74,7 @@ class ParamTester(object):
             self.assertRaises(TypeError, float, self.instance.A)
             self.assertRaises(TypeError, int, self.instance.A)
 
-        if self.instance.A._default_val is _NotValid:
+        if self.instance.A._default_val is NoValue:
             val_list = self.sparse_data.items()
         else:
             val_list = self.data.items()
@@ -121,7 +124,7 @@ class ParamTester(object):
                 test = self.instance.A[key]
                 self.assertEqual( value(test), val )
             except ValueError:
-                if val is not _NotValid:
+                if val is not NoValue:
                     raise
 
     def test_setitem_index_error(self):
@@ -144,7 +147,7 @@ class ParamTester(object):
             return
 
         idx = sorted(keys)[0]
-        self.assertEqual(self.instance.A[idx], self.data[idx])
+        self.assertEqual(value(self.instance.A[idx]), self.data[idx])
         if self.instance.A.mutable:
             self.assertTrue( isinstance( self.instance.A[idx],
                                          _ParamData ) )
@@ -156,7 +159,7 @@ class ParamTester(object):
             if not self.instance.A.mutable:
                 self.fail("Expected setitem[%s] to fail for immutable Params"
                           % (idx,))
-            self.assertEqual( self.instance.A[idx], 4.3)
+            self.assertEqual( value(self.instance.A[idx]), 4.3)
             self.assertTrue( isinstance(self.instance.A[idx],
                                         _ParamData ) )
         except TypeError:
@@ -172,7 +175,7 @@ class ParamTester(object):
             if self.expectNegativeDomainError:
                 self.fail("Expected setitem[%s] to fail with negative data"
                           % (idx,))
-            self.assertEqual( self.instance.A[idx], -4.3 )
+            self.assertEqual( value(self.instance.A[idx]), -4.3 )
         except ValueError:
             if not self.expectNegativeDomainError:
                 self.fail(
@@ -208,7 +211,7 @@ class ParamTester(object):
         if len(keys) == len(sparse_keys):
             # No default value possible
             return
-        if self.instance.A._default_val is _NotValid:
+        if self.instance.A._default_val is NoValue:
             # No default value defined
             return
 
@@ -231,7 +234,7 @@ class ParamTester(object):
             if not self.instance.A.mutable:
                 self.fail("Expected setitem[%s] to fail for immutable Params"
                           % (idx,))
-            self.assertEqual( self.instance.A[idx], 4.3)
+            self.assertEqual( self.instance.A[idx].value, 4.3)
             self.assertIsInstance( self.instance.A[idx],
                                    _ParamData )
         except TypeError:
@@ -247,7 +250,7 @@ class ParamTester(object):
             if self.expectNegativeDomainError:
                 self.fail("Expected setitem[%s] to fail with negative data"
                           % (idx,))
-            self.assertEqual( self.instance.A[idx], -4.3 )
+            self.assertEqual( self.instance.A[idx].value, -4.3 )
         except ValueError:
             if not self.expectNegativeDomainError:
                 self.fail(
@@ -291,7 +294,7 @@ class ParamTester(object):
     def test_keys(self):
         test = self.instance.A.keys()
         #self.assertEqual( type(test), list )
-        if self.instance.A._default_val is _NotValid:
+        if self.instance.A._default_val is NoValue:
             self.assertEqual( sorted(test), sorted(self.sparse_data.keys()) )
         else:
             self.assertEqual( sorted(test), sorted(self.data.keys()) )
@@ -304,7 +307,7 @@ class ParamTester(object):
             test = self.instance.A.values()
             #self.assertEqual( type(test), list )
             test = zip(self.instance.A.keys(), test)
-            if self.instance.A._default_val is _NotValid:
+            if self.instance.A._default_val is NoValue:
                 self.validateDict(self.sparse_data.items(), test)
             else:
                 self.validateDict(self.data.items(), test)
@@ -316,12 +319,12 @@ class ParamTester(object):
     def test_items(self):
         expectException = False
         #                  len(self.sparse_data) < len(self.data) and \
-        #                  not self.instance.A._default_val is _NotValid and \
+        #                  not self.instance.A._default_val is NoValue and \
         #                  not self.instance.A.mutable
         try:
             test = self.instance.A.items()
             #self.assertEqual( type(test), list )
-            if self.instance.A._default_val is _NotValid:
+            if self.instance.A._default_val is NoValue:
                 self.validateDict(self.sparse_data.items(), test)
             else:
                 self.validateDict(self.data.items(), test)
@@ -342,7 +345,7 @@ class ParamTester(object):
         try:
             test = self.instance.A.values()
             test = zip(self.instance.A.keys(), test)
-            if self.instance.A._default_val is _NotValid:
+            if self.instance.A._default_val is NoValue:
                 self.validateDict(self.sparse_data.items(), test)
             else:
                 self.validateDict(self.data.items(), test)
@@ -358,7 +361,7 @@ class ParamTester(object):
         #                  not self.instance.A.mutable
         try:
             test = self.instance.A.items()
-            if self.instance.A._default_val is _NotValid:
+            if self.instance.A._default_val is NoValue:
                 self.validateDict(self.sparse_data.items(), test)
             else:
                 self.validateDict(self.data.items(), test)
@@ -404,7 +407,7 @@ class ParamTester(object):
 
     def test_len(self):
         #"""Check the use of len"""
-        if self.instance.A._default_val is _NotValid:
+        if self.instance.A._default_val is NoValue:
             self.assertEqual( len(self.instance.A), len(self.sparse_data) )
             self.assertEqual( len(list(self.instance.A.keys())), len(self.sparse_data) )
         else:
@@ -421,17 +424,17 @@ class ParamTester(object):
             # nothing to test
             return
         idx = list(set(self.data) - set(self.sparse_data))[0]
-        expectException = self.instance.A._default_val is _NotValid \
+        expectException = self.instance.A._default_val is NoValue \
                           and not self.instance.A.mutable
         try:
             test = self.instance.A[idx]
             if expectException:
                 self.fail("Expected the test to raise an exception")
             self.assertFalse(expectException)
-            expectException = self.instance.A._default_val is _NotValid
+            expectException = self.instance.A._default_val is NoValue
             try:
                 ans = value(test)
-                self.assertEquals(ans, value(self.instance.A._default_val))
+                self.assertEqual(ans, value(self.instance.A._default_val))
                 self.assertFalse(expectException)
             except:
                 if not expectException:
@@ -452,7 +455,7 @@ class ArrayParam_mutable_sparse_noDefault\
         ParamTester.setUp(self, mutable=True, initialize={1:1.3}, **kwds)
 
         self.sparse_data = {1:1.3}
-        self.data = {1:1.3, 3:_NotValid}
+        self.data = {1:1.3, 3:NoValue}
 
 class ArrayParam_mutable_sparse_intDefault\
           (ParamTester, unittest.TestCase):
@@ -581,7 +584,7 @@ class ArrayParam_immutable_sparse_noDefault\
         ParamTester.setUp(self, mutable=False, initialize={1:1.3}, **kwds)
 
         self.sparse_data = {1:1.3}
-        self.data = {1:1.3, 3:_NotValid}
+        self.data = {1:1.3, 3:NoValue}
 
 
 class ArrayParam_immutable_sparse_intDefault\
@@ -811,7 +814,7 @@ class ScalarTester(ParamTester):
 
     def test_value_scalar(self):
         #"""Check the value of the parameter"""
-        if self.data.get(None,_NotValid) is _NotValid:
+        if self.data.get(None,NoValue) is NoValue:
             self.assertRaises(ValueError, value, self.instance.A)
             self.assertRaises(TypeError, float, self.instance.A)
             self.assertRaises(TypeError, int, self.instance.A)
@@ -826,9 +829,9 @@ class ScalarTester(ParamTester):
 
     def test_call(self):
         #"""Check the use of the __call__ method"""
-        if self.sparse_data.get(None,0) is _NotValid or \
-           self.data.get(None,_NotValid) is _NotValid: #not self.sparse_data:
-            self.assertRaisesRegexp(
+        if self.sparse_data.get(None,0) is NoValue or \
+           self.data.get(None,NoValue) is NoValue: #not self.sparse_data:
+            self.assertRaisesRegex(
                 ValueError, ".*currently set to an invalid value",
                 self.instance.A.__call__ )
         else:
@@ -836,8 +839,8 @@ class ScalarTester(ParamTester):
 
     def test_get_valueattr(self):
         self.assertEqual( self.instance.A._value,
-                          self.sparse_data.get(None,_NotValid) )
-        if self.data.get(None,0) is _NotValid: #not self.sparse_data:
+                          self.sparse_data.get(None,NoValue) )
+        if self.data.get(None,0) is NoValue: #not self.sparse_data:
             try:
                 value(self.instance.A)
                 self.fail("Expected value error")
@@ -852,15 +855,15 @@ class ScalarTester(ParamTester):
         self.assertEqual(self.instance.A(), 4.3)
 
     def test_get_value(self):
-        if self.sparse_data.get(None,0) is _NotValid or \
-           self.data.get(None,_NotValid) is _NotValid: #not self.sparse_data:
+        if self.sparse_data.get(None,0) is NoValue or \
+           self.data.get(None,NoValue) is NoValue: #not self.sparse_data:
             try:
                 value(self.instance.A)
                 self.fail("Expected value error")
             except ValueError:
                 pass
         else:
-            self.assertEqual( self.instance.A, self.data[None])
+            self.assertEqual( self.instance.A.value, self.data[None])
 
     def test_set_value(self):
         self.instance.A = 4.3
@@ -886,7 +889,7 @@ class ScalarParam_mutable_noDefault(ScalarTester, unittest.TestCase):
         ScalarTester.setUp(self, mutable=True, **kwds)
 
         self.sparse_data = {}
-        self.data = {None:_NotValid}
+        self.data = {None:NoValue}
 
 
 class ScalarParam_mutable_init(ScalarTester, unittest.TestCase):
@@ -1355,7 +1358,7 @@ p : Size=1, Index=None, Domain=Any, Default=None, Mutable=True
 q : Size=3, Index=Any, Domain=Any, Default=None, Mutable=True
     Key : Value
       1 : None
-      2 : <class 'pyomo.core.base.param._NotValid'>
+      2 : <class 'pyomo.core.base.param.Param.NoValue'>
       a : b
             """.strip())
 
@@ -1377,6 +1380,30 @@ q : Size=3, Index=Any, Domain=Any, Default=None, Mutable=True
             "domain of this Param (p) to be 'Any'",
             log.getvalue())
         self.assertEqual(value(m.p), 'a')
+
+    @unittest.skipUnless(pint_available, "units test requires pint module")
+    def test_set_value_units(self):
+        m = ConcreteModel()
+        m.p = Param(units=units.g)
+        m.p = 5
+        self.assertEqual(value(m.p), 5)
+        m.p = 6*units.g
+        self.assertEqual(value(m.p), 6)
+        m.p = 7*units.kg
+        self.assertEqual(value(m.p), 7000)
+        with self.assertRaises(UnitsError):
+            m.p = 1*units.s
+
+        out = StringIO()
+        m.pprint(ostream=out)
+        self.assertEqual(out.getvalue().strip(), """
+1 Param Declarations
+    p : Size=1, Index=None, Domain=Any, Default=None, Mutable=True, Units=g
+        Key  : Value
+        None : 7000.0
+
+1 Declarations: p
+        """.strip())
 
 
 def createNonIndexedParamMethod(func, init_xy, new_xy, tol=1e-10):
@@ -1474,39 +1501,39 @@ class MiscNonIndexedParamBehaviorTests(unittest.TestCase):
         tmp_stream = TempfileManager.create_tempfile(suffix = '.param_display.test')
         model = ConcreteModel()
         model.Q = Param(initialize=0.0, mutable=True)
-        self.assertEqual(model.Q, 0.0)
+        self.assertEqual(model.Q.value, 0.0)
         #print model.Q._data
         #print value(model.Q)
         f = StringIO()
         display(model.Q, f)
         tmp = f.getvalue().splitlines()
         val = float(tmp[-1].split(':')[-1].strip())
-        self.assertEqual(model.Q, val)
+        self.assertEqual(model.Q.value, val)
 
         model.Q = 1.0
-        self.assertEqual(model.Q,1.0)
+        self.assertEqual(model.Q.value,1.0)
         f = StringIO()
         display(model.Q,f)
         tmp = f.getvalue().splitlines()
         val = float(tmp[-1].split(':')[-1].strip())
-        self.assertEqual(model.Q, val)
+        self.assertEqual(model.Q.value, val)
 
     # Test that pprint actually displays the correct param value
     def test_mutable_pprint(self):
         model = ConcreteModel()
         model.Q = Param(initialize=0.0, mutable=True)
-        self.assertEqual(model.Q, 0.0)
+        self.assertEqual(model.Q.value, 0.0)
         buf = StringIO()
         model.Q.pprint(ostream=buf)
         val = float(buf.getvalue().splitlines()[-1].split(':')[-1].strip())
-        self.assertEqual(model.Q, val)
+        self.assertEqual(model.Q.value, val)
 
         buf.buf = ''
         model.Q = 1.0
-        self.assertEqual(model.Q,1.0)
+        self.assertEqual(model.Q.value,1.0)
         model.Q.pprint(ostream=buf)
         val = float(buf.getvalue().splitlines()[-1].split(':')[-1].strip())
-        self.assertEqual(model.Q, val)
+        self.assertEqual(model.Q.value, val)
 
     # Test mutability of non-indexed
     # params involved in sum expression
@@ -1625,18 +1652,18 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         model = ConcreteModel()
         model.P = Param([1,2],default=1.0, mutable=True)
 
-        self.assertEqual(model.P[1],1.0)
-        self.assertEqual(model.P[2],1.0)
+        self.assertEqual(model.P[1].value,1.0)
+        self.assertEqual(model.P[2].value,1.0)
         model.P[1].value = 0.0
-        self.assertEqual(model.P[1],0.0)
-        self.assertEqual(model.P[2],1.0)
+        self.assertEqual(model.P[1].value,0.0)
+        self.assertEqual(model.P[2].value,1.0)
 
         model.Q = Param([1,2],default=1.0, mutable=True)
-        self.assertEqual(model.Q[1],1.0)
-        self.assertEqual(model.Q[2],1.0)
+        self.assertEqual(model.Q[1].value,1.0)
+        self.assertEqual(model.Q[2].value,1.0)
         model.Q[1] = 0.0
-        self.assertEqual(model.Q[1],0.0)
-        self.assertEqual(model.Q[2],1.0)
+        self.assertEqual(model.Q[1].value,0.0)
+        self.assertEqual(model.Q[2].value,1.0)
 
     # Test that display actually displays the correct param value
     def test_mutable_display(self):
@@ -1671,7 +1698,7 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         #     changes display output
         for Item in [model.P, model.Q, model.R]:
             for i in [1,2]:
-                self.assertEqual(Item[i],0.0)
+                self.assertEqual(Item[i].value,0.0)
 
         # check that the correct value is printed
         # Treat the param using default a little differently
@@ -1734,7 +1761,7 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         #     changes pprint output
         for Item in [model.P, model.Q, model.R]:
             for i in [1,2]:
-                self.assertEqual(Item[i],0.0)
+                self.assertEqual(Item[i].value,0.0)
 
         for Item in [model.P, model.Q, model.R]:
             f = StringIO()

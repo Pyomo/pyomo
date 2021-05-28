@@ -30,7 +30,7 @@ from pyomo.core.expr.visitor import (
     sizeof_expression,
     identify_variables, identify_components, identify_mutable_parameters,
 )
-from pyomo.core.base.param import _ParamData, SimpleParam
+from pyomo.core.base.param import _ParamData, ScalarParam
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.common.collections import ComponentSet
@@ -106,7 +106,7 @@ class TestExpressionUtilities(unittest.TestCase):
         self.assertEqual( list(identify_variables(m.a**m.b[1])),
                           [ m.a, m.b[1] ] )
         self.assertEqual( list(identify_variables(m.a**m.b[1] + m.b[2])),
-                          [ m.a, m.b[1], m.b[2] ] )
+                          [ m.b[2], m.a, m.b[1]] )
         self.assertEqual( list(identify_variables(
             m.a**m.b[1] + m.b[2]*m.b[3]*m.b[2])),
                           [ m.a, m.b[1], m.b[2], m.b[3] ] )
@@ -117,15 +117,15 @@ class TestExpressionUtilities(unittest.TestCase):
         # Identify variables in the arguments to functions
         #
         self.assertEqual( list(identify_variables(
-            m.x(m.a, 'string_param', 1, [])*m.b[1] )),
-                          [ m.a, m.b[1] ] )
+            m.x(m.a, 'string_param', 1, []) * m.b[1] )),
+                          [ m.b[1], m.a ] )
         self.assertEqual( list(identify_variables(
             m.x(m.p, 'string_param', 1, [])*m.b[1] )),
                           [ m.b[1] ] )
         self.assertEqual( list(identify_variables(
-            tanh(m.a)*m.b[1] )), [ m.a, m.b[1] ] )
+            tanh(m.a)*m.b[1] )), [ m.b[1], m.a ] )
         self.assertEqual( list(identify_variables(
-            abs(m.a)*m.b[1] )), [ m.a, m.b[1] ] )
+            abs(m.a) * m.b[1] )), [ m.b[1], m.a ] )
         #
         # Check logic for allowing duplicates
         #
@@ -170,7 +170,7 @@ class TestIdentifyParams(unittest.TestCase):
 
     def test_identify_mutable_parameters_constants(self):
         #
-        # SimpleParams and NumericConstants are not recognized
+        # ScalarParams and NumericConstants are not recognized
         #
         m = ConcreteModel()
         m.x = Var(initialize=1)
@@ -237,7 +237,7 @@ class TestIdentifyParams(unittest.TestCase):
         self.assertEqual( list(identify_mutable_parameters(m.a**m.b[1])),
                           [ m.a, m.b[1] ] )
         self.assertEqual( list(identify_mutable_parameters(m.a**m.b[1] + m.b[2])),
-                          [ m.a, m.b[1], m.b[2] ] )
+                          [ m.b[2], m.a, m.b[1] ] )
         self.assertEqual( list(identify_mutable_parameters(
             m.a**m.b[1] + m.b[2]*m.b[3]*m.b[2])),
                           [ m.a, m.b[1], m.b[2], m.b[3] ] )
@@ -249,14 +249,14 @@ class TestIdentifyParams(unittest.TestCase):
         #
         self.assertEqual( list(identify_mutable_parameters(
             m.x(m.a, 'string_param', 1, [])*m.b[1] )),
-                          [ m.a, m.b[1] ] )
+                          [ m.b[1], m.a ] )
         self.assertEqual( list(identify_mutable_parameters(
             m.x(m.p, 'string_param', 1, [])*m.b[1] )),
                           [ m.b[1] ] )
         self.assertEqual( list(identify_mutable_parameters(
-            tanh(m.a)*m.b[1] )), [ m.a, m.b[1] ] )
+            tanh(m.a)*m.b[1] )), [ m.b[1], m.a ] )
         self.assertEqual( list(identify_mutable_parameters(
-            abs(m.a)*m.b[1] )), [ m.a, m.b[1] ] )
+            abs(m.a)*m.b[1] )), [ m.b[1], m.a ] )
         #
         # Check logic for allowing duplicates
         #
@@ -524,7 +524,7 @@ class ReplacementWalkerTest3(ExpressionReplacementVisitor):
         self.model = model
 
     def visiting_potential_leaf(self, node):
-        if node.__class__ in (_ParamData, SimpleParam):
+        if node.__class__ in (_ParamData, ScalarParam):
             if id(node) in self.substitute:
                 return True, self.substitute[id(node)]
             self.substitute[id(node)] = 2*self.model.w.add()
@@ -722,7 +722,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         self.e = m.x**2 + m.y + m.z*(m.x+m.y)
 
     def test_bad_args(self):
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Unrecognized keyword arguments: {'foo': None}"):
             StreamBasedExpressionVisitor(foo=None)
 
@@ -797,10 +797,10 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         walker = StreamBasedExpressionVisitor(
             enterNode=enter, acceptChildResult=accept)
         # 4 operators, 6 leaf nodes
-        self.assertEquals(walker.walk_expression(self.e), 10)
+        self.assertEqual(walker.walk_expression(self.e), 10)
 
     def test_sizeof_expression(self):
-        self.assertEquals(sizeof_expression(self.e), 10)
+        self.assertEqual(sizeof_expression(self.e), 10)
 
     def test_enterNode(self):
         # This is an alternative way to implement the beforeChild test:
@@ -930,7 +930,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         ans = walker.walk_expression(self.e)
         m = self.m
         self.assertEqual(ans, None)
-        self.assertEquals(counts, [9,9,9])
+        self.assertEqual(counts, [9,9,9])
 
     def test_OLD_beforeChild_acceptChildResult_afterChild(self):
         counts = [0,0,0]
@@ -964,7 +964,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         ans = walker.walk_expression(self.e)
         m = self.m
         self.assertEqual(ans, None)
-        self.assertEquals(counts, [9,9,9])
+        self.assertEqual(counts, [9,9,9])
 
     def test_enterNode_acceptChildResult_beforeChild(self):
         ans = []

@@ -103,15 +103,6 @@ def create_test_method(model, solver, io,
         # then unpickle and load status
         inst, res = pickle.loads(pickle.dumps([instance3,status3]))
 
-    # 03/23/2021: IDAES-ext added CBC 2.10.4 to their official release
-    #             This is causing failures in this test.
-    #             Manually turning off CBC tests until a solution can be found.
-    #             - mrmundt
-    if solver == 'cbc':
-        def skipping_test(self):
-            self.skipTest('SKIP: cbc currently does not work.')
-        return skipping_test
-
     # Skip this test if the status is 'skip'
     if test_case.status == 'skip':
         def skipping_test(self):

@@ -11,7 +11,6 @@
 import logging
 import os
 import re
-import six
 import sys
 
 from pyomo.common.dependencies import attempt_import
@@ -23,7 +22,7 @@ from pyomo.opt.parallel.async_solver import (
 from pyomo.core.base import Block
 import pyomo.neos.kestrel
 
-xmlrpc_client = attempt_import('six.moves.xmlrpc_client')[0]
+xmlrpc_client = attempt_import('xmlrpc.client')[0]
 
 logger = logging.getLogger('pyomo.neos')
 
@@ -34,14 +33,12 @@ def _neos_error(msg, results, current_message):
 
     logger.error("%s  NEOS log:\n%s" % ( msg, current_message, ),
                  exc_info=sys.exc_info())
-    soln_data = results.data
-    if six.PY3:
-        soln_data = soln_data.decode('utf-8')
+    soln_data = results.data.decode('utf-8')
     for line in soln_data.splitlines():
         if error_re.search(line):
             logger.error(line)
         elif warn_re.search(line):
-            logger.warn(line)
+            logger.warning(line)
 
 
 @SolverManagerFactory.register(
@@ -211,10 +208,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                 with open(opt._log_file, 'w') as OUTPUT:
                     OUTPUT.write(current_message)
                 with open(opt._soln_file, 'w') as OUTPUT:
-                    if six.PY2:
-                        OUTPUT.write(results.data)
-                    else:
-                        OUTPUT.write(results.data.decode('utf-8'))
+                    OUTPUT.write(results.data.decode('utf-8'))
 
                 rc = None
                 try:
@@ -269,11 +263,16 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                     self._neos_log[jobNumber] = (
                         new_offset,
                         current_message + (
-                            message_fragment.data if six.PY2
-                            else (message_fragment.data).decode('utf-8') ) )
+                            (message_fragment.data).decode('utf-8') ) )
                 except xmlrpc_client.ProtocolError:
                     # The command probably timed out
                     pass
 
         return None
 
+    def _kill_all_pending_jobs(self):
+        for ah in self._ah.values():
+            self.kestrel.kill(ah.job, ah.password)
+
+    def __exit__(self, t, v, traceback):
+        self._kill_all_pending_jobs()

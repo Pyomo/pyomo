@@ -18,7 +18,7 @@ from filecmp import cmp
 import pyomo.common.unittest as unittest
 
 from pyomo.opt import check_available_solvers
-import pyomo.scripting.pyomo_command as main
+from pyomo.scripting.pyomo_main import main
 from pyomo.core import (AbstractModel, ConcreteModel, Block, Set, Param, Var,
                         Objective, Constraint, Reals, display)
 from pyomo.common.tee import capture_output
@@ -116,13 +116,13 @@ class PyomoBadModels ( unittest.TestCase ):
         solvers = check_available_solvers('glpk', 'cplex')
 
     def pyomo ( self, cmd, **kwargs):
-        args = re.split('[ ]+', cmd )
+        args = ['solve'] + re.split('[ ]+', cmd )
         out = kwargs.get( 'file', None )
         if out is None:
             out = StringIO()
         with capture_output(out):
             os.chdir( currdir )
-            output = main.run( args )
+            output = main( args )
         if not 'file' in kwargs:
             return output.getvalue()
         return output

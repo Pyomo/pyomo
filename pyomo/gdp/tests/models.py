@@ -1,7 +1,8 @@
 from pyomo.core import (Block, ConcreteModel, Constraint, Objective, Param, Set,
-                        Var, inequality, RangeSet, Any, Expression, maximize)
+                        Var, inequality, RangeSet, Any, Expression, maximize, TransformationFactory)
 from pyomo.gdp import Disjunct, Disjunction
 
+import pyomo.network as ntwk
 
 def oneVarDisj_2pts():
     m = ConcreteModel()
@@ -541,9 +542,7 @@ def makeDisjunctInMultipleDisjunctions():
 def makeDuplicatedNestedDisjunction():
     """Not a transformable model (because of disjuncts shared between 
     disjunctions): A SimpleDisjunction where one of the disjuncts contains
-    two SimpleDisjunctions with the same Disjuncts. This is a lazy
-    way to test that we complain about untransformed disjunctions we encounter
-    while transforming a disjunct.
+    two SimpleDisjunctions with the same Disjuncts.
     """
     m = ConcreteModel()
     m.x = Var(bounds=(0, 8))
@@ -726,4 +725,68 @@ def makeAnyIndexedDisjunctionOfDisjunctDatas():
     m.disjunction = Disjunction(Any)
     m.disjunction[1] = [m.firstTerm[1], m.secondTerm[1]]
     m.disjunction[2] = [m.firstTerm[2], m.secondTerm[2]]
+    return m
+
+def makeNetworkDisjunction(minimize=True):
+    """ creates a GDP model with pyomo.network components """
+    m = ConcreteModel()
+
+    m.feed = feed = Block()
+    m.wkbx = wkbx = Block()
+    m.dest = dest = Block()
+
+    m.orange = orange = Disjunct()
+    m.blue = blue = Disjunct()
+
+    m.orange_or_blue = Disjunction(expr=[orange,blue])
+
+    blue.blue_box = blue_box = Block()
+
+    feed.x = Var(bounds=(0,1))
+    wkbx.x = Var(bounds=(0,1))
+    dest.x = Var(bounds=(0,1))
+
+    wkbx.inlet = ntwk.Port(initialize={"x":wkbx.x})
+    wkbx.outlet = ntwk.Port(initialize={"x":wkbx.x})
+
+    feed.outlet = ntwk.Port(initialize={"x":feed.x})
+    dest.inlet = ntwk.Port(initialize={"x":dest.x})
+
+    blue_box.x = Var(bounds=(0,1))
+    blue_box.x_wkbx = Var(bounds=(0,1))
+    blue_box.x_dest = Var(bounds=(0,1))
+
+
+    blue_box.inlet_feed = ntwk.Port(initialize={"x":blue_box.x})
+    blue_box.outlet_wkbx = ntwk.Port(initialize={"x":blue_box.x})
+
+    blue_box.inlet_wkbx = ntwk.Port(initialize={"x":blue_box.x_wkbx})
+    blue_box.outlet_dest = ntwk.Port(initialize={"x":blue_box.x_dest})
+
+    blue_box.multiplier_constr = Constraint(expr=blue_box.x_dest == 2*blue_box.x_wkbx)
+
+    # orange arcs
+    orange.a1 = ntwk.Arc(source=feed.outlet, destination=wkbx.inlet)
+    orange.a2 = ntwk.Arc(source=wkbx.outlet, destination=dest.inlet)
+
+    # blue arcs
+    blue.a1 = ntwk.Arc(source=feed.outlet, destination=blue_box.inlet_feed)
+    blue.a2 = ntwk.Arc(source=blue_box.outlet_wkbx, destination=wkbx.inlet)
+    blue.a3 = ntwk.Arc(source=wkbx.outlet, destination=blue_box.inlet_wkbx)
+    blue.a4 = ntwk.Arc(source=blue_box.outlet_dest, destination=dest.inlet)
+
+    # maximize/minimize "production"
+    if minimize:
+        m.obj = Objective(expr=m.dest.x)
+    else:
+        m.obj = Objective(expr=m.dest.x, sense=maximize)
+
+    # create a completely fixed model
+    feed.x.fix(0.42)
+
+    return m
+
+def makeExpandedNetworkDisjunction(minimize=True):
+    m = makeNetworkDisjunction(minimize)
+    TransformationFactory('network.expand_arcs').apply_to(m)
     return m

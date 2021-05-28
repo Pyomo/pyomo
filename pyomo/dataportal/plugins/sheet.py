@@ -9,8 +9,6 @@
 #  ___________________________________________________________________________
 
 import os.path
-import six
-from pyutilib.excel.spreadsheet import ExcelSpreadsheet, Interfaces
 
 from pyomo.dataportal import TableData
 # from pyomo.dataportal.plugins.db_table import (
@@ -18,7 +16,11 @@ from pyomo.dataportal import TableData
 # )
 from pyomo.dataportal.factory import DataManagerFactory
 from pyomo.common.errors import ApplicationError
-
+from pyomo.common.dependencies import pyutilib, pyutilib_available
+if pyutilib_available:
+    from pyutilib.excel.spreadsheet import ExcelSpreadsheet, Interfaces
+else:
+    raise(RuntimeError('PyUtilib is required to use pyomo.dataportal.plugins.sheet.'))
 
 def _attempt_open_excel():
     if _attempt_open_excel.result is None:
@@ -61,7 +63,7 @@ class SheetTable(TableData):
         if self.sheet is None:
             return
         tmp = self.sheet.get_range(self.options.range, raw=True)
-        if type(tmp) is float or type(tmp) in six.integer_types:
+        if type(tmp) is float or type(tmp) is int:
             if not self.options.param is None:
                 self._info = ["param"] + list(self.options.param) + [":=",tmp]
             elif len(self.options.symbol_map) == 1:

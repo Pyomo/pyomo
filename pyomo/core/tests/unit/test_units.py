@@ -20,7 +20,7 @@ from pyomo.environ import (
     tanh, asinh, acosh, atanh, ceil, floor,
 )
 from pyomo.common.log import LoggingIntercept
-from pyomo.util.check_units import assert_units_consistent
+from pyomo.util.check_units import assert_units_consistent, check_units_equivalent
 from pyomo.core.expr import inequality
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base.units_container import (
@@ -575,7 +575,7 @@ class TestPyomoUnit(unittest.TestCase):
         self.assertEqual("", log.getvalue())
         self.assertIsNot(m.x, i.x)
         self.assertIsNot(m.x._units, i.x._units)
-        self.assertEqual(m.x._units, i.x._units)
+        self.assertTrue(check_units_equivalent(m.x._units, i.x._units))
         self.assertEqual(str(m.c.upper), str(i.c.upper))
         base = StringIO()
         m.pprint(base)

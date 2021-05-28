@@ -16,13 +16,15 @@ from __future__ import division
 import logging
 
 import pyomo.common.unittest as unittest
-from six import StringIO
+from io import StringIO
 
-from pyomo.common.dependencies import networkx_available
+from pyomo.common.dependencies import networkx_available, matplotlib_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import ConcreteModel, Constraint, Objective, Var, Integers, minimize, RangeSet, Block, ConstraintList
-from pyomo.contrib.community_detection.detection import detect_communities, CommunityMap, \
-    community_louvain_available, matplotlib_available, community_louvain, matplotlib
+from pyomo.contrib.community_detection.detection import (
+    detect_communities, CommunityMap,
+    community_louvain_available, community_louvain
+)
 from pyomo.contrib.community_detection.community_graph import generate_model_graph
 
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
@@ -642,8 +644,8 @@ class TestDecomposition(unittest.TestCase):
 
         community_map_object = cmo = detect_communities(model, random_seed=5)
         correct_partition = {3: 0, 4: 1, 5: 0, 6: 0, 7: 1, 8: 0}
-        correct_components = {'b[0].B[2].c', 'b[0].c2[1]', 'b[0].c1[3]', 'equality_constraint_list[1]',
-                              'b[1].c2[2]', 'b[1].x', 'b[0].x', 'b[0].y', 'b[0].z', 'b[0].obj[2]', 'b[1].c1[2]'}
+        correct_components = {"b[0].'B[2].c'", "b[0].'c2[1]'", "b[0].'c1[3]'", 'equality_constraint_list[1]',
+                              "b[1].'c2[2]'", 'b[1].x', 'b[0].x', 'b[0].y', 'b[0].z', "b[0].'obj[2]'", "b[1].'c1[2]'"}
 
         structured_model = cmo.generate_structured_model()
         self.assertIsInstance(structured_model, Block)

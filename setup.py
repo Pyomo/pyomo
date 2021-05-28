@@ -125,18 +125,20 @@ def run_setup():
         'Topic :: Software Development :: Libraries :: Python Modules' ],
       python_requires='>=3.6',
       install_requires=[
-          'PyUtilib>=6.0.1.dev0',
           'ply',
-          'six>=1.4',
       ],
       packages=find_packages(exclude=("scripts",)),
-      package_data={"pyomo.contrib.viewer":["*.ui"]},
+      package_data={
+          "pyomo.contrib.appsi.cmodel": ["src/*"],
+          "pyomo.contrib.mcpp": ["*.cpp"],
+          "pyomo.contrib.pynumero": ['src/*', 'src/tests/*'],
+          "pyomo.contrib.viewer": ["*.ui"],
+      },
+      #include_package_data=True,
       ext_modules = ext_modules,
-      include_package_data=True,
       entry_points="""
         [console_scripts]
         pyomo = pyomo.scripting.pyomo_main:main_console_script
-        pyomo_python = pyomo.scripting.commands:pyomo_python
 
         [pyomo.command]
         pyomo.help = pyomo.scripting.driver_help

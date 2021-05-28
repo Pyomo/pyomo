@@ -513,11 +513,11 @@ class TestSimulator(unittest.TestCase):
         self.assertTrue(
             isinstance(mysim._rhsdict[_GetItemIndexer(m.dv[t])], Param))
         self.assertEqual(
-            mysim._rhsdict[_GetItemIndexer(m.dv[t])].name, 'v[{t}]')
+            mysim._rhsdict[_GetItemIndexer(m.dv[t])].name, "'v[{t}]'")
         self.assertTrue(
             isinstance(mysim._rhsdict[_GetItemIndexer(m.dw[t])], Param))
         self.assertEqual(
-            mysim._rhsdict[_GetItemIndexer(m.dw[t])].name, 'v[{t}]')
+            mysim._rhsdict[_GetItemIndexer(m.dw[t])].name, "'v[{t}]'")
         self.assertEqual(len(mysim._rhsfun(0, [0, 0])), 2)
         self.assertIsNone(mysim._tsim)
         self.assertIsNone(mysim._simsolution)
@@ -598,13 +598,13 @@ class TestSimulator(unittest.TestCase):
             isinstance(mysim._rhsdict[_GetItemIndexer(m.dw3[1, t, 3])],
                        EXPR.SumExpression))
         self.assertEqual(
-            mysim._rhsdict[_GetItemIndexer(m.dw1[t, 1])].name, 'w1[{t},1]')
+            mysim._rhsdict[_GetItemIndexer(m.dw1[t, 1])].name, "'w1[{t},1]'")
         self.assertEqual(
-            mysim._rhsdict[_GetItemIndexer(m.dw1[t, 3])].name, 'w1[{t},3]')
+            mysim._rhsdict[_GetItemIndexer(m.dw1[t, 3])].name, "'w1[{t},3]'")
         self.assertEqual(
-            mysim._rhsdict[_GetItemIndexer(m.dw2[1, t])].name, 'w2[1,{t}]')
+            mysim._rhsdict[_GetItemIndexer(m.dw2[1, t])].name, "'w2[1,{t}]'")
         self.assertEqual(
-            mysim._rhsdict[_GetItemIndexer(m.dw2[3, t])].name, 'w2[3,{t}]')
+            mysim._rhsdict[_GetItemIndexer(m.dw2[3, t])].name, "'w2[3,{t}]'")
 
         self.assertEqual(len(mysim._rhsfun(0, [0] * 12)), 12)
         self.assertIsNone(mysim._tsim)
@@ -692,13 +692,13 @@ class TestSimulator(unittest.TestCase):
             mysim._rhsdict[_GetItemIndexer(m.dw3[1, t, 2, 2])],
             EXPR.SumExpression))
         self.assertEqual(mysim._rhsdict[_GetItemIndexer(m.dw1[t, 1, 1])].name,
-                         'w1[{t},1,1]')
+                         "'w1[{t},1,1]'")
         self.assertEqual(mysim._rhsdict[_GetItemIndexer(m.dw1[t, 2, 2])].name,
-                         'w1[{t},2,2]')
+                         "'w1[{t},2,2]'")
         self.assertEqual(mysim._rhsdict[_GetItemIndexer(m.dw2[1, 1, t])].name,
-                         'w2[1,1,{t}]')
+                         "'w2[1,1,{t}]'")
         self.assertEqual(mysim._rhsdict[_GetItemIndexer(m.dw2[2, 2, t])].name,
-                         'w2[2,2,{t}]')
+                         "'w2[2,2,{t}]'")
 
         self.assertEqual(len(mysim._rhsfun(0, [0] * 8)), 8)
         self.assertIsNone(mysim._tsim)

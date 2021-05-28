@@ -48,8 +48,8 @@ import enum
 from pyomo.common.log import is_debug_set
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.block import Block, _BlockData
+from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.constraint import Constraint, ConstraintList
 from pyomo.core.base.sos import SOSConstraint
 from pyomo.core.base.var import Var, _VarData, IndexedVar
@@ -254,7 +254,7 @@ class _PiecewiseData(_BlockData):
 
 class _SimpleSinglePiecewise(object):
     """
-    Called when the piecwise points list has only two points
+    Called when the piecewise points list has only two points
     """
 
     def construct(self,pblock,x_var,y_var):
@@ -1120,10 +1120,15 @@ class Piecewise(Block):
             msg = "Piecewise component keyword 'f_rule' must "\
                   "be a function, dict, list, or tuple"
             raise ValueError(msg)
-        if bound_type not in Bound:
-            msg = "Invalid value for Piecewise component "\
-                  "keyword 'pw_constr_type'"
-            raise ValueError(msg)
+        try:
+            bound_type = Bound(bound_type)
+        except ValueError:
+            try:
+                bound_type = Bound[bound_type]
+            except KeyError:
+                msg = "Invalid value for Piecewise component "\
+                      "keyword 'pw_constr_type'"
+                raise ValueError(msg)
         if warning_tol.__class__ is not float:
             msg = "Invalid type '%s' for Piecewise component "\
                   "keyword 'warning_tol', which must be of type 'float'"

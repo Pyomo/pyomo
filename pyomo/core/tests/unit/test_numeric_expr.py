@@ -22,6 +22,8 @@ currdir = dirname(abspath(__file__))+os.sep
 
 from filecmp import cmp
 import pyomo.common.unittest as unittest
+from pyomo.common.log import LoggingIntercept
+from io import StringIO
 
 from pyomo.environ import ConcreteModel, AbstractModel, RangeSet, Var, Param, Set, Constraint, ConstraintList, Expression, Objective, Reals, ExternalFunction, PositiveReals, log10, exp, floor, ceil, log, cos, sin, tan, acos, asin, atan, sinh, cosh, tanh, acosh, asinh, atanh, sqrt, value, quicksum, sum_product, is_fixed, is_constant
 from pyomo.kernel import variable, expression, objective
@@ -39,6 +41,7 @@ from pyomo.core.expr.numeric_expr import (
     LinearDecompositionError,
 )
 import pyomo.core.expr.logical_expr as logical_expr
+from pyomo.common.errors import PyomoException
 from pyomo.core.expr.visitor import (expression_to_string, 
                                      clone_expression)
 from pyomo.core.expr.current import Expr_if
@@ -48,92 +51,64 @@ from pyomo.core.expr import expr_common
 from pyomo.core.base.var import _GeneralVarData
 
 from pyomo.repn import generate_standard_repn
+from pyomo.core.expr.numvalue import NumericValue
+
+
+class decompose_linear_term_wrapper(object):
+    def __init__(self, pairs):
+        self.pairs = pairs
+
+    def __eq__(self, other):
+        if self.pairs is None:
+            if other.pairs is not None:
+                return False
+        else:
+            if other.pairs is None:
+                return False
+            if len(self.pairs) != len(other.pairs):
+                return False
+            for ndx in range(len(self.pairs)):
+                if value(self.pairs[ndx][0]) != value(other.pairs[ndx][0]):
+                    return False
+                if self.pairs[ndx][1] is not other.pairs[ndx][1]:
+                    return False
+        return True
+
+
+class decompose_term_wrapper(decompose_linear_term_wrapper):
+    def __init__(self, decomposed_term):
+        lin, pairs = decomposed_term
+        super().__init__(pairs)
+        self.linear = lin
+
+    def __eq__(self, other):
+        if self.linear != other.linear:
+            return False
+        return super().__eq__(other)
+
 
 class TestExpression_EvaluateNumericConstant(unittest.TestCase):
-
-    def setUp(self):
-        # Do we expect arithmetic operations to return expressions?
-        self.expectExpression = False
-        # Do we expect relational tests to return constant expressions?
-        self.expectConstExpression = True
 
     def create(self, val, domain):
         # Create the type of expression term that we are testing
         return NumericConstant(val)
 
     @unittest.nottest
-    def value_test(self, exp, val, expectExpression=None):
+    def value_test(self, exp, val):
         """ Test the value of the expression. """
-        #
-        # Override the class value of 'expectExpression'
-        #
-        if expectExpression is None:
-            expectExpression = self.expectExpression
         #
         # Confirm whether 'exp' is an expression
         #
-        self.assertEqual(isinstance(exp,ExpressionBase), expectExpression)
+        self.assertEqual(isinstance(exp, ExpressionBase), False)
         #
         # Confirm that 'exp' has the expected value
         #
-        self.assertEqual(value(exp), val)
+        self.assertEqual(exp, val)
 
     @unittest.nottest
-    def relation_test(self, exp, val, expectConstExpression=None):
-        """ Test a relationship expression. """
-        #
-        # Override the class value of 'expectConstExpression'
-        #
-        if expectConstExpression is None:
-            expectConstExpression = self.expectConstExpression
-        #
-        # Confirm that this is a relational expression
-        #
-        self.assertTrue(isinstance(exp, ExpressionBase))
-        self.assertTrue(exp.is_relational())
-        #
-        # Check that the expression evaluates correctly
-        #
-        self.assertEqual(exp(), val)
-        #
-        # Check that the expression evaluates correctly in a Boolean context
-        #
-        try:
-            if expectConstExpression:
-                #
-                # The relational expression should be a constant.
-                #
-                # Check that 'val' equals the boolean value of the expression.
-                #
-                self.assertEqual(bool(exp), val)
-                #
-                # The 'chainedInequality' value is None
-                #
-                if logical_expr._using_chained_inequality:
-                    self.assertIsNone(logical_expr._chainedInequality.prev)
-            else:
-                #
-                # The relational expression may not be constant
-                #
-                # Check that the expression evaluates to 'val'
-                #
-                if logical_expr._using_chained_inequality:
-                    self.assertEqual(bool(exp), True)
-                else:
-                    self.assertEqual(bool(exp), val)
-                #
-                # Check that the 'chainedInequality' value is the current expression
-                #
-                if logical_expr._using_chained_inequality:
-                    self.assertIs(exp,logical_expr._chainedInequality.prev)
-        finally:
-            #
-            # TODO: Why would we get here?  Because the expression isn't constant?
-            #
-            # Check that the 'chainedInequality' value is None
-            #
-            if logical_expr._using_chained_inequality:
-                logical_expr._chainedInequality.prev = None
+    def relation_test(self, exp, val):
+        self.assertEqual(type(exp), bool)
+        self.assertEqual(exp, val)
 
     def test_lt(self):
         #
@@ -173,15 +148,15 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         #
         a=self.create(1.3, Reals)
         b=self.create(2.0, Reals)
-        self.relation_test(a==b, False, True)
-        self.relation_test(a==a, True, True)
-        self.relation_test(b==a, False, True)
-        self.relation_test(a==2.0, False, True)
-        self.relation_test(a==1.3, True, True)
-        self.relation_test(b==1.3, False, True)
-        self.relation_test(1.3==b, False, True)
-        self.relation_test(1.3==a, True, True)
-        self.relation_test(2.0==a, False, True)
+        self.relation_test(a==b, False)
+        self.relation_test(a==a, True)
+        self.relation_test(b==a, False)
+        self.relation_test(a==2.0, False)
+        self.relation_test(a==1.3, True)
+        self.relation_test(b==1.3, False)
+        self.relation_test(1.3==b, False)
+        self.relation_test(1.3==a, True)
+        self.relation_test(2.0==a, False)
 
     def test_arithmetic(self):
         #
@@ -209,22 +184,57 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         self.value_test((0.5)**b, 0.25)
 
         self.value_test(-a, 0.5)
-        self.value_test(+a, -0.5, False)        # This doesn't generate an expression
+        self.assertIs(+a, a)
         self.value_test(abs(-a), 0.5)
 
 
-class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericConstant):
+class TestExpression_EvaluateNumericValue(TestExpression_EvaluateNumericConstant):
 
-    def setUp(self):
+    def create(self, val, domain):
+        tmp = Var(name='unknown', initialize=val, domain=domain)
+        tmp.construct()
+        return tmp
+
+    @unittest.nottest
+    def relation_test(self, exp, val):
+        """ Test a relationship expression. """
         #
-        # Create Model
+        # Confirm that this is a relational expression
         #
-        TestExpression_EvaluateNumericConstant.setUp(self)
+        self.assertTrue(isinstance(exp, ExpressionBase))
+        self.assertTrue(exp.is_relational())
         #
-        # Create model instance
+        # Check that the expression evaluates correctly
         #
-        self.expectExpression = True
-        self.expectConstExpression = False
+        self.assertEqual(exp(), val)
+        #
+        # Check that the expression evaluates correctly in a Boolean context
+        #
+        #
+        # The relational expression may not be constant
+        #
+        # Check that the expression evaluates to 'val'
+        #
+        if isinstance(exp, logical_expr.EqualityExpression) and exp.args[0] is exp.args[1]:
+            self.assertEqual(bool(exp), val)
+        else:
+            with self.assertRaises(PyomoException):
+                bool(exp)
+
+    @unittest.nottest
+    def value_test(self, exp, val):
+        """ Test the value of the expression. """
+        #
+        # Confirm whether 'exp' is an expression
+        #
+        self.assertEqual(isinstance(exp, ExpressionBase), True)
+        #
+        # Confirm that 'exp' has the expected value
+        #
+        self.assertEqual(value(exp), val)
+
+
+class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericValue):
 
     def create(self, val, domain):
         tmp=_GeneralVarData()
@@ -233,18 +243,7 @@ class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericConstant):
         return tmp
 
 
-class TestExpression_EvaluateVar(TestExpression_EvaluateNumericConstant):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        TestExpression_EvaluateNumericConstant.setUp(self)
-        #
-        # Create model instance
-        #
-        self.expectExpression = True
-        self.expectConstExpression = False
+class TestExpression_EvaluateVar(TestExpression_EvaluateNumericValue):
 
     def create(self, val, domain):
         tmp=Var(name="unknown",domain=domain)
@@ -253,18 +252,7 @@ class TestExpression_EvaluateVar(TestExpression_EvaluateNumericConstant):
         return tmp
 
 
-class TestExpression_EvaluateFixedVar(TestExpression_EvaluateNumericConstant):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        TestExpression_EvaluateNumericConstant.setUp(self)
-        #
-        # Create model instance
-        #
-        self.expectExpression = True
-        self.expectConstExpression = False
+class TestExpression_EvaluateFixedVar(TestExpression_EvaluateNumericValue):
 
     def create(self, val, domain):
         tmp=Var(name="unknown", domain=domain)
@@ -276,35 +264,13 @@ class TestExpression_EvaluateFixedVar(TestExpression_EvaluateNumericConstant):
 
 class TestExpression_EvaluateImmutableParam(TestExpression_EvaluateNumericConstant):
 
-    def setUp(self):
-        #
-        # Create Model
-        #
-        TestExpression_EvaluateNumericConstant.setUp(self)
-        #
-        # Create model instance
-        #
-        self.expectExpression = False
-        self.expectConstExpression = True
-
     def create(self, val, domain):
         tmp=Param(default=val, mutable=False, within=domain)
         tmp.construct()
         return tmp
 
 
-class TestExpression_Evaluate_MutableParam(TestExpression_EvaluateNumericConstant):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        TestExpression_EvaluateNumericConstant.setUp(self)
-        #
-        # Create model instance
-        #
-        self.expectExpression = True
-        self.expectConstExpression = False
+class TestExpression_Evaluate_MutableParam(TestExpression_EvaluateNumericValue):
 
     def create(self, val, domain):
         tmp=Param(default=val, mutable=True, within=domain)
@@ -2704,15 +2670,12 @@ class TestGeneralExpressionGeneration(unittest.TestCase):
 class TestExprConditionalContext(unittest.TestCase):
 
 
-    def tearDown(self):
-        # Make sure errors here don't bleed over to other tests
-        if logical_expr._using_chained_inequality:
-            logical_expr._chainedInequality.prev = None
-
-    def checkCondition(self, expr, expectedValue):
+    def checkCondition(self, expr, expectedValue, use_value=False):
+        if use_value:
+            expr = value(expr)
         try:
             if expr:
-                if not logical_expr._using_chained_inequality and expectedValue != True:
+                if expectedValue != True:
                     self.fail("__nonzero__ returned the wrong condition value"
                               " (expected %s)" % expectedValue)
             else:
@@ -2721,12 +2684,9 @@ class TestExprConditionalContext(unittest.TestCase):
                               " (expected %s)" % expectedValue)
             if expectedValue is None:
                 self.fail("Expected ValueError because component was undefined")
-        except ValueError:
+        except (ValueError, PyomoException):
             if expectedValue is not None:
                 raise
-        finally:
-            if logical_expr._using_chained_inequality:
-                logical_expr._chainedInequality.prev = None
 
     def test_immutable_paramConditional(self):
         model = AbstractModel()
@@ -2734,9 +2694,8 @@ class TestExprConditionalContext(unittest.TestCase):
         #
         try:
             self.checkCondition(model.p > 0, True)
-            if not logical_expr._using_chained_inequality:
-                self.fail("Expected ValueError because the parameter is unconstructed.")
-        except ValueError:
+            self.fail("Expected PyomoException because the parameter is unconstructed.")
+        except PyomoException:
             pass
         #self.checkCondition(model.p >= 0, True)
         #self.checkCondition(model.p < 1, True)
@@ -2749,9 +2708,8 @@ class TestExprConditionalContext(unittest.TestCase):
         #
         try:
             self.checkCondition(model.p > 0, True)
-            if not logical_expr._using_chained_inequality:
-                self.fail("Expected ValueError because the parameter is unconstructed.")
-        except ValueError:
+            self.fail("Expected PyomoException because the parameter is unconstructed.")
+        except PyomoException:
             pass
         #self.checkCondition(model.p >= 0, True)
         #self.checkCondition(model.p < 1, True)
@@ -2776,11 +2734,21 @@ class TestExprConditionalContext(unittest.TestCase):
         #
         # TODO: Inequalities evaluate True when the parameter is unconstructed?
         #
-        self.checkCondition(0 < model.p, True)
-        self.checkCondition(0 <= model.p, True)
-        self.checkCondition(1 > model.p, True)
-        self.checkCondition(1 >= model.p, True)
-        self.checkCondition(0 == model.p, None)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(0 < model.p, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(0 <= model.p, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(1 > model.p, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(1 >= model.p, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(0 == model.p, None)
+        self.checkCondition(0 < model.p, True, use_value=True)
+        self.checkCondition(0 <= model.p, True, use_value=True)
+        self.checkCondition(1 > model.p, True, use_value=True)
+        self.checkCondition(1 >= model.p, True, use_value=True)
+        self.checkCondition(0 == model.p, None, use_value=True)
 
         instance = model.create_instance()
         #
@@ -2806,9 +2774,8 @@ class TestExprConditionalContext(unittest.TestCase):
         #
         try:
             self.checkCondition(0 < model.p, True)
-            if not logical_expr._using_chained_inequality:
-                self.fail("Expected ValueError because the parameter value is being accessed before it is constructed.")
-        except ValueError:
+            self.fail("Expected PyomoException because the parameter value is being accessed before it is constructed.")
+        except PyomoException:
             pass
         #self.checkCondition(0 <= model.p, True)
         #self.checkCondition(1 > model.p, True)
@@ -2836,9 +2803,8 @@ class TestExprConditionalContext(unittest.TestCase):
         #
         try:
             self.checkCondition(model.p > 0, True)
-            if not logical_expr._using_chained_inequality:
-                self.fail("Expected ValueError because the parameter value is being accessed before it is constructed.")
-        except ValueError:
+            self.fail("Expected PyomoException because the parameter value is being accessed before it is constructed.")
+        except PyomoException:
             pass
         #self.checkCondition(model.p >= 0, True)
         #self.checkCondition(model.p < 1, True)
@@ -2846,19 +2812,36 @@ class TestExprConditionalContext(unittest.TestCase):
         #self.checkCondition(model.p == 0, None)
 
         instance = model.create_instance()
-        #
-        # Inequalities evaluate normally when the parameter is initialized
-        #
-        self.checkCondition(instance.p > 0, True)
-        self.checkCondition(instance.p > 2, False)
-        self.checkCondition(instance.p >= 1, True)
-        self.checkCondition(instance.p >= 2, False)
-        self.checkCondition(instance.p < 2, True)
-        self.checkCondition(instance.p < 0, False)
-        self.checkCondition(instance.p <= 1, True)
-        self.checkCondition(instance.p <= 0, False)
-        self.checkCondition(instance.p == 1, True)
-        self.checkCondition(instance.p == 2, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.p > 0, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.p > 2, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.p >= 1, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.p >= 2, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.p < 2, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.p < 0, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.p <= 1, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.p <= 0, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.p == 1, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.p == 2, False)
+        self.checkCondition(instance.p > 0, True, use_value=True)
+        self.checkCondition(instance.p > 2, False, use_value=True)
+        self.checkCondition(instance.p >= 1, True, use_value=True)
+        self.checkCondition(instance.p >= 2, False, use_value=True)
+        self.checkCondition(instance.p < 2, True, use_value=True)
+        self.checkCondition(instance.p < 0, False, use_value=True)
+        self.checkCondition(instance.p <= 1, True, use_value=True)
+        self.checkCondition(instance.p <= 0, False, use_value=True)
+        self.checkCondition(instance.p == 1, True, use_value=True)
+        self.checkCondition(instance.p == 2, False, use_value=True)
 
     def test_mutable_paramConditional_reversed(self):
         model = AbstractModel()
@@ -2866,9 +2849,8 @@ class TestExprConditionalContext(unittest.TestCase):
         #
         try:
             self.checkCondition(0 < model.p, True)
-            if not logical_expr._using_chained_inequality:
-                self.fail("Expected ValueError because the parameter value is being accessed before it is constructed.")
-        except ValueError:
+            self.fail("Expected PyomoException because the parameter value is being accessed before it is constructed.")
+        except PyomoException:
             pass
         #self.checkCondition(0 <= model.p, True)
         #self.checkCondition(1 > model.p, True)
@@ -2876,19 +2858,36 @@ class TestExprConditionalContext(unittest.TestCase):
         #self.checkCondition(0 == model.p, None)
 
         instance = model.create_instance()
-        #
-        # Inequalities evaluate normally when the parameter is initialized
-        #
-        self.checkCondition(0 < instance.p, True)
-        self.checkCondition(2 < instance.p, False)
-        self.checkCondition(1 <= instance.p, True)
-        self.checkCondition(2 <= instance.p, False)
-        self.checkCondition(2 > instance.p, True)
-        self.checkCondition(0 > instance.p, False)
-        self.checkCondition(1 >= instance.p, True)
-        self.checkCondition(0 >= instance.p, False)
-        self.checkCondition(1 == instance.p, True)
-        self.checkCondition(2 == instance.p, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(0 < instance.p, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(2 < instance.p, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(1 <= instance.p, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(2 <= instance.p, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(2 > instance.p, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(0 > instance.p, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(1 >= instance.p, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(0 >= instance.p, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(1 == instance.p, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(2 == instance.p, False)
+        self.checkCondition(0 < instance.p, True, use_value=True)
+        self.checkCondition(2 < instance.p, False, use_value=True)
+        self.checkCondition(1 <= instance.p, True, use_value=True)
+        self.checkCondition(2 <= instance.p, False, use_value=True)
+        self.checkCondition(2 > instance.p, True, use_value=True)
+        self.checkCondition(0 > instance.p, False, use_value=True)
+        self.checkCondition(1 >= instance.p, True, use_value=True)
+        self.checkCondition(0 >= instance.p, False, use_value=True)
+        self.checkCondition(1 == instance.p, True, use_value=True)
+        self.checkCondition(2 == instance.p, False, use_value=True)
 
     def test_varConditional(self):
         model = AbstractModel()
@@ -2896,8 +2895,7 @@ class TestExprConditionalContext(unittest.TestCase):
         #
         try:
             self.checkCondition(model.v > 0, True)
-            if not logical_expr._using_chained_inequality:
-                self.fail("Expected ValueError because the variable value is being accessed before it is constructed.")
+            self.fail("Expected ValueError because the variable value is being accessed before it is constructed.")
         except:
             pass
         #self.checkCondition(model.v >= 0, True)
@@ -2909,16 +2907,36 @@ class TestExprConditionalContext(unittest.TestCase):
         #
         # Inequalities evaluate normally when the variable is initialized
         #
-        self.checkCondition(instance.v > 0, True)
-        self.checkCondition(instance.v > 2, False)
-        self.checkCondition(instance.v >= 1, True)
-        self.checkCondition(instance.v >= 2, False)
-        self.checkCondition(instance.v < 2, True)
-        self.checkCondition(instance.v < 0, False)
-        self.checkCondition(instance.v <= 1, True)
-        self.checkCondition(instance.v <= 0, False)
-        self.checkCondition(instance.v == 1, True)
-        self.checkCondition(instance.v == 2, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.v > 0, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.v > 2, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.v >= 1, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.v >= 2, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.v < 2, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.v < 0, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.v <= 1, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.v <= 0, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.v == 1, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.v == 2, False)
+        self.checkCondition(instance.v > 0, True, use_value=True)
+        self.checkCondition(instance.v > 2, False, use_value=True)
+        self.checkCondition(instance.v >= 1, True, use_value=True)
+        self.checkCondition(instance.v >= 2, False, use_value=True)
+        self.checkCondition(instance.v < 2, True, use_value=True)
+        self.checkCondition(instance.v < 0, False, use_value=True)
+        self.checkCondition(instance.v <= 1, True, use_value=True)
+        self.checkCondition(instance.v <= 0, False, use_value=True)
+        self.checkCondition(instance.v == 1, True, use_value=True)
+        self.checkCondition(instance.v == 2, False, use_value=True)
 
     def test_varConditional_reversed(self):
         model = AbstractModel()
@@ -2926,8 +2944,7 @@ class TestExprConditionalContext(unittest.TestCase):
         #
         try:
             self.checkCondition(0 < model.v, True)
-            if not logical_expr._using_chained_inequality:
-                self.fail("Expected ValueError because the variable value is being accessed before it is constructed.")
+            self.fail("Expected PyomoException because the variable value is being accessed before it is constructed.")
         except:
             pass
         #self.checkCondition(0 <= model.v, True)
@@ -2939,16 +2956,36 @@ class TestExprConditionalContext(unittest.TestCase):
         #
         # Inequalities evaluate normally when the variable is initialized
         #
-        self.checkCondition(0 < instance.v, True)
-        self.checkCondition(2 < instance.v, False)
-        self.checkCondition(1 <= instance.v, True)
-        self.checkCondition(2 <= instance.v, False)
-        self.checkCondition(2 > instance.v, True)
-        self.checkCondition(0 > instance.v, False)
-        self.checkCondition(1 >= instance.v, True)
-        self.checkCondition(0 >= instance.v, False)
-        self.checkCondition(1 == instance.v, True)
-        self.checkCondition(2 == instance.v, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(0 < instance.v, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(2 < instance.v, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(1 <= instance.v, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(2 <= instance.v, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(2 > instance.v, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(0 > instance.v, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(1 >= instance.v, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(0 >= instance.v, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(1 == instance.v, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(2 == instance.v, False)
+        self.checkCondition(0 < instance.v, True, use_value=True)
+        self.checkCondition(2 < instance.v, False, use_value=True)
+        self.checkCondition(1 <= instance.v, True, use_value=True)
+        self.checkCondition(2 <= instance.v, False, use_value=True)
+        self.checkCondition(2 > instance.v, True, use_value=True)
+        self.checkCondition(0 > instance.v, False, use_value=True)
+        self.checkCondition(1 >= instance.v, True, use_value=True)
+        self.checkCondition(0 >= instance.v, False, use_value=True)
+        self.checkCondition(1 == instance.v, True, use_value=True)
+        self.checkCondition(2 == instance.v, False, use_value=True)
 
     def test_eval_sub_varConditional(self):
         model = AbstractModel()
@@ -4760,13 +4797,13 @@ class TestLinearDecomp(unittest.TestCase):
         M.w = Var()
         M.q = Param(initialize=2)
         e = SumExpression([2])
-        self.assertEqual(list(_decompose_linear_terms(e)), [(2,None)])
+        self.assertEqual(decompose_linear_term_wrapper(list(_decompose_linear_terms(e))), decompose_linear_term_wrapper([(2,None)]))
         e = SumExpression([2,M.v])
-        self.assertEqual(list(_decompose_linear_terms(e)), [(2,None), (1,M.v)])
+        self.assertEqual(decompose_linear_term_wrapper(list(_decompose_linear_terms(e))), decompose_linear_term_wrapper([(2,None), (1,M.v)]))
         e = SumExpression([2,M.q+M.v])
-        self.assertEqual(list(_decompose_linear_terms(e)), [(2,None), (2,None), (1,M.v)])
+        self.assertEqual(decompose_linear_term_wrapper(list(_decompose_linear_terms(e))), decompose_linear_term_wrapper([(2,None), (2,None), (1,M.v)]))
         e = SumExpression([2,M.q+M.v,M.w])
-        self.assertEqual(list(_decompose_linear_terms(e)), [(2,None), (2,None), (1,M.v), (1,M.w)])
+        self.assertEqual(decompose_linear_term_wrapper(list(_decompose_linear_terms(e))), decompose_linear_term_wrapper([(2,None), (2,None), (1,M.v), (1,M.w)]))
         
 
 #
@@ -4834,13 +4871,13 @@ class Test_decompose_linear_terms(unittest.TestCase):
         M.w = Var()
         M.q = Param(initialize=3)
         e = SumExpression([2])
-        self.assertEqual(decompose_term(e), (True, [(2,None)]))
+        self.assertEqual(decompose_term_wrapper(decompose_term(e)), decompose_term_wrapper((True, [(2,None)])))
         e = SumExpression([2,M.v])
-        self.assertEqual(decompose_term(e), (True, [(2,None), (1,M.v)]))
+        self.assertEqual(decompose_term_wrapper(decompose_term(e)), decompose_term_wrapper((True, [(2,None), (1,M.v)])))
         e = SumExpression([2,M.q+M.v])
-        self.assertEqual(decompose_term(e), (True, [(2,None), (3,None), (1,M.v)]))
+        self.assertEqual(decompose_term_wrapper(decompose_term(e)), decompose_term_wrapper((True, [(2,None), (3,None), (1,M.v)])))
         e = SumExpression([2,M.q+M.v,M.w])
-        self.assertEqual(decompose_term(e), (True, [(2,None), (3,None), (1,M.v), (1,M.w)]))
+        self.assertEqual(decompose_term_wrapper(decompose_term(e)), decompose_term_wrapper((True, [(2,None), (3,None), (1,M.v), (1,M.w)])))
 
     def test_linear(self):
         M = ConcreteModel()
@@ -4942,8 +4979,8 @@ class Test_pickle(unittest.TestCase):
         e_ = pickle.loads(s)
         flag, terms = decompose_term(e_)
         self.assertTrue(flag)
-        self.assertEqual(terms[0][0], 0.5)
-        self.assertEqual(terms[0][1], None)
+        self.assertEqual(value(terms[0][0]), 0.5)
+        self.assertEqual(value(terms[0][1]), None)
         
     def test_multisum(self):
         M = ConcreteModel()
@@ -5242,6 +5279,18 @@ class TestDirect_LinearExpression(unittest.TestCase):
 
         self.assertFalse(is_fixed(m.c1.body))
         self.assertEqual(polynomial_degree(m.c1.body), 1)
+
+
+class TestEvaluation(unittest.TestCase):
+    def test_log_error(self):
+        m = ConcreteModel()
+        m.x = Var()
+        e = m.x**2
+        os = StringIO()
+        with LoggingIntercept(os, 'pyomo'):
+            e_val = value(e, exception=False)
+            self.assertIsNone(e_val)
+        self.assertEqual(os.getvalue(), '')
 
 
 if __name__ == "__main__":

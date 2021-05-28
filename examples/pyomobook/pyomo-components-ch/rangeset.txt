@@ -1,0 +1,12 @@
+3 RangeSet Declarations
+    A : Dimen=1, Size=10, Bounds=(1, 10)
+        Key  : Finite : Members
+        None :   True :  [1:10]
+    C : Dimen=1, Size=6, Bounds=(5, 10)
+        Key  : Finite : Members
+        None :   True :  [5:10]
+    D : Dimen=1, Size=6, Bounds=(2.5, 10)
+        Key  : Finite : Members
+        None :   True : [2.5], [4.0], [5.5], [7.0], [8.5], [10.0]
+
+3 Declarations: A C D

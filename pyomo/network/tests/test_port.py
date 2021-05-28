@@ -12,7 +12,7 @@
 #
 
 import pyomo.common.unittest as unittest
-from six import StringIO
+from io import StringIO
 
 from pyomo.environ import ConcreteModel, AbstractModel, Var, Set, NonNegativeReals, Binary, Reals, Integers, RangeSet
 from pyomo.network import Port, Arc

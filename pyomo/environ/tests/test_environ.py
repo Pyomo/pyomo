@@ -16,7 +16,6 @@ import sys
 import subprocess
 
 from collections import namedtuple
-from six import iteritems, itervalues
 
 import pyomo.common.unittest as unittest
 
@@ -27,12 +26,10 @@ class ImportData(object):
     def __init__(self):
         self.tpl = {}
         self.pyomo = {}
-        self.pyutilib = {}
 
     def update(self, other):
         self.tpl.update(other.tpl)
         self.pyomo.update(other.pyomo)
-        self.pyutilib.update(other.pyutilib)
 
 def collect_import_time(module):
         output = subprocess.check_output(
@@ -58,20 +55,15 @@ def collect_import_time(module):
                 inner = data.pop()
                 inner.tpl = {
                     (k if '(from' in k else "%s (from %s)" % (k, _module),
-                     v) for k,v in iteritems(inner.tpl) }
+                     v) for k,v in inner.tpl.items() }
                 if _module.startswith('pyomo'):
                     data[_level].update(inner)
                     data[_level].pyomo[_module] = _self
-                elif _module.startswith('pyutilib'):
-                    data[_level].update(inner)
-                    data[_level].pyutilib[_module] = _self
                 else:
                     if _level > 0:
                         data[_level].tpl[_module] = _cumul
             elif _module.startswith('pyomo'):
                 data[_level].pyomo[_module] = _self
-            elif _module.startswith('pyutilib'):
-                data[_level].pyutilib[_module] = _self
             elif _level > 0:
                 data[_level].tpl[_module] = _self
         assert len(data) == 1
@@ -94,10 +86,9 @@ class TestPyomoEnviron(unittest.TestCase):
                      "Import timing introduced in python 3.7")
     def test_tpl_import_time(self):
         data = collect_import_time('pyomo.environ')
-        pyomo_time = sum(itervalues(data.pyomo))
-        pyutilib_time = sum(itervalues(data.pyutilib))
-        tpl_time = sum(itervalues(data.tpl))
-        total = float(pyomo_time + pyutilib_time + tpl_time)
+        pyomo_time = sum(data.pyomo.values())
+        tpl_time = sum(data.tpl.values())
+        total = float(pyomo_time + tpl_time)
         print("Pyomo (by module time):")
         print("\n".join("   %s: %s" % i for i in sorted(
             data.pyomo.items(), key=lambda x: x[1])))
@@ -107,7 +98,7 @@ class TestPyomoEnviron(unittest.TestCase):
         print("\n".join(_line_fmt % (k[:k.find(' ')], v, k[k.find(' '):])
                         for k,v in sorted(data.tpl.items())))
         tpl = {}
-        for k, v in iteritems(data.tpl):
+        for k, v in data.tpl.items():
             _mod = k[:k.find(' ')].split('.')[0]
             tpl[_mod] = tpl.get(_mod,0) + v
         tpl_by_time = sorted(tpl.items(), key=lambda x: x[1])
@@ -116,8 +107,6 @@ class TestPyomoEnviron(unittest.TestCase):
             m, t, 100*t/total) for m, t in tpl_by_time))
         print("Pyomo:    %6d (%4.1f%%)" % (
             pyomo_time, 100 * pyomo_time / total))
-        print("Pyutilib: %6d (%4.1f%%)" % (
-            pyutilib_time, 100 * pyutilib_time / total))
         print("TPL:      %6d (%4.1f%%)" % (tpl_time, 100 * tpl_time / total))
         # Arbitrarily choose a threshold 10% more than the expected
         # value (at time of writing, TPL imports were 52-57% of the
@@ -129,40 +118,29 @@ class TestPyomoEnviron(unittest.TestCase):
         ref = {
             'argparse',
             'cPickle',
+            'copy',
             'csv',
             'ctypes',
             'decimal',
+            'gc',
             'glob',
             'inspect',
             'json',
             'logging',
             'pickle',
             'platform',
-            'pprint',
-            'textwrap',
+            'pyutilib',
+            'random',
+            'shlex',
+            'socket',
             'tempfile',
-            'xml',
+            'textwrap',
             'typing',
-            # From PySP
-            'filecmp',
-            'optparse',
-            'shelve',
-            'uuid',
-            # From PyUtilib
-            'difflib',
-            'gzip',
-            'imp',
-            'runpy',
-            'tarfile',
-            'zipfile',
         }
         # Non-standard-library TPLs that Pyomo will load unconditionally
-        ref.add('six')
         ref.add('ply')
         if numpy_available:
             ref.add('numpy')
-        if pyro4_available:
-            ref.add('Pyro4')
         diff = set(_[0] for _ in tpl_by_time[-5:]).difference(ref)
         self.assertEqual(
             diff, set(),

@@ -18,19 +18,19 @@ import logging
 import math
 from weakref import ref as weakref_ref
 
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr import logical_expr
-from pyomo.core.expr.numvalue import (ZeroConstant,
-                                      value,
-                                      as_numeric,
-                                      is_constant,
-                                      native_numeric_types)
-from pyomo.core.base.plugin import ModelComponentFactory
-from pyomo.core.base.component import ActiveComponentData
-from pyomo.core.base.indexed_component import \
-    ( ActiveIndexedComponent,
-      UnindexedComponent_set)
+from pyomo.core.expr.numvalue import (
+    ZeroConstant, value, as_numeric, is_constant, native_numeric_types,
+)
+from pyomo.core.base.component import (
+    ActiveComponentData, ModelComponentFactory,
+)
+from pyomo.core.base.indexed_component import (
+    ActiveIndexedComponent, UnindexedComponent_set,
+)
 from pyomo.core.base.misc import (tabular_writer)
 from pyomo.core.base.set import Set
 from pyomo.core.base.util import (
@@ -503,46 +503,14 @@ class _GeneralConstraintData(_ConstraintData):
             raise ValueError(_rule_returned_none_error % (self.name,))
 
         elif _expr_type is bool:
-            #
-            # There are cases where a user thinks they are generating
-            # a valid 2-sided inequality, but Python's internal
-            # systems for handling chained inequalities is doing
-            # something very different and resolving it to True /
-            # False.  In this case, chainedInequality will be
-            # non-None, but the expression will be a bool.  For
-            # example, model.a < 1 > 0.
-            #
-            if logical_expr._using_chained_inequality \
-               and logical_expr._chainedInequality.prev is not None:
-
-                buf = io.StringIO()
-                logical_expr._chainedInequality.prev.pprint(buf)
-                #
-                # We are about to raise an exception, so it's OK to
-                # reset chainedInequality
-                #
-                logical_expr._chainedInequality.prev = None
-                raise ValueError(
-                    "Invalid chained (2-sided) inequality detected. "
-                    "The expression is resolving to %s instead of a "
-                    "Pyomo Expression object. This can occur when "
-                    "the middle term of a chained inequality is a "
-                    "constant or immutable parameter, for example, "
-                    "'model.a <= 1 >= 0'.  The proper form for "
-                    "2-sided inequalities is '0 <= model.a <= 1'."
-                    "\n\nError thrown for Constraint '%s'"
-                    "\n\nUnresolved (dangling) inequality "
-                    "expression: %s"
-                    % (expr, self.name, buf))
-            else:
-                raise ValueError(
-                    "Invalid constraint expression. The constraint "
-                    "expression resolved to a trivial Boolean (%s) "
-                    "instead of a Pyomo object. Please modify your "
-                    "rule to return Constraint.%s instead of %s."
-                    "\n\nError thrown for Constraint '%s'"
-                    % ( expr, "Feasible" if expr else "Infeasible",
-                        expr, self.name ))
+            raise ValueError(
+                "Invalid constraint expression. The constraint "
+                "expression resolved to a trivial Boolean (%s) "
+                "instead of a Pyomo object. Please modify your "
+                "rule to return Constraint.%s instead of %s."
+                "\n\nError thrown for Constraint '%s'"
+                % (expr, "Feasible" if expr else "Infeasible",
+                   expr, self.name))
 
         else:
             msg = ("Constraint '%s' does not have a proper "
@@ -560,19 +528,7 @@ class _GeneralConstraintData(_ConstraintData):
                         "form for compound inequalities is "
                         "always 'lb <= expr <= ub'.")
             raise ValueError(msg)
-        #
-        # Special check for chainedInequality errors like "if var <
-        # 1:" within rules.  Catching them here allows us to provide
-        # the user with better (and more immediate) debugging
-        # information.  We don't want to check earlier because we
-        # want to provide a specific debugging message if the
-        # construction rule returned True/False; for example, if the
-        # user did ( var < 1 > 0 ) (which also results in a non-None
-        # chainedInequality value)
-        #
-        if logical_expr._using_chained_inequality \
-           and logical_expr._chainedInequality.prev is not None:
-            raise TypeError(logical_expr._chainedInequality.error_message())
+
         #
         # Process relational expressions
         # (i.e. explicit '==', '<', and '<=')
@@ -758,7 +714,7 @@ class Constraint(ActiveIndexedComponent):
         if cls != Constraint:
             return super(Constraint, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
-            return super(Constraint, cls).__new__(AbstractSimpleConstraint)
+            return super(Constraint, cls).__new__(AbstractScalarConstraint)
         else:
             return super(Constraint, cls).__new__(IndexedConstraint)
 
@@ -794,6 +750,7 @@ class Constraint(ActiveIndexedComponent):
 
         try:
             # We do not (currently) accept data for constructing Constraints
+            index = None
             assert data is None
 
             if self.rule is None:
@@ -806,7 +763,6 @@ class Constraint(ActiveIndexedComponent):
                     "of a constraint with a single expression" %
                     (self.name,) )
 
-            index = None
             block = self.parent_block()
             if self.rule.contains_indices():
                 # The index is coming in externally; we need to validate it
@@ -889,9 +845,9 @@ class Constraint(ActiveIndexedComponent):
                                        ] )
 
 
-class SimpleConstraint(_GeneralConstraintData, Constraint):
+class ScalarConstraint(_GeneralConstraintData, Constraint):
     """
-    SimpleConstraint is the implementation representing a single,
+    ScalarConstraint is the implementation representing a single,
     non-indexed constraint.
     """
 
@@ -926,7 +882,7 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
         """Access the body of a constraint expression."""
         if not self._data:
             raise ValueError(
-                "Accessing the body of SimpleConstraint "
+                "Accessing the body of ScalarConstraint "
                 "'%s' before the Constraint has been assigned "
                 "an expression. There is currently "
                 "nothing to access." % (self.name))
@@ -937,7 +893,7 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
         """Access the lower bound of a constraint expression."""
         if not self._data:
             raise ValueError(
-                "Accessing the lower bound of SimpleConstraint "
+                "Accessing the lower bound of ScalarConstraint "
                 "'%s' before the Constraint has been assigned "
                 "an expression. There is currently "
                 "nothing to access." % (self.name))
@@ -948,7 +904,7 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
         """Access the upper bound of a constraint expression."""
         if not self._data:
             raise ValueError(
-                "Accessing the upper bound of SimpleConstraint "
+                "Accessing the upper bound of ScalarConstraint "
                 "'%s' before the Constraint has been assigned "
                 "an expression. There is currently "
                 "nothing to access." % (self.name))
@@ -959,7 +915,7 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
         """A boolean indicating whether this is an equality constraint."""
         if not self._data:
             raise ValueError(
-                "Accessing the equality flag of SimpleConstraint "
+                "Accessing the equality flag of ScalarConstraint "
                 "'%s' before the Constraint has been assigned "
                 "an expression. There is currently "
                 "nothing to access." % (self.name))
@@ -970,7 +926,7 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
         """A boolean indicating whether this constraint has a strict lower bound."""
         if not self._data:
             raise ValueError(
-                "Accessing the strict_lower flag of SimpleConstraint "
+                "Accessing the strict_lower flag of ScalarConstraint "
                 "'%s' before the Constraint has been assigned "
                 "an expression. There is currently "
                 "nothing to access." % (self.name))
@@ -981,18 +937,20 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
         """A boolean indicating whether this constraint has a strict upper bound."""
         if not self._data:
             raise ValueError(
-                "Accessing the strict_upper flag of SimpleConstraint "
+                "Accessing the strict_upper flag of ScalarConstraint "
                 "'%s' before the Constraint has been assigned "
                 "an expression. There is currently "
                 "nothing to access." % (self.name))
         return _GeneralConstraintData.strict_upper.fget(self)
 
+    def clear(self):
+        self._data = {}
 
     def set_value(self, expr):
         """Set the expression on this constraint."""
         if not self._data:
             self._data[None] = self
-        return super(SimpleConstraint, self).set_value(expr)
+        return super(ScalarConstraint, self).set_value(expr)
 
     #
     # Leaving this method for backward compatibility reasons.
@@ -1002,17 +960,27 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
         """Add a constraint with a given index."""
         if index is not None:
             raise ValueError(
-                "SimpleConstraint object '%s' does not accept "
+                "ScalarConstraint object '%s' does not accept "
                 "index values other than None. Invalid value: %s"
                 % (self.name, index))
         self.set_value(expr)
         return self
 
 
+class SimpleConstraint(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarConstraint
+    __renamed__version__ = '6.0'
+
+
 @disable_methods({'add', 'set_value', 'body', 'lower', 'upper', 'equality',
                   'strict_lower', 'strict_upper'})
-class AbstractSimpleConstraint(SimpleConstraint):
+class AbstractScalarConstraint(ScalarConstraint):
     pass
+
+
+class AbstractSimpleConstraint(metaclass=RenamedClass):
+    __renamed__new_class__ = AbstractScalarConstraint
+    __renamed__version__ = '6.0'
 
 
 class IndexedConstraint(Constraint):

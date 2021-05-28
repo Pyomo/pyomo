@@ -23,17 +23,15 @@ from pyomo.core.expr import current as EXPR
 from pyomo.repn import generate_standard_repn
 from pyomo.environ import AbstractModel, ConcreteModel, Var, Param, Set, Expression, RangeSet, ExternalFunction, quicksum, cos, sin, summation, sum_product
 import pyomo.kernel
-from pyomo.core.base.numvalue import native_numeric_types, as_numeric
+from pyomo.core.expr.numvalue import native_numeric_types, as_numeric, value
 
-from six import iteritems
-from six.moves import range
 
 class frozendict(dict):
     __slots__ = ('_hash',)
     def __hash__(self):
         rval = getattr(self, '_hash', None)
         if rval is None:
-            rval = self._hash = hash(frozenset(iteritems(self)))
+            rval = self._hash = hash(frozenset(self.items()))
         return rval
 
 
@@ -42,17 +40,17 @@ def repn_to_dict(repn):
     result = {}
     for i in range(len(repn.linear_vars)):
         if id(repn.linear_vars[i]) in result:
-            result[id(repn.linear_vars[i])] += repn.linear_coefs[i]
+            result[id(repn.linear_vars[i])] += value(repn.linear_coefs[i])
         else:
-            result[id(repn.linear_vars[i])] = repn.linear_coefs[i]
+            result[id(repn.linear_vars[i])] = value(repn.linear_coefs[i])
     for i in range(len(repn.quadratic_vars)):
         v1_, v2_ = repn.quadratic_vars[i]
         if id(v1_) <= id(v2_):
-            result[id(v1_), id(v2_)] = repn.quadratic_coefs[i]
+            result[id(v1_), id(v2_)] = value(repn.quadratic_coefs[i])
         else:
-            result[id(v2_), id(v1_)] = repn.quadratic_coefs[i]
+            result[id(v2_), id(v1_)] = value(repn.quadratic_coefs[i])
     if not (repn.constant is None or (type(repn.constant) in native_numeric_types and repn.constant == 0)):
-        result[None] = repn.constant
+        result[None] = value(repn.constant)
     return result
 
 
@@ -147,8 +145,8 @@ class Test(unittest.TestCase):
 
     def test_param(self):
         # p
-        m = AbstractModel()
-        m.p = Param()
+        m = ConcreteModel()
+        m.p = Param(mutable=True)
         e = m.p
 
         with self.assertRaises(ValueError):
@@ -168,7 +166,8 @@ class Test(unittest.TestCase):
         self.assertTrue(len(rep.quadratic_coefs) == 0)
         self.assertTrue(rep.nonlinear_expr is None)
         self.assertTrue(len(rep.nonlinear_vars) == 0)
-        baseline = { None : m.p }
+        baseline = { None : -4 }
+        m.p.value = -4
         self.assertEqual(baseline, repn_to_dict(rep))
         #s = pickle.dumps(rep)
         #rep = pickle.loads(s)

@@ -36,6 +36,17 @@ try:
 finally:
     sys.path.pop(0)
 
+# -- Options for intersphinx ---------------------------------------------
+
+intersphinx_mapping = {
+    'matplotlib': ('https://matplotlib.org/stable/', None),
+    'numpy': ('https://numpy.org/doc/stable/', None),
+    'pandas': ('https://pandas.pydata.org/docs/', None),
+    'scikit-learn': ('https://scikit-learn.org/stable/', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
+    'Sphinx': ('https://www.sphinx-doc.org/en/stable/', None),
+}
+
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -45,19 +56,26 @@ needs_sphinx = '1.8'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc',
-              'sphinx.ext.coverage',
-              'sphinx.ext.mathjax',
-              'sphinx.ext.viewcode',
-              'sphinx.ext.napoleon',
-              'sphinx.ext.ifconfig',
-              'sphinx.ext.inheritance_diagram',
-              'sphinx.ext.autosummary',
-              'sphinx.ext.doctest']
-    #'sphinx.ext.githubpages']
+extensions = [
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.coverage',
+    'sphinx.ext.mathjax',
+    'sphinx.ext.viewcode',
+    'sphinx.ext.napoleon',
+    'sphinx.ext.ifconfig',
+    'sphinx.ext.inheritance_diagram',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.doctest',
+    'sphinx_copybutton',
+    #'sphinx.ext.githubpages',
+]
 
 viewcode_follow_imported_members = True
 #napoleon_include_private_with_doc = True
+
+copybutton_prompt_text = r">>> |\.\.\. |\$ |In \[\d*\]: | {2,5}\.\.\.: | {5,8}: "
+copybutton_prompt_is_regexp = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -104,6 +122,13 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
+# If true, doctest flags (comments looking like # doctest: FLAG, ...) at
+# the ends of lines and <BLANKLINE> markers are removed for all code
+# blocks showing interactive Python sessions (i.e. doctests)
+trim_doctest_flags = True
+
+# If true, figures, tables and code-blocks are automatically numbered if
+# they have a caption.
 numfig = True
 
 # -- Options for HTML output ----------------------------------------------
@@ -114,9 +139,17 @@ numfig = True
 #html_theme = 'alabaster'
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
+html_theme = 'sphinx_rtd_theme'
+
+# Force HTML4: If we don't explicitly force HTML4, then the background
+# of the Paramters/Returns/Return type headers is shaded the same as the
+# method prototype (tested 15 April 21 with Sphinx=3.5.4 and
+# sphinx-rtd-theme=0.5.2).
+html4_writer = True
+#html5_writer = True
+
 if not on_rtd:  # only import and set the theme if we're building docs locally
     import sphinx_rtd_theme
-    html_theme = 'sphinx_rtd_theme'
     html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
     # Override default css to get a larger width for local build
     def setup(app):
@@ -210,7 +243,11 @@ texinfo_documents = [
 
 # -- Check which conditional dependencies are available ------------------
 # Used for skipping certain doctests
-
+from sphinx.ext.doctest import doctest
+doctest_default_flags = (
+    doctest.ELLIPSIS + doctest.NORMALIZE_WHITESPACE +
+    doctest.IGNORE_EXCEPTION_DETAIL + doctest.DONT_ACCEPT_TRUE_FOR_1
+)
 doctest_global_setup = '''
 
 from pyomo.common.dependencies import (
@@ -234,4 +271,14 @@ try:
     gurobipy_available = True
 except ImportError:
     gurobipy_available = False
+if numpy_available and scipy_available:
+    from pyomo.contrib.pynumero.asl import AmplInterface
+    asl_available = AmplInterface.available()
+    from pyomo.contrib.pynumero.linalg.mumps_interface import mumps_available
+    from pyomo.contrib.pynumero.linalg.ma27 import MA27Interface
+    ma27_available = MA27Interface.available()
+else:
+    asl_available = False
+    mumps_available = False
+    ma27_available = False
 '''

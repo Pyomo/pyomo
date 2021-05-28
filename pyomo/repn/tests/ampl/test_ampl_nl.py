@@ -48,7 +48,7 @@ class TestNLWriter(unittest.TestCase):
 
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError,
             "'a' is not part of the model",
             model.write, test_fname, format='nl')
@@ -87,7 +87,7 @@ class TestNLWriter(unittest.TestCase):
 
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError,
             "'other.a' exists within Foo 'other'",
             model.write, test_fname, format='nl')
@@ -108,6 +108,27 @@ class TestNLWriter(unittest.TestCase):
             expr=m.z**2 * m.hypot(m.p*m.x, m.p+m.y)**2)
         self.assertAlmostEqual(value(m.o), 25.0, 7)
         return m
+
+    def test_external_expression_constant(self):
+        DLL = find_GSL()
+        if not DLL:
+            self.skipTest("Could not find the amplgsl.dll library")
+
+        m = ConcreteModel()
+        m.y = Var(initialize=4, bounds=(0,None))
+        m.hypot = ExternalFunction(library=DLL, function="gsl_hypot")
+        m.o = Objective(expr=m.hypot(3, m.y))
+        self.assertAlmostEqual(value(m.o), 5.0, 7)
+
+        baseline_fname, test_fname = self._get_fnames()
+        self._cleanup(test_fname)
+        m.write(test_fname, format='nl',
+                    io_options={'symbolic_solver_labels':True})
+        self.assertTrue(cmp(
+            test_fname,
+            baseline_fname),
+            msg="Files %s and %s differ" % (test_fname, baseline_fname))
+        self._cleanup(test_fname)
 
     def test_external_expression_variable(self):
         m = self._external_model()

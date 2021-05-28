@@ -32,7 +32,7 @@ from pyomo.environ import (AbstractModel, ConcreteModel, Var, Set,
                            value, sum_product)
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
-from pyomo.core.base.block import SimpleBlock, SubclassOf, _BlockData, declare_custom_block
+from pyomo.core.base.block import ScalarBlock, SubclassOf, _BlockData, declare_custom_block
 from pyomo.core.expr import current as EXPR
 from pyomo.opt import check_available_solvers
 
@@ -40,7 +40,7 @@ from pyomo.gdp import Disjunct
 
 solvers = check_available_solvers('glpk')
 
-class DerivedBlock(SimpleBlock):
+class DerivedBlock(ScalarBlock):
     def __init__(self, *args, **kwargs):
         """Constructor"""
         kwargs['ctype'] = DerivedBlock
@@ -667,26 +667,26 @@ class TestBlock(unittest.TestCase):
         ### creation of a circular reference
         b = Block(concrete=True)
         b.c = Block()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Cannot assign the top-level block as a subblock "
-                "of one of its children \(c\): creates a circular hierarchy"):
+                r"of one of its children \(c\): creates a circular hierarchy"):
             b.c.d = b
 
     def test_set_value(self):
         b = Block(concrete=True)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Block components do not support assignment "
                 "or set_value"):
             b.set_value(None)
 
         b.b = Block()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Block components do not support assignment "
                 "or set_value"):
             b.b = 5
 
     def test_clear(self):
-        class DerivedBlock(SimpleBlock):
+        class DerivedBlock(ScalarBlock):
             _Block_reserved_words = None
 
         DerivedBlock._Block_reserved_words \
@@ -742,7 +742,7 @@ class TestBlock(unittest.TestCase):
         self.assertIs(b.x, c_x)
         self.assertIs(b.y, c_y)
 
-        class DerivedBlock(SimpleBlock):
+        class DerivedBlock(ScalarBlock):
             _Block_reserved_words = set()
             def __init__(self, *args, **kwds):
                 super(DerivedBlock, self).__init__(*args, **kwds)
@@ -799,16 +799,16 @@ class TestBlock(unittest.TestCase):
         b.c = Block()
         b.c.d = Block()
         b.c.d.e = Block()
-        with self.assertRaisesRegexp(
-                ValueError, '_BlockData.transfer_attributes_from\(\): '
-                'Cannot set a sub-block \(c.d.e\) to a parent block \(c\):'):
+        with self.assertRaisesRegex(
+                ValueError, r'_BlockData.transfer_attributes_from\(\): '
+                r'Cannot set a sub-block \(c.d.e\) to a parent block \(c\):'):
             b.c.d.e.transfer_attributes_from(b.c)
 
         ### bad data type
         b = Block(concrete=True)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError,
-                '_BlockData.transfer_attributes_from\(\): expected a Block '
+                r'_BlockData.transfer_attributes_from\(\): expected a Block '
                 'or dict; received str'):
             b.transfer_attributes_from('foo')
 
@@ -1804,18 +1804,18 @@ class TestBlock(unittest.TestCase):
 
         ref = [x.name for x in (
             m.x,
-            m.e[1].indicator_var,      m.e[1].x,
-            m.e[1].e[1].indicator_var, m.e[1].e[1].x,
-            m.e[1].e[2].indicator_var, m.e[1].e[2].x,
-            m.e[1].d.indicator_var,    m.e[1].d.x,
-            m.e[2].indicator_var,      m.e[2].x,
-            m.e[2].e[1].indicator_var, m.e[2].e[1].x,
-            m.e[2].e[2].indicator_var, m.e[2].e[2].x,
-            m.e[2].d.indicator_var,    m.e[2].d.x,
-            m.d.indicator_var,      m.d.x,
-            m.d.e[1].indicator_var, m.d.e[1].x,
-            m.d.e[2].indicator_var, m.d.e[2].x,
-            m.d.d.indicator_var,    m.d.d.x,
+            m.e[1].binary_indicator_var,      m.e[1].x,
+            m.e[1].e[1].binary_indicator_var, m.e[1].e[1].x,
+            m.e[1].e[2].binary_indicator_var, m.e[1].e[2].x,
+            m.e[1].d.binary_indicator_var,    m.e[1].d.x,
+            m.e[2].binary_indicator_var,      m.e[2].x,
+            m.e[2].e[1].binary_indicator_var, m.e[2].e[1].x,
+            m.e[2].e[2].binary_indicator_var, m.e[2].e[2].x,
+            m.e[2].d.binary_indicator_var,    m.e[2].d.x,
+            m.d.binary_indicator_var,      m.d.x,
+            m.d.e[1].binary_indicator_var, m.d.e[1].x,
+            m.d.e[2].binary_indicator_var, m.d.e[2].x,
+            m.d.d.binary_indicator_var,    m.d.d.x,
         )]
         test = list(x.name for x in m.component_data_objects(
             Var, descend_into=Disjunct ))
@@ -1824,44 +1824,44 @@ class TestBlock(unittest.TestCase):
         ref = [x.name for x in (
             m.x,
             m.c[1].x,
-            m.c[1].c[1].x,             m.c[1].c[2].x,
-            m.c[1].e[1].indicator_var, m.c[1].e[1].x,
-            m.c[1].e[2].indicator_var, m.c[1].e[2].x,
+            m.c[1].c[1].x,                    m.c[1].c[2].x,
+            m.c[1].e[1].binary_indicator_var, m.c[1].e[1].x,
+            m.c[1].e[2].binary_indicator_var, m.c[1].e[2].x,
             m.c[1].b.x,
-            m.c[1].d.indicator_var,    m.c[1].d.x,
+            m.c[1].d.binary_indicator_var,    m.c[1].d.x,
             m.c[2].x,
-            m.c[2].c[1].x,             m.c[2].c[2].x,
-            m.c[2].e[1].indicator_var, m.c[2].e[1].x,
-            m.c[2].e[2].indicator_var, m.c[2].e[2].x,
+            m.c[2].c[1].x,                    m.c[2].c[2].x,
+            m.c[2].e[1].binary_indicator_var, m.c[2].e[1].x,
+            m.c[2].e[2].binary_indicator_var, m.c[2].e[2].x,
             m.c[2].b.x,
-            m.c[2].d.indicator_var,    m.c[2].d.x,
+            m.c[2].d.binary_indicator_var,    m.c[2].d.x,
 
-            m.e[1].indicator_var,      m.e[1].x,
-            m.e[1].c[1].x,             m.e[1].c[2].x,
-            m.e[1].e[1].indicator_var, m.e[1].e[1].x,
-            m.e[1].e[2].indicator_var, m.e[1].e[2].x,
+            m.e[1].binary_indicator_var,      m.e[1].x,
+            m.e[1].c[1].x,                    m.e[1].c[2].x,
+            m.e[1].e[1].binary_indicator_var, m.e[1].e[1].x,
+            m.e[1].e[2].binary_indicator_var, m.e[1].e[2].x,
             m.e[1].b.x,
-            m.e[1].d.indicator_var,    m.e[1].d.x,
-            m.e[2].indicator_var,      m.e[2].x,
-            m.e[2].c[1].x,             m.e[2].c[2].x,
-            m.e[2].e[1].indicator_var, m.e[2].e[1].x,
-            m.e[2].e[2].indicator_var, m.e[2].e[2].x,
+            m.e[1].d.binary_indicator_var,    m.e[1].d.x,
+            m.e[2].binary_indicator_var,      m.e[2].x,
+            m.e[2].c[1].x,                    m.e[2].c[2].x,
+            m.e[2].e[1].binary_indicator_var, m.e[2].e[1].x,
+            m.e[2].e[2].binary_indicator_var, m.e[2].e[2].x,
             m.e[2].b.x,
-            m.e[2].d.indicator_var,    m.e[2].d.x,
+            m.e[2].d.binary_indicator_var,    m.e[2].d.x,
 
             m.b.x,
-            m.b.c[1].x,             m.b.c[2].x,
-            m.b.e[1].indicator_var, m.b.e[1].x,
-            m.b.e[2].indicator_var, m.b.e[2].x,
+            m.b.c[1].x,                    m.b.c[2].x,
+            m.b.e[1].binary_indicator_var, m.b.e[1].x,
+            m.b.e[2].binary_indicator_var, m.b.e[2].x,
             m.b.b.x,
-            m.b.d.indicator_var,    m.b.d.x,
+            m.b.d.binary_indicator_var,    m.b.d.x,
 
-            m.d.indicator_var,      m.d.x,
-            m.d.c[1].x,             m.d.c[2].x,
-            m.d.e[1].indicator_var, m.d.e[1].x,
-            m.d.e[2].indicator_var, m.d.e[2].x,
+            m.d.binary_indicator_var,      m.d.x,
+            m.d.c[1].x,                    m.d.c[2].x,
+            m.d.e[1].binary_indicator_var, m.d.e[1].x,
+            m.d.e[2].binary_indicator_var, m.d.e[2].x,
             m.d.b.x,
-            m.d.d.indicator_var,    m.d.d.x,
+            m.d.d.binary_indicator_var,    m.d.d.x,
         )]
         test = list(x.name for x in m.component_data_objects(
             Var, descend_into=(Block,Disjunct) ))
@@ -2412,22 +2412,22 @@ class TestBlock(unittest.TestCase):
 
     def test_reserved_words(self):
         m = ConcreteModel()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError, ".*using the name of a reserved attribute",
             m.add_component, "add_component", Var())
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, ".*using the name of a reserved attribute"):
             m.add_component = Var()
         m.foo = Var()
 
         m.b = DerivedBlock()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError, ".*using the name of a reserved attribute",
             m.b.add_component, "add_component", Var())
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError, ".*using the name of a reserved attribute",
             m.b.add_component, "foo", Var())
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, ".*using the name of a reserved attribute"):
             m.b.foo = Var()
 
@@ -2443,11 +2443,11 @@ class TestBlock(unittest.TestCase):
 
     def test_write_exceptions(self):
         m = Block()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, ".*Could not infer file format from file name"):
             m.write(filename="foo.bogus")
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, ".*Cannot write model in format"):
             m.write(format="bogus")
 
