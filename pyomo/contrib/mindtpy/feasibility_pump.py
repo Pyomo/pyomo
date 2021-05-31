@@ -69,19 +69,7 @@ def solve_fp_subproblem(solve_data, config):
     # Ref: Paper 'A storm of feasibility pumps for nonconvex MINLP'
     # the norm type is consistant with the norm obj of the FP-main problem.
     if config.fp_norm_constraint:
-        if config.fp_main_norm == 'L1':
-            # TODO: check if we can access the block defined in FP-main problem
-            generate_norm1_norm_constraint(
-                fp_nlp, solve_data.mip, config, discrete_only=True)
-        elif config.fp_main_norm == 'L2':
-            fp_nlp.norm_constraint = Constraint(expr=sum((nlp_var - mip_var.value)**2 - config.fp_norm_constraint_coef*(nlp_var.value - mip_var.value)**2
-                                                         for nlp_var, mip_var in zip(fp_nlp.MindtPy_utils.discrete_variable_list, solve_data.mip.MindtPy_utils.discrete_variable_list)) <= 0)
-        elif config.fp_main_norm == 'L_infinity':
-            fp_nlp.norm_constraint = ConstraintList()
-            rhs = config.fp_norm_constraint_coef * max(nlp_var.value - mip_var.value for nlp_var, mip_var in zip(
-                fp_nlp.MindtPy_utils.discrete_variable_list, solve_data.mip.MindtPy_utils.discrete_variable_list))
-            for nlp_var, mip_var in zip(fp_nlp.MindtPy_utils.discrete_variable_list, solve_data.mip.MindtPy_utils.discrete_variable_list):
-                fp_nlp.norm_constraint.add(nlp_var - mip_var.value <= rhs)
+        generate_norm_constraint(fp_nlp, solve_data, config)
 
     MindtPy.fp_nlp_obj = generate_norm2sq_objective_function(
         fp_nlp, solve_data.mip, discrete_only=config.fp_discrete_only)
@@ -160,28 +148,9 @@ def fp_loop(solve_data, config):
         # solve MILP main problem
         feas_main, feas_main_results = solve_main(
             solve_data, config, fp=True)
-        if feas_main_results.solver.termination_condition is tc.optimal:
-            config.logger.info(
-                'FP-MIP %s: Distance-OBJ: %s'
-                % (solve_data.fp_iter, value(solve_data.mip.MindtPy_utils.fp_mip_obj)))
-        elif feas_main_results.solver.termination_condition is tc.maxTimeLimit:
-            config.logger.warning('FP-MIP reaches max TimeLimit')
-            solve_data.results.solver.termination_condition = tc.maxTimeLimit
-        elif feas_main_results.solver.termination_condition is tc.infeasible:
-            config.logger.warning('FP-MIP infeasible')
-            no_good_cuts = solve_data.mip.MindtPy_utils.cuts.no_good_cuts
-            if no_good_cuts.__len__() > 0:
-                no_good_cuts[no_good_cuts.__len__()].deactivate()
-            break
-        elif feas_main_results.solver.termination_condition is tc.unbounded:
-            config.logger.warning('FP-MIP unbounded')
-            break
-        elif (feas_main_results.solver.termination_condition is tc.other and
-              feas_main_results.solution.status is SolutionStatus.feasible):
-            config.logger.warning('MILP solver reported feasible solution of FP-MIP, '
-                                  'but not guaranteed to be optimal.')
-        else:
-            config.logger.warning('Unexpected result of FP-MIP')
+        fp_should_terminate = handle_feas_main_tc(
+            feas_main_results, solve_data, config)
+        if fp_should_terminate:
             break
 
         # Solve NLP subproblem
@@ -256,3 +225,48 @@ def add_orthogonality_cuts(solve_data, config):
                                 for mip_v, nlp_v in zip(mip_integer_vars, nlp_integer_vars)) >= 0
         solve_data.working_model.MindtPy_utils.cuts.fp_orthogonality_cuts.add(
             orthogonality_cut)
+
+
+def generate_norm_constraint(fp_nlp, solve_data, config):
+    if config.fp_main_norm == 'L1':
+        # TODO: check if we can access the block defined in FP-main problem
+        generate_norm1_norm_constraint(
+            fp_nlp, solve_data.mip, config, discrete_only=True)
+    elif config.fp_main_norm == 'L2':
+        fp_nlp.norm_constraint = Constraint(expr=sum((nlp_var - mip_var.value)**2 - config.fp_norm_constraint_coef*(nlp_var.value - mip_var.value)**2
+                                                     for nlp_var, mip_var in zip(fp_nlp.MindtPy_utils.discrete_variable_list, solve_data.mip.MindtPy_utils.discrete_variable_list)) <= 0)
+    elif config.fp_main_norm == 'L_infinity':
+        fp_nlp.norm_constraint = ConstraintList()
+        rhs = config.fp_norm_constraint_coef * max(nlp_var.value - mip_var.value for nlp_var, mip_var in zip(
+            fp_nlp.MindtPy_utils.discrete_variable_list, solve_data.mip.MindtPy_utils.discrete_variable_list))
+        for nlp_var, mip_var in zip(fp_nlp.MindtPy_utils.discrete_variable_list, solve_data.mip.MindtPy_utils.discrete_variable_list):
+            fp_nlp.norm_constraint.add(nlp_var - mip_var.value <= rhs)
+
+
+def handle_feas_main_tc(feas_main_results, solve_data, config):
+    if feas_main_results.solver.termination_condition is tc.optimal:
+        config.logger.info(
+            'FP-MIP %s: Distance-OBJ: %s'
+            % (solve_data.fp_iter, value(solve_data.mip.MindtPy_utils.fp_mip_obj)))
+        return False
+    elif feas_main_results.solver.termination_condition is tc.maxTimeLimit:
+        config.logger.warning('FP-MIP reaches max TimeLimit')
+        solve_data.results.solver.termination_condition = tc.maxTimeLimit
+        return True
+    elif feas_main_results.solver.termination_condition is tc.infeasible:
+        config.logger.warning('FP-MIP infeasible')
+        no_good_cuts = solve_data.mip.MindtPy_utils.cuts.no_good_cuts
+        if no_good_cuts.__len__() > 0:
+            no_good_cuts[no_good_cuts.__len__()].deactivate()
+        return True
+    elif feas_main_results.solver.termination_condition is tc.unbounded:
+        config.logger.warning('FP-MIP unbounded')
+        return True
+    elif (feas_main_results.solver.termination_condition is tc.other and
+            feas_main_results.solution.status is SolutionStatus.feasible):
+        config.logger.warning('MILP solver reported feasible solution of FP-MIP, '
+                              'but not guaranteed to be optimal.')
+        return False
+    else:
+        config.logger.warning('Unexpected result of FP-MIP')
+        return True

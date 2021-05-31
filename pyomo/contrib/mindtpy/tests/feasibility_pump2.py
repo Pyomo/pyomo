@@ -11,8 +11,6 @@ Ref:
 
 """
 from __future__ import division
-
-from six import iteritems
 from math import pi
 
 from pyomo.environ import (Binary, ConcreteModel, Constraint,
@@ -27,7 +25,7 @@ class Feasibility_Pump2(ConcreteModel):
         """Create the problem."""
         kwargs.setdefault('name', 'Feasibility_Pump2')
         super(Feasibility_Pump2, self).__init__(*args, **kwargs)
-        m = self
+        model = m = self
 
         m.x = Var(within=Binary)
         m.y = Var(within=Reals)
@@ -36,3 +34,4 @@ class Feasibility_Pump2(ConcreteModel):
 
         m.c1 = Constraint(expr=m.y - sin(m.x * pi * (5 / 3)) <= 0)
         m.c2 = Constraint(expr=- m.y - sin(m.x * pi * (5 / 3)) <= 0)
+        model.optimal_value = 0

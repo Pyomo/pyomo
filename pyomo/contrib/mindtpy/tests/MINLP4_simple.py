@@ -26,7 +26,7 @@ class SimpleMINLP4(ConcreteModel):
         """Create the problem."""
         kwargs.setdefault('name', 'SimpleMINLP4')
         super(SimpleMINLP4, self).__init__(*args, **kwargs)
-        m = self
+        model = m = self
 
         m.x = Var(domain=Reals, bounds=(1, 20), initialize=5.29)
         m.y = Var(domain=Integers, bounds=(1, 20), initialize=3)
@@ -36,4 +36,5 @@ class SimpleMINLP4(ConcreteModel):
         m.c2 = Constraint(expr=1/m.x + 1/m.y - sqrt(m.x) * sqrt(m.y) <= -1)
         m.c3 = Constraint(expr=2*m.x - 5*m.y <= -1)
 
-        m.obj = Objective(expr=-6 * m.x - m.y, sense=minimize)
+        m.objective = Objective(expr=-6 * m.x - m.y, sense=minimize)
+        m.optimal_value = -56.981

@@ -18,7 +18,7 @@ class Nonconvex3(ConcreteModel):
         """Create the problem."""
         kwargs.setdefault('name', 'Nonconvex3')
         super(Nonconvex3, self).__init__(*args, **kwargs)
-        m = self
+        model = m = self
 
         m.x1 = Var(within=Reals, bounds=(1, 5))
         m.x2 = Var(within=Reals, bounds=(1, 5))
@@ -38,3 +38,4 @@ class Nonconvex3(ConcreteModel):
         m.c4 = Constraint(expr=4 * m.x1 - 3 * m.x2 <= 11)
         m.c5 = Constraint(expr=-m.x1 + m.y1 + 2 * m.y2 + 4 * m.y3 == 0)
         m.c6 = Constraint(expr=-m.x2 + m.y4 + 2 * m.y5 + m.y6 == 0)
+        m.optimal_value = 31
