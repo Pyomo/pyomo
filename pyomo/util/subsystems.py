@@ -79,3 +79,151 @@ class SubsystemManager(object):
         for con, was_active in self._var_was_active:
             if was_active:
                 var.activate()
+
+"""
+Could iterate over a param sweeper object, or could iterate over
+parameters, and create a new context for each...
+
+subsystem = SubsystemManager(to_fix, to_deactivate)
+param_sweep = ParamSweeper(
+    inputs=ComponentMap([(var, vals) for var, vals in input_data),
+    outputs=ComponentMap([(var, vals) for var, vals in output_data),
+    n_scenario=n_scenario,
+    )
+with subsystem:
+    with param_sweep:
+        for inputs, outputs in param_sweep:
+            solver.solve(block)
+            for var, val in outputs.items():
+                assert var.value == val
+
+-------
+versus:
+-------
+
+input_data = [
+    ComponentMap([(var, vals[i]) for var, vals in input_data])
+    for i in range(n_scenario)
+    ]
+output_data = [
+    ComponentMap([(var, vals[i]) for var, vals in output_data])
+    for i in range(n_scenario)
+    ]
+subsystem = SubsystemManager(to_fix, to_deactivate)
+with subsystem:
+    for inputs, outputs in zip(input_data, output_data):
+        with InputSetter(inputs):
+            solver.solve(block)
+            for var, val in outputs.items():
+                assert var.value == val
+
+-----------
+Comparison:
+-----------
+Former:
+    - data format of inputs and outputs that user has to deal with
+      is more intuitive. Dict of lists rather than list of dicts.
+      => keys (components) are only stored once.
+    - Can naturally combine the two context managers
+    - Could we avoid iteration if n_scenario == 1?
+    ^ The more I think about it, the more I think the base
+    SubsystemManager should support setting and restoring values.
+    This would special handling of the n == 1 case less important.
+
+Latter:
+    - Context manager is less opaque. Avoids iterating over context
+      manager, which may be confusing.
+    - But combining with the "subsystem" manager would repeat the
+      fixing/deactivating work.
+    - More natural if we only have one set of inputs we want to test;
+      don't need to iterate in this case.
+"""
+
+
+class ParamSweeper(SubsystemManager):
+    """ This class enables setting values of variables/parameters
+    according to a provided sequence. Iterating over this object
+    sets values to the next in the sequence, at which point a
+    calculation may be performed and output values compared.
+    On exit, original values are restored.
+    """
+
+    def __init__(self,
+            n_scenario,
+            input_values,
+            output_values=None,
+            to_fix=None,
+            to_deactivate=None,
+            ):
+        """
+        Parameters
+        ----------
+        n_scenario: The number of different values we expect for each
+                    input variable
+        input_values: ComponentMap mapping each input variable to a list
+                      of values of length n_scenario
+        output_values: ComponentMap mapping each output variable to a list
+                       of values of length n_scenario
+        """
+        # Should this object be aware of the user's block/model?
+        # My answer for now is no.
+        self.input_values = input_values
+        self.output_values = output_values if output_values is not None else {}
+        self.n_scenario = n_scenario
+        self.initial_state_values = None
+        self._ip = -1 # Index pointer for iteration
+
+        super(ParamSweeper, self).__init__(
+                to_fix=to_fix,
+                to_deactivate=to_deactivate,
+                )
+
+    def __enter__(self):
+        # Store initial values of input vars
+        self.initial_input_values = ComponentMap([
+            (var, var.value) for var in self.input_values
+            ])
+
+        # TODO: Maybe alter the values of the inputs here?
+        # Or this could be handled by the call to super.__enter__
+        # if I expand the base class's functionality
+
+        # Fix and deactivate if necessary
+        return super(ParamSweeper, self).__enter__()
+
+    def __exit__(self, ex_type, ex_val, ex_bt):
+        # I don't think order should matter here.
+        res = super(ParamSweeper, self).__exit__(ex_type, ex_val, ex_bt)
+        
+        for var, val in self.initial_input_values.items():
+            var.set_value(val)
+
+        return res
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        self._ip += 1
+
+        i = self._ip
+        n_scenario = self.n_scenario
+        input_values = self.input_values
+        output_values = self.output_values
+
+        if i >= n_scenario:
+            self._ip = -1
+            raise StopIteration()
+
+        else:
+            inputs = ComponentMap()
+            for var, values in input_values.items():
+                val = values[i]
+                var.set_value(val)
+                inputs[var] = val
+
+            outputs = ComponentMap([
+                (var, values[i]) for var, values in output_values.items()
+                ])
+
+            return inputs, outputs
