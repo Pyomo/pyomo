@@ -11,7 +11,7 @@
 from pyomo.core.base.PyomoModel import ConcreteModel
 from pyomo.core.base.reference import Reference
 from pyomo.core.expr.visitor import identify_variables
-from pyomo.common.collections import ComponentSet
+from pyomo.common.collections import ComponentSet, ComponentMap
 
 
 def create_subsystem_block(constraints, variables=None, include_fixed=False):
@@ -76,7 +76,7 @@ class SubsystemManager(object):
         for var, was_fixed in self._var_was_fixed:
             if not was_fixed:
                 var.unfix()
-        for con, was_active in self._var_was_active:
+        for con, was_active in self._con_was_active:
             if was_active:
                 var.activate()
 
