@@ -26,7 +26,7 @@ from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
 from pyomo.solvers.tests.models.QCP_simple import QCP_simple
 from pyomo.opt import TerminationCondition
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
-from pyomo.contrib.mindtpy.util import setup_solve_data, add_feas_slacks
+from pyomo.contrib.mindtpy.util import setup_solve_data, add_feas_slacks, set_solver_options
 from pyomo.contrib.mindtpy.nlp_solve import handle_subproblem_other_termination, handle_feasibility_subproblem_tc, solve_subproblem, handle_nlp_subproblem_tc
 from pyomo.core.base import TransformationFactory
 from pyomo.opt import TerminationCondition as tc
@@ -38,6 +38,7 @@ from pyomo.contrib.mindtpy.mip_solve import solve_main, handle_main_optimal, han
 from pyomo.opt import SolutionStatus, SolverStatus
 from pyomo.core import (Constraint, Objective,
                         TransformationFactory, minimize, value, Var, RangeSet, NonNegativeReals)
+from pyomo.contrib.mindtpy.iterate import algorithm_should_terminate
 
 nonconvex_model_list = [EightProcessFlowsheet(convex=False)]
 
@@ -213,7 +214,6 @@ class TestMindtPy(unittest.TestCase):
             init_rNLP(solve_data, config)
             feas_main, feas_main_results = solve_main(
                 solve_data, config, fp=True)
-            print(feas_main_results)
             feas_main_results.solver.termination_condition = tc.optimal
             fp_should_terminate = handle_feas_main_tc(
                 feas_main_results, solve_data, config)
@@ -255,6 +255,75 @@ class TestMindtPy(unittest.TestCase):
             generate_norm_constraint(fp_nlp, solve_data, config)
             config.fp_main_norm = 'L_infinity'
             generate_norm_constraint(fp_nlp, solve_data, config)
+
+            # test set_solver_options
+            config.mip_solver = 'gams'
+            config.threads = 1
+            opt = SolverFactory(config.mip_solver)
+            set_solver_options(opt, solve_data, config,
+                               'mip', regularization=False)
+
+            config.mip_solver = 'gurobi'
+            config.mip_regularization_solver = 'gurobi'
+            config.regularization_mip_threads = 1
+            opt = SolverFactory(config.mip_solver)
+            set_solver_options(opt, solve_data, config,
+                               'mip', regularization=True)
+
+            config.nlp_solver = 'gams'
+            config.nlp_solver_args['solver'] = 'ipopt'
+            set_solver_options(opt, solve_data, config,
+                               'nlp', regularization=False)
+
+            config.nlp_solver_args['solver'] = 'ipopth'
+            set_solver_options(opt, solve_data, config,
+                               'nlp', regularization=False)
+
+            config.nlp_solver_args['solver'] = 'conopt'
+            set_solver_options(opt, solve_data, config,
+                               'nlp', regularization=False)
+
+            config.nlp_solver_args['solver'] = 'msnlp'
+            set_solver_options(opt, solve_data, config,
+                               'nlp', regularization=False)
+
+            config.nlp_solver_args['solver'] = 'baron'
+            set_solver_options(opt, solve_data, config,
+                               'nlp', regularization=False)
+
+            # test algorithm_should_terminate
+            solve_data.should_terminate = True
+            solve_data.UB = float('inf')
+            self.assertIs(algorithm_should_terminate(
+                solve_data, config, check_cycling=False), True)
+            self.assertIs(
+                solve_data.results.solver.termination_condition, tc.noSolution)
+
+            solve_data.UB = 100
+            self.assertIs(algorithm_should_terminate(
+                solve_data, config, check_cycling=False), True)
+            self.assertIs(
+                solve_data.results.solver.termination_condition, tc.feasible)
+
+            solve_data.objective_sense = maximize
+            solve_data.LB = float('-inf')
+            self.assertIs(algorithm_should_terminate(
+                solve_data, config, check_cycling=False), True)
+            self.assertIs(
+                solve_data.results.solver.termination_condition, tc.noSolution)
+
+            solve_data.LB = 100
+            self.assertIs(algorithm_should_terminate(
+                solve_data, config, check_cycling=False), True)
+            self.assertIs(
+                solve_data.results.solver.termination_condition, tc.feasible)
+
+            # config.time_limit = 1
+            # solve_data.should_terminate = False
+            # self.assertIs(algorithm_should_terminate(
+            #     solve_data, config, check_cycling=False), True)
+            # self.assertIs(
+            #     solve_data.results.solver.termination_condition, tc.maxTimeLimit)
 
 
 if __name__ == '__main__':
