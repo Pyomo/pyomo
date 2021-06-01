@@ -34,7 +34,7 @@ def create_subsystem_block(constraints, variables=None, include_fixed=False):
             if var not in var_set:
                 input_vars.append(var)
                 var_set.add(var)
-    block.input_vars = Reference(other_vars)
+    block.input_vars = Reference(input_vars)
     return block
 
 
