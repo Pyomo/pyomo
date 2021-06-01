@@ -15,7 +15,8 @@ from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.core.expr.numeric_expr import (ProductExpression,
-                                          UnaryFunctionExpression)
+                                          UnaryFunctionExpression,
+                                          LinearExpression)
 import math
 from io import StringIO
 
@@ -819,3 +820,14 @@ class TestFBBT(unittest.TestCase):
         lb, ub = compute_bounds_on_expr(e)
         self.assertAlmostEqual(lb, 0)
         self.assertIsNone(ub)
+
+    def test_linear_expression(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(1, 2))
+        m.y = pyo.Var()
+        m.p = pyo.Param(initialize=3, mutable=True)
+        e = LinearExpression(constant=1, linear_coefs=[1, m.p - 1], linear_vars=[m.x, m.y])
+        m.c = pyo.Constraint(expr=e == 0)
+        fbbt(m.c)
+        self.assertAlmostEqual(m.y.lb, -1.5)
+        self.assertAlmostEqual(m.y.ub, -1)
