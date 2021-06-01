@@ -8,6 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.environ import SolverFactory
+from pyomo.util.subsystems import create_subsystem_block, subsystem_manager
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.interfaces.external_grey_box import (
         ExternalGreyBoxModel,
@@ -65,25 +67,21 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         return ["residual_%i" % i for i in range(self.n_equality_constraints())]
 
     def set_input_values(self, input_values):
-        for var, val in zip(self.input_vars, input_values):
+        external_cons = self.external_cons
+        external_vars = self.external_vars
+        input_vars = self.input_vars
+
+        for var, val in zip(input_vars, input_values):
             var.set_value(val)
 
-        # TODO:
-        # - toss external constraints and external/input variables onto 
-        #   a temporary block
-        # - walk the constraint expressions for additional variables,
-        #   put them on the block as well (is it an error if additional
-        #   variables exist? - probably. These should just be inputs)
-        # - fix inputs and solve temporary block. (with context manager,
-        #   ideally)
-        # - create a PyomoNLP that can be used to compute derivatives at
-        #   the solution.
-        #
-        # Another issue:
-        # I have two representations of the model - the Pyomo components,
-        # and the PyomoNLP. It is convenient to solve the Pyomo components,
-        # but then I need to update the values in the PyomoNLP (or
-        # reconstruct it). Alternatively I could just solve the PyomoNLP
-        # with a compatible method (interior_point, cyipopt). This would
-        # be more efficient, less convenient. E.g. how would I "fix"
-        # variables in the NLP? (By projecting it, probably).
+        _temp = create_subsystem_block(external_cons, variables=external_vars)
+        assert len(_temp.other_vars) == len(input_vars)
+
+        solver = SolverFactory("ipopt")
+        with SubsystemManager(to_fix=input_vars):
+            solver.solve(_temp)
+
+        # Should we create the NLP from the original block or the temp block?
+        # Need to create it from the original block because temp block won't
+        # have residual constraints, whose derivatives are necessary.
+        self._nlp = PyomoNLP(self._block)
