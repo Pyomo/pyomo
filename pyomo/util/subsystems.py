@@ -88,65 +88,6 @@ class TemporarySubsystemManager(object):
         for comp, val in self._comp_original_value:
             comp.set_value(val)
 
-"""
-Could iterate over a param sweeper object, or could iterate over
-parameters, and create a new context for each...
-
-subsystem = SubsystemManager(to_fix, to_deactivate)
-param_sweep = ParamSweeper(
-    inputs=ComponentMap([(var, vals) for var, vals in input_data),
-    outputs=ComponentMap([(var, vals) for var, vals in output_data),
-    n_scenario=n_scenario,
-    )
-with subsystem:
-    with param_sweep:
-        for inputs, outputs in param_sweep:
-            solver.solve(block)
-            for var, val in outputs.items():
-                assert var.value == val
-
--------
-versus:
--------
-
-input_data = [
-    ComponentMap([(var, vals[i]) for var, vals in input_data])
-    for i in range(n_scenario)
-    ]
-output_data = [
-    ComponentMap([(var, vals[i]) for var, vals in output_data])
-    for i in range(n_scenario)
-    ]
-subsystem = SubsystemManager(to_fix, to_deactivate)
-with subsystem:
-    for inputs, outputs in zip(input_data, output_data):
-        with InputSetter(inputs):
-            solver.solve(block)
-            for var, val in outputs.items():
-                assert var.value == val
-
------------
-Comparison:
------------
-Former:
-    - data format of inputs and outputs that user has to deal with
-      is more intuitive. Dict of lists rather than list of dicts.
-      => keys (components) are only stored once.
-    - Can naturally combine the two context managers
-    - Could we avoid iteration if n_scenario == 1?
-    ^ The more I think about it, the more I think the base
-    SubsystemManager should support setting and restoring values.
-    This would special handling of the n == 1 case less important.
-
-Latter:
-    - Context manager is less opaque. Avoids iterating over context
-      manager, which may be confusing.
-    - But combining with the "subsystem" manager would repeat the
-      fixing/deactivating work.
-    - More natural if we only have one set of inputs we want to test;
-      don't need to iterate in this case.
-"""
-
 
 class ParamSweeper(TemporarySubsystemManager):
     """ This class enables setting values of variables/parameters
