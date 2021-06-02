@@ -9,8 +9,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.fileutils import find_library
-import numpy.ctypeslib as npct
-import numpy as np
+from pyomo.common.dependencies import numpy as np
 import ctypes
 import os
 
@@ -33,8 +32,7 @@ class AmplInterface(object):
 
         if not AmplInterface.available():
             raise RuntimeError(
-                "ASL interface is not supported on this platform (%s)"
-                % (os.name,) )
+                "Cannot load the PyNumero ASL interface (pynumero_ASL)")
 
         if nl_buffer is not None:
             raise NotImplementedError("AmplInterface only supported form NL-file for now")
@@ -42,8 +40,10 @@ class AmplInterface(object):
         self.ASLib = ctypes.cdll.LoadLibrary(AmplInterface.libname)
 
         # define 1d array
-        array_1d_double = npct.ndpointer(dtype=np.double, ndim=1, flags='CONTIGUOUS')
-        array_1d_int = npct.ndpointer(dtype=np.intc, ndim=1, flags='CONTIGUOUS')
+        array_1d_double = np.ctypeslib.ndpointer(
+            dtype=np.double, ndim=1, flags='CONTIGUOUS')
+        array_1d_int = np.ctypeslib.ndpointer(
+            dtype=np.intc, ndim=1, flags='CONTIGUOUS')
 
         # constructor
         self.ASLib.EXTERNAL_AmplInterface_new.argtypes = [ctypes.c_char_p]
