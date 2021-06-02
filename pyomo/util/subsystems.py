@@ -162,6 +162,7 @@ class ParamSweeper(TemporarySubsystemManager):
             output_values=None,
             to_fix=None,
             to_deactivate=None,
+            to_reset=None,
             ):
         """
         Parameters
@@ -184,6 +185,7 @@ class ParamSweeper(TemporarySubsystemManager):
         super(ParamSweeper, self).__init__(
                 to_fix=to_fix,
                 to_deactivate=to_deactivate,
+                to_reset=to_reset,
                 )
 
     def __enter__(self):
