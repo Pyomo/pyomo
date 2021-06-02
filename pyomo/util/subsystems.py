@@ -123,33 +123,16 @@ class ParamSweeper(TemporarySubsystemManager):
         self.initial_state_values = None
         self._ip = -1 # Index pointer for iteration
 
+        if to_reset is None:
+            to_reset = [var for var in input_values]
+        else:
+            to_reset.extend(var for var in input_values)
+
         super(ParamSweeper, self).__init__(
                 to_fix=to_fix,
                 to_deactivate=to_deactivate,
                 to_reset=to_reset,
                 )
-
-    def __enter__(self):
-        # Store initial values of input vars
-        self.initial_input_values = ComponentMap([
-            (var, var.value) for var in self.input_values
-            ])
-
-        # TODO: Maybe alter the values of the inputs here?
-        # Or this could be handled by the call to super.__enter__
-        # if I expand the base class's functionality
-
-        # Fix and deactivate if necessary
-        return super(ParamSweeper, self).__enter__()
-
-    def __exit__(self, ex_type, ex_val, ex_bt):
-        # I don't think order should matter here.
-        res = super(ParamSweeper, self).__exit__(ex_type, ex_val, ex_bt)
-        
-        for var, val in self.initial_input_values.items():
-            var.set_value(val)
-
-        return res
 
     def __iter__(self):
         return self
