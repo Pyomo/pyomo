@@ -195,6 +195,10 @@ class _StreamHandle(object):
                 written = 0
             if written and not self.buffering:
                 stream.flush()
+            # Note: some derived file-like objects fail to return the
+            # number of characters written (and implicitly return None).
+            # If we get None, we will just assume that everything was
+            # fine (as opposed to tossing the incomplete write error).
             if written is not None and written != len(ostring):
                 logger.error(
                     "Output stream (%s) closed before all output was "
