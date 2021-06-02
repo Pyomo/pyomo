@@ -11,9 +11,8 @@
 # pyros.py: Generalized Robust Cutting-Set Algorithm for Pyomo
 import logging
 from pyutilib.misc import Container
-from pyomo.solver.base import Solver
 from pyomo.common.config import (
-    ConfigValue, In, NonNegativeFloat
+    ConfigDict, ConfigValue, In, NonNegativeFloat
 )
 from pyomo.core.base.block import Block
 from pyomo.core.expr import value
@@ -76,8 +75,8 @@ class SolverResolvable(object):
         elif isinstance(obj, list):
             return [self(o) for o in obj]
         else:
-            raise ValueError("Expected a {0} or string object, "
-                             "instead recieved {1}".format(Solver.__name__, obj.__class__.__name__))
+            raise ValueError("Expected a Pyomo solver or string object, "
+                             "instead recieved {1}".format(obj.__class__.__name__))
 
 class InputDataStandardizer(object):
     def __init__(self, ctype, cdatatype):
@@ -96,16 +95,37 @@ class InputDataStandardizer(object):
             assert isinstance(_, self.cdatatype)
         return ans
 
-@SolverFactory.register("pyros",
-                        doc="Robust optimization (RO) solver implementing "
-                            "the generalized robust cutting-set algorithm (GRCS)")
-class PyROS(Solver):
+@SolverFactory.register(
+    "pyros",
+    doc="Robust optimization (RO) solver implementing "
+    "the generalized robust cutting-set algorithm (GRCS)")
+class PyROS(object):
     '''
     PyROS (Pyomo Robust Optimization Solver) implements the
     generalized robust cutting-set algorithm (GRCS) (TODO citation)
     '''
 
-    CONFIG = Solver.CONFIG()
+    CONFIG = ConfigDict()
+    # ================================================
+    # === Options common to all solvers
+    # ================================================
+    CONFIG.declare('time_limit', ConfigValue(
+        default=None,
+        domain=NonNegativeFloat,
+    ))
+    CONFIG.declare('keepfiles', ConfigValue(
+        default=False,
+        domain=bool,
+    ))
+    CONFIG.declare('tee', ConfigValue(
+        default=False,
+        domain=bool,
+    ))
+    CONFIG.declare('load_solution', ConfigValue(
+        default=True,
+        domain=bool,
+    ))
+
     # ================================================
     # === Required User Inputs
     # ================================================
@@ -203,7 +223,7 @@ class PyROS(Solver):
         description="The logger object or name to use for reporting."
     ))
     CONFIG.declare("print_subsolver_progress_to_screen", ConfigValue(
-        default=True, domain=bool,
+        default=False, domain=bool,
         description="Sets the 'tee' for all sub-solvers utilized."
     ))
     CONFIG.declare("backup_local_solvers", ConfigValue(
@@ -243,7 +263,7 @@ class PyROS(Solver):
         """Return a 3-tuple describing the solver version."""
         return __version__
 
-    def license_status(self):
+    def license_is_valid(self):
         ''' TODO: '''
         return True
 

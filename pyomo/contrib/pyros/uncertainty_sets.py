@@ -93,7 +93,7 @@ class UncertaintySet:
 
         # === Check if uncertain_params are Params or Vars, if Params set value, if vars fix value
         if type(uncertain_params) is IndexedVar or type(uncertain_params) is IndexedParam:
-            the_params = list(uncertain_params.itervalues())
+            the_params = list(uncertain_params.values())
         else:
             the_params = uncertain_params
         for idx, p in enumerate(the_params):
@@ -108,7 +108,7 @@ class UncertaintySet:
         set_constraint = self.set_as_constraint(uncertain_params=the_params)
 
         # === value() returns True if the constraint is satisfied, False else.
-        is_in_set = all(value(con.expr) for con in list(set_constraint.itervalues()))
+        is_in_set = all(value(con.expr) for con in list(set_constraint.values()))
 
         # === Revert uncertain_params to their original value and unfix them
         for idx, p in enumerate(the_params):
@@ -182,7 +182,7 @@ class BoxSet(UncertaintySet):
         '''
         set = config.uncertainty_set
         bounds = set.bounds
-        for i, p in enumerate(model.util.uncertain_param_vars.itervalues()):
+        for i, p in enumerate(model.util.uncertain_param_vars.values()):
             lb = bounds[i][0]
             ub = bounds[i][1]
             p.setlb(lb)
@@ -289,7 +289,7 @@ class CardinalitySet(UncertaintySet):
         set = config.uncertainty_set
         nom_val = config.nominal_uncertain_param_vals
         deviation = set.positive_deviation
-        for i, p in enumerate(model.util.uncertain_param_vars.itervalues()):
+        for i, p in enumerate(model.util.uncertain_param_vars.values()):
             lb = nom_val[i]
             ub = nom_val[i] + min(config.uncertainty_set.gamma, 1) * deviation[i]
             p.setlb(lb)
@@ -486,7 +486,7 @@ class BudgetSet(PolyhedralSet):
         set = config.uncertainty_set
         membership_mat = set.coefficients_mat
         rhs_vec = set.rhs_vec
-        for i, p in enumerate(model.util.uncertain_param_vars.itervalues()):
+        for i, p in enumerate(model.util.uncertain_param_vars.values()):
             col = column(membership_mat, i)
             ub = min(col[j] * rhs_vec[j] for j in range(len(rhs_vec)))
             lb = 0
@@ -613,7 +613,7 @@ class FactorModelSet(UncertaintySet):
         nom_val = config.nominal_uncertain_param_vals
         psi_mat = set.psi_mat
         F = set.number_of_factors
-        for i, p in enumerate(model.util.uncertain_param_vars.itervalues()):
+        for i, p in enumerate(model.util.uncertain_param_vars.values()):
             sum_psi_row = sum(abs(psi_mat[i][j]) for j in range(F))
             lb = nom_val[i] - sum_psi_row
             ub = nom_val[i] + sum_psi_row
@@ -690,7 +690,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
         :param config: the config object for the PyROS solver instance
         :return: void
         '''
-        for i, p in enumerate(model.util.uncertain_param_vars.itervalues()):
+        for i, p in enumerate(model.util.uncertain_param_vars.values()):
             nom_value = config.nominal_uncertain_param_vals[i]
             half_length = config.uncertainty_set.half_lengths[i]
             p.setlb(nom_value - half_length)
@@ -804,7 +804,7 @@ class EllipsoidalSet(UncertaintySet):
         '''
         set = config.uncertainty_set
         scale = set.scale
-        for i, p in enumerate(model.util.uncertain_param_vars.itervalues()):
+        for i, p in enumerate(model.util.uncertain_param_vars.values()):
             nom_value = config.nominal_uncertain_param_vals[i]
             P = set.shape_matrix
             P_ii = P[i][i]
@@ -891,7 +891,7 @@ class DiscreteSet(UncertaintySet):
         :return: void
         '''
         set = config.uncertainty_set
-        for i, p in enumerate(model.util.uncertain_param_vars.itervalues()):
+        for i, p in enumerate(model.util.uncertain_param_vars.values()):
             min_i = min(s[i] for s in set.scenarios)
             max_i = max(s[i] for s in set.scenarios)
             p.setlb(min_i)
@@ -1025,7 +1025,7 @@ class IntersectedSet(UncertaintySet):
                 conlist = ConstraintList()
                 conlist.construct()
                 for set in Qint.all_sets:
-                    for con in list(set.set_as_constraint(uncertain_params=uncertain_params).itervalues()):
+                    for con in list(set.set_as_constraint(uncertain_params=uncertain_params).values()):
                         conlist.add(con.expr)
                 return conlist
         else:

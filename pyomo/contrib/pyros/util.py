@@ -3,12 +3,12 @@ Utility functions for the PyROS solver
 '''
 import copy
 from enum import Enum, auto
+from pyomo.common.collections import ComponentSet
 from pyomo.core.base import (Constraint, Var, Param,
                              Objective, minimize, Expression,
                              ConcreteModel, maximize, Block)
 from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.set_types import Reals
-from pyomo.solver.base import Solver
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr import value
 from pyomo.core.expr.visitor import identify_variables, identify_mutable_parameters, identify_components
@@ -220,7 +220,7 @@ def add_bounds_for_uncertain_parameters(separation_model, config):
     bounding_model = ConcreteModel()
     bounding_model.util = Block()
     bounding_model.util.uncertain_param_vars = IndexedVar(separation_model.util.uncertain_param_vars.index_set())
-    for tup in list(separation_model.util.uncertain_param_vars.iteritems()):
+    for tup in list(separation_model.util.uncertain_param_vars.items()):
         bounding_model.util.uncertain_param_vars[tup[0]].value = tup[1].value
 
     bounding_model.add_component("uncertainty_set_constraint",
@@ -229,7 +229,7 @@ def add_bounds_for_uncertain_parameters(separation_model, config):
                                      config=config
                                  ))
 
-    for idx, param in enumerate(list(bounding_model.util.uncertain_param_vars.itervalues())):
+    for idx, param in enumerate(list(bounding_model.util.uncertain_param_vars.values())):
         bounding_model.add_component("lb_obj_" + str(idx), Objective(expr=param, sense=minimize))
         bounding_model.add_component("ub_obj_" + str(idx), Objective(expr=param, sense=maximize))
 
@@ -313,16 +313,18 @@ def validate_kwarg_inputs(model, config):
 
     # === Ensure that if there is an uncertain_param in an equality constraint,
     #     there is at least 1 state or 1 second-stage var as well
+    uncertain_param_set = ComponentSet(config.uncertain_params)
+    first_stage_variable_set = ComponentSet(config.first_stage_variables)
     for c in model.component_data_objects(Constraint, active=True):
         if c.equality:
             vars_in_term = list(v for v in identify_variables(c.expr))
             uncertain_params = list(p for p in identify_mutable_parameters(c.expr)
-                                   if id(p) in list(id(param) for param in config.uncertain_params))
+                                   if p in uncertain_param_set)
             if len(uncertain_params) > 0:
-                state_vars_in_expr = list(v for v in vars_in_term if
-                                                v in config.first_stage_variables)
-                second_stage_vars_in_expr = list(v for v in vars_in_term if
-                                                 v not in config.first_stage_variables)
+                state_vars_in_expr = list(v for v in vars_in_term
+                                          if v in first_stage_variable_set)
+                second_stage_vars_in_expr = list(v for v in vars_in_term
+                                                 if v not in first_stage_variable_set)
                 if len(state_vars_in_expr) == 0 and len(second_stage_vars_in_expr) == 0:
                     raise AttributeError("PyROS assumption violated: if any uncertain parameters participate"
                                          "in an equality constraint, either a state or second-stage variable must"
@@ -381,7 +383,7 @@ def add_decision_rule_variables(model_data, config):
         for i in range(len(second_stage_variables)):
             model_data.working_model.add_component("decision_rule_var_" + str(i),
                                                    Var(initialize=value(second_stage_variables[i]),bounds=bounds,domain=Reals))#bounds=(second_stage_variables[i].lb, second_stage_variables[i].ub)))
-            first_stage_variables.extend(list(getattr(model_data.working_model, "decision_rule_var_" + str(i)).itervalues()))
+            first_stage_variables.extend(list(getattr(model_data.working_model, "decision_rule_var_" + str(i)).values()))
             decision_rule_vars.append(getattr(model_data.working_model, "decision_rule_var_" + str(i)))
     elif degree == 1:
         for i in range(len(second_stage_variables)):
@@ -393,7 +395,7 @@ def add_decision_rule_variables(model_data, config):
                         domain=Reals))#bounds=(second_stage_variables[i].lb, second_stage_variables[i].ub)))
             # === For affine drs, the [0]th constant term is initialized to the control variable values, all other terms are initialized to 0
             getattr(model_data.working_model, "decision_rule_var_" + str(i))[0].value = value(second_stage_variables[i])
-            first_stage_variables.extend(list(getattr(model_data.working_model, "decision_rule_var_" + str(i)).itervalues()))
+            first_stage_variables.extend(list(getattr(model_data.working_model, "decision_rule_var_" + str(i)).values()))
             decision_rule_vars.append(getattr(model_data.working_model, "decision_rule_var_" + str(i)))
     elif degree == 2 or degree == 3 or degree == 4:
         for i in range(len(second_stage_variables)):
@@ -408,7 +410,7 @@ def add_decision_rule_variables(model_data, config):
                                                    Var(list(range(num_vars)), initialize=dict_init, bounds=bounds,
                                                        domain=Reals))
             first_stage_variables.extend(
-                list(getattr(model_data.working_model, "decision_rule_var_" + str(i)).itervalues()))
+                list(getattr(model_data.working_model, "decision_rule_var_" + str(i)).values()))
             decision_rule_vars.append(getattr(model_data.working_model, "decision_rule_var_" + str(i)))
     else:
         raise ValueError(
@@ -458,7 +460,7 @@ def add_decision_rule_constraints(model_data, config):
         for n in range(1, degree+1):
             all_powers.append(list(bars_and_stars(n, len(uncertain_params))))
         for i in range(len(second_stage_variables)):
-            Z = list(z for z in getattr(model_data.working_model, "decision_rule_var_" + str(i)).itervalues())
+            Z = list(z for z in getattr(model_data.working_model, "decision_rule_var_" + str(i)).values())
             e = Z.pop(0)
             for degree_param_powers in all_powers:
                 degree_param_powers = degree_param_powers[::-1]
@@ -506,13 +508,15 @@ def identify_cost_functions(model, config):
         obj_to_parse = [obj[0].expr]
     else:
         obj_to_parse = obj[0].expr.args
+    first_stage_variable_set = ComponentSet(config.first_stage_variables)
+    second_stage_variable_set = ComponentSet(config.second_stage_variables)
     for term in obj_to_parse:
         vars_in_term = list(v for v in identify_variables(term))
 
         first_stage_vars_in_term = list(v for v in vars_in_term if
-                                        v in config.first_stage_variables)
+                                        v in first_stage_variable_set)
         second_stage_vars_in_term = list(v for v in vars_in_term if
-                                         v in config.second_stage_variables)
+                                         v in second_stage_variable_set)
         for v in first_stage_vars_in_term:
             if v not in first_stage_terms:
                 first_stage_terms.append(v)

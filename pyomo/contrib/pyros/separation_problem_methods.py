@@ -39,7 +39,7 @@ def make_separation_objective_functions(model, config):
     """
     performance_constraints = []
     for c in model.component_data_objects(Constraint, active=True, descend_into=True):
-        uncertain_params_in_expr = list(v for v in list(model.util.uncertain_param_vars.itervalues()) if
+        uncertain_params_in_expr = list(v for v in list(model.util.uncertain_param_vars.values()) if
                     id(v) in list(id(u) for u in list(identify_variables(expr=c.expr))))
         state_vars_in_expr = list(v for v in model.util.state_vars if
                                         id(v) in list(id(u) for u in list(identify_variables(expr=c.expr))))
@@ -94,7 +94,7 @@ def make_separation_problem(model_data, config):
 
     substitution_map = {}
     #Separation problem initialized to nominal uncertain parameter values
-    for idx, var in enumerate(list(param_vars.itervalues())):
+    for idx, var in enumerate(list(param_vars.values())):
         param = uncertain_params[idx]
         var.value = param.value
         substitution_map[id(param)] = var
@@ -118,7 +118,7 @@ def make_separation_problem(model_data, config):
                     replace_expressions(expr=c.upper, substitution_map=substitution_map) >=
                     replace_expressions(expr=c.body, substitution_map=substitution_map))
             c.deactivate()
-            map_new_constraint_list_names_to_original_con_names[list(constraints.itervalues())[-1].name] = c.name
+            map_new_constraint_list_names_to_original_con_names[list(constraints.values())[-1].name] = c.name
 
     separation_model.util.map_constr_list_names_to_original_con_names = map_new_constraint_list_names_to_original_con_names
 
@@ -342,7 +342,7 @@ def is_violation(model_data, config, solve_data):
 
     if value(active_objective)/denom > tol:
         violating_param_realization = list(
-            p.value for p in list(model_data.separation_model.util.uncertain_param_vars.itervalues())
+            p.value for p in list(model_data.separation_model.util.uncertain_param_vars.values())
         )
         list_of_violations = get_all_sep_objective_values(model_data=model_data)
         solve_data.violating_param_realization = violating_param_realization
@@ -351,7 +351,7 @@ def is_violation(model_data, config, solve_data):
         return True
     else:
         violating_param_realization = list(
-            p.value for p in list(model_data.separation_model.util.uncertain_param_vars.itervalues())
+            p.value for p in list(model_data.separation_model.util.uncertain_param_vars.values())
         )
         list_of_violations = get_all_sep_objective_values(model_data=model_data)
         solve_data.violating_param_realization = violating_param_realization
@@ -367,7 +367,7 @@ def initialize_separation(model_data, config):
     as design vars are are therefore fixed to the optimum from the master.
     """
     if config.uncertainty_set.geometry != 4:
-        for idx, p in list(model_data.separation_model.util.uncertain_param_vars.iteritems()):
+        for idx, p in list(model_data.separation_model.util.uncertain_param_vars.items()):
             p.value = config.nominal_uncertain_param_vals[idx]
             p.unfix()
     for idx, v in enumerate(model_data.separation_model.util.first_stage_variables):
@@ -458,7 +458,7 @@ def discrete_solve(model_data, config, solver, is_global):
     solve_data_list = []
     conlist = model_data.separation_model.util.uncertainty_set_constraint
     chunk_size = len(model_data.separation_model.util.uncertain_param_vars)
-    constraints = list(conlist.itervalues())
+    constraints = list(conlist.values())
     conlist.deactivate()
 
     for i in range(0, len(constraints), chunk_size):

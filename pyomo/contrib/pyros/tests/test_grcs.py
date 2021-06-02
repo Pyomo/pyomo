@@ -5,6 +5,7 @@ One class per function being tested, minimum one test per class
 
 import pyutilib.th as unittest
 from pyomo.common.log import LoggingIntercept
+from pyomo.common.collections import ComponentSet
 from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.environ import *
 from pyomo.core.expr.current import identify_variables, identify_mutable_parameters
@@ -338,8 +339,10 @@ class testAbstractUncertaintySetClass(unittest.TestCase):
 
         set = myUncertaintySet()
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
-        uncertain_params_in_expr = list(v for v in m.uncertain_param_vars if
-                                        v in list(identify_variables(expr=m.uncertainty_set_contr.expr)))
+        uncertain_params_in_expr = list(
+            v for v in m.uncertain_param_vars if
+            v in ComponentSet(identify_variables(expr=m.uncertainty_set_contr.expr))
+        )
 
         self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars],
                           msg="Uncertain param Var objects used to construct uncertainty set constraint must"
@@ -357,8 +360,10 @@ class testAbstractUncertaintySetClass(unittest.TestCase):
 
         set = myUncertaintySet()
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_params)
-        variables_in_constr = list(v for v in m.uncertain_params if
-                                        v in list(identify_variables(expr=m.uncertainty_set_contr.expr)))
+        variables_in_constr = list(
+            v for v in m.uncertain_params if
+            v in ComponentSet(identify_variables(expr=m.uncertainty_set_contr.expr))
+        )
 
         self.assertEqual(len(variables_in_constr), 0,
                          msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
@@ -386,10 +391,12 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
 
         set = EllipsoidalSet(center=[0, 0], q=m.uncertain_param_vars, shape_matrix=cov, scale=s)
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
-        uncertain_params_in_expr = list(v for v in m.uncertain_param_vars.itervalues() if
-                                        v in list(identify_variables(expr=m.uncertainty_set_contr[1].expr)))
+        uncertain_params_in_expr = list(
+            v for v in m.uncertain_param_vars.values() if
+            v in ComponentSet(identify_variables(expr=m.uncertainty_set_contr[1].expr))
+        )
 
-        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.itervalues()],
+        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.values()],
                           msg="Uncertain param Var objects used to construct uncertainty set constraint must"
                               " be the same uncertain param Var objects in the original model.")
 
@@ -408,8 +415,10 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
 
         set = EllipsoidalSet(center=[0, 0], q=m.uncertain_param_vars, shape_matrix=cov, scale=s)
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
-        variables_in_constr = list(v for v in m.uncertain_params if
-                                   v in list(identify_variables(expr=m.uncertainty_set_contr[1].expr)))
+        variables_in_constr = list(
+            v for v in m.uncertain_params if
+            v in ComponentSet(identify_variables(expr=m.uncertainty_set_contr[1].expr))
+        )
 
         self.assertEqual(len(variables_in_constr), 0,
                          msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
@@ -433,10 +442,12 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
         set = AxisAlignedEllipsoidalSet(center=[0,0], half_lengths=[2,1])
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
-        uncertain_params_in_expr = list(v for v in m.uncertain_param_vars.itervalues() if
-                                        v in list(identify_variables(expr=m.uncertainty_set_contr[1].expr)))
+        uncertain_params_in_expr = list(
+            v for v in m.uncertain_param_vars.values() if
+            v in ComponentSet(identify_variables(expr=m.uncertainty_set_contr[1].expr))
+        )
 
-        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.itervalues()],
+        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.values()],
                           msg="Uncertain param Var objects used to construct uncertainty set constraint must"
                               " be the same uncertain param Var objects in the original model.")
 
@@ -452,8 +463,10 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
         m.uncertain_param_vars = Param(range(len(m.uncertain_params)), initialize=0, mutable=True)
         set = AxisAlignedEllipsoidalSet(center=[0,0], half_lengths=[2,1])
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
-        variables_in_constr = list(v for v in m.uncertain_params if
-                                   v in list(identify_variables(expr=m.uncertainty_set_contr[1].expr)))
+        variables_in_constr = list(
+            v for v in m.uncertain_params if
+            v in ComponentSet(identify_variables(expr=m.uncertainty_set_contr[1].expr))
+        )
 
         self.assertEqual(len(variables_in_constr), 0,
                          msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
@@ -480,17 +493,16 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
 
         set = PolyhedralSet(q=m.uncertain_param_vars, lhs_coefficients_mat=A, rhs_vec=b, )
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
-        uncertain_params_in_expr = []
-        for con in m.uncertainty_set_contr.itervalues():
-            for v in m.uncertain_param_vars.itervalues():
-                if v in list(identify_variables(expr=con.expr)):
-                    if id(v) not in list(id(u) for u in uncertain_params_in_expr):
-                        # Not using ID here leads to it thinking both are in the list already when they aren't
-                        uncertain_params_in_expr.append(v)
+        uncertain_params_in_expr = ComponentSet()
+        for con in m.uncertainty_set_contr.values():
+            con_vars = ComponentSet(identify_variables(expr=con.expr))
+            for v in m.uncertain_param_vars.values():
+                if v in con_vars:
+                    uncertain_params_in_expr.add(v)
 
-
-        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.itervalues()],
-                          msg="Uncertain param Var objects used to construct uncertainty set constraint must"
+        self.assertEqual(uncertain_params_in_expr,
+                         ComponentSet(m.uncertain_param_vars.values()),
+                         msg="Uncertain param Var objects used to construct uncertainty set constraint must"
                               " be the same uncertain param Var objects in the original model.")
 
     def test_uncertainty_set_with_incorrect_params(self):
@@ -510,9 +522,11 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
         set = PolyhedralSet(q=m.uncertain_param_vars, lhs_coefficients_mat=A, rhs_vec=b)
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         vars_in_expr = []
-        for con in m.uncertainty_set_contr.itervalues():
-            vars_in_expr.extend(v for v in m.uncertain_param_vars if
-                                            v in list(identify_variables(expr=con.expr)))
+        for con in m.uncertainty_set_contr.values():
+            vars_in_expr.extend(
+                v for v in m.uncertain_param_vars if
+                v in ComponentSet(identify_variables(expr=con.expr))
+            )
 
         self.assertEqual(len(vars_in_expr), 0,
                              msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
@@ -556,21 +570,21 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
         # Single budget
         budget_membership_mat = [np.ones(shape=len(m.uncertain_param_vars)).tolist()]
-        rhs_vec = [0.1 * len(m.uncertain_param_vars) + sum(p.value for p in m.uncertain_param_vars.itervalues())]
+        rhs_vec = [0.1 * len(m.uncertain_param_vars) + sum(p.value for p in m.uncertain_param_vars.values())]
 
         set = BudgetSet(q=m.uncertain_param_vars, budget_membership_mat=budget_membership_mat,
                         rhs_vec=rhs_vec, lhs_vec=rhs_vec)
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         uncertain_params_in_expr = []
-        for con in m.uncertainty_set_contr.itervalues():
-            for v in m.uncertain_param_vars.itervalues():
-                if v in list(identify_variables(expr=con.expr)):
+        for con in m.uncertainty_set_contr.values():
+            for v in m.uncertain_param_vars.values():
+                if v in ComponentSet(identify_variables(expr=con.expr)):
                     if id(v) not in list(id(u) for u in uncertain_params_in_expr):
                         # Not using ID here leads to it thinking both are in the list already when they aren't
                         uncertain_params_in_expr.append(v)
 
 
-        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.itervalues()],
+        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.values()],
                           msg="Uncertain param Var objects used to construct uncertainty set constraint must"
                               " be the same uncertain param Var objects in the original model.")
 
@@ -587,15 +601,17 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         m.uncertain_param_vars = Param(range(len(m.uncertain_params)), initialize=0, mutable=True)
         # Single budget
         budget_membership_mat = [np.ones(shape=len(m.uncertain_param_vars)).tolist()]
-        rhs_vec = [0.1 * len(m.uncertain_param_vars) + sum(p.value for p in m.uncertain_param_vars.itervalues())]
+        rhs_vec = [0.1 * len(m.uncertain_param_vars) + sum(p.value for p in m.uncertain_param_vars.values())]
 
         set = BudgetSet(q=m.uncertain_param_vars, budget_membership_mat=budget_membership_mat,
                         rhs_vec=rhs_vec, lhs_vec=rhs_vec)
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         vars_in_expr = []
-        for con in m.uncertainty_set_contr.itervalues():
-            vars_in_expr.extend(v for v in m.uncertain_param_vars.itervalues() if
-                                            v in list(identify_variables(expr=con.expr)))
+        for con in m.uncertainty_set_contr.values():
+            vars_in_expr.extend(
+                v for v in m.uncertain_param_vars.values() if
+                v in ComponentSet(identify_variables(expr=con.expr))
+            )
 
         self.assertEqual(len(vars_in_expr), 0,
                              msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
@@ -643,7 +659,7 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
 
-        center = list(p.value for p in m.uncertain_param_vars.itervalues())
+        center = list(p.value for p in m.uncertain_param_vars.values())
         positive_deviation = list(0.3 for j in range(len(center)))
         gamma = np.ceil(len(m.uncertain_param_vars) / 2)
 
@@ -651,15 +667,15 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
                         positive_deviation=positive_deviation, gamma=gamma)
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars, model=m)
         uncertain_params_in_expr = []
-        for con in m.uncertainty_set_contr.itervalues():
-            for v in m.uncertain_param_vars.itervalues():
-                if v in list(identify_variables(expr=con.expr)):
+        for con in m.uncertainty_set_contr.values():
+            for v in m.uncertain_param_vars.values():
+                if v in ComponentSet(identify_variables(expr=con.expr)):
                     if id(v) not in list(id(u) for u in uncertain_params_in_expr):
                         # Not using ID here leads to it thinking both are in the list already when they aren't
                         uncertain_params_in_expr.append(v)
 
 
-        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.itervalues()],
+        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.values()],
                           msg="Uncertain param Var objects used to construct uncertainty set constraint must"
                               " be the same uncertain param Var objects in the original model.")
 
@@ -676,7 +692,7 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Param(range(len(m.uncertain_params)), initialize=0, mutable=True)
 
-        center = list(p.value for p in m.uncertain_param_vars.itervalues())
+        center = list(p.value for p in m.uncertain_param_vars.values())
         positive_deviation = list(0.3 for j in range(len(center)))
         gamma = np.ceil(len(m.uncertain_param_vars) / 2)
 
@@ -684,8 +700,8 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
                              positive_deviation=positive_deviation, gamma=gamma)
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars, model=m)
         vars_in_expr = []
-        for con in m.uncertainty_set_contr.itervalues():
-            for v in m.uncertain_param_vars.itervalues():
+        for con in m.uncertainty_set_contr.values():
+            for v in m.uncertain_param_vars.values():
                 if id(v) in [id(u) for u in list(identify_variables(expr=con.expr))]:
                     if id(v) not in list(id(u) for u in vars_in_expr):
                         # Not using ID here leads to it thinking both are in the list already when they aren't
@@ -715,14 +731,14 @@ class testBoxUncertaintySetClass(unittest.TestCase):
         set = BoxSet(bounds=bounds)
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         uncertain_params_in_expr = []
-        for con in m.uncertainty_set_contr.itervalues():
-            for v in m.uncertain_param_vars.itervalues():
-                if v in list(identify_variables(expr=con.expr)):
+        for con in m.uncertainty_set_contr.values():
+            for v in m.uncertain_param_vars.values():
+                if v in ComponentSet(identify_variables(expr=con.expr)):
                     if id(v) not in list(id(u) for u in uncertain_params_in_expr):
                         # Not using ID here leads to it thinking both are in the list already when they aren't
                         uncertain_params_in_expr.append(v)
 
-        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.itervalues()],
+        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.values()],
                           msg="Uncertain param Var objects used to construct uncertainty set constraint must"
                               " be the same uncertain param Var objects in the original model.")
 
@@ -742,8 +758,8 @@ class testBoxUncertaintySetClass(unittest.TestCase):
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         vars_in_expr = []
         vars_in_expr = []
-        for con in m.uncertainty_set_contr.itervalues():
-            for v in m.uncertain_param_vars.itervalues():
+        for con in m.uncertainty_set_contr.values():
+            for v in m.uncertain_param_vars.values():
                 if id(v) in [id(u) for u in list(identify_variables(expr=con.expr))]:
                     if id(v) not in list(id(u) for u in vars_in_expr):
                         # Not using ID here leads to it thinking both are in the list already when they aren't
@@ -773,15 +789,15 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
         set = DiscreteSet(scenarios=scenarios)
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         uncertain_params_in_expr = []
-        for con in m.uncertainty_set_contr.itervalues():
-            for v in m.uncertain_param_vars.itervalues():
-                if v in list(identify_variables(expr=con.expr)):
+        for con in m.uncertainty_set_contr.values():
+            for v in m.uncertain_param_vars.values():
+                if v in ComponentSet(identify_variables(expr=con.expr)):
                     if id(v) not in list(id(u) for u in uncertain_params_in_expr):
                         # Not using ID here leads to it thinking both are in the list already when they aren't
                         uncertain_params_in_expr.append(v)
 
 
-        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.itervalues()],
+        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.values()],
                           msg="Uncertain param Var objects used to construct uncertainty set constraint must"
                               " be the same uncertain param Var objects in the original model.")
 
@@ -801,8 +817,8 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         vars_in_expr = []
         vars_in_expr = []
-        for con in m.uncertainty_set_contr.itervalues():
-            for v in m.uncertain_param_vars.itervalues():
+        for con in m.uncertainty_set_contr.values():
+            for v in m.uncertain_param_vars.values():
                 if id(v) in [id(u) for u in list(identify_variables(expr=con.expr))]:
                     if id(v) not in list(id(u) for u in vars_in_expr):
                         # Not using ID here leads to it thinking both are in the list already when they aren't
@@ -838,15 +854,15 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
         set = FactorModelSet(origin=[0,0], psi_mat=psi_mat, number_of_factors=F, beta=1)
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars, model=m)
         uncertain_params_in_expr = []
-        for con in m.uncertainty_set_contr.itervalues():
-            for v in m.uncertain_param_vars.itervalues():
-                if v in list(identify_variables(expr=con.expr)):
+        for con in m.uncertainty_set_contr.values():
+            for v in m.uncertain_param_vars.values():
+                if v in ComponentSet(identify_variables(expr=con.expr)):
                     if id(v) not in list(id(u) for u in uncertain_params_in_expr):
                         # Not using ID here leads to it thinking both are in the list already when they aren't
                         uncertain_params_in_expr.append(v)
 
 
-        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.itervalues()],
+        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.values()],
                           msg="Uncertain param Var objects used to construct uncertainty set constraint must"
                               " be the same uncertain param Var objects in the original model.")
 
@@ -872,8 +888,8 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars, model=m)
         vars_in_expr = []
         vars_in_expr = []
-        for con in m.uncertainty_set_contr.itervalues():
-            for v in m.uncertain_param_vars.itervalues():
+        for con in m.uncertainty_set_contr.values():
+            for v in m.uncertain_param_vars.values():
                 if id(v) in [id(u) for u in list(identify_variables(expr=con.expr))]:
                     if id(v) not in list(id(u) for u in vars_in_expr):
                         # Not using ID here leads to it thinking both are in the list already when they aren't
@@ -1011,7 +1027,8 @@ class RegressionTest(unittest.TestCase):
                    uncertainty_set=box_set,
                    local_solver=solver,
                    global_solver=solver)
-        self.assertEqual(results.grcs_termination_condition == grcsTerminationCondition.robust_optimal)
+        self.assertEqual(results.grcs_termination_condition,
+                         grcsTerminationCondition.robust_optimal)
 
 if __name__ == "__main__":
     unittest.main()
