@@ -21,8 +21,9 @@ from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.triangularize import block_triangularize
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
-import pyomo.common.unittest as unittest
+from pyomo.contrib.pynumero.asl import AmplInterface
 
+import pyomo.common.unittest as unittest
 
 def make_gas_expansion_model(N=2):
     """
@@ -76,6 +77,7 @@ def make_gas_expansion_model(N=2):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
+@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
 class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
     """
     This class tests the get_numeric_incidence_matrix function on
@@ -460,6 +462,7 @@ class TestGasExpansionStructuralIncidenceMatrix(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
+@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
 class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
     # In these tests, we pass the interface a PyomoNLP and cache
     # its Jacobian.
