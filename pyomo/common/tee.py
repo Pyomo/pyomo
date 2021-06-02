@@ -195,11 +195,12 @@ class _StreamHandle(object):
                 written = 0
             if written and not self.buffering:
                 stream.flush()
-            if written != len(ostring):
+            if written is not None and written != len(ostring):
                 logger.error(
-                    "Output stream closed before all output was "
+                    "Output stream (%s) closed before all output was "
                     "written to it. The following was left in "
-                    "the output buffer:\n\t%r" % (ostring[written:],))
+                    "the output buffer:\n\t%r" % (
+                        stream, ostring[written:],))
 
 
 class TeeStream(object):
