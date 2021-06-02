@@ -602,17 +602,21 @@ def output_logger(config, **kwargs):
 	if "preamble" in kwargs:
 		if kwargs["preamble"]:
 			version = str(kwargs["version"])
-			preamble = "=======================================================================\n" \
-					   "PyROS: Pyomo Robust Optimization Solver: Version %s\n" \
-					   "Developed by Natalie M. Isenberg(1), John D. Siirola(2), Chrysanthos E. Gounaris(1)\n" \
+			preamble = "\n" \
+					   "===========================================================================================\n" \
+					   "PyROS: Pyomo Robust Optimization Solver ver.%s\n" \
+					   "Developed by Natalie M. Isenberg (1), John D. Siirola (2), Chrysanthos E. Gounaris (1)\n" \
 					   "(1) Carnegie Mellon University, Department of Chemical Engineering\n" \
-					   "(2) Sandia National Laboratory\n" \
-					   "Licensing: TODO\n======================================================================\n" % version
+					   "(2) Sandia National Laboratory, Discrete Math and Optimization\n" \
+					   "The developers gratefully acknowledge support from " \
+					   "the U.S. Department of Energy's Institute for the Design of Advanced Energy Systems (IDAES)" \
+					   "Licensing: TODO" \
+					   "===========================================================================================" % version
 			config.progress_logger.info(preamble)
 	# === DISCLAIMER
 	if "disclaimer" in kwargs:
 		if kwargs["disclaimer"]:
-			config.progress_logger.info(" \n ============ DISCLAIMER ============ \n"
+			config.progress_logger.info("\n ============ DISCLAIMER ============ \n"
 										"PyROS is still under development.\n"
 										"This version is a beta release.\n"
 										"Please report any issues via Pyomo.\n"
