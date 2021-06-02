@@ -118,10 +118,10 @@ class TestTeeStream(unittest.TestCase):
             with tee.TeeStream(out) as t:
                 out.close()
                 t.STDOUT.write("hi\n")
-        self.assertEqual(
+        self.assertRegex(
             log.getvalue(),
-            "Output stream closed before all output was written to it. "
-            "The following was left in the output buffer:\n\t'hi\\n'\n"
+            r"^Output stream \(<.*?>\) closed before all output was written "
+            r"to it. The following was left in the output buffer:\n\t'hi\\n'\n$"
         )
 
     def test_capture_output(self):
