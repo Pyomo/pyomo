@@ -38,7 +38,7 @@ def create_subsystem_block(constraints, variables=None, include_fixed=False):
     return block
 
 
-class SubsystemManager(object):
+class TemporarySubsystemManager(object):
     """ This class is a context manager for cases when we want to
     temporarily fix or deactivate certain variables or constraints
     in order to perform some solve or calculation with the resulting
@@ -48,21 +48,27 @@ class SubsystemManager(object):
     and do not restore values of variables fixed. This could change.
     """
 
-    def __init__(self, to_fix=None, to_deactivate=None):
-        if to_fix == None:
+    def __init__(self, to_fix=None, to_deactivate=None, to_reset=None):
+        if to_fix is None:
             to_fix = []
-        if to_deactivate == None:
+        if to_deactivate is None:
             to_deactivate = []
+        if to_reset is None:
+            to_reset = []
         self._vars_to_fix = to_fix
         self._cons_to_deactivate = to_deactivate
+        self._comps_to_set = to_reset
         self._var_was_fixed = None
         self._con_was_active = None
+        self._comp_original_value = None
 
     def __enter__(self):
         to_fix = self._vars_to_fix
         to_deactivate = self._cons_to_deactivate
+        to_set = self._comps_to_set
         self._var_was_fixed = [(var, var.fixed) for var in to_fix]
         self._con_was_active = [(con, con.active) for con in to_deactivate]
+        self._comp_original_value = [(comp, comp.value) for comp in to_set]
 
         for var in self._vars_to_fix:
             var.fix()
@@ -78,7 +84,9 @@ class SubsystemManager(object):
                 var.unfix()
         for con, was_active in self._con_was_active:
             if was_active:
-                var.activate()
+                con.activate()
+        for comp, val in self._comp_original_value:
+            comp.set_value(val)
 
 """
 Could iterate over a param sweeper object, or could iterate over
@@ -140,7 +148,7 @@ Latter:
 """
 
 
-class ParamSweeper(SubsystemManager):
+class ParamSweeper(TemporarySubsystemManager):
     """ This class enables setting values of variables/parameters
     according to a provided sequence. Iterating over this object
     sets values to the next in the sequence, at which point a
