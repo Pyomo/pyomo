@@ -58,12 +58,12 @@ class UncertaintySet:
     @property
     def geometry(self):
         """
-		UncertaintySet geometry
-		1 is linear
-		2 is convex nonlinear
-		3 is general nonlinear
-		4 is discrete
-		"""
+        UncertaintySet geometry
+        1 is linear
+        2 is convex nonlinear
+        3 is general nonlinear
+        4 is discrete
+        """
         raise NotImplementedError
 
     @abc.abstractmethod

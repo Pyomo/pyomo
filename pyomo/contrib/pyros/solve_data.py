@@ -3,45 +3,45 @@ Objects to contain all model data and solve results for the ROSolver
 '''
 
 class ROSolveResults(object):
-	'''
-	Container for solve-instance data
+    '''
+    Container for solve-instance data
 
-	Attributes:
-		:original_model: Deterministic model input
-		:grcs_termination_condition: termination condition of the PyROS algorithm
-		:config: the config block for this solve instance
-		:timing: Container with overall algorithm CPU time
-		:timing_data: PyROS sub-solver timing data container
-		:nominal_data: Container with solution of the nominal problem (master problem 0/deterministic model)
-		:total_iters: total iterations done by PyROS solver
-	'''
-	pass
+    Attributes:
+        :original_model: Deterministic model input
+        :grcs_termination_condition: termination condition of the PyROS algorithm
+        :config: the config block for this solve instance
+        :timing: Container with overall algorithm CPU time
+        :timing_data: PyROS sub-solver timing data container
+        :nominal_data: Container with solution of the nominal problem (master problem 0/deterministic model)
+        :total_iters: total iterations done by PyROS solver
+    '''
+    pass
 
 class MasterProblemData(object):
-	'''
-	Container for the grcs master problem
+    '''
+    Container for the grcs master problem
 
-	Attributes:
-		:master_model: master problem model object
-		:base_model: block representing the original model object
-		:iteration: current iteration of the algorithm
-	'''
+    Attributes:
+        :master_model: master problem model object
+        :base_model: block representing the original model object
+        :iteration: current iteration of the algorithm
+    '''
 
 class SeparationProblemData(object):
-	'''
-	Container for the grcs separation problem
+    '''
+    Container for the grcs separation problem
 
-	Attributes:
-		:separation_model: separation problem model object
-		:points_added_to_master: list of parameter violations added to the master problem over the course of the algorithm
-		:separation_problem_subsolver_statuses: list of subordinate sub-solver statuses throughout separations
-		:total_global_separation_solvers: Counter for number of times global solvers were employed in separation
-		:constraint_violations: List of constraint violations identified in separation
-	'''
-	pass
+    Attributes:
+        :separation_model: separation problem model object
+        :points_added_to_master: list of parameter violations added to the master problem over the course of the algorithm
+        :separation_problem_subsolver_statuses: list of subordinate sub-solver statuses throughout separations
+        :total_global_separation_solvers: Counter for number of times global solvers were employed in separation
+        :constraint_violations: List of constraint violations identified in separation
+    '''
+    pass
 
 class MasterResult(object):
-	"""Data class for master problem results data.
+    """Data class for master problem results data.
 
    Attributes:
         - termination_condition: Solver termination condition
@@ -56,7 +56,7 @@ class MasterResult(object):
     """
 
 class SeparationResult(object):
-	"""Data class for master problem results data.
+    """Data class for master problem results data.
 
    Attributes:
         - termination_condition: Solver termination condition
