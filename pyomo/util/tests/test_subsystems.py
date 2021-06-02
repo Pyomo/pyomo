@@ -10,31 +10,33 @@
 
 import pyomo.environ as pyo
 import pyomo.common.unittest as unittest
-from pyomo.common.collections import ComponentSet
+from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.util.subsystems import (
         create_subsystem_block,
-        SubsystemManager,
+        TemporarySubsystemManager,
         ParamSweeper,
         )
 
 
+def _make_simple_model():
+    m = pyo.ConcreteModel()
+
+    m.v1 = pyo.Var(bounds=(0, None))
+    m.v2 = pyo.Var(bounds=(0, None))
+    m.v3 = pyo.Var()
+    m.v4 = pyo.Var()
+
+    m.con1 = pyo.Constraint(expr=m.v1*m.v2*m.v3 == m.v4)
+    m.con2 = pyo.Constraint(expr=m.v1 + m.v2**2 == 2*m.v4)
+    m.con3 = pyo.Constraint(expr=m.v1**2 - m.v3 == 3*m.v4)
+
+    return m
+
+
 class TestSubsystemBlock(unittest.TestCase):
-    def _make_simple_model(self):
-        m = pyo.ConcreteModel()
-
-        m.v1 = pyo.Var(bounds=(0, None))
-        m.v2 = pyo.Var(bounds=(0, None))
-        m.v3 = pyo.Var()
-        m.v4 = pyo.Var()
-
-        m.con1 = pyo.Constraint(expr=m.v1*m.v2*m.v3 == m.v4)
-        m.con2 = pyo.Constraint(expr=m.v1 + m.v2**2 == 2*m.v4)
-        m.con3 = pyo.Constraint(expr=m.v1**2 - m.v3 == 3*m.v4)
-
-        return m
 
     def test_square_subsystem(self):
-        m = self._make_simple_model()
+        m = _make_simple_model()
 
         cons = [m.con2, m.con3]
         vars = [m.v1, m.v2]
@@ -70,7 +72,7 @@ class TestSubsystemBlock(unittest.TestCase):
                 self.assertIs(data.model(), m)
 
     def test_subsystem_inputs_only(self):
-        m = self._make_simple_model()
+        m = _make_simple_model()
 
         cons = [m.con2, m.con3]
         block = create_subsystem_block(cons)
@@ -110,7 +112,7 @@ class TestSubsystemBlock(unittest.TestCase):
     def test_solve_subsystem(self):
         # This is a test of this function's intended use. We extract a
         # subsystem then solve it without altering the rest of the model.
-        m = self._make_simple_model()
+        m = _make_simple_model()
         ipopt = pyo.SolverFactory("ipopt")
 
         m.v5 = pyo.Var(initialize=1.0)
@@ -135,6 +137,198 @@ class TestSubsystemBlock(unittest.TestCase):
 
         # Rest of model has not changed
         self.assertEqual(m.v5.value, 1.0)
+
+
+class TestTemporarySubsystemManager(unittest.TestCase):
+
+    def test_context(self):
+        m = _make_simple_model()
+
+        to_fix = [m.v4]
+        to_deactivate = [m.con1]
+        to_reset = [m.v1]
+
+        m.v1.set_value(1.5)
+
+        with TemporarySubsystemManager(to_fix, to_deactivate, to_reset):
+            self.assertEqual(m.v1.value, 1.5)
+            self.assertTrue(m.v4.fixed)
+            self.assertFalse(m.con1.active)
+
+            m.v1.set_value(2.0)
+            m.v4.set_value(3.0)
+
+        self.assertEqual(m.v1.value, 1.5)
+        self.assertEqual(m.v4.value, 3.0)
+        self.assertFalse(m.v4.fixed)
+        self.assertTrue(m.con1.active)
+
+    def test_context_some_redundant(self):
+        m = _make_simple_model()
+
+        to_fix = [m.v2, m.v4]
+        to_deactivate = [m.con1, m.con2]
+        to_reset = [m.v1]
+
+        m.v1.set_value(1.5)
+        m.v2.fix()
+        m.con1.deactivate()
+
+        with TemporarySubsystemManager(to_fix, to_deactivate, to_reset):
+            self.assertEqual(m.v1.value, 1.5)
+            self.assertTrue(m.v2.fixed)
+            self.assertTrue(m.v4.fixed)
+            self.assertFalse(m.con1.active)
+            self.assertFalse(m.con2.active)
+
+            m.v1.set_value(2.0)
+            m.v2.set_value(3.0)
+
+        self.assertEqual(m.v1.value, 1.5)
+        self.assertEqual(m.v2.value, 3.0)
+        self.assertTrue(m.v2.fixed)
+        self.assertFalse(m.v4.fixed)
+        self.assertTrue(m.con2.active)
+        self.assertFalse(m.con1.active)
+
+    @unittest.skipUnless(pyo.SolverFactory("ipopt").available(),
+            "Ipopt is not available")
+    def test_fix_then_solve(self):
+        # This is a test of the expected use case. We have a (square)
+        # subsystem that we can solve easily after fixing and deactivating
+        # certain variables and constraints.
+
+        m = _make_simple_model()
+        ipopt = pyo.SolverFactory("ipopt")
+
+        # Initialize to avoid converging infeasible due to bad pivots
+        m.v1.set_value(1.0)
+        m.v2.set_value(1.0)
+        m.v3.set_value(1.0)
+        m.v4.set_value(2.0)
+
+        with TemporarySubsystemManager(to_fix=[m.v3, m.v4],
+                to_deactivate=[m.con1]):
+            # Solve the subsystem with m.v1, m.v2 unfixed and
+            # m.con2, m.con3 inactive.
+            ipopt.solve(m)
+
+        # Have solved model to expected values
+        self.assertAlmostEqual(m.v1.value, pyo.sqrt(7.0), delta=1e-8)
+        self.assertAlmostEqual(m.v2.value, pyo.sqrt(4.0-pyo.sqrt(7.0)),
+                delta=1e-8)
+
+
+class TestParamSweeper(unittest.TestCase):
+
+    def test_set_values(self):
+        m = _make_simple_model()
+
+        n_scenario = 2
+        input_values = ComponentMap([
+            (m.v3, [1.3, 2.3]),
+            (m.v4, [1.4, 2.4]),
+            ])
+
+        to_fix = [m.v3, m.v4]
+        to_deactivate = [m.con1]
+
+        with ParamSweeper(2, input_values, to_fix=to_fix,
+                to_deactivate=to_deactivate) as sweeper:
+            self.assertFalse(m.v1.fixed)
+            self.assertFalse(m.v2.fixed)
+            self.assertTrue(m.v3.fixed)
+            self.assertTrue(m.v4.fixed)
+            self.assertFalse(m.con1.active)
+            self.assertTrue(m.con2.active)
+            self.assertTrue(m.con3.active)
+            for i, (inputs, outputs) in enumerate(sweeper):
+                for var, val in inputs.items():
+                    self.assertEqual(var.value, val)
+                    self.assertEqual(var.value, input_values[var][i])
+
+
+    def test_output_values(self):
+        m = _make_simple_model()
+
+        n_scenario = 2
+        input_values = ComponentMap([
+            (m.v3, [1.3, 2.3]),
+            (m.v4, [1.4, 2.4]),
+            ])
+
+        output_values = ComponentMap([
+            (m.v1, [1.1, 2.1]),
+            (m.v2, [1.2, 2.2]),
+            ])
+
+        to_fix = [m.v3, m.v4]
+        to_deactivate = [m.con1]
+
+        with ParamSweeper(2, input_values, to_fix=to_fix,
+                to_deactivate=to_deactivate) as sweeper:
+            self.assertFalse(m.v1.fixed)
+            self.assertFalse(m.v2.fixed)
+            self.assertTrue(m.v3.fixed)
+            self.assertTrue(m.v4.fixed)
+            self.assertFalse(m.con1.active)
+            self.assertTrue(m.con2.active)
+            self.assertTrue(m.con3.active)
+            for i, (inputs, outputs) in enumerate(sweeper):
+                for var, val in inputs.items():
+                    self.assertEqual(var.value, val)
+                    self.assertEqual(var.value, input_values[var][i])
+
+                for var, val in outputs.items():
+                    self.assertEqual(var.value, output_values[var][i])
+
+
+    @unittest.skipUnless(pyo.SolverFactory("ipopt").available(),
+            "Ipopt is not available")
+    def test_with_solve(self):
+        m = _make_simple_model()
+        ipopt = pyo.SolverFactory("ipopt")
+
+        n_scenario = 2
+        input_values = ComponentMap([
+            (m.v3, [1.3, 2.3]),
+            (m.v4, [1.4, 2.4]),
+            ])
+
+        _v1_val_1 = pyo.sqrt(3*1.4+1.3)
+        _v1_val_2 = pyo.sqrt(3*2.4+2.3)
+        _v2_val_1 = pyo.sqrt(2*1.4 - _v1_val_1)
+        _v2_val_2 = pyo.sqrt(2*2.4 - _v1_val_2)
+        output_values = ComponentMap([
+            (m.v1, [_v1_val_1, _v1_val_2]),
+            (m.v2, [_v2_val_1, _v2_val_2]),
+            ])
+
+        to_fix = [m.v3, m.v4]
+        to_deactivate = [m.con1]
+
+        with ParamSweeper(2, input_values, output_values, to_fix=to_fix,
+                to_deactivate=to_deactivate) as sweeper:
+            self.assertFalse(m.v1.fixed)
+            self.assertFalse(m.v2.fixed)
+            self.assertTrue(m.v3.fixed)
+            self.assertTrue(m.v4.fixed)
+            self.assertFalse(m.con1.active)
+            self.assertTrue(m.con2.active)
+            self.assertTrue(m.con3.active)
+            for i, (inputs, outputs) in enumerate(sweeper):
+                ipopt.solve(m)
+
+                for var, val in inputs.items():
+                    # These values should not have been altered.
+                    # I believe exact equality should be appropriate here.
+                    self.assertEqual(var.value, val)
+                    self.assertEqual(var.value, input_values[var][i])
+
+                for var, val in outputs.items():
+                    self.assertAlmostEqual(var.value, val, delta=1e-8)
+                    self.assertAlmostEqual(var.value, output_values[var][i],
+                            delta=1e-8)
 
 
 if __name__ == '__main__':
