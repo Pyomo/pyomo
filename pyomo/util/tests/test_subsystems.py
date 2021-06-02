@@ -247,6 +247,10 @@ class TestParamSweeper(unittest.TestCase):
                     self.assertEqual(var.value, val)
                     self.assertEqual(var.value, input_values[var][i])
 
+        # Values have been reset after exit.
+        self.assertIs(m.v3.value, None)
+        self.assertIs(m.v4.value, None)
+
 
     def test_output_values(self):
         m = _make_simple_model()
@@ -282,6 +286,10 @@ class TestParamSweeper(unittest.TestCase):
                 for var, val in outputs.items():
                     self.assertEqual(var.value, output_values[var][i])
 
+        # Values have been reset after exit.
+        self.assertIs(m.v3.value, None)
+        self.assertIs(m.v4.value, None)
+
 
     @unittest.skipUnless(pyo.SolverFactory("ipopt").available(),
             "Ipopt is not available")
@@ -306,9 +314,17 @@ class TestParamSweeper(unittest.TestCase):
 
         to_fix = [m.v3, m.v4]
         to_deactivate = [m.con1]
+        to_reset = [m.v1, m.v2]
 
-        with ParamSweeper(2, input_values, output_values, to_fix=to_fix,
-                to_deactivate=to_deactivate) as sweeper:
+        # Initialize values so we don't fail due to bad initialization
+        m.v1.set_value(1.0)
+        m.v2.set_value(1.0)
+
+        with ParamSweeper(n_scenario, input_values, output_values,
+                to_fix=to_fix,
+                to_deactivate=to_deactivate,
+                to_reset=to_reset,
+                ) as sweeper:
             self.assertFalse(m.v1.fixed)
             self.assertFalse(m.v2.fixed)
             self.assertTrue(m.v3.fixed)
@@ -329,6 +345,12 @@ class TestParamSweeper(unittest.TestCase):
                     self.assertAlmostEqual(var.value, val, delta=1e-8)
                     self.assertAlmostEqual(var.value, output_values[var][i],
                             delta=1e-8)
+
+        # Values have been reset after exit.
+        self.assertIs(m.v1.value, 1.0)
+        self.assertIs(m.v2.value, 1.0)
+        self.assertIs(m.v3.value, None)
+        self.assertIs(m.v4.value, None)
 
 
 if __name__ == '__main__':
