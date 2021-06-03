@@ -89,7 +89,7 @@ def make_separation_problem(model_data, config):
 
     if config.objective_focus is ObjectiveType.worst_case:
         separation_model.util.zeta = Param(initialize=0, mutable=True)
-        constr = Constraint(expr= separation_model.first_stage_costs + separation_model.second_stage_costs <= separation_model.util.zeta)
+        constr = Constraint(expr= separation_model.first_stage_objective + separation_model.second_stage_objective <= separation_model.util.zeta)
         separation_model.add_component("epigraph_constr", constr)
 
     substitution_map = {}

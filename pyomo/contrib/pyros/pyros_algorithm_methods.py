@@ -65,18 +65,18 @@ def ROSolver_iterative_solve(model_data, config):
     # === Add objective function (assuming minimization of costs) with nominal second-stage costs
     if config.objective_focus is ObjectiveType.nominal:
         master_data.master_model.obj = Objective(
-            expr=master_data.master_model.scenarios[0,0].first_stage_costs +
-                 master_data.master_model.scenarios[0,0].second_stage_costs +
+            expr=master_data.master_model.scenarios[0,0].first_stage_objective +
+                 master_data.master_model.scenarios[0,0].second_stage_objective +
                  master_data.master_model.scenarios[0,0].const_obj_term
         )
     elif config.objective_focus is ObjectiveType.worst_case:
         # === Worst-case cost objective
-        master_data.master_model.zeta = Var(initialize=value(master_data.master_model.scenarios[0, 0].first_stage_costs +
-                                                            master_data.master_model.scenarios[0, 0].second_stage_costs))
+        master_data.master_model.zeta = Var(initialize=value(master_data.master_model.scenarios[0, 0].first_stage_objective +
+                                                            master_data.master_model.scenarios[0, 0].second_stage_objective))
         master_data.master_model.obj = Objective(expr=master_data.master_model.zeta)
         master_data.master_model.scenarios[0,0].epigraph_constr = Constraint(expr=
-                        master_data.master_model.scenarios[0, 0].first_stage_costs +
-                        master_data.master_model.scenarios[0, 0].second_stage_costs +
+                        master_data.master_model.scenarios[0, 0].first_stage_objective +
+                        master_data.master_model.scenarios[0, 0].second_stage_objective +
                         master_data.master_model.scenarios[0,0].const_obj_term <= master_data.master_model.zeta )
         master_data.master_model.scenarios[0,0].util.first_stage_variables.append(master_data.master_model.zeta)
 
@@ -169,8 +169,8 @@ def ROSolver_iterative_solve(model_data, config):
             for val in master_soln.ssv_vals:
                 nominal_data.nom_ssv_vals.append(val)
 
-            nominal_data.nom_first_stage_cost += master_soln.first_stage_costs
-            nominal_data.nom_second_stage_cost += master_soln.second_stage_costs
+            nominal_data.nom_first_stage_cost += master_soln.first_stage_objective
+            nominal_data.nom_second_stage_cost += master_soln.second_stage_objective
             nominal_data.nom_obj = value(master_data.master_model.obj)
 
         # === Decision rule polishing
@@ -181,7 +181,7 @@ def ROSolver_iterative_solve(model_data, config):
             # === Save initial values of DR vars to file
             for varslist in master_data.master_model.scenarios[0,0].util.decision_rule_vars:
                 vals = []
-                for dvar in list(varslist.itervalues()):
+                for dvar in varslist.values():
                     vals.append(dvar.value)
                 dr_var_lists_original.append(vals)
             polishing_results = master_problem_methods.minimize_dr_vars(model_data=master_data, config=config)
@@ -190,7 +190,7 @@ def ROSolver_iterative_solve(model_data, config):
             #=== Save after polish
             for varslist in master_data.master_model.scenarios[0,0].util.decision_rule_vars:
                 vals = []
-                for dvar in list(varslist.itervalues()):
+                for dvar in varslist.values():
                     vals.append(dvar.value)
                 dr_var_lists_polished.append(vals)
             #config.progress_logger.info("Done with Decision Rule Polishing.")

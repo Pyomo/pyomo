@@ -962,6 +962,9 @@ class testSolveMaster(unittest.TestCase):
         master_data.master_model.scenarios[0, 0].util.decision_rule_vars = []
         master_data.master_model.scenarios[0, 0].util.second_stage_variables = []
         master_data.master_model.scenarios[0, 0].util.uncertain_params = [master_data.master_model.scenarios[0, 0].p]
+        master_data.master_model.scenarios[0, 0].first_stage_objective = 0
+        master_data.master_model.scenarios[0, 0].second_stage_objective = \
+            Expression(expr=master_data.master_model.scenarios[0, 0].x)
         master_data.iteration = 0
         box_set = BoxSet(bounds=[(0,2)])
         solver = SolverFactory(global_solver)

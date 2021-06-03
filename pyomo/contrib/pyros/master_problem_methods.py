@@ -100,9 +100,9 @@ def minimize_dr_vars(model_data, config):
     this_iter = polishing_model.scenarios[max(polishing_model.scenarios.keys())[0], 0]
     nom_block = polishing_model.scenarios[0, 0]
     if config.objective_focus == ObjectiveType.nominal:
-        obj_val = value(this_iter.second_stage_costs + this_iter.first_stage_costs)
+        obj_val = value(this_iter.second_stage_objective + this_iter.first_stage_objective)
         polishing_model.scenarios[0,0].polishing_constraint = \
-            Constraint(expr=obj_val >= nom_block.second_stage_costs + nom_block.first_stage_costs)
+            Constraint(expr=obj_val >= nom_block.second_stage_objective + nom_block.first_stage_objective)
     elif config.objective_focus == ObjectiveType.worst_case:
         polishing_model.zeta.fix() # Searching equivalent optimal solutions given optimal zeta
 
@@ -155,7 +155,7 @@ def minimize_dr_vars(model_data, config):
         d.unfix()
 
     # === Unfix all control var values
-    for block in list(polishing_model.scenarios.itervalues()):
+    for block in polishing_model.scenarios.values():
         for c in block.util.second_stage_variables:
             c.unfix()
         for d in block.util.decision_rule_vars:
@@ -179,8 +179,8 @@ def minimize_dr_vars(model_data, config):
 
     polish_soln.fsv_values = list(v.value for v in polishing_model.scenarios[0, 0].util.first_stage_variables)
     polish_soln.ssv_values = list(v.value for v in polishing_model.scenarios[0, 0].util.second_stage_variables)
-    polish_soln.first_stage_costs = value(nom_block.first_stage_costs)
-    polish_soln.second_stage_costs = value(nom_block.second_stage_costs)
+    polish_soln.first_stage_objective = value(nom_block.first_stage_objective)
+    polish_soln.second_stage_objective = value(nom_block.second_stage_objective)
 
     # === Process solution by termination condition
     acceptable = [tc.optimal, tc.locallyOptimal, tc.feasible]
@@ -203,12 +203,12 @@ def add_p_robust_constraint(model_data, config):
     rho = config.p_robustness['rho']
     model = model_data.master_model
     block_0 = model.scenarios[0, 0]
-    frac_nom_cost = (1 + rho) * (block_0.first_stage_costs +
-                                        block_0.second_stage_costs)
+    frac_nom_cost = (1 + rho) * (block_0.first_stage_objective +
+                                        block_0.second_stage_objective)
 
     for block_k in model.scenarios[model_data.iteration, :]:
         model.p_robust_constraints.add(
-            block_k.first_stage_costs + block_k.second_stage_costs
+            block_k.first_stage_objective + block_k.second_stage_objective
             <= frac_nom_cost)
     return
 
@@ -302,12 +302,12 @@ def solver_call_master(model_data, config, solver, solve_data):
 
         if config.objective_focus is ObjectiveType.nominal:
             master_soln.ssv_vals = list(v.value for v in nlp_model.scenarios[0, 0].util.second_stage_variables)
-            master_soln.second_stage_costs = value(nlp_model.scenarios[0, 0].second_stage_costs)
+            master_soln.second_stage_objective = value(nlp_model.scenarios[0, 0].second_stage_objective)
         else:
             idx =  max(nlp_model.scenarios.keys())[0]
             master_soln.ssv_vals = list(v.value for v in nlp_model.scenarios[idx, 0].util.second_stage_variables)
-            master_soln.second_stage_costs = value(nlp_model.scenarios[idx, 0].second_stage_costs)
-        master_soln.first_stage_costs = value(nlp_model.scenarios[0, 0].first_stage_costs)
+            master_soln.second_stage_objective = value(nlp_model.scenarios[idx, 0].second_stage_objective)
+        master_soln.first_stage_objective = value(nlp_model.scenarios[0, 0].first_stage_objective)
 
         master_soln.nominal_block = nlp_model.scenarios[0, 0]
         master_soln.results = results

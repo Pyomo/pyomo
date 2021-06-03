@@ -129,13 +129,13 @@ def model_is_valid(model):
     elif len(objectives) > 1:
         '''
         User should deactivate all Objectives in the model except the one represented by the output of 
-        first_stage_costs() + second_stage_costs()
+        first_stage_objective + second_stage_objective
         '''
         return False
     else:
         '''
         No Objective objects provided as part of the model, please provide an Objective to your model so that
-        PyROS can infer first- and second-stage costs.
+        PyROS can infer first- and second-stage objective.
         '''
         return False
 
@@ -482,7 +482,7 @@ def add_decision_rule_constraints(model_data, config):
     return
 
 
-def identify_cost_functions(model, config):
+def identify_objective_functions(model, config):
     '''
     Determine the objective first- and second-stage costs based on the user provided variable partition
     :param model: deterministic model
@@ -508,8 +508,8 @@ def identify_cost_functions(model, config):
         obj_to_parse = [obj[0].expr]
     else:
         obj_to_parse = obj[0].expr.args
-    first_stage_variable_set = ComponentSet(config.first_stage_variables)
-    second_stage_variable_set = ComponentSet(config.second_stage_variables)
+    first_stage_variable_set = ComponentSet(model.util.first_stage_variables)
+    second_stage_variable_set = ComponentSet(model.util.second_stage_variables)
     for term in obj_to_parse:
         vars_in_term = list(v for v in identify_variables(term))
 
@@ -518,10 +518,10 @@ def identify_cost_functions(model, config):
         second_stage_vars_in_term = list(v for v in vars_in_term if
                                          v in second_stage_variable_set)
         for v in first_stage_vars_in_term:
-            if v not in first_stage_terms:
+            if id(v) not in list(id(var) for var in first_stage_terms):
                 first_stage_terms.append(v)
         for v in second_stage_vars_in_term:
-            if v not in second_stage_terms:
+            if id(v) not in list(id(var) for var in second_stage_terms):
                 second_stage_terms.append(v)
 
         if len(first_stage_vars_in_term) > 0 and len(second_stage_vars_in_term) > 0:
@@ -532,8 +532,8 @@ def identify_cost_functions(model, config):
             second_stage_cost_expr += term
         elif len(vars_in_term) == 0:
             const_obj_expr += term
-    m.first_stage_costs = Expression(expr=first_stage_cost_expr)
-    m.second_stage_costs = Expression(expr=second_stage_cost_expr)
+    m.first_stage_objective = Expression(expr=first_stage_cost_expr)
+    m.second_stage_objective = Expression(expr=second_stage_cost_expr)
     m.const_obj_term = Expression(expr=const_obj_expr)
     return
 
@@ -608,22 +608,22 @@ def output_logger(config, **kwargs):
             version = str(kwargs["version"])
             preamble = "\n" \
                        "===========================================================================================\n" \
-                       "PyROS: Pyomo Robust Optimization Solver ver.%s\n" \
-                       "Developed by Natalie M. Isenberg (1), John D. Siirola (2), Chrysanthos E. Gounaris (1)\n" \
-                       "(1) Carnegie Mellon University, Department of Chemical Engineering\n" \
-                       "(2) Sandia National Laboratory, Discrete Math and Optimization\n" \
-                       "The developers gratefully acknowledge support from the U.S. Department of Energy's\n" \
-                       "                                Institute for the Design of Advanced Energy Systems (IDAES)" \
-                       "Licensing: TODO" \
+                       "PyROS: Pyomo Robust Optimization Solver v.%s \n" \
+                       "Developed by Natalie M. Isenberg (1), John D. Siirola (2), Chrysanthos E. Gounaris (1) \n" \
+                       "(1) Carnegie Mellon University, Department of Chemical Engineering \n" \
+                       "(2) Sandia National Laboratory, Discrete Math and Optimization \n\n" \
+                       "The developers gratefully acknowledge support from the U.S. Department of Energy's \n" \
+                       "Institute for the Design of Advanced Energy Systems (IDAES) \n" \
+                       "Licensing: TODO \n" \
                        "===========================================================================================" % version
-            config.progress_logger.info(preamble)
+            print(preamble)
     # === DISCLAIMER
     if "disclaimer" in kwargs:
         if kwargs["disclaimer"]:
-            config.progress_logger.info("\n ========================= DISCLAIMER ========================= \n"
-                                        "PyROS is still under development. This version is a beta release.\n"
-                                        "Please provide feedback and/or report any issues by opening a Pyomo ticket.\n"
-                                        "=================================================================\n")
+           print("\n======================================== DISCLAIMER ========================================\n"
+                    "PyROS is still under development. This version is a beta release.\n"
+                    "Please provide feedback and/or report any issues by opening a Pyomo ticket.\n"
+                    "===============================================================================\n")
     # === ALL LOGGER RETURN MESSAGES
     if "robust_optimal" in kwargs:
         if kwargs["robust_optimal"]:

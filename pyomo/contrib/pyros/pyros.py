@@ -25,18 +25,18 @@ from pyomo.contrib.pyros.util import (a_logger,
 from pyomo.common.modeling import unique_component_name
 from pyomo.opt import SolverFactory
 from pyomo.contrib.pyros.util import (model_is_valid,
-                                     add_decision_rule_constraints,
-                                     add_decision_rule_variables,
-                                     load_final_solution,
-                                     grcsTerminationCondition,
-                                     ValidEnum,
-                                     ObjectiveType,
-                                     validate_uncertainty_set,
-                                     identify_cost_functions,
-                                     validate_kwarg_inputs,
-                                     transform_to_standard_form,
-                                     turn_bounds_to_constraints,
-                                     output_logger)
+                                      add_decision_rule_constraints,
+                                      add_decision_rule_variables,
+                                      load_final_solution,
+                                      grcsTerminationCondition,
+                                      ValidEnum,
+                                      ObjectiveType,
+                                      validate_uncertainty_set,
+                                      identify_objective_functions,
+                                      validate_kwarg_inputs,
+                                      transform_to_standard_form,
+                                      turn_bounds_to_constraints,
+                                      output_logger)
 from pyomo.contrib.pyros.solve_data import ROSolveResults
 from pyomo.contrib.pyros.pyros_algorithm_methods import ROSolver_iterative_solve
 from pyomo.contrib.pyros.uncertainty_sets import uncertainty_sets
@@ -327,8 +327,8 @@ class PyROS(object):
             model_data.original_model = model
             model_data.working_model = model.clone()
 
-            # === Add cost expressions
-            identify_cost_functions(model_data.working_model, config)
+            # === Add objective expressions
+            identify_objective_functions(model_data.working_model, config)
 
             # === Put model in standard form
             transform_to_standard_form(model_data.working_model)
@@ -390,14 +390,8 @@ class PyROS(object):
                 config.progress_logger.info("Second-stage variable values at termination:")
                 for idx, c in enumerate(pyros_soln.master_soln.ssv_vals):
                     config.progress_logger.info(model_data.working_model.util.second_stage_variables[idx].name + ": " + str(value(c)))'''
-            if config.objective_focus == ObjectiveType.nominal:
-                pyros_soln.master_soln.robust_objective = \
-                    value(pyros_soln.master_soln.first_stage_costs + pyros_soln.master_soln.second_stage_costs)
-                #config.progress_logger.info("Objective: " + str(pyros_soln.master_soln.robust_objective))
-            elif config.objective_focus == ObjectiveType.worst_case:
-                pyros_soln.master_soln.robust_objective = value(pyros_soln.master_soln.master_model.obj)
-                #config.progress_logger.info(
-                #    "Objective: " + str(value(pyros_soln.master_soln.master_model.obj)))
+
+            config.progress_logger.info("Objective: " + str(value(pyros_soln.master_soln.master_model.obj)))
             config.progress_logger.info("Time (s): " + str(model_data.total_cpu_time))
             '''config.progress_logger.info("Time solving Masters (s): " + str(pyros_soln.timing_data.total_master_solve_time))
             config.progress_logger.info("Time solving Separation Local (s): " + str(pyros_soln.timing_data.total_separation_local_time))
@@ -410,7 +404,7 @@ class PyROS(object):
             config.progress_logger.info("Iterations: " + str(pyros_soln.total_iters+1))
             # === Return config to user
             pyros_soln.config = config
-
+            pyros_soln.final_objective_value = value(pyros_soln.master_soln.master_model.obj)
             # === Remove util block
             model.del_component(model_data.util_block)
 
