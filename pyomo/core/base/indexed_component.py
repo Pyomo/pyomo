@@ -133,40 +133,19 @@ def _get_indexed_component_data_name(component, index):
             del component._data[index]
     return ans
 
-class pyomo_ndarray(np.lib.mixins.NDArrayOperatorsMixin,
-                    np.ndarray if numpy_available else object):
-    __array_priority__ = 11
-
+class pyomo_ndarray(np.ndarray if numpy_available else object):
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        print('In __array_ufunc__:')
-        #raise RuntimeError(str((type(ufunc), ufunc, method, inputs, kwargs)))
-
         if method == '__call__':
-            args = [i.__array__() if i is self else i for i in inputs]
-            return pyomo_ndarray(ufunc(*args, **kwargs))
-        else:
-            return NotImplemented
+            # Convert all incoming types to ndarray (to prevent recursion)
+            args = [np.asarray(i) for i in inputs]
+            # Set the return type to be an 'object'.  This prevents the
+            # logical operators from casting the result to a bool.  This
+            # requires numpy >= 1.6
+            kwargs['dtype'] = object
 
-    def __array_finalize__(self, obj):
-        print('In __array_finalize__:')
-        print('   self is %s' % repr(self))
-        print('   obj is %s' % repr(obj))
-        if obj is None:
-            return
-        return obj
-
-    def __array_wrap__(self, out_arr, context=None):
-        print('In __array_wrap__:')
-        print('   self is %s' % repr(self))
-        print('   arr is %s' % repr(out_arr))
-        # then just call the parent
-        return super(MySubClass, self).__array_wrap__(self, out_arr, context)
-
-    def __eq__(self, other):
-        raise RuntimeError("YAY!")
-
-    def __bool__(self, other):
-        raise RuntimeError("YAY!")
+        # Delegate to the base ufunc, but return an instance of this
+        # class so that additional operators hit this method.
+        return getattr(ufunc, method)(*args, **kwargs).view(pyomo_ndarray)
 
 
 class IndexedComponent(Component):
@@ -291,6 +270,10 @@ class IndexedComponent(Component):
         for k, v in self.items():
             ans[k] = v
         return ans
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        return pyomo_ndarray.__array_ufunc__(
+            None, ufunc, method, *inputs, **kwargs)
 
     def to_dense_data(self):
         """TODO"""
