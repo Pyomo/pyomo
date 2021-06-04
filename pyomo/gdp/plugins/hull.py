@@ -62,10 +62,18 @@ class Hull_Reformulation(Transformation):
         list of blocks and Disjunctions [default: the instance]
 
     The transformation will create a new Block with a unique
-    name beginning "_pyomo_gdp_hull_reformulation".  That Block will
-    contain an indexed Block named "relaxedDisjuncts", which will hold
-    the relaxed disjuncts.  This block is indexed by an integer
-    indicating the order in which the disjuncts were relaxed.
+    name beginning "_pyomo_gdp_hull_reformulation".  
+    The block will have a dictionary "_disaggregatedVarMap:
+        'srcVar': ComponentMap(<src var>:<disaggregated var>),
+        'disaggregatedVar': ComponentMap(<disaggregated var>:<src var>)
+
+    It will also have a ComponentMap "_bigMConstraintMap":
+
+        <disaggregated var>:<bounds constraint>
+
+    Last, it will contain an indexed Block named "relaxedDisjuncts", 
+    which will hold the relaxed disjuncts.  This block is indexed by 
+    an integer indicating the order in which the disjuncts were relaxed.
     Each block has a dictionary "_constraintMap":
 
         'srcConstraints': ComponentMap(<transformed constraint>:
@@ -75,14 +83,6 @@ class Hull_Reformulation(Transformation):
                                               <src constraintData>:
                                               [<transformed constraintDatas>]
                                              )
-
-    It will have a dictionary "_disaggregatedVarMap:
-        'srcVar': ComponentMap(<src var>:<disaggregated var>),
-        'disaggregatedVar': ComponentMap(<disaggregated var>:<src var>)
-
-    And, last, it will have a ComponentMap "_bigMConstraintMap":
-
-        <disaggregated var>:<bounds constraint>
 
     All transformed Disjuncts will have a pointer to the block their transformed
     constraints are on, and all transformed Disjunctions will have a
