@@ -46,7 +46,7 @@ class redirect_fd(object):
     a specified new output target (either file name or file descriptor).
     For the special case of file descriptors 1 (stdout) and 2 (stderr),
     we will also make sure that the Python `sys.stdout` or `sys.stderr`
-    reamin usable: in the case of synchronize=True, the `sys.stdout` /
+    remain usable: in the case of synchronize=True, the `sys.stdout` /
     `sys.stderr` file handles point to the new file descriptor.  When
     synchronize=False, we preserve the behavior of the Python file
     object (retargeting it to the original file descriptor if necessary).
