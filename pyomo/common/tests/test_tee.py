@@ -291,28 +291,6 @@ class TestFileDescriptor(unittest.TestCase):
             os.close(1)
             self.assertEqual(FILE.read(), "to_fd1_2\n")
 
-    def test_redirect_disable(self):
-        r,w = os.pipe()
-        os.dup2(w, 1)
-        try:
-            sys.stdout, out = StringIO(), sys.stdout
-            rd = tee.redirect_fd(synchronize=True, enable=False)
-            with rd:
-                sys.stdout.write("to_stdout_1\n")
-                os.fdopen(1, 'w', closefd=False).write("to_fd1_1\n")
-
-            sys.stdout.write("to_stdout_2\n")
-            sys.stdout.flush()
-            os.fdopen(1, 'w', closefd=False).write("to_fd1_2\n")
-        finally:
-            sys.stdout, out = out, sys.stdout
-
-        self.assertEqual(out.getvalue(), "to_stdout_1\nto_stdout_2\n")
-        with os.fdopen(r, 'r') as FILE:
-            os.close(w)
-            os.close(1)
-            self.assertEqual(FILE.read(), "to_fd1_1\nto_fd1_2\n")
-
     def test_caputure_output_fd(self):
         r,w = os.pipe()
         os.dup2(w, 1)

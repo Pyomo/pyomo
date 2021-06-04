@@ -40,7 +40,31 @@ logger = logging.getLogger(__name__)
 
 
 class redirect_fd(object):
-    def __init__(self, fd=1, output=None, synchronize=True, enable=True):
+    """Redirect a file descriptor to a new file or file descriptor.
+
+    This context manager will redirect the specified file descriptor to
+    a specified new output target (either file name or file descriptor).
+    For the special case of file descriptors 1 (stdout) and 2 (stderr),
+    we will also make sure that the Python `sys.stdout` or `sys.stderr`
+    reamin usable: in the case of synchronize=True, the `sys.stdout` /
+    `sys.stderr` file handles point to the new file descriptor.  When
+    synchronize=False, we preserve the behavior of the Python file
+    object (retargeting it to the original file descriptor if necessary).
+
+    Parameters
+    ----------
+    fd: int
+        The file descriptor to redirect
+
+    output: int or str
+        The new output target for `fd`: either another valid file
+        descriptor (int) or a string with the file to open.
+
+    synchronize: bool
+        If True, and `fd` is 1 or 2, then update `sys.stdout` or
+        `sys.stderr` to also point to the new file descriptor
+    """
+    def __init__(self, fd=1, output=None, synchronize=True):
         if output is None:
             # /dev/null is used just to discard what is being printed
             output = os.devnull
@@ -49,13 +73,10 @@ class redirect_fd(object):
         self.target = output
         self.target_file = None
         self.synchronize = synchronize
-        self.enable = enable
         self.original_file = None
         self.original_fd = None
 
     def __enter__(self):
-        if not self.enable:
-            return self
         if self.std:
             # important: flush the current file buffer when redirecting
             getattr(sys, self.std).flush()
@@ -104,8 +125,6 @@ class redirect_fd(object):
         return self
 
     def __exit__(self, t, v, traceback):
-        if not self.enable:
-            return
         # Close output: this either closes the new file that we opened,
         # or else the new file that points to the original (duplicated)
         # file descriptor
