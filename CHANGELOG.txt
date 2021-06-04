@@ -3,6 +3,21 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.0.1   4 Jun 2021
+-------------------------------------------------------------------------------
+
+- General
+  - Catch non-standard file.write() implementations (#1999)
+- Testing
+  - Fix miscellaneous tests caught by peripheral test suites (#1991)
+- GDP Updates
+  - Switch bigm's M value calculation to always use fbbt (#2000)
+- Contributed Packages
+  - FBBT: Add support for LinearExpression (#1994)
+  - PyNumero: Improve management of stdout in cyipopt solver (#2001)
+  - GDPopt: Fix implicit conversion warnings (#2002)
+
+-------------------------------------------------------------------------------
 Pyomo 6.0    20 May 2021
 -------------------------------------------------------------------------------
 
