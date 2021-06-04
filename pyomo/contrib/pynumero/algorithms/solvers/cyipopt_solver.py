@@ -438,11 +438,21 @@ class CyIpoptSolver(object):
                 x_scaling = np.ones(nx)
             if g_scaling is None:
                 g_scaling = np.ones(ng)
-            cyipopt_solver.setProblemScaling(obj_scaling, x_scaling, g_scaling)
+            try:
+                set_scaling = cyipopt_solver.set_problem_scaling
+            except AttributeError:
+                # Fall back to pre-1.0.0 API
+                set_scaling = cyipopt_solver.setProblemScaling
+            set_scaling(obj_scaling, x_scaling, g_scaling)
 
         # add options
+        try:
+            add_option = cyipopt_solver.add_option
+        except AttributeError:
+            # Fall back to pre-1.0.0 API
+            add_option = cyipopt_solver.addOption
         for k, v in self._options.items():
-            cyipopt_solver.addOption(k, v)
+            add_option(k, v)
 
         # We preemptively set up the TeeStream, even if we aren't
         # going to use it: the implementation is such that the
@@ -568,11 +578,21 @@ class PyomoCyIpoptSolver(object):
                 x_scaling = np.ones(nx)
             if g_scaling is None:
                 g_scaling = np.ones(ng)
-            cyipopt_solver.setProblemScaling(obj_scaling, x_scaling, g_scaling)
+            try:
+                set_scaling = cyipopt_solver.set_problem_scaling
+            except AttributeError:
+                # Fall back to pre-1.0.0 API
+                set_scaling = cyipopt_solver.setProblemScaling
+            set_scaling(obj_scaling, x_scaling, g_scaling)
 
         # add options
+        try:
+            add_option = cyipopt_solver.add_option
+        except AttributeError:
+            # Fall back to pre-1.0.0 API
+            add_option = cyipopt_solver.addOption
         for k, v in config.options.items():
-            cyipopt_solver.addOption(k, v)
+            add_option(k, v)
 
         timer = TicTocTimer()
         try:
