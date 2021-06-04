@@ -161,7 +161,8 @@ class TestTeeStream(unittest.TestCase):
             a.setup()
             b = tee.capture_output(OUT2)
             b.setup()
-            with self.assertRaisesRegex(RuntimeError, 'Captured output does not match sys.stdout'):
+            with self.assertRaisesRegex(
+                    RuntimeError, 'Captured output does not match sys.stdout'):
                 a.reset()
             b.tee = None
         finally:
@@ -176,18 +177,26 @@ class TestFileDescriptor(unittest.TestCase):
         sys.stdout = self.out
         os.dup2(self.out_fd, 1)
 
+    def _generate_output(self, redirector):
+        with redirector:
+            sys.stdout.write("to_stdout_1\n")
+            sys.stdout.flush()
+            with os.fdopen(1, 'w', closefd=False) as F:
+                F.write("to_fd1_1\n")
+                F.flush()
+
+        sys.stdout.write("to_stdout_2\n")
+        sys.stdout.flush()
+        with os.fdopen(1, 'w', closefd=False) as F:
+            F.write("to_fd1_2\n")
+            F.flush()
+
     def test_redirect_synchronize_stdout(self):
         r,w = os.pipe()
         os.dup2(w, 1)
         sys.stdout = os.fdopen(1, 'w', closefd=False)
         rd = tee.redirect_fd(synchronize=True)
-        with rd:
-            sys.stdout.write("to_stdout_1\n")
-            os.fdopen(1, 'w', closefd=False).write("to_fd1_1\n")
-
-        sys.stdout.write("to_stdout_2\n")
-        sys.stdout.flush()
-        os.fdopen(1, 'w', closefd=False).write("to_fd1_2\n")
+        self._generate_output(rd)
 
         with os.fdopen(r, 'r') as FILE:
             os.close(w)
@@ -199,13 +208,7 @@ class TestFileDescriptor(unittest.TestCase):
         os.dup2(w, 1)
         sys.stdout = os.fdopen(1, 'w', closefd=False)
         rd = tee.redirect_fd(synchronize=False)
-        with rd:
-            sys.stdout.write("to_stdout_1\n")
-            os.fdopen(1, 'w', closefd=False).write("to_fd1_1\n")
-
-        sys.stdout.write("to_stdout_2\n")
-        sys.stdout.flush()
-        os.fdopen(1, 'w', closefd=False).write("to_fd1_2\n")
+        self._generate_output(rd)
 
         with os.fdopen(r, 'r') as FILE:
             os.close(w)
@@ -217,13 +220,7 @@ class TestFileDescriptor(unittest.TestCase):
         r,w = os.pipe()
         os.dup2(w, 1)
         rd = tee.redirect_fd(synchronize=True)
-        with rd:
-            sys.stdout.write("to_stdout_1\n")
-            os.fdopen(1, 'w', closefd=False).write("to_fd1_1\n")
-
-        sys.stdout.write("to_stdout_2\n")
-        sys.stdout.flush()
-        os.fdopen(1, 'w', closefd=False).write("to_fd1_2\n")
+        self._generate_output(rd)
 
         with os.fdopen(r, 'r') as FILE:
             os.close(w)
@@ -234,13 +231,7 @@ class TestFileDescriptor(unittest.TestCase):
         r,w = os.pipe()
         os.dup2(w, 1)
         rd = tee.redirect_fd(synchronize=False)
-        with rd:
-            sys.stdout.write("to_stdout_1\n")
-            os.fdopen(1, 'w', closefd=False).write("to_fd1_1\n")
-
-        sys.stdout.write("to_stdout_2\n")
-        sys.stdout.flush()
-        os.fdopen(1, 'w', closefd=False).write("to_fd1_2\n")
+        self._generate_output(rd)
 
         with os.fdopen(r, 'r') as FILE:
             os.close(w)
@@ -253,13 +244,7 @@ class TestFileDescriptor(unittest.TestCase):
         try:
             sys.stdout, out = StringIO(), sys.stdout
             rd = tee.redirect_fd(synchronize=True)
-            with rd:
-                sys.stdout.write("to_stdout_1\n")
-                os.fdopen(1, 'w', closefd=False).write("to_fd1_1\n")
-
-            sys.stdout.write("to_stdout_2\n")
-            sys.stdout.flush()
-            os.fdopen(1, 'w', closefd=False).write("to_fd1_2\n")
+            self._generate_output(rd)
         finally:
             sys.stdout, out = out, sys.stdout
 
@@ -275,13 +260,7 @@ class TestFileDescriptor(unittest.TestCase):
         try:
             sys.stdout, out = StringIO(), sys.stdout
             rd = tee.redirect_fd(synchronize=False)
-            with rd:
-                sys.stdout.write("to_stdout_1\n")
-                os.fdopen(1, 'w', closefd=False).write("to_fd1_1\n")
-
-            sys.stdout.write("to_stdout_2\n")
-            sys.stdout.flush()
-            os.fdopen(1, 'w', closefd=False).write("to_fd1_2\n")
+            self._generate_output(rd)
         finally:
             sys.stdout, out = out, sys.stdout
 
@@ -298,11 +277,15 @@ class TestFileDescriptor(unittest.TestCase):
         with tee.capture_output(capture_fd=True) as OUT:
             sys.stdout.write("to_stdout_1\n")
             sys.stdout.flush()
-            os.fdopen(1, 'w', closefd=False).write("to_fd1_1\n")
+            with os.fdopen(1, 'w', closefd=False) as F:
+                F.write("to_fd1_1\n")
+                F.flush()
 
         sys.stdout.write("to_stdout_2\n")
         sys.stdout.flush()
-        os.fdopen(1, 'w', closefd=False).write("to_fd1_2\n")
+        with os.fdopen(1, 'w', closefd=False) as F:
+            F.write("to_fd1_2\n")
+            F.flush()
 
         self.assertEqual(OUT.getvalue(), "to_stdout_1\nto_fd1_1\n")
         with os.fdopen(r, 'r') as FILE:
