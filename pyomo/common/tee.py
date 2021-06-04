@@ -90,7 +90,7 @@ class redirect_fd(object):
                 # descriptor that we just redirected, then we want to
                 # retarget the std file to the original (duplicated)
                 # target file descriptor.  This allows, e.g. Python to
-                # still write to stdout when re redirect fd=1 to
+                # still write to stdout when we redirect fd=1 to
                 # /dev/null
                 try:
                     old_std_fd = getattr(sys, self.std).fileno()
