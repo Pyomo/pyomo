@@ -479,17 +479,16 @@ jobs:
             > ${SITE_PACKAGES}/run_coverage_at_startup.pth
 
     - name: Download and install extensions
+      if: ${{ ! matrix.slim }}
       run: |
-        if [[ ! "${{matrix.slim}}" ]]; then
-            echo ""
-            echo "Pyomo download-extensions"
-            echo ""
-            pyomo download-extensions
-            echo ""
-            echo "Pyomo build-extensions"
-            echo ""
-            pyomo build-extensions --parallel 2
-        fi
+        echo ""
+        echo "Pyomo download-extensions"
+        echo ""
+        pyomo download-extensions
+        echo ""
+        echo "Pyomo build-extensions"
+        echo ""
+        pyomo build-extensions --parallel 2
 
     - name: Report pyomo plugin information
       run: |

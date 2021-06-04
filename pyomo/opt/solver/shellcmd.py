@@ -320,6 +320,8 @@ class SystemCallSolver(OptSolver):
                     timeout=timeout,
                     universal_newlines=True,
                 )
+                t.STDOUT.flush()
+                t.STDERR.flush()
 
             rc = results.returncode
             log = ostreams[0].getvalue()
