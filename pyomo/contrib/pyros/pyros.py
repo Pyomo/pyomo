@@ -12,7 +12,7 @@
 import logging
 from pyutilib.misc import Container
 from pyomo.common.config import (
-    ConfigDict, ConfigValue, In, NonNegativeFloat
+    ConfigDict, ConfigValue, In, NonNegativeFloat, add_docstring_list
 )
 from pyomo.core.base.block import Block
 from pyomo.core.expr import value
@@ -95,23 +95,15 @@ class InputDataStandardizer(object):
             assert isinstance(_, self.cdatatype)
         return ans
 
-@SolverFactory.register(
-    "pyros",
-    doc="Robust optimization (RO) solver implementing "
-    "the generalized robust cutting-set algorithm (GRCS)")
-class PyROS(object):
-    '''
-    PyROS (Pyomo Robust Optimization Solver) implements the
-    generalized robust cutting-set algorithm (GRCS) (TODO citation)
-    '''
+def pyros_config():
+    CONFIG = ConfigDict('PyROS')
 
-    CONFIG = ConfigDict()
     # ================================================
     # === Options common to all solvers
     # ================================================
-    CONFIG.declare('time_limit', ConfigValue(
+    '''CONFIG.declare('time_limit', ConfigValue(
         default=None,
-        domain=NonNegativeFloat,
+        domain=NonNegativeFloat
     ))
     CONFIG.declare('keepfiles', ConfigValue(
         default=False,
@@ -124,34 +116,11 @@ class PyROS(object):
     CONFIG.declare('load_solution', ConfigValue(
         default=True,
         domain=bool,
-    ))
+    ))'''
 
     # ================================================
     # === Required User Inputs
     # ================================================
-    # TODO alphabetize all user options by keyword within category
-    # TODO: check if None uncertainty_set throws error in validate_kwargs
-    CONFIG.declare("uncertainty_set", ConfigValue(
-        default=None, domain=uncertainty_sets,
-        description="UncertaintySet object representing the uncertainty space "
-                    "that the final solutions will be robust against."
-    ))
-    CONFIG.declare("local_solver", ConfigValue(
-        default=None, domain=SolverResolvable(),
-        description="NLP solver to utilize as the primary local solver."
-    ))
-    CONFIG.declare("global_solver", ConfigValue(
-        default=None, domain=SolverResolvable(),
-        description="NLP solver to utilize as the primary global solver."
-    ))
-    CONFIG.declare("first_stage_variables", ConfigValue(
-        default=[], domain=InputDataStandardizer(Var, _VarData),
-        description="List of first-stage variables (Var objects)."
-    ))
-    CONFIG.declare("second_stage_variables", ConfigValue(
-        default=[], domain=InputDataStandardizer(Var, _VarData),
-        description="List of second-stage variables (Var objects)."
-    ))
     CONFIG.declare("uncertain_params", ConfigValue(
         default=[], domain=InputDataStandardizer(Param, _ParamData),
         description="List of uncertain parameters (Param objects). MUST be 'mutable'. "
@@ -162,12 +131,33 @@ class PyROS(object):
         description="List of nominal values for all uncertain parameters. "
                     "Assumes entries are provided in consistent order with the entries of 'uncertain_params' input."
     ))
+    CONFIG.declare("uncertainty_set", ConfigValue(
+        default=None, domain=uncertainty_sets,
+        description="UncertaintySet object representing the uncertainty space "
+                    "that the final solutions will be robust against."
+    ))
+    CONFIG.declare("first_stage_variables", ConfigValue(
+        default=[], domain=InputDataStandardizer(Var, _VarData),
+        description="List of first-stage variables (Var objects)."
+    ))
+    CONFIG.declare("second_stage_variables", ConfigValue(
+        default=[], domain=InputDataStandardizer(Var, _VarData),
+        description="List of second-stage variables (Var objects)."
+    ))
+
     CONFIG.declare("decision_rule_order", ConfigValue(
         default=0, domain=In([0, 1, 2]),
         description="Order of decision rule functions for handling second-stage variable recourse. "
-                    "Choices are: '0' for constant recourse (a.k.a. static approximation), "
-                    "             '1' for affine recourse (a.k.a. affine decision rules) "
-                    "             '2' for quadratic recourse."
+                    "Choices are: '0' for constant recourse (a.k.a. static approximation), '1' for affine recourse "
+                    "(a.k.a. affine decision rules), '2' for quadratic recourse."
+    ))
+    CONFIG.declare("local_solver", ConfigValue(
+        default=None, domain=SolverResolvable(),
+        description="NLP solver to utilize as the primary local solver."
+    ))
+    CONFIG.declare("global_solver", ConfigValue(
+        default=None, domain=SolverResolvable(),
+        description="NLP solver to utilize as the primary global solver."
     ))
     # ================================================
     # === Optional User Inputs
@@ -180,9 +170,7 @@ class PyROS(object):
     # in the solver interface and I'm defining a different one here with the no limit option.
     CONFIG.declare("pyros_time_limit", ConfigValue(
         default=-1, domain=NonNegIntOrMinusOne(),
-        description="Total allotted time for the execution of the PyROS solver in seconds "
-                    "(includes time spent in sub-solvers). "
-                    "'-1' is no time limit."
+        description="Total allotted time for the execution of the PyROS solver in seconds (includes time spent in sub-solvers). '-1' is no time limit."
     ))
     CONFIG.declare("robust_feasibility_tolerance", ConfigValue(
         default=1e-4, domain=NonNegativeFloat,
@@ -192,26 +180,12 @@ class PyROS(object):
         default=False, domain=bool,
         description="'True' for the master problems to be solved with the user-supplied global solver(s); "
                     "or 'False' for the master problems to be solved with the user-supplied local solver(s). "
-                    "Note: Solving the master problems globally is one of the requirements to guarantee robust optimality; "
-                    "solving the master problems locally can only lead to a robust feasible solution."
+
     ))
     CONFIG.declare("objective_focus", ConfigValue(
         default=ObjectiveType.nominal, domain=ValidEnum(ObjectiveType),
         description="Choice of objective function to optimize in the master problems. "
                     "Choices are: 'ObjectiveType.worst_case', 'ObjectiveType.nominal'. "
-                    "Note: Selecting worst-case objective is one of the requirements to guarantee robust optimality; "
-                    "selecting nominal objective can only lead to a robust feasible solution, "
-                    "albeit one that has optimized the sum of first- and (nominal) second-stage objectives. "
-                    "Solving the master problems globally is one of the requirements to guarantee robust optimality; "
-                    "solving the master problems locally can only lead to a robust feasible solution."
-    ))
-    CONFIG.declare("p_robustness", ConfigValue(
-        default={}, domain=dict,
-        description="Whether or not to add p-robustness constraints to the master problems. "
-                    "If the dictionary is empty (default), then p-robustness constraints are not added. "
-                    "Otherwise, a dictionary of the following form must be supplied: "
-                    "There must be a key 'rho', which maps to a non-negative value, where '1+rho' defines a bound "
-                    "for the ratio of the objective that any scenario may exhibit compared to the nominal objective."
     ))
     CONFIG.declare("separation_priority_order", ConfigValue(
         default={}, domain=dict,
@@ -245,14 +219,37 @@ class PyROS(object):
     # ================================================
     CONFIG.declare("minimize_dr_norm", ConfigValue(
         default=True, domain=bool,
-        description="Whether or not to polish decision rule functions at each iteration."
+        description="Whether or not to polish decision rule functions at each iteration. "
+                    "This is an advanced option."
     ))
     CONFIG.declare("bypass_local_separation", ConfigValue(
         default=False, domain=bool,
         description="'True' to only employ global solver(s) during separation; "
                     "'False' to employ local solver(s) at intermediate separations, "
-                    "utilizing global solver(s) only before termination to certify robust feasibility."
+                    "utilizing global solver(s) only before termination to certify robust feasibility. "
+                    "This is an advanced option."
     ))
+    CONFIG.declare("p_robustness", ConfigValue(
+        default={}, domain=dict,
+        description="Whether or not to add p-robustness constraints to the master problems. "
+                    "If the dictionary is empty (default), then p-robustness constraints are not added. "
+                    "This is an advanced option. See Note for how to specify arguments."
+    ))
+
+    return CONFIG
+
+@SolverFactory.register(
+    "pyros",
+    doc="Robust optimization (RO) solver implementing "
+    "the generalized robust cutting-set algorithm (GRCS)")
+class PyROS(object):
+    '''
+    PyROS (Pyomo Robust Optimization Solver) implementing a
+    generalized robust cutting-set algorithm (GRCS) to solve
+    uncertain non-linear programming problems.
+    '''
+
+    CONFIG = pyros_config()
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -264,19 +261,25 @@ class PyROS(object):
         return __version__
 
     def license_is_valid(self):
-        ''' TODO: '''
+        ''' License for using PyROS '''
         return True
 
-    def solve(self, deterministic_model, **kwds):
+    def solve(self, model, **kwds):
         """Solve the model.
-        :param model: a deterministic Pyomo model to be solved robustly
+
+        Warning: this solver is still in beta. Keyword arguments subject to
+        change.
+
+        Args:
+            model: a Pyomo model to be solved
         """
+
         config = self.CONFIG(kwds.pop('options', {}))
         dev_options = kwds.pop('dev_options',{})
         config.set_value(kwds)
         config.set_value(dev_options)
 
-        model = deterministic_model
+        model = model
 
         # === Validate kwarg inputs
         validate_kwarg_inputs(model, config)
@@ -375,22 +378,6 @@ class PyROS(object):
             model_data.total_cpu_time = get_main_elapsed_time(model_data.timing)
 
             # === Print results
-            #config.progress_logger.info("PyROS terminated with condition " + str(pyros_soln.grcs_termination_condition.name))
-            ''''if config.first_stage_variables:
-                config.progress_logger.info("First-stage variable values at termination:")
-                if config.objective_focus is ObjectiveType.nominal:
-                    for idx, v in enumerate(pyros_soln.master_soln.fsv_vals):
-                        if "decision_rule" not in model_data.working_model.util.first_stage_variables[idx].name:
-                            config.progress_logger.info(model_data.working_model.util.first_stage_variables[idx].local_name + ": " + str(value(v)))
-                else:
-                    for idx, v in enumerate(pyros_soln.master_soln.fsv_vals):
-                        if "decision_rule" not in pyros_soln.master_soln.master_model.scenarios[0,0].util.first_stage_variables[idx].name:
-                            config.progress_logger.info(pyros_soln.master_soln.master_model.scenarios[0,0].util.first_stage_variables[idx].local_name + ": " + str(value(v)))
-            if config.second_stage_variables:
-                config.progress_logger.info("Second-stage variable values at termination:")
-                for idx, c in enumerate(pyros_soln.master_soln.ssv_vals):
-                    config.progress_logger.info(model_data.working_model.util.second_stage_variables[idx].name + ": " + str(value(c)))'''
-
             config.progress_logger.info("Objective: " + str(value(pyros_soln.master_soln.master_model.obj)))
             config.progress_logger.info("Time (s): " + str(model_data.total_cpu_time))
             '''config.progress_logger.info("Time solving Masters (s): " + str(pyros_soln.timing_data.total_master_solve_time))
@@ -408,10 +395,10 @@ class PyROS(object):
             # === Remove util block
             model.del_component(model_data.util_block)
 
-            #del pyros_soln.master_soln
-            #del pyros_soln.separation_data
             del pyros_soln.util_block
             del pyros_soln.working_model
         return pyros_soln
 
 
+PyROS.solve.__doc__ = add_docstring_list(
+    PyROS.solve.__doc__, PyROS.CONFIG, indent_by=8)

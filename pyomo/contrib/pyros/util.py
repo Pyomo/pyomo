@@ -611,7 +611,7 @@ def output_logger(config, **kwargs):
                        "PyROS: Pyomo Robust Optimization Solver v.%s \n" \
                        "Developed by Natalie M. Isenberg (1), John D. Siirola (2), Chrysanthos E. Gounaris (1) \n" \
                        "(1) Carnegie Mellon University, Department of Chemical Engineering \n" \
-                       "(2) Sandia National Laboratory, Discrete Math and Optimization \n\n" \
+                       "(2) Sandia National Laboratory, Discrete Math and Optimization Department\n\n" \
                        "The developers gratefully acknowledge support from the U.S. Department of Energy's \n" \
                        "Institute for the Design of Advanced Energy Systems (IDAES) \n" \
                        "Licensing: TODO \n" \
@@ -620,10 +620,10 @@ def output_logger(config, **kwargs):
     # === DISCLAIMER
     if "disclaimer" in kwargs:
         if kwargs["disclaimer"]:
-           print("\n======================================== DISCLAIMER ========================================\n"
+           print("\n======================================== DISCLAIMER =======================================\n"
                     "PyROS is still under development. This version is a beta release.\n"
                     "Please provide feedback and/or report any issues by opening a Pyomo ticket.\n"
-                    "===============================================================================\n")
+                    "===========================================================================================\n")
     # === ALL LOGGER RETURN MESSAGES
     if "robust_optimal" in kwargs:
         if kwargs["robust_optimal"]:
