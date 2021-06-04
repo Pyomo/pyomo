@@ -16,6 +16,7 @@ __all__ = ('value', 'is_constant', 'is_fixed', 'is_variable_type',
 import sys
 import logging
 
+from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.deprecation import deprecated
 from pyomo.core.expr.expr_common import \
     (_add, _sub, _mul, _div, _pow,
@@ -1028,6 +1029,22 @@ class NumericConstant(NumericValue):
 
 pyomo_constant_types.add(NumericConstant)
 
-
 # We use as_numeric() so that the constant is also in the cache
 ZeroConstant = as_numeric(0)
+
+
+class NumericNDArray(np.ndarray if numpy_available else object):
+    """An ndarray subclass that stores Pyomo numeric expressions"""
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        if method == '__call__':
+            # Convert all incoming types to ndarray (to prevent recursion)
+            args = [np.asarray(i) for i in inputs]
+            # Set the return type to be an 'object'.  This prevents the
+            # logical operators from casting the result to a bool.  This
+            # requires numpy >= 1.6
+            kwargs['dtype'] = object
+
+        # Delegate to the base ufunc, but return an instance of this
+        # class so that additional operators hit this method.
+        return getattr(ufunc, method)(*args, **kwargs).view(pyomo_ndarray)

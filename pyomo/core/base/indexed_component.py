@@ -13,7 +13,7 @@ __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 import logging
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
-from pyomo.core.expr.numvalue import native_types
+from pyomo.core.expr.numvalue import native_types, NumericNDArray
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
@@ -133,20 +133,6 @@ def _get_indexed_component_data_name(component, index):
             del component._data[index]
     return ans
 
-class pyomo_ndarray(np.ndarray if numpy_available else object):
-    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        if method == '__call__':
-            # Convert all incoming types to ndarray (to prevent recursion)
-            args = [np.asarray(i) for i in inputs]
-            # Set the return type to be an 'object'.  This prevents the
-            # logical operators from casting the result to a bool.  This
-            # requires numpy >= 1.6
-            kwargs['dtype'] = object
-
-        # Delegate to the base ufunc, but return an instance of this
-        # class so that additional operators hit this method.
-        return getattr(ufunc, method)(*args, **kwargs).view(pyomo_ndarray)
-
 
 class IndexedComponent(Component):
     """
@@ -245,35 +231,6 @@ class IndexedComponent(Component):
         if state['_index'] is None:
             state['_index'] = UnindexedComponent_set
         super(IndexedComponent, self).__setstate__(state)
-
-    def __array__(self, dtype=None):
-        if not self.is_indexed():
-            ans = pyomo_ndarray(shape=(1,), dtype=object)
-            ans[0] = self
-            return ans
-
-        _dim = self.dim()
-        if _dim is None:
-            raise TypeError(
-                "Cannot convert a non-dimensioned Pyomo IndexedComponent "
-                "(%s) into a numpy array" % (self,))
-        bounds = self.index_set().bounds()
-        if not isinstance(bounds[0], Sequence):
-            bounds = ((bounds[0],), (bounds[1],))
-        if any(b != 0 for b in bounds[0]):
-            raise TypeError(
-                "Cannot convert a Pyomo IndexedComponent "
-                "(%s) with bounds [%s, %s] into a numpy array" % (
-                    self, bounds[0], bounds[1]))
-        shape = tuple(b+1 for b in bounds[1])
-        ans = pyomo_ndarray(shape=shape, dtype=object)
-        for k, v in self.items():
-            ans[k] = v
-        return ans
-
-    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        return pyomo_ndarray.__array_ufunc__(
-            None, ufunc, method, *inputs, **kwargs)
 
     def to_dense_data(self):
         """TODO"""
@@ -893,3 +850,41 @@ class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
             for component_data in self.values():
                 component_data.deactivate()
 
+
+class IndexedComponent_NDArrayMixin(object):
+    """Support using IndexedComponent with numpy.ndarray
+
+    This IndexedComponent mixin class adds support for implicitly using
+    the IndexedComponent as a term in an expression with numpy ndarray
+    objects.
+
+    """
+
+    def __array__(self, dtype=None):
+        if not self.is_indexed():
+            ans = NumericNDArray(shape=(1,), dtype=object)
+            ans[0] = self
+            return ans
+
+        _dim = self.dim()
+        if _dim is None:
+            raise TypeError(
+                "Cannot convert a non-dimensioned Pyomo IndexedComponent "
+                "(%s) into a numpy array" % (self,))
+        bounds = self.index_set().bounds()
+        if not isinstance(bounds[0], Sequence):
+            bounds = ((bounds[0],), (bounds[1],))
+        if any(b != 0 for b in bounds[0]):
+            raise TypeError(
+                "Cannot convert a Pyomo IndexedComponent "
+                "(%s) with bounds [%s, %s] into a numpy array" % (
+                    self, bounds[0], bounds[1]))
+        shape = tuple(b+1 for b in bounds[1])
+        ans = NumericNDArray(shape=shape, dtype=object)
+        for k, v in self.items():
+            ans[k] = v
+        return ans
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        return NumericNDArray.__array_ufunc__(
+            None, ufunc, method, *inputs, **kwargs)
