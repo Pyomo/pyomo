@@ -39,19 +39,102 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+class redirect_fd(object):
+    def __init__(self, fd=1, output=None, synchronize=True, enable=True):
+        if output is None:
+            # /dev/null is used just to discard what is being printed
+            output = os.devnull
+        self.fd = fd
+        self.std = {1: 'stdout', 2: 'stderr'}.get(self.fd, None)
+        self.target = output
+        self.target_file = None
+        self.synchronize = synchronize
+        self.enable = enable
+        self.original_file = None
+        self.original_fd = None
+
+    def __enter__(self):
+        if not self.enable:
+            return self
+        if self.std:
+            # important: flush the current file buffer when redirecting
+            getattr(sys, self.std).flush()
+            self.original_file = getattr(sys, self.std)
+        # Duplicate the original standard file descriptor(file
+        # descriptor 1 or 2) to a different file descriptor number
+        self.original_fd = os.dup(self.fd)
+
+        # Open a file descriptor pointing to the new file
+        if isinstance(self.target, int):
+            out_fd = self.target
+        else:
+            out_fd = os.open(self.target, os.O_WRONLY)
+
+        # Duplicate the file descriptor for the opened file, closing and
+        # overwriting the value for stdout (file descriptor 1).  Only
+        # make the new FD inheritable if it is stdout/stderr
+        os.dup2(out_fd, self.fd, inheritable=bool(self.std))
+
+        # We no longer need this original file descriptor
+        if out_fd is not self.target:
+            os.close(out_fd)
+
+        if self.std:
+            if self.synchronize:
+                # Cause Python's stdout to point to our new file
+                fd = self.fd
+            else:
+                # IF we are not synchronizing the std file object with
+                # the redirected file descriptor, and IF the current
+                # file object is pointing to the original file
+                # descriptor that we just redirected, then we want to
+                # retarget the std file to the original (duplicated)
+                # target file descriptor.  This allows, e.g. Python to
+                # still write to stdout when re redirect fd=1 to
+                # /dev/null
+                try:
+                    old_std_fd = getattr(sys, self.std).fileno()
+                    fd = self.original_fd if old_std_fd == self.fd else None
+                except (io.UnsupportedOperation, AttributeError):
+                    fd = None
+            if fd is not None:
+                self.target_file = os.fdopen(fd, 'w', closefd=False)
+                setattr(sys, self.std, self.target_file)
+
+        return self
+
+    def __exit__(self, t, v, traceback):
+        if not self.enable:
+            return
+        # Close output: this either closes the new file that we opened,
+        # or else the new file that points to the original (duplicated)
+        # file descriptor
+        if self.target_file is not None:
+            setattr(sys, self.std, self.original_file)
+            self.target_file.flush()
+            self.target_file.close()
+            self.target_file = None
+        # Restore stdout's FD (implicitly closing the FD we opened)
+        os.dup2(self.original_fd, self.fd, inheritable=bool(self.std))
+        # Close the temporary FD
+        os.close(self.original_fd)
+
+
 class capture_output(object):
     """
     Drop-in substitute for PyUtilib's capture_output.
     Takes in a StringIO, file-like object, or filename and temporarily
     redirects output to a string buffer.
     """
-    def __init__(self, output=None):
+    def __init__(self, output=None, capture_fd=False):
         if output is None:
             output = StringIO()
         self.output = output
         self.output_file = None
         self.old = None
         self.tee = None
+        self.capture_fd = capture_fd
+        self.fd_redirect = None
 
     def __enter__(self):
         if isinstance(self.output, str):
@@ -63,9 +146,20 @@ class capture_output(object):
         self.tee.__enter__()
         sys.stdout = self.tee.STDOUT
         sys.stderr = self.tee.STDERR
+        if self.capture_fd:
+            self.fd_redirect = (
+                redirect_fd(1, sys.stdout.fileno()),
+                redirect_fd(2, sys.stderr.fileno())
+            )
+            self.fd_redirect[0].__enter__()
+            self.fd_redirect[1].__enter__()
         return self.output_stream
 
     def __exit__(self, et, ev, tb):
+        if self.fd_redirect is not None:
+            self.fd_redirect[0].__exit__(et, ev, tb)
+            self.fd_redirect[1].__exit__(et, ev, tb)
+            self.fd_redirect = None
         FAIL = self.tee.STDOUT is not sys.stdout
         self.tee.__exit__(et, ev, tb)
         if self.output_stream is not self.output:
