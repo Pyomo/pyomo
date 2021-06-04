@@ -138,11 +138,11 @@ def pyros_config():
     ))
     CONFIG.declare("first_stage_variables", ConfigValue(
         default=[], domain=InputDataStandardizer(Var, _VarData),
-        description="List of first-stage variables (Var objects)."
+        description="List of design variables (Var objects)."
     ))
     CONFIG.declare("second_stage_variables", ConfigValue(
         default=[], domain=InputDataStandardizer(Var, _VarData),
-        description="List of second-stage variables (Var objects)."
+        description="List of control variables (Var objects)."
     ))
 
     CONFIG.declare("decision_rule_order", ConfigValue(
@@ -174,7 +174,7 @@ def pyros_config():
     ))
     CONFIG.declare("robust_feasibility_tolerance", ConfigValue(
         default=1e-4, domain=NonNegativeFloat,
-        description="Relative tolerance for what is considered a violation of a constraint in separation."
+        description="Relative tolerance for assessing robust feasibility violation during separation phase."
     ))
     CONFIG.declare("solve_master_globally", ConfigValue(
         default=False, domain=bool,
@@ -185,7 +185,7 @@ def pyros_config():
     CONFIG.declare("objective_focus", ConfigValue(
         default=ObjectiveType.nominal, domain=ValidEnum(ObjectiveType),
         description="Choice of objective function to optimize in the master problems. "
-                    "Choices are: 'ObjectiveType.worst_case', 'ObjectiveType.nominal'. "
+                    "Choices are: 'ObjectiveType.worst_case', 'ObjectiveType.nominal'. See Note for details."
     ))
     CONFIG.declare("separation_priority_order", ConfigValue(
         default={}, domain=dict,
@@ -194,7 +194,7 @@ def pyros_config():
     ))
     CONFIG.declare("progress_logger", ConfigValue(
         default="pyomo.contrib.pyros", domain=a_logger,
-        description="The logger object or name to use for reporting."
+        description="The logger object to use for reporting."
     ))
     CONFIG.declare("print_subsolver_progress_to_screen", ConfigValue(
         default=False, domain=bool,
@@ -245,8 +245,8 @@ def pyros_config():
 class PyROS(object):
     '''
     PyROS (Pyomo Robust Optimization Solver) implementing a
-    generalized robust cutting-set algorithm (GRCS) to solve
-    uncertain non-linear programming problems.
+    generalized robust cutting-set algorithm (GRCS)
+    to solve two-stage NLP optimization models under uncertainty.
     '''
 
     CONFIG = pyros_config()
@@ -266,9 +266,6 @@ class PyROS(object):
 
     def solve(self, model, **kwds):
         """Solve the model.
-
-        Warning: this solver is still in beta. Keyword arguments subject to
-        change.
 
         Args:
             model: a Pyomo model to be solved

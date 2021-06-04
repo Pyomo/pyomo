@@ -32,9 +32,9 @@ The general form of a deterministic optimization problem that can be passed into
 
 where:
 
-* :math:`x \in \mathcal{X}` are the 'design' variables (i.e., first-stage degrees of freedom), where :math:`\mathcal{X} \subseteq \mathbb{R}^m` is the feasible space defined by the model constraints that only reference these variables
-* :math:`z \in \mathbb{R}^n` are the 'control' variables (i.e., second-stage degrees of freedom)
-* :math:`y \in \mathbb{R}^a` are the state variables
+* :math:`x \in \mathcal{X}` are the "design" variables (i.e., first-stage degrees of freedom), where :math:`\mathcal{X} \subseteq \mathbb{R}^m` is the feasible space defined by the model constraints that only reference these variables
+* :math:`z \in \mathbb{R}^n` are the "control" variables (i.e., second-stage degrees of freedom)
+* :math:`y \in \mathbb{R}^a` are the "state" variables
 * :math:`q \in \mathbb{R}^w` is the vector of parameters that we shall later consider to be uncertain, and :math:`q^0` is the vector of nominal values associated with those.
 * :math:`f_1\left(x\right)` are the terms of the objective function that depend only on design variables
 * :math:`f_2\left(x, z, y; q\right)` are the terms of the objective function that depend on control and/or state variables
@@ -64,29 +64,35 @@ In order to solve problems of the above type, PyROS implements the Generalized R
 
 `Isenberg, NM, Akula, P, Eslick, JC, Bhattacharyya, D, Miller, DC, Gounaris, CE. A generalized cutting‐set approach for nonlinear robust optimization in process systems engineering. AIChE J. 2021; 67:e17175. DOI 10.1002/aic.17175 <https://aiche.onlinelibrary.wiley.com/doi/abs/10.1002/aic.17175>`_
 
+When using PyROS, please consider citing the above paper.
+
 PyROS Required Inputs
 -----------------------------
 The required inputs to the PyROS solver are the following:
 
 * The determinisitic optimization model
-* The ``UncertaintySet`` object
+* The uncertainty set
 * List of parameters to be considered uncertain
-* List of first-stage variables
-* List of second-stage variables
-* Subordinate local and global optimization solvers
+* List of first-stage "design" variables
+* List of second-stage "control" variables
+* Subordinate local and global NLP optimization solvers
+
+.. note::
+    Any variables in the model not specified to be first- or second-stage variables are
+    automatically considered state variables in the underlying algorithm.
 
 These arguments **must** be specified as ``kwargs`` when calling the ``solve`` command.
 
 model : ``ConcreteModel``
     A ``ConcreteModel`` object representing the deterministic model.
 uncertain_params : ``list(Param)``
-    A list of Pyomo ``Param`` objects in the ``deterministic_model`` to be considered uncertain. These specified ``Param`` objects must have the property ``mutable=True``.
+    A list of Pyomo ``Param`` objects in ``deterministic_model`` to be considered uncertain. These specified ``Param`` objects must have the property ``mutable=True``.
 uncertainty_set : ``UncertaintySet``
-    A PyROS ``UncertaintySet`` object that represents the uncertainty in
+    A PyROS ``UncertaintySet`` object that represents the uncertainty in the space of the specified ``uncertain_param`` objects.
 first_stage_variables : ``list(Var)``
-    A list of Pyomo ``Var`` objects representing first-stage degrees of freedom in ``deterministic_model``
+    A list of Pyomo ``Var`` objects representing the first-stage degrees of freedom (design variables) in ``deterministic_model``
 second_stage_variables : ``list(Var)``
-    A list of Pyomo ``Var`` objects representing second-stage degrees of freedom in ``deterministic_model``
+    A list of Pyomo ``Var`` objects representing second-stage degrees of freedom (control variables) in ``deterministic_model``
 local_solver : ``Solver``
     A Pyomo ``Solver`` instance for a local NLP optimization solver
 global_solver : ``Solver``
@@ -107,8 +113,6 @@ PyROS options (via ``kwargs``) are shown below.
     Selecting worst-case objective (via option ``objective_focus=ObjectiveType.worst_case``) is one of the requirements to guarantee robust optimality;
     selecting nominal objective can only lead to a robust feasible solution,
     albeit one that has optimized the sum of first- and (nominal) second-stage objectives.
-    Solving the master problems globally is one of the requirements to guarantee robust optimality;
-    solving the master problems locally can only lead to a robust feasible solution.
 
 .. note::
     To utilize option ``p_robustness``, a dictionary of the following form must be supplied via the ``kwarg``:
@@ -125,82 +129,76 @@ Mathematical representations of the sets are shown below, followed by the class 
 
 .. list-table:: PyROS Uncertainty Sets
    :header-rows: 1
+   :class: tight-table
 
-   * - UncertaintySet Type
-     - Input Data
+   * - Uncertainty Set Type
      - Set Representation
    * - ``BoxSet``
-     - :math:`q^\ell \in \mathbb{R}^n, q^u \in \mathbb{R}^n : q^\ell \leq q^u`
-     - :math:`Q_X = \left\{q \in \mathbb{R}^n : q^\ell \leq q \leq q^u\right\}`
+     - :math:`Q_X = \left\{q \in \mathbb{R}^n : q^\ell \leq q \leq q^u\right\} \\ q^\ell \in \mathbb{R}^n \\ q^u \in \mathbb{R}^n : \left\{q^\ell \leq q^u\right\}`
    * - ``CardinalitySet``
-     - :math:`\Gamma \in [0, n], \hat{q} \in \mathbb{R}^{n}_{+}, q^0 \in \mathbb{R}^n`
-     - :math:`Q_C = \left\{q \in \mathbb{R}^n : q = q^0 + (\hat{q} \circ \xi) \text{ for some } \xi \in \Xi_C\right\}\\ \Xi_C = \left\{\xi \in [0, 1]^n : \displaystyle\sum_{i=1}^{n} \xi_i \leq \Gamma\right\}`
+     - :math:`Q_C = \left\{q \in \mathbb{R}^n : q = q^0 + (\hat{q} \circ \xi) \text{ for some } \xi \in \Xi_C\right\}\\ \Xi_C = \left\{\xi \in [0, 1]^n : \displaystyle\sum_{i=1}^{n} \xi_i \leq \Gamma\right\} \\ \Gamma \in [0, n] \\ \hat{q} \in \mathbb{R}^{n}_{+} \\ q^0 \in \mathbb{R}^n`
    * - ``BudgetSet``
-     - :math:`b_\ell \in \mathbb{R}^{L}_+`
-     - :math:`Q_B = \left\{q \in \mathbb{R}^n_+: \displaystyle\sum_{i \in B_\ell} q_i \leq b_\ell \ \forall \ell \in \left\{1,\ldots,L\right\} \right\}`
+     - :math:`Q_B = \left\{q \in \mathbb{R}^n_+: \displaystyle\sum_{i \in B_\ell} q_i \leq b_\ell \ \forall \ell \in \left\{1,\ldots,L\right\} \right\} \\ b_\ell \in \mathbb{R}^{L}_+`
    * - ``FactorModelSet``
-     - :math:`\beta \in [0,1], \Psi \in \mathbb{R}^{n \times F}_+, q^0 \in \mathbb{R}^n`
-     - :math:`Q_F = \left\{q \in \mathbb{R}^n: \displaystyle q = q^0 + \Psi \xi \text{ for some }\xi \in \Xi_F\right\} \\ \Xi_F = \left\{ \xi \in \left[-1, 1\right]^F, \left\lvert \displaystyle \sum_{f=1}^{F} \xi_f\right\rvert \leq \beta F \right\}`
+     - :math:`Q_F = \left\{q \in \mathbb{R}^n: \displaystyle q = q^0 + \Psi \xi \text{ for some }\xi \in \Xi_F\right\} \\ \Xi_F = \left\{ \xi \in \left[-1, 1\right]^F, \left\lvert \displaystyle \sum_{f=1}^{F} \xi_f\right\rvert \leq \beta F \right\} \\ \beta \in [0,1] \\ \Psi \in \mathbb{R}^{n \times F}_+ \\ q^0 \in \mathbb{R}^n`
    * - ``PolyhedralSet``
-     - :math:`A \in \mathbb{R}^{m \times n}, b \in \mathbb{R}^{m}, q^0 \in \mathbb{R}^n: {Aq^0 \leq b}`
-     - :math:`Q_P = \left\{q \in \mathbb{R}^n: \displaystyle A q \leq b \right\}`
+     - :math:`Q_P = \left\{q \in \mathbb{R}^n: \displaystyle A q \leq b \right\} \\ A \in \mathbb{R}^{m \times n} \\ b \in \mathbb{R}^{m} \\ q^0 \in \mathbb{R}^n: {Aq^0 \leq b}`
    * - ``AxisAlignedEllipsoidalSet``
-     - :math:`\alpha \in \mathbb{R}^n_+, q^0 \in \mathbb{R}^n`
-     - :math:`Q_A = \left\{q \in \mathbb{R}^n: \displaystyle \sum\limits_{i=1 : \atop \left\{ \alpha_i > 0 \right\} } \left(\frac{q_i - q_i^0}{\alpha_i} \right)^2 \leq 1 , \quad q_i = q^0_i \quad \forall i : \left\{\alpha_i=0\right\}\right\}`
+     - :math:`Q_A = \left\{q \in \mathbb{R}^n: \displaystyle \sum\limits_{i=1 : \atop \left\{ \alpha_i > 0 \right\} } \left(\frac{q_i - q_i^0}{\alpha_i} \right)^2 \leq 1 , \quad q_i = q^0_i \quad \forall i : \left\{\alpha_i=0\right\}\right\} \\ \alpha \in \mathbb{R}^n_+, \\ q^0 \in \mathbb{R}^n`
    * - ``EllipsoidalSet``
-     - :math:`P \in \mathbb{S}^{n\times n}_+, s \in \mathbb{R}_+, q^0 \in \mathbb{R}^n`
-     - :math:`Q_E = \left\{q \in \mathbb{R}^n: \displaystyle q = q^0 + P^{1/2} \xi \text{ for some } \xi \in \Xi_E \right\} \\ \Xi_E = \left\{\xi \in \mathbb{R} : \xi^T\xi \leq s \right\}`
+     - :math:`Q_E = \left\{q \in \mathbb{R}^n: \displaystyle q = q^0 + P^{1/2} \xi \text{ for some } \xi \in \Xi_E \right\} \\ \Xi_E = \left\{\xi \in \mathbb{R} : \xi^T\xi \leq s \right\} \\ P \in \mathbb{S}^{n\times n}_+ \\ s \in \mathbb{R}_+ \\ q^0 \in \mathbb{R}^n`
    * - ``UncertaintySet``
-     - :math:`m \in \mathbb{N}_+, g_i : \mathbb{R}^n \mapsto \mathbb{R} \ \forall i \in \left\{1,\ldots,m\right\}, \\ q^0 \in \mathbb{R}^n : g_i(q^0) \leq 0  \ \forall i \in \left\{1,\ldots,m\right\}`
-     - :math:`Q_U = \left\{q \in \mathbb{R}^n: \displaystyle g_i(q) \leq 0 \quad \forall i \in \left\{1,\ldots,m \right\}\right\}`
+     - :math:`Q_U = \left\{q \in \mathbb{R}^n: \displaystyle g_i(q) \leq 0 \quad \forall i \in \left\{1,\ldots,m \right\}\right\} \\ m \in \mathbb{N}_+ \\ g_i : \mathbb{R}^n \mapsto \mathbb{R} \\ \forall i \in \left\{1,\ldots,m\right\}, \\ q^0 \in \mathbb{R}^n : \left\{g_i(q^0) \leq 0  \ \forall i \in \left\{1,\ldots,m\right\}\right\}`
    * - ``DiscreteSet``
-     - :math:`D \in \mathbb{N}, q^s \in \mathbb{R}^n`
-     - :math:`Q_D = \left\{q^s : s = 0,\ldots,D \right\}`
+     - :math:`Q_D = \left\{q^s : s = 0,\ldots,D \right\} \\ D \in \mathbb{N} \\ q^s \in \mathbb{R}^n \forall s \in \left\{ 0,\ldots,D\right\}`
    * - ``IntersectionSet``
-     - :math:`Q_i \subset \mathbb{R}^n \quad \forall i \in \left\{1,\ldots,m\right\}`
-     - :math:`Q_I = \left\{q \in \mathbb{R}^n: \displaystyle q \in \bigcap_{i \in \left\{1,\ldots,m\right\}} Q_i\right\}`
+     - :math:`Q_I = \left\{q \in \mathbb{R}^n: \displaystyle q \in \bigcap_{i \in \left\{1,\ldots,m\right\}} Q_i\right\} \\ Q_i \subset \mathbb{R}^n \quad \forall i \in \left\{1,\ldots,m\right\}`
 
-
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.BoxSet
-    :members:
-
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.CardinalitySet
-    :members:
-
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.BudgetSet
-    :members:
-
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.FactorModelSet
-    :members:
-
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.PolyhedralSet
-    :members:
-
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.AxisAlignedEllipsoidalSet
-    :members:
-
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.EllipsoidalSet
-    :members:
-
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.DiscreteSet
-    :members:
-
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.IntersectedSet
-    :members:
+.. note::
+    Each of the PyROS uncertainty set objects inherits from the ``UncertaintySet`` base class.
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.UncertaintySet
-    :members:
+    :special-members: __init__
 
-Example Problem Walk-through
+.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.BoxSet
+    :special-members: __init__
+
+.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.CardinalitySet
+    :special-members: __init__
+
+.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.BudgetSet
+    :special-members: __init__
+
+.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.FactorModelSet
+    :special-members: __init__
+
+.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.PolyhedralSet
+    :special-members: __init__
+
+.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.AxisAlignedEllipsoidalSet
+    :special-members: __init__
+
+.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.EllipsoidalSet
+    :special-members: __init__
+
+.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.DiscreteSet
+    :special-members: __init__
+
+.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.IntersectionSet
+    :special-members: __init__
+
+
+PyROS Usage Example
 -----------------------------
 
 We will use an example to illustrate the usage of PyROS. The problem we will use is called *hydro* and comes from
 the GAMS example problem database in `The GAMS Model Library <https://www.gams.com/latest/gamslib_ml/libhtml/>`_. The model was converted to Pyomo format via the `GAMS Convert tool <https://www.gams.com/latest/docs/S_CONVERT.html>`_.
-Per our analysis, this model is a QCQP with 13 decision variables, 18 state variables, and we have selected 3 uncertain parameters.
+Per our analysis, this model is a QCQP with 13 variables representing degrees of freedom, 18 state variables, and we have selected 3 uncertain parameters.
 
-In this model, are 6 linear inequality constraints, 6 linear equality constraints, 6 non-linear (quadratic) equalities, and a quadratic objective.
+This model features 6 linear inequality constraints, 6 linear equality constraints, 6 non-linear (quadratic) equalities, and a quadratic objective.
 
-Note that we can easily verify that this model satisfies our assumption regarding 1-1 state variable mappings via an elimination-type algorithm for variables and equality constraints.
+.. note::
+    We can easily verify that this model satisfies the requirement that each value of :math:`\left(x, z, q \right)` maps to a unique value of :math:`y` via an elimination-type algorithm for variables and equality constraints.
 
 Step 1: Define the Deterministic Problem
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -214,14 +212,15 @@ primitive data (python literals) cannot be considered uncertain within PyROS.
 
 .. doctest::
 
-  Required imports
+  >>> # === Required imports ===
   >>> from pyomo.environ import *
   >>> from pyomo.pyros import *
 
-
+  >>> # === Construct the Pyomo model object ===
   >>> m = pyo.ConcreteModel()
   >>> m.name = "hydro"
 
+  >>> # === Define variables ===
   >>> m.x1 = pyo.Var(within=pyo.Reals,bounds=(150,1500),initialize=150)
   >>> m.x2 = pyo.Var(within=pyo.Reals,bounds=(150,1500),initialize=150)
   >>> m.x3 = pyo.Var(within=pyo.Reals,bounds=(150,1500),initialize=150)
@@ -259,209 +258,191 @@ primitive data (python literals) cannot be considered uncertain within PyROS.
   >>> nominal_values = {0:82.8*0.0016, 1:4.97, 2:4.97, 3:1800}
   >>> m.p = pyo.Param(m.set_of_params, initialize=nominal_values, mutable=True)
 
-  >>> m.obj = pyo.Objective(expr=m.p[0]*m.x1**2 + 82.8*8*m.x1 + 82.8*0.0016*m.x2**2 + 82.8*
-                       82.8*8*m.x2 + 82.8*0.0016*m.x3**2 + 82.8*8*m.x3 +
-                       82.8*0.0016*m.x4**2 + 82.8*8*m.x4 + 82.8*0.0016*m.x5**2 +
-                       82.8*8*m.x5 + 82.8*0.0016*m.x6**2 + 82.8*8*m.x6 + 248400,
-                       sense=pyo.minimize)
+  >>> # === Specify the objective function ===
+  >>> m.obj = pyo.Objective(expr=m.p[0]*m.x1**2 + 82.8*8*m.x1 + 82.8*0.0016*m.x2**2 +
+                                 82.8*82.8*8*m.x2 + 82.8*0.0016*m.x3**2 + 82.8*8*m.x3 +
+                                 82.8*0.0016*m.x4**2 + 82.8*8*m.x4 + 82.8*0.0016*m.x5**2 +
+                                 82.8*8*m.x5 + 82.8*0.0016*m.x6**2 + 82.8*8*m.x6 + 248400,
+                                 sense=pyo.minimize)
 
+  >>> # === Specify the constraints ===
   >>> m.c2 = pyo.Constraint(expr=-m.x1 - m.x7 + m.x13 + 1200<= 0)
-
   >>> m.c3 = pyo.Constraint(expr=-m.x2 - m.x8 + m.x14 + 1500 <= 0)
-
   >>> m.c4 = pyo.Constraint(expr=-m.x3 - m.x9 + m.x15 + 1100 <= 0)
-
   >>> m.c5 = pyo.Constraint(expr=-m.x4 - m.x10 + m.x16 + m.p[3] <= 0)
-
   >>> m.c6 = pyo.Constraint(expr=-m.x5 - m.x11 + m.x17 + 950 <= 0)
-
   >>> m.c7 = pyo.Constraint(expr=-m.x6 - m.x12 + m.x18 + 1300 <= 0)
-
   >>> m.c8 = pyo.Constraint(expr=12*m.x19 - m.x25 + m.x26 == 24000)
-
   >>> m.c9 = pyo.Constraint(expr=12*m.x20 - m.x26 + m.x27 == 24000)
-
   >>> m.c10 = pyo.Constraint(expr=12*m.x21 - m.x27 + m.x28 == 24000)
-
   >>> m.c11 = pyo.Constraint(expr=12*m.x22 - m.x28 + m.x29 == 24000)
-
   >>> m.c12 = pyo.Constraint(expr=12*m.x23 - m.x29 + m.x30 == 24000)
-
   >>> m.c13 = pyo.Constraint(expr=12*m.x24 - m.x30 + m.x31 == 24000)
-
   >>> m.c14 = pyo.Constraint(expr=-8e-5*m.x7**2 + m.x13 == 0)
-
   >>> m.c15 = pyo.Constraint(expr=-8e-5*m.x8**2 + m.x14 == 0)
-
   >>> m.c16 = pyo.Constraint(expr=-8e-5*m.x9**2 + m.x15 == 0)
-
   >>> m.c17 = pyo.Constraint(expr=-8e-5*m.x10**2 + m.x16 == 0)
-
   >>> m.c18 = pyo.Constraint(expr=-8e-5*m.x11**2 + m.x17 == 0)
-
   >>> m.c19 = pyo.Constraint(expr=-8e-5*m.x12**2 + m.x18 == 0)
-
   >>> m.c20 = pyo.Constraint(expr=-4.97*m.x7 + m.x19 == 330)
-
   >>> m.c21 = pyo.Constraint(expr=-m.p[1]*m.x8 + m.x20 == 330)
-
   >>> m.c22 = pyo.Constraint(expr=-4.97*m.x9 + m.x21 == 330)
-
   >>> m.c23 = pyo.Constraint(expr=-4.97*m.x10 + m.x22 == 330)
-
   >>> m.c24 = pyo.Constraint(expr=-m.p[2]*m.x11 + m.x23 == 330)
-
   >>> m.c25 = pyo.Constraint(expr=-4.97*m.x12 + m.x24 == 330)
 
 Step 2: Define the Uncertainty
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 In the case that the parameters in the model ``(m.p[0], m.p[1], m.p[2], m.p[3])`` are uncertain, we can use PyROS to
-identify solutions to this problem that remains feasible for any realization of the uncertain parameters that we specify.
+identify solutions to this problem that remains feasible for any realization of the uncertain parameters that
+is included in an uncertainty set that we shall postulate.
 Furthermore, we can utilize PyROS to show the robust infeasibility of the deterministic solution in light of our proposed
 uncertainty set.
 
-We will utilize the `UncertaintySet` object to specify pertinent data used to construct a representative uncertainty set in the space of our parameters.
-Then, PyROS handles the construction of the necessary constraints for the sets and utilizes them in the underlying robust optimization algorithm.
+We will define a ``UncertaintySet`` object to construct a representative uncertainty set in the space of our parameters.
+For this example, let us utilize the ``BoxSet`` constructor to specify an uncertainty set of simple hyper-rectangular geometry.
+For this, we will assume each parameter value is uncertain within a percentage of its nominal value.
 
-For this example, lets utilize the ``BoxSet`` first to represent the uncertainty in our parameters.
-We will assume each parameter value is uncertain within a percentage of its nominal value.
-
-.. note::
-    The ``UncertaintySet`` object
-    is simply a container for data to define the specific type of uncertainty set geometry and size.
-
-Constructing this specific ``UncertaintySet`` object is as follows:
+Constructing this specific ``UncertaintySet`` object can be done as follows:
 
 .. doctest::
 
   >>> # === Define our pertinent data
   >>> percent_deviation = 0.15
   >>> bounds = [(m.p[0].value - percent_deviation*m.p[0].value, m.p[0].value + percent_deviation*m.p[0].value),
-          (m.p[1].value - percent_deviation*m.p[1].value, m.p[1].value + percent_deviation*m.p[1].value),
-          (m.p[2].value - percent_deviation*m.p[2].value, m.p[2].value + percent_deviation*m.p[2].value),
-          (m.p[3].value - percent_deviation*m.p[3].value, m.p[3].value + percent_deviation*m.p[3].value)]
+                (m.p[1].value - percent_deviation*m.p[1].value, m.p[1].value + percent_deviation*m.p[1].value),
+                (m.p[2].value - percent_deviation*m.p[2].value, m.p[2].value + percent_deviation*m.p[2].value),
+                (m.p[3].value - percent_deviation*m.p[3].value, m.p[3].value + percent_deviation*m.p[3].value)]
 
   >>> # === Construct the Box Set
   >>> box_uncertainty_set = pyros.BoxSet(bounds=bounds)
 
-  >>> # === Print some information about our new UncertaintySet
+  >>> # === Print some information about our new uncertainty set
   >>> print("Set type: %s" % box_uncertainty_set.type)
   >>> print("Set dimension: %s" % box_uncertainty_set.dim)
 
 Step 3: Solve with PyROS
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-The final step in solving with PyROS is to designate the remaining required inputs:
+The final step in solving a model with PyROS is to designate the remaining required inputs:
 ``first_stage_variables``, ``second_stage_variables``, ``uncertain_params``, ``local_solver``, and ``global_solver``.
 
 
 The Single-Stage Problem
 """""""""""""""""""""""""
-If we choose to designate all degrees of freedom as first-stage, we can solve the single-stage problem as shown below.
+If we choose to designate all variables as either design or state variables without any control variables (i.e., all degrees of freedom are first-stage),
+we can solve the single-stage problem as shown below.
 
 .. doctest::
 
-  >>> # === Here we partition the decision variables (degrees of freedom) into which are first-/second- stage
+  >>> # === Designate which variables correspond to first- and second-stage degrees of freedom ===
   >>> first_stage_variables =[m.x1, m.x2, m.x3, m.x4, m.x5, m.x6,
                         m.x19, m.x20, m.x21, m.x22, m.x23, m.x24, m.x31]
   >>> second_stage_variables = []
+  >>> # === The remaining variables are implicitly designated to be state variables
 
-  >>> # === Specify which parameters are uncertain
+  >>> # === Specify which parameters are uncertain ===
   >>> uncertain_parameters = [m.p] # We can pass IndexedParams this way to PyROS, or as a expanded list per index
 
-  >>> # === Designate local and global NLP solvers. Here we use Baron as both a local and global NLP solver.
+  >>> # === Designate local and global NLP solvers. Here we use BARON as both the local and the global NLP solver. ===
   >>> local_solver = pyo.SolverFactory('baron')
   >>> global_solver = pyo.SolverFactory('baron')
 
-  >>> # === Make the PyROS solver
+  >>> # === Make the PyROS solver object ===
   >>> pyros_solver = SolverFactory("pyros")
 
-  >>> # === Solve the uncertain optimization problem
+  >>> # === Solve the uncertain optimization problem ===
   >>> results = pyros_solver.solve(model=m,
-                                    first_stage_variables = first_stage_variables,
-                                    second_stage_variables = second_stage_variables,
-                                    uncertain_params = uncertain_parameters,
-                                    uncertainty_set = box_uncertainty_set,
-                                    global_solver= global_solver,
-                                    local_solver = local_solver,
-                                    options = {"bypass_local_separation": True,
-                                    "solve_master_globally": True,
-                                    "objective_focus": pyros.ObjectiveType.worst_case,
-                                    "print_subsolver_progress_to_screen": False})
+                                   first_stage_variables = first_stage_variables,
+                                   second_stage_variables = second_stage_variables,
+                                   uncertain_params = uncertain_parameters,
+                                   uncertainty_set = box_uncertainty_set,
+                                   global_solver= global_solver,
+                                   local_solver = local_solver,
+                                   options = {
+                                       "bypass_local_separation": True,
+                                       "solve_master_globally": True,
+                                       "objective_focus": pyros.ObjectiveType.worst_case
+                                    })
+  >>> # === Print Results ===
+  >>> const_dr_final_objective = pyo.value(pyros_results.final_objective_value)
+  >>> print("\n Final objective value: %s" % const_dr_final_objective)
+
+
 
 The Two-Stage Problem
 """"""""""""""""""""""
-In the previous results, all the decision variables are assumed to be first-stage (here-and-now) decisions.
-Is is often the case that some decision variables are actually second-stage (wait-and-see) decisions.
-PyROS supports second-stage decision variables via adjustable robust optimization.
+In the previous run, all the degrees of freedom are assumed to be first-stage ("here-and-now") decisions.
+Now, let us assume that a subset of those degrees of freedom were in fact second-stage ("wait-and-see") decisions.
 
-Decision rules are used to replace the fully-flexible form of second-stage decisions, making them a function of the uncertain parameter realizations.
-Currently, PyROS supports both affine and quadratic decision rules. Note the solver config options above for how to designate the decision rules option in PyROS.
-
+PyROS handles second-stage degrees of freedom via the use of decision rules.
+Currently, PyROS supports constant, affine, and quadratic functionals to implement decision rules.
+This is controlled with the config option ``decision_rule_order`` presented above.
 For this next set of runs, we will assume we have a partition between first- and second-stage variables.
 
 .. doctest::
 
   >>> # === Redefine the variable partitioning
-  >>> first_stage_variables =[m.x1, m.x2, m.x3, m.x4, m.x5, m.x6, m.x19]
-
-  >>> second_stage_variables = [m.x20, m.x21, m.x22, m.x23, m.x24, m.x31]
+  >>> first_stage_variables =[m.x5, m.x6, m.x19, m.x22, m.x23, m.x24, m.x31]
+  >>> second_stage_variables = [m.x1, m.x2, m.x3, m.x4, m.x20, m.x21]
 
   >>> # === Call pyros with dr_order = 1 (affine decision rules)
-  >>> affine_results = pyros_solver.solve(deterministic_model=m,
-                   first_stage_variables = first_stage_variables,
-                   second_stage_variables = second_stage_variables,
-                   uncertain_params = uncertain_parameters,
-                   uncertainty_set = box_uncertainty_set,
-                   global_solver= global_solver,
-                   local_solver=local_solver,
-                   options = {"bypass_local_separation": True,
-                              "solve_master_globally": True,
-                              "objective_focus": pyros.ObjectiveType.worst_case,
-                              "print_subsolver_progress_to_screen": False,
-                              "decision_rule_order":1})
+  >>> affine_results = pyros_solver.solve(model=m,
+                                          first_stage_variables = first_stage_variables,
+                                          second_stage_variables = second_stage_variables,
+                                          uncertain_params = uncertain_parameters,
+                                          uncertainty_set = box_uncertainty_set,
+                                          global_solver= global_solver,
+                                          local_solver=local_solver,
+                                          options = {
+                                             "bypass_local_separation": True,
+                                             "solve_master_globally": True,
+                                             "objective_focus": pyros.ObjectiveType.worst_case,
+                                             "decision_rule_order":1
+                                          })
+
+  >>> # === Compare final objective to the constant decision rules case
+  >>> percent_difference = (affine_dr_objective- const_dr_final_objective)/(const_dr_final_objective) * 100
+  >>> print("\n Percent objective change relative to constant decision rules objective: %.2f %%" % percent_difference)
 
 In this example, when we compare the final objective value in the case of constant decision rules (no second-stage recourse)
 and affine decision rules, we see there is a -24.95% decrease in total objective value.
 
 Price of Robustness
 """"""""""""""""""""""
-For hierarchies of uncertainty sets, PyROS allows for the facile comparison of robust optimal objectives across sets to determine the "price of robustness."
-For the set we considered here, the ``BoxSet``, we can create such a hierarchy via an array of ``percent deviation`` parameters to define bounds on parameters in the box.
-We can then loop through the array of ``percent deviation`` values and call PyROS within a loop to identify robust solutions to each of the specified ``BoxSet`` objects.
+Using appropriately constructed hierarchies, PyROS allows for the facile comparison of robust optimal objectives across sets to determine the "price of robustness."
+For the set we considered here, the ``BoxSet``, we can create such a hierarchy via an array of ``percent deviation`` parameters to define the size of these uncertainty sets.
+We can then loop through the array of ``percent deviation`` values and call PyROS within a loop to identify robust solutions in light of each of the specified ``BoxSet`` objects.
 
 .. doctest::
 
   >>> # === An array of % changes in the nominal uncertain parameter values to utilize in constructing BoxSets
-  >>> percent_deviation_list = [0, 0.15, 0.20, 0.25]
-
-  >>> # === Using static approximation/constant decision rules
-  >>> first_stage_variables =[m.x1, m.x2, m.x3, m.x4, m.x5, m.x6, m.x19,
-                              m.x20, m.x21, m.x22, m.x23, m.x24, m.x31]
-  >>> second_stage_variables = []
+  >>> percent_deviation_list = [0.00, 0.05, 0.10, 0.15, 0.20, 0.25]
 
   >>> # === Final robust optimal objectives
   >>> robust_optimal_objectives = []
 
   >>> for percent_deviation in percent_deviation_list:
       ... box_uncertainty_set = pyros.BoxSet(bounds = [(m.p[0].value - percent_deviation*m.p[0].value, m.p[0].value + percent_deviation*m.p[0].value),
-                                                     (m.p[1].value - percent_deviation*m.p[1].value, m.p[1].value + percent_deviation*m.p[1].value),
-                                                     (m.p[2].value - percent_deviation*m.p[2].value, m.p[2].value + percent_deviation*m.p[2].value),
-                                                     (m.p[3].value - percent_deviation*m.p[3].value, m.p[3].value + percent_deviation*m.p[3].value)])
-      ... results = pyros_solver.solve(deterministic_model=m,
-                       first_stage_variables = first_stage_variables,
-                       second_stage_variables = second_stage_variables,
-                       uncertain_params = uncertain_parameters,
-                       uncertainty_set = box_uncertainty_set,
-                       global_solver= global_solver,
-                       local_solver=local_solver,
-                       options = {"bypass_local_separation": True,
-                                  "solve_master_globally": True,
-                                  "objective_focus": pyros.ObjectiveType.worst_case,
-                                  "print_subsolver_progress_to_screen": False,
-                                  "nominal_uncertain_param_vals":[82.8*0.0016, 4.97, 4.97, 1800]})
+                                                       (m.p[1].value - percent_deviation*m.p[1].value, m.p[1].value + percent_deviation*m.p[1].value),
+                                                       (m.p[2].value - percent_deviation*m.p[2].value, m.p[2].value + percent_deviation*m.p[2].value),
+                                                       (m.p[3].value - percent_deviation*m.p[3].value, m.p[3].value + percent_deviation*m.p[3].value)])
+      ... results = pyros_solver.solve(model=m,
+                                       first_stage_variables = first_stage_variables,
+                                       second_stage_variables = second_stage_variables,
+                                       uncertain_params = uncertain_parameters,
+                                       uncertainty_set = box_uncertainty_set,
+                                       global_solver= global_solver,
+                                       local_solver=local_solver,
+                                       options = {
+                                          "bypass_local_separation": True,
+                                          "solve_master_globally": True,
+                                          "objective_focus": pyros.ObjectiveType.worst_case,
+                                          "print_subsolver_progress_to_screen": False,
+                                          "nominal_uncertain_param_vals":[82.8*0.0016, 4.97, 4.97, 1800]
+                                       })
       ... robust_optimal_objectives.append(results.final_objective_value)
 
-For this example, we see the following result:
+For this example, we obtain the following results:
 
 .. list-table:: Price of Robustness Results
    :widths: 10 10
@@ -469,8 +450,12 @@ For this example, we see the following result:
 
    * - Percent (+/-) Nominal
      - Final Cost
-   * - 0.0
+   * - 0.00
      - 35,837,659.18
+   * - 0.05
+     - 40,330,925.63
+   * - 0.10
+     - 44,489,857.82
    * - 0.15
      - 48,349,406.72
    * - 0.20
@@ -479,7 +464,7 @@ For this example, we see the following result:
      - 55,288,935.37
 
 
-This clearly illustrates the impact uncertainty set size can have on final robust objective values.
+This clearly illustrates the impact that the uncertainty set size can have on the robust optimal objective values.
 Price of robustness studies like this are easily implemented using PyROS.
 
 .. warning::

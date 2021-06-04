@@ -48,6 +48,15 @@ class UncertaintySet:
     Abstract class for custom user-defined uncertainty sets.
     '''
 
+    def __init__(self, **kwargs):
+        """
+        Constructor for UncertaintySet base class
+
+        Args:
+             kwargs: use the kwargs for specifying data for the UncertaintySet object
+        """
+        return
+
     @property
     def dim(self):
         """
@@ -58,22 +67,24 @@ class UncertaintySet:
     @property
     def geometry(self):
         """
-        UncertaintySet geometry
-        1 is linear
-        2 is convex nonlinear
-        3 is general nonlinear
-        4 is discrete
+        UncertaintySet geometry:
+        1 is linear,
+        2 is convex nonlinear,
+        3 is general nonlinear,
+        4 is discrete.
         """
         raise NotImplementedError
 
     @abc.abstractmethod
     def set_as_constraint(self, **kwargs):
         """
-        An uncertainty set *must* have a set_as_constraint method. **kwargs may be used
-        to pass any additional information needed to generate the constraint(s)
-        representing the UncertaintySet. UncertaintySets are instantiated with "q" as
-        the list of uncertain param objects. Returns: a Pyomo Constraint object (could
+        An uncertainty set *must* have a set_as_constraint method. UncertaintySets are instantiated with "q" as
+        the list of uncertain param objects. Returns a Pyomo Constraint object (could
         be indexed) representing the uncertainty set for use in the separation problem
+
+        Args:
+            **kwargs: may be used to pass any additional information needed to generate the constraint(s)
+            representing the UncertaintySet
         """
         pass
 
@@ -128,9 +139,9 @@ class BoxSet(UncertaintySet):
     def __init__(self, bounds):
         """
         BoxSet constructor
+
         Args:
-            bounds: a list of tuples or a list of lists giving (lb, ub) for each uncertain parameter,
-            in the same order as the supplied uncertain_params
+            bounds: a list of tuples or a list of lists giving (lb, ub) for each uncertain parameter, in the same order as the supplied uncertain_params
         """
         # === non-empty bounds
         if len(bounds) == 0:
@@ -202,16 +213,14 @@ class CardinalitySet(UncertaintySet):
     Cardinality uncertainty set
     """
 
-    def __init__(self, origin, positive_deviation, gamma, **kwargs):
+    def __init__(self, origin, positive_deviation, gamma):
         """
         CardinalitySet constructor
 
         Args:
             origin: the origin of the set e.g. nominal point
             positive_deviation: vector (list) of max deviations of each parameter
-            gamma: single parameter to bound total number of params which can deviate from nominal value
-                  gamma = 0 reduces uncertainty set to just nominal parameter values
-                  gamma = number-of-params makes an n-dim hyper-rectangle [q0, q0+positive_deviation]
+            gamma: single parameter to bound total number of params which can deviate from nominal value. gamma = 0 reduces uncertainty set to just nominal parameter values. gamma = number-of-params makes an n-dim hyper-rectangle [q0, q0+positive_deviation]
         """
         # === Real number valued data
         if not all(isinstance(elem, (int, float)) for elem in origin):
@@ -316,7 +325,7 @@ class PolyhedralSet(UncertaintySet):
     Polyhedral uncertainty set
     """
 
-    def __init__(self, lhs_coefficients_mat, rhs_vec, **kwargs):
+    def __init__(self, lhs_coefficients_mat, rhs_vec):
         """
         PolyhedralSet constructor
 
@@ -411,13 +420,12 @@ class BudgetSet(PolyhedralSet):
     Budget uncertainty set
     """
 
-    def __init__(self, budget_membership_mat,  rhs_vec, **kwargs):
+    def __init__(self, budget_membership_mat,  rhs_vec):
         """
         BudgetSet constructor
 
         Args:
-            budget_membership_mat: L x |q| matrix w/ 0-1 entries where each row representing
-            which uncertain params participate in each ineq. constraint (row). L is the number of budget constraints
+            budget_membership_mat: L x |q| matrix w/ 0-1 entries where each row representing which uncertain params participate in each ineq. constraint (row). L is the number of budget constraints.
             rhs_vec: length L vector of RHS values for the budgets constraints
 
         constraint form: Q_B = {q in R^n_+: sum for i in B_l (q_i) <= b_l_rhs for l in {1,...,L}}
@@ -507,7 +515,7 @@ class FactorModelSet(UncertaintySet):
     Factor model uncertainty set
     """
 
-    def __init__(self, origin, number_of_factors, psi_mat, beta, **kwargs):
+    def __init__(self, origin, number_of_factors, psi_mat, beta):
         """
         FactorModelSet constructor
 
@@ -515,9 +523,7 @@ class FactorModelSet(UncertaintySet):
             origin: vector (list) of nominal parameter values. Factor model q0 must be strictly positive.
             number_of_factors: natural number representing the dimensionality of the hypercube where independent factors, psi, reside
             psi: |q| x num_of_factors matrix with strictly positive entries
-            beta: in [0,1], parameter limiting how many factors achieve their extreme values.
-            beta = 0 means equal numbers of cassi vars in [-1,1]^num_of_factors achieve their lower and upper bounds.
-            beta = 1 reduces to num_of_factors-dimensional hypercube
+            beta: in [0,1], parameter limiting how many factors achieve their extreme values. beta = 0 means equal numbers of cassi vars in [-1,1]^num_of_factors achieve their lower and upper bounds. beta = 1 reduces to num_of_factors-dimensional hypercube.
         """
         mat = np.asarray(psi_mat)
         # === Numeric valued arrays
@@ -725,7 +731,7 @@ class EllipsoidalSet(UncertaintySet):
     Ellipsoidal uncertainty set
     """
 
-    def __init__(self, center, shape_matrix, scale=1, **kwargs):
+    def __init__(self, center, shape_matrix, scale=1):
         """
         EllipsoidalSet constructor
 
@@ -847,13 +853,12 @@ class DiscreteSet(UncertaintySet):
     Discrete uncertainty set
     """
 
-    def __init__(self, scenarios, **kwargs):
+    def __init__(self, scenarios):
         """
         DiscreteSet constructor
 
         Args:
-            scenarios: vector (list) of discrete scenarios for each uncertain param realization.
-            This is a list of dimensions n x |q| where n = number of discrete scenarios and |q| is the number of uncertain params
+            scenarios: vector (list) of discrete scenarios for each uncertain param realization. This is a list of dimensions n x |q| where n = number of discrete scenarios and |q| is the number of uncertain params.
         """
 
         # === Non-empty
