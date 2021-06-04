@@ -28,6 +28,7 @@ from pyomo.common.dependencies import (
     attempt_import,
     numpy as np, numpy_available,
 )
+from pyomo.common.tee import redirect_fd
 
 def _cyipopt_importer():
     import cyipopt
@@ -387,29 +388,6 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         return True
 
 
-def _redirect_stdout():
-    sys.stdout.flush() # <--- important when redirecting to files
-
-    # Duplicate stdout (file descriptor 1)
-    # to a different file descriptor number
-    newstdout = os.dup(1)
-
-    # /dev/null is used just to discard what is being printed
-    devnull = os.open(os.devnull, os.O_WRONLY)
-
-    # Duplicate the file descriptor for /dev/null
-    # and overwrite the value for stdout (file descriptor 1)
-    os.dup2(devnull, 1)
-
-    # Close devnull after duplication (no longer needed)
-    os.close(devnull)
-
-    # Use the original stdout to still be able
-    # to print to stdout within python
-    sys.stdout = os.fdopen(newstdout, 'w')
-    return newstdout
-
-
 class CyIpoptSolver(object):
     def __init__(self, problem_interface, options=None):
         """Create an instance of the CyIpoptSolver. You must
@@ -465,12 +443,8 @@ class CyIpoptSolver(object):
         for k, v in self._options.items():
             cyipopt_solver.addOption(k, v)
 
-        if tee:
+        with redirect_fd(fd=1, enable=not tee, synchronize=False):
             x, info = cyipopt_solver.solve(xstart)
-        else:
-            newstdout = _redirect_stdout()
-            x, info = cyipopt_solver.solve(xstart)
-            os.dup2(newstdout, 1)
 
         return x, info
 
@@ -586,12 +560,8 @@ class PyomoCyIpoptSolver(object):
 
         timer = TicTocTimer()
         try:
-            if config.tee:
+            with redirect_fd(fd=1, enable=not tee, synchronize=False):
                 x, info = cyipopt_solver.solve(problem.x_init())
-            else:
-                newstdout = _redirect_stdout()
-                x, info = cyipopt_solver.solve(problem.x_init())
-                os.dup2(newstdout, 1)
             solverStatus = SolverStatus.ok
         except:
             msg = "Exception encountered during cyipopt solve:"
