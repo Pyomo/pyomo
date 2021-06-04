@@ -560,7 +560,7 @@ class PyomoCyIpoptSolver(object):
 
         timer = TicTocTimer()
         try:
-            with redirect_fd(fd=1, enable=not tee, synchronize=False):
+            with redirect_fd(fd=1, enable=not config.tee, synchronize=False):
                 x, info = cyipopt_solver.solve(problem.x_init())
             solverStatus = SolverStatus.ok
         except:
