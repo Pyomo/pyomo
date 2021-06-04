@@ -450,7 +450,7 @@ class CyIpoptSolver(object):
         # processing threads) until afer a client accesses
         # STDOUT/STDERR
         with TeeStream(sys.stdout) as _teeStream:
-            if config.tee:
+            if tee:
                 try:
                     fd = sys.stdout.fileno()
                 except (io.UnsupportedOperation, AttributeError):
