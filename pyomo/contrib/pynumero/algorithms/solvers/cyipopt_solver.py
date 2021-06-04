@@ -19,6 +19,7 @@ that works with problems derived from AslNLP as long as those
 classes return numpy ndarray objects for the vectors and coo_matrix
 objects for the matrices (e.g., AmplNLP and PyomoNLP)
 """
+import io
 import sys
 import logging
 import os
@@ -28,7 +29,7 @@ from pyomo.common.dependencies import (
     attempt_import,
     numpy as np, numpy_available,
 )
-from pyomo.common.tee import redirect_fd
+from pyomo.common.tee import redirect_fd, TeeStream
 
 def _cyipopt_importer():
     import cyipopt
@@ -443,8 +444,23 @@ class CyIpoptSolver(object):
         for k, v in self._options.items():
             cyipopt_solver.addOption(k, v)
 
-        with redirect_fd(fd=1, enable=not tee, synchronize=False):
-            x, info = cyipopt_solver.solve(xstart)
+        # We preemptively set up the TeeStream, even if we aren't
+        # going to use it: the implementation is such that the
+        # context manager does nothing (i.e., doesn't start up any
+        # processing threads) until afer a client accesses
+        # STDOUT/STDERR
+        with TeeStream(sys.stdout) as _teeStream:
+            if config.tee:
+                try:
+                    fd = sys.stdout.fileno()
+                except (io.UnsupportedOperation, AttributeError):
+                    # If sys,stdout doesn't have a valid fileno,
+                    # then create one using the TeeStream
+                    fd = _teeStream.STDOUT.fileno()
+            else:
+                fd = None
+            with redirect_fd(fd=1, output=fd, synchronize=False):
+                x, info = cyipopt_solver.solve(xstart)
 
         return x, info
 
@@ -560,8 +576,23 @@ class PyomoCyIpoptSolver(object):
 
         timer = TicTocTimer()
         try:
-            with redirect_fd(fd=1, enable=not config.tee, synchronize=False):
-                x, info = cyipopt_solver.solve(problem.x_init())
+            # We preemptively set up the TeeStream, even if we aren't
+            # going to use it: the implementation is such that the
+            # context manager does nothing (i.e., doesn't start up any
+            # processing threads) until afer a client accesses
+            # STDOUT/STDERR
+            with TeeStream(sys.stdout) as _teeStream:
+                if config.tee:
+                    try:
+                        fd = sys.stdout.fileno()
+                    except (io.UnsupportedOperation, AttributeError):
+                        # If sys,stdout doesn't have a valid fileno,
+                        # then create one using the TeeStream
+                        fd = _teeStream.STDOUT.fileno()
+                else:
+                    fd = None
+                with redirect_fd(fd=1, output=fd, synchronize=False):
+                    x, info = cyipopt_solver.solve(problem.x_init())
             solverStatus = SolverStatus.ok
         except:
             msg = "Exception encountered during cyipopt solve:"
