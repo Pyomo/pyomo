@@ -389,7 +389,7 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
         cov = [[1,0], [0,1]]
         s = 1
 
-        set = EllipsoidalSet(center=[0, 0], q=m.uncertain_param_vars, shape_matrix=cov, scale=s)
+        set = EllipsoidalSet(center=[0, 0], shape_matrix=cov, scale=s)
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         uncertain_params_in_expr = list(
             v for v in m.uncertain_param_vars.values() if
@@ -413,7 +413,7 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
         cov = [[1,0],[0,1]]
         s = 1
 
-        set = EllipsoidalSet(center=[0, 0], q=m.uncertain_param_vars, shape_matrix=cov, scale=s)
+        set = EllipsoidalSet(center=[0, 0], shape_matrix=cov, scale=s)
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         variables_in_constr = list(
             v for v in m.uncertain_params if
@@ -491,7 +491,7 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
         A = [[0, 1], [1, 0]]
         b = [0, 0]
 
-        set = PolyhedralSet(q=m.uncertain_param_vars, lhs_coefficients_mat=A, rhs_vec=b, )
+        set = PolyhedralSet(lhs_coefficients_mat=A, rhs_vec=b, )
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         uncertain_params_in_expr = ComponentSet()
         for con in m.uncertainty_set_contr.values():
@@ -519,7 +519,7 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
         A = [[0, 1], [1, 0]]
         b = [0, 0]
 
-        set = PolyhedralSet(q=m.uncertain_param_vars, lhs_coefficients_mat=A, rhs_vec=b)
+        set = PolyhedralSet(lhs_coefficients_mat=A, rhs_vec=b)
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         vars_in_expr = []
         for con in m.uncertainty_set_contr.values():
@@ -545,7 +545,7 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
         m.p1 = Var(initialize=1)
         m.p2 = Var(initialize=1)
 
-        polyhedral_set = PolyhedralSet(q = [m.p1, m.p2], lhs_coefficients_mat=A, rhs_vec=b)
+        polyhedral_set = PolyhedralSet(lhs_coefficients_mat=A, rhs_vec=b)
         m.uncertainty_set_constr = polyhedral_set.set_as_constraint(uncertain_params=[m.p1, m.p2])
 
         self.assertEqual(len(A), len(m.uncertainty_set_constr.index_set()),
@@ -554,7 +554,7 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
 
 class testBudgetUncertaintySetClass(unittest.TestCase):
     '''
-    Budget uncertainty sets. Required inputs are matrix budget_membership_mat, lhs_vec, rhs_vec.
+    Budget uncertainty sets. Required inputs are matrix budget_membership_mat, rhs_vec.
     '''
 
     def test_uncertainty_set_with_correct_params(self):
@@ -572,8 +572,8 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         budget_membership_mat = [np.ones(shape=len(m.uncertain_param_vars)).tolist()]
         rhs_vec = [0.1 * len(m.uncertain_param_vars) + sum(p.value for p in m.uncertain_param_vars.values())]
 
-        set = BudgetSet(q=m.uncertain_param_vars, budget_membership_mat=budget_membership_mat,
-                        rhs_vec=rhs_vec, lhs_vec=rhs_vec)
+        set = BudgetSet(budget_membership_mat=budget_membership_mat,
+                        rhs_vec=rhs_vec)
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         uncertain_params_in_expr = []
         for con in m.uncertainty_set_contr.values():
@@ -603,8 +603,8 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         budget_membership_mat = [np.ones(shape=len(m.uncertain_param_vars)).tolist()]
         rhs_vec = [0.1 * len(m.uncertain_param_vars) + sum(p.value for p in m.uncertain_param_vars.values())]
 
-        set = BudgetSet(q=m.uncertain_param_vars, budget_membership_mat=budget_membership_mat,
-                        rhs_vec=rhs_vec, lhs_vec=rhs_vec)
+        set = BudgetSet(budget_membership_mat=budget_membership_mat,
+                        rhs_vec=rhs_vec)
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         vars_in_expr = []
         for con in m.uncertainty_set_contr.values():
@@ -632,8 +632,8 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         budget_membership_mat = [np.ones(shape=len(m.uncertain_params)).tolist()]
         rhs_vec = [0.1 * len(m.uncertain_params) + sum(p.value for p in m.uncertain_params)]
 
-        budget_set = BudgetSet(q = m.uncertain_params, budget_membership_mat=budget_membership_mat,
-                               rhs_vec=rhs_vec, lhs_vec=rhs_vec)
+        budget_set = BudgetSet(budget_membership_mat=budget_membership_mat,
+                               rhs_vec=rhs_vec)
         m.uncertainty_set_constr = budget_set.set_as_constraint(uncertain_params=m.uncertain_params)
 
         self.assertEqual(len(budget_membership_mat), len(m.uncertainty_set_constr.index_set()),
@@ -663,7 +663,7 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
         positive_deviation = list(0.3 for j in range(len(center)))
         gamma = np.ceil(len(m.uncertain_param_vars) / 2)
 
-        set = CardinalitySet(q=m.uncertain_param_vars, origin=center,
+        set = CardinalitySet(origin=center,
                         positive_deviation=positive_deviation, gamma=gamma)
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars, model=m)
         uncertain_params_in_expr = []
@@ -696,7 +696,7 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
         positive_deviation = list(0.3 for j in range(len(center)))
         gamma = np.ceil(len(m.uncertain_param_vars) / 2)
 
-        set = CardinalitySet(q=m.uncertain_param_vars, origin=center,
+        set = CardinalitySet(origin=center,
                              positive_deviation=positive_deviation, gamma=gamma)
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars, model=m)
         vars_in_expr = []
