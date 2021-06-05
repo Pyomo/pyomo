@@ -3,7 +3,7 @@ Unit tests for the grcs API
 One class per function being tested, minimum one test per class
 '''
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import ComponentSet
 from pyomo.common.config import ConfigBlock, ConfigValue

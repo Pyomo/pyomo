@@ -24,6 +24,7 @@ function point_in_set(): a method which takes a point and determines if it is in
 import six
 import abc
 import functools
+import math
 from pyomo.common.dependencies import numpy as np, scipy as sp
 from pyomo.core.base import ConcreteModel
 from pyomo.core.base.constraint import ConstraintList
@@ -626,11 +627,22 @@ class FactorModelSet(UncertaintySet):
         set = config.uncertainty_set
         nom_val = config.nominal_uncertain_param_vals
         psi_mat = set.psi_mat
+
         F = set.number_of_factors
+        beta_F = set.beta * F
+        floor_beta_F = math.floor(beta_F)
         for i, p in enumerate(model.util.uncertain_param_vars.values()):
-            sum_psi_row = sum(abs(psi_mat[i][j]) for j in range(F))
-            lb = nom_val[i] - sum_psi_row
-            ub = nom_val[i] + sum_psi_row
+            non_decreasing_factor_row = sorted(psi_mat[i], reverse=True)
+            # deviation = sum_j=1^floor(beta F) {psi_if_j} + (beta F - floor(beta F)) psi_{if_{betaF +1}}
+            # because indexing starts at 0, we adjust the limit on the sum and the final factor contribution
+            if beta_F - floor_beta_F == 0:
+                deviation = sum(non_decreasing_factor_row[j] for j in range(floor_beta_F - 1))
+            else:
+                deviation = sum(non_decreasing_factor_row[j] for j in range(floor_beta_F - 1)) + (beta_F - floor_beta_F) * psi_mat[i][floor_beta_F]
+            lb = nom_val[i] - deviation
+            ub = nom_val[i] + deviation
+            if lb > ub:
+                raise AttributeError("The computed lower bound on uncertain parameters must be less than or equal to the upper bound.")
             p.setlb(lb)
             p.setub(ub)
         return
