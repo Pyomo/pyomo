@@ -941,7 +941,7 @@ class testAddScenarioToMaster(unittest.TestCase):
 global_solver = "baron"
 class testSolveMaster(unittest.TestCase):
 
-    @unittest.skipUnless(SolverFactory(global_solver).available(), "Global NLP solver not available")
+    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False), "Global NLP solver is not available.")
     def test_solve_master(self):
         working_model = m = ConcreteModel()
         m.x = Var(initialize=0.5, bounds=(0,10))
@@ -984,7 +984,7 @@ class testSolveMaster(unittest.TestCase):
 # === regression test for the solver
 class RegressionTest(unittest.TestCase):
 
-    @unittest.skipUnless(SolverFactory(global_solver).available(), "Global NLP solver not available")
+    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False), "Global NLP solver is not available.")
     def regression_test(self):
         model = m = ConcreteModel()
 
