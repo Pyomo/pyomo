@@ -567,7 +567,7 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
         # Single budget
-        budget_membership_mat = [1 for i in range(len(m.uncertain_param_vars))]
+        budget_membership_mat = [[1 for i in range(len(m.uncertain_param_vars))]]
         rhs_vec = [0.1 * len(m.uncertain_param_vars) + sum(p.value for p in m.uncertain_param_vars.values())]
 
         set = BudgetSet(budget_membership_mat=budget_membership_mat,
@@ -598,7 +598,7 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Param(range(len(m.uncertain_params)), initialize=0, mutable=True)
         # Single budget
-        budget_membership_mat = [1 for i in range(len(m.uncertain_param_vars))]
+        budget_membership_mat = [[1 for i in range(len(m.uncertain_param_vars))]]
         rhs_vec = [0.1 * len(m.uncertain_param_vars) + sum(p.value for p in m.uncertain_param_vars.values())]
 
         set = BudgetSet(budget_membership_mat=budget_membership_mat,
@@ -627,7 +627,7 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
 
         # Single budget
-        budget_membership_mat = [1 for i in range(len(m.uncertain_params))]
+        budget_membership_mat = [[1 for i in range(len(m.uncertain_params))]]
         rhs_vec = [0.1 * len(m.uncertain_params) + sum(p.value for p in m.uncertain_params)]
 
         budget_set = BudgetSet(budget_membership_mat=budget_membership_mat,
