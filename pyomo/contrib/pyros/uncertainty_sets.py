@@ -141,7 +141,7 @@ class BoxSet(UncertaintySet):
         BoxSet constructor
 
         Args:
-            bounds: a list of tuples or a list of lists giving (lb, ub) for each uncertain parameter, in the same order as the supplied uncertain_params
+            bounds: a list of tuples or a list of lists giving (lb, ub) for each uncertain parameter, in the same order as the 'uncertain_params' required input that is to be supplied to the PyROS solve statement.
         """
         # === non-empty bounds
         if len(bounds) == 0:
@@ -218,9 +218,9 @@ class CardinalitySet(UncertaintySet):
         CardinalitySet constructor
 
         Args:
-            origin: the origin of the set e.g. nominal point
+            origin: the origin of the set (e.g., the nominal point)
             positive_deviation: vector (list) of max deviations of each parameter
-            gamma: single parameter to bound total number of params which can deviate from nominal value. gamma = 0 reduces uncertainty set to just nominal parameter values. gamma = number-of-params makes an n-dim hyper-rectangle [q0, q0+positive_deviation]
+            gamma: scalar to bound the total number of params that can maximally deviate from 'origin'. gamma = 0 reduces the set to the 'origin' point. gamma = number-of-params makes the hyper-rectangle [origin, origin+positive_deviation]
         """
         # === Real number valued data
         if not all(isinstance(elem, (int, float)) for elem in origin):
@@ -330,8 +330,8 @@ class PolyhedralSet(UncertaintySet):
         PolyhedralSet constructor
 
         Args:
-            lhs_coefficients_mat: matrix of coefficients on inequality constraints.
-            rhs_vec: right-hand sides vector for the inequality constraints
+            lhs_coefficients_mat: matrix of coefficients for inequality constraints defining the polyhedral set
+            rhs_vec: right-hand side vector for the inequality constraints
         """
 
         # === Real valued data
@@ -425,10 +425,8 @@ class BudgetSet(PolyhedralSet):
         BudgetSet constructor
 
         Args:
-            budget_membership_mat: L x |q| matrix w/ 0-1 entries where each row representing which uncertain params participate in each ineq. constraint (row). L is the number of budget constraints.
-            rhs_vec: length L vector of RHS values for the budgets constraints
-
-        constraint form: Q_B = {q in R^n_+: sum for i in B_l (q_i) <= b_l_rhs for l in {1,...,L}}
+            budget_membership_mat: A matrix with 0-1 entries. Each row represents a budget constraint designating which parameter participates in the given budget. L is the total number of budget constraints.
+            rhs_vec: length L vector of right-hand side values for the budgets
         """
         # === Non-zero number of columns
         mat = np.asarray(budget_membership_mat)
@@ -520,9 +518,9 @@ class FactorModelSet(UncertaintySet):
         FactorModelSet constructor
 
         Args:
-            origin: vector (list) of nominal parameter values. Factor model q0 must be strictly positive.
-            number_of_factors: natural number representing the dimensionality of the hypercube where independent factors, psi, reside
-            psi: |q| x num_of_factors matrix with strictly positive entries
+            origin: vector (list) of nominal parameter values
+            number_of_factors: natural number representing the dimensionality of the hypercube where independent factors (psi) reside
+            psi: matrix of factors with strictly positive entries
             beta: in [0,1], parameter limiting how many factors achieve their extreme values. beta = 0 means equal numbers of cassi vars in [-1,1]^num_of_factors achieve their lower and upper bounds. beta = 1 reduces to num_of_factors-dimensional hypercube.
         """
         mat = np.asarray(psi_mat)
@@ -649,7 +647,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
         Args:
             origin: vector (list) of nominal parameter values.
             half_lengths: list of half-length values in each dimension (e.g. for each uncertain parameter)
-            scale: right-hand-side value for the ellipsoid
+            scale: right-hand side value for the ellipsoid
         """
         # === Valid data in lists
         if not all(isinstance(elem, (int, float)) for elem in half_lengths):
@@ -737,8 +735,8 @@ class EllipsoidalSet(UncertaintySet):
 
         Args:
             center: vector (list) of nominal parameter values.
-            shape_matrix: |q| x |q| positive-definite matrix
-            scale: right-hand-side value for the ellipsoid
+            shape_matrix: positive-definite matrix
+            scale: right-hand side value for the ellipsoid
         """
 
         # === Valid data in lists/matrixes
@@ -858,7 +856,7 @@ class DiscreteSet(UncertaintySet):
         DiscreteSet constructor
 
         Args:
-            scenarios: vector (list) of discrete scenarios for each uncertain param realization. This is a list of dimensions n x |q| where n = number of discrete scenarios and |q| is the number of uncertain params.
+            scenarios: vector (list) of discrete scenarios for each uncertain param realization. This is a list of dimensions (number of discrete scenarios) X (number uncertain parameters)
         """
 
         # === Non-empty

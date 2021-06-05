@@ -121,117 +121,115 @@ def pyros_config():
     # ================================================
     # === Required User Inputs
     # ================================================
-    CONFIG.declare("uncertain_params", ConfigValue(
-        default=[], domain=InputDataStandardizer(Param, _ParamData),
-        description="List of uncertain parameters (Param objects). MUST be 'mutable'. "
-                    "Assumes entries are provided in consistent order with the entries of 'nominal_uncertain_param_vals' input."
-    ))
-    CONFIG.declare("nominal_uncertain_param_vals", ConfigValue(
-        default=[], domain=list,
-        description="List of nominal values for all uncertain parameters. "
-                    "Assumes entries are provided in consistent order with the entries of 'uncertain_params' input."
-    ))
-    CONFIG.declare("uncertainty_set", ConfigValue(
-        default=None, domain=uncertainty_sets,
-        description="UncertaintySet object representing the uncertainty space "
-                    "that the final solutions will be robust against."
-    ))
     CONFIG.declare("first_stage_variables", ConfigValue(
         default=[], domain=InputDataStandardizer(Var, _VarData),
-        description="List of design variables (Var objects)."
+        description="Required. List of design variables (Var objects)."
     ))
     CONFIG.declare("second_stage_variables", ConfigValue(
         default=[], domain=InputDataStandardizer(Var, _VarData),
-        description="List of control variables (Var objects)."
+        description="Required. List of control variables (Var objects)."
     ))
-
-    CONFIG.declare("decision_rule_order", ConfigValue(
-        default=0, domain=In([0, 1, 2]),
-        description="Order of decision rule functions for handling second-stage variable recourse. "
-                    "Choices are: '0' for constant recourse (a.k.a. static approximation), '1' for affine recourse "
-                    "(a.k.a. affine decision rules), '2' for quadratic recourse."
+    CONFIG.declare("uncertain_params", ConfigValue(
+        default=[], domain=InputDataStandardizer(Param, _ParamData),
+        description="Required. List of uncertain parameters (Param objects). MUST be 'mutable'. "
+                    "Assumes entries are provided in consistent order with the entries of 'nominal_uncertain_param_vals' input."
+    ))
+    CONFIG.declare("uncertainty_set", ConfigValue(
+        default=None, domain=uncertainty_sets,
+        description="Required. UncertaintySet object representing the uncertainty space "
+                    "that the final solutions will be robust against."
     ))
     CONFIG.declare("local_solver", ConfigValue(
         default=None, domain=SolverResolvable(),
-        description="NLP solver to utilize as the primary local solver."
+        description="Required. NLP solver to utilize as the primary local solver."
     ))
     CONFIG.declare("global_solver", ConfigValue(
         default=None, domain=SolverResolvable(),
-        description="NLP solver to utilize as the primary global solver."
+        description="Required. NLP solver to utilize as the primary global solver."
     ))
     # ================================================
     # === Optional User Inputs
     # ================================================
-    CONFIG.declare("max_iter", ConfigValue(
-        default=-1, domain=NonNegIntOrMinusOne(),
-        description="Iteration limit for the GRCS algorithm. '-1' is no iteration limit."
+    CONFIG.declare("objective_focus", ConfigValue(
+        default=ObjectiveType.nominal, domain=ValidEnum(ObjectiveType),
+        description="Optional. Default = ObjectiveType.nominal. Choice of objective function to optimize in the master problems. "
+                    "Choices are: 'ObjectiveType.worst_case', 'ObjectiveType.nominal'. See Note for details."
+    ))
+    CONFIG.declare("nominal_uncertain_param_vals", ConfigValue(
+        default=[], domain=list,
+        description="Optional. Default = deterministic model Param values. List of nominal values for all uncertain parameters. "
+                    "Assumes entries are provided in consistent order with the entries of 'uncertain_params' input."
+    ))
+    CONFIG.declare("decision_rule_order", ConfigValue(
+        default=0, domain=In([0, 1, 2]),
+        description="Optional. Default = 0. Order of decision rule functions for handling second-stage variable recourse. "
+                    "Choices are: '0' for constant recourse (a.k.a. static approximation), '1' for affine recourse "
+                    "(a.k.a. affine decision rules), '2' for quadratic recourse."
+    ))
+    CONFIG.declare("solve_master_globally", ConfigValue(
+        default=False, domain=bool,
+        description="Optional. Default = False. 'True' for the master problems to be solved with the user-supplied global solver(s); "
+                    "or 'False' for the master problems to be solved with the user-supplied local solver(s). "
+
     ))
     # This is called pyros_time_limit because time_limit is already defined
     # in the solver interface and I'm defining a different one here with the no limit option.
     CONFIG.declare("pyros_time_limit", ConfigValue(
         default=-1, domain=NonNegIntOrMinusOne(),
-        description="Total allotted time for the execution of the PyROS solver in seconds (includes time spent in sub-solvers). '-1' is no time limit."
+        description="Optional. Default = -1. Total allotted time for the execution of the PyROS solver in seconds (includes time spent in sub-solvers). '-1' is no time limit."
+    ))
+    CONFIG.declare("max_iter", ConfigValue(
+        default=-1, domain=NonNegIntOrMinusOne(),
+        description="Optional. Default = -1. Iteration limit for the GRCS algorithm. '-1' is no iteration limit."
     ))
     CONFIG.declare("robust_feasibility_tolerance", ConfigValue(
         default=1e-4, domain=NonNegativeFloat,
-        description="Relative tolerance for assessing robust feasibility violation during separation phase."
-    ))
-    CONFIG.declare("solve_master_globally", ConfigValue(
-        default=False, domain=bool,
-        description="'True' for the master problems to be solved with the user-supplied global solver(s); "
-                    "or 'False' for the master problems to be solved with the user-supplied local solver(s). "
-
-    ))
-    CONFIG.declare("objective_focus", ConfigValue(
-        default=ObjectiveType.nominal, domain=ValidEnum(ObjectiveType),
-        description="Choice of objective function to optimize in the master problems. "
-                    "Choices are: 'ObjectiveType.worst_case', 'ObjectiveType.nominal'. See Note for details."
+        description="Optional. Default = 1e-4. Relative tolerance for assessing robust feasibility violation during separation phase."
     ))
     CONFIG.declare("separation_priority_order", ConfigValue(
         default={}, domain=dict,
-        description="Dictionary mapping inequality constraint names to positive integer priorities for separation. "
+        description="Optional. Default = {}. Dictionary mapping inequality constraint names to positive integer priorities for separation. "
                     "Constraints not referenced in the dictionary assume a priority of 0 (lowest priority)."
     ))
     CONFIG.declare("progress_logger", ConfigValue(
         default="pyomo.contrib.pyros", domain=a_logger,
-        description="The logger object to use for reporting."
+        description="Optional. Default = pyomo.contrib.pyros. The logger object to use for reporting."
     ))
     CONFIG.declare("print_subsolver_progress_to_screen", ConfigValue(
         default=False, domain=bool,
-        description="Sets the 'tee' for all sub-solvers utilized."
+        description="Optional. Default = False. Sets the 'tee' for all sub-solvers utilized."
     ))
     CONFIG.declare("backup_local_solvers", ConfigValue(
         default=[], domain=SolverResolvable(),
-        description="List of additional NLP solver(s) to utilize as backup "
+        description="Optional. Default = []. List of additional NLP solver(s) to utilize as backup "
                     "whenever primary local solver fails to identify solution to a sub-problem."
     ))
     CONFIG.declare("backup_global_solvers", ConfigValue(
         default=[], domain=SolverResolvable(),
-        description="List of additional NLP solver(s) to utilize as backup "
+        description="Optional. Default = []. List of additional NLP solver(s) to utilize as backup "
                     "whenever primary global solver fails to identify solution to a sub-problem."
     ))
     CONFIG.declare("load_pyros_solution", ConfigValue(
         default=True, domain=bool,
-        description="Whether or not to load the final solution of PyROS into the model object."
+        description="Optional. Default = True. Whether or not to load the final solution of PyROS into the model object."
     ))
     # ================================================
-    # === Developer Options
+    # === Advanced Options
     # ================================================
     CONFIG.declare("minimize_dr_norm", ConfigValue(
-        default=True, domain=bool,
-        description="Whether or not to polish decision rule functions at each iteration. "
+        default=False, domain=bool,
+        description="Optional. Default=True. Whether or not to polish decision rule functions at each iteration. "
                     "This is an advanced option."
     ))
     CONFIG.declare("bypass_local_separation", ConfigValue(
         default=False, domain=bool,
-        description="'True' to only employ global solver(s) during separation; "
-                    "'False' to employ local solver(s) at intermediate separations, "
-                    "utilizing global solver(s) only before termination to certify robust feasibility. "
-                    "This is an advanced option."
+        description="Optional. Default = False. 'True' to only use global solver(s) during separation; "
+                    "'False' to use local solver(s) at intermediate separations, "
+                    "using global solver(s) only before termination to certify robust feasibility. This is an advanced option."
     ))
     CONFIG.declare("p_robustness", ConfigValue(
         default={}, domain=dict,
-        description="Whether or not to add p-robustness constraints to the master problems. "
+        description="Optional. Default = {}. Whether or not to add p-robustness constraints to the master problems. "
                     "If the dictionary is empty (default), then p-robustness constraints are not added. "
                     "This is an advanced option. See Note for how to specify arguments."
     ))
