@@ -18,7 +18,7 @@ from pyomo.contrib.pyros.separation_problem_methods import (
     make_separation_problem, make_separation_objective_functions,
     solver_call_separation, initialize_separation)
 from pyomo.contrib.pyros.solve_data import MasterProblemData
-import scipy as sp
+from pyomo.common.dependencies import scipy as sp
 
 
 # TODO: can make calls to solvers. Add catch so that if solver available, call solver, else dont.
