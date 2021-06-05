@@ -10,7 +10,7 @@
 
 # pyros.py: Generalized Robust Cutting-Set Algorithm for Pyomo
 import logging
-from pyutilib.misc import Container
+from pyomo.common.collections import Bunch
 from pyomo.common.config import (
     ConfigDict, ConfigValue, In, NonNegativeFloat, add_docstring_list
 )
@@ -295,7 +295,7 @@ class PyROS(object):
 
         # === Create data containers
         model_data = ROSolveResults()
-        model_data.timing = Container()
+        model_data.timing = Bunch()
 
         # === Set up logger for logging results
         with time_code(model_data.timing, 'total', is_main_timer=True):
