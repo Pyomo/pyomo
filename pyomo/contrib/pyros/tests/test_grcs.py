@@ -1023,7 +1023,7 @@ class RegressionTest(unittest.TestCase):
         box_set = BoxSet(bounds=[(0.8,1.2) for i in range(5)])
         solver = SolverFactory(global_solver)
         pyros = SolverFactory("pyros")
-        results = pyros.solve(deterministic_model=m,
+        results = pyros.solve(model=m,
                    first_stage_variables=[m.x1, m.x2],
                    second_stage_variables=[m.x3],
                    uncertain_params=m.uncertain_params,
