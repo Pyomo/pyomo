@@ -11,15 +11,12 @@ from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.set_types import Reals
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr import value
-from pyomo.core.expr.visitor import identify_variables, identify_mutable_parameters, identify_components
+from pyomo.core.expr.visitor import identify_variables, identify_mutable_parameters
 from pyomo.core.expr.sympy_tools import sympyify_expression, sympy2pyomo_expression
-from pyomo.opt.results import check_optimal_termination
 from pyomo.common.dependencies import scipy as sp
 import itertools as it
 import timeit
 from contextlib import contextmanager
-from datetime import datetime
-import six
 import logging
 from pprint import pprint
 
@@ -48,9 +45,9 @@ def get_main_elapsed_time(timing_data_obj):
         return current_time - timing_data_obj.main_timer_start_time
     except AttributeError as e:
         if 'main_timer_start_time' in str(e):
-            six.raise_from(e, AttributeError(
+           raise AttributeError(
                 "You need to be in a 'time_code' context to use `get_main_elapsed_time()`."
-            ))
+            )
 
 def a_logger(str_or_logger):
     """Returns a logger when passed either a logger name or logger object."""
