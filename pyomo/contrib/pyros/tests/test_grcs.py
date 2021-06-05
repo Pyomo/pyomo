@@ -13,12 +13,9 @@ from pyomo.contrib.pyros.util import selective_clone, add_decision_rule_variable
     model_is_valid, turn_bounds_to_constraints, transform_to_standard_form, ObjectiveType, grcsTerminationCondition
 from pyomo.contrib.pyros.uncertainty_sets import *
 from pyomo.contrib.pyros.master_problem_methods import add_scenario_to_master, initial_construct_master, solve_master
-from pyomo.contrib.pyros.separation_problem_methods import (
-    solve_separation_problem, add_uncertainty_set_constraints,
-    make_separation_problem, make_separation_objective_functions,
-    solver_call_separation, initialize_separation)
 from pyomo.contrib.pyros.solve_data import MasterProblemData
-from pyomo.common.dependencies import scipy as sp
+from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.dependencies import scipy as sp, scipy_available
 
 
 # TODO: can make calls to solvers. Add catch so that if solver available, call solver, else dont.
@@ -86,6 +83,7 @@ class testAddDecisionRuleVars(unittest.TestCase):
     depends on the number of control variables in the model and the number of uncertain parameters in the model.
     '''
 
+    @unittest.skipIf(not scipy_available, 'Scipy is not available.')
     def test_add_decision_rule_vars_positive_case(self):
         '''
         Testing whether the correct number of decision rule variables is created in each DR type case
@@ -569,7 +567,7 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
         # Single budget
-        budget_membership_mat = [np.ones(shape=len(m.uncertain_param_vars)).tolist()]
+        budget_membership_mat = [1 for i in range(len(m.uncertain_param_vars))]
         rhs_vec = [0.1 * len(m.uncertain_param_vars) + sum(p.value for p in m.uncertain_param_vars.values())]
 
         set = BudgetSet(budget_membership_mat=budget_membership_mat,
@@ -600,7 +598,7 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Param(range(len(m.uncertain_params)), initialize=0, mutable=True)
         # Single budget
-        budget_membership_mat = [np.ones(shape=len(m.uncertain_param_vars)).tolist()]
+        budget_membership_mat = [1 for i in range(len(m.uncertain_param_vars))]
         rhs_vec = [0.1 * len(m.uncertain_param_vars) + sum(p.value for p in m.uncertain_param_vars.values())]
 
         set = BudgetSet(budget_membership_mat=budget_membership_mat,
@@ -629,7 +627,7 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
 
         # Single budget
-        budget_membership_mat = [np.ones(shape=len(m.uncertain_params)).tolist()]
+        budget_membership_mat = [1 for i in range(len(m.uncertain_params))]
         rhs_vec = [0.1 * len(m.uncertain_params) + sum(p.value for p in m.uncertain_params)]
 
         budget_set = BudgetSet(budget_membership_mat=budget_membership_mat,
@@ -646,6 +644,7 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
     Because Cardinality adds cassi vars to model, must pass model to set_as_constraint()
     '''
 
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_uncertainty_set_with_correct_params(self):
         '''
         Case in which the UncertaintySet is constructed using the uncertain_param objects from the model to
@@ -679,6 +678,8 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
                           msg="Uncertain param Var objects used to construct uncertainty set constraint must"
                               " be the same uncertain param Var objects in the original model.")
 
+
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_uncertainty_set_with_incorrect_params(self):
         '''
         Case in which the CardinalitySet is constructed using  uncertain_param objects which are Params instead of
@@ -833,6 +834,7 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
     FactorModelSet uncertainty sets. Required inputs are psi_matrix, number_of_factors, origin and beta.
     '''
 
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_uncertainty_set_with_correct_params(self):
         '''
         Case in which the UncertaintySet is constructed using the uncertain_param objects from the model to
@@ -866,6 +868,7 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
                           msg="Uncertain param Var objects used to construct uncertainty set constraint must"
                               " be the same uncertain param Var objects in the original model.")
 
+    @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_uncertainty_set_with_incorrect_params(self):
         '''
         Case in which the set is constructed using  uncertain_param objects which are Params instead of
