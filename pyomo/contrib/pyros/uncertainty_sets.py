@@ -21,7 +21,6 @@ function point_in_set(): a method which takes a point and determines if it is in
 
 """
 
-import six
 import abc
 import functools
 import math
@@ -43,8 +42,7 @@ def column(matrix, i):
     # Get column i of a given multi-dimensional list
     return [row[i] for row in matrix]
 
-@six.add_metaclass(abc.ABCMeta)
-class UncertaintySet:
+class UncertaintySet(object, metaclass=abc.ABCMeta):
     '''
     Abstract class for custom user-defined uncertainty sets.
     '''
