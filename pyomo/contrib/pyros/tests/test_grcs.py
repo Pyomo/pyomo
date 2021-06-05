@@ -17,11 +17,8 @@ from pyomo.contrib.pyros.solve_data import MasterProblemData
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.dependencies import scipy as sp, scipy_available
 
-
-# TODO: can make calls to solvers. Add catch so that if solver available, call solver, else dont.
-#  Ensure tests don't take too long. Can flag them as expensive tests so they dont get run constantly.
-#  Alternatively, mock up solver is another option when it gets an input and calculates an output that is predetermined.
-#  If inputs aren't right, get wrong output...
+if not (numpy_available and scipy_available):
+    raise unittest.SkipTest('PyROS unit tests require numpy and scipy')
 
 # === Config args for testing
 nlp_solver = 'ipopt'
