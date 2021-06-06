@@ -655,7 +655,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
         AxisAlignedEllipsoidalSet constructor
 
         Args:
-            origin: Vector (``list``) of uncertain parameter values around which deviations are restrained.
+            center: Vector (``list``) of uncertain parameter values around which deviations are restrained.
             half_lengths: Vector (``list``) of half-length values representing the maximal deviations for each uncertain parameter.
         """
         # === Valid data in lists
@@ -851,7 +851,7 @@ class EllipsoidalSet(UncertaintySet):
 
 class DiscreteSet(UncertaintySet):
     """
-    Discrete uncertainty set
+    Set of discrete scenarios (i.e., finite collection of realizations)
     """
 
     def __init__(self, scenarios):
