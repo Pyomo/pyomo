@@ -71,37 +71,35 @@ PyROS Required Inputs
 The required inputs to the PyROS solver are the following:
 
 * The determinisitic optimization model
-* The uncertainty set
-* List of parameters to be considered uncertain
 * List of first-stage "design" variables
 * List of second-stage "control" variables
+* List of parameters to be considered uncertain
+* The uncertainty set
 * Subordinate local and global NLP optimization solvers
 
 .. note::
-    Any variables in the model not specified to be first- or second-stage variables are
-    automatically considered state variables in the underlying algorithm.
+    Any variables in the model not specified to be first- or second-stage variables are automatically considered to be state variables.
 
 Below is a list of arguments that PyROS expects the user to provide when calling the ``solve`` command.
 Note how all but the ``model`` argument **must** be specified as ``kwargs``.
 
 model : ``ConcreteModel``
-    A ``ConcreteModel`` object representing the deterministic model.
+    A ``ConcreteModel`` object representing the deterministic model
 first_stage_variables : ``list(Var)``
-    A list of Pyomo ``Var`` objects representing the first-stage degrees of freedom (design variables) in ``deterministic_model``
+    A list of Pyomo ``Var`` objects representing the first-stage degrees of freedom (design variables) in ``model``
 second_stage_variables : ``list(Var)``
-    A list of Pyomo ``Var`` objects representing second-stage degrees of freedom (control variables) in ``deterministic_model``
+    A list of Pyomo ``Var`` objects representing second-stage degrees of freedom (control variables) in ``model``
 uncertain_params : ``list(Param)``
-    A list of Pyomo ``Param`` objects in ``deterministic_model`` to be considered uncertain. These specified ``Param`` objects must have the property ``mutable=True``.
+    A list of Pyomo ``Param`` objects in ``deterministic_model`` to be considered uncertain. These specified ``Param`` objects must have the property ``mutable=True``
 uncertainty_set : ``UncertaintySet``
-    A PyROS ``UncertaintySet`` object that represents the uncertainty in the space of the specified ``uncertain_param`` objects.
+    A PyROS ``UncertaintySet`` object that represents the uncertainty in the space of the specified ``uncertain_param`` objects
 local_solver : ``Solver``
     A Pyomo ``Solver`` instance for a local NLP optimization solver
 global_solver : ``Solver``
     A Pyomo ``Solver`` instance for a global NLP optimization solver
 
-PyROS Solver
+PyROS Solver Interface
 -----------------------------
-PyROS options (via ``kwargs``) are shown below.
 
 .. autoclass:: pyomo.contrib.pyros.PyROS
     :members: solve
@@ -124,7 +122,7 @@ PyROS Uncertainty Sets
 -----------------------------
 PyROS contains pre-implemented ``UncertaintySet`` specializations for many types of commonly used uncertainty sets.
 Additional capabilities for intersecting multiple PyROS ``UncertaintySet`` objects so as to create custom sets are also provided
-via the ``IntersectionSet`` class.  Custom user-specified sets can also be defined via the ``UncertaintySet`` class.
+via the ``IntersectionSet`` class.  Custom user-specified sets can also be defined via the base ``UncertaintySet`` class.
 
 Mathematical representations of the sets are shown below, followed by the class descriptions.
 
@@ -201,20 +199,23 @@ the GAMS example problem database in `The GAMS Model Library <https://www.gams.c
 
 Per our analysis, this model is a QCQP with 13 variables representing degrees of freedom, as well as an additional 18 state variables.
 This model features 6 linear inequality constraints, 6 linear equality constraints, 6 non-linear (quadratic) equalities, and a quadratic objective.
-We have augmented this model such that 4 of its coefficients have been converted to ``Param`` objects so that they can be considered uncertain later on.
+We have augmented this model by converting one objective coefficient, two constraint coefficients, and one constraint right-hand side into Param objects so that they can be considered uncertain later on.
 
 .. note::
-    We can easily verify that this model satisfies the requirement that each value of :math:`\left(x, z, q \right)` maps to a unique value of :math:`y` via an elimination-type algorithm for variables and equality constraints.
+    We can easily verify that this model satisfies the requirement that each value of :math:`\left(x, z, q \right)` maps to a unique value of :math:`y`, which indicates a proper partition of variables between (first- or second-stage) degrees of freedom and state variables.
 
 Step 1: Define the Deterministic Problem
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The deterministic Pyomo model for *hydro* is shown below. For the purpose of selecting uncertain parameters from
-within the model for our robust optimization example, we assume some of the data are potentially uncertain and utilize the ``m.uncertain_params``
-indexed ``Param`` object as a normalized version of the uncertain data within the model, as shown below. This is because
-primitive data (python literals) cannot be considered uncertain within PyROS.
+The deterministic Pyomo model for *hydro* is shown below. For purposes of our robust optimization example,
+we assume that some of the data are potentially uncertain and utilize the ``m.p`` object (itself an indexed ``Param`` object)
+to instruct PyROS to consider as uncertain in the model.
 
 .. note::
-    Any parameter data that is to be uncertain **must** be posed as a Pyomo ``Param`` object with ``mutable=True``
+    Primitive data (python literals) that have been hard-coded within a deterministic model cannot be considered uncertain,
+    unless they are first converted to ``Param`` objects within the ``model`` object.
+
+.. note::
+    Any ``Param`` object that is to be considered uncertain (by being specified as ``uncertain_params``) must have the property ``mutable=True``.
 
 .. code::
 
@@ -299,9 +300,8 @@ primitive data (python literals) cannot be considered uncertain within PyROS.
 
 Step 2: Define the Uncertainty
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-In the case that the parameters in the model ``(m.p[0], m.p[1], m.p[2], m.p[3])`` are uncertain, we can use PyROS to
-identify solutions to this problem that remains feasible for any realization of the uncertain parameters that
-is included in an uncertainty set that we shall postulate.
+Given uncertainty in the model parameters ``(m.p[0], m.p[1], m.p[2], m.p[3])``, we can use PyROS to
+identify solutions that remain feasible for any realization of these parameters included in an uncertainty set that we shall postulate.
 Furthermore, we can utilize PyROS to show the robust infeasibility of the deterministic solution in light of our proposed
 uncertainty set.
 
@@ -315,17 +315,13 @@ Constructing this specific ``UncertaintySet`` object can be done as follows:
 
   >>> # === Define our pertinent data
   >>> percent_deviation = 0.15
-  >>> bounds = [(m.p[0].value - percent_deviation*m.p[0].value, m.p[0].value + percent_deviation*m.p[0].value),
-                (m.p[1].value - percent_deviation*m.p[1].value, m.p[1].value + percent_deviation*m.p[1].value),
-                (m.p[2].value - percent_deviation*m.p[2].value, m.p[2].value + percent_deviation*m.p[2].value),
-                (m.p[3].value - percent_deviation*m.p[3].value, m.p[3].value + percent_deviation*m.p[3].value)]
+  >>> bounds = [(nominal_values[i] - percent_deviation*nominal_values[i],
+                 nominal_values[i] + percent_deviation*nominal_values[i])
+                 for i in range(4)]
 
   >>> # === Construct the Box Set
   >>> box_uncertainty_set = pyros.BoxSet(bounds=bounds)
 
-  >>> # === Print some information about our new uncertainty set
-  >>> print("Set type: %s" % box_uncertainty_set.type)
-  >>> print("Set dimension: %s" % box_uncertainty_set.dim)
 
 Step 3: Solve with PyROS
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -373,12 +369,13 @@ we can solve the single-stage problem as shown below.
   >>> const_dr_final_objective = pyo.value(pyros_results.final_objective_value)
   >>> print("\n Final objective value: %s" % const_dr_final_objective)
 
+Final objective value: 48,349,406.72
 
 
 The Two-Stage Problem
 """"""""""""""""""""""
-In the previous run, all the degrees of freedom are assumed to be first-stage ("here-and-now") decisions.
-Now, let us assume that a subset of those degrees of freedom were in fact second-stage ("wait-and-see") decisions.
+For this next set of runs,
+we will assume that some of the previously designated first-stage degrees of freedom are in fact second-stage ones.
 
 PyROS handles second-stage degrees of freedom via the use of decision rules.
 Currently, PyROS supports constant, affine, and quadratic functionals to implement decision rules.
@@ -428,10 +425,10 @@ We can then loop through the array of ``percent deviation`` values and call PyRO
   >>> robust_optimal_objectives = []
 
   >>> for percent_deviation in percent_deviation_list:
-      ... box_uncertainty_set = pyros.BoxSet(bounds = [(m.p[0].value - percent_deviation*m.p[0].value, m.p[0].value + percent_deviation*m.p[0].value),
-                                                       (m.p[1].value - percent_deviation*m.p[1].value, m.p[1].value + percent_deviation*m.p[1].value),
-                                                       (m.p[2].value - percent_deviation*m.p[2].value, m.p[2].value + percent_deviation*m.p[2].value),
-                                                       (m.p[3].value - percent_deviation*m.p[3].value, m.p[3].value + percent_deviation*m.p[3].value)])
+      ... bounds = [(nominal_values[i] - percent_deviation*nominal_values[i],
+                     nominal_values[i] + percent_deviation*nominal_values[i])
+                     for i in range(4)]
+      ... box_uncertainty_set = pyros.BoxSet(bounds = bounds)
       ... results = pyros_solver.solve(model = m,
                                        first_stage_variables = first_stage_variables,
                                        second_stage_variables = second_stage_variables,
@@ -446,33 +443,57 @@ We can then loop through the array of ``percent deviation`` values and call PyRO
                                        })
       ... robust_optimal_objectives.append(results.final_objective_value)
 
-For this example, we obtain the following results:
+For this example, we obtain the following price of robustness results:
 
-.. list-table:: Price of Robustness Results
-   :widths: 10 10 10
-   :header-rows: 1
+.. tabularcolumns:: |c|c|c|
 
-   * - BoxSet Size Nominal
-     - Final Cost
-     - % Increase Relative to Deterministic Cost
-   * - 0.00
-     - 35,837,659.18
-     - 0.00 %
-   * - 0.05
-     - 35,986,085.98
-     - 0.41 %
-   * - 0.10
-     - 36,135,191.59
-     - 0.82 %
-   * - 0.15
-     - 36,285,254.72
-     - 1.23 %
-   * - 0.20
-     - 36,437,979.81
-     - 1.64 %
-   * - 0.25
-     - 37,946,802.00
-     - 5.55 %
++------------------------------------------+------------------------------+-----------------------------+
+|  **Uncertainty Set Size (+/-)** :sup:`o` | **Robust Optimal Objective** | **% Increase** :sup:`x`     |
++------------------------------------------+------------------------------+-----------------------------+
+|   0.00                                   | 35,837,659.18                | 0.00 %                      |
++------------------------------------------+------------------------------+-----------------------------+
+|   0.05                                   | 35,986,085.98                | 0.41 %                      |
++------------------------------------------+------------------------------+-----------------------------+
+|   0.10                                   | 36,135,191.59                | 0.82 %                      |
++------------------------------------------+------------------------------+-----------------------------+
+|   0.15                                   | 36,285,254.72                | 1.23 %                      |
++------------------------------------------+------------------------------+-----------------------------+
+|   0.20                                   | 36,437,979.81                | 1.64 %                      |
++------------------------------------------+------------------------------+-----------------------------+
+|   0.25                                   | 37,946,802.00                | 5.55 %                      |
++------------------------------------------+------------------------------+-----------------------------+
+
+..
+    .. list-table::
+       :widths: 10 10 10
+       :header-rows: 1
+       :align: center
+
+       * - Uncertainty Set Size (+/-) :sup:`o`
+         - Robust Optimal Objective
+         - % Increase :sup:`x`
+       * - 0.00
+         - 35,837,659.18
+         - 0.00 %
+       * - 0.05
+         - 35,986,085.98
+         - 0.41 %
+       * - 0.10
+         - 36,135,191.59
+         - 0.82 %
+       * - 0.15
+         - 36,285,254.72
+         - 1.23 %
+       * - 0.20
+         - 36,437,979.81
+         - 1.64 %
+       * - 0.25
+         - 37,946,802.00
+         - 5.55 %
+
+:sup:`o` **Relative Deviation around Nominal Realization**
+
+:sup:`x` **Relative to Deterministic Optimal Objective**
 
 
 This clearly illustrates the impact that the uncertainty set size can have on the robust optimal objective values.

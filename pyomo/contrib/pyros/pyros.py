@@ -44,7 +44,7 @@ from pyomo.core.base import Constraint
 
 
 
-__version__ = (0, 1, 0, "beta")  # Note: date-based version number
+__version__ =  "0.1.0 (beta)"
 
 class NonNegIntOrMinusOne(object):
 
@@ -123,42 +123,42 @@ def pyros_config():
     # ================================================
     CONFIG.declare("first_stage_variables", ConfigValue(
         default=[], domain=InputDataStandardizer(Var, _VarData),
-        description="Required. List of design variables (Var objects)."
+        description="Required. List of ``Var`` objects referenced in ``model`` representing the design variables."
     ))
     CONFIG.declare("second_stage_variables", ConfigValue(
         default=[], domain=InputDataStandardizer(Var, _VarData),
-        description="Required. List of control variables (Var objects)."
+        description="Required. List of ``Var`` referenced in ``model`` representing the control variables."
     ))
     CONFIG.declare("uncertain_params", ConfigValue(
         default=[], domain=InputDataStandardizer(Param, _ParamData),
-        description="Required. List of uncertain parameters (Param objects). MUST be 'mutable'. "
+        description="Required. List of ``Param`` referenced in ``model`` representing the uncertain parameters. MUST be ``mutable``. "
                     "Assumes entries are provided in consistent order with the entries of 'nominal_uncertain_param_vals' input."
     ))
     CONFIG.declare("uncertainty_set", ConfigValue(
         default=None, domain=uncertainty_sets,
-        description="Required. UncertaintySet object representing the uncertainty space "
+        description="Required. ``UncertaintySet`` object representing the uncertainty space "
                     "that the final solutions will be robust against."
     ))
     CONFIG.declare("local_solver", ConfigValue(
         default=None, domain=SolverResolvable(),
-        description="Required. NLP solver to utilize as the primary local solver."
+        description="Required. ``Solver`` object to utilize as the primary local NLP solver."
     ))
     CONFIG.declare("global_solver", ConfigValue(
         default=None, domain=SolverResolvable(),
-        description="Required. NLP solver to utilize as the primary global solver."
+        description="Required. ``Solver`` object to utilize as the primary global NLP solver."
     ))
     # ================================================
     # === Optional User Inputs
     # ================================================
     CONFIG.declare("objective_focus", ConfigValue(
         default=ObjectiveType.nominal, domain=ValidEnum(ObjectiveType),
-        description="Optional. Default = ObjectiveType.nominal. Choice of objective function to optimize in the master problems. "
-                    "Choices are: 'ObjectiveType.worst_case', 'ObjectiveType.nominal'. See Note for details."
+        description="Optional. Default = ``ObjectiveType.nominal``. Choice of objective function to optimize in the master problems. "
+                    "Choices are: ``ObjectiveType.worst_case``, ``ObjectiveType.nominal``. See Note for details."
     ))
     CONFIG.declare("nominal_uncertain_param_vals", ConfigValue(
         default=[], domain=list,
-        description="Optional. Default = deterministic model Param values. List of nominal values for all uncertain parameters. "
-                    "Assumes entries are provided in consistent order with the entries of 'uncertain_params' input."
+        description="Optional. Default = deterministic model ``Param`` values. List of nominal values for all uncertain parameters. "
+                    "Assumes entries are provided in consistent order with the entries of ``uncertain_params`` input."
     ))
     CONFIG.declare("decision_rule_order", ConfigValue(
         default=0, domain=In([0, 1, 2]),
@@ -193,21 +193,21 @@ def pyros_config():
     ))
     CONFIG.declare("progress_logger", ConfigValue(
         default="pyomo.contrib.pyros", domain=a_logger,
-        description="Optional. Default = pyomo.contrib.pyros. The logger object to use for reporting."
+        description="Optional. Default = \"pyomo.contrib.pyros\". The logger object to use for reporting."
     ))
     CONFIG.declare("print_subsolver_progress_to_screen", ConfigValue(
         default=False, domain=bool,
-        description="Optional. Default = False. Sets the 'tee' for all sub-solvers utilized."
+        description="Optional. Default = False. Sets the ``tee`` for all sub-solvers utilized."
     ))
     CONFIG.declare("backup_local_solvers", ConfigValue(
         default=[], domain=SolverResolvable(),
-        description="Optional. Default = []. List of additional NLP solver(s) to utilize as backup "
-                    "whenever primary local solver fails to identify solution to a sub-problem."
+        description="Optional. Default = []. List of additional ``Solver`` objects to utilize as backup "
+                    "whenever primary local NLP solver fails to identify solution to a sub-problem."
     ))
     CONFIG.declare("backup_global_solvers", ConfigValue(
         default=[], domain=SolverResolvable(),
-        description="Optional. Default = []. List of additional NLP solver(s) to utilize as backup "
-                    "whenever primary global solver fails to identify solution to a sub-problem."
+        description="Optional. Default = []. List of additional ``Solver`` objects to utilize as backup "
+                    "whenever primary global NLP solver fails to identify solution to a sub-problem."
     ))
     CONFIG.declare("load_pyros_solution", ConfigValue(
         default=True, domain=bool,
@@ -218,20 +218,19 @@ def pyros_config():
     # ================================================
     CONFIG.declare("minimize_dr_norm", ConfigValue(
         default=False, domain=bool,
-        description="Optional. Default=True. Whether or not to polish decision rule functions at each iteration. "
-                    "This is an advanced option."
+        description="This is an advanced option. Default=True. Whether or not to polish decision rule functions at each iteration. "
     ))
     CONFIG.declare("bypass_local_separation", ConfigValue(
         default=False, domain=bool,
-        description="Optional. Default = False. 'True' to only use global solver(s) during separation; "
+        description="This is an advanced option. Default = False. 'True' to only use global solver(s) during separation; "
                     "'False' to use local solver(s) at intermediate separations, "
-                    "using global solver(s) only before termination to certify robust feasibility. This is an advanced option."
+                    "using global solver(s) only before termination to certify robust feasibility. "
     ))
     CONFIG.declare("p_robustness", ConfigValue(
         default={}, domain=dict,
-        description="Optional. Default = {}. Whether or not to add p-robustness constraints to the master problems. "
+        description="This is an advanced option. Default = {}. Whether or not to add p-robustness constraints to the master problems. "
                     "If the dictionary is empty (default), then p-robustness constraints are not added. "
-                    "This is an advanced option. See Note for how to specify arguments."
+                    "See Note for how to specify arguments."
     ))
 
     return CONFIG
@@ -266,7 +265,7 @@ class PyROS(object):
         """Solve the model.
 
         Args:
-            model: a Pyomo model to be solved
+            model: A ``ConcreteModel`` object representing the deterministic model, cast as a minimization problem.
         """
 
         config = self.CONFIG(kwds.pop('options', {}))

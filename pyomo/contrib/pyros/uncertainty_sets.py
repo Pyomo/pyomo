@@ -44,7 +44,7 @@ def column(matrix, i):
 
 class UncertaintySet(object, metaclass=abc.ABCMeta):
     '''
-    Abstract class for custom user-defined uncertainty sets.
+    Base class for custom user-defined uncertainty sets.
     '''
 
     def __init__(self, **kwargs):
@@ -52,7 +52,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         Constructor for UncertaintySet base class
 
         Args:
-             kwargs: use the kwargs for specifying data for the UncertaintySet object
+             kwargs: Use the kwargs for specifying data for the UncertaintySet object. This data should be used in defining constraints in the 'set_as_constraint' function.
         """
         return
 
@@ -132,7 +132,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
 class BoxSet(UncertaintySet):
     """
-    Box uncertainty set
+    Hyper-rectangle (a.k.a. "Box")
     """
 
     def __init__(self, bounds):
@@ -140,7 +140,7 @@ class BoxSet(UncertaintySet):
         BoxSet constructor
 
         Args:
-            bounds: a list of tuples or a list of lists giving (lb, ub) for each uncertain parameter, in the same order as the 'uncertain_params' required input that is to be supplied to the PyROS solve statement.
+            bounds: A list of tuples providing lower and upper bounds (lb, ub) for each uncertain parameter, in the same order as the 'uncertain_params' required input that is to be supplied to the PyROS solve statement.
         """
         # === non-empty bounds
         if len(bounds) == 0:
@@ -209,7 +209,7 @@ class BoxSet(UncertaintySet):
 
 class CardinalitySet(UncertaintySet):
     """
-    Cardinality uncertainty set
+    Cardinality-constrained (a.k.a "Gamma") uncertainty set
     """
 
     def __init__(self, origin, positive_deviation, gamma):
@@ -217,9 +217,9 @@ class CardinalitySet(UncertaintySet):
         CardinalitySet constructor
 
         Args:
-            origin: the origin of the set (e.g., the nominal point)
-            positive_deviation: vector (list) of max deviations of each parameter
-            gamma: scalar to bound the total number of params that can maximally deviate from 'origin'. gamma = 0 reduces the set to the 'origin' point. gamma = number-of-params makes the hyper-rectangle [origin, origin+positive_deviation]
+            origin: The origin of the set (e.g., the nominal point).
+            positive_deviation: Vector (``list``) of maximal deviations of each parameter.
+            gamma: Scalar to bound the total number of uncertain parameters that can maximally deviate from their respective 'origin'. Setting 'gamma = 0' reduces the set to the 'origin' point. Setting 'gamma' to be equal to the number of parameters produces the hyper-rectangle [origin, origin+positive_deviation]
         """
         # === Real number valued data
         if not all(isinstance(elem, (int, float)) for elem in origin):
@@ -329,8 +329,8 @@ class PolyhedralSet(UncertaintySet):
         PolyhedralSet constructor
 
         Args:
-            lhs_coefficients_mat: matrix of coefficients for inequality constraints defining the polyhedral set
-            rhs_vec: right-hand side vector for the inequality constraints
+            lhs_coefficients_mat: Matrix of left-hand side coefficients for the linear inequality constraints defining the polyhedral set.
+            rhs_vec: Vector (``list``) of right-hand side values for the linear inequality constraints defining the polyhedral set.
         """
 
         # === Real valued data
@@ -424,8 +424,8 @@ class BudgetSet(PolyhedralSet):
         BudgetSet constructor
 
         Args:
-            budget_membership_mat: A matrix with 0-1 entries. Each row represents a budget constraint designating which parameter participates in the given budget. L is the total number of budget constraints.
-            rhs_vec: length L vector of right-hand side values for the budgets
+            budget_membership_mat: A matrix with 0-1 entries to designate which uncertain parameters participate in each budget constraint. Here, each row is associated with a separate budget constraint.
+            rhs_vec: Vector (``list``) of right-hand side values for the budget constraints.
         """
         # === Non-zero number of columns
         mat = np.asarray(budget_membership_mat)
@@ -509,7 +509,7 @@ class BudgetSet(PolyhedralSet):
 
 class FactorModelSet(UncertaintySet):
     """
-    Factor model uncertainty set
+    Factor model (a.k.a. "net-alpha" model) uncertainty set
     """
 
     def __init__(self, origin, number_of_factors, psi_mat, beta):
@@ -517,10 +517,10 @@ class FactorModelSet(UncertaintySet):
         FactorModelSet constructor
 
         Args:
-            origin: vector (list) of nominal parameter values
-            number_of_factors: natural number representing the dimensionality of the hypercube where independent factors (psi) reside
-            psi: matrix of factors with strictly positive entries
-            beta: in [0,1], parameter limiting how many factors achieve their extreme values. beta = 0 means equal numbers of cassi vars in [-1,1]^num_of_factors achieve their lower and upper bounds. beta = 1 reduces to num_of_factors-dimensional hypercube.
+            origin: Vector (``list``) of uncertain parameter values around which deviations are restrained.
+            number_of_factors: Natural number representing the dimensionality of the space to which the set projects.
+            psi: Matrix with non-negative entries designating each uncertain parameter's contribution to each factor. Here, each row is associated with a separate uncertain parameter and each column with a separate factor.
+            beta: Number in [0,1] representing the fraction of the independent factors that can simultaneously attain their extreme values. Setting 'beta = 0' will enforce that as many factors will be above 0 as there will be below 0 (i.e., "zero-net-alpha" model). Setting 'beta = 1' produces the hyper-rectangle [origin - psi e, origin + psi e], where 'e' is the vector of ones.
         """
         mat = np.asarray(psi_mat)
         # === Numeric valued arrays
@@ -546,7 +546,7 @@ class FactorModelSet(UncertaintySet):
         # === Psi must be strictly positive entries
         for idx in range(mat.shape[1]):
             if any(elem < 0 for elem in mat[:,idx]):
-                raise AttributeError("Psi matrix cannot have any negative entries. All factors must be strictly positive.")
+                raise AttributeError("Psi matrix cannot have any negative entries. All factors must be non-negative.")
 
         self.origin = origin
         self.number_of_factors = number_of_factors
@@ -650,32 +650,25 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
     '''
     Axis-aligned ellipsoidal uncertainty set
     '''
-    def __init__(self, center, half_lengths, scale=1):
+    def __init__(self, center, half_lengths):
         """
         AxisAlignedEllipsoidalSet constructor
 
         Args:
-            origin: vector (list) of nominal parameter values.
-            half_lengths: list of half-length values in each dimension (e.g. for each uncertain parameter)
-            scale: right-hand side value for the ellipsoid
+            origin: Vector (``list``) of uncertain parameter values around which deviations are restrained.
+            half_lengths: Vector (``list``) of half-length values representing the maximal deviations for each uncertain parameter.
         """
         # === Valid data in lists
         if not all(isinstance(elem, (int, float)) for elem in half_lengths):
             raise AttributeError("Vector of half-lengths must be real-valued and numeric.")
         if not all(isinstance(elem, (int, float)) for elem in center):
             raise AttributeError("Vector center must be real-valued and numeric.")
-        if not isinstance(scale, (int, float)):
-            raise AttributeError("Ellipse scale must be a real-valued numeric.")
         # === Valid variance dimensions
         if not len(center) == len(half_lengths):
             raise AttributeError("Variances and center of ellipsoid must have same dimensions.")
-        # === Ensure scale is non-negative
-        if scale < 0:
-            raise AttributeError("Scale of ellipse (rhs) must be non-negative.")
 
         self.center=center
         self.half_lengths=half_lengths
-        self.scale=scale
         self.type="ellipsoidal"
 
     @property
@@ -712,7 +705,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
 
         conlist = ConstraintList()
         conlist.construct()
-        conlist.add(constraint <= self.scale)
+        conlist.add(constraint <= 1)
         return conlist
 
     @staticmethod
@@ -744,9 +737,9 @@ class EllipsoidalSet(UncertaintySet):
         EllipsoidalSet constructor
 
         Args:
-            center: vector (list) of nominal parameter values.
-            shape_matrix: positive-definite matrix
-            scale: right-hand side value for the ellipsoid
+            center: Vector (``list``) of uncertain parameter values around which deviations are restrained.
+            shape_matrix: Positive semidefinite matrix.
+            scale: Right-hand side value for the ellipsoid.
         """
 
         # === Valid data in lists/matrixes
@@ -866,7 +859,7 @@ class DiscreteSet(UncertaintySet):
         DiscreteSet constructor
 
         Args:
-            scenarios: vector (list) of discrete scenarios for each uncertain param realization. This is a list of dimensions (number of discrete scenarios) X (number uncertain parameters)
+            scenarios: Vector (``list``) of discrete scenarios where each scenario represents a realization of the uncertain parameters.
         """
 
         # === Non-empty
@@ -948,7 +941,7 @@ class DiscreteSet(UncertaintySet):
 
 class IntersectionSet(UncertaintySet):
     """
-    A class for set intersections of PyROS UncertaintySets
+    Set stemming from intersecting previously constructed sets of any type
     """
 
     def __init__(self, **kwargs):
@@ -956,7 +949,7 @@ class IntersectionSet(UncertaintySet):
         IntersectedSet constructor
 
         Args:
-            **kwargs: keyword arguments for specifying all PyROS UncertaintySet objects to be intersected
+            **kwargs: Keyword arguments for specifying all PyROS UncertaintySet objects to be intersected.
         """
         if not all(isinstance(a_set, UncertaintySet) for a_set in kwargs.values()):
             raise ValueError("SetIntersection objects can only be constructed via UncertaintySet objects.")
