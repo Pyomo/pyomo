@@ -360,17 +360,15 @@ You can silence this warning by one of three ways:
 
     def keys(self):
         """Return an iterator of the keys in the dictionary"""
-        return iter(self)
+        return iter([ x for x in self ])
 
     def values(self):
         """Return an iterator of the component data objects in the dictionary"""
-        for s in self:
-            yield self[s]
+        return iter([ self[x] for x in self ])
 
     def items(self):
         """Return an iterator of (index,data) tuples from the dictionary"""
-        for s in self:
-            yield s, self[s]
+        return iter([ (x, self[x]) for x in self ])
 
     def __getitem__(self, index):
         """
