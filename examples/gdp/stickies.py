@@ -342,50 +342,53 @@ def build_model():
     # Boolean Constraints
     ######################
 
+    # TODO: convert the logical constraints below to use proper
+    # LogicalConstraint expressions
+
     # These are the GAMS versions of the logical constraints, which is not
     # what appears in the formulation:
     def log1_rule(model, s):
-        return model.screen_selection_disjunct[1, s].indicator_var == \
-            sum(model.flow_acceptance_disjunct[s, n, 1].indicator_var \
+        return model.screen_selection_disjunct[1, s].binary_indicator_var == \
+            sum(model.flow_acceptance_disjunct[s, n, 1].binary_indicator_var \
                 for n in model.Nodes if s != n)
     model.log1 = Constraint(model.Screens, rule=log1_rule)
 
     def log2_rule(model, s):
-        return model.screen_selection_disjunct[1, s].indicator_var == \
-            sum(model.flow_rejection_disjunct[s, n, 1].indicator_var \
+        return model.screen_selection_disjunct[1, s].binary_indicator_var == \
+            sum(model.flow_rejection_disjunct[s, n, 1].binary_indicator_var \
                 for n in model.Nodes if s != n)
     model.log2 = Constraint(model.Screens, rule=log2_rule)
 
     def log3_rule(model, s):
-        return model.screen_selection_disjunct[1, s].indicator_var >= \
-            sum(model.flow_acceptance_disjunct[s, sprime, 1].indicator_var \
+        return model.screen_selection_disjunct[1, s].binary_indicator_var >= \
+            sum(model.flow_acceptance_disjunct[s, sprime, 1].binary_indicator_var \
                 for sprime in model.Screens if s != sprime)
     model.log3 = Constraint(model.Screens, rule=log3_rule)
 
     def log4_rule(model, s):
-        return model.screen_selection_disjunct[1, s].indicator_var >= \
-            sum(model.flow_rejection_disjunct[s, sprime, 1].indicator_var \
+        return model.screen_selection_disjunct[1, s].binary_indicator_var >= \
+            sum(model.flow_rejection_disjunct[s, sprime, 1].binary_indicator_var \
                 for sprime in model.Screens if s != sprime)
     model.log4 = Constraint(model.Screens, rule=log4_rule)
 
     def log6_rule(model, s, sprime):
-        return model.flow_acceptance_disjunct[s, sprime, 1].indicator_var + \
-            model.flow_acceptance_disjunct[sprime, s, 1].indicator_var <= 1
+        return model.flow_acceptance_disjunct[s, sprime, 1].binary_indicator_var + \
+            model.flow_acceptance_disjunct[sprime, s, 1].binary_indicator_var <= 1
     model.log6 = Constraint(model.ScreenPairs, rule=log6_rule)
 
     def log7_rule(model, s, sprime):
-        return model.flow_rejection_disjunct[s, sprime, 1].indicator_var + \
-            model.flow_rejection_disjunct[sprime, s, 1].indicator_var <= 1
+        return model.flow_rejection_disjunct[s, sprime, 1].binary_indicator_var + \
+            model.flow_rejection_disjunct[sprime, s, 1].binary_indicator_var <= 1
     model.log7 = Constraint(model.ScreenPairs, rule=log7_rule)
 
     def log8_rule(model, s, n):
-        return model.flow_acceptance_disjunct[s, n, 1].indicator_var + \
-            model.flow_rejection_disjunct[s, n, 1].indicator_var <= 1
+        return model.flow_acceptance_disjunct[s, n, 1].binary_indicator_var + \
+            model.flow_rejection_disjunct[s, n, 1].binary_indicator_var <= 1
     model.log8 = Constraint(model.ScreenNodePairs, rule=log8_rule)
 
     def log9_rule(model, s, sprime):
-        return model.flow_acceptance_disjunct[s, sprime, 1].indicator_var + \
-            model.flow_rejection_disjunct[sprime, s, 1].indicator_var <= 1
+        return model.flow_acceptance_disjunct[s, sprime, 1].binary_indicator_var + \
+            model.flow_rejection_disjunct[sprime, s, 1].binary_indicator_var <= 1
     model.log9 = Constraint(model.ScreenPairs, rule=log9_rule)
 
     # These are the above logical constraints implemented correctly (I think)
@@ -493,8 +496,8 @@ def build_model():
 
     # fix the variables they fix in GAMS
     for s in instance.Screens:
-        instance.flow_acceptance_disjunct[s,'SNK',1].indicator_var.fix(0)
-        instance.flow_rejection_disjunct[s,'PRD',1].indicator_var.fix(0)
+        instance.flow_acceptance_disjunct[s,'SNK',1].indicator_var.fix(False)
+        instance.flow_rejection_disjunct[s,'PRD',1].indicator_var.fix(False)
 
     ##################################################################################
     ## for validation: Fix all the indicator variables to see if we get same objective
