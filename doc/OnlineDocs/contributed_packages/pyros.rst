@@ -220,8 +220,8 @@ to instruct PyROS to consider as uncertain in the model.
 .. code::
 
   >>> # === Required imports ===
-  >>> from pyomo.environ import *
-  >>> from pyomo.pyros import *
+  >>> import pyomo.environ as pyo
+  >>> import pyomo.pyros as pyros
 
   >>> # === Construct the Pyomo model object ===
   >>> m = pyo.ConcreteModel()
