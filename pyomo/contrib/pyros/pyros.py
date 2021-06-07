@@ -264,7 +264,7 @@ class PyROS(object):
     # The Pyomo solver API expects that solvers support the context
     # manager API
     def __enter__(self):
-        pass
+        return self
 
     def __exit__(self, et, ev, tb):
         pass
