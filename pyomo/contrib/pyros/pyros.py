@@ -261,6 +261,14 @@ class PyROS(object):
         ''' License for using PyROS '''
         return True
 
+    # The Pyomo solver API expects that solvers support the context
+    # manager API
+    def __enter__(self):
+        pass
+
+    def __exit__(self, et, ev, tb):
+        pass
+
     def solve(self, model, **kwds):
         """Solve the model.
 
