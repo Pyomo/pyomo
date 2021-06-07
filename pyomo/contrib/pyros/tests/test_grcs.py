@@ -999,36 +999,25 @@ class RegressionTest(unittest.TestCase):
 
         # === Uncertain Params ===
         m.set_params = Set(initialize=list(range(4)))
-        m.p = Param(m.set_params, initialize=1, mutable=True)
+        m.p = Param(m.set_params, initialize=2, mutable=True)
         m.uncertain_params = [m.p]
 
-        m.obj = Objective(
-            expr=m.p[0] * 0.8 * m.x1 + 1.1 * m.x2 + 0.85 * m.x3, sense=minimize)
+        m.obj = Objective(expr=(m.x1 - 1) * 2, sense=minimize)
+        m.con1 = Constraint(expr=m.p[1] * m.x1 + m.x2 + m.x3 <= 2)
 
-        m.c1 = Constraint(
-            expr=-m.p[1] * 11.6 * m.x1 - 13.7 * m.x2 -  9.5 * m.x3 + 18 <= 0)
-
-        m.c2 = Constraint(
-            expr=-m.p[2] * 0.05 * m.x1 - 0.07 * m.x2 + 1 <= 0)
-
-        m.c3 = Constraint(
-            expr=-m.p[3] * 0.35 * m.x1 -  0.37 * m.x2 -  0.1 * m.x3  <= 0)
-
-        m.c4 = Constraint(
-            expr=m.x1 + m.x2 + m.x3 == 1)
-
-        box_set = BoxSet(bounds=[(0.8,1.2) for i in [0]])
-        solver = SolverFactory(global_solver)
+        box_set = BoxSet(bounds=[(1.8, 2.2)])
+        solver = SolverFactory("baron")
         pyros = SolverFactory("pyros")
         results = pyros.solve(model=m,
-                   first_stage_variables=m.decision_vars,
-                   second_stage_variables=[],
-                   uncertain_params=[m.p[0]],
-                   uncertainty_set=box_set,
-                   local_solver=solver,
-                   global_solver=solver)
-        self.assertFalse(results.grcs_termination_condition,
-                         grcsTerminationCondition.subsolver_error)
+                              first_stage_variables=m.decision_vars,
+                              second_stage_variables=[],
+                              uncertain_params=[m.p[1]],
+                              uncertainty_set=box_set,
+                              local_solver=solver,
+                              global_solver=solver,
+                              options={"objective_focus":ObjectiveType.nominal})
+        self.assertTrue(results.grcs_termination_condition,
+                         grcsTerminationCondition.robust_feasible)
 
 if __name__ == "__main__":
     unittest.main()
