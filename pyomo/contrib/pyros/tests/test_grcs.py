@@ -992,64 +992,43 @@ class RegressionTest(unittest.TestCase):
         m.x1 = Var(within=Reals, bounds=(0, None), initialize=0.1)
         m.x2 = Var(within=Reals, bounds=(0, None), initialize=0.1)
         m.x3 = Var(within=Reals, bounds=(0, None), initialize=0.1)
-        m.x4 = Var(within=Reals, bounds=(0, None), initialize=0.1)
-        m.x5 = Var(within=Reals, bounds=(0, None), initialize=0.1)
-        m.x6 = Var(within=Reals, bounds=(0, None), initialize=0.1)
-        m.x7 = Var(within=Reals, bounds=(0, None), initialize=0.1)
-        m.x8 = Var(within=Reals, bounds=(0, None), initialize=0.1)
-        m.x9 = Var(within=Reals, bounds=(0, None), initialize=0.1)
-        m.x10 = Var(within=Reals, bounds=(0, None), initialize=0.1)
-        m.x11 = Var(within=Reals, bounds=(0, None), initialize=0.1)
-        m.x12 = Var(within=Reals, bounds=(0, None), initialize=0.1)
-        m.x13 = Var(within=Reals, bounds=(0, None), initialize=0.1)
 
         # === State Vars = [x13]
         # === Decision Vars ===
-        m.decision_vars = [m.x1, m.x2, m.x3, m.x4, m.x5, m.x6, m.x7, m.x8, m.x9, m.x10, m.x11, m.x12]
+        m.decision_vars = [m.x1, m.x2, m.x3]
 
         # === Uncertain Params ===
-        m.set_params = Set(initialize=list(range(41)))
+        m.set_params = Set(initialize=list(range(4)))
         m.p = Param(m.set_params, initialize=1, mutable=True)
-        m.uncertain_params = [m.p[0], m.p[10], m.p[29], m.p[8], m.p[20]]
+        m.uncertain_params = [m.p]
 
         m.obj = Objective(
-            expr=m.p[0] * 0.8 * m.x1 + m.p[1] * 1.1 * m.x2 + m.p[2] * 0.85 * m.x3 + m.p[3] * 3.45 * m.x4 + 2 * m.x5 +
-                 m.p[4] * 2.1 * m.x6 + 3 * m.x7 + m.p[5] * 0.8 * m.x8
-                 + m.p[6] * 0.45 * m.x9 + m.p[7] * 0.72 * m.x10 + m.p[8] * 1.8 * m.x11 + 3 * m.x12 + m.p[
-                     9] * 0.6 * m.x13, sense=minimize)
+            expr=m.p[0] * 0.8 * m.x1 + 1.1 * m.x2 + 0.85 * m.x3, sense=minimize)
 
         m.c1 = Constraint(
-            expr=-m.p[10] * 11.6 * m.x1 - m.p[11] * 13.7 * m.x2 - m.p[12] * 9.5 * m.x3 - m.p[13] * 48.5 * m.x4 -
-                 m.p[14] * 31.9 * m.x5 - m.p[15] * 51.1 * m.x6 - m.p[16] * 65.5 * m.x7 - m.p[17] * 21.8 * m.x11
-                 - 46.9 * m.x12 + 18 <= 0)
+            expr=-m.p[1] * 11.6 * m.x1 - 13.7 * m.x2 -  9.5 * m.x3 + 18 <= 0)
 
         m.c2 = Constraint(
-            expr=-m.p[18] * 0.05 * m.x1 - m.p[19] * 0.07 * m.x2 - m.p[20] * 0.33 * m.x4 - m.p[21] * 1.27 * m.x6 -
-                 m.p[22] * 1.27 * m.x7 - m.p[23] * 23.35 * m.x8 - m.p[24] * 35.84 * m.x9
-                 - m.p[25] * 0.81 * m.x10 - m.p[26] * 1.79 * m.x11 - m.p[27] * 7.34 * m.x12 + 1 <= 0)
+            expr=-m.p[2] * 0.05 * m.x1 - 0.07 * m.x2 + 1 <= 0)
 
         m.c3 = Constraint(
-            expr=-m.p[28] * 0.35 * m.x1 - m.p[29] * 0.37 * m.x2 - m.p[30] * 0.1 * m.x3 - m.p[31] * 0.62 * m.x4 +
-                 m.p[32] * 1.03 * m.x6 - m.p[33] * 1.69 * m.x7 - m.p[34] * 18.21 * m.x8 - m.p[35] * 0.01 * m.x9
-                 - m.p[36] * 0.08 * m.x10 - m.p[37] * 0.31 * m.x11 - m.p[38] * 1.59 * m.x12 - m.p[39] * 22.45 * m.x13 +
-                 m.p[40] * 0.9 <= 0)
+            expr=-m.p[3] * 0.35 * m.x1 -  0.37 * m.x2 -  0.1 * m.x3  <= 0)
 
         m.c4 = Constraint(
-            expr=m.x1 + m.x2 + m.x3 + m.x4 + m.x5 + m.x6 + m.x7 + m.x8 + m.x9 + m.x10 + m.x11 + m.x12 + m.x13
-                 == 1)
+            expr=m.x1 + m.x2 + m.x3 == 1)
 
-        box_set = BoxSet(bounds=[(0.8,1.2) for i in range(2)])
+        box_set = BoxSet(bounds=[(0.8,1.2) for i in [0]])
         solver = SolverFactory(global_solver)
         pyros = SolverFactory("pyros")
         results = pyros.solve(model=m,
                    first_stage_variables=m.decision_vars,
                    second_stage_variables=[],
-                   uncertain_params=[m.p[0], m.p[10]],
+                   uncertain_params=[m.p[0]],
                    uncertainty_set=box_set,
                    local_solver=solver,
                    global_solver=solver)
-        self.assertEqual(results.grcs_termination_condition,
-                         grcsTerminationCondition.robust_optimal)
+        self.assertFalse(results.grcs_termination_condition,
+                         grcsTerminationCondition.subsolver_error)
 
 if __name__ == "__main__":
     unittest.main()

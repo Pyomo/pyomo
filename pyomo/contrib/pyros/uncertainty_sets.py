@@ -663,9 +663,11 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
             raise AttributeError("Vector of half-lengths must be real-valued and numeric.")
         if not all(isinstance(elem, (int, float)) for elem in center):
             raise AttributeError("Vector center must be real-valued and numeric.")
+        if any(elem <= 0 for elem in half_lengths):
+            raise AttributeError("Half length values must be > 0.")
         # === Valid variance dimensions
         if not len(center) == len(half_lengths):
-            raise AttributeError("Variances and center of ellipsoid must have same dimensions.")
+            raise AttributeError("Half lengths and center of ellipsoid must have same dimensions.")
 
         self.center=center
         self.half_lengths=half_lengths

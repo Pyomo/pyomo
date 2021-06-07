@@ -143,7 +143,7 @@ def ROSolver_iterative_solve(model_data, config):
         else:
             term_cond = None
         if term_cond == grcsTerminationCondition.subsolver_error or \
-                term_cond == grcsTerminationCondition.subsolver_error:
+                term_cond == grcsTerminationCondition.robust_infeasible:
             update_grcs_solve_data(pyros_soln=model_data, k=k, term_cond=term_cond,
                                    nominal_data=nominal_data,
                                    timing_data=timing_data,
