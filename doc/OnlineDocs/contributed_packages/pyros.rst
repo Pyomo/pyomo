@@ -419,7 +419,7 @@ We can then loop through the array of ``percent deviation`` values and call PyRO
 .. code::
 
   >>> # === An array of % changes in the nominal uncertain parameter values to utilize in constructing BoxSets
-  >>> percent_deviation_list = [0.00, 0.05, 0.10, 0.15, 0.20, 0.25]
+  >>> percent_deviation_list = [0.00, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30]
 
   >>> # === Final robust optimal objectives
   >>> robust_optimal_objectives = []
@@ -461,6 +461,8 @@ For this example, we obtain the following price of robustness results:
 |   0.20                                   | 36,437,979.81                | 1.64 %                      |
 +------------------------------------------+------------------------------+-----------------------------+
 |   0.25                                   | 37,946,802.00                | 5.55 %                      |
++------------------------------------------+------------------------------+-----------------------------+
+|   0.30                                   | 43,478,190.92                | 17.57 %                     |
 +------------------------------------------+------------------------------+-----------------------------+
 
 ..
