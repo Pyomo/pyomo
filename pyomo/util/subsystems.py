@@ -38,14 +38,40 @@ def create_subsystem_block(constraints, variables=None, include_fixed=False):
     return block
 
 
+def generate_subsystem_blocks(subsystems, include_fixed=False, fix_inputs=True):
+    """ Generates blocks that contain subsystems of variables and constraints.
+    
+    Arguments
+    ---------
+    subsystems: List of tuples. Each tuple is a list of constraints then
+                a list of variables that will define a subsystem.
+    include_fixed: Whether to add already fixed variables to the generated
+                   subsystem blocks.
+    fix_inputs: Whether to fix variables in the constraints that are not
+                included in the subsystem.
+
+    Yields
+    ------
+    "Subsystem blocks" containing the variables and constraints specified
+    by each entry in subsystems. Variables in the constraints that are
+    not specified are contained in the input_vars component.
+    """
+    for cons, vars in subsystems:
+        block = create_subsystem_block(cons, vars, include_fixed)
+        if fix_inputs:
+            to_fix = list(block.input_vars[:])
+            with TemporarySubsystemManager(to_fix=to_fix):
+                yield block
+        else:
+            yield block
+
+
 class TemporarySubsystemManager(object):
     """ This class is a context manager for cases when we want to
     temporarily fix or deactivate certain variables or constraints
     in order to perform some solve or calculation with the resulting
     subsystem.
 
-    We currently do not support fixing variables to particular values,
-    and do not restore values of variables fixed. This could change.
     """
 
     def __init__(self, to_fix=None, to_deactivate=None, to_reset=None):
@@ -124,6 +150,9 @@ class ParamSweeper(TemporarySubsystemManager):
         self._ip = -1 # Index pointer for iteration
 
         if to_reset is None:
+            # Input values will be set repeatedly by iterating over this object.
+            # We would like to reset them to original values to make this
+            # functionality less intrusive.
             to_reset = [var for var in input_values]
         else:
             to_reset.extend(var for var in input_values)
