@@ -987,46 +987,64 @@ class RegressionTest(unittest.TestCase):
     @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False), "Global NLP solver is not available.")
     def regression_test(self):
         model = m = ConcreteModel()
+        m.name = "s381"
 
-        m.x1 = Var(within=Reals, bounds=(0, None), initialize=0)
-        m.x2 = Var(within=Reals, bounds=(0, None), initialize=0)
-        m.x3 = Var(within=Reals, bounds=(0, None), initialize=0.4)
-        m.x4 = Var(within=Reals, bounds=(0, None), initialize=0.6)
-        m.x5 = Var(within=Reals, bounds=(None, None), initialize=0)
+        m.x1 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+        m.x2 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+        m.x3 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+        m.x4 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+        m.x5 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+        m.x6 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+        m.x7 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+        m.x8 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+        m.x9 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+        m.x10 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+        m.x11 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+        m.x12 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+        m.x13 = Var(within=Reals, bounds=(0, None), initialize=0.1)
 
-        # === State Vars = [x4, x5]
+        # === State Vars = [x13]
         # === Decision Vars ===
-        m.decision_vars = [m.x1, m.x2, m.x3]
+        m.decision_vars = [m.x1, m.x2, m.x3, m.x4, m.x5, m.x6, m.x7, m.x8, m.x9, m.x10, m.x11, m.x12]
 
         # === Uncertain Params ===
-        m.set_params = Set(initialize=list(range(17)))
+        m.set_params = Set(initialize=list(range(41)))
         m.p = Param(m.set_params, initialize=1, mutable=True)
-        m.uncertain_params = [m.p[0], m.p[4], m.p[8], m.p[2], m.p[5]]
+        m.uncertain_params = [m.p[0], m.p[10], m.p[29], m.p[8], m.p[20]]
 
         m.obj = Objective(
-            expr=-24.55 * m.p[0] * m.x1 - 26.75 * m.p[1] * m.x2 - 39 * m.p[2] * m.x3 - 40.5 * m.p[3] * m.x4,
-            sense=minimize)
+            expr=m.p[0] * 0.8 * m.x1 + m.p[1] * 1.1 * m.x2 + m.p[2] * 0.85 * m.x3 + m.p[3] * 3.45 * m.x4 + 2 * m.x5 +
+                 m.p[4] * 2.1 * m.x6 + 3 * m.x7 + m.p[5] * 0.8 * m.x8
+                 + m.p[6] * 0.45 * m.x9 + m.p[7] * 0.72 * m.x10 + m.p[8] * 1.8 * m.x11 + 3 * m.x12 + m.p[
+                     9] * 0.6 * m.x13, sense=minimize)
 
-        m.c1 = Constraint(expr=-(
-                    (0.53 * m.p[4] * m.x1) ** 2 + (0.44 * m.p[5] * m.x2) ** 2 + (4.5 * m.p[6] * m.x3) ** 2 + (
-                        0.79 * m.p[7] * m.x4) ** 2) + m.x5 == 0)
+        m.c1 = Constraint(
+            expr=-m.p[10] * 11.6 * m.x1 - m.p[11] * 13.7 * m.x2 - m.p[12] * 9.5 * m.x3 - m.p[13] * 48.5 * m.x4 -
+                 m.p[14] * 31.9 * m.x5 - m.p[15] * 51.1 * m.x6 - m.p[16] * 65.5 * m.x7 - m.p[17] * 21.8 * m.x11
+                 - 46.9 * m.x12 + 18 <= 0)
 
         m.c2 = Constraint(
-            expr=-2.3 * m.p[8] * m.x1 - 5.6 * m.p[9] * m.x2 - 11.1 * m.p[10] * m.x3 - 1.3 * m.p[11] * m.x4 + 5 <= 0)
+            expr=-m.p[18] * 0.05 * m.x1 - m.p[19] * 0.07 * m.x2 - m.p[20] * 0.33 * m.x4 - m.p[21] * 1.27 * m.x6 -
+                 m.p[22] * 1.27 * m.x7 - m.p[23] * 23.35 * m.x8 - m.p[24] * 35.84 * m.x9
+                 - m.p[25] * 0.81 * m.x10 - m.p[26] * 1.79 * m.x11 - m.p[27] * 7.34 * m.x12 + 1 <= 0)
 
         m.c3 = Constraint(
-            expr=-12 * m.p[12] * m.x1 - 11.9 * m.p[13] * m.x2 - 41.8 * m.p[14] * m.x3 - 52.1 * m.p[15] * m.x4 + 1.645 *
-                 m.p[16] * m.x5 + 12 <= 0)
+            expr=-m.p[28] * 0.35 * m.x1 - m.p[29] * 0.37 * m.x2 - m.p[30] * 0.1 * m.x3 - m.p[31] * 0.62 * m.x4 +
+                 m.p[32] * 1.03 * m.x6 - m.p[33] * 1.69 * m.x7 - m.p[34] * 18.21 * m.x8 - m.p[35] * 0.01 * m.x9
+                 - m.p[36] * 0.08 * m.x10 - m.p[37] * 0.31 * m.x11 - m.p[38] * 1.59 * m.x12 - m.p[39] * 22.45 * m.x13 +
+                 m.p[40] * 0.9 <= 0)
 
-        m.c4 = Constraint(expr=m.x1 + m.x2 + m.x3 + m.x4 == 1)
+        m.c4 = Constraint(
+            expr=m.x1 + m.x2 + m.x3 + m.x4 + m.x5 + m.x6 + m.x7 + m.x8 + m.x9 + m.x10 + m.x11 + m.x12 + m.x13
+                 == 1)
 
-        box_set = BoxSet(bounds=[(0.8,1.2) for i in range(5)])
+        box_set = BoxSet(bounds=[(0.8,1.2) for i in range(2)])
         solver = SolverFactory(global_solver)
         pyros = SolverFactory("pyros")
         results = pyros.solve(model=m,
-                   first_stage_variables=[m.x1, m.x2],
-                   second_stage_variables=[m.x3],
-                   uncertain_params=m.uncertain_params,
+                   first_stage_variables=m.decision_vars,
+                   second_stage_variables=[],
+                   uncertain_params=[m.p[0], m.p[10]],
                    uncertainty_set=box_set,
                    local_solver=solver,
                    global_solver=solver)

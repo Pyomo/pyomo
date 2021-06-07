@@ -388,7 +388,7 @@ For this next set of runs, we will assume we have a partition between first- and
   >>> first_stage_variables =[m.x5, m.x6, m.x19, m.x22, m.x23, m.x24, m.x31]
   >>> second_stage_variables = [m.x1, m.x2, m.x3, m.x4, m.x20, m.x21]
 
-  >>> # === Call PyS with decision_rule_order = 1 (affine decision rules)
+  >>> # === Call PyROS with decision_rule_order = 1 (affine decision rules)
   >>> affine_results = pyros_solver.solve(model = m,
                                           first_stage_variables = first_stage_variables,
                                           second_stage_variables = second_stage_variables,
