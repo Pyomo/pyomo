@@ -180,16 +180,15 @@ class TestGenerateSCC(unittest.TestCase):
                 for var in block.input_vars[:]:
                     self.assertIn(var, other_var_set)
 
-    def test_dynamic_backward_disc(self):
+    def test_dynamic_backward_disc_with_initial_conditions(self):
         nfe = 5
         m = make_dynamic_model(nfe=nfe, scheme="BACKWARD")
         time = m.time
         t0 = m.time.first()
+        t1 = m.time.next(t0)
 
         m.flow_in.fix()
         m.height[t0].fix()
-
-        time.pprint()
 
         self.assertEqual(
                 len(list(generate_strongly_connected_components(m))),
@@ -198,14 +197,144 @@ class TestGenerateSCC(unittest.TestCase):
                 # decompose into the algebraic equation and differential
                 # equation. This decomposition is because the discretization
                 # equation is not present.
+                #
+                # This is actually quite troublesome for testing because
+                # it means that the topological order of strongly connected
+                # components is not unique (alternatively, the initial
+                # conditions and rest of the model are independent, or the
+                # bipartite graph of variables and equations is disconnected.
                 )
+        t_scc_map = {}
         for i, block in enumerate(generate_strongly_connected_components(m)):
-            t = m.time[i+1] # Pyomo sets are base-1-indexed...
-            if i != 0:
+            t = block.vars[0].index()
+            t_scc_map[t] = i
+            if t == t0:
+                continue
+            else:
                 t_prev = m.time.prev(t)
 
-            if i == 0:
-                con_set = ComponentSet([m.flow_out_eqn[t]])
+                con_set = ComponentSet([
+                    m.diff_eqn[t], m.flow_out_eqn[t], m.dhdt_disc_eq[t]
+                    ])
+                var_set = ComponentSet([
+                    m.height[t], m.dhdt[t], m.flow_out[t]
+                    ])
+                self.assertEqual(len(con_set), len(block.cons))
+                self.assertEqual(len(var_set), len(block.vars))
+                for var, con in zip(block.vars[:], block.cons[:]):
+                    self.assertIn(var, var_set)
+                    self.assertIn(con, con_set)
+                    self.assertFalse(var.fixed)
+
+                other_var_set = ComponentSet([m.height[t_prev]])\
+                        if t != t1 else ComponentSet()
+                        # At t1, "input var" height[t0] is fixed, so
+                        # it is not included here.
+                self.assertEqual(len(block.input_vars), len(other_var_set))
+                for var in block.input_vars[:]:
+                    self.assertIn(var, other_var_set)
+                    self.assertTrue(var.fixed)
+
+        scc = -1
+        for t in m.time:
+            if t == t0:
+                self.assertTrue(m.height[t].fixed)
+            else:
+                self.assertFalse(m.height[t].fixed)
+
+                # Make sure "finite element blocks" in the SCC DAG are
+                # in a valid topological order
+                self.assertGreater(t_scc_map[t], scc)
+                scc = t_scc_map[t]
+
+    def test_dynamic_backward_disc_without_initial_conditions(self):
+        nfe = 5
+        m = make_dynamic_model(nfe=nfe, scheme="BACKWARD")
+        time = m.time
+        t0 = m.time.first()
+        t1 = m.time.next(t0)
+
+        m.flow_in.fix()
+        m.height[t0].fix()
+        m.flow_out[t0].fix()
+        m.dhdt[t0].fix()
+        m.diff_eqn[t0].deactivate()
+        m.flow_out_eqn[t0].deactivate()
+
+        self.assertEqual(
+                len(list(generate_strongly_connected_components(m))),
+                nfe,
+                )
+        for i, block in enumerate(generate_strongly_connected_components(m)):
+            # We have a much easier time testing the SCCs generated
+            # in this test.
+            t = m.time[i+2]
+            t_prev = m.time.prev(t)
+
+            con_set = ComponentSet([
+                m.diff_eqn[t], m.flow_out_eqn[t], m.dhdt_disc_eq[t]
+                ])
+            var_set = ComponentSet([
+                m.height[t], m.dhdt[t], m.flow_out[t]
+                ])
+            self.assertEqual(len(con_set), len(block.cons))
+            self.assertEqual(len(var_set), len(block.vars))
+            for var, con in zip(block.vars[:], block.cons[:]):
+                self.assertIn(var, var_set)
+                self.assertIn(con, con_set)
+                self.assertFalse(var.fixed)
+
+            other_var_set = ComponentSet([m.height[t_prev]])\
+                    if t != t1 else ComponentSet()
+                    # At t1, "input var" height[t0] is fixed, so
+                    # it is not included here.
+            self.assertEqual(len(block.input_vars), len(other_var_set))
+            for var in block.input_vars[:]:
+                self.assertIn(var, other_var_set)
+                self.assertTrue(var.fixed)
+
+    def test_dynamic_forward_disc(self):
+        nfe = 5
+        m = make_dynamic_model(nfe=nfe, scheme="FORWARD")
+        time = m.time
+        t0 = m.time.first()
+        t1 = m.time.next(t0)
+
+        m.flow_in.fix()
+        m.height[t0].fix()
+
+        # For a forward discretization, the entire model decomposes
+        self.assertEqual(
+                len(list(generate_strongly_connected_components(m))),
+                len(list(m.component_data_objects(pyo.Constraint))),
+                )
+        self.assertEqual(
+                len(list(generate_strongly_connected_components(m))),
+                3*nfe+2,
+                # "Initial constraints" only add two variables/equations
+                )
+        for i, block in enumerate(generate_strongly_connected_components(m)):
+            # The order is:
+            #     algebraic -> derivative -> differential -> algebraic -> ...
+            idx = i//3
+            mod = i % 3
+            t = m.time[idx+1]
+            if t != time.last():
+                t_next = m.time.next(t)
+
+            self.assertEqual(len(block.vars), 1)
+            self.assertEqual(len(block.cons), 1)
+
+            if mod == 0:
+                self.assertIs(block.vars[0], m.flow_out[t])
+                self.assertIs(block.cons[0], m.flow_out_eqn[t])
+            elif mod == 1:
+                self.assertIs(block.vars[0], m.dhdt[t])
+                self.assertIs(block.cons[0], m.diff_eqn[t])
+            elif mod == 2:
+                # Never get to mod == 2 when t == time.last()
+                self.assertIs(block.vars[0], m.height[t_next])
+                self.assertIs(block.cons[0], m.dhdt_disc_eq[t])
 
 
 if __name__ == "__main__":
