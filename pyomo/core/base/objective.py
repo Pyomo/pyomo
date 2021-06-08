@@ -22,11 +22,12 @@ from weakref import ref as weakref_ref
 import inspect
 
 from pyomo.common.log import is_debug_set
-from pyomo.common.deprecation import deprecated
+from pyomo.common.deprecation import deprecated, RenamedClass
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import value
-from pyomo.core.base.plugin import ModelComponentFactory
-from pyomo.core.base.component import ActiveComponentData
+from pyomo.core.base.component import (
+    ActiveComponentData, ModelComponentFactory,
+)
 from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
                                                UnindexedComponent_set,
                                                _get_indexed_component_data_name)
@@ -280,7 +281,7 @@ class Objective(ActiveIndexedComponent):
         if cls != Objective:
             return super(Objective, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
-            return SimpleObjective.__new__(SimpleObjective)
+            return ScalarObjective.__new__(ScalarObjective)
         else:
             return IndexedObjective.__new__(IndexedObjective)
 
@@ -330,13 +331,6 @@ class Objective(ActiveIndexedComponent):
         _init_expr = self._init_expr
         _init_sense = self._init_sense
         _init_rule = self.rule
-        #
-        # We no longer need these
-        #
-        self._init_expr = None
-        self._init_sense = None
-        # Utilities like DAE assume this stays around
-        #self.rule = None
 
         if (_init_rule is None) and \
            (_init_expr is None):
@@ -454,9 +448,9 @@ class Objective(ActiveIndexedComponent):
 
         return expr
 
-class SimpleObjective(_GeneralObjectiveData, Objective):
+class ScalarObjective(_GeneralObjectiveData, Objective):
     """
-    SimpleObjective is the implementation representing a single,
+    ScalarObjective is the implementation representing a single,
     non-indexed objective.
     """
 
@@ -485,7 +479,7 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
         if self._constructed:
             if len(self._data) == 0:
                 raise ValueError(
-                    "Accessing the expression of SimpleObjective "
+                    "Accessing the expression of ScalarObjective "
                     "'%s' before the Objective has been assigned "
                     "a sense or expression. There is currently "
                     "nothing to access." % (self.name))
@@ -502,13 +496,13 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
 
     # for backwards compatibility reasons
     @property
-    @deprecated("The .value property getter on SimpleObjective is deprecated. "
+    @deprecated("The .value property getter on ScalarObjective is deprecated. "
                 "Use the .expr property getter instead", version='4.3.11323')
     def value(self):
         return self.expr
 
     @value.setter
-    @deprecated("The .value property setter on SimpleObjective is deprecated. "
+    @deprecated("The .value property setter on ScalarObjective is deprecated. "
                 "Use the set_value(expr) method instead", version='4.3.11323')
     def value(self, expr):
         self.set_value(expr)
@@ -519,7 +513,7 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
         if self._constructed:
             if len(self._data) == 0:
                 raise ValueError(
-                    "Accessing the sense of SimpleObjective "
+                    "Accessing the sense of ScalarObjective "
                     "'%s' before the Objective has been assigned "
                     "a sense or expression. There is currently "
                     "nothing to access." % (self.name))
@@ -544,6 +538,9 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
     # like _ObjectiveData objects where set_value does not handle
     # Objective.Skip but expects a valid expression or None
     #
+
+    def clear(self):
+        self._data = {}
 
     def set_value(self, expr):
         """Set the expression of this objective."""
@@ -581,11 +578,17 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
         """Add an expression with a given index."""
         if index is not None:
             raise ValueError(
-                "SimpleObjective object '%s' does not accept "
+                "ScalarObjective object '%s' does not accept "
                 "index values other than None. Invalid value: %s"
                 % (self.name, index))
         self.set_value(expr)
         return self
+
+
+class SimpleObjective(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarObjective
+    __renamed__version__ = '6.0'
+
 
 class IndexedObjective(Objective):
 

@@ -11,12 +11,12 @@
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.boolean_value import BooleanValue
 from pyomo.core.expr.numvalue import value
-from pyomo.core.base.plugin import ModelComponentFactory
-from pyomo.core.base.component import ComponentData
+from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import Set, BooleanSet
@@ -274,7 +274,7 @@ class BooleanVar(IndexedComponent):
         if cls != BooleanVar:
             return super(BooleanVar, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
-            return SimpleBooleanVar.__new__(SimpleBooleanVar)
+            return ScalarBooleanVar.__new__(ScalarBooleanVar)
         else:
             return IndexedBooleanVar.__new__(IndexedBooleanVar) 
 
@@ -456,7 +456,7 @@ class BooleanVar(IndexedComponent):
                  )
 
 
-class SimpleBooleanVar(_GeneralBooleanVarData, BooleanVar):
+class ScalarBooleanVar(_GeneralBooleanVarData, BooleanVar):
     
     """A single variable."""
     def __init__(self, *args, **kwd):
@@ -531,6 +531,11 @@ class SimpleBooleanVar(_GeneralBooleanVarData, BooleanVar):
             % (self.name))
 
     free=unfix
+
+
+class SimpleBooleanVar(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarBooleanVar
+    __renamed__version__ = '6.0'
 
 
 class IndexedBooleanVar(BooleanVar):

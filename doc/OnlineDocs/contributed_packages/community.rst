@@ -160,7 +160,7 @@ community_map attribute or the repr() function can be used:
 .. doctest::
 
     >>> print(community_map_object.community_map)  # or print(repr(community_map_object))  # doctest: +SKIP
-    {0: ([<pyomo.core.base.constraint.SimpleConstraint object at 0x0000028DA74BB588>, <pyomo.core.base.constraint.SimpleConstraint object at 0x0000028DA74BB5F8>], [<pyomo.core.base.var.SimpleVar object at 0x0000028DA74BB3C8>, <pyomo.core.base.var.SimpleVar object at 0x0000028DA74BB438>]), 1: ([<pyomo.core.base.constraint.SimpleConstraint object at 0x0000028DA74BB668>, <pyomo.core.base.constraint.SimpleConstraint object at 0x0000028DA74BB6D8>, <pyomo.core.base.constraint.SimpleConstraint object at 0x0000028DA74BB748>], [<pyomo.core.base.var.SimpleVar object at 0x0000028DA74BB4A8>, <pyomo.core.base.var.SimpleVar object at 0x0000028DA74BB518>])}
+    {0: ([<pyomo.core.base.constraint.ScalarConstraint object at 0x0000028DA74BB588>, <pyomo.core.base.constraint.ScalarConstraint object at 0x0000028DA74BB5F8>], [<pyomo.core.base.var.ScalarVar object at 0x0000028DA74BB3C8>, <pyomo.core.base.var.ScalarVar object at 0x0000028DA74BB438>]), 1: ([<pyomo.core.base.constraint.ScalarConstraint object at 0x0000028DA74BB668>, <pyomo.core.base.constraint.ScalarConstraint object at 0x0000028DA74BB6D8>, <pyomo.core.base.constraint.ScalarConstraint object at 0x0000028DA74BB748>], [<pyomo.core.base.var.ScalarVar object at 0x0000028DA74BB4A8>, <pyomo.core.base.var.ScalarVar object at 0x0000028DA74BB518>])}
 
 `generate_structured_model` method of CommunityMap objects
     It may be useful to create a new model based on the communities found in the model - we can use the

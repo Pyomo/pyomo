@@ -22,5 +22,4 @@ from .fileutils import (
 from . import config, dependencies, timing
 from .deprecation import deprecated
 from .errors import DeveloperError
-from ._task import pyomo_api, PyomoAPIData, PyomoAPIFactory
 from ._command import pyomo_command, get_pyomo_commands

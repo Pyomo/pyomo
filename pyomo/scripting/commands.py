@@ -20,7 +20,7 @@ import pyomo.scripting.pyomo_parser
 @pyomo_command('pyomo_python', "Launch script using Pyomo's python installation")
 @deprecated(
     msg="The 'pyomo_python' command has been deprecated and will be removed",
-    version="TBD",
+    version="6.0",
 )
 def pyomo_python(args=None):
     if args is None:

@@ -541,7 +541,7 @@ def check_targets_cannot_be_cuids(self, transformation):
         r"\tFailed casting \[disjunction\]\n"
         r"\tto target_list\n"
         r"\tError: Expected Component or list of Components."
-        r"\n\tRecieved %s" % type(ComponentUID(m.disjunction)),
+        r"\n\tReceived %s" % type(ComponentUID(m.disjunction)),
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m,
         targets=[ComponentUID(m.disjunction)])
@@ -1216,7 +1216,7 @@ def check_silly_target(self, transformation):
         GDP_Error,
         r"Target 'd\[1\].c1' was not a Block, Disjunct, or Disjunction. "
         r"It was of type "
-        r"<class 'pyomo.core.base.constraint.SimpleConstraint'> and "
+        r"<class 'pyomo.core.base.constraint.ScalarConstraint'> and "
         r"can't be transformed.",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m,

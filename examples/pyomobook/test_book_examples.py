@@ -216,7 +216,8 @@ def filter(line):
                    'function calls',
                    'List reduced',
                    '.py:',
-                   'built-in method'):
+                   'built-in method',
+                   '{method'):
         if field in line:
             return True
     return False

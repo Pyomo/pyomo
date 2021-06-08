@@ -107,15 +107,11 @@ _import_packages()
 #
 from pyomo.dataportal import DataPortal
 import pyomo.core.kernel
-import pyomo.core.base._pyomo
 from pyomo.common.collections import ComponentMap
 import pyomo.core.base.indexed_component
-import pyomo.core.base._pyomo
-from six import iterkeys, iteritems
 import pyomo.core.base.util
-from pyomo.core import expr, base, beta, kernel, plugins, preprocess
+from pyomo.core import expr, base, beta, kernel, plugins
 from pyomo.core.base import util
-import pyomo.core.preprocess
 
 from pyomo.core import (numvalue, numeric_expr, boolean_value,
                              current, symbol_map, sympy_tools, 
@@ -139,8 +135,8 @@ from pyomo.core import (numvalue, numeric_expr, boolean_value,
                              AlphaNumericTextLabeler, NameLabeler, ShortNameLabeler, 
                              name, Component, ComponentUID, BuildAction, 
                              BuildCheck, Set, SetOf, simple_set_rule, RangeSet,
-                             Param, Var, VarList, SimpleVar, 
-                             BooleanVar, BooleanVarList, SimpleBooleanVar, 
+                             Param, Var, VarList, ScalarVar,
+                             BooleanVar, BooleanVarList, ScalarBooleanVar,
                              logical_expr, simple_constraint_rule,
                              simple_constraintlist_rule, ConstraintList,
                              Constraint, LogicalConstraint, 
@@ -157,26 +153,11 @@ from pyomo.core import (numvalue, numeric_expr, boolean_value,
                              Boolean, Binary, Any, AnyWithNone, EmptySet,
                              UnitInterval, PercentFraction, RealInterval,
                              IntegerInterval, display, SortComponents,
-                             TraversalStrategy, Block, SimpleBlock,
+                             TraversalStrategy, Block, ScalarBlock,
                              active_components, components, 
                              active_components_data, components_data, 
                              global_option, Model, ConcreteModel,
-                             AbstractModel, pyomo_callback,
-                             IPyomoExpression, ExpressionFactory,
-                             ExpressionRegistration, IPyomoPresolver,
-                             IPyomoPresolveAction,
-                             IParamRepresentation,
-                             ParamRepresentationFactory,
-                             IPyomoScriptPreprocess,
-                             IPyomoScriptCreateModel,
-                             IPyomoScriptCreateDataPortal,
-                             IPyomoScriptModifyInstance,
-                             IPyomoScriptPrintModel,
-                             IPyomoScriptPrintInstance,
-                             IPyomoScriptSaveInstance,
-                             IPyomoScriptPrintResults,
-                             IPyomoScriptSaveResults,
-                             IPyomoScriptPostprocess,
+                             AbstractModel,
                              ModelComponentFactory, Transformation,
                              TransformationFactory, instance2dat, 
                              set_options, RealSet, IntegerSet, BooleanSet,

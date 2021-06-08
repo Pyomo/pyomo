@@ -9,8 +9,10 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.deprecation import deprecated
-from pyomo.common.plugin import Plugin, implements
-from pyomo.core import IPyomoScriptModifyInstance, TransformationFactory
+from pyomo.scripting.interface import (
+    Plugin, implements, IPyomoScriptModifyInstance,
+)
+from pyomo.core import TransformationFactory
 
 # This import ensures that gdp.bigm is registered, even if pyomo.environ
 # was never imported.
@@ -20,7 +22,7 @@ import pyomo.gdp.plugins.bigm
             'Use BuildActions or the --transform option.',
             version='5.4')
 class BigM_Transformation_PyomoScript_Plugin(Plugin):
-
+    __singleton__ = True
     implements(IPyomoScriptModifyInstance, service=True)
 
     def apply(self, **kwds):
@@ -30,6 +32,3 @@ class BigM_Transformation_PyomoScript_Plugin(Plugin):
         model = kwds.pop('model', None)
         xform = TransformationFactory('gdp.bigm')
         return xform.apply_to(instance, **kwds)
-
-
-transform = BigM_Transformation_PyomoScript_Plugin()

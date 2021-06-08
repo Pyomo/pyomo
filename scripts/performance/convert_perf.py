@@ -19,7 +19,7 @@ except:
 import sys
 import argparse
 import re
-import pyutilib.subprocess
+import subprocess
 
 ## TIMEOUT LOGIC
 from functools import wraps
@@ -147,8 +147,9 @@ def run_pyomo(code, format_, problem, verbose, cwd=None):
             os.chdir(cwd)
         if verbose:
             print("Command: %s" % cmd)
-        res = pyutilib.subprocess.run(cmd, outfile='pyomo.out', verbose=verbose)
-        if res[0] != 0:
+        with open('pyomo.out', 'w') as f:
+            res = subprocess.run(cmd, stdout=f, stderr=f)
+        if res.returncode != 0:
             print("Aborting performance testing!")
             sys.exit(1)
 
@@ -175,9 +176,10 @@ def run_script(code, format_, problem, verbose, cwd=None):
             print("Command: %s" % cmd)
         _cwd = os.getcwd()
         os.chdir(cwd)
-        res = pyutilib.subprocess.run(cmd, outfile='pyomo.out', verbose=verbose)
+        with open('pyomo.out', 'w') as f:
+            res = subprocess.run(cmd, stdout=f, stderr=f)
         os.chdir(_cwd)
-        if res[0] != 0:
+        if res.returncode != 0:
             print("Aborting performance testing!")
             sys.exit(1)
 
