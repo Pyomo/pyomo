@@ -457,7 +457,7 @@ For this example, we obtain the following price of robustness results:
 +------------------------------------------+------------------------------+-----------------------------+
 |   0.30                                   | 43,478,190.92                | 17.57 %                     |
 +------------------------------------------+------------------------------+-----------------------------+
-|   0.40                                   | ``robust_infeasible``        | -------                     |
+|   0.40                                   | ``robust_infeasible``        | :math:`\text{-----}`        |
 +------------------------------------------+------------------------------+-----------------------------+
 
 Note how, in the case of the last uncertainty set, we were able to utilize PyROS to show the robust infeasibility of the problem.
