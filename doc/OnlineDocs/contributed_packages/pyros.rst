@@ -345,6 +345,29 @@ PyROS requires the user to supply one local and one global NLP solver to be used
 
 The final step in solving a model with PyROS is to designate the remaining required inputs, namely ``first_stage_variables`` and ``second_stage_variables``. Below, we present two separate cases.
 
+PyROS Termination Conditions
+"""""""""""""""""""""""""""""
+
+PyROS will return one of six termination conditions upon completion. These termination conditions are tabulated below.
+
+.. tabularcolumns:: |c|c|c|
+
++---------------------------------------------------+----------------------------------------------------------------+
+|  **Termination Condition**                        | **Description**                                                |
++---------------------------------------------------+----------------------------------------------------------------+
+|   ``grcsTerminationCondition.robust_optimal``     |  The final solution is robust optimal                          |
++---------------------------------------------------+----------------------------------------------------------------+
+|   ``grcsTerminationCondition.robust_feasible``    |  The final solution is robust feasible                         |
++---------------------------------------------------+----------------------------------------------------------------+
+|   ``grcsTerminationCondition.robust_infeasible``  |  The posed problem is robust infeasible                        |
++---------------------------------------------------+----------------------------------------------------------------+
+|   ``grcsTerminationCondition.max_iter``           |  Maximum number of GRCS iteration reached                      |
++---------------------------------------------------+----------------------------------------------------------------+
+|   ``grcsTerminationCondition.time_out``           |  Maximum number of time reached                                |
++---------------------------------------------------+----------------------------------------------------------------+
+|   ``grcsTerminationCondition.subsolver_error``    |  Unacceptable return status(es) from a user-supplied sub-solver|
++---------------------------------------------------+----------------------------------------------------------------+
+
 A Single-Stage Problem
 """""""""""""""""""""""""
 If we choose to designate all variables as either design or state variables, without any control variables (i.e., all degrees of freedom are first-stage), we can use PyROS to solve the single-stage problem as shown below. In particular, let us instruct PyROS that variables ``m.x1`` through ``m.x6``, ``m.x19`` through ``m.x24``, and ``m.x31`` correspond to first-stage degrees of freedom.
@@ -373,6 +396,7 @@ If we choose to designate all variables as either design or state variables, wit
   >>> # === Print results ===
   >>> single_stage_final_objective = pyo.value(results_1.final_objective_value)
   >>> print("\n Final objective value: %s" % single_stage_final_objective)
+  >>> print("PyROS termination condition: %s" % results_1.grcs_termination_condition)
 
 The above code yields: "Final objective value: 48,349,406.72"
 
@@ -440,7 +464,11 @@ We can then loop through this array and call PyROS within a loop to identify rob
                                           "solve_master_globally": True,
                                           "decision_rule_order": 1
                                        })
-      ... robust_optimal_objectives.append(results.final_objective_value)
+      ... if results.grcs_termination_condition != pyros.grcsTerminationCondition.robust_optimal:
+      ...   print("This instance didn't solve to robust optimality.")
+      ...   robust_optimal_objective.append("-----")
+      ... else:
+      ...   robust_optimal_objectives.append(str(results.final_objective_value))
 
 For this example, we obtain the following price of robustness results:
 
@@ -461,34 +489,6 @@ For this example, we obtain the following price of robustness results:
 +------------------------------------------+------------------------------+-----------------------------+
 
 Note how, in the case of the last uncertainty set, we were able to utilize PyROS to show the robust infeasibility of the problem.
-
-..
-    .. list-table::
-       :widths: 10 10 10
-       :header-rows: 1
-       :align: center
-
-       * - Uncertainty Set Size (+/-) :sup:`o`
-         - Robust Optimal Objective
-         - % Increase :sup:`x`
-       * - 0.00
-         - 35,837,659.18
-         - 0.00 %
-       * - 0.05
-         - 35,986,085.98
-         - 0.41 %
-       * - 0.10
-         - 36,135,191.59
-         - 0.82 %
-       * - 0.15
-         - 36,285,254.72
-         - 1.23 %
-       * - 0.20
-         - 36,437,979.81
-         - 1.64 %
-       * - 0.25
-         - 37,946,802.00
-         - 5.55 %
 
 :sup:`o` **Relative Deviation from Nominal Realization**
 
