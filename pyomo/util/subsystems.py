@@ -34,11 +34,11 @@ def create_subsystem_block(constraints, variables=None, include_fixed=False):
             if var not in var_set:
                 input_vars.append(var)
                 var_set.add(var)
-    block.input_vars = Reference(other_vars)
+    block.input_vars = Reference(input_vars)
     return block
 
 
-class SubsystemManager(object):
+class TemporarySubsystemManager(object):
     """ This class is a context manager for cases when we want to
     temporarily fix or deactivate certain variables or constraints
     in order to perform some solve or calculation with the resulting
@@ -48,21 +48,27 @@ class SubsystemManager(object):
     and do not restore values of variables fixed. This could change.
     """
 
-    def __init__(self, to_fix=None, to_deactivate=None):
-        if to_fix == None:
+    def __init__(self, to_fix=None, to_deactivate=None, to_reset=None):
+        if to_fix is None:
             to_fix = []
-        if to_deactivate == None:
+        if to_deactivate is None:
             to_deactivate = []
+        if to_reset is None:
+            to_reset = []
         self._vars_to_fix = to_fix
         self._cons_to_deactivate = to_deactivate
+        self._comps_to_set = to_reset
         self._var_was_fixed = None
         self._con_was_active = None
+        self._comp_original_value = None
 
     def __enter__(self):
         to_fix = self._vars_to_fix
         to_deactivate = self._cons_to_deactivate
+        to_set = self._comps_to_set
         self._var_was_fixed = [(var, var.fixed) for var in to_fix]
         self._con_was_active = [(con, con.active) for con in to_deactivate]
+        self._comp_original_value = [(comp, comp.value) for comp in to_set]
 
         for var in self._vars_to_fix:
             var.fix()
@@ -78,69 +84,12 @@ class SubsystemManager(object):
                 var.unfix()
         for con, was_active in self._con_was_active:
             if was_active:
-                var.activate()
-
-"""
-Could iterate over a param sweeper object, or could iterate over
-parameters, and create a new context for each...
-
-subsystem = SubsystemManager(to_fix, to_deactivate)
-param_sweep = ParamSweeper(
-    inputs=ComponentMap([(var, vals) for var, vals in input_data),
-    outputs=ComponentMap([(var, vals) for var, vals in output_data),
-    n_scenario=n_scenario,
-    )
-with subsystem:
-    with param_sweep:
-        for inputs, outputs in param_sweep:
-            solver.solve(block)
-            for var, val in outputs.items():
-                assert var.value == val
-
--------
-versus:
--------
-
-input_data = [
-    ComponentMap([(var, vals[i]) for var, vals in input_data])
-    for i in range(n_scenario)
-    ]
-output_data = [
-    ComponentMap([(var, vals[i]) for var, vals in output_data])
-    for i in range(n_scenario)
-    ]
-subsystem = SubsystemManager(to_fix, to_deactivate)
-with subsystem:
-    for inputs, outputs in zip(input_data, output_data):
-        with InputSetter(inputs):
-            solver.solve(block)
-            for var, val in outputs.items():
-                assert var.value == val
-
------------
-Comparison:
------------
-Former:
-    - data format of inputs and outputs that user has to deal with
-      is more intuitive. Dict of lists rather than list of dicts.
-      => keys (components) are only stored once.
-    - Can naturally combine the two context managers
-    - Could we avoid iteration if n_scenario == 1?
-    ^ The more I think about it, the more I think the base
-    SubsystemManager should support setting and restoring values.
-    This would special handling of the n == 1 case less important.
-
-Latter:
-    - Context manager is less opaque. Avoids iterating over context
-      manager, which may be confusing.
-    - But combining with the "subsystem" manager would repeat the
-      fixing/deactivating work.
-    - More natural if we only have one set of inputs we want to test;
-      don't need to iterate in this case.
-"""
+                con.activate()
+        for comp, val in self._comp_original_value:
+            comp.set_value(val)
 
 
-class ParamSweeper(SubsystemManager):
+class ParamSweeper(TemporarySubsystemManager):
     """ This class enables setting values of variables/parameters
     according to a provided sequence. Iterating over this object
     sets values to the next in the sequence, at which point a
@@ -154,6 +103,7 @@ class ParamSweeper(SubsystemManager):
             output_values=None,
             to_fix=None,
             to_deactivate=None,
+            to_reset=None,
             ):
         """
         Parameters
@@ -173,32 +123,16 @@ class ParamSweeper(SubsystemManager):
         self.initial_state_values = None
         self._ip = -1 # Index pointer for iteration
 
+        if to_reset is None:
+            to_reset = [var for var in input_values]
+        else:
+            to_reset.extend(var for var in input_values)
+
         super(ParamSweeper, self).__init__(
                 to_fix=to_fix,
                 to_deactivate=to_deactivate,
+                to_reset=to_reset,
                 )
-
-    def __enter__(self):
-        # Store initial values of input vars
-        self.initial_input_values = ComponentMap([
-            (var, var.value) for var in self.input_values
-            ])
-
-        # TODO: Maybe alter the values of the inputs here?
-        # Or this could be handled by the call to super.__enter__
-        # if I expand the base class's functionality
-
-        # Fix and deactivate if necessary
-        return super(ParamSweeper, self).__enter__()
-
-    def __exit__(self, ex_type, ex_val, ex_bt):
-        # I don't think order should matter here.
-        res = super(ParamSweeper, self).__exit__(ex_type, ex_val, ex_bt)
-        
-        for var, val in self.initial_input_values.items():
-            var.set_value(val)
-
-        return res
 
     def __iter__(self):
         return self
