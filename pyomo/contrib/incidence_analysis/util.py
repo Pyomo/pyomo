@@ -73,7 +73,7 @@ def solve_strongly_connected_components(block, solver=None, solve_kwds=None):
     solver: The solver object that will be used to solve strongly connected
             components of size greater than one constraint. Must implement
             a solve method.
-    solver_kwds: Keyword arguments for the solver's solve method
+    solve_kwds: Keyword arguments for the solver's solve method
 
     """
     if solve_kwds is None:
