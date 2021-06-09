@@ -247,6 +247,10 @@ class TestGenerateSCC(unittest.TestCase):
                 self.assertGreater(t_scc_map[t], scc)
                 scc = t_scc_map[t]
 
+            self.assertFalse(m.flow_out[t].fixed)
+            self.assertFalse(m.dhdt[t].fixed)
+            self.assertTrue(m.flow_in[t].fixed)
+
     def test_dynamic_backward_disc_without_initial_conditions(self):
         nfe = 5
         m = make_dynamic_model(nfe=nfe, scheme="BACKWARD")
@@ -292,6 +296,16 @@ class TestGenerateSCC(unittest.TestCase):
             for var in block.input_vars[:]:
                 self.assertIn(var, other_var_set)
                 self.assertTrue(var.fixed)
+
+        for t in time:
+            if t == t0:
+                self.assertTrue(m.height[t].fixed)
+                self.assertTrue(m.flow_out[t].fixed)
+                self.assertTrue(m.dhdt[t].fixed)
+            else:
+                self.assertFalse(m.height[t].fixed)
+                self.assertFalse(m.flow_out[t].fixed)
+                self.assertFalse(m.dhdt[t].fixed)
 
     def test_dynamic_forward_disc(self):
         nfe = 5
@@ -351,6 +365,15 @@ class TestSolveSCC(unittest.TestCase):
                 "An external solver is required*"):
             solve_strongly_connected_components(m)
 
+        for t in time:
+            if t == t0:
+                self.assertTrue(m.height[t].fixed)
+            else:
+                self.assertFalse(m.height[t].fixed)
+            self.assertFalse(m.flow_out[t].fixed)
+            self.assertFalse(m.dhdt[t].fixed)
+            self.assertTrue(m.flow_in[t].fixed)
+
     @unittest.skipUnless(pyo.SolverFactory("ipopt").available(),
             "IPOPT is not available")
     def test_dynamic_backward(self):
@@ -374,6 +397,15 @@ class TestSolveSCC(unittest.TestCase):
             self.assertAlmostEqual(pyo.value(con.body), pyo.value(con.upper),
                     delta=1e-7)
 
+        for t in time:
+            if t == t0:
+                self.assertTrue(m.height[t].fixed)
+            else:
+                self.assertFalse(m.height[t].fixed)
+            self.assertFalse(m.flow_out[t].fixed)
+            self.assertFalse(m.dhdt[t].fixed)
+            self.assertTrue(m.flow_in[t].fixed)
+
     def test_dynamic_forward(self):
         nfe = 5
         m = make_dynamic_model(nfe=nfe, scheme="FORWARD")
@@ -391,6 +423,15 @@ class TestSolveSCC(unittest.TestCase):
             # Assert that the constraint is satisfied within tolerance
             self.assertAlmostEqual(pyo.value(con.body), pyo.value(con.upper),
                     delta=1e-7)
+
+        for t in time:
+            if t == t0:
+                self.assertTrue(m.height[t].fixed)
+            else:
+                self.assertFalse(m.height[t].fixed)
+            self.assertFalse(m.flow_out[t].fixed)
+            self.assertFalse(m.dhdt[t].fixed)
+            self.assertTrue(m.flow_in[t].fixed)
 
 
 if __name__ == "__main__":
