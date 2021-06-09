@@ -165,6 +165,7 @@ class TestSubsystemBlock(unittest.TestCase):
             self.assertTrue(all(var.fixed for var in block.input_vars[:]))
             self.assertFalse(any(var.fixed for var in block.vars[:]))
 
+        # Test that we have properly unfixed variables
         self.assertFalse(any(var.fixed for var in
             m.component_data_objects(pyo.Var)))
 
@@ -194,7 +195,9 @@ class TestSubsystemBlock(unittest.TestCase):
                     all(var in input_set for var in block.input_vars[:]))
             self.assertTrue(all(var.fixed for var in block.input_vars[:]))
             self.assertFalse(any(var.fixed for var in block.vars[:]))
-
+        
+        # Test that we have properly unfixed variables, except variables
+        # that were already fixed.
         self.assertFalse(m.v1.fixed)
         self.assertFalse(m.v2.fixed)
         self.assertFalse(m.v3.fixed)

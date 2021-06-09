@@ -61,6 +61,9 @@ def generate_subsystem_blocks(subsystems, include_fixed=False, fix_inputs=True):
         if fix_inputs:
             to_fix = list(block.input_vars[:])
             with TemporarySubsystemManager(to_fix=to_fix):
+                # On enter, we fix the "inputs" of the subsystem. When
+                # control returns to this code (iterator advance), we
+                # exit this context, and inputs are unfixed.
                 yield block
         else:
             yield block
