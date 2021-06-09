@@ -58,7 +58,7 @@ def generate_strongly_connected_components(
         yield block
 
 
-def solve_strongly_connected_components(block, solver=None, solver_kwds=None):
+def solve_strongly_connected_components(block, solver=None, solve_kwds=None):
     """ This function solves a square block of variables and equality
     constraints by solving strongly connected components individually.
     Strongly connected components (of the directed graph of constraints
@@ -76,8 +76,8 @@ def solve_strongly_connected_components(block, solver=None, solver_kwds=None):
     solver_kwds: Keyword arguments for the solver's solve method
 
     """
-    if solver_kwds is None:
-        solver_kwds = {}
+    if solve_kwds is None:
+        solve_kwds = {}
 
     for scc in generate_strongly_connected_components(block):
         if len(scc.vars) == 1:
@@ -87,12 +87,12 @@ def solve_strongly_connected_components(block, solver=None, solver_kwds=None):
                 # NOTE: Use local name to avoid slow generation of this
                 # error message if a user provides a large, non-decomposable
                 # block with no solver.
-                vars = [var.local_name for var in scc.vars]
-                cons = [con.local_name for con in scc.cons]
+                vars = [var.local_name for var in scc.vars.values()]
+                cons = [con.local_name for con in scc.cons.values()]
                 raise RuntimeError(
                     "An external solver is required if block has strongly\n"
-                    "connected components of size greater than one (is not\n"
-                    "a DAG). Got an SCC with components: \n%s\n%s"
+                    "connected components of size greater than one (is not "
+                    "a DAG).\nGot an SCC with components: \n%s\n%s"
                     % (vars, cons)
                     )
-            solver.solve(scc, **solver_kwds)
+            solver.solve(scc, **solve_kwds)
