@@ -337,5 +337,61 @@ class TestGenerateSCC(unittest.TestCase):
                 self.assertIs(block.cons[0], m.dhdt_disc_eq[t])
 
 
+class TestSolveSCC(unittest.TestCase):
+
+    def test_dynamic_backward_no_solver(self):
+        nfe = 5
+        m = make_dynamic_model(nfe=nfe, scheme="BACKWARD")
+        time = m.time
+        t0 = time.first()
+        m.flow_in.fix()
+        m.height[t0].fix()
+
+        with self.assertRaisesRegex(RuntimeError,
+                "An external solver is required*"):
+            solve_strongly_connected_components(m)
+
+    @unittest.skipUnless(pyo.SolverFactory("ipopt").available(),
+            "IPOPT is not available")
+    def test_dynamic_backward(self):
+        nfe = 5
+        m = make_dynamic_model(nfe=nfe, scheme="BACKWARD")
+        time = m.time
+        t0 = time.first()
+        m.flow_in.fix()
+        m.height[t0].fix()
+
+        solver = pyo.SolverFactory("ipopt")
+        solve_kwds = {"tee": True} # Not that this matters here...
+        solve_strongly_connected_components(m, solver=solver,
+                solve_kwds=solve_kwds)
+
+        for con in m.component_data_objects(pyo.Constraint):
+            # Sanity check that this is an equality constraint...
+            self.assertEqual(pyo.value(con.upper), pyo.value(con.lower))
+
+            # Assert that the constraint is satisfied within tolerance
+            self.assertAlmostEqual(pyo.value(con.body), pyo.value(con.upper),
+                    delta=1e-7)
+
+    def test_dynamic_forward(self):
+        nfe = 5
+        m = make_dynamic_model(nfe=nfe, scheme="FORWARD")
+        time = m.time
+        t0 = time.first()
+        m.flow_in.fix()
+        m.height[t0].fix()
+
+        solve_strongly_connected_components(m)
+
+        for con in m.component_data_objects(pyo.Constraint):
+            # Sanity check that this is an equality constraint...
+            self.assertEqual(pyo.value(con.upper), pyo.value(con.lower))
+
+            # Assert that the constraint is satisfied within tolerance
+            self.assertAlmostEqual(pyo.value(con.body), pyo.value(con.upper),
+                    delta=1e-7)
+
+
 if __name__ == "__main__":
     unittest.main()
