@@ -105,6 +105,8 @@ def make_dynamic_model(**disc_args):
 
 class TestGenerateSCC(unittest.TestCase):
 
+    @unittest.skipUnless(scipy_available, "SciPy is not available")
+    @unittest.skipUnless(networkx_available, "NetworkX is not available")
     def test_gas_expansion(self):
         N = 5
         m = make_gas_expansion_model(N)
@@ -171,6 +173,8 @@ class TestGenerateSCC(unittest.TestCase):
                 for var in block.input_vars[:]:
                     self.assertIn(var, other_var_set)
 
+    @unittest.skipUnless(scipy_available, "SciPy is not available")
+    @unittest.skipUnless(networkx_available, "NetworkX is not available")
     def test_dynamic_backward_disc_with_initial_conditions(self):
         nfe = 5
         m = make_dynamic_model(nfe=nfe, scheme="BACKWARD")
@@ -242,6 +246,8 @@ class TestGenerateSCC(unittest.TestCase):
             self.assertFalse(m.dhdt[t].fixed)
             self.assertTrue(m.flow_in[t].fixed)
 
+    @unittest.skipUnless(scipy_available, "SciPy is not available")
+    @unittest.skipUnless(networkx_available, "NetworkX is not available")
     def test_dynamic_backward_disc_without_initial_conditions(self):
         nfe = 5
         m = make_dynamic_model(nfe=nfe, scheme="BACKWARD")
@@ -298,6 +304,8 @@ class TestGenerateSCC(unittest.TestCase):
                 self.assertFalse(m.flow_out[t].fixed)
                 self.assertFalse(m.dhdt[t].fixed)
 
+    @unittest.skipUnless(scipy_available, "SciPy is not available")
+    @unittest.skipUnless(networkx_available, "NetworkX is not available")
     def test_dynamic_forward_disc(self):
         nfe = 5
         m = make_dynamic_model(nfe=nfe, scheme="FORWARD")
@@ -344,6 +352,8 @@ class TestGenerateSCC(unittest.TestCase):
 
 class TestSolveSCC(unittest.TestCase):
 
+    @unittest.skipUnless(scipy_available, "SciPy is not available")
+    @unittest.skipUnless(networkx_available, "NetworkX is not available")
     def test_dynamic_backward_no_solver(self):
         nfe = 5
         m = make_dynamic_model(nfe=nfe, scheme="BACKWARD")
@@ -365,6 +375,8 @@ class TestSolveSCC(unittest.TestCase):
             self.assertFalse(m.dhdt[t].fixed)
             self.assertTrue(m.flow_in[t].fixed)
 
+    @unittest.skipUnless(scipy_available, "SciPy is not available")
+    @unittest.skipUnless(networkx_available, "NetworkX is not available")
     @unittest.skipUnless(pyo.SolverFactory("ipopt").available(),
             "IPOPT is not available")
     def test_dynamic_backward(self):
@@ -397,6 +409,8 @@ class TestSolveSCC(unittest.TestCase):
             self.assertFalse(m.dhdt[t].fixed)
             self.assertTrue(m.flow_in[t].fixed)
 
+    @unittest.skipUnless(scipy_available, "SciPy is not available")
+    @unittest.skipUnless(networkx_available, "NetworkX is not available")
     def test_dynamic_forward(self):
         nfe = 5
         m = make_dynamic_model(nfe=nfe, scheme="FORWARD")
