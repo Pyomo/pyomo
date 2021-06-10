@@ -177,6 +177,17 @@ class TestGetHessianOfConstraint(unittest.TestCase):
         hess_array = hess.toarray()
         np.testing.assert_allclose(expected_hess_array, hess_array, rtol=1e-8)
 
+    def test_unused_variable(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.0)
+        m.y = pyo.Var(initialize=1.0)
+        m.z = pyo.Var(initialize=1.0)
+        m.eqn = pyo.Constraint(expr=m.x**2 + m.y**2 == 1.0)
+        variables = [m.x, m.y, m.z]
+        expected_hess = np.array([[2, 0, 0], [0, 2, 0], [0, 0, 0]])
+        hess = get_hessian_of_constraint(m.eqn, wrt=variables).toarray()
+        np.testing.assert_allclose(hess, expected_hess, rtol=1e-8)
+
 
 class TestExternalPyomoModel(unittest.TestCase):
 
