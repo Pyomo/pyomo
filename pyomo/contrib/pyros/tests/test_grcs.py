@@ -419,6 +419,18 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
                          msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
                              " variable expression.")
 
+    def test_point_in_set(self):
+        m = ConcreteModel()
+        m.p1 = Param(initialize=0, mutable=True)
+        m.p2 = Param(initialize=0, mutable=True)
+        m.uncertain_params = [m.p1, m.p2]
+        m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
+        cov = [[1, 0], [0, 1]]
+        s = 1
+
+        set = EllipsoidalSet(center=[0, 0], shape_matrix=cov, scale=s)
+        self.assertTrue(set.point_in_set(m.uncertain_param_vars, [0,0]), msg="Point is not in the EllipsoidalSet.")
+
 class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
     '''
     Axis aligned ellipsoidal uncertainty sets. Required inputs are half-lengths, nominal point, and right-hand side.
@@ -466,6 +478,16 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
         self.assertEqual(len(variables_in_constr), 0,
                          msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
                              " variable expression.")
+
+    def test_point_in_set(self):
+        m = ConcreteModel()
+        m.p1 = Param(initialize=0, mutable=True)
+        m.p2 = Param(initialize=0, mutable=True)
+        m.uncertain_params = [m.p1, m.p2]
+        m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
+        set = AxisAlignedEllipsoidalSet(center=[0, 0], half_lengths=[2, 1])
+        self.assertTrue(set.point_in_set(m.uncertain_param_vars, [0, 0]),
+                        msg="Point is not in the AxisAlignedEllipsoidalSet.")
 
 class testPolyhedralUncertaintySetClass(unittest.TestCase):
     '''
@@ -537,8 +559,8 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
         b = [0, 0]
 
         m = ConcreteModel()
-        m.p1 = Var(initialize=1)
-        m.p2 = Var(initialize=1)
+        m.p1 = Var(initialize=0)
+        m.p2 = Var(initialize=0)
 
         polyhedral_set = PolyhedralSet(lhs_coefficients_mat=A, rhs_vec=b)
         m.uncertainty_set_constr = polyhedral_set.set_as_constraint(uncertain_params=[m.p1, m.p2])
@@ -546,6 +568,19 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
         self.assertEqual(len(A), len(m.uncertainty_set_constr.index_set()),
                          msg="Polyhedral uncertainty set constraints must be as many as the"
                              "number of rows in the matrix A.")
+
+    def test_point_in_set(self):
+        A = [[1, 0], [0, 1]]
+        b = [0, 0]
+
+        m = ConcreteModel()
+        m.p1 = Var(initialize=0)
+        m.p2 = Var(initialize=0)
+        m.uncertain_params = [m.p1, m.p2]
+        m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
+        polyhedral_set = PolyhedralSet(lhs_coefficients_mat=A, rhs_vec=b)
+        self.assertTrue(polyhedral_set.point_in_set(m.uncertain_param_vars, [0, 0]),
+                        msg="Point is not in the PolyhedralSet.")
 
 class testBudgetUncertaintySetClass(unittest.TestCase):
     '''
@@ -635,6 +670,22 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
                          msg="Budget uncertainty set constraints must be as many as the"
                              "number of rows in the matrix A.")
 
+    def test_point_in_set(self):
+        m = ConcreteModel()
+        m.p1 = Var(initialize=0)
+        m.p2 = Var(initialize=0)
+        m.uncertain_params = [m.p1, m.p2]
+        m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
+
+        budget_membership_mat = [[1 for i in range(len(m.uncertain_params))]]
+        rhs_vec = [0.1 * len(m.uncertain_params) + sum(p.value for p in m.uncertain_params)]
+
+        budget_set = BudgetSet(budget_membership_mat=budget_membership_mat,
+                               rhs_vec=rhs_vec)
+        self.assertTrue(budget_set.point_in_set(m.uncertain_param_vars, [0, 0]),
+                        msg="Point is not in the BudgetSet.")
+
+
 class testCardinalityUncertaintySetClass(unittest.TestCase):
     '''
     Cardinality uncertainty sets. Required inputs are origin, positive_deviation, gamma.
@@ -709,6 +760,24 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
                              msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
                                  " variable expression.")
 
+
+    def test_point_in_set(self):
+        m = ConcreteModel()
+        m.p1 = Var(initialize=0)
+        m.p2 = Var(initialize=0)
+        m.uncertain_params = [m.p1, m.p2]
+        m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
+
+        center = list(p.value for p in m.uncertain_param_vars.values())
+        positive_deviation = list(0.3 for j in range(len(center)))
+        gamma = np.ceil(len(m.uncertain_param_vars) / 2)
+
+        set = CardinalitySet(origin=center,
+                             positive_deviation=positive_deviation, gamma=gamma)
+
+        self.assertTrue(set.point_in_set(m.uncertain_param_vars, [0, 0]),
+                        msg="Point is not in the CardinalitySet.")
+
 class testBoxUncertaintySetClass(unittest.TestCase):
     '''
     Box uncertainty sets. Required input is bounds list.
@@ -767,6 +836,18 @@ class testBoxUncertaintySetClass(unittest.TestCase):
                              msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
                                  " variable expression.")
 
+    def test_point_in_set(self):
+        m = ConcreteModel()
+        m.p1 = Var(initialize=0)
+        m.p2 = Var(initialize=0)
+        m.uncertain_params = [m.p1, m.p2]
+        m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
+
+        bounds = [(-1, 1), (-1, 1)]
+        set = BoxSet(bounds=bounds)
+        self.assertTrue(set.point_in_set(m.uncertain_param_vars, [0, 0]),
+                        msg="Point is not in the BoxSet.")
+
 class testDiscreteUncertaintySetClass(unittest.TestCase):
     '''
     Discrete uncertainty sets. Required inputis a scenarios list.
@@ -814,7 +895,6 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
         set = DiscreteSet(scenarios=scenarios)
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         vars_in_expr = []
-        vars_in_expr = []
         for con in m.uncertainty_set_contr.values():
             for v in m.uncertain_param_vars.values():
                 if id(v) in [id(u) for u in list(identify_variables(expr=con.expr))]:
@@ -825,6 +905,18 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
         self.assertEqual(len(vars_in_expr), 0,
                              msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
                                  " variable expression.")
+
+    def test_point_in_set(self):
+        m = ConcreteModel()
+        m.p1 = Var(initialize=0)
+        m.p2 = Var(initialize=0)
+        m.uncertain_params = [m.p1, m.p2]
+        m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
+
+        scenarios = [(0, 0), (1, 0), (0, 1), (1, 1), (2, 0)]
+        set = DiscreteSet(scenarios=scenarios)
+        self.assertTrue(set.point_in_set(m.uncertain_param_vars, [0, 0]),
+                        msg="Point is not in the DiscreteSet.")
 
 class testFactorModelUncertaintySetClass(unittest.TestCase):
     '''
@@ -898,6 +990,112 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
         self.assertEqual(len(vars_in_expr), 0,
                              msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
                                  " variable expression.")
+
+    def test_point_in_set(self):
+        m = ConcreteModel()
+        m.p1 = Var(initialize=0)
+        m.p2 = Var(initialize=0)
+        m.uncertain_params = [m.p1, m.p2]
+        m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
+
+        F = 1
+        psi_mat = np.zeros(shape=(len(m.uncertain_params), F))
+        for i in range(len(psi_mat)):
+            random_row_entries = list(np.random.uniform(low=0, high=0.2, size=F))
+            for j in range(len(psi_mat[i])):
+                psi_mat[i][j] = random_row_entries[j]
+        set = FactorModelSet(origin=[0, 0], psi_mat=psi_mat, number_of_factors=F, beta=1)
+        self.assertTrue(set.point_in_set(m.uncertain_param_vars, [0, 0]),
+                        msg="Point is not in the FactorModelSet.")
+
+class testIntersectionSetClass(unittest.TestCase):
+    '''
+    Intersection uncertainty sets. Required input is set objects to intersect, and set_as_constraint requires
+    a NLP solver to confirm the intersection is not empty.
+    '''
+
+    @unittest.skipUnless(SolverFactory('ipopt').available(exception_flag=False), "Local NLP solver is not available.")
+    def test_uncertainty_set_with_correct_params(self):
+        '''
+        Case in which the UncertaintySet is constructed using the uncertain_param objects from the model to
+        which the uncertainty set constraint is being added.
+        '''
+        m = ConcreteModel()
+        # At this stage, the separation problem has uncertain_params which are now Var objects
+        m.p1 = Var(initialize=0)
+        m.p2 = Var(initialize=0)
+        m.uncertain_params = [m.p1, m.p2]
+        m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
+        bounds = [(-1,1), (-1,1)]
+        Q1 = BoxSet(bounds=bounds)
+        Q2 = AxisAlignedEllipsoidalSet(center=[0, 0], half_lengths=[2, 1])
+        Q = IntersectionSet(Q1=Q1, Q2=Q2)
+
+        config = ConfigBlock()
+        solver = SolverFactory("ipopt")
+        config.declare("local_solver", ConfigValue(default=solver))
+
+        m.uncertainty_set_contr = Q.set_as_constraint(uncertain_params=m.uncertain_param_vars, config=config)
+        uncertain_params_in_expr = []
+        for con in m.uncertainty_set_contr.values():
+            for v in m.uncertain_param_vars.values():
+                if v in ComponentSet(identify_variables(expr=con.expr)):
+                    if id(v) not in list(id(u) for u in uncertain_params_in_expr):
+                        # Not using ID here leads to it thinking both are in the list already when they aren't
+                        uncertain_params_in_expr.append(v)
+
+        self.assertEqual([id(u) for u in uncertain_params_in_expr], [id(u) for u in m.uncertain_param_vars.values()],
+                          msg="Uncertain param Var objects used to construct uncertainty set constraint must"
+                              " be the same uncertain param Var objects in the original model.")
+
+    @unittest.skipUnless(SolverFactory('ipopt').available(exception_flag=False), "Local NLP solver is not available.")
+    def test_uncertainty_set_with_incorrect_params(self):
+        '''
+        Case in which the set is constructed using  uncertain_param objects which are Params instead of
+        Vars. Leads to a constraint this is not potentially variable.
+        '''
+        m = ConcreteModel()
+        # At this stage, the separation problem has uncertain_params which are now Var objects
+        m.p1 = Var(initialize=0)
+        m.p2 = Var(initialize=0)
+        m.uncertain_params = [m.p1, m.p2]
+        m.uncertain_param_vars = Param(range(len(m.uncertain_params)), initialize=0, mutable=True)
+        bounds = [(-1, 1), (-1, 1)]
+
+        Q1 = BoxSet(bounds=bounds)
+        Q2 = AxisAlignedEllipsoidalSet(center=[0, 0], half_lengths=[2, 1])
+        Q = IntersectionSet(Q1=Q1, Q2=Q2)
+
+        solver = SolverFactory("ipopt")
+        config = ConfigBlock()
+        config.declare("local_solver", ConfigValue(default=solver))
+
+        m.uncertainty_set_contr = Q.set_as_constraint(uncertain_params=m.uncertain_param_vars, config=config)
+        vars_in_expr = []
+        for con in m.uncertainty_set_contr.values():
+            for v in m.uncertain_param_vars.values():
+                if id(v) in [id(u) for u in list(identify_variables(expr=con.expr))]:
+                    if id(v) not in list(id(u) for u in vars_in_expr):
+                        # Not using ID here leads to it thinking both are in the list already when they aren't
+                        vars_in_expr.append(v)
+
+        self.assertEqual(len(vars_in_expr), 0,
+                             msg="Uncertainty set constraint contains no Var objects, consists of a not potentially"
+                                 " variable expression.")
+
+    def test_point_in_set(self):
+        m = ConcreteModel()
+        m.p1 = Var(initialize=0)
+        m.p2 = Var(initialize=0)
+        m.uncertain_params = [m.p1, m.p2]
+        m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
+
+        bounds = [(-1, 1), (-1, 1)]
+        Q1 = BoxSet(bounds=bounds)
+        Q2 = AxisAlignedEllipsoidalSet(center=[0, 0], half_lengths=[2, 1])
+        Q = IntersectionSet(Q1=Q1, Q2=Q2)
+        self.assertTrue(Q.point_in_set(m.uncertain_param_vars, [0, 0]),
+                        msg="Point is not in the IntersectionSet.")
 
 # === master_problem_methods.py
 class testInitialConstructMaster(unittest.TestCase):
@@ -985,7 +1183,7 @@ class testSolveMaster(unittest.TestCase):
 class RegressionTest(unittest.TestCase):
 
     @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False), "Global NLP solver is not available.")
-    def regression_test(self):
+    def regression_test_constant_drs(self):
         model = m = ConcreteModel()
         m.name = "s381"
 
@@ -1018,6 +1216,80 @@ class RegressionTest(unittest.TestCase):
                               options={"objective_focus":ObjectiveType.nominal})
         self.assertTrue(results.grcs_termination_condition,
                          grcsTerminationCondition.robust_feasible)
+
+        @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False),
+                             "Global NLP solver is not available.")
+        def regression_test_affine_drs(self):
+            model = m = ConcreteModel()
+            m.name = "s381"
+
+            m.x1 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+            m.x2 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+            m.x3 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+
+            # === State Vars = [x13]
+            # === Decision Vars ===
+            m.decision_vars = [m.x1, m.x2, m.x3]
+
+            # === Uncertain Params ===
+            m.set_params = Set(initialize=list(range(4)))
+            m.p = Param(m.set_params, initialize=2, mutable=True)
+            m.uncertain_params = [m.p]
+
+            m.obj = Objective(expr=(m.x1 - 1) * 2, sense=minimize)
+            m.con1 = Constraint(expr=m.p[1] * m.x1 + m.x2 + m.x3 <= 2)
+
+            box_set = BoxSet(bounds=[(1.8, 2.2)])
+            solver = SolverFactory("baron")
+            pyros = SolverFactory("pyros")
+            results = pyros.solve(model=m,
+                                  first_stage_variables=m.decision_vars,
+                                  second_stage_variables=[],
+                                  uncertain_params=[m.p[1]],
+                                  uncertainty_set=box_set,
+                                  local_solver=solver,
+                                  global_solver=solver,
+                                  options={"objective_focus": ObjectiveType.nominal,
+                                           "decision_rule_order":1})
+            self.assertTrue(results.grcs_termination_condition,
+                            grcsTerminationCondition.robust_feasible)
+
+        @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False),
+                             "Global NLP solver is not available.")
+        def regression_test_quad_drs(self):
+            model = m = ConcreteModel()
+            m.name = "s381"
+
+            m.x1 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+            m.x2 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+            m.x3 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+
+            # === State Vars = [x13]
+            # === Decision Vars ===
+            m.decision_vars = [m.x1, m.x2, m.x3]
+
+            # === Uncertain Params ===
+            m.set_params = Set(initialize=list(range(4)))
+            m.p = Param(m.set_params, initialize=2, mutable=True)
+            m.uncertain_params = [m.p]
+
+            m.obj = Objective(expr=(m.x1 - 1) * 2, sense=minimize)
+            m.con1 = Constraint(expr=m.p[1] * m.x1 + m.x2 + m.x3 <= 2)
+
+            box_set = BoxSet(bounds=[(1.8, 2.2)])
+            solver = SolverFactory("baron")
+            pyros = SolverFactory("pyros")
+            results = pyros.solve(model=m,
+                                  first_stage_variables=m.decision_vars,
+                                  second_stage_variables=[],
+                                  uncertain_params=[m.p[1]],
+                                  uncertainty_set=box_set,
+                                  local_solver=solver,
+                                  global_solver=solver,
+                                  options={"objective_focus": ObjectiveType.nominal,
+                                           "decision_rule_order": 2})
+            self.assertTrue(results.grcs_termination_condition,
+                            grcsTerminationCondition.robust_feasible)
 
 if __name__ == "__main__":
     unittest.main()

@@ -191,6 +191,7 @@ def ROSolver_iterative_solve(model_data, config):
             for varslist in master_data.master_model.scenarios[0,0].util.decision_rule_vars:
                 vals = []
                 for dvar in varslist.values():
+
                     vals.append(dvar.value)
                 dr_var_lists_polished.append(vals)
             #config.progress_logger.info("Done with Decision Rule Polishing.")

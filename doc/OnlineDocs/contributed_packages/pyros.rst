@@ -227,6 +227,7 @@ The deterministic Pyomo model for *hydro* is shown below.
 
   >>> # === Required import ===
   >>> import pyomo.environ as pyo
+  >>> pyo.Param.DefaultMutable = True
 
   >>> # === Construct the Pyomo model object ===
   >>> m = pyo.ConcreteModel()

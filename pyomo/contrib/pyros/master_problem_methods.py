@@ -163,7 +163,7 @@ def minimize_dr_vars(model_data, config):
 
     # === Solve the polishing model
     polish_soln = MasterResult()
-    solver = config.global_solver
+    solver = config.local_solver
 
     if not solver.available():
         raise RuntimeError("NLP solver %s is not available." %
