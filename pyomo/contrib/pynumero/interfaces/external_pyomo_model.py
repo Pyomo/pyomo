@@ -9,6 +9,8 @@
 #  ___________________________________________________________________________
 
 from pyomo.environ import SolverFactory
+from pyomo.core.base.var import Var
+from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.util.subsystems import (
@@ -24,15 +26,30 @@ import scipy.sparse as sps
 
 def get_hessian_of_constraint(constraint, wrt=None):
     variables = wrt
+    constraints = [constraint]
     if variables is None:
         variables = list(identify_variables(constraint.expr, include_fixed=False))
-    constraints = [constraint]
     block = create_subsystem_block(constraints, variables=variables)
+
+    # HUGE HACK: Variables not included in a constraint are not written
+    # to the nl file, so we cannot take the derivative with respect to
+    # them, even though we know this derivative is zero. To work around,
+    # we make sure all variables appear on the block in the form of a
+    # dummy constraint. Then we can take derivatives of any constraint
+    # with respect to them. Conveniently, the extract_submatrix_
+    # call deals with extracting the variables and constraint we care
+    # about, in the proper order.
+    block._dummy_var = Var()
+    block._dummy_con = Constraint(expr=sum(variables) == block._dummy_var)
     block._obj = Objective(expr=0.0)
     nlp = PyomoNLP(block)
+
     # NOTE: This makes some assumption about how the Lagrangian is constructed.
     # TODO: Define the convention we assume and convert if necessary.
-    nlp.set_duals([1.0])
+    duals = [0.0, 0.0]
+    idx = nlp.get_constraint_indices(constraints)[0]
+    duals[idx] = 1.0
+    nlp.set_duals(duals)
     return nlp.extract_submatrix_hessian_lag(variables, variables)
 
 
@@ -147,4 +164,17 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
           evaluate_hessian_lag
 
         """
-        raise NotImplementedError()
+        x = self.input_vars
+        y = self.external_vars
+        f = self.residual_cons
+        g = self.external_cons
+        jfx = nlp.extract_submatrix_jacobian(x, f)
+        jfy = nlp.extract_submatrix_jacobian(y, f)
+        jgx = nlp.extract_submatrix_jacobian(x, g)
+        jgy = nlp.extract_submatrix_jacobian(y, g)
+        dydx = -1 * sps.linalg.splu(jgy.tocsc()).solve(jgx.toarray())
+
+        hfx = [get_hessian_of_constraint(con, wrt=x) for con in f]
+        hfy = [get_hessian_of_constraint(con, wrt=y) for con in f]
+        hgx = [get_hessian_of_constraint(con, wrt=x) for con in g]
+        hgy = [get_hessian_of_constraint(con, wrt=y) for con in g]
