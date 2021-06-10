@@ -10,6 +10,7 @@
 
 from pyomo.environ import SolverFactory
 from pyomo.core.base.objective import Objective
+from pyomo.core.expr.visitor import identify_variables
 from pyomo.util.subsystems import (
         create_subsystem_block,
         TemporarySubsystemManager,
@@ -19,6 +20,20 @@ from pyomo.contrib.pynumero.interfaces.external_grey_box import (
         ExternalGreyBoxModel,
         )
 import scipy.sparse as sps
+
+
+def get_hessian_of_constraint(constraint, wrt=None):
+    variables = wrt
+    if variables is None:
+        variables = list(identify_variables(constraint.expr, include_fixed=False))
+    constraints = [constraint]
+    block = create_subsystem_block(constraints, variables=variables)
+    block._obj = Objective(expr=0.0)
+    nlp = PyomoNLP(block)
+    # NOTE: This makes some assumption about how the Lagrangian is constructed.
+    # TODO: Define the convention we assume and convert if necessary.
+    nlp.set_duals([1.0])
+    return nlp.extract_submatrix_hessian_lag(variables, variables)
 
 
 class ExternalPyomoModel(ExternalGreyBoxModel):
@@ -122,4 +137,14 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         return (jfx + jfy.dot(dydx))
 
     def evaluate_hessian_equality_constraints(self):
+        """
+        Getting the Hessian of an individual constraint:
+        - with PyomoNLP of entire model (no objective), set constraint
+          multiplier to 1, all other multipliers to 0, evaluate_hessian_lag,
+          reset multipliers
+        - Create a block that only contains the constraint I'm interested in,
+          create a PyomoNLP of that block, set multiplier to 1,
+          evaluate_hessian_lag
+
+        """
         raise NotImplementedError()
