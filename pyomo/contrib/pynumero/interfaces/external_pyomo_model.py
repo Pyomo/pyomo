@@ -167,19 +167,6 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         return (jfx + jfy.dot(dydx))
 
     def evaluate_hessian_external_variables(self):
-        raise NotImplementedError()
-
-    def evaluate_hessian_equality_constraints(self):
-        """
-        Getting the Hessian of an individual constraint:
-        - with PyomoNLP of entire model (no objective), set constraint
-          multiplier to 1, all other multipliers to 0, evaluate_hessian_lag,
-          reset multipliers
-        - Create a block that only contains the constraint I'm interested in,
-          create a PyomoNLP of that block, set multiplier to 1,
-          evaluate_hessian_lag
-
-        """
         x = self.input_vars
         y = self.external_vars
         f = self.residual_cons
@@ -218,3 +205,17 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         d2ydx2 = [-1 * sps.linalg.splu(jgy_csc).solve(term) for term in sum_]
         # TODO: This is a good stopping point. Make sure I am doing d2ydx2
         # calculations properly, then move on to d2fdx2.
+        return d2ydx2
+
+    def evaluate_hessian_equality_constraints(self):
+        """
+        Getting the Hessian of an individual constraint:
+        - with PyomoNLP of entire model (no objective), set constraint
+          multiplier to 1, all other multipliers to 0, evaluate_hessian_lag,
+          reset multipliers
+        - Create a block that only contains the constraint I'm interested in,
+          create a PyomoNLP of that block, set multiplier to 1,
+          evaluate_hessian_lag
+
+        """
+        d2ydx2 = self.evaluate_hessian_external_variables()
