@@ -167,6 +167,17 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         dydx = -1 * sps.linalg.splu(jgy.tocsc()).solve(jgx.toarray())
         return (jfx + jfy.dot(dydx))
 
+    def evaluate_jacobian_external_variables(self):
+        nlp = self._nlp
+        x = self.input_vars
+        y = self.external_vars
+        g = self.external_cons
+        jgx = nlp.extract_submatrix_jacobian(x, g)
+        jgy = nlp.extract_submatrix_jacobian(y, g)
+        jgy_csc = jgy.tocsc()
+        dydx = -1 * sps.linalg.splu(jgy_csc).solve(jgx.toarray())
+        return dydx
+
     def evaluate_hessian_external_variables(self):
         nlp = self._nlp
         x = self.input_vars
