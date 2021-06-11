@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import math
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 
@@ -67,6 +68,31 @@ class SimpleModel1(object):
 
     def evaluate_jacobian(self, x):
         return 2*x - 0.08/x**3
+
+
+class SimpleModel2(object):
+    """
+    The purpose of this model is to exercise each term in the computation
+    of the d2ydx2 Hessian.
+    """
+
+    def make_model(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=2.0)
+        m.y = pyo.Var(initialize=2.0)
+        m.residual_eqn = pyo.Constraint(expr=m.x**2 + m.y**2 == 1.0)
+        m.external_eqn = pyo.Constraint(expr=(m.x**3)*(m.y**3) == 0.2)
+        return m
+
+    def evaluate_external_variables(self, x):
+        return 0.2**(1/3)/x
+
+    def evaluate_external_jacobian(self, x):
+        return -(0.2**(1/3))/(x**2)
+
+    def evaluate_external_hessian(self, x):
+        return 2*0.2**(1/3)/(x**3)
+
 
 """
 Tests should cover:
@@ -260,6 +286,47 @@ class TestExternalPyomoModel(unittest.TestCase):
                     delta=1e-8,
                     )
 
+    def test_external_jacobian_SimpleModel2(self):
+        model = SimpleModel2()
+        m = model.make_model()
+        x_init_list = [
+                [-5.0], [-4.0], [-3.0], [-1.5], [0.5], [1.0], [2.0], [3.5]
+                ]
+        external_model = ExternalPyomoModel(
+                [m.x], [m.y], [m.residual_eqn], [m.external_eqn],
+                )
+
+        for x in x_init_list:
+            external_model.set_input_values(x)
+            jac = external_model.evaluate_jacobian_external_variables()
+            expected_jac = model.evaluate_external_jacobian(x[0])
+            self.assertAlmostEqual(
+                    jac[0,0],
+                    expected_jac,
+                    delta=1e-8,
+                    )
+
+    def test_external_hessian_SimpleModel2(self):
+        model = SimpleModel2()
+        m = model.make_model()
+        x_init_list = [
+                [-5.0], [-4.0], [-3.0], [-1.5], [0.5], [1.0], [2.0], [3.5]
+                ]
+        external_model = ExternalPyomoModel(
+                [m.x], [m.y], [m.residual_eqn], [m.external_eqn],
+                )
+
+        for x in x_init_list:
+            external_model.set_input_values(x)
+            hess = external_model.evaluate_hessian_external_variables()
+            expected_hess = model.evaluate_external_hessian(x[0])
+            self.assertAlmostEqual(
+                    hess[0][0,0],
+                    expected_hess,
+                    delta=1e-7,
+                    )
+
 
 if __name__ == '__main__':
     unittest.main()
+    #test = TestExternalPyomoModel()
