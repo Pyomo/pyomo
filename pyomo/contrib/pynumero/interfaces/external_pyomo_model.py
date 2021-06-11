@@ -24,12 +24,25 @@ from pyomo.contrib.pynumero.interfaces.external_grey_box import (
 import scipy.sparse as sps
 
 
-def get_hessian_of_constraint(constraint, wrt=None):
-    variables = wrt
+def get_hessian_of_constraint(constraint, wrt1=None, wrt2=None):
     constraints = [constraint]
-    if variables is None:
+    if wrt1 is None and wrt2 is None:
         variables = list(identify_variables(constraint.expr, include_fixed=False))
+        wrt1 = variables
+        wrt2 = variables
+    elif wrt1 is not None and wrt2 is not None:
+        variables = wrt1 + wrt2
+    elif wrt1 is not None: # but wrt2 is None
+        wrt2 = wrt1
+        variables = wrt1
+    else:
+        # wrt2 is not None and wrt1 is None
+        wrt1 = wrt2
+        variables = wrt1
+
     block = create_subsystem_block(constraints, variables=variables)
+    # Could fix input_vars so I don't evaluate the Hessian with respect
+    # to variables I don't care about...
 
     # HUGE HACK: Variables not included in a constraint are not written
     # to the nl file, so we cannot take the derivative with respect to
@@ -50,7 +63,7 @@ def get_hessian_of_constraint(constraint, wrt=None):
     idx = nlp.get_constraint_indices(constraints)[0]
     duals[idx] = 1.0
     nlp.set_duals(duals)
-    return nlp.extract_submatrix_hessian_lag(variables, variables)
+    return nlp.extract_submatrix_hessian_lag(wrt1, wrt2)
 
 
 class ExternalPyomoModel(ExternalGreyBoxModel):
@@ -153,6 +166,9 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         dydx = -1 * sps.linalg.splu(jgy.tocsc()).solve(jgx.toarray())
         return (jfx + jfy.dot(dydx))
 
+    def evaluate_hessian_external_variables(self):
+        raise NotImplementedError()
+
     def evaluate_hessian_equality_constraints(self):
         """
         Getting the Hessian of an individual constraint:
@@ -172,9 +188,33 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         jfy = nlp.extract_submatrix_jacobian(y, f)
         jgx = nlp.extract_submatrix_jacobian(x, g)
         jgy = nlp.extract_submatrix_jacobian(y, g)
-        dydx = -1 * sps.linalg.splu(jgy.tocsc()).solve(jgx.toarray())
+        jgy_csc = jgy.tocsc()
+        dydx = -1 * sps.linalg.splu(jgy_csc).solve(jgx.toarray())
 
-        hfx = [get_hessian_of_constraint(con, wrt=x) for con in f]
-        hfy = [get_hessian_of_constraint(con, wrt=y) for con in f]
-        hgx = [get_hessian_of_constraint(con, wrt=x) for con in g]
-        hgy = [get_hessian_of_constraint(con, wrt=y) for con in g]
+        hfxx = [get_hessian_of_constraint(con, x) for con in f]
+        hfxy = [get_hessian_of_constraint(con, x, y) for con in f]
+        hfyy = [get_hessian_of_constraint(con, y) for con in f]
+        hgxx = [get_hessian_of_constraint(con, x) for con in g]
+        hgxy = [get_hessian_of_constraint(con, x, y) for con in g]
+        hgyy = [get_hessian_of_constraint(con, y) for con in g]
+
+        # Each term should be a length-ny list of nx-by-nx matrices
+        term1 = hgxx
+        term2 = [
+                2*hessian.dot(            # Hessian is nx-by-ny
+                    np.transpose(dydx)    # dydx is nx-by-ny
+                    ) for hessian in hgxy
+                ]
+        term3 = [
+                hessian.dot(             # Hessian is ny-by-ny
+                    np.transpose(dydx)   # dydx is nx-by-ny
+                    ).transpose().dot(   # first product is ny-by-nx
+                        dydx.transpose() # dydx is nx-by-ny
+                        )                # second product is nx-by-nx
+                for hessian in hgyy
+                ]
+        # List of nx-by-nx matrices
+        sum_ = [t1 + t2 + t3 for t1, t2, t3 in zip(term1, term2, term3)]
+        d2ydx2 = [-1 * sps.linalg.splu(jgy_csc).solve(term) for term in sum_]
+        # TODO: This is a good stopping point. Make sure I am doing d2ydx2
+        # calculations properly, then move on to d2fdx2.
