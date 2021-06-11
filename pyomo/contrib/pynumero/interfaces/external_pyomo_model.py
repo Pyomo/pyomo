@@ -21,6 +21,7 @@ from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.interfaces.external_grey_box import (
         ExternalGreyBoxModel,
         )
+import numpy as np
 import scipy.sparse as sps
 
 
@@ -167,6 +168,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         return (jfx + jfy.dot(dydx))
 
     def evaluate_hessian_external_variables(self):
+        nlp = self._nlp
         x = self.input_vars
         y = self.external_vars
         f = self.residual_cons
@@ -193,11 +195,11 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
                     ) for hessian in hgxy
                 ]
         term3 = [
-                hessian.dot(             # Hessian is ny-by-ny
-                    np.transpose(dydx)   # dydx is nx-by-ny
-                    ).transpose().dot(   # first product is ny-by-nx
-                        dydx.transpose() # dydx is nx-by-ny
-                        )                # second product is nx-by-nx
+                hessian.dot(              # Hessian is ny-by-ny
+                    np.transpose(dydx)    # dydx is nx-by-ny
+                    ).transpose().dot(    # first product is ny-by-nx
+                        dydx.transpose()  # dydx is nx-by-ny
+                        )                 # second product is nx-by-nx
                 for hessian in hgyy
                 ]
         # List of nx-by-nx matrices
