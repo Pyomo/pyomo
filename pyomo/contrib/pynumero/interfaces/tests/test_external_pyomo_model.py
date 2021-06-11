@@ -83,7 +83,7 @@ class TestGetHessianOfConstraint(unittest.TestCase):
         self.assertTrue(np.all(expected_hess == hess.toarray()))
 
         expected_hess = np.array([[2.0]])
-        hess = get_hessian_of_constraint(con, wrt=[m.x])
+        hess = get_hessian_of_constraint(con, [m.x])
         self.assertTrue(np.all(expected_hess == hess.toarray()))
 
         con = m.external_eqn
@@ -173,7 +173,7 @@ class TestGetHessianOfConstraint(unittest.TestCase):
                 + np.transpose(expected_hess_array)
                 - np.diag(np.diagonal(expected_hess_array))
                 )
-        hess = get_hessian_of_constraint(m.eqn, wrt=list(m.x.values()))
+        hess = get_hessian_of_constraint(m.eqn, list(m.x.values()))
         hess_array = hess.toarray()
         np.testing.assert_allclose(expected_hess_array, hess_array, rtol=1e-8)
 
@@ -185,7 +185,7 @@ class TestGetHessianOfConstraint(unittest.TestCase):
         m.eqn = pyo.Constraint(expr=m.x**2 + m.y**2 == 1.0)
         variables = [m.x, m.y, m.z]
         expected_hess = np.array([[2, 0, 0], [0, 2, 0], [0, 0, 0]])
-        hess = get_hessian_of_constraint(m.eqn, wrt=variables).toarray()
+        hess = get_hessian_of_constraint(m.eqn, variables).toarray()
         np.testing.assert_allclose(hess, expected_hess, rtol=1e-8)
 
 
