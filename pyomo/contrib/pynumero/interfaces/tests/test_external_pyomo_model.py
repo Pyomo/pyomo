@@ -132,6 +132,25 @@ class Model2by2(object):
         dy1dx1 = 0.25/(x[0] * x[1]**0.5)
         return np.array([[dy0dx0, dy0dx1], [dy1dx0, dy1dx1]])
 
+    def evaluate_external_hessian(self, x):
+        d2y0dx0dx0 = 0.4/(x[0]**3 * x[1])
+        d2y0dx0dx1 = 0.2/(x[0]**2 * x[1]**2)
+        d2y0dx1dx1 = 0.4/(x[0] * x[1]**3)
+
+        d2y1dx0dx0 = x[1]**0.5/(x[0]**3)
+        d2y1dx0dx1 = -0.25/(x[0]**2 * x[1]**0.5)
+        d2y1dx1dx1 = -0.125/(x[0] * x[1]**1.5)
+
+        d2y0dxdx = np.array([
+            [d2y0dx0dx0, d2y0dx0dx1],
+            [d2y0dx0dx1, d2y0dx1dx1],
+            ])
+        d2y1dxdx = np.array([
+            [d2y1dx0dx0, d2y1dx0dx1],
+            [d2y1dx0dx1, d2y1dx1dx1],
+            ])
+        return [d2y0dxdx, d2y1dxdx]
+
 """
 Tests should cover:
     1. Residual, Jacobian, and Hessian evaluation
@@ -387,7 +406,33 @@ class TestExternalPyomoModel(unittest.TestCase):
             expected_jac = model.evaluate_external_jacobian(x)
             np.testing.assert_allclose(jac, expected_jac, rtol=1e-8)
 
+    def test_external_hessian_Model2by2(self):
+        model = Model2by2()
+        m = model.make_model()
+        m.x[0].set_value(1.0)
+        m.x[1].set_value(2.0)
+        m.y[0].set_value(3.0)
+        m.y[1].set_value(4.0)
+        x0_init_list = [-5.0, -3.0, 0.5, 1.0, 2.5]
+        x1_init_list = [0.5, 1.0, 1.5, 2.5, 4.1]
+        x_init_list = list(itertools.product(x0_init_list, x1_init_list))
+        external_model = ExternalPyomoModel(
+                list(m.x.values()),
+                list(m.y.values()),
+                list(m.residual_eqn.values()),
+                list(m.external_eqn.values()),
+                )
+
+        for x in x_init_list:
+            external_model.set_input_values(x)
+            hess = external_model.evaluate_hessian_external_variables()
+            expected_hess = model.evaluate_external_hessian(x)
+            for matrix1, matrix2 in zip(hess, expected_hess):
+                matrix2 = np.matrix(matrix2)
+                np.testing.assert_allclose(matrix1, matrix2, rtol=1e-8)
+
 
 if __name__ == '__main__':
-    unittest.main()
+    #unittest.main()
     test = TestExternalPyomoModel()
+    test.test_external_hessian_Model2by2()
