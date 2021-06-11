@@ -214,7 +214,7 @@ class TestExternalPyomoModel(unittest.TestCase):
             self.assertAlmostEqual(
                     resid[0],
                     model.evaluate_residual(x[0]),
-                    delta=1e-7,
+                    delta=1e-8,
                     )
 
     def test_jacobian_SimpleModel1(self):
@@ -237,7 +237,27 @@ class TestExternalPyomoModel(unittest.TestCase):
             self.assertAlmostEqual(
                     jac[0][0],
                     model.evaluate_jacobian(x[0]),
-                    delta=1e-7,
+                    delta=1e-8,
+                    )
+
+    def test_external_hessian_SimpleModel1(self):
+        model = SimpleModel1()
+        m = model.make_model()
+        x_init_list = [
+                [-5.0], [-4.0], [-3.0], [-1.5], [0.5], [1.0], [2.0], [3.5]
+                ]
+        external_model = ExternalPyomoModel(
+                [m.x], [m.y], [m.residual_eqn], [m.external_eqn],
+                )
+
+        for x in x_init_list:
+            external_model.set_input_values(x)
+            hess = external_model.evaluate_hessian_external_variables()
+            expected_hess = model.evaluate_external_hessian(x[0])
+            self.assertAlmostEqual(
+                    hess[0][0,0],
+                    expected_hess,
+                    delta=1e-8,
                     )
 
 
