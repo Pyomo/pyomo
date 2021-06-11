@@ -37,30 +37,44 @@ if not pyo.SolverFactory("ipopt").available():
         "Need IPOPT to run ExternalPyomoModel tests"
         )
 
-def make_simple_model_1():
-    m = pyo.ConcreteModel()
-    m.x = pyo.Var(initialize=2.0)
-    m.y = pyo.Var(initialize=2.0)
-    m.residual_eqn = pyo.Constraint(expr=m.x**2 + m.y**2 == 1.0)
-    m.external_eqn = pyo.Constraint(expr=m.x*m.y == 0.2)
-    # The "external function constraint" exposed by the ExternalPyomoModel
-    # will look like: x**2 + 0.04/x**2 - 1 == 0
-    return m
 
-# Could construct an equivalent ExternalGreyBoxModel...
-def simple_model_1_residual(x):
-    try:
-        x = x[0]
-    except TypeError:
-        pass
-    return x**2 + 0.04/x**2 - 1
+class SimpleModel1(object):
 
-def simple_model_1_jacobian(x):
-    try:
-        x = x[0]
-    except TypeError:
-        pass
-    return 2*x - 0.08/x**3
+    def make_model(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=2.0)
+        m.y = pyo.Var(initialize=2.0)
+        m.residual_eqn = pyo.Constraint(expr=m.x**2 + m.y**2 == 1.0)
+        m.external_eqn = pyo.Constraint(expr=m.x*m.y == 0.2)
+        # The "external function constraint" exposed by the ExternalPyomoModel
+        # will look like: x**2 + 0.04/x**2 - 1 == 0
+        return m
+
+    def evaluate_external_variables(self, x):
+        # y(x)
+        return 0.2/x
+
+    def evaluate_external_jacobian(self, x):
+        # dydx
+        return -0.2/(x**2)
+
+    def evaluate_external_hessian(self, x):
+        # d2ydx2
+        return 0.4/(x**3)
+
+    def evaluate_residual(self, x):
+        try:
+            x = x[0]
+        except TypeError:
+            pass
+        return x**2 + 0.04/x**2 - 1
+
+    def evaluate_jacobian(self, x):
+        try:
+            x = x[0]
+        except TypeError:
+            pass
+        return 2*x - 0.08/x**3
 
 """
 Tests should cover:
@@ -73,7 +87,8 @@ Tests should cover:
 class TestGetHessianOfConstraint(unittest.TestCase):
 
     def test_simple_model_1(self):
-        m = make_simple_model_1()
+        model = SimpleModel1()
+        m = model.make_model()
         m.x.set_value(2.0)
         m.y.set_value(2.0)
 
@@ -192,7 +207,8 @@ class TestGetHessianOfConstraint(unittest.TestCase):
 class TestExternalPyomoModel(unittest.TestCase):
 
     def test_evaluate_simple_model_1(self):
-        m = make_simple_model_1()
+        model = SimpleModel1()
+        m = model.make_model()
         x_init_list = [
                 [-5.0], [-4.0], [-3.0], [-1.5], [0.5], [1.0], [2.0], [3.5]
                 ]
@@ -205,12 +221,13 @@ class TestExternalPyomoModel(unittest.TestCase):
             resid = external_model.evaluate_equality_constraints()
             self.assertAlmostEqual(
                     resid[0],
-                    simple_model_1_residual(x),
+                    model.evaluate_residual(x),
                     delta=1e-7,
                     )
 
     def test_jacobian_simple_model_1(self):
-        m = make_simple_model_1()
+        model = SimpleModel1()
+        m = model.make_model()
         x_init_list = [
                 [-5.0], [-4.0], [-3.0], [-1.5], [0.5], [1.0], [2.0], [3.5]
                 ]
@@ -227,7 +244,7 @@ class TestExternalPyomoModel(unittest.TestCase):
             # cast it to a sparse matrix. For now it is dense...
             self.assertAlmostEqual(
                     jac[0][0],
-                    simple_model_1_jacobian(x),
+                    model.evaluate_jacobian(x),
                     delta=1e-7,
                     )
 
