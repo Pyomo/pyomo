@@ -63,17 +63,9 @@ class SimpleModel1(object):
         return 0.4/(x**3)
 
     def evaluate_residual(self, x):
-        try:
-            x = x[0]
-        except TypeError:
-            pass
         return x**2 + 0.04/x**2 - 1
 
     def evaluate_jacobian(self, x):
-        try:
-            x = x[0]
-        except TypeError:
-            pass
         return 2*x - 0.08/x**3
 
 """
@@ -221,7 +213,7 @@ class TestExternalPyomoModel(unittest.TestCase):
             resid = external_model.evaluate_equality_constraints()
             self.assertAlmostEqual(
                     resid[0],
-                    model.evaluate_residual(x),
+                    model.evaluate_residual(x[0]),
                     delta=1e-7,
                     )
 
@@ -244,7 +236,7 @@ class TestExternalPyomoModel(unittest.TestCase):
             # cast it to a sparse matrix. For now it is dense...
             self.assertAlmostEqual(
                     jac[0][0],
-                    model.evaluate_jacobian(x),
+                    model.evaluate_jacobian(x[0]),
                     delta=1e-7,
                     )
 
