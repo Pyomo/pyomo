@@ -851,14 +851,14 @@ class EllipsoidalSet(UncertaintySet):
         return
 
 
-class DiscreteSet(UncertaintySet):
+class DiscreteScenariosSet(UncertaintySet):
     """
     Set of discrete scenarios (i.e., finite collection of realizations)
     """
 
     def __init__(self, scenarios):
         """
-        DiscreteSet constructor
+        DiscreteScenariosSet constructor
 
         Args:
             scenarios: Vector (``list``) of discrete scenarios where each scenario represents a realization of the uncertain parameters.
@@ -910,7 +910,7 @@ class DiscreteSet(UncertaintySet):
 
     def point_in_set(self, uncertain_params, point, **kwargs):
         """
-        DiscreteSet class-specific method for identifying if a point is in the set
+        DiscreteScenariosSet class-specific method for identifying if a point is in the set
 
         Args:
              uncertain_params: uncertain parameter objects
@@ -1043,7 +1043,7 @@ class IntersectionSet(UncertaintySet):
                 for point in set.scenarios:
                     if other.point_in_set(point=point, uncertain_params=uncertain_params):
                         intersected_scenarios.append(point)
-                return DiscreteSet(scenarios=intersected_scenarios)
+                return DiscreteScenariosSet(scenarios=intersected_scenarios)
 
         # === This case is if both sets are continuous
         return IntersectionSet(set1=Q1, set2=Q2)

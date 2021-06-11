@@ -216,10 +216,6 @@ def pyros_config():
     # ================================================
     # === Advanced Options
     # ================================================
-    CONFIG.declare("minimize_dr_norm", ConfigValue(
-        default=True, domain=bool,
-        description="This is an advanced option. Default=True. Whether or not to polish decision rule functions at each iteration. "
-    ))
     CONFIG.declare("bypass_local_separation", ConfigValue(
         default=False, domain=bool,
         description="This is an advanced option. Default = False. 'True' to only use global solver(s) during separation; "

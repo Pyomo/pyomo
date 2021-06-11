@@ -865,7 +865,7 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
         scenarios = [(0,0), (1,0), (0,1), (1,1), (2,0)]
-        set = DiscreteSet(scenarios=scenarios)
+        set = DiscreteScenariosSet(scenarios=scenarios)
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         uncertain_params_in_expr = []
         for con in m.uncertainty_set_contr.values():
@@ -892,7 +892,7 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Param(range(len(m.uncertain_params)), initialize=0, mutable=True)
         scenarios = [(0, 0), (1, 0), (0, 1), (1, 1), (2, 0)]
-        set = DiscreteSet(scenarios=scenarios)
+        set = DiscreteScenariosSet(scenarios=scenarios)
         m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         vars_in_expr = []
         for con in m.uncertainty_set_contr.values():
@@ -914,9 +914,9 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
 
         scenarios = [(0, 0), (1, 0), (0, 1), (1, 1), (2, 0)]
-        set = DiscreteSet(scenarios=scenarios)
+        set = DiscreteScenariosSet(scenarios=scenarios)
         self.assertTrue(set.point_in_set(m.uncertain_param_vars, [0, 0]),
-                        msg="Point is not in the DiscreteSet.")
+                        msg="Point is not in the DiscreteScenariosSet.")
 
 class testFactorModelUncertaintySetClass(unittest.TestCase):
     '''

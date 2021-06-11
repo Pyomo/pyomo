@@ -174,8 +174,7 @@ def ROSolver_iterative_solve(model_data, config):
             nominal_data.nom_obj = value(master_data.master_model.obj)
 
         # === Decision rule polishing
-        if config.minimize_dr_norm and \
-                config.decision_rule_order != 0 and len(config.second_stage_variables) > 0 and \
+        if config.decision_rule_order != 0 and len(config.second_stage_variables) > 0 and \
                 k > len(config.uncertain_params):
             #config.progress_logger.info("Solving Decision Rule Polishing Problem at iteration %s" % k)
             # === Save initial values of DR vars to file

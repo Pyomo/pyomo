@@ -221,7 +221,14 @@ Step 1: Define the Deterministic Problem
 The deterministic Pyomo model for *hydro* is shown below.
 
 .. note::
-    Primitive data (Python literals) that have been hard-coded within a deterministic model cannot be later considered uncertain, unless they are first converted to ``Param`` objects within the ``ConcreteModel`` object. Furthermore, any ``Param`` object that is to be later considered uncertain must have the property ``mutable=True``.
+    Primitive data (Python literals) that have been hard-coded within a deterministic model cannot be later considered uncertain, unless they are first converted to ``Param`` objects within the ``ConcreteModel`` object.
+    Furthermore, any ``Param`` object that is to be later considered uncertain must have the property ``mutable=True``.
+
+.. note::
+    In case modifying the ``mutable`` property inside the deterministic model object itself is not straight-forward in your context,
+    you may consider adding the following statement **after** ``import pyomo.environ as pyo`` but **before** defining the model object:
+    ``pyo.Param.DefaultMutable = True``. Note how this sets the default ``mutable`` property in all ``Param`` objects in the ensuing model instance to ``True``;
+    consequently, this solution will not work with ``Param`` objects for which the ``mutable=False`` property was explicitly enabled inside the model object.
 
 .. code::
 
