@@ -198,7 +198,7 @@ class TestGetHessianOfConstraint(unittest.TestCase):
 
 class TestExternalPyomoModel(unittest.TestCase):
 
-    def test_evaluate_simple_model_1(self):
+    def test_evaluate_SimpleModel1(self):
         model = SimpleModel1()
         m = model.make_model()
         x_init_list = [
@@ -217,7 +217,7 @@ class TestExternalPyomoModel(unittest.TestCase):
                     delta=1e-7,
                     )
 
-    def test_jacobian_simple_model_1(self):
+    def test_jacobian_SimpleModel1(self):
         model = SimpleModel1()
         m = model.make_model()
         x_init_list = [
