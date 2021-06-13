@@ -195,27 +195,30 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         hfxy = [get_hessian_of_constraint(con, x, y) for con in f]
         hfyy = [get_hessian_of_constraint(con, y) for con in f]
         hgxx = [get_hessian_of_constraint(con, x) for con in g]
-        hgxy = [get_hessian_of_constraint(con, x, y) for con in g]
+        hgyx = [get_hessian_of_constraint(con, y, x) for con in g]
         hgyy = [get_hessian_of_constraint(con, y) for con in g]
 
         # Each term should be a length-ny list of nx-by-nx matrices
         term1 = hgxx
         term2 = [
-                2*hessian.dot(            # Hessian is nx-by-ny
-                    np.transpose(dydx)    # dydx is nx-by-ny
-                    ) for hessian in hgxy
+                (hessian.dot(dydx) + hessian.dot(dydx).transpose())
+                for hessian in hgyx
                 ]
         term3 = [
-                hessian.dot(              # Hessian is ny-by-ny
-                    np.transpose(dydx)    # dydx is nx-by-ny
-                    ).transpose().dot(    # first product is ny-by-nx
-                        dydx.transpose()  # dydx is nx-by-ny
-                        )                 # second product is nx-by-nx
+                dydx.dot(hessian.toarray()).dot(dydx.transpose())
+                #hessian.dot(              
+                #    np.transpose(dydx)    
+                #    ).transpose().dot(    
+                #        dydx.transpose()  
+                #        )                 
                 for hessian in hgyy
                 ]
         # List of nx-by-nx matrices
         sum_ = [t1 + t2 + t3 for t1, t2, t3 in zip(term1, term2, term3)]
         d2ydx2 = [-1 * sps.linalg.splu(jgy_csc).solve(term) for term in sum_]
+        # ^ This makes no sense. Need to do a back solve for each entry in the
+        # matrix.
+        #
         # TODO: This is a good stopping point. Make sure I am doing d2ydx2
         # calculations properly, then move on to d2fdx2.
         return d2ydx2
