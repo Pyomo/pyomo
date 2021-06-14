@@ -126,6 +126,21 @@ def run_setup():
       install_requires=[
           'ply',
       ],
+      extras_require={
+          'tests': [
+              'coverage',
+              'nose',
+              'parameterized',
+              'pybind11',
+          ],
+          'docs': [
+              'Sphinx>2',
+              'sphinx-copybutton',
+              'sphinx-rtd-theme>0.5',
+              'sphinxcontrib-jsmath',
+              'sphinxcontrib-napoleon',
+          ],
+      },
       packages=find_packages(exclude=("scripts",)),
       package_data={
           "pyomo.contrib.appsi.cmodel": ["src/*"],
