@@ -296,7 +296,7 @@ class DirectOrPersistentSolver(OptSolver):
             raise ApplicationError(
                 "No Python bindings available for %s solver plugin"
                 % (type(self),))
-        return _api
+        return bool(_api)
 
     def _get_version(self):
         if self._version is None:
