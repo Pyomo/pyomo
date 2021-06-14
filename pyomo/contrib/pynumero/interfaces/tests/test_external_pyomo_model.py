@@ -118,11 +118,16 @@ class SimpleModel2by2_1(object):
         m.x = pyo.Var([0, 1], initialize=2.0)
         m.y = pyo.Var([0, 1], initialize=2.0)
 
-        # Residual equation is not important for now, as we are only
-        # testing the external function and its derivative.
-        m.residual_eqn = pyo.Constraint(expr=
-                m.x[0]**2 + m.x[1]**2 + m.y[0]**2 + m.y[1]**2 == 1.0
-                )
+        def residual_eqn_rule(m, i):
+            # These equations are chosen to exercise every term in the
+            # equality hessian calculation, i.e. to have nonlinearities
+            # in x, y, and xy.
+            if i == 0:
+                return m.x[0]**2 + m.x[0]*m.y[0] + m.y[0]**2 == 1.0
+            elif i == 1:
+                return m.x[1]**2 + m.x[1]*m.y[1] == 2.0
+
+        m.residual_eqn = pyo.Constraint([0, 1], rule=residual_eqn_rule)
 
         def external_eqn_rule(m, i):
             if i == 0:
@@ -134,10 +139,19 @@ class SimpleModel2by2_1(object):
 
         return m
 
+    def evaluate_residual(self, x):
+        f1 = (
+                x[0]**2 + 2*x[0] - 2*x[0]**2*x[1] - x[1]**2*x[0] + 4
+                - 8*x[0]*x[1] - 4*x[1]**2 + 4*x[0]**2*x[1]**2
+                + 4*x[0]*x[1]**3 + x[1]**4 - 1.0
+                )
+        f2 = x[1]**2 - x[1] + x[0]*x[1]**2 + x[1]**3 - x[0]**2*x[1] - 2.0
+        return (f1, f2)
+
     def evaluate_external_variables(self, x):
         y0 = 2.0 - 2.0*x[0]*x[1] - x[1]**2
         y1 = 1.0 - y0 - x[0]*x[1] - x[0]**2
-        return [y0, y1]
+        return (y0, y1)
 
     def evaluate_external_jacobian(self, x):
         dy0dx0 = -2.0*x[1]
@@ -623,6 +637,29 @@ class TestExternalPyomoModel(unittest.TestCase):
             expected_hess = model.evaluate_external_hessian(x)
             for matrix1, matrix2 in zip(hess, expected_hess):
                 np.testing.assert_allclose(matrix1, matrix2, rtol=1e-8)
+
+    def test_evaluate_SimpleModel2x2_1(self):
+        model = SimpleModel2by2_1()
+        m = model.make_model()
+        m.x[0].set_value(1.0)
+        m.x[1].set_value(2.0)
+        m.y[0].set_value(3.0)
+        m.y[1].set_value(4.0)
+        x0_init_list = [-5.0, -3.0, 0.5, 1.0, 2.5]
+        x1_init_list = [-4.5, -2.3, 0.0, 1.0, 4.1]
+        x_init_list = list(itertools.product(x0_init_list, x1_init_list))
+        external_model = ExternalPyomoModel(
+                list(m.x.values()),
+                list(m.y.values()),
+                list(m.residual_eqn.values()),
+                list(m.external_eqn.values()),
+                )
+
+        for x in x_init_list:
+            external_model.set_input_values(x)
+            resid = external_model.evaluate_equality_constraints()
+            expected_resid = model.evaluate_residual(x)
+            np.testing.assert_allclose(resid, expected_resid, rtol=1e-8)
 
 
 if __name__ == '__main__':
