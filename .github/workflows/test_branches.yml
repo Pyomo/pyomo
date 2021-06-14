@@ -25,7 +25,7 @@ env:
       python-louvain sphinx-copybutton
   PYTHON_NUMPY_PKGS: >
       numpy scipy pyodbc pandas matplotlib seaborn numdifftools 
-      parameterized casadi
+      casadi
   CACHE_VER: v210415.0
   NEOS_EMAIL: tests@pyomo.org
 
@@ -94,13 +94,6 @@ jobs:
           TARGET: linux
           PYENV: pip
           PACKAGES: cython
-
-        - os: ubuntu-18.04
-          python: 3.7
-          other: /pyutilib
-          TARGET: linux
-          PYENV: pip
-          PACKAGES: pyutilib
 
     steps:
     - name: Checkout Pyomo source
@@ -544,17 +537,17 @@ jobs:
 
 
   bare-python-env:
-    name: linux/3.7/bare-env
+    name: linux/3.6/bare-env
     runs-on: ubuntu-18.04
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v2
 
-    - name: Set up Python 3.7
+    - name: Set up Python 3.6
       uses: actions/setup-python@v2
       with:
-        python-version: 3.7
+        python-version: 3.6
 
     - name: Install Pyomo
       run: |
@@ -588,7 +581,7 @@ jobs:
     needs: build
     if: always() # run even if a build job fails
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
