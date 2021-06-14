@@ -226,8 +226,11 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
 
         return d2ydx2
 
-    def evaluate_hessian_equality_constraints(self):
+    def evaluate_hessians_of_residuals(self):
         """
+        This method computes the Hessian matrix of each equality
+        constraint individually, rather than the sum of Hessians
+        times multipliers.
         """
         nlp = self._nlp
         x = self.input_vars
@@ -273,5 +276,14 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         # List of nx-by-nx matrices
         d2fdx2 = [t1 + t2 + t3 + t4
                 for t1, t2, t3, t4 in zip(term1, term2, term3, term4)]
+        return d2fdx2
+
+    def evaluate_hessian_equality_constraints(self):
+        """
+        This method actually evaluates the sum of Hessians times
+        multipliers, i.e. the term in the Hessian of the Lagrangian
+        due to these equality constraints.
+        """
+        d2fdx2 = self.evaluate_hessians_of_residuals()
         multipliers = self.residual_con_multipliers
         return sum(mult*matrix for mult, matrix in zip(multipliers, d2fdx2))
