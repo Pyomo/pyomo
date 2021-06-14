@@ -74,7 +74,7 @@ class GurobiDirect(DirectSolver):
     _verified_license = None
     _import_messages = ''
     _name = None
-    _version = None
+    _version = 0
     _version_major = 0
 
     def __init__(self, **kwds):
@@ -110,6 +110,10 @@ class GurobiDirect(DirectSolver):
         if gurobipy_available and GurobiDirect._version_major < 5:
             self._max_constraint_degree = 1
             self._capabilities.quadratic_constraint = False
+
+        # Note that the base OptSolver class declares a _version
+        # attribute (hiding the class attribute).  We will fix that here.
+        self._version = GurobiDirect._version
 
     def available(self, exception_flag=True):
         if not gurobipy_available:
