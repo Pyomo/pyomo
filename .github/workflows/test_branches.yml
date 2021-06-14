@@ -570,7 +570,7 @@ jobs:
     - name: Run Pyomo standalone test
       run: |
         echo ""
-        echo "Running standalone Pyomo test
+        echo "Running standalone Pyomo test"
         echo ""
         python `pwd`/pyomo/environ/tests/standalone_minimal_pyomo_driver.py \
             || exit 1
