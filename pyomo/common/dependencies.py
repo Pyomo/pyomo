@@ -65,18 +65,18 @@ class ModuleUnavailable(object):
         if msg is None:
             msg = _err
         if _imp:
-            if not msg:
+            if not str(msg):
                 msg = (
                     "The %s module (an optional Pyomo dependency) " \
                     "failed to import: %s" % (self.__name__, _imp)
                 )
             else:
-                msg += " (import raised %s)" % (_imp,)
+                msg = "%s (import raised %s)" % (msg, _imp,)
         if _ver:
-            if not msg:
+            if not str(msg):
                 msg = "The %s module %s" % (self.__name__, _ver)
             else:
-                msg += " (%s)" % (_ver,)
+                msg = "%s (%s)" % (msg, _ver,)
         return msg
 
     def log_import_warning(self, logger='pyomo', msg=None):
