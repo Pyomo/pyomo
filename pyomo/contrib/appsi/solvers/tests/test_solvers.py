@@ -4,6 +4,7 @@ import pyomo.common.unittest as unittest
 parameterized, param_available = attempt_import('parameterized')
 if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
+parameterized = parameterized.parameterized
 try:
     from pyomo.contrib.appsi.cmodel import cmodel
 except ImportError:
