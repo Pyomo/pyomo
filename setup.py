@@ -139,6 +139,8 @@ def run_setup():
               'sphinx-rtd-theme>0.5',
               'sphinxcontrib-jsmath',
               'sphinxcontrib-napoleon',
+              'numpy', # Needed by autodoc for pynumero
+              'scipy', # Needed by autodoc for pynumero
           ],
       },
       packages=find_packages(exclude=("scripts",)),
