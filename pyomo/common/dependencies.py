@@ -65,7 +65,7 @@ class ModuleUnavailable(object):
         if msg is None:
             msg = _err
         if _imp:
-            if not str(msg):
+            if not msg or not str(msg):
                 msg = (
                     "The %s module (an optional Pyomo dependency) " \
                     "failed to import: %s" % (self.__name__, _imp)
@@ -73,7 +73,7 @@ class ModuleUnavailable(object):
             else:
                 msg = "%s (import raised %s)" % (msg, _imp,)
         if _ver:
-            if not str(msg):
+            if not msg or not str(msg):
                 msg = "The %s module %s" % (self.__name__, _ver)
             else:
                 msg = "%s (%s)" % (msg, _ver,)
