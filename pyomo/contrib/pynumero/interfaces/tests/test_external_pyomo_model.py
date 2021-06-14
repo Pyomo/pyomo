@@ -140,13 +140,26 @@ class SimpleModel2by2_1(object):
         return m
 
     def evaluate_residual(self, x):
-        f1 = (
+        f0 = (
                 x[0]**2 + 2*x[0] - 2*x[0]**2*x[1] - x[1]**2*x[0] + 4
                 - 8*x[0]*x[1] - 4*x[1]**2 + 4*x[0]**2*x[1]**2
                 + 4*x[0]*x[1]**3 + x[1]**4 - 1.0
                 )
-        f2 = x[1]**2 - x[1] + x[0]*x[1]**2 + x[1]**3 - x[0]**2*x[1] - 2.0
-        return (f1, f2)
+        f1 = x[1]**2 - x[1] + x[0]*x[1]**2 + x[1]**3 - x[0]**2*x[1] - 2.0
+        return (f0, f1)
+
+    def evaluate_jacobian(self, x):
+        df0dx0 = (
+                2*x[0] + 2 - 4*x[0]*x[1] - x[1]**2
+                - 8*x[1] + 8*x[0]*x[1]**2 + 4*x[1]**3
+                )
+        df0dx1 = (
+                -2*x[0]**2 - 2*x[0]*x[1] - 8*x[0] - 8*x[1]
+                + 8*x[0]**2*x[1] + 12*x[0]*x[1]**2 + 4*x[1]**3
+                )
+        df1dx0 = x[1]**2 - 2*x[0]*x[1]
+        df1dx1 = 2*x[1] - 1+ 2*x[0]*x[1] - x[0]**2 + 3*x[1]**2
+        return np.array([[df0dx0, df0dx1], [df1dx0, df1dx1]])
 
     def evaluate_external_variables(self, x):
         y0 = 2.0 - 2.0*x[0]*x[1] - x[1]**2
@@ -660,6 +673,29 @@ class TestExternalPyomoModel(unittest.TestCase):
             resid = external_model.evaluate_equality_constraints()
             expected_resid = model.evaluate_residual(x)
             np.testing.assert_allclose(resid, expected_resid, rtol=1e-8)
+
+    def test_jacobian_SimpleModel2x2_1(self):
+        model = SimpleModel2by2_1()
+        m = model.make_model()
+        m.x[0].set_value(1.0)
+        m.x[1].set_value(2.0)
+        m.y[0].set_value(3.0)
+        m.y[1].set_value(4.0)
+        x0_init_list = [-5.0, -3.0, 0.5, 1.0, 2.5]
+        x1_init_list = [-4.5, -2.3, 0.0, 1.0, 4.1]
+        x_init_list = list(itertools.product(x0_init_list, x1_init_list))
+        external_model = ExternalPyomoModel(
+                list(m.x.values()),
+                list(m.y.values()),
+                list(m.residual_eqn.values()),
+                list(m.external_eqn.values()),
+                )
+
+        for x in x_init_list:
+            external_model.set_input_values(x)
+            jac = external_model.evaluate_jacobian_equality_constraints()
+            expected_jac = model.evaluate_jacobian(x)
+            np.testing.assert_allclose(jac, expected_jac, rtol=1e-8)
 
 
 if __name__ == '__main__':
