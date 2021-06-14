@@ -542,12 +542,53 @@ jobs:
           #   manage total artifact storage
           # TEST-*.xml
 
+
+  bare-python-env:
+    name: linux/3.7/bare-env
+    runs-on: ubuntu-18.04
+    timeout-minutes: 20
+    steps:
+    - name: Checkout Pyomo source
+      uses: actions/checkout@v2
+
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.7
+
+    - name: Install Pyomo
+      run: |
+        echo ""
+        echo "Install Pyomo..."
+        echo ""
+        python setup.py develop
+        echo ""
+        echo "Set custom PYOMO_CONFIG_DIR"
+        echo ""
+        echo "PYOMO_CONFIG_DIR=${GITHUB_WORKSPACE}/config" >> $GITHUB_ENV
+
+    - name: Run Pyomo standalone test
+      run: |
+        echo ""
+        echo "Running standalone Pyomo test
+        echo ""
+        python `pwd`/pyomo/environ/tests/standalone_minimal_pyomo_driver.py \
+            || exit 1
+
+    - name: Report pyomo plugin information
+      run: |
+        echo "$PATH"
+        pyomo help --solvers || exit 1
+        pyomo help --transformations || exit 1
+        pyomo help --writers || exit 1
+
+
   cover:
     name: process-coverage-${{ matrix.TARGET }}
     needs: build
     if: always() # run even if a build job fails
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
