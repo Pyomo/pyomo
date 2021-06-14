@@ -234,14 +234,6 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
 
     def evaluate_hessian_equality_constraints(self):
         """
-        Getting the Hessian of an individual constraint:
-        - with PyomoNLP of entire model (no objective), set constraint
-          multiplier to 1, all other multipliers to 0, evaluate_hessian_lag,
-          reset multipliers
-        - Create a block that only contains the constraint I'm interested in,
-          create a PyomoNLP of that block, set multiplier to 1,
-          evaluate_hessian_lag
-
         """
         nlp = self._nlp
         x = self.input_vars
