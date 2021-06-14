@@ -143,6 +143,11 @@ class XpressDirect(DirectSolver):
         self._capabilities.sos1 = True
         self._capabilities.sos2 = True
 
+        # remove the instance-level definiton of the xpress version:
+        # because the version comes from an imported module, only one
+        # version of xpress is supported (and stored as a class attribute)
+        del self._version
+
     def available(self, exception_flag=True):
         """True if the solver is available."""
 

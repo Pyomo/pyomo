@@ -111,9 +111,10 @@ class GurobiDirect(DirectSolver):
             self._max_constraint_degree = 1
             self._capabilities.quadratic_constraint = False
 
-        # Note that the base OptSolver class declares a _version
-        # attribute (hiding the class attribute).  We will fix that here.
-        self._version = GurobiDirect._version
+        # remove the instance-level definiton of the gurobi version:
+        # because the version comes from an imported module, only one
+        # version of gurobi is supported (and stored as a class attribute)
+        del self._version
 
     def available(self, exception_flag=True):
         if not gurobipy_available:
