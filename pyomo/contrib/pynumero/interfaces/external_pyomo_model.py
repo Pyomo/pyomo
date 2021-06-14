@@ -108,6 +108,8 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         self.residual_cons = residual_cons
         self.external_cons = external_cons
 
+        self.residual_con_multipliers = [None for _ in residual_cons]
+
     def n_inputs(self):
         return len(self.input_vars)
 
@@ -144,7 +146,8 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         self._nlp = PyomoNLP(self._block)
 
     def set_equality_constraint_multipliers(self, eq_con_multipliers):
-        raise NotImplementedError()
+        for i, val in enumerate(eq_con_multipliers):
+            self.residual_con_multipliers[i] = val
 
     def evaluate_equality_constraints(self):
         return self._nlp.extract_subvector_constraints(self.residual_cons)
@@ -240,4 +243,49 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
           evaluate_hessian_lag
 
         """
+        nlp = self._nlp
+        x = self.input_vars
+        y = self.external_vars
+        f = self.residual_cons
+        g = self.external_cons
+        jfx = nlp.extract_submatrix_jacobian(x, f)
+        jfy = nlp.extract_submatrix_jacobian(y, f)
+
+        dydx = self.evaluate_jacobian_external_variables()
+
+        ny = len(y)
+        nx = len(x)
+
+        hfxx = [get_hessian_of_constraint(con, x) for con in f]
+        hfxy = [get_hessian_of_constraint(con, x, y) for con in f]
+        hfyy = [get_hessian_of_constraint(con, y) for con in f]
+
         d2ydx2 = self.evaluate_hessian_external_variables()
+
+        # Each term should be a length-ny list of nx-by-nx matrices
+        # TODO: Make these 3-d numpy arrays.
+        term1 = hfxx
+        term2 = []
+        for hessian in hfxy:
+            _prod = hessian.dot(dydx)
+            term2.append(_prod + _prod.transpose())
+        term3 = [dydx.transpose().dot(hessian.toarray()).dot(dydx)
+                for hessian in hfyy]
+
+        # Extract each of the nx^2 vectors from d2ydx2
+        vectors = [[np.array([matrix[i, j] for matrix in d2ydx2])
+                for j in range(nx)] for i in range(nx)]
+        # Multiply by jfy
+        product_vectors = [[jfy.dot(vector) for vector in vlist]
+            for vlist in vectors]
+        term4 = [
+            np.array([[vec[i] for vec in vlist]
+            for vlist in product_vectors])
+            for i in range(ny)
+            ]
+
+        # List of nx-by-nx matrices
+        d2fdx2 = [t1 + t2 + t3 + t4
+                for t1, t2, t3, t4 in zip(term1, term2, term3, term4)]
+        multipliers = self.residual_con_multipliers
+        return sum(mult*matrix for mult, matrix in zip(multipliers, d2fdx2))
