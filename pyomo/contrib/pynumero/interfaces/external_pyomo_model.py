@@ -185,10 +185,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         nlp = self._nlp
         x = self.input_vars
         y = self.external_vars
-        f = self.residual_cons
         g = self.external_cons
-        jfx = nlp.extract_submatrix_jacobian(x, f)
-        jfy = nlp.extract_submatrix_jacobian(y, f)
         jgx = nlp.extract_submatrix_jacobian(x, g)
         jgy = nlp.extract_submatrix_jacobian(y, g)
         jgy_csc = jgy.tocsc()
@@ -198,9 +195,6 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         ny = len(y)
         nx = len(x)
 
-        hfxx = [get_hessian_of_constraint(con, x) for con in f]
-        hfxy = [get_hessian_of_constraint(con, x, y) for con in f]
-        hfyy = [get_hessian_of_constraint(con, y) for con in f]
         hgxx = [get_hessian_of_constraint(con, x) for con in g]
         hgxy = [get_hessian_of_constraint(con, x, y) for con in g]
         hgyy = [get_hessian_of_constraint(con, y) for con in g]
