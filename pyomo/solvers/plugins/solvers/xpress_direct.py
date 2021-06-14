@@ -269,8 +269,8 @@ class XpressDirect(DirectSolver):
 
     def _add_var(self, var):
         varname = self._symbol_map.getSymbol(var, self._labeler)
-        vartype = xpress_vartype_from_var(var)
-        lb, ub = xpress_lb_ub_from_var(var)
+        vartype = self._xpress_vartype_from_var(var)
+        lb, ub = self._xpress_lb_ub_from_var(var)
 
         xpress_var = xpress.var(name=varname, lb=lb, ub=ub, vartype=vartype)
         self._solver_model.addVariable(xpress_var)
