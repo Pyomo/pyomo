@@ -187,15 +187,17 @@ class TestTiming(unittest.TestCase):
         SLEEP = 0.1
         RES = 0.05 # resolution (seconds): 1/2 the sleep
 
+        abs_time = time.perf_counter()
         with TicTocTimer() as timer:
-            abs_time = time.perf_counter()
             time.sleep(SLEEP)
+        exclude = -time.perf_counter()
         time.sleep(SLEEP)
+        exclude += time.perf_counter()
         with timer:
             time.sleep(SLEEP)
-        self.assertAlmostEqual(time.perf_counter() - abs_time,
-                               SLEEP*3, delta=RES)
-        self.assertAlmostEqual(timer.toc(None), SLEEP*2, delta=RES)
+        abs_time = time.perf_counter() - abs_time
+        self.assertGreater(abs_time, SLEEP*3)
+        self.assertAlmostEqual(timer.toc(None), abs_time - exclude, delta=RES)
 
     def test_HierarchicalTimer(self):
         RES = 0.01 # resolution (seconds)
