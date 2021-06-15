@@ -1,6 +1,10 @@
 import pyomo.environ as pe
+from pyomo.common.dependencies import attempt_import
 import pyomo.common.unittest as unittest
-from parameterized import parameterized
+parameterized, param_available = attempt_import('parameterized')
+if not param_available:
+    raise unittest.SkipTest('Parameterized is not available.')
+parameterized = parameterized.parameterized
 try:
     from pyomo.contrib.appsi.cmodel import cmodel
 except ImportError:

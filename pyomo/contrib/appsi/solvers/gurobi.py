@@ -7,6 +7,7 @@ from typing import List, Dict, Optional
 from pyomo.common.collections import ComponentSet, ComponentMap, OrderedSet
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import PyomoException
+from pyomo.common.tee import capture_output
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.config import ConfigValue
 from pyomo.core.kernel.objective import minimize, maximize
@@ -216,7 +217,10 @@ class Gurobi(PersistentBase, PersistentSolver):
     @classmethod
     def _check_license(cls):
         try:
-            m = gurobipy.Model()
+            # Gurobipy writes out license file information when creating
+            # the environment
+            with capture_output(capture_fd=True):
+                m = gurobipy.Model()
         except ImportError:
             # Triggered if this is the first time the deferred import of
             # gurobipy is resolved. _import_gurobipy will have already
@@ -225,6 +229,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         except gurobipy.GurobiError:
             cls._available = Gurobi.Availability.BadLicense
             return
+        m.setParam('OutputFlag', 0)
         try:
             # As of 3/2021, the limited-size Gurobi license was limited
             # to 2000 variables.

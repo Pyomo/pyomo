@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -17,9 +17,10 @@ import logging
 import subprocess
 from io import StringIO
 
+from pyomo.common.backports import nullcontext
 from pyomo.common.errors import ApplicationError
 from pyomo.common.collections import Bunch
-from pyomo.common.log import is_debug_set
+from pyomo.common.log import is_debug_set, LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.tee import TeeStream
 
@@ -111,7 +112,11 @@ class SystemCallSolver(OptSolver):
         if not OptSolver.available(self,exception_flag):
             return False
         try:
-            ans = self.executable()
+            # HACK: Suppress logged warnings about the executable not
+            # being found
+            cm = nullcontext() if exception_flag else LoggingIntercept()
+            with cm:
+                ans = self.executable()
         except NotImplementedError:
             ans = None
         if ans is None:

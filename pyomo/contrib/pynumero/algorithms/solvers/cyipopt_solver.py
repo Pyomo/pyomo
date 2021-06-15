@@ -523,7 +523,7 @@ class PyomoCyIpoptSolver(object):
         self._model = model
 
     def available(self, exception_flag=False):
-        return numpy_available and cyipopt_available
+        return bool(numpy_available and cyipopt_available)
 
     def license_is_valid(self):
         return True
