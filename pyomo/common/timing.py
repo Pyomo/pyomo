@@ -279,6 +279,14 @@ class TicTocTimer(object):
         self._start_count += 1
         self._lastTime = default_timer()
 
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, et, ev, tb):
+        self.stop()
+
+
 _globalTimer = TicTocTimer()
 tic = functools.partial(TicTocTimer.tic, _globalTimer)
 tic.__doc__ = """
