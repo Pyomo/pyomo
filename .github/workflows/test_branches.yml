@@ -560,6 +560,13 @@ jobs:
         echo ""
         echo "PYOMO_CONFIG_DIR=${GITHUB_WORKSPACE}/config" >> $GITHUB_ENV
 
+    - name: Report pyomo plugin information
+      run: |
+        echo "$PATH"
+        pyomo help --solvers || exit 1
+        pyomo help --transformations || exit 1
+        pyomo help --writers || exit 1
+
     - name: Run Pyomo standalone test
       run: |
         echo ""
@@ -567,13 +574,6 @@ jobs:
         echo ""
         python `pwd`/pyomo/environ/tests/standalone_minimal_pyomo_driver.py \
             || exit 1
-
-    - name: Report pyomo plugin information
-      run: |
-        echo "$PATH"
-        pyomo help --solvers || exit 1
-        pyomo help --transformations || exit 1
-        pyomo help --writers || exit 1
 
 
   cover:
