@@ -25,7 +25,7 @@ env:
       python-louvain sphinx-copybutton
   PYTHON_NUMPY_PKGS: >
       numpy scipy pyodbc pandas matplotlib seaborn numdifftools 
-      parameterized casadi
+      casadi
   CACHE_VER: v210415.0
   NEOS_EMAIL: tests@pyomo.org
 
@@ -94,13 +94,6 @@ jobs:
           TARGET: linux
           PYENV: pip
           PACKAGES: cython
-
-        - os: ubuntu-18.04
-          python: 3.7
-          other: /pyutilib
-          TARGET: linux
-          PYENV: pip
-          PACKAGES: pyutilib
 
     steps:
     - name: Checkout Pyomo source
@@ -541,6 +534,47 @@ jobs:
           # In general, do not record test results as artifacts to
           #   manage total artifact storage
           # TEST-*.xml
+
+
+  bare-python-env:
+    name: linux/3.6/bare-env
+    runs-on: ubuntu-18.04
+    timeout-minutes: 10
+    steps:
+    - name: Checkout Pyomo source
+      uses: actions/checkout@v2
+
+    - name: Set up Python 3.6
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.6
+
+    - name: Install Pyomo
+      run: |
+        echo ""
+        echo "Install Pyomo..."
+        echo ""
+        python setup.py develop
+        echo ""
+        echo "Set custom PYOMO_CONFIG_DIR"
+        echo ""
+        echo "PYOMO_CONFIG_DIR=${GITHUB_WORKSPACE}/config" >> $GITHUB_ENV
+
+    - name: Report pyomo plugin information
+      run: |
+        echo "$PATH"
+        pyomo help --solvers || exit 1
+        pyomo help --transformations || exit 1
+        pyomo help --writers || exit 1
+
+    - name: Run Pyomo standalone test
+      run: |
+        echo ""
+        echo "Running standalone Pyomo test"
+        echo ""
+        python `pwd`/pyomo/environ/tests/standalone_minimal_pyomo_driver.py \
+            || exit 1
+
 
   cover:
     name: process-coverage-${{ matrix.TARGET }}
