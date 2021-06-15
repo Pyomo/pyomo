@@ -139,6 +139,8 @@ class SimpleModel2by2_1(object):
 
         return m
 
+    # The following three methods are evaluation and derivatives of
+    # the equality constraints exposed by the ExternalPyomoModel
     def evaluate_residual(self, x):
         f0 = (
                 x[0]**2 + 2*x[0] - 2*x[0]**2*x[1] - x[1]**2*x[0] + 4
@@ -161,6 +163,20 @@ class SimpleModel2by2_1(object):
         df1dx1 = 2*x[1] - 1+ 2*x[0]*x[1] - x[0]**2 + 3*x[1]**2
         return np.array([[df0dx0, df0dx1], [df1dx0, df1dx1]])
 
+    def evaluate_hessian(self, x):
+        df0dx0dx0 = 2 - 4*x[1] + 8*x[1]**2
+        df0dx0dx1 = -4*x[0] - 2*x[1] - 8 + 16*x[0]*x[1] + 12*x[1]**2
+        df0dx1dx1 = -2*x[0] - 8 + 8*x[0]**2 + 24*x[0]*x[1] + 12*x[1]**2
+
+        df1dx0dx0 = -2*x[1]
+        df1dx0dx1 = 2*x[1] - 2*x[0]
+        df1dx1dx1 = 2 + 2*x[0] + 6*x[1]
+        d2f0 = np.array([[df0dx0dx0, df0dx0dx1], [df0dx0dx1, df0dx1dx1]])
+        d2f1 = np.array([[df1dx0dx0, df1dx0dx1], [df1dx0dx1, df1dx1dx1]])
+        return [d2f0, d2f1]
+
+    # The following three methods are evaluation and derivatives of
+    # the external function "hidden by" the ExternalPyomoModel
     def evaluate_external_variables(self, x):
         y0 = 2.0 - 2.0*x[0]*x[1] - x[1]**2
         y1 = 1.0 - y0 - x[0]*x[1] - x[0]**2
@@ -696,6 +712,29 @@ class TestExternalPyomoModel(unittest.TestCase):
             jac = external_model.evaluate_jacobian_equality_constraints()
             expected_jac = model.evaluate_jacobian(x)
             np.testing.assert_allclose(jac, expected_jac, rtol=1e-8)
+
+    def test_hessian_SimpleModel2x2_1(self):
+        model = SimpleModel2by2_1()
+        m = model.make_model()
+        m.x[0].set_value(1.0)
+        m.x[1].set_value(2.0)
+        m.y[0].set_value(3.0)
+        m.y[1].set_value(4.0)
+        x0_init_list = [-5.0, -3.0, 0.5, 1.0, 2.5]
+        x1_init_list = [-4.5, -2.3, 0.0, 1.0, 4.1]
+        x_init_list = list(itertools.product(x0_init_list, x1_init_list))
+        external_model = ExternalPyomoModel(
+                list(m.x.values()),
+                list(m.y.values()),
+                list(m.residual_eqn.values()),
+                list(m.external_eqn.values()),
+                )
+
+        for x in x_init_list:
+            external_model.set_input_values(x)
+            hess = external_model.evaluate_hessians_of_residuals()
+            expected_hess = model.evaluate_hessian(x)
+            np.testing.assert_allclose(hess, expected_hess, rtol=1e-8)
 
 
 if __name__ == '__main__':
