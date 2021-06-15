@@ -736,6 +736,31 @@ class TestExternalPyomoModel(unittest.TestCase):
             expected_hess = model.evaluate_hessian(x)
             np.testing.assert_allclose(hess, expected_hess, rtol=1e-8)
 
+    def test_evaluate_hessian_lagrangian_SimpleModel2x2_1(self):
+        model = SimpleModel2by2_1()
+        m = model.make_model()
+        m.x[0].set_value(1.0)
+        m.x[1].set_value(2.0)
+        m.y[0].set_value(3.0)
+        m.y[1].set_value(4.0)
+        x0_init_list = [-5.0, -3.0, 0.5, 1.0, 2.5]
+        x1_init_list = [-4.5, -2.3, 0.0, 1.0, 4.1]
+        x_init_list = list(itertools.product(x0_init_list, x1_init_list))
+        external_model = ExternalPyomoModel(
+                list(m.x.values()),
+                list(m.y.values()),
+                list(m.residual_eqn.values()),
+                list(m.external_eqn.values()),
+                )
+
+        for x in x_init_list:
+            external_model.set_input_values(x)
+            external_model.set_equality_constraint_multipliers([1.0, 1.0])
+            hess_lag = external_model.evaluate_hessian_equality_constraints()
+            expected_hess = model.evaluate_hessian(x)
+            expected_hess_lag = expected_hess[0] + expected_hess[1]
+            np.testing.assert_allclose(hess_lag, expected_hess_lag, rtol=1e-8)
+
 
 if __name__ == '__main__':
     unittest.main()
