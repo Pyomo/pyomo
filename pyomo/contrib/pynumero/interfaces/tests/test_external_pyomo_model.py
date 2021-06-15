@@ -738,7 +738,4 @@ class TestExternalPyomoModel(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    #unittest.main()
-    test = TestExternalPyomoModel()
-    test.test_external_jacobian_Model2by2()
-    #test.test_external_hessian_Model2by2()
+    unittest.main()
