@@ -111,7 +111,7 @@ class GurobiDirect(DirectSolver):
             self._max_constraint_degree = 1
             self._capabilities.quadratic_constraint = False
 
-        # remove the instance-level definiton of the gurobi version:
+        # remove the instance-level definition of the gurobi version:
         # because the version comes from an imported module, only one
         # version of gurobi is supported (and stored as a class attribute)
         del self._version

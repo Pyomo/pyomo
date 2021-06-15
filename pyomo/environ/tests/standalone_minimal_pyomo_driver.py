@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import sys
 from io import StringIO
 from pyomo.common.log import LoggingIntercept
@@ -137,7 +147,7 @@ def run_transformationfactory_test():
 
     if not isinstance(bigm, pyo.Transformation):
         print("TransformationFactory(gdp.bigm) did not return a "
-              "transfomation")
+              "transformation")
         sys.exit(4)
 
     _check_log_and_out(LOG, OUT, 30)
