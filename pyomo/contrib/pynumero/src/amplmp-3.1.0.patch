@@ -4,12 +4,12 @@ index 523faa7..2523b22 100644
 +++ b/CMakeLists.txt
 @@ -336,8 +336,6 @@ check_cxx_source_compiles("
    int main() {}" MP_VARIADIC_TEMPLATES)
-
+ 
  if (MP_VARIADIC_TEMPLATES)
 -  add_executable(nl-example src/nl-example.cc)
 -  target_link_libraries(nl-example mp)
  endif ()
-
+ 
  add_subdirectory(doc)
 @@ -384,13 +384,8 @@ endforeach ()
  if (MP_VARIADIC_TEMPLATES AND HAVE_ATOMIC)
