@@ -17,6 +17,7 @@ import logging
 import math
 from io import StringIO
 
+from pyomo.common.backports import nullcontext
 from pyomo.common.collections import OrderedSet
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter, WriterFactory
@@ -516,7 +517,30 @@ class ProblemWriter_bar(AbstractProblemWriter):
                  output_filename,
                  solver_capability,
                  io_options):
+        if output_filename is None:
+            output_filename = model.name + ".bar"
 
+        # If the user provides a file name, we will use the opened file
+        # as a context manager to ensure it gets closed.  If the user
+        # provided something else (e.g., a file-like object), we will
+        # use a nullcontext manager to prevent closing it.
+        if isinstance(output_filename, str):
+            output_file = open(output_filename, "w")
+        else:
+            output_file = nullcontext(output_filename)
+
+        with output_file:
+            symbol_map = self._write_bar_file(
+                model, output_file, solver_capability, io_options)
+
+        return output_filename, symbol_map
+
+
+    def _write_bar_file(self,
+                        model,
+                        output_file,
+                        solver_capability,
+                        io_options):
         # Make sure not to modify the user's dictionary, they may be
         # reusing it outside of this call
         io_options = dict(io_options)
@@ -576,11 +600,6 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 "Unallowable active component(s) %s.\nThe BARON writer cannot "
                 "export models with this component type." %
                 ", ".join(invalids))
-
-        if output_filename is None:
-            output_filename = model.name + ".bar"
-
-        output_file=open(output_filename, "w")
 
         # Process the options. Rely on baron to catch
         # and reset bad option values
@@ -818,7 +837,5 @@ class ProblemWriter_bar(AbstractProblemWriter):
         output_file.write("".join( tmp[key] for key in sorted(tmp.keys()) ))
         output_file.write('}\n\n')
 
-        output_file.close()
-
-        return output_filename, symbol_map
+        return symbol_map
 
