@@ -247,10 +247,18 @@ class ProblemWriter_bar(AbstractProblemWriter):
                                     "Choices are: [relaxationonly, convex, local]"
                                     % (suffix.name, constraint_type))
                 else:
+                    if block is block.model():
+                        if block.name == 'unknown':
+                            _location = 'model'
+                        else:
+                            _location = "model '%s'" % (block.name,)
+                    else:
+                        _location = "block '%s'" % (block.name,)
+
                     raise ValueError(
                         "The BARON writer can not export suffix with name '%s'. "
-                        "Either remove it from block '%s' or deactivate it."
-                        % (block.name, name))
+                        "Either remove it from the %s or deactivate it."
+                        % (name, _location))
 
         non_standard_eqns = r_o_eqns + c_eqns + l_eqns
 
