@@ -497,6 +497,7 @@ jobs:
       if: matrix.mpi == 0
       run: |
         echo PATH="$PATH"
+        cat ~/.profile
         CATEGORY=
         for cat in ${{matrix.category}}; do
             CATEGORY+=" --cat $cat"
