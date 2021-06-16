@@ -263,9 +263,14 @@ jobs:
         # conda activate puts itself first in the PATH, which overrides
         # any paths we add through GITHUB_PATH.  We will update .profile
         # to move the local runner paths back to the front (before conda).
-        echo 'export PATH=`echo "$PATH" \
-            | tr ":" "\n" | grep runner | tr "\n" ":"`:`echo "$PATH" \
-            | tr ":" "\n" | grep -v runner | tr "\n" ":"`' >> $HOME/.profile
+        for profile in $HOME/.profile $HOME/.bash_profile; do
+            if test ! -e $profile; then
+                continue
+            fi
+            echo 'export PATH=`echo "$PATH" \
+                | tr ":" "\n" | grep runner | tr "\n" ":"`:`echo "$PATH" \
+                | tr ":" "\n" | grep -v runner | tr "\n" ":"`' >> $profile
+        done
 
         mkdir -p $GITHUB_WORKSPACE/cache/conda
         conda config --set always_yes yes
