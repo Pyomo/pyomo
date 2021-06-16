@@ -60,9 +60,8 @@ Based on the above notation, the form of the robust counterpart addressed in PyR
     & & & \displaystyle ~~ h_j\left(x, z, y, q\right) = 0 &  & \forall j \in \mathcal{J}
     \end{align*}
 
-In order to solve problems of the above type, PyROS implements the Generalized Robust Cutting-Set algorithm developed in:
-
-`Isenberg, NM, Akula, P, Eslick, JC, Bhattacharyya, D, Miller, DC, Gounaris, CE. A generalized cutting‐set approach for nonlinear robust optimization in process systems engineering. AIChE J. 2021; 67:e17175. DOI 10.1002/aic.17175 <https://aiche.onlinelibrary.wiley.com/doi/abs/10.1002/aic.17175>`_
+In order to solve problems of the above type, PyROS implements the
+Generalized Robust Cutting-Set algorithm developed in [GRCSPaper]_.
 
 When using PyROS, please consider citing the above paper.
 
@@ -148,7 +147,7 @@ Mathematical representations of the sets are shown below, followed by the class 
      - :math:`Q_E = \left\{q \in \mathbb{R}^n: \displaystyle q = q^0 + P^{1/2} \xi \text{ for some } \xi \in \Xi_E \right\} \\ \Xi_E = \left\{\xi \in \mathbb{R} : \xi^T\xi \leq s \right\} \\ P \in \mathbb{S}^{n\times n}_+ \\ s \in \mathbb{R}_+ \\ q^0 \in \mathbb{R}^n`
    * - ``UncertaintySet``
      - :math:`Q_U = \left\{q \in \mathbb{R}^n: \displaystyle g_i(q) \leq 0 \quad \forall i \in \left\{1,\ldots,m \right\}\right\} \\ m \in \mathbb{N}_+ \\ g_i : \mathbb{R}^n \mapsto \mathbb{R} \, \forall i \in \left\{1,\ldots,m\right\}, \\ q^0 \in \mathbb{R}^n : \left\{g_i(q^0) \leq 0  \ \forall i \in \left\{1,\ldots,m\right\}\right\}`
-   * - ``DiscreteSet``
+   * - ``DiscreteScenariosSet``
      - :math:`Q_D = \left\{q^s : s = 0,\ldots,D \right\} \\ D \in \mathbb{N} \\ q^s \in \mathbb{R}^n \forall s \in \left\{ 0,\ldots,D\right\}`
    * - ``IntersectionSet``
      - :math:`Q_I = \left\{q \in \mathbb{R}^n: \displaystyle q \in \bigcap_{i \in \left\{1,\ldots,m\right\}} Q_i\right\} \\ Q_i \subset \mathbb{R}^n \quad \forall i \in \left\{1,\ldots,m\right\}`
@@ -183,7 +182,7 @@ PyROS Uncertainty Set Classes
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.UncertaintySet
     :special-members: __init__
 
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.DiscreteSet
+.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.DiscreteScenariosSet
     :special-members: __init__
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.IntersectionSet
