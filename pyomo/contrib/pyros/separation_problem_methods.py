@@ -6,6 +6,7 @@ from pyomo.core.base.objective import (Objective,
                                        maximize,
                                        value)
 from pyomo.core.base import Var, Param
+from pyomo.common.collections import ComponentSet
 from pyomo.common.dependencies import numpy as np
 from pyomo.contrib.pyros.util import (ObjectiveType,
                                       get_time_from_solver,
@@ -39,14 +40,13 @@ def make_separation_objective_functions(model, config):
     """
     performance_constraints = []
     for c in model.component_data_objects(Constraint, active=True, descend_into=True):
-        uncertain_params_in_expr = list(v for v in list(model.util.uncertain_param_vars.values()) if
-                    id(v) in list(id(u) for u in list(identify_variables(expr=c.expr))))
-        state_vars_in_expr = list(v for v in model.util.state_vars if
-                                        id(v) in list(id(u) for u in list(identify_variables(expr=c.expr))))
-        second_stage_variables_in_expr = list(v for v in model.util.second_stage_variables if
-                                        id(v) in list(id(u) for u in list(identify_variables(expr=c.expr))))
-        if not c.equality and \
-                (len(uncertain_params_in_expr) > 0 or len(state_vars_in_expr) > 0 or len(second_stage_variables_in_expr) > 0):
+        if c.name == "epigraph_constr":
+            print()
+        _vars = ComponentSet(identify_variables(expr=c.expr))
+        uncertain_params_in_expr = list(v for v in model.util.uncertain_param_vars.values() if v in _vars)
+        state_vars_in_expr = list(v for v in model.util.state_vars if v in _vars)
+        second_stage_variables_in_expr = list(v for v in model.util.second_stage_variables if v in _vars)
+        if not c.equality and (uncertain_params_in_expr or state_vars_in_expr or second_stage_variables_in_expr):
             # This inequality constraint depends on uncertain parameters therefore it must be separated against
             performance_constraints.append(c)
     model.util.performance_constraints = performance_constraints
@@ -89,7 +89,8 @@ def make_separation_problem(model_data, config):
 
     if config.objective_focus is ObjectiveType.worst_case:
         separation_model.util.zeta = Param(initialize=0, mutable=True)
-        constr = Constraint(expr= separation_model.first_stage_objective + separation_model.second_stage_objective <= separation_model.util.zeta)
+        constr = Constraint(expr= separation_model.first_stage_objective + separation_model.second_stage_objective + separation_model.const_obj_term
+                                  <= separation_model.util.zeta)
         separation_model.add_component("epigraph_constr", constr)
 
     substitution_map = {}
@@ -101,10 +102,9 @@ def make_separation_problem(model_data, config):
 
     separation_model.util.new_constraints = constraints = ConstraintList()
 
+    uncertain_param_set = ComponentSet(uncertain_params)
     for c in separation_model.component_data_objects(Constraint):
-        num_uncertain_params_in_constr = len(list(i for i in list(identify_mutable_parameters(c.expr))
-                                                  if id(i) in list(id(u) for u in uncertain_params)))
-        if num_uncertain_params_in_constr > 0:
+        if any(v in uncertain_param_set for v in identify_mutable_parameters(c.expr)):
             if c.equality:
                 constraints.add(
                     replace_expressions(expr=c.lower, substitution_map=substitution_map) ==
@@ -117,6 +117,8 @@ def make_separation_problem(model_data, config):
                 constraints.add(
                     replace_expressions(expr=c.upper, substitution_map=substitution_map) >=
                     replace_expressions(expr=c.body, substitution_map=substitution_map))
+            else:
+                raise ValueError("Unable to parse constraint for building the separation problem.")
             c.deactivate()
             map_new_constraint_list_names_to_original_con_names[list(constraints.values())[-1].name] = c.name
 
@@ -131,7 +133,7 @@ def make_separation_problem(model_data, config):
     return separation_model
 
 
-def get_all_sep_objective_values(model_data):
+def get_all_sep_objective_values(model_data, config):
     """
     Returns all violations from separation
     """
@@ -141,10 +143,9 @@ def get_all_sep_objective_values(model_data):
             list_of_violations_across_objectives.append(value(o.expr))
         except:
             for v in model_data.separation_model.util.first_stage_variables:
-                print(v.name + " " + str(v.value))
-            print()
+                config.progress_logger.info(v.name + " " + str(v.value))
             for v in model_data.separation_model.util.second_stage_variables:
-                print(v.name + " " + str(v.value))
+                config.progress_logger.info(v.name + " " + str(v.value))
             raise ArithmeticError(
                 "Objective function " + str(o) + " led to a math domain error. "
                  "Does this objective (meaning, its parent performance constraint) "
@@ -344,7 +345,7 @@ def is_violation(model_data, config, solve_data):
         violating_param_realization = list(
             p.value for p in list(model_data.separation_model.util.uncertain_param_vars.values())
         )
-        list_of_violations = get_all_sep_objective_values(model_data=model_data)
+        list_of_violations = get_all_sep_objective_values(model_data=model_data, config=config)
         solve_data.violating_param_realization = violating_param_realization
         solve_data.list_of_scaled_violations = [l/denom for l in list_of_violations]
         solve_data.found_violation = True
@@ -353,7 +354,7 @@ def is_violation(model_data, config, solve_data):
         violating_param_realization = list(
             p.value for p in list(model_data.separation_model.util.uncertain_param_vars.values())
         )
-        list_of_violations = get_all_sep_objective_values(model_data=model_data)
+        list_of_violations = get_all_sep_objective_values(model_data=model_data, config=config)
         solve_data.violating_param_realization = violating_param_realization
         solve_data.list_of_scaled_violations = [l/denom for l in list_of_violations]
         solve_data.found_violation = False
@@ -396,10 +397,7 @@ def solver_call_separation(model_data, config, solver, solve_data, is_global):
     """
     Solve the separation problem.
     """
-    path = os.path.dirname(os.path.realpath(__file__))
-    save_dir = os.path.join(path, "failed_models")
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
+    save_dir = config.subproblem_file_directory
 
     if is_global or config.bypass_local_separation:
         backup_solvers = deepcopy(config.backup_global_solvers)
@@ -441,12 +439,13 @@ def solver_call_separation(model_data, config, solver, solve_data, is_global):
             return True
 
     # === Write this instance to file for user to debug because this separation instance did not return an optimal solution
-    objective = str(list(nlp_model.component_data_objects(Objective, active=True))[0].name)
-    name = os.path.join(save_dir, config.uncertainty_set.type + "_" + nlp_model.name + "_separation_" + str(
-                            model_data.iteration) + "_obj_" + objective + ".gms")
-    nlp_model.write(name, format="gams")
-    output_logger(config=config, separation_error=True, filename=name, iteration=model_data.iteration, objective=objective,
-                  status_dict=solver_status_dict)
+    if save_dir:
+        objective = str(list(nlp_model.component_data_objects(Objective, active=True))[0].name)
+        name = os.path.join(save_dir, config.uncertainty_set.type + "_" + nlp_model.name + "_separation_" + str(
+            model_data.iteration) + "_obj_" + objective + ".bar")
+        nlp_model.write(name, format="bar")
+        output_logger(config=config, separation_error=True, filename=name, iteration=model_data.iteration, objective=objective,
+                      status_dict=solver_status_dict)
     return True
 
 

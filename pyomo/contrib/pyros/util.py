@@ -417,11 +417,29 @@ def add_decision_rule_variables(model_data, config):
     return
 
 
-def bars_and_stars(n, k):
-    # Snippet taken from stack overflow. used in add_decision_rule_constraints
-    # https://stackoverflow.com/questions/28965734/general-bars-and-stars
-    for c in it.combinations(range(n + k - 1), k - 1):
-        yield [b - a - 1 for a, b in zip((-1,) + c, c + (n + k - 1,))]
+def partition_powers(n, v):
+    """Partition a total degree n across v variables
+
+    This is an implementation of the "stars and bars" algorithm from
+    combinatorial mathematics.
+
+    This partitions a "total integer degree" of n across v variables
+    such that each variable gets an integer degree >= 0.  You can think
+    of this as dividing a set of n+v things into v groupings, with the
+    power for each v_i being 1 less than the number of things in the
+    i'th group (because the v is part of the group).  It is therefore
+    sufficient to just get the v-1 starting points chosen from a list of
+    indices n+v long (the first starting point is fixed to be 0).
+
+    """
+    for starts in it.combinations(range(1, n + v), v - 1):
+        # add the initial starting point to the beginning and the total
+        # number of objects (degree counters and variables) to the end
+        # of the list.  The degree for each variable is 1 less than the
+        # difference of sequential starting points (to account for the
+        # variable itself)
+        starts = (0,) + starts + (n+v,)
+        yield [starts[i+1] - starts[i] - 1 for i in range(v)]
 
 
 def add_decision_rule_constraints(model_data, config):
@@ -455,7 +473,7 @@ def add_decision_rule_constraints(model_data, config):
         # Using bars and stars groupings of variable powers, construct x1^a * .... * xn^b terms for all c <= a+...+b = degree
         all_powers = []
         for n in range(1, degree+1):
-            all_powers.append(list(bars_and_stars(n, len(uncertain_params))))
+            all_powers.append(list(partition_powers(n, len(uncertain_params))))
         for i in range(len(second_stage_variables)):
             Z = list(z for z in getattr(model_data.working_model, "decision_rule_var_" + str(i)).values())
             e = Z.pop(0)

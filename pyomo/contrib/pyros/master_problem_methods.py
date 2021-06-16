@@ -32,7 +32,7 @@ def initial_construct_master(model_data):
     m.scenarios = Block(NonNegativeIntegers, NonNegativeIntegers)
 
     master_data = MasterProblemData()
-    master_data.original = copy.deepcopy(model_data.working_model)
+    master_data.original = model_data.working_model.clone()
     master_data.master_model = m
     master_data.timing = model_data.timing
 
@@ -43,7 +43,7 @@ def solve_master_feasibility_problem(model_data, config):
     """
     Solve a slack variable based feasibility model for the master problem
     """
-    model = copy.deepcopy(model_data.master_model)
+    model = model_data.master_model.clone()
     for o in model.component_data_objects(Objective):
         o.deactivate()
     TransformationFactory("core.add_slack_variables").apply_to(model)
@@ -65,7 +65,7 @@ def solve_master_feasibility_problem(model_data, config):
     if check_optimal_termination(results) and value(model._core_add_slack_variables._slack_objective) <= 0:
         # If this led to a feasible solution, continue with this model
         # Load solution into master
-        for v in model.component_data_objects(Var, Constraint, Objective, Expression):
+        for v in model.component_data_objects(Var):
             master_v = model_data.master_model.find_component(v)
             if master_v is not None:
                 master_v.value = v.value
@@ -319,13 +319,11 @@ def solver_call_master(model_data, config, solver, solve_data):
             return master_soln
 
     # === At this point, all sub-solvers have been tried and none returned an acceptable status or return code
-    path = os.path.dirname(os.path.realpath(__file__))
-    save_dir = os.path.join(path, "failed_models")
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-    name = os.path.join(save_dir,  config.uncertainty_set.type + "_" + model_data.original.name + "_master_" + str(model_data.iteration) + ".gms")
-    nlp_model.write(name, format="gams")
-    output_logger(config=config, master_error=True, status_dict=solver_term_cond_dict, filename=name, iteration=model_data.iteration)
+    save_dir = config.subproblem_file_directory
+    if save_dir:
+        name = os.path.join(save_dir,  config.uncertainty_set.type + "_" + model_data.original.name + "_master_" + str(model_data.iteration) + ".bar")
+        nlp_model.write(name, format="bar")
+        output_logger(config=config, master_error=True, status_dict=solver_term_cond_dict, filename=name, iteration=model_data.iteration)
     master_soln.grcs_termination_condition = grcsTerminationCondition.subsolver_error
     return master_soln
 

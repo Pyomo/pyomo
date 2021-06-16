@@ -58,9 +58,8 @@ def ROSolver_iterative_solve(model_data, config):
         raise ValueError
 
     # === Set the nominal uncertain parameters to the violation values
-    for i in range(len(violation)):
-        master_data.master_model.scenarios[0, 0].util.uncertain_params[i].value = \
-            violation[i]
+    for i, v in enumerate(violation):
+        master_data.master_model.scenarios[0, 0].util.uncertain_params[i] = v
 
     # === Add objective function (assuming minimization of costs) with nominal second-stage costs
     if config.objective_focus is ObjectiveType.nominal:
@@ -169,8 +168,8 @@ def ROSolver_iterative_solve(model_data, config):
             for val in master_soln.ssv_vals:
                 nominal_data.nom_ssv_vals.append(val)
 
-            nominal_data.nom_first_stage_cost += master_soln.first_stage_objective
-            nominal_data.nom_second_stage_cost += master_soln.second_stage_objective
+            nominal_data.nom_first_stage_cost = master_soln.first_stage_objective
+            nominal_data.nom_second_stage_cost = master_soln.second_stage_objective
             nominal_data.nom_obj = value(master_data.master_model.obj)
 
         # === Decision rule polishing
@@ -248,8 +247,9 @@ def ROSolver_iterative_solve(model_data, config):
             return model_data, separation_solns
 
         # === Check if we exit due to solver returning unsatisfactory statuses (not in permitted_termination_conditions)
-        local_solve_term_conditions = [TerminationCondition.optimal, TerminationCondition.locallyOptimal, TerminationCondition.globallyOptimal]
-        global_solve_term_conditions = [TerminationCondition.optimal, TerminationCondition.globallyOptimal]
+        local_solve_term_conditions = {TerminationCondition.optimal, TerminationCondition.locallyOptimal,
+                                       TerminationCondition.globallyOptimal}
+        global_solve_term_conditions = {TerminationCondition.optimal, TerminationCondition.globallyOptimal}
         if (is_global and any((s.termination_condition not in global_solve_term_conditions)
                                   for sep_soln_list in separation_solns for s in sep_soln_list)) or \
             (not is_global and any((s.termination_condition not in local_solve_term_conditions)

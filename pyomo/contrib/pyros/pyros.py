@@ -10,7 +10,7 @@
 
 # pyros.py: Generalized Robust Cutting-Set Algorithm for Pyomo
 import logging
-from pyomo.common.collections import Bunch
+from pyomo.common.collections import Bunch, ComponentSet
 from pyomo.common.config import (
     ConfigDict, ConfigValue, In, NonNegativeFloat, add_docstring_list
 )
@@ -101,7 +101,7 @@ def pyros_config():
     # ================================================
     # === Options common to all solvers
     # ================================================
-    '''CONFIG.declare('time_limit', ConfigValue(
+    CONFIG.declare('time_limit', ConfigValue(
         default=None,
         domain=NonNegativeFloat
     ))
@@ -116,7 +116,7 @@ def pyros_config():
     CONFIG.declare('load_solution', ConfigValue(
         default=True,
         domain=bool,
-    ))'''
+    ))
 
     # ================================================
     # === Required User Inputs
@@ -212,6 +212,11 @@ def pyros_config():
     CONFIG.declare("load_pyros_solution", ConfigValue(
         default=True, domain=bool,
         description="Optional. Default = True. Whether or not to load the final solution of PyROS into the model object."
+    ))
+    CONFIG.declare("subproblem_file_directory", ConfigValue(
+        default=None, domain=str,
+        description="Optional. Path to a directory where subproblem files and "
+                    "logs will be written in the case that a subproblem fails to solve."
     ))
     # ================================================
     # === Advanced Options
@@ -342,13 +347,14 @@ class PyROS(object):
             wm_util = model_data.working_model
 
             # === Assuming all other Var objects in the model are state variables
-            fsv_ids = list(id(v) for v in model_data.working_model.util.first_stage_variables)
-            ssv_ids = list(id(v) for v in model_data.working_model.util.second_stage_variables)
+            fsv = ComponentSet(model_data.working_model.util.first_stage_variables)
+            ssv = ComponentSet(model_data.working_model.util.second_stage_variables)
+            sv = ComponentSet()
             model_data.working_model.util.state_vars = []
             for v in model_data.working_model.component_data_objects(Var):
-                if id(v) not in ssv_ids and id(v) not in fsv_ids \
-                        and id(v) not in list(id(state_var) for state_var in model_data.working_model.util.state_vars):
+                if v not in fsv and v not in ssv and v not in sv:
                     model_data.working_model.util.state_vars.append(v)
+                    sv.add(v)
 
             # Bounds on second stage variables and state variables are separation objectives,
             #  they are brought in this was as explicit constraints

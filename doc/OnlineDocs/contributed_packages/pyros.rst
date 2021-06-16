@@ -206,7 +206,7 @@ Step 0: Import the PyROS Module
 
 In anticipation of using the PyROS solver:
 
-.. code::
+.. doctest::
 
   >>> # === Required import ===
   >>> import pyomo.pyros as pyros
@@ -229,7 +229,7 @@ The deterministic Pyomo model for *hydro* is shown below.
     ``pyo.Param.DefaultMutable = True``. Note how this sets the default ``mutable`` property in all ``Param`` objects in the ensuing model instance to ``True``;
     consequently, this solution will not work with ``Param`` objects for which the ``mutable=False`` property was explicitly enabled inside the model object.
 
-.. code::
+.. doctest::
 
   >>> # === Required import ===
   >>> import pyomo.environ as pyo
@@ -315,7 +315,7 @@ Step 2: Define the Uncertainty
 
 First, we need to collect into a list those ``Param`` objects of our model that represent potentially uncertain parameters. For purposes of our example, we shall assume uncertainty in the model parameters ``(m.p[0], m.p[1], m.p[2], m.p[3])``, for which we can conveniently utilize the ``m.p`` object (itself an indexed ``Param`` object).
 
-.. code::
+.. doctest::
 
   >>> # === Specify which parameters are uncertain ===
   >>> uncertain_parameters = [m.p] # We can pass IndexedParams this way to PyROS, or as an expanded list per index
@@ -325,7 +325,7 @@ First, we need to collect into a list those ``Param`` objects of our model that 
 
 PyROS will seek to identify solutions that remain feasible for any realization of these parameters included in an uncertainty set. To that end, we need to construct an ``UncertaintySet`` object. In our example, let us utilize the ``BoxSet`` constructor to specify an uncertainty set of simple hyper-rectangular geometry. For this, we will assume each parameter value is uncertain within a percentage of its nominal value. Constructing this specific ``UncertaintySet`` object can be done as follows.
 
-.. code::
+.. doctest::
 
   >>> # === Define the pertinent data ===
   >>> relative_deviation = 0.15
@@ -341,8 +341,9 @@ Step 3: Solve with PyROS
 
 PyROS requires the user to supply one local and one global NLP solver to be used for solving sub-problems. For convenience, we shall have PyROS invoke BARON as both the local and the global NLP solver.
 
-.. code::
+.. doctest::
 
+  :skipif: not baron_available
   >>> # === Designate local and global NLP solvers ===
   >>> local_solver = pyo.SolverFactory('baron')
   >>> global_solver = pyo.SolverFactory('baron')
@@ -379,8 +380,9 @@ A Single-Stage Problem
 """""""""""""""""""""""""
 If we choose to designate all variables as either design or state variables, without any control variables (i.e., all degrees of freedom are first-stage), we can use PyROS to solve the single-stage problem as shown below. In particular, let us instruct PyROS that variables ``m.x1`` through ``m.x6``, ``m.x19`` through ``m.x24``, and ``m.x31`` correspond to first-stage degrees of freedom.
 
-.. code::
+.. doctest::
 
+  :skipif: not baron_available
   >>> # === Designate which variables correspond to first- and second-stage degrees of freedom ===
   >>> first_stage_variables =[m.x1, m.x2, m.x3, m.x4, m.x5, m.x6,
                         m.x19, m.x20, m.x21, m.x22, m.x23, m.x24, m.x31]
@@ -411,7 +413,8 @@ A Two-Stage Problem
 """"""""""""""""""""""
 For this next set of runs, we will assume that some of the previously designated first-stage degrees of freedom are in fact second-stage ones. PyROS handles second-stage degrees of freedom via the use of decision rules, which is controlled with the config option ``decision_rule_order`` presented above. Here, we shall select affine decision rules by setting ``decision_rule_order`` to the value of `1`.
 
-.. code::
+.. doctest::
+  :skipif: not baron_available
 
   >>> # === Define the variable partitioning
   >>> first_stage_variables =[m.x5, m.x6, m.x19, m.x22, m.x23, m.x24, m.x31]
@@ -446,7 +449,8 @@ Using appropriately constructed hierarchies, PyROS allows for the facile compari
 For the set we considered here, the ``BoxSet``, we can create such a hierarchy via an array of ``relative_deviation`` parameters to define the size of these uncertainty sets.
 We can then loop through this array and call PyROS within a loop to identify robust solutions in light of each of the specified ``BoxSet`` objects.
 
-.. code::
+.. doctest::
+  :skipif: not baron_available
 
   >>> # === An array of maximum relative deviations from the nominal uncertain parameter values to utilize in constructing box sets
   >>> relative_deviation_list = [0.00, 0.10, 0.20, 0.30, 0.40]
