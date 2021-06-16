@@ -15,10 +15,11 @@ import pyomo.environ as pyo
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np, numpy_available, scipy, scipy_available
 )
-from pyomo.common.dependencies.scipy import sparse as sps
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
+
+from pyomo.common.dependencies.scipy import sparse as sps
 
 from pyomo.contrib.pynumero.asl import AmplInterface
 if not AmplInterface.available():
@@ -427,7 +428,7 @@ class TestExternalPyomoModel(unittest.TestCase):
             # dense matrix from this operation. I am not sure if I should
             # cast it to a sparse matrix. For now it is dense...
             self.assertAlmostEqual(
-                    jac[0][0],
+                    jac.toarray()[0][0],
                     model.evaluate_jacobian(x[0]),
                     delta=1e-8,
                     )
@@ -508,7 +509,7 @@ class TestExternalPyomoModel(unittest.TestCase):
             # dense matrix from this operation. I am not sure if I should
             # cast it to a sparse matrix. For now it is dense...
             self.assertAlmostEqual(
-                    jac[0][0],
+                    jac.toarray()[0][0],
                     model.evaluate_jacobian(x[0]),
                     delta=1e-7,
                     )
@@ -711,7 +712,7 @@ class TestExternalPyomoModel(unittest.TestCase):
             external_model.set_input_values(x)
             jac = external_model.evaluate_jacobian_equality_constraints()
             expected_jac = model.evaluate_jacobian(x)
-            np.testing.assert_allclose(jac, expected_jac, rtol=1e-8)
+            np.testing.assert_allclose(jac.toarray(), expected_jac, rtol=1e-8)
 
     def test_hessian_SimpleModel2x2_1(self):
         model = SimpleModel2by2_1()
@@ -757,8 +758,9 @@ class TestExternalPyomoModel(unittest.TestCase):
             external_model.set_input_values(x)
             external_model.set_equality_constraint_multipliers([1.0, 1.0])
             hess_lag = external_model.evaluate_hessian_equality_constraints()
+            hess_lag = hess_lag.toarray()
             expected_hess = model.evaluate_hessian(x)
-            expected_hess_lag = expected_hess[0] + expected_hess[1]
+            expected_hess_lag = np.tril(expected_hess[0] + expected_hess[1])
             np.testing.assert_allclose(hess_lag, expected_hess_lag, rtol=1e-8)
 
 
