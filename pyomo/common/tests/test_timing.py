@@ -99,9 +99,9 @@ class TestTiming(unittest.TestCase):
         RES = 0.02 # resolution (seconds): 1/5 the sleep
 
         # Note: pypy on GHA occasionally has timing
-        # differences of >0.03s
+        # differences of >0.04s
         if 'pypy_version_info' in dir(sys):
-            RES *= 2
+            RES *= 2.5
         # Note: previously, OSX on GHA also had significantly nosier tests
         # if sys.platform == 'darwin':
         #     RES *= 2
