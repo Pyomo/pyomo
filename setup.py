@@ -142,6 +142,30 @@ def run_setup():
               'numpy', # Needed by autodoc for pynumero
               'scipy', # Needed by autodoc for pynumero
           ],
+          'optional': [
+              'dill',      # No direct use, but improves lambda pickle
+              'ipython',   # contrib.viewer
+              'networkx',  # network, incidence_analysis, community_detection
+              'openpyxl',  # dataportals
+              #'pathos',   # requested for #963, but PR currently closed
+              'pint',      # units
+              #'pyro4',    # used by PySP; no longer needed by core Pyomo
+              'python-louvain', # community_detection
+              'pyyaml',    # core
+              'sympy',     # differentiation
+              'xlrd',      # dataportals
+              'z3-solver', # community_detection
+              # The following optional dependencies are difficult to
+              # install on PyPy (due to the numpy dependency), so we
+              # will only "require" them on other (CPython) platforms:
+              'casadi; implementation_name!="pypy"', # dae
+              'matplotlib; implementation_name!="pypy"',
+              'numdifftools; implementation_name!="pypy"', # pynumero
+              'numpy; implementation_name!="pypy"',
+              'pandas; implementation_name!="pypy"',
+              'scipy; implementation_name!="pypy"',
+              'seaborn; implementation_name!="pypy"', # parmest.graphics
+          ],
       },
       packages=find_packages(exclude=("scripts",)),
       package_data={
