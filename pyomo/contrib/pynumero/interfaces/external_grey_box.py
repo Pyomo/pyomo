@@ -19,6 +19,7 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base import Var, Set, Constraint, value
 from pyomo.core.base.block import _BlockData, Block, declare_custom_block
 from pyomo.core.base.util import Initializer
+from pyomo.core.base.set import UnindexedComponent_set
 
 from ..sparse.block_matrix import BlockMatrix
 
