@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import itertools
 from pyomo.environ import SolverFactory
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
@@ -91,7 +92,13 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
             external_vars,
             residual_cons,
             external_cons,
+            model=None,
             ):
+        # This is the original model containing the components we are
+        # working with. The only reason to include this here is so
+        # it does not get garbage collected.
+        self._model = model
+
         # We only need this block to construct the NLP, which wouldn't
         # be necessary if we could compute Hessians of Pyomo constraints.
         self._block = create_subsystem_block(
@@ -114,7 +121,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         return len(self.input_vars)
 
     def n_equality_constraints(self):
-        return len(self.residual_equations)
+        return len(self.residual_cons)
 
     # I would like to try to get by without using the following "name" methods.
     def input_names(self):
@@ -133,7 +140,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         _temp = create_subsystem_block(external_cons, variables=external_vars)
         # Make sure that no additional variables appear in the
         # "external constraints." Not sure if this is necessary.
-        assert len(_temp.input_vars) == len(input_vars)
+        #assert len(_temp.input_vars) == len(input_vars)
 
         # TODO: Make this solver a configurable option
         solver = SolverFactory("ipopt")
@@ -163,12 +170,32 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         jgx = nlp.extract_submatrix_jacobian(x, g)
         jgy = nlp.extract_submatrix_jacobian(y, g)
 
+        nf = len(f)
+        nx = len(x)
+        n_entries = nf*nx
+
         # TODO: Does it make sense to cast dydx to a sparse matrix?
         # My intuition is that it does only if jgy is "decomposable"
         # in the strongly connected component sense, which is probably
         # not usually the case.
         dydx = -1 * sps.linalg.splu(jgy.tocsc()).solve(jgx.toarray())
-        return (jfx + jfy.dot(dydx))
+        # NOTE: PyNumero block matrices require this to be a sparse matrix
+        # that contains coordinates for every entry that could possibly
+        # be nonzero. Here, this is all of the entries.
+        dfdx = jfx + jfy.dot(dydx)
+
+        row = []
+        col = []
+        data = []
+        for i, j in itertools.product(range(nf), range(nx)):
+            row.append(i)
+            col.append(j)
+            data.append(dfdx[i, j])
+        row = np.array(row)
+        col = np.array(col)
+        data = np.array(data)
+
+        return sps.coo_matrix((data, (row, col)), shape=(nf, nx))
 
     def evaluate_jacobian_external_variables(self):
         nlp = self._nlp
@@ -242,7 +269,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
 
         dydx = self.evaluate_jacobian_external_variables()
 
-        ny = len(y)
+        nf = len(f)
         nx = len(x)
 
         hfxx = [get_hessian_of_constraint(con, x) for con in f]
@@ -270,7 +297,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         term4 = [
             np.array([[vec[i] for vec in vlist]
             for vlist in product_vectors])
-            for i in range(ny)
+            for i in range(nf)
             ]
 
         # List of nx-by-nx matrices
@@ -286,4 +313,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         """
         d2fdx2 = self.evaluate_hessians_of_residuals()
         multipliers = self.residual_con_multipliers
-        return sum(mult*matrix for mult, matrix in zip(multipliers, d2fdx2))
+        # NOTE: PyomoGreyBoxNLP requires this to be a sparse matrix.
+        return sps.tril(sps.coo_matrix(
+                    sum(mult*matrix for mult, matrix in zip(multipliers, d2fdx2))
+                    ))
