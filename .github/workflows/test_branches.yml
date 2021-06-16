@@ -267,9 +267,10 @@ jobs:
             if test ! -e $profile; then
                 continue
             fi
-            echo 'export PATH=`echo "$PATH" \
-                | tr ":" "\n" | grep runner | tr "\n" ":"`:`echo "$PATH" \
-                | tr ":" "\n" | grep -v runner | tr "\n" ":"`' >> $profile
+            echo 'export PATH=`echo "$PATH" \\
+                | tr ":" "\\n" | grep runner | tr "\n" ":"`:`echo "$PATH" \\
+                | tr ":" "\\n" | grep -v runner | tr "\n" ":"`' >> $profile
+            cat $profile
         done
 
         mkdir -p $GITHUB_WORKSPACE/cache/conda
