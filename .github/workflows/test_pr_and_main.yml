@@ -298,6 +298,19 @@ jobs:
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
         echo "NOSETESTS="`which nosetests` >> $GITHUB_ENV
+        #
+        # conda activate puts itself first in the PATH, which overrides
+        # any paths we add through GITHUB_PATH.  We will update .profile
+        # to move the local runner paths back to the front (before conda).
+        for profile in $HOME/.profile $HOME/.bash_profile; do
+            if test ! -e $profile; then
+                continue
+            fi
+            echo '' >> $profile
+            echo 'export PATH=`echo "$PATH" \
+                | tr ":" "\\n" | grep runner | tr "\n" ":"`:`echo "$PATH" \
+                | tr ":" "\\n" | grep -v runner | tr "\n" ":"`' >> $profile
+        done
 
     - name: Setup TPL package directories
       run: |
