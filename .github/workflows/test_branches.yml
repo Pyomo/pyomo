@@ -260,6 +260,13 @@ jobs:
     - name: Install Python packages (conda)
       if: matrix.PYENV == 'conda'
       run: |
+        # conda activate puts itself first in the PATH, which overrides
+        # any paths we add through GITHUB_PATH.  We will update .profile
+        # to move the local runner paths back to the front (before conda).
+        echo 'export PATH=`echo "$PATH" \
+            | tr ":" "\n" | grep runner | tr "\n" ":"`:`echo "$PATH" \
+            | tr ":" "\n" | grep -v runner | tr "\n" ":"`' >> $HOME/.profile
+
         mkdir -p $GITHUB_WORKSPACE/cache/conda
         conda config --set always_yes yes
         conda config --set auto_update_conda false
