@@ -230,7 +230,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
         branching_priorities_suffixes = []
         for block in all_blocks_list:
             for name, suffix in suffix_gen(block):
-                if name == 'branching_priorities':
+                if name in {'branching_priorities', 'priority'}:
                     branching_priorities_suffixes.append(suffix)
                 elif name == 'constraint_types':
                     for constraint_data, constraint_type in suffix.items():
