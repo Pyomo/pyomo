@@ -498,11 +498,12 @@ class Hull_Reformulation(Transformation):
 
         # Now that we know who we need to disaggregate, we will do it
         # while we also transform the disjuncts.
+        local_var_set = self._get_local_var_set(obj)
         or_expr = 0
         for disjunct in obj.disjuncts:
             or_expr += disjunct.indicator_var.get_associated_binary()
             self._transform_disjunct(disjunct, transBlock, varSet[disjunct],
-                                     localVars.get(disjunct, []))
+                                     localVars.get(disjunct, []), local_var_set)
         orConstraint.add(index, (or_expr, 1))
         # map the DisjunctionData to its XOR constraint to mark it as
         # transformed
@@ -520,25 +521,17 @@ class Hull_Reformulation(Transformation):
                 # create one more disaggregated var
                 idx = len(disaggregatedVars)
                 disaggregated_var = disaggregatedVars[idx]
-                lb = var.lb
-                ub = var.ub
-                if lb > 0:
-                    disaggregated_var.setlb(0)
-                else:
-                    disaggregated_var.setlb(lb)
-                if ub < 0:
-                    disaggregated_var.setub(0)
-                else:
-                    disaggregated_var.setub(ub)
-
-                # and we need the bounds constraints too
+                # mark this as local because we won't re-disaggregate if this is
+                # a nested disjunction
+                if local_var_set is not None:
+                    local_var_set.append(disaggregatedVar)
                 var_free = 1 - sum(disj.indicator_var.get_associated_binary()
                                    for disj in disjunctsVarAppearsIn[var])
-                disaggregated_var_bounds[idx, 'lb'] = lb*var_free <= \
-                                                      disaggregated_var
-                disaggregated_var_bounds[idx, 'ub'] = disaggregated_var <= \
-                                                      ub*var_free
-                
+                self._declare_disaggregated_var_bounds(var, disaggregated_var,
+                                                       obj,
+                                                       disaggregated_var_bounds,
+                                                       (idx,'lb'), (idx,'ub'),
+                                                       var_free)
                 # maintain the mappings
                 for disj in obj.disjuncts:
                     # Because we called _transform_disjunct above, we know that
@@ -585,7 +578,8 @@ class Hull_Reformulation(Transformation):
         # deactivate for the writers
         obj.deactivate()
 
-    def _transform_disjunct(self, obj, transBlock, varSet, localVars):
+    def _transform_disjunct(self, obj, transBlock, varSet, localVars,
+                            local_var_set):
         # deactivated should only come from the user
         if not obj.active:
             if obj.indicator_var.is_fixed():
@@ -640,87 +634,36 @@ class Hull_Reformulation(Transformation):
         obj._transformation_block = weakref_ref(relaxationBlock)
         relaxationBlock._srcDisjunct = weakref_ref(obj)
 
-        # add Suffix to the relaxation block that disaggregated variables are
-        # local (in case this is nested in another Disjunct)
-        local_var_set = None
-        parent_disjunct = obj.parent_block()
-        while parent_disjunct is not None:
-            if parent_disjunct.ctype is Disjunct:
-                break
-            parent_disjunct = parent_disjunct.parent_block()
-        if parent_disjunct is not None:
-            # This limits the cases that a user is allowed to name something
-            # (other than a Suffix) 'LocalVars' on a Disjunct. But I am assuming
-            # that the Suffix has to be somewhere above the disjunct in the
-            # tree, so I can't put it on a Block that I own. And if I'm coopting
-            # something of theirs, it may as well be here.
-            self._add_local_var_suffix(parent_disjunct)
-            if parent_disjunct.LocalVars.get(parent_disjunct) is None:
-                parent_disjunct.LocalVars[parent_disjunct] = []
-            local_var_set = parent_disjunct.LocalVars[parent_disjunct]
-
         # add the disaggregated variables and their bigm constraints
         # to the relaxationBlock
         for var in varSet:
-            lb = var.lb
-            ub = var.ub
-            if lb is None or ub is None:
-                raise GDP_Error("Variables that appear in disjuncts must be "
-                                "bounded in order to use the hull "
-                                "transformation! Missing bound for %s."
-                                % (var.name))
-
-            disaggregatedVar = Var(within=Reals,
-                                   bounds=(min(0, lb), max(0, ub)),
-                                   initialize=var.value)
+            disaggregatedVar = Var(within=Reals, initialize=var.value)
             # naming conflicts are possible here since this is a bunch
             # of variables from different blocks coming together, so we
             # get a unique name
             disaggregatedVarName = unique_component_name(
                 relaxationBlock.disaggregatedVars,
-                var.getname(fully_qualified=False, name_buffer=NAME_BUFFER),
-            )
+                var.getname(fully_qualified=False, name_buffer=NAME_BUFFER))
             relaxationBlock.disaggregatedVars.add_component(
                 disaggregatedVarName, disaggregatedVar)
             # mark this as local because we won't re-disaggregate if this is a
             # nested disjunction
             if local_var_set is not None:
                 local_var_set.append(disaggregatedVar)
-            # store the mappings from variables to their disaggregated selves on
-            # the transformation block.
-            transBlock._disaggregatedVarMap['disaggregatedVar'][obj][
-                var] = disaggregatedVar
-            transBlock._disaggregatedVarMap['srcVar'][
-                disaggregatedVar] = var
 
+            # add the bigm constraint
             bigmConstraint = Constraint(transBlock.lbub)
             relaxationBlock.add_component(
                 disaggregatedVarName + "_bounds", bigmConstraint)
-            if lb:
-                bigmConstraint.add(
-                    'lb', obj.binary_indicator_var*lb <= disaggregatedVar)
-            if ub:
-                bigmConstraint.add(
-                    'ub', disaggregatedVar <= obj.binary_indicator_var*ub)
 
-            transBlock._bigMConstraintMap[disaggregatedVar] = bigmConstraint
+            self._declare_disaggregated_var_bounds( 
+                var, disaggregatedVar, obj,
+                bigmConstraint, 'lb', 'ub',
+                obj.indicator_var.get_associated_binary(), transBlock)
 
         for var in localVars:
-            lb = var.lb
-            ub = var.ub
-            if lb is None or ub is None:
-                raise GDP_Error("Variables that appear in disjuncts must be "
-                                "bounded in order to use the hull "
-                                "transformation! Missing bound for %s."
-                                % (var.name))
-            if value(lb) > 0:
-                var.setlb(0)
-            if value(ub) < 0:
-                var.setub(0)
-
-            # map it to itself
-            transBlock._disaggregatedVarMap['disaggregatedVar'][obj][var] = var
-            transBlock._disaggregatedVarMap['srcVar'][var] = var
+            # we don't need to disaggregated, we can use this Var, but we do
+            # need to set up its bounds constraints.
 
             # naming conflicts are possible here since this is a bunch
             # of variables from different blocks coming together, so we
@@ -731,13 +674,11 @@ class Hull_Reformulation(Transformation):
                 "_bounds")
             bigmConstraint = Constraint(transBlock.lbub)
             relaxationBlock.add_component(conName, bigmConstraint)
-            if lb:
-                bigmConstraint.add(
-                    'lb', obj.binary_indicator_var*lb <= var)
-            if ub:
-                bigmConstraint.add(
-                    'ub', var <= obj.binary_indicator_var*ub)
-            transBlock._bigMConstraintMap[var] = bigmConstraint
+        
+            self._declare_disaggregated_var_bounds(
+                var, var, obj,
+                bigmConstraint, 'lb', 'ub',
+                obj.indicator_var.get_associated_binary(), transBlock)
 
         var_substitute_map = dict((id(v), newV) for v, newV in
                                   transBlock._disaggregatedVarMap[
@@ -810,6 +751,61 @@ class Hull_Reformulation(Transformation):
             # through so that we will have access to the indicator
             # variables down the line.
             handler(obj, disjunct, var_substitute_map, zero_substitute_map)
+
+    def _declare_disaggregated_var_bounds(self, original_var, disaggregatedVar,
+                                          disjunct, bigmConstraint, lb_idx,
+                                          ub_idx, var_free_indicator,
+                                          transBlock=None):
+        # If transBlock is None then this is a disaggregated variable for
+        # multiple Disjuncts and we will handle the mappings separately.
+        lb = original_var.lb
+        ub = original_var.ub
+        if lb is None or ub is None:
+            raise GDP_Error("Variables that appear in disjuncts must be "
+                            "bounded in order to use the hull "
+                            "transformation! Missing bound for %s."
+                            % (original_var.name))
+
+        disaggregatedVar.setlb(min(0, lb))
+        disaggregatedVar.setub(max(0, ub))
+        
+        if lb:
+            bigmConstraint.add(
+                lb_idx, var_free_indicator*lb <= disaggregatedVar)
+        if ub:
+            bigmConstraint.add(
+                ub_idx, disaggregatedVar <= ub*var_free_indicator)
+
+        # store the mappings from variables to their disaggregated selves on
+        # the transformation block.
+        if transBlock is not None:
+            transBlock._disaggregatedVarMap['disaggregatedVar'][disjunct][
+                original_var] = disaggregatedVar
+            transBlock._disaggregatedVarMap['srcVar'][
+                disaggregatedVar] = original_var
+            transBlock._bigMConstraintMap[disaggregatedVar] = bigmConstraint
+
+    def _get_local_var_set(self, disjunction):
+        # add Suffix to the relaxation block that disaggregated variables are
+        # local (in case this is nested in another Disjunct)
+        local_var_set = None
+        parent_disjunct = disjunction.parent_block()
+        while parent_disjunct is not None:
+            if parent_disjunct.ctype is Disjunct:
+                break
+            parent_disjunct = parent_disjunct.parent_block()
+        if parent_disjunct is not None:
+            # This limits the cases that a user is allowed to name something
+            # (other than a Suffix) 'LocalVars' on a Disjunct. But I am assuming
+            # that the Suffix has to be somewhere above the disjunct in the
+            # tree, so I can't put it on a Block that I own. And if I'm coopting
+            # something of theirs, it may as well be here.
+            self._add_local_var_suffix(parent_disjunct)
+            if parent_disjunct.LocalVars.get(parent_disjunct) is None:
+                parent_disjunct.LocalVars[parent_disjunct] = []
+            local_var_set = parent_disjunct.LocalVars[parent_disjunct]
+
+        return local_var_set
 
     def _transfer_var_references(self, fromBlock, toBlock):
         disjunctList = toBlock.relaxedDisjuncts

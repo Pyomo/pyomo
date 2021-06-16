@@ -680,9 +680,17 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # as are the XOR, reaggregation and their bounds constraints
         self.assertEqual(len(list(transBlock.component_objects(
             Constraint, descend_into=False))), 3)
-        # 3 reaggregation + 4 bounds + 1 xor
-        self.assertEqual(len(list(transBlock.component_data_objects(
-            Constraint, descend_into=False))), 8)
+        
+        if lb == 0:
+            # 3 reaggregation + 2 bounds + 1 xor (because one bounds constraint
+            # is on the parent transformation block, and we don't need lb
+            # constraints if lb = 0)
+            self.assertEqual(len(list(transBlock.component_data_objects(
+                Constraint, descend_into=False))), 6)
+        else:
+            # 3 reaggregation + 4 bounds + 1 xor
+            self.assertEqual(len(list(transBlock.component_data_objects(
+                Constraint, descend_into=False))), 8)
 
     def test_indexed_constraints_in_disjunct(self):
         m = models.makeThreeTermDisj_IndexedConstraints()
