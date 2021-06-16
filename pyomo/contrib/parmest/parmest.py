@@ -441,7 +441,7 @@ class Estimator(object):
                     for key in self.solver_options:
                         solver.options[key] = self.solver_options[key]
 
-                solve_result = solver.solve(ef, tee = True)#self.tee)
+                solve_result = solver.solve(ef, tee = self.tee)
 
             # The import error will be raised when we attempt to use
             # inv_reduced_hessian_barrier below.
