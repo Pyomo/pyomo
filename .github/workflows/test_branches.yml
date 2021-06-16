@@ -496,6 +496,7 @@ jobs:
     - name: Run Pyomo tests
       if: matrix.mpi == 0
       run: |
+        echo PATH="$PATH"
         CATEGORY=
         for cat in ${{matrix.category}}; do
             CATEGORY+=" --cat $cat"
