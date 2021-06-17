@@ -15,7 +15,11 @@ Script to generate the installer for pyomo.
 import os
 import platform
 import sys
-from setuptools import setup, find_packages, Command, DistutilsOptionError
+from setuptools import setup, find_packages, Command
+try:
+    from setuptools import DistutilsOptionError
+except ImportError:
+    from setuptools.distutils.errors import DistutilsOptionError
 
 def read(*rnames):
     with open(os.path.join(os.path.dirname(__file__), *rnames)) as README:
