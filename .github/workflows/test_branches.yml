@@ -229,7 +229,9 @@ jobs:
       run: |
         python -c 'import sys;print(sys.executable)'
         python -m pip install --cache-dir cache/pip --upgrade pip
-        pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES}
+        pip install --cache-dir cache/pip \
+            ${PYTHON_CORE_PKGS} \
+            ${PYTHON_PACKAGES}
         pip install --cache-dir cache/pip pymysql || \
             pip install --cache-dir cache/pip pymysql
         if test -z "${{matrix.slim}}"; then
@@ -258,7 +260,6 @@ jobs:
         conda config --show-sources
         conda list --show-channel-urls
         conda install -q -y -c conda-forge \
-            conda-build \
             ${PYTHON_CORE_PKGS} \
             ${PYTHON_PACKAGES} \
             `python setup.py dependencies $EXTRAS | tail -1`
@@ -450,7 +451,9 @@ jobs:
             fi
             $PYTHON_EXE -m pip install --cache-dir cache/pip -e ".$EXTRAS"
         else
-            conda develop .
+            # We don't invoke extra dependencies here, as that should
+            # have been covered during the conda environment setup.
+            $PYTHON_EXE -m pip install --cache-dir cache/pip -e .
         fi
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
