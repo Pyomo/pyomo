@@ -170,7 +170,25 @@ class TestSubsystemBlock(unittest.TestCase):
             m.component_data_objects(pyo.Var)))
 
     def test_generate_subsystems_with_exception(self):
-        pass
+        m = _make_simple_model()
+        subsystems = [
+                ([m.con1], [m.v1, m.v4]),
+                ([m.con2, m.con3], [m.v2, m.v3]),
+                ]
+        other_vars = [
+                [m.v2, m.v3],
+                [m.v1, m.v4],
+                ]
+        with self.assertRaises(RuntimeError):
+            for i, block in enumerate(generate_subsystem_blocks(subsystems)):
+                self.assertTrue(all(var.fixed for var in block.input_vars[:]))
+                self.assertFalse(any(var.fixed for var in block.vars[:]))
+                if i == 1:
+                    raise RuntimeError()
+
+        # Test that we have properly unfixed variables
+        self.assertFalse(any(var.fixed for var in
+            m.component_data_objects(pyo.Var)))
 
     def test_generate_subsystems_with_fixed_var(self):
         m = _make_simple_model()
