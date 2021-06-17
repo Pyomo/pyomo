@@ -444,7 +444,7 @@ jobs:
         echo "Install Pyomo..."
         echo ""
         # $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
-        if test "${{matrix.TARGET}}" == pip:
+        if test "${{matrix.TARGET}}" == pip; then
             if test -n "$EXTRAS"; then
                 EXTRAS="[$EXTRAS]"
             fi
