@@ -31,8 +31,8 @@ def generate_strongly_connected_components(
     """
     variables = [var for var in block.component_data_objects(Var)
             if not var.fixed]
-    constraints = [con for con in block.component_data_objects(Constraint)
-            if con.active]
+    constraints = [con for con in 
+            block.component_data_objects(Constraint, active=True)]
     assert len(variables) == len(constraints)
     igraph = IncidenceGraphInterface()
     var_block_map, con_block_map = igraph.block_triangularize(
