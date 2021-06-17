@@ -19,7 +19,7 @@ from setuptools import setup, find_packages, Command
 try:
     from setuptools import DistutilsOptionError
 except ImportError:
-    from setuptools.distutils.errors import DistutilsOptionError
+    from distutils.errors import DistutilsOptionError
 
 def read(*rnames):
     with open(os.path.join(os.path.dirname(__file__), *rnames)) as README:
