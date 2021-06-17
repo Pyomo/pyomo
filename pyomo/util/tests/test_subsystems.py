@@ -169,6 +169,9 @@ class TestSubsystemBlock(unittest.TestCase):
         self.assertFalse(any(var.fixed for var in
             m.component_data_objects(pyo.Var)))
 
+    def test_generate_subsystems_with_exception(self):
+        pass
+
     def test_generate_subsystems_with_fixed_var(self):
         m = _make_simple_model()
         m.v4.fix()
