@@ -30,7 +30,8 @@ class GDPbbSolveData(object):
     pass
 
 
-@SolverFactory.register('gdpbb', doc='Branch and Bound based GDP Solver')
+@SolverFactory.register(
+    'gdpbb', doc='[DEPRECATED] Branch and Bound based GDP Solver')
 @deprecated("GDPbb has been merged into GDPopt. "
             "You can use the algorithm using GDPopt with strategy='LBB'.",
             logger="pyomo.solvers",
