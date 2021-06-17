@@ -97,7 +97,7 @@ class DependenciesCommand(Command):
     """Custom setuptools command
 
     This will output the list of dependencies, including any optional
-    dependenties for 'extras_require` targets.  This is needed so that
+    dependencies for 'extras_require` targets.  This is needed so that
     we can (relatively) easily extract what `pip install '.[optional]'`
     would have done so that we can pass it on to a 'conda install'
     command when setting up Pyomo testing in a conda environment
@@ -203,7 +203,6 @@ setup_kwargs = dict(
             'openpyxl',  # dataportals
             #'pathos',   # requested for #963, but PR currently closed
             'pint',      # units
-            #'pyro4',    # used by PySP; no longer needed by core Pyomo
             'python-louvain', # community_detection
             'pyyaml',    # core
             'sympy',     # differentiation
@@ -228,7 +227,6 @@ setup_kwargs = dict(
         "pyomo.contrib.pynumero": ['src/*', 'src/tests/*'],
         "pyomo.contrib.viewer": ["*.ui"],
     },
-    #include_package_data=True,
     ext_modules = ext_modules,
     entry_points = """
     [console_scripts]

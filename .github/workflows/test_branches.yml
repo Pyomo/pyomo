@@ -278,7 +278,7 @@ jobs:
             done
         fi
         # Re-try Pyomo (optional) dependencies with pip
-        if test -n "$PYPY_DEPENDENCIES"; then
+        if test -n "$PYPI_DEPENDENCIES"; then
             python -m pip install --cache-dir cache/pip $PYPI_DEPENDENCIES
         fi
         # remember this python interpreter
