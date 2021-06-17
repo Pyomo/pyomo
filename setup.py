@@ -131,10 +131,11 @@ class dependencies(Command):
         python_version = '.'.join(platform.python_version_tuple()[:2])
         for entry in deplist:
             dep, _, condition = (_.strip() for _ in entry.partition(';'))
-            if condition:
-                if not eval(condition):
-                    continue
-            yield "'" + dep + "'"
+            if condition and not eval(condition):
+                continue
+            if any(_ in dep for _ in '<>=!'):
+                dep = "'" + dep + "'"
+            yield dep
 
 
 setup_kwargs = dict(
