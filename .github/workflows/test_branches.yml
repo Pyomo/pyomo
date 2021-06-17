@@ -232,7 +232,7 @@ jobs:
         pip install --cache-dir cache/pip \
             ${PYTHON_CORE_PKGS} \
             ${PYTHON_PACKAGES} \
-            `$PYTHON_EXE setup.py dependencies --extras "$EXTRAS" | tail -1`
+            `python setup.py dependencies --extras "$EXTRAS" | tail -1`
         pip install --cache-dir cache/pip pymysql || \
             pip install --cache-dir cache/pip pymysql
         if test -z "${{matrix.slim}}"; then
