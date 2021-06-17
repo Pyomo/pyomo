@@ -1106,7 +1106,7 @@ class testInitialConstructMaster(unittest.TestCase):
     def test_initial_construct_master(self):
         model_data = MasterProblemData()
         model_data.timing = None
-        model_data.working_model = None
+        model_data.working_model = ConcreteModel()
         master_data = initial_construct_master(model_data)
         self.assertTrue(hasattr(master_data, "master_model"),
                         msg="Initial construction of master problem "
