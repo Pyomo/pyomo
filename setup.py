@@ -186,7 +186,7 @@ setup_kwargs = dict(
         'docs': [
             'Sphinx>2',
             'sphinx-copybutton',
-            'sphinx-rtd-theme>0.5',
+            'sphinx_rtd_theme>0.5',
             'sphinxcontrib-jsmath',
             'sphinxcontrib-napoleon',
             'numpy', # Needed by autodoc for pynumero
