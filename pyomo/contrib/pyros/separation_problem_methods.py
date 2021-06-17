@@ -120,7 +120,8 @@ def make_separation_problem(model_data, config):
             else:
                 raise ValueError("Unable to parse constraint for building the separation problem.")
             c.deactivate()
-            map_new_constraint_list_names_to_original_con_names[list(constraints.values())[-1].name] = c.name
+            map_new_constraint_list_names_to_original_con_names[
+                constraints[constraints.index_set().last()].name] = c.name
 
     separation_model.util.map_constr_list_names_to_original_con_names = map_new_constraint_list_names_to_original_con_names
 
@@ -165,9 +166,9 @@ def get_index_of_max_violation(model_data, config, solve_data_list):
             if any(v.found_violation for v in row):
                 matrix_dim+=1
                 if len([v for v in row if v.found_violation]) > 1:
-                    all_violations = [val.list_of_scaled_violations[idx] for the_index, val in enumerate(row)]
-                    max_val = max(all_violations)
-                    violation_idx = all_violations.index(max_val)
+                    max_val, violation_idx = max(
+                        (val.list_of_scaled_violations[idx], the_index) for the_index, val in enumerate(row)
+                    )
                 else:
                     for elem in row:
                         if elem.found_violation:

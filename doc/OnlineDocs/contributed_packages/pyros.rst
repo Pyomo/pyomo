@@ -343,7 +343,7 @@ PyROS requires the user to supply one local and one global NLP solver to be used
 
 .. doctest::
 
-  :skipif: not baron_available
+  :skipif: not baron.available() and not baron.license_is_valid()
   >>> # === Designate local and global NLP solvers ===
   >>> local_solver = pyo.SolverFactory('baron')
   >>> global_solver = pyo.SolverFactory('baron')
@@ -382,7 +382,7 @@ If we choose to designate all variables as either design or state variables, wit
 
 .. doctest::
 
-  :skipif: not baron_available
+  :skipif: not baron.available() and not baron.license_is_valid()
   >>> # === Designate which variables correspond to first- and second-stage degrees of freedom ===
   >>> first_stage_variables =[m.x1, m.x2, m.x3, m.x4, m.x5, m.x6,
                         m.x19, m.x20, m.x21, m.x22, m.x23, m.x24, m.x31]
@@ -414,7 +414,7 @@ A Two-Stage Problem
 For this next set of runs, we will assume that some of the previously designated first-stage degrees of freedom are in fact second-stage ones. PyROS handles second-stage degrees of freedom via the use of decision rules, which is controlled with the config option ``decision_rule_order`` presented above. Here, we shall select affine decision rules by setting ``decision_rule_order`` to the value of `1`.
 
 .. doctest::
-  :skipif: not baron_available
+  :skipif: not baron.available() and not baron.license_is_valid()
 
   >>> # === Define the variable partitioning
   >>> first_stage_variables =[m.x5, m.x6, m.x19, m.x22, m.x23, m.x24, m.x31]
@@ -450,7 +450,7 @@ For the set we considered here, the ``BoxSet``, we can create such a hierarchy v
 We can then loop through this array and call PyROS within a loop to identify robust solutions in light of each of the specified ``BoxSet`` objects.
 
 .. doctest::
-  :skipif: not baron_available
+  :skipif: not baron.available() and not baron.license_is_valid()
 
   >>> # === An array of maximum relative deviations from the nominal uncertain parameter values to utilize in constructing box sets
   >>> relative_deviation_list = [0.00, 0.10, 0.20, 0.30, 0.40]

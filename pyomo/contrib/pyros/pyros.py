@@ -103,48 +103,48 @@ def pyros_config():
     # ================================================
     CONFIG.declare('time_limit', ConfigValue(
         default=None,
-        domain=NonNegativeFloat
+        domain=NonNegativeFloat, visibility=10
     ))
     CONFIG.declare('keepfiles', ConfigValue(
         default=False,
-        domain=bool,
+        domain=bool, visibility=10
     ))
     CONFIG.declare('tee', ConfigValue(
         default=False,
-        domain=bool,
+        domain=bool, visibility=10
     ))
     CONFIG.declare('load_solution', ConfigValue(
         default=True,
-        domain=bool,
+        domain=bool, visibility=10
     ))
 
     # ================================================
     # === Required User Inputs
     # ================================================
     CONFIG.declare("first_stage_variables", ConfigValue(
-        default=[], domain=InputDataStandardizer(Var, _VarData),
+        default=[], domain=InputDataStandardizer(Var, _VarData), visibility=10,
         description="Required. List of ``Var`` objects referenced in ``model`` representing the design variables."
     ))
     CONFIG.declare("second_stage_variables", ConfigValue(
-        default=[], domain=InputDataStandardizer(Var, _VarData),
+        default=[], domain=InputDataStandardizer(Var, _VarData), visibility=10,
         description="Required. List of ``Var`` referenced in ``model`` representing the control variables."
     ))
     CONFIG.declare("uncertain_params", ConfigValue(
-        default=[], domain=InputDataStandardizer(Param, _ParamData),
+        default=[], domain=InputDataStandardizer(Param, _ParamData), visibility=10,
         description="Required. List of ``Param`` referenced in ``model`` representing the uncertain parameters. MUST be ``mutable``. "
                     "Assumes entries are provided in consistent order with the entries of 'nominal_uncertain_param_vals' input."
     ))
     CONFIG.declare("uncertainty_set", ConfigValue(
-        default=None, domain=uncertainty_sets,
+        default=None, domain=uncertainty_sets, visibility=10,
         description="Required. ``UncertaintySet`` object representing the uncertainty space "
                     "that the final solutions will be robust against."
     ))
     CONFIG.declare("local_solver", ConfigValue(
-        default=None, domain=SolverResolvable(),
+        default=None, domain=SolverResolvable(), visibility=10,
         description="Required. ``Solver`` object to utilize as the primary local NLP solver."
     ))
     CONFIG.declare("global_solver", ConfigValue(
-        default=None, domain=SolverResolvable(),
+        default=None, domain=SolverResolvable(), visibility=10,
         description="Required. ``Solver`` object to utilize as the primary global NLP solver."
     ))
     # ================================================
@@ -270,14 +270,30 @@ class PyROS(object):
     def __exit__(self, et, ev, tb):
         pass
 
-    def solve(self, model, **kwds):
+    def solve(self, model, first_stage_variables, second_stage_variables, uncertain_params, uncertainty_set, local_solver,
+              global_solver, **kwds):
         """Solve the model.
 
         Args:
             model: A ``ConcreteModel`` object representing the deterministic model, cast as a minimization problem.
+            first_stage_variables: List of ``Var`` objects referenced in ``model`` representing the design variables.
+            second_stage_variables: List of ``Var`` referenced in ``model`` representing the control variables.
+            uncertain_params: List of ``Param`` referenced in ``model`` representing the uncertain parameters. MUST be ``mutable``.
+                              Assumes entries are provided in consistent order with the entries of 'nominal_uncertain_param_vals' input.
+            uncertainty_set: ``UncertaintySet`` object representing the uncertainty space that the final solutions will be robust against.
+            local_solver: ``Solver`` object to utilize as the primary local NLP solver.
+            global_solver: ``Solver`` object to utilize as the primary global NLP solver.
         """
-
+        # TODO: add filter to docstring writer to exclude the required positional args above
+        # === Add the explicit arguments to the config
         config = self.CONFIG(kwds.pop('options', {}))
+        config.first_stage_variables = first_stage_variables
+        config.second_stage_variables = second_stage_variables
+        config.uncertain_params = uncertain_params
+        config.uncertainty_set = uncertainty_set
+        config.local_solver = local_solver
+        config.global_solver = global_solver
+
         dev_options = kwds.pop('dev_options',{})
         config.set_value(kwds)
         config.set_value(dev_options)

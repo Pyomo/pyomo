@@ -539,13 +539,13 @@ def identify_objective_functions(model, config):
             if id(v) not in list(id(var) for var in second_stage_terms):
                 second_stage_terms.append(v)
 
-        if len(first_stage_vars_in_term) > 0 and len(second_stage_vars_in_term) > 0:
+        if first_stage_vars_in_term and second_stage_vars_in_term:
             second_stage_cost_expr += term
-        elif len(first_stage_vars_in_term) > 0 and len(second_stage_vars_in_term) == 0:
+        elif first_stage_vars_in_term and not second_stage_vars_in_term:
             first_stage_cost_expr += term
-        elif len(first_stage_vars_in_term) == 0 and len(second_stage_vars_in_term) > 0:
+        elif not first_stage_vars_in_term and second_stage_vars_in_term:
             second_stage_cost_expr += term
-        elif len(vars_in_term) == 0:
+        elif not vars_in_term:
             const_obj_expr += term
     m.first_stage_objective = Expression(expr=first_stage_cost_expr)
     m.second_stage_objective = Expression(expr=second_stage_cost_expr)

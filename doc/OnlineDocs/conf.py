@@ -266,6 +266,7 @@ ipopt_available = bool(pyomo.opt.check_available_solvers('ipopt'))
 sipopt_available = bool(pyomo.opt.check_available_solvers('ipopt_sens'))
 baron_available = bool(pyomo.opt.check_available_solvers('baron'))
 glpk_available = bool(pyomo.opt.check_available_solvers('glpk'))
+baron = pyomo.opt.SolverFactory('baron')
 try:
     import gurobipy
     gurobipy_available = True
