@@ -448,17 +448,14 @@ jobs:
         echo "Clone Pyomo-model-libraries..."
         git clone https://github.com/Pyomo/pyomo-model-libraries.git
         echo ""
+        echo "Install Pyomo dependencies..."
+        echo ""
+        $PYTHON_EXE -m pip install --cache-dir cache/pip \
+            `$PYTHON_EXE setup.py dependencies --extras "$EXTRAS"`
+        echo ""
         echo "Install Pyomo..."
         echo ""
-        # $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
-        if test -n "${{matrix.setup_options}}"; then
-            OPTIONS="--install-option='${{matrix.setup_options}}'"
-        fi
-        if test -n "$EXTRAS"; then
-            EXTRAS="[$EXTRAS]"
-        fi
-        echo "$PYTHON_EXE -m pip install $OPTIONS --cache-dir cache/pip -e '.$EXTRAS'"
-        $PYTHON_EXE -m pip install $OPTIONS --cache-dir cache/pip -e ".$EXTRAS"
+        $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
