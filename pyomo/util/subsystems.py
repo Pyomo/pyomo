@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.base.PyomoModel import ConcreteModel
+from pyomo.core.base.block import Block
 from pyomo.core.base.reference import Reference
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentSet, ComponentMap
@@ -38,7 +38,7 @@ def create_subsystem_block(constraints, variables=None, include_fixed=False):
     """
     if variables is None:
         variables = []
-    block = ConcreteModel()
+    block = Block(concrete=True)
     block.vars = Reference(variables)
     block.cons = Reference(constraints)
     var_set = ComponentSet(variables)
