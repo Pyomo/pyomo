@@ -93,11 +93,16 @@ ERROR: Cython was explicitly requested with --with-cython, but cythonization
         using_cython = False
 
 
-class dependencies(Command):
+class DependenciesCommand(Command):
     """Custom setuptools command
 
-    This will output the list of dependencies (so we can easily pass
-    them on to, e.g., conda)
+    This will output the list of dependencies, including any optional
+    dependenties for 'extras_require` targets.  This is needed so that
+    we can (relatively) easily extract what `pip install '.[optional]'`
+    would have done so that we can pass it on to a 'conda install'
+    command when setting up Pyomo testing in a conda environment
+    (because conda for all intents does not acknowledge
+    `extras_require`).
 
     """
     description = "list the dependencies for this package"
@@ -141,7 +146,7 @@ setup_kwargs = dict(
     #
     # Note: the release number is set in pyomo/version/info.py
     #
-    cmdclass = {'dependencies': dependencies},
+    cmdclass = {'dependencies': DependenciesCommand},
     version = get_version(),
     maintainer = 'Pyomo Developer Team',
     maintainer_email = 'pyomo-developers@googlegroups.com',
