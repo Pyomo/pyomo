@@ -17,15 +17,6 @@ defaults:
 env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
-  PYTHON_REQUIRED_PKGS: >
-      nose coverage parameterized pybind11
-  PYTHON_BASE_PKGS: >
-      ply dill ipython networkx openpyxl pathos
-      pint pyro4 pyyaml sphinx_rtd_theme sympy xlrd
-      python-louvain sphinx-copybutton
-  PYTHON_NUMPY_PKGS: >
-      numpy scipy pyodbc pandas matplotlib seaborn numdifftools 
-      parameterized casadi
   CACHE_VER: v210415.0
   NEOS_EMAIL: tests@pyomo.org
 
@@ -116,16 +107,12 @@ jobs:
             echo "GHA_JOBGROUP=other" >> $GITHUB_ENV
         fi
         # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
-        PYTHON_PACKAGES="${PYTHON_REQUIRED_PKGS}"
+        EXTRAS=tests
         if test -z "${{matrix.slim}}"; then
-            PYTHON_PACKAGES="$PYTHON_PACKAGES ${PYTHON_BASE_PKGS}"
+            EXTRAS="$EXTRAS,docs,optional"
         fi
-        if [[ ${{matrix.python}} != pypy* && ! "${{matrix.slim}}" ]]; then
-            # NumPy and derivatives either don't build under pypy, or if
-            # they do, the builds take forever.
-            PYTHON_PACKAGES="$PYTHON_PACKAGES ${PYTHON_NUMPY_PKGS}"
-        fi
-        PYTHON_PACKAGES="$PYTHON_PACKAGES ${{matrix.PACKAGES}}"
+        echo "EXTRAS=$EXTRAS" >> $GITHUB_ENV
+        PYTHON_PACKAGES="${{matrix.PACKAGES}}"
         echo "PYTHON_PACKAGES=$PYTHON_PACKAGES" \
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
 
@@ -242,8 +229,7 @@ jobs:
       run: |
         python -c 'import sys;print(sys.executable)'
         python -m pip install --cache-dir cache/pip --upgrade pip
-        pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS}
-        pip install --cache-dir cache/pip ${PYTHON_PACKAGES}
+        pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES}
         pip install --cache-dir cache/pip pymysql || \
             pip install --cache-dir cache/pip pymysql
         if test -z "${{matrix.slim}}"; then
@@ -271,8 +257,11 @@ jobs:
         conda info
         conda config --show-sources
         conda list --show-channel-urls
-        conda install -q -y -c conda-forge ${PYTHON_CORE_PKGS}
-        conda install -q -y -c conda-forge ${PYTHON_PACKAGES}
+        conda install -q -y -c conda-forge \
+            conda-build \
+            ${PYTHON_CORE_PKGS} \
+            ${PYTHON_PACKAGES} \
+            `python setup.py dependencies $EXTRAS | tail -1`
         if test -z "${{matrix.slim}}"; then
             conda install -q -y -c ibmdecisionoptimization 'cplex>=12.10' \
                 || echo "WARNING: CPLEX Community Edition is not available"
@@ -454,7 +443,15 @@ jobs:
         echo ""
         echo "Install Pyomo..."
         echo ""
-        $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
+        # $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
+        if test "${{matrix.TARGET}}" == pip:
+            if test -n "$EXTRAS"; then
+                EXTRAS="[$EXTRAS]"
+            fi
+            pip install -e ".$EXTRAS"
+        else
+            conda develop .
+        fi
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
@@ -588,8 +585,7 @@ jobs:
       run: |
         python -c 'import sys;print(sys.executable)'
         python -m pip install --cache-dir cache/pip --upgrade pip
-        pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS} \
-            ${PYTHON_REQUIRED_PKGS}
+        pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS}
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
 

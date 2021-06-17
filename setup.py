@@ -128,7 +128,7 @@ class dependencies(Command):
             if condition:
                 if not eval(condition):
                     continue
-            yield dep
+            yield "'" + dep + "'"
 
 
 setup_kwargs = dict(
