@@ -269,8 +269,8 @@ class TestParamSweeper(unittest.TestCase):
         to_fix = [m.v3, m.v4]
         to_deactivate = [m.con1]
 
-        with ParamSweeper(2, input_values, to_fix=to_fix,
-                to_deactivate=to_deactivate) as sweeper:
+        with ParamSweeper(2, input_values, output_values,
+                to_fix=to_fix, to_deactivate=to_deactivate) as sweeper:
             self.assertFalse(m.v1.fixed)
             self.assertFalse(m.v2.fixed)
             self.assertTrue(m.v3.fixed)
@@ -284,7 +284,7 @@ class TestParamSweeper(unittest.TestCase):
                     self.assertEqual(var.value, input_values[var][i])
 
                 for var, val in outputs.items():
-                    self.assertEqual(var.value, output_values[var][i])
+                    self.assertEqual(val, output_values[var][i])
 
         # Values have been reset after exit.
         self.assertIs(m.v3.value, None)
