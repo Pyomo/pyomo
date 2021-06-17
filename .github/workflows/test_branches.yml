@@ -457,7 +457,8 @@ jobs:
         if test -n "$EXTRAS"; then
             EXTRAS="[$EXTRAS]"
         fi
-        $PYTHON_EXE -m pip install --cache-dir cache/pip -e ".$EXTRAS" $OPTIONS
+        echo "$PYTHON_EXE -m pip install $OPTIONS --cache-dir cache/pip -e '.$EXTRAS'"
+        $PYTHON_EXE -m pip install $OPTIONS --cache-dir cache/pip -e ".$EXTRAS"
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
