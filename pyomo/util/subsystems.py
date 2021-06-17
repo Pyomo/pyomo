@@ -12,6 +12,7 @@ from pyomo.core.base.PyomoModel import ConcreteModel
 from pyomo.core.base.reference import Reference
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentSet, ComponentMap
+from pyomo.common.backports import nullcontext
 
 
 def create_subsystem_block(constraints, variables=None, include_fixed=False):
@@ -60,12 +61,13 @@ def generate_subsystem_blocks(subsystems, include_fixed=False, fix_inputs=True):
         block = create_subsystem_block(cons, vars, include_fixed)
         if fix_inputs:
             to_fix = list(block.input_vars[:])
-            with TemporarySubsystemManager(to_fix=to_fix):
-                # On enter, we fix the "inputs" of the subsystem. When
-                # control returns to this code (iterator advance), we
-                # exit this context, and inputs are unfixed.
-                yield block
+            context = TemporarySubsystemManager(to_fix=to_fix)
         else:
+            context = nullcontext()
+        with context:
+            # On enter, we fix the "inputs" of the subsystem. When
+            # control returns to this code (iterator advance), we
+            # exit this context, and inputs are unfixed.
             yield block
 
 
