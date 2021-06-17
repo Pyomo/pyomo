@@ -115,8 +115,6 @@ jobs:
         PYTHON_PACKAGES="${{matrix.PACKAGES}}"
         echo "PYTHON_PACKAGES=$PYTHON_PACKAGES" \
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
-        echo "PYOMO_DEPENDENCIES=`python setup.py dependencies \
-            --extras '$EXTRAS' | tail -1`" >> $GITHUB_ENV
 
     # Ideally we would cache the conda downloads; however, each cache is
     # over 850MB, and with 5 python versions, that would consume 4.2 of
@@ -231,6 +229,8 @@ jobs:
       run: |
         python -c 'import sys;print(sys.executable)'
         python -m pip install --cache-dir cache/pip --upgrade pip
+        PYOMO_DEPENDENCIES=`python setup.py dependencies \
+            --extras '$EXTRAS' | tail -1`
         pip install --cache-dir cache/pip \
             ${PYTHON_CORE_PKGS} \
             ${PYTHON_PACKAGES} \
@@ -263,6 +263,8 @@ jobs:
         conda config --show-sources
         conda list --show-channel-urls
         # Note: some pypi packages are not available through conda
+        PYOMO_DEPENDENCIES=`python setup.py dependencies \
+            --extras '$EXTRAS' | tail -1`
         CONDA_DEPENDENCIES=`echo $PYOMO_DEPENDENCIES | tr ' ' '\n' \
             | grep -v z3-solver \
             | tr '\n' ' '`
