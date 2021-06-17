@@ -133,8 +133,6 @@ class dependencies(Command):
             dep, _, condition = (_.strip() for _ in entry.partition(';'))
             if condition and not eval(condition):
                 continue
-            if any(_ in dep for _ in '<>=!'):
-                dep = "'" + dep + "'"
             yield dep
 
 
