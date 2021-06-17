@@ -1089,7 +1089,7 @@ class Hull_Reformulation(Transformation):
 
 @TransformationFactory.register(
     'gdp.chull',
-    doc="Deprecated name for the hull reformulation. Please use 'gdp.hull'.")
+    doc="[DEPRECATED] please use 'gdp.hull' to get the Hull transformation.")
 @deprecated("The 'gdp.chull' name is deprecated. "
             "Please use the more apt 'gdp.hull' instead.",
             logger='pyomo.gdp',
