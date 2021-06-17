@@ -231,7 +231,8 @@ jobs:
         python -m pip install --cache-dir cache/pip --upgrade pip
         pip install --cache-dir cache/pip \
             ${PYTHON_CORE_PKGS} \
-            ${PYTHON_PACKAGES}
+            ${PYTHON_PACKAGES} \
+            `$PYTHON_EXE setup.py dependencies --extras "$EXTRAS" | tail -1`
         pip install --cache-dir cache/pip pymysql || \
             pip install --cache-dir cache/pip pymysql
         if test -z "${{matrix.slim}}"; then
@@ -281,6 +282,10 @@ jobs:
                     || echo "WARNING: $PKG is not available"
             done
         fi
+        # Re-try Pyomo (optional) dependencies with pip
+        python -m pip install --cache-dir cache/pip \
+            `python setup.py dependencies --extras "$EXTRAS" | tail -1`
+        # remember this python interpreter
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
         echo "NOSETESTS="`which nosetests` >> $GITHUB_ENV
@@ -447,11 +452,6 @@ jobs:
         echo ""
         echo "Clone Pyomo-model-libraries..."
         git clone https://github.com/Pyomo/pyomo-model-libraries.git
-        echo ""
-        echo "Install Pyomo dependencies..."
-        echo ""
-        $PYTHON_EXE -m pip install --cache-dir cache/pip \
-            `$PYTHON_EXE setup.py dependencies --extras "$EXTRAS"`
         echo ""
         echo "Install Pyomo..."
         echo ""
