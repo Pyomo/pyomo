@@ -58,11 +58,24 @@ class TemporarySubsystemManager(object):
     in order to perform some solve or calculation with the resulting
     subsystem.
 
-    We currently do not support fixing variables to particular values,
-    and do not restore values of variables fixed. This could change.
     """
 
     def __init__(self, to_fix=None, to_deactivate=None, to_reset=None):
+        """
+        Arguments
+        ---------
+        to_fix: List of var data objects that should be temporarily fixed.
+                These are restored to their original status on exit from
+                this object's context manager.
+        to_deactivate: List of constraint data objects that should be
+                       temporarily deactivated. These are restored to their
+                       original status on exit from this object's context
+                       manager.
+        to_reset: List of var data objects that should be reset to their
+                  original values on exit from this object's context
+                  context manager.
+
+        """
         if to_fix is None:
             to_fix = []
         if to_deactivate is None:
