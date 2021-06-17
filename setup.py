@@ -110,7 +110,9 @@ class dependencies(Command):
 
     def finalize_options(self):
         if self.extras is not None:
-            self.extras = [_.strip() for _ in self.extras.split(',')]
+            self.extras = [
+                e for e in (_.strip() for _ in self.extras.split(',')) if e
+            ]
             for e in self.extras:
                 if e not in setup_kwargs['extras_require']:
                     raise DistutilsOptionError(

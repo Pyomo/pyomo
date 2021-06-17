@@ -262,7 +262,7 @@ jobs:
         conda install -q -y -c conda-forge \
             ${PYTHON_CORE_PKGS} \
             ${PYTHON_PACKAGES} \
-            `python setup.py dependencies $EXTRAS | tail -1`
+            `python setup.py dependencies --extras "$EXTRAS" | tail -1`
         if test -z "${{matrix.slim}}"; then
             conda install -q -y -c ibmdecisionoptimization 'cplex>=12.10' \
                 || echo "WARNING: CPLEX Community Edition is not available"
