@@ -448,7 +448,7 @@ jobs:
             if test -n "$EXTRAS"; then
                 EXTRAS="[$EXTRAS]"
             fi
-            pip install --cache-dir cache/pip -e ".$EXTRAS"
+            $PYTHON_EXE -m pip install --cache-dir cache/pip -e ".$EXTRAS"
         else
             conda develop .
         fi
