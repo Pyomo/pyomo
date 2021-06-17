@@ -17,6 +17,7 @@ defaults:
 env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
+  PYPY_ONLY: z3-solver
   CACHE_VER: v210415.0
   NEOS_EMAIL: tests@pyomo.org
 
@@ -257,8 +258,9 @@ jobs:
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
         CONDA_DEPENDENCIES=`echo $PYOMO_DEPENDENCIES | tr ' ' '\n' \
-            | grep -v z3-solver \
-            | tr '\n' ' '`
+            | grep -Ev ${PYPI_ONLY}` | tr '\n' ' '`
+        PYPI_DEPENDENCIES=`echo $PYOMO_DEPENDENCIES | tr ' ' '\n' \
+            | grep -E ${PYPI_ONLY}` | tr '\n' ' '`
         conda install -q -y -c conda-forge \
             ${PYTHON_CORE_PKGS} \
             ${PYTHON_PACKAGES} \
@@ -276,7 +278,9 @@ jobs:
             done
         fi
         # Re-try Pyomo (optional) dependencies with pip
-        python -m pip install --cache-dir cache/pip $PYOMO_DEPENDENCIES
+        if test -n "$PYPY_DEPENDENCIES"; then
+            python -m pip install --cache-dir cache/pip $PYPI_DEPENDENCIES
+        fi
         # remember this python interpreter
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
