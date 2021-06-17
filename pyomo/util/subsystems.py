@@ -15,12 +15,26 @@ from pyomo.common.collections import ComponentSet, ComponentMap
 
 
 def create_subsystem_block(constraints, variables=None, include_fixed=False):
-    """ This function defines creates a block to serve as a subsystem with
-    the specified variables and constraints. To satisfy certain writers,
-    other variables that appear in the constraints must be added to the block
-    as well. We call these the "input vars." They may be thought of as
+    """ This function creates a block to serve as a subsystem with the
+    specified variables and constraints. To satisfy certain writers, other
+    variables that appear in the constraints must be added to the block as
+    well. We call these the "input vars." They may be thought of as
     parameters in the subsystem, but we do not fix them here as it is not
     obvious that this is desired.
+
+    Arguments
+    ---------
+    constraints: List of Pyomo constraint data objects
+    variables: List of Pyomo var data objects
+    include_fixed: Bool indicating whether fixed variables should be
+                   attached to the block. This is useful if they may
+                   be unfixed at some point.
+
+    Returns
+    -------
+    Block containing references to the specified constraints and variables,
+    as well as other variables present in the constraints
+
     """
     if variables is None:
         variables = []
