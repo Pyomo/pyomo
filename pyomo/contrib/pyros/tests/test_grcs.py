@@ -1217,79 +1217,79 @@ class RegressionTest(unittest.TestCase):
         self.assertTrue(results.grcs_termination_condition,
                          grcsTerminationCondition.robust_feasible)
 
-        @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False),
-                             "Global NLP solver is not available.")
-        def regression_test_affine_drs(self):
-            model = m = ConcreteModel()
-            m.name = "s381"
+    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False),
+                         "Global NLP solver is not available.")
+    def regression_test_affine_drs(self):
+        model = m = ConcreteModel()
+        m.name = "s381"
 
-            m.x1 = Var(within=Reals, bounds=(0, None), initialize=0.1)
-            m.x2 = Var(within=Reals, bounds=(0, None), initialize=0.1)
-            m.x3 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+        m.x1 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+        m.x2 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+        m.x3 = Var(within=Reals, bounds=(0, None), initialize=0.1)
 
-            # === State Vars = [x13]
-            # === Decision Vars ===
-            m.decision_vars = [m.x1, m.x2, m.x3]
+        # === State Vars = [x13]
+        # === Decision Vars ===
+        m.decision_vars = [m.x1, m.x2, m.x3]
 
-            # === Uncertain Params ===
-            m.set_params = Set(initialize=list(range(4)))
-            m.p = Param(m.set_params, initialize=2, mutable=True)
-            m.uncertain_params = [m.p]
+        # === Uncertain Params ===
+        m.set_params = Set(initialize=list(range(4)))
+        m.p = Param(m.set_params, initialize=2, mutable=True)
+        m.uncertain_params = [m.p]
 
-            m.obj = Objective(expr=(m.x1 - 1) * 2, sense=minimize)
-            m.con1 = Constraint(expr=m.p[1] * m.x1 + m.x2 + m.x3 <= 2)
+        m.obj = Objective(expr=(m.x1 - 1) * 2, sense=minimize)
+        m.con1 = Constraint(expr=m.p[1] * m.x1 + m.x2 + m.x3 <= 2)
 
-            box_set = BoxSet(bounds=[(1.8, 2.2)])
-            solver = SolverFactory("baron")
-            pyros = SolverFactory("pyros")
-            results = pyros.solve(model=m,
-                                  first_stage_variables=m.decision_vars,
-                                  second_stage_variables=[],
-                                  uncertain_params=[m.p[1]],
-                                  uncertainty_set=box_set,
-                                  local_solver=solver,
-                                  global_solver=solver,
-                                  options={"objective_focus": ObjectiveType.nominal,
-                                           "decision_rule_order":1})
-            self.assertTrue(results.grcs_termination_condition,
-                            grcsTerminationCondition.robust_feasible)
+        box_set = BoxSet(bounds=[(1.8, 2.2)])
+        solver = SolverFactory("baron")
+        pyros = SolverFactory("pyros")
+        results = pyros.solve(model=m,
+                              first_stage_variables=m.decision_vars,
+                              second_stage_variables=[],
+                              uncertain_params=[m.p[1]],
+                              uncertainty_set=box_set,
+                              local_solver=solver,
+                              global_solver=solver,
+                              options={"objective_focus": ObjectiveType.nominal,
+                                       "decision_rule_order":1})
+        self.assertTrue(results.grcs_termination_condition,
+                        grcsTerminationCondition.robust_feasible)
 
-        @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False),
-                             "Global NLP solver is not available.")
-        def regression_test_quad_drs(self):
-            model = m = ConcreteModel()
-            m.name = "s381"
+    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False),
+                         "Global NLP solver is not available.")
+    def regression_test_quad_drs(self):
+        model = m = ConcreteModel()
+        m.name = "s381"
 
-            m.x1 = Var(within=Reals, bounds=(0, None), initialize=0.1)
-            m.x2 = Var(within=Reals, bounds=(0, None), initialize=0.1)
-            m.x3 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+        m.x1 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+        m.x2 = Var(within=Reals, bounds=(0, None), initialize=0.1)
+        m.x3 = Var(within=Reals, bounds=(0, None), initialize=0.1)
 
-            # === State Vars = [x13]
-            # === Decision Vars ===
-            m.decision_vars = [m.x1, m.x2, m.x3]
+        # === State Vars = [x13]
+        # === Decision Vars ===
+        m.decision_vars = [m.x1, m.x2, m.x3]
 
-            # === Uncertain Params ===
-            m.set_params = Set(initialize=list(range(4)))
-            m.p = Param(m.set_params, initialize=2, mutable=True)
-            m.uncertain_params = [m.p]
+        # === Uncertain Params ===
+        m.set_params = Set(initialize=list(range(4)))
+        m.p = Param(m.set_params, initialize=2, mutable=True)
+        m.uncertain_params = [m.p]
 
-            m.obj = Objective(expr=(m.x1 - 1) * 2, sense=minimize)
-            m.con1 = Constraint(expr=m.p[1] * m.x1 + m.x2 + m.x3 <= 2)
+        m.obj = Objective(expr=(m.x1 - 1) * 2, sense=minimize)
+        m.con1 = Constraint(expr=m.p[1] * m.x1 + m.x2 + m.x3 <= 2)
 
-            box_set = BoxSet(bounds=[(1.8, 2.2)])
-            solver = SolverFactory("baron")
-            pyros = SolverFactory("pyros")
-            results = pyros.solve(model=m,
-                                  first_stage_variables=m.decision_vars,
-                                  second_stage_variables=[],
-                                  uncertain_params=[m.p[1]],
-                                  uncertainty_set=box_set,
-                                  local_solver=solver,
-                                  global_solver=solver,
-                                  options={"objective_focus": ObjectiveType.nominal,
-                                           "decision_rule_order": 2})
-            self.assertTrue(results.grcs_termination_condition,
-                            grcsTerminationCondition.robust_feasible)
+        box_set = BoxSet(bounds=[(1.8, 2.2)])
+        solver = SolverFactory("baron")
+        pyros = SolverFactory("pyros")
+        results = pyros.solve(model=m,
+                              first_stage_variables=m.decision_vars,
+                              second_stage_variables=[],
+                              uncertain_params=[m.p[1]],
+                              uncertainty_set=box_set,
+                              local_solver=solver,
+                              global_solver=solver,
+                              options={"objective_focus": ObjectiveType.nominal,
+                                       "decision_rule_order": 2})
+        self.assertTrue(results.grcs_termination_condition,
+                        grcsTerminationCondition.robust_feasible)
 
 if __name__ == "__main__":
     unittest.main()
