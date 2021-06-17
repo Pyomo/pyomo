@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.base.PyomoModel import ConcreteModel
+from pyomo.core.base.block import Block
 from pyomo.core.base.reference import Reference
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentSet, ComponentMap
@@ -16,16 +16,30 @@ from pyomo.common.backports import nullcontext
 
 
 def create_subsystem_block(constraints, variables=None, include_fixed=False):
-    """ This function defines creates a block to serve as a subsystem with
-    the specified variables and constraints. To satisfy certain writers,
-    other variables that appear in the constraints must be added to the block
-    as well. We call these the "input vars." They may be thought of as
+    """ This function creates a block to serve as a subsystem with the
+    specified variables and constraints. To satisfy certain writers, other
+    variables that appear in the constraints must be added to the block as
+    well. We call these the "input vars." They may be thought of as
     parameters in the subsystem, but we do not fix them here as it is not
     obvious that this is desired.
+
+    Arguments
+    ---------
+    constraints: List of Pyomo constraint data objects
+    variables: List of Pyomo var data objects
+    include_fixed: Bool indicating whether fixed variables should be
+                   attached to the block. This is useful if they may
+                   be unfixed at some point.
+
+    Returns
+    -------
+    Block containing references to the specified constraints and variables,
+    as well as other variables present in the constraints
+
     """
     if variables is None:
         variables = []
-    block = ConcreteModel()
+    block = Block(concrete=True)
     block.vars = Reference(variables)
     block.cons = Reference(constraints)
     var_set = ComponentSet(variables)
@@ -80,6 +94,21 @@ class TemporarySubsystemManager(object):
     """
 
     def __init__(self, to_fix=None, to_deactivate=None, to_reset=None):
+        """
+        Arguments
+        ---------
+        to_fix: List of var data objects that should be temporarily fixed.
+                These are restored to their original status on exit from
+                this object's context manager.
+        to_deactivate: List of constraint data objects that should be
+                       temporarily deactivated. These are restored to their
+                       original status on exit from this object's context
+                       manager.
+        to_reset: List of var data objects that should be reset to their
+                  original values on exit from this object's context
+                  context manager.
+
+        """
         if to_fix is None:
             to_fix = []
         if to_deactivate is None:
@@ -126,6 +155,32 @@ class ParamSweeper(TemporarySubsystemManager):
     sets values to the next in the sequence, at which point a
     calculation may be performed and output values compared.
     On exit, original values are restored.
+
+    This is useful for testing a solve that is meant to perform some
+    calculation, over a range of values for which the calculation
+    is valid. For example:
+
+    >>> model = ... # Make model somehow
+    >>> solver = ... # Make solver somehow
+    >>> input_vars = [model.v1]
+    >>> n_scen = 2
+    >>> input_values = ComponentMap([(model.v1, [1.1, 2.1])])
+    >>> output_values = ComponentMap([(model.v2, [1.2, 2.2])])
+    >>> with ParamSweeper(
+    ...         n_scen,
+    ...         input_values,
+    ...         output_values,
+    ...         to_fix=input_vars,
+    ...         ) as param_sweeper:
+    >>>     for inputs, outputs in param_sweeper:
+    >>>         solver.solve(model)
+    >>>         # inputs and outputs contain the correct values for this
+    >>>         # instance of the model
+    >>>         for var, val in outputs.items():
+    >>>             # Test that model.v2 was calculated properly.
+    >>>             # First that it equals 1.2, then that it equals 2.2
+    >>>             assert var.value == val
+
     """
 
     def __init__(self,
@@ -145,22 +200,31 @@ class ParamSweeper(TemporarySubsystemManager):
                       of values of length n_scenario
         output_values: ComponentMap mapping each output variable to a list
                        of values of length n_scenario
+        to_fix: to_fix argument for base class
+        to_deactivate: to_deactivate argument for base class
+        to_reset: to_reset argument for base class. This list is extended
+                  with input variables.
+
         """
         # Should this object be aware of the user's block/model?
         # My answer for now is no.
         self.input_values = input_values
-        self.output_values = output_values if output_values is not None else {}
+        output = ComponentMap() if output_values is None else output_values
+        self.output_values = output
         self.n_scenario = n_scenario
         self.initial_state_values = None
         self._ip = -1 # Index pointer for iteration
 
         if to_reset is None:
-            # Input values will be set repeatedly by iterating over this object.
-            # We would like to reset them to original values to make this
-            # functionality less intrusive.
-            to_reset = [var for var in input_values]
+            # Input values will be set repeatedly by iterating over this
+            # object. Output values will presumably be altered by some
+            # solve within this context. We would like to reset these to
+            # their original values to make this functionality less
+            # intrusive.
+            to_reset = list(input_values) + list(output)
         else:
             to_reset.extend(var for var in input_values)
+            to_reset.extend(var for var in output)
 
         super(ParamSweeper, self).__init__(
                 to_fix=to_fix,
