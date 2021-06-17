@@ -17,7 +17,7 @@ defaults:
 env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
-  PYPY_ONLY: z3-solver
+  PYPI_ONLY: z3-solver
   CACHE_VER: v210415.0
   NEOS_EMAIL: tests@pyomo.org
 
