@@ -28,6 +28,23 @@ def generate_strongly_connected_components(
     incidence matrix of the provided block, and yields a block that
     contains the variables and constraints of each diagonal block
     (strongly connected component).
+
+    Arguments
+    ---------
+    block: Block whose strongly connected components will be generated
+    include_fixed: Bool indicating whether fixed variables will be
+                   attached as "input variables" on the subsystem blocks
+                   containing the strongly connected components
+    fix_inputs: Bool indicating whether "input variables" on a subsystem
+                block should be temporarily fixed when the block is
+                yielded. The default is True as this is necessary to solve
+                the strongly connected component as a square system.
+
+    Yields
+    ------
+    Blocks containing the variables and constraints of every strongly
+    connected component, in a topological order
+
     """
     variables = [var for var in block.component_data_objects(Var)
             if not var.fixed]
