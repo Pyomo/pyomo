@@ -122,6 +122,8 @@ class ParamSweeper(TemporarySubsystemManager):
     sets values to the next in the sequence, at which point a
     calculation may be performed and output values compared.
     On exit, original values are restored.
+
+
     """
 
     def __init__(self,
@@ -141,19 +143,26 @@ class ParamSweeper(TemporarySubsystemManager):
                       of values of length n_scenario
         output_values: ComponentMap mapping each output variable to a list
                        of values of length n_scenario
+        to_fix: to_fix argument for base class
+        to_deactivate: to_deactivate argument for base class
+        to_reset: to_reset argument for base class. This list is extended
+                  with input variables.
+
         """
         # Should this object be aware of the user's block/model?
         # My answer for now is no.
         self.input_values = input_values
-        self.output_values = output_values if output_values is not None else {}
+        output = ComponentMap() if output_values is None else output_values
+        self.output_values = output
         self.n_scenario = n_scenario
         self.initial_state_values = None
         self._ip = -1 # Index pointer for iteration
 
         if to_reset is None:
-            to_reset = [var for var in input_values]
+            to_reset = list(input_values) + list(output)
         else:
             to_reset.extend(var for var in input_values)
+            to_reset.extend(var for var in output)
 
         super(ParamSweeper, self).__init__(
                 to_fix=to_fix,
