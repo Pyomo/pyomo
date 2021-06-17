@@ -319,6 +319,12 @@ class TestParamSweeper(unittest.TestCase):
             self.assertTrue(m.con2.active)
             self.assertTrue(m.con3.active)
             for i, (inputs, outputs) in enumerate(sweeper):
+                self.assertEqual(len(inputs), 2)
+                self.assertEqual(len(outputs), 2)
+                self.assertIn(m.v3, inputs)
+                self.assertIn(m.v4, inputs)
+                self.assertIn(m.v1, outputs)
+                self.assertIn(m.v2, outputs)
                 for var, val in inputs.items():
                     self.assertEqual(var.value, val)
                     self.assertEqual(var.value, input_values[var][i])
@@ -327,6 +333,8 @@ class TestParamSweeper(unittest.TestCase):
                     self.assertEqual(val, output_values[var][i])
 
         # Values have been reset after exit.
+        self.assertIs(m.v1.value, None)
+        self.assertIs(m.v2.value, None)
         self.assertIs(m.v3.value, None)
         self.assertIs(m.v4.value, None)
 
