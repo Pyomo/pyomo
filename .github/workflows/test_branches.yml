@@ -37,16 +37,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-18.04]
+        os: [ubuntu-latest]
         python: [3.9]
         other: [""]
         category: ["nightly"]
-        # Ubuntu-18.04 should be replaced with ubuntu-latest once PyNumero
-        # build error is resolved:
-        # https://github.com/Pyomo/pyomo/issues/1710
 
         include:
-        - os: ubuntu-18.04
+        - os: ubuntu-latest
+          python: 3.9
           TARGET: linux
           PYENV: pip
 
@@ -61,7 +59,7 @@ jobs:
           PYENV: conda
           PACKAGES: glpk
 
-        - os: ubuntu-18.04
+        - os: ubuntu-latest
           python: 3.8
           other: /mpi
           mpi: 3
@@ -70,7 +68,7 @@ jobs:
           PYENV: conda
           PACKAGES: mpi4py openmpi
 
-        - os: ubuntu-18.04
+        - os: ubuntu-latest
           python: 3.7
           other: /conda
           skip_doctest: 1
@@ -78,7 +76,7 @@ jobs:
           PYENV: conda
           PACKAGES: mpi4py openmpi
 
-        - os: ubuntu-18.04
+        - os: ubuntu-latest
           python: 3.9
           other: /slim
           slim: 1
@@ -86,7 +84,7 @@ jobs:
           TARGET: linux
           PYENV: pip
 
-        - os: ubuntu-18.04
+        - os: ubuntu-latest
           python: 3.6
           other: /cython
           setup_options: --with-cython
@@ -281,6 +279,19 @@ jobs:
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
         echo "NOSETESTS="`which nosetests` >> $GITHUB_ENV
+        #
+        # conda activate puts itself first in the PATH, which overrides
+        # any paths we add through GITHUB_PATH.  We will update .profile
+        # to move the local runner paths back to the front (before conda).
+        for profile in $HOME/.profile $HOME/.bash_profile; do
+            if test ! -e $profile; then
+                continue
+            fi
+            echo '' >> $profile
+            echo 'export PATH=`echo "$PATH" \
+                | tr ":" "\\n" | grep runner | tr "\n" ":"`:`echo "$PATH" \
+                | tr ":" "\\n" | grep -v runner | tr "\n" ":"`' >> $profile
+        done
 
     - name: Setup TPL package directories
       run: |
@@ -312,7 +323,7 @@ jobs:
             URL=${URL}/releases/download/$VER
             if test "${{matrix.TARGET}}" == linux; then
                 curl --max-time 150 --retry 8 \
-                    -L $URL/idaes-solvers-ubuntu1804-64.tar.gz \
+                    -L $URL/idaes-solvers-ubuntu2004-64.tar.gz \
                     > $IPOPT_TAR
             else
                 curl --max-time 150 --retry 8 \
@@ -538,7 +549,7 @@ jobs:
 
   bare-python-env:
     name: linux/3.6/bare-env
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
     - name: Checkout Pyomo source
@@ -585,10 +596,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-18.04, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
         include:
-        - os: ubuntu-18.04
+        - os: ubuntu-latest
           TARGET: linux
         - os: macos-latest
           TARGET: osx
