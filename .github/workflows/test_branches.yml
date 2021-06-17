@@ -450,16 +450,13 @@ jobs:
         echo "Install Pyomo..."
         echo ""
         # $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
-        if test "${{matrix.PYENV}}" == pip; then
-            if test -n "$EXTRAS"; then
-                EXTRAS="[$EXTRAS]"
-            fi
-            $PYTHON_EXE -m pip install --cache-dir cache/pip -e ".$EXTRAS"
-        else
-            # We don't invoke extra dependencies here, as that should
-            # have been covered during the conda environment setup.
-            $PYTHON_EXE -m pip install --cache-dir cache/pip -e .
+        if test -n "${{matrix.setup_options}}"; then
+            OPTIONS="--install-option='${{matrix.setup_options}}'"
         fi
+        if test -n "$EXTRAS"; then
+            EXTRAS="[$EXTRAS]"
+        fi
+        $PYTHON_EXE -m pip install --cache-dir cache/pip -e ".$EXTRAS" $OPTIONS
         echo ""
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
