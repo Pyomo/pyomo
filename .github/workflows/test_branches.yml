@@ -444,11 +444,11 @@ jobs:
         echo "Install Pyomo..."
         echo ""
         # $PYTHON_EXE setup.py develop ${{matrix.setup_options}}
-        if test "${{matrix.TARGET}}" == pip; then
+        if test "${{matrix.PYENV}}" == pip; then
             if test -n "$EXTRAS"; then
                 EXTRAS="[$EXTRAS]"
             fi
-            pip install -e ".$EXTRAS"
+            pip install --cache-dir cache/pip -e ".$EXTRAS"
         else
             conda develop .
         fi
@@ -691,7 +691,7 @@ jobs:
         if compgen -G ".coverage-*" > /dev/null; then
             echo ""
             echo "Installing coverage 4.x for legacy builds"
-            pip install 'coverage<5'
+            pip install --cache-dir cache/pip 'coverage<5'
             upload ${{matrix.TARGET}}/legacy .coverage-*
         fi
 
