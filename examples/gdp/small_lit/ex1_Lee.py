@@ -34,6 +34,6 @@ def build_model():
 
 if __name__ == "__main__":
     model = build_model()
-    results = SolverFactory('gdpopt').solve(model, tee=True)
+    results = SolverFactory('gdpopt').solve(model, tee=True, strategy='LOA')
     print(results)
 
