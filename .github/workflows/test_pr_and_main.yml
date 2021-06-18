@@ -243,9 +243,7 @@ jobs:
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
         python -m pip install --cache-dir cache/pip \
-            ${PYTHON_CORE_PKGS} \
-            ${PYTHON_PACKAGES} \
-            ${PYOMO_DEPENDENCIES}
+            ${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES} ${PYOMO_DEPENDENCIES}
         python -m pip install --cache-dir cache/pip pymysql || \
             python -m pip install --cache-dir cache/pip pymysql
         if test -z "${{matrix.slim}}"; then
@@ -279,9 +277,7 @@ jobs:
         PYPI_DEPENDENCIES=`echo $PYOMO_DEPENDENCIES | tr ' ' '\n' \
             | grep -E ${PYPI_ONLY} | tr '\n' ' '`
         conda install -q -y -c conda-forge \
-            ${PYTHON_CORE_PKGS} \
-            ${PYTHON_PACKAGES} \
-            ${CONDA_DEPENDENCIES}
+            ${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES} ${CONDA_DEPENDENCIES}
         if test -z "${{matrix.slim}}"; then
             conda install -q -y -c ibmdecisionoptimization 'cplex>=12.10' \
                 || echo "WARNING: CPLEX Community Edition is not available"
@@ -656,7 +652,10 @@ jobs:
       run: |
         python -c 'import sys;print(sys.executable)'
         python -m pip install --cache-dir cache/pip --upgrade pip
-        pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS}
+        PYOMO_DEPENDENCIES=`python setup.py dependencies \
+            --extras "tests" | tail -1`
+        python -m pip install --cache-dir cache/pip \
+            ${PYTHON_CORE_PKGS} ${PYOMO_DEPENDENCIES}
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
 
