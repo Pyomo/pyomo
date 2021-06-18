@@ -203,7 +203,6 @@ setup_kwargs = dict(
             'numdifftools', # pynumero
             'numpy',
             'openpyxl',  # dataportals
-            'pandas',
             #'pathos',   # requested for #963, but PR currently closed
             'pint',      # units
             'python-louvain', # community_detection
@@ -216,6 +215,7 @@ setup_kwargs = dict(
             # install on PyPy (binary wheels are not available), so we
             # will only "require" them on other (CPython) platforms:
             'casadi; implementation_name!="pypy"',  # dae
+            'pandas; implementation_name!="pypy"',
             'scipy; implementation_name!="pypy"',
         ],
     },
