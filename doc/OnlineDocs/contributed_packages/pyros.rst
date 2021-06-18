@@ -339,11 +339,11 @@ Step 3: Solve with PyROS
 PyROS requires the user to supply one local and one global NLP solver to be used for solving sub-problems. For convenience, we shall have PyROS invoke BARON as both the local and the global NLP solver.
 
 .. doctest::
-  :skipif: not baron.available() and not baron.license_is_valid()
+  :skipif: not (baron.available() and baron.license_is_valid())
 
   >>> # === Designate local and global NLP solvers ===
-  >>> local_solver = pyo.SolverFactory('baron')#, options={"CplexLibName":"/opt/ibm/ILOG/CPLEX_Studio1210/cplex/bin/x86-64_linux/libcplex12100.so"})
-  >>> global_solver = pyo.SolverFactory('baron')#, options={"CplexLibName":"/opt/ibm/ILOG/CPLEX_Studio1210/cplex/bin/x86-64_linux/libcplex12100.so"})
+  >>> local_solver = pyo.SolverFactory('baron')
+  >>> global_solver = pyo.SolverFactory('baron')
 
 .. note::
     Additional solvers to be used as backup can be designated during the ``solve`` statement via the config options ``backup_local_solvers`` and ``backup_global_solvers`` presented above.
@@ -378,7 +378,7 @@ A Single-Stage Problem
 If we choose to designate all variables as either design or state variables, without any control variables (i.e., all degrees of freedom are first-stage), we can use PyROS to solve the single-stage problem as shown below. In particular, let us instruct PyROS that variables ``m.x1`` through ``m.x6``, ``m.x19`` through ``m.x24``, and ``m.x31`` correspond to first-stage degrees of freedom.
 
 .. doctest::
-  :skipif: not baron.available() and not baron.license_is_valid()
+  :skipif: not (baron.available() and baron.license_is_valid())
 
   >>> # === Designate which variables correspond to first- and second-stage degrees of freedom ===
   >>> first_stage_variables =[m.x1, m.x2, m.x3, m.x4, m.x5, m.x6,
@@ -419,7 +419,7 @@ A Two-Stage Problem
 For this next set of runs, we will assume that some of the previously designated first-stage degrees of freedom are in fact second-stage ones. PyROS handles second-stage degrees of freedom via the use of decision rules, which is controlled with the config option ``decision_rule_order`` presented above. Here, we shall select affine decision rules by setting ``decision_rule_order`` to the value of `1`.
 
 .. doctest::
-  :skipif: not baron.available() and not baron.license_is_valid()
+  :skipif: not (baron.available() and baron.license_is_valid())
 
   >>> # === Define the variable partitioning
   >>> first_stage_variables =[m.x5, m.x6, m.x19, m.x22, m.x23, m.x24, m.x31]

@@ -56,14 +56,14 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         """
         return
 
-    @property
+    @abc.abstractmethod
     def dim(self):
         """
         UncertaintySet dimension, e.g. dimension of uncertain parameters
         """
         raise NotImplementedError
 
-    @property
+    @abc.abstractmethod
     def geometry(self):
         """
         UncertaintySet geometry:
@@ -851,14 +851,14 @@ class EllipsoidalSet(UncertaintySet):
         return
 
 
-class DiscreteScenariosSet(UncertaintySet):
+class DiscreteScenarioSet(UncertaintySet):
     """
     Set of discrete scenarios (i.e., finite collection of realizations)
     """
 
     def __init__(self, scenarios):
         """
-        DiscreteScenariosSet constructor
+        DiscreteScenarioSet constructor
 
         Args:
             scenarios: Vector (``list``) of discrete scenarios where each scenario represents a realization of the uncertain parameters.
@@ -910,7 +910,7 @@ class DiscreteScenariosSet(UncertaintySet):
 
     def point_in_set(self, uncertain_params, point, **kwargs):
         """
-        DiscreteScenariosSet class-specific method for identifying if a point is in the set
+        DiscreteScenarioSet class-specific method for identifying if a point is in the set
 
         Args:
              uncertain_params: uncertain parameter objects
@@ -948,7 +948,7 @@ class IntersectionSet(UncertaintySet):
 
     def __init__(self, **kwargs):
         """
-        IntersectedSet constructor
+        IntersectionSet constructor
 
         Args:
             **kwargs: Keyword arguments for specifying all PyROS UncertaintySet objects to be intersected.
@@ -1043,7 +1043,7 @@ class IntersectionSet(UncertaintySet):
                 for point in set.scenarios:
                     if other.point_in_set(point=point, uncertain_params=uncertain_params):
                         intersected_scenarios.append(point)
-                return DiscreteScenariosSet(scenarios=intersected_scenarios)
+                return DiscreteScenarioSet(scenarios=intersected_scenarios)
 
         # === This case is if both sets are continuous
         return IntersectionSet(set1=Q1, set2=Q2)
