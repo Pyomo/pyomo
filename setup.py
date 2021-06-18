@@ -200,14 +200,12 @@ setup_kwargs = dict(
             'ipython',   # contrib.viewer
             'matplotlib',
             'networkx',  # network, incidence_analysis, community_detection
-            'numdifftools', # pynumero
             'numpy',
             'openpyxl',  # dataportals
             #'pathos',   # requested for #963, but PR currently closed
             'pint',      # units
             'python-louvain', # community_detection
             'pyyaml',    # core
-            'seaborn',   # parmest.graphics
             'sympy',     # differentiation
             'xlrd',      # dataportals
             'z3-solver', # community_detection
@@ -215,8 +213,10 @@ setup_kwargs = dict(
             # install on PyPy (binary wheels are not available), so we
             # will only "require" them on other (CPython) platforms:
             'casadi; implementation_name!="pypy"',  # dae
+            'numdifftools; implementation_name!="pypy"', # pynumero
             'pandas; implementation_name!="pypy"',
             'scipy; implementation_name!="pypy"',
+            'seaborn; implementation_name!="pypy"',   # parmest.graphics
         ],
     },
     packages = find_packages(exclude=("scripts",)),
