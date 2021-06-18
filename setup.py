@@ -196,7 +196,6 @@ setup_kwargs = dict(
             'numpy', # Needed by autodoc for pynumero
         ],
         'optional': [
-            'casadi',    # dae
             'dill',      # No direct use, but improves lambda pickle
             'ipython',   # contrib.viewer
             'matplotlib',
@@ -216,6 +215,7 @@ setup_kwargs = dict(
             # The following optional dependencies are difficult to
             # install on PyPy (binary wheels are not available), so we
             # will only "require" them on other (CPython) platforms:
+            'casadi; implementation_name!="pypy"',  # dae
             'scipy; implementation_name!="pypy"',
         ],
     },
