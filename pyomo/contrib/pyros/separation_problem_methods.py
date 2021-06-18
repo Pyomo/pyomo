@@ -40,8 +40,6 @@ def make_separation_objective_functions(model, config):
     """
     performance_constraints = []
     for c in model.component_data_objects(Constraint, active=True, descend_into=True):
-        if c.name == "epigraph_constr":
-            print()
         _vars = ComponentSet(identify_variables(expr=c.expr))
         uncertain_params_in_expr = list(v for v in model.util.uncertain_param_vars.values() if v in _vars)
         state_vars_in_expr = list(v for v in model.util.state_vars if v in _vars)

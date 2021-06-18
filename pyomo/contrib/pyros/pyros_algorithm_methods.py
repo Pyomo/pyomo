@@ -59,7 +59,7 @@ def ROSolver_iterative_solve(model_data, config):
 
     # === Set the nominal uncertain parameters to the violation values
     for i, v in enumerate(violation):
-        master_data.master_model.scenarios[0, 0].util.uncertain_params[i] = v
+        master_data.master_model.scenarios[0, 0].util.uncertain_params[i].value = v
 
     # === Add objective function (assuming minimization of costs) with nominal second-stage costs
     if config.objective_focus is ObjectiveType.nominal:

@@ -2,7 +2,6 @@
 PyROS Solver
 ############
 
-
 PyROS (Pyomo Robust Optimization Solver) is a metasolver capability within Pyomo for solving non-convex,
 two-stage optimization models using adjustable robust optimization.
 
@@ -201,18 +200,19 @@ We have augmented this model by converting one objective coefficient, two constr
 .. note::
     Per our analysis, the *hydro* problem satisfies the requirement that each value of :math:`\left(x, z, q \right)` maps to a unique value of :math:`y`, which indicates a proper partition of variables between (first- or second-stage) degrees of freedom and state variables.
 
-Step 0: Import the PyROS Module
+Step 0: Import Pyomo and the PyROS Module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In anticipation of using the PyROS solver:
+In anticipation of using the PyROS solver and building the deterministic Pyomo model:
 
 .. doctest::
 
   >>> # === Required import ===
-  >>> import pyomo.pyros as pyros
+  >>> import pyomo.environ as pyo
+  >>> import pyomo.contrib.pyros as pyros
 
   >>> # === Instantiate the PyROS solver object ===
-  >>> pyros_solver = SolverFactory("pyros")
+  >>> pyros_solver = pyo.SolverFactory("pyros")
 
 Step 1: Define the Deterministic Problem
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -230,9 +230,6 @@ The deterministic Pyomo model for *hydro* is shown below.
     consequently, this solution will not work with ``Param`` objects for which the ``mutable=False`` property was explicitly enabled inside the model object.
 
 .. doctest::
-
-  >>> # === Required import ===
-  >>> import pyomo.environ as pyo
 
 
   >>> # === Construct the Pyomo model object ===
@@ -279,10 +276,10 @@ The deterministic Pyomo model for *hydro* is shown below.
 
   >>> # === Specify the objective function ===
   >>> m.obj = pyo.Objective(expr=m.p[0]*m.x1**2 + 82.8*8*m.x1 + 82.8*0.0016*m.x2**2 +
-                                 82.8*82.8*8*m.x2 + 82.8*0.0016*m.x3**2 + 82.8*8*m.x3 +
-                                 82.8*0.0016*m.x4**2 + 82.8*8*m.x4 + 82.8*0.0016*m.x5**2 +
-                                 82.8*8*m.x5 + 82.8*0.0016*m.x6**2 + 82.8*8*m.x6 + 248400,
-                                 sense=pyo.minimize)
+  ...                               82.8*82.8*8*m.x2 + 82.8*0.0016*m.x3**2 + 82.8*8*m.x3 +
+  ...                               82.8*0.0016*m.x4**2 + 82.8*8*m.x4 + 82.8*0.0016*m.x5**2 +
+  ...                               82.8*8*m.x5 + 82.8*0.0016*m.x6**2 + 82.8*8*m.x6 + 248400,
+  ...                               sense=pyo.minimize)
 
   >>> # === Specify the constraints ===
   >>> m.c2 = pyo.Constraint(expr=-m.x1 - m.x7 + m.x13 + 1200<= 0)
@@ -330,8 +327,8 @@ PyROS will seek to identify solutions that remain feasible for any realization o
   >>> # === Define the pertinent data ===
   >>> relative_deviation = 0.15
   >>> bounds = [(nominal_values[i] - relative_deviation*nominal_values[i],
-                 nominal_values[i] + relative_deviation*nominal_values[i])
-                 for i in range(4)]
+  ...               nominal_values[i] + relative_deviation*nominal_values[i])
+  ...               for i in range(4)]
 
   >>> # === Construct the desirable uncertainty set ===
   >>> box_uncertainty_set = pyros.BoxSet(bounds=bounds)
@@ -342,11 +339,11 @@ Step 3: Solve with PyROS
 PyROS requires the user to supply one local and one global NLP solver to be used for solving sub-problems. For convenience, we shall have PyROS invoke BARON as both the local and the global NLP solver.
 
 .. doctest::
-
   :skipif: not baron.available() and not baron.license_is_valid()
+
   >>> # === Designate local and global NLP solvers ===
-  >>> local_solver = pyo.SolverFactory('baron')
-  >>> global_solver = pyo.SolverFactory('baron')
+  >>> local_solver = pyo.SolverFactory('baron')#, options={"CplexLibName":"/opt/ibm/ILOG/CPLEX_Studio1210/cplex/bin/x86-64_linux/libcplex12100.so"})
+  >>> global_solver = pyo.SolverFactory('baron')#, options={"CplexLibName":"/opt/ibm/ILOG/CPLEX_Studio1210/cplex/bin/x86-64_linux/libcplex12100.so"})
 
 .. note::
     Additional solvers to be used as backup can be designated during the ``solve`` statement via the config options ``backup_local_solvers`` and ``backup_global_solvers`` presented above.
@@ -381,31 +378,39 @@ A Single-Stage Problem
 If we choose to designate all variables as either design or state variables, without any control variables (i.e., all degrees of freedom are first-stage), we can use PyROS to solve the single-stage problem as shown below. In particular, let us instruct PyROS that variables ``m.x1`` through ``m.x6``, ``m.x19`` through ``m.x24``, and ``m.x31`` correspond to first-stage degrees of freedom.
 
 .. doctest::
-
   :skipif: not baron.available() and not baron.license_is_valid()
+
   >>> # === Designate which variables correspond to first- and second-stage degrees of freedom ===
   >>> first_stage_variables =[m.x1, m.x2, m.x3, m.x4, m.x5, m.x6,
-                        m.x19, m.x20, m.x21, m.x22, m.x23, m.x24, m.x31]
+  ...                      m.x19, m.x20, m.x21, m.x22, m.x23, m.x24, m.x31]
   >>> second_stage_variables = []
   >>> # The remaining variables are implicitly designated to be state variables
 
   >>> # === Call PyROS to solve the robust optimization problem ===
-  >>> results_1 = pyros_solver.solve(model = m,
-                                    first_stage_variables = first_stage_variables,
-                                    second_stage_variables = second_stage_variables,
-                                    uncertain_params = uncertain_parameters,
-                                    uncertainty_set = box_uncertainty_set,
-                                    local_solver = local_solver,
-                                    global_solver= global_solver,
-                                    options = {
-                                       "objective_focus": pyros.ObjectiveType.worst_case,
-                                       "solve_master_globally": True
-                                     })
+  >>> results_1 = pyros_solver.solve(model = m, # doctest: +ELLIPSIS
+  ...                                  first_stage_variables = first_stage_variables,
+  ...                                  second_stage_variables = second_stage_variables,
+  ...                                  uncertain_params = uncertain_parameters,
+  ...                                  uncertainty_set = box_uncertainty_set,
+  ...                                  local_solver = local_solver,
+  ...                                  global_solver= global_solver,
+  ...                                  options = {
+  ...                                     "objective_focus": pyros.ObjectiveType.worst_case,
+  ...                                     "solve_master_globally": True
+  ...                                   })
+  ===========================================================================================
+  PyROS: Pyomo Robust Optimization Solver ...
+  ===========================================================================================
+  ...
+  INFO: Robust optimal solution identified. Exiting PyROS.
+  ...
 
   >>> # === Print results ===
   >>> single_stage_final_objective = pyo.value(results_1.final_objective_value)
-  >>> print("\n Final objective value: %s" % single_stage_final_objective)
-  >>> print("PyROS termination condition: %s" % results_1.grcs_termination_condition)
+  >>> print("Final objective value: %s" % single_stage_final_objective) # doctest: +ELLIPSIS
+  Final objective value: ...
+  >>> print("PyROS termination condition: %s" % results_1.grcs_termination_condition) # doctest: +ELLIPSIS
+  PyROS termination condition: ...
 
 The above code yields: "Final objective value: 48,349,406.72"
 
@@ -420,25 +425,29 @@ For this next set of runs, we will assume that some of the previously designated
   >>> first_stage_variables =[m.x5, m.x6, m.x19, m.x22, m.x23, m.x24, m.x31]
   >>> second_stage_variables = [m.x1, m.x2, m.x3, m.x4, m.x20, m.x21]
   >>> # The remaining variables are implicitly designated to be state variables
-  
+
   >>> # === Call PyROS to solve the robust optimization problem ===
   >>> results_2 = pyros_solver.solve(model = m,
-                                     first_stage_variables = first_stage_variables,
-                                     second_stage_variables = second_stage_variables,
-                                     uncertain_params = uncertain_parameters,
-                                     uncertainty_set = box_uncertainty_set,
-                                     local_solver = local_solver,
-                                     global_solver = global_solver,
-                                     options = {
-                                        "objective_focus": pyros.ObjectiveType.worst_case,
-                                        "solve_master_globally": True,
-                                        "decision_rule_order": 1
-                                     })
+  ...                                   first_stage_variables = first_stage_variables,
+  ...                                   second_stage_variables = second_stage_variables,
+  ...                                   uncertain_params = uncertain_parameters,
+  ...                                   uncertainty_set = box_uncertainty_set,
+  ...                                   local_solver = local_solver,
+  ...                                   global_solver = global_solver,
+  ...                                   options = {
+  ...                                      "objective_focus": pyros.ObjectiveType.worst_case,
+  ...                                      "solve_master_globally": True,
+  ...                                      "decision_rule_order": 1
+  ...                                   }) # doctest: +ELLIPSIS
+  ===========================================================================================
+  PyROS: Pyomo Robust Optimization Solver ...
+  ...
 
   >>> # === Compare final objective to the singe-stage solution
   >>> two_stage_final_objective = pyo.value(results_2.final_objective_value)
   >>> percent_difference = 100 * (two_stage_final_objective - single_stage_final_objective)/(single_stage_final_objective)
-  >>> print("\n Percent objective change relative to constant decision rules objective: %.2f %%" % percent_difference)
+  >>> print("Percent objective change relative to constant decision rules objective: %.2f %%" % percent_difference) # doctest: +ELLIPSIS
+  Percent objective change relative to constant decision rules objective: ...
 
 In this example, when we compare the final objective value in the case of constant decision rules (no second-stage recourse)
 and affine decision rules, we see there is a -24.95% decrease in total objective value.
@@ -449,37 +458,35 @@ Using appropriately constructed hierarchies, PyROS allows for the facile compari
 For the set we considered here, the ``BoxSet``, we can create such a hierarchy via an array of ``relative_deviation`` parameters to define the size of these uncertainty sets.
 We can then loop through this array and call PyROS within a loop to identify robust solutions in light of each of the specified ``BoxSet`` objects.
 
-.. doctest::
-  :skipif: not baron.available() and not baron.license_is_valid()
+.. code::
 
+  >>> # This takes a long time to run and therefore is not a doctest
   >>> # === An array of maximum relative deviations from the nominal uncertain parameter values to utilize in constructing box sets
   >>> relative_deviation_list = [0.00, 0.10, 0.20, 0.30, 0.40]
-
   >>> # === Final robust optimal objectives
   >>> robust_optimal_objectives = []
-
-  >>> for relative_deviation in relative_deviation_list:
-      ... bounds = [(nominal_values[i] - relative_deviation*nominal_values[i],
-                     nominal_values[i] + relative_deviation*nominal_values[i])
-                     for i in range(4)]
-      ... box_uncertainty_set = pyros.BoxSet(bounds = bounds)
-      ... results = pyros_solver.solve(model = m,
-                                       first_stage_variables = first_stage_variables,
-                                       second_stage_variables = second_stage_variables,
-                                       uncertain_params = uncertain_parameters,
-                                       uncertainty_set = box_uncertainty_set,
-                                       local_solver = local_solver,
-                                       global_solver = global_solver,
-                                       options = {
-                                          "objective_focus": pyros.ObjectiveType.worst_case,
-                                          "solve_master_globally": True,
-                                          "decision_rule_order": 1
-                                       })
-      ... if results.grcs_termination_condition != pyros.grcsTerminationCondition.robust_optimal:
-      ...   print("This instance didn't solve to robust optimality.")
-      ...   robust_optimal_objective.append("-----")
-      ... else:
-      ...   robust_optimal_objectives.append(str(results.final_objective_value))
+  >>> for relative_deviation in relative_deviation_list: # doctest: +SKIP
+  ...   bounds = [(nominal_values[i] - relative_deviation*nominal_values[i],
+  ...                   nominal_values[i] + relative_deviation*nominal_values[i])
+  ...                   for i in range(4)]
+  ...   box_uncertainty_set = pyros.BoxSet(bounds = bounds)
+  ...   results = pyros_solver.solve(model = m,
+  ...                                     first_stage_variables = first_stage_variables,
+  ...                                     second_stage_variables = second_stage_variables,
+  ...                                     uncertain_params = uncertain_parameters,
+  ...                                     uncertainty_set = box_uncertainty_set,
+  ...                                     local_solver = local_solver,
+  ...                                     global_solver = global_solver,
+  ...                                     options = {
+  ...                                        "objective_focus": pyros.ObjectiveType.worst_case,
+  ...                                        "solve_master_globally": True,
+  ...                                        "decision_rule_order": 1
+  ...                                     })
+  ...   if results.grcs_termination_condition != pyros.grcsTerminationCondition.robust_optimal:
+  ...       print("This instance didn't solve to robust optimality.")
+  ...       robust_optimal_objective.append("-----")
+  ...   else:
+  ...       robust_optimal_objectives.append(str(results.final_objective_value))
 
 For this example, we obtain the following price of robustness results:
 
