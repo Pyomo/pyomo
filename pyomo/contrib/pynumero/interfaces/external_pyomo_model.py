@@ -92,12 +92,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
             external_vars,
             residual_cons,
             external_cons,
-            model=None,
             ):
-        # This is the original model containing the components we are
-        # working with. The only reason to include this here is so
-        # it does not get garbage collected.
-        self._model = model
 
         # We only need this block to construct the NLP, which wouldn't
         # be necessary if we could compute Hessians of Pyomo constraints.
