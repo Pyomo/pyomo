@@ -10,6 +10,7 @@
 
 import itertools
 import pyomo.common.unittest as unittest
+from pyomo.common.collections import ComponentSet, ComponentMap
 import pyomo.environ as pyo
 
 from pyomo.contrib.pynumero.dependencies import (
@@ -69,6 +70,56 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
     def test_construct_scalar(self):
         block = ExternalGreyBoxBlock(concrete=True)
         self.assertIs(type(block), ScalarExternalGreyBoxBlock)
+
+        m = make_external_model()
+        input_vars = [m.a, m.b, m.r, m.x_out, m.y_out]
+        external_vars = [m.x, m.y]
+        residual_cons = [m.c_out_1, m.c_out_2]
+        external_cons = [m.c_ex_1, m.c_ex_2]
+        ex_model = ExternalPyomoModel(
+                input_vars,
+                external_vars,
+                residual_cons,
+                external_cons,
+                )
+        block.set_external_model(ex_model)
+
+        self.assertEqual(len(block.inputs), len(input_vars))
+        self.assertEqual(len(block.outputs), 0)
+        self.assertEqual(len(block._equality_constraint_names), 2)
+
+#    def test_construct_indexed(self):
+#        block = ExternalGreyBoxBlock([0, 1, 2], concrete=True)
+#        self.assertIs(type(block), IndexedExternalGreyBoxBlock)
+#
+#        m = make_external_model()
+#        input_vars = [m.a, m.b, m.r, m.x_out, m.y_out]
+#        external_vars = [m.x, m.y]
+#        residual_cons = [m.c_out_1, m.c_out_2]
+#        external_cons = [m.c_ex_1, m.c_ex_2]
+#        ex_model = ExternalPyomoModel(
+#                input_vars,
+#                external_vars,
+#                residual_cons,
+#                external_cons,
+#                )
+#
+#        for i in block:
+#            b = block[i]
+#            b.set_external_model(ex_model)
+#            self.assertEqual(len(b.inputs), len(input_vars))
+#            self.assertEqual(len(b.outputs), 0)
+#            self.assertEqual(len(b._equality_constraint_names), 2)
+
+"""
+The ExternalGreyBoxModel doesn't do much with the external model. It
+is mostly an intermediate between the external model and the NLP, which
+is created by the CyIpopt solver?
+^ This work is done during the cyipopt solver's solve method, which is
+unfortunate. It makes this somewhat hard to test...
+
+What data from the ExternalGreyBoxBlock is used where?
+"""
 
 
 if __name__ == '__main__':
