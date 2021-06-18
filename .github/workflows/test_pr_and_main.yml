@@ -20,16 +20,8 @@ defaults:
 env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
-  PYTHON_REQUIRED_PKGS: >
-      nose coverage parameterized pybind11
-  PYTHON_BASE_PKGS: >
-      ply dill ipython networkx openpyxl pathos
-      pint pyro4 pyyaml sphinx_rtd_theme sympy xlrd
-      python-louvain sphinx-copybutton
-  PYTHON_NUMPY_PKGS: >
-      numpy scipy pyodbc pandas matplotlib seaborn numdifftools 
-      casadi
-  CACHE_VER: v210415.0
+  PYPI_ONLY: z3-solver
+  CACHE_VER: v210618.0
   NEOS_EMAIL: tests@pyomo.org
 
 jobs:
@@ -126,16 +118,12 @@ jobs:
             echo "GHA_JOBGROUP=other" >> $GITHUB_ENV
         fi
         # Note: pandas 1.0.3 causes gams 29.1.0 import to fail in python 3.8
-        PYTHON_PACKAGES="${PYTHON_REQUIRED_PKGS}"
+        EXTRAS=tests
         if test -z "${{matrix.slim}}"; then
-            PYTHON_PACKAGES="$PYTHON_PACKAGES ${PYTHON_BASE_PKGS}"
+            EXTRAS="$EXTRAS,docs,optional"
         fi
-        if [[ ${{matrix.python}} != pypy* && ! "${{matrix.slim}}" ]]; then
-            # NumPy and derivatives either don't build under pypy, or if
-            # they do, the builds take forever.
-            PYTHON_PACKAGES="$PYTHON_PACKAGES ${PYTHON_NUMPY_PKGS}"
-        fi
-        PYTHON_PACKAGES="$PYTHON_PACKAGES ${{matrix.PACKAGES}}"
+        echo "EXTRAS=$EXTRAS" >> $GITHUB_ENV
+        PYTHON_PACKAGES="${{matrix.PACKAGES}}"
         echo "PYTHON_PACKAGES=$PYTHON_PACKAGES" \
             | tr '\n' ' ' | sed 's/ \+/ /g' >> $GITHUB_ENV
 
@@ -252,20 +240,20 @@ jobs:
       run: |
         python -c 'import sys;print(sys.executable)'
         python -m pip install --cache-dir cache/pip --upgrade pip
-        pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS}
-        pip install --cache-dir cache/pip ${PYTHON_PACKAGES}
-        pip install --cache-dir cache/pip pymysql || \
-            pip install --cache-dir cache/pip pymysql
+        PYOMO_DEPENDENCIES=`python setup.py dependencies \
+            --extras "$EXTRAS" | tail -1`
+        python -m pip install --cache-dir cache/pip \
+            ${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES} ${PYOMO_DEPENDENCIES}
+        python -m pip install --cache-dir cache/pip pymysql || \
+            python -m pip install --cache-dir cache/pip pymysql
         if test -z "${{matrix.slim}}"; then
-            pip install --cache-dir cache/pip cplex \
+            python -m pip install --cache-dir cache/pip cplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
-            pip install --cache-dir cache/pip \
+            python -m pip install --cache-dir cache/pip \
                 -i https://pypi.gurobi.com gurobipy \
                 || echo "WARNING: Gurobi is not available"
-            pip install --cache-dir cache/pip xpress \
+            python -m pip install --cache-dir cache/pip xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
-            pip install --cache-dir cache/pip z3-solver \
-                || echo "WARNING: Z3 Solver is not available"
         fi
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
@@ -281,8 +269,15 @@ jobs:
         conda info
         conda config --show-sources
         conda list --show-channel-urls
-        conda install -q -y -c conda-forge ${PYTHON_CORE_PKGS}
-        conda install -q -y -c conda-forge ${PYTHON_PACKAGES}
+        # Note: some pypi packages are not available through conda
+        PYOMO_DEPENDENCIES=`python setup.py dependencies \
+            --extras "$EXTRAS" | tail -1`
+        CONDA_DEPENDENCIES=`echo $PYOMO_DEPENDENCIES | tr ' ' '\n' \
+            | grep -Ev ${PYPI_ONLY} | tr '\n' ' '`
+        PYPI_DEPENDENCIES=`echo $PYOMO_DEPENDENCIES | tr ' ' '\n' \
+            | grep -E ${PYPI_ONLY} | tr '\n' ' '`
+        conda install -q -y -c conda-forge \
+            ${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES} ${CONDA_DEPENDENCIES}
         if test -z "${{matrix.slim}}"; then
             conda install -q -y -c ibmdecisionoptimization 'cplex>=12.10' \
                 || echo "WARNING: CPLEX Community Edition is not available"
@@ -295,6 +290,11 @@ jobs:
                     || echo "WARNING: $PKG is not available"
             done
         fi
+        # Re-try Pyomo (optional) dependencies with pip
+        if test -n "$PYPI_DEPENDENCIES"; then
+            python -m pip install --cache-dir cache/pip $PYPI_DEPENDENCIES
+        fi
+        # remember this python interpreter
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
         echo "NOSETESTS="`which nosetests` >> $GITHUB_ENV
@@ -652,8 +652,10 @@ jobs:
       run: |
         python -c 'import sys;print(sys.executable)'
         python -m pip install --cache-dir cache/pip --upgrade pip
-        pip install --cache-dir cache/pip ${PYTHON_CORE_PKGS} \
-            ${PYTHON_REQUIRED_PKGS}
+        PYOMO_DEPENDENCIES=`python setup.py dependencies \
+            --extras "tests" | tail -1`
+        python -m pip install --cache-dir cache/pip \
+            ${PYTHON_CORE_PKGS} ${PYOMO_DEPENDENCIES}
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
 
@@ -759,7 +761,7 @@ jobs:
         if compgen -G ".coverage-*" > /dev/null; then
             echo ""
             echo "Installing coverage 4.x for legacy builds"
-            pip install 'coverage<5'
+            pip install --cache-dir cache/pip 'coverage<5'
             upload ${{matrix.TARGET}}/legacy .coverage-*
         fi
 
