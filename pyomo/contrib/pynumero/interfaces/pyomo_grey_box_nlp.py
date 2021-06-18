@@ -84,6 +84,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
                     fixed_vars.extend(v for v in data.inputs.values() if v.fixed)
                     fixed_vars.extend(v for v in data.outputs.values() if v.fixed)
                     greybox_nlp = _ExternalGreyBoxAsNLP(greybox)
+                    # ^RBP: Should this be _ExternalGreyBoxAsNLP(data)?
                     greybox_nlps.append(greybox_nlp)
 
         if fixed_vars:
@@ -95,6 +96,8 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
             raise NotImplementedError('PyomoNLPWithGreyBoxBlocks does not support fixed inputs or outputs')
 
         # let's build up the union of all the primal variables names
+        # RBP: Why use names here? Why not just ComponentSet of all
+        # data objects?
         primals_names = set(self._pyomo_nlp.primals_names())
         for gbnlp in greybox_nlps:
             primals_names.update(gbnlp.primals_names())
