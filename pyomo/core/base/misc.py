@@ -118,7 +118,7 @@ class _robust_sort_keyfcn(object):
         self._typemap[tuple] =(3, tuple.__name__)
         self._key = key
 
-    def __call__(self, val):
+    def __call__(self, val, use_key=True):
         """Generate a tuple ( str(type_name), val ) for sorting the value.
 
         `key=` expects a function.  We are generating a functor so we
@@ -127,7 +127,7 @@ class _robust_sort_keyfcn(object):
         argument of the sort key.
 
         """
-        if self._key is not None:
+        if use_key and self._key is not None:
             val = self._key(val)
 
         try:
@@ -156,7 +156,7 @@ class _robust_sort_keyfcn(object):
         if i == 1:
             return _typename, val
         elif i == 3:
-            return _typename, tuple(self(v) for v in val)
+            return _typename, tuple(self(v, use_key=False) for v in val)
         elif i == 2:
             return _typename, str(val)
         else:
