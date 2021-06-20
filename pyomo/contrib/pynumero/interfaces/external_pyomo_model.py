@@ -19,11 +19,43 @@ from pyomo.util.subsystems import (
         TemporarySubsystemManager,
         )
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
+from pyomo.contrib.pynumero.interfaces.utils import CondensedSparseSummation
 from pyomo.contrib.pynumero.interfaces.external_grey_box import (
         ExternalGreyBoxModel,
         )
 import numpy as np
 import scipy.sparse as sps
+
+
+def _dense_to_full_sparse(matrix):
+    """
+    Used to convert a dense matrix (2d NumPy array) to SciPy sparse matrix
+    with explicit coordinates for every entry, including zeros. This is
+    used because _ExternalGreyBoxAsNLP methods rely on receiving sparse
+    matrices where sparsity structure does not change between calls.
+    This is difficult to achieve for matrices obtained via the implicit
+    function theorem unless an entry is returned for every coordinate
+    of the matrix.
+
+    Note that this does not mean that the Hessian of the entire NLP will
+    be dense, only that the block corresponding to this external model
+    will be dense.
+    """
+    # TODO: Allow methods to hard-code Jacobian/Hessian sparsity structure
+    # in the case it is known a priori.
+    # TODO: Decompose matrices to infer maximum-fill-in sparsity structure.
+    nrow, ncol = matrix.shape
+    row = []
+    col = []
+    data = []
+    for i, j in itertools.product(range(nrow), range(ncol)):
+        row.append(i)
+        col.append(j)
+        data.append(matrix[i,j])
+    row = np.array(row)
+    col = np.array(col)
+    data = np.array(data)
+    return sps.coo_matrix((data, (row, col)), shape=(nrow, ncol))
 
 
 def get_hessian_of_constraint(constraint, wrt1=None, wrt2=None):
@@ -65,6 +97,8 @@ def get_hessian_of_constraint(constraint, wrt1=None, wrt2=None):
     idx = nlp.get_constraint_indices(constraints)[0]
     duals[idx] = 1.0
     nlp.set_duals(duals)
+    # NOTE: The returned matrix preserves explicit zeros. I.e. it contains
+    # coordinates for every entry that could possibly be nonzero.
     return nlp.extract_submatrix_hessian_lag(wrt1, wrt2)
 
 
@@ -179,18 +213,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         # be nonzero. Here, this is all of the entries.
         dfdx = jfx + jfy.dot(dydx)
 
-        row = []
-        col = []
-        data = []
-        for i, j in itertools.product(range(nf), range(nx)):
-            row.append(i)
-            col.append(j)
-            data.append(dfdx[i, j])
-        row = np.array(row)
-        col = np.array(col)
-        data = np.array(data)
-
-        return sps.coo_matrix((data, (row, col)), shape=(nf, nx))
+        return _dense_to_full_sparse(dfdx)
 
     def evaluate_jacobian_external_variables(self):
         nlp = self._nlp
@@ -223,11 +246,15 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
 
         # Each term should be a length-ny list of nx-by-nx matrices
         # TODO: Make these 3-d numpy arrays.
-        term1 = hgxx
+        term1 = hgxx # Sparse matrix
         term2 = []
         for hessian in hgxy:
+            # Sparse matrix times dense matrix. The result is sparse
+            # if the sparse matrix is low rank.
             _prod = hessian.dot(dydx)
             term2.append(_prod + _prod.transpose())
+        # Dense matrix times sparse matrix times dense matrix.
+        # I believe the product is always dense.
         term3 = [dydx.transpose().dot(hessian.toarray()).dot(dydx)
                 for hessian in hgyy]
 
@@ -308,7 +335,20 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         """
         d2fdx2 = self.evaluate_hessians_of_residuals()
         multipliers = self.residual_con_multipliers
-        # NOTE: PyomoGreyBoxNLP requires this to be a sparse matrix.
-        return sps.tril(sps.coo_matrix(
-                    sum(mult*matrix for mult, matrix in zip(multipliers, d2fdx2))
-                    ))
+
+        # Even if multipliers are zero, these matrices retain their
+        # entries. The matrices in d2fdx2 are not guaranteed to have
+        # every possible nonzero, however.
+        #list_of_matrices = [mult*sps.coo_matrix(matrix)
+        #        for mult, matrix in zip(multipliers, d2fdx2)]
+        # Use CondensedSparseSummation to sum matrices without losing
+        # "explicit zeros"
+        #cs_sum = CondensedSparseSummation(list_of_matrices)
+        #return sps.tril(cs_sum.sum(list_of_matrices))
+
+        sum_ = sum(mult*matrix for mult, matrix in zip(multipliers, d2fdx2))
+        # Return a sparse matrix with every entry accounted for because it
+        # is difficult to determine rigorously which coordinates
+        # _could possibly_ be nonzero.
+        sparse = _dense_to_full_sparse(sum_)
+        return sps.tril(sparse)
