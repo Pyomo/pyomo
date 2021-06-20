@@ -388,6 +388,24 @@ class TestGetHessianOfConstraint(unittest.TestCase):
         hess = get_hessian_of_constraint(m.eqn, variables).toarray()
         np.testing.assert_allclose(hess, expected_hess, rtol=1e-8)
 
+    def test_explicit_zeros(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.0)
+        m.y = pyo.Var(initialize=0.0)
+        m.eqn = pyo.Constraint(expr=m.x**2 + m.y**3 == 1.0)
+        variables = [m.x, m.y]
+
+        row = np.array([0, 1])
+        col = np.array([0, 1])
+        data = np.array([2.0, 0.0])
+        expected_hess = sps.coo_matrix(
+                (data, (row, col)), shape=(2,2)
+                )
+        hess = get_hessian_of_constraint(m.eqn, variables)
+        np.testing.assert_allclose(hess.row, row, atol=0)
+        np.testing.assert_allclose(hess.col, col, atol=0)
+        np.testing.assert_allclose(hess.data, data, rtol=1e-8)
+
 
 class TestExternalPyomoModel(unittest.TestCase):
 
@@ -765,4 +783,5 @@ class TestExternalPyomoModel(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    #unittest.main()
+    TestGetHessianOfConstraint().test_explicit_zeros()
