@@ -229,22 +229,5 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
         self.assertAlmostEqual(m_ex.y.value, y.value, delta=1e-8)
 
 
-"""
-Test solve:
-    - given inputs, solve for outputs (square problem)
-    - solve an optimization problem with the embedded external model
-"""
-
-"""
-The ExternalGreyBoxModel doesn't do much with the external model. It
-is mostly an intermediate between the external model and the NLP, which
-is created by the CyIpopt solver?
-^ This work is done during the cyipopt solver's solve method, which is
-unfortunate. It makes this somewhat hard to test...
-
-What data from the ExternalGreyBoxBlock is used where?
-"""
-
-
 if __name__ == '__main__':
     unittest.main()
