@@ -68,14 +68,16 @@ def make_external_model():
 class TestExternalGreyBoxBlock(unittest.TestCase):
 
     def test_construct_scalar(self):
-        block = ExternalGreyBoxBlock(concrete=True)
+        m = pyo.ConcreteModel()
+        m.ex_block = ExternalGreyBoxBlock(concrete=True)
+        block = m.ex_block
         self.assertIs(type(block), ScalarExternalGreyBoxBlock)
 
-        m = make_external_model()
-        input_vars = [m.a, m.b, m.r, m.x_out, m.y_out]
-        external_vars = [m.x, m.y]
-        residual_cons = [m.c_out_1, m.c_out_2]
-        external_cons = [m.c_ex_1, m.c_ex_2]
+        m_ex = make_external_model()
+        input_vars = [m_ex.a, m_ex.b, m_ex.r, m_ex.x_out, m_ex.y_out]
+        external_vars = [m_ex.x, m_ex.y]
+        residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
+        external_cons = [m_ex.c_ex_1, m_ex.c_ex_2]
         ex_model = ExternalPyomoModel(
                 input_vars,
                 external_vars,
@@ -93,10 +95,10 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
 #        self.assertIs(type(block), IndexedExternalGreyBoxBlock)
 #
 #        m = make_external_model()
-#        input_vars = [m.a, m.b, m.r, m.x_out, m.y_out]
-#        external_vars = [m.x, m.y]
-#        residual_cons = [m.c_out_1, m.c_out_2]
-#        external_cons = [m.c_ex_1, m.c_ex_2]
+#        input_vars = [m_ex.a, m_ex.b, m_ex.r, m_ex.x_out, m_ex.y_out]
+#        external_vars = [m_ex.x, m_ex.y]
+#        residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
+#        external_cons = [m_ex.c_ex_1, m_ex.c_ex_2]
 #        ex_model = ExternalPyomoModel(
 #                input_vars,
 #                external_vars,
@@ -110,6 +112,57 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
 #            self.assertEqual(len(b.inputs), len(input_vars))
 #            self.assertEqual(len(b.outputs), 0)
 #            self.assertEqual(len(b._equality_constraint_names), 2)
+
+    def test_solve_square(self):
+        m = pyo.ConcreteModel()
+        m.ex_block = ExternalGreyBoxBlock(concrete=True)
+        block = m.ex_block
+
+        m_ex = make_external_model()
+        input_vars = [m_ex.a, m_ex.b, m_ex.r, m_ex.x_out, m_ex.y_out]
+        external_vars = [m_ex.x, m_ex.y]
+        residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
+        external_cons = [m_ex.c_ex_1, m_ex.c_ex_2]
+        ex_model = ExternalPyomoModel(
+                input_vars,
+                external_vars,
+                residual_cons,
+                external_cons,
+                )
+        block.set_external_model(ex_model)
+
+        m.a = pyo.Var()
+        m.b = pyo.Var()
+        m.r = pyo.Var()
+
+        n_inputs = 3
+
+        def linking_constraint_rule(m, i):
+            if i == 0:
+                return m.a == m.ex_block.inputs["input_0"]
+            elif i == 1:
+                return m.b == m.ex_block.inputs["input_1"]
+            elif i == 2:
+                return m.r == m.ex_block.inputs["input_2"]
+
+        m.linking_constraint = pyo.Constraint(range(3),
+                rule=linking_constraint_rule)
+
+        m.a.fix(1)
+        m.b.fix(2)
+        m.r.fix(3)
+
+        m.obj = pyo.Objective(expr=0)
+
+        solver = pyo.SolverFactory("cyipopt")
+        solver.solve(m, tee=True)
+
+
+"""
+Test solve:
+    - given inputs, solve for outputs (square problem)
+    - solve an optimization problem with the embedded external model
+"""
 
 """
 The ExternalGreyBoxModel doesn't do much with the external model. It
