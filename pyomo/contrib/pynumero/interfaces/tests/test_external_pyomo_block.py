@@ -58,10 +58,11 @@ def make_external_model():
     m.c_out_1 = pyo.Constraint(expr=m.x_out == m.x)
     m.c_out_2 = pyo.Constraint(expr=m.y_out == m.y)
     m.c_ex_1 = pyo.Constraint(expr=
-            m.a + m.b ==
-            1 + 0.5*m.x + 3*m.x**2 - 2*m.x**3 + 0.1*m.x**4 - 0.1*m.x**5
+            m.x**3 - 2*m.y == m.a**2 + m.b**3 - m.r**3 - 2
             )
-    m.c_ex_2 = pyo.Constraint(expr=m.r == m.x*m.y)
+    m.c_ex_2 = pyo.Constraint(expr=
+            m.x + m.y**3 == m.a**3 + 2*m.b**2 + m.r**2 + 1
+            )
     return m
 
 
@@ -113,6 +114,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
 #            self.assertEqual(len(b.outputs), 0)
 #            self.assertEqual(len(b._equality_constraint_names), 2)
 
+    @unittest.skipUnless(cyipopt_available, "cyipopt is not available")
     def test_solve_square(self):
         m = pyo.ConcreteModel()
         m.ex_block = ExternalGreyBoxBlock(concrete=True)
@@ -155,7 +157,76 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
         m.obj = pyo.Objective(expr=0)
 
         solver = pyo.SolverFactory("cyipopt")
+        solver.solve(m)
+
+        self.assertFalse(m_ex.a.fixed)
+        self.assertFalse(m_ex.b.fixed)
+        self.assertFalse(m_ex.r.fixed)
+
+        m_ex.a.fix(1)
+        m_ex.b.fix(2)
+        m_ex.r.fix(3)
+        ipopt = pyo.SolverFactory("ipopt")
+        ipopt.solve(m_ex)
+
+        x = m.ex_block.inputs["input_3"]
+        y = m.ex_block.inputs["input_4"]
+        self.assertAlmostEqual(m_ex.x.value, x.value, delta=1e-8)
+        self.assertAlmostEqual(m_ex.y.value, y.value, delta=1e-8)
+
+    @unittest.skipUnless(cyipopt_available, "cyipopt is not available")
+    def test_optimize(self):
+        m = pyo.ConcreteModel()
+        m.ex_block = ExternalGreyBoxBlock(concrete=True)
+        block = m.ex_block
+
+        m_ex = make_external_model()
+        input_vars = [m_ex.a, m_ex.b, m_ex.r, m_ex.x_out, m_ex.y_out]
+        external_vars = [m_ex.x, m_ex.y]
+        residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
+        external_cons = [m_ex.c_ex_1, m_ex.c_ex_2]
+        ex_model = ExternalPyomoModel(
+                input_vars,
+                external_vars,
+                residual_cons,
+                external_cons,
+                )
+        block.set_external_model(ex_model)
+
+        a = m.ex_block.inputs["input_0"]
+        b = m.ex_block.inputs["input_1"]
+        r = m.ex_block.inputs["input_2"]
+        x = m.ex_block.inputs["input_3"]
+        y = m.ex_block.inputs["input_4"]
+        m.obj = pyo.Objective(expr=
+                (x-2.0)**2 + (y-2.0)**2 + (a-2.0)**2 + (b-2.0)**2 + (r-2.0)**2
+                )
+
+        # Solve with external model embedded
+        solver = pyo.SolverFactory("cyipopt")
         solver.solve(m, tee=True)
+
+        m_ex.obj = pyo.Objective(expr=
+                (m_ex.x-2.0)**2 + (m_ex.y-2.0)**2 + (m_ex.a-2.0)**2 +
+                (m_ex.b-2.0)**2 + (m_ex.r-2.0)**2
+                )
+        m_ex.a.set_value(0.0)
+        m_ex.b.set_value(0.0)
+        m_ex.r.set_value(0.0)
+        m_ex.y.set_value(0.0)
+        m_ex.x.set_value(0.0)
+
+        # Solve external model, now with same objective function
+        ipopt = pyo.SolverFactory("ipopt")
+        ipopt.solve(m_ex, tee=True)
+
+        # Make sure full space and reduced space solves give same
+        # answers.
+        self.assertAlmostEqual(m_ex.a.value, a.value, delta=1e-8)
+        self.assertAlmostEqual(m_ex.b.value, b.value, delta=1e-8)
+        self.assertAlmostEqual(m_ex.r.value, r.value, delta=1e-8)
+        self.assertAlmostEqual(m_ex.x.value, x.value, delta=1e-8)
+        self.assertAlmostEqual(m_ex.y.value, y.value, delta=1e-8)
 
 
 """
