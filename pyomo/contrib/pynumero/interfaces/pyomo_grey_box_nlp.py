@@ -363,6 +363,8 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
     def evaluate_hessian_lag(self, out=None):
         list_of_hessians = [nlp.evaluate_hessian_lag() for nlp in self._nlps]
         if self._sparse_hessian_summation is None:
+            # This is assuming that the nonzero structures of Hessians
+            # do not change
             self._sparse_hessian_summation = CondensedSparseSummation(list_of_hessians)
         ret = self._sparse_hessian_summation.sum(list_of_hessians)
 
