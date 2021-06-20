@@ -783,5 +783,4 @@ class TestExternalPyomoModel(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    #unittest.main()
-    TestGetHessianOfConstraint().test_explicit_zeros()
+    unittest.main()
