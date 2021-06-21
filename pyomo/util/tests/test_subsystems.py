@@ -471,6 +471,10 @@ class TestParamSweeper(unittest.TestCase):
         self.assertIs(m.v2.value, None)
         self.assertIs(m.v3.value, None)
         self.assertIs(m.v4.value, None)
+        self.assertFalse(m.v1.fixed)
+        self.assertFalse(m.v2.fixed)
+        self.assertFalse(m.v3.fixed)
+        self.assertFalse(m.v4.fixed)
 
 
 if __name__ == '__main__':
