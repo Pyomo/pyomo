@@ -428,7 +428,8 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
             self.assertIn((i, j), rcd_dict)
             self.assertAlmostEqual(rcd_dict[i, j], val, delta=1e-8)
 
-    def test_hessian(self):
+    def test_hessian_1(self):
+        # Test with duals equal vector of ones.
         m = pyo.ConcreteModel()
         m.ex_block = ExternalGreyBoxBlock(concrete=True)
         block = m.ex_block
@@ -499,6 +500,96 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
                 (3, 4): (1.13920361) + (0.01063667),
                 (4, 3): (1.13920361) + (0.01063667),
                 (4, 4): 2.0 + (-1.0) + (-1.0891866) + (0.01190218),
+                (5, 5): 2.0,
+                (6, 6): 2.0,
+                }
+        rcd_dict.update(ex_block_nonzeros)
+
+        # Because "external Hessians" are computed by factorizing matrices,
+        # we have dense blocks in the Hessian for now.
+        ex_block_coords = [2, 3, 4, 5, 6]
+        for i, j in itertools.product(ex_block_coords, ex_block_coords):
+            row.append(i)
+            col.append(j)
+            if (i, j) not in rcd_dict:
+                rcd_dict[i, j] = 0.0
+
+        self.assertEqual(len(row), len(hess.row))
+        for i, j, val in zip(hess.row, hess.col, hess.data):
+            self.assertIn((i, j), rcd_dict)
+            self.assertAlmostEqual(rcd_dict[i, j], val, delta=1e-8)
+
+    def test_hessian_2(self):
+        # Test with duals different than vector of ones
+        m = pyo.ConcreteModel()
+        m.ex_block = ExternalGreyBoxBlock(concrete=True)
+        block = m.ex_block
+
+        m_ex = _make_external_model()
+        input_vars = [m_ex.a, m_ex.b, m_ex.r, m_ex.x_out, m_ex.y_out]
+        external_vars = [m_ex.x, m_ex.y]
+        residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
+        external_cons = [m_ex.c_ex_1, m_ex.c_ex_2]
+        ex_model = ExternalPyomoModel(
+                input_vars,
+                external_vars,
+                residual_cons,
+                external_cons,
+                )
+        block.set_external_model(ex_model)
+
+        a = m.ex_block.inputs["input_0"]
+        b = m.ex_block.inputs["input_1"]
+        r = m.ex_block.inputs["input_2"]
+        x = m.ex_block.inputs["input_3"]
+        y = m.ex_block.inputs["input_4"]
+        m.obj = pyo.Objective(expr=
+                (x-2.0)**2 + (y-2.0)**2 + (a-2.0)**2 + (b-2.0)**2 + (r-2.0)**2
+                )
+
+        _add_nonlinear_linking_constraints(m)
+
+        nlp = PyomoNLPWithGreyBoxBlocks(m)
+        primals = np.array([0, 1, 2, 3, 4, 5, 6, 7])
+        duals = np.array([4.4, -3.3, 2.2, -1.1, 0.0])
+        nlp.set_primals(primals)
+        nlp.set_duals(duals)
+        hess = nlp.evaluate_hessian_lag()
+
+        # Variable order (verified by a previous test):
+        # [
+        #     "a",
+        #     "b",
+        #     "ex_block.inputs[input_0]",
+        #     "ex_block.inputs[input_1]",
+        #     "ex_block.inputs[input_2]",
+        #     "ex_block.inputs[input_3]",
+        #     "ex_block.inputs[input_4]",
+        #     "r",
+        # ]
+        row = [0, 1, 7]
+        col = [0, 1, 7]
+        # Data entries are influenced by multiplier values.
+        data = [4.4*2.0, -3.3*2.0, 2.2*2.0]
+        # ^ These variables only appear in linking constraints
+        rcd_dict = dict(((i, j), val) for i, j, val in zip(row, col, data))
+
+        # These are the coordinates of the Hessian corresponding to
+        # external variables with true nonzeros. The coordinates have
+        # terms due to objective, linking constraints, and external
+        # constraints. Values were extracted from the external model
+        # while writing this test, which is just meant to verify
+        # that the different Hessians combined properly.
+        ex_block_nonzeros = {
+                (2, 2): 2.0 + 4.4*(-1.0) + -1.1*(-0.10967928),
+                (2, 3): -1.1*(-0.10684633),
+                (3, 2): -1.1*(-0.10684633),
+                (2, 4): -1.1*(0.19329898),
+                (4, 2): -1.1*(0.19329898),
+                (3, 3): 2.0 + (-3.3)*(-1.0) + -1.1*(-1.31592135),
+                (3, 4): -1.1*(1.13920361),
+                (4, 3): -1.1*(1.13920361),
+                (4, 4): 2.0 + 2.2*(-1.0) + -1.1*(-1.0891866),
                 (5, 5): 2.0,
                 (6, 6): 2.0,
                 }
