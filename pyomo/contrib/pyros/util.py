@@ -4,6 +4,7 @@ Utility functions for the PyROS solver
 import copy
 from enum import Enum, auto
 from pyomo.common.collections import ComponentSet
+from pyomo.common.modeling import unique_component_name
 from pyomo.core.base import (Constraint, Var, Param,
                              Objective, minimize, Expression,
                              ConcreteModel, maximize, Block)
@@ -120,7 +121,7 @@ def model_is_valid(model):
             # Use sympy to distribute the negation so the method for determining first/second stage costs is valid
             min_obj = Objective(expr=sympy2pyomo_expression(sympy_obj[1].simplify(), sympy_obj[0]))
             model.del_component(obj)
-            model.add_component("obj",min_obj)
+            model.add_component(unique_component_name(model, obj.name+'_min'), min_obj)
         return True
 
     elif len(objectives) > 1:
@@ -189,7 +190,7 @@ def validate_uncertainty_set(config):
     if len(uncertain_params) == 0:
         raise AttributeError("Must provide uncertain params, uncertain_params list length is 0.")
     # === No duplicate parameters
-    if len(uncertain_params) != len(set(id(p) for p in uncertain_params)):
+    if len(uncertain_params) != len(ComponentSet(uncertain_params)):
         raise AttributeError("No duplicates allowed for uncertain param objects.")
 
     # === Ensure nominal point is in the set
@@ -217,7 +218,7 @@ def add_bounds_for_uncertain_parameters(separation_model, config):
     bounding_model = ConcreteModel()
     bounding_model.util = Block()
     bounding_model.util.uncertain_param_vars = IndexedVar(separation_model.util.uncertain_param_vars.index_set())
-    for tup in list(separation_model.util.uncertain_param_vars.items()):
+    for tup in separation_model.util.uncertain_param_vars.items():
         bounding_model.util.uncertain_param_vars[tup[0]].value = tup[1].value
 
     bounding_model.add_component("uncertainty_set_constraint",
@@ -256,7 +257,7 @@ def transform_to_standard_form(model):
     :param model: the optimization model
     :return: void
     '''
-    for constraint in model.component_data_objects(Constraint, descend_into=True):
+    for constraint in model.component_data_objects(Constraint, descend_into=True, active=True):
         if not constraint.equality:
             if constraint.lower is not None:
                 temp = constraint
@@ -278,23 +279,22 @@ def validate_kwarg_inputs(model, config):
     if not isinstance(model, ConcreteModel):
         raise ValueError("Model passed to PyROS solver must be a ConcreteModel object.")
 
-    first_stage_variables = list(o for o in model.component_data_objects(Var) if o.name in list(n.name for n in config.first_stage_variables))
-    second_stage_variables = list(o for o in model.component_data_objects(Var) if o.name in list(n.name for n in config.second_stage_variables))
-    uncertain_params = list(o for o in model.component_data_objects(Param) if
-                            o.name in list(n.name for n in config.uncertain_params))
+    first_stage_variables = config.first_stage_variables
+    second_stage_variables = config.second_stage_variables
+    uncertain_params = config.uncertain_params
 
-    if len(config.first_stage_variables) == 0 and len(config.second_stage_variables) == 0:
+    if not config.first_stage_variables and not config.second_stage_variables:
         # Must have non-zero DOF
         raise ValueError("First-stage variables (first_stage_variables) and "
                          "second-stage variables (second_stage_variables) cannot both be empty lists.")
 
-    if not set(id(v) for v in first_stage_variables) == set(id(v) for v in config.first_stage_variables):
+    if ComponentSet(first_stage_variables) != ComponentSet(config.first_stage_variables):
         raise ValueError("First-stage variables in first_stage_variables must be members of the model object.")
 
-    if not set(id(v) for v in second_stage_variables) == set(id(v) for v in config.second_stage_variables):
+    if ComponentSet(second_stage_variables) != ComponentSet(config.second_stage_variables):
         raise ValueError("Second-stage variables in second_stage_variables must be members of the model object.")
 
-    if not set(id(p) for p in uncertain_params) == set(id(p) for p in config.uncertain_params):
+    if ComponentSet(uncertain_params) != ComponentSet(config.uncertain_params):
         raise ValueError("Uncertain parameters in uncertain_params must be members of the model object.")
 
     if not config.uncertainty_set:
@@ -380,7 +380,7 @@ def add_decision_rule_variables(model_data, config):
         for i in range(len(second_stage_variables)):
             model_data.working_model.add_component("decision_rule_var_" + str(i),
                                                    Var(initialize=value(second_stage_variables[i]),bounds=bounds,domain=Reals))#bounds=(second_stage_variables[i].lb, second_stage_variables[i].ub)))
-            first_stage_variables.extend(list(getattr(model_data.working_model, "decision_rule_var_" + str(i)).values()))
+            first_stage_variables.extend(getattr(model_data.working_model, "decision_rule_var_" + str(i)).values())
             decision_rule_vars.append(getattr(model_data.working_model, "decision_rule_var_" + str(i)))
     elif degree == 1:
         for i in range(len(second_stage_variables)):
@@ -562,10 +562,15 @@ def load_final_solution(model_data, master_soln):
     '''
     model = model_data.original_model
     soln = master_soln.nominal_block
-    for v in model.component_data_objects(Var, descend_into=True):
-        for soln_v in soln.component_data_objects(Var, descend_into=True):
-            if v.local_name == soln_v.local_name:
-                v.set_value(value(soln_v))
+
+    src_vars = getattr(model, 'tmp_var_list')
+    local_vars = getattr(soln, 'tmp_var_list')
+    varMap = list(zip(src_vars, local_vars))
+
+    for src, local in varMap:
+        src.value = local.value
+
+    return
 
 
 def process_termination_condition_master_problem(config, results):

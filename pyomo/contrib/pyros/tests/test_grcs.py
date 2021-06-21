@@ -308,7 +308,7 @@ class myUncertaintySet(UncertaintySet):
         return True
 
     def geometry(self):
-        self.geometry = 1
+        self.geometry = Geometry.LINEAR
 
     def dim(self):
         self.dim = 1

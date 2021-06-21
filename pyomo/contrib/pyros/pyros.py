@@ -284,7 +284,7 @@ class PyROS(object):
             local_solver: ``Solver`` object to utilize as the primary local NLP solver.
             global_solver: ``Solver`` object to utilize as the primary global NLP solver.
         """
-        # TODO: add filter to docstring writer to exclude the required positional args above
+
         # === Add the explicit arguments to the config
         config = self.CONFIG(kwds.pop('options', {}))
         config.first_stage_variables = first_stage_variables
@@ -347,7 +347,11 @@ class PyROS(object):
 
             # === Leads to a logger warning here for inactive obj when cloning
             model_data.original_model = model
-            model_data.working_model = model.clone()
+            # === For keeping track of variables after cloning
+            cname = unique_component_name(model_data.original_model, 'tmp_var_list')
+            src_vars = list(model_data.original_model.component_data_objects(Var))
+            setattr(model_data.original_model, cname, src_vars)
+            model_data.working_model = model_data.original_model.clone()
 
             # === Add objective expressions
             identify_objective_functions(model_data.working_model, config)

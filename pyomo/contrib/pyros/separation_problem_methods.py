@@ -17,6 +17,7 @@ from pyomo.core.expr.current import (replace_expressions,
                                      identify_mutable_parameters,
                                      identify_variables)
 from pyomo.contrib.pyros.util import get_main_elapsed_time
+from pyomo.contrib.pyros.uncertainty_sets import Geometry
 import os
 from copy import deepcopy
 
@@ -101,7 +102,7 @@ def make_separation_problem(model_data, config):
     separation_model.util.new_constraints = constraints = ConstraintList()
 
     uncertain_param_set = ComponentSet(uncertain_params)
-    for c in separation_model.component_data_objects(Constraint):
+    for c in separation_model.component_data_objects(Constraint, active=True):
         if any(v in uncertain_param_set for v in identify_mutable_parameters(c.expr)):
             if c.equality:
                 constraints.add(
@@ -154,7 +155,7 @@ def get_all_sep_objective_values(model_data, config):
 
 def get_index_of_max_violation(model_data, config, solve_data_list):
 
-    is_discrete_scenarios = True if config.uncertainty_set.geometry == 4 else False
+    is_discrete_scenarios = True if config.uncertainty_set.geometry == Geometry.DISCRETE_SCENARIOS else False
     matrix_dim=0
     indices_of_violating_realizations = []
     indices_of_violating_realizations_and_scenario = {}
@@ -239,7 +240,8 @@ def solve_separation_problem(model_data, config):
         solver = config.global_solver if \
             (is_global or config.bypass_local_separation) else config.local_solver
         solve_data_list = []
-
+        list_of_deterministic_constraint_names = list(c.local_name for c in
+                                        model_data.master_nominal_scenario.component_data_objects(Constraint, descend_into=True))
         for val in sorted_unique_priorities:
             # Descending ordered by value
             # The list of performance constraints with this priority
@@ -252,19 +254,17 @@ def solve_separation_problem(model_data, config):
                     raise ValueError("Error in mapping separation objective to its master constraint form.")
                 separation_obj.activate()
 
-                if perf_con in list(c.local_name for c in model_data.master_nominal_scenario.component_data_objects(Constraint, descend_into=True)):
-                    val = perf_con
+                if perf_con in list_of_deterministic_constraint_names:
+                    nom_constraint = perf_con
                 else:
-                    val = constraint_map_to_master[perf_con]
+                    nom_constraint = constraint_map_to_master[perf_con]
 
-                if "[" and "]" in val:
-                    # For handling indexed components here, since find_component isn't implemented for IndexedBlock
-                    # want to get the nominal scenario via find_component, not sure if there is a better way to do this
-                    model_data.master_nominal_scenario_value = value(model_data.master_model.find_component("scenarios[0,0]."+ val))
-                else:
-                    model_data.master_nominal_scenario_value = value(getattr(model_data.master_nominal_scenario, val))
+                try:
+                    model_data.master_nominal_scenario_value = value(model_data.master_nominal_scenario.find_component(nom_constraint))
+                except:
+                    raise ValueError("Unable to access nominal scenario value for the constraint " + str(nom_constraint))
 
-                if config.uncertainty_set.geometry == 4:
+                if config.uncertainty_set.geometry == Geometry.DISCRETE_SCENARIOS:
                     solve_data_list.append(discrete_solve(model_data=model_data, config=config,
                                                                        solver=solver, is_global=is_global))
                     if all(s.termination_condition in globally_acceptable for
@@ -285,14 +285,14 @@ def solve_separation_problem(model_data, config):
 
                 # === Keep track of total solve times
                 if is_global or config.bypass_local_separation:
-                    if config.uncertainty_set.geometry == 4:
+                    if config.uncertainty_set.geometry == Geometry.DISCRETE_SCENARIOS:
                         for sublist in solve_data_list:
                             for s in sublist:
                                 global_solve_time += get_time_from_solver(s.results)
                     else:
                         global_solve_time += get_time_from_solver(solve_data.results)
                 else:
-                    if config.uncertainty_set.geometry == 4:
+                    if config.uncertainty_set.geometry == Geometry.DISCRETE_SCENARIOS:
                         for sublist in solve_data_list:
                             for s in sublist:
                                 local_solve_time += get_time_from_solver(s.results)
@@ -338,7 +338,7 @@ def is_violation(model_data, config, solve_data):
     nom_value = model_data.master_nominal_scenario_value
     denom = float(max(1, abs(nom_value)))
     tol = config.robust_feasibility_tolerance
-    active_objective = list(model_data.separation_model.component_data_objects(Objective, active=True))[0]
+    active_objective = next(model_data.separation_model.component_data_objects(Objective, active=True))
 
     if value(active_objective)/denom > tol:
         violating_param_realization = list(
@@ -366,7 +366,7 @@ def initialize_separation(model_data, config):
     In the case of the static_approx decision rule, control vars are treated
     as design vars are are therefore fixed to the optimum from the master.
     """
-    if config.uncertainty_set.geometry != 4:
+    if config.uncertainty_set.geometry != Geometry.DISCRETE_SCENARIOS:
         for idx, p in list(model_data.separation_model.util.uncertain_param_vars.items()):
             p.value = config.nominal_uncertain_param_vals[idx]
             p.unfix()
@@ -389,8 +389,8 @@ def initialize_separation(model_data, config):
 
     return
 
-locally_acceptable = [tc.optimal, tc.locallyOptimal, tc.globallyOptimal]
-globally_acceptable = [tc.optimal, tc.globallyOptimal]
+locally_acceptable = {tc.optimal, tc.locallyOptimal, tc.globallyOptimal}
+globally_acceptable = {tc.optimal, tc.globallyOptimal}
 
 def solver_call_separation(model_data, config, solver, solve_data, is_global):
     """
@@ -429,7 +429,7 @@ def solver_call_separation(model_data, config, solver, solve_data, is_global):
         is_violation(model_data, config, solve_data)
 
         if solve_data.termination_condition in globally_acceptable or \
-                (is_global == False and solve_data.termination_condition in locally_acceptable):
+                (not is_global and solve_data.termination_condition in locally_acceptable):
             return False
 
         # Else: continue with backup solvers unless we have hit time limit or not found any acceptable solutions

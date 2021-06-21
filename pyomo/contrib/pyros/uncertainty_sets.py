@@ -24,6 +24,7 @@ function point_in_set(): a method which takes a point and determines if it is in
 import abc
 import functools
 import math
+from enum import Enum
 from pyomo.common.dependencies import numpy as np, scipy as sp
 from pyomo.core.base import ConcreteModel
 from pyomo.core.base.constraint import ConstraintList
@@ -41,6 +42,16 @@ def uncertainty_sets(obj):
 def column(matrix, i):
     # Get column i of a given multi-dimensional list
     return [row[i] for row in matrix]
+
+class Geometry(Enum):
+    '''
+    Enum defining uncertainty set geometries
+    '''
+    LINEAR = 1
+    CONVEX_NONLINEAR = 2
+    GENERAL_NONLINEAR = 3
+    DISCRETE_SCENARIOS = 4
+
 
 class UncertaintySet(object, metaclass=abc.ABCMeta):
     '''
@@ -103,12 +114,12 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             raise AttributeError("Point must have same dimensions as uncertain parameters.")
 
         # === Check if uncertain_params are Params or Vars, if Params set value, if vars fix value
-        if type(uncertain_params) is IndexedVar or type(uncertain_params) is IndexedParam:
+        if isinstance(uncertain_params, IndexedVar) or isinstance(uncertain_params, IndexedParam):
             the_params = list(uncertain_params.values())
         else:
             the_params = uncertain_params
         for idx, p in enumerate(the_params):
-            if isinstance(p, Param) or isinstance(p, _ParamData):
+            if isinstance(p, _ParamData):
                 p.value = point[idx]
             else:
                 p.fix(point[idx])
@@ -119,12 +130,12 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         set_constraint = self.set_as_constraint(uncertain_params=the_params)
 
         # === value() returns True if the constraint is satisfied, False else.
-        is_in_set = all(value(con.expr) for con in list(set_constraint.values()))
+        is_in_set = all(value(con.expr) for con in set_constraint.values())
 
         # === Revert uncertain_params to their original value and unfix them
         for idx, p in enumerate(the_params):
             p.value = original_values[idx]
-            if type(p) is Var or type(p) is _VarData:
+            if isinstance(p, _VarData):
                 p.unfix()
 
         return is_in_set
@@ -167,7 +178,7 @@ class BoxSet(UncertaintySet):
 
     @property
     def geometry(self):
-        return 1
+        return Geometry.LINEAR
 
     def set_as_constraint(self, uncertain_params, **kwargs):
         """
@@ -197,8 +208,8 @@ class BoxSet(UncertaintySet):
             model: The model to add bounds on for the uncertain parameter variable objects
             config: the config object for the PyROS solver instance
         '''
-        set = config.uncertainty_set
-        bounds = set.bounds
+        _set = config.uncertainty_set
+        bounds = _set.bounds
         for i, p in enumerate(model.util.uncertain_param_vars.values()):
             lb = bounds[i][0]
             ub = bounds[i][1]
@@ -248,7 +259,7 @@ class CardinalitySet(UncertaintySet):
 
     @property
     def geometry(self):
-        return 1
+        return Geometry.LINEAR
 
     def set_as_constraint(self, uncertain_params, **kwargs):
         """
@@ -263,10 +274,7 @@ class CardinalitySet(UncertaintySet):
                raise AttributeError("Dimensions of origin and uncertain_param lists must be equal.")
 
         model = kwargs['model']
-        set_i = []
-
-        for i in range(len(uncertain_params)):
-            set_i.append(i)
+        set_i = list(range(len(uncertain_params)))
         model.util.cassi = Var(set_i, initialize=0, bounds=(0, 1))
 
         # Make n equality constraints
@@ -308,9 +316,9 @@ class CardinalitySet(UncertaintySet):
             model: The model to add bounds on for the uncertain parameter variable objects
             config: the config object for the PyROS solver instance
         '''
-        set = config.uncertainty_set
+        _set = config.uncertainty_set
         nom_val = config.nominal_uncertain_param_vals
-        deviation = set.positive_deviation
+        deviation = _set.positive_deviation
         for i, p in enumerate(model.util.uncertain_param_vars.values()):
             lb = nom_val[i]
             ub = nom_val[i] + min(config.uncertainty_set.gamma, 1) * deviation[i]
@@ -371,7 +379,7 @@ class PolyhedralSet(UncertaintySet):
 
     @property
     def geometry(self):
-        return 1
+        return Geometry.LINEAR
 
     def set_as_constraint(self, uncertain_params, **kwargs):
         """
@@ -386,9 +394,7 @@ class PolyhedralSet(UncertaintySet):
             raise AttributeError("Columns of coefficients_mat matrix "
                                  "must equal length of uncertain parameters list.")
 
-        set_i = []
-        for i in range(len(self.coefficients_mat)):
-            set_i.append(i)
+        set_i = list(range(len(self.coefficients_mat)))
 
         conlist = ConstraintList()
         conlist.construct()
@@ -467,7 +473,7 @@ class BudgetSet(PolyhedralSet):
 
     @property
     def geometry(self):
-        return 1
+        return Geometry.LINEAR
 
 
     def set_as_constraint(self, uncertain_params, **kwargs):
@@ -495,9 +501,9 @@ class BudgetSet(PolyhedralSet):
             model: The model to add bounds on for the uncertain parameter variable objects
             config: the config object for the PyROS solver instance
         '''
-        set = config.uncertainty_set
-        membership_mat = set.coefficients_mat
-        rhs_vec = set.rhs_vec
+        _set = config.uncertainty_set
+        membership_mat = _set.coefficients_mat
+        rhs_vec = _set.rhs_vec
         for i, p in enumerate(model.util.uncertain_param_vars.values()):
             col = column(membership_mat, i)
             ub = min(list(col[j] * rhs_vec[j] for j in range(len(rhs_vec))))
@@ -560,7 +566,7 @@ class FactorModelSet(UncertaintySet):
 
     @property
     def geometry(self):
-        return 1
+        return Geometry.LINEAR
 
     def set_as_constraint(self, uncertain_params, **kwargs):
         """
@@ -576,17 +582,14 @@ class FactorModelSet(UncertaintySet):
                 raise AttributeError("Dimensions of origin and uncertain_param lists must be equal.")
 
         # Make F-dim cassi variable
-        n = []
-        for i in range(self.number_of_factors):
-            n.append(i)
+        n = list(range(self.number_of_factors))
         model.util.cassi = Var(n, initialize=0, bounds=(-1, 1))
 
         conlist = ConstraintList()
         conlist.construct()
 
-        disturbances = []
-        for i in range(len(uncertain_params)):
-            disturbances.append(sum(self.psi_mat[i][j] * model.util.cassi[j] for j in n))
+        disturbances = [sum(self.psi_mat[i][j] * model.util.cassi[j] for j in n)
+                        for i in range(len(uncertain_params))]
 
         # Make n equality constraints
         for i in range(len(uncertain_params)):
@@ -622,12 +625,12 @@ class FactorModelSet(UncertaintySet):
             model: The model to add bounds on for the uncertain parameter variable objects
             config: the config object for the PyROS solver instance
         '''
-        set = config.uncertainty_set
+        _set = config.uncertainty_set
         nom_val = config.nominal_uncertain_param_vals
-        psi_mat = set.psi_mat
+        psi_mat = _set.psi_mat
 
-        F = set.number_of_factors
-        beta_F = set.beta * F
+        F = _set.number_of_factors
+        beta_F = _set.beta * F
         floor_beta_F = math.floor(beta_F)
         for i, p in enumerate(model.util.uncertain_param_vars.values()):
             non_decreasing_factor_row = sorted(psi_mat[i], reverse=True)
@@ -679,7 +682,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
 
     @property
     def geometry(self):
-        return 2
+        return Geometry.CONVEX_NONLINEAR
 
     def set_as_constraint(self, uncertain_params, **kwargs):
         """
@@ -790,7 +793,7 @@ class EllipsoidalSet(UncertaintySet):
 
     @property
     def geometry(self):
-        return 2
+        return Geometry.CONVEX_NONLINEAR
 
     def set_as_constraint(self, uncertain_params, **kwargs):
         """
@@ -815,10 +818,7 @@ class EllipsoidalSet(UncertaintySet):
                 diff.append(uncertain_params[idx] - self.center[idx])
 
         # Calculate inner product of difference vector and covar matrix
-        product1 = []
-        for i in range(len(inv_covar)):
-            dot = sum([x * y for x, y in zip(diff, column(inv_covar, i))])
-            product1.append(dot)
+        product1 = [sum([x * y for x, y in zip(diff, column(inv_covar, i))]) for i in range(len(inv_covar))]
         constraint = sum([x * y for x, y in zip(product1, diff)])
 
         conlist = ConstraintList()
@@ -835,11 +835,11 @@ class EllipsoidalSet(UncertaintySet):
             model: The model to add bounds on for the uncertain parameter variable objects
             config: the config object for the PyROS solver instance
         '''
-        set = config.uncertainty_set
-        scale = set.scale
+        _set = config.uncertainty_set
+        scale = _set.scale
         for i, p in enumerate(model.util.uncertain_param_vars.values()):
             nom_value = config.nominal_uncertain_param_vals[i]
-            P = set.shape_matrix
+            P = _set.shape_matrix
             P_ii = P[i][i]
             try:
                 deviation = np.power(1.0/P_ii, 0.5)
@@ -884,7 +884,7 @@ class DiscreteScenarioSet(UncertaintySet):
 
     @property
     def geometry(self):
-        return 4
+        return Geometry.DISCRETE_SCENARIOS
 
     def set_as_constraint(self, uncertain_params, **kwargs):
         """
@@ -932,10 +932,10 @@ class DiscreteScenarioSet(UncertaintySet):
             model: The model to add bounds on for the uncertain parameter variable objects
             config: the config object for the PyROS solver instance
         '''
-        set = config.uncertainty_set
+        _set = config.uncertainty_set
         for i, p in enumerate(model.util.uncertain_param_vars.values()):
-            min_i = min(s[i] for s in set.scenarios)
-            max_i = max(s[i] for s in set.scenarios)
+            min_i = min(s[i] for s in _set.scenarios)
+            max_i = max(s[i] for s in _set.scenarios)
             p.setlb(min_i)
             p.setub(max_i)
         return
@@ -974,7 +974,7 @@ class IntersectionSet(UncertaintySet):
 
     @property
     def geometry(self):
-        return max(self.all_sets[i].geometry for i in range(len(self.all_sets)))
+        return max(self.all_sets[i].geometry.value for i in range(len(self.all_sets)))
 
     def point_in_set(self, uncertain_params, point, **kwargs):
         """
