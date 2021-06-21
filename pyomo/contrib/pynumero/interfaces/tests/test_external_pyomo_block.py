@@ -49,7 +49,7 @@ if not pyo.SolverFactory("ipopt").available():
         )
 
 
-def make_external_model():
+def _make_external_model():
     m = pyo.ConcreteModel()
     m.a = pyo.Var()
     m.b = pyo.Var()
@@ -69,6 +69,47 @@ def make_external_model():
     return m
 
 
+def _add_linking_constraints(m):
+    m.a = pyo.Var()
+    m.b = pyo.Var()
+    m.r = pyo.Var()
+
+    n_inputs = 3
+
+    def linking_constraint_rule(m, i):
+        if i == 0:
+            return m.a == m.ex_block.inputs["input_0"]
+        elif i == 1:
+            return m.b == m.ex_block.inputs["input_1"]
+        elif i == 2:
+            return m.r == m.ex_block.inputs["input_2"]
+
+    m.linking_constraint = pyo.Constraint(range(n_inputs),
+            rule=linking_constraint_rule)
+
+
+def _add_nonlinear_linking_constraints(m):
+    # Nonlinear linking constraints are unusual. They are useful
+    # here to test correct combination of Hessians from multiple
+    # sources, however.
+    m.a = pyo.Var()
+    m.b = pyo.Var()
+    m.r = pyo.Var()
+
+    n_inputs = 3
+
+    def linking_constraint_rule(m, i):
+        if i == 0:
+            return m.a**2 - 0.5*m.ex_block.inputs["input_0"]**2 == 0
+        elif i == 1:
+            return m.b**2 - 0.5*m.ex_block.inputs["input_1"]**2 == 0
+        elif i == 2:
+            return m.r**2 - 0.5*m.ex_block.inputs["input_2"]**2 == 0
+
+    m.linking_constraint = pyo.Constraint(range(n_inputs),
+            rule=linking_constraint_rule)
+
+
 class TestExternalGreyBoxBlock(unittest.TestCase):
 
     def test_construct_scalar(self):
@@ -77,7 +118,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
         block = m.ex_block
         self.assertIs(type(block), ScalarExternalGreyBoxBlock)
 
-        m_ex = make_external_model()
+        m_ex = _make_external_model()
         input_vars = [m_ex.a, m_ex.b, m_ex.r, m_ex.x_out, m_ex.y_out]
         external_vars = [m_ex.x, m_ex.y]
         residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
@@ -98,7 +139,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
 #        block = ExternalGreyBoxBlock([0, 1, 2], concrete=True)
 #        self.assertIs(type(block), IndexedExternalGreyBoxBlock)
 #
-#        m = make_external_model()
+#        m = _make_external_model()
 #        input_vars = [m_ex.a, m_ex.b, m_ex.r, m_ex.x_out, m_ex.y_out]
 #        external_vars = [m_ex.x, m_ex.y]
 #        residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
@@ -123,7 +164,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
         m.ex_block = ExternalGreyBoxBlock(concrete=True)
         block = m.ex_block
 
-        m_ex = make_external_model()
+        m_ex = _make_external_model()
         input_vars = [m_ex.a, m_ex.b, m_ex.r, m_ex.x_out, m_ex.y_out]
         external_vars = [m_ex.x, m_ex.y]
         residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
@@ -136,22 +177,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
                 )
         block.set_external_model(ex_model)
 
-        m.a = pyo.Var()
-        m.b = pyo.Var()
-        m.r = pyo.Var()
-
-        n_inputs = 3
-
-        def linking_constraint_rule(m, i):
-            if i == 0:
-                return m.a == m.ex_block.inputs["input_0"]
-            elif i == 1:
-                return m.b == m.ex_block.inputs["input_1"]
-            elif i == 2:
-                return m.r == m.ex_block.inputs["input_2"]
-
-        m.linking_constraint = pyo.Constraint(range(n_inputs),
-                rule=linking_constraint_rule)
+        _add_linking_constraints(m)
 
         m.a.fix(1)
         m.b.fix(2)
@@ -183,7 +209,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
         m.ex_block = ExternalGreyBoxBlock(concrete=True)
         block = m.ex_block
 
-        m_ex = make_external_model()
+        m_ex = _make_external_model()
         input_vars = [m_ex.a, m_ex.b, m_ex.r, m_ex.x_out, m_ex.y_out]
         external_vars = [m_ex.x, m_ex.y]
         residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
@@ -238,7 +264,7 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
         m.ex_block = ExternalGreyBoxBlock(concrete=True)
         block = m.ex_block
 
-        m_ex = make_external_model()
+        m_ex = _make_external_model()
         input_vars = [m_ex.a, m_ex.b, m_ex.r, m_ex.x_out, m_ex.y_out]
         external_vars = [m_ex.x, m_ex.y]
         residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
@@ -260,22 +286,7 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
                 (x-2.0)**2 + (y-2.0)**2 + (a-2.0)**2 + (b-2.0)**2 + (r-2.0)**2
                 )
 
-        m.a = pyo.Var()
-        m.b = pyo.Var()
-        m.r = pyo.Var()
-
-        n_inputs = 3
-
-        def linking_constraint_rule(m, i):
-            if i == 0:
-                return m.a - m.ex_block.inputs["input_0"] == 0
-            elif i == 1:
-                return m.b - m.ex_block.inputs["input_1"] == 0
-            elif i == 2:
-                return m.r - m.ex_block.inputs["input_2"] == 0
-
-        m.linking_constraint = pyo.Constraint(range(n_inputs),
-                rule=linking_constraint_rule)
+        _add_linking_constraints(m)
 
         nlp = PyomoNLPWithGreyBoxBlocks(m)
 
@@ -341,7 +352,7 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
         m.ex_block = ExternalGreyBoxBlock(concrete=True)
         block = m.ex_block
 
-        m_ex = make_external_model()
+        m_ex = _make_external_model()
         input_vars = [m_ex.a, m_ex.b, m_ex.r, m_ex.x_out, m_ex.y_out]
         external_vars = [m_ex.x, m_ex.y]
         residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
@@ -363,22 +374,7 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
                 (x-2.0)**2 + (y-2.0)**2 + (a-2.0)**2 + (b-2.0)**2 + (r-2.0)**2
                 )
 
-        m.a = pyo.Var()
-        m.b = pyo.Var()
-        m.r = pyo.Var()
-
-        n_inputs = 3
-
-        def linking_constraint_rule(m, i):
-            if i == 0:
-                return m.a - m.ex_block.inputs["input_0"] == 0
-            elif i == 1:
-                return m.b - m.ex_block.inputs["input_1"] == 0
-            elif i == 2:
-                return m.r - m.ex_block.inputs["input_2"] == 0
-
-        m.linking_constraint = pyo.Constraint(range(n_inputs),
-                rule=linking_constraint_rule)
+        _add_linking_constraints(m)
 
         nlp = PyomoNLPWithGreyBoxBlocks(m)
         primals = np.array([0, 1, 2, 3, 4, 5, 6, 7])
@@ -437,7 +433,7 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
         m.ex_block = ExternalGreyBoxBlock(concrete=True)
         block = m.ex_block
 
-        m_ex = make_external_model()
+        m_ex = _make_external_model()
         input_vars = [m_ex.a, m_ex.b, m_ex.r, m_ex.x_out, m_ex.y_out]
         external_vars = [m_ex.x, m_ex.y]
         residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
@@ -459,25 +455,7 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
                 (x-2.0)**2 + (y-2.0)**2 + (a-2.0)**2 + (b-2.0)**2 + (r-2.0)**2
                 )
 
-        m.a = pyo.Var()
-        m.b = pyo.Var()
-        m.r = pyo.Var()
-
-        n_inputs = 3
-
-        def linking_constraint_rule(m, i):
-            # Nonlinear linking constraints are unusual. They are useful
-            # here to test correct combination of Hessians from multiple
-            # sources, however.
-            if i == 0:
-                return m.a**2 - 0.5*m.ex_block.inputs["input_0"]**2 == 0
-            elif i == 1:
-                return m.b**2 - 0.5*m.ex_block.inputs["input_1"]**2 == 0
-            elif i == 2:
-                return m.r**2 - 0.5*m.ex_block.inputs["input_2"]**2 == 0
-
-        m.linking_constraint = pyo.Constraint(range(n_inputs),
-                rule=linking_constraint_rule)
+        _add_nonlinear_linking_constraints(m)
 
         nlp = PyomoNLPWithGreyBoxBlocks(m)
         primals = np.array([0, 1, 2, 3, 4, 5, 6, 7])
