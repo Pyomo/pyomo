@@ -218,6 +218,28 @@ class TestTemporarySubsystemManager(unittest.TestCase):
         self.assertAlmostEqual(m.v2.value, pyo.sqrt(4.0-pyo.sqrt(7.0)),
                 delta=1e-8)
 
+    def test_generate_subsystems_with_exception(self):
+        m = _make_simple_model()
+        subsystems = [ 
+                ([m.con1], [m.v1, m.v4]),
+                ([m.con2, m.con3], [m.v2, m.v3]),
+                ]
+        other_vars = [ 
+                [m.v2, m.v3],
+                [m.v1, m.v4],
+                ]
+        block = create_subsystem_block(*subsystems[0])
+        with self.assertRaises(RuntimeError):
+            inputs = list(block.input_vars[:])
+            with TemporarySubsystemManager(to_fix=inputs):
+                self.assertTrue(all(var.fixed for var in inputs))
+                self.assertFalse(any(var.fixed for var in block.vars[:]))
+                raise RuntimeError()
+
+        # Test that we have properly unfixed variables
+        self.assertFalse(any(var.fixed for var in
+            m.component_data_objects(pyo.Var)))
+
 
 class TestParamSweeper(unittest.TestCase):
 
@@ -397,6 +419,56 @@ class TestParamSweeper(unittest.TestCase):
         # Values have been reset after exit.
         self.assertIs(m.v1.value, 1.0)
         self.assertIs(m.v2.value, 1.0)
+        self.assertIs(m.v3.value, None)
+        self.assertIs(m.v4.value, None)
+
+    def test_with_exception(self):
+        m = _make_simple_model()
+
+        n_scenario = 2
+        input_values = ComponentMap([
+            (m.v3, [1.3, 2.3]),
+            (m.v4, [1.4, 2.4]),
+            ])
+
+        output_values = ComponentMap([
+            (m.v1, [1.1, 2.1]),
+            (m.v2, [1.2, 2.2]),
+            ])
+
+        to_fix = [m.v3, m.v4]
+        to_deactivate = [m.con1]
+
+        with self.assertRaises(RuntimeError):
+            with ParamSweeper(2, input_values, output_values,
+                    to_fix=to_fix, to_deactivate=to_deactivate) as sweeper:
+                self.assertFalse(m.v1.fixed)
+                self.assertFalse(m.v2.fixed)
+                self.assertTrue(m.v3.fixed)
+                self.assertTrue(m.v4.fixed)
+                self.assertFalse(m.con1.active)
+                self.assertTrue(m.con2.active)
+                self.assertTrue(m.con3.active)
+                for i, (inputs, outputs) in enumerate(sweeper):
+                    self.assertEqual(len(inputs), 2)
+                    self.assertEqual(len(outputs), 2)
+                    self.assertIn(m.v3, inputs)
+                    self.assertIn(m.v4, inputs)
+                    self.assertIn(m.v1, outputs)
+                    self.assertIn(m.v2, outputs)
+                    for var, val in inputs.items():
+                        self.assertEqual(var.value, val)
+                        self.assertEqual(var.value, input_values[var][i])
+
+                    for var, val in outputs.items():
+                        self.assertEqual(val, output_values[var][i])
+
+                    if i == 0:
+                        raise RuntimeError()
+
+        # Values have been reset after exit.
+        self.assertIs(m.v1.value, None)
+        self.assertIs(m.v2.value, None)
         self.assertIs(m.v3.value, None)
         self.assertIs(m.v4.value, None)
 
