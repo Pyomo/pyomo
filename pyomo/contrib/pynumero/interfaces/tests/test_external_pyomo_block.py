@@ -385,9 +385,52 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
         nlp.set_primals(primals)
         jac = nlp.evaluate_jacobian()
 
-        self.assertEqual(len(jac.data), 16)
-        # TODO: for each (row, col, data), assert that this triple
-        # is in the set of expected matrix entries.
+        # Variable and constraint orders (verified by previous test):
+        # Rows:
+        # [
+        #     "linking_constraint[0]",
+        #     "linking_constraint[1]",
+        #     "linking_constraint[2]",
+        #     "ex_block.residual_0",
+        #     "ex_block.residual_1",
+        # ]
+        # Cols:
+        # [
+        #     "a",
+        #     "b",
+        #     "ex_block.inputs[input_0]",
+        #     "ex_block.inputs[input_1]",
+        #     "ex_block.inputs[input_2]",
+        #     "ex_block.inputs[input_3]",
+        #     "ex_block.inputs[input_4]",
+        #     "r",
+        # ]
+        row = [
+                0, 0,
+                1, 1,
+                2, 2,
+                3, 3, 3, 3, 3,
+                4, 4, 4, 4, 4,
+                ]
+        col = [
+                0, 2,
+                1, 3,
+                7, 4,
+                2, 3, 4, 5, 6,
+                2, 3, 4, 5, 6,
+                ]
+        data = [
+                1, -1,
+                1, -1,
+                1, -1,
+                -0.16747094, -1.00068434, 1.72383729, 1, 0,
+                -0.30708535, -0.28546127, -0.25235924, 0, 1,
+                ]
+        self.assertEqual(len(row), len(jac.row))
+        rcd_dict = dict(((i, j), val) for i, j, val in zip(row, col, data))
+        for i, j, val in zip(jac.row, jac.col, jac.data):
+            self.assertIn((i, j), rcd_dict)
+            self.assertAlmostEqual(rcd_dict[i, j], val, delta=1e-8)
 
 
 if __name__ == '__main__':
