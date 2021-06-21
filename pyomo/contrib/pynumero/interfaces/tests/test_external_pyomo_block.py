@@ -233,7 +233,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
 
 class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
 
-    def test_pyomo_nlp(self):
+    def test_set_and_evaluate(self):
         m = pyo.ConcreteModel()
         m.ex_block = ExternalGreyBoxBlock(concrete=True)
         block = m.ex_block
@@ -335,6 +335,59 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
 
         self.assertEqual(ex_model.residual_con_multipliers, [4, 5])
         np.testing.assert_equal(nlp.get_duals(), duals)
+
+    def test_jacobian(self):
+        m = pyo.ConcreteModel()
+        m.ex_block = ExternalGreyBoxBlock(concrete=True)
+        block = m.ex_block
+
+        m_ex = make_external_model()
+        input_vars = [m_ex.a, m_ex.b, m_ex.r, m_ex.x_out, m_ex.y_out]
+        external_vars = [m_ex.x, m_ex.y]
+        residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
+        external_cons = [m_ex.c_ex_1, m_ex.c_ex_2]
+        ex_model = ExternalPyomoModel(
+                input_vars,
+                external_vars,
+                residual_cons,
+                external_cons,
+                )
+        block.set_external_model(ex_model)
+
+        a = m.ex_block.inputs["input_0"]
+        b = m.ex_block.inputs["input_1"]
+        r = m.ex_block.inputs["input_2"]
+        x = m.ex_block.inputs["input_3"]
+        y = m.ex_block.inputs["input_4"]
+        m.obj = pyo.Objective(expr=
+                (x-2.0)**2 + (y-2.0)**2 + (a-2.0)**2 + (b-2.0)**2 + (r-2.0)**2
+                )
+
+        m.a = pyo.Var()
+        m.b = pyo.Var()
+        m.r = pyo.Var()
+
+        n_inputs = 3
+
+        def linking_constraint_rule(m, i):
+            if i == 0:
+                return m.a - m.ex_block.inputs["input_0"] == 0
+            elif i == 1:
+                return m.b - m.ex_block.inputs["input_1"] == 0
+            elif i == 2:
+                return m.r - m.ex_block.inputs["input_2"] == 0
+
+        m.linking_constraint = pyo.Constraint(range(n_inputs),
+                rule=linking_constraint_rule)
+
+        nlp = PyomoNLPWithGreyBoxBlocks(m)
+        primals = np.array([0, 1, 2, 3, 4, 5, 6, 7])
+        nlp.set_primals(primals)
+        jac = nlp.evaluate_jacobian()
+
+        self.assertEqual(len(jac.data), 16)
+        # TODO: for each (row, col, data), assert that this triple
+        # is in the set of expected matrix entries.
 
 
 if __name__ == '__main__':
