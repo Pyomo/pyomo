@@ -330,6 +330,11 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
         np.testing.assert_allclose(residuals, nlp.evaluate_constraints(),
                 rtol=1e-8)
 
+        duals = np.array([1, 2, 3, 4, 5])
+        nlp.set_duals(duals)
+
+        self.assertEqual(ex_model.residual_con_multipliers, [4, 5])
+        np.testing.assert_equal(nlp.get_duals(), duals)
 
 
 if __name__ == '__main__':
