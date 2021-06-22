@@ -397,7 +397,7 @@ class TestSolveSCC(unittest.TestCase):
         m.height[t0].fix()
 
         solver = pyo.SolverFactory("ipopt")
-        solve_kwds = {"tee": True} # Not that this matters here...
+        solve_kwds = {"tee": False}
         solve_strongly_connected_components(m, solver=solver,
                 solve_kwds=solve_kwds)
 
