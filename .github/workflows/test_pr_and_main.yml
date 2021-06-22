@@ -28,7 +28,7 @@ env:
       python-louvain sphinx-copybutton
   PYTHON_NUMPY_PKGS: >
       numpy scipy pyodbc pandas matplotlib seaborn numdifftools 
-      parameterized casadi
+      casadi
   CACHE_VER: v210415.0
   NEOS_EMAIL: tests@pyomo.org
 
@@ -492,17 +492,16 @@ jobs:
             > ${SITE_PACKAGES}/run_coverage_at_startup.pth
 
     - name: Download and install extensions
+      if: ${{ ! matrix.slim }}
       run: |
-        if [[ ! "${{matrix.slim}}" ]]; then
-            echo ""
-            echo "Pyomo download-extensions"
-            echo ""
-            pyomo download-extensions
-            echo ""
-            echo "Pyomo build-extensions"
-            echo ""
-            pyomo build-extensions --parallel 2
-        fi
+        echo ""
+        echo "Pyomo download-extensions"
+        echo ""
+        pyomo download-extensions
+        echo ""
+        echo "Pyomo build-extensions"
+        echo ""
+        pyomo build-extensions --parallel 2
 
     - name: Report pyomo plugin information
       run: |
@@ -520,7 +519,7 @@ jobs:
         done
         $PYTHON_EXE -m pyomo.common.unittest \
             pyomo `pwd`/pyomo-model-libraries \
-             `pwd`/examples/pyomobook -v $CATEGORY
+            `pwd`/examples/pyomobook -v $CATEGORY
 
     - name: Run Pyomo MPI tests
       if: matrix.mpi != 0
@@ -555,6 +554,47 @@ jobs:
           # In general, do not record test results as artifacts to
           #   manage total artifact storage
           # TEST-*.xml
+
+
+  bare-python-env:
+    name: linux/3.6/bare-env
+    runs-on: ubuntu-18.04
+    timeout-minutes: 10
+    steps:
+    - name: Checkout Pyomo source
+      uses: actions/checkout@v2
+
+    - name: Set up Python 3.6
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.6
+
+    - name: Install Pyomo
+      run: |
+        echo ""
+        echo "Install Pyomo..."
+        echo ""
+        python setup.py develop
+        echo ""
+        echo "Set custom PYOMO_CONFIG_DIR"
+        echo ""
+        echo "PYOMO_CONFIG_DIR=${GITHUB_WORKSPACE}/config" >> $GITHUB_ENV
+
+    - name: Report pyomo plugin information
+      run: |
+        echo "$PATH"
+        pyomo help --solvers || exit 1
+        pyomo help --transformations || exit 1
+        pyomo help --writers || exit 1
+
+    - name: Run Pyomo standalone test
+      run: |
+        echo ""
+        echo "Running standalone Pyomo test"
+        echo ""
+        python `pwd`/pyomo/environ/tests/standalone_minimal_pyomo_driver.py \
+            || exit 1
+
 
   cover:
     name: process-coverage-${{ matrix.TARGET }}

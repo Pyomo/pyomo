@@ -209,8 +209,7 @@ def _component_data_objects(self, *args, **kwds):
     kwds.pop('sort', None)
     if 'active' not in kwds:
         kwds['active'] = None
-    for component in self.components(*args, **kwds):
-        yield component
+    yield from self.components(*args, **kwds)
 IHeterogeneousContainer.component_data_objects = \
     _component_data_objects
 del _component_data_objects
@@ -225,8 +224,7 @@ def _component_objects(self, *args, **kwds):
     for item in heterogeneous_containers(self,
                                          active=active,
                                          descend_into=descend_into):
-        for child in item.children(*args, **kwds):
-            yield child
+        yield from item.children(*args, **kwds)
 IHeterogeneousContainer.component_objects = \
     _component_objects
 del _component_objects
@@ -242,10 +240,7 @@ def _block_data_objects(self, **kwds):
        (not self.active):
         return
     yield self
-    for component in self.components(
-            ctype=self.ctype,
-            **kwds):
-        yield component
+    yield from self.components(ctype=self.ctype, **kwds)
 block.block_data_objects = _block_data_objects
 del _block_data_objects
 

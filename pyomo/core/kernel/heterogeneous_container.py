@@ -61,12 +61,11 @@ def heterogeneous_containers(node,
         # heterogeneous objects
         for obj in node.components(active=active):
             assert obj._is_heterogeneous_container
-            for item in heterogeneous_containers(
-                    obj,
-                    ctype=ctype,
-                    active=active,
-                    descend_into=descend_into):
-                yield item
+            yield from heterogeneous_containers(
+                obj,
+                ctype=ctype,
+                active=active,
+                descend_into=descend_into)
         return
 
     # convert AML types into Kernel types (hack for the
@@ -99,12 +98,12 @@ def heterogeneous_containers(node,
                (not child.active):
                 continue
 
-            for obj in heterogeneous_containers(
-                    child,
-                    ctype=ctype,
-                    active=active,
-                    descend_into=descend_into):
-                yield obj
+            yield from heterogeneous_containers(
+                child,
+                ctype=ctype,
+                active=active,
+                descend_into=descend_into)
+
 
 class IHeterogeneousContainer(ICategorizedObjectContainer):
     """
@@ -261,26 +260,22 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
                 elif child._is_heterogeneous_container:
                     yield child
                     if descend_into(child):
-                        for obj in child.components(
-                                active=active,
-                                descend_into=descend_into):
-                            yield obj
+                        yield from child.components(
+                            active=active,
+                            descend_into=descend_into)
                 elif (descend_into is _convert_descend_into._false) or \
                      (not child.ctype._is_heterogeneous_container):
                     assert child._is_container
-                    for obj in child.components(active=active):
-                        yield obj
+                    yield from child.components(active=active)
                 else:
                     assert child._is_container
-                    for obj in child.components(
-                            active=active):
+                    for obj in child.components(active=active):
                         assert obj._is_heterogeneous_container
                         yield obj
                         if descend_into(obj):
-                            for item in obj.components(
-                                    active=active,
-                                    descend_into=descend_into):
-                                yield item
+                            yield from obj.components(
+                                active=active,
+                                descend_into=descend_into)
 
         else:
 
@@ -295,5 +290,4 @@ class IHeterogeneousContainer(ICategorizedObjectContainer):
                             yield child
                     else:
                         assert child._is_container
-                        for obj in child.components(active=active):
-                            yield obj
+                        yield from child.components(active=active)

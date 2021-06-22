@@ -541,7 +541,7 @@ class TwoTermDisjNonlinear(unittest.TestCase, CommonTests):
         m.y.setlb(None)
         self.assertRaisesRegex(
             GDP_Error,
-            r"Cannot estimate M for unbounded nonlinear "
+            r"Cannot estimate M for unbounded "
             r"expressions.\n\t\(found while processing "
             r"constraint 'd\[0\].c'\)",
             TransformationFactory('gdp.bigm').apply_to,
@@ -1419,9 +1419,12 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
         m = models.makeTwoTermDisj_IndexedConstraints()
         self.assertRaisesRegex(
             GDP_Error,
-            r"Cannot estimate M for expressions with unbounded variables."
-            r"\n\t\(found unbounded var 'a\[1\]' while processing constraint "
-            r"'b.simpledisj1.c'\)",
+            r"Cannot estimate M for unbounded "
+            r"expressions.\n\t\(found while processing "
+            r"constraint 'b.simpledisj1.c'\). "
+            r"Please specify a value of M "
+            r"or ensure all variables that appear in the "
+            r"constraint are bounded.",
             TransformationFactory('gdp.bigm').apply_to,
             m)
 
