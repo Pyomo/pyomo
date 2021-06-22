@@ -336,16 +336,6 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         d2fdx2 = self.evaluate_hessians_of_residuals()
         multipliers = self.residual_con_multipliers
 
-        # Even if multipliers are zero, these matrices retain their
-        # entries. The matrices in d2fdx2 are not guaranteed to have
-        # every possible nonzero, however.
-        #list_of_matrices = [mult*sps.coo_matrix(matrix)
-        #        for mult, matrix in zip(multipliers, d2fdx2)]
-        # Use CondensedSparseSummation to sum matrices without losing
-        # "explicit zeros"
-        #cs_sum = CondensedSparseSummation(list_of_matrices)
-        #return sps.tril(cs_sum.sum(list_of_matrices))
-
         sum_ = sum(mult*matrix for mult, matrix in zip(multipliers, d2fdx2))
         # Return a sparse matrix with every entry accounted for because it
         # is difficult to determine rigorously which coordinates
