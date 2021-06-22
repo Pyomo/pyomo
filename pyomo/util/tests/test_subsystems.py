@@ -150,20 +150,21 @@ class TestSubsystemBlock(unittest.TestCase):
                 [m.v1, m.v4],
                 ]
         for i, block in enumerate(generate_subsystem_blocks(subsystems)):
-            self.assertIs(block.model(), block)
-            var_set = ComponentSet(subsystems[i][1])
-            con_set = ComponentSet(subsystems[i][0])
-            input_set = ComponentSet(other_vars[i])
-            
-            self.assertEqual(len(var_set), len(block.vars))
-            self.assertEqual(len(con_set), len(block.cons))
-            self.assertEqual(len(input_set), len(block.input_vars))
-            self.assertTrue(all(var in var_set for var in block.vars[:]))
-            self.assertTrue(all(con in con_set for con in block.cons[:]))
-            self.assertTrue(
-                    all(var in input_set for var in block.input_vars[:]))
-            self.assertTrue(all(var.fixed for var in block.input_vars[:]))
-            self.assertFalse(any(var.fixed for var in block.vars[:]))
+            with TemporarySubsystemManager(to_fix=list(block.input_vars[:])):
+                self.assertIs(block.model(), block)
+                var_set = ComponentSet(subsystems[i][1])
+                con_set = ComponentSet(subsystems[i][0])
+                input_set = ComponentSet(other_vars[i])
+                
+                self.assertEqual(len(var_set), len(block.vars))
+                self.assertEqual(len(con_set), len(block.cons))
+                self.assertEqual(len(input_set), len(block.input_vars))
+                self.assertTrue(all(var in var_set for var in block.vars[:]))
+                self.assertTrue(all(con in con_set for con in block.cons[:]))
+                self.assertTrue(
+                        all(var in input_set for var in block.input_vars[:]))
+                self.assertTrue(all(var.fixed for var in block.input_vars[:]))
+                self.assertFalse(any(var.fixed for var in block.vars[:]))
 
         # Test that we have properly unfixed variables
         self.assertFalse(any(var.fixed for var in
@@ -181,10 +182,12 @@ class TestSubsystemBlock(unittest.TestCase):
                 ]
         with self.assertRaises(RuntimeError):
             for i, block in enumerate(generate_subsystem_blocks(subsystems)):
-                self.assertTrue(all(var.fixed for var in block.input_vars[:]))
-                self.assertFalse(any(var.fixed for var in block.vars[:]))
-                if i == 1:
-                    raise RuntimeError()
+                inputs = list(block.input_vars.values())
+                with TemporarySubsystemManager(to_fix=inputs):
+                    self.assertTrue(all(var.fixed for var in inputs))
+                    self.assertFalse(any(var.fixed for var in block.vars[:]))
+                    if i == 1:
+                        raise RuntimeError()
 
         # Test that we have properly unfixed variables
         self.assertFalse(any(var.fixed for var in
@@ -202,21 +205,23 @@ class TestSubsystemBlock(unittest.TestCase):
                 [m.v1],
                 ]
         for i, block in enumerate(generate_subsystem_blocks(subsystems)):
-            self.assertIs(block.model(), block)
-            var_set = ComponentSet(subsystems[i][1])
-            con_set = ComponentSet(subsystems[i][0])
-            input_set = ComponentSet(other_vars[i])
-            
-            self.assertEqual(len(var_set), len(block.vars))
-            self.assertEqual(len(con_set), len(block.cons))
-            self.assertEqual(len(input_set), len(block.input_vars))
-            self.assertTrue(all(var in var_set for var in block.vars[:]))
-            self.assertTrue(all(con in con_set for con in block.cons[:]))
-            self.assertTrue(
-                    all(var in input_set for var in block.input_vars[:]))
-            self.assertTrue(all(var.fixed for var in block.input_vars[:]))
-            self.assertFalse(any(var.fixed for var in block.vars[:]))
-        
+            inputs = list(block.input_vars.values())
+            with TemporarySubsystemManager(to_fix=inputs):
+                self.assertIs(block.model(), block)
+                var_set = ComponentSet(subsystems[i][1])
+                con_set = ComponentSet(subsystems[i][0])
+                input_set = ComponentSet(other_vars[i])
+
+                self.assertEqual(len(var_set), len(block.vars))
+                self.assertEqual(len(con_set), len(block.cons))
+                self.assertEqual(len(input_set), len(inputs))
+                self.assertTrue(all(var in var_set for var in block.vars[:]))
+                self.assertTrue(all(con in con_set for con in block.cons[:]))
+                self.assertTrue(
+                        all(var in input_set for var in inputs))
+                self.assertTrue(all(var.fixed for var in inputs))
+                self.assertFalse(any(var.fixed for var in block.vars[:]))
+
         # Test that we have properly unfixed variables, except variables
         # that were already fixed.
         self.assertFalse(m.v1.fixed)
@@ -239,20 +244,21 @@ class TestSubsystemBlock(unittest.TestCase):
             subsystems,
             include_fixed=True,
             )):
-            self.assertIs(block.model(), block)
-            var_set = ComponentSet(subsystems[i][1])
-            con_set = ComponentSet(subsystems[i][0])
-            input_set = ComponentSet(other_vars[i])
-            
-            self.assertEqual(len(var_set), len(block.vars))
-            self.assertEqual(len(con_set), len(block.cons))
-            self.assertEqual(len(input_set), len(block.input_vars))
-            self.assertTrue(all(var in var_set for var in block.vars[:]))
-            self.assertTrue(all(con in con_set for con in block.cons[:]))
-            self.assertTrue(
-                    all(var in input_set for var in block.input_vars[:]))
-            self.assertTrue(all(var.fixed for var in block.input_vars[:]))
-            self.assertFalse(any(var.fixed for var in block.vars[:]))
+            inputs = list(block.input_vars.values())
+            with TemporarySubsystemManager(to_fix=inputs):
+                self.assertIs(block.model(), block)
+                var_set = ComponentSet(subsystems[i][1])
+                con_set = ComponentSet(subsystems[i][0])
+                input_set = ComponentSet(other_vars[i])
+                
+                self.assertEqual(len(var_set), len(block.vars))
+                self.assertEqual(len(con_set), len(block.cons))
+                self.assertEqual(len(input_set), len(block.input_vars))
+                self.assertTrue(all(var in var_set for var in block.vars[:]))
+                self.assertTrue(all(con in con_set for con in block.cons[:]))
+                self.assertTrue(all(var in input_set for var in inputs))
+                self.assertTrue(all(var.fixed for var in inputs))
+                self.assertFalse(any(var.fixed for var in block.vars[:]))
 
         self.assertFalse(m.v1.fixed)
         self.assertFalse(m.v2.fixed)
