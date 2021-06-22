@@ -53,7 +53,7 @@ def create_subsystem_block(constraints, variables=None, include_fixed=False):
     return block
 
 
-def generate_subsystem_blocks(subsystems, include_fixed=False, fix_inputs=True):
+def generate_subsystem_blocks(subsystems, include_fixed=False, fix_inputs=False):
     """ Generates blocks that contain subsystems of variables and constraints.
     
     Arguments
