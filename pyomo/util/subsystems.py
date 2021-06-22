@@ -25,11 +25,13 @@ def create_subsystem_block(constraints, variables=None, include_fixed=False):
 
     Arguments
     ---------
-    constraints: List of Pyomo constraint data objects
-    variables: List of Pyomo var data objects
-    include_fixed: Bool indicating whether fixed variables should be
-                   attached to the block. This is useful if they may
-                   be unfixed at some point.
+    constraints: List
+        List of Pyomo constraint data objects
+    variables: List
+        List of Pyomo var data objects
+    include_fixed: Bool
+        Indicates whether fixed variables should be attached to the block.
+        This is useful if they may be unfixed at some point.
 
     Returns
     -------
@@ -89,16 +91,18 @@ class TemporarySubsystemManager(object):
         """
         Arguments
         ---------
-        to_fix: List of var data objects that should be temporarily fixed.
-                These are restored to their original status on exit from
-                this object's context manager.
-        to_deactivate: List of constraint data objects that should be
-                       temporarily deactivated. These are restored to their
-                       original status on exit from this object's context
-                       manager.
-        to_reset: List of var data objects that should be reset to their
-                  original values on exit from this object's context
-                  context manager.
+        to_fix: List
+            List of var data objects that should be temporarily fixed.
+            These are restored to their original status on exit from
+            this object's context manager.
+        to_deactivate: List
+            List of constraint data objects that should be temporarily
+            deactivated. These are restored to their original status on
+            exit from this object's context manager.
+        to_reset: List
+            List of var data objects that should be reset to their
+            original values on exit from this object's context context
+            manager.
 
         """
         if to_fix is None:
@@ -186,16 +190,19 @@ class ParamSweeper(TemporarySubsystemManager):
         """
         Parameters
         ----------
-        n_scenario: The number of different values we expect for each
-                    input variable
-        input_values: ComponentMap mapping each input variable to a list
-                      of values of length n_scenario
-        output_values: ComponentMap mapping each output variable to a list
-                       of values of length n_scenario
-        to_fix: to_fix argument for base class
-        to_deactivate: to_deactivate argument for base class
-        to_reset: to_reset argument for base class. This list is extended
-                  with input variables.
+        n_scenario: Integer
+            The number of different values we expect for each input variable
+        input_values: ComponentMap
+            Maps each input variable to a list of values of length n_scenario
+        output_values: ComponentMap
+            Maps each output variable to a list of values of length n_scenario
+        to_fix: List
+            to_fix argument for base class
+        to_deactivate: List
+            to_deactivate argument for base class
+        to_reset: List
+            to_reset argument for base class. This list is extended with
+            input variables.
 
         """
         # Should this object be aware of the user's block/model?
