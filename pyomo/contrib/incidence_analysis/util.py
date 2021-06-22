@@ -68,11 +68,15 @@ def generate_strongly_connected_components(
     for block in generate_subsystem_blocks(
             subsets,
             include_fixed=include_fixed,
-            fix_inputs=fix_inputs,
             ):
         # TODO: How does len scale for reference-to-list?
         assert len(block.vars) == len(block.cons)
-        yield block
+        if fix_inputs:
+            inputs = list(block.input_vars.values())
+            with TemporarySubsystemManager(to_fix=inputs):
+                yield block
+        else:
+            yield block
 
 
 def solve_strongly_connected_components(block, solver=None, solve_kwds=None):
@@ -96,6 +100,7 @@ def solve_strongly_connected_components(block, solver=None, solve_kwds=None):
     if solve_kwds is None:
         solve_kwds = {}
 
+    res_list = []
     for scc in generate_strongly_connected_components(block):
         if len(scc.vars) == 1:
             calculate_variable_from_constraint(scc.vars[0], scc.cons[0])
@@ -112,4 +117,6 @@ def solve_strongly_connected_components(block, solver=None, solve_kwds=None):
                     "a DAG).\nGot an SCC with components: \n%s\n%s"
                     % (vars, cons)
                     )
-            solver.solve(scc, **solve_kwds)
+            results = solver.solve(scc, **solve_kwds)
+            res_list.append(results)
+    return res_list
