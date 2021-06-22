@@ -14,9 +14,17 @@ import logging
 import sys
 import types
 
+from pyomo.common.deprecation import relocated_module_attribute
 from pyomo.core.expr import native_numeric_types
 
 logger = logging.getLogger('pyomo.core')
+
+relocated_module_attribute(
+    'tabular_writer', 'pyomo.common.formatting.tabular_writer',
+    version='TBD')
+relocated_module_attribute(
+    'sorted_robust', 'pyomo.common.sorting.sorted_robust',
+    version='TBD')
 
 
 def display(obj, ostream=None):
