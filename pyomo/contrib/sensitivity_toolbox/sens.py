@@ -7,9 +7,12 @@
 # rights in this software.
 # This software is distributed under the 3-clause BSD License
 # ______________________________________________________________________________
-from pyomo.environ import Param, Var, Block, ComponentMap, Objective, Constraint, ConstraintList, Suffix, value
+from pyomo.environ import (
+    Param, Var, Block, ComponentMap, Objective, Constraint,
+    ConstraintList, Suffix, value,
+)
 
-from pyomo.core.base.misc import sorted_robust
+from pyomo.common.sorting import sorted_robust
 from pyomo.core.expr.current import ExpressionReplacementVisitor
 
 from pyomo.common.modeling import unique_component_name

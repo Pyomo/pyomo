@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import types
+from pyomo.common.sorting import sorted_robust
 
 def tostr(value, quote_str=False):
     """Convert a value to a string

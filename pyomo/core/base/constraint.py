@@ -19,6 +19,7 @@ import math
 from weakref import ref as weakref_ref
 
 from pyomo.common.deprecation import RenamedClass
+from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr import logical_expr
@@ -31,7 +32,6 @@ from pyomo.core.base.component import (
 from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent, UnindexedComponent_set,
 )
-from pyomo.core.base.misc import (tabular_writer)
 from pyomo.core.base.set import Set
 from pyomo.core.base.util import (
     disable_methods, Initializer,
