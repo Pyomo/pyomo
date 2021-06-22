@@ -27,15 +27,18 @@ def generate_strongly_connected_components(block, include_fixed=False):
 
     Arguments
     ---------
-    block: Block whose strongly connected components will be generated
-    include_fixed: Bool indicating whether fixed variables will be
-                   attached as "input variables" on the subsystem blocks
-                   containing the strongly connected components
+    block: Pyomo Block
+        Block whose strongly connected components will be generated
+    include_fixed: Bool
+        Indicates whether fixed variables will be attached as
+        "input variables" on the subsystem blocks containing
+        the strongly connected components
 
     Yields
     ------
     Blocks containing the variables and constraints of every strongly
-    connected component, in a topological order
+    connected component, in a topological order, as well as the
+    "input variables" for that block
 
     """
     variables = [var for var in block.component_data_objects(Var)
@@ -57,13 +60,13 @@ def generate_strongly_connected_components(block, include_fixed=False):
     for con, b in con_block_map.items():
         con_blocks[b].append(con)
     subsets = list(zip(con_blocks, var_blocks))
-    for block in generate_subsystem_blocks(
+    for block, inputs in generate_subsystem_blocks(
             subsets,
             include_fixed=include_fixed,
             ):
         # TODO: How does len scale for reference-to-list?
         assert len(block.vars) == len(block.cons)
-        yield block
+        yield (block, inputs)
 
 
 def solve_strongly_connected_components(block, solver=None, solve_kwds=None):
@@ -77,19 +80,25 @@ def solve_strongly_connected_components(block, solver=None, solve_kwds=None):
 
     Arguments
     ---------
-    block: The Pyomo block whose variables and constraints will be solved
-    solver: The solver object that will be used to solve strongly connected
-            components of size greater than one constraint. Must implement
-            a solve method.
-    solve_kwds: Keyword arguments for the solver's solve method
+    block: Pyomo Block
+        The Pyomo block whose variables and constraints will be solved
+    solver: Pyomo solver object
+        The solver object that will be used to solve strongly connected
+        components of size greater than one constraint. Must implement
+        a solve method.
+    solve_kwds: Dictionary
+        Keyword arguments for the solver's solve method
+
+    Returns
+    -------
+    List of results objects returned by each call to solve
 
     """
     if solve_kwds is None:
         solve_kwds = {}
 
     res_list = []
-    for scc in generate_strongly_connected_components(block):
-        inputs = list(scc.input_vars.values())
+    for scc, inputs in generate_strongly_connected_components(block):
         with TemporarySubsystemManager(to_fix=inputs):
             if len(scc.vars) == 1:
                 calculate_variable_from_constraint(scc.vars[0], scc.cons[0])
