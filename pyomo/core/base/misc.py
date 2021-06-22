@@ -127,7 +127,7 @@ class _robust_sort_keyfcn(object):
         argument of the sort key.
 
         """
-        if use_key and self._key is not None:
+        if self._key is not None:
             val = self._key(val)
 
         return self._generate_sort_key(val)
