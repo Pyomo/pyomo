@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# Imports from Pyomo and PyUtilib
+# Imports from Pyomo
 from pyomo.core import *
 from pyomo.common.plugin import *
 from pyomo.opt import *

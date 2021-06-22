@@ -19,6 +19,7 @@ that works with problems derived from AslNLP as long as those
 classes return numpy ndarray objects for the vectors and coo_matrix
 objects for the matrices (e.g., AmplNLP and PyomoNLP)
 """
+import io
 import sys
 import logging
 import os
@@ -28,6 +29,7 @@ from pyomo.common.dependencies import (
     attempt_import,
     numpy as np, numpy_available,
 )
+from pyomo.common.tee import redirect_fd, TeeStream
 
 def _cyipopt_importer():
     import cyipopt
@@ -387,29 +389,6 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         return True
 
 
-def _redirect_stdout():
-    sys.stdout.flush() # <--- important when redirecting to files
-
-    # Duplicate stdout (file descriptor 1)
-    # to a different file descriptor number
-    newstdout = os.dup(1)
-
-    # /dev/null is used just to discard what is being printed
-    devnull = os.open(os.devnull, os.O_WRONLY)
-
-    # Duplicate the file descriptor for /dev/null
-    # and overwrite the value for stdout (file descriptor 1)
-    os.dup2(devnull, 1)
-
-    # Close devnull after duplication (no longer needed)
-    os.close(devnull)
-
-    # Use the original stdout to still be able
-    # to print to stdout within python
-    sys.stdout = os.fdopen(newstdout, 'w')
-    return newstdout
-
-
 class CyIpoptSolver(object):
     def __init__(self, problem_interface, options=None):
         """Create an instance of the CyIpoptSolver. You must
@@ -459,18 +438,39 @@ class CyIpoptSolver(object):
                 x_scaling = np.ones(nx)
             if g_scaling is None:
                 g_scaling = np.ones(ng)
-            cyipopt_solver.setProblemScaling(obj_scaling, x_scaling, g_scaling)
+            try:
+                set_scaling = cyipopt_solver.set_problem_scaling
+            except AttributeError:
+                # Fall back to pre-1.0.0 API
+                set_scaling = cyipopt_solver.setProblemScaling
+            set_scaling(obj_scaling, x_scaling, g_scaling)
 
         # add options
+        try:
+            add_option = cyipopt_solver.add_option
+        except AttributeError:
+            # Fall back to pre-1.0.0 API
+            add_option = cyipopt_solver.addOption
         for k, v in self._options.items():
-            cyipopt_solver.addOption(k, v)
+            add_option(k, v)
 
-        if tee:
-            x, info = cyipopt_solver.solve(xstart)
-        else:
-            newstdout = _redirect_stdout()
-            x, info = cyipopt_solver.solve(xstart)
-            os.dup2(newstdout, 1)
+        # We preemptively set up the TeeStream, even if we aren't
+        # going to use it: the implementation is such that the
+        # context manager does nothing (i.e., doesn't start up any
+        # processing threads) until afer a client accesses
+        # STDOUT/STDERR
+        with TeeStream(sys.stdout) as _teeStream:
+            if tee:
+                try:
+                    fd = sys.stdout.fileno()
+                except (io.UnsupportedOperation, AttributeError):
+                    # If sys,stdout doesn't have a valid fileno,
+                    # then create one using the TeeStream
+                    fd = _teeStream.STDOUT.fileno()
+            else:
+                fd = None
+            with redirect_fd(fd=1, output=fd, synchronize=False):
+                x, info = cyipopt_solver.solve(xstart)
 
         return x, info
 
@@ -523,7 +523,7 @@ class PyomoCyIpoptSolver(object):
         self._model = model
 
     def available(self, exception_flag=False):
-        return numpy_available and cyipopt_available
+        return bool(numpy_available and cyipopt_available)
 
     def license_is_valid(self):
         return True
@@ -578,20 +578,41 @@ class PyomoCyIpoptSolver(object):
                 x_scaling = np.ones(nx)
             if g_scaling is None:
                 g_scaling = np.ones(ng)
-            cyipopt_solver.setProblemScaling(obj_scaling, x_scaling, g_scaling)
+            try:
+                set_scaling = cyipopt_solver.set_problem_scaling
+            except AttributeError:
+                # Fall back to pre-1.0.0 API
+                set_scaling = cyipopt_solver.setProblemScaling
+            set_scaling(obj_scaling, x_scaling, g_scaling)
 
         # add options
+        try:
+            add_option = cyipopt_solver.add_option
+        except AttributeError:
+            # Fall back to pre-1.0.0 API
+            add_option = cyipopt_solver.addOption
         for k, v in config.options.items():
-            cyipopt_solver.addOption(k, v)
+            add_option(k, v)
 
         timer = TicTocTimer()
         try:
-            if config.tee:
-                x, info = cyipopt_solver.solve(problem.x_init())
-            else:
-                newstdout = _redirect_stdout()
-                x, info = cyipopt_solver.solve(problem.x_init())
-                os.dup2(newstdout, 1)
+            # We preemptively set up the TeeStream, even if we aren't
+            # going to use it: the implementation is such that the
+            # context manager does nothing (i.e., doesn't start up any
+            # processing threads) until afer a client accesses
+            # STDOUT/STDERR
+            with TeeStream(sys.stdout) as _teeStream:
+                if config.tee:
+                    try:
+                        fd = sys.stdout.fileno()
+                    except (io.UnsupportedOperation, AttributeError):
+                        # If sys,stdout doesn't have a valid fileno,
+                        # then create one using the TeeStream
+                        fd = _teeStream.STDOUT.fileno()
+                else:
+                    fd = None
+                with redirect_fd(fd=1, output=fd, synchronize=False):
+                    x, info = cyipopt_solver.solve(problem.x_init())
             solverStatus = SolverStatus.ok
         except:
             msg = "Exception encountered during cyipopt solve:"

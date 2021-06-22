@@ -11,10 +11,13 @@ Solving Logic-based Models with Pyomo.GDP
 Flexible Solution Suite
 =======================
 
-Once a model is formulated as a GDP model, a range of solution strategies are available to manipulate and solve it.
+Once a model is formulated as a GDP model, a range of solution
+strategies are available to manipulate and solve it.
 
-The traditional approach is reformulation to MINLP, but various other techniques are possible, including direct solution via the :ref:`GDPopt solver <gdpopt-main-page>`.
-Below, we describe some of these capabilities.
+The traditional approach is reformulation to a MI(N)LP, but various
+other techniques are possible, including direct solution via the
+:ref:`GDPopt solver <gdpopt-main-page>`.  Below, we describe some of
+these capabilities.
 
 .. _gdp-reformulations:
 
@@ -24,22 +27,27 @@ Reformulations
 Logical constraints
 -------------------
 
-At present, logical propositions must be converted to algebraic form prior to use of the MINLP reformulations or the GDPopt solver.
-This may be accomplished via transformation:
+At present, logical propositions must be converted to algebraic form
+prior to use of the MI(N)LP reformulations or the GDPopt solver.  This
+may be accomplished via transformation:
 
 .. code::
 
     TransformationFactory('core.logical_to_linear').apply_to(model)
 
-The transformation creates a constraint list with a unique name starting with ``logic_to_linear``, upon which the algebraic equivalents of the logical constraints are placed.
-If not already associated with a binary variable, each ``BooleanVar`` object will receive a generated binary counterpart.
-These associated binary variables may be accessed via the ``get_associated_binary()`` method.
+The transformation creates a constraint list with a unique name starting
+with ``logic_to_linear``, within which the algebraic equivalents of the
+logical constraints are placed.  If not already associated with a binary
+variable, each ``BooleanVar`` object will receive a generated binary
+counterpart.  These associated binary variables may be accessed via the
+``get_associated_binary()`` method.
 
 .. code::
 
     m.Y[1].get_associated_binary()
 
-Additional augmented variables and their corresponding constraints may also be created, as described in :ref:`gdp-advanced-examples`.
+Additional augmented variables and their corresponding constraints may
+also be created, as described in :ref:`gdp-advanced-examples`.
 
 Following solution of the GDP model, values of the Boolean variables may be updated from their algebraic binary counterparts using the ``update_boolean_vars_from_binary()`` function.
 
@@ -48,14 +56,15 @@ Following solution of the GDP model, values of the Boolean variables may be upda
 Reformulation to MI(N)LP
 ------------------------
 
-To use standard commercial solvers, you must convert the disjunctive model to a standard MIP/MINLP model.
-The two classical strategies for doing so are the (included) Big-M and Hull reformulations.
+To use standard commercial solvers, you must convert the disjunctive
+model to a standard MILP/MINLP model.  The two classical strategies for
+doing so are the (included) Big-M and Hull reformulations.
 
 
-Big M (BM) Reformulation
+Big-M (BM) Reformulation
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-The Big M reformulation\ [#gdp-bm]_ results in a smaller transformed model, avoiding the need to add extra variables; however, it yields a looser continuous relaxation.
+The Big-M reformulation\ [#gdp-bm]_ results in a smaller transformed model, avoiding the need to add extra variables; however, it yields a looser continuous relaxation.
 By default, the BM transformation will estimate reasonably tight M values for you if variables are bounded.
 For nonlinear models where finite expression bounds may be inferred from variable bounds, the BM transformation may also be able to automatically compute M values for you.
 For all other models, you will need to provide the M values through a "BigM" Suffix, or through the `bigM` argument to the transformation.
@@ -79,8 +88,9 @@ The Hull Reformulation requires a lifting into a higher-dimensional space and co
 
     - All variables that appear in disjuncts need upper and lower bounds.
 
-    - The hull reformulation is an exact reformulation at the solution points
-      even for nonconvex GDP models, but the resulting MINLP will also be nonconvex.
+    - The hull reformulation is an exact reformulation at the solution
+      points even for nonconvex GDP models, but the resulting MINLP will
+      also be nonconvex.
 
 To apply the Hull reformulation within a python script, use:
 
@@ -106,8 +116,9 @@ This transformation is accessible via:
 Direct GDP solvers
 ==================
 
-Pyomo includes the contributed GDPopt solver, which can directly solve GDP models.
-Its usage is described within the :ref:`contributed packages documentation <gdpopt-main-page>`.
+Pyomo includes the contributed GDPopt solver, which can directly solve
+GDP models.  Its usage is described within the :ref:`contributed
+packages documentation <gdpopt-main-page>`.
 
 References
 ==========

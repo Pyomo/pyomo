@@ -14,9 +14,7 @@ from pyomo.checker.plugins.checker import IterativeTreeChecker
 from pyomo.checker.plugins.function import FunctionTrackerHook
 
 
-class _ModelRuleChecker(IterativeTreeChecker):
-
-    FunctionTrackerHook()
+class _ModelRuleChecker(IterativeTreeChecker, FunctionTrackerHook):
 
     def check(self, runner, script, info):
         if isinstance(info, ast.Call):

@@ -17,8 +17,7 @@ import logging
 from pyomo.common.collections import ComponentMap
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base.plugin import ModelComponentFactory
-from pyomo.core.base.component import ActiveComponent
+from pyomo.core.base.component import ActiveComponent, ModelComponentFactory
 
 from pyomo.common.deprecation import deprecated
 

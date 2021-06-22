@@ -12,7 +12,7 @@
 from __future__ import division
 
 from pyomo.core.base.var import Var
-from pyomo.core.base.plugin import TransformationFactory
+from pyomo.core.base.transformation import TransformationFactory
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 

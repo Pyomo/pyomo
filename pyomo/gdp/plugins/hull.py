@@ -29,7 +29,8 @@ from pyomo.gdp.util import ( _warn_for_active_logical_constraint,
                              is_child_of, get_src_disjunction,
                              get_src_constraint, get_transformed_constraints,
                              get_src_disjunct, _warn_for_active_disjunction,
-                             _warn_for_active_disjunct, )
+                             _warn_for_active_disjunct, preprocess_targets)
+from pyomo.network import Port
 from functools import wraps
 from weakref import ref as weakref_ref
 
@@ -190,6 +191,7 @@ class Hull_Reformulation(Transformation):
             Disjunct:    self._warn_for_active_disjunct,
             Block:       self._transform_block_on_disjunct,
             LogicalConstraint: self._warn_for_active_logical_statement,
+            Port:        False,
             }
         self._generate_debug_messages = False
 
@@ -230,6 +232,12 @@ class Hull_Reformulation(Transformation):
             NAME_BUFFER.clear()
 
     def _apply_to_impl(self, instance, **kwds):
+        if not instance.ctype in (Block, Disjunct):
+            raise GDP_Error("Transformation called on %s of type %s. 'instance' "
+                            "must be a ConcreteModel, Block, or Disjunct (in "
+                            "the case of nested disjunctions)." %
+                            (instance.name, instance.ctype))
+
         self._config = self.CONFIG(kwds.pop('options', {}))
         self._config.set_value(kwds)
         self._generate_debug_messages = is_debug_set(logger)
@@ -237,6 +245,11 @@ class Hull_Reformulation(Transformation):
         targets = self._config.targets
         if targets is None:
             targets = ( instance, )
+        else:
+            # we need to preprocess targets to make sure that if there are any
+            # disjunctions in targets that their disjuncts appear before them in
+            # the list.
+            targets = preprocess_targets(targets)
         knownBlocks = {}
         for t in targets:
             # check that t is in fact a child of instance
@@ -458,7 +471,7 @@ class Hull_Reformulation(Transformation):
         # while we also transform the disjuncts.
         or_expr = 0
         for disjunct in obj.disjuncts:
-            or_expr += disjunct.indicator_var
+            or_expr += disjunct.binary_indicator_var
             self._transform_disjunct(disjunct, transBlock, varSet,
                                      localVars.get(disjunct, []))
         orConstraint.add(index, (or_expr, 1))
@@ -498,7 +511,7 @@ class Hull_Reformulation(Transformation):
         # deactivated should only come from the user
         if not obj.active:
             if obj.indicator_var.is_fixed():
-                if value(obj.indicator_var) == 0:
+                if not value(obj.indicator_var):
                     # The user cleanly deactivated the disjunct: there
                     # is nothing for us to do here.
                     return
@@ -513,7 +526,7 @@ class Hull_Reformulation(Transformation):
                     "indicator_var is not fixed and the disjunct does not "
                     "appear to have been relaxed. This makes no sense. "
                     "(If the intent is to deactivate the disjunct, fix its "
-                    "indicator_var to 0.)"
+                    "indicator_var to False.)"
                     % ( obj.name, ))
 
         if obj._transformation_block is not None:
@@ -615,10 +628,10 @@ class Hull_Reformulation(Transformation):
                 disaggregatedVarName + "_bounds", bigmConstraint)
             if lb:
                 bigmConstraint.add(
-                    'lb', obj.indicator_var*lb <= disaggregatedVar)
+                    'lb', obj.binary_indicator_var*lb <= disaggregatedVar)
             if ub:
                 bigmConstraint.add(
-                    'ub', disaggregatedVar <= obj.indicator_var*ub)
+                    'ub', disaggregatedVar <= obj.binary_indicator_var*ub)
 
             relaxationBlock._bigMConstraintMap[disaggregatedVar] = bigmConstraint
 
@@ -649,9 +662,11 @@ class Hull_Reformulation(Transformation):
             bigmConstraint = Constraint(transBlock.lbub)
             relaxationBlock.add_component(conName, bigmConstraint)
             if lb:
-                bigmConstraint.add('lb', obj.indicator_var*lb <= var)
+                bigmConstraint.add(
+                    'lb', obj.binary_indicator_var*lb <= var)
             if ub:
-                bigmConstraint.add('ub', var <= obj.indicator_var*ub)
+                bigmConstraint.add(
+                    'ub', var <= obj.binary_indicator_var*ub)
             relaxationBlock._bigMConstraintMap[var] = bigmConstraint
 
         var_substitute_map = dict((id(v), newV) for v, newV in 
@@ -673,21 +688,13 @@ class Hull_Reformulation(Transformation):
         # As opposed to bigm, in hull the only special thing we need to do for
         # nested Disjunctions is to make sure that we move up local var
         # references and also references to the disaggregated variables so that
-        # all will be accessible after we transform this Disjunct.The indicator
+        # all will be accessible after we transform this Disjunct. The indicator
         # variables and disaggregated variables of the inner disjunction will
         # need to be disaggregated again, but the transformed constraints will
         # not be. But this way nothing will get double-bigm-ed. (If an
         # untransformed disjunction is lurking here, we will catch it below).
 
-        # add references to all local variables on block (including the
-        # indicator_var)
         disjunctBlock = disjunct._transformation_block()
-        varRefBlock = disjunctBlock.localVarReferences
-        for v in block.component_objects(Var, descend_into=Block, active=None):
-            varRefBlock.add_component(unique_component_name(
-                varRefBlock, v.getname(fully_qualified=True,
-                                       name_buffer=NAME_BUFFER)), Reference(v))
-
         destinationBlock = disjunctBlock.parent_block()
         for obj in block.component_data_objects(
                 Disjunction,
@@ -701,6 +708,16 @@ class Hull_Reformulation(Transformation):
             transBlock = obj.algebraic_constraint().parent_block()
 
             self._transfer_var_references(transBlock, destinationBlock)
+
+        # add references to all local variables on block (including the
+        # indicator_var). Note that we do this after we have moved up the
+        # transformation blocks for nested disjunctions, so that we don't have
+        # duplicate references.
+        varRefBlock = disjunctBlock.localVarReferences
+        for v in block.component_objects(Var, descend_into=Block, active=None):
+            varRefBlock.add_component(unique_component_name(
+                varRefBlock, v.getname(fully_qualified=True,
+                                       name_buffer=NAME_BUFFER)), Reference(v))
 
         # Look through the component map of block and transform everything we
         # have a handler for. Yell if we don't know how to handle it. (Note that
@@ -781,7 +798,7 @@ class Hull_Reformulation(Transformation):
         if obj.is_indexed():
             constraintMap['transformedConstraints'][obj] = newConstraint
         # add mapping of transformed constraint container back to original
-        # constraint container (or SimpleConstraint)
+        # constraint container (or ScalarConstraint)
         constraintMap['srcConstraints'][newConstraint] = obj
 
         for i in sorted(obj.keys()):
@@ -800,7 +817,7 @@ class Hull_Reformulation(Transformation):
                 h_0 = clone_without_expression_components(
                     c.body, substitute=zero_substitute_map)
 
-            y = disjunct.indicator_var
+            y = disjunct.binary_indicator_var
             if NL:
                 if mode == "LeeGrossmann":
                     sub_expr = clone_without_expression_components(
@@ -866,9 +883,9 @@ class Hull_Reformulation(Transformation):
                 else:
                     newConstraint.add('eq', newConsExpr)
                     # map to the _ConstraintData (And yes, for
-                    # SimpleConstraints, this is overwriting the map to the
+                    # ScalarConstraints, this is overwriting the map to the
                     # container we made above, and that is what I want to
-                    # happen. SimpleConstraints will map to lists. For
+                    # happen. ScalarConstraints will map to lists. For
                     # IndexedConstraints, we can map the container to the
                     # container, but more importantly, we are mapping the
                     # _ConstraintDatas to each other above)
@@ -1072,7 +1089,7 @@ class Hull_Reformulation(Transformation):
 
 @TransformationFactory.register(
     'gdp.chull',
-    doc="Deprecated name for the hull reformulation. Please use 'gdp.hull'.")
+    doc="[DEPRECATED] please use 'gdp.hull' to get the Hull transformation.")
 @deprecated("The 'gdp.chull' name is deprecated. "
             "Please use the more apt 'gdp.hull' instead.",
             logger='pyomo.gdp',
