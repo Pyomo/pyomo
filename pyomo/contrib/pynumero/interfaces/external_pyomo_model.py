@@ -14,6 +14,7 @@ from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.expr.visitor import identify_variables
+from pyomo.common.collections import ComponentSet
 from pyomo.util.subsystems import (
         create_subsystem_block,
         TemporarySubsystemManager,
@@ -126,7 +127,11 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
             external_vars,
             residual_cons,
             external_cons,
+            solver=None,
             ):
+        if solver is None:
+            solver = SolverFactory("ipopt")
+        self._solver = solver
 
         # We only need this block to construct the NLP, which wouldn't
         # be necessary if we could compute Hessians of Pyomo constraints.
@@ -159,6 +164,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         return ["residual_%i" % i for i in range(self.n_equality_constraints())]
 
     def set_input_values(self, input_values):
+        solver = self._solver
         external_cons = self.external_cons
         external_vars = self.external_vars
         input_vars = self.input_vars
@@ -167,12 +173,10 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
             var.set_value(val)
 
         _temp = create_subsystem_block(external_cons, variables=external_vars)
-        # Make sure that no additional variables appear in the
-        # "external constraints." Not sure if this is necessary.
-        #assert len(_temp.input_vars) == len(input_vars)
+        possible_input_vars = ComponentSet(input_vars)
+        for var in _temp.input_vars.values():
+            assert var in possible_input_vars
 
-        # TODO: Make this solver a configurable option
-        solver = SolverFactory("ipopt")
         with TemporarySubsystemManager(to_fix=input_vars):
             solver.solve(_temp)
 
