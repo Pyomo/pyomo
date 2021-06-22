@@ -19,10 +19,7 @@ from pyomo.util.subsystems import (
 from pyomo.contrib.incidence_analysis.interface import IncidenceGraphInterface
 
 
-def generate_strongly_connected_components(
-        block,
-        include_fixed=False,
-        ):
+def generate_strongly_connected_components(block, include_fixed=False):
     """ Performs a block triangularization of the variable-constraint
     incidence matrix of the provided block, and yields a block that
     contains the variables and constraints of each diagonal block
@@ -34,10 +31,6 @@ def generate_strongly_connected_components(
     include_fixed: Bool indicating whether fixed variables will be
                    attached as "input variables" on the subsystem blocks
                    containing the strongly connected components
-    fix_inputs: Bool indicating whether "input variables" on a subsystem
-                block should be temporarily fixed when the block is
-                yielded. The default is True as this is necessary to solve
-                the strongly connected component as a square system.
 
     Yields
     ------
