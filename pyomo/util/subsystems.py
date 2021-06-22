@@ -58,16 +58,19 @@ def generate_subsystem_blocks(subsystems, include_fixed=False):
 
     Arguments
     ---------
-    subsystems: List of tuples. Each tuple is a list of constraints then
-                a list of variables that will define a subsystem.
-    include_fixed: Whether to add already fixed variables to the generated
-                   subsystem blocks.
+    subsystems: List of tuples
+        Each tuple is a list of constraints then a list of variables
+        that will define a subsystem.
+    include_fixed: Bool
+        Indicates whether to add already fixed variables to the generated
+        subsystem blocks.
 
     Yields
     ------
     "Subsystem blocks" containing the variables and constraints specified
     by each entry in subsystems. Variables in the constraints that are
     not specified are contained in the input_vars component.
+
     """
     for cons, vars in subsystems:
         block = create_subsystem_block(cons, vars, include_fixed)
