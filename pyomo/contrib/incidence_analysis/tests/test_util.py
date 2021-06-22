@@ -119,8 +119,8 @@ class TestGenerateSCC(unittest.TestCase):
                 len(list(generate_strongly_connected_components(m))),
                 N+1,
                 )
-        for i, block in enumerate(generate_strongly_connected_components(m)):
-            inputs = list(block.input_vars.values())
+        for i, (block, inputs) in enumerate(
+                generate_strongly_connected_components(m)):
             with TemporarySubsystemManager(to_fix=inputs):
                 if i == 0:
                     # P[0], ideal_gas[0]
@@ -203,8 +203,8 @@ class TestGenerateSCC(unittest.TestCase):
                 # bipartite graph of variables and equations is disconnected).
                 )
         t_scc_map = {}
-        for i, block in enumerate(generate_strongly_connected_components(m)):
-            inputs = list(block.input_vars.values())
+        for i, (block, inputs) in enumerate(
+                generate_strongly_connected_components(m)):
             with TemporarySubsystemManager(to_fix=inputs):
                 t = block.vars[0].index()
                 t_scc_map[t] = i
@@ -271,8 +271,8 @@ class TestGenerateSCC(unittest.TestCase):
                 len(list(generate_strongly_connected_components(m))),
                 nfe,
                 )
-        for i, block in enumerate(generate_strongly_connected_components(m)):
-            inputs = list(block.input_vars.values())
+        for i, (block, inputs) in enumerate(
+                generate_strongly_connected_components(m)):
             with TemporarySubsystemManager(to_fix=inputs):
                 # We have a much easier time testing the SCCs generated
                 # in this test.
@@ -333,8 +333,8 @@ class TestGenerateSCC(unittest.TestCase):
                 3*nfe+2,
                 # "Initial constraints" only add two variables/equations
                 )
-        for i, block in enumerate(generate_strongly_connected_components(m)):
-            inputs = list(block.input_vars.values())
+        for i, (block, inputs) in enumerate(
+                generate_strongly_connected_components(m)):
             with TemporarySubsystemManager(to_fix=inputs):
                 # The order is:
                 #   algebraic -> derivative -> differential -> algebraic -> ...
