@@ -275,10 +275,7 @@ class TestSubsystemBlock(unittest.TestCase):
                 [m.v2, m.v3, m.v4],
                 [m.v1, m.v4],
                 ]
-        for i, block in enumerate(generate_subsystem_blocks(
-            subsystems,
-            fix_inputs=False,
-            )):
+        for i, block in enumerate(generate_subsystem_blocks(subsystems)):
             self.assertIs(block.model(), block)
             var_set = ComponentSet(subsystems[i][1])
             con_set = ComponentSet(subsystems[i][0])
@@ -310,10 +307,7 @@ class TestSubsystemBlock(unittest.TestCase):
                 [m.v2, m.v3],
                 [m.v1],
                 ]
-        for i, block in enumerate(generate_subsystem_blocks(
-            subsystems,
-            fix_inputs=False,
-            )):
+        for i, block in enumerate(generate_subsystem_blocks(subsystems)):
             self.assertIs(block.model(), block)
             var_set = ComponentSet(subsystems[i][1])
             con_set = ComponentSet(subsystems[i][0])

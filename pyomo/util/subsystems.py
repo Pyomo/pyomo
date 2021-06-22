@@ -53,17 +53,15 @@ def create_subsystem_block(constraints, variables=None, include_fixed=False):
     return block
 
 
-def generate_subsystem_blocks(subsystems, include_fixed=False, fix_inputs=False):
+def generate_subsystem_blocks(subsystems, include_fixed=False):
     """ Generates blocks that contain subsystems of variables and constraints.
-    
+
     Arguments
     ---------
     subsystems: List of tuples. Each tuple is a list of constraints then
                 a list of variables that will define a subsystem.
     include_fixed: Whether to add already fixed variables to the generated
                    subsystem blocks.
-    fix_inputs: Whether to fix variables in the constraints that are not
-                included in the subsystem.
 
     Yields
     ------
@@ -73,16 +71,7 @@ def generate_subsystem_blocks(subsystems, include_fixed=False, fix_inputs=False)
     """
     for cons, vars in subsystems:
         block = create_subsystem_block(cons, vars, include_fixed)
-        if fix_inputs:
-            to_fix = list(block.input_vars[:])
-            context = TemporarySubsystemManager(to_fix=to_fix)
-        else:
-            context = nullcontext()
-        with context:
-            # On enter, we fix the "inputs" of the subsystem. When
-            # control returns to this code (iterator advance), we
-            # exit this context, and inputs are unfixed.
-            yield block
+        yield block
 
 
 class TemporarySubsystemManager(object):
