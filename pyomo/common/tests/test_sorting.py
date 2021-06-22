@@ -15,22 +15,7 @@ from io import StringIO
 
 import pyomo.common.unittest as unittest
 
-from pyomo.core.base.misc import tabular_writer, sorted_robust
-
-class TestTabularWriter(unittest.TestCase):
-    def test_unicode_table(self):
-        # Test that an embedded unicode character does not foul up the
-        # table alignment
-        os = StringIO()
-        data = {1: ("a", 1), (2, 3): ("∧", 2)}
-        tabular_writer(os, "", data.items(), ["s", "val"], lambda k, v: v)
-        ref = u"""
-Key    : s : val
-     1 : a :   1
-(2, 3) : ∧ :   2
-"""
-        self.assertEqual(ref.strip(), os.getvalue().strip())
-
+from pyomo.common.sorting import sorted_robust
 
 class TestSortedRobust(unittest.TestCase):
     def test_sorted_robust(self):
