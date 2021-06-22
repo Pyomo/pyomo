@@ -22,7 +22,6 @@ from pyomo.contrib.incidence_analysis.interface import IncidenceGraphInterface
 def generate_strongly_connected_components(
         block,
         include_fixed=False,
-        fix_inputs=True,
         ):
     """ Performs a block triangularization of the variable-constraint
     incidence matrix of the provided block, and yields a block that
@@ -71,12 +70,7 @@ def generate_strongly_connected_components(
             ):
         # TODO: How does len scale for reference-to-list?
         assert len(block.vars) == len(block.cons)
-        if fix_inputs:
-            inputs = list(block.input_vars.values())
-            with TemporarySubsystemManager(to_fix=inputs):
-                yield block
-        else:
-            yield block
+        yield block
 
 
 def solve_strongly_connected_components(block, solver=None, solve_kwds=None):
@@ -102,21 +96,23 @@ def solve_strongly_connected_components(block, solver=None, solve_kwds=None):
 
     res_list = []
     for scc in generate_strongly_connected_components(block):
-        if len(scc.vars) == 1:
-            calculate_variable_from_constraint(scc.vars[0], scc.cons[0])
-        else:
-            if solver is None:
-                # NOTE: Use local name to avoid slow generation of this
-                # error message if a user provides a large, non-decomposable
-                # block with no solver.
-                vars = [var.local_name for var in scc.vars.values()]
-                cons = [con.local_name for con in scc.cons.values()]
-                raise RuntimeError(
-                    "An external solver is required if block has strongly\n"
-                    "connected components of size greater than one (is not "
-                    "a DAG).\nGot an SCC with components: \n%s\n%s"
-                    % (vars, cons)
-                    )
-            results = solver.solve(scc, **solve_kwds)
-            res_list.append(results)
+        inputs = list(scc.input_vars.values())
+        with TemporarySubsystemManager(to_fix=inputs):
+            if len(scc.vars) == 1:
+                calculate_variable_from_constraint(scc.vars[0], scc.cons[0])
+            else:
+                if solver is None:
+                    # NOTE: Use local name to avoid slow generation of this
+                    # error message if a user provides a large, non-decomposable
+                    # block with no solver.
+                    vars = [var.local_name for var in scc.vars.values()]
+                    cons = [con.local_name for con in scc.cons.values()]
+                    raise RuntimeError(
+                        "An external solver is required if block has strongly\n"
+                        "connected components of size greater than one (is not "
+                        "a DAG).\nGot an SCC with components: \n%s\n%s"
+                        % (vars, cons)
+                        )
+                results = solver.solve(scc, **solve_kwds)
+                res_list.append(results)
     return res_list
