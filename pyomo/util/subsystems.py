@@ -71,7 +71,7 @@ def generate_subsystem_blocks(subsystems, include_fixed=False):
     """
     for cons, vars in subsystems:
         block = create_subsystem_block(cons, vars, include_fixed)
-        yield block
+        yield block, list(block.input_vars.values())
 
 
 class TemporarySubsystemManager(object):
