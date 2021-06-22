@@ -295,12 +295,19 @@ class ExternalGreyBoxModel(object):
 
 class ExternalGreyBoxBlockData(_BlockData):
 
-    def set_external_model(self, external_grey_box_model):
+    def set_external_model(self,
+            external_grey_box_model,
+            inputs=None,
+            outputs=None,
+            ):
         self._ex_model = ex_model = external_grey_box_model
         if ex_model is None:
             self._input_names = self._output_names = None
             self.inputs = self.outputs = None
             return
+
+        if inputs is not None:
+            pass
 
         self._input_names = ex_model.input_names()
         if self._input_names is None or len(self._input_names) == 0:

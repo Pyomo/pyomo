@@ -610,5 +610,38 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
             self.assertAlmostEqual(rcd_dict[i, j], val, delta=1e-8)
 
 
+class TestExternalPyomoBlock(unittest.TestCase):
+
+    def test_set_inputs(self):
+        m = pyo.ConcreteModel()
+        m.ex_block = ExternalGreyBoxBlock(concrete=True)
+        block = m.ex_block
+
+        m.a = pyo.Var()
+        m.b = pyo.Var()
+        m.r = pyo.Var()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+
+        m_ex = _make_external_model()
+        input_vars = [m_ex.a, m_ex.b, m_ex.r, m_ex.x_out, m_ex.y_out]
+        external_vars = [m_ex.x, m_ex.y]
+        residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
+        external_cons = [m_ex.c_ex_1, m_ex.c_ex_2]
+        ex_model = ExternalPyomoModel(
+                input_vars,
+                external_vars,
+                residual_cons,
+                external_cons,
+                )
+        inputs = [m.a, m.b, m.r, m.x, m.y]
+        block.set_external_model(ex_model, inputs=inputs)
+
+        m.obj = pyo.Objective(expr=
+                (m.x-2.0)**2 + (m.y-2.0)**2 + (m.a-2.0)**2 +
+                (m.b-2.0)**2 + (m.r-2.0)**2
+                )
+
+
 if __name__ == '__main__':
     unittest.main()
