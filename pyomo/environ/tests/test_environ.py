@@ -116,6 +116,7 @@ class TestPyomoEnviron(unittest.TestCase):
         # modules from the "standard" library.  Their order in the list
         # of slow-loading TPLs can vary from platform to platform.
         ref = {
+            '__future__',
             'argparse',
             'cPickle',
             'copy',
