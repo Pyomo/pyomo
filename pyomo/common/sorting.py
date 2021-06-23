@@ -13,19 +13,19 @@ class _robust_sort_keyfcn(object):
 
     Generates keys (for use with Python `sorted()` that are
     (str(type_name), val), where val is the actual value (if the type
-    is comparable), otherwise is the string representation of the value.
+    is comparable), otherwise the string representation of the value.
     If str() also fails, we fall back on id().
 
     This allows sorting lists with mixed types in Python3
 
     We implement this as a callable object so that we can store the
-    _typemap without resorting to global variables.
+    user's original key function, if provided
 
     """
     _typemap = {
-        bool: (1, bool.__name__),
         int: (1, float.__name__),
         float: (1, float.__name__),
+        str: (1, str.__name__),
         tuple: (4, tuple.__name__),
     }
 
@@ -36,9 +36,10 @@ class _robust_sort_keyfcn(object):
         """Generate a tuple ( str(type_name), val ) for sorting the value.
 
         `key=` expects a function.  We are generating a functor so we
-        have a convenient place to store the _typemap, which converts
-        the type-specific functions for converting a value to the second
-        argument of the sort key.
+        have a convenient place to store the user-provided key and the
+        (singleton) _typemap, which maps types to the type-specific
+        functions for converting a value to the second argument of the
+        sort key.
 
         """
         if self._key is not None:
@@ -58,6 +59,7 @@ class _robust_sort_keyfcn(object):
             # it is, sort it as if it were a float.
             try:
                 val < 1.
+                1. < val
                 _typename = float.__name__
             except:
                 pass
@@ -72,15 +74,13 @@ class _robust_sort_keyfcn(object):
                 #    this run.
                 i = 3
         self._typemap[_type] = i, _typename
-        return i, _typename
 
     def _generate_sort_key(self, val):
-        try:
-            i, _typename = self._typemap[val.__class__]
-        except KeyError:
+        if val.__class__ not in self._typemap:
             # If this is not a type we have seen before, determine what
-            # to use for the second value in the tuple.
-            i, _typename = self._classify_type(val)
+            # to use for the second value in the sorting tuple.
+            self._classify_type(val)
+        i, _typename = self._typemap[val.__class__]
         if i == 1:
             # value type is directly comparable
             return _typename, val
@@ -95,24 +95,39 @@ class _robust_sort_keyfcn(object):
             return _typename, id(val)
 
 
-def sorted_robust(arg, key=None, reverse=False):
+def sorted_robust(iterable, key=None, reverse=False):
     """Utility to sort an arbitrary iterable.
 
-    This returns the sorted(arg) in a consistent order by first tring
-    the standard sorted() function, and if that fails (for example with
+    This returns the sorted(arg) in a consistent order by first trying
+    the standard sort() function, and if that fails (for example with
     mixed-type Sets in Python3), use the _robust_sort_keyfcn utility
     (above) to generate sortable keys.
 
+    Parameters
+    ----------
+    iterable: iterable
+        the source of items to sort
+    key: function
+        a function of one argument that is used to extract the
+        comparison ket from each element in `iterable`
+    reverse: bool
+        if True, the iterable is sorted as if each comparison was reversed.
+
+    Returns
+    -------
+    list
     """
-    # It is possible that arg is a generator.  We need to cache the
-    # elements returned by the generator in case 'sort' raises an
-    # exception (this ensures we don't lose any elements).  Further, as
-    # we will use the in-place `list.sort()`, we want to copy any
-    # incoming lists so we do not accidentally have any
-    # side-effects.
-    arg = list(arg)
+    # Because we implement this as a "try a normal (fast) sort, then
+    # fall back on our slow, but robust sort", we will need to cache the
+    # incoming arg: it may be a generator, in which case we would need
+    # to exhaust it so we can cache all the values for the case that the
+    # forst sort attempt fails.  Given that, it is simpler / easire to
+    # take *all* incoming args and create a new list, then use list's
+    # in-place sort().  By copying *all* incoming data, we avoid
+    # possible side effects in the case that the user provided a list.
+    ans = list(iterable)
     try:
-        arg.sort(key=key, reverse=reverse)
+        ans.sort(key=key, reverse=reverse)
     except:
-        arg.sort(key=_robust_sort_keyfcn(key), reverse=reverse)
-    return arg
+        ans.sort(key=_robust_sort_keyfcn(key), reverse=reverse)
+    return ans
