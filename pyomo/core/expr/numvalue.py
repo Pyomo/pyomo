@@ -1049,6 +1049,8 @@ class NumericNDArray(np.ndarray if numpy_available else object):
         # class so that additional operators hit this method.
         ans = getattr(ufunc, method)(*args, **kwargs)
         if isinstance(ans, np.ndarray):
+            if ans.size == 1:
+                return ans[0]
             return ans.view(NumericNDArray)
         else:
             return ans
