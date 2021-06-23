@@ -1403,7 +1403,7 @@ def _fbbt_block(m, config):
     var_ubs = ComponentMap()
     n_cons = 0
     for c in m.component_data_objects(ctype=Constraint, active=True,
-                                      descend_into=True, sort=True):
+                                      descend_into=config.descend_into, sort=True):
         for v in identify_variables(c.body):
             if v not in var_to_con_map:
                 var_to_con_map[v] = list()
@@ -1428,7 +1428,7 @@ def _fbbt_block(m, config):
 
     improved_vars = ComponentSet()
     for c in m.component_data_objects(ctype=Constraint, active=True,
-                                      descend_into=True, sort=True):
+                                      descend_into=config.descend_into, sort=True):
         _new_var_bounds = _fbbt_con(c, config)
         n_fbbt += 1
         new_var_bounds.update(_new_var_bounds)
@@ -1466,7 +1466,7 @@ def _fbbt_block(m, config):
 
 
 def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, feasibility_tol=1e-8, max_iter=10,
-         improvement_tol=1e-4):
+         improvement_tol=1e-4, descend_into=True):
     """
     Perform FBBT on a constraint, block, or model. For more control,
     use _fbbt_con and _fbbt_block. For detailed documentation, see
@@ -1514,11 +1514,13 @@ def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, feasibi
     ft_config = ConfigValue(default=feasibility_tol, domain=NonNegativeFloat)
     mi_config = ConfigValue(default=max_iter, domain=NonNegativeInt)
     improvement_tol_config = ConfigValue(default=improvement_tol, domain=NonNegativeFloat)
+    descend_into_config = ConfigValue(default=descend_into)
     config.declare('deactivate_satisfied_constraints', dsc_config)
     config.declare('integer_tol', integer_tol_config)
     config.declare('feasibility_tol', ft_config)
     config.declare('max_iter', mi_config)
     config.declare('improvement_tol', improvement_tol_config)
+    config.declare('descend_into', descend_into_config)
 
     new_var_bounds = ComponentMap()
     if comp.ctype == Constraint:
