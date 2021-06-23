@@ -1047,4 +1047,8 @@ class NumericNDArray(np.ndarray if numpy_available else object):
 
         # Delegate to the base ufunc, but return an instance of this
         # class so that additional operators hit this method.
-        return getattr(ufunc, method)(*args, **kwargs).view(NumericNDArray)
+        ans = getattr(ufunc, method)(*args, **kwargs)
+        if isinstance(ans, np.ndarray):
+            return ans.view(NumericNDArray)
+        else:
+            return ans
