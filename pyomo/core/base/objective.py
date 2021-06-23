@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -19,7 +19,6 @@ __all__ = ('Objective',
 import sys
 import logging
 from weakref import ref as weakref_ref
-import inspect
 
 from pyomo.common.log import is_debug_set
 from pyomo.common.deprecation import deprecated, RenamedClass
@@ -28,13 +27,17 @@ from pyomo.core.expr.numvalue import value
 from pyomo.core.base.component import (
     ActiveComponentData, ModelComponentFactory,
 )
-from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
-                                               UnindexedComponent_set,
-                                               _get_indexed_component_data_name)
+from pyomo.core.base.indexed_component import (
+    ActiveIndexedComponent, UnindexedComponent_set, rule_result_mapper,
+    _get_indexed_component_data_name,
+)
 from pyomo.core.base.expression import (_ExpressionData,
                                         _GeneralExpressionDataImpl)
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.set import Set
+from pyomo.core.base.util import (
+    Initializer, IndexedCallInitializer, CountedCallInitializer,
+)
 from pyomo.core.base import minimize, maximize
 
 logger = logging.getLogger('pyomo.core')
@@ -60,26 +63,10 @@ def simple_objective_rule(fn):
 
     model.o = Objective(rule=simple_objective_rule(...))
     """
-
-    def wrapper_function (*args, **kwargs):
-        #
-        # If the function is None, then skip this objective.
-        #
-        if fn is None:
-            return Objective.Skip
-        #
-        # Otherwise, the argument is a functor, so call it to generate
-        # the objective expression.
-        #
-        value = fn(*args, **kwargs)
-        if value is None:
-            return Objective.Skip
-        return value
-    return wrapper_function
+    return rule_result_mapper(fn, {None: Objective.Skip})
 
 def simple_objectivelist_rule(fn):
     """
-
     This is a decorator that translates None into ObjectiveList.End.
     This supports a simpler syntax in objective rules, though these
     can be more difficult to debug when errors occur.
@@ -92,21 +79,7 @@ def simple_objectivelist_rule(fn):
 
     model.o = ObjectiveList(expr=simple_objectivelist_rule(...))
     """
-    def wrapper_function (*args, **kwargs):
-        #
-        # If the function is None, then the list is finished.
-        #
-        if fn is None:
-            return ObjectiveList.End
-        #
-        # Otherwise, the argument is a functor, so call it to generate
-        # the objective expression.
-        #
-        value = fn(*args, **kwargs)
-        if value is None:
-            return ObjectiveList.End
-        return value
-    return wrapper_function
+    return rule_result_mapper(fn, {None: ObjectiveList.End})
 
 #
 # This class is a pure interface
@@ -232,44 +205,44 @@ class Objective(ActiveIndexedComponent):
     objectives to be used as part of expressions.
 
     Constructor arguments:
-        expr            
+        expr
             A Pyomo expression for this objective
-        rule            
+        rule
             A function that is used to construct objective expressions
-        sense           
+        sense
             Indicate whether minimizing (the default) or maximizing
-        doc             
+        doc
             A text string describing this component
-        name            
+        name
             A name for this component
 
     Public class attributes:
-        doc             
+        doc
             A text string describing this component
-        name            
+        name
             A name for this component
-        active          
-            A boolean that is true if this component will be used to construct 
+        active
+            A boolean that is true if this component will be used to construct
             a model instance
-        rule            
+        rule
             The rule used to initialize the objective(s)
-        sense           
+        sense
             The objective sense
 
     Private class attributes:
-        _constructed        
+        _constructed
             A boolean that is true if this component has been constructed
-        _data               
+        _data
             A dictionary from the index set to component data objects
-        _index              
+        _index
             The set of valid indices
-        _implicit_subsets   
+        _implicit_subsets
             A tuple of set objects that represents the index set
-        _model              
+        _model
             A weakref to the model that owns this component
-        _parent             
+        _parent
             A weakref to the parent block that owns this component
-        _type               
+        _type
             The class type for the derived subclass
     """
 
@@ -286,11 +259,23 @@ class Objective(ActiveIndexedComponent):
             return IndexedObjective.__new__(IndexedObjective)
 
     def __init__(self, *args, **kwargs):
-        self._init_sense = kwargs.pop('sense', minimize)
-        self.rule  = kwargs.pop('rule', None)
-        self._init_expr  = kwargs.pop('expr', None)
+        _sense = kwargs.pop('sense', minimize)
+        _init = tuple( _arg for _arg in (
+            kwargs.pop('rule', None), kwargs.pop('expr', None)
+        ) if _arg is not None )
+        if len(_init) == 1:
+            _init = _init[0]
+        elif not _init:
+            _init = None
+        else:
+            raise ValueError("Duplicate initialization: Objective() only "
+                             "accepts one of 'rule=' and 'expr='")
+
         kwargs.setdefault('ctype', Objective)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
+
+        self.rule = Initializer(_init)
+        self._init_sense = Initializer(_sense)
 
     #
     # TODO: Ideally we would not override these methods and instead add
@@ -320,70 +305,60 @@ class Objective(ActiveIndexedComponent):
         """
         Construct the expression(s) for this objective.
         """
-        if is_debug_set(logger):
-            logger.debug(
-                "Constructing objective %s" % (self.name))
         if self._constructed:
             return
-        timer = ConstructionTimer(self)
         self._constructed = True
 
-        _init_expr = self._init_expr
-        _init_sense = self._init_sense
-        _init_rule = self.rule
+        timer = ConstructionTimer(self)
+        if is_debug_set(logger):
+            logger.debug("Constructing objective %s" % (self.name))
 
-        if (_init_rule is None) and \
-           (_init_expr is None):
-            # No construction rule or expression specified.
-            return
+        try:
+            # We do not (currently) accept data for constructing Objectives
+            index = None
+            assert data is None
 
-        _self_parent = self._parent()
-        if not self.is_indexed():
-            #
-            # Scalar component
-            #
-            if _init_rule is None:
-                tmp = _init_expr
-            else:
-                try:
-                    tmp = _init_rule(_self_parent)
-                except Exception:
-                    err = sys.exc_info()[1]
-                    logger.error(
-                        "Rule failed when generating expression for "
-                        "objective %s:\n%s: %s"
-                        % (self.name,
-                           type(err).__name__,
-                           err))
-                    raise
-            if self._setitem_when_not_present(None, tmp) is not None:
-                self.set_sense(_init_sense)
+            if self.rule is None:
+                # If there is no rule, then we are immediately done.
+                return
 
-        else:
-            if _init_expr is not None:
+            if self.rule.constant() and self.is_indexed():
                 raise IndexError(
-                    "Cannot initialize multiple indices of an "
-                    "objective with a single expression")
-            for ndx in self._index:
-                try:
-                    tmp = apply_indexed_rule(self,
-                                             _init_rule,
-                                             _self_parent,
-                                             ndx)
-                except Exception:
-                    err = sys.exc_info()[1]
-                    logger.error(
-                        "Rule failed when generating expression for"
-                        " objective %s with index %s:\n%s: %s"
-                        % (self.name,
-                           str(ndx),
-                           type(err).__name__,
-                           err))
-                    raise
-                ans = self._setitem_when_not_present(ndx, tmp)
-                if ans is not None:
-                    ans.set_sense(_init_sense)
-        timer.report()
+                    "Objective '%s': Cannot initialize multiple indices "
+                    "of an objective with a single expression" %
+                    (self.name,) )
+
+            block = self.parent_block()
+            if self.rule.contains_indices():
+                # The index is coming in externally; we need to validate it
+                for index in self.rule.indices():
+                    self[index] = self.rule(block, index)
+            elif not self.index_set().isfinite():
+                # If the index is not finite, then we cannot iterate
+                # over it.  Since the rule doesn't provide explicit
+                # indices, then there is nothing we can do (the
+                # assumption is that the user will trigger specific
+                # indices to be created at a later time).
+                pass
+            else:
+                # Bypass the index validation and create the member directly
+                for index in self.index_set():
+                    ans = self._setitem_when_not_present(
+                        index, self.rule(block, index))
+                    if ans is not None:
+                        ans.set_sense(self._init_sense(block, index))
+        except Exception:
+            err = sys.exc_info()[1]
+            logger.error(
+                "Rule failed when generating expression for "
+                "objective %s with index %s:\n%s: %s"
+                % (self.name,
+                   str(index),
+                   type(err).__name__,
+                   err))
+            raise
+        finally:
+            timer.report()
 
     def _pprint(self):
         """
@@ -612,74 +587,47 @@ class ObjectiveList(IndexedObjective):
     an index value is not specified.
     """
 
-    End             = (1003,)
+    class End(object): pass
 
     def __init__(self, **kwargs):
         """Constructor"""
-        args = (Set(dimen=1),)
         if 'expr' in kwargs:
             raise ValueError(
                 "ObjectiveList does not accept the 'expr' keyword")
-        Objective.__init__(self, *args, **kwargs)
+        _rule = kwargs.pop('rule', None)
+
+        args = (Set(dimen=1),)
+        super().__init__(*args, **kwargs)
+
+        self.rule = Initializer(_rule, allow_generators=True)
+        # HACK to make the "counted call" syntax work.  We wait until
+        # after the base class is set up so that is_indexed() is
+        # reliable.
+        if self.rule is not None and type(self.rule) is IndexedCallInitializer:
+            self.rule = CountedCallInitializer(self, self.rule)
 
     def construct(self, data=None):
         """
         Construct the expression(s) for this objective.
         """
-        generate_debug_messages = is_debug_set(logger)
-        if generate_debug_messages:
-            logger.debug(
-                "Constructing objective %s" % (self.name))
-
         if self._constructed:
             return
         self._constructed=True
+
+        if is_debug_set(logger):
+            logger.debug("Constructing objective list %s"
+                         % (self.name))
+
         self.index_set().construct()
 
-        assert self._init_expr is None
-        _init_rule = self.rule
-        _init_sense = self._init_sense
-
-        #
-        # We no longer need these
-        #
-        self._init_expr = None
-        self._init_sense = None
-        # Utilities like DAE assume this stays around
-        #self.rule = None
-
-
-        if _init_rule is None:
-            return
-
-        _generator = None
-        _self_parent = self._parent()
-        if inspect.isgeneratorfunction(_init_rule):
-            _generator = _init_rule(_self_parent)
-        elif inspect.isgenerator(_init_rule):
-            _generator = _init_rule
-        if _generator is None:
-            while True:
-                val = len(self._index) + 1
-                if generate_debug_messages:
-                    logger.debug(
-                        "   Constructing objective index "+str(val))
-                expr = apply_indexed_rule(self,
-                                          _init_rule,
-                                          _self_parent,
-                                          val)
-                if (expr.__class__ is tuple) and \
-                   (expr == ObjectiveList.End):
-                    return
-                self.add(expr, sense=_init_sense)
-
-        else:
-
-            for expr in _generator:
-                if (expr.__class__ is tuple) and \
-                   (expr == ObjectiveList.End):
-                    return
-                self.add(expr, sense=_init_sense)
+        if self.rule is not None:
+            _rule = self.rule(self.parent_block(), ())
+            for cc in iter(_rule):
+                if cc is ObjectiveList.End:
+                    break
+                if cc is Objective.Skip:
+                    continue
+                self.add(cc, sense=self._init_sense)
 
     def add(self, expr, sense=minimize):
         """Add an objective to the list."""
@@ -687,6 +635,8 @@ class ObjectiveList(IndexedObjective):
         self._index.add(next_idx)
         ans = self.__setitem__(next_idx, expr)
         if ans is not None:
+            if sense not in {minimize, maximize}:
+                sense = sense(self.parent_block(), next_idx)
             ans.set_sense(sense)
         return ans
 
