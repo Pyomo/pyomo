@@ -91,51 +91,65 @@ tostr.handlers = {
 def tabular_writer(ostream, prefix, data, header, row_generator):
     """Output data in tabular form
 
-    Parameters:
-    - ostream: the stream to write to
-    - prefix:  prefix each line with this string
-    - data:    a generator returning (key, value) pairs (e.g., from iteritems())
-    - header:  list of column header strings
-    - row_generator: a generator that returns tuples of values for each
-      line of the table
+    Parameters
+    ----------
+    ostream: RawIOBase
+        the stream to write to
+    prefix: str
+        prefix each generated line with this string
+    data: iterable
+        an iterable object that returns (key, value) pairs
+        (e.g., from iteritems()) defining each row in the table
+    header: List[str]
+        list of column headers
+    row_generator: function
+        a function that accepts the `key` and `value` from `data` and
+        returns either a tuple defining the entries for a single row, or
+        a generator that returns a sequence of table rows to be output
+        for the specified `key`
+
     """
 
-    prefix = _to_ustr(prefix)
+    prefix = tostr(prefix)
 
     _rows = {}
-    #_header = ("Key","Initial Value","Lower Bound","Upper Bound",
-    #           "Current Value","Fixed","Stale")
     # NB: _width is a list because we will change these values
     if header:
-        header = (u"Key",) + tuple(_to_ustr(x) for x in header)
+        header = (u"Key",) + tuple(tostr(x) for x in header)
         _width = [len(x) for x in header]
     else:
         _width = None
+    _minWidth = 0
 
     for _key, _val in data:
         try:
             _rowSet = row_generator(_key, _val)
+            if isinstance(_rowSet, types.GeneratorType):
+                _rowSet = list(_rowSet)
+            else:
+                _rowSet = [_rowSet]
         except ValueError:
+            # A ValueError can be raised when row_generator is called
+            # (if it is a function), or when it is exhausted generating
+            # the list (if it is a generator)
+            _minWidth = 4 # Ensure columns are wide enough to output "None"
             _rows[_key] = None
             continue
 
-        if isinstance(_rowSet, types.GeneratorType):
-            _rows[_key] = [
-                ((_to_ustr("" if i else _key),) if header else ()) +
-                tuple( _to_ustr(x) for x in _r )
-                for i,_r in enumerate(_rowSet) ]
-        else:
-            _rows[_key] = [
-                ((_to_ustr(_key),) if header else ()) +
-                tuple( _to_ustr(x) for x in _rowSet) ]
+        _rows[_key] = [
+            ((tostr("" if i else _key),) if header else ())
+            + tuple(tostr(x) for x in _r)
+            for i, _r in enumerate(_rowSet) ]
 
+        if not _rows[_key]:
+            _minWidth = 4
+        elif not _width:
+            _width = [0]*len(_rows[_key][0])
         for _row in _rows[_key]:
-            if not _width:
-                _width = [0]*len(_row)
-            for _id, x in enumerate(_row):
-                _width[_id] = max(_width[_id], len(x))
+            for col, x in enumerate(_row):
+                _width[col] = max(_width[col], len(x), col and _minWidth)
 
-    # NB: left-justify header
+    # NB: left-justify header entries
     if header:
         # Note: do not right-pad the last header with unnecessary spaces
         tmp = _width[-1]
