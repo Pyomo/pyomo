@@ -11,7 +11,6 @@
 __all__ = ['Constraint', '_ConstraintData', 'ConstraintList',
            'simple_constraint_rule', 'simple_constraintlist_rule']
 
-import inspect
 import io
 import sys
 import logging
@@ -29,7 +28,7 @@ from pyomo.core.base.component import (
     ActiveComponentData, ModelComponentFactory,
 )
 from pyomo.core.base.indexed_component import (
-    ActiveIndexedComponent, UnindexedComponent_set,
+    ActiveIndexedComponent, UnindexedComponent_set, rule_result_mapper,
 )
 from pyomo.core.base.misc import (tabular_writer)
 from pyomo.core.base.set import Set
@@ -41,51 +40,12 @@ from pyomo.core.base.util import (
 
 logger = logging.getLogger('pyomo.core')
 
-_simple_constraint_rule_types = set([ type(None), bool ])
-
 _rule_returned_none_error = """Constraint '%s': rule returned None.
 
 Constraint rules must return either a valid expression, a 2- or 3-member
 tuple, or one of Constraint.Skip, Constraint.Feasible, or
 Constraint.Infeasible.  The most common cause of this error is
 forgetting to include the "return" statement at the end of your rule.
-"""
-
-
-def _map_constraint_result(fn, none_val, args, kwargs):
-    if fn.__class__ in _simple_constraint_rule_types:
-        #
-        # If the argument is a boolean or None, then this is a
-        # trivial constraint expression.
-        #
-        value = fn
-    else:
-        #
-        # Otherwise, the argument is a functor, so call it to
-        # generate the constraint expression.
-        #
-        value = fn( *args, **kwargs )
-    #
-    # Map the value to a constant:
-    #   None        to none_val
-    #   True        Feasible constraint
-    #   False       Infeasible constraint
-    #
-    if value.__class__ in _simple_constraint_rule_types:
-        if value is None:
-            return none_val
-        elif value is True:
-            return Constraint.Feasible
-        elif value is False:
-            return Constraint.Infeasible
-    return value
-
-_map_constraint_funcdef = \
-"""def wrapper_function%s:
-    args, varargs, kwds, local_env = inspect.getargvalues(
-        inspect.currentframe())
-    args = tuple(local_env[_] for _ in args) + (varargs or ())
-    return _map_constraint_result(fn, %s, args, (kwds or {}))
 """
 
 def simple_constraint_rule( fn ):
@@ -103,21 +63,11 @@ def simple_constraint_rule( fn ):
 
     model.c = Constraint(rule=simple_constraint_rule(...))
     """
-    if type(fn) in _simple_constraint_rule_types:
-        return _map_constraint_result(fn, Constraint.Skip, None, None)
-    # Because some of our processing of initializer functions relies on
-    # knowing the number of positional arguments, we will go to extra
-    # effort here to preserve the original function signature.
-    _funcdef = _map_constraint_funcdef % (
-        str(inspect.signature(fn)), 'ConstraintList.Skip'
-    )
-    # Create the wrapper in a temporary environment that mimics this
-    # function's environment.
-    _env = dict(globals())
-    _env.update(locals())
-    exec(_funcdef, _env)
-    return _env['wrapper_function']
-
+    return rule_result_mapper(fn, {
+        None: Constraint.Skip,
+        True: Constraint.Feasible,
+        False: Constraint.Infeasible,
+    })
 
 def simple_constraintlist_rule( fn ):
     """
@@ -134,21 +84,11 @@ def simple_constraintlist_rule( fn ):
 
     model.c = ConstraintList(expr=simple_constraintlist_rule(...))
     """
-    if type(fn) in _simple_constraint_rule_types:
-        return _map_constraint_result(fn, ConstraintList.End, None, None)
-    # Because some of our processing of initializer functions relies on
-    # knowing the number of positional arguments, we will go to extra
-    # effort here to preserve the original function signature.
-    _funcdef = _map_constraint_funcdef % (
-        str(inspect.signature(fn)), 'ConstraintList.End'
-    )
-    # Create the wrapper in a temporary environment that mimics this
-    # function's environment.
-    _env = dict(globals())
-    _env.update(locals())
-    exec(_funcdef, _env)
-    return _env['wrapper_function']
-
+    return rule_result_mapper(fn, {
+        None: ConstraintList.End,
+        True: Constraint.Feasible,
+        False: Constraint.Infeasible,
+    })
 
 #
 # This class is a pure interface
@@ -745,8 +685,7 @@ class Constraint(ActiveIndexedComponent):
 
         timer = ConstructionTimer(self)
         if is_debug_set(logger):
-            logger.debug("Constructing constraint %s"
-                         % (self.name))
+            logger.debug("Constructing constraint %s" % (self.name))
 
         try:
             # We do not (currently) accept data for constructing Constraints
