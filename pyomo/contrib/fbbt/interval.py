@@ -74,7 +74,7 @@ def inv(xl, xu, feasibility_tol):
 
 
 def div(xl, xu, yl, yu, feasibility_tol):
-    if xl <= 0 <= xu and yl <= 0 <= yu:
+    if xl - feasibility_tol <= 0 <= xu + feasibility_tol and yl - feasibility_tol <= 0 <= yu + feasibility_tol:
         lb = -inf
         ub = inf
     else:

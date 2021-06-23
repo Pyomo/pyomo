@@ -106,6 +106,23 @@ class TestInterval(unittest.TestCase):
                     self.assertTrue(np.all(zl <= _z))
                     self.assertTrue(np.all(zu >= _z))
 
+    def test_div_edge_cases(self):
+        lb, ub = interval.div(0, -1e-16, 0, 0, 1e-8)
+        self.assertEqual(lb, -interval.inf)
+        self.assertEqual(ub, interval.inf)
+
+        lb, ub = interval.div(0, 1e-16, 0, 0, 1e-8)
+        self.assertEqual(lb, -interval.inf)
+        self.assertEqual(ub, interval.inf)
+
+        lb, ub = interval.div(-1e-16, 0, 0, 0, 1e-8)
+        self.assertEqual(lb, -interval.inf)
+        self.assertEqual(ub, interval.inf)
+
+        lb, ub = interval.div(1e-16, 0, 0, 0, 1e-8)
+        self.assertEqual(lb, -interval.inf)
+        self.assertEqual(ub, interval.inf)
+
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_pow(self):
         x_bounds = [(np.random.uniform(0, 2), np.random.uniform(2, 5)),
