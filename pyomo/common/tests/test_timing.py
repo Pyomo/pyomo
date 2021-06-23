@@ -99,9 +99,9 @@ class TestTiming(unittest.TestCase):
         RES = 0.02 # resolution (seconds): 1/5 the sleep
 
         # Note: pypy on GHA occasionally has timing
-        # differences of >0.03s
+        # differences of >0.04s
         if 'pypy_version_info' in dir(sys):
-            RES *= 2
+            RES *= 2.5
         # Note: previously, OSX on GHA also had significantly nosier tests
         # if sys.platform == 'darwin':
         #     RES *= 2
@@ -182,7 +182,6 @@ class TestTiming(unittest.TestCase):
             r'\[    [.0-9]+\|   1\] .* in test_TicTocTimer_tictoc'
         )
 
-
     def test_TicTocTimer_context_manager(self):
         SLEEP = 0.1
         RES = 0.05 # resolution (seconds): 1/2 the sleep
@@ -196,7 +195,7 @@ class TestTiming(unittest.TestCase):
         with timer:
             time.sleep(SLEEP)
         abs_time = time.perf_counter() - abs_time
-        self.assertGreater(abs_time, SLEEP*3)
+        self.assertGreater(abs_time, SLEEP*3 - RES/10)
         self.assertAlmostEqual(timer.toc(None), abs_time - exclude, delta=RES)
 
     def test_HierarchicalTimer(self):
