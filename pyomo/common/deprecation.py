@@ -153,13 +153,12 @@ def deprecation_warning(msg, logger=None, version=None,
         'DEPRECATED: %s' % (_default_msg(None, msg, version, remove_in),),
         width=70)
     if calling_frame is None:
-        try:
-            g = globals()
-            calling_frame = inspect.currentframe().f_back
-            while calling_frame is not None and calling_frame.f_globals is g:
-                calling_frame = calling_frame.f_back
-        except:
-            pass
+        # Walk up the call stack until we find a frame that is not in
+        # this module
+        g = globals()
+        calling_frame = inspect.currentframe().f_back
+        while calling_frame is not None and calling_frame.f_globals is g:
+            calling_frame = calling_frame.f_back
     if calling_frame is not None:
         info = inspect.getframeinfo(calling_frame)
         msg += "\n(called from %s:%s)" % (info.filename.strip(), info.lineno)
