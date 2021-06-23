@@ -10,6 +10,7 @@
 
 __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 
+import inspect
 import logging
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
@@ -131,6 +132,57 @@ def _get_indexed_component_data_name(component, index):
         finally:
             del component._data[index]
     return ans
+
+_rule_returned_none_error = """%s '%s': rule returned None.
+
+%s rules must return either a valid expression, numeric value, or
+%s.Skip.  The most common cause of this error is forgetting to
+include the "return" statement at the end of your rule.
+"""
+
+def _map_rule_result(fn, _map, _map_types, args, kwargs):
+    if fn.__class__ in _map_types:
+        #
+        # The argument is a trivial type and will be mapped
+        #
+        value = fn
+    else:
+        #
+        # Otherwise, the argument is a functor, so call it to
+        # generate the rule result.
+        #
+        value = fn( *args, **kwargs )
+    #
+    # Map the returned value:
+    #
+    if value.__class__ in _map_types and value in _map:
+        return _map[value]
+    return value
+
+_map_rule_funcdef = \
+"""def wrapper_function%s:
+    args, varargs, kwds, local_env = inspect.getargvalues(
+        inspect.currentframe())
+    args = tuple(local_env[_] for _ in args) + (varargs or ())
+    return _map_rule_result(fn, result_map, _map_types, args, (kwds or {}))
+"""
+
+def rule_result_mapper(fn, result_map):
+    """Implemetation for a rule result maping decorator
+    """
+    _map_types = set(type(key) for key in result_map)
+    if type(fn) in _map_types:
+        return _map_rule_result(fn, result_map, _map_types, None, None)
+    # Because some of our processing of initializer functions relies on
+    # knowing the number of positional arguments, we will go to extra
+    # effort here to preserve the original function signature.
+    _funcdef = _map_rule_funcdef % (str(inspect.signature(fn)),)
+    # Create the wrapper in a temporary environment that mimics this
+    # function's environment.
+    _env = dict(globals())
+    _env.update(locals())
+    exec(_funcdef, _env)
+    return _env['wrapper_function']
 
 
 class IndexedComponent(Component):
