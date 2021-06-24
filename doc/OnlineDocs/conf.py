@@ -248,8 +248,6 @@ doctest_default_flags = (
     doctest.ELLIPSIS + doctest.NORMALIZE_WHITESPACE +
     doctest.IGNORE_EXCEPTION_DETAIL + doctest.DONT_ACCEPT_TRUE_FOR_1
 )
-doctest_global_setup = '''
-import doctest
 class IgnoreResultOutputChecker(doctest.OutputChecker):
     IGNORE_RESULT = doctest.register_optionflag('IGNORE_RESULT')
     def check_output(self, want, got, optionflags):
@@ -258,6 +256,7 @@ class IgnoreResultOutputChecker(doctest.OutputChecker):
         return super().check_output(want, got, optionflags)
 doctest.OutputChecker = IgnoreResultOutputChecker
 
+doctest_global_setup = '''
 from pyomo.common.dependencies import (
     attempt_import, numpy_available, scipy_available, pandas_available,
     yaml_available, networkx_available, matplotlib_available,
