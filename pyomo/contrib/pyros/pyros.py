@@ -103,48 +103,52 @@ def pyros_config():
     # ================================================
     CONFIG.declare('time_limit', ConfigValue(
         default=None,
-        domain=NonNegativeFloat, visibility=10
+        domain=NonNegativeFloat, description="Optional. Default = None. "
+                                             "Total allotted time for the execution of the PyROS solver in seconds "
+                                             "(includes time spent in sub-solvers). 'None' is no time limit."
     ))
     CONFIG.declare('keepfiles', ConfigValue(
         default=False,
-        domain=bool, visibility=10
+        domain=bool, description="Optional. Default = False. Whether or not to write files of sub-problems for use in debugging. "
+                                 "Must be paired with a writable directory supplied via ``sub-problem_file_directory``."
     ))
     CONFIG.declare('tee', ConfigValue(
         default=False,
-        domain=bool, visibility=10
+        domain=bool, description="Optional. Default = False. Sets the ``tee`` for all sub-solvers utilized."
     ))
     CONFIG.declare('load_solution', ConfigValue(
         default=True,
-        domain=bool, visibility=10
+        domain=bool, description="Optional. Default = True. "
+                                 "Whether or not to load the final solution of PyROS into the model object."
     ))
 
     # ================================================
     # === Required User Inputs
     # ================================================
     CONFIG.declare("first_stage_variables", ConfigValue(
-        default=[], domain=InputDataStandardizer(Var, _VarData), visibility=10,
+        default=[], domain=InputDataStandardizer(Var, _VarData),
         description="Required. List of ``Var`` objects referenced in ``model`` representing the design variables."
     ))
     CONFIG.declare("second_stage_variables", ConfigValue(
-        default=[], domain=InputDataStandardizer(Var, _VarData), visibility=10,
+        default=[], domain=InputDataStandardizer(Var, _VarData),
         description="Required. List of ``Var`` referenced in ``model`` representing the control variables."
     ))
     CONFIG.declare("uncertain_params", ConfigValue(
-        default=[], domain=InputDataStandardizer(Param, _ParamData), visibility=10,
+        default=[], domain=InputDataStandardizer(Param, _ParamData),
         description="Required. List of ``Param`` referenced in ``model`` representing the uncertain parameters. MUST be ``mutable``. "
                     "Assumes entries are provided in consistent order with the entries of 'nominal_uncertain_param_vals' input."
     ))
     CONFIG.declare("uncertainty_set", ConfigValue(
-        default=None, domain=uncertainty_sets, visibility=10,
+        default=None, domain=uncertainty_sets,
         description="Required. ``UncertaintySet`` object representing the uncertainty space "
                     "that the final solutions will be robust against."
     ))
     CONFIG.declare("local_solver", ConfigValue(
-        default=None, domain=SolverResolvable(), visibility=10,
+        default=None, domain=SolverResolvable(),
         description="Required. ``Solver`` object to utilize as the primary local NLP solver."
     ))
     CONFIG.declare("global_solver", ConfigValue(
-        default=None, domain=SolverResolvable(), visibility=10,
+        default=None, domain=SolverResolvable(),
         description="Required. ``Solver`` object to utilize as the primary global NLP solver."
     ))
     # ================================================
@@ -172,12 +176,6 @@ def pyros_config():
                     "or 'False' for the master problems to be solved with the user-supplied local solver(s). "
 
     ))
-    # This is called pyros_time_limit because time_limit is already defined
-    # in the solver interface and I'm defining a different one here with the no limit option.
-    CONFIG.declare("pyros_time_limit", ConfigValue(
-        default=-1, domain=NonNegIntOrMinusOne(),
-        description="Optional. Default = -1. Total allotted time for the execution of the PyROS solver in seconds (includes time spent in sub-solvers). '-1' is no time limit."
-    ))
     CONFIG.declare("max_iter", ConfigValue(
         default=-1, domain=NonNegIntOrMinusOne(),
         description="Optional. Default = -1. Iteration limit for the GRCS algorithm. '-1' is no iteration limit."
@@ -195,10 +193,6 @@ def pyros_config():
         default="pyomo.contrib.pyros", domain=a_logger,
         description="Optional. Default = \"pyomo.contrib.pyros\". The logger object to use for reporting."
     ))
-    CONFIG.declare("print_subsolver_progress_to_screen", ConfigValue(
-        default=False, domain=bool,
-        description="Optional. Default = False. Sets the ``tee`` for all sub-solvers utilized."
-    ))
     CONFIG.declare("backup_local_solvers", ConfigValue(
         default=[], domain=SolverResolvable(),
         description="Optional. Default = []. List of additional ``Solver`` objects to utilize as backup "
@@ -208,10 +202,6 @@ def pyros_config():
         default=[], domain=SolverResolvable(),
         description="Optional. Default = []. List of additional ``Solver`` objects to utilize as backup "
                     "whenever primary global NLP solver fails to identify solution to a sub-problem."
-    ))
-    CONFIG.declare("load_pyros_solution", ConfigValue(
-        default=True, domain=bool,
-        description="Optional. Default = True. Whether or not to load the final solution of PyROS into the model object."
     ))
     CONFIG.declare("subproblem_file_directory", ConfigValue(
         default=None, domain=str,
@@ -393,7 +383,7 @@ class PyROS(object):
             # === Solve and load solution into model
             pyros_soln, final_iter_separation_solns = ROSolver_iterative_solve(model_data, config)
 
-            if config.load_pyros_solution and \
+            if config.load_solution and \
                     (pyros_soln.grcs_termination_condition is grcsTerminationCondition.robust_optimal or
                      pyros_soln.grcs_termination_condition is grcsTerminationCondition.robust_feasible):
                 load_final_solution(model_data, pyros_soln.master_soln)

@@ -661,8 +661,8 @@ def output_logger(config, **kwargs):
             config.progress_logger.info(
                 'PyROS was unable to identify robust solution '
                 'before exceeding time limit of %s seconds. '
-                'Consider increasing the time limit via option pyros_time_limit.'
-                 % config.pyros_time_limit)
+                'Consider increasing the time limit via option time_limit.'
+                 % config.time_limit)
 
     if "max_iter" in kwargs:
         if kwargs["max_iter"]:

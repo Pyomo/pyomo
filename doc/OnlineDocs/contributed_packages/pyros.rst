@@ -407,13 +407,11 @@ If we choose to designate all variables as either design or state variables, wit
   ...
 
   >>> # === Print results ===
-  >>> single_stage_final_objective = pyo.value(results_1.final_objective_value)
+  >>> single_stage_final_objective = round(pyo.value(results_1.final_objective_value),-1)
   >>> print("Final objective value: %s" % single_stage_final_objective)
-  Final objective value: ...
+  Final objective value: 48367380.0
   >>> print("PyROS termination condition: %s" % results_1.grcs_termination_condition)
-  PyROS termination condition: ...
-
-The above code yields: "Final objective value: 48,367,381"
+  PyROS termination condition: grcsTerminationCondition.robust_optimal
 
 A Two-Stage Problem
 """"""""""""""""""""""
@@ -448,10 +446,10 @@ For this next set of runs, we will assume that some of the previously designated
   ...
 
   >>> # === Compare final objective to the singe-stage solution
-  >>> two_stage_final_objective = pyo.value(results_2.final_objective_value)
+  >>> two_stage_final_objective = round(pyo.value(results_2.final_objective_value),-1)
   >>> percent_difference = 100 * (two_stage_final_objective - single_stage_final_objective)/(single_stage_final_objective)
   >>> print("Percent objective change relative to constant decision rules objective: %.2f %%" % percent_difference)
-  Percent objective change relative to constant decision rules objective: ...
+  Percent objective change relative to constant decision rules objective: -24...
 
 In this example, when we compare the final objective value in the case of constant decision rules (no second-stage recourse)
 and affine decision rules, we see there is a ~25% decrease in total objective value.

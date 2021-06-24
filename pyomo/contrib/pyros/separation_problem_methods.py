@@ -48,6 +48,8 @@ def make_separation_objective_functions(model, config):
         if not c.equality and (uncertain_params_in_expr or state_vars_in_expr or second_stage_variables_in_expr):
             # This inequality constraint depends on uncertain parameters therefore it must be separated against
             performance_constraints.append(c)
+        elif not c.equality and not (uncertain_params_in_expr or state_vars_in_expr or second_stage_variables_in_expr):
+            c.deactivate() # These are x \in X constraints, not active in separation because x is fixed to x* from previous master
     model.util.performance_constraints = performance_constraints
     model.util.separation_objectives = []
     map_obj_to_constr_names = {}
@@ -102,7 +104,7 @@ def make_separation_problem(model_data, config):
     separation_model.util.new_constraints = constraints = ConstraintList()
 
     uncertain_param_set = ComponentSet(uncertain_params)
-    for c in separation_model.component_data_objects(Constraint, active=True):
+    for c in separation_model.component_data_objects(Constraint):
         if any(v in uncertain_param_set for v in identify_mutable_parameters(c.expr)):
             if c.equality:
                 constraints.add(
@@ -415,7 +417,7 @@ def solver_call_separation(model_data, config, solver, solve_data, is_global):
             raise RuntimeError("Solver %s is not available." %
                                solver)
         try:
-            results = solver.solve(nlp_model, tee=config.print_subsolver_progress_to_screen)
+            results = solver.solve(nlp_model, tee=config.tee)
         except ValueError as err:
             if 'Cannot load a SolverResults object with bad status: error' in str(err):
                 solve_data.termination_condition = tc.error
@@ -428,24 +430,22 @@ def solver_call_separation(model_data, config, solver, solve_data, is_global):
         # === Process result
         is_violation(model_data, config, solve_data)
 
-        if solve_data.termination_condition == tc.infeasible:
-            print()
-
         if solve_data.termination_condition in globally_acceptable or \
                 (not is_global and solve_data.termination_condition in locally_acceptable):
             return False
 
         # Else: continue with backup solvers unless we have hit time limit or not found any acceptable solutions
         elapsed = get_main_elapsed_time(model_data.timing)
-        if elapsed >= config.pyros_time_limit and config.pyros_time_limit != -1:
-            return True
+        if config.time_limit:
+            if elapsed >= config.time_limit:
+                return True
 
     # === Write this instance to file for user to debug because this separation instance did not return an optimal solution
-    if save_dir:
+    if save_dir and config.keepfiles:
         objective = str(list(nlp_model.component_data_objects(Objective, active=True))[0].name)
         name = os.path.join(save_dir, config.uncertainty_set.type + "_" + nlp_model.name + "_separation_" + str(
             model_data.iteration) + "_obj_" + objective + ".bar")
-        nlp_model.write(name, io_options={'symbolic_solver_labels':True})
+        nlp_model.write(name, io_options={'symbolic_solver_labels':False})
         output_logger(config=config, separation_error=True, filename=name, iteration=model_data.iteration, objective=objective,
                       status_dict=solver_status_dict)
     return True

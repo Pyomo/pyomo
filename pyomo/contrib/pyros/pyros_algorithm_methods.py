@@ -149,14 +149,15 @@ def ROSolver_iterative_solve(model_data, config):
             return model_data, []
         # === Check if time limit reached
         elapsed = get_main_elapsed_time(model_data.timing)
-        if elapsed >= config.pyros_time_limit and config.pyros_time_limit != -1:
-            output_logger(config=config, time_out=True, elapsed=elapsed)
-            update_grcs_solve_data(pyros_soln=model_data, k=k, term_cond=grcsTerminationCondition.time_out,
-                                   nominal_data=nominal_data,
-                                   timing_data=timing_data,
-                                   separation_data=separation_data,
-                                   master_soln=master_soln)
-            return model_data, []
+        if config.time_limit:
+            if elapsed >= config.time_limit:
+                output_logger(config=config, time_out=True, elapsed=elapsed)
+                update_grcs_solve_data(pyros_soln=model_data, k=k, term_cond=grcsTerminationCondition.time_out,
+                                       nominal_data=nominal_data,
+                                       timing_data=timing_data,
+                                       separation_data=separation_data,
+                                       master_soln=master_soln)
+                return model_data, []
 
         # === Save nominal information
         if k == 0:
@@ -234,15 +235,16 @@ def ROSolver_iterative_solve(model_data, config):
 
         # === Check if time limit reached
         elapsed = get_main_elapsed_time(model_data.timing)
-        if elapsed >= config.pyros_time_limit and config.pyros_time_limit != -1:
-            output_logger(config=config, time_out=True, elapsed=elapsed)
-            termination_condition = grcsTerminationCondition.time_out
-            update_grcs_solve_data(pyros_soln=model_data, k=k, term_cond=termination_condition,
-                                   nominal_data=nominal_data,
-                                   timing_data=timing_data,
-                                   separation_data=separation_data,
-                                   master_soln=master_soln)
-            return model_data, separation_solns
+        if config.time_limit:
+            if elapsed >= config.time_limit:
+                output_logger(config=config, time_out=True, elapsed=elapsed)
+                termination_condition = grcsTerminationCondition.time_out
+                update_grcs_solve_data(pyros_soln=model_data, k=k, term_cond=termination_condition,
+                                       nominal_data=nominal_data,
+                                       timing_data=timing_data,
+                                       separation_data=separation_data,
+                                       master_soln=master_soln)
+                return model_data, separation_solns
 
         # === Check if we exit due to solver returning unsatisfactory statuses (not in permitted_termination_conditions)
         local_solve_term_conditions = {TerminationCondition.optimal, TerminationCondition.locallyOptimal,

@@ -687,7 +687,6 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         self.assertTrue(budget_set.point_in_set(m.uncertain_param_vars, [0, 0]),
                         msg="Point is not in the BudgetSet.")
 
-
 class testCardinalityUncertaintySetClass(unittest.TestCase):
     '''
     Cardinality uncertainty sets. Required inputs are origin, positive_deviation, gamma.
@@ -1173,7 +1172,7 @@ class testSolveMaster(unittest.TestCase):
         config.declare("backup_local_solvers", ConfigValue(default=[]))
         config.declare("solve_master_globally", ConfigValue(default=True))
         config.declare("global_solver", ConfigValue(default=solver))
-        config.declare("print_subsolver_progress_to_screen", ConfigValue(default=False))
+        config.declare("tee", ConfigValue(default=False))
         config.declare("decision_rule_order", ConfigValue(default=1))
         config.declare("objective_focus", ConfigValue(default=ObjectiveType.worst_case))
         config.declare("second_stage_variables", ConfigValue(default=master_data.master_model.scenarios[0, 0].util.second_stage_variables))
@@ -1294,8 +1293,8 @@ class RegressionTest(unittest.TestCase):
         self.assertTrue(results.grcs_termination_condition,
                         grcsTerminationCondition.robust_feasible)
 
-    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False),
-                         "Global NLP solver is not available.")
+    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
     def test_minimize_dr_norm(self):
         m = ConcreteModel()
         m.p1 = Param(initialize=0, mutable=True)
@@ -1316,7 +1315,7 @@ class RegressionTest(unittest.TestCase):
         config.decision_rule_order = 1
         config.objective_focus = ObjectiveType.nominal
         config.global_solver = SolverFactory('baron')
-        config.print_subsolver_progress_to_screen = False
+        config.tee = False
 
         add_decision_rule_variables(model_data=m, config=config)
         add_decision_rule_constraints(model_data=m, config=config)

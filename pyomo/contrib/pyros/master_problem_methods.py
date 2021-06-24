@@ -54,7 +54,7 @@ def solve_master_feasibility_problem(model_data, config):
                            config.solver)
 
     try:
-        results = solver.solve(model, tee=config.print_subsolver_progress_to_screen)
+        results = solver.solve(model, tee=config.tee)
     except ValueError as err:
         if 'Cannot load a SolverResults object with bad status: error' in str(err):
             results.solver.termination_condition = tc.error
@@ -169,7 +169,7 @@ def minimize_dr_vars(model_data, config):
         raise RuntimeError("NLP solver %s is not available." %
                            config.solver)
     try:
-        results = solver.solve(polishing_model, tee=config.print_subsolver_progress_to_screen)
+        results = solver.solve(polishing_model, tee=config.tee)
         polish_soln.termination_condition = results.solver.termination_condition
 
     except ValueError as err:
@@ -285,13 +285,7 @@ def solver_call_master(model_data, config, solver, solve_data):
     while len(backup_solvers) > 0:
         solver = backup_solvers.pop(0)
         try:
-            save_dir = config.subproblem_file_directory
-            if save_dir:
-                name = os.path.join(save_dir,
-                                    config.uncertainty_set.type + "_" + model_data.original.name + "_master_" + str(
-                                        model_data.iteration) + ".bar")
-                nlp_model.write(name, io_options={'symbolic_solver_labels': True})
-            results = solver.solve(nlp_model, tee=config.print_subsolver_progress_to_screen)
+            results = solver.solve(nlp_model, tee=config.tee)
         except ValueError as err:
             if 'Cannot load a SolverResults object with bad status: error' in str(err):
                 results.solver.termination_condition = tc.error
@@ -326,7 +320,7 @@ def solver_call_master(model_data, config, solver, solve_data):
 
     # === At this point, all sub-solvers have been tried and none returned an acceptable status or return code
     save_dir = config.subproblem_file_directory
-    if save_dir:
+    if save_dir and config.keepfiles:
         name = os.path.join(save_dir,  config.uncertainty_set.type + "_" + model_data.original.name + "_master_" + str(model_data.iteration) + ".bar")
         nlp_model.write(name, io_options={'symbolic_solver_labels':True})
         output_logger(config=config, master_error=True, status_dict=solver_term_cond_dict, filename=name, iteration=model_data.iteration)
