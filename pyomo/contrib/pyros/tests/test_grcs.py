@@ -334,8 +334,8 @@ class testAbstractUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = m.uncertain_params
 
-        set = myUncertaintySet()
-        m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        _set = myUncertaintySet()
+        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         uncertain_params_in_expr = list(
             v for v in m.uncertain_param_vars if
             v in ComponentSet(identify_variables(expr=m.uncertainty_set_contr.expr))
@@ -355,8 +355,8 @@ class testAbstractUncertaintySetClass(unittest.TestCase):
         m.p2 = Param(initialize=0, mutable=True)
         m.uncertain_params = [m.p1, m.p2]
 
-        set = myUncertaintySet()
-        m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_params)
+        _set = myUncertaintySet()
+        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_params)
         variables_in_constr = list(
             v for v in m.uncertain_params if
             v in ComponentSet(identify_variables(expr=m.uncertainty_set_contr.expr))
@@ -386,8 +386,8 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
         cov = [[1,0], [0,1]]
         s = 1
 
-        set = EllipsoidalSet(center=[0, 0], shape_matrix=cov, scale=s)
-        m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        _set = EllipsoidalSet(center=[0, 0], shape_matrix=cov, scale=s)
+        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         uncertain_params_in_expr = list(
             v for v in m.uncertain_param_vars.values() if
             v in ComponentSet(identify_variables(expr=m.uncertainty_set_contr[1].expr))
@@ -410,8 +410,8 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
         cov = [[1,0],[0,1]]
         s = 1
 
-        set = EllipsoidalSet(center=[0, 0], shape_matrix=cov, scale=s)
-        m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        _set = EllipsoidalSet(center=[0, 0], shape_matrix=cov, scale=s)
+        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         variables_in_constr = list(
             v for v in m.uncertain_params if
             v in ComponentSet(identify_variables(expr=m.uncertainty_set_contr[1].expr))
@@ -430,8 +430,30 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
         cov = [[1, 0], [0, 1]]
         s = 1
 
-        set = EllipsoidalSet(center=[0, 0], shape_matrix=cov, scale=s)
-        self.assertTrue(set.point_in_set(m.uncertain_param_vars, [0,0]), msg="Point is not in the EllipsoidalSet.")
+        _set = EllipsoidalSet(center=[0, 0], shape_matrix=cov, scale=s)
+        self.assertTrue(_set.point_in_set(m.uncertain_param_vars, [0,0]), msg="Point is not in the EllipsoidalSet.")
+
+    def test_add_bounds_on_uncertain_parameters(self):
+        m = ConcreteModel()
+        m.util = Block()
+        m.util.uncertain_param_vars = Var([0, 1], initialize=0.5)
+        cov = [[1, 0], [0, 1]]
+        s = 1
+
+        _set = EllipsoidalSet(center=[0, 0], shape_matrix=cov, scale=s)
+        config = Block()
+        config.uncertainty_set = _set
+
+        EllipsoidalSet.add_bounds_on_uncertain_parameters(m, config)
+
+        self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None,
+                            "Bounds not added correctly for EllipsoidalSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None,
+                            "Bounds not added correctly for EllipsoidalSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None,
+                            "Bounds not added correctly for EllipsoidalSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None,
+                            "Bounds not added correctly for EllipsoidalSet")
 
 class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
     '''
@@ -449,8 +471,8 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
         m.p2 = Var(initialize=0)
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
-        set = AxisAlignedEllipsoidalSet(center=[0,0], half_lengths=[2,1])
-        m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        _set = AxisAlignedEllipsoidalSet(center=[0,0], half_lengths=[2,1])
+        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         uncertain_params_in_expr = list(
             v for v in m.uncertain_param_vars.values() if
             v in ComponentSet(identify_variables(expr=m.uncertainty_set_contr[1].expr))
@@ -470,8 +492,8 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
         m.p2 = Param(initialize=0, mutable=True)
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Param(range(len(m.uncertain_params)), initialize=0, mutable=True)
-        set = AxisAlignedEllipsoidalSet(center=[0,0], half_lengths=[2,1])
-        m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        _set = AxisAlignedEllipsoidalSet(center=[0,0], half_lengths=[2,1])
+        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         variables_in_constr = list(
             v for v in m.uncertain_params if
             v in ComponentSet(identify_variables(expr=m.uncertainty_set_contr[1].expr))
@@ -487,9 +509,25 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
         m.p2 = Param(initialize=0, mutable=True)
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
-        set = AxisAlignedEllipsoidalSet(center=[0, 0], half_lengths=[2, 1])
-        self.assertTrue(set.point_in_set(m.uncertain_param_vars, [0, 0]),
+        _set = AxisAlignedEllipsoidalSet(center=[0, 0], half_lengths=[2, 1])
+        self.assertTrue(_set.point_in_set(m.uncertain_param_vars, [0, 0]),
                         msg="Point is not in the AxisAlignedEllipsoidalSet.")
+        
+    def test_add_bounds_on_uncertain_parameters(self):
+        m = ConcreteModel()
+        m.util = Block()
+        m.util.uncertain_param_vars = Var([0,1], initialize=0.5)
+
+        _set = AxisAlignedEllipsoidalSet(center=[0, 0], half_lengths=[2, 1])
+        config = Block()
+        config.uncertainty_set = _set
+
+        AxisAlignedEllipsoidalSet.add_bounds_on_uncertain_parameters(m, config)
+
+        self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None, "Bounds not added correctly for AxisAlignedEllipsoidalSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for AxisAlignedEllipsoidalSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for AxisAlignedEllipsoidalSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for AxisAlignedEllipsoidalSet")
 
 class testPolyhedralUncertaintySetClass(unittest.TestCase):
     '''
@@ -510,8 +548,8 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
         A = [[0, 1], [1, 0]]
         b = [0, 0]
 
-        set = PolyhedralSet(lhs_coefficients_mat=A, rhs_vec=b, )
-        m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        _set = PolyhedralSet(lhs_coefficients_mat=A, rhs_vec=b, )
+        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         uncertain_params_in_expr = ComponentSet()
         for con in m.uncertainty_set_contr.values():
             con_vars = ComponentSet(identify_variables(expr=con.expr))
@@ -538,8 +576,8 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
         A = [[0, 1], [1, 0]]
         b = [0, 0]
 
-        set = PolyhedralSet(lhs_coefficients_mat=A, rhs_vec=b)
-        m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        _set = PolyhedralSet(lhs_coefficients_mat=A, rhs_vec=b)
+        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         vars_in_expr = []
         for con in m.uncertainty_set_contr.values():
             vars_in_expr.extend(
@@ -583,6 +621,27 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
         polyhedral_set = PolyhedralSet(lhs_coefficients_mat=A, rhs_vec=b)
         self.assertTrue(polyhedral_set.point_in_set(m.uncertain_param_vars, [0, 0]),
                         msg="Point is not in the PolyhedralSet.")
+    
+    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False), "Global NLP solver is not available.")
+    def test_add_bounds_on_uncertain_parameters(self):
+        m = ConcreteModel()
+        m.util = Block()
+        m.util.uncertain_param_vars = Var([0, 1], initialize=0.5)
+
+        A = [[1, 0], [0, 1]]
+        b = [0, 0]
+
+        polyhedral_set = PolyhedralSet(lhs_coefficients_mat=A, rhs_vec=b)
+        config = Block()
+        config.uncertainty_set = polyhedral_set
+        config.global_solver = SolverFactory("baron")
+
+        PolyhedralSet.add_bounds_on_uncertain_parameters(m, config)
+
+        self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None, "Bounds not added correctly for PolyhedralSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for PolyhedralSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for PolyhedralSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for PolyhedralSet")
 
 class testBudgetUncertaintySetClass(unittest.TestCase):
     '''
@@ -604,9 +663,9 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         budget_membership_mat = [[1 for i in range(len(m.uncertain_param_vars))]]
         rhs_vec = [0.1 * len(m.uncertain_param_vars) + sum(p.value for p in m.uncertain_param_vars.values())]
 
-        set = BudgetSet(budget_membership_mat=budget_membership_mat,
+        _set = BudgetSet(budget_membership_mat=budget_membership_mat,
                         rhs_vec=rhs_vec)
-        m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         uncertain_params_in_expr = []
         for con in m.uncertainty_set_contr.values():
             for v in m.uncertain_param_vars.values():
@@ -635,9 +694,9 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         budget_membership_mat = [[1 for i in range(len(m.uncertain_param_vars))]]
         rhs_vec = [0.1 * len(m.uncertain_param_vars) + sum(p.value for p in m.uncertain_param_vars.values())]
 
-        set = BudgetSet(budget_membership_mat=budget_membership_mat,
+        _set = BudgetSet(budget_membership_mat=budget_membership_mat,
                         rhs_vec=rhs_vec)
-        m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         vars_in_expr = []
         for con in m.uncertainty_set_contr.values():
             vars_in_expr.extend(
@@ -687,6 +746,26 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         self.assertTrue(budget_set.point_in_set(m.uncertain_param_vars, [0, 0]),
                         msg="Point is not in the BudgetSet.")
 
+    def test_add_bounds_on_uncertain_parameters(self):
+        m = ConcreteModel()
+        m.util = Block()
+        m.util.uncertain_param_vars = Var([0,1], initialize=0.5)
+
+        budget_membership_mat = [[1 for i in range(len(m.util.uncertain_param_vars))]]
+        rhs_vec = [0.1 * len(m.util.uncertain_param_vars) + sum(value(p) for p in m.util.uncertain_param_vars.values())]
+
+        budget_set = BudgetSet(budget_membership_mat=budget_membership_mat,
+                               rhs_vec=rhs_vec)
+        config = Block()
+        config.uncertainty_set = budget_set
+
+        BudgetSet.add_bounds_on_uncertain_parameters(m, config)
+
+        self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None, "Bounds not added correctly for BudgetSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for BudgetSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for BudgetSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for BudgetSet")
+
 class testCardinalityUncertaintySetClass(unittest.TestCase):
     '''
     Cardinality uncertainty sets. Required inputs are origin, positive_deviation, gamma.
@@ -711,9 +790,9 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
         positive_deviation = list(0.3 for j in range(len(center)))
         gamma = np.ceil(len(m.uncertain_param_vars) / 2)
 
-        set = CardinalitySet(origin=center,
+        _set = CardinalitySet(origin=center,
                         positive_deviation=positive_deviation, gamma=gamma)
-        m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars, model=m)
+        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars, model=m)
         uncertain_params_in_expr = []
         for con in m.uncertainty_set_contr.values():
             for v in m.uncertain_param_vars.values():
@@ -746,9 +825,9 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
         positive_deviation = list(0.3 for j in range(len(center)))
         gamma = np.ceil(len(m.uncertain_param_vars) / 2)
 
-        set = CardinalitySet(origin=center,
+        _set = CardinalitySet(origin=center,
                              positive_deviation=positive_deviation, gamma=gamma)
-        m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars, model=m)
+        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars, model=m)
         vars_in_expr = []
         for con in m.uncertainty_set_contr.values():
             for v in m.uncertain_param_vars.values():
@@ -773,11 +852,32 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
         positive_deviation = list(0.3 for j in range(len(center)))
         gamma = np.ceil(len(m.uncertain_param_vars) / 2)
 
-        set = CardinalitySet(origin=center,
+        _set = CardinalitySet(origin=center,
                              positive_deviation=positive_deviation, gamma=gamma)
 
-        self.assertTrue(set.point_in_set(m.uncertain_param_vars, [0, 0]),
+        self.assertTrue(_set.point_in_set(m.uncertain_param_vars, [0, 0]),
                         msg="Point is not in the CardinalitySet.")
+
+    def test_add_bounds_on_uncertain_parameters(self):
+        m = ConcreteModel()
+        m.util = Block()
+        m.util.uncertain_param_vars = Var([0,1], initialize=0.5)
+
+        center = list(p.value for p in m.util.uncertain_param_vars.values())
+        positive_deviation = list(0.3 for j in range(len(center)))
+        gamma = np.ceil(len(center) / 2)
+
+        cardinality_set = CardinalitySet(origin=center,
+                             positive_deviation=positive_deviation, gamma=gamma)
+        config = Block()
+        config.uncertainty_set = cardinality_set
+
+        CardinalitySet.add_bounds_on_uncertain_parameters(m, config)
+
+        self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None, "Bounds not added correctly for CardinalitySet")
+        self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for CardinalitySet")
+        self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for CardinalitySet")
+        self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for CardinalitySet")
 
 class testBoxUncertaintySetClass(unittest.TestCase):
     '''
@@ -796,8 +896,8 @@ class testBoxUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
         bounds = [(-1,1), (-1,1)]
-        set = BoxSet(bounds=bounds)
-        m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        _set = BoxSet(bounds=bounds)
+        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         uncertain_params_in_expr = []
         for con in m.uncertainty_set_contr.values():
             for v in m.uncertain_param_vars.values():
@@ -822,8 +922,8 @@ class testBoxUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Param(range(len(m.uncertain_params)), initialize=0, mutable=True)
         bounds = [(-1, 1), (-1, 1)]
-        set = BoxSet(bounds=bounds)
-        m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        _set = BoxSet(bounds=bounds)
+        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         vars_in_expr = []
         vars_in_expr = []
         for con in m.uncertainty_set_contr.values():
@@ -845,9 +945,26 @@ class testBoxUncertaintySetClass(unittest.TestCase):
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
 
         bounds = [(-1, 1), (-1, 1)]
-        set = BoxSet(bounds=bounds)
-        self.assertTrue(set.point_in_set(m.uncertain_param_vars, [0, 0]),
+        _set = BoxSet(bounds=bounds)
+        self.assertTrue(_set.point_in_set(m.uncertain_param_vars, [0, 0]),
                         msg="Point is not in the BoxSet.")
+
+    def test_add_bounds_on_uncertain_parameters(self):
+        m = ConcreteModel()
+        m.util = Block()
+        m.util.uncertain_param_vars = Var([0,1], initialize=0)
+
+        bounds = [(-1, 1), (-1, 1)]
+        box_set = BoxSet(bounds=bounds)
+        config = Block()
+        config.uncertainty_set = box_set
+
+        BoxSet.add_bounds_on_uncertain_parameters(m, config)
+
+        self.assertEqual(m.util.uncertain_param_vars[0].lb, -1, "Bounds not added correctly for BoxSet")
+        self.assertEqual(m.util.uncertain_param_vars[0].ub, 1, "Bounds not added correctly for BoxSet")
+        self.assertEqual(m.util.uncertain_param_vars[1].lb, -1, "Bounds not added correctly for BoxSet")
+        self.assertEqual(m.util.uncertain_param_vars[1].ub, 1, "Bounds not added correctly for BoxSet")
 
 class testDiscreteUncertaintySetClass(unittest.TestCase):
     '''
@@ -866,8 +983,8 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
         scenarios = [(0,0), (1,0), (0,1), (1,1), (2,0)]
-        set = DiscreteScenarioSet(scenarios=scenarios)
-        m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        _set = DiscreteScenarioSet(scenarios=scenarios)
+        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         uncertain_params_in_expr = []
         for con in m.uncertainty_set_contr.values():
             for v in m.uncertain_param_vars.values():
@@ -893,8 +1010,8 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Param(range(len(m.uncertain_params)), initialize=0, mutable=True)
         scenarios = [(0, 0), (1, 0), (0, 1), (1, 1), (2, 0)]
-        set = DiscreteScenarioSet(scenarios=scenarios)
-        m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
+        _set = DiscreteScenarioSet(scenarios=scenarios)
+        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars)
         vars_in_expr = []
         for con in m.uncertainty_set_contr.values():
             for v in m.uncertain_param_vars.values():
@@ -915,9 +1032,26 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
 
         scenarios = [(0, 0), (1, 0), (0, 1), (1, 1), (2, 0)]
-        set = DiscreteScenarioSet(scenarios=scenarios)
-        self.assertTrue(set.point_in_set(m.uncertain_param_vars, [0, 0]),
+        _set = DiscreteScenarioSet(scenarios=scenarios)
+        self.assertTrue(_set.point_in_set(m.uncertain_param_vars, [0, 0]),
                         msg="Point is not in the DiscreteScenarioSet.")
+
+    def test_add_bounds_on_uncertain_parameters(self):
+        m = ConcreteModel()
+        m.util = Block()
+        m.util.uncertain_param_vars = Var([0,1], initialize=0)
+
+        scenarios = [(0, 0), (1, 0), (0, 1), (1, 1), (2, 0)]
+        _set = DiscreteScenarioSet(scenarios=scenarios)
+        config = Block()
+        config.uncertainty_set = _set
+
+        DiscreteScenarioSet.add_bounds_on_uncertain_parameters(m, config)
+
+        self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None, "Bounds not added correctly for DiscreteScenarioSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for DiscreteScenarioSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for DiscreteScenarioSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for DiscreteScenarioSet")
 
 class testFactorModelUncertaintySetClass(unittest.TestCase):
     '''
@@ -943,8 +1077,8 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
             random_row_entries = list(np.random.uniform(low=0, high=0.2, size=F))
             for j in range(len(psi_mat[i])):
                 psi_mat[i][j] = random_row_entries[j]
-        set = FactorModelSet(origin=[0,0], psi_mat=psi_mat, number_of_factors=F, beta=1)
-        m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars, model=m)
+        _set = FactorModelSet(origin=[0,0], psi_mat=psi_mat, number_of_factors=F, beta=1)
+        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars, model=m)
         uncertain_params_in_expr = []
         for con in m.uncertainty_set_contr.values():
             for v in m.uncertain_param_vars.values():
@@ -977,8 +1111,8 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
             random_row_entries = list(np.random.uniform(low=0, high=0.2, size=F))
             for j in range(len(psi_mat[i])):
                 psi_mat[i][j] = random_row_entries[j]
-        set = FactorModelSet(origin=[0, 0], psi_mat=psi_mat, number_of_factors=F, beta=1)
-        m.uncertainty_set_contr = set.set_as_constraint(uncertain_params=m.uncertain_param_vars, model=m)
+        _set = FactorModelSet(origin=[0, 0], psi_mat=psi_mat, number_of_factors=F, beta=1)
+        m.uncertainty_set_contr = _set.set_as_constraint(uncertain_params=m.uncertain_param_vars, model=m)
         vars_in_expr = []
         vars_in_expr = []
         for con in m.uncertainty_set_contr.values():
@@ -1005,9 +1139,31 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
             random_row_entries = list(np.random.uniform(low=0, high=0.2, size=F))
             for j in range(len(psi_mat[i])):
                 psi_mat[i][j] = random_row_entries[j]
-        set = FactorModelSet(origin=[0, 0], psi_mat=psi_mat, number_of_factors=F, beta=1)
-        self.assertTrue(set.point_in_set(m.uncertain_param_vars, [0, 0]),
+        _set = FactorModelSet(origin=[0, 0], psi_mat=psi_mat, number_of_factors=F, beta=1)
+        self.assertTrue(_set.point_in_set(m.uncertain_param_vars, [0, 0]),
                         msg="Point is not in the FactorModelSet.")
+
+    def test_add_bounds_on_uncertain_parameters(self):
+        m = ConcreteModel()
+        m.util = Block()
+        m.util.uncertain_param_vars = Var([0,1], initialize=0)
+
+        F = 1
+        psi_mat = np.zeros(shape=(len(list(m.util.uncertain_param_vars.values())), F))
+        for i in range(len(psi_mat)):
+            random_row_entries = list(np.random.uniform(low=0, high=0.2, size=F))
+            for j in range(len(psi_mat[i])):
+                psi_mat[i][j] = random_row_entries[j]
+        _set = FactorModelSet(origin=[0, 0], psi_mat=psi_mat, number_of_factors=F, beta=1)
+        config = Block()
+        config.uncertainty_set = _set
+
+        FactorModelSet.add_bounds_on_uncertain_parameters(m, config)
+
+        self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None, "Bounds not added correctly for FactorModelSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for FactorModelSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for FactorModelSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for FactorModelSet")
 
 class testIntersectionSetClass(unittest.TestCase):
     '''
@@ -1034,7 +1190,7 @@ class testIntersectionSetClass(unittest.TestCase):
 
         config = ConfigBlock()
         solver = SolverFactory("ipopt")
-        config.declare("local_solver", ConfigValue(default=solver))
+        config.declare("global_solver", ConfigValue(default=solver))
 
         m.uncertainty_set_contr = Q.set_as_constraint(uncertain_params=m.uncertain_param_vars, config=config)
         uncertain_params_in_expr = []
@@ -1069,7 +1225,7 @@ class testIntersectionSetClass(unittest.TestCase):
 
         solver = SolverFactory("ipopt")
         config = ConfigBlock()
-        config.declare("local_solver", ConfigValue(default=solver))
+        config.declare("global_solver", ConfigValue(default=solver))
 
         m.uncertainty_set_contr = Q.set_as_constraint(uncertain_params=m.uncertain_param_vars, config=config)
         vars_in_expr = []
@@ -1093,10 +1249,31 @@ class testIntersectionSetClass(unittest.TestCase):
 
         bounds = [(-1, 1), (-1, 1)]
         Q1 = BoxSet(bounds=bounds)
-        Q2 = AxisAlignedEllipsoidalSet(center=[0, 0], half_lengths=[2, 1])
+        Q2 = BoxSet(bounds=[(-2, 1), (-1, 2)])
         Q = IntersectionSet(Q1=Q1, Q2=Q2)
         self.assertTrue(Q.point_in_set(m.uncertain_param_vars, [0, 0]),
                         msg="Point is not in the IntersectionSet.")
+
+    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False), "Global NLP solver is not available.")
+    def test_add_bounds_on_uncertain_parameters(self):
+        m = ConcreteModel()
+        m.util = Block()
+        m.util.uncertain_param_vars = Var([0, 1], initialize=0.5)
+
+        bounds = [(-1, 1), (-1, 1)]
+        Q1 = BoxSet(bounds=bounds)
+        Q2 = AxisAlignedEllipsoidalSet(center=[0, 0], half_lengths=[5, 5])
+        Q = IntersectionSet(Q1=Q1, Q2=Q2)
+        config = Block()
+        config.uncertainty_set = Q
+        config.global_solver = SolverFactory("baron")
+
+        IntersectionSet.add_bounds_on_uncertain_parameters(m, config)
+
+        self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None, "Bounds not added correctly for IntersectionSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for IntersectionSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for IntersectionSet")
+        self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for IntersectionSet")
 
 # === master_problem_methods.py
 class testInitialConstructMaster(unittest.TestCase):

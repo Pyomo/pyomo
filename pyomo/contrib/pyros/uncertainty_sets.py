@@ -26,7 +26,7 @@ import functools
 import math
 from enum import Enum
 from pyomo.common.dependencies import numpy as np, scipy as sp
-from pyomo.core.base import ConcreteModel
+from pyomo.core.base import ConcreteModel, Objective
 from pyomo.core.base.constraint import ConstraintList
 from pyomo.core.base.var import Var, _VarData, IndexedVar
 from pyomo.core.base.param import Param, _ParamData, IndexedParam
@@ -319,7 +319,7 @@ class CardinalitySet(UncertaintySet):
             config: the config object for the PyROS solver instance
         '''
         _set = config.uncertainty_set
-        nom_val = config.nominal_uncertain_param_vals
+        nom_val = _set.origin
         deviation = _set.positive_deviation
         for i, p in enumerate(model.util.uncertain_param_vars.values()):
             lb = nom_val[i]
@@ -628,7 +628,7 @@ class FactorModelSet(UncertaintySet):
             config: the config object for the PyROS solver instance
         '''
         _set = config.uncertainty_set
-        nom_val = config.nominal_uncertain_param_vals
+        nom_val = config.uncertainty_set.origin
         psi_mat = _set.psi_mat
 
         F = _set.number_of_factors
@@ -726,7 +726,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
         '''
 
         for i, p in enumerate(model.util.uncertain_param_vars.values()):
-            nom_value = config.nominal_uncertain_param_vals[i]
+            nom_value = config.uncertainty_set.center[i]
             half_length = config.uncertainty_set.half_lengths[i]
             p.setlb(nom_value - half_length)
             p.setub(nom_value + half_length)
@@ -840,7 +840,7 @@ class EllipsoidalSet(UncertaintySet):
         _set = config.uncertainty_set
         scale = _set.scale
         for i, p in enumerate(model.util.uncertain_param_vars.values()):
-            nom_value = config.nominal_uncertain_param_vals[i]
+            nom_value = config.uncertainty_set.center[i]
             P = _set.shape_matrix
             P_ii = P[i][i]
             try:
@@ -1013,6 +1013,7 @@ class IntersectionSet(UncertaintySet):
         else:
             # === Compile constraints and solve NLP
             m = ConcreteModel()
+            m.obj = Objective(expr=0) # dummy objective required if using baron
             m.param_vars = Var(uncertain_params.index_set())
             for a_set in self.all_sets:
                 m.add_component(a_set.type + "_constraints", a_set.set_as_constraint(uncertain_params=m.param_vars))
@@ -1059,7 +1060,7 @@ class IntersectionSet(UncertaintySet):
             uncertain_params: list of uncertain param objects participating in the sets to be intersected
         """
         try:
-            nlp_solver = kwargs["config"].local_solver
+            nlp_solver = kwargs["config"].global_solver
         except:
             raise AttributeError("set_as_constraint for SetIntersection requires access to an NLP solver via"
                                  "the PyROS Solver config.")
