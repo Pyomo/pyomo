@@ -67,6 +67,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         """
         return
 
+    @property
     @abc.abstractmethod
     def dim(self):
         """
@@ -74,6 +75,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         """
         raise NotImplementedError
 
+    @property
     @abc.abstractmethod
     def geometry(self):
         """
@@ -114,7 +116,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
             raise AttributeError("Point must have same dimensions as uncertain parameters.")
 
         # === Check if uncertain_params are Params or Vars, if Params set value, if vars fix value
-        if isinstance(uncertain_params, IndexedVar) or isinstance(uncertain_params, IndexedParam):
+        if isinstance(uncertain_params, (IndexedVar, IndexedParam)):
             the_params = list(uncertain_params.values())
         else:
             the_params = uncertain_params

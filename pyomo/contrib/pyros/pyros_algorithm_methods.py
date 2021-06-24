@@ -65,8 +65,7 @@ def ROSolver_iterative_solve(model_data, config):
     if config.objective_focus is ObjectiveType.nominal:
         master_data.master_model.obj = Objective(
             expr=master_data.master_model.scenarios[0,0].first_stage_objective +
-                 master_data.master_model.scenarios[0,0].second_stage_objective +
-                 master_data.master_model.scenarios[0,0].const_obj_term
+                 master_data.master_model.scenarios[0,0].second_stage_objective
         )
     elif config.objective_focus is ObjectiveType.worst_case:
         # === Worst-case cost objective
@@ -75,8 +74,7 @@ def ROSolver_iterative_solve(model_data, config):
         master_data.master_model.obj = Objective(expr=master_data.master_model.zeta)
         master_data.master_model.scenarios[0,0].epigraph_constr = Constraint(expr=
                         master_data.master_model.scenarios[0, 0].first_stage_objective +
-                        master_data.master_model.scenarios[0, 0].second_stage_objective +
-                        master_data.master_model.scenarios[0,0].const_obj_term <= master_data.master_model.zeta )
+                        master_data.master_model.scenarios[0, 0].second_stage_objective <= master_data.master_model.zeta )
         master_data.master_model.scenarios[0,0].util.first_stage_variables.append(master_data.master_model.zeta)
 
 

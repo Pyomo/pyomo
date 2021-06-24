@@ -7,12 +7,14 @@ import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import ComponentSet
 from pyomo.common.config import ConfigBlock, ConfigValue
+from pyomo.core.base.set_types import NonNegativeIntegers
 from pyomo.environ import *
 from pyomo.core.expr.current import identify_variables, identify_mutable_parameters
 from pyomo.contrib.pyros.util import selective_clone, add_decision_rule_variables, add_decision_rule_constraints, \
     model_is_valid, turn_bounds_to_constraints, transform_to_standard_form, ObjectiveType, grcsTerminationCondition
 from pyomo.contrib.pyros.uncertainty_sets import *
-from pyomo.contrib.pyros.master_problem_methods import add_scenario_to_master, initial_construct_master, solve_master
+from pyomo.contrib.pyros.master_problem_methods import add_scenario_to_master, initial_construct_master, solve_master, \
+    minimize_dr_vars
 from pyomo.contrib.pyros.solve_data import MasterProblemData
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.dependencies import scipy as sp, scipy_available
@@ -1175,6 +1177,7 @@ class testSolveMaster(unittest.TestCase):
         config.declare("decision_rule_order", ConfigValue(default=1))
         config.declare("objective_focus", ConfigValue(default=ObjectiveType.worst_case))
         config.declare("second_stage_variables", ConfigValue(default=master_data.master_model.scenarios[0, 0].util.second_stage_variables))
+        config.declare("subproblem_file_directory", ConfigValue(default=None))
         master_soln = solve_master(master_data, config)
         self.assertEqual(master_soln.termination_condition, TerminationCondition.optimal,
                          msg="Could not solve simple master problem with solve_master function.")
@@ -1290,6 +1293,50 @@ class RegressionTest(unittest.TestCase):
                                        "decision_rule_order": 2})
         self.assertTrue(results.grcs_termination_condition,
                         grcsTerminationCondition.robust_feasible)
+
+    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False),
+                         "Global NLP solver is not available.")
+    def test_minimize_dr_norm(self):
+        m = ConcreteModel()
+        m.p1 = Param(initialize=0, mutable=True)
+        m.p2 = Param(initialize=0, mutable=True)
+        m.z1 = Var(initialize=0, bounds=(0,1))
+        m.z2 = Var(initialize=0, bounds=(0,1))
+
+
+        m.working_model = ConcreteModel()
+        m.working_model.util = Block()
+
+        m.working_model.util.second_stage_variables = [m.z1, m.z2]
+        m.working_model.util.uncertain_params = [m.p1, m.p2]
+        m.working_model.util.first_stage_variables = []
+
+        m.working_model.util.first_stage_variables = []
+        config = Block()
+        config.decision_rule_order = 1
+        config.objective_focus = ObjectiveType.nominal
+        config.global_solver = SolverFactory('baron')
+        config.print_subsolver_progress_to_screen = False
+
+        add_decision_rule_variables(model_data=m, config=config)
+        add_decision_rule_constraints(model_data=m, config=config)
+
+        # === Make master_type model
+        master = ConcreteModel()
+        master.scenarios = Block(NonNegativeIntegers, NonNegativeIntegers)
+        master.scenarios[0, 0].transfer_attributes_from(m.working_model.clone())
+        master.scenarios[0, 0].first_stage_objective = 0
+        master.scenarios[0, 0].second_stage_objective = Expression(expr=(master.scenarios[0, 0].util.second_stage_variables[0] - 1)**2 +
+                                    (master.scenarios[0, 0].util.second_stage_variables[1] - 1)**2)
+        master.obj = Objective(expr=master.scenarios[0, 0].second_stage_objective)
+        master_data = MasterProblemData()
+        master_data.master_model = master
+        results = minimize_dr_vars(model_data=master_data, config=config)
+
+        self.assertEqual(results.solver.termination_condition, TerminationCondition.optimal,
+                         msg="Minimize dr norm did not solve to optimality.")
+
+
 
 if __name__ == "__main__":
     unittest.main()

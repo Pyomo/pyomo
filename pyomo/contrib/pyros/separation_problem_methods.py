@@ -88,7 +88,7 @@ def make_separation_problem(model_data, config):
 
     if config.objective_focus is ObjectiveType.worst_case:
         separation_model.util.zeta = Param(initialize=0, mutable=True)
-        constr = Constraint(expr= separation_model.first_stage_objective + separation_model.second_stage_objective + separation_model.const_obj_term
+        constr = Constraint(expr= separation_model.first_stage_objective + separation_model.second_stage_objective
                                   <= separation_model.util.zeta)
         separation_model.add_component("epigraph_constr", constr)
 
@@ -428,6 +428,9 @@ def solver_call_separation(model_data, config, solver, solve_data, is_global):
         # === Process result
         is_violation(model_data, config, solve_data)
 
+        if solve_data.termination_condition == tc.infeasible:
+            print()
+
         if solve_data.termination_condition in globally_acceptable or \
                 (not is_global and solve_data.termination_condition in locally_acceptable):
             return False
@@ -442,7 +445,7 @@ def solver_call_separation(model_data, config, solver, solve_data, is_global):
         objective = str(list(nlp_model.component_data_objects(Objective, active=True))[0].name)
         name = os.path.join(save_dir, config.uncertainty_set.type + "_" + nlp_model.name + "_separation_" + str(
             model_data.iteration) + "_obj_" + objective + ".bar")
-        nlp_model.write(name, format="bar")
+        nlp_model.write(name, io_options={'symbolic_solver_labels':True})
         output_logger(config=config, separation_error=True, filename=name, iteration=model_data.iteration, objective=objective,
                       status_dict=solver_status_dict)
     return True

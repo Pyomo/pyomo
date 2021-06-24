@@ -547,9 +547,9 @@ def identify_objective_functions(model, config):
             second_stage_cost_expr += term
         elif not vars_in_term:
             const_obj_expr += term
-    m.first_stage_objective = Expression(expr=first_stage_cost_expr)
+    # convention to add constant objective term to first stage costs
+    m.first_stage_objective = Expression(expr=first_stage_cost_expr + const_obj_expr)
     m.second_stage_objective = Expression(expr=second_stage_cost_expr)
-    m.const_obj_term = Expression(expr=const_obj_expr)
     return
 
 

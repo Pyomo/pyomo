@@ -163,7 +163,7 @@ def minimize_dr_vars(model_data, config):
 
     # === Solve the polishing model
     polish_soln = MasterResult()
-    solver = config.local_solver
+    solver = config.global_solver
 
     if not solver.available():
         raise RuntimeError("NLP solver %s is not available." %
@@ -285,6 +285,12 @@ def solver_call_master(model_data, config, solver, solve_data):
     while len(backup_solvers) > 0:
         solver = backup_solvers.pop(0)
         try:
+            save_dir = config.subproblem_file_directory
+            if save_dir:
+                name = os.path.join(save_dir,
+                                    config.uncertainty_set.type + "_" + model_data.original.name + "_master_" + str(
+                                        model_data.iteration) + ".bar")
+                nlp_model.write(name, io_options={'symbolic_solver_labels': True})
             results = solver.solve(nlp_model, tee=config.print_subsolver_progress_to_screen)
         except ValueError as err:
             if 'Cannot load a SolverResults object with bad status: error' in str(err):
@@ -322,7 +328,7 @@ def solver_call_master(model_data, config, solver, solve_data):
     save_dir = config.subproblem_file_directory
     if save_dir:
         name = os.path.join(save_dir,  config.uncertainty_set.type + "_" + model_data.original.name + "_master_" + str(model_data.iteration) + ".bar")
-        nlp_model.write(name, format="bar")
+        nlp_model.write(name, io_options={'symbolic_solver_labels':True})
         output_logger(config=config, master_error=True, status_dict=solver_term_cond_dict, filename=name, iteration=model_data.iteration)
     master_soln.grcs_termination_condition = grcsTerminationCondition.subsolver_error
     return master_soln

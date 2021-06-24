@@ -181,7 +181,7 @@ PyROS Uncertainty Set Classes
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.UncertaintySet
     :special-members: __init__
 
-.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.DiscreteScenariosSet
+.. autoclass:: pyomo.contrib.pyros.uncertainty_sets.DiscreteScenarioSet
     :special-members: __init__
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.IntersectionSet
@@ -397,22 +397,23 @@ If we choose to designate all variables as either design or state variables, wit
   ...                                  options = {
   ...                                     "objective_focus": pyros.ObjectiveType.worst_case,
   ...                                     "solve_master_globally": True
-  ...                                   })
+  ...                                   }) # doctest: +ELLIPSIS
   ===========================================================================================
   PyROS: Pyomo Robust Optimization Solver ...
   ===========================================================================================
   ...
   INFO: Robust optimal solution identified. Exiting PyROS.
+  INFO: Objective: 4836738...
   ...
 
   >>> # === Print results ===
   >>> single_stage_final_objective = pyo.value(results_1.final_objective_value)
-  >>> print("Final objective value: %s" % single_stage_final_objective) # doctest: +ELLIPSIS
+  >>> print("Final objective value: %s" % single_stage_final_objective)
   Final objective value: ...
-  >>> print("PyROS termination condition: %s" % results_1.grcs_termination_condition) # doctest: +ELLIPSIS
+  >>> print("PyROS termination condition: %s" % results_1.grcs_termination_condition)
   PyROS termination condition: ...
 
-The above code yields: "Final objective value: 48,349,406.72"
+The above code yields: "Final objective value: 48,367,381"
 
 A Two-Stage Problem
 """"""""""""""""""""""
@@ -438,19 +439,22 @@ For this next set of runs, we will assume that some of the previously designated
   ...                                      "objective_focus": pyros.ObjectiveType.worst_case,
   ...                                      "solve_master_globally": True,
   ...                                      "decision_rule_order": 1
-  ...                                   }) # doctest: +ELLIPSIS
+  ...                                   })
   ===========================================================================================
   PyROS: Pyomo Robust Optimization Solver ...
+  ...
+  INFO: Robust optimal solution identified. Exiting PyROS.
+  INFO: Objective: 3628525...
   ...
 
   >>> # === Compare final objective to the singe-stage solution
   >>> two_stage_final_objective = pyo.value(results_2.final_objective_value)
   >>> percent_difference = 100 * (two_stage_final_objective - single_stage_final_objective)/(single_stage_final_objective)
-  >>> print("Percent objective change relative to constant decision rules objective: %.2f %%" % percent_difference) # doctest: +ELLIPSIS
+  >>> print("Percent objective change relative to constant decision rules objective: %.2f %%" % percent_difference)
   Percent objective change relative to constant decision rules objective: ...
 
 In this example, when we compare the final objective value in the case of constant decision rules (no second-stage recourse)
-and affine decision rules, we see there is a -24.95% decrease in total objective value.
+and affine decision rules, we see there is a ~25% decrease in total objective value.
 
 The Price of Robustness
 """"""""""""""""""""""""
