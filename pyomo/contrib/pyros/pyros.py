@@ -399,6 +399,7 @@ class PyROS(object):
             return_soln.final_objective_value = value(pyros_soln.master_soln.master_model.obj)
             return_soln.time = model_data.total_cpu_time
             return_soln.iterations = iterations
+            return_soln.grcs_termination_condition = pyros_soln.grcs_termination_condition
 
             # === Remove util block
             model.del_component(model_data.util_block)
