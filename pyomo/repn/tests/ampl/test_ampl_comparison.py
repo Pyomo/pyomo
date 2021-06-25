@@ -21,11 +21,11 @@ from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyomo.common.unittest as unittest
-import pyomo.common
+from pyomo.common.dependencies import attempt_import
 
 import pyomo.scripting.pyomo_main as main
 
-parameterized, param_available = pyomo.common.dependencies.attempt_import('parameterized')
+parameterized, param_available = attempt_import('parameterized')
 if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 
