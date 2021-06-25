@@ -140,43 +140,66 @@ _rule_returned_none_error = """%s '%s': rule returned None.
 include the "return" statement at the end of your rule.
 """
 
-def _map_rule_result(fn, _map, _map_types, args, kwargs):
-    if fn.__class__ in _map_types:
+def rule_result_substituter(result_map):
+    _map = result_map
+    _map_types = set(type(key) for key in result_map)
+
+    def rule_result_substituter_impl(rule, *args, **kwargs):
+        if rule.__class__ in _map_types:
+            #
+            # The argument is a trivial type and will be mapped
+            #
+            value = rule
+        else:
+            #
+            # Otherwise, the argument is a functor, so call it to
+            # generate the rule result.
+            #
+            value = rule( *args, **kwargs )
         #
-        # The argument is a trivial type and will be mapped
+        # Map the returned value:
         #
-        value = fn
-    else:
-        #
-        # Otherwise, the argument is a functor, so call it to
-        # generate the rule result.
-        #
-        value = fn( *args, **kwargs )
-    #
-    # Map the returned value:
-    #
-    if value.__class__ in _map_types and value in _map:
-        return _map[value]
-    return value
+        if value.__class__ in _map_types and value in _map:
+            return _map[value]
+        return value
+
+    return rule_result_substituter_impl
 
 _map_rule_funcdef = \
 """def wrapper_function%s:
     args, varargs, kwds, local_env = inspect.getargvalues(
         inspect.currentframe())
     args = tuple(local_env[_] for _ in args) + (varargs or ())
-    return _map_rule_result(fn, result_map, _map_types, args, (kwds or {}))
+    return wrapping_fcn(rule, *args, **(kwds or {}))
 """
 
-def rule_result_mapper(fn, result_map):
-    """Implemetation for a rule result maping decorator
+def rule_wrapper(rule, wrapping_fcn):
+    """Wrap a rule with another function
+
+    This utility method provides a way to wrap a function (rule) with
+    another function while preserving the original function signature.
+    This is important for rules, as the :py:func:`Initializer`
+    argument processor relies on knowing the number of positional
+    arguments.
+
+    Parameters
+    ----------
+    rule: function
+        The original rule being wrapped
+    wrapping_fcn: function or Dict
+        The wrapping function.  The `wrapping_fcn` will be called with
+        ``(rule, *args, **kwargs)``.  For convenience, if a `dict` is
+        passed as the `wrapping_fcn`, then the result of
+        :py:func:`rule_result_substituter(wrapping_fcn)` is used as the
+        wrapping function.
+
     """
-    _map_types = set(type(key) for key in result_map)
-    if type(fn) in _map_types:
-        return _map_rule_result(fn, result_map, _map_types, None, None)
+    if isinstance(wrapping_fcn, dict):
+        wrapping_fcn = rule_result_substituter(wrapping_fcn)
     # Because some of our processing of initializer functions relies on
     # knowing the number of positional arguments, we will go to extra
     # effort here to preserve the original function signature.
-    _funcdef = _map_rule_funcdef % (str(inspect.signature(fn)),)
+    _funcdef = _map_rule_funcdef % (str(inspect.signature(rule)),)
     # Create the wrapper in a temporary environment that mimics this
     # function's environment.
     _env = dict(globals())

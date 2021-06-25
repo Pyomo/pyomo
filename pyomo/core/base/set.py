@@ -35,7 +35,7 @@ from pyomo.core.base.component import (
 )
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, normalize_index,
-    rule_result_mapper,
+    rule_wrapper,
 )
 from pyomo.core.base.global_set import (
     GlobalSets, GlobalSetBase,
@@ -207,7 +207,7 @@ def set_options(**kwds):
         return func
     return decorator
 
-def simple_set_rule(fn):
+def simple_set_rule(rule):
     """
     This is a decorator that translates None into Set.End.
     This supports a simpler syntax in set rules, though these can be
@@ -219,7 +219,7 @@ def simple_set_rule(fn):
     def A_rule(model, i, j):
         ...
     """
-    return rule_result_mapper(fn, {None: Set.End})
+    return rule_wrapper(rule, {None: Set.End})
 
 
 class UnknownSetDimen(object): pass

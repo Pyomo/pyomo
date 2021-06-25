@@ -28,7 +28,7 @@ from pyomo.core.base.component import (
     ActiveComponentData, ModelComponentFactory,
 )
 from pyomo.core.base.indexed_component import (
-    ActiveIndexedComponent, UnindexedComponent_set, rule_result_mapper,
+    ActiveIndexedComponent, UnindexedComponent_set, rule_wrapper,
 )
 from pyomo.core.base.misc import (tabular_writer)
 from pyomo.core.base.set import Set
@@ -48,7 +48,7 @@ Constraint.Infeasible.  The most common cause of this error is
 forgetting to include the "return" statement at the end of your rule.
 """
 
-def simple_constraint_rule( fn ):
+def simple_constraint_rule(rule):
     """
     This is a decorator that translates None/True/False return
     values into Constraint.Skip/Constraint.Feasible/Constraint.Infeasible.
@@ -63,13 +63,13 @@ def simple_constraint_rule( fn ):
 
     model.c = Constraint(rule=simple_constraint_rule(...))
     """
-    return rule_result_mapper(fn, {
+    return rule_wrapper(rule, {
         None: Constraint.Skip,
         True: Constraint.Feasible,
         False: Constraint.Infeasible,
     })
 
-def simple_constraintlist_rule( fn ):
+def simple_constraintlist_rule(rule):
     """
     This is a decorator that translates None/True/False return values
     into ConstraintList.End/Constraint.Feasible/Constraint.Infeasible.
@@ -84,7 +84,7 @@ def simple_constraintlist_rule( fn ):
 
     model.c = ConstraintList(expr=simple_constraintlist_rule(...))
     """
-    return rule_result_mapper(fn, {
+    return rule_wrapper(rule, {
         None: ConstraintList.End,
         True: Constraint.Feasible,
         False: Constraint.Infeasible,

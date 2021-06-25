@@ -28,7 +28,7 @@ from pyomo.core.base.component import (
     ActiveComponentData, ModelComponentFactory,
 )
 from pyomo.core.base.indexed_component import (
-    ActiveIndexedComponent, UnindexedComponent_set, rule_result_mapper,
+    ActiveIndexedComponent, UnindexedComponent_set, rule_wrapper,
     _get_indexed_component_data_name,
 )
 from pyomo.core.base.expression import (_ExpressionData,
@@ -49,7 +49,7 @@ Objective.Skip.  The most common cause of this error is forgetting to
 include the "return" statement at the end of your rule.
 """
 
-def simple_objective_rule(fn):
+def simple_objective_rule(rule):
     """
     This is a decorator that translates None into Objective.Skip.
     This supports a simpler syntax in objective rules, though these
@@ -63,9 +63,9 @@ def simple_objective_rule(fn):
 
     model.o = Objective(rule=simple_objective_rule(...))
     """
-    return rule_result_mapper(fn, {None: Objective.Skip})
+    return rule_wrapper(rule, {None: Objective.Skip})
 
-def simple_objectivelist_rule(fn):
+def simple_objectivelist_rule(rule):
     """
     This is a decorator that translates None into ObjectiveList.End.
     This supports a simpler syntax in objective rules, though these
@@ -79,7 +79,7 @@ def simple_objectivelist_rule(fn):
 
     model.o = ObjectiveList(expr=simple_objectivelist_rule(...))
     """
-    return rule_result_mapper(fn, {None: ObjectiveList.End})
+    return rule_wrapper(rule, {None: ObjectiveList.End})
 
 #
 # This class is a pure interface
