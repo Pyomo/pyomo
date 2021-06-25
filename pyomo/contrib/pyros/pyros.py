@@ -386,32 +386,26 @@ class PyROS(object):
             if config.load_solution and \
                     (pyros_soln.grcs_termination_condition is grcsTerminationCondition.robust_optimal or
                      pyros_soln.grcs_termination_condition is grcsTerminationCondition.robust_feasible):
-                load_final_solution(model_data, pyros_soln.master_soln)
+                load_final_solution(model_data, pyros_soln.master_soln, config)
 
             # === Return time info
             model_data.total_cpu_time = get_main_elapsed_time(model_data.timing)
+            iterations = pyros_soln.total_iters + 1
 
-            # === Print results
-            config.progress_logger.info("Objective: " + str(value(pyros_soln.master_soln.master_model.obj)))
-            config.progress_logger.info("Time (s): " + str(model_data.total_cpu_time))
-            '''config.progress_logger.info("Time solving Masters (s): " + str(pyros_soln.timing_data.total_master_solve_time))
-            config.progress_logger.info("Time solving Separation Local (s): " + str(pyros_soln.timing_data.total_separation_local_time))
-            config.progress_logger.info("Time solving Separation Global (s): " + str(pyros_soln.timing_data.total_separation_global_time))
-            config.progress_logger.info(
-                "Time solving Separation TOTAL (s): " + str(pyros_soln.timing_data.total_separation_global_time +
-                                                            pyros_soln.timing_data.total_separation_local_time))
-            config.progress_logger.info(
-                "Time solving polishing step (s): " + str(pyros_soln.timing_data.total_dr_polish_time))'''
-            config.progress_logger.info("Iterations: " + str(pyros_soln.total_iters+1))
             # === Return config to user
-            pyros_soln.config = config
-            pyros_soln.final_objective_value = value(pyros_soln.master_soln.master_model.obj)
+
+            return_soln = ROSolveResults()
+            return_soln.config = config
+            return_soln.final_objective_value = value(pyros_soln.master_soln.master_model.obj)
+            return_soln.time = model_data.total_cpu_time
+            return_soln.iterations = iterations
+
             # === Remove util block
             model.del_component(model_data.util_block)
 
             del pyros_soln.util_block
             del pyros_soln.working_model
-        return pyros_soln
+        return return_soln
 
 
 PyROS.solve.__doc__ = add_docstring_list(

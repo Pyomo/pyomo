@@ -319,11 +319,6 @@ def solve_separation_problem(model_data, config):
             #	"Violation found in constraint %s with realization %s" % (
             #	list(objectives_map.keys())[idx_i], violating_realizations))
             return solve_data_list, violating_realizations, violations, is_global, local_solve_time, global_solve_time
-        else:
-            if not is_global:
-                config.progress_logger.info("No violations identified. Next is global certification separation.")
-            else:
-                config.progress_logger.info("No violations identified via global solve. Exiting algorithm.")
 
     return solve_data_list, [], [], is_global, local_solve_time, global_solve_time
 

@@ -283,19 +283,36 @@ def validate_kwarg_inputs(model, config):
     second_stage_variables = config.second_stage_variables
     uncertain_params = config.uncertain_params
 
+    # === Not currently supporting constraints of the form h(x, q) = 0
+    # (uncertain equality constraints in only first stage variables)
+    # We have plans to support this in the future
+    for c in model.component_data_objects(Constraint):
+        if c.equality:
+            variables_in_constraint = identify_variables(c.expr)
+            params_in_constraint = identify_mutable_parameters(c.expr)
+            if all(v in ComponentSet(first_stage_variables) for v in variables_in_constraint) and \
+                any(q in ComponentSet(uncertain_params) for q in params_in_constraint):
+                raise ValueError("PyROS does not currently support uncertain optimization problems with constraints of "
+                                 "the form h(x, q) = 0, where all x are first-stage variables and q are uncertain parameters. "
+                                 "All equality constraints referencing uncertain parameters must "
+                                 "also reference at least 1 second-stage or state variable.")
+
     if not config.first_stage_variables and not config.second_stage_variables:
         # Must have non-zero DOF
-        raise ValueError("First-stage variables (first_stage_variables) and "
-                         "second-stage variables (second_stage_variables) cannot both be empty lists.")
+        raise ValueError("first_stage_variables and "
+                         "second_stage_variables cannot both be empty lists.")
 
     if ComponentSet(first_stage_variables) != ComponentSet(config.first_stage_variables):
-        raise ValueError("First-stage variables in first_stage_variables must be members of the model object.")
+        raise ValueError("All elements in first_stage_variables must be Var members of the model object.")
 
     if ComponentSet(second_stage_variables) != ComponentSet(config.second_stage_variables):
-        raise ValueError("Second-stage variables in second_stage_variables must be members of the model object.")
+        raise ValueError("All elements in second_stage_variables must be Var members of the model object.")
+
+    if any(v in ComponentSet(second_stage_variables) for v in ComponentSet(first_stage_variables)):
+        raise ValueError("No common elements allowed between first_stage_variables and second_stage_variables.")
 
     if ComponentSet(uncertain_params) != ComponentSet(config.uncertain_params):
-        raise ValueError("Uncertain parameters in uncertain_params must be members of the model object.")
+        raise ValueError("uncertain_params must be mutable Param members of the model object.")
 
     if not config.uncertainty_set:
         raise ValueError("An UncertaintySet object must be provided to the PyROS solver.")
@@ -339,6 +356,8 @@ def validate_kwarg_inputs(model, config):
     # === Uncertain params provided check
     if len(config.uncertain_params) == 0:
         raise ValueError("User must designate at least one uncertain parameter.")
+
+
 
     return
 
@@ -554,15 +573,22 @@ def identify_objective_functions(model, config):
     return
 
 
-def load_final_solution(model_data, master_soln):
+def load_final_solution(model_data, master_soln, config):
     '''
     load the final solution into the original model object
     :param model_data: model data container object
     :param master_soln: results data container object returned to user
     :return:
     '''
-    model = model_data.original_model
-    soln = master_soln.nominal_block
+    if config.objective_focus == ObjectiveType.nominal:
+        model = model_data.original_model
+        soln = master_soln.nominal_block
+    elif config.objective_focus == ObjectiveType.worst_case:
+        model = model_data.original_model
+        indices = range(len(master_soln.master_model.scenarios))
+        k = max(indices, key=lambda i: value(master_soln.master_model.scenarios[i, 0].first_stage_objective +
+                                             master_soln.master_model.scenarios[i, 0].second_stage_objective))
+        soln = master_soln.master_model.scenarios[k, 0]
 
     src_vars = getattr(model, 'tmp_var_list')
     local_vars = getattr(soln, 'tmp_var_list')
