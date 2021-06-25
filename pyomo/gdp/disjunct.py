@@ -12,20 +12,22 @@ import logging
 import sys
 import types
 
-from six import iteritems, itervalues
+from math import fabs
 from weakref import ref as weakref_ref
 
+from pyomo.common.deprecation import RenamedClass,  deprecation_warning
 from pyomo.common.errors import PyomoException
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import (
-    BooleanVar, ModelComponentFactory, Binary, Block, Var, ConstraintList, Any,
-    LogicalConstraintList, BooleanValue, value)
+    ModelComponentFactory, Binary, Block, ConstraintList, Any,
+    LogicalConstraintList, BooleanValue, ScalarBooleanVar, ScalarVar,
+    value)
 from pyomo.core.base.component import (
     ActiveComponent, ActiveComponentData, ComponentData
 )
-from pyomo.core.base.numvalue import native_types, value
+from pyomo.core.base.numvalue import native_types
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
@@ -43,6 +45,272 @@ your rule.
 
 class GDP_Error(PyomoException):
     """Exception raised while processing GDP Models"""
+
+
+class AutoLinkedBinaryVar(ScalarVar):
+    """A binary variable implicitly linked to its equivalent Boolean variable.
+
+    Basic operations like setting values and fixing/unfixing this
+    variable are also automatically applied to the associated Boolean
+    variable.
+
+    As this class is only intended to provide a deprecation path for
+    Disjunct.indicator_var, it only supports Scalar instances and does
+    not support indexing.
+    """
+
+    INTEGER_TOLERANCE = 0.001
+
+    def __init__(self, boolean_var=None):
+        super().__init__(domain=Binary)
+        self._associated_boolean = weakref_ref(boolean_var)
+
+    def get_associated_boolean(self):
+        return self._associated_boolean()
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, val):
+        # super() does not work as expected for properties; we will call
+        # the property setter explicitly.
+        ScalarVar.value.fset(self, val)
+        bool_var = self.get_associated_boolean()
+        # Only update the associated Boolean value if it is needed
+        # to match the current (potentially fractional) binary value.
+        # (This prevents infinite recursion.)
+        if val is None:
+            bool_val = None
+        elif fabs(val - 0.5) < 0.5 - AutoLinkedBinaryVar.INTEGER_TOLERANCE:
+            bool_val = None
+        else:
+            bool_val = bool(int(val + 0.5))
+        if bool_val != bool_var.value:
+            bool_var.set_value(bool_val)
+
+    def fix(self, *val):
+        super().fix(*val)
+        bool_var = self.get_associated_boolean()
+        if not bool_var.is_fixed():
+            bool_var.fix()
+
+    def unfix(self):
+        super().unfix()
+        bool_var = self.get_associated_boolean()
+        if bool_var.is_fixed():
+            bool_var.unfix()
+
+    def __getstate__(self):
+        state = super().__getstate__()
+        if self._associated_boolean is not None:
+            state['_associated_boolean'] = self._associated_boolean()
+        return state
+
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        if self._associated_boolean is not None:
+            self._associated_boolean = weakref_ref(self._associated_boolean)
+
+
+class AutoLinkedBooleanVar(ScalarBooleanVar):
+    """A Boolean variable implicitly linked to its equivalent binary variable.
+
+    This class provides a deprecation path for GDP.  Originally,
+    Disjunct indicator_var was a binary variable.  This simplified early
+    transformations.  However, with the introduction of a proper logical
+    expression system, the mathematically correct approach is for the
+    Disjunct's indicator_var attribute to be a proper BooleanVar.  As
+    part of the transition, indicator_var attributes are instances of
+    AutoLinkedBooleanVar, which allow the indicator_var to be used in
+    logical expressions, but also implicitly converted (with deprecation
+    warning) into their equivalent binary variable.
+
+    Basic operations like setting values and fixing/unfixing this
+    variable are also automatically applied to the associated binary
+    variable.
+
+    As this class is only intended to provide a deprecation path for
+    Disjunct.indicator_var, it only supports Scalar instances and does
+    not support indexing.
+
+    """
+
+    def as_binary(self):
+        """Return the binary variable associated with this Boolean variable.
+
+        This method returns the associated binary variable along with a
+        deprecation warning about using the Boolean variable in a numeric
+        context.
+
+        """
+        deprecation_warning(
+            "Implicit conversion of the Boolean indicator_var '%s' to a "
+            "binary variable is deprecated and will be removed.  "
+            "Either express constraints on indicator_var using "
+            "LogicalConstraints or work with the associated binary "
+            "variable from indicator_var.get_associated_binary()"
+            % (self.name,), version='6.0')
+        return self.get_associated_binary()
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, val):
+        # super() does not work as expected for properties; we will call
+        # the property setter explicitly.
+        ScalarBooleanVar.value.fset(self, val)
+        bin_var = self.get_associated_binary()
+        bin_val = bin_var.value
+        if bin_val is None:
+            bool_val = None
+        elif fabs(bin_val - 0.5) < 0.5 - AutoLinkedBinaryVar.INTEGER_TOLERANCE:
+            bool_val = None
+        else:
+            bool_val = bool(int(bin_val + 0.5))
+        # Fetch the current value (so that it is cast to None/bool)
+        val = self.value
+        # Only update the associated (potentially fractional) binary
+        # value if it is needed to match the current Boolean value.
+        # (This prevents infinite recursion.)
+        if val != bool_val:
+            if val is not None:
+                val = int(val)
+            bin_var.set_value(val)
+
+    def fix(self, *val):
+        super().fix(*val)
+        bin_var = self.get_associated_binary()
+
+        val = self.value
+        if val is not None:
+            val = int(val)
+        if not bin_var.is_fixed() or bin_var.value != val:
+            # Note: if someone fixes the Boolean to True/False then we
+            # need to snap the binary to 1/0 (and not leave it at the
+            # potentially fractional value)
+            bin_var.fix(val)
+
+    def unfix(self):
+        super().unfix()
+        bin_var = self.get_associated_binary()
+        if bin_var.is_fixed():
+            bin_var.unfix()
+
+    #
+    # Duck-type the numeric expression API, but route the conversion to
+    # Binary through as_binary to generate the deprecation warning
+    #
+
+    @property
+    def bounds(self):
+        return self.as_binary().bounds
+
+    @bounds.setter
+    def bounds(self, value):
+        self.as_binary().bounds = value
+
+    @property
+    def lb(self):
+        return self.as_binary().lb
+
+    @lb.setter
+    def lb(self, value):
+        self.as_binary().lb = value
+
+    @property
+    def ub(self):
+        return self.as_binary().ub
+
+    @ub.setter
+    def ub(self, value):
+        self.as_binary().ub = value
+
+    def __abs__(self):
+        return self.as_binary().__abs__()
+    def __bool__(self):
+        return self.as_binary().__bool__()
+    def __float__(self):
+        return self.as_binary().__float__()
+    def __int__(self):
+        return self.as_binary().__int__()
+    def __neg__(self):
+        return self.as_binary().__neg__()
+    def __nonzero__(self):
+        return self.as_binary().__nonzero__()
+    def __pos__(self):
+        return self.as_binary().__pos__()
+    def get_units(self):
+        return self.as_binary().get_units()
+    def has_lb(self):
+        return self.as_binary().has_lb()
+    def has_ub(self):
+        return self.as_binary().has_ub()
+    def is_binary(self):
+        return self.as_binary().is_binary()
+    def is_continuous(self):
+        return self.as_binary().is_continuous()
+    def is_integer(self):
+        return self.as_binary().is_integer()
+    def polynomial_degree(self):
+        return self.as_binary().polynomial_degree()
+
+    def __le__(self, arg):
+        return self.as_binary().__le__(arg)
+    def __lt__(self, arg):
+        return self.as_binary().__lt__(arg)
+    def __ge__(self, arg):
+        return self.as_binary().__ge__(arg)
+    def __gt__(self, arg):
+        return self.as_binary().__gt__(arg)
+    def __eq__(self, arg):
+        return self.as_binary().__eq__(arg)
+    def __ne__(self, arg):
+        return self.as_binary().__ne__(arg)
+
+    def __add__(self, arg):
+        return self.as_binary().__add__(arg)
+    def __div__(self, arg):
+        return self.as_binary().__div__(arg)
+    def __mul__(self, arg):
+        return self.as_binary().__mul__(arg)
+    def __pow__(self, arg):
+        return self.as_binary().__pow__(arg)
+    def __sub__(self, arg):
+        return self.as_binary().__sub__(arg)
+    def __truediv__(self, arg):
+        return self.as_binary().__truediv__(arg)
+    def __iadd__(self, arg):
+        return self.as_binary().__iadd__(arg)
+    def __idiv__(self, arg):
+        return self.as_binary().__idiv__(arg)
+    def __imul__(self, arg):
+        return self.as_binary().__imul__(arg)
+    def __ipow__(self, arg):
+        return self.as_binary().__ipow__(arg)
+    def __isub__(self, arg):
+        return self.as_binary().__isub__(arg)
+    def __itruediv__(self, arg):
+        return self.as_binary().__itruediv__(arg)
+    def __radd__(self, arg):
+        return self.as_binary().__radd__(arg)
+    def __rdiv__(self, arg):
+        return self.as_binary().__rdiv__(arg)
+    def __rmul__(self, arg):
+        return self.as_binary().__rmul__(arg)
+    def __rpow__(self, arg):
+        return self.as_binary().__rpow__(arg)
+    def __rsub__(self, arg):
+        return self.as_binary().__rsub__(arg)
+    def __rtruediv__(self, arg):
+        return self.as_binary().__rtruediv__(arg)
+    def setlb(self, arg):
+        return self.as_binary().setlb(arg)
+    def setub(self, arg):
+        return self.as_binary().setub(arg)
 
 
 # The following should eventually be promoted so that all
@@ -87,7 +355,9 @@ class _DisjunctData(_BlockData):
 
     def __init__(self, component):
         _BlockData.__init__(self, component)
-        self.indicator_var = Var(within=Binary)
+        self.indicator_var = AutoLinkedBooleanVar()
+        self.binary_indicator_var = AutoLinkedBinaryVar(self.indicator_var)
+        self.indicator_var.associate_binary_var(self.binary_indicator_var)
         # pointer to transformation block if this disjunct has been
         # transformed. None indicates it hasn't been transformed.
         self._transformation_block = None
@@ -98,7 +368,7 @@ class _DisjunctData(_BlockData):
 
     def deactivate(self):
         super(_DisjunctData, self).deactivate()
-        self.indicator_var.fix(0)
+        self.indicator_var.fix(False)
 
     def _deactivate_without_fixing_indicator(self):
         super(_DisjunctData, self).deactivate()
@@ -116,7 +386,7 @@ class Disjunct(Block):
         if cls != Disjunct:
             return super(Disjunct, cls).__new__(cls)
         if args == ():
-            return SimpleDisjunct.__new__(SimpleDisjunct)
+            return ScalarDisjunct.__new__(ScalarDisjunct)
         else:
             return IndexedDisjunct.__new__(IndexedDisjunct)
 
@@ -151,11 +421,11 @@ class Disjunct(Block):
         # call this method.
         ActiveComponent.activate(self)
         if self.is_indexed():
-            for component_data in itervalues(self):
+            for component_data in self.values():
                 component_data._activate_without_unfixing_indicator()
 
 
-class SimpleDisjunct(_DisjunctData, Disjunct):
+class ScalarDisjunct(_DisjunctData, Disjunct):
 
     def __init__(self, *args, **kwds):
         ## FIXME: This is a HACK to get around a chicken-and-egg issue
@@ -169,6 +439,11 @@ class SimpleDisjunct(_DisjunctData, Disjunct):
         self._data[None] = self
 
 
+class SimpleDisjunct(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarDisjunct
+    __renamed__version__ = '6.0'
+
+
 class IndexedDisjunct(Disjunct):
     #
     # HACK: this should be implemented on ActiveIndexedComponent, but
@@ -176,7 +451,7 @@ class IndexedDisjunct(Disjunct):
     #
     @property
     def active(self):
-        return any(d.active for d in itervalues(self._data))
+        return any(d.active for d in self._data.values())
 
 
 _DisjunctData._Block_reserved_words = set(dir(Disjunct()))
@@ -217,7 +492,7 @@ class _DisjunctionData(ActiveComponentData):
 
     def set_value(self, expr):
         for e in expr:
-            # The user gave us a proper Disjunct block 
+            # The user gave us a proper Disjunct block
             # [ESJ 06/21/2019] This is really an issue with the reclassifier,
             # but in the case where you are iteratively adding to an
             # IndexedDisjunct indexed by Any which has already been transformed,
@@ -294,7 +569,7 @@ class Disjunction(ActiveIndexedComponent):
         if cls != Disjunction:
             return super(Disjunction, cls).__new__(cls)
         if args == ():
-            return SimpleDisjunction.__new__(SimpleDisjunction)
+            return ScalarDisjunction.__new__(ScalarDisjunction)
         else:
             return IndexedDisjunction.__new__(IndexedDisjunction)
 
@@ -423,13 +698,13 @@ class Disjunction(ActiveIndexedComponent):
              ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active),
              ],
-            iteritems(self),
+            self.items(),
             ( "Disjuncts", "Active", "XOR" ),
             lambda k, v: [ [x.name for x in v.disjuncts], v.active, v.xor]
             )
 
 
-class SimpleDisjunction(_DisjunctionData, Disjunction):
+class ScalarDisjunction(_DisjunctionData, Disjunction):
 
     def __init__(self, *args, **kwds):
         _DisjunctionData.__init__(self, component=self)
@@ -460,7 +735,13 @@ class SimpleDisjunction(_DisjunctionData, Disjunction):
         if expr is Disjunction.Skip:
             del self[None]
             return None
-        return super(SimpleDisjunction, self).set_value(expr)
+        return super(ScalarDisjunction, self).set_value(expr)
+
+
+class SimpleDisjunction(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarDisjunction
+    __renamed__version__ = '6.0'
+
 
 class IndexedDisjunction(Disjunction):
     #
@@ -469,4 +750,4 @@ class IndexedDisjunction(Disjunction):
     #
     @property
     def active(self):
-        return any(d.active for d in itervalues(self._data))
+        return any(d.active for d in self._data.values())

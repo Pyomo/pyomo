@@ -11,22 +11,10 @@
 __all__ = [
     "AbstractProblemWriter",
     "WriterFactory",
-    "ProblemConfigFactory",
-    "BaseProblemConfig",
     "BranchDirection",
 ]
 
 from pyomo.common import Factory
-
-
-ProblemConfigFactory = Factory('problem configuration object')
-
-
-class BaseProblemConfig(object):
-    """Base class for plugins generating problem configurations"""
-
-    def config_block(self):
-        pass
 
 
 WriterFactory = Factory('problem writer')

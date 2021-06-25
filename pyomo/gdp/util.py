@@ -16,7 +16,6 @@ from pyomo.core.base.component import _ComponentBase
 
 from pyomo.core import Block, TraversalStrategy
 from pyomo.opt import TerminationCondition, SolverStatus
-from six import iterkeys
 from weakref import ref as weakref_ref
 import logging
 
@@ -81,7 +80,22 @@ def clone_without_expression_components(expr, substitute=None):
                                                 remove_named_expressions=True)
     return visitor.dfs_postorder_stack(expr)
 
-
+def preprocess_targets(targets):
+    preprocessed_targets = []
+    for t in targets:
+        if t.ctype is Disjunction:
+            if t.is_indexed():
+                for disjunction in t.values():
+                    for disj in disjunction.disjuncts:
+                        preprocessed_targets.append(disj)
+            else:
+                for disj in t.disjuncts:
+                    preprocessed_targets.append(disj)
+        # now we are safe to put the disjunction, and if the target was
+        # anything else, then we don't need to worry because disjuncts
+        # are declared before disjunctions they appear in
+        preprocessed_targets.append(t)
+    return preprocessed_targets
 
 def target_list(x):
     if isinstance(x, _ComponentBase):
@@ -94,12 +108,12 @@ def target_list(x):
             else:
                 raise ValueError(
                     "Expected Component or list of Components."
-                    "\n\tRecieved %s" % (type(i),))
+                    "\n\tReceived %s" % (type(i),))
         return ans
     else:
         raise ValueError(
             "Expected Component or list of Components."
-            "\n\tRecieved %s" % (type(x),))
+            "\n\tReceived %s" % (type(x),))
 
 # [ESJ 07/09/2019 Should this be a more general utility function elsewhere?  I'm
 #  putting it here for now so that all the gdp transformations can use it.
@@ -229,12 +243,12 @@ def get_transformed_constraints(srcConstraint):
 
     Parameters
     ----------
-    srcConstraint: SimpleConstraint or _ConstraintData, which must be in
+    srcConstraint: ScalarConstraint or _ConstraintData, which must be in
     the subtree of a transformed Disjunct
     """
     if srcConstraint.is_indexed():
         raise GDP_Error("Argument to get_transformed_constraint should be "
-                        "a SimpleConstraint or _ConstraintData. (If you "
+                        "a ScalarConstraint or _ConstraintData. (If you "
                         "want the container for all transformed constraints "
                         "from an IndexedDisjunction, this is the parent "
                         "component of a transformed constraint originating "
@@ -252,7 +266,7 @@ def _warn_for_active_disjunction(disjunction, disjunct, NAME_BUFFER):
     assert disjunction.active
     problemdisj = disjunction
     if disjunction.is_indexed():
-        for i in sorted(iterkeys(disjunction)):
+        for i in sorted(disjunction.keys()):
             if disjunction[i].active:
                 # a _DisjunctionData is active, we will yell about
                 # it specifically.
@@ -275,7 +289,7 @@ def _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER):
     assert innerdisjunct.active
     problemdisj = innerdisjunct
     if innerdisjunct.is_indexed():
-        for i in sorted(iterkeys(innerdisjunct)):
+        for i in sorted(innerdisjunct.keys()):
             if innerdisjunct[i].active:
                 # This shouldn't be true, we will complain about it.
                 problemdisj = innerdisjunct[i]
@@ -379,7 +393,7 @@ def check_model_algebraic(instance):
 def _disjunct_not_fixed_true(disjunct):
     # Return true if the disjunct indicator variable is not fixed to True
     return not (disjunct.indicator_var.fixed and
-                disjunct.indicator_var.value == 1)
+                disjunct.indicator_var.value)
 
 def _disjunct_on_active_block(disjunct):
     # Check first to make sure that the disjunct is not a descendent of an
@@ -392,7 +406,7 @@ def _disjunct_on_active_block(disjunct):
             return False
         # properly deactivated Disjunct
         elif (parent_block.ctype is Disjunct and not parent_block.active
-              and parent_block.indicator_var.value == 0
+              and parent_block.indicator_var.value == False
               and parent_block.indicator_var.fixed):
             return False
         else:

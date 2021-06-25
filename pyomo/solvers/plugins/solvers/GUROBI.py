@@ -16,9 +16,8 @@ import logging
 import subprocess
 
 from pyomo.common import Executable
-from pyomo.common.collections import Options, Bunch
+from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
-from pyutilib.subprocess import run
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
@@ -27,13 +26,6 @@ from pyomo.opt.solver import ILMLicensedSystemCallSolver
 from pyomo.core.kernel.block import IBlock
 
 logger = logging.getLogger('pyomo.solvers')
-
-from six import iteritems, StringIO
-
-try:
-    unicode
-except:
-    basestring = str
 
 
 @SolverFactory.register('gurobi', doc='The GUROBI LP/MIP solver')
@@ -110,7 +102,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         self.set_problem_format(ProblemFormat.cpxlp)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -219,11 +211,11 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # create the temporary file - assuming that the user has already, via some external
         # mechanism, invoked warm_start() with a instance to create the warm start file.
         if self._warm_start_solve and \
-           isinstance(args[0], basestring):
+           isinstance(args[0], str):
             # we assume the user knows what they are doing...
             pass
         elif self._warm_start_solve and \
-             (not isinstance(args[0], basestring)):
+             (not isinstance(args[0], str)):
             # assign the name of the warm start file *before* calling the base class
             # presolve - the base class method ends up creating the command line,
             # and the warm start file-name is (obviously) needed there.
@@ -238,7 +230,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # NB: we must let the base class presolve run first so that the
         # symbol_map is actually constructed!
 
-        if (len(args) > 0) and (not isinstance(args[0], basestring)):
+        if (len(args) > 0) and (not isinstance(args[0], str)):
 
             if len(args) != 1:
                 raise ValueError(
@@ -278,14 +270,16 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         if solver_exec is None:
             ver = _extract_version('')
         else:
-            f = StringIO()
-            results = run([solver_exec],
-                          stdin=('from gurobipy import *; '
-                                 'print(gurobi.version()); exit()'),
-                          ostream=f)
+            results = subprocess.run(
+                [solver_exec],
+                input='from gurobipy import *; print(gurobi.version()); exit()',
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+            )
             ver = None
             try:
-                ver = tuple(eval(f.getvalue().strip()))
+                ver = tuple(eval(results.stdout.strip()))
                 while(len(ver) < 4):
                     ver += (0,)
             except SyntaxError:
@@ -389,13 +383,13 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         extract_rc = False
         for suffix in self._suffixes:
             flag=False
-            if re.match(suffix,"dual"):
+            if re.match(suffix, "dual"):
                 extract_duals = True
                 flag=True
-            if re.match(suffix,"slack"):
+            if re.match(suffix, "slack"):
                 extract_slacks = True
                 flag=True
-            if re.match(suffix,"rc"):
+            if re.match(suffix, "rc"):
                 extract_rc = True
                 flag=True
             if not flag:
@@ -508,13 +502,13 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
 
         # For the range constraints, supply only the dual with the largest
         # magnitude (at least one should always be numerically zero)
-        for key,(ld,ud) in iteritems(range_duals):
+        for key,(ld,ud) in range_duals.items():
             if abs(ld) > abs(ud):
                 soln_constraints['r_l_'+key] = {"Dual" : ld}
             else:
                 soln_constraints['r_l_'+key] = {"Dual" : ud}                # Use the same key
         # slacks
-        for key,(ls,us) in iteritems(range_slacks):
+        for key,(ls,us) in range_slacks.items():
             if abs(ls) > abs(us):
                 soln_constraints.setdefault('r_l_'+key,{})["Slack"] = ls
             else:

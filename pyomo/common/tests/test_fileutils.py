@@ -16,17 +16,18 @@ import shutil
 import stat
 import sys
 import tempfile
+import subprocess
 
-from six import StringIO
+from io import StringIO
 
-import pyutilib.th as unittest
-from pyutilib.subprocess import run
+import pyomo.common.unittest as unittest
 
 import pyomo.common.config as config
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.fileutils import (
     this_file, this_file_dir, find_file, find_library, find_executable, 
     PathManager, _system, _path, _exeExt, _libExt, _ExecutableData,
+    import_file, StreamIndenter
 )
 from pyomo.common.download import FileDownloader
 
@@ -81,23 +82,51 @@ class TestFileUtils(unittest.TestCase):
         self.assertTrue(samefile(ref, found))
 
     def test_this_file(self):
-        self.assertEquals(_this_file, __file__.replace('.pyc','.py'))
+        self.assertEqual(_this_file, __file__.replace('.pyc','.py'))
         # Note that in some versions of PyPy, this can return <module>
         # instead of the normal <string>
-        self.assertIn(run([
+        self.assertIn(subprocess.run([
             sys.executable,'-c',
             'from pyomo.common.fileutils import this_file;'
             'print(this_file())'
-        ])[1].strip(), ['<string>','<module>'])
-        self.assertEquals(run(
+        ], stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True).stdout.strip(),
+            ['<string>','<module>'])
+        self.assertEqual(subprocess.run(
             [sys.executable],
-            stdin='from pyomo.common.fileutils import this_file;'
-            'print(this_file())'
-        )[1].strip(), '<stdin>')
+            input='from pyomo.common.fileutils import this_file;'
+            'print(this_file())', stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT, universal_newlines=True
+        ).stdout.strip(), '<stdin>')
 
     def test_this_file_dir(self):
         expected_path = os.path.join('pyomo','common','tests')
         self.assertTrue(_this_file_dir.endswith(expected_path))
+
+    def test_import_file(self):
+        import_ex = import_file(os.path.join(_this_file_dir, 'import_ex.py'))
+        self.assertIn("pyomo.common.tests.import_ex", sys.modules)
+        self.assertEqual(import_ex.b, 2)
+
+    def test_import_file_no_extension(self):
+        with self.assertRaises(FileNotFoundError) as context:
+            import_file(os.path.join(_this_file_dir, 'import_ex'))
+        self.assertTrue('File does not exist' in str(context.exception))
+
+    def test_StreamIndenter_noprefix(self):
+        OUT1 = StringIO()
+        OUT2 = StreamIndenter(OUT1)
+        OUT2.write('Hello?\nHello, world!')
+        self.assertEqual('    Hello?\n    Hello, world!',
+                         OUT2.getvalue())
+
+    def test_StreamIndenter_prefix(self):
+        prefix = 'foo:'
+        OUT1 = StringIO()
+        OUT2 = StreamIndenter(OUT1, prefix)
+        OUT2.write('Hello?\nHello, world!')
+        self.assertEqual('foo:Hello?\nfoo:Hello, world!', OUT2.getvalue())
 
     def test_system(self):
         self.assertTrue(platform.system().lower().startswith(_system()))
@@ -208,7 +237,8 @@ class TestFileUtils(unittest.TestCase):
         self.assertIsNotNone(b)
         self.assertIsNotNone(c)
         self.assertEqual(a,b)
-        self.assertEqual(a,c)
+        # find_library could have found libc.so.6
+        self.assertTrue(c.startswith(a))
         # Verify that the library is loadable (they are all the same
         # file, so only check one)
         _lib = ctypes.cdll.LoadLibrary(a)

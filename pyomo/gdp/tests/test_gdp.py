@@ -15,7 +15,7 @@
 import os
 import sys
 from os.path import abspath, dirname, normpath, join
-from pyutilib.misc import import_file
+from pyomo.common.fileutils import import_file
 currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir,'..','..','..','examples', 'gdp'))
 
@@ -24,13 +24,12 @@ try:
 except:
     import types as new
 
-import pyutilib.th as unittest
+from filecmp import cmp
+import pyomo.common.unittest as unittest
 
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 import pyomo.opt
 from pyomo.environ import SolverFactory, TransformationFactory
-
-from six import iteritems
 
 solvers = pyomo.opt.check_available_solvers('cplex', 'glpk','gurobi')
 
@@ -185,10 +184,11 @@ class Reformulate(unittest.TestCase, CommonTests):
         return join(currdir, problem+"_"+solver+'.lp')
 
     def check(self, problem, solver):
-        self.assertFileEqualsBaseline( join(currdir,self.problem+'_result.lp'),
-                                           self.referenceFile(problem,solver) )
+        _prob, _solv = join(currdir,self.problem+'_result.lp'), self.referenceFile(problem,solver)
+        self.assertTrue(cmp(_prob, _solv),
+                        msg="Files %s and %s differ" % (_prob, _solv))
         if os.path.exists(join(currdir,self.problem+'_result.lp')):
-            os.remove(join(currdir,self.problem+'_result.lp'))
+           os.remove(join(currdir,self.problem+'_result.lp'))
 
 
 class Solver(unittest.TestCase):
@@ -203,7 +203,7 @@ class Solver(unittest.TestCase):
         self.assertEqual(len(refObj), len(ansObj))
         for i in range(len(refObj)):
             self.assertEqual(len(refObj[i]), len(ansObj[i]))
-            for key,val in iteritems(refObj[i]):
+            for key,val in refObj[i].items():
                 self.assertAlmostEqual(
                     val.get('Value', None),
                     ansObj[i].get(key,{}).get('Value', None),
@@ -211,7 +211,7 @@ class Solver(unittest.TestCase):
                 )
         # Clean up test files
         if os.path.exists(join(currdir,self.problem+'_result.lp')):
-            os.remove(join(currdir,self.problem+'_result.lp'))
+           os.remove(join(currdir,self.problem+'_result.lp'))
 
 
 @unittest.skipIf(not yaml_available, "YAML is not available")

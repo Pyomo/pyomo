@@ -10,14 +10,12 @@
 
 import re
 import os
-
-from six import iteritems
+import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.errors import  ApplicationError
-from pyomo.common.collections import Options, Bunch
+from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
-from pyutilib.subprocess import run
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
@@ -92,7 +90,7 @@ class PICOSHELL(SystemCallSolver):
         self.set_problem_format(ProblemFormat.cpxlp)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.integer = True
         #self._capabilities.sos1 = True
@@ -134,12 +132,15 @@ class PICOSHELL(SystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = run([solver_exec, "--version"], timelimit=1)
+        results = subprocess.run([solver_exec, "--version"], timeout=1,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT,
+                                 universal_newlines=True)
         # 'PICO --version' seems to print 'pebble <version>, PICO <version>
         # we don't wan't the pebble version being advertised so we split
         # the string at the comma before extracting a version number. It
         # also exits with a nonzero return code so don't bother checking it.
-        return _extract_version(results[1].split(',')[1])
+        return _extract_version(results.stdout.split(',')[1])
 
     # Nothing needs to be done here
     #def _presolve(self, *args, **kwds):
@@ -179,7 +180,7 @@ class PICOSHELL(SystemCallSolver):
             #self._results_file = self.tmpDir+os.sep+"PICO.osrl.xml"
 
         def _check_and_escape_options(options):
-            for key, val in iteritems(self.options):
+            for key, val in self.options.items():
                 tmp_k = str(key)
                 _bad = ' ' in tmp_k
 
@@ -407,7 +408,7 @@ class PICOSHELL(SystemCallSolver):
                         range_duals.setdefault(var[4:],[0,0])[1] = val
             # For the range constraints, supply only the dual with the largest
             # magnitude (at least one should always be numerically zero)
-            for key,(ld,ud) in iteritems(range_duals):
+            for key,(ld,ud) in range_duals.items():
                 if abs(ld) > abs(ud):
                     soln_constraints['r_l_'+key] = {"Dual" : ld}
                 else:

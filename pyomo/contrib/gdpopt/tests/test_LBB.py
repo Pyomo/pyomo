@@ -3,9 +3,9 @@
 from math import fabs
 from os.path import abspath, dirname, join, normpath
 
-import pyutilib.th as unittest
-from pyutilib.misc import import_file
+import pyomo.common.unittest as unittest
 
+from pyomo.common.fileutils import import_file
 from pyomo.contrib.satsolver.satsolver import z3_available
 from pyomo.environ import SolverFactory, value, ConcreteModel, Var, Objective, maximize
 from pyomo.gdp import Disjunction

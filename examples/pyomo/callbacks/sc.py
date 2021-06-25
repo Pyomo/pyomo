@@ -8,11 +8,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 from pyomo.core import *
 import math
 import random
-from six.moves import xrange
 
 def print_model_stats(options,model):
     print("-"*40)
@@ -45,7 +44,7 @@ def print_model_stats(options,model):
 
 def pyomo_create_model(options=None, model_options=None):
     if model_options is None:
-        model_options = Options()
+        model_options = Bunch()
     if model_options.type is None:
         model_options.type = 'fixed_set_size'
     #
@@ -73,7 +72,7 @@ def pyomo_create_model(options=None, model_options=None):
         #
         def S_rule(model):
             ans = set()
-            for j in xrange(1,n+1):
+            for j in range(1,n+1):
                 tmp = list(range(1,m+1))
                 random.shuffle( tmp )
                 for i in range(0,p):
@@ -93,7 +92,7 @@ def pyomo_create_model(options=None, model_options=None):
         #
         def S_rule(model):
             ans = set()
-            for i in xrange(1,m+1):
+            for i in range(1,m+1):
                 tmp = list(range(1,n+1))
                 random.shuffle( tmp )
                 for j in range(0,p):
@@ -107,8 +106,8 @@ def pyomo_create_model(options=None, model_options=None):
         #
         def S_rule(model):
             ans = set()
-            for j in xrange(1,n+1):
-                for i in xrange(1,m+1):
+            for j in range(1,n+1):
+                for i in range(1,m+1):
                     if random.uniform(0,1) < rho:
                         ans.add( (i, j) )
             return ans
@@ -120,8 +119,8 @@ def pyomo_create_model(options=None, model_options=None):
         #
         def S_rule(model):
             ans = set()
-            for j in xrange(1,n+1):
-                for i in xrange(1,m+1):
+            for j in range(1,n+1):
+                for i in range(1,m+1):
                     if random.uniform(0,1) < rho:
                         ans.add( (i, j) )
             return ans
@@ -185,24 +184,24 @@ def test_model(options=None):
 if __name__ == '__main__':
     test_model()
     #
-    options = Options()
+    options = Bunch()
     options.type = 'fixed_set_size'
     options.m = 11
     options.n = 21
     options.rho = 0.3
     test_model(options)
     #
-    options = Options()
+    options = Bunch()
     options.type = 'fixed_element_coverage'
     test_model(options)
     #
-    options = Options()
+    options = Bunch()
     options.m = 100
     options.n = 200
     options.type = 'fixed_probability'
     test_model(options)
     #
-    options = Options()
+    options = Bunch()
     options.type = 'fixed_element_coverage'
     options.m = 10
     options.n = 100

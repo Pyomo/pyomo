@@ -8,15 +8,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import iteritems
 from collections import namedtuple
 
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import ZeroConstant, native_numeric_types, as_numeric
 from pyomo.core import Constraint, Var, Block, Set
-from pyomo.core.base.plugin import ModelComponentFactory
+from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.util import (
     disable_methods, Initializer, IndexedCallInitializer, CountedCallInitializer
@@ -172,7 +172,7 @@ class Complementarity(Block):
         if cls != Complementarity:
             return super(Complementarity, cls).__new__(cls)
         if args == ():
-            return super(Complementarity, cls).__new__(AbstractSimpleComplementarity)
+            return super(Complementarity, cls).__new__(AbstractScalarComplementarity)
         else:
             return super(Complementarity, cls).__new__(IndexedComplementarity)
 
@@ -267,13 +267,13 @@ Error thrown for Complementarity "%s".""" % ( b.name, ) )
              ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active),
              ],
-            iteritems(self._data),
+            self._data.items(),
             ( "Arg0","Arg1","Active" ),
             (_table_data, _conditional_block_printer),
             )
 
 
-class SimpleComplementarity(_ComplementarityData, Complementarity):
+class ScalarComplementarity(_ComplementarityData, Complementarity):
 
     def __init__(self, *args, **kwds):
         _ComplementarityData.__init__(self, self)
@@ -281,9 +281,19 @@ class SimpleComplementarity(_ComplementarityData, Complementarity):
         self._data[None] = self
 
 
+class SimpleComplementarity(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarComplementarity
+    __renamed__version__ = '6.0'
+
+
 @disable_methods({'add', 'set_value', 'to_standard_form'})
-class AbstractSimpleComplementarity(SimpleComplementarity):
+class AbstractScalarComplementarity(ScalarComplementarity):
     pass
+
+
+class AbstractSimpleComplementarity(metaclass=RenamedClass):
+    __renamed__new_class__ = AbstractScalarComplementarity
+    __renamed__version__ = '6.0'
 
 
 class IndexedComplementarity(Complementarity):

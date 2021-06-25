@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 from abc import ABCMeta, abstractmethod
-import six
 from pyomo.contrib.pynumero.interfaces import pyomo_nlp, ampl_nlp
 from pyomo.contrib.pynumero.sparse import BlockMatrix, BlockVector
 import numpy as np
@@ -17,7 +16,7 @@ import scipy.sparse
 from pyomo.common.timing import HierarchicalTimer
 
 
-class BaseInteriorPointInterface(six.with_metaclass(ABCMeta, object)):
+class BaseInteriorPointInterface(object, metaclass=ABCMeta):
     @abstractmethod
     def n_primals(self):
         pass

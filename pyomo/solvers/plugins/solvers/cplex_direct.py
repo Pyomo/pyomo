@@ -10,7 +10,6 @@
 
 import logging
 import re
-import six
 import sys
 
 from pyomo.common.tempfiles import TempfileManager
@@ -169,7 +168,7 @@ class CPLEXDirect(DirectSolver):
         # least as far back as CPLEX 12.5.1 [the oldest version
         # supported by IBM as of 1 Oct 2020]
         if self.version() >= (12, 5, 1) \
-           and isinstance(self._log_file, six.string_types):
+           and isinstance(self._log_file, str):
             _log_file = (open(self._log_file, 'a'),)
             _close_log_file = True
         else:
@@ -745,7 +744,7 @@ class CPLEXDirect(DirectSolver):
         self.results.solver.termination_message = cpxprob.solution.get_status_string(status)
 
         # Get additional solver output from log file
-        if self.version() >= (12, 5, 1) and isinstance(self._log_file, six.string_types):
+        if self.version() >= (12, 5, 1) and isinstance(self._log_file, str):
             _log_file = open(self._log_file, 'r')
             _close_log_file = True
         else:

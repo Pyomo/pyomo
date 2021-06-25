@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Tests deactivation of trivial constraints."""
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.environ import (Constraint, ConcreteModel, TransformationFactory,
                            Var)
 

@@ -215,7 +215,7 @@ class Finite_Difference_Transformation(Transformation):
                 generate_finite_elements(ds, self._nfe[currentds])
                 if not ds.get_changed():
                     if len(ds) - 1 > self._nfe[currentds]:
-                        logger.warn("More finite elements were found in "
+                        logger.warning("More finite elements were found in "
                                     "ContinuousSet '%s' than the number of "
                                     "finite elements specified in apply. The "
                                     "larger number of finite elements will be "
@@ -282,11 +282,24 @@ class Finite_Difference_Transformation(Transformation):
 
             if block.contains_component(Integral):
                 for i in block.component_objects(Integral, descend_into=True):
-                    i.reconstruct()
                     i.parent_block().reclassify_component_type(i, Expression)
+                    # TODO: The following reproduces the old behavior of
+                    # "reconstruct()".  We should come up with an
+                    # implementation that does not rely on manipulating
+                    # private attributes
+                    i.clear()
+                    i._constructed = False
+                    i.construct()
+
                 # If a model contains integrals they are most likely to
                 # appear in the objective function which will need to be
                 # reconstructed after the model is discretized.
                 for k in block.component_objects(Objective, descend_into=True):
                     # TODO: check this, reconstruct might not work
-                    k.reconstruct()
+                    # TODO: The following reproduces the old behavior of
+                    # "reconstruct()".  We should come up with an
+                    # implementation that does not rely on manipulating
+                    # private attributes
+                    k.clear()
+                    k._constructed = False
+                    k.construct()

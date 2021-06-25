@@ -13,7 +13,8 @@
 
 import os
 
-import pyutilib.th as unittest
+from filecmp import cmp
+import pyomo.common.unittest as unittest
 
 from pyomo.common.getGSL import find_GSL
 from pyomo.environ import ConcreteModel, Var, Constraint, Objective, Param, Block, ExternalFunction, value
@@ -47,7 +48,7 @@ class TestNLWriter(unittest.TestCase):
 
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError,
             "'a' is not part of the model",
             model.write, test_fname, format='nl')
@@ -65,10 +66,11 @@ class TestNLWriter(unittest.TestCase):
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
         model.write(test_fname, format='nl')
-        self.assertFileEqualsBaseline(
+        self.assertTrue(cmp(
             test_fname,
-            baseline_fname,
-            delete=True)
+            baseline_fname),
+            msg="Files %s and %s differ" % (test_fname, baseline_fname))
+        self._cleanup(test_fname)
 
     def test_var_on_nonblock(self):
         class Foo(Block().__class__):
@@ -85,7 +87,7 @@ class TestNLWriter(unittest.TestCase):
 
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError,
             "'other.a' exists within Foo 'other'",
             model.write, test_fname, format='nl')
@@ -107,6 +109,27 @@ class TestNLWriter(unittest.TestCase):
         self.assertAlmostEqual(value(m.o), 25.0, 7)
         return m
 
+    def test_external_expression_constant(self):
+        DLL = find_GSL()
+        if not DLL:
+            self.skipTest("Could not find the amplgsl.dll library")
+
+        m = ConcreteModel()
+        m.y = Var(initialize=4, bounds=(0,None))
+        m.hypot = ExternalFunction(library=DLL, function="gsl_hypot")
+        m.o = Objective(expr=m.hypot(3, m.y))
+        self.assertAlmostEqual(value(m.o), 5.0, 7)
+
+        baseline_fname, test_fname = self._get_fnames()
+        self._cleanup(test_fname)
+        m.write(test_fname, format='nl',
+                    io_options={'symbolic_solver_labels':True})
+        self.assertTrue(cmp(
+            test_fname,
+            baseline_fname),
+            msg="Files %s and %s differ" % (test_fname, baseline_fname))
+        self._cleanup(test_fname)
+
     def test_external_expression_variable(self):
         m = self._external_model()
 
@@ -114,10 +137,10 @@ class TestNLWriter(unittest.TestCase):
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True})
-        self.assertFileEqualsBaseline(
+        self.assertTrue(cmp(
             test_fname,
-            baseline_fname,
-            delete=True)
+            baseline_fname),
+            msg="Files %s and %s differ" % (test_fname, baseline_fname))
         self._cleanup(test_fname)
 
     def test_external_expression_partial_fixed(self):
@@ -128,10 +151,10 @@ class TestNLWriter(unittest.TestCase):
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True})
-        self.assertFileEqualsBaseline(
+        self.assertTrue(cmp(
             test_fname,
-            baseline_fname,
-            delete=True)
+            baseline_fname),
+            msg="Files %s and %s differ" % (test_fname, baseline_fname))
         self._cleanup(test_fname)
 
     def test_external_expression_fixed(self):
@@ -143,10 +166,10 @@ class TestNLWriter(unittest.TestCase):
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True})
-        self.assertFileEqualsBaseline(
+        self.assertTrue(cmp(
             test_fname,
-            baseline_fname,
-            delete=True)
+            baseline_fname),
+            msg="Files %s and %s differ" % (test_fname, baseline_fname))
         self._cleanup(test_fname)
 
     def test_external_expression_rewrite_fixed(self):
@@ -157,10 +180,10 @@ class TestNLWriter(unittest.TestCase):
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True})
-        self.assertFileEqualsBaseline(
+        self.assertTrue(cmp(
             test_fname,
-            variable_baseline,
-            delete=True)
+            variable_baseline),
+            msg="Files %s and %s differ" % (test_fname, baseline_fname))
 
         self.assertIsNot(m._repn, None)
 
@@ -170,20 +193,20 @@ class TestNLWriter(unittest.TestCase):
                 io_options={'symbolic_solver_labels':True})
         partial_baseline = baseline_fname.replace(
             'rewrite_fixed','partial_fixed')
-        self.assertFileEqualsBaseline(
+        self.assertTrue(cmp(
             test_fname,
-            partial_baseline,
-            delete=True)
+            partial_baseline),
+            msg="Files %s and %s differ" % (test_fname, baseline_fname))
 
         m.y.fix()
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                 io_options={'symbolic_solver_labels':True})
         fixed_baseline = baseline_fname.replace('rewrite_fixed','fixed')
-        self.assertFileEqualsBaseline(
+        self.assertTrue(cmp(
             test_fname,
-            fixed_baseline,
-            delete=True)
+            fixed_baseline),
+            msg="Files %s and %s differ" % (test_fname, baseline_fname))
         self._cleanup(test_fname)
 
 

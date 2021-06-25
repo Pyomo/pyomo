@@ -38,7 +38,7 @@ def configure_glpk_direct():
         print("Import of glpk failed - glpk message="+str(e)+"\n")
         glpk_python_api_exists = False
 
-from pyomo.common.collections import Bunch, Options
+from pyomo.common.collections import Bunch
 
 from pyomo.opt.base import OptSolver
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
@@ -104,7 +104,7 @@ class GLPKDirect ( OptSolver ):
         self._timelimit = None
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.integer = True
 

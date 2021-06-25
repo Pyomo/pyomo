@@ -9,12 +9,8 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.dependencies import (
-    numpy as np, numpy_available,
     pandas as pd, pandas_available,
-    scipy, scipy_available,
-    matplotlib, matplotlib_available,
 )
-imports_present = numpy_available & pandas_available & scipy_available
 
 uuid_available = True
 try:
@@ -22,7 +18,7 @@ try:
 except:
     uuid_available = False
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 import os
 import pyomo.contrib.parmest.parmest as parmest
 import pyomo.contrib.parmest.scenariocreator as sc
@@ -33,8 +29,7 @@ ipopt_available = SolverFactory('ipopt').available()
 
 testdir = os.path.dirname(os.path.abspath(__file__))
 
-
-@unittest.skipIf(not imports_present, "Cannot test parmest: required dependencies are missing")
+@unittest.skipIf(not parmest.parmest_available, "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class pamest_Scenario_creator_reactor_design(unittest.TestCase):
     
@@ -102,7 +97,7 @@ class pamest_Scenario_creator_reactor_design(unittest.TestCase):
         
 
 
-@unittest.skipIf(not imports_present, "Cannot test parmest: required dependencies are missing")
+@unittest.skipIf(not parmest.parmest_available, "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 class  pamest_Scenario_creator_semibatch(unittest.TestCase):
     

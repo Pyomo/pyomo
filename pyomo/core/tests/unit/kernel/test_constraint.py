@@ -10,7 +10,7 @@
 
 import pickle
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.core.expr import logical_expr
 from pyomo.kernel import pprint
 from pyomo.core.tests.unit.kernel.test_dict_container import \
@@ -1488,19 +1488,6 @@ class Test_constraint(unittest.TestCase):
             c.expr = (2)
         with self.assertRaises(ValueError):
             c.expr = (True)
-
-    @unittest.skipIf(not logical_expr._using_chained_inequality, "Chained inequalities are not supported.")
-    def test_chainedInequalityError(self):
-        x = variable()
-        c = constraint()
-        a = x <= 0
-        if x <= 0:
-            pass
-        def f():
-            c.expr = a
-        self.assertRaisesRegexp(
-            TypeError, "Relational expression used in an unexpected "
-            "Boolean context.", f)
 
     def test_tuple_constraint_create(self):
         x = variable()

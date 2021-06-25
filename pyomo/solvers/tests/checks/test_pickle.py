@@ -16,10 +16,9 @@ try:
 except:
     new_available=False
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.testcases import test_scenarios
-
 
 #
 # A function that returns a function that gets
@@ -45,12 +44,17 @@ def create_test_method(model, solver, io,
         load_solutions = (not model_class.solve_should_fail) and \
                          (test_case.status != 'expected failure')
 
-        opt, status = model_class.solve(solver,
-                                        io,
-                                        test_case.testcase.io_options,
-                                        test_case.testcase.options,
-                                        symbolic_labels,
-                                        load_solutions)
+        try:
+            opt, status = model_class.solve(solver,
+                                            io,
+                                            test_case.testcase.io_options,
+                                            test_case.testcase.options,
+                                            symbolic_labels,
+                                            load_solutions)
+        except:
+            if test_case.status == 'expected failure':
+                return
+            raise
         m = pickle.loads(pickle.dumps(model_class.model))
 
         #
@@ -150,6 +154,7 @@ for model in test_models():
 for key, value in test_scenarios(lambda c: c.test_pickling):
     model, solver, io = key
     cls = driver[model]
+
     # Symbolic labels
     test_name = "test_"+solver+"_"+io +"_symbolic_labels"
     test_method = create_test_method(model, solver, io, value, True)

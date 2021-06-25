@@ -1,7 +1,7 @@
 import logging
 
-import pyutilib.th as unittest
-from six import StringIO
+import pyomo.common.unittest as unittest
+from io import StringIO
 
 from pyomo.common.log import LoggingIntercept
 from pyomo.environ import ConcreteModel, Var, Objective

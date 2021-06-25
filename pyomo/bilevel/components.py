@@ -10,16 +10,15 @@
 
 __all__ = ['SubModel']
 
-from pyomo.core.base.plugin import ModelComponentFactory
-from pyomo.core.base.component import Component
-from pyomo.core.base.block import SimpleBlock
+from pyomo.core.base.block import ScalarBlock
+from pyomo.core.base.component import Component, ModelComponentFactory
 from pyomo.common.deprecation import deprecated
 
-# TODO: Do we need to have SimpleSubModel and IndexedSubModel classes?
+# TODO: Do we need to have ScalarSubModel and IndexedSubModel classes?
 
 
 @ModelComponentFactory.register("A submodel in a bilevel program")
-class SubModel(SimpleBlock):
+class SubModel(ScalarBlock):
 
     @deprecated(
         "Use of the pyomo.bilevel package is deprecated. There are known bugs "
@@ -37,10 +36,10 @@ class SubModel(SimpleBlock):
         _fixed = kwargs.pop('fixed', None )
         _var = kwargs.pop('var', None )     # Not documented
         #
-        # Initialize the SimpleBlock
+        # Initialize the ScalarBlock
         #
         kwargs.setdefault('ctype', SubModel)
-        SimpleBlock.__init__(self, *args, **kwargs)
+        ScalarBlock.__init__(self, *args, **kwargs)
         #
         # Initialize from kwargs
         #

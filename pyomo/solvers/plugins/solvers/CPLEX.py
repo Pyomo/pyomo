@@ -13,14 +13,13 @@ import os
 import re
 import time
 import logging
+import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.errors import ApplicationError
-from pyutilib.misc import yaml_fix
 from pyomo.common.tempfiles import TempfileManager
-from pyutilib.subprocess import run
 
-from pyomo.common.collections import ComponentMap, Options, Bunch
+from pyomo.common.collections import ComponentMap, Bunch
 from pyomo.opt.base import (
     ProblemFormat, ResultsFormat, OptSolver, BranchDirection,
 )
@@ -38,13 +37,6 @@ from pyomo.util.components import iter_component
 
 logger = logging.getLogger('pyomo.solvers')
 
-from six import iteritems
-from six.moves import xrange
-
-try:
-    unicode
-except:
-    basestring = unicode = str
 
 def _validate_file_name(cplex, filename, description):
     """Validate filenames against the set of allowable chaacters in CPLEX.
@@ -174,7 +166,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         self.set_problem_format(ProblemFormat.cpxlp)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -319,11 +311,11 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # create the temporary file - assuming that the user has already, via some external
         # mechanism, invoked warm_start() with a instance to create the warm start file.
         if self._warm_start_solve and \
-           isinstance(args[0], basestring):
+           isinstance(args[0], str):
             # we assume the user knows what they are doing...
             pass
         elif self._warm_start_solve and \
-             (not isinstance(args[0], basestring)):
+             (not isinstance(args[0], str)):
             # assign the name of the warm start file *before* calling the base class
             # presolve - the base class method ends up creating the command line,
             # and the warm start file-name is (obviously) needed there.
@@ -340,7 +332,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
         if (
             self._priorities_solve
-            and not isinstance(args[0], basestring)
+            and not isinstance(args[0], str)
             and not user_priorities
         ):
             self._priorities_file_name = TempfileManager.create_tempfile(
@@ -353,7 +345,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # NB: we must let the base class presolve run first so that the
         # symbol_map is actually constructed!
 
-        if (len(args) > 0) and (not isinstance(args[0], basestring)):
+        if (len(args) > 0) and (not isinstance(args[0], str)):
 
             if len(args) != 1:
                 raise ValueError(
@@ -396,11 +388,21 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         """
         Returns a tuple describing the solver executable version.
         """
+        # The subprocess below can sometimes time out if we're low on resources. This gives us a much
+        # cheaper way of getting the version
+        version_from_env = _extract_version(os.environ.get('CPLEX_VERSION', ''))
+        if version_from_env:
+            return version_from_env
+
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = run( [solver_exec,'-c','quit'], timelimit=1 )
-        return _extract_version(results[1])
+        results = subprocess.run( [solver_exec,'-c','quit'],
+                                  timeout=1,
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT,
+                                  universal_newlines=True)
+        return _extract_version(results.stdout)
 
     def create_command_line(self, executable, problem_files):
 
@@ -436,7 +438,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         for key in self.options:
             if key == 'relax_integrality' or key == 'mipgap':
                 continue
-            elif isinstance(self.options[key], basestring) and \
+            elif isinstance(self.options[key], str) and \
                  (' ' in self.options[key]):
                 opt = ' '.join(key.split('_'))+' '+str(self.options[key])
             else:
@@ -686,7 +688,8 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 results.solver.termination_message = ' '.join(tokens)
 
         try:
-            results.solver.termination_message = yaml_fix(results.solver.termination_message)
+            if isinstance(results.solver.termination_message, str):
+                results.solver.termination_message = results.solver.termination_message.replace(':', '\\x3a')
         except:
             pass
         return results
@@ -757,7 +760,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 variable_value = None
                 variable_reduced_cost = None
                 variable_status = None
-                for i in xrange(1,len(tokens)):
+                for i in range(1,len(tokens)):
                     field_name =  tokens[i].split('=')[0]
                     field_value = tokens[i].split('=')[1].lstrip("\"").rstrip("\"")
                     if field_name == "name":
@@ -793,7 +796,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 is_range = False
                 rlabel = None
                 rkey = None
-                for i in xrange(1,len(tokens)):
+                for i in range(1,len(tokens)):
                     field_name =  tokens[i].split('=')[0]
                     field_value = tokens[i].split('=')[1].lstrip("\"").rstrip("\"")
                     if field_name == "name":
@@ -919,13 +922,13 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
         # For the range constraints, supply only the dual with the largest
         # magnitude (at least one should always be numerically zero)
-        for key,(ld,ud) in iteritems(range_duals):
+        for key,(ld,ud) in range_duals.items():
             if abs(ld) > abs(ud):
                 soln_constraints['r_l_'+key] = {"Dual" : ld}
             else:
                 soln_constraints['r_l_'+key] = {"Dual" : ud}                # Use the same key
         # slacks
-        for key,(ls,us) in iteritems(range_slacks):
+        for key,(ls,us) in range_slacks.items():
             if abs(ls) > abs(us):
                 soln_constraints.setdefault('r_l_'+key,{})["Slack"] = ls
             else:

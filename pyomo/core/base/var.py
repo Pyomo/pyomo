@@ -8,28 +8,29 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar']
+__all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar',
+           'ScalarVar']
 
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base.numvalue import NumericValue, value, is_fixed
+from pyomo.core.base.numvalue import (
+    NumericValue, value, is_fixed, native_numeric_types,
+)
 from pyomo.core.base.set_types import Reals, Binary
-from pyomo.core.base.plugin import ModelComponentFactory
-from pyomo.core.base.component import ComponentData
+from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import Set, _SetDataBase
 from pyomo.core.base.units_container import units
 from pyomo.core.base.util import is_functor
 
-from six import iteritems, itervalues
-from six.moves import xrange
-
 logger = logging.getLogger('pyomo.core')
+
 
 class _VarData(ComponentData, NumericValue):
     """
@@ -175,9 +176,24 @@ class _VarData(ComponentData, NumericValue):
         validating its value. If the 'valid' flag is True,
         then the validation step is skipped.
         """
-        if valid or self._valid_value(val):
-            self.value = val
-            self.stale = False
+        if not valid and val is not None:
+            # TODO: warn/error: check if this Var has units: assigning
+            # a dimensionless value to a united variable should be an error
+            if type(val) not in native_numeric_types:
+                if self.parent_component()._units is not None:
+                    _src_magnitude = value(val)
+                    _src_units = units.get_units(val)
+                    val = units.convert_value(
+                        num_value=_src_magnitude, from_units=_src_units,
+                        to_units=self.parent_component()._units)
+
+            if val not in self.domain:
+                raise ValueError("Numeric value `%s` (%s) is not in "
+                                 "domain %s for Var %s" %
+                                 (val, type(val), self.domain, self.name))
+                
+        self.value = val
+        self.stale = False
 
     def _valid_value(self, val, use_exception=True):
         """
@@ -373,6 +389,16 @@ class _GeneralVarData(_VarData):
     @value.setter
     def value(self, val):
         """Set the value for this variable."""
+        if type(val) in native_numeric_types:
+            # TODO: warn/error: check if this Var has units: assigning
+            # a dimensionless value to a united variable should be an error
+            pass
+        elif val is not None and self.parent_component()._units is not None:
+            _src_magnitude = value(val)
+            _src_units = units.get_units(val)
+            val = units.convert_value(
+                num_value=_src_magnitude, from_units=_src_units,
+                to_units=self.parent_component()._units)
         self._value = val
 
     @property
@@ -435,13 +461,24 @@ class _GeneralVarData(_VarData):
         the value is fixed (or None).
         """
         # Note: is_fixed(None) returns True
-        if is_fixed(val):
-            self._lb = val
-        else:
+        if not is_fixed(val):
             raise ValueError(
                 "Non-fixed input of type '%s' supplied as variable lower "
                 "bound - legal types must be fixed expressions or variables."
                 % (type(val),))
+        if type(val) in native_numeric_types or val is None:
+            # TODO: warn/error: check if this Var has units: assigning
+            # a dimensionless value to a united variable should be an error
+            pass
+        else:
+            if self.parent_component()._units is not None:
+                _src_magnitude = value(val)
+                _src_units = units.get_units(val)
+                val = units.convert_value(
+                    num_value=_src_magnitude, from_units=_src_units,
+                    to_units=self.parent_component()._units)
+        self._lb = val
+
 
     def setub(self, val):
         """
@@ -449,14 +486,24 @@ class _GeneralVarData(_VarData):
         the value is fixed (or None).
         """
         # Note: is_fixed(None) returns True
-        if is_fixed(val):
-            self._ub = val
-        else:
+        if not is_fixed(val):
             raise ValueError(
                 "Non-fixed input of type '%s' supplied as variable upper "
                 "bound - legal types are fixed expressions or variables."
                 "parameters"
                 % (type(val),))
+        if type(val) in native_numeric_types or val is None:
+            # TODO: warn/error: check if this Var has units: assigning
+            # a dimensionless value to a united variable should be an error
+            pass
+        else:
+            if self.parent_component()._units is not None:
+                _src_magnitude = value(val)
+                _src_units = units.get_units(val)
+                val = units.convert_value(
+                    num_value=_src_magnitude, from_units=_src_units,
+                    to_units=self.parent_component()._units)
+        self._ub = val
 
     def fix(self, value=NoArgumentGiven):
         """
@@ -503,7 +550,7 @@ class Var(IndexedComponent):
         if cls != Var:
             return super(Var, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
-            return SimpleVar.__new__(SimpleVar)
+            return ScalarVar.__new__(ScalarVar)
         else:
             return IndexedVar.__new__(IndexedVar)
 
@@ -561,7 +608,7 @@ class Var(IndexedComponent):
         """
         Set the 'stale' attribute of every variable data object to True.
         """
-        for var_data in itervalues(self._data):
+        for var_data in self._data.values():
             var_data.stale = True
 
     def get_values(self, include_fixed_values=True):
@@ -569,9 +616,9 @@ class Var(IndexedComponent):
         Return a dictionary of index-value pairs.
         """
         if include_fixed_values:
-            return {idx:vardata.value for idx,vardata in iteritems(self._data)}
+            return {idx:vardata.value for idx,vardata in self._data.items()}
         return {idx:vardata.value
-                            for idx, vardata in iteritems(self._data)
+                            for idx, vardata in self._data.items()
                                                 if not vardata.fixed}
 
     extract_values = get_values
@@ -583,7 +630,7 @@ class Var(IndexedComponent):
         The default behavior is to validate the values in the
         dictionary.
         """
-        for index, new_value in iteritems(new_values):
+        for index, new_value in new_values.items():
             self[index].set_value(new_value, valid)
 
     def get_units(self):
@@ -771,10 +818,14 @@ class Var(IndexedComponent):
 
     def _pprint(self):
         """Print component information."""
-        return ( [("Size", len(self)),
-                  ("Index", self._index if self.is_indexed() else None),
-                  ],
-                 iteritems(self._data),
+        headers = [
+            ("Size", len(self)),
+            ("Index", self._index if self.is_indexed() else None),
+        ]
+        if self._units is not None:
+            headers.append(('Units', str(self._units)))
+        return ( headers,
+                 self._data.items(),
                  ( "Lower","Value","Upper","Fixed","Stale","Domain"),
                  lambda k, v: [ value(v.lb),
                                 v.value,
@@ -785,7 +836,7 @@ class Var(IndexedComponent):
                                 ]
                  )
 
-class SimpleVar(_GeneralVarData, Var):
+class ScalarVar(_GeneralVarData, Var):
     """A single variable."""
 
     def __init__(self, *args, **kwd):
@@ -935,6 +986,12 @@ class SimpleVar(_GeneralVarData, Var):
 
     free=unfix
 
+
+class SimpleVar(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarVar
+    __renamed__version__ = '6.0'
+
+
 class IndexedVar(Var):
     """An array of variables."""
 
@@ -942,14 +999,14 @@ class IndexedVar(Var):
         """
         Set the lower bound for this variable.
         """
-        for vardata in itervalues(self):
+        for vardata in self.values():
             vardata.setlb(val)
 
     def setub(self, val):
         """
         Set the upper bound for this variable.
         """
-        for vardata in itervalues(self):
+        for vardata in self.values():
             vardata.setub(val)
 
     def fix(self, value=NoArgumentGiven):
@@ -957,12 +1014,12 @@ class IndexedVar(Var):
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
         """
-        for vardata in itervalues(self):
+        for vardata in self.values():
             vardata.fix(value=value)
 
     def unfix(self):
         """Sets the fixed indicator to False."""
-        for vardata in itervalues(self):
+        for vardata in self.values():
             vardata.unfix()
 
     @property
@@ -974,7 +1031,7 @@ class IndexedVar(Var):
     @domain.setter
     def domain(self, domain):
         """Sets the domain for all variables in this container."""
-        for vardata in itervalues(self):
+        for vardata in self.values():
             vardata.domain = domain
 
     free=unfix
@@ -1008,7 +1065,7 @@ class VarList(IndexedVar):
         # OR we can just add the correct number of sequential integers and
         # then let _validate_index complain when we set the value.
         if self._value_init_value.__class__ is dict:
-            for i in xrange(len(self._value_init_value)):
+            for i in range(len(self._value_init_value)):
                 self._index.add(i+1)
         super(VarList,self).construct(data)
         # Note that the current Var initializer silently ignores
@@ -1017,7 +1074,7 @@ class VarList(IndexedVar):
         # VarList (so we get potential domain errors), we will re-set
         # everything.
         if self._value_init_value.__class__ is dict:
-            for k,v in iteritems(self._value_init_value):
+            for k,v in self._value_init_value.items():
                 self[k] = v
 
     def add(self):

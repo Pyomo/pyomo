@@ -10,11 +10,10 @@
 
 import weakref
 from pyomo.common.collections import ComponentMap
+from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.set import UnknownSetDimen
 from pyomo.core.base.var import Var
-from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.dae.contset import ContinuousSet
-from six import iterkeys
 
 __all__ = ('DerivativeVar', 'DAE_Error',)
 
@@ -132,7 +131,7 @@ class DerivativeVar(Var):
                     "The variable %s is indexed by multiple ContinuousSets. "
                     "The desired ContinuousSet must be specified using the "
                     "keyword argument 'wrt'" % sVar)
-            wrt = [next(iterkeys(sVar._contset)), ]
+            wrt = [next(iter(sVar._contset.keys())), ]
         elif type(wrt) is ContinuousSet:
             if wrt not in sVar._contset:
                 raise DAE_Error(

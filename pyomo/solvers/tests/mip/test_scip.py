@@ -8,11 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import json
 import os
 from os.path import abspath, dirname, join
 currdir = dirname(abspath(__file__))
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt import SolverFactory
 from pyomo.core import ConcreteModel, Var, Objective, Constraint
@@ -54,6 +55,13 @@ class Test(unittest.TestCase):
         m.o = Objective(expr=m.v)
         m.c = Constraint(expr=m.v >= 1)
 
+    def compare_json(self, file1, file2):
+        with open(file1, 'r') as out, \
+            open(file2, 'r') as txt:
+            self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
+                                             abstol=1e-7,
+                                             allow_second_superset=True)
+
     def tearDown(self):
         global tmpdir
         TempfileManager.clear_tempfiles()
@@ -77,9 +85,8 @@ class Test(unittest.TestCase):
         results.write(filename=join(currdir, "test_scip_solve_from_instance.txt"),
                       times=False,
                       format='json')
-        self.assertMatchesJsonBaseline(join(currdir, "test_scip_solve_from_instance.txt"),
-                                       join(currdir, "test_scip_solve_from_instance.baseline"),
-                                       tolerance=1e-7)
+        self.compare_json(join(currdir, "test_scip_solve_from_instance.txt"),
+                          join(currdir, "test_scip_solve_from_instance.baseline"))
 
     def test_scip_solve_from_instance_options(self):
 
@@ -101,9 +108,8 @@ class Test(unittest.TestCase):
         results.write(filename=join(currdir, "test_scip_solve_from_instance.txt"),
                       times=False,
                       format='json')
-        self.assertMatchesJsonBaseline(join(currdir, "test_scip_solve_from_instance.txt"),
-                                       join(currdir, "test_scip_solve_from_instance.baseline"),
-                                       tolerance=1e-7)
+        self.compare_json(join(currdir, "test_scip_solve_from_instance.txt"),
+                          join(currdir, "test_scip_solve_from_instance.baseline"))
 
 if __name__ == "__main__":
     unittest.main()

@@ -13,7 +13,6 @@ from __future__ import division
 
 from collections import namedtuple
 from math import copysign, fabs
-from six import iteritems
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
 from pyomo.contrib.gdpopt.util import time_code, constraints_in_True_disjuncts
@@ -31,7 +30,10 @@ def add_subproblem_cuts(subprob_result, solve_data, config):
         return add_outer_approximation_cuts(subprob_result, solve_data, config)
     elif config.strategy == "GLOA":
         return add_affine_cuts(subprob_result, solve_data, config)
-
+    elif config.strategy == 'RIC':
+        pass
+    else:
+        raise ValueError('Unrecognized strategy: ' + config.strategy)
 
 def add_outer_approximation_cuts(nlp_result, solve_data, config):
     """Add outer approximation cuts to the linear GDP model."""
@@ -118,10 +120,10 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
                     copysign(1, sign_adjust * dual_value) * (
                         value(constr.body) - rhs + sum(
                             value(jac) * (var - value(var))
-                            for var, jac in iteritems(jacobian.jac))
+                            for var, jac in jacobian.jac.items())
                         ) - slack_var <= 0)
                 if new_oa_cut.polynomial_degree() not in (1, 0):
-                    for var, jac in iteritems(jacobian.jac):
+                    for var, jac in jacobian.jac.items():
                         print(var.name, value(jac))
                 oa_cuts.add(expr=new_oa_cut)
                 counter += 1
@@ -209,7 +211,8 @@ def add_integer_cut(var_values, target_model, solve_data, config, feasible=False
         GDPopt = m.GDPopt_utils
         var_value_is_one = ComponentSet()
         var_value_is_zero = ComponentSet()
-        indicator_vars = ComponentSet(disj.indicator_var for disj in GDPopt.disjunct_list)
+        indicator_vars = ComponentSet(
+            disj.binary_indicator_var for disj in GDPopt.disjunct_list)
         for var, val in zip(GDPopt.variable_list, var_values):
             if not var.is_binary():
                 continue

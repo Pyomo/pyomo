@@ -9,18 +9,18 @@
 #  ___________________________________________________________________________
 
 import logging
-import six
 import sys
 from copy import deepcopy
 from pickle import PickleError
-from six import iteritems, string_types
 from weakref import ref as weakref_ref
-
-from pyutilib.misc.indent_io import StreamIndenter
 
 import pyomo.common
 from pyomo.common.deprecation import deprecated, relocated_module_attribute
+from pyomo.common.factory import Factory
+from pyomo.common.fileutils import StreamIndenter
+from pyomo.common.modeling import NOTSET
 from pyomo.core.pyomoobject import PyomoObject
+from pyomo.core.base.component_namer import name_repr, index_repr
 from pyomo.core.base.misc import tabular_writer, sorted_robust
 
 logger = logging.getLogger('pyomo.core')
@@ -29,44 +29,33 @@ relocated_module_attribute(
     'ComponentUID', 'pyomo.core.base.componentuid.ComponentUID',
     version='5.7.2')
 
-def _name_index_generator(idx):
-    """
-    Return a string representation of an index.
-    """
-    def _escape(val):
-        if type(val) is tuple:
-            ans = "(" + ','.join(_escape(_) for _ in val) + ")"
-        else:
-            # We need to quote set members (because people put things
-            # like spaces - or worse commas - in their set names).  Our
-            # plan is to put the strings in single quotes... but that
-            # requires escaping any single quotes in the string... which
-            # in turn requires escaping the escape character.
-            ans = "%s" % (val,)
-            if isinstance(val, six.string_types):
-                ans = ans.replace("\\", "\\\\").replace("'", "\\'")
-                if ',' in ans or "'" in ans:
-                    ans = "'"+ans+"'"
-        return ans
-    if idx.__class__ is tuple:
-        return "[" + ",".join(_escape(i) for i in idx) + "]"
-    else:
-        return "[" + _escape(idx) + "]"
+
+class ModelComponentFactoryClass(Factory):
+
+    def register(self, doc=None):
+        def fn(cls):
+            return super(ModelComponentFactoryClass, self).register(
+                cls.__name__, doc)(cls)
+        return fn
+
+ModelComponentFactory = ModelComponentFactoryClass('model component')
 
 
-def name(component, index=None, fully_qualified=False, relative_to=None):
+def name(component, index=NOTSET, fully_qualified=False, relative_to=None):
     """
     Return a string representation of component for a specific
     index value.
     """
-    base = component.getname(fully_qualified=fully_qualified, relative_to=relative_to)
-    if index is None:
+    base = component.getname(
+        fully_qualified=fully_qualified, relative_to=relative_to
+    )
+    if index is NOTSET:
         return base
     else:
         if index not in component.index_set():
             raise KeyError( "Index %s is not valid for component %s"
                             % (index, component.name) )
-        return base + _name_index_generator( index )
+        return base + index_repr( index )
 
 
 @deprecated(msg="The cname() function has been renamed to name()",
@@ -201,7 +190,7 @@ class _ComponentBase(PyomoObject):
             elif paranoid is not None:
                 raise PickleError()
             new_state = {}
-            for k,v in iteritems(state):
+            for k, v in state.items():
                 try:
                     if paranoid:
                         saved_memo = dict(memo)
@@ -268,7 +257,7 @@ class _ComponentBase(PyomoObject):
         """
         comp = self.parent_component()
         _attr, _data, _header, _fcn = comp._pprint()
-        if isinstance(type(_data), six.string_types):
+        if isinstance(type(_data), str):
             # If the component _pprint only returned a pre-formatted
             # result, then we have no way to only emit the information
             # for this _data object.
@@ -359,7 +348,7 @@ class _ComponentBase(PyomoObject):
         if _header is not None:
             if _fcn2 is not None:
                 _data_dict = dict(_data)
-                _data = iteritems(_data_dict)
+                _data = _data_dict.items()
             tabular_writer( ostream, '', _data, _header, _fcn )
             if _fcn2 is not None:
                 for _key in sorted_robust(_data_dict):
@@ -433,7 +422,7 @@ class Component(_ComponentBase):
         _base = super(Component,self)
         if hasattr(_base, '__getstate__'):
             state = _base.__getstate__()
-            for key,val in iteritems(self.__dict__):
+            for key,val in self.__dict__.items():
                 if key not in state:
                     state[key] = val
         else:
@@ -461,7 +450,7 @@ class Component(_ComponentBase):
         if hasattr(_base, '__setstate__'):
             _base.__setstate__(state)
         else:
-            for key, val in iteritems(state):
+            for key, val in state.items():
                 # Note: per the Python data model docs, we explicitly
                 # set the attribute using object.__setattr__() instead
                 # of setting self.__dict__[key] = val.
@@ -487,9 +476,23 @@ class Component(_ComponentBase):
         return self._constructed
 
     def reconstruct(self, data=None):
-        """Re-construct model expressions"""
-        self._constructed = False
-        self.construct(data=data)
+        """REMOVED: reconstruct() was removed in Pyomo 6.0.
+
+        Re-constructing model components was fragile and did not
+        correctly update instances of the component used in other
+        components or contexts (this was particularly problemmatic for
+        Var, Param, and Set).  Users who wish to reproduce the old
+        behavior of reconstruct(), are comfortable manipulating
+        non-public interfaces, and who take the time to verify that the
+        correct thing happens to their model can approximate the old
+        behavior of reconstruct with:
+
+            component.clear()
+            component._constructed = False
+            component.construct()
+
+        """
+        raise AttributeError(self.reconstruct.__doc__)
 
     def valid_model_component(self):
         """Return True if this can be used as a model component."""
@@ -566,21 +569,25 @@ class Component(_ComponentBase):
         relative_to: Block
             Generate fully_qualified names reletive to the specified block.
         """
+        local_name = self._name
         if fully_qualified:
             pb = self.parent_block()
             if relative_to is None:
                 relative_to = self.model()
             if pb is not None and pb is not relative_to:
                 ans = pb.getname(fully_qualified, name_buffer, relative_to) \
-                      + "." + self._name
+                      + "." + name_repr(local_name)
             elif pb is None and relative_to != self.model():
                 raise RuntimeError(
                     "The relative_to argument was specified but not found "
                     "in the block hierarchy: %s" % str(relative_to))
             else:
-                ans = self._name
+                ans = name_repr(local_name)
         else:
-            ans = self._name
+            # Note: we want "getattr(x.parent_block(), x.localname) == x"
+            # so we do not want to call _safe_name_str, as that could
+            # add quotes or otherwise escape the string.
+            ans = local_name
         if name_buffer is not None:
             name_buffer[id(self)] = ans
         return ans
@@ -608,7 +615,7 @@ class Component(_ComponentBase):
 
     def clear_suffix_value(self, suffix_or_name, expand=True):
         """Clear the suffix value for this component data"""
-        if isinstance(suffix_or_name, six.string_types):
+        if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
             for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
                 if suffix_or_name == name_:
@@ -619,7 +626,7 @@ class Component(_ComponentBase):
 
     def set_suffix_value(self, suffix_or_name, value, expand=True):
         """Set the suffix value for this component data"""
-        if isinstance(suffix_or_name, six.string_types):
+        if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
             for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
                 if suffix_or_name == name_:
@@ -630,7 +637,7 @@ class Component(_ComponentBase):
 
     def get_suffix_value(self, suffix_or_name, default=None):
         """Get the suffix value for this component data"""
-        if isinstance(suffix_or_name, six.string_types):
+        if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
             for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
                 if suffix_or_name == name_:
@@ -773,7 +780,7 @@ class ComponentData(_ComponentBase):
         if hasattr(_base, '__setstate__'):
             _base.__setstate__(state)
         else:
-            for key, val in iteritems(state):
+            for key, val in state.items():
                 # Note: per the Python data model docs, we explicitly
                 # set the attribute using object.__setattr__() instead
                 # of setting self.__dict__[key] = val.
@@ -838,7 +845,7 @@ class ComponentData(_ComponentBase):
         self_component = self.parent_component()
         if self_component is None:
             return None
-        for idx, component_data in self_component.iteritems():
+        for idx, component_data in self_component.items():
             if component_data is self:
                 return idx
         return None
@@ -898,8 +905,8 @@ class ComponentData(_ComponentBase):
         if name_buffer is not None:
             # Iterate through the dictionary and generate all names in
             # the buffer
-            for idx, obj in iteritems(c):
-                name_buffer[id(obj)] = base + _name_index_generator(idx)
+            for idx, obj in c.items():
+                name_buffer[id(obj)] = base + index_repr(idx)
             if id(self) in name_buffer:
                 # Return the name if it is in the buffer
                 return name_buffer[id(self)]
@@ -909,9 +916,9 @@ class ComponentData(_ComponentBase):
             # dictionary until we find this object.  This can be much
             # more expensive than if a buffer is provided.
             #
-            for idx, obj in iteritems(c):
+            for idx, obj in c.items():
                 if obj is self:
-                    return base + _name_index_generator(idx)
+                    return base + index_repr(idx)
         #
         raise RuntimeError("Fatal error: cannot find the component data in "
                            "the owning component's _data dictionary.")
@@ -922,7 +929,7 @@ class ComponentData(_ComponentBase):
 
     def clear_suffix_value(self, suffix_or_name, expand=True):
         """Set the suffix value for this component data"""
-        if isinstance(suffix_or_name, six.string_types):
+        if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
             for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
                 if suffix_or_name == name_:
@@ -933,7 +940,7 @@ class ComponentData(_ComponentBase):
 
     def set_suffix_value(self, suffix_or_name, value, expand=True):
         """Set the suffix value for this component data"""
-        if isinstance(suffix_or_name, six.string_types):
+        if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
             for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
                 if suffix_or_name == name_:
@@ -944,7 +951,7 @@ class ComponentData(_ComponentBase):
 
     def get_suffix_value(self, suffix_or_name, default=None):
         """Get the suffix value for this component data"""
-        if isinstance(suffix_or_name, six.string_types):
+        if isinstance(suffix_or_name, str):
             import pyomo.core.base.suffix
             for name_, suffix_ in pyomo.core.base.suffix.active_suffix_generator(self.model()):
                 if suffix_or_name == name_:

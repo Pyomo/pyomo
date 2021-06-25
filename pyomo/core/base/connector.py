@@ -12,20 +12,17 @@ __all__ = [ 'Connector' ]
 
 import logging
 import sys
-from six import iteritems, itervalues
 from weakref import ref as weakref_ref
 
-from pyomo.common import deprecated
+from pyomo.common.deprecation import deprecated, RenamedClass
 from pyomo.common.log import is_debug_set
-from pyomo.common.plugin import Plugin, implements
 from pyomo.common.timing import ConstructionTimer
 
-from pyomo.core.base.component import ComponentData
+from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.numvalue import NumericValue, value
-from pyomo.core.base.plugin import ModelComponentFactory, \
-    IPyomoScriptModifyInstance, TransformationFactory
+from pyomo.core.base.transformation import TransformationFactory
 
 logger = logging.getLogger('pyomo.core')
 
@@ -110,15 +107,19 @@ class _ConnectorData(ComponentData, NumericValue):
 
 
     def _iter_vars(self):
-        for var in itervalues(self.vars):
+        for var in self.vars.values():
             if not hasattr(var, 'is_indexed') or not var.is_indexed():
                 yield var
             else:
-                for v in itervalues(var):
+                for v in var.values():
                     yield v
 
 
-@ModelComponentFactory.register("A bundle of variables that can be manipilated together.")
+@ModelComponentFactory.register(
+    "A bundle of variables that can be manipulated together.")
+@deprecated("Use of pyomo.connectors is deprecated. "
+            "Its functionality has been replaced by pyomo.network.",
+            version='5.6.9')
 class Connector(IndexedComponent):
     """A collection of variables, which may be defined over a index
 
@@ -144,15 +145,11 @@ class Connector(IndexedComponent):
         if cls != Connector:
             return super(Connector, cls).__new__(cls)
         if args == ():
-            return SimpleConnector.__new__(SimpleConnector)
+            return ScalarConnector.__new__(ScalarConnector)
         else:
             return IndexedConnector.__new__(IndexedConnector)
 
     # TODO: default keyword is  not used?  Need to talk to Bill ...?
-    @deprecated(
-        "Use of pyomo.connectors is deprecated. "
-        "Its functionality has been replaced by pyomo.network.",
-        version='5.6.9')
     def __init__(self, *args, **kwd):
         kwd.setdefault('ctype', Connector)
         self._rule = kwd.pop('rule', None)
@@ -195,21 +192,21 @@ class Connector(IndexedComponent):
             for key in self._implicit:
                 tmp.add(None,key)
             if self._extends:
-                for key, val in iteritems(self._extends.vars):
+                for key, val in self._extends.vars.items():
                     tmp.add(val,key)
-            for key, val in iteritems(self._initialize):
+            for key, val in self._initialize.items():
                 tmp.add(val,key)
             if self._rule:
                 items = apply_indexed_rule(
                     self, self._rule, self._parent(), idx)
-                for key, val in iteritems(items):
+                for key, val in items.items():
                     tmp.add(val,key)
 
 
     def _pprint(self, ostream=None, verbose=False):
         """Print component information."""
         def _line_generator(k,v):
-            for _k, _v in sorted(iteritems(v.vars)):
+            for _k, _v in sorted(v.vars.items()):
                 if _v is None:
                     _len = '-'
                 elif _k in v.aggregators:
@@ -222,7 +219,7 @@ class Connector(IndexedComponent):
         return ( [("Size", len(self)),
                   ("Index", self._index if self.is_indexed() else None),
                   ],
-                 iteritems(self._data),
+                 self._data.items(),
                  ( "Name","Size", "Variable", ),
                  _line_generator
              )
@@ -244,7 +241,7 @@ class Connector(IndexedComponent):
 
         ostream.write("\n")
         def _line_generator(k,v):
-            for _k, _v in sorted(iteritems(v.vars)):
+            for _k, _v in sorted(v.vars.items()):
                 if _v is None:
                     _val = '-'
                 elif not hasattr(_v, 'is_indexed') or not _v.is_indexed():
@@ -254,11 +251,11 @@ class Connector(IndexedComponent):
                         x, value(_v[x])) for x in sorted(_v._data) ),)
                 yield _k, _val
         tabular_writer( ostream, prefix+tab,
-                        ((k,v) for k,v in iteritems(self._data)),
+                        ((k,v) for k,v in self._data.items()),
                         ( "Name","Value" ), _line_generator )
 
 
-class SimpleConnector(Connector, _ConnectorData):
+class ScalarConnector(Connector, _ConnectorData):
 
     def __init__(self, *args, **kwd):
         _ConnectorData.__init__(self, component=self)
@@ -274,22 +271,12 @@ class SimpleConnector(Connector, _ConnectorData):
     #
 
 
+class SimpleConnector(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarConnector
+    __renamed__version__ = '6.0'
+
+
 class IndexedConnector(Connector):
     """An array of connectors"""
     pass
 
-
-class ConnectorExpander(Plugin):
-    implements(IPyomoScriptModifyInstance)
-
-    @deprecated(
-        "Use of pyomo.connectors is deprecated. "
-        "Its functionality has been replaced by pyomo.network.",
-        version='5.6.9')
-    def apply(self, **kwds):
-        instance = kwds.pop('instance')
-        xform = TransformationFactory('core.expand_connectors')
-        xform.apply_to(instance, **kwds)
-        return instance
-
-transform = ConnectorExpander()

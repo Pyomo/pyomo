@@ -1,4 +1,4 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 """Transformation to fix and enforce disjunct True/False status."""
 
 import logging
@@ -51,15 +51,16 @@ class GDP_Disjunct_Fixer(Transformation):
     def _transformContainer(self, obj):
         """Find all disjuncts in the container and transform them."""
         for disjunct in obj.component_data_objects(ctype=Disjunct, active=True, descend_into=True):
-            if fabs(value(disjunct.indicator_var) - 1) <= self.config.integer_tolerance:
-                disjunct.indicator_var.fix(1)
+            _binary = disjunct.binary_indicator_var
+            if fabs(value(_binary) - 1) <= self.config.integer_tolerance:
+                disjunct.indicator_var.fix(True)
                 self._transformContainer(disjunct)
-            elif fabs(value(disjunct.indicator_var)) <= self.config.integer_tolerance:
+            elif fabs(value(_binary)) <= self.config.integer_tolerance:
                 disjunct.deactivate()
             else:
                 raise ValueError(
                     'Non-binary indicator variable value %s for disjunct %s'
-                    % (disjunct.name, value(disjunct.indicator_var)))
+                    % (disjunct.name, value(_binary)))
 
         for disjunction in obj.component_data_objects(ctype=Disjunction, active=True, descend_into=True):
             self._transformDisjunctionData(disjunction)
@@ -67,7 +68,7 @@ class GDP_Disjunct_Fixer(Transformation):
     def _transformDisjunctionData(self, disjunction):
         # the sum of all the indicator variable values of disjuncts in the
         # disjunction
-        logical_sum = sum(value(disj.indicator_var)
+        logical_sum = sum(value(disj.binary_indicator_var)
                           for disj in disjunction.disjuncts)
 
         # Check that the disjunctions are not being fixed to an infeasible

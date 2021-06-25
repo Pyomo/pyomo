@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import iterkeys
 from pyomo.common import DeveloperError
 from pyomo.common.collections import ComponentMap
 from pyomo.common.dependencies import attempt_import
@@ -128,7 +127,7 @@ class PyomoSympyBimap(object):
         return sympy_obj
 
     def sympyVars(self):
-        return iterkeys(self.sympy2pyomo)
+        return self.sympy2pyomo.keys()
 
 # =====================================================
 # sympyify_expression

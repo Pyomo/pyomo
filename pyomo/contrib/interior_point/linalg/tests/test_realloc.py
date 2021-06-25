@@ -1,4 +1,4 @@
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 from pyomo.common.dependencies import attempt_import
 np, numpy_available = attempt_import('numpy', 'Interior point requires numpy',
         minimum_version='1.13.0')

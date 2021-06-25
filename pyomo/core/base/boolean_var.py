@@ -1,20 +1,26 @@
-from six import itervalues, iteritems
-
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.boolean_value import BooleanValue
 from pyomo.core.expr.numvalue import value
-from pyomo.core.base.plugin import ModelComponentFactory
-from pyomo.core.base.component import ComponentData
+from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import Set, BooleanSet
 from pyomo.core.base.util import is_functor
-from six.moves import xrange
 
 
 logger = logging.getLogger('pyomo.core')
@@ -173,7 +179,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
         self._associated_binary = None
 
     def __getstate__(self):
-        state = super(_GeneralBooleanVarData, self).__getstate__()
+        state = super().__getstate__()
         for i in _GeneralBooleanVarData.__slots__:
             state[i] = getattr(self, i)
         if self._associated_binary is not None:
@@ -186,18 +192,9 @@ class _GeneralBooleanVarData(_BooleanVarData):
         Note: adapted from class ComponentData in pyomo.core.base.component
 
         """
-        if state['_associated_binary'] is not None and type(state['_associated_binary']) is not weakref_ref:
-            state['_associated_binary'] = weakref_ref(state['_associated_binary'])
-
-        _base = super(_GeneralBooleanVarData, self)
-        if hasattr(_base, '__setstate__'):
-            _base.__setstate__(state)
-        else:
-            for key, val in iteritems(state):
-                # Note: per the Python data model docs, we explicitly
-                # set the attribute using object.__setattr__() instead
-                # of setting self.__dict__[key] = val.
-                object.__setattr__(self, key, val)
+        super().__setstate__(state)
+        if self._associated_binary is not None:
+            self._associated_binary = weakref_ref(self._associated_binary)
 
     #
     # Abstract Interface
@@ -212,6 +209,10 @@ class _GeneralBooleanVarData(_BooleanVarData):
     @value.setter
     def value(self, val):
         """Set the value for this variable."""
+        if type(val) not in {bool, type(None)}:
+            logger.warning("implicitly casting '%s' value %s to bool"
+                           % (self.name, val))
+            val = bool(val)
         self._value = val
 
     @property
@@ -242,7 +243,16 @@ class _GeneralBooleanVarData(_BooleanVarData):
 
     def associate_binary_var(self, binary_var):
         """Associate a binary _VarData to this _GeneralBooleanVarData"""
-        self._associated_binary = weakref_ref(binary_var) if binary_var is not None else None
+        if self._associated_binary is not None:
+            raise RuntimeError(
+                "Reassociating BooleanVar '%s' (currently associated "
+                "with '%s') with '%s' is not allowed" % (
+                    self.name,
+                    self._associated_binary.name
+                    if self._associated_binary is not None else None,
+                    binary_var.name if binary_var is not None else None))
+        if binary_var is not None:
+            self._associated_binary = weakref_ref(binary_var)
 
 
 @ModelComponentFactory.register("Logical decision variables.")
@@ -264,7 +274,7 @@ class BooleanVar(IndexedComponent):
         if cls != BooleanVar:
             return super(BooleanVar, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
-            return SimpleBooleanVar.__new__(SimpleBooleanVar)
+            return ScalarBooleanVar.__new__(ScalarBooleanVar)
         else:
             return IndexedBooleanVar.__new__(IndexedBooleanVar) 
 
@@ -296,7 +306,7 @@ class BooleanVar(IndexedComponent):
         """
         Set the 'stale' attribute of every variable data object to True.
         """
-        for boolvar_data in itervalues(self._data):
+        for boolvar_data in self._data.values():
             boolvar_data.stale = True
 
     def get_values(self, include_fixed_values=True):
@@ -305,9 +315,9 @@ class BooleanVar(IndexedComponent):
         """
         if include_fixed_values:
             return dict((idx, vardata.value)
-                        for idx, vardata in iteritems(self._data))
+                        for idx, vardata in self._data.items())
         return dict((idx, vardata.value)
-                    for idx, vardata in iteritems(self._data)
+                    for idx, vardata in self._data.items()
                     if not vardata.fixed)
 
     extract_values = get_values
@@ -319,7 +329,7 @@ class BooleanVar(IndexedComponent):
         The default behavior is to validate the values in the
         dictionary.
         """
-        for index, new_value in iteritems(new_values):
+        for index, new_value in new_values.items():
             self[index].set_value(new_value, valid)
 
 
@@ -437,7 +447,7 @@ class BooleanVar(IndexedComponent):
         return ( [("Size", len(self)),
                   ("Index", self._index if self.is_indexed() else None),
                   ],
-                 iteritems(self._data),
+                 self._data.items(),
                  ( "Value","Fixed","Stale"),
                  lambda k, v: [ v.value,
                                 v.fixed,
@@ -446,7 +456,7 @@ class BooleanVar(IndexedComponent):
                  )
 
 
-class SimpleBooleanVar(_GeneralBooleanVarData, BooleanVar):
+class ScalarBooleanVar(_GeneralBooleanVarData, BooleanVar):
     
     """A single variable."""
     def __init__(self, *args, **kwd):
@@ -523,6 +533,11 @@ class SimpleBooleanVar(_GeneralBooleanVarData, BooleanVar):
     free=unfix
 
 
+class SimpleBooleanVar(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarBooleanVar
+    __renamed__version__ = '6.0'
+
+
 class IndexedBooleanVar(BooleanVar):
     """An array of variables."""
 
@@ -531,12 +546,12 @@ class IndexedBooleanVar(BooleanVar):
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
         """
-        for boolean_vardata in itervalues(self):
+        for boolean_vardata in self.values():
             boolean_vardata.fix(*val)
 
     def unfix(self):
         """Sets the fixed indicator to False."""
-        for boolean_vardata in itervalues(self):
+        for boolean_vardata in self.values():
             boolean_vardata.unfix()
 
     @property
@@ -567,7 +582,7 @@ class BooleanVarList(IndexedBooleanVar):
         # OR we can just add the correct number of sequential integers and
         # then let _validate_index complain when we set the value.
         if self._value_init_value.__class__ is dict:
-            for i in xrange(len(self._value_init_value)):
+            for i in range(len(self._value_init_value)):
                 self._index.add(i+1)
         super(BooleanVarList,self).construct(data)
         # Note that the current Var initializer silently ignores
@@ -576,7 +591,7 @@ class BooleanVarList(IndexedBooleanVar):
         # VarList (so we get potential domain errors), we will re-set
         # everything.
         if self._value_init_value.__class__ is dict:
-            for k,v in iteritems(self._value_init_value):
+            for k,v in self._value_init_value.items():
                 self[k] = v
 
     def add(self):

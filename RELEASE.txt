@@ -1,27 +1,28 @@
-We are pleased to announce the release of Pyomo 5.7.3.
+We are pleased to announce the release of Pyomo 6.0.
 
 Pyomo is a collection of Python software packages that supports a
 diverse set of optimization capabilities for formulating and analyzing
 optimization models.
 
 
-The following are highlights of the 5.7 release series:
+The following are highlights of the 6.0 release series:
 
- - Adding a logical expression system
- - Standardizing component initialization
- - Distribution of Cythonized wheels
- - Reimplementation of the core Set component
- - Improved direct and persistent interfaces to Xpress & MOSEK
- - Adding support for Python 3.9
- - Deprecating pyomo-extras
- - Numerous bug fixes
+ - Improved stability and robustness of core Pyomo code and solver interfaces
+ - Integration of Boolean variables into GDP
+ - New packages: APPSI, structural model analysis, external grey box models
+
+Note: As a major release, Pyomo 6.0 has certain backwards
+incompatibilities with the 5.x series and the 2nd Edition of the Pyomo
+Book.  Most notably:
+
+ - Removed support for Python 2.7 or 3.5
+ - Moved PySP into a separate package at https://github.com/Pyomo/pysp
+ - Renamed "Simple" components to "Scalar" components
+ - Removed support for implicit ranged inequalities (a <= m.x <= b)
+ - Removed support for component reconstruct method
+ - Removed support for casting relational expressions to bool
 
 A full list of updates and changes is available in the CHANGELOG.txt
-
-ADVANCE CHANGE NOTICE:
- - This is the last Pyomo release to support Python 2.7, 3.4, and 3.5
- - This is the last Pyomo release to bundle PySP
- - This is the last Pyomo release that will have a strict PyUtilib dependency
 
 Enjoy!
 

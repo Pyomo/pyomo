@@ -11,9 +11,9 @@
 import sys
 import logging
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.solvers import test_solver_cases
@@ -45,17 +45,12 @@ MissingSuffixFailures = {}
 # MOSEK
 #
 
-ExpectedFailures['mosek_direct', 'python', 'QCP_simple'] = \
-    (lambda v: True,
-     "Conic constraints not yet handled by this interface")
+for _io in ('python', 'persistent'):
+    for _test in ('QCP_simple', 'QCP_simple_nosuffixes', 'MIQCP_simple'):
+        ExpectedFailures['mosek', _io, _test] = (
+            lambda v: True,
+            "Mosek does not handle nonconvex quadratic constraints")
 
-ExpectedFailures['mosek_direct', 'python', 'QCP_simple_nosuffixes'] = \
-    (lambda v: True,
-     "Conic constraints not yet handled by this interface")
-
-ExpectedFailures['mosek_direct', 'python', 'MIQCP_simple'] = \
-    (lambda v: True,
-     "Conic constraints not yet handled by this interface")
 #
 # CPLEX
 #
@@ -109,17 +104,27 @@ ExpectedFailures['glpk', 'mps', 'LP_duals_maximize'] = \
 # CBC
 #
 
-ExpectedFailures['cbc', 'lp', 'LP_duals_maximize'] = \
-    (lambda v: v <= (2,10,1,0),
-    "For a maximization problem where a variable is pushed to its "
-    "lower bound, Cbc reports the reduced cost as a positive number. In "
-    "practice this should be reported as a negative number. A ticket has "
-    "been filed at:\nhttps://projects.coin-or.org/Cbc/ticket/125")
-
 ExpectedFailures['cbc', 'nl', 'MILP_unbounded'] = \
     (lambda v: v <= _trunk_version,
-     "Cbc fails to report a MILP model as unbounded when it"
-     "is defined as an NL file.")
+     "Cbc fails to report an unbounded MILP model as unbounded through "
+     "the NL interface (through 2.9.x), and fails with invalid free() "
+     "(in 2.10.x).")
+
+ExpectedFailures['cbc', 'nl', 'LP_unbounded'] = \
+    (lambda v: v[:2] == (2, 10),
+     "Cbc fails (invalid free()) for unbounded LP models through "
+     "the NL interface in 2.10.x versions "
+     "(reported upstream as coin-or/Cbc#389)")
+
+ExpectedFailures['cbc', 'nl', 'SOS1_simple'] = \
+    (lambda v: v[:2] == (2, 10),
+     "Cbc segfaults for SOS constraints in the NL interface "
+     "(reported upstream as coin-or/Cbc#388)")
+
+ExpectedFailures['cbc', 'nl', 'SOS2_simple'] = \
+    (lambda v: v[:2] == (2, 10),
+     "Cbc segfaults for SOS constraints in the NL interface "
+     "(reported upstream as coin-or/Cbc#388)")
 
 #
 # PICO
@@ -397,7 +402,7 @@ def test_scenarios(arg=None):
                     msg=case[2]
 
             # Return scenario dimensions and scenario information
-            yield (model, solver, io), Options(
+            yield (model, solver, io), Bunch(
                 status=status, msg=msg, model=_model, solver=None,
                 testcase=_solver_case, demo_limits=_solver_case.demo_limits,
                 exclude_suffixes=exclude_suffixes)
@@ -477,11 +482,12 @@ def run_test_scenarios(options):
     # Summarize the runtime statistics, by solver
     #
     summary = {}
-    total = Options(NumEPass=0, NumEFail=0, NumUPass=0, NumUFail=0)
+    total = Bunch(NumEPass=0, NumEFail=0, NumUPass=0, NumUFail=0)
     for key in stat:
         model, solver, io = key
         if not solver in summary:
-            summary[solver] = Options(NumEPass=0, NumEFail=0, NumUPass=0, NumUFail=0)
+            summary[solver] = Bunch(NumEPass=0, NumEFail=0,
+                                    NumUPass=0, NumUFail=0)
         _pass, _str = stat[key]
         if _pass:
             if _str == "Expected failure":

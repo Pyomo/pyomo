@@ -13,6 +13,10 @@ Bibliography
 
 .. [GAMS] http://www.gams.com
 
+.. [ParmestPaper] Katherine A. Klise, Bethany L. Nicholson, Andrea Staid, David L.Woodruff.
+	     Parmest: Parameter Estimation Via Pyomo.
+	     Computer Aided Chemical Engineering, 47 (2019): 41-46. 
+
 .. [PyomoBookI] William E. Hart, Carl D. Laird, Jean-Paul Watson,
                 David L. Woodruff. Pyomo – Optimization Modeling in
                 Python, Springer, 2012.

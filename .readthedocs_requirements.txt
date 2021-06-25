@@ -1,7 +1,10 @@
-git+https://github.com/PyUtilib/pyutilib
-sphinx>=1.8.0
+Sphinx>2
+sphinx-rtd-theme>0.5
+sphinxcontrib-jsmath
+sphinxcontrib-napoleon
 networkx
 pandas
 numpy
 seaborn
 pint
+sphinx-copybutton

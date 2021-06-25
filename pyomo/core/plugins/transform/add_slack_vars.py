@@ -10,8 +10,6 @@
 
 from pyomo.core import TransformationFactory, Var, NonNegativeReals, Constraint, Objective, Block, value
 
-from six import iterkeys
-
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
 from pyomo.common.config import ConfigBlock, ConfigValue
@@ -50,12 +48,12 @@ def target_list(x):
             else:
                 raise ValueError(
                     "Expected Constraint or list of Constraints."
-                    "\n\tRecieved %s" % (type(i),))
+                    "\n\tReceived %s" % (type(i),))
         return ans
     else:
         raise ValueError(
             "Expected Constraint or list of Constraints."
-            "\n\tRecieved %s" % (type(x),))
+            "\n\tReceived %s" % (type(x),))
 
 import logging
 logger = logging.getLogger('pyomo.core')

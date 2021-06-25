@@ -9,9 +9,9 @@
 #  ___________________________________________________________________________
 
 import inspect
-from six import StringIO
+from io import StringIO
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.dependencies import (
@@ -58,13 +58,13 @@ class TestDependencies(unittest.TestCase):
                 "attribute '__sphinx_mock__'"):
             module_obj.__sphinx_mock__
 
-                
+
     def test_import_success(self):
         module_obj, module_available = attempt_import(
-            'pyutilib','Testing import of PyUtilib', defer_check=False)
+            'ply', 'Testing import of ply', defer_check=False)
         self.assertTrue(module_available)
-        import pyutilib
-        self.assertTrue(module_obj is pyutilib)
+        import ply
+        self.assertTrue(module_obj is ply)
 
     def test_local_deferred_import(self):
         self.assertIs(type(bogus_available), DeferredImportIndicator)
@@ -74,17 +74,17 @@ class TestDependencies(unittest.TestCase):
         self.assertIs(bogus_available, False)
         # Note: this also tests the implicit alt_names for dotted imports
         self.assertIs(type(bogus), ModuleUnavailable)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 DeferredImportError, "The nonexisting.module.bogus module "
-                "\(an optional Pyomo dependency\) failed to import"):
+                r"\(an optional Pyomo dependency\) failed to import"):
             bogus.hello
 
     def test_imported_deferred_import(self):
         self.assertIs(type(has_bogus_nem), DeferredImportIndicator)
         self.assertIs(type(bogus_nem), DeferredImportModule)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 DeferredImportError, "The bogus_nonexisting_module module "
-                "\(an optional Pyomo dependency\) failed to import"):
+                r"\(an optional Pyomo dependency\) failed to import"):
             bogus_nem.hello
         self.assertIs(has_bogus_nem, False)
         self.assertIs(type(bogus_nem), ModuleUnavailable)
@@ -118,7 +118,7 @@ class TestDependencies(unittest.TestCase):
         self.assertIs(type(mod), ModuleUnavailable)
         with self.assertRaisesRegex(
                 DeferredImportError, "Failed import "
-                "\(version 1.5 does not satisfy the minimum version 2.0\)"):
+                r"\(version 1.5 does not satisfy the minimum version 2.0\)"):
             mod.hello
 
         # Verify check_min_version works with deferred imports
@@ -131,8 +131,20 @@ class TestDependencies(unittest.TestCase):
                                     defer_check=True)
         self.assertFalse(check_min_version(mod, '2.0'))
 
+        # Verify check_min_version works when called directly
+
+        mod, avail = attempt_import('pyomo.common.tests.dep_mod',
+                                    minimum_version='1.0')
+        self.assertTrue(check_min_version(mod, '1.0'))
+
+        mod, avail = attempt_import('pyomo.common.tests.bogus',
+                                    minimum_version='1.0')
+        self.assertFalse(check_min_version(mod, '1.0'))
+
+
+
     def test_and_or(self):
-        mod0, avail0 = attempt_import('pyutilib',
+        mod0, avail0 = attempt_import('ply',
                                       defer_check=True)
         mod1, avail1 = attempt_import('pyomo.common.tests.dep_mod',
                                       defer_check=True)
@@ -193,7 +205,7 @@ class TestDependencies(unittest.TestCase):
         def _record_avail(module, avail):
             ans.append(avail)
 
-        mod0, avail0 = attempt_import('pyutilib',
+        mod0, avail0 = attempt_import('ply',
                                       defer_check=True,
                                       callback=_record_avail)
         mod1, avail1 = attempt_import('pyomo.common.tests.dep_mod',
@@ -228,18 +240,66 @@ class TestDependencies(unittest.TestCase):
 
         # Test generate warning
         log = StringIO()
-        with LoggingIntercept(log, 'pyomo.common'):
-            mod.generate_import_warning()
-        self.assertEqual(
-            log.getvalue(), "The pyomo.common.tests.dep_mod_except module "
-            "(an optional Pyomo dependency) failed to import\n")
+        dep = StringIO()
+        with LoggingIntercept(dep, 'pyomo.common.tests'):
+            with LoggingIntercept(log, 'pyomo.common'):
+                mod.generate_import_warning()
+        self.assertIn(
+            "The pyomo.common.tests.dep_mod_except module "
+            "(an optional Pyomo dependency) failed to import",
+            log.getvalue())
+        self.assertIn(
+            "DEPRECATED: use :py:class:`log_import_warning()`",
+            dep.getvalue())
 
         log = StringIO()
-        with LoggingIntercept(log, 'pyomo.core.base'):
-            mod.generate_import_warning('pyomo.core.base')
-        self.assertEqual(
-            log.getvalue(), "The pyomo.common.tests.dep_mod_except module "
-            "(an optional Pyomo dependency) failed to import\n")
+        dep = StringIO()
+        with LoggingIntercept(dep, 'pyomo'):
+            with LoggingIntercept(log, 'pyomo.core.base'):
+                mod.generate_import_warning('pyomo.core.base')
+        self.assertIn(
+            "The pyomo.common.tests.dep_mod_except module "
+            "(an optional Pyomo dependency) failed to import",
+            log.getvalue())
+        self.assertIn(
+            "DEPRECATED: use :py:class:`log_import_warning()`",
+            dep.getvalue())
+
+    def test_log_warning(self):
+        mod, avail = attempt_import('pyomo.common.tests.dep_mod_except',
+                                    defer_check=True,
+                                    only_catch_importerror=False)
+        log = StringIO()
+        dep = StringIO()
+        with LoggingIntercept(dep, 'pyomo'):
+            with LoggingIntercept(log, 'pyomo.common'):
+                mod.log_import_warning()
+        self.assertIn(
+            "The pyomo.common.tests.dep_mod_except module "
+            "(an optional Pyomo dependency) failed to import",
+            dep.getvalue())
+        self.assertNotIn("DEPRECATED:", dep.getvalue())
+        self.assertEqual("", log.getvalue())
+
+        log = StringIO()
+        dep = StringIO()
+        with LoggingIntercept(dep, 'pyomo'):
+            with LoggingIntercept(log, 'pyomo.core.base'):
+                mod.log_import_warning('pyomo.core.base')
+        self.assertIn(
+            "The pyomo.common.tests.dep_mod_except module "
+            "(an optional Pyomo dependency) failed to import",
+            log.getvalue())
+        self.assertEqual("", dep.getvalue())
+
+        log = StringIO()
+        with LoggingIntercept(dep, 'pyomo'):
+            with LoggingIntercept(log, 'pyomo.core.base'):
+                mod.log_import_warning('pyomo.core.base', "Custom")
+        self.assertIn(
+            "Custom (import raised ValueError: cannot import module)",
+            log.getvalue())
+        self.assertEqual("", dep.getvalue())
 
     def test_importer(self):
         attempted_import = []
@@ -265,10 +325,10 @@ class TestDependencies(unittest.TestCase):
         self.assertIsInstance(pyo, DeferredImportModule)
         self.assertIsNone(pyo._submodule_name)
         self.assertEqual(pyo_available._deferred_submodules,
-                         {'.version': None,
-                          '.common': None,
-                          '.common.tests': None,
-                          '.common.tests.dep_mod': ['dm']})
+                         ['.version',
+                          '.common',
+                          '.common.tests',
+                          '.common.tests.dep_mod',])
         # This doesn't cause test_mod to be resolved
         version = pyo.version
         self.assertIsInstance(pyo, DeferredImportModule)
@@ -285,13 +345,13 @@ class TestDependencies(unittest.TestCase):
         with self.assertRaisesRegex(
                 ValueError,
                 "deferred_submodules is only valid if defer_check==True"):
-            mod, mod_available \
-                = attempt_import('nonexisting.module', defer_check=False,
-                                 deferred_submodules={'submod': None})
+            mod, mod_available = attempt_import(
+                'nonexisting.module', defer_check=False,
+                deferred_submodules={'submod': None})
 
-        mod, mod_available \
-            = attempt_import('nonexisting.module', defer_check=True,
-                             deferred_submodules={'submod.subsubmod': None})
+        mod, mod_available = attempt_import(
+            'nonexisting.module', defer_check=True,
+            deferred_submodules={'submod.subsubmod': None})
         self.assertIs(type(mod), DeferredImportModule)
         self.assertFalse(mod_available)
         _mod = mod_available._module

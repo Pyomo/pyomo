@@ -8,19 +8,19 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import StringIO, iteritems, string_types
+from io import StringIO
+import shlex
 from tempfile import mkdtemp
-import os, sys, math, logging, shutil, time
+import os, sys, math, logging, shutil, time, subprocess
 
 from pyomo.core.base import Constraint, Var, value, Objective
 from pyomo.opt import ProblemFormat, SolverFactory
 
 import pyomo.common
-from pyomo.common.collections import Options
+from pyomo.common.collections import Bunch
+from pyomo.common.tee import TeeStream
 
 from pyomo.opt.base.solvers import _extract_version
-import pyutilib.subprocess
-from pyutilib.misc import quote_split
 
 from pyomo.core.kernel.block import IBlock
 from pyomo.core.kernel.objective import IObjective
@@ -45,7 +45,7 @@ class _GAMSSolver(object):
         self._default_variable_value = None
         self._metasolver = False
 
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
         self._capabilities.quadratic_constraint = True
@@ -53,7 +53,7 @@ class _GAMSSolver(object):
         self._capabilities.sos1 = False
         self._capabilities.sos2 = False
 
-        self.options = Options()
+        self.options = Bunch()
 
     def version(self):
         """Returns a 4-tuple describing the solver executable version."""
@@ -69,7 +69,7 @@ class _GAMSSolver(object):
         return self._default_variable_value
 
     def set_options(self, istr):
-        if isinstance(istr, string_types):
+        if isinstance(istr, str):
             istr = self._options_string_to_dict(istr)
         for key in istr:
             if not istr[key] is None:
@@ -83,7 +83,7 @@ class _GAMSSolver(object):
             return ans
         if istr[0] == "'" or istr[0] == '"':
             istr = eval(istr)
-        tokens = quote_split('[ ]+',istr)
+        tokens = shlex.split(istr)
         for token in tokens:
             index = token.find('=')
             if index == -1:
@@ -192,7 +192,7 @@ class GAMSDirect(_GAMSSolver):
         tmpdir = mkdtemp()
         try:
             from gams import GamsWorkspace, DebugLevel
-            GamsWorkspace(debug=DebugLevel.Off,
+            ws = GamsWorkspace(debug=DebugLevel.Off,
                           working_directory=tmpdir)
             t1 = ws.add_job_from_string(self._simple_model(n))
             t1.run()
@@ -486,7 +486,7 @@ class GAMSDirect(_GAMSSolver):
         soln.gap = abs(results.problem.upper_bound \
                        - results.problem.lower_bound)
 
-        for sym, ref in iteritems(symbolMap.bySymbol):
+        for sym, ref in symbolMap.bySymbol.items():
             obj = ref()
             if isinstance(model, IBlock):
                 # Kernel variables have no 'parent_component'
@@ -630,9 +630,11 @@ class GAMSShell(_GAMSSolver):
             test = os.path.join(tmpdir, 'test.gms')
             with open(test, 'w') as FILE:
                 FILE.write(self._simple_model(n))
-            rc, txt = pyutilib.subprocess.run(
-                [self.executable(), test, "curdir=" + tmpdir, 'lo=0'])
-            return not rc
+            result = subprocess.run(
+                [self.executable(), test, "curdir=" + tmpdir, 'lo=0'],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL)
+            return not result.returncode
         finally:
             shutil.rmtree(tmpdir)
         return False
@@ -659,8 +661,10 @@ class GAMSShell(_GAMSSolver):
         else:
             # specify logging to stdout for windows compatibility
             cmd = [solver_exec, "audit", "lo=3"]
-            _, txt = pyutilib.subprocess.run(cmd, tee=False)
-            return _extract_version(txt)
+            results = subprocess.run(cmd, stdout=subprocess.PIPE,
+                                     stderr=subprocess.STDOUT,
+                                     universal_newlines=True)
+            return _extract_version(results.stdout)
 
     @staticmethod
     def _parse_special_values(value):
@@ -811,7 +815,14 @@ class GAMSShell(_GAMSSolver):
             command.append("lf=" + str(logfile))
 
         try:
-            rc, txt = pyutilib.subprocess.run(command, tee=tee)
+            ostreams = [StringIO()]
+            if tee:
+                ostreams.append(sys.stdout)
+            with TeeStream(*ostreams) as t:
+                result = subprocess.run(command, stdout=t.STDOUT,
+                                        stderr=t.STDERR)
+            rc = result.returncode
+            txt = ostreams[0].getvalue()
 
             if keepfiles:
                 print("\nGAMS WORKING DIRECTORY: %s\n" % tmpdir)
@@ -996,7 +1007,7 @@ class GAMSShell(_GAMSSolver):
                        - results.problem.lower_bound)
 
         has_rc_info = True
-        for sym, ref in iteritems(symbolMap.bySymbol):
+        for sym, ref in symbolMap.bySymbol.items():
             obj = ref()
             if isinstance(model, IBlock):
                 # Kernel variables have no 'parent_component'

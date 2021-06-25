@@ -9,9 +9,14 @@
 #  ___________________________________________________________________________
 
 import os
+from contextlib import contextmanager
+from unittest.mock import Mock
+from parameterized import parameterized
+
+from pyomo.opt.base.solvers import _extract_version
 
 from pyomo.common.tempfiles import TempfileManager
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 import pyomo.kernel as pmo
 from pyomo.core import Binary, ConcreteModel, Constraint, NonNegativeReals, Objective, Var, Integers, RangeSet, minimize, quicksum, Suffix
@@ -40,7 +45,7 @@ class CPLEX_utils(unittest.TestCase):
 
         # Check spaces in the file
         fname = 'foo bar.lp'
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Space detected in CPLEX xxx file"):
             _validate_file_name(_126, fname, 'xxx')
         self.assertEqual('"%s"' % (fname,),
@@ -54,11 +59,11 @@ class CPLEX_utils(unittest.TestCase):
         # check BAD path separators
         bad_char = '/\\'.replace(os.path.sep,'')
         fname = 'foo%sbar.lp' % (bad_char,)
-        msg = 'Unallowed character \(%s\) found in CPLEX xxx file' % (
+        msg = r'Unallowed character \(%s\) found in CPLEX xxx file' % (
             repr(bad_char)[1:-1],)
-        with self.assertRaisesRegexp(ValueError, msg):
+        with self.assertRaisesRegex(ValueError, msg):
             _validate_file_name(_126, fname, 'xxx')
-        with self.assertRaisesRegexp(ValueError, msg):
+        with self.assertRaisesRegex(ValueError, msg):
             _validate_file_name(_128, fname, 'xxx')
 
 
@@ -590,6 +595,47 @@ Objective nonzeros   :      32
 
         results = CPLEXSHELL.process_logfile(self.solver)
         self.assertEqual(results.problem.number_of_continuous_variables, 206)
+
+
+class TestCplexVersion:
+    ENV_VAR_NAME = 'CPLEX_VERSION'
+
+    @contextmanager
+    def temp_cplex_env_var_value(self, value):
+        old_environ = dict(os.environ)
+        if value is None:
+            os.environ.pop(self.ENV_VAR_NAME, None)
+        else:
+            os.environ[self.ENV_VAR_NAME] = value
+        try:
+            yield
+        finally:
+            os.environ.clear()
+            os.environ.update(old_environ)
+
+    def test_it_uses_env_var(self):
+        with self.temp_cplex_env_var_value('20.1.0'):
+            cplex = MockCPLEX()
+            assert cplex.version() == (20, 1, 0, 0)
+
+    @parameterized.expand([
+        [None],
+        ["invalid_version"],
+    ])
+    def test_it_uses_subprocess_when_env_var_invalid(self, invalid_env_value):
+        with self.temp_cplex_env_var_value(invalid_env_value), unittest.mock.patch(
+            "pyomo.solvers.plugins.solvers.CPLEX.subprocess"
+        ) as mock_subprocess:
+            mock_subprocess.run.return_value = Mock(stdout='20.0.0')
+            cplex = MockCPLEX()
+            assert cplex.version() == (20, 0, 0, 0)
+            mock_subprocess.run.assert_called_once_with(
+                [cplex.executable(), '-c', 'quit'],
+                timeout=1,
+                stdout=mock_subprocess.PIPE,
+                stderr=mock_subprocess.STDOUT,
+                universal_newlines=True
+            )
 
 
 if __name__ == "__main__":

@@ -12,8 +12,7 @@ import copy
 import itertools
 import logging
 import sys
-from six import itervalues
-from six.moves import builtins
+import builtins
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.expr.numvalue import (
@@ -83,20 +82,20 @@ class GetItemExpression(ExpressionBase):
         # storage scheme), but as of now [30 Apr 20], there are no known
         # Components where this assumption will cause problems.
         return any( getattr(x, 'is_potentially_variable', _false)()
-                    for x in itervalues(getattr(base, '_data', {})) )
+                    for x in getattr(base, '_data', {}).values() )
 
     def _is_fixed(self, values):
         if not all(values[1:]):
             return False
         _true = lambda: True
         return all( getattr(x, 'is_fixed', _true)()
-                    for x in itervalues(values[0]) )
+                    for x in values[0].values() )
 
     def _compute_polynomial_degree(self, result):
         if any(x != 0 for x in result[1:]):
             return None
         ans = 0
-        for x in itervalues(result[0]):
+        for x in result[0].values():
             if x.__class__ in nonpyomo_leaf_types \
                or not hasattr(x, 'polynomial_degree'):
                 continue

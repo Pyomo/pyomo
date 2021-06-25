@@ -7,9 +7,10 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 import copy
-from six import iteritems, iterkeys, advance_iterator
 from pyomo.common import DeveloperError
+
 
 class IndexedComponent_slice(object):
     """Special class for slicing through hierarchical component trees
@@ -121,7 +122,7 @@ class IndexedComponent_slice(object):
     def __setstate__(self, state):
         """Deserialize the state into this object. """
         set_attr = super(IndexedComponent_slice, self).__setattr__
-        for k,v in iteritems(state):
+        for k,v in state.items():
             set_attr(k,v)
 
     def __deepcopy__(self, memo):
@@ -284,8 +285,8 @@ def _freeze(info):
         return (
             info[0],
             id(info[1][0]),  # id of the Component
-            tuple(iteritems(info[1][1])), # {idx: value} for fixed
-            tuple(iterkeys(info[1][2])),  # {idx: slice} for slices
+            tuple(info[1][1].items()), # {idx: value} for fixed
+            tuple(info[1][2].keys()),  # {idx: slice} for slices
             info[1][3]  # elipsis index
         )
     elif info[0] & IndexedComponent_slice.ITEM_MASK:
@@ -349,7 +350,7 @@ class _slice_generator(object):
             # Note: running off the end of the underlying iterator will
             # generate a StopIteration exception that will propagate up
             # and end this iterator.
-            index = advance_iterator(self.component_iter)
+            index = next(self.component_iter)
 
             # We want a tuple of indices, so convert scalars to tuples
             if normalize_index.flatten:
@@ -370,7 +371,7 @@ class _slice_generator(object):
                 continue
 
             valid = True
-            for key, val in iteritems(self.fixed):
+            for key, val in self.fixed.items():
                 # If this index of the component does not match all
                 # the specified fixed indices, don't return anything.
                 if not val == _idx[key]:
@@ -407,7 +408,7 @@ _IndexedComponent_slice = IndexedComponent_slice
 
 # Mock up a callable object with a "check_complete" method
 def _advance_iter(_iter):
-    return advance_iterator(_iter)
+    return next(_iter)
 def _advance_iter_check_complete():
     pass
 _advance_iter.check_complete = _advance_iter_check_complete

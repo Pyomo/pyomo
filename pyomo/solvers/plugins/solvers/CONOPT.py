@@ -9,11 +9,11 @@
 #  ___________________________________________________________________________
 
 import os
+import subprocess
 
 from pyomo.common import Executable
-from pyomo.common.collections import Options, Bunch
+from pyomo.common.collections import Bunch
 from pyomo.common.tempfiles import TempfileManager
-from pyutilib.subprocess import run
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
@@ -22,11 +22,6 @@ from pyomo.opt.solver import  SystemCallSolver
 
 import logging
 logger = logging.getLogger('pyomo.solvers')
-
-try:
-    unicode
-except:
-    basestring = str
 
 
 @SolverFactory.register('conopt', doc='The CONOPT NLP solver')
@@ -52,7 +47,7 @@ class CONOPT(SystemCallSolver):
         self.set_problem_format(ProblemFormat.nl)
 
         # Note: Undefined capabilities default to 'None'
-        self._capabilities = Options()
+        self._capabilities = Bunch()
         self._capabilities.linear = True
         self._capabilities.integer = True
         self._capabilities.quadratic_objective = True
@@ -79,8 +74,11 @@ class CONOPT(SystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = run( [solver_exec], timelimit=1 )
-        return _extract_version(results[1])
+        results = subprocess.run( [solver_exec], timeout=1,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT,
+                                 universal_newlines=True)
+        return _extract_version(results.stdout)
 
     def create_command_line(self, executable, problem_files):
 
@@ -135,7 +133,7 @@ class CONOPT(SystemCallSolver):
         for key in self.options:
             if key == 'solver':
                 continue
-            if isinstance(self.options[key], basestring) and ' ' in self.options[key]:
+            if isinstance(self.options[key], str) and ' ' in self.options[key]:
                 opt.append(key+"=\""+str(self.options[key])+"\"")
                 cmd.append(str(key)+"="+str(self.options[key]))
             elif key == 'subsolver':

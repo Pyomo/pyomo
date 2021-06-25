@@ -10,13 +10,13 @@
 
 import pickle
 
-import pyutilib.th as unittest
+import pyomo.common.unittest as unittest
 
 from pyomo.common import DeveloperError
 from pyomo.core.base.util import (
     Initializer, ConstantInitializer, ItemInitializer, ScalarCallInitializer,
     IndexedCallInitializer, CountedCallInitializer, CountedCallGenerator,
-    disable_methods,
+    disable_methods, flatten_tuple
 )
 from pyomo.environ import (
     ConcreteModel, Var,
@@ -58,39 +58,39 @@ class TestDisableMethods(unittest.TestCase):
         x = _abstract_simple('foo')
         self.assertIs(type(x), _abstract_simple)
         self.assertIsInstance(x, _simple)
-        with self.assertRaisesRegexp(
-                RuntimeError, "Cannot access a on _abstract_simple "
+        with self.assertRaisesRegex(
+                RuntimeError, "Cannot access 'a' on _abstract_simple "
                 "'foo' before it has been constructed"):
             x.a()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Cannot custom_msg _abstract_simple "
                 "'foo' before it has been constructed"):
             x.b()
         self.assertEqual(x.c(), 'c')
-        with self.assertRaisesRegexp(
-                RuntimeError, "Cannot access property d on _abstract_simple "
+        with self.assertRaisesRegex(
+                RuntimeError, "Cannot access property 'd' on _abstract_simple "
                 "'foo' before it has been constructed"):
             x.d
-        with self.assertRaisesRegexp(
-                RuntimeError, "Cannot set property d on _abstract_simple "
+        with self.assertRaisesRegex(
+                RuntimeError, "Cannot set property 'd' on _abstract_simple "
                 "'foo' before it has been constructed"):
             x.d = 1
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Cannot custom_pmsg _abstract_simple "
                 "'foo' before it has been constructed"):
             x.e
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "Cannot custom_pmsg _abstract_simple "
                 "'foo' before it has been constructed"):
             x.e = 1
 
         # Verify that the wrapper function enforces the same API as the
         # wrapped function
-        with self.assertRaisesRegexp(
-                TypeError, "f\(\) takes "):
+        with self.assertRaisesRegex(
+                TypeError, r"f\(\) takes "):
             x.f(1,2,3)
-        with self.assertRaisesRegexp(
-                RuntimeError, "Cannot access f on _abstract_simple "
+        with self.assertRaisesRegex(
+                RuntimeError, "Cannot access 'f' on _abstract_simple "
                 "'foo' before it has been constructed"):
             x.f(1,2)
 
@@ -106,9 +106,9 @@ class TestDisableMethods(unittest.TestCase):
         self.assertEqual(x.f(1,2), 'f12')
 
     def test_bad_api(self):
-        with self.assertRaisesRegexp(
-                DeveloperError, "Cannot disable method not_there on "
-                "<class '.*\.foo'>"):
+        with self.assertRaisesRegex(
+                DeveloperError, r"Cannot disable method not_there on "
+                r"<class '.*\.foo'>"):
 
             @disable_methods(('a','not_there'))
             class foo(_simple):
@@ -125,6 +125,14 @@ def _init_indexed(m, *args):
     return i
 
 class Test_Initializer(unittest.TestCase):
+    def test_flattener(self):
+        tup = (1, 0, (0, 1), (2, 3))
+        self.assertEqual((1, 0, 0, 1, 2, 3), flatten_tuple(tup))
+        li = [0]
+        self.assertEqual((0,), flatten_tuple(li))
+        ex = [(1, 0), [2, 3]]
+        self.assertEqual((1, 0, 2, 3), flatten_tuple(ex))
+
     def test_constant(self):
         m = ConcreteModel()
         a = Initializer(5)
@@ -414,7 +422,7 @@ class Test_Initializer(unittest.TestCase):
         def a_init(m):
             yield 0
             yield 3
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Generator functions are not allowed"):
             a = Initializer(a_init)
 
@@ -461,7 +469,7 @@ class Test_Initializer(unittest.TestCase):
         init = Init()
 
         m = ConcreteModel()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Generator functions are not allowed"):
             a = Initializer(init.a_init)
 
@@ -488,7 +496,7 @@ class Test_Initializer(unittest.TestCase):
 
     def test_generators(self):
         m = ConcreteModel()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Generators are not allowed"):
             a = Initializer(iter([0,3]))
 
@@ -501,7 +509,7 @@ class Test_Initializer(unittest.TestCase):
         def x_init():
             yield 0
             yield 3
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Generators are not allowed"):
             a = Initializer(x_init())
 
