@@ -391,13 +391,20 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         """
         Returns a tuple describing the solver executable version.
         """
+        # The subprocess below can sometimes time out if we're low on resources. This gives us a much
+        # cheaper way of getting the version
+        version_from_env = _extract_version(os.environ.get('CPLEX_VERSION', ''))
+        if version_from_env:
+            return version_from_env
+
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = subprocess.run( [solver_exec,'-c','quit'], timeout=1,
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT,
-                                 universal_newlines=True)
+        results = subprocess.run( [solver_exec,'-c','quit'],
+                                  timeout=1,
+                                  stdout=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT,
+                                  universal_newlines=True)
         return _extract_version(results.stdout)
 
     def create_command_line(self, executable, problem_files):
