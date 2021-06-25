@@ -531,7 +531,8 @@ def identify_objective_functions(model, config):
         first_stage_vars_in_term = list(v for v in vars_in_term if
                                         v in first_stage_variable_set)
         second_stage_vars_in_term = list(v for v in vars_in_term if
-                                         v in second_stage_variable_set)
+                                         v not in first_stage_variable_set)
+        # By checking not in first_stage_variable_set, you pick up both ssv and state vars
         for v in first_stage_vars_in_term:
             if id(v) not in list(id(var) for var in first_stage_terms):
                 first_stage_terms.append(v)
@@ -588,7 +589,6 @@ def process_termination_condition_master_problem(config, results):
                tc.internalSolverError, tc.error,
                tc.unbounded, tc.infeasibleOrUnbounded, tc.invalidProblem, tc.intermediateNonInteger,
                tc.noSolution, tc.unknown]
-    aborted = [tc.userInterrupt, tc.resourceInterrupt, tc.licensingProblems]
 
     termination_condition = results.solver.termination_condition
     if config.solve_master_globally == False:

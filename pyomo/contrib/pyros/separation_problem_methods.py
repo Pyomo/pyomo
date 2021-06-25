@@ -445,7 +445,7 @@ def solver_call_separation(model_data, config, solver, solve_data, is_global):
         objective = str(list(nlp_model.component_data_objects(Objective, active=True))[0].name)
         name = os.path.join(save_dir, config.uncertainty_set.type + "_" + nlp_model.name + "_separation_" + str(
             model_data.iteration) + "_obj_" + objective + ".bar")
-        nlp_model.write(name, io_options={'symbolic_solver_labels':False})
+        nlp_model.write(name, io_options={'symbolic_solver_labels':True})
         output_logger(config=config, separation_error=True, filename=name, iteration=model_data.iteration, objective=objective,
                       status_dict=solver_status_dict)
     return True
