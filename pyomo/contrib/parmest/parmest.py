@@ -253,7 +253,7 @@ def group_data(data, groupby_column_name, use_mean=None):
     return grouped_data
 
 
-class _SecondStateCostExpr(object):
+class _SecondStageCostExpr(object):
     """
     Class to pass objective expression into the Pyomo model
     """
@@ -282,7 +282,7 @@ class Estimator(object):
         Function used to formulate parameter estimation objective, generally
         sum of squared error between measurements and model variables.  
         If no function is specified, the model is used 
-        "as is" and should be defined with a "FirstStateCost" and 
+        "as is" and should be defined with a "FirstStageCost" and
         "SecondStageCost" expression that are used to build an objective.
     tee: bool, optional
         Indicates that ef solver output should be teed
@@ -351,7 +351,7 @@ class Estimator(object):
             def FirstStageCost_rule(model):
                 return 0
             model.FirstStageCost = pyo.Expression(rule=FirstStageCost_rule)
-            model.SecondStageCost = pyo.Expression(rule=_SecondStateCostExpr(self.obj_function, data))
+            model.SecondStageCost = pyo.Expression(rule=_SecondStageCostExpr(self.obj_function, data))
             
             def TotalCost_rule(model):
                 return model.FirstStageCost + model.SecondStageCost
