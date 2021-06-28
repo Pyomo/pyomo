@@ -35,7 +35,7 @@ from pyomo.core.base.expression import (_ExpressionData,
                                         _GeneralExpressionDataImpl)
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.set import Set
-from pyomo.core.base.util import (
+from pyomo.core.base.initializer import (
     Initializer, IndexedCallInitializer, CountedCallInitializer,
 )
 from pyomo.core.base import minimize, maximize

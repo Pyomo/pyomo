@@ -32,9 +32,9 @@ from pyomo.core.base.indexed_component import (
 )
 from pyomo.core.base.misc import (tabular_writer)
 from pyomo.core.base.set import Set
-from pyomo.core.base.util import (
-    disable_methods, Initializer,
-    IndexedCallInitializer, CountedCallInitializer
+from pyomo.core.base.disable_methods import disable_methods
+from pyomo.core.base.initializer import (
+    Initializer, IndexedCallInitializer, CountedCallInitializer,
 )
 
 

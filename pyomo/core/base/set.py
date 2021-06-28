@@ -22,8 +22,9 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import (
     native_types, native_numeric_types, as_numeric, value,
 )
-from pyomo.core.base.util import (
-    disable_methods, InitializerBase, Initializer, 
+from pyomo.core.base.disable_methods import disable_methods
+from pyomo.core.base.initializer import (
+    InitializerBase, Initializer,
     CountedCallInitializer, IndexedCallInitializer,
 )
 from pyomo.core.base.range import (

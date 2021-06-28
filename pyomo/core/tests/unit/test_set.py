@@ -29,7 +29,7 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.core.expr import native_numeric_types, native_types
 import pyomo.core.base.set as SetModule
 from pyomo.core.base.indexed_component import normalize_index
-from pyomo.core.base.util import (
+from pyomo.core.base.initializer import (
     ConstantInitializer, ItemInitializer, IndexedCallInitializer,
 )
 from pyomo.core.base.set import (

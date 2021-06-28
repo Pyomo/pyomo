@@ -33,7 +33,7 @@ from pyomo.core.base.component import (
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.set import GlobalSetBase, _SetDataBase
 from pyomo.core.base.var import Var
-from pyomo.core.base.util import Initializer
+from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent, UnindexedComponent_set,
 )
