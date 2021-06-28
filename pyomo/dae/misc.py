@@ -269,13 +269,7 @@ def _update_constraint(con):
     This method will construct any additional indices in a constraint
     resulting from the discretization of a ContinuousSet.
     """
-
-    _rule = con.rule
-    _parent = con._parent()
-    for i in con.index_set():
-        if i not in con:
-            # Code taken from the construct() method of Constraint
-            con.add(i, _rule(_parent, i))
+    con.to_dense_data()
 
 
 def _update_expression(expre):
@@ -283,12 +277,7 @@ def _update_expression(expre):
     This method will construct any additional indices in an expression
     resulting from the discretization of a ContinuousSet.
     """
-    _rule = expre._init_rule
-    _parent = expre._parent()
-    for i in expre.index_set():
-        if i not in expre:
-            # Code taken from the construct() method of Expression
-            expre.add(i, apply_indexed_rule(expre, _rule, _parent, i))
+    expre.to_dense_data()
 
 
 def _update_block(blk):
