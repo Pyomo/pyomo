@@ -687,26 +687,27 @@ class Constraint(ActiveIndexedComponent):
         if is_debug_set(logger):
             logger.debug("Constructing constraint %s" % (self.name))
 
+        rule = self.rule
         try:
             # We do not (currently) accept data for constructing Constraints
             index = None
             assert data is None
 
-            if self.rule is None:
+            if rule is None:
                 # If there is no rule, then we are immediately done.
                 return
 
-            if self.rule.constant() and self.is_indexed():
+            if rule.constant() and self.is_indexed():
                 raise IndexError(
                     "Constraint '%s': Cannot initialize multiple indices "
                     "of a constraint with a single expression" %
                     (self.name,) )
 
             block = self.parent_block()
-            if self.rule.contains_indices():
+            if rule.contains_indices():
                 # The index is coming in externally; we need to validate it
-                for index in self.rule.indices():
-                    self[index] = self.rule(block, index)
+                for index in rule.indices():
+                    self[index] = rule(block, index)
             elif not self.index_set().isfinite():
                 # If the index is not finite, then we cannot iterate
                 # over it.  Since the rule doesn't provide explicit
@@ -717,14 +718,12 @@ class Constraint(ActiveIndexedComponent):
             else:
                 # Bypass the index validation and create the member directly
                 for index in self.index_set():
-                    self._setitem_when_not_present(
-                        index, self.rule(block, index)
-                    )
+                    self._setitem_when_not_present(index, rule(block, index))
         except Exception:
             err = sys.exc_info()[1]
             logger.error(
                 "Rule failed when generating expression for "
-                "constraint %s with index %s:\n%s: %s"
+                "Constraint %s with index %s:\n%s: %s"
                 % (self.name,
                    str(index),
                    type(err).__name__,
@@ -791,9 +790,7 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
     """
 
     def __init__(self, *args, **kwds):
-        _GeneralConstraintData.__init__(self,
-                                        component=self,
-                                        expr=None)
+        _GeneralConstraintData.__init__(self, component=self, expr=None)
         Constraint.__init__(self, *args, **kwds)
 
     #
