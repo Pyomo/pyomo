@@ -427,7 +427,7 @@ loaded to the solution determined by PyROS and can be obtained by querying the m
 
 An example of how to query these values on the previously obtained results is shown in the code block below.
 
-.. code-block::
+.. doctest::
 
   >>> # === Query results ===
   >>> time = results_1.time
