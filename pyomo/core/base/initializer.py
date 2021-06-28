@@ -14,9 +14,8 @@ import inspect
 from collections.abc import Sequence
 from collections.abc import Mapping
 
-from pyomo.core.expr.numvalue import (
-    native_types,
-)
+from pyomo.core.expr.numvalue import native_types
+from pyomo.core.pyomoobject import PyomoObject
 
 #
 # The following set of "Initializer" classes are a general functionality
@@ -58,8 +57,7 @@ def Initializer(init,
             return IndexedCallInitializer(init)
     elif isinstance(init, Mapping):
         return ItemInitializer(init)
-    elif isinstance(init, Sequence) \
-            and not isinstance(init, str):
+    elif isinstance(init, Sequence) and not isinstance(init, str):
         if treat_sequences_as_mappings:
             return ItemInitializer(init)
         else:
@@ -76,12 +74,28 @@ def Initializer(init,
         # segfault in pypy3 7.3.0).  We will immediately expand the
         # generator into a tuple and then store it as a constant.
         return ConstantInitializer(tuple(init))
+    elif isinstance(init, PyomoObject):
+        # TODO: Should IndexedComponent inherit from collections.abc.Mapping?
+        if init.is_component_type() and init.is_indexed():
+            return ItemInitializer(init)
+        else:
+            return ConstantInitializer(init)
     elif type(init) is functools.partial:
         _args = inspect.getfullargspec(init.func)
         if len(_args.args) - len(init.args) == 1 and _args.varargs is None:
             return ScalarCallInitializer(init)
         else:
             return IndexedCallInitializer(init)
+    elif callable(init) and not isinstance(init, type):
+        # We assume any callable thing could be a functor; but, we must
+        # filter out types, as isfunction() and ismethod() both return
+        # False for type.__call__
+        return Initializer(
+            init.__call__,
+            allow_generators=allow_generators,
+            treat_sequences_as_mappings=treat_sequences_as_mappings,
+            arg_not_specified=arg_not_specified,
+        )
     else:
         return ConstantInitializer(init)
 
