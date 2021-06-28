@@ -18,7 +18,7 @@ from pyomo.core.base.block import Block
 from pyomo.core.expr import value
 from pyomo.core.base.var import Var, _VarData
 from pyomo.core.base.param import Param, _ParamData
-from pyomo.core.base.objective import Objective
+from pyomo.core.base.objective import Objective, maximize
 from pyomo.contrib.pyros.util import (a_logger,
                                        time_code,
                                        get_main_elapsed_time)
@@ -110,7 +110,7 @@ def pyros_config():
     CONFIG.declare('keepfiles', ConfigValue(
         default=False,
         domain=bool, description="Optional. Default = False. Whether or not to write files of sub-problems for use in debugging. "
-                                 "Must be paired with a writable directory supplied via ``sub-problem_file_directory``."
+                                 "Must be paired with a writable directory supplied via ``subproblem_file_directory``."
     ))
     CONFIG.declare('tee', ConfigValue(
         default=False,
@@ -396,7 +396,12 @@ class PyROS(object):
 
             return_soln = ROSolveResults()
             return_soln.config = config
-            return_soln.final_objective_value = value(pyros_soln.master_soln.master_model.obj)
+            # Report the negative of the objective value if it was originally maximize, since we use the minimize form in the algorithm
+            if next(model.component_data_objects(Objective)).sense == maximize:
+                negation = -1
+            else:
+                negation = 1
+            return_soln.final_objective_value = negation * value(pyros_soln.master_soln.master_model.obj)
             return_soln.time = model_data.total_cpu_time
             return_soln.iterations = iterations
             return_soln.grcs_termination_condition = pyros_soln.grcs_termination_condition

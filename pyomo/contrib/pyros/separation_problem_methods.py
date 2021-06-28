@@ -30,7 +30,8 @@ def add_uncertainty_set_constraints(model, config):
             uncertain_params=model.util.uncertain_param_vars, model=model, config=config
         )
 
-    config.uncertainty_set.add_bounds_on_uncertain_parameters(model, config)
+    config.uncertainty_set.add_bounds_on_uncertain_parameters(model=model, config=config)
+
     return
 
 

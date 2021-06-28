@@ -315,6 +315,9 @@ class myUncertaintySet(UncertaintySet):
     def dim(self):
         self.dim = 1
 
+    def parameter_bounds(self):
+        return [(0,1)]
+
 class testAbstractUncertaintySetClass(unittest.TestCase):
     '''
     The UncertaintySet class has an abstract base class implementing set_as_constraint method, as well as a couple
@@ -444,7 +447,7 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
         config = Block()
         config.uncertainty_set = _set
 
-        EllipsoidalSet.add_bounds_on_uncertain_parameters(m, config)
+        EllipsoidalSet.add_bounds_on_uncertain_parameters(model=m, config=config)
 
         self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None,
                             "Bounds not added correctly for EllipsoidalSet")
@@ -522,7 +525,7 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
         config = Block()
         config.uncertainty_set = _set
 
-        AxisAlignedEllipsoidalSet.add_bounds_on_uncertain_parameters(m, config)
+        AxisAlignedEllipsoidalSet.add_bounds_on_uncertain_parameters(model=m, config=config)
 
         self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None, "Bounds not added correctly for AxisAlignedEllipsoidalSet")
         self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for AxisAlignedEllipsoidalSet")
@@ -636,7 +639,7 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
         config.uncertainty_set = polyhedral_set
         config.global_solver = SolverFactory("baron")
 
-        PolyhedralSet.add_bounds_on_uncertain_parameters(m, config)
+        PolyhedralSet.add_bounds_on_uncertain_parameters(model=m, config=config)
 
         self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None, "Bounds not added correctly for PolyhedralSet")
         self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for PolyhedralSet")
@@ -759,7 +762,7 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         config = Block()
         config.uncertainty_set = budget_set
 
-        BudgetSet.add_bounds_on_uncertain_parameters(m, config)
+        BudgetSet.add_bounds_on_uncertain_parameters(model=m, config=config)
 
         self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None, "Bounds not added correctly for BudgetSet")
         self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for BudgetSet")
@@ -872,7 +875,7 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
         config = Block()
         config.uncertainty_set = cardinality_set
 
-        CardinalitySet.add_bounds_on_uncertain_parameters(m, config)
+        CardinalitySet.add_bounds_on_uncertain_parameters(model=m, config=config)
 
         self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None, "Bounds not added correctly for CardinalitySet")
         self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for CardinalitySet")
@@ -959,7 +962,7 @@ class testBoxUncertaintySetClass(unittest.TestCase):
         config = Block()
         config.uncertainty_set = box_set
 
-        BoxSet.add_bounds_on_uncertain_parameters(m, config)
+        BoxSet.add_bounds_on_uncertain_parameters(model=m, config=config)
 
         self.assertEqual(m.util.uncertain_param_vars[0].lb, -1, "Bounds not added correctly for BoxSet")
         self.assertEqual(m.util.uncertain_param_vars[0].ub, 1, "Bounds not added correctly for BoxSet")
@@ -1046,7 +1049,7 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
         config = Block()
         config.uncertainty_set = _set
 
-        DiscreteScenarioSet.add_bounds_on_uncertain_parameters(m, config)
+        DiscreteScenarioSet.add_bounds_on_uncertain_parameters(model=m, config=config)
 
         self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None, "Bounds not added correctly for DiscreteScenarioSet")
         self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for DiscreteScenarioSet")
@@ -1158,7 +1161,7 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
         config = Block()
         config.uncertainty_set = _set
 
-        FactorModelSet.add_bounds_on_uncertain_parameters(m, config)
+        FactorModelSet.add_bounds_on_uncertain_parameters(model=m, config=config)
 
         self.assertNotEqual(m.util.uncertain_param_vars[0].lb, None, "Bounds not added correctly for FactorModelSet")
         self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for FactorModelSet")

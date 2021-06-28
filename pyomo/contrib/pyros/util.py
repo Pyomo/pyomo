@@ -204,7 +204,7 @@ def validate_uncertainty_set(config):
     return
 
 
-def add_bounds_for_uncertain_parameters(separation_model, config):
+def add_bounds_for_uncertain_parameters(model, config):
     '''
     This function solves a set of optimization problems to determine bounds on the uncertain parameters
     given the uncertainty set description. These bounds will be added as additional constraints to the uncertaint_set_constr
@@ -217,8 +217,8 @@ def add_bounds_for_uncertain_parameters(separation_model, config):
     uncertain_param_bounds = []
     bounding_model = ConcreteModel()
     bounding_model.util = Block()
-    bounding_model.util.uncertain_param_vars = IndexedVar(separation_model.util.uncertain_param_vars.index_set())
-    for tup in separation_model.util.uncertain_param_vars.items():
+    bounding_model.util.uncertain_param_vars = IndexedVar(model.util.uncertain_param_vars.index_set())
+    for tup in model.util.uncertain_param_vars.items():
         bounding_model.util.uncertain_param_vars[tup[0]].value = tup[1].value
 
     bounding_model.add_component("uncertainty_set_constraint",
@@ -245,8 +245,8 @@ def add_bounds_for_uncertain_parameters(separation_model, config):
 
     # === Add bounds as constraints to uncertainty_set_constraint ConstraintList
     for idx, bound in enumerate(uncertain_param_bounds):
-        separation_model.util.uncertain_param_vars[idx].setlb(bound[0])
-        separation_model.util.uncertain_param_vars[idx].setub(bound[1])
+        model.util.uncertain_param_vars[idx].setlb(bound[0])
+        model.util.uncertain_param_vars[idx].setub(bound[1])
 
     return
 

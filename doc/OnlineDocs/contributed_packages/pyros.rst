@@ -158,34 +158,34 @@ PyROS Uncertainty Set Classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.BoxSet
-    :special-members: __init__
+    :special-members: __init__, parameter_bounds, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.CardinalitySet
-    :special-members: __init__
+    :special-members: __init__, parameter_bounds, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.BudgetSet
-    :special-members: __init__
+    :special-members: __init__, parameter_bounds, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.FactorModelSet
-    :special-members: __init__
+    :special-members: __init__, parameter_bounds, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.PolyhedralSet
-    :special-members: __init__
+    :special-members: __init__, parameter_bounds, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.AxisAlignedEllipsoidalSet
-    :special-members: __init__
+    :special-members: __init__, parameter_bounds, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.EllipsoidalSet
-    :special-members: __init__
+    :special-members: __init__, parameter_bounds, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.UncertaintySet
-    :special-members: __init__
+    :special-members: __init__, parameter_bounds, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.DiscreteScenarioSet
-    :special-members: __init__
+    :special-members: __init__, parameter_bounds, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.IntersectionSet
-    :special-members: __init__
+    :special-members: __init__, parameter_bounds, point_in_set
 
 
 PyROS Usage Example
@@ -373,6 +373,7 @@ PyROS will return one of six termination conditions upon completion. These termi
 |   ``grcsTerminationCondition.subsolver_error``    |  Unacceptable return status(es) from a user-supplied sub-solver|
 +---------------------------------------------------+----------------------------------------------------------------+
 
+
 A Single-Stage Problem
 """""""""""""""""""""""""
 If we choose to designate all variables as either design or state variables, without any control variables (i.e., all degrees of freedom are first-stage), we can use PyROS to solve the single-stage problem as shown below. In particular, let us instruct PyROS that variables ``m.x1`` through ``m.x6``, ``m.x19`` through ``m.x24``, and ``m.x31`` correspond to first-stage degrees of freedom.
@@ -410,6 +411,30 @@ If we choose to designate all variables as either design or state variables, wit
   Final objective value: 48367380.0
   >>> print("PyROS termination condition: %s" % results_1.grcs_termination_condition)
   PyROS termination condition: grcsTerminationCondition.robust_optimal
+
+PyROS Results Object
+"""""""""""""""""""""""""""
+The results object returned by PyROS allows you to query the following information from the solve call:
+total iterations of the algorithm ``iterations``, CPU time ``time``, the GRCS algorithm termination condition ``grcs_termination_condition``,
+and the final objective function value ``final_objective_value``. If the option ``load_solution`` = ``True`` (default), the variables in the model will be
+loaded to the solution determined by PyROS and can be obtained by querying the model variables.
+
+.. note::
+    The reported ``final_objective_value`` and final model variable values depend on the selection of the option ``objective_focus``.
+    The ``final_objective_value`` is the sum of first-stage and second-stage objective functions.
+    If ``objective_focus = ObjectiveType.nominal``, second-stage objective and variables are evaluated at the nominal realization of the uncertain parameters, :math:`q^0`.
+    If ``objective_focus = ObjectiveType.worst_case``, second-stage objective and variables are evaluated at the worst-case realization of the uncertain parameters, :math:`q^{k^\ast}` where :math:`k^\ast = argmax_{k \in \mathcal{K}} f_2(x,z^k,y^k,q^k)` .
+
+An example of how to query these values on the previously obtained results is shown in the code block below.
+
+.. code-block::
+
+  >>> # === Query results ===
+  >>> time = results_1.time
+  >>> iterations = results_1.iterations
+  >>> termination_condition = results_1.grcs_termination_condition
+  >>> objective = results_1.final_objective_value
+
 
 A Two-Stage Problem
 """"""""""""""""""""""
