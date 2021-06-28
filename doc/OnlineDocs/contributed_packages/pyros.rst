@@ -388,7 +388,7 @@ If we choose to designate all variables as either design or state variables, wit
   >>> # The remaining variables are implicitly designated to be state variables
 
   >>> # === Call PyROS to solve the robust optimization problem ===
-  >>> results_1 = pyros_solver.solve(model = m, # doctest: +ELLIPSIS
+  >>> results_1 = pyros_solver.solve(model = m,
   ...                                  first_stage_variables = first_stage_variables,
   ...                                  second_stage_variables = second_stage_variables,
   ...                                  uncertain_params = uncertain_parameters,
@@ -398,18 +398,23 @@ If we choose to designate all variables as either design or state variables, wit
   ...                                  options = {
   ...                                     "objective_focus": pyros.ObjectiveType.worst_case,
   ...                                     "solve_master_globally": True
-  ...                                   }) # doctest: +ELLIPSIS
+  ...                                   })
   ===========================================================================================
   PyROS: Pyomo Robust Optimization Solver ...
   ===========================================================================================
   ...
   INFO: Robust optimal solution identified. Exiting PyROS.
 
-  >>> # === Print results ===
-  >>> single_stage_final_objective = round(pyo.value(results_1.final_objective_value),-1)
+  >>> # === Query results ===
+  >>> time = results_1.time
+  >>> iterations = results_1.iterations
+  >>> termination_condition = results_1.grcs_termination_condition
+  >>> objective = results_1.final_objective_value
+  >>> # === Print some results ===
+  >>> single_stage_final_objective = round(objective,-1)
   >>> print("Final objective value: %s" % single_stage_final_objective)
   Final objective value: 48367380.0
-  >>> print("PyROS termination condition: %s" % results_1.grcs_termination_condition)
+  >>> print("PyROS termination condition: %s" % termination_condition)
   PyROS termination condition: grcsTerminationCondition.robust_optimal
 
 PyROS Results Object
@@ -425,15 +430,7 @@ loaded to the solution determined by PyROS and can be obtained by querying the m
     If ``objective_focus = ObjectiveType.nominal``, second-stage objective and variables are evaluated at the nominal realization of the uncertain parameters, :math:`q^0`.
     If ``objective_focus = ObjectiveType.worst_case``, second-stage objective and variables are evaluated at the worst-case realization of the uncertain parameters, :math:`q^{k^\ast}` where :math:`k^\ast = argmax_{k \in \mathcal{K}} f_2(x,z^k,y^k,q^k)` .
 
-An example of how to query these values on the previously obtained results is shown in the code block below.
-
-.. code-block::
-
-  >>> # === Query results ===
-  >>> time = results_1.time
-  >>> iterations = results_1.iterations
-  >>> termination_condition = results_1.grcs_termination_condition
-  >>> objective = results_1.final_objective_value
+An example of how to query these values on the previously obtained results is shown in the code block above.
 
 
 A Two-Stage Problem
