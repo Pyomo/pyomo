@@ -430,7 +430,8 @@ loaded to the solution determined by PyROS and can be obtained by querying the m
     If ``objective_focus = ObjectiveType.nominal``, second-stage objective and variables are evaluated at the nominal realization of the uncertain parameters, :math:`q^0`.
     If ``objective_focus = ObjectiveType.worst_case``, second-stage objective and variables are evaluated at the worst-case realization of the uncertain parameters, :math:`q^{k^\ast}` where :math:`k^\ast = argmax_{k \in \mathcal{K}} f_2(x,z^k,y^k,q^k)` .
 
-An example of how to query these values on the previously obtained results is shown in the code block above.
+An example of how to query these values on the previously obtained results is shown in the code above.
+
 
 
 A Two-Stage Problem
