@@ -143,8 +143,7 @@ class _GeneralObjectiveData(_GeneralExpressionDataImpl,
     """
 
     __pickle_slots__ = ("_sense",)
-    __slots__ = __pickle_slots__ + \
-                _GeneralExpressionDataImpl.__expression_slots__
+    __slots__ = __pickle_slots__ + _GeneralExpressionDataImpl.__pickle_slots__
 
     def __init__(self, expr=None, sense=minimize, component=None):
         _GeneralExpressionDataImpl.__init__(self, expr)
@@ -173,6 +172,11 @@ class _GeneralObjectiveData(_GeneralExpressionDataImpl,
     #       we don't need to implement a specialized __setstate__
     #       method.
 
+    def set_value(self, expr):
+        if expr is None:
+            raise ValueError(_rule_returned_none_error % (self.name,))
+        return super().set_value(expr)
+
     #
     # Abstract Interface
     #
@@ -188,8 +192,7 @@ class _GeneralObjectiveData(_GeneralExpressionDataImpl,
 
     def set_sense(self, sense):
         """Set the sense (direction) of this objective."""
-        if (sense == minimize) or \
-           (sense == maximize):
+        if sense in {minimize, maximize}:
             self._sense = sense
         else:
             raise ValueError("Objective sense must be set to one of "
@@ -247,8 +250,7 @@ class Objective(ActiveIndexedComponent):
     """
 
     _ComponentDataClass = _GeneralObjectiveData
-    NoObjective = (1000,)
-    Skip        = (1000,)
+    NoObjective = ActiveIndexedComponent.Skip
 
     def __new__(cls, *args, **kwds):
         if cls != Objective:
@@ -277,30 +279,6 @@ class Objective(ActiveIndexedComponent):
         self.rule = Initializer(_init)
         self._init_sense = Initializer(_sense)
 
-    #
-    # TODO: Ideally we would not override these methods and instead add
-    # the contents of _check_skip_add to the set_value() method.
-    # Unfortunately, until IndexedComponentData objects know their own
-    # index, determining the index is a *very* expensive operation.  If
-    # we refactor things so that the Data objects have their own index,
-    # then we can remove these overloads.
-    #
-
-    def _setitem_impl(self, index, obj, value):
-        if self._check_skip_add(index, value) is None:
-            del self[index]
-            return None
-        else:
-            obj.set_value(value)
-            return obj
-
-    def _setitem_when_not_present(self, index, value):
-        if self._check_skip_add(index, value) is None:
-            return None
-        else:
-            return super(Objective, self)._setitem_when_not_present(
-                index=index, value=value)
-
     def construct(self, data=None):
         """
         Construct the expression(s) for this objective.
@@ -313,26 +291,29 @@ class Objective(ActiveIndexedComponent):
         if is_debug_set(logger):
             logger.debug("Constructing objective %s" % (self.name))
 
+        rule = self.rule
         try:
             # We do not (currently) accept data for constructing Objectives
             index = None
             assert data is None
 
-            if self.rule is None:
+            if rule is None:
                 # If there is no rule, then we are immediately done.
                 return
 
-            if self.rule.constant() and self.is_indexed():
+            if rule.constant() and self.is_indexed():
                 raise IndexError(
                     "Objective '%s': Cannot initialize multiple indices "
                     "of an objective with a single expression" %
                     (self.name,) )
 
             block = self.parent_block()
-            if self.rule.contains_indices():
+            if rule.contains_indices():
                 # The index is coming in externally; we need to validate it
-                for index in self.rule.indices():
-                    self[index] = self.rule(block, index)
+                for index in rule.indices():
+                    ans = self.__setitem__(index, rule(block, index))
+                    if ans is not None:
+                        self[index].set_sense(self._init_sense(block, index))
             elif not self.index_set().isfinite():
                 # If the index is not finite, then we cannot iterate
                 # over it.  Since the rule doesn't provide explicit
@@ -344,14 +325,14 @@ class Objective(ActiveIndexedComponent):
                 # Bypass the index validation and create the member directly
                 for index in self.index_set():
                     ans = self._setitem_when_not_present(
-                        index, self.rule(block, index))
+                        index, rule(block, index))
                     if ans is not None:
                         ans.set_sense(self._init_sense(block, index))
         except Exception:
             err = sys.exc_info()[1]
             logger.error(
                 "Rule failed when generating expression for "
-                "objective %s with index %s:\n%s: %s"
+                "Objective %s with index %s:\n%s: %s"
                 % (self.name,
                    str(index),
                    type(err).__name__,
@@ -359,6 +340,17 @@ class Objective(ActiveIndexedComponent):
             raise
         finally:
             timer.report()
+
+    def _getitem_when_not_present(self, index):
+        if self.rule is None:
+            raise KeyError(index)
+        obj = self._setitem_when_not_present(
+            index, self.rule(self.parent_block(), index))
+        if obj is None:
+            raise KeyError(index)
+        else:
+            obj.set_sense(self._init_sense(block, index))
+        return obj
 
     def _pprint(self):
         """
@@ -397,31 +389,6 @@ class Objective(ActiveIndexedComponent):
                         ( "Active","Value" ),
                         lambda k, v: [ v.active, value(v), ] )
 
-    #
-    # Checks flags like Objective.Skip, etc. before
-    # actually creating an objective object. Optionally
-    # pass in the _ObjectiveData object to set the value
-    # on. Only returns the _ObjectiveData object when it
-    # should be added to the _data dict; otherwise, None
-    # is returned or an exception is raised.
-    #
-    def _check_skip_add(self, index, expr, objdata=None):
-        #
-        # Convert deprecated expression values
-        #
-        if expr is None:
-            raise ValueError(
-                _rule_returned_none_error %
-                (_get_indexed_component_data_name(self, index),) )
-
-        #
-        # Ignore an 'empty' objective
-        #
-        if expr.__class__ is tuple:
-            if expr == Objective.Skip:
-                return None
-
-        return expr
 
 class ScalarObjective(_GeneralObjectiveData, Objective):
     """
@@ -525,13 +492,9 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
                 "before the Objective has been constructed (there "
                 "is currently no object to set)."
                 % (self.name))
-
-        if len(self._data) == 0:
+        if not self._data:
             self._data[None] = self
-        if self._check_skip_add(None, expr) is None:
-            del self[None]
-            return None
-        return _GeneralObjectiveData.set_value(self, expr)
+        return super().set_value(expr)
 
     def set_sense(self, sense):
         """Set the sense (direction) of this objective."""
