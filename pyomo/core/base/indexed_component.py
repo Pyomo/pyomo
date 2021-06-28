@@ -173,7 +173,7 @@ _map_rule_funcdef = \
     return wrapping_fcn(rule, *args, **(kwds or {}))
 """
 
-def rule_wrapper(rule, wrapping_fcn):
+def rule_wrapper(rule, wrapping_fcn, positional_arg_map=None):
     """Wrap a rule with another function
 
     This utility method provides a way to wrap a function (rule) with
@@ -192,14 +192,26 @@ def rule_wrapper(rule, wrapping_fcn):
         passed as the `wrapping_fcn`, then the result of
         :py:func:`rule_result_substituter(wrapping_fcn)` is used as the
         wrapping function.
+    positional_arg_map: iterable[int]
+        An iterable of indices of rule positional arguments to expose in
+        the wrapped function signature.  For example,
+        `positional_arg_map=(2, 0)` and `rule=fcn(a, b, c)` would produce a
+        wrapped function with a signature `wrapper_function(c, a)`
 
     """
     if isinstance(wrapping_fcn, dict):
         wrapping_fcn = rule_result_substituter(wrapping_fcn)
+        if not inspect.isfunction(rule):
+            return wrapping_fcn(rule)
     # Because some of our processing of initializer functions relies on
     # knowing the number of positional arguments, we will go to extra
     # effort here to preserve the original function signature.
-    _funcdef = _map_rule_funcdef % (str(inspect.signature(rule)),)
+    rule_sig = inspect.signature(rule)
+    if positional_arg_map is not None:
+        param = list(rule_sig.parameters.values())
+        rule_sig = rule_sig.replace(
+            parameters=(param[i] for i in positional_arg_map))
+    _funcdef = _map_rule_funcdef % (str(rule_sig),)
     # Create the wrapper in a temporary environment that mimics this
     # function's environment.
     _env = dict(globals())
