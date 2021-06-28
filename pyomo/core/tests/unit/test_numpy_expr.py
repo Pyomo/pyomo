@@ -20,6 +20,7 @@ from pyomo.environ import (
 )
 from pyomo.core.expr.current import MonomialTermExpression
 from pyomo.core.expr.numvalue import NumericNDArray
+from pyomo.core.expr.compare import compare_expressions
 
 @unittest.skipUnless(numpy_available, 'numpy is not available')
 class TestNumPy(unittest.TestCase):
@@ -29,11 +30,11 @@ class TestNumPy(unittest.TestCase):
         m.x = Var()
         e = np.float64(5) * m.x
         self.assertIs(type(e), MonomialTermExpression)
-        self.assertEqual(str(e), "5.0*x")
+        self.assertTrue(compare_expressions(e, 5.0*m.x))
 
         e = m.x * np.float64(5)
         self.assertIs(type(e), MonomialTermExpression)
-        self.assertEqual(str(e), "5.0*x")
+        self.assertTrue(compare_expressions(e, 5.0*m.x))
 
     def test_numpy_float(self):
         # Test issue #31
@@ -58,9 +59,9 @@ class TestNumPy(unittest.TestCase):
 
         #m.pprint()
         for t in m.T:
-            self.assertEqual(str(m.x[0].expr), str(m.x[t].expr))
-            self.assertEqual(str(m.y[0].expr), str(m.y[t].expr))
-            self.assertEqual(str(m.z[0].expr), str(m.z[t].expr))
+            self.assertTrue(compare_expressions(m.x[0].expr, m.x[t].expr))
+            self.assertTrue(compare_expressions(m.y[0].expr, m.y[t].expr))
+            self.assertTrue(compare_expressions(m.z[0].expr, m.z[t].expr))
 
     def test_indexed_constraint(self):
         m = ConcreteModel()
@@ -68,11 +69,9 @@ class TestNumPy(unittest.TestCase):
         A = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
         b = np.array([10, 20])
         m.c = Constraint([0,1], expr=A @ m.x <= b)
-        self.assertEqual(
-            str(m.c[0].expr),
-            "x[0] + 2*x[1] + 3*x[2] + 4*x[3]  <=  10.0"
-        )
-        self.assertEqual(
-            str(m.c[1].expr),
-            "5*x[0] + 6*x[1] + 7*x[2] + 8*x[3]  <=  20.0"
-        )
+        self.assertTrue(compare_expressions(
+            m.c[0].expr,
+            m.x[0] + 2*m.x[1] + 3*m.x[2] + 4*m.x[3] <= 10))
+        self.assertTrue(compare_expressions(
+            m.c[1].expr,
+            5*m.x[0] + 6*m.x[1] + 7*m.x[2] + 8*m.x[3] <= 20))
