@@ -321,8 +321,13 @@ class IndexedComponent(Component):
     def to_dense_data(self):
         """TODO"""
         for idx in self._index:
-            if idx not in self._data:
+            if idx in self._data:
+                continue
+            try:
                 self._getitem_when_not_present(idx)
+            except KeyError:
+                # Rule could have returned Skip, which we will silently ignore
+                pass
 
     def clear(self):
         """Clear the data in this component"""
