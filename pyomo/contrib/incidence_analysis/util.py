@@ -10,6 +10,8 @@
 
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
+from pyomo.common.collections import ComponentSet
+from pyomo.core.expr.visitor import identify_variables
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.util.subsystems import (
         create_subsystem_block,
@@ -41,10 +43,16 @@ def generate_strongly_connected_components(block, include_fixed=False):
     "input variables" for that block
 
     """
-    variables = [var for var in block.component_data_objects(Var)
-            if not var.fixed]
     constraints = [con for con in 
             block.component_data_objects(Constraint, active=True)]
+    var_set = ComponentSet()
+    variables = []
+    for con in constraints:
+        for var in identify_variables(con.body, include_fixed=False):
+            if var not in var_set:
+                variables.append(var)
+                var_set.add(var)
+
     assert len(variables) == len(constraints)
     igraph = IncidenceGraphInterface()
     var_block_map, con_block_map = igraph.block_triangularize(
