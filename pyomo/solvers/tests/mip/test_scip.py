@@ -78,14 +78,17 @@ class Test(unittest.TestCase):
 
         # Creating a dummy scip.set file in the cwd
         # will cover the code that prints a warning
-        assert os.getcwd() == currdir, str(os.getcwd())+" "+currdir
-        with open(join(currdir, 'scip.set'), "w") as f:
-            pass
-        # Test scip solve from a pyomo instance and load the solution
-        results = self.scip.solve(self.model,
-                                  suffixes=['.*'],
-                                  options={"limits/softtime": 100})
-        os.remove(join(currdir, 'scip.set'))
+        _cwd = os.getcwd()
+        tmpdir = TempfileManager.create_tempdir()
+        try:
+            os.chdir(tmpdir)
+            open(join(tmpdir, 'scip.set'), "w").close()
+            # Test scip solve from a pyomo instance and load the solution
+            results = self.scip.solve(self.model,
+                                      suffixes=['.*'],
+                                      options={"limits/softtime": 100})
+        finally:
+            os.chdir(_cwd)
         # We don't want the test to care about which Scip version we are using
         self.model.solutions.store_to(results)
         results.Solution(0).Message = "Scip"
