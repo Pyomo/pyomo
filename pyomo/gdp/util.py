@@ -13,6 +13,7 @@ from pyomo.gdp import GDP_Error, Disjunction
 from pyomo.gdp.disjunct import _DisjunctData, Disjunct
 
 from pyomo.core.base.component import _ComponentBase
+from pyomo.common.collections import ComponentMap
 
 from pyomo.core import Block, TraversalStrategy
 from pyomo.opt import TerminationCondition, SolverStatus
@@ -150,6 +151,11 @@ def is_child_of(parent, child, knownBlocks=None):
             node = node.parent_block()
         else:
             node = container
+
+def _to_dict(val):
+    if isinstance(val, (dict, ComponentMap)):
+       return val
+    return {None: val}
 
 def get_src_disjunction(xor_constraint):
     """Return the Disjunction corresponding to xor_constraint
@@ -307,7 +313,8 @@ def _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER):
                             name_buffer=NAME_BUFFER)))
 
 
-def _warn_for_active_logical_constraint(logical_statement, disjunct, NAME_BUFFER):
+def _warn_for_active_logical_constraint(logical_statement, disjunct,
+                                        NAME_BUFFER):
     # this should only have gotten called if the logical constraint is active
     assert logical_statement.active
     problem_statement = logical_statement
@@ -323,7 +330,8 @@ def _warn_for_active_logical_constraint(logical_statement, disjunct, NAME_BUFFER
         else:
             logical_statement.deactivate()
             return
-    # the logical constraint should only have been active if it wasn't transformed
+    # the logical constraint should only have been active if it wasn't
+    # transformed
     _probStatementName = problem_statement.getname(
         fully_qualified=True, name_buffer=NAME_BUFFER)
     raise GDP_Error("Found untransformed logical constraint %s in disjunct %s! "
