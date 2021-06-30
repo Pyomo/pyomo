@@ -23,7 +23,9 @@ from pyomo.core.base.numvalue import (
 )
 from pyomo.core.base.set_types import Reals, Binary
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
-from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
+from pyomo.core.base.indexed_component import (
+    IndexedComponent, UnindexedComponent_set, IndexedComponent_NDArrayMixin
+)
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import Set, _SetDataBase
 from pyomo.core.base.units_container import units
@@ -522,7 +524,7 @@ class _GeneralVarData(_VarData):
 
 
 @ModelComponentFactory.register("Decision variables.")
-class Var(IndexedComponent):
+class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
     """A numeric variable, which may be defined over an index.
 
     Args:
