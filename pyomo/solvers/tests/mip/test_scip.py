@@ -10,22 +10,18 @@
 
 import json
 import os
-from os.path import abspath, dirname, join
-currdir = dirname(abspath(__file__))
+from os.path import join
 
 import pyomo.common.unittest as unittest
+
+from pyomo.common.fileutils import this_file_dir
 from pyomo.common.tempfiles import TempfileManager
+
 from pyomo.opt import SolverFactory
 from pyomo.core import ConcreteModel, Var, Objective, Constraint
 
-old_tempdir = None
-def setUpModule():
-    global old_tempdir
-    old_tempdir = TempfileManager.tempdir
-    TempfileManager.tempdir = currdir
-
-def tearDownModule():
-    TempfileManager.tempdir = old_tempdir
+currdir = this_file_dir()
+deleteFiles = True
 
 scip_available = False
 class Test(unittest.TestCase):
@@ -40,13 +36,7 @@ class Test(unittest.TestCase):
     def setUp(self):
         if not scip_available:
             self.skipTest("The 'scipampl' command is not available")
-        self.do_setup()
-
-    def do_setup(self):
-        global tmpdir
-        tmpdir = os.getcwd()
-        os.chdir(currdir)
-        TempfileManager.sequential_files(0)
+        TempfileManager.push()
 
         self.scip = SolverFactory('scip', solver_io='nl')
 
@@ -55,18 +45,15 @@ class Test(unittest.TestCase):
         m.o = Objective(expr=m.v)
         m.c = Constraint(expr=m.v >= 1)
 
+    def tearDown(self):
+        TempfileManager.pop(remove=deleteFiles or self.currentTestPassed())
+
     def compare_json(self, file1, file2):
         with open(file1, 'r') as out, \
             open(file2, 'r') as txt:
             self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
                                              abstol=1e-7,
                                              allow_second_superset=True)
-
-    def tearDown(self):
-        global tmpdir
-        TempfileManager.clear_tempfiles()
-        TempfileManager.unique_files()
-        os.chdir(tmpdir)
 
     def test_version_scip(self):
         self.assertTrue(self.scip.version() is not None)
@@ -82,11 +69,10 @@ class Test(unittest.TestCase):
         results.Solution(0).Message = "Scip"
         results.Solver.Message = "Scip"
         results.Solver.Time = 0
-        results.write(filename=join(currdir, "test_scip_solve_from_instance.txt"),
-                      times=False,
-                      format='json')
-        self.compare_json(join(currdir, "test_scip_solve_from_instance.txt"),
-                          join(currdir, "test_scip_solve_from_instance.baseline"))
+        _out = TempfileManager.create_tempfile(".txt")
+        results.write(filename=_out, times=False, format='json')
+        self.compare_json(
+            _out, join(currdir, "test_scip_solve_from_instance.baseline"))
 
     def test_scip_solve_from_instance_options(self):
 
@@ -105,11 +91,11 @@ class Test(unittest.TestCase):
         results.Solution(0).Message = "Scip"
         results.Solver.Message = "Scip"
         results.Solver.Time = 0
-        results.write(filename=join(currdir, "test_scip_solve_from_instance.txt"),
-                      times=False,
-                      format='json')
-        self.compare_json(join(currdir, "test_scip_solve_from_instance.txt"),
-                          join(currdir, "test_scip_solve_from_instance.baseline"))
+        _out = TempfileManager.create_tempfile(".txt")
+        results.write(filename=_out, times=False, format='json')
+        self.compare_json(
+            _out, join(currdir, "test_scip_solve_from_instance.baseline"))
 
 if __name__ == "__main__":
+    deleteFiles = False
     unittest.main()
