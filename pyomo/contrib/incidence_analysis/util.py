@@ -47,9 +47,6 @@ def generate_strongly_connected_components(
     "input variables" for that block
 
     """
-    #constraints = [con for con in
-    #        block.component_data_objects(Constraint, active=True)]
-
     if variables is None:
         var_set = ComponentSet()
         variables = []
@@ -114,8 +111,7 @@ def solve_strongly_connected_components(block, solver=None, solve_kwds=None):
     if solve_kwds is None:
         solve_kwds = {}
 
-    constraints = [con for con in
-            block.component_data_objects(Constraint, active=True)]
+    constraints = list(block.component_data_objects(Constraint, active=True))
     var_set = ComponentSet()
     variables = []
     for con in constraints:
