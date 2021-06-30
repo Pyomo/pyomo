@@ -45,6 +45,7 @@ import pyomo.environ as pyo
 
 from pyomo.opt import SolverFactory
 from pyomo.environ import Block, ComponentUID
+from pyomo.environ import Block, ComponentUID
 
 import pyomo.contrib.parmest.mpi_utils as mpiu
 import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
@@ -337,7 +338,11 @@ class Estimator(object):
                     # If the component that was found is not a variable,
                     # this will generate an exception (and the warning
                     # in the 'except')
-                    var_validate.fixed = False
+                    if var_validate.is_indexed():
+                        for v in var_validate.values():
+                            v.fixed = False
+                    else:
+                        var_validate.fixed = False
                     # We want to standardize on the CUID string
                     # representation
                     self.theta_names[i] = repr(var_cuid)
