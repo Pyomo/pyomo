@@ -726,11 +726,12 @@ class Hull_Reformulation(Transformation):
         # transformation blocks for nested disjunctions, so that we don't have
         # duplicate references.
         varRefBlock = disjunctBlock.localVarReferences
-        for v in block.component_data_objects(Var, descend_into=Block,
-                                              active=None):
-            varRefBlock.add_component(unique_component_name(
-                varRefBlock, v.getname(fully_qualified=True,
-                                       name_buffer=NAME_BUFFER)), Reference(v))
+        for v in block.component_objects(Var, descend_into=Block, active=None):
+            if len(v) > 0:
+                varRefBlock.add_component(unique_component_name(
+                    varRefBlock, v.getname(fully_qualified=True,
+                                           name_buffer=NAME_BUFFER)), 
+                                          Reference(v))
 
         # Look through the component map of block and transform everything we
         # have a handler for. Yell if we don't know how to handle it. (Note that
@@ -1174,7 +1175,7 @@ class Hull_Reformulation(Transformation):
 
 @TransformationFactory.register(
     'gdp.chull',
-    doc="Deprecated name for the hull reformulation. Please use 'gdp.hull'.")
+    doc="[DEPRECATED] please use 'gdp.hull' to get the Hull transformation.")
 @deprecated("The 'gdp.chull' name is deprecated. "
             "Please use the more apt 'gdp.hull' instead.",
             logger='pyomo.gdp',

@@ -1534,17 +1534,14 @@ def _decompose_linear_terms(expr, multiplier=1):
         yield (multiplier*expr._args_[0], expr._args_[1])
     elif expr.__class__ is ProductExpression:
         if expr._args_[0].__class__ in native_numeric_types or not expr._args_[0].is_potentially_variable():
-            for term in _decompose_linear_terms(expr._args_[1], multiplier*expr._args_[0]):
-                yield term
+            yield from _decompose_linear_terms(expr._args_[1], multiplier*expr._args_[0])
         elif expr._args_[1].__class__ in native_numeric_types or not expr._args_[1].is_potentially_variable():
-            for term in _decompose_linear_terms(expr._args_[0], multiplier*expr._args_[1]):
-                yield term
+            yield from _decompose_linear_terms(expr._args_[0], multiplier*expr._args_[1])
         else:
             raise LinearDecompositionError("Quadratic terms exist in a product expression.")
     elif expr.__class__ is DivisionExpression:
         if expr._args_[1].__class__ in native_numeric_types or not expr._args_[1].is_potentially_variable():
-            for term in _decompose_linear_terms(expr._args_[0], multiplier/expr._args_[1]):
-                yield term
+            yield from _decompose_linear_terms(expr._args_[0], multiplier/expr._args_[1])
         else:
             raise LinearDecompositionError("Unexpected nonlinear term (division)")
     elif expr.__class__ is ReciprocalExpression:
@@ -1554,11 +1551,9 @@ def _decompose_linear_terms(expr, multiplier=1):
         raise LinearDecompositionError("Unexpected nonlinear term")
     elif expr.__class__ is SumExpression or expr.__class__ is _MutableSumExpression:
         for arg in expr.args:
-            for term in _decompose_linear_terms(arg, multiplier):
-                yield term
+            yield from _decompose_linear_terms(arg, multiplier)
     elif expr.__class__ is NegationExpression:
-        for term in  _decompose_linear_terms(expr._args_[0], -multiplier):
-            yield term
+        yield from _decompose_linear_terms(expr._args_[0], -multiplier)
     elif expr.__class__ is LinearExpression or expr.__class__ is _MutableLinearExpression:
         if not (expr.constant.__class__ in native_numeric_types and expr.constant == 0):
             yield (multiplier*expr.constant,None)
