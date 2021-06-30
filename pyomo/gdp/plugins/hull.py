@@ -726,8 +726,7 @@ class Hull_Reformulation(Transformation):
         # transformation blocks for nested disjunctions, so that we don't have
         # duplicate references.
         varRefBlock = disjunctBlock.localVarReferences
-        for v in block.component_data_objects(Var, descend_into=Block,
-                                              active=None):
+        for v in block.component_objects(Var, descend_into=Block, active=None):
             varRefBlock.add_component(unique_component_name(
                 varRefBlock, v.getname(fully_qualified=True,
                                        name_buffer=NAME_BUFFER)), Reference(v))
