@@ -1,0 +1,20 @@
+# .readthedocs.yaml
+# Read the Docs configuration file
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+
+# Required
+version: 2
+
+sphinx:
+   configuration: doc/OnlineDocs/conf.py
+
+formats: all
+
+# Set the version of Python and requirements required to build the docs
+python:
+   version: 3
+   install:
+     - method: pip
+       path: .
+       extra_requirements:
+         - docs

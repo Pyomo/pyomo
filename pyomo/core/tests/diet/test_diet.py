@@ -10,7 +10,6 @@
 
 import json
 import os
-from nose.tools import nottest
 
 import pyomo.common.unittest as unittest
 
@@ -47,7 +46,7 @@ class Test(unittest.TestCase):
         import pyomo.environ
         solvers = check_available_solvers('glpk')
 
-    @nottest
+    @unittest.nottest
     def run_pyomo(self, *args, **kwargs):
         """
         Run Pyomo with the given arguments. `args` should be a list with

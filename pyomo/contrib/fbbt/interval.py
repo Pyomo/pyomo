@@ -29,12 +29,13 @@ def sub(xl, xu, yl, yu):
 
 
 def mul(xl, xu, yl, yu):
-    lb = min(xl*yl, xl*yu, xu*yl, xu*yu)
-    ub = max(xl*yl, xl*yu, xu*yl, xu*yu)
-    if math.isnan(lb):
+    options = [xl*yl, xl*yu, xu*yl, xu*yu]
+    if any(math.isnan(i) for i in options):
         lb = -inf
-    if math.isnan(ub):
         ub = inf
+    else:
+        lb = min(options)
+        ub = max(options)
     return lb, ub
 
 
@@ -49,7 +50,12 @@ def inv(xl, xu, feasibility_tol):
     if xu - xl <= -feasibility_tol:
         raise InfeasibleConstraintException(f'lower bound is greater than upper bound in inv; xl: {xl}; xu: {xu}')
     elif xu <= 0 <= xl:
-        raise IntervalException(f'Division by zero in inv; xl: {xl}; xu: {xu}')
+        # This has to return -inf to inf because it could later be multiplied by 0
+        lb = -inf
+        ub = inf
+    elif xl < 0 < xu:
+        lb = -inf
+        ub = inf
     elif 0 <= xl <= feasibility_tol:
         # xu must be strictly positive
         ub = inf
@@ -74,11 +80,7 @@ def inv(xl, xu, feasibility_tol):
 
 
 def div(xl, xu, yl, yu, feasibility_tol):
-    if xl <= 0 <= xu and yl <= 0 <= yu:
-        lb = -inf
-        ub = inf
-    else:
-        lb, ub = mul(xl, xu, *inv(yl, yu, feasibility_tol))
+    lb, ub = mul(xl, xu, *inv(yl, yu, feasibility_tol))
     return lb, ub
 
 

@@ -13,12 +13,13 @@ __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 import logging
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
-from pyomo.core.expr.numvalue import native_types
+from pyomo.core.expr.numvalue import native_types, NumericNDArray
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common import DeveloperError
+from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
 
 from collections.abc import Sequence
@@ -360,15 +361,17 @@ You can silence this warning by one of three ways:
 
     def keys(self):
         """Return an iterator of the keys in the dictionary"""
-        return [ x for x in self ]
+        return iter(self)
 
     def values(self):
         """Return an iterator of the component data objects in the dictionary"""
-        return [ self[x] for x in self ]
+        for s in self:
+            yield self[s]
 
     def items(self):
         """Return an iterator of (index,data) tuples from the dictionary"""
-        return [ (x, self[x]) for x in self ]
+        for s in self:
+            yield s, self[s]
 
     def __getitem__(self, index):
         """
@@ -708,7 +711,7 @@ value() function.""" % ( self.name, i ))
             if not structurally_valid:
                 raise IndexError(
                     "Index %s contains an invalid number of entries for "
-                    "component %s. Expected %s, got %s." 
+                    "component %s. Expected %s, got %s."
                     % (idx, self.name, set_dim, slice_dim))
             return IndexedComponent_slice(self, fixed, sliced, ellipsis)
         elif _found_numeric:
@@ -849,3 +852,41 @@ class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
             for component_data in self.values():
                 component_data.deactivate()
 
+
+class IndexedComponent_NDArrayMixin(object):
+    """Support using IndexedComponent with numpy.ndarray
+
+    This IndexedComponent mixin class adds support for implicitly using
+    the IndexedComponent as a term in an expression with numpy ndarray
+    objects.
+
+    """
+
+    def __array__(self, dtype=None):
+        if not self.is_indexed():
+            ans = NumericNDArray(shape=(1,), dtype=object)
+            ans[0] = self
+            return ans
+
+        _dim = self.dim()
+        if _dim is None:
+            raise TypeError(
+                "Cannot convert a non-dimensioned Pyomo IndexedComponent "
+                "(%s) into a numpy array" % (self,))
+        bounds = self.index_set().bounds()
+        if not isinstance(bounds[0], Sequence):
+            bounds = ((bounds[0],), (bounds[1],))
+        if any(b != 0 for b in bounds[0]):
+            raise TypeError(
+                "Cannot convert a Pyomo IndexedComponent "
+                "(%s) with bounds [%s, %s] into a numpy array" % (
+                    self, bounds[0], bounds[1]))
+        shape = tuple(b+1 for b in bounds[1])
+        ans = NumericNDArray(shape=shape, dtype=object)
+        for k, v in self.items():
+            ans[k] = v
+        return ans
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        return NumericNDArray.__array_ufunc__(
+            None, ufunc, method, *inputs, **kwargs)
