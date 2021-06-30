@@ -16,9 +16,14 @@ import os
 from filecmp import cmp
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import ConcreteModel, Var, Param,  Constraint, Objective,  Block, sin
+from pyomo.common.fileutils import this_file_dir
 
-thisdir = os.path.dirname(os.path.abspath(__file__))
+from pyomo.environ import (
+    ConcreteModel, Var, Param,  Constraint, Objective,  Block, sin,
+    maximize, Binary, Suffix
+)
+
+thisdir = this_file_dir()
 
 
 class Test(unittest.TestCase):
@@ -159,6 +164,17 @@ class Test(unittest.TestCase):
         m.obj = Objective(expr=m.x**2)
         m.p = Param(initialize=1, mutable=True)
         m.c = Constraint(expr=m.x * m.p ** 1.2 == 0)
+        self._check_baseline(m)
+
+    def test_branching_priorities(self):
+        m = ConcreteModel()
+        m.x = Var(within=Binary)
+        m.y = Var([1, 2], within=Binary)
+        m.c = Constraint(expr=m.y[1]*m.y[2] - 2*m.x >= 0)
+        m.obj = Objective(expr=m.y[1]+m.y[2], sense=maximize)
+        m.priority = Suffix(direction=Suffix.EXPORT)
+        m.priority[m.x] = 1
+        m.priority[m.y] = 2
         self._check_baseline(m)
 
 
