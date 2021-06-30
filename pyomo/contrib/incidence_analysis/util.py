@@ -21,7 +21,11 @@ from pyomo.util.subsystems import (
 from pyomo.contrib.incidence_analysis.interface import IncidenceGraphInterface
 
 
-def generate_strongly_connected_components(block, include_fixed=False):
+def generate_strongly_connected_components(
+        constraints,
+        variables=None,
+        include_fixed=False,
+        ):
     """ Performs a block triangularization of the variable-constraint
     incidence matrix of the provided block, and yields a block that
     contains the variables and constraints of each diagonal block
@@ -43,15 +47,20 @@ def generate_strongly_connected_components(block, include_fixed=False):
     "input variables" for that block
 
     """
-    constraints = [con for con in 
-            block.component_data_objects(Constraint, active=True)]
-    var_set = ComponentSet()
-    variables = []
-    for con in constraints:
-        for var in identify_variables(con.body, include_fixed=False):
-            if var not in var_set:
-                variables.append(var)
-                var_set.add(var)
+    #constraints = [con for con in
+    #        block.component_data_objects(Constraint, active=True)]
+
+    if variables is None:
+        var_set = ComponentSet()
+        variables = []
+        for con in constraints:
+            for var in identify_variables(
+                    con.body,
+                    include_fixed=include_fixed,
+                    ):
+                if var not in var_set:
+                    variables.append(var)
+                    var_set.add(var)
 
     assert len(variables) == len(constraints)
     igraph = IncidenceGraphInterface()
@@ -105,8 +114,22 @@ def solve_strongly_connected_components(block, solver=None, solve_kwds=None):
     if solve_kwds is None:
         solve_kwds = {}
 
+    constraints = [con for con in
+            block.component_data_objects(Constraint, active=True)]
+    var_set = ComponentSet()
+    variables = []
+    for con in constraints:
+        for var in identify_variables(con.body, include_fixed=False):
+            # Because we are solving, we do not want to include fixed variables
+            if var not in var_set:
+                variables.append(var)
+                var_set.add(var)
+
     res_list = []
-    for scc, inputs in generate_strongly_connected_components(block):
+    for scc, inputs in generate_strongly_connected_components(
+            constraints,
+            variables,
+            ):
         with TemporarySubsystemManager(to_fix=inputs):
             if len(scc.vars) == 1:
                 calculate_variable_from_constraint(scc.vars[0], scc.cons[0])
