@@ -83,7 +83,10 @@ def _prop_bnds_leaf_to_root_ProductExpression(node, bnds_dict, feasibility_tol):
     arg1, arg2 = node.args
     lb1, ub1 = bnds_dict[arg1]
     lb2, ub2 = bnds_dict[arg2]
-    bnds_dict[node] = interval.mul(lb1, ub1, lb2, ub2)
+    if arg1 is arg2:
+        bnds_dict[node] = interval.power(lb1, ub1, 2, 2, feasibility_tol)
+    else:
+        bnds_dict[node] = interval.mul(lb1, ub1, lb2, ub2)
 
 
 def _prop_bnds_leaf_to_root_SumExpression(node, bnds_dict, feasibility_tol):
@@ -498,8 +501,12 @@ def _prop_bnds_root_to_leaf_ProductExpression(node, bnds_dict, feasibility_tol):
     lb0, ub0 = bnds_dict[node]
     lb1, ub1 = bnds_dict[arg1]
     lb2, ub2 = bnds_dict[arg2]
-    _lb1, _ub1 = interval.div(lb0, ub0, lb2, ub2, feasibility_tol)
-    _lb2, _ub2 = interval.div(lb0, ub0, lb1, ub1, feasibility_tol)
+    if arg1 is arg2:
+        _lb1, _ub1 = interval._inverse_power1(lb0, ub0, 2, 2, orig_xl=lb1, orig_xu=ub1, feasibility_tol=feasibility_tol)
+        _lb2, _ub2 = _lb1, _ub1
+    else:
+        _lb1, _ub1 = interval.div(lb0, ub0, lb2, ub2, feasibility_tol)
+        _lb2, _ub2 = interval.div(lb0, ub0, lb1, ub1, feasibility_tol)
     if _lb1 > lb1:
         lb1 = _lb1
     if _ub1 < ub1:
