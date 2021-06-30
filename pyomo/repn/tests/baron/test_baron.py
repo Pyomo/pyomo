@@ -12,8 +12,9 @@
 #
 
 import os
-
 from filecmp import cmp
+from io import StringIO
+
 import pyomo.common.unittest as unittest
 
 from pyomo.common.fileutils import this_file_dir
@@ -176,6 +177,19 @@ class Test(unittest.TestCase):
         m.priority[m.x] = 1
         m.priority[m.y] = 2
         self._check_baseline(m)
+
+    def test_invalid_suffix(self):
+        m = ConcreteModel()
+        m.x = Var(within=Binary)
+        m.y = Var([1, 2], within=Binary)
+        m.c = Constraint(expr=m.y[1]*m.y[2] - 2*m.x >= 0)
+        m.obj = Objective(expr=m.y[1]+m.y[2], sense=maximize)
+        m.priorities = Suffix(direction=Suffix.EXPORT)
+        m.priorities[m.x] = 1
+        m.priorities[m.y] = 2
+        with self.assertRaisesRegex(ValueError, "The BARON writer can not "
+                                    "export suffix with name 'priorities'."):
+            m.write(StringIO(), format='bar')
 
 
 #class TestBaron_writer(unittest.TestCase):
