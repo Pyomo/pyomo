@@ -158,34 +158,34 @@ PyROS Uncertainty Set Classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.BoxSet
-    :special-members: __init__, parameter_bounds, point_in_set
+    :special-members: __init__, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.CardinalitySet
-    :special-members: __init__, parameter_bounds, point_in_set
+    :special-members: __init__, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.BudgetSet
-    :special-members: __init__, parameter_bounds, point_in_set
+    :special-members: __init__, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.FactorModelSet
-    :special-members: __init__, parameter_bounds, point_in_set
+    :special-members: __init__, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.PolyhedralSet
-    :special-members: __init__, parameter_bounds, point_in_set
+    :special-members: __init__, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.AxisAlignedEllipsoidalSet
-    :special-members: __init__, parameter_bounds, point_in_set
+    :special-members: __init__, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.EllipsoidalSet
-    :special-members: __init__, parameter_bounds, point_in_set
+    :special-members: __init__, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.UncertaintySet
-    :special-members: __init__, parameter_bounds, point_in_set
+    :special-members: __init__, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.DiscreteScenarioSet
-    :special-members: __init__, parameter_bounds, point_in_set
+    :special-members: __init__, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.IntersectionSet
-    :special-members: __init__, parameter_bounds, point_in_set
+    :special-members: __init__, parameter_bounds, dim, point_in_set
 
 
 PyROS Usage Example
@@ -397,7 +397,8 @@ If we choose to designate all variables as either design or state variables, wit
   ...                                  global_solver= global_solver,
   ...                                  options = {
   ...                                     "objective_focus": pyros.ObjectiveType.worst_case,
-  ...                                     "solve_master_globally": True
+  ...                                     "solve_master_globally": True,
+  ...                                     "load_solution":False
   ...                                   })
   ===========================================================================================
   PyROS: Pyomo Robust Optimization Solver ...
@@ -422,7 +423,8 @@ PyROS Results Object
 The results object returned by PyROS allows you to query the following information from the solve call:
 total iterations of the algorithm ``iterations``, CPU time ``time``, the GRCS algorithm termination condition ``grcs_termination_condition``,
 and the final objective function value ``final_objective_value``. If the option ``load_solution`` = ``True`` (default), the variables in the model will be
-loaded to the solution determined by PyROS and can be obtained by querying the model variables.
+loaded to the solution determined by PyROS and can be obtained by querying the model variables. Note that in the results obtained above, we set ``load_solution`` = ``False``.
+This is to ensure that the next set of runs shown here can utilize the original deterministic model, as the initial point can affect the performance of sub-solvers.
 
 .. note::
     The reported ``final_objective_value`` and final model variable values depend on the selection of the option ``objective_focus``.

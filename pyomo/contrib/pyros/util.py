@@ -195,7 +195,7 @@ def validate_uncertainty_set(config):
 
     # === Ensure nominal point is in the set
     nom_vals = list(p.value for p in config.uncertain_params)
-    if not config.uncertainty_set.point_in_set(uncertain_params=config.uncertain_params, point=nom_vals):
+    if not config.uncertainty_set.point_in_set(point=nom_vals):
         raise AttributeError("Nominal point for uncertain parameters must be in the uncertainty set.")
 
     # === Add nominal point to config
@@ -286,16 +286,16 @@ def validate_kwarg_inputs(model, config):
     # === Not currently supporting constraints of the form h(x, q) = 0
     # (uncertain equality constraints in only first stage variables)
     # We have plans to support this in the future
+    effective_first_stage_variables = first_stage_variables + second_stage_variables
     for c in model.component_data_objects(Constraint):
         if c.equality:
             variables_in_constraint = identify_variables(c.expr)
             params_in_constraint = identify_mutable_parameters(c.expr)
-            if all(v in ComponentSet(first_stage_variables) for v in variables_in_constraint) and \
+            if all(v in ComponentSet(effective_first_stage_variables) for v in variables_in_constraint) and \
                 any(q in ComponentSet(uncertain_params) for q in params_in_constraint):
-                raise ValueError("PyROS does not currently support uncertain optimization problems with constraints of "
-                                 "the form h(x, q) = 0, where all x are first-stage variables and q are uncertain parameters. "
-                                 "All equality constraints referencing uncertain parameters must "
-                                 "also reference at least 1 second-stage or state variable.")
+                raise ValueError("If any uncertain parameters participate "
+                                 "in an equality constraint, a state variable must "
+                                 "also participate. Offending constraint: %s " % c.name)
 
     if not config.first_stage_variables and not config.second_stage_variables:
         # Must have non-zero DOF
@@ -325,25 +325,6 @@ def validate_kwarg_inputs(model, config):
             raise ValueError("Param objects which are uncertain must have attribute mutable=True. "
                              "Offending Params: %s" % [p.name for p in non_mutable_params])
 
-    # === Ensure that if there is an uncertain_param in an equality constraint,
-    #     there is at least 1 state or 1 second-stage var as well
-    uncertain_param_set = ComponentSet(config.uncertain_params)
-    first_stage_variable_set = ComponentSet(config.first_stage_variables)
-    for c in model.component_data_objects(Constraint, active=True):
-        if c.equality:
-            vars_in_term = list(v for v in identify_variables(c.expr))
-            uncertain_params = list(p for p in identify_mutable_parameters(c.expr)
-                                   if p in uncertain_param_set)
-            if len(uncertain_params) > 0:
-                state_vars_in_expr = list(v for v in vars_in_term
-                                          if v in first_stage_variable_set)
-                second_stage_vars_in_expr = list(v for v in vars_in_term
-                                                 if v not in first_stage_variable_set)
-                if len(state_vars_in_expr) == 0 and len(second_stage_vars_in_expr) == 0:
-                    raise AttributeError("PyROS assumption violated: if any uncertain parameters participate"
-                                         "in an equality constraint, either a state or second-stage variable must"
-                                         "also participate. Offending constraint: %s " % c.name)
-
     # === Solvers provided check
     if not config.local_solver or not config.global_solver:
         raise ValueError("User must designate both a local and global optimization solver via the local_solver"
@@ -356,7 +337,6 @@ def validate_kwarg_inputs(model, config):
     # === Uncertain params provided check
     if len(config.uncertain_params) == 0:
         raise ValueError("User must designate at least one uncertain parameter.")
-
 
 
     return

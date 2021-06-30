@@ -42,8 +42,6 @@ from pyomo.contrib.pyros.pyros_algorithm_methods import ROSolver_iterative_solve
 from pyomo.contrib.pyros.uncertainty_sets import uncertainty_sets
 from pyomo.core.base import Constraint
 
-
-
 __version__ =  "0.1.0 (beta)"
 
 class NonNegIntOrMinusOne(object):
@@ -223,6 +221,7 @@ def pyros_config():
                     "If the dictionary is empty (default), then p-robustness constraints are not added. "
                     "See Note for how to specify arguments."
     ))
+
 
     return CONFIG
 

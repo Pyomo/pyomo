@@ -434,7 +434,7 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
         s = 1
 
         _set = EllipsoidalSet(center=[0, 0], shape_matrix=cov, scale=s)
-        self.assertTrue(_set.point_in_set(m.uncertain_param_vars, [0,0]), msg="Point is not in the EllipsoidalSet.")
+        self.assertTrue(_set.point_in_set([0,0]), msg="Point is not in the EllipsoidalSet.")
 
     def test_add_bounds_on_uncertain_parameters(self):
         m = ConcreteModel()
@@ -513,7 +513,7 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
         _set = AxisAlignedEllipsoidalSet(center=[0, 0], half_lengths=[2, 1])
-        self.assertTrue(_set.point_in_set(m.uncertain_param_vars, [0, 0]),
+        self.assertTrue(_set.point_in_set([0, 0]),
                         msg="Point is not in the AxisAlignedEllipsoidalSet.")
         
     def test_add_bounds_on_uncertain_parameters(self):
@@ -622,7 +622,7 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
         m.uncertain_params = [m.p1, m.p2]
         m.uncertain_param_vars = Var(range(len(m.uncertain_params)), initialize=0)
         polyhedral_set = PolyhedralSet(lhs_coefficients_mat=A, rhs_vec=b)
-        self.assertTrue(polyhedral_set.point_in_set(m.uncertain_param_vars, [0, 0]),
+        self.assertTrue(polyhedral_set.point_in_set([0, 0]),
                         msg="Point is not in the PolyhedralSet.")
     
     @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False), "Global NLP solver is not available.")
@@ -746,7 +746,7 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
 
         budget_set = BudgetSet(budget_membership_mat=budget_membership_mat,
                                rhs_vec=rhs_vec)
-        self.assertTrue(budget_set.point_in_set(m.uncertain_param_vars, [0, 0]),
+        self.assertTrue(budget_set.point_in_set([0, 0]),
                         msg="Point is not in the BudgetSet.")
 
     def test_add_bounds_on_uncertain_parameters(self):
@@ -858,7 +858,7 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
         _set = CardinalitySet(origin=center,
                              positive_deviation=positive_deviation, gamma=gamma)
 
-        self.assertTrue(_set.point_in_set(m.uncertain_param_vars, [0, 0]),
+        self.assertTrue(_set.point_in_set([0, 0]),
                         msg="Point is not in the CardinalitySet.")
 
     def test_add_bounds_on_uncertain_parameters(self):
@@ -949,7 +949,7 @@ class testBoxUncertaintySetClass(unittest.TestCase):
 
         bounds = [(-1, 1), (-1, 1)]
         _set = BoxSet(bounds=bounds)
-        self.assertTrue(_set.point_in_set(m.uncertain_param_vars, [0, 0]),
+        self.assertTrue(_set.point_in_set([0, 0]),
                         msg="Point is not in the BoxSet.")
 
     def test_add_bounds_on_uncertain_parameters(self):
@@ -1036,7 +1036,7 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
 
         scenarios = [(0, 0), (1, 0), (0, 1), (1, 1), (2, 0)]
         _set = DiscreteScenarioSet(scenarios=scenarios)
-        self.assertTrue(_set.point_in_set(m.uncertain_param_vars, [0, 0]),
+        self.assertTrue(_set.point_in_set([0, 0]),
                         msg="Point is not in the DiscreteScenarioSet.")
 
     def test_add_bounds_on_uncertain_parameters(self):
@@ -1143,7 +1143,7 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
             for j in range(len(psi_mat[i])):
                 psi_mat[i][j] = random_row_entries[j]
         _set = FactorModelSet(origin=[0, 0], psi_mat=psi_mat, number_of_factors=F, beta=1)
-        self.assertTrue(_set.point_in_set(m.uncertain_param_vars, [0, 0]),
+        self.assertTrue(_set.point_in_set([0, 0]),
                         msg="Point is not in the FactorModelSet.")
 
     def test_add_bounds_on_uncertain_parameters(self):
@@ -1254,7 +1254,7 @@ class testIntersectionSetClass(unittest.TestCase):
         Q1 = BoxSet(bounds=bounds)
         Q2 = BoxSet(bounds=[(-2, 1), (-1, 2)])
         Q = IntersectionSet(Q1=Q1, Q2=Q2)
-        self.assertTrue(Q.point_in_set(m.uncertain_param_vars, [0, 0]),
+        self.assertTrue(Q.point_in_set([0, 0]),
                         msg="Point is not in the IntersectionSet.")
 
     @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False), "Global NLP solver is not available.")
@@ -1514,6 +1514,216 @@ class RegressionTest(unittest.TestCase):
 
         self.assertEqual(results.solver.termination_condition, TerminationCondition.optimal,
                          msg="Minimize dr norm did not solve to optimality.")
+
+    @unittest.skipUnless(
+        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
+        "Global NLP solver is not available and licensed.")
+    def test_identifying_violating_param_realization(self):
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u = Param(initialize=1.125, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u**(0.5) - m.x2 * m.u <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+        # Define the uncertainty set
+        interval = BoxSet(bounds=[(0.25, 2)])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('baron')
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(model=m,
+                                     first_stage_variables=[m.x1, m.x2],
+                                     second_stage_variables=[],
+                                     uncertain_params=[m.u],
+                                     uncertainty_set=interval,
+                                     local_solver=local_subsolver,
+                                     global_solver=global_subsolver,
+                                     options={
+                                         "objective_focus": ObjectiveType.worst_case,
+                                         "solve_master_globally": True
+                                     })
+
+        self.assertEqual(results.grcs_termination_condition, grcsTerminationCondition.robust_optimal,
+                         msg="Did not identify robust optimal solution to problem instance.")
+        self.assertGreater(results.iterations, 0,
+                         msg="Robust infeasible model terminated in 0 iterations (nominal case).")
+
+    @unittest.skipUnless(
+        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
+        "Global NLP solver is not available and licensed.")
+    def test_terminate_with_max_iter(self):
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u = Param(initialize=1.125, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u**(0.5) - m.x2 * m.u <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+        # Define the uncertainty set
+        interval = BoxSet(bounds=[(0.25, 2)])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('baron')
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(model=m,
+                                     first_stage_variables=[m.x1, m.x2],
+                                     second_stage_variables=[],
+                                     uncertain_params=[m.u],
+                                     uncertainty_set=interval,
+                                     local_solver=local_subsolver,
+                                     global_solver=global_subsolver,
+                                     options={
+                                         "objective_focus": ObjectiveType.worst_case,
+                                         "solve_master_globally": True,
+                                         "max_iter":1
+                                     })
+
+        self.assertEqual(results.grcs_termination_condition, grcsTerminationCondition.max_iter,
+                         msg="Returned termination condition is not return max_iter.")
+
+    @unittest.skipUnless(
+        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
+        "Global NLP solver is not available and licensed.")
+    def test_terminate_with_time_limit(self):
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u = Param(initialize=1.125, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u**(0.5) - m.x2 * m.u <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+        # Define the uncertainty set
+        interval = BoxSet(bounds=[(0.25, 2)])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('baron')
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(model=m,
+                                     first_stage_variables=[m.x1, m.x2],
+                                     second_stage_variables=[],
+                                     uncertain_params=[m.u],
+                                     uncertainty_set=interval,
+                                     local_solver=local_subsolver,
+                                     global_solver=global_subsolver,
+                                     options={
+                                         "objective_focus": ObjectiveType.worst_case,
+                                         "solve_master_globally": True,
+                                         "time_limit": 0.001
+                                     })
+
+        self.assertEqual(results.grcs_termination_condition, grcsTerminationCondition.time_out,
+                         msg="Returned termination condition is not return time_out.")
+
+    @unittest.skipUnless(
+        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
+        "Global NLP solver is not available and licensed.")
+    def test_discrete_separation(self):
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u = Param(initialize=1.125, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u**(0.5) - m.x2 * m.u <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+        # Define the uncertainty set
+        discrete_scenarios = DiscreteScenarioSet(scenarios=[[0.25], [2.0], [1.125]])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('baron')
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(model=m,
+                                     first_stage_variables=[m.x1, m.x2],
+                                     second_stage_variables=[],
+                                     uncertain_params=[m.u],
+                                     uncertainty_set=discrete_scenarios,
+                                     local_solver=local_subsolver,
+                                     global_solver=global_subsolver,
+                                     options={
+                                         "objective_focus": ObjectiveType.worst_case,
+                                         "solve_master_globally": True
+                                     })
+
+        self.assertEqual(results.grcs_termination_condition, grcsTerminationCondition.robust_optimal,
+                         msg="Returned termination condition is not return robust_optimal.")
+
+    @unittest.skipUnless(
+        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
+        "Global NLP solver is not available and licensed.")
+    def test_higher_order_decision_rules(self):
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u = Param(initialize=1.125, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+        # Define the uncertainty set
+        interval = BoxSet(bounds=[(0.25, 2)])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('baron')
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(model=m,
+                                     first_stage_variables=[m.x1],
+                                     second_stage_variables=[m.x2],
+                                     uncertain_params=[m.u],
+                                     uncertainty_set=interval,
+                                     local_solver=local_subsolver,
+                                     global_solver=global_subsolver,
+                                     options={
+                                         "objective_focus": ObjectiveType.worst_case,
+                                         "solve_master_globally": True,
+                                         "decision_rule_order":2
+                                     })
+
+        self.assertEqual(results.grcs_termination_condition, grcsTerminationCondition.robust_optimal,
+                         msg="Returned termination condition is not return robust_optimal.")
 
 
 

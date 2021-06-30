@@ -71,7 +71,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def dim(self):
         """
-        UncertaintySet dimension, e.g. dimension of uncertain parameters
+        UncertaintySet dimension, e.g. dimension of uncertain parameters list in ``uncertain_params``.
         """
         raise NotImplementedError
 
@@ -108,7 +108,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         """
         pass
 
-    def point_in_set(self, uncertain_params, point):
+    def point_in_set(self, point):
         """
         Given the uncertainty set constraint, verify if the point ``point`` is in the set.
         This function takes a n-dimensional point, where n is the dimension of the vector of uncertain
@@ -116,38 +116,27 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         Returns True of False.
 
         Args:
-            uncertain_params: list of uncertain parameter objects defining the uncertainty set
-            point: the point being checked for existence in the set
+            point: The point being checked for existence in the set.
+                   The coordinates of the point should be supplied in the same order as the elements of ``uncertain_params``
+                   that is to be supplied to the PyROS solve statement.
+                   This point must match the dimension of the uncertain parameters of the set.
         """
 
         # === Ensure point is of correct dimensionality as the uncertain parameters
-        if len(point) != len(uncertain_params):
+        if len(point) != self.dim:
             raise AttributeError("Point must have same dimensions as uncertain parameters.")
 
-        # === Check if uncertain_params are Params or Vars, if Params set value, if vars fix value
-        if isinstance(uncertain_params, (IndexedVar, IndexedParam)):
-            the_params = list(uncertain_params.values())
-        else:
-            the_params = uncertain_params
-        for idx, p in enumerate(the_params):
-            if isinstance(p, _ParamData):
-                p.value = point[idx]
-            else:
-                p.fix(point[idx])
-
-        original_values = list(p.value for p in the_params)
+        m = ConcreteModel()
+        the_params = []
+        for i in range(self.dim):
+            m.add_component("x_%s" % i, Var(initialize=point[i]))
+            the_params.append(getattr(m, "x_%s" % i))
 
         # === Generate constraint for set
         set_constraint = self.set_as_constraint(uncertain_params=the_params)
 
         # === value() returns True if the constraint is satisfied, False else.
         is_in_set = all(value(con.expr) for con in set_constraint.values())
-
-        # === Revert uncertain_params to their original value and unfix them
-        for idx, p in enumerate(the_params):
-            p.value = original_values[idx]
-            if isinstance(p, _VarData):
-                p.unfix()
 
         return is_in_set
 
@@ -203,6 +192,9 @@ class BoxSet(UncertaintySet):
 
     @property
     def dim(self):
+        """
+        UncertaintySet dimension, e.g. dimension of uncertain parameters list in ``uncertain_params``.
+        """
         return len(self.bounds)
 
     @property
@@ -273,6 +265,9 @@ class CardinalitySet(UncertaintySet):
 
     @property
     def dim(self):
+        """
+        UncertaintySet dimension, e.g. dimension of uncertain parameters list in ``uncertain_params``.
+        """
         return len(self.origin)
 
     @property
@@ -317,7 +312,7 @@ class CardinalitySet(UncertaintySet):
 
         return conlist
 
-    def point_in_set(self, uncertain_params, point):
+    def point_in_set(self, point):
         """
         Given the uncertainty set constraint, verify if the point ``point`` is in the set.
         This function takes a n-dimensional point, where n is the dimension of the vector of uncertain
@@ -330,7 +325,7 @@ class CardinalitySet(UncertaintySet):
         """
 
         cassis = []
-        for i in range(len(uncertain_params)):
+        for i in range(self.dim):
             if self.positive_deviation[i] > 0:
                 cassis.append((point[i] - self.origin[i])/self.positive_deviation[i])
 
@@ -389,6 +384,9 @@ class PolyhedralSet(UncertaintySet):
 
     @property
     def dim(self):
+        """
+        UncertaintySet dimension, e.g. dimension of uncertain parameters list in ``uncertain_params``.
+        """
         return len(self.coefficients_mat[0])
 
     @property
@@ -399,6 +397,8 @@ class PolyhedralSet(UncertaintySet):
     def parameter_bounds(self):
         """
         Inferred numerical bounds on the uncertainty set.
+        PolyhedralSet bounds are not computed at set construction because they cannot be algebraically determined
+        and require access to an optimization solver.
         """
         # For the PolyhedralSet, these are numerically determined
         # in the algorithm therefore they cannot presently be determined at construction of the set.
@@ -492,6 +492,9 @@ class BudgetSet(PolyhedralSet):
 
     @property
     def dim(self):
+        """
+        UncertaintySet dimension, e.g. dimension of uncertain parameters list in ``uncertain_params``.
+        """
         return np.asarray(self.coefficients_mat).shape[1]
 
     @property
@@ -583,6 +586,9 @@ class FactorModelSet(UncertaintySet):
 
     @property
     def dim(self):
+        """
+        UncertaintySet dimension, e.g. dimension of uncertain parameters list in ``uncertain_params``.
+        """
         return len(self.origin)
 
     @property
@@ -647,7 +653,7 @@ class FactorModelSet(UncertaintySet):
         conlist.add(sum(model.util.cassi[i] for i in n) >= -self.beta * self.number_of_factors)
         return conlist
 
-    def point_in_set(self, uncertain_params, point):
+    def point_in_set(self, point):
         """
         Given the uncertainty set constraint, verify if the point ``point`` is in the set.
         This function takes a n-dimensional point, where n is the dimension of the vector of uncertain
@@ -698,6 +704,9 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
 
     @property
     def dim(self):
+        """
+        UncertaintySet dimension, e.g. dimension of uncertain parameters list in ``uncertain_params``.
+        """
         return len(self.center)
 
     @property
@@ -806,6 +815,9 @@ class EllipsoidalSet(UncertaintySet):
 
     @property
     def dim(self):
+        """
+        UncertaintySet dimension, e.g. dimension of uncertain parameters list in ``uncertain_params``.
+        """
         return len(self.center)
 
     @property
@@ -885,6 +897,9 @@ class DiscreteScenarioSet(UncertaintySet):
 
     @property
     def dim(self):
+        """
+        UncertaintySet dimension, e.g. dimension of uncertain parameters list in ``uncertain_params``.
+        """
         return len(self.scenarios[0])
 
     @property
@@ -922,7 +937,7 @@ class DiscreteScenarioSet(UncertaintySet):
         conlist.deactivate()
         return conlist
 
-    def point_in_set(self, uncertain_params, point):
+    def point_in_set(self, point):
         """
         Given the uncertainty set constraint, verify if the point ``point`` is in the set.
         This function takes a n-dimensional point, where n is the dimension of the vector of uncertain
@@ -970,6 +985,9 @@ class IntersectionSet(UncertaintySet):
 
     @property
     def dim(self):
+        """
+        UncertaintySet dimension, e.g. dimension of uncertain parameters list in ``uncertain_params``.
+        """
         return self.all_sets[0].dim
 
     @property
@@ -980,12 +998,14 @@ class IntersectionSet(UncertaintySet):
     def parameter_bounds(self):
         """
         Inferred numerical bounds on the uncertainty set.
+        IntersectedSet bounds are not computed at set construction because they cannot be algebraically determined
+        and require access to an optimization solver.
         """
         # For the IntersectedSet, these are numerically determined
         # in the algorithm therefore they cannot presently be determined at construction of the set.
         return []
 
-    def point_in_set(self, uncertain_params, point):
+    def point_in_set(self, point):
         """
         Given the uncertainty set constraint, verify if the point ``point`` is in the set.
         This function takes a n-dimensional point, where n is the dimension of the vector of uncertain
@@ -996,7 +1016,7 @@ class IntersectionSet(UncertaintySet):
              uncertain_params: list of uncertain parameter objects defining the uncertainty set
              point: the point being checked for existence in the set
         """
-        if all(a_set.point_in_set(uncertain_params=uncertain_params, point=point) for a_set in self.all_sets):
+        if all(a_set.point_in_set(point=point) for a_set in self.all_sets):
             return True
         else:
             return False
@@ -1017,7 +1037,7 @@ class IntersectionSet(UncertaintySet):
             disc_set = min(disc_sets, key=lambda x: len(x.scenarios))  # minimum set of scenarios
             # === Ensure there is at least one scenario from this discrete set which is a member of all other sets
             for scenario in disc_set.scenarios:
-                if all(a_set.point_in_set(uncertain_params, scenario) for a_set in self.all_sets):
+                if all(a_set.point_in_set(point=scenario) for a_set in self.all_sets):
                     is_empty_intersection = False
                     break
         else:
@@ -1037,14 +1057,12 @@ class IntersectionSet(UncertaintySet):
 
     # === Define pairwise intersection function
     @staticmethod
-    def intersect(Q1, Q2, uncertain_params):
+    def intersect(Q1, Q2):
         """
         Binary function intersecting two UncertaintySet objects
         Args:
             Q1: uncertainty set 1
             Q2: uncertainty set 2
-            uncertain_params: list of param objects to build constraints in point_in_set to determine if
-            there is overlap between discrete and discrete/continuous sets.
         """
         constraints = ConstraintList()
         constraints.construct()
@@ -1054,7 +1072,7 @@ class IntersectionSet(UncertaintySet):
             if set.type == "discrete":
                 intersected_scenarios = []
                 for point in set.scenarios:
-                    if other.point_in_set(point=point, uncertain_params=uncertain_params):
+                    if other.point_in_set(point=point):
                         intersected_scenarios.append(point)
                 return DiscreteScenarioSet(scenarios=intersected_scenarios)
 
@@ -1077,7 +1095,7 @@ class IntersectionSet(UncertaintySet):
         is_empty_intersection = self.is_empty_intersection(uncertain_params=uncertain_params, nlp_solver=nlp_solver)
 
         def _intersect(Q1, Q2):
-            return self.intersect(Q1, Q2, uncertain_params)
+            return self.intersect(Q1, Q2)
 
         if not is_empty_intersection:
             Qint = functools.reduce(_intersect, self.all_sets)

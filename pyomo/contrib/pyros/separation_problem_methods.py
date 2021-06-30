@@ -25,12 +25,23 @@ def add_uncertainty_set_constraints(model, config):
     """
     Add inequality constraint(s) representing the uncertainty set.
     """
+
     model.util.uncertainty_set_constraint = \
         config.uncertainty_set.set_as_constraint(
             uncertain_params=model.util.uncertain_param_vars, model=model, config=config
         )
 
     config.uncertainty_set.add_bounds_on_uncertain_parameters(model=model, config=config)
+
+    # === Pre-process out any uncertain parameters which have q_LB = q_ub via (q_ub - q_lb)/max(1,|q_UB|) <= TOL
+    #     before building the uncertainty set constraint(s)
+    param_bounds = config.uncertainty_set.parameter_bounds
+    TOL = 1e-4
+    for i, tup in enumerate(param_bounds):
+        if (tup[1] - tup[0]) / max(1, abs(tup[1])) <= TOL:
+            # This parameter is effectively certain for this set, can remove it from the uncertainty set
+            # We do this by fixing it in separation to its nominal value
+            model.util.uncertain_param_vars[i].fix(config.nominal_uncertain_param_vals[i])
 
     return
 
@@ -367,7 +378,6 @@ def initialize_separation(model_data, config):
     if config.uncertainty_set.geometry != Geometry.DISCRETE_SCENARIOS:
         for idx, p in list(model_data.separation_model.util.uncertain_param_vars.items()):
             p.value = config.nominal_uncertain_param_vals[idx]
-            p.unfix()
     for idx, v in enumerate(model_data.separation_model.util.first_stage_variables):
         v.fix(model_data.opt_fsv_vals[idx])
 
@@ -439,7 +449,8 @@ def solver_call_separation(model_data, config, solver, solve_data, is_global):
     # === Write this instance to file for user to debug because this separation instance did not return an optimal solution
     if save_dir and config.keepfiles:
         objective = str(list(nlp_model.component_data_objects(Objective, active=True))[0].name)
-        name = os.path.join(save_dir, config.uncertainty_set.type + "_" + nlp_model.name + "_separation_" + str(
+        name = os.path.join(save_dir, config.uncertainty_set.type + "_"
+                                    + str(config.uncertainty_set.number_of_factors) + "_" + str(config.uncertainty_set.beta)+ "_" + nlp_model.name + "_separation_" + str(
             model_data.iteration) + "_obj_" + objective + ".bar")
         nlp_model.write(name, io_options={'symbolic_solver_labels':True})
         output_logger(config=config, separation_error=True, filename=name, iteration=model_data.iteration, objective=objective,
