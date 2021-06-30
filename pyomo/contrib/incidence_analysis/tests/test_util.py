@@ -115,12 +115,13 @@ class TestGenerateSCC(unittest.TestCase):
         m.F[0].fix()
         m.T[0].fix()
 
+        constraints = list(m.component_data_objects(pyo.Constraint))
         self.assertEqual(
-                len(list(generate_strongly_connected_components(m))),
+                len(list(generate_strongly_connected_components(constraints))),
                 N+1,
                 )
         for i, (block, inputs) in enumerate(
-                generate_strongly_connected_components(m)):
+                generate_strongly_connected_components(constraints)):
             with TemporarySubsystemManager(to_fix=inputs):
                 if i == 0:
                     # P[0], ideal_gas[0]
@@ -188,8 +189,9 @@ class TestGenerateSCC(unittest.TestCase):
         m.flow_in.fix()
         m.height[t0].fix()
 
+        constraints = list(m.component_data_objects(pyo.Constraint))
         self.assertEqual(
-                len(list(generate_strongly_connected_components(m))),
+                len(list(generate_strongly_connected_components(constraints))),
                 nfe+2,
                 # The "initial constraints" have two SCCs because they
                 # decompose into the algebraic equation and differential
@@ -204,7 +206,7 @@ class TestGenerateSCC(unittest.TestCase):
                 )
         t_scc_map = {}
         for i, (block, inputs) in enumerate(
-                generate_strongly_connected_components(m)):
+                generate_strongly_connected_components(constraints)):
             with TemporarySubsystemManager(to_fix=inputs):
                 t = block.vars[0].index()
                 t_scc_map[t] = i
@@ -267,12 +269,15 @@ class TestGenerateSCC(unittest.TestCase):
         m.diff_eqn[t0].deactivate()
         m.flow_out_eqn[t0].deactivate()
 
+        constraints = list(
+                m.component_data_objects(pyo.Constraint, active=True)
+                )
         self.assertEqual(
-                len(list(generate_strongly_connected_components(m))),
+                len(list(generate_strongly_connected_components(constraints))),
                 nfe,
                 )
         for i, (block, inputs) in enumerate(
-                generate_strongly_connected_components(m)):
+                generate_strongly_connected_components(constraints)):
             with TemporarySubsystemManager(to_fix=inputs):
                 # We have a much easier time testing the SCCs generated
                 # in this test.
@@ -313,6 +318,83 @@ class TestGenerateSCC(unittest.TestCase):
 
     @unittest.skipUnless(scipy_available, "SciPy is not available")
     @unittest.skipUnless(networkx_available, "NetworkX is not available")
+    def test_dynamic_backward_with_inputs(self):
+        nfe = 5
+        m = make_dynamic_model(nfe=nfe, scheme="BACKWARD")
+        time = m.time
+        t0 = m.time.first()
+        t1 = m.time.next(t0)
+
+        # Initial conditions are still fixed
+        m.height[t0].fix()
+        m.flow_out[t0].fix()
+        m.dhdt[t0].fix()
+        m.diff_eqn[t0].deactivate()
+        m.flow_out_eqn[t0].deactivate()
+
+        # Variables that we want in our SCCs:
+        # Here we exclude "dynamic inputs" (flow_in) instead of fixing them
+        variables = [
+                var for var in m.component_data_objects(pyo.Var)
+                if not var.fixed and var.parent_component() is not m.flow_in
+                ]
+        constraints = list(
+                m.component_data_objects(pyo.Constraint, active=True)
+                )
+        self.assertEqual(
+                len(list(generate_strongly_connected_components(
+                    constraints,
+                    variables,
+                    ))),
+                nfe,
+                )
+
+        # The result of the generator is the same as in the previous
+        # test, but we are using the more general API
+        for i, (block, inputs) in enumerate(
+                generate_strongly_connected_components(
+                    constraints,
+                    variables,
+                    )):
+            with TemporarySubsystemManager(to_fix=inputs):
+                t = m.time[i+2]
+                t_prev = m.time.prev(t)
+
+                con_set = ComponentSet([
+                    m.diff_eqn[t], m.flow_out_eqn[t], m.dhdt_disc_eq[t]
+                    ])
+                var_set = ComponentSet([
+                    m.height[t], m.dhdt[t], m.flow_out[t]
+                    ])
+                self.assertEqual(len(con_set), len(block.cons))
+                self.assertEqual(len(var_set), len(block.vars))
+                for var, con in zip(block.vars[:], block.cons[:]):
+                    self.assertIn(var, var_set)
+                    self.assertIn(con, con_set)
+                    self.assertFalse(var.fixed)
+
+                other_var_set = ComponentSet([m.flow_in[t]])
+                if t != t1:
+                    other_var_set.add(m.height[t_prev])
+                    # At t1, "input var" height[t0] is fixed, so
+                    # it is not included here.
+                self.assertEqual(len(inputs), len(other_var_set))
+                for var in block.input_vars[:]:
+                    self.assertIn(var, other_var_set)
+                    self.assertTrue(var.fixed)
+
+        for t in time:
+            if t == t0:
+                self.assertTrue(m.height[t].fixed)
+                self.assertTrue(m.flow_out[t].fixed)
+                self.assertTrue(m.dhdt[t].fixed)
+            else:
+                self.assertFalse(m.height[t].fixed)
+                self.assertFalse(m.flow_out[t].fixed)
+                self.assertFalse(m.dhdt[t].fixed)
+
+    @unittest.skipUnless(scipy_available, "SciPy is not available")
+    @unittest.skipUnless(networkx_available, "NetworkX is not available")
     def test_dynamic_forward_disc(self):
         nfe = 5
         m = make_dynamic_model(nfe=nfe, scheme="FORWARD")
@@ -323,18 +405,19 @@ class TestGenerateSCC(unittest.TestCase):
         m.flow_in.fix()
         m.height[t0].fix()
 
+        constraints = list(m.component_data_objects(pyo.Constraint))
         # For a forward discretization, the entire model decomposes
         self.assertEqual(
-                len(list(generate_strongly_connected_components(m))),
+                len(list(generate_strongly_connected_components(constraints))),
                 len(list(m.component_data_objects(pyo.Constraint))),
                 )
         self.assertEqual(
-                len(list(generate_strongly_connected_components(m))),
+                len(list(generate_strongly_connected_components(constraints))),
                 3*nfe+2,
                 # "Initial constraints" only add two variables/equations
                 )
         for i, (block, inputs) in enumerate(
-                generate_strongly_connected_components(m)):
+                generate_strongly_connected_components(constraints)):
             with TemporarySubsystemManager(to_fix=inputs):
                 # The order is:
                 #   algebraic -> derivative -> differential -> algebraic -> ...
