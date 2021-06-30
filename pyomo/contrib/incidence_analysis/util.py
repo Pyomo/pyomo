@@ -26,9 +26,9 @@ def generate_strongly_connected_components(
         variables=None,
         include_fixed=False,
         ):
-    """ Performs a block triangularization of the variable-constraint
-    incidence matrix of the provided block, and yields a block that
-    contains the variables and constraints of each diagonal block
+    """ Performs a block triangularization of the incidence matrix
+    of the provided constraints and variables, and yields a block that
+    contains the constraints and variables of each diagonal block
     (strongly connected component).
 
     Arguments
