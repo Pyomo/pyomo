@@ -529,9 +529,9 @@ class ProblemWriter_bar(AbstractProblemWriter):
         else:
             output_file = nullcontext(output_filename)
 
-        with output_file:
+        with output_file as FILE:
             symbol_map = self._write_bar_file(
-                model, output_file, solver_capability, io_options)
+                model, FILE, solver_capability, io_options)
 
         return output_filename, symbol_map
 
