@@ -63,5 +63,7 @@ class AmplModel(object):
             args = (self.modfile, self.datfile)
         res = convert_problem(args, format, [format], solver_capability)
         if filename is not None and res[0][0] != filename:
+            if os.path.exists(filename):
+                os.remove(filename)
             os.rename(res[0][0], filename)
 
