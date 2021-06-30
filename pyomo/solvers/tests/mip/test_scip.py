@@ -15,6 +15,7 @@ from os.path import join
 import pyomo.common.unittest as unittest
 
 from pyomo.common.fileutils import this_file_dir
+from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.opt import SolverFactory
@@ -84,9 +85,16 @@ class Test(unittest.TestCase):
             os.chdir(tmpdir)
             open(join(tmpdir, 'scip.set'), "w").close()
             # Test scip solve from a pyomo instance and load the solution
-            results = self.scip.solve(self.model,
-                                      suffixes=['.*'],
-                                      options={"limits/softtime": 100})
+            with LoggingIntercept() as LOG:
+                results = self.scip.solve(self.model,
+                                          suffixes=['.*'],
+                                          options={"limits/softtime": 100})
+            self.assertRegex(
+                LOG.getvalue().replace("\n", " "),
+                r"A file named (.*) exists in the current working "
+                r"directory, but SCIP options are being "
+                r"set using a separate options file. The "
+                r"options file \1 will be ignored.")
         finally:
             os.chdir(_cwd)
         # We don't want the test to care about which Scip version we are using
