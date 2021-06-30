@@ -33,12 +33,14 @@ def generate_strongly_connected_components(
 
     Arguments
     ---------
-    block: Pyomo Block
-        Block whose strongly connected components will be generated
+    constraints: List of Pyomo constraint data objects
+        Constraints used to generate strongly connected components.
+    variables: List of Pyomo variable data objects
+        Variables that may participate in strongly connected components.
+        If not provided, all variables in the constraints will be used.
     include_fixed: Bool
-        Indicates whether fixed variables will be attached as
-        "input variables" on the subsystem blocks containing
-        the strongly connected components
+        Indicates whether fixed variables will be included when
+        identifying variables in constraints.
 
     Yields
     ------
