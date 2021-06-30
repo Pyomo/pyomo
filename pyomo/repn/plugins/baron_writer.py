@@ -801,15 +801,20 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # object, indexed by the relevant variable
         BranchingPriorityHeader = False
         for suffix in branching_priorities_suffixes:
-            for var_data, priority in suffix.items():
-                if id(var_data) not in referenced_variable_ids:
-                    continue
-                if priority is not None:
-                    if not BranchingPriorityHeader:
-                        output_file.write('BRANCHING_PRIORITIES{\n')
-                        BranchingPriorityHeader = True
-                    name_to_output = symbol_map.getSymbol(var_data)
-                    output_file.write(name_to_output+': '+str(priority)+';\n')
+            for var, priority in suffix.items():
+                if var.is_indexed():
+                    var_iter = var.values()
+                else:
+                    var_iter = (var,)
+                for var_data in var_iter:
+                    if id(var_data) not in referenced_variable_ids:
+                        continue
+                    if priority is not None:
+                        if not BranchingPriorityHeader:
+                            output_file.write('BRANCHING_PRIORITIES{\n')
+                            BranchingPriorityHeader = True
+                        output_file.write( "%s: %s;\n" % (
+                            symbol_map.getSymbol(var_data), priority))
 
         if BranchingPriorityHeader:
             output_file.write("}\n\n")
