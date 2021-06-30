@@ -31,7 +31,8 @@ from pyomo.gdp.util import ( _warn_for_active_logical_constraint, target_list,
                              get_src_constraint, get_transformed_constraints,
                              _get_constraint_transBlock, get_src_disjunct,
                              _warn_for_active_disjunction,
-                             _warn_for_active_disjunct, preprocess_targets)
+                             _warn_for_active_disjunct, preprocess_targets,
+                             _to_dict)
 from pyomo.network import Port
 from pyomo.repn import generate_standard_repn
 from functools import wraps
@@ -40,12 +41,6 @@ from weakref import ref as weakref_ref
 logger = logging.getLogger('pyomo.gdp.bigm')
 
 NAME_BUFFER = {}
-
-def _to_dict(val):
-    if isinstance(val, (dict, ComponentMap)):
-       return val
-    return {None: val}
-
 
 @TransformationFactory.register('gdp.bigm', doc="Relax disjunctive model using "
                                 "big-M terms.")
