@@ -292,6 +292,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
         self.assertAlmostEqual(m_ex.x.value, x.value, delta=1e-8)
         self.assertAlmostEqual(m_ex.y.value, y.value, delta=1e-8)
 
+    @unittest.skipUnless(cyipopt_available, "cyipopt is not available")
     def test_solve_square_dynamic(self):
         # Create the "external model"
         m = make_dynamic_model()
