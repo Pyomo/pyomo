@@ -171,16 +171,21 @@ def ROSolver_iterative_solve(model_data, config):
             nominal_data.nom_second_stage_cost = master_soln.second_stage_objective
             nominal_data.nom_obj = value(master_data.master_model.obj)
 
-        # === Decision rule polishing
-        if config.decision_rule_order != 0 and len(config.second_stage_variables) > 0 and \
-                k > len(config.uncertain_params):
-            #config.progress_logger.info("Solving Decision Rule Polishing Problem at iteration %s" % k)
+
+        if (
+            # === Decision rule polishing (do not polish on first iteration if no ssv or if decision_rule_order = 0)
+            (config.decision_rule_order != 0 and len(config.second_stage_variables) > 0 and k != 0)
+            # AND if we haven't applied higher order efficiencies at k > 0
+            # (see higher_order_decision_rule_efficiency in master_problem_methods)
+            and not (config.decision_rule_order == 2 and k <= len(config.uncertain_params))
+        ):
             # === Save initial values of DR vars to file
             for varslist in master_data.master_model.scenarios[0,0].util.decision_rule_vars:
                 vals = []
                 for dvar in varslist.values():
                     vals.append(dvar.value)
                 dr_var_lists_original.append(vals)
+
             polishing_results = master_problem_methods.minimize_dr_vars(model_data=master_data, config=config)
             timing_data.total_dr_polish_time += get_time_from_solver(polishing_results)
 
@@ -191,7 +196,6 @@ def ROSolver_iterative_solve(model_data, config):
 
                     vals.append(dvar.value)
                 dr_var_lists_polished.append(vals)
-            #config.progress_logger.info("Done with Decision Rule Polishing.")
 
         # === Set up for the separation problem
         separation_data.opt_fsv_vals = [v.value for v in master_soln.master_model.scenarios[0,0].util.first_stage_variables]
@@ -204,7 +208,6 @@ def ROSolver_iterative_solve(model_data, config):
             separation_model.util.zeta = value(master_soln.master_model.obj)
 
         # === Solve Separation Problem
-        #config.progress_logger.info("Solving Separation Problem at iteration %s" % k)
         separation_data.iteration = k
         separation_data.master_nominal_scenario = master_data.master_model.scenarios[0,0]
         separation_data.master_model = master_data.master_model
@@ -212,8 +215,6 @@ def ROSolver_iterative_solve(model_data, config):
         separation_solns, violating_realizations, constr_violations, is_global, \
             local_sep_time, global_sep_time = \
                 separation_problem_methods.solve_separation_problem(model_data=separation_data, config=config)
-
-        #config.progress_logger.info("Done with Separation Problem.")
 
         for sep_soln_list in separation_solns:
             for s in sep_soln_list:
