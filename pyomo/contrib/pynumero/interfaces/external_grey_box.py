@@ -20,6 +20,7 @@ from pyomo.core.base import Var, Set, Constraint, value
 from pyomo.core.base.block import _BlockData, Block, declare_custom_block
 from pyomo.core.base.util import Initializer
 from pyomo.core.base.set import UnindexedComponent_set
+from pyomo.core.base.reference import Reference
 
 from ..sparse.block_matrix import BlockMatrix
 
@@ -306,16 +307,21 @@ class ExternalGreyBoxBlockData(_BlockData):
             self.inputs = self.outputs = None
             return
 
-        if inputs is not None:
-            pass
-
+        # Shouldn't need input names if we provide input vars, but
+        # no reason to remove this.
+        # _could_ make inputs a reference-to-mapping
         self._input_names = ex_model.input_names()
         if self._input_names is None or len(self._input_names) == 0:
             raise ValueError(
                 'No input_names specified for external_grey_box_model.'
                 ' Must specify at least one input.')
+
         self._input_names_set = Set(initialize=self._input_names, ordered=True)
-        self.inputs = Var(self._input_names_set)
+
+        if inputs is None:
+            self.inputs = Var(self._input_names_set)
+        else:
+            self.inputs = Reference(inputs)
 
         self._equality_constraint_names = ex_model.equality_constraint_names()
         self._output_names = ex_model.output_names()
