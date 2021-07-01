@@ -14,8 +14,14 @@ import inspect
 from collections.abc import Sequence
 from collections.abc import Mapping
 
+from pyomo.common.dependencies import numpy, numpy_available
 from pyomo.core.expr.numvalue import native_types
 from pyomo.core.pyomoobject import PyomoObject
+
+if numpy_available:
+    _ndarray = numpy.ndarray
+else:
+    _ndarray = ()
 
 #
 # The following set of "Initializer" classes are a general functionality
@@ -96,6 +102,11 @@ def Initializer(init,
             treat_sequences_as_mappings=treat_sequences_as_mappings,
             arg_not_specified=arg_not_specified,
         )
+    elif isinstance(init, _ndarray):
+        if init.size == 1:
+            return ConstantInitializer(init[0])
+        else:
+            return ItemInitializer(init)
     else:
         return ConstantInitializer(init)
 
