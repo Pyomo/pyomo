@@ -83,8 +83,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
                     # check that no variables are fixed
                     fixed_vars.extend(v for v in data.inputs.values() if v.fixed)
                     fixed_vars.extend(v for v in data.outputs.values() if v.fixed)
-                    greybox_nlp = _ExternalGreyBoxAsNLP(greybox)
-                    # ^RBP: Should this be _ExternalGreyBoxAsNLP(data)?
+                    greybox_nlp = _ExternalGreyBoxAsNLP(data)
                     greybox_nlps.append(greybox_nlp)
 
         if fixed_vars:

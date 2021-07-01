@@ -331,6 +331,9 @@ class ExternalGreyBoxBlockData(_BlockData):
 
 
 class ExternalGreyBoxBlock(Block):
+
+    _ComponentDataClass = ExternalGreyBoxBlockData
+
     def __new__(cls, *args, **kwds):
         if cls != ExternalGreyBoxBlock:
             target_cls = cls
@@ -380,5 +383,5 @@ class SimpleExternalGreyBoxBlock(metaclass=RenamedClass):
     __renamed__version__ = '6.0'
 
 
-class IndexedExternalGreyBoxBlock(Block):
+class IndexedExternalGreyBoxBlock(ExternalGreyBoxBlock):
     pass
