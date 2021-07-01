@@ -135,28 +135,28 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
         self.assertEqual(len(block.outputs), 0)
         self.assertEqual(len(block._equality_constraint_names), 2)
 
-#    def test_construct_indexed(self):
-#        block = ExternalGreyBoxBlock([0, 1, 2], concrete=True)
-#        self.assertIs(type(block), IndexedExternalGreyBoxBlock)
-#
-#        m = _make_external_model()
-#        input_vars = [m_ex.a, m_ex.b, m_ex.r, m_ex.x_out, m_ex.y_out]
-#        external_vars = [m_ex.x, m_ex.y]
-#        residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
-#        external_cons = [m_ex.c_ex_1, m_ex.c_ex_2]
-#        ex_model = ExternalPyomoModel(
-#                input_vars,
-#                external_vars,
-#                residual_cons,
-#                external_cons,
-#                )
-#
-#        for i in block:
-#            b = block[i]
-#            b.set_external_model(ex_model)
-#            self.assertEqual(len(b.inputs), len(input_vars))
-#            self.assertEqual(len(b.outputs), 0)
-#            self.assertEqual(len(b._equality_constraint_names), 2)
+    def test_construct_indexed(self):
+        block = ExternalGreyBoxBlock([0, 1, 2], concrete=True)
+        self.assertIs(type(block), IndexedExternalGreyBoxBlock)
+
+        m_ex = _make_external_model()
+        input_vars = [m_ex.a, m_ex.b, m_ex.r, m_ex.x_out, m_ex.y_out]
+        external_vars = [m_ex.x, m_ex.y]
+        residual_cons = [m_ex.c_out_1, m_ex.c_out_2]
+        external_cons = [m_ex.c_ex_1, m_ex.c_ex_2]
+        ex_model = ExternalPyomoModel(
+                input_vars,
+                external_vars,
+                residual_cons,
+                external_cons,
+                )
+
+        for i in block:
+            b = block[i]
+            b.set_external_model(ex_model)
+            self.assertEqual(len(b.inputs), len(input_vars))
+            self.assertEqual(len(b.outputs), 0)
+            self.assertEqual(len(b._equality_constraint_names), 2)
 
     @unittest.skipUnless(cyipopt_available, "cyipopt is not available")
     def test_solve_square(self):
