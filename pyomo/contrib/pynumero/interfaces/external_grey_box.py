@@ -373,5 +373,5 @@ class SimpleExternalGreyBoxBlock(metaclass=RenamedClass):
     __renamed__version__ = '6.0'
 
 
-class IndexedExternalGreyBoxBlock(Block):
+class IndexedExternalGreyBoxBlock(ExternalGreyBoxBlock):
     pass
