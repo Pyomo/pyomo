@@ -110,6 +110,41 @@ def _add_nonlinear_linking_constraints(m):
             rule=linking_constraint_rule)
 
 
+def make_dynamic_model():
+    m = pyo.ConcreteModel()
+    m.time = pyo.Set(initialize=[0, 1, 2])
+    m = pyo.ConcreteModel()
+
+    m.time = pyo.Set(initialize=[0, 1, 2]) 
+    t0 = m.time.first()
+
+    m.h = pyo.Var(m.time, initialize=1.0)
+    m.dhdt = pyo.Var(m.time, initialize=1.0)
+    m.flow_in = pyo.Var(m.time, bounds=(0, None), initialize=1.0)
+    m.flow_out = pyo.Var(m.time, initialize=1.0)
+
+    m.flow_coef = pyo.Param(initialize=2.0, mutable=True)
+
+    def h_diff_eqn_rule(m, t): 
+        return m.dhdt[t] - (m.flow_in[t] - m.flow_out[t]) == 0
+    m.h_diff_eqn = pyo.Constraint(m.time, rule=h_diff_eqn_rule)
+
+    def dhdt_disc_eqn_rule(m, t): 
+        if t == m.time.first():
+            return pyo.Constraint.Skip
+        else:
+            t_prev = m.time.prev(t)
+            delta_t = (t - t_prev)
+            return m.dhdt[t] - delta_t*(m.h[t] - m.h[t_prev]) == 0
+    m.dhdt_disc_eqn = pyo.Constraint(m.time, rule=dhdt_disc_eqn_rule)
+
+    def flow_out_eqn(m, t): 
+        return m.flow_out[t] == m.flow_coef*m.h[t]**0.5
+    m.flow_out_eqn = pyo.Constraint(m.time, rule=flow_out_eqn)
+
+    return m
+
+
 class TestExternalGreyBoxBlock(unittest.TestCase):
 
     def test_construct_scalar(self):
@@ -256,6 +291,77 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
         self.assertAlmostEqual(m_ex.r.value, r.value, delta=1e-8)
         self.assertAlmostEqual(m_ex.x.value, x.value, delta=1e-8)
         self.assertAlmostEqual(m_ex.y.value, y.value, delta=1e-8)
+
+    def test_solve_square_dynamic(self):
+        # Create the "external model"
+        m = make_dynamic_model()
+        time = m.time
+        t0 = m.time.first()
+        m.h[t0].fix(1.2)
+        m.flow_in.fix(1.5)
+
+        # Create the block that will hold the reduced space model.
+        reduced_space = pyo.Block(concrete=True)
+        reduced_space.diff_var = pyo.Reference(m.h)
+        reduced_space.deriv_var = pyo.Reference(m.dhdt)
+        reduced_space.input_var = pyo.Reference(m.flow_in)
+        reduced_space.disc_eq = pyo.Reference(m.dhdt_disc_eqn)
+
+        reduced_space.external_block = ExternalGreyBoxBlock(time)
+        block = reduced_space.external_block
+        block[t0].deactivate()
+        for t in time:
+            # TODO: skipping time.first() necessary?
+            if t != t0:
+                input_vars = [m.h[t], m.dhdt[t]]
+                external_vars = [m.flow_out[t]]
+                residual_cons = [m.h_diff_eqn[t]]
+                external_cons = [m.flow_out_eqn[t]]
+                external_model = ExternalPyomoModel(
+                        input_vars,
+                        external_vars,
+                        residual_cons,
+                        external_cons,
+                        )
+                block[t].set_external_model(external_model)
+
+        n_inputs = 2
+        def linking_constraint_rule(m, i, t):
+            if t == t0:
+                return pyo.Constraint.Skip
+            if i == 0:
+                return m.diff_var[t] == m.external_block[t].inputs["input_0"]
+            elif i == 1:
+                return m.deriv_var[t] == m.external_block[t].inputs["input_1"]
+
+        reduced_space.linking_constraint = pyo.Constraint(
+                range(n_inputs),
+                time,
+                rule=linking_constraint_rule,
+                )
+        # Initialize new variables
+        for t in time:
+            if t != t0:
+                block[t].inputs["input_0"].set_value(m.h[t].value)
+                block[t].inputs["input_1"].set_value(m.dhdt[t].value)
+
+        reduced_space._obj = pyo.Objective(expr=0)
+
+        solver = pyo.SolverFactory("cyipopt")
+        results = solver.solve(reduced_space, tee=True)
+
+        # Full space square model was solved in a separate script
+        # to obtain these values.
+        h_target = [1.2, 0.852923, 0.690725]
+        dhdt_target = [-0.690890, -0.347077, -0.162198]
+        flow_out_target = [2.190980, 1.847077, 1.662198]
+        for t in time:
+            if t == t0:
+                continue
+            values = [m.h[t].value, m.dhdt[t].value, m.flow_out[t].value]
+            target_values = [h_target[t], dhdt_target[t], flow_out_target[t]]
+            self.assertStructuredAlmostEqual(values, target_values, delta=1e-5)
+
 
 class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
 
