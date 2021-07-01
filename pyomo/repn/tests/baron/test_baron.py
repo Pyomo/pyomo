@@ -170,25 +170,44 @@ class Test(unittest.TestCase):
     def test_branching_priorities(self):
         m = ConcreteModel()
         m.x = Var(within=Binary)
-        m.y = Var([1, 2], within=Binary)
+        m.y = Var([1, 2, 3], within=Binary)
         m.c = Constraint(expr=m.y[1]*m.y[2] - 2*m.x >= 0)
         m.obj = Objective(expr=m.y[1]+m.y[2], sense=maximize)
         m.priority = Suffix(direction=Suffix.EXPORT)
         m.priority[m.x] = 1
+        # Note this checks that y[3] is filtered out
         m.priority[m.y] = 2
         self._check_baseline(m)
 
     def test_invalid_suffix(self):
         m = ConcreteModel()
         m.x = Var(within=Binary)
-        m.y = Var([1, 2], within=Binary)
+        m.y = Var([1, 2, 3], within=Binary)
         m.c = Constraint(expr=m.y[1]*m.y[2] - 2*m.x >= 0)
         m.obj = Objective(expr=m.y[1]+m.y[2], sense=maximize)
         m.priorities = Suffix(direction=Suffix.EXPORT)
         m.priorities[m.x] = 1
         m.priorities[m.y] = 2
-        with self.assertRaisesRegex(ValueError, "The BARON writer can not "
-                                    "export suffix with name 'priorities'."):
+        with self.assertRaisesRegex(
+                ValueError, "The BARON writer can not export suffix "
+                "with name 'priorities'. Either remove it from "
+                "the model or deactivate it."):
+            m.write(StringIO(), format='bar')
+        m._name = 'TestModel'
+        with self.assertRaisesRegex(
+                ValueError, "The BARON writer can not export suffix "
+                "with name 'priorities'. Either remove it from "
+                "the model 'TestModel' or deactivate it."):
+            m.write(StringIO(), format='bar')
+        p = m.priorities
+        del m.priorities
+        m.blk = Block()
+        m.blk.sub = Block()
+        m.blk.sub.priorities = p
+        with self.assertRaisesRegex(
+                ValueError, "The BARON writer can not export suffix "
+                "with name 'priorities'. Either remove it from "
+                "the block 'blk.sub' or deactivate it."):
             m.write(StringIO(), format='bar')
 
 
