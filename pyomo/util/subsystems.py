@@ -12,6 +12,7 @@ from pyomo.core.base.block import Block
 from pyomo.core.base.reference import Reference
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentSet, ComponentMap
+from pyomo.common.backports import nullcontext
 
 
 def create_subsystem_block(constraints, variables=None, include_fixed=False):
@@ -24,11 +25,13 @@ def create_subsystem_block(constraints, variables=None, include_fixed=False):
 
     Arguments
     ---------
-    constraints: List of Pyomo constraint data objects
-    variables: List of Pyomo var data objects
-    include_fixed: Bool indicating whether fixed variables should be
-                   attached to the block. This is useful if they may
-                   be unfixed at some point.
+    constraints: List
+        List of Pyomo constraint data objects
+    variables: List
+        List of Pyomo var data objects
+    include_fixed: Bool
+        Indicates whether fixed variables should be attached to the block.
+        This is useful if they may be unfixed at some point.
 
     Returns
     -------
@@ -52,6 +55,30 @@ def create_subsystem_block(constraints, variables=None, include_fixed=False):
     return block
 
 
+def generate_subsystem_blocks(subsystems, include_fixed=False):
+    """ Generates blocks that contain subsystems of variables and constraints.
+
+    Arguments
+    ---------
+    subsystems: List of tuples
+        Each tuple is a list of constraints then a list of variables
+        that will define a subsystem.
+    include_fixed: Bool
+        Indicates whether to add already fixed variables to the generated
+        subsystem blocks.
+
+    Yields
+    ------
+    "Subsystem blocks" containing the variables and constraints specified
+    by each entry in subsystems. Variables in the constraints that are
+    not specified are contained in the input_vars component.
+
+    """
+    for cons, vars in subsystems:
+        block = create_subsystem_block(cons, vars, include_fixed)
+        yield block, list(block.input_vars.values())
+
+
 class TemporarySubsystemManager(object):
     """ This class is a context manager for cases when we want to
     temporarily fix or deactivate certain variables or constraints
@@ -64,16 +91,18 @@ class TemporarySubsystemManager(object):
         """
         Arguments
         ---------
-        to_fix: List of var data objects that should be temporarily fixed.
-                These are restored to their original status on exit from
-                this object's context manager.
-        to_deactivate: List of constraint data objects that should be
-                       temporarily deactivated. These are restored to their
-                       original status on exit from this object's context
-                       manager.
-        to_reset: List of var data objects that should be reset to their
-                  original values on exit from this object's context
-                  context manager.
+        to_fix: List
+            List of var data objects that should be temporarily fixed.
+            These are restored to their original status on exit from
+            this object's context manager.
+        to_deactivate: List
+            List of constraint data objects that should be temporarily
+            deactivated. These are restored to their original status on
+            exit from this object's context manager.
+        to_reset: List
+            List of var data objects that should be reset to their
+            original values on exit from this object's context context
+            manager.
 
         """
         if to_fix is None:
@@ -161,16 +190,19 @@ class ParamSweeper(TemporarySubsystemManager):
         """
         Parameters
         ----------
-        n_scenario: The number of different values we expect for each
-                    input variable
-        input_values: ComponentMap mapping each input variable to a list
-                      of values of length n_scenario
-        output_values: ComponentMap mapping each output variable to a list
-                       of values of length n_scenario
-        to_fix: to_fix argument for base class
-        to_deactivate: to_deactivate argument for base class
-        to_reset: to_reset argument for base class. This list is extended
-                  with input variables.
+        n_scenario: Integer
+            The number of different values we expect for each input variable
+        input_values: ComponentMap
+            Maps each input variable to a list of values of length n_scenario
+        output_values: ComponentMap
+            Maps each output variable to a list of values of length n_scenario
+        to_fix: List
+            to_fix argument for base class
+        to_deactivate: List
+            to_deactivate argument for base class
+        to_reset: List
+            to_reset argument for base class. This list is extended with
+            input variables.
 
         """
         # Should this object be aware of the user's block/model?
@@ -183,6 +215,11 @@ class ParamSweeper(TemporarySubsystemManager):
         self._ip = -1 # Index pointer for iteration
 
         if to_reset is None:
+            # Input values will be set repeatedly by iterating over this
+            # object. Output values will presumably be altered by some
+            # solve within this context. We would like to reset these to
+            # their original values to make this functionality less
+            # intrusive.
             to_reset = list(input_values) + list(output)
         else:
             to_reset.extend(var for var in input_values)

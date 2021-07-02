@@ -83,7 +83,10 @@ def _prop_bnds_leaf_to_root_ProductExpression(node, bnds_dict, feasibility_tol):
     arg1, arg2 = node.args
     lb1, ub1 = bnds_dict[arg1]
     lb2, ub2 = bnds_dict[arg2]
-    bnds_dict[node] = interval.mul(lb1, ub1, lb2, ub2)
+    if arg1 is arg2:
+        bnds_dict[node] = interval.power(lb1, ub1, 2, 2, feasibility_tol)
+    else:
+        bnds_dict[node] = interval.mul(lb1, ub1, lb2, ub2)
 
 
 def _prop_bnds_leaf_to_root_SumExpression(node, bnds_dict, feasibility_tol):
@@ -498,8 +501,12 @@ def _prop_bnds_root_to_leaf_ProductExpression(node, bnds_dict, feasibility_tol):
     lb0, ub0 = bnds_dict[node]
     lb1, ub1 = bnds_dict[arg1]
     lb2, ub2 = bnds_dict[arg2]
-    _lb1, _ub1 = interval.div(lb0, ub0, lb2, ub2, feasibility_tol)
-    _lb2, _ub2 = interval.div(lb0, ub0, lb1, ub1, feasibility_tol)
+    if arg1 is arg2:
+        _lb1, _ub1 = interval._inverse_power1(lb0, ub0, 2, 2, orig_xl=lb1, orig_xu=ub1, feasibility_tol=feasibility_tol)
+        _lb2, _ub2 = _lb1, _ub1
+    else:
+        _lb1, _ub1 = interval.div(lb0, ub0, lb2, ub2, feasibility_tol)
+        _lb2, _ub2 = interval.div(lb0, ub0, lb1, ub1, feasibility_tol)
     if _lb1 > lb1:
         lb1 = _lb1
     if _ub1 < ub1:
@@ -1403,7 +1410,7 @@ def _fbbt_block(m, config):
     var_ubs = ComponentMap()
     n_cons = 0
     for c in m.component_data_objects(ctype=Constraint, active=True,
-                                      descend_into=True, sort=True):
+                                      descend_into=config.descend_into, sort=True):
         for v in identify_variables(c.body):
             if v not in var_to_con_map:
                 var_to_con_map[v] = list()
@@ -1428,7 +1435,7 @@ def _fbbt_block(m, config):
 
     improved_vars = ComponentSet()
     for c in m.component_data_objects(ctype=Constraint, active=True,
-                                      descend_into=True, sort=True):
+                                      descend_into=config.descend_into, sort=True):
         _new_var_bounds = _fbbt_con(c, config)
         n_fbbt += 1
         new_var_bounds.update(_new_var_bounds)
@@ -1466,7 +1473,7 @@ def _fbbt_block(m, config):
 
 
 def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, feasibility_tol=1e-8, max_iter=10,
-         improvement_tol=1e-4):
+         improvement_tol=1e-4, descend_into=True):
     """
     Perform FBBT on a constraint, block, or model. For more control,
     use _fbbt_con and _fbbt_block. For detailed documentation, see
@@ -1514,11 +1521,13 @@ def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, feasibi
     ft_config = ConfigValue(default=feasibility_tol, domain=NonNegativeFloat)
     mi_config = ConfigValue(default=max_iter, domain=NonNegativeInt)
     improvement_tol_config = ConfigValue(default=improvement_tol, domain=NonNegativeFloat)
+    descend_into_config = ConfigValue(default=descend_into)
     config.declare('deactivate_satisfied_constraints', dsc_config)
     config.declare('integer_tol', integer_tol_config)
     config.declare('feasibility_tol', ft_config)
     config.declare('max_iter', mi_config)
     config.declare('improvement_tol', improvement_tol_config)
+    config.declare('descend_into', descend_into_config)
 
     new_var_bounds = ComponentMap()
     if comp.ctype == Constraint:
