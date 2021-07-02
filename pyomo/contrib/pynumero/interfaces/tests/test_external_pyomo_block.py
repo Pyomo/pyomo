@@ -908,6 +908,4 @@ class TestExternalPyomoBlock(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    #unittest.main()
-    test = TestExternalGreyBoxBlock()
-    test.test_construct_dynamic()
+    unittest.main()
