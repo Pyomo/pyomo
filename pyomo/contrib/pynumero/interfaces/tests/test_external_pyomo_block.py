@@ -428,6 +428,21 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
         solver = pyo.SolverFactory("cyipopt")
         results = solver.solve(reduced_space)
 
+        # These values were obtained by solving this problem in the full
+        # space in a separate script.
+        h_target = [1.2, 2.0, 2.0]
+        dhdt_target = [-0.690890, 0.80, 0.0]
+        flow_in_target = [1.5, 3.628427, 2.828427]
+        flow_out_target = [2.190890, 2.828427, 2.828427]
+        for t in time:
+            if t == t0:
+                continue
+            values = [m.h[t].value, m.dhdt[t].value,
+                    m.flow_out[t].value, m.flow_in[t].value]
+            target_values = [h_target[t], dhdt_target[t],
+                    flow_out_target[t], flow_in_target[t]]
+            self.assertStructuredAlmostEqual(values, target_values, delta=1e-5)
+
 
 class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
 
