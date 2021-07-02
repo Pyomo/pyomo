@@ -326,7 +326,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
                         )
                 block[t].set_external_model(external_model)
 
-        n_inputs = 2
+        n_inputs = len(input_vars)
         def linking_constraint_rule(m, i, t):
             if t == t0:
                 return pyo.Constraint.Skip
@@ -402,7 +402,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
                         )
                 block[t].set_external_model(external_model)
 
-        n_inputs = 2
+        n_inputs = len(input_vars)
         def linking_constraint_rule(m, i, t):
             if t == t0:
                 return pyo.Constraint.Skip
@@ -426,7 +426,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
                 block[t].inputs["input_2"].set_value(m.flow_in[t].value)
 
         solver = pyo.SolverFactory("cyipopt")
-        results = solver.solve(reduced_space, tee=True)
+        results = solver.solve(reduced_space)
 
 
 class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
@@ -783,4 +783,6 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    #unittest.main()
+    test = TestExternalGreyBoxBlock()
+    test.test_optimize_dynamic()
