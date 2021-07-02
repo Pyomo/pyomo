@@ -301,6 +301,19 @@ class ExternalGreyBoxBlockData(_BlockData):
             inputs=None,
             outputs=None,
             ):
+        """
+        Parameters
+        ----------
+        external_grey_box_model: ExternalGreyBoxModel
+            The external model that will be interfaced to in this block
+        inputs: List of VarData objects
+            If provided, these VarData will be used as inputs into the
+            external model.
+        outputs: List of VarData objects
+            If provided, these VarData will be used as outputs from the
+            external model.
+
+        """
         self._ex_model = ex_model = external_grey_box_model
         if ex_model is None:
             self._input_names = self._output_names = None
@@ -321,13 +334,29 @@ class ExternalGreyBoxBlockData(_BlockData):
         if inputs is None:
             self.inputs = Var(self._input_names_set)
         else:
+            if ex_model.n_inputs() != len(inputs):
+                raise ValueError(
+                    "Dimension mismatch in provided input vars for external "
+                    "model.\nExpected %s input vars, got %s."
+                    % (ex_model.n_inputs(), len(inputs))
+                    )
             self.inputs = Reference(inputs)
 
         self._equality_constraint_names = ex_model.equality_constraint_names()
         self._output_names = ex_model.output_names()
 
         self._output_names_set = Set(initialize=self._output_names, ordered=True)
-        self.outputs = Var(self._output_names_set)
+
+        if outputs is None:
+            self.outputs = Var(self._output_names_set)
+        else:
+            if ex_model.n_outputs() != len(outputs):
+                raise ValueError(
+                    "Dimension mismatch in provided output vars for external "
+                    "model.\nExpected %s output vars, got %s."
+                    % (ex_model.n_outputs(), len(outputs))
+                    )
+            self.outputs = Reference(outputs)
 
         # call the callback so the model can set initialization, bounds, etc.
         external_grey_box_model.finalize_block_construction(self)
