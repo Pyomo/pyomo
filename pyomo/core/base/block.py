@@ -968,8 +968,8 @@ component, use the block del_component() and add_component() methods.
         #
         # Set the name and parent pointer of this component.
         #
-        val._name = name
         val._parent = weakref.ref(self)
+        val._name = name
         #
         # We want to add the temporary / implicit sets first so that
         # they get constructed before this component
