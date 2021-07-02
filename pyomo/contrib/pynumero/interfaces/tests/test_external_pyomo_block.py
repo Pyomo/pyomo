@@ -125,11 +125,11 @@ def make_dynamic_model():
 
     m.flow_coef = pyo.Param(initialize=2.0, mutable=True)
 
-    def h_diff_eqn_rule(m, t): 
+    def h_diff_eqn_rule(m, t):
         return m.dhdt[t] - (m.flow_in[t] - m.flow_out[t]) == 0
     m.h_diff_eqn = pyo.Constraint(m.time, rule=h_diff_eqn_rule)
 
-    def dhdt_disc_eqn_rule(m, t): 
+    def dhdt_disc_eqn_rule(m, t):
         if t == m.time.first():
             return pyo.Constraint.Skip
         else:
@@ -138,7 +138,7 @@ def make_dynamic_model():
             return m.dhdt[t] - delta_t*(m.h[t] - m.h[t_prev]) == 0
     m.dhdt_disc_eqn = pyo.Constraint(m.time, rule=dhdt_disc_eqn_rule)
 
-    def flow_out_eqn(m, t): 
+    def flow_out_eqn(m, t):
         return m.flow_out[t] == m.flow_coef*m.h[t]**0.5
     m.flow_out_eqn = pyo.Constraint(m.time, rule=flow_out_eqn)
 
@@ -292,6 +292,84 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
         self.assertAlmostEqual(m_ex.x.value, x.value, delta=1e-8)
         self.assertAlmostEqual(m_ex.y.value, y.value, delta=1e-8)
 
+    def test_construct_dynamic(self):
+        m = make_dynamic_model()
+        time = m.time
+        t0 = m.time.first()
+
+        inputs = [m.h, m.dhdt, m.flow_in]
+        ext_vars = [m.flow_out]
+        residuals = [m.h_diff_eqn]
+        ext_cons = [m.flow_out_eqn]
+
+        external_model_dict = {
+                t: ExternalPyomoModel(
+                    [var[t] for var in inputs],
+                    [var[t] for var in ext_vars],
+                    [con[t] for con in residuals],
+                    [con[t] for con in ext_cons],
+                    )
+                for t in time
+                }
+
+        reduced_space = pyo.Block(concrete=True)
+        reduced_space.external_block = ExternalGreyBoxBlock(
+                time,
+                external_model=external_model_dict,
+                )
+        block = reduced_space.external_block
+        block[t0].deactivate()
+        self.assertIs(type(block), IndexedExternalGreyBoxBlock)
+
+        for t in time:
+            b = block[t]
+            self.assertEqual(len(b.inputs), len(inputs))
+            self.assertEqual(len(b.outputs), 0)
+            self.assertEqual(len(b._equality_constraint_names), len(residuals))
+
+        reduced_space.diff_var = pyo.Reference(m.h)
+        reduced_space.deriv_var = pyo.Reference(m.dhdt)
+        reduced_space.input_var = pyo.Reference(m.flow_in)
+        reduced_space.disc_eqn = pyo.Reference(m.dhdt_disc_eqn)
+
+        pyomo_vars = list(reduced_space.component_data_objects(pyo.Var))
+        pyomo_cons = list(reduced_space.component_data_objects(pyo.Constraint))
+        # NOTE: Variables in the EGBB are not found by component_data_objects
+        self.assertEqual(len(pyomo_vars), len(inputs)*len(time))
+        # "Constraints" defined by the EGBB are not found either, although
+        # this is expected.
+        self.assertEqual(len(pyomo_cons), len(time)-1)
+
+        reduced_space._obj = pyo.Objective(expr=0)
+
+        # This is required to avoid a failure in the implicit function
+        # evaluation when "initializing" (?) the PNLPwGBB.
+        # Why exactly is function evaluation necessary for this
+        # initialization again?
+        block[:].inputs[:].set_value(1.0)
+
+        # This is necessary for these variables to appear in the PNLPwGBB.
+        # Otherwise they don't appear in any "real" constraints of the
+        # PyomoNLP. 
+        reduced_space.const_input_eqn = pyo.Constraint(
+            expr=reduced_space.input_var[2] - reduced_space.input_var[1] == 0
+            )
+
+        nlp = PyomoNLPWithGreyBoxBlocks(reduced_space)
+        self.assertEqual(
+                nlp.n_primals(),
+                # EGBB "inputs", dhdt, and flow_in exist for t != t0.
+                # h exists for all time.
+                (2+len(inputs))*(len(time)-1) + len(time),
+                )
+        self.assertEqual(
+                nlp.n_constraints(),
+                # EGBB equality constraints and disc_eqn exist for t != t0.
+                # const_input_eqn is a single constraint
+                (len(residuals)+1)*(len(time)-1) + 1,
+                )
+
+    @unittest.skipUnless(cyipopt_available, "cyipopt is not available")
     def test_solve_square_dynamic(self):
         # Create the "external model"
         m = make_dynamic_model()
@@ -325,7 +403,7 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
                         )
                 block[t].set_external_model(external_model)
 
-        n_inputs = 2
+        n_inputs = len(input_vars)
         def linking_constraint_rule(m, i, t):
             if t == t0:
                 return pyo.Constraint.Skip
@@ -360,6 +438,86 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
                 continue
             values = [m.h[t].value, m.dhdt[t].value, m.flow_out[t].value]
             target_values = [h_target[t], dhdt_target[t], flow_out_target[t]]
+            self.assertStructuredAlmostEqual(values, target_values, delta=1e-5)
+
+    @unittest.skipUnless(cyipopt_available, "cyipopt is not available")
+    def test_optimize_dynamic(self):
+        # Create the "external model"
+        m = make_dynamic_model()
+        time = m.time
+        t0 = m.time.first()
+        m.h[t0].fix(1.2)
+        m.flow_in[t0].fix(1.5)
+
+        m.obj = pyo.Objective(expr=sum(
+            (m.h[t] - 2.0)**2 for t in m.time if t != t0
+            ))
+
+        # Create the block that will hold the reduced space model.
+        reduced_space = pyo.Block(concrete=True)
+        reduced_space.diff_var = pyo.Reference(m.h)
+        reduced_space.deriv_var = pyo.Reference(m.dhdt)
+        reduced_space.input_var = pyo.Reference(m.flow_in)
+        reduced_space.disc_eq = pyo.Reference(m.dhdt_disc_eqn)
+        reduced_space.objective = pyo.Reference(m.obj)
+
+        reduced_space.external_block = ExternalGreyBoxBlock(time)
+        block = reduced_space.external_block
+        block[t0].deactivate()
+        for t in time:
+            # TODO: skipping time.first() necessary?
+            if t != t0:
+                input_vars = [m.h[t], m.dhdt[t], m.flow_in[t]]
+                external_vars = [m.flow_out[t]]
+                residual_cons = [m.h_diff_eqn[t]]
+                external_cons = [m.flow_out_eqn[t]]
+                external_model = ExternalPyomoModel(
+                        input_vars,
+                        external_vars,
+                        residual_cons,
+                        external_cons,
+                        )
+                block[t].set_external_model(external_model)
+
+        n_inputs = len(input_vars)
+        def linking_constraint_rule(m, i, t):
+            if t == t0:
+                return pyo.Constraint.Skip
+            if i == 0:
+                return m.diff_var[t] == m.external_block[t].inputs["input_0"]
+            elif i == 1:
+                return m.deriv_var[t] == m.external_block[t].inputs["input_1"]
+            elif i == 2:
+                return m.input_var[t] == m.external_block[t].inputs["input_2"]
+
+        reduced_space.linking_constraint = pyo.Constraint(
+                range(n_inputs),
+                time,
+                rule=linking_constraint_rule,
+                )
+        # Initialize new variables
+        for t in time:
+            if t != t0:
+                block[t].inputs["input_0"].set_value(m.h[t].value)
+                block[t].inputs["input_1"].set_value(m.dhdt[t].value)
+                block[t].inputs["input_2"].set_value(m.flow_in[t].value)
+
+        solver = pyo.SolverFactory("cyipopt")
+        results = solver.solve(reduced_space)
+
+        # These values were obtained by solving this problem in the full
+        # space in a separate script.
+        h_target = [1.2, 2.0, 2.0]
+        dhdt_target = [-0.690890, 0.80, 0.0]
+        flow_in_target = [1.5, 3.628427, 2.828427]
+        flow_out_target = [2.190890, 2.828427, 2.828427]
+        for t in time:
+            if t == t0:
+                continue
+            values = [m.h[t].value, m.dhdt[t].value,
+                    m.flow_out[t].value, m.flow_in[t].value]
+            target_values = [h_target[t], dhdt_target[t],
+                    flow_out_target[t], flow_in_target[t]]
             self.assertStructuredAlmostEqual(values, target_values, delta=1e-5)
 
 
@@ -750,4 +908,6 @@ class TestExternalPyomoBlock(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    #unittest.main()
+    test = TestExternalGreyBoxBlock()
+    test.test_construct_dynamic()

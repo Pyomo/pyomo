@@ -320,8 +320,9 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
        >>> try:
        ...     import numpy
        ...     numpy_available = True
-       ... except ImportError:
-       ...     numpy = ModuleUnavailable('numpy', 'Numpy is not available')
+       ... except ImportError as e:
+       ...     numpy = ModuleUnavailable('numpy', 'Numpy is not available',
+       ...                               '', str(e))
        ...     numpy_available = False
 
     The import can be "deferred" until the first time the code either
