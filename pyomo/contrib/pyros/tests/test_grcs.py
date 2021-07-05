@@ -1495,6 +1495,7 @@ class RegressionTest(unittest.TestCase):
         config.decision_rule_order = 1
         config.objective_focus = ObjectiveType.nominal
         config.global_solver = SolverFactory('baron')
+        config.uncertain_params = m.working_model.util.uncertain_params
         config.tee = False
 
         add_decision_rule_variables(model_data=m, config=config)
@@ -1510,6 +1511,8 @@ class RegressionTest(unittest.TestCase):
         master.obj = Objective(expr=master.scenarios[0, 0].second_stage_objective)
         master_data = MasterProblemData()
         master_data.master_model = master
+        master_data.master_model.const_efficiency_applied = False
+        master_data.master_model.linear_efficiency_applied = False
         results = minimize_dr_vars(model_data=master_data, config=config)
 
         self.assertEqual(results.solver.termination_condition, TerminationCondition.optimal,

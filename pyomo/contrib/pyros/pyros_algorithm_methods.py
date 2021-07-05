@@ -175,9 +175,6 @@ def ROSolver_iterative_solve(model_data, config):
         if (
             # === Decision rule polishing (do not polish on first iteration if no ssv or if decision_rule_order = 0)
             (config.decision_rule_order != 0 and len(config.second_stage_variables) > 0 and k != 0)
-            # AND if we haven't applied higher order efficiencies at k > 0
-            # (see higher_order_decision_rule_efficiency in master_problem_methods)
-            and not (config.decision_rule_order == 2 and k <= len(config.uncertain_params))
         ):
             # === Save initial values of DR vars to file
             for varslist in master_data.master_model.scenarios[0,0].util.decision_rule_vars:
@@ -193,7 +190,6 @@ def ROSolver_iterative_solve(model_data, config):
             for varslist in master_data.master_model.scenarios[0,0].util.decision_rule_vars:
                 vals = []
                 for dvar in varslist.values():
-
                     vals.append(dvar.value)
                 dr_var_lists_polished.append(vals)
 

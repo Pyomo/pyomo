@@ -114,10 +114,10 @@ def minimize_dr_vars(model_data, config):
             for j in range(len(this_iter.util.decision_rule_vars[i])):
                 if j == 0:
                     cons.add(-tau[j] <= this_iter.util.decision_rule_vars[i][j])
-                    cons.add(this_iter.util.decision_rule_vars[i][j] >= tau[j])
+                    cons.add(this_iter.util.decision_rule_vars[i][j] <= tau[j])
                 else:
                     cons.add(-tau[j] <= this_iter.util.decision_rule_vars[i][j] * uncertain_params[j - 1])
-                    cons.add(this_iter.util.decision_rule_vars[i][j] * uncertain_params[j - 1] >= tau[j])
+                    cons.add(this_iter.util.decision_rule_vars[i][j] * uncertain_params[j - 1] <= tau[j])
     elif config.decision_rule_order == 2:
         l = list(range(len(uncertain_params)))
         index_pairs = list(it.combinations(l, 2))
@@ -151,15 +151,40 @@ def minimize_dr_vars(model_data, config):
         d.fix()
 
     # === Unfix DR vars
-    for d in decision_rule_vars:
-        d.unfix()
+    num_dr_vars = len(model.scenarios[0, 0].util.decision_rule_vars[0])  # there is at least one dr var
+    num_uncertain_params = len(config.uncertain_params)
+
+    if model.const_efficiency_applied:
+        for d in decision_rule_vars:
+            for i in range(1, num_dr_vars):
+                d[i].fix(0)
+                d[0].unfix()
+    elif model.linear_efficiency_applied:
+        for d in decision_rule_vars:
+            d.unfix()
+            for i in range(num_uncertain_params + 1, num_dr_vars):
+                d[i].fix(0)
+    else:
+        for d in decision_rule_vars:
+            d.unfix()
 
     # === Unfix all control var values
     for block in polishing_model.scenarios.values():
         for c in block.util.second_stage_variables:
             c.unfix()
-        for d in block.util.decision_rule_vars:
-            d.unfix()
+        if model.const_efficiency_applied:
+            for d in block.util.decision_rule_vars:
+                for i in range(1, num_dr_vars):
+                    d[i].fix(0)
+                    d[0].unfix()
+        elif model.linear_efficiency_applied:
+            for d in block.util.decision_rule_vars:
+                d.unfix()
+                for i in range(num_uncertain_params + 1, num_dr_vars):
+                    d[i].fix(0)
+        else:
+            for d in block.util.decision_rule_vars:
+                d.unfix()
 
     # === Solve the polishing model
     polish_soln = MasterResult()
@@ -169,9 +194,8 @@ def minimize_dr_vars(model_data, config):
         raise RuntimeError("NLP solver %s is not available." %
                            config.solver)
     try:
-        results = solver.solve(polishing_model, tee=config.tee)
+        results = solver.solve(polishing_model, tee=False)
         polish_soln.termination_condition = results.solver.termination_condition
-
     except ValueError as err:
         polish_soln.grcs_termination_condition = grcsTerminationCondition.subsolver_error
         polish_soln.termination_condition = tc.error
@@ -245,13 +269,17 @@ def higher_order_decision_rule_efficiency(config, model_data):
             dr_var.unfix()
         num_dr_vars = len(nlp_model.scenarios[0, 0].util.decision_rule_vars[0])  # there is at least one dr var
         num_uncertain_params = len(config.uncertain_params)
+        nlp_model.const_efficiency_applied = False
+        nlp_model.linear_efficiency_applied = False
         if model_data.iteration == 0:
+            nlp_model.const_efficiency_applied = True
             for dr_var in nlp_model.scenarios[0, 0].util.decision_rule_vars:
                 for i in range(1, num_dr_vars):
                     dr_var[i].fix(0)
-        if model_data.iteration <= num_uncertain_params:
+        elif model_data.iteration <= num_uncertain_params:
             for dr_var in nlp_model.scenarios[0, 0].util.decision_rule_vars:
                 for i in range(num_uncertain_params + 1, num_dr_vars):
+                    nlp_model.linear_efficiency_applied = True
                     dr_var[i].fix(0)
     return
 
