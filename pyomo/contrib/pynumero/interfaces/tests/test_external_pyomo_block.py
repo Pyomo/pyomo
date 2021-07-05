@@ -42,6 +42,9 @@ from pyomo.contrib.pynumero.interfaces.external_grey_box import (
 from pyomo.contrib.pynumero.interfaces.pyomo_grey_box_nlp import (
     PyomoNLPWithGreyBoxBlocks,
 )
+from pyomo.contrib.pynumero.interfaces.tests.external_grey_box_models import (
+    PressureDropTwoOutputsWithHessian,
+)
 
 if not pyo.SolverFactory("ipopt").available():
     raise unittest.SkipTest(
@@ -880,11 +883,71 @@ class TestExternalGreyBoxBlock(unittest.TestCase):
     as inputs and outputs
     """
 
+    def _create_pressure_drop_model(self):
+        """
+        Create a Pyomo model with pure ExternalGreyBoxModel embedded.
+        """
+        m = pyo.ConcreteModel()
+
+        # Create variables that the external block will use
+        m.Pin = pyo.Var()
+        m.c = pyo.Var()
+        m.F = pyo.Var()
+        m.P2 = pyo.Var()
+        m.Pout = pyo.Var()
+
+        # Create some random constraints and objective. These variables
+        # need to appear somewhere other than the external block.
+        m.Pin_con = pyo.Constraint(expr=m.Pin == 5.0)
+        m.c_con = pyo.Constraint(expr=m.c == 1.0)
+        m.F_con = pyo.Constraint(expr=m.F == 10.0)
+        m.P2_con = pyo.Constraint(expr=m.P2 <= 5.0)
+        m.obj = pyo.Objective(expr=(m.Pout - 3.0)**2)
+
+        cons = [m.c_con, m.F_con, m.Pin_con, m.P2_con]
+        inputs = [m.Pin, m.c, m.F]
+        outputs = [m.P2, m.Pout]
+
+        # This is "model 3" from the external_grey_box_models.py file.
+        ex_model = PressureDropTwoOutputsWithHessian()
+        m.egb = ExternalGreyBoxBlock()
+        m.egb.set_external_model(
+                ex_model,
+                inputs=inputs,
+                outputs=outputs,
+                )
+        return m
+
     def test_pressure_drop_model(self):
-        """
-        Test using an ExternalGreyBoxModel
-        """
-        pass
+        m = self._create_pressure_drop_model()
+
+        cons = [m.c_con, m.F_con, m.Pin_con, m.P2_con]
+        inputs = [m.Pin, m.c, m.F]
+        outputs = [m.P2, m.Pout]
+
+        pyomo_variables = list(m.component_data_objects(pyo.Var))
+        pyomo_constraints = list(m.component_data_objects(pyo.Constraint))
+
+        # The references to inputs and outputs are not picked up twice,
+        # as EGBB does not have ctype Block
+        self.assertEqual(len(pyomo_variables), len(inputs)+len(outputs))
+        self.assertEqual(len(pyomo_constraints), len(cons))
+
+        # Test the inputs and outputs attributes on egb
+        self.assertIs(m.egb.inputs.ctype, pyo.Var)
+        self.assertIs(m.egb.outputs.ctype, pyo.Var)
+
+        self.assertEqual(len(m.egb.inputs), len(inputs))
+        self.assertEqual(len(m.egb.outputs), len(outputs))
+
+        for i in range(len(inputs)):
+            self.assertIs(inputs[i], m.egb.inputs[i])
+        for i in range(len(outputs)):
+            self.assertIs(outputs[i], m.egb.outputs[i])
+
+    def test_pressure_drop_model_nlp(self):
+        m = self._create_pressure_drop_model()
+        nlp = PyomoNLPWithGreyBoxBlocks(m)
 
     def test_set_inputs(self):
         m = pyo.ConcreteModel()
