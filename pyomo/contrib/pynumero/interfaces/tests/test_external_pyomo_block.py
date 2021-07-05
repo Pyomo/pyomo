@@ -874,7 +874,17 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
             self.assertAlmostEqual(rcd_dict[i, j], val, delta=1e-8)
 
 
-class TestExternalPyomoBlock(unittest.TestCase):
+class TestExternalGreyBoxBlock(unittest.TestCase):
+    """
+    Tests for ExternalGreyBoxBlock with existing variables used
+    as inputs and outputs
+    """
+
+    def test_pressure_drop_model(self):
+        """
+        Test using an ExternalGreyBoxModel
+        """
+        pass
 
     def test_set_inputs(self):
         m = pyo.ConcreteModel()
