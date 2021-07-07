@@ -339,6 +339,62 @@ class PathList(Path):
             return [ super(PathList, self).__call__(data) ]
 
 
+class DynamicImplicitDomain(object):
+    """Implicit domain that can return a custom domain based on the key.
+
+    This provides a mechanism for managing plugin-like systems, where
+    the key specifies a source for additional configuration information.
+    For example, given the plugin module,
+    ``pyomo/common/tests/config_plugin.py``:
+
+    .. literalinclude:: /../../pyomo/common/tests/config_plugin.py
+       :lines: 10-
+
+    .. doctest::
+       :hide:
+
+       >>> import importlib
+       >>> import pyomo.common.fileutils
+       >>> from pyomo.common.config import ConfigDict, DynamicImplicitDomain
+
+    .. doctest::
+
+       >>> def _pluginImporter(name, config):
+       ...     mod = importlib.import_module(name)
+       ...     return mod.get_configuration(config)
+       >>> config = ConfigDict()
+       >>> config.declare('plugins', ConfigDict(
+       ...     implicit=True,
+       ...     implicit_domain=DynamicImplicitDomain(_pluginImporter)))
+       <pyomo.common.config.ConfigDict object at ...>
+       >>> config.plugins['pyomo.common.tests.config_plugin'] = {'key1': 5}
+       >>> config.display()
+       plugins:
+         pyomo.common.tests.config_plugin:
+           key1: 5
+           key2: '5'
+
+    .. note::
+
+       This initializer is only useful for the :py:class:`ConfigDict`
+       ``implicit_domain`` argument (and not for "regular" ``domain``
+       arguments)
+
+    Parameters
+    ----------
+    callback: Callable[[str, object], ConfigBase]
+        A callable (function) that is passed the ConfigDict key and
+        value, and is expected to returnt the appropriate Config object
+        (ConfigValue, ConfigList, or ConfigDict)
+
+    """
+    def __init__(self, callback):
+        self.callback = callback
+
+    def __call__(self, key, value):
+        return self.callback(key, value)
+
+
 def add_docstring_list(docstring, configdict, indent_by=4):
     """Returns the docstring with a formatted configuration arguments listing."""
     return docstring + (" " * indent_by).join(
@@ -1753,7 +1809,9 @@ class ConfigDict(ConfigBase):
         self._decl_order = []
         self._declared = set()
         self._implicit_declaration = implicit
-        if implicit_domain is None or isinstance(implicit_domain, ConfigBase):
+        if ( implicit_domain is None
+             or type(implicit_domain) is DynamicImplicitDomain
+             or isinstance(implicit_domain, ConfigBase) ):
             self._implicit_domain = implicit_domain
         else:
             self._implicit_domain = ConfigValue(None, domain=implicit_domain)
@@ -1791,7 +1849,10 @@ class ConfigDict(ConfigBase):
         if default is NoArgumentGiven:
             return None
         if self._implicit_domain is not None:
-            return self._implicit_domain(default)
+            if type(self._implicit_domain) is DynamicImplicitDomain:
+                return self._implicit_domain(key, default)
+            else:
+                return self._implicit_domain(default)
         else:
             return ConfigValue(default)
 
@@ -1900,10 +1961,6 @@ class ConfigDict(ConfigBase):
             raise ValueError(
                 "duplicate config '%s' defined for ConfigDict '%s'" %
                 (name, self.name(True)))
-        if '.' in name or '[' in name or ']' in name:
-            raise ValueError(
-                "Illegal character in config '%s' for ConfigDict '%s': "
-                "'.[]' are not allowed." % (name, self.name(True)))
         self._data[_name] = config
         self._decl_order.append(_name)
         config._parent = self
@@ -1941,6 +1998,8 @@ class ConfigDict(ConfigBase):
                 ans = self._add(name, config)
             else:
                 ans = self._add(name, ConfigValue(config))
+        elif type(self._implicit_domain) is DynamicImplicitDomain:
+            ans = self._add(name, self._implicit_domain(name, config))
         else:
             ans = self._add(name, self._implicit_domain(config))
         ans._userSet = True
