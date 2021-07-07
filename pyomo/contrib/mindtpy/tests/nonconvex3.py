@@ -18,7 +18,7 @@ class Nonconvex3(ConcreteModel):
         """Create the problem."""
         kwargs.setdefault('name', 'Nonconvex3')
         super(Nonconvex3, self).__init__(*args, **kwargs)
-        model = m = self
+        m = self
 
         m.x1 = Var(within=Reals, bounds=(1, 5))
         m.x2 = Var(within=Reals, bounds=(1, 5))

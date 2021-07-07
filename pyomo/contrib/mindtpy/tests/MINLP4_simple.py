@@ -26,7 +26,7 @@ class SimpleMINLP4(ConcreteModel):
         """Create the problem."""
         kwargs.setdefault('name', 'SimpleMINLP4')
         super(SimpleMINLP4, self).__init__(*args, **kwargs)
-        model = m = self
+        m = self
 
         m.x = Var(domain=Reals, bounds=(1, 20), initialize=5.29)
         m.y = Var(domain=Integers, bounds=(1, 20), initialize=3)

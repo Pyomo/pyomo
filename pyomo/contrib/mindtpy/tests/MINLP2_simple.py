@@ -46,7 +46,7 @@ class SimpleMINLP(ConcreteModel):
         """Create the problem."""
         kwargs.setdefault('name', 'DuranEx1')
         super(SimpleMINLP, self).__init__(*args, **kwargs)
-        model = m = self
+        m = self
 
         """Set declarations"""
         I = m.I = RangeSet(1, 4, doc='continuous variables')

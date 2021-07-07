@@ -25,7 +25,7 @@ class Feasibility_Pump2(ConcreteModel):
         """Create the problem."""
         kwargs.setdefault('name', 'Feasibility_Pump2')
         super(Feasibility_Pump2, self).__init__(*args, **kwargs)
-        model = m = self
+        m = self
 
         m.x = Var(within=Binary)
         m.y = Var(within=Reals)
@@ -34,4 +34,4 @@ class Feasibility_Pump2(ConcreteModel):
 
         m.c1 = Constraint(expr=m.y - sin(m.x * pi * (5 / 3)) <= 0)
         m.c2 = Constraint(expr=- m.y - sin(m.x * pi * (5 / 3)) <= 0)
-        model.optimal_value = 0
+        m.optimal_value = 0

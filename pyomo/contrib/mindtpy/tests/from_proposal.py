@@ -14,7 +14,7 @@ class ProposalModel(ConcreteModel):
         """Create the problem."""
         kwargs.setdefault('name', 'DavidProposalExample')
         super(ProposalModel, self).__init__(*args, **kwargs)
-        model = m = self
+        m = self
 
         m.x = Var(domain=Reals, bounds=(0, 20), initialize=1)
         m.y = Var(domain=Integers, bounds=(0, 20), initialize=4)

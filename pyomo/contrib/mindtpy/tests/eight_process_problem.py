@@ -35,7 +35,7 @@ class EightProcessFlowsheet(ConcreteModel):
         """Create the flowsheet."""
         kwargs.setdefault('name', 'DuranEx3')
         super(EightProcessFlowsheet, self).__init__(*args, **kwargs)
-        model = m = self
+        m = self
 
         """Set declarations"""
         I = m.I = RangeSet(2, 25, doc='process streams')
