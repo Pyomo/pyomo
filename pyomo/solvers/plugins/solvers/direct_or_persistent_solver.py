@@ -95,9 +95,6 @@ class DirectOrPersistentSolver(OptSolver):
         self._version = None
         """The version of the solver."""
 
-        self._version_major = None
-        """The major version of the solver. For example, if using Gurobi 7.0.2, then _version_major is 7."""
-
         self._symbolic_solver_labels = False
         """A bool. If true then the solver components will be given names corresponding to the pyomo component names."""
 
@@ -296,7 +293,7 @@ class DirectOrPersistentSolver(OptSolver):
             raise ApplicationError(
                 "No Python bindings available for %s solver plugin"
                 % (type(self),))
-        return _api
+        return bool(_api)
 
     def _get_version(self):
         if self._version is None:

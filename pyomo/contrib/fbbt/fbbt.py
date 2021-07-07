@@ -19,7 +19,7 @@ from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 from pyomo.gdp import Disjunct
-from pyomo.core.base.expression import _GeneralExpressionData, SimpleExpression
+from pyomo.core.base.expression import _GeneralExpressionData, ScalarExpression
 import logging
 from pyomo.common.errors import InfeasibleConstraintException, PyomoException
 from pyomo.common.config import ConfigBlock, ConfigValue, In, NonNegativeFloat, NonNegativeInt
@@ -106,6 +106,19 @@ def _prop_bnds_leaf_to_root_SumExpression(node, bnds_dict, feasibility_tol):
         arg = node.arg(i)
         lb2, ub2 = bnds_dict[arg]
         lb, ub = interval.add(lb, ub, lb2, ub2)
+    bnds_dict[node] = (lb, ub)
+
+
+def _prop_bnds_leaf_to_root_LinearExpression(node: numeric_expr.LinearExpression, bnds_dict, feasibility_tol):
+    """
+    This is very similar to sum expression
+    """
+    lb, ub = bnds_dict[node.constant]
+    for coef, v in zip(node.linear_coefs, node.linear_vars):
+        coef_bnds = bnds_dict[coef]
+        v_bnds = bnds_dict[v]
+        term_bounds = interval.mul(*coef_bnds, *v_bnds)
+        lb, ub = interval.add(lb, ub, *term_bounds)
     bnds_dict[node] = (lb, ub)
 
 
@@ -452,6 +465,7 @@ _prop_bnds_leaf_to_root_map[numeric_expr.SumExpression] = _prop_bnds_leaf_to_roo
 _prop_bnds_leaf_to_root_map[numeric_expr.MonomialTermExpression] = _prop_bnds_leaf_to_root_ProductExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.NegationExpression] = _prop_bnds_leaf_to_root_NegationExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.UnaryFunctionExpression] = _prop_bnds_leaf_to_root_UnaryFunctionExpression
+_prop_bnds_leaf_to_root_map[numeric_expr.LinearExpression] = _prop_bnds_leaf_to_root_LinearExpression
 
 _prop_bnds_leaf_to_root_map[numeric_expr.NPV_ProductExpression] = _prop_bnds_leaf_to_root_ProductExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.NPV_DivisionExpression] = _prop_bnds_leaf_to_root_DivisionExpression
@@ -462,7 +476,7 @@ _prop_bnds_leaf_to_root_map[numeric_expr.NPV_NegationExpression] = _prop_bnds_le
 _prop_bnds_leaf_to_root_map[numeric_expr.NPV_UnaryFunctionExpression] = _prop_bnds_leaf_to_root_UnaryFunctionExpression
 
 _prop_bnds_leaf_to_root_map[_GeneralExpressionData] = _prop_bnds_leaf_to_root_GeneralExpression
-_prop_bnds_leaf_to_root_map[SimpleExpression] = _prop_bnds_leaf_to_root_GeneralExpression
+_prop_bnds_leaf_to_root_map[ScalarExpression] = _prop_bnds_leaf_to_root_GeneralExpression
 
 
 def _prop_bnds_root_to_leaf_ProductExpression(node, bnds_dict, feasibility_tol):
@@ -571,6 +585,49 @@ def _prop_bnds_root_to_leaf_SumExpression(node, bnds_dict, feasibility_tol):
     if _ub < ub:
         ub = _ub
     bnds_dict[node.arg(0)] = (lb, ub)
+
+
+def _prop_bnds_root_to_leaf_LinearExpression(node: numeric_expr.LinearExpression,
+                                             bnds_dict: ComponentMap,
+                                             feasibility_tol: float):
+    """
+    This is very similar to SumExpression.
+    """
+    # first accumulate bounds
+    accumulated_bounds = list()
+    accumulated_bounds.append(bnds_dict[node.constant])
+    lb0, ub0 = bnds_dict[node]
+    for coef, v in zip(node.linear_coefs, node.linear_vars):
+        _lb0, _ub0 = accumulated_bounds[-1]
+        _lb_coef, _ub_coef = bnds_dict[coef]
+        _lb_v, _ub_v = bnds_dict[v]
+        _lb_term, _ub_term = interval.mul(_lb_coef, _ub_coef, _lb_v, _ub_v)
+        accumulated_bounds.append(interval.add(_lb0, _ub0, _lb_term, _ub_term))
+    if lb0 > accumulated_bounds[-1][0]:
+        accumulated_bounds[-1] = (lb0, accumulated_bounds[-1][1])
+    if ub0 < accumulated_bounds[-1][1]:
+        accumulated_bounds[-1] = (accumulated_bounds[-1][0], ub0)
+
+    for i in reversed(range(len(node.linear_coefs))):
+        lb0, ub0 = accumulated_bounds[i + 1]
+        lb1, ub1 = accumulated_bounds[i]
+        coef = node.linear_coefs[i]
+        v = node.linear_vars[i]
+        coef_bnds = bnds_dict[coef]
+        v_bnds = bnds_dict[v]
+        lb2, ub2 = interval.mul(*coef_bnds, *v_bnds)
+        _lb1, _ub1 = interval.sub(lb0, ub0, lb2, ub2)
+        _lb2, _ub2 = interval.sub(lb0, ub0, lb1, ub1)
+        if _lb1 > lb1:
+            lb1 = _lb1
+        if _ub1 < ub1:
+            ub1 = _ub1
+        if _lb2 > lb2:
+            lb2 = _lb2
+        if _ub2 < ub2:
+            ub2 = _ub2
+        accumulated_bounds[i] = (lb1, ub1)
+        bnds_dict[v] = interval.div(lb2, ub2, *coef_bnds, feasibility_tol=feasibility_tol)
 
 
 def _prop_bnds_root_to_leaf_DivisionExpression(node, bnds_dict, feasibility_tol):
@@ -1019,6 +1076,7 @@ _prop_bnds_root_to_leaf_map[numeric_expr.SumExpression] = _prop_bnds_root_to_lea
 _prop_bnds_root_to_leaf_map[numeric_expr.MonomialTermExpression] = _prop_bnds_root_to_leaf_ProductExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.NegationExpression] = _prop_bnds_root_to_leaf_NegationExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.UnaryFunctionExpression] = _prop_bnds_root_to_leaf_UnaryFunctionExpression
+_prop_bnds_root_to_leaf_map[numeric_expr.LinearExpression] = _prop_bnds_root_to_leaf_LinearExpression
 
 _prop_bnds_root_to_leaf_map[numeric_expr.NPV_ProductExpression] = _prop_bnds_root_to_leaf_ProductExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.NPV_DivisionExpression] = _prop_bnds_root_to_leaf_DivisionExpression
@@ -1029,7 +1087,7 @@ _prop_bnds_root_to_leaf_map[numeric_expr.NPV_NegationExpression] = _prop_bnds_ro
 _prop_bnds_root_to_leaf_map[numeric_expr.NPV_UnaryFunctionExpression] = _prop_bnds_root_to_leaf_UnaryFunctionExpression
 
 _prop_bnds_root_to_leaf_map[_GeneralExpressionData] = _prop_bnds_root_to_leaf_GeneralExpression
-_prop_bnds_root_to_leaf_map[SimpleExpression] = _prop_bnds_root_to_leaf_GeneralExpression
+_prop_bnds_root_to_leaf_map[ScalarExpression] = _prop_bnds_root_to_leaf_GeneralExpression
 
 
 def _check_and_reset_bounds(var, lb, ub):
@@ -1084,6 +1142,8 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
             return True, None
 
         if node.is_variable_type():
+            if node in self.bnds_dict:
+                return True, None
             if node.is_fixed():
                 lb = value(node.value)
                 ub = lb
@@ -1097,6 +1157,17 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
                 if lb - self.feasibility_tol > ub:
                     raise InfeasibleConstraintException('Variable has a lower bound which is larger than its upper bound: {0}'.format(str(node)))
             self.bnds_dict[node] = (lb, ub)
+            return True, None
+
+        if node.__class__ is numeric_expr.LinearExpression:
+            const_val = value(node.constant)
+            self.bnds_dict[node.constant] = (const_val, const_val)
+            for coef in node.linear_coefs:
+                coef_val = value(coef)
+                self.bnds_dict[coef] = (coef_val, coef_val)
+            for v in node.linear_vars:
+                self.visiting_potential_leaf(v)
+            _prop_bnds_leaf_to_root_LinearExpression(node, self.bnds_dict, self.feasibility_tol)
             return True, None
 
         if not node.is_expression_type():
@@ -1193,6 +1264,12 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
                 node.setlb(lb)
             if ub != interval.inf:
                 node.setub(ub)
+            return True, None
+
+        if node.__class__ is numeric_expr.LinearExpression:
+            _prop_bnds_root_to_leaf_LinearExpression(node, self.bnds_dict, self.feasibility_tol)
+            for v in node.linear_vars:
+                self.visiting_potential_leaf(v)
             return True, None
 
         if not node.is_expression_type():

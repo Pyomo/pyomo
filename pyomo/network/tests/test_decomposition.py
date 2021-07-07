@@ -14,13 +14,15 @@
 import pyomo.common.unittest as unittest
 
 from pyomo.common.dependencies import numpy_available, networkx_available
-from pyomo.environ import SolverFactory, value, ConcreteModel, Set, Block, Var, TransformationFactory, Reference
+from pyomo.environ import SolverFactory, value, ConcreteModel, Set, Block, Var, TransformationFactory, Reference, Constraint
 from pyomo.network import Port, SequentialDecomposition, Arc
+from pyomo.gdp.tests.models import makeExpandedNetworkDisjunction
 from types import MethodType
 
 import_available = numpy_available and networkx_available
 
-gams_available = SolverFactory('gams').available(exception_flag=False)
+glpk_available = SolverFactory('glpk').available(exception_flag=False)
+ipopt_available = SolverFactory('ipopt').available(exception_flag=False)
 
 @unittest.skipIf(not import_available, "numpy or networkx not available")
 class TestSequentialDecomposition(unittest.TestCase):
@@ -187,9 +189,9 @@ class TestSequentialDecomposition(unittest.TestCase):
                         self.expr_var_idx_in_side_2[i])
             self.expr_var_out.value = \
                 value(self.expr_var_in_side_1 + self.expr_var_in_side_2)
-            assert self.temperature_in_side_1 == self.temperature_in_side_2
+            assert self.temperature_in_side_1.value == self.temperature_in_side_2.value
             self.temperature_out.value = value(self.temperature_in_side_1)
-            assert self.pressure_in_side_1 == self.pressure_in_side_2
+            assert self.pressure_in_side_1.value == self.pressure_in_side_2.value
             self.pressure_out.value = value(self.pressure_in_side_1)
 
         m.mixer.initialize = MethodType(initialize_mixer, m.mixer)
@@ -707,7 +709,7 @@ class TestSequentialDecomposition(unittest.TestCase):
     def test_extensive_recycle_wegstein_rel(self):
         self.extensive_recycle_run(tear_method="Wegstein", tol_type="rel")
 
-    @unittest.skipIf(not gams_available, "GAMS solver not available")
+    @unittest.skipIf(not glpk_available, "GLPK solver not available")
     def test_tear_selection(self):
         m = self.simple_recycle_model()
         seq = SequentialDecomposition()
@@ -724,13 +726,13 @@ class TestSequentialDecomposition(unittest.TestCase):
                 m.stream_splitter_to_mixer):
             self.assertIn([arc], all_tsets)
 
-        tset_mip = seq.tear_set_arcs(G, "mip", solver="gams")
+        tset_mip = seq.tear_set_arcs(G, "mip", solver="glpk")
         self.assertIn(tset_mip, all_tsets)
 
         tset_heu = seq.tear_set_arcs(G, "heuristic")
         self.assertIn(tset_heu, all_tsets)
 
-    @unittest.skipIf(not gams_available, "GAMS solver not available")
+    @unittest.skipIf(not glpk_available, "GLPK solver not available")
     def test_select_tear_in_run(self):
         m = self.simple_recycle_model()
 
@@ -755,15 +757,42 @@ class TestSequentialDecomposition(unittest.TestCase):
         # we shouldn't need to know which streams are torn since everything
         # should already have values set so we don't need guesses, but we
         # just make sure it is able to select a tear set on its own
-        seq = SequentialDecomposition(tear_solver="gams",
+        seq = SequentialDecomposition(tear_solver="glpk",
             select_tear_method="mip")
         seq.run(m, function)
         self.check_recycle_model(m)
 
-        seq = SequentialDecomposition(tear_solver="gams",
+        seq = SequentialDecomposition(tear_solver="glpk",
             select_tear_method="heuristic")
         seq.run(m, function)
         self.check_recycle_model(m)
+
+    def _test_disjuncts(self, blue_on=True):
+        m = makeExpandedNetworkDisjunction()
+        if blue_on:
+            m.blue.indicator_var.fix(1)
+            m.orange.indicator_var.fix(0)
+        else:
+            m.blue.indicator_var.fix(0)
+            m.orange.indicator_var.fix(1)
+        TransformationFactory('gdp.fix_disjuncts').apply_to(m)
+
+        def initializer(blk):
+            for _ in blk.component_data_objects(Constraint, active=True):
+                SolverFactory("ipopt").solve(blk)
+                break
+
+        seq = SequentialDecomposition(select_tear_method="heuristic", default_guess=0.5)
+        seq.run(m, initializer)
+        if blue_on:
+            self.assertAlmostEqual( value(m.dest.x), 0.84)
+        else:
+            self.assertAlmostEqual( value(m.dest.x), 0.42)
+
+    @unittest.skipIf(not ipopt_available, "ipopt solver not available")
+    def test_fixed_disjuncts(self):
+        self._test_disjuncts(True)
+        self._test_disjuncts(False)
 
 if __name__ == "__main__":
     unittest.main()

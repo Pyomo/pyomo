@@ -1,4 +1,4 @@
-from pyutilib.services import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.contrib.appsi.base import PersistentSolver, Results, TerminationCondition, MIPSolverConfig
 from pyomo.contrib.appsi.writers import LPWriter
 import logging

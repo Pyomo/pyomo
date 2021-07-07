@@ -33,8 +33,9 @@ expensive_problems = ['piecewise_multi_vararray', \
 
 
 testing_solvers = {}
+testing_solvers['gurobi','lp'] = False
 #testing_solvers['cplex','lp'] = False
-testing_solvers['cplex','nl'] = False
+#testing_solvers['cplex','nl'] = False
 #testing_solvers['ipopt','nl'] = False
 #testing_solvers['cplex','python'] = False
 #testing_solvers['_cplex_persistent','python'] = False
@@ -68,7 +69,7 @@ def createTestMethod(pName,problem,solver,writer,kwds):
                                                                descend_into=False))
         baseline_results = getattr(obj,problem+'_results')
         for name, value in new_results:
-            if abs(baseline_results[name]-value) > 0.00001:
+            if abs(baseline_results[name]-value) > 0.0001:
                 raise IOError("Difference in baseline solution values and "
                               "current solution values using:\n" + \
                 "Solver: "+solver+"\n" + \

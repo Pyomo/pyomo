@@ -243,9 +243,20 @@ texinfo_documents = [
 
 # -- Check which conditional dependencies are available ------------------
 # Used for skipping certain doctests
+from sphinx.ext.doctest import doctest
+doctest_default_flags = (
+    doctest.ELLIPSIS + doctest.NORMALIZE_WHITESPACE +
+    doctest.IGNORE_EXCEPTION_DETAIL + doctest.DONT_ACCEPT_TRUE_FOR_1
+)
+class IgnoreResultOutputChecker(doctest.OutputChecker):
+    IGNORE_RESULT = doctest.register_optionflag('IGNORE_RESULT')
+    def check_output(self, want, got, optionflags):
+        if optionflags & self.IGNORE_RESULT:
+            return True
+        return super().check_output(want, got, optionflags)
+doctest.OutputChecker = IgnoreResultOutputChecker
 
 doctest_global_setup = '''
-
 from pyomo.common.dependencies import (
     attempt_import, numpy_available, scipy_available, pandas_available,
     yaml_available, networkx_available, matplotlib_available,

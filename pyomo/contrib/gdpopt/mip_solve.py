@@ -59,7 +59,8 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
             mip_result.pyomo_results = SolverResults()
             mip_result.pyomo_results.solver.termination_condition = tc.error
             mip_result.disjunct_values = list(
-                disj.indicator_var.value for disj in GDPopt.disjunct_list)
+                disj.binary_indicator_var.value
+                for disj in GDPopt.disjunct_list)
             return mip_result
 
     # Deactivate extraneous IMPORT/EXPORT suffixes
@@ -97,7 +98,8 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
             mip_result.pyomo_results = SolverResults()
             mip_result.pyomo_results.solver.termination_condition = tc.error
             mip_result.disjunct_values = list(
-                disj.indicator_var.value for disj in GDPopt.disjunct_list)
+                disj.binary_indicator_var.value
+                for disj in GDPopt.disjunct_list)
             return mip_result
         else:
             raise
@@ -131,7 +133,7 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
     mip_result.var_values = list(v.value for v in GDPopt.variable_list)
     mip_result.pyomo_results = results
     mip_result.disjunct_values = list(
-        disj.indicator_var.value for disj in GDPopt.disjunct_list)
+        disj.binary_indicator_var.value for disj in GDPopt.disjunct_list)
 
     if terminate_cond in {tc.optimal, tc.locallyOptimal, tc.feasible}:
         pass
