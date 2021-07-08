@@ -465,6 +465,11 @@ class TestConfigDomains(unittest.TestCase):
         self.assertIsNot(test.fast, test2.fast)
         self.assertEqual(test.value(), test2.value())
 
+        self.assertEqual(len(test2), 2)
+        fit = test2.get('fit', {})
+        self.assertEqual(len(test2), 3)
+        self.assertEqual(fit.value(), {'option_f': 2, 'option_i': 1})
+
         with self.assertRaisesRegex(ValueError, "invalid key: fail"):
             test = cfg({'hi': {'option_i': 10},
                         'fast': {'option_f': 20},
