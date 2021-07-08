@@ -324,33 +324,85 @@ class TestBookExamples(unittest.TestCase):
 
     def compare_files(self, out_file, base_file):
         try:
-            self.assertTrue(cmp(out_file, base_file),
-                            msg="Files %s and %s differ" % (out_file, base_file))
-        except:
-            with open(out_file, 'r') as f1, open(base_file, 'r') as f2:
-                out_file_contents = f1.read()
-                base_file_contents = f2.read()
+            self.assertTrue(
+                cmp(out_file, base_file),
+                msg="Files %s and %s differ" % (out_file, base_file))
+            return
+        except self.failureException:
+            pass
+
+        with open(out_file, 'r') as f1, open(base_file, 'r') as f2:
+            out_file_contents = f1.read()
+            base_file_contents = f2.read()
                 
-                # Filter files independently and then compare filtered contents
-                out_filtered = filter_file_contents(out_file_contents.strip().split('\n'))
-                base_filtered = filter_file_contents(base_file_contents.strip().split('\n'))
+        # Filter files independently and then compare filtered contents
+        out_filtered = filter_file_contents(
+            out_file_contents.strip().split('\n'))
+        base_filtered = filter_file_contents(
+            base_file_contents.strip().split('\n'))
+
+        if len(out_filtered) != len(base_filtered):
+            # it is likely that a solver returned a (slightly) nonzero
+            # value for a variable that is normally 0.  Try to look for
+            # sequences like "['varname:', 'Value:', 1e-9]" that appear
+            # in one result but not the other and remove them.
+            i = 0
+            while i < len(base_filtered):
+                try:
+                    self.assertStructuredAlmostEqual(
+                        out_filtered[i], base_filtered[i],
+                        abstol=1e-6, allow_second_superset=False)
+                    i += 1
+                    continue
+                except self.failureException:
+                    pass
 
                 try:
-                    self.assertStructuredAlmostEqual(out_filtered, base_filtered,
-                                                     abstol=1e-6,
-                                                     allow_second_superset=False)
-                except AssertionError:
-                    # Print helpful information when file comparison fails
-                    print('---------------------------------')
-                    print('BASELINE FILE')
-                    print('---------------------------------')
-                    print(base_file_contents)
-                    print('=================================')
-                    print('---------------------------------')
-                    print('TEST OUTPUT FILE')
-                    print('---------------------------------')
-                    print(out_file_contents)
-                    raise 
+                    index_of_out_i_in_base = base_filtered.index(
+                        out_filtered[i], i)
+                except ValueError:
+                    index_of_out_i_in_base = float('inf')
+                try:
+                    index_of_base_i_in_out = out_filtered.index(
+                        base_filtered[i], i)
+                except ValueError:
+                    index_of_base_i_in_out = float('inf')
+                if index_of_out_i_in_base < index_of_base_i_in_out:
+                    extra = base_filtered
+                    n = index_of_out_i_in_base
+                else:
+                    extra = out_filtered
+                    n = index_of_base_i_in_out
+                extra_terms = extra[i:n]
+                try:
+                    assert len(extra_terms) % 3 == 0
+                    assert all(str(_)[-1] == ":" for _ in extra_terms[0::3])
+                    assert all(str(_) == "Value:" for _ in extra_terms[1::3])
+                    assert all(abs(_) < 1e-7 for _ in extra_terms[2::3])
+                except:
+                    # This does not match the pattern we are looking
+                    # for: quit processing, and let the next
+                    # assertStructuredAlmostEqual raise the appropriate
+                    # failureException
+                    break
+                extra[i:n] = []
+
+        try:
+            self.assertStructuredAlmostEqual(out_filtered, base_filtered,
+                                             abstol=1e-6,
+                                             allow_second_superset=False)
+        except self.failureException:
+            # Print helpful information when file comparison fails
+            print('---------------------------------')
+            print('BASELINE FILE')
+            print('---------------------------------')
+            print(base_file_contents)
+            print('=================================')
+            print('---------------------------------')
+            print('TEST OUTPUT FILE')
+            print('---------------------------------')
+            print(out_file_contents)
+            raise
 
     @parameterized.parameterized.expand(py_test_tuples, name_func=custom_name_func)
     def test_book_py(self, tname, test_file, base_file):
