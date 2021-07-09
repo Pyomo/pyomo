@@ -276,7 +276,8 @@ def higher_order_decision_rule_efficiency(config, model_data):
             for dr_var in nlp_model.scenarios[0, 0].util.decision_rule_vars:
                 for i in range(1, num_dr_vars):
                     dr_var[i].fix(0)
-        elif model_data.iteration <= num_uncertain_params:
+        elif model_data.iteration <= num_uncertain_params and config.decision_rule_order > 1:
+            # Only applied in DR order > 1 case
             for dr_var in nlp_model.scenarios[0, 0].util.decision_rule_vars:
                 for i in range(num_uncertain_params + 1, num_dr_vars):
                     nlp_model.linear_efficiency_applied = True

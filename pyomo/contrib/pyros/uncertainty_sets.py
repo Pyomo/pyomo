@@ -71,7 +71,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def dim(self):
         """
-        UncertaintySet dimension, e.g. dimension of uncertain parameters list in ``uncertain_params``.
+        Dimension of the uncertainty set, i.e., number of parameters in “uncertain_params” list.
         """
         raise NotImplementedError
 
@@ -79,7 +79,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def geometry(self):
         """
-        UncertaintySet geometry:
+        UncertaintySet _geometry:
         1 is linear,
         2 is convex nonlinear,
         3 is general nonlinear,
@@ -91,7 +91,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def parameter_bounds(self):
         """
-        Inferred numerical bounds on the uncertainty set.
+        Bounds on the realizations of the uncertain parameters, as inferred from the uncertainty set.
         """
         raise NotImplementedError
 
@@ -110,13 +110,10 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
     def point_in_set(self, point):
         """
-        Given the uncertainty set constraint, verify if the point ``point`` is in the set.
-        This function takes a n-dimensional point, where n is the dimension of the vector of uncertain
-        parameters q, and determines if it is in the set defined by the specific uncertainty set constraint(s).
-        Returns True of False.
+        Calculates if supplied ``point`` is contained in the uncertainty set. Returns True or False.
 
         Args:
-            point: The point being checked for existence in the set.
+            point: The point being checked for membership in the set.
                    The coordinates of the point should be supplied in the same order as the elements of ``uncertain_params``
                    that is to be supplied to the PyROS solve statement.
                    This point must match the dimension of the uncertain parameters of the set.
@@ -193,7 +190,7 @@ class BoxSet(UncertaintySet):
     @property
     def dim(self):
         """
-        UncertaintySet dimension, e.g. dimension of uncertain parameters list in ``uncertain_params``.
+        Dimension of the uncertainty set, i.e., number of parameters in “uncertain_params” list.
         """
         return len(self.bounds)
 
@@ -204,7 +201,7 @@ class BoxSet(UncertaintySet):
     @property
     def parameter_bounds(self):
         """
-        Inferred numerical bounds on the uncertainty set.
+        Bounds on the realizations of the uncertain parameters, as inferred from the uncertainty set.
         """
         return self.bounds
 
@@ -266,7 +263,7 @@ class CardinalitySet(UncertaintySet):
     @property
     def dim(self):
         """
-        UncertaintySet dimension, e.g. dimension of uncertain parameters list in ``uncertain_params``.
+        Dimension of the uncertainty set, i.e., number of parameters in “uncertain_params” list.
         """
         return len(self.origin)
 
@@ -277,7 +274,7 @@ class CardinalitySet(UncertaintySet):
     @property
     def parameter_bounds(self):
         """
-        Inferred numerical bounds on the uncertainty set.
+        Bounds on the realizations of the uncertain parameters, as inferred from the uncertainty set.
         """
 
         nom_val = self.origin
@@ -314,14 +311,10 @@ class CardinalitySet(UncertaintySet):
 
     def point_in_set(self, point):
         """
-        Given the uncertainty set constraint, verify if the point ``point`` is in the set.
-        This function takes a n-dimensional point, where n is the dimension of the vector of uncertain
-        parameters q, and determines if it is in the set defined by the specific uncertainty set constraint(s).
-        Returns True of False.
+        Calculates if supplied ``point`` is contained in the uncertainty set. Returns True or False.
 
         Args:
-            uncertain_params: list of uncertain parameter objects defining the uncertainty set
-            point: the point being checked for existence in the set
+            point: the point being checked for membership in the set
         """
 
         cassis = []
@@ -368,14 +361,13 @@ class PolyhedralSet(UncertaintySet):
         # === Non-emptiness
         res = sp.optimize.linprog(c=np.zeros(mat.shape[1]), A_ub=mat, b_ub=rhs_vec, method="simplex")
         if not res.success:
-            raise AttributeError("Error in evaluation of non-emptiness of the PolyhedralSet. Recieved " +
-                                 res.message + " output from scipy.optimize.linprog linear program solver.")
+            raise AttributeError("User-defined PolyhedralSet was determined to be empty. "
+                                 "Please check the set of constraints supplied during set construction.")
         # === Boundedness
         if res.status == 3:
             # scipy linprog status == 3 indicates unboundedness
-            raise AttributeError("PolyhedralSet appears to be unbounded. "
-                                 "PyROS requires a bounded UncertaintySet object."
-                                 "Please ensure the UncertaintySet is bounded.")
+            raise AttributeError("User-defined PolyhedralSet was determined to be unbounded. "
+                                 "Please augment the set of constraints supplied during set construction.")
 
 
         self.coefficients_mat = lhs_coefficients_mat
@@ -385,18 +377,18 @@ class PolyhedralSet(UncertaintySet):
     @property
     def dim(self):
         """
-        UncertaintySet dimension, e.g. dimension of uncertain parameters list in ``uncertain_params``.
+        Dimension of the uncertainty set, i.e., number of parameters in “uncertain_params” list.
         """
         return len(self.coefficients_mat[0])
 
     @property
-    def geometry(self):
+    def _geometry(self):
         return Geometry.LINEAR
 
     @property
     def parameter_bounds(self):
         """
-        Inferred numerical bounds on the uncertainty set.
+        Bounds on the realizations of the uncertain parameters, as inferred from the uncertainty set.
         PolyhedralSet bounds are not computed at set construction because they cannot be algebraically determined
         and require access to an optimization solver.
         """
@@ -493,18 +485,18 @@ class BudgetSet(PolyhedralSet):
     @property
     def dim(self):
         """
-        UncertaintySet dimension, e.g. dimension of uncertain parameters list in ``uncertain_params``.
+        Dimension of the uncertainty set, i.e., number of parameters in “uncertain_params” list.
         """
         return np.asarray(self.coefficients_mat).shape[1]
 
     @property
-    def geometry(self):
+    def _geometry(self):
         return Geometry.LINEAR
 
     @property
     def parameter_bounds(self):
         """
-        Inferred numerical bounds on the uncertainty set.
+        Bounds on the realizations of the uncertain parameters, as inferred from the uncertainty set.
         """
         membership_mat = np.asarray(self.coefficients_mat)
         rhs_vec = self.rhs_vec
@@ -587,7 +579,7 @@ class FactorModelSet(UncertaintySet):
     @property
     def dim(self):
         """
-        UncertaintySet dimension, e.g. dimension of uncertain parameters list in ``uncertain_params``.
+        Dimension of the uncertainty set, i.e., number of parameters in “uncertain_params” list.
         """
         return len(self.origin)
 
@@ -598,7 +590,7 @@ class FactorModelSet(UncertaintySet):
     @property
     def parameter_bounds(self):
         """
-        Inferred numerical bounds on the uncertainty set.
+        Bounds on the realizations of the uncertain parameters, as inferred from the uncertainty set.
         """
         nom_val = self.origin
         psi_mat = self.psi_mat
@@ -655,14 +647,10 @@ class FactorModelSet(UncertaintySet):
 
     def point_in_set(self, point):
         """
-        Given the uncertainty set constraint, verify if the point ``point`` is in the set.
-        This function takes a n-dimensional point, where n is the dimension of the vector of uncertain
-        parameters q, and determines if it is in the set defined by the specific uncertainty set constraint(s).
-        Returns True of False.
+        Calculates if supplied ``point`` is contained in the uncertainty set. Returns True or False.
 
         Args:
-             uncertain_params: list of uncertain parameter objects defining the uncertainty set
-             point: the point being checked for existence in the set
+             point: the point being checked for membership in the set
         """
         inv_psi = np.linalg.pinv(self.psi_mat)
         diff = np.asarray(list(point[i] - self.origin[i] for i in range(len(point))))
@@ -705,7 +693,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
     @property
     def dim(self):
         """
-        UncertaintySet dimension, e.g. dimension of uncertain parameters list in ``uncertain_params``.
+        Dimension of the uncertainty set, i.e., number of parameters in “uncertain_params” list.
         """
         return len(self.center)
 
@@ -716,7 +704,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
     @property
     def parameter_bounds(self):
         """
-        Inferred numerical bounds on the uncertainty set.
+        Bounds on the realizations of the uncertain parameters, as inferred from the uncertainty set.
         """
         nom_value = self.center
         half_length =self.half_lengths
@@ -816,7 +804,7 @@ class EllipsoidalSet(UncertaintySet):
     @property
     def dim(self):
         """
-        UncertaintySet dimension, e.g. dimension of uncertain parameters list in ``uncertain_params``.
+        Dimension of the uncertainty set, i.e., number of parameters in “uncertain_params” list.
         """
         return len(self.center)
 
@@ -827,7 +815,7 @@ class EllipsoidalSet(UncertaintySet):
     @property
     def parameter_bounds(self):
         """
-        Inferred numerical bounds on the uncertainty set.
+        Bounds on the realizations of the uncertain parameters, as inferred from the uncertainty set.
         """
         scale = self.scale
         nom_value = self.center
@@ -898,7 +886,7 @@ class DiscreteScenarioSet(UncertaintySet):
     @property
     def dim(self):
         """
-        UncertaintySet dimension, e.g. dimension of uncertain parameters list in ``uncertain_params``.
+        Dimension of the uncertainty set, i.e., number of parameters in “uncertain_params” list.
         """
         return len(self.scenarios[0])
 
@@ -909,7 +897,7 @@ class DiscreteScenarioSet(UncertaintySet):
     @property
     def parameter_bounds(self):
         """
-        Inferred numerical bounds on the uncertainty set.
+        Bounds on the realizations of the uncertain parameters, as inferred from the uncertainty set.
         """
         parameter_bounds = [(min(s[i] for s in self.scenarios),
                              max(s[i] for s in self.scenarios)) for i in range(self.dim)]
@@ -939,14 +927,10 @@ class DiscreteScenarioSet(UncertaintySet):
 
     def point_in_set(self, point):
         """
-        Given the uncertainty set constraint, verify if the point ``point`` is in the set.
-        This function takes a n-dimensional point, where n is the dimension of the vector of uncertain
-        parameters q, and determines if it is in the set defined by the specific uncertainty set constraint(s).
-        Returns True of False.
+        Calculates if supplied ``point`` is contained in the uncertainty set. Returns True or False.
 
         Args:
-             uncertain_params: list of uncertain parameter objects defining the uncertainty set
-             point: the point being checked for existence in the set
+             point: the point being checked for membership in the set
         """
         # Round all double precision to a tolerance
         num_decimals = 8
@@ -986,18 +970,18 @@ class IntersectionSet(UncertaintySet):
     @property
     def dim(self):
         """
-        UncertaintySet dimension, e.g. dimension of uncertain parameters list in ``uncertain_params``.
+        Dimension of the uncertainty set, i.e., number of parameters in “uncertain_params” list.
         """
         return self.all_sets[0].dim
 
     @property
     def geometry(self):
-        return max(self.all_sets[i].geometry.value for i in range(len(self.all_sets)))
+        return max(self.all_sets[i]._geometry.value for i in range(len(self.all_sets)))
 
     @property
     def parameter_bounds(self):
         """
-        Inferred numerical bounds on the uncertainty set.
+        Bounds on the realizations of the uncertain parameters, as inferred from the uncertainty set.
         IntersectedSet bounds are not computed at set construction because they cannot be algebraically determined
         and require access to an optimization solver.
         """
@@ -1007,14 +991,10 @@ class IntersectionSet(UncertaintySet):
 
     def point_in_set(self, point):
         """
-        Given the uncertainty set constraint, verify if the point ``point`` is in the set.
-        This function takes a n-dimensional point, where n is the dimension of the vector of uncertain
-        parameters q, and determines if it is in the set defined by the specific uncertainty set constraint(s).
-        Returns True of False.
+        Calculates if supplied ``point`` is contained in the uncertainty set. Returns True or False.
 
         Args:
-             uncertain_params: list of uncertain parameter objects defining the uncertainty set
-             point: the point being checked for existence in the set
+             point: the point being checked for membership in the set
         """
         if all(a_set.point_in_set(point=point) for a_set in self.all_sets):
             return True
