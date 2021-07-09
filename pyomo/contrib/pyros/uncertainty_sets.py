@@ -79,7 +79,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def geometry(self):
         """
-        UncertaintySet _geometry:
+        UncertaintySet geometry:
         1 is linear,
         2 is convex nonlinear,
         3 is general nonlinear,
@@ -382,7 +382,7 @@ class PolyhedralSet(UncertaintySet):
         return len(self.coefficients_mat[0])
 
     @property
-    def _geometry(self):
+    def geometry(self):
         return Geometry.LINEAR
 
     @property
@@ -490,7 +490,7 @@ class BudgetSet(PolyhedralSet):
         return np.asarray(self.coefficients_mat).shape[1]
 
     @property
-    def _geometry(self):
+    def geometry(self):
         return Geometry.LINEAR
 
     @property
@@ -976,7 +976,7 @@ class IntersectionSet(UncertaintySet):
 
     @property
     def geometry(self):
-        return max(self.all_sets[i]._geometry.value for i in range(len(self.all_sets)))
+        return max(self.all_sets[i].geometry.value for i in range(len(self.all_sets)))
 
     @property
     def parameter_bounds(self):
