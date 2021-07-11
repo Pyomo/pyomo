@@ -174,10 +174,11 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
 
         _temp = create_subsystem_block(external_cons, variables=external_vars)
         possible_input_vars = ComponentSet(input_vars)
-        for var in _temp.input_vars.values():
-            assert var in possible_input_vars
+        #for var in _temp.input_vars.values():
+        #    # TODO: Is this check necessary?
+        #    assert var in possible_input_vars
 
-        with TemporarySubsystemManager(to_fix=input_vars):
+        with TemporarySubsystemManager(to_fix=list(_temp.input_vars.values())):
             solver.solve(_temp)
 
         # Should we create the NLP from the original block or the temp block?
