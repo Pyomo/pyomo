@@ -4,16 +4,14 @@ Objects to contain all model data and solve results for the ROSolver
 
 class ROSolveResults(object):
     '''
-    Container for solve-instance data
+    Container for solve-instance data returned to the user after solving with PyROS.
 
     Attributes:
-        :original_model: Deterministic model input
-        :grcs_termination_condition: termination condition of the PyROS algorithm
+        :pyros_termination_condition: termination condition of the PyROS algorithm
         :config: the config block for this solve instance
-        :timing: Container with overall algorithm CPU time
-        :timing_data: PyROS sub-solver timing data container
-        :nominal_data: Container with solution of the nominal problem (master problem 0/deterministic model)
-        :total_iters: total iterations done by PyROS solver
+        :time: Total solver CPU time
+        :iterations: total iterations done by PyROS solver
+        :final_objective_value: objective function value at termination
     '''
     pass
 

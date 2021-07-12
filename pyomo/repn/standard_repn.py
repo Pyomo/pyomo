@@ -30,6 +30,7 @@ from pyomo.core.base.var import (ScalarVar,
                                  Var,
                                  _GeneralVarData,
                                  value)
+from pyomo.core.base.param import ScalarParam, _ParamData
 from pyomo.core.base.numvalue import (NumericConstant,
                                       native_numeric_types)
 from pyomo.core.kernel.expression import expression, noclone
@@ -896,8 +897,8 @@ _repn_collectors = {
     EXPR.ExternalFunctionExpression             : _collect_external_fn,
     #_ConnectorData          : _collect_linear_connector,
     #ScalarConnector         : _collect_linear_connector,
-    #param._ParamData        : _collect_linear_const,
-    #param.ScalarParam       : _collect_linear_const,
+    _ParamData        : _collect_const,
+    ScalarParam       : _collect_const,
     #param.Param             : _collect_linear_const,
     #parameter               : _collect_linear_const,
     NumericConstant                             : _collect_const,

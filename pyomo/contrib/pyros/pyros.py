@@ -28,7 +28,7 @@ from pyomo.contrib.pyros.util import (model_is_valid,
                                       add_decision_rule_constraints,
                                       add_decision_rule_variables,
                                       load_final_solution,
-                                      grcsTerminationCondition,
+                                      pyrosTerminationCondition,
                                       ValidEnum,
                                       ObjectiveType,
                                       validate_uncertainty_set,
@@ -57,6 +57,21 @@ class NonNegIntOrMinusOne(object):
             raise ValueError(
                 "Expected non-negative int, but received %s" % (obj,))
         return ans
+
+class PositiveIntOrMinusOne(object):
+
+    def __call__(self, obj):
+        '''
+        if obj is a positive int, return the int
+        if obj is -1, return -1
+        else, error
+        '''
+        ans = int(obj)
+        if ans != float(obj) or (ans <= 0 and ans != -1):
+            raise ValueError(
+                "Expected non-negative int, but received %s" % (obj,))
+        return ans
+
 
 class SolverResolvable(object):
 
@@ -175,7 +190,7 @@ def pyros_config():
 
     ))
     CONFIG.declare("max_iter", ConfigValue(
-        default=-1, domain=NonNegIntOrMinusOne(),
+        default=-1, domain=PositiveIntOrMinusOne(),
         description="Optional. Default = -1. Iteration limit for the GRCS algorithm. '-1' is no iteration limit."
     ))
     CONFIG.declare("robust_feasibility_tolerance", ConfigValue(
@@ -221,7 +236,9 @@ def pyros_config():
                     "If the dictionary is empty (default), then p-robustness constraints are not added. "
                     "See Note for how to specify arguments."
     ))
-
+    CONFIG.declare("ID", ConfigValue(
+        default=0, domain=int
+    ))
 
     return CONFIG
 
@@ -312,15 +329,15 @@ class PyROS(object):
         if not model_is_valid(model):
             raise AttributeError("This model structure is not currently handled by the ROSolver.")
 
-        # === Validate uncertainty set
-        validate_uncertainty_set(config=config)
-
         # === Define nominal point if not specified
         if len(config.nominal_uncertain_param_vals) == 0:
             config.nominal_uncertain_param_vals = list(p.value for p in config.uncertain_params)
         elif len(config.nominal_uncertain_param_vals) != len(config.uncertain_params):
             raise AttributeError("The nominal_uncertain_param_vals list must be the same length"
                                  "as the uncertain_params list")
+
+        # === Validate uncertainty set
+        validate_uncertainty_set(config=config)
 
         # === Create data containers
         model_data = ROSolveResults()
@@ -398,34 +415,44 @@ class PyROS(object):
             # === Solve and load solution into model
             pyros_soln, final_iter_separation_solns = ROSolver_iterative_solve(model_data, config)
 
-            if config.load_solution and \
-                    (pyros_soln.grcs_termination_condition is grcsTerminationCondition.robust_optimal or
-                     pyros_soln.grcs_termination_condition is grcsTerminationCondition.robust_feasible):
-                load_final_solution(model_data, pyros_soln.master_soln, config)
-
-            # === Return time info
-            model_data.total_cpu_time = get_main_elapsed_time(model_data.timing)
-            iterations = pyros_soln.total_iters + 1
-
-            # === Return config to user
 
             return_soln = ROSolveResults()
-            return_soln.config = config
-            # Report the negative of the objective value if it was originally maximize, since we use the minimize form in the algorithm
-            if next(model.component_data_objects(Objective)).sense == maximize:
-                negation = -1
+            if pyros_soln is not None and final_iter_separation_solns is not None:
+                if config.load_solution and \
+                        (pyros_soln.pyros_termination_condition is pyrosTerminationCondition.robust_optimal or
+                         pyros_soln.pyros_termination_condition is pyrosTerminationCondition.robust_feasible):
+                    load_final_solution(model_data, pyros_soln.master_soln, config)
+
+                # === Return time info
+                model_data.total_cpu_time = get_main_elapsed_time(model_data.timing)
+                iterations = pyros_soln.total_iters + 1
+
+                # === Return config to user
+                return_soln.config = config
+                # Report the negative of the objective value if it was originally maximize, since we use the minimize form in the algorithm
+                if next(model.component_data_objects(Objective)).sense == maximize:
+                    negation = -1
+                else:
+                    negation = 1
+                if config.objective_focus == ObjectiveType.nominal:
+                    return_soln.final_objective_value = negation * value(pyros_soln.master_soln.master_model.obj)
+                elif config.objective_focus == ObjectiveType.worst_case:
+                    return_soln.final_objective_value = negation * value(pyros_soln.master_soln.master_model.zeta)
+                return_soln.pyros_termination_condition = pyros_soln.pyros_termination_condition
+
+                return_soln.time = model_data.total_cpu_time
+                return_soln.iterations = iterations
+
+                # === Remove util block
+                model.del_component(model_data.util_block)
+
+                del pyros_soln.util_block
+                del pyros_soln.working_model
             else:
-                negation = 1
-            return_soln.final_objective_value = negation * value(pyros_soln.master_soln.master_model.obj)
-            return_soln.time = model_data.total_cpu_time
-            return_soln.iterations = iterations
-            return_soln.grcs_termination_condition = pyros_soln.grcs_termination_condition
-
-            # === Remove util block
-            model.del_component(model_data.util_block)
-
-            del pyros_soln.util_block
-            del pyros_soln.working_model
+                return_soln.pyros_termination_condition = pyrosTerminationCondition.robust_infeasible
+                return_soln.final_objective_value = None
+                return_soln.time = get_main_elapsed_time(model_data.timing)
+                return_soln.iterations = 0
         return return_soln
 
 

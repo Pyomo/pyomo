@@ -5,14 +5,15 @@ import copy
 from enum import Enum, auto
 from pyomo.common.collections import ComponentSet
 from pyomo.common.modeling import unique_component_name
-from pyomo.core.base import (Constraint, Var, Param,
+from pyomo.core.base import (Constraint, Var, ConstraintList,
                              Objective, minimize, Expression,
-                             ConcreteModel, maximize, Block)
+                             ConcreteModel, maximize, Block, Param)
 from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.set_types import Reals
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr import value
-from pyomo.core.expr.visitor import identify_variables, identify_mutable_parameters
+from pyomo.repn.standard_repn import generate_standard_repn
+from pyomo.core.expr.visitor import identify_variables, identify_mutable_parameters, replace_expressions
 from pyomo.core.expr.sympy_tools import sympyify_expression, sympy2pyomo_expression
 from pyomo.common.dependencies import scipy as sp
 import itertools as it
@@ -20,6 +21,13 @@ import timeit
 from contextlib import contextmanager
 import logging
 from pprint import pprint
+import math
+
+# Tolerances used in the code
+PARAM_IS_CERTAIN_REL_TOL = 1e-4
+PARAM_IS_CERTAIN_ABS_TOL = 0
+COEFF_MATCH_REL_TOL = 1e-6
+COEFF_MATCH_ABS_TOL = 0
 
 '''Code borrowed from gdpopt: time_code, get_main_ellapsed_time, a_logger.'''
 @contextmanager
@@ -68,32 +76,17 @@ def ValidEnum(enum_class):
         return obj
     return fcn
 
-class grcsTerminationCondition(Enum):
-    '''Enum class to describe termination conditions of the grcs algorithm
-
-    robust_feasible
-        The grcs algorithm returned a feasible solution under
-        normal conditions, but could not prove robust optimality.
-
-    robust_optimal
-        The grcs algorithm returned a robust optimal solution under
-        normal conditions.
-
-    robust_infeasible
-        The grcs algorithm identified that the problem is robust infeasible
-
-    max_iter
-        The grcs algorithm could not identify a robust optimal solution
-        within the specified number of iterations.
-
-    subsolver_error
-        A solver called within the grcs algorithm returned an error
-        status that prevented the algorithm from completing.
-
-    time_out
-        The grcs algorithm exceeded the time limit before identifying a
-        robust solution
-
+class pyrosTerminationCondition(Enum):
+    '''
+    Enum class to describe termination conditions of the grcs algorithm
+    robust_optimal: The grcs algorithm returned with a robust_optimal solution under normal conditions
+    robust_feasible: The grcs algorithm determined a proven robust feasible solution.
+                     See documentation for the distinction between robust feasible and robust optimal.
+    robust_infeasible: The grcs algorithm terminated with a proof of robust infeasibility.
+    max_iter: The grcs algorithm could not identify a robust optimal solution within the specified max_iter.
+              Consider increasing the max_iter config param.
+    subsolver_error: There was an error in the user-specified sub-solvers used in the grcs solution procedure. Check the sub-solver log files.
+    time_out: The grcs algorithm could not identify a robust optimal solution within the specified time_limit.
     '''
     robust_feasible = 0
     robust_optimal = 1
@@ -211,14 +204,13 @@ def validate_uncertainty_set(config):
     # === No duplicate parameters
     if len(uncertain_params) != len(ComponentSet(uncertain_params)):
         raise AttributeError("No duplicates allowed for uncertain param objects.")
-
     # === Ensure nominal point is in the set
-    nom_vals = list(p.value for p in config.uncertain_params)
-    if not config.uncertainty_set.point_in_set(point=nom_vals):
+    if not config.uncertainty_set.point_in_set(point=config.nominal_uncertain_param_vals):
         raise AttributeError("Nominal point for uncertain parameters must be in the uncertainty set.")
-
-    # === Add nominal point to config
-    config.nominal_uncertain_param_vals = nom_vals
+    # === Check set validity via boundedness and non-emptiness
+    if not config.uncertainty_set.is_valid(config=config):
+        raise AttributeError("Invalid uncertainty set detected. Check the uncertainty set object to "
+                             "ensure non-emptiness and boundedness.")
 
     return
 
@@ -281,7 +273,7 @@ def transform_to_standard_form(model):
             if constraint.lower is not None:
                 temp = constraint
                 model.del_component(constraint)
-                model.add_component(temp.name, Constraint(expr= - (temp.body) <= - (temp.lower)))
+                model.add_component(temp.name, Constraint(expr= - (temp.body) + (temp.lower) <= 0 ))
 
     return
 
@@ -301,20 +293,6 @@ def validate_kwarg_inputs(model, config):
     first_stage_variables = config.first_stage_variables
     second_stage_variables = config.second_stage_variables
     uncertain_params = config.uncertain_params
-
-    # === Not currently supporting constraints of the form h(x, q) = 0
-    # (uncertain equality constraints in only first stage variables)
-    # We have plans to support this in the future
-    effective_first_stage_variables = first_stage_variables + second_stage_variables
-    for c in model.component_data_objects(Constraint):
-        if c.equality:
-            variables_in_constraint = identify_variables(c.expr)
-            params_in_constraint = identify_mutable_parameters(c.expr)
-            if all(v in ComponentSet(effective_first_stage_variables) for v in variables_in_constraint) and \
-                any(q in ComponentSet(uncertain_params) for q in params_in_constraint):
-                raise ValueError("If any uncertain parameters participate "
-                                 "in an equality constraint, a state variable must "
-                                 "also participate. Offending constraint: %s " % c.name)
 
     if not config.first_stage_variables and not config.second_stage_variables:
         # Must have non-zero DOF
@@ -359,6 +337,226 @@ def validate_kwarg_inputs(model, config):
 
 
     return
+
+def substitute_ssv_in_dr_constraints(model, constraint):
+    '''
+    Makes a generate_standard_repn for the dr constraints. Generate new expression with replace_expression to ignore
+    the ssv component (replace with 0?) or build in a loop but skip ssv.
+    Then, replace_expression with substitution_map between ssv and the new expression. Deactivate or del_component the original dr equation.
+    Then, return modified model and do coefficient matching as normal.
+    :param model: the working_model
+    :return:
+    '''
+    dr_eqns = model.util.decision_rule_eqns
+    fsv = ComponentSet(model.util.first_stage_variables)
+    if not hasattr(model, "dr_substituted_constraints"):
+        model.dr_substituted_constraints = ConstraintList()
+    for eqn in dr_eqns:
+        repn = generate_standard_repn(eqn.body, compute_values=False)
+        new_expression = 0
+        map_linear_coeff_to_var = [x for x in zip(repn.linear_coefs, repn.linear_vars) if x[1] in ComponentSet(fsv)]
+        map_quad_coeff_to_var = [x for x in zip(repn.quadratic_coefs, repn.quadratic_vars) if x[1] in ComponentSet(fsv)]
+        if repn.linear_coefs:
+            for coeff, var in map_linear_coeff_to_var:
+                new_expression += coeff * var
+        if repn.quadratic_coefs:
+            for coeff, var in map_quad_coeff_to_var:
+                new_expression += coeff * var[0] * var[1] # var here is a 2-tuple
+
+        model.no_ssv_dr_expr = Expression(expr=new_expression)
+        substitution_map = {}
+        substitution_map[id(repn.linear_vars[-1])] = model.no_ssv_dr_expr.expr
+
+    model.dr_substituted_constraints.add(
+            replace_expressions(expr=constraint.lower,
+                                     substitution_map=substitution_map) ==
+            replace_expressions(expr=constraint.body,
+                                     substitution_map=substitution_map))
+
+    # === Delete the original constraint
+    model.del_component(constraint.name)
+    model.del_component("no_ssv_dr_expr")
+
+    return model.dr_substituted_constraints[max(model.dr_substituted_constraints.keys())]
+
+def is_certain_parameter(uncertain_param_index, config):
+    '''
+    If an uncertain parameter's inferred LB and UB are within a relative tolerance,
+    then the parameter is considered certain.
+    :param uncertain_param_index: index of the parameter in the config.uncertain_params list
+    :param config: solver config
+    :return: True if param is effectively "certain," else return False
+    '''
+    if config.uncertainty_set.parameter_bounds:
+        param_bounds = config.uncertainty_set.parameter_bounds[uncertain_param_index]
+        if math.isclose(a=param_bounds[0], b=param_bounds[1], rel_tol=PARAM_IS_CERTAIN_REL_TOL, abs_tol=PARAM_IS_CERTAIN_ABS_TOL):
+            return True
+        else:
+            return False
+    else:
+        return False # cannot be determined without bounds
+
+def coefficient_matching(model, constraint, uncertain_params, config):
+    '''
+    :param model: master problem model
+    :param constraint: the constraint from the master problem model
+    :param uncertain_params: the list of uncertain parameters
+    :param first_stage_variables: the list of effective first-stage variables (includes ssv if decision_rule_order = 0)
+    :return: True if the coefficient matching was successful, False if its proven robust_infeasible due to
+             constraints of the form 1 == 0
+    '''
+    # === Returned flags
+    successful_matching = True
+    robust_infeasible = False
+
+    # === Efficiency for q_LB = q_UB
+    actual_uncertain_params = []
+
+    for i in range(len(uncertain_params)):
+        if not is_certain_parameter(uncertain_param_index=i, config=config):
+            actual_uncertain_params.append(uncertain_params[i])
+
+    # === Add coefficient matching constraint list
+    if not hasattr(model, "coefficient_matching_constraints"):
+        model.coefficient_matching_constraints = ConstraintList()
+    if not hasattr(model, "swapped_constraints"):
+        model.swapped_constraints = ConstraintList()
+
+    variables_in_constraint = ComponentSet(identify_variables(constraint.expr))
+    params_in_constraint = ComponentSet(identify_mutable_parameters(constraint.expr))
+    first_stage_variables = model.util.first_stage_variables
+    second_stage_variables = model.util.second_stage_variables
+
+    # === Determine if we need to do DR expression/ssv substitution to
+    #     make h(x,z,q) == 0 into h(x,d,q) == 0 (which is just h(x,q) == 0)
+    if all(v in ComponentSet(first_stage_variables) for v in variables_in_constraint) and \
+            any(q in ComponentSet(actual_uncertain_params) for q in params_in_constraint):
+        # h(x, q) == 0
+        pass
+    elif all(v in ComponentSet(first_stage_variables + second_stage_variables) for v in variables_in_constraint) and \
+            any(q in ComponentSet(actual_uncertain_params) for q in params_in_constraint):
+        constraint = substitute_ssv_in_dr_constraints(model=model, constraint=constraint)
+        variables_in_constraint = ComponentSet(identify_variables(constraint.expr))
+        params_in_constraint = ComponentSet(identify_mutable_parameters(constraint.expr))
+    else:
+        pass
+
+    if all(v in ComponentSet(first_stage_variables) for v in variables_in_constraint) and \
+            any(q in ComponentSet(actual_uncertain_params) for q in params_in_constraint):
+
+        # Swap param objects for variable objects in this constraint
+        model.param_set = []
+        for i in range(len(list(variables_in_constraint))):
+            # Initialize Params to non-zero value due to standard_repn bug
+            model.add_component("p_%s" % i, Param(initialize=1, mutable=True))
+            model.param_set.append(getattr(model, "p_%s" % i))
+
+        model.variable_set = []
+        for i in range(len(list(actual_uncertain_params))):
+            model.add_component("x_%s" % i, Var(initialize=1))
+            model.variable_set.append(getattr(model, "x_%s" % i))
+
+        original_var_to_param_map = list(zip(list(variables_in_constraint), model.param_set))
+        original_param_to_vap_map = list(zip(list(actual_uncertain_params), model.variable_set))
+
+        var_to_param_substitution_map_forward = {}
+        # Separation problem initialized to nominal uncertain parameter values
+        for var, param in original_var_to_param_map:
+            var_to_param_substitution_map_forward[id(var)] = param
+
+        param_to_var_substitution_map_forward = {}
+        # Separation problem initialized to nominal uncertain parameter values
+        for param, var in original_param_to_vap_map:
+            param_to_var_substitution_map_forward[id(param)] = var
+
+        var_to_param_substitution_map_reverse = {}
+        # Separation problem initialized to nominal uncertain parameter values
+        for var, param in original_var_to_param_map:
+            var_to_param_substitution_map_reverse[id(param)] = var
+
+        param_to_var_substitution_map_reverse = {}
+        # Separation problem initialized to nominal uncertain parameter values
+        for param, var in original_param_to_vap_map:
+            param_to_var_substitution_map_reverse[id(var)] = param
+
+        model.swapped_constraints.add(
+            replace_expressions(
+                expr=replace_expressions(expr=constraint.lower,
+                                         substitution_map=param_to_var_substitution_map_forward),
+                substitution_map=var_to_param_substitution_map_forward) ==
+            replace_expressions(
+                expr=replace_expressions(expr=constraint.body,
+                                         substitution_map=param_to_var_substitution_map_forward),
+                substitution_map=var_to_param_substitution_map_forward))
+
+        swapped = model.swapped_constraints[max(model.swapped_constraints.keys())]
+
+        val = generate_standard_repn(swapped.body, compute_values=False)
+
+        if val.constant is not None:
+            if hasattr(val.constant, "is_potentially_variable"):
+                temp_expr = replace_expressions(val.constant, substitution_map=var_to_param_substitution_map_reverse)
+                if temp_expr.is_potentially_variable():
+                    model.coefficient_matching_constraints.add(expr=temp_expr == 0)
+                elif math.isclose(value(temp_expr), 0, rel_tol=COEFF_MATCH_REL_TOL, abs_tol=COEFF_MATCH_ABS_TOL):
+                    pass
+                else:
+                    successful_matching = False
+                    robust_infeasible = True
+            elif math.isclose(value(val.constant), 0, rel_tol=COEFF_MATCH_REL_TOL, abs_tol=COEFF_MATCH_ABS_TOL):
+                pass
+            else:
+                successful_matching = False
+                robust_infeasible = True
+        if val.linear_coefs is not None:
+            for coeff in val.linear_coefs:
+                if hasattr(coeff, "is_potentially_variable"):
+                    temp_expr = replace_expressions(coeff, substitution_map=var_to_param_substitution_map_reverse)
+                    if temp_expr.is_potentially_variable():
+                        model.coefficient_matching_constraints.add(expr=temp_expr == 0)
+                    elif math.isclose(value(temp_expr), 0, rel_tol=COEFF_MATCH_REL_TOL, abs_tol=COEFF_MATCH_ABS_TOL):
+                        pass
+                    else:
+                        successful_matching = False
+                        robust_infeasible = True
+                elif math.isclose(value(coeff), 0, rel_tol=COEFF_MATCH_REL_TOL, abs_tol=COEFF_MATCH_ABS_TOL):
+                    pass
+                else:
+                    successful_matching = False
+                    robust_infeasible = True
+        if val.quadratic_coefs:
+            for coeff in val.quadratic_coefs:
+                if hasattr(coeff, "is_potentially_variable"):
+                    temp_expr = replace_expressions(coeff, substitution_map=var_to_param_substitution_map_reverse)
+                    if temp_expr.is_potentially_variable():
+                        model.coefficient_matching_constraints.add(expr=temp_expr == 0)
+                    elif math.isclose(value(temp_expr), 0, rel_tol=COEFF_MATCH_REL_TOL, abs_tol=COEFF_MATCH_ABS_TOL):
+                        pass
+                    else:
+                        successful_matching = False
+                        robust_infeasible = True
+                elif math.isclose(value(coeff), 0, rel_tol=COEFF_MATCH_REL_TOL, abs_tol=COEFF_MATCH_ABS_TOL):
+                    pass
+                else:
+                    successful_matching = False
+                    robust_infeasible = True
+        if val.nonlinear_expr is not None:
+            successful_matching = False
+            robust_infeasible = False
+
+        if successful_matching:
+            model.util.h_x_q_constraints.add(constraint)
+
+    for i in range(len(list(variables_in_constraint))):
+        model.del_component("p_%s" % i)
+
+    for i in range(len(list(params_in_constraint))):
+        model.del_component("x_%s" % i)
+
+    model.del_component("swapped_constraints")
+    model.del_component("swapped_constraints_index")
+
+    return successful_matching, robust_infeasible
 
 
 def selective_clone(block, first_stage_vars):
@@ -459,6 +657,11 @@ def partition_powers(n, v):
         starts = (0,) + starts + (n+v,)
         yield [starts[i+1] - starts[i] - 1 for i in range(v)]
 
+def sort_partitioned_powers(powers_list):
+    powers_list = sorted(powers_list, reverse=True)
+    powers_list = sorted(powers_list, key=lambda elem: max(elem))
+    return powers_list
+
 
 def add_decision_rule_constraints(model_data, config):
     '''
@@ -491,12 +694,11 @@ def add_decision_rule_constraints(model_data, config):
         # Using bars and stars groupings of variable powers, construct x1^a * .... * xn^b terms for all c <= a+...+b = degree
         all_powers = []
         for n in range(1, degree+1):
-            all_powers.append(list(partition_powers(n, len(uncertain_params))))
+            all_powers.append(sort_partitioned_powers(list(partition_powers(n, len(uncertain_params)))))
         for i in range(len(second_stage_variables)):
             Z = list(z for z in getattr(model_data.working_model, "decision_rule_var_" + str(i)).values())
             e = Z.pop(0)
             for degree_param_powers in all_powers:
-                degree_param_powers = degree_param_powers[::-1]
                 for param_powers in degree_param_powers:
                     product = 1
                     for idx, power in enumerate(param_powers):
@@ -620,7 +822,7 @@ def process_termination_condition_master_problem(config, results):
         if termination_condition in locally_acceptable:
             return (False, None)
         elif termination_condition in robust_infeasible:
-            return (False, grcsTerminationCondition.robust_infeasible)
+            return (False, pyrosTerminationCondition.robust_infeasible)
         elif termination_condition in try_backups:
             return (True, None)
         else:
@@ -630,7 +832,7 @@ def process_termination_condition_master_problem(config, results):
         if termination_condition in globally_acceptable:
             return (False, None)
         elif termination_condition in robust_infeasible:
-            return (False, grcsTerminationCondition.robust_infeasible)
+            return (False, pyrosTerminationCondition.robust_infeasible)
         elif termination_condition in try_backups:
             return (True, None)
         else:
