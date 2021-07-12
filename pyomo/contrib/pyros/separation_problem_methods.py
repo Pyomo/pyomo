@@ -373,7 +373,7 @@ def initialize_separation(model_data, config):
     """
     Fix the separation problem variables to the optimal master problem solution
     In the case of the static_approx decision rule, control vars are treated
-    as design vars are are therefore fixed to the optimum from the master.
+    as design vars are therefore fixed to the optimum from the master.
     """
     if config.uncertainty_set.geometry != Geometry.DISCRETE_SCENARIOS:
         for idx, p in list(model_data.separation_model.util.uncertain_param_vars.items()):

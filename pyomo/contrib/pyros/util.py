@@ -69,12 +69,31 @@ def ValidEnum(enum_class):
     return fcn
 
 class grcsTerminationCondition(Enum):
-    '''
-    Enum class to describe termination conditions of the grcs algorithm
-    robust_optimal: the grcs algorithm returned with a robust_optimal solution under normal conditions
-    max_iter: the grcs algorithm could not identify a robust optimal solution within the specified max_iter.
-              Consider increasing the max_iter config param.
-    error: there was an error in the grcs solution procedure. Check the log file.
+    '''Enum class to describe termination conditions of the grcs algorithm
+
+    robust_feasible
+        The grcs algorithm returned a feasible solution under
+        normal conditions, but could not prove robust optimality.
+
+    robust_optimal
+        The grcs algorithm returned a robust optimal solution under
+        normal conditions.
+
+    robust_infeasible
+        The grcs algorithm identified that the problem is robust infeasible
+
+    max_iter
+        The grcs algorithm could not identify a robust optimal solution
+        within the specified number of iterations.
+
+    subsolver_error
+        A solver called within the grcs algorithm returned an error
+        status that prevented the algorithm from completing.
+
+    time_out
+        The grcs algorithm exceeded the time limit before identifying a
+        robust solution
+
     '''
     robust_feasible = 0
     robust_optimal = 1
@@ -207,7 +226,7 @@ def validate_uncertainty_set(config):
 def add_bounds_for_uncertain_parameters(model, config):
     '''
     This function solves a set of optimization problems to determine bounds on the uncertain parameters
-    given the uncertainty set description. These bounds will be added as additional constraints to the uncertaint_set_constr
+    given the uncertainty set description. These bounds will be added as additional constraints to the uncertainty_set_constr
     constraint. Should only be called once set_as_constraint() has been called on the separation_model object.
     :param separation_model: the model on which to add the bounds
     :param config: solver config
@@ -510,7 +529,7 @@ def identify_objective_functions(model, config):
         raise AttributeError("Deterministic model must only have 1 active objective!")
     if obj[0].sense != minimize:
         raise AttributeError("PyROS requires deterministic models to have an objective function with  'sense'=minimization. "
-                             "Please specity your objective function as minimization.")
+                             "Please specify your objective function as minimization.")
     first_stage_terms = []
     second_stage_terms = []
 

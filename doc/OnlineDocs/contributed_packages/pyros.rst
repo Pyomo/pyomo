@@ -540,4 +540,6 @@ Price of robustness studies like this are easily implemented using PyROS.
 
 .. warning::
 
-    PyROS is still under a beta release. Please provide feedback and/or report any issues by opening a Pyomo ticket.
+    PyROS is still under a beta release. Please provide feedback and/or
+    report any problems by opening an issue on the Pyomo
+    `GitHub page <https://github.com/Pyomo/pyomo/issues/new/choose>`_.
