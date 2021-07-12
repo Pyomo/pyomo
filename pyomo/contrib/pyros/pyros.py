@@ -259,19 +259,35 @@ class PyROS(object):
     def __exit__(self, et, ev, tb):
         pass
 
-    def solve(self, model, first_stage_variables, second_stage_variables, uncertain_params, uncertainty_set, local_solver,
-              global_solver, **kwds):
+    def solve(self, model, first_stage_variables, second_stage_variables,
+              uncertain_params, uncertainty_set, local_solver, global_solver,
+              **kwds):
         """Solve the model.
 
-        Args:
-            model: A ``ConcreteModel`` object representing the deterministic model, cast as a minimization problem.
-            first_stage_variables: List of ``Var`` objects referenced in ``model`` representing the design variables.
-            second_stage_variables: List of ``Var`` referenced in ``model`` representing the control variables.
-            uncertain_params: List of ``Param`` referenced in ``model`` representing the uncertain parameters. MUST be ``mutable``.
-                              Assumes entries are provided in consistent order with the entries of 'nominal_uncertain_param_vals' input.
-            uncertainty_set: ``UncertaintySet`` object representing the uncertainty space that the final solutions will be robust against.
-            local_solver: ``Solver`` object to utilize as the primary local NLP solver.
-            global_solver: ``Solver`` object to utilize as the primary global NLP solver.
+        Parameters
+        ----------
+        model: ConcreteModel
+            A ``ConcreteModel`` object representing the deterministic
+            model, cast as a minimization problem.
+        first_stage_variables: List[Var]
+            The list of ``Var`` objects referenced in ``model``
+            representing the design variables.
+        second_stage_variables: List[Var]
+            The list of ``Var`` objects referenced in ``model``
+            representing the control variables.
+        uncertain_params: List[Param]
+            The list of ``Param`` objects referenced in ``model``
+            representing the uncertain parameters.  MUST be ``mutable``.
+            Assumes entries are provided in consistent order with the
+            entries of 'nominal_uncertain_param_vals' input.
+        uncertainty_set: UncertaintySet
+            ``UncertaintySet`` object representing the uncertainty space
+            that the final solutions will be robust against.
+        local_solver: Solver
+            ``Solver`` object to utilize as the primary local NLP solver.
+        global_solver: Solver
+            ``Solver`` object to utilize as the primary global NLP solver.
+
         """
 
         # === Add the explicit arguments to the config
@@ -413,5 +429,14 @@ class PyROS(object):
         return return_soln
 
 
-PyROS.solve.__doc__ = add_docstring_list(
-    PyROS.solve.__doc__, PyROS.CONFIG, indent_by=8)
+def _generate_filtered_docstring():
+    cfg = PyROS.CONFIG()
+    del cfg['first_stage_variables']
+    del cfg['second_stage_variables']
+    del cfg['uncertain_params']
+    del cfg['uncertainty_set']
+    del cfg['local_solver']
+    del cfg['global_solver']
+    return add_docstring_list(PyROS.solve.__doc__, cfg, indent_by=8)
+
+PyROS.solve.__doc__ = _generate_filtered_docstring()
