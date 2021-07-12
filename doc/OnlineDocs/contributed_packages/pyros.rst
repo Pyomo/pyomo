@@ -18,7 +18,7 @@ Below is an overview of the type of optimization models PyROS can accomodate.
 
 * PyROS is suitable for optimization models of **continuous variables** that may feature non-linearities (including **non-convexities**) in both the variables and uncertain parameters.
 * PyROS can handle **equality constraints** defining state variables, including implicit state variables that cannot be eliminated via reformulation.
-* PyROS allows for **two-stage** optimization problems that may feauture both first-stage and second-stage degrees of freedom.
+* PyROS allows for **two-stage** optimization problems that may feature both first-stage and second-stage degrees of freedom.
 
 The general form of a deterministic optimization problem that can be passed into PyROS is shown below:
 
