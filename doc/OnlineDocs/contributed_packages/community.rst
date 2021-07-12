@@ -169,6 +169,7 @@ community_map attribute or the repr() function can be used:
     take a look at the example below:
 
     .. doctest::
+
         Use the CommunityMap object made from the first code example
         >>> structured_model = community_map_object.generate_structured_model()  # doctest: +SKIP
         >>> structured_model.pprint()  # doctest: +SKIP

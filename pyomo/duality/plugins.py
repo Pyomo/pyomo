@@ -37,7 +37,8 @@ logger = logging.getLogger('pyomo.core')
 # specified, then the entire model is dualized.
 # This returns a new Block object.
 #
-@TransformationFactory.register('duality.linear_dual', doc="Dualize a linear model")
+@TransformationFactory.register(
+    'duality.linear_dual', doc="[DEPRECATED] Dualize a linear model")
 @deprecated(
     "Use of the pyomo.duality package is deprecated. There are known bugs "
     "in pyomo.duality, and we do not recommend the use of this code. "

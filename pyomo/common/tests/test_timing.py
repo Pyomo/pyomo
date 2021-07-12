@@ -29,6 +29,7 @@ class TestTiming(unittest.TestCase):
     def tearDown(self):
         if self.reenable_gc:
             gc.enable()
+            gc.collect()
 
     def test_raw_construction_timer(self):
         a = ConstructionTimer(None)
@@ -96,18 +97,27 @@ class TestTiming(unittest.TestCase):
     def test_TicTocTimer_tictoc(self):
         SLEEP = 0.1
         RES = 0.02 # resolution (seconds): 1/5 the sleep
-        abs_time = time.time()
+
+        # Note: pypy on GHA occasionally has timing
+        # differences of >0.04s
+        if 'pypy_version_info' in dir(sys):
+            RES *= 2.5
+        # Note: previously, OSX on GHA also had significantly nosier tests
+        # if sys.platform == 'darwin':
+        #     RES *= 2
+
+        abs_time = time.perf_counter()
         timer = TicTocTimer()
 
         time.sleep(SLEEP)
 
         with capture_output() as out:
-            start_time = time.time()
+            start_time = time.perf_counter()
             timer.tic(None)
         self.assertEqual(out.getvalue(), '')
 
         with capture_output() as out:
-            start_time = time.time()
+            start_time = time.perf_counter()
             timer.tic()
         self.assertRegex(
             out.getvalue(),
@@ -116,7 +126,7 @@ class TestTiming(unittest.TestCase):
 
         time.sleep(SLEEP)
 
-        ref = time.time()
+        ref = time.perf_counter()
         with capture_output() as out:
             delta = timer.toc()
         self.assertAlmostEqual(ref - start_time, delta, delta=RES)
@@ -125,7 +135,7 @@ class TestTiming(unittest.TestCase):
             out.getvalue(),
             r'\[\+   [.0-9]+\] .* in test_TicTocTimer_tictoc'
         )
-        ref = time.time()
+        ref = time.perf_counter()
         with capture_output() as out:
             total = timer.toc(delta=False)
         self.assertAlmostEqual(ref - abs_time, total, delta=RES)
@@ -137,7 +147,7 @@ class TestTiming(unittest.TestCase):
         ref *= -1
         time.sleep(SLEEP)
 
-        ref += time.time()
+        ref += time.perf_counter()
         timer.stop()
         cumul_stop1 = timer.toc(None)
         self.assertAlmostEqual(ref, cumul_stop1, delta=RES)
@@ -149,20 +159,12 @@ class TestTiming(unittest.TestCase):
         cumul_stop2 = timer.toc(None)
         self.assertEqual(cumul_stop1, cumul_stop2)
 
-        ref -= time.time()
+        ref -= time.perf_counter()
         timer.start()
         time.sleep(SLEEP)
 
-        # Note: pypy and osx (py3.8) on GHA occasionally have timing
-        # differences of >0.01s for the following tests
-        #
-        # Update: we relaxed the resolution for all tests to 0.2
-        #
-        # if 'pypy_version_info' in dir(sys) or sys.platform == 'darwin':
-        #     RES *= 2
-
         with capture_output() as out:
-            ref += time.time()
+            ref += time.perf_counter()
             timer.stop()
             delta = timer.toc()
         self.assertAlmostEqual(ref, delta, delta=RES)
@@ -180,11 +182,27 @@ class TestTiming(unittest.TestCase):
             r'\[    [.0-9]+\|   1\] .* in test_TicTocTimer_tictoc'
         )
 
+    def test_TicTocTimer_context_manager(self):
+        SLEEP = 0.1
+        RES = 0.05 # resolution (seconds): 1/2 the sleep
+
+        abs_time = time.perf_counter()
+        with TicTocTimer() as timer:
+            time.sleep(SLEEP)
+        exclude = -time.perf_counter()
+        time.sleep(SLEEP)
+        exclude += time.perf_counter()
+        with timer:
+            time.sleep(SLEEP)
+        abs_time = time.perf_counter() - abs_time
+        self.assertGreater(abs_time, SLEEP*3 - RES/10)
+        self.assertAlmostEqual(timer.toc(None), abs_time - exclude, delta=RES)
+
     def test_HierarchicalTimer(self):
         RES = 0.01 # resolution (seconds)
 
         timer = HierarchicalTimer()
-        start_time = time.time()
+        start_time = time.perf_counter()
         timer.start('all')
         time.sleep(0.02)
         for i in range(10):
@@ -197,7 +215,7 @@ class TestTiming(unittest.TestCase):
             timer.start('ab')
             timer.stop('ab')
             timer.stop('a')
-        end_time = time.time()
+        end_time = time.perf_counter()
         timer.stop('all')
         ref = \
 """Identifier        ncalls   cumtime   percall      %

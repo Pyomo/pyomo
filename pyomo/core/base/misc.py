@@ -115,7 +115,7 @@ class _robust_sort_keyfcn(object):
     def __init__(self, key=None):
         # sort all native numeric types as if they were floats
         self._typemap = {t: (1, float.__name__) for t in native_numeric_types}
-        self._typemap[tuple] =(3, tuple.__name__)
+        self._typemap[tuple] =(4, tuple.__name__)
         self._key = key
 
     def __call__(self, val):
@@ -130,6 +130,9 @@ class _robust_sort_keyfcn(object):
         if self._key is not None:
             val = self._key(val)
 
+        return self._generate_sort_key(val)
+
+    def _generate_sort_key(self, val):
         try:
             i, _typename = self._typemap[val.__class__]
         except KeyError:
@@ -154,12 +157,16 @@ class _robust_sort_keyfcn(object):
                     i = 3
             self._typemap[_type] = i, _typename
         if i == 1:
+            # value type is directly comparable
             return _typename, val
-        elif i == 3:
-            return _typename, tuple(self(v) for v in val)
+        elif i == 4:
+            # nested tuple: recurse into it (so that the tuple is comparable)
+            return _typename, tuple(self._generate_sort_key(v) for v in val)
         elif i == 2:
+            # value type is convertible to string
             return _typename, str(val)
         else:
+            # everything else (incuding i==3), fall back on id()
             return _typename, id(val)
 
 
