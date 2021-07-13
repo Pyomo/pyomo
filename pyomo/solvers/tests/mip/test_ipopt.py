@@ -214,7 +214,6 @@ class Test(unittest.TestCase):
         m.c.add(m.x + m.y == 1)
         m.c.add(m.x - m.y == 0)
         m.c.add(2*m.x - 3*m.y == 1)
-        #m.write('j.nl')
         res = self.ipopt.solve(m)
         self.assertEqual(str(res.solver.status), "warning")
         self.assertEqual(str(res.solver.termination_condition), "other")
