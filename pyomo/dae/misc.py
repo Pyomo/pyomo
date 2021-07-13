@@ -452,7 +452,7 @@ def get_index_information(var, ds):
 
     if var.dim() != 1:
         indCount = 0
-        for index in var.index_set().set_tuple:
+        for index in var.index_set().subsets():
             if isinstance(index, ContinuousSet):
                 if index is ds:
                     dsindex = indCount
