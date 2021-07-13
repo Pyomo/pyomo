@@ -17,7 +17,7 @@ from itertools import islice
 logger = logging.getLogger('pyomo.core')
 
 from math import isclose
-from pyomo.common.deprecation import deprecated
+from pyomo.common.deprecation import deprecated, deprecation_warning
 
 from .expr_common import (
     _add, _sub, _mul, _div,
@@ -1534,17 +1534,14 @@ def _decompose_linear_terms(expr, multiplier=1):
         yield (multiplier*expr._args_[0], expr._args_[1])
     elif expr.__class__ is ProductExpression:
         if expr._args_[0].__class__ in native_numeric_types or not expr._args_[0].is_potentially_variable():
-            for term in _decompose_linear_terms(expr._args_[1], multiplier*expr._args_[0]):
-                yield term
+            yield from _decompose_linear_terms(expr._args_[1], multiplier*expr._args_[0])
         elif expr._args_[1].__class__ in native_numeric_types or not expr._args_[1].is_potentially_variable():
-            for term in _decompose_linear_terms(expr._args_[0], multiplier*expr._args_[1]):
-                yield term
+            yield from _decompose_linear_terms(expr._args_[0], multiplier*expr._args_[1])
         else:
             raise LinearDecompositionError("Quadratic terms exist in a product expression.")
     elif expr.__class__ is DivisionExpression:
         if expr._args_[1].__class__ in native_numeric_types or not expr._args_[1].is_potentially_variable():
-            for term in _decompose_linear_terms(expr._args_[0], multiplier/expr._args_[1]):
-                yield term
+            yield from _decompose_linear_terms(expr._args_[0], multiplier/expr._args_[1])
         else:
             raise LinearDecompositionError("Unexpected nonlinear term (division)")
     elif expr.__class__ is ReciprocalExpression:
@@ -1554,11 +1551,9 @@ def _decompose_linear_terms(expr, multiplier=1):
         raise LinearDecompositionError("Unexpected nonlinear term")
     elif expr.__class__ is SumExpression or expr.__class__ is _MutableSumExpression:
         for arg in expr.args:
-            for term in _decompose_linear_terms(arg, multiplier):
-                yield term
+            yield from _decompose_linear_terms(arg, multiplier)
     elif expr.__class__ is NegationExpression:
-        for term in  _decompose_linear_terms(expr._args_[0], -multiplier):
-            yield term
+        yield from _decompose_linear_terms(expr._args_[0], -multiplier)
     elif expr.__class__ is LinearExpression or expr.__class__ is _MutableLinearExpression:
         if not (expr.constant.__class__ in native_numeric_types and expr.constant == 0):
             yield (multiplier*expr.constant,None)
@@ -1572,17 +1567,30 @@ def _decompose_linear_terms(expr, multiplier=1):
 def _process_arg(obj):
     # Note: caller is responsible for filtering out native types and
     # expressions.
-    if obj.is_numeric_type() and obj.is_constant():
+    if not obj.is_numeric_type():
+        if hasattr(obj, 'as_binary'):
+            # We assume non-numeric types that have an as_binary method
+            # are instances of AutoLinkedBooleanVar.  Calling as_binary
+            # will return a valid Binary Var (and issue the appropriate
+            # deprecation warning)
+            obj = obj.as_binary()
+        else:
+            # User assistance: provide a helpful exception when using an
+            # indexed object in an expression
+            if obj.is_component_type() and obj.is_indexed():
+                raise TypeError(
+                    "Argument for expression is an indexed numeric "
+                    "value\nspecified without an index:\n\t%s\nIs this "
+                    "value defined over an index that you did not specify?"
+                    % (obj.name, ) )
+
+            raise TypeError(
+                "Attempting to use a non-numeric type (%s) in a "
+                "numeric context" % (obj,))
+
+    if obj.is_constant():
         # Resolve constants (e.g., immutable scalar Params & NumericConstants)
         return value(obj)
-    # User assistance: provide a helpful exception when using an indexed
-    # object in an expression
-    if obj.is_component_type() and obj.is_indexed():
-        raise TypeError(
-            "Argument for expression is an indexed numeric "
-            "value\nspecified without an index:\n\t%s\nIs this "
-            "value defined over an index that you did not specify?"
-            % (obj.name, ) )
     return obj
 
 

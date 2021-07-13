@@ -19,7 +19,7 @@ except:
 import sys
 import argparse
 import re
-import pyutilib.subprocess
+import subprocess
 
 ## TIMEOUT LOGIC
 from functools import wraps
@@ -137,8 +137,9 @@ def run_pyomo(solver, problem, verbose):
         cmd = 'pyomo solve --solver=%s --report-timing --results-format=json --save-results=solver.jsn %s %s' % (solver, options, problem)
         if verbose:
             print("Command: %s" % cmd)
-        res = pyutilib.subprocess.run(cmd, outfile='solver.out')
-        if res[0] != 0:
+        with open('solver.out', 'w') as f:
+            res = subprocess.run(cmd, stdout=f, stderr=f)
+        if res.returncode != 0:
             print("Aborting performance testing!")
             sys.exit(1)
 

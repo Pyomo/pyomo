@@ -65,7 +65,8 @@ class PyomoNLP(AslNLP):
                     'The ASL interface and PyomoNLP in PyNumero currently '
                     'only support single objective problems. Deactivate '
                     'any extra objectives you may have, or add a dummy '
-                    'objective (f(x)=0) if you have a square problem.')
+                    'objective (f(x)=0) if you have a square problem '
+                    '(found %s objectives).' % (len(objectives),))
             self._objective = objectives[0]
 
             # write the nl file for the Pyomo model and get the symbolMap

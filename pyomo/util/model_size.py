@@ -84,7 +84,8 @@ def build_model_size_report(model):
         for var in EXPR.identify_variables(
             constr.body, include_fixed=False))
     activated_vars.update(
-        disj.indicator_var for disj in activated_disjuncts)
+        disj.indicator_var.get_associated_binary()
+        for disj in activated_disjuncts)
 
     report.activated = Bunch()
     report.activated.variables = len(activated_vars)
@@ -143,7 +144,7 @@ def _process_activated_container(blk):
     """Process a container object, returning the new components found."""
     new_fixed_true_disjuncts = ComponentSet(
         disj for disj in blk.component_data_objects(Disjunct, active=True)
-        if disj.indicator_var.value == 1 and disj.indicator_var.fixed)
+        if disj.indicator_var.value and disj.indicator_var.fixed)
     new_activated_disjunctions = ComponentSet(
         blk.component_data_objects(Disjunction, active=True))
     new_activated_disjuncts = ComponentSet(

@@ -7,11 +7,13 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 import abc
 import logging
 import numpy as np
 from scipy.sparse import coo_matrix
 
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base import Var, Set, Constraint, value
@@ -325,7 +327,7 @@ class ExternalGreyBoxBlock(Block):
         if cls != ExternalGreyBoxBlock:
             target_cls = cls
         elif not args or (args[0] is UnindexedComponent_set and len(args) == 1):
-            target_cls = SimpleExternalGreyBoxBlock
+            target_cls = ScalarExternalGreyBoxBlock
         else:
             target_cls = IndexedExternalGreyBoxBlock
         return super(ExternalGreyBoxBlock, cls).__new__(target_cls)
@@ -356,13 +358,18 @@ class ExternalGreyBoxBlock(Block):
                 data.set_external_model(self._init_model(block, index))
 
 
-class SimpleExternalGreyBoxBlock(ExternalGreyBoxBlockData, ExternalGreyBoxBlock):
+class ScalarExternalGreyBoxBlock(ExternalGreyBoxBlockData, ExternalGreyBoxBlock):
     def __init__(self, *args, **kwds):
         ExternalGreyBoxBlockData.__init__(self, component=self)
         ExternalGreyBoxBlock.__init__(self, *args, **kwds)
 
     # Pick up the display() from Block and not BlockData
     display = ExternalGreyBoxBlock.display
+
+
+class SimpleExternalGreyBoxBlock(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarExternalGreyBoxBlock
+    __renamed__version__ = '6.0'
 
 
 class IndexedExternalGreyBoxBlock(Block):

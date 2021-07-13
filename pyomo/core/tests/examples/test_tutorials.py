@@ -27,7 +27,9 @@ try:
 except:
     _win32com=False #pragma:nocover
 
-if _win32com:
+from pyomo.common.dependencies import pyutilib, pyutilib_available
+_excel_available = False
+if _win32com and pyutilib_available:
     from pyutilib.excel.spreadsheet_win32com import ExcelSpreadsheet_win32com
     tmp = ExcelSpreadsheet_win32com()
     try:
@@ -35,7 +37,7 @@ if _win32com:
         tmp._excel_quit()
         _excel_available = True
     except:
-        _excel_available = False
+        pass
 
 try:
     import xlrd
@@ -81,7 +83,9 @@ class PyomoTutorials(unittest.TestCase):
     def test_data(self):
         self.driver('data')
 
-    @unittest.skipIf(not ((_win32com and _excel_available) or _xlrd or _openpyxl), "Cannot read excel file.")
+    @unittest.skipIf(not (_xlrd or _openpyxl), "Cannot read excel file.")
+    @unittest.skipIf(not (_win32com and _excel_available and pyutilib_available),
+                     "Cannot read excel file.")
     def test_excel(self):
         self.driver('excel')
 

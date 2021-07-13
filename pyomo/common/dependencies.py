@@ -65,18 +65,18 @@ class ModuleUnavailable(object):
         if msg is None:
             msg = _err
         if _imp:
-            if not msg:
+            if not msg or not str(msg):
                 msg = (
                     "The %s module (an optional Pyomo dependency) " \
                     "failed to import: %s" % (self.__name__, _imp)
                 )
             else:
-                msg += " (import raised %s)" % (_imp,)
+                msg = "%s (import raised %s)" % (msg, _imp,)
         if _ver:
-            if not msg:
+            if not msg or not str(msg):
                 msg = "The %s module %s" % (self.__name__, _ver)
             else:
-                msg += " (%s)" % (_ver,)
+                msg = "%s (%s)" % (msg, _ver,)
         return msg
 
     def log_import_warning(self, logger='pyomo', msg=None):
@@ -90,7 +90,7 @@ class ModuleUnavailable(object):
         """
         logging.getLogger(logger).warning(self._moduleunavailable_message(msg))
 
-    @deprecated("use :py:class:`log_import_warning()`", version='TBD')
+    @deprecated("use :py:class:`log_import_warning()`", version='6.0')
     def generate_import_warning(self, logger='pyomo.common'):
         self.log_import_warning(logger)
 
@@ -320,8 +320,9 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
        >>> try:
        ...     import numpy
        ...     numpy_available = True
-       ... except ImportError:
-       ...     numpy = ModuleUnavailable('numpy', 'Numpy is not available')
+       ... except ImportError as e:
+       ...     numpy = ModuleUnavailable('numpy', 'Numpy is not available',
+       ...                               '', str(e))
        ...     numpy_available = False
 
     The import can be "deferred" until the first time the code either
@@ -405,7 +406,7 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
     """
     if alt_names is not None:
         deprecation_warning('alt_names=%s no longer needs to be specified '
-                            'and is ignored' % (alt_names,), version='TBD')
+                            'and is ignored' % (alt_names,), version='6.0')
 
     if only_catch_importerror is not None:
         deprecation_warning(
@@ -429,7 +430,7 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
                 deprecation_warning(
                     'attempt_import(): deferred_submodules takes an iterable '
                     'and not a mapping (the alt_names supplied by the mapping '
-                    'are no longer needed and are ignored).', version='TBD')
+                    'are no longer needed and are ignored).', version='6.0')
                 deferred_submodules = list(deferred_submodules)
 
             # Ensures all names begin with '.'
@@ -594,6 +595,7 @@ scipy, scipy_available = attempt_import(
 networkx, networkx_available = attempt_import('networkx')
 pandas, pandas_available = attempt_import('pandas')
 dill, dill_available = attempt_import('dill')
+pyutilib, pyutilib_available = attempt_import('pyutilib')
 
 # Note that matplotlib.pyplot can generate a runtime error on OSX when
 # not installed as a Framework (as is the case in the CI systems)

@@ -108,12 +108,12 @@ def target_list(x):
             else:
                 raise ValueError(
                     "Expected Component or list of Components."
-                    "\n\tRecieved %s" % (type(i),))
+                    "\n\tReceived %s" % (type(i),))
         return ans
     else:
         raise ValueError(
             "Expected Component or list of Components."
-            "\n\tRecieved %s" % (type(x),))
+            "\n\tReceived %s" % (type(x),))
 
 # [ESJ 07/09/2019 Should this be a more general utility function elsewhere?  I'm
 #  putting it here for now so that all the gdp transformations can use it.
@@ -243,12 +243,12 @@ def get_transformed_constraints(srcConstraint):
 
     Parameters
     ----------
-    srcConstraint: SimpleConstraint or _ConstraintData, which must be in
+    srcConstraint: ScalarConstraint or _ConstraintData, which must be in
     the subtree of a transformed Disjunct
     """
     if srcConstraint.is_indexed():
         raise GDP_Error("Argument to get_transformed_constraint should be "
-                        "a SimpleConstraint or _ConstraintData. (If you "
+                        "a ScalarConstraint or _ConstraintData. (If you "
                         "want the container for all transformed constraints "
                         "from an IndexedDisjunction, this is the parent "
                         "component of a transformed constraint originating "
@@ -393,7 +393,7 @@ def check_model_algebraic(instance):
 def _disjunct_not_fixed_true(disjunct):
     # Return true if the disjunct indicator variable is not fixed to True
     return not (disjunct.indicator_var.fixed and
-                disjunct.indicator_var.value == 1)
+                disjunct.indicator_var.value)
 
 def _disjunct_on_active_block(disjunct):
     # Check first to make sure that the disjunct is not a descendent of an
@@ -406,7 +406,7 @@ def _disjunct_on_active_block(disjunct):
             return False
         # properly deactivated Disjunct
         elif (parent_block.ctype is Disjunct and not parent_block.active
-              and parent_block.indicator_var.value == 0
+              and parent_block.indicator_var.value == False
               and parent_block.indicator_var.fixed):
             return False
         else:

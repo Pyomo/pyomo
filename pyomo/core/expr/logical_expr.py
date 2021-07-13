@@ -15,17 +15,18 @@ from __future__ import division
 import types
 from itertools import islice
 
-_using_chained_inequality = False
 import logging
 import traceback
 
 logger = logging.getLogger('pyomo.core')
+from pyomo.common.errors import PyomoException
 from pyomo.common.deprecation import deprecation_warning
 from .numvalue import (
     native_types,
     native_numeric_types,
     as_numeric,
     native_logical_types,
+    value
 )
 
 from .boolean_value import (
@@ -45,47 +46,6 @@ from .visitor import (
 
 from .numeric_expr import _LinearOperatorExpression, _process_arg
 import operator
-
-
-if _using_chained_inequality:
-    class _chainedInequality(object):
-
-        prev = None
-        call_info = None
-        cloned_from = []
-
-        @staticmethod
-        def error_message(msg=None):
-            if msg is None:
-                msg = "Relational expression used in an unexpected Boolean context."
-            val = _chainedInequality.prev.to_string()
-            # We are about to raise an exception, so it's OK to reset chainedInequality
-            info = _chainedInequality.call_info
-            _chainedInequality.call_info = None
-            _chainedInequality.prev = None
-
-            args = ( str(msg).strip(), val.strip(), info[0], info[1],
-                     ':\n    %s' % info[3] if info[3] is not None else '.' )
-            return """%s
-
-        The inequality expression:
-            %s
-        contains non-constant terms (variables) that were evaluated in an
-        unexpected Boolean context at
-          File '%s', line %s%s
-
-        Evaluating Pyomo variables in a Boolean context, e.g.
-            if expression <= 5:
-        is generally invalid.  If you want to obtain the Boolean value of the
-        expression based on the current variable values, explicitly evaluate the
-        expression using the value() function:
-            if value(expression) <= 5:
-        or
-            if value(expression <= 5):
-        """ % args
-
-else:
-    _chainedInequality = None
 
 
 #-------------------------------------------------------
@@ -126,10 +86,17 @@ class RangedExpression(_LinearOperatorExpression):
             state[i] = getattr(self, i)
         return state
 
-    def __nonzero__(self):
+    def __bool__(self):
+        if not self.is_constant():
+            raise PyomoException('Cannot convert non-constant expression '
+                                 'to bool. This error is usually caused by '
+                                 'using an expression in a boolean context '
+                                 'such as an if statement. For example, \n'
+                                 '    m.x = Var()\n'
+                                 '    if m.x <= 0:\n'
+                                 '        ...\n'
+                                 'would cause this exception.')
         return bool(self())
-
-    __bool__ = __nonzero__
 
     def is_relational(self):
         return True
@@ -198,19 +165,17 @@ class InequalityExpression(_LinearOperatorExpression):
             state[i] = getattr(self, i)
         return state
 
-    def __nonzero__(self):
-        if _using_chained_inequality and not self.is_constant():
-            deprecation_warning("Chained inequalities are deprecated. "
-                                "Use the inequality() function to "
-                                "express ranged inequality expressions.")     # Remove in Pyomo 6.0
-            _chainedInequality.call_info = traceback.extract_stack(limit=2)[-2]
-            _chainedInequality.prev = self
-            return True
-            #return bool(self())                # This is needed to apply simple evaluation of inequalities
-
+    def __bool__(self):
+        if not self.is_constant():
+            raise PyomoException('Cannot convert non-constant expression '
+                                 'to bool. This error is usually caused by '
+                                 'using an expression in a boolean context '
+                                 'such as an if statement. For example, \n'
+                                 '    m.x = Var()\n'
+                                 '    if m.x <= 0:\n'
+                                 '        ...\n'
+                                 'would cause this exception.')
         return bool(self())
-
-    __bool__ = __nonzero__
 
     def is_relational(self):
         return True
@@ -287,6 +252,7 @@ def inequality(lower=None, body=None, upper=None, strict=False):
         return InequalityExpression((lower, body), strict)
     return RangedExpression((lower, body, upper), (strict, strict))
 
+
 class EqualityExpression(_LinearOperatorExpression):
     """
     Equality expression::
@@ -300,10 +266,20 @@ class EqualityExpression(_LinearOperatorExpression):
     def nargs(self):
         return 2
 
-    def __nonzero__(self):
+    def __bool__(self):
+        lhs, rhs = self.args
+        if lhs is rhs:
+            return True
+        if not self.is_constant():
+            raise PyomoException('Cannot convert non-constant expression '
+                                 'to bool. This error is usually caused by '
+                                 'using an expression in a boolean context '
+                                 'such as an if statement. For example, \n'
+                                 '    m.x = Var()\n'
+                                 '    if m.x <= 0:\n'
+                                 '        ...\n'
+                                 'would cause this exception.')
         return bool(self())
-
-    __bool__ = __nonzero__
 
     def is_relational(self):
         return True
@@ -325,188 +301,76 @@ class EqualityExpression(_LinearOperatorExpression):
         return self._args_[0].is_potentially_variable() or self._args_[1].is_potentially_variable()
 
 
+def _generate_relational_expression(etype, lhs, rhs):
+    rhs_is_relational = False
+    lhs_is_relational = False
 
-if _using_chained_inequality:
-    def _generate_relational_expression(etype, lhs, rhs):
-        # We cannot trust Python not to recycle ID's for temporary POD data
-        # (e.g., floats).  So, if it is a "native" type, we will record the
-        # value, otherwise we will record the ID.  The tuple for native
-        # types is to guarantee that a native value will *never*
-        # accidentally match an ID
-        cloned_from = (\
-            id(lhs) if lhs.__class__ not in native_numeric_types else (0,lhs),
-            id(rhs) if rhs.__class__ not in native_numeric_types else (0,rhs)
-            )
-        rhs_is_relational = False
-        lhs_is_relational = False
+    if not (lhs.__class__ in native_types or lhs.is_expression_type()):
+        lhs = _process_arg(lhs)
+    if not (rhs.__class__ in native_types or rhs.is_expression_type()):
+        rhs = _process_arg(rhs)
 
-        if not (lhs.__class__ in native_types or lhs.is_expression_type()):
-            lhs = _process_arg(lhs)
-        if not (rhs.__class__ in native_types or rhs.is_expression_type()):
-            rhs = _process_arg(rhs)
+    if lhs.__class__ in native_numeric_types:
+        # TODO: Why do we need this?
+        lhs = as_numeric(lhs)
+    elif lhs.is_relational():
+        lhs_is_relational = True
 
-        if lhs.__class__ in native_numeric_types:
-            lhs = as_numeric(lhs)
-        elif lhs.is_relational():
-            lhs_is_relational = True
+    if rhs.__class__ in native_numeric_types:
+        # TODO: Why do we need this?
+        rhs = as_numeric(rhs)
+    elif rhs.is_relational():
+        rhs_is_relational = True
 
-        if rhs.__class__ in native_numeric_types:
-            rhs = as_numeric(rhs)
-        elif rhs.is_relational():
-            rhs_is_relational = True
-
-        if _chainedInequality.prev is not None:
-            prevExpr = _chainedInequality.prev
-            match = []
-            # This is tricky because the expression could have been posed
-            # with >= operators, so we must figure out which arguments
-            # match.  One edge case is when the upper and lower bounds are
-            # the same (implicit equality) - in which case *both* arguments
-            # match, and this should be converted into an equality
-            # expression.
-            for i,arg in enumerate(_chainedInequality.cloned_from):
-                if arg == cloned_from[0]:
-                    match.append((i,0))
-                elif arg == cloned_from[1]:
-                    match.append((i,1))
-            if etype == _eq:
-                raise TypeError(_chainedInequality.error_message())
-            if len(match) == 1:
-                if match[0][0] == match[0][1]:
-                    raise TypeError(_chainedInequality.error_message(
-                        "Attempting to form a compound inequality with two "
-                        "%s bounds" % ('lower' if match[0][0] else 'upper',)))
-                if not match[0][1]:
-                    cloned_from = _chainedInequality.cloned_from + (cloned_from[1],)
-                    lhs = prevExpr
-                    lhs_is_relational = True
-                else:
-                    cloned_from = (cloned_from[0],) + _chainedInequality.cloned_from
-                    rhs = prevExpr
-                    rhs_is_relational = True
-            elif len(match) == 2:
-                # Special case: implicit equality constraint posed as a <= b <= a
-                if prevExpr._strict or etype == _lt:
-                    _chainedInequality.prev = None
-                    raise TypeError("Cannot create a compound inequality with "
-                          "identical upper and lower\n\tbounds using strict "
-                          "inequalities: constraint infeasible:\n\t%s and "
-                          "%s < %s" % ( prevExpr.to_string(), lhs, rhs ))
-                if match[0] == (0,0):
-                    # This is a particularly weird case where someone
-                    # evaluates the *same* inequality twice in a row.  This
-                    # should always be an error (you can, for example, get
-                    # it with "0 <= a >= 0").
-                    raise TypeError(_chainedInequality.error_message())
-                etype = _eq
-            else:
-                raise TypeError(_chainedInequality.error_message())
-            _chainedInequality.prev = None
-
+    if lhs.is_constant() and rhs.is_constant():
+        lhs = value(lhs)
+        rhs = value(rhs)
         if etype == _eq:
-            if lhs_is_relational or rhs_is_relational:
-                if lhs_is_relational:
-                    val = lhs.to_string()
-                else:
-                    val = rhs.to_string()
-                raise TypeError("Cannot create an EqualityExpression where "\
-                      "one of the sub-expressions is a relational expression:\n"\
-                      "    " + val)
-            _chainedInequality.prev = None
-            return EqualityExpression((lhs,rhs))
+            return lhs == rhs
+        elif etype == _le:
+            return lhs <= rhs
+        elif etype == _lt:
+            return lhs < rhs
         else:
-            if etype == _le:
-                strict = False
-            elif etype == _lt:
-                strict = True
-            else:
-                raise ValueError("Unknown relational expression type '%s'" % etype)
+            raise ValueError("Unknown relational expression type '%s'" % etype)
+
+    if etype == _eq:
+        if lhs_is_relational or rhs_is_relational:
             if lhs_is_relational:
-                if lhs.__class__ is InequalityExpression:
-                    if rhs_is_relational:
-                        raise TypeError("Cannot create an InequalityExpression "\
-                              "where both sub-expressions are relational "\
-                              "expressions.")
-                    _chainedInequality.prev = None
-                    return RangedExpression(lhs._args_ + (rhs,), (lhs._strict,strict))
-                else:
-                    raise TypeError("Cannot create an InequalityExpression "\
-                          "where one of the sub-expressions is an equality "\
-                          "or ranged expression:\n    " + lhs.to_string())
-            elif rhs_is_relational:
-                if rhs.__class__ is InequalityExpression:
-                    _chainedInequality.prev = None
-                    return RangedExpression((lhs,) + rhs._args_, (strict, rhs._strict))
-                else:
-                    raise TypeError("Cannot create an InequalityExpression "\
-                          "where one of the sub-expressions is an equality "\
-                          "or ranged expression:\n    " + rhs.to_string())
+                val = lhs.to_string()
             else:
-                obj = InequalityExpression((lhs, rhs), strict)
-                #_chainedInequality.prev = obj
-                _chainedInequality.cloned_from = cloned_from
-                return obj
-
-else:
-
-    def _generate_relational_expression(etype, lhs, rhs):
-        rhs_is_relational = False
-        lhs_is_relational = False
-
-        if not (lhs.__class__ in native_types or lhs.is_expression_type()):
-            lhs = _process_arg(lhs)
-        if not (rhs.__class__ in native_types or rhs.is_expression_type()):
-            rhs = _process_arg(rhs)
-
-        if lhs.__class__ in native_numeric_types:
-            # TODO: Why do we need this?
-            lhs = as_numeric(lhs)
-        elif lhs.is_relational():
-            lhs_is_relational = True
-
-        if rhs.__class__ in native_numeric_types:
-            # TODO: Why do we need this?
-            rhs = as_numeric(rhs)
-        elif rhs.is_relational():
-            rhs_is_relational = True
-
-        if etype == _eq:
-            if lhs_is_relational or rhs_is_relational:
-                if lhs_is_relational:
-                    val = lhs.to_string()
-                else:
-                    val = rhs.to_string()
-                raise TypeError("Cannot create an EqualityExpression where "\
-                      "one of the sub-expressions is a relational expression:\n"\
-                      "    " + val)
-            return EqualityExpression((lhs,rhs))
+                val = rhs.to_string()
+            raise TypeError("Cannot create an EqualityExpression where "\
+                  "one of the sub-expressions is a relational expression:\n"\
+                  "    " + val)
+        return EqualityExpression((lhs,rhs))
+    else:
+        if etype == _le:
+            strict = False
+        elif etype == _lt:
+            strict = True
         else:
-            if etype == _le:
-                strict = False
-            elif etype == _lt:
-                strict = True
-            else:
-                raise ValueError("Unknown relational expression type '%s'" % etype)
-            if lhs_is_relational:
-                if lhs.__class__ is InequalityExpression:
-                    if rhs_is_relational:
-                        raise TypeError("Cannot create an InequalityExpression "\
-                              "where both sub-expressions are relational "\
-                              "expressions.")
-                    return RangedExpression(lhs._args_ + (rhs,), (lhs._strict,strict))
-                else:
+            raise ValueError("Unknown relational expression type '%s'" % etype)
+        if lhs_is_relational:
+            if lhs.__class__ is InequalityExpression:
+                if rhs_is_relational:
                     raise TypeError("Cannot create an InequalityExpression "\
-                          "where one of the sub-expressions is an equality "\
-                          "or ranged expression:\n    " + lhs.to_string())
-            elif rhs_is_relational:
-                if rhs.__class__ is InequalityExpression:
-                    return RangedExpression((lhs,) + rhs._args_, (strict, rhs._strict))
-                else:
-                    raise TypeError("Cannot create an InequalityExpression "\
-                          "where one of the sub-expressions is an equality "\
-                          "or ranged expression:\n    " + rhs.to_string())
+                          "where both sub-expressions are relational "\
+                          "expressions.")
+                return RangedExpression(lhs._args_ + (rhs,), (lhs._strict,strict))
             else:
-                return InequalityExpression((lhs, rhs), strict)
+                raise TypeError("Cannot create an InequalityExpression "\
+                      "where one of the sub-expressions is an equality "\
+                      "or ranged expression:\n    " + lhs.to_string())
+        elif rhs_is_relational:
+            if rhs.__class__ is InequalityExpression:
+                return RangedExpression((lhs,) + rhs._args_, (strict, rhs._strict))
+            else:
+                raise TypeError("Cannot create an InequalityExpression "\
+                      "where one of the sub-expressions is an equality "\
+                      "or ranged expression:\n    " + rhs.to_string())
+        else:
+            return InequalityExpression((lhs, rhs), strict)
 
 
 def _generate_logical_proposition(etype, lhs, rhs):
@@ -1082,8 +946,12 @@ class ImplicationExpression(BinaryBooleanExpression):
 
 class NaryBooleanExpression(BooleanExpressionBase):
     """
-    The abstract class for NaryBooleanExpression. This class should never be initialized.
+    The abstract class for NaryBooleanExpression.
+
+    This class should never be initialized.
     """
+    __slots__ = ('_nargs',)
+
     def __init__(self, args):
         self._args_ = args
         self._nargs = len(self._args_)
@@ -1096,6 +964,18 @@ class NaryBooleanExpression(BooleanExpressionBase):
 
     def getname(self, *arg, **kwd):
         return 'NaryBooleanExpression'
+
+    def __getstate__(self):
+        """
+        Pickle the expression object
+
+        Returns:
+            The pickled state.
+        """
+        state = super().__getstate__()
+        for i in NaryBooleanExpression.__slots__:
+           state[i] = getattr(self, i)
+        return state
 
 
 def _add_to_and_or_expression(orig_expr, new_arg):

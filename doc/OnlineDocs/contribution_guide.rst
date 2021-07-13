@@ -263,9 +263,11 @@ You may change the environment name from ``pyomodev`` as you see fit. Then activ
    
    conda activate pyomodev
 
-Step 2: Install PyUtilib
+Step 2 (optional): Install PyUtilib
 
-You will likely need the main branch of PyUtilib to contribute to Pyomo. Clone a copy of the repository in a new directory:
+The hard dependency on PyUtilib was removed in Pyomo 6.0.0. There is still a soft dependency for any code related to ``pyomo.dataportal.plugins.sheet``.
+
+If your contribution requires PyUtilib, you will likely need the main branch of PyUtilib to contribute. Clone a copy of the repository in a new directory:
 
 ::
 
@@ -285,7 +287,7 @@ Finally, move to the directory containing the clone of your Pyomo fork and run:
 
   python setup.py develop
 
-These commands register the cloned code with the active python environment (``pyomodev``). This way, your changes to the source code for ``pyomo`` and ``pyutilib`` are automatically used by the active environment. You can create another conda environment to switch to alternate versions of pyomo (e.g., stable).
+These commands register the cloned code with the active python environment (``pyomodev``). This way, your changes to the source code for ``pyomo`` are automatically used by the active environment. You can create another conda environment to switch to alternate versions of pyomo (e.g., stable).
 
 Review Process
 --------------

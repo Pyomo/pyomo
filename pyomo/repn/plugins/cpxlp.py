@@ -599,8 +599,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             sorted_constraint_list = list(constraint_generator())
             sorted_constraint_list.sort(key=lambda x: row_order[x[0]])
             def yield_all_constraints():
-                for data, repn in sorted_constraint_list:
-                    yield data, repn
+                yield from sorted_constraint_list
         else:
             yield_all_constraints = constraint_generator
 
