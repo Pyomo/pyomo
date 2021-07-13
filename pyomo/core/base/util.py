@@ -18,6 +18,7 @@ from collections.abc import Sequence
 from collections.abc import Mapping
 
 from pyomo.common import DeveloperError
+from pyomo.common.dependencies import numpy, numpy_available
 from pyomo.core.expr.numvalue import (
     native_types,
 )
@@ -153,6 +154,13 @@ def disable_methods(methods):
 
     return class_decorator
 
+# If numpy is available, then reference ndarray, otherwise declare a
+# local class (so that isinstance will still work, and return False)
+if numpy_available:
+    _ndarray = numpy.ndarray
+else:
+    class _ndarray(object):
+        pass
 
 #
 # The following set of "Initializer" classes are a general functionality
@@ -192,7 +200,7 @@ def Initializer(init,
             return ScalarCallInitializer(init)
         else:
             return IndexedCallInitializer(init)
-    elif isinstance(init, Mapping):
+    elif isinstance(init, (Mapping, _ndarray)):
         return ItemInitializer(init)
     elif isinstance(init, Sequence) \
             and not isinstance(init, str):

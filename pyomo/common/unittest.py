@@ -500,6 +500,11 @@ class TestCase(_unittest.TestCase):
         # Disable nose's use of test docstrings for the test description.
         return None
 
+    def currentTestPassed(self):
+        # Note: this only works for Python 3.4+
+        return not (self._outcome and any(
+            test is self and err for test, err in self._outcome.errors))
+
     def assertStructuredAlmostEqual(self, first, second,
                                     places=None, msg=None, delta=None,
                                     reltol=None, abstol=None,
