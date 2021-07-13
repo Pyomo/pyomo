@@ -11,7 +11,7 @@
 """Transformation to detect variables fixed by bounds and fix them."""
 from math import fabs
 
-from pyomo.core.base.plugin import TransformationFactory
+from pyomo.core.base.transformation import TransformationFactory
 from pyomo.common.collections import ComponentMap
 from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
                                  add_docstring_list)

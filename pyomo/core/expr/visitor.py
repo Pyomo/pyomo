@@ -1100,8 +1100,7 @@ def identify_components(expr, component_types):
     # in the expression.
     #
     visitor = _ComponentVisitor(component_types)
-    for v in visitor.xbfs_yield_leaves(expr):
-        yield v
+    yield from visitor.xbfs_yield_leaves(expr)
 
 
 # =====================================================
@@ -1155,8 +1154,7 @@ def identify_variables(expr, include_fixed=True):
     if include_fixed:
         for v in visitor.xbfs_yield_leaves(expr):
             if isinstance(v, tuple):
-                for v_i in v:
-                    yield v_i
+                yield from v
             else:
                 yield v
     else:
@@ -1204,8 +1202,7 @@ def identify_mutable_parameters(expr):
         Each mutable parameter that is found.
     """
     visitor = _MutableParamVisitor()
-    for v in visitor.xbfs_yield_leaves(expr):
-        yield v
+    yield from visitor.xbfs_yield_leaves(expr)
 
 
 # =====================================================

@@ -367,7 +367,7 @@ class ConfigEnum(enum.Enum):
                 "Directly inherit from enum.Enum and then use "
                 "In() or InEnum() as the ConfigValue 'domain' for "
                 "validation and int/string type conversions.",
-                version='TBD')
+                version='6.0')
     def __new__(cls, value, *args):
         member = object.__new__(cls)
         member._value_ = value
@@ -1874,17 +1874,17 @@ class ConfigDict(ConfigBase):
             yield (self._data[key]._name, self[key])
 
     @deprecated('The iterkeys method is deprecated. Use dict.keys().',
-                version='TBD')
+                version='6.0')
     def iterkeys(self):
         return self.keys()
 
     @deprecated('The itervalues method is deprecated. Use dict.keys().',
-                version='TBD')
+                version='6.0')
     def itervalues(self):
         return self.values()
 
     @deprecated('The iteritems method is deprecated. Use dict.keys().',
-                version='TBD')
+                version='6.0')
     def iteritems(self):
         return self.items()
 

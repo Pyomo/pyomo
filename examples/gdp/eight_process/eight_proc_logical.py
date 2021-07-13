@@ -128,7 +128,7 @@ def build_eight_process_flowsheet():
     m.specs3 = Constraint(expr=m.flow[12] <= 5 * m.flow[14])
     m.specs4 = Constraint(expr=m.flow[12] >= 2 * m.flow[14])
 
-    m.Y = Reference(m.use_unit[:].indicator_bool)
+    m.Y = Reference(m.use_unit[:].indicator_var)
 
     # logical propositions
     m.use1or2 = LogicalConstraint(expr=m.Y[1].xor(m.Y[2]))
@@ -150,7 +150,7 @@ def build_eight_process_flowsheet():
     """Bound definitions"""
     # x (flow) upper bounds
     x_ubs = {3: 2, 5: 2, 9: 2, 10: 1, 14: 1, 17: 2, 19: 2, 21: 2, 25: 3}
-    for i, x_ub in x_ubs.item():
+    for i, x_ub in x_ubs.items():
         m.flow[i].setub(x_ub)
 
     # Optimal solution uses units 2, 4, 6, 8 with objective value 68.
@@ -162,7 +162,7 @@ if __name__ == "__main__":
     m = build_eight_process_flowsheet()
     from pyomo.environ import TransformationFactory
     TransformationFactory('core.logical_to_linear').apply_to(m)
-    SolverFactory('gdpopt').solve(m, tee=True)
+    SolverFactory('gdpopt').solve(m, tee=True, strategy='LOA')
     update_boolean_vars_from_binary(m)
     m.Y.display()
     m.flow.display()

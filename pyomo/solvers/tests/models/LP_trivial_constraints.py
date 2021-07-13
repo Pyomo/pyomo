@@ -9,7 +9,9 @@
 #  ___________________________________________________________________________
 
 import pyomo.kernel as pmo
-from pyomo.core import ConcreteModel, Var, Objective, Constraint, RealInterval, ConstraintList
+from pyomo.core import (
+    ConcreteModel, Var, Objective, Constraint, RangeSet, ConstraintList
+)
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 @register_model
@@ -32,7 +34,7 @@ class LP_trivial_constraints(_BaseTestModel):
         model = self.model
         model._name = self.description
 
-        model.x = Var(domain=RealInterval(bounds=(float('-inf'), None)))
+        model.x = Var(domain=RangeSet(float('-inf'), None, 0))
         model.y = Var(bounds=(None, float('inf')))
         model.obj = Objective(expr=model.x - model.y)
         model.c = ConstraintList()
@@ -92,7 +94,7 @@ class LP_trivial_constraints_kernel(LP_trivial_constraints):
         model = self.model
         model._name = self.description
 
-        model.x = pmo.variable(domain=RealInterval(bounds=(float('-inf'), None)))
+        model.x = pmo.variable(domain=RangeSet(float('-inf'), None, 0))
         model.y = pmo.variable(ub=float('inf'))
         model.obj = pmo.objective(model.x - model.y)
         model.c = pmo.constraint_dict()

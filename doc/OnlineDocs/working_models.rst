@@ -281,7 +281,7 @@ solving the model again. The main lines of interest are:
 This could also have been accomplished by setting the upper and lower
 bounds:
 
-   >>> if instance.x[2] == 0:
+   >>> if instance.x[2].value == 0:
    ...     instance.x[2].setlb(1)
    ...     instance.x[2].setub(1)
    ... else:

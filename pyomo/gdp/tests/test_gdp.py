@@ -188,7 +188,7 @@ class Reformulate(unittest.TestCase, CommonTests):
         self.assertTrue(cmp(_prob, _solv),
                         msg="Files %s and %s differ" % (_prob, _solv))
         if os.path.exists(join(currdir,self.problem+'_result.lp')):
-            os.remove(join(currdir,self.problem+'_result.lp'))
+           os.remove(join(currdir,self.problem+'_result.lp'))
 
 
 class Solver(unittest.TestCase):
@@ -211,7 +211,7 @@ class Solver(unittest.TestCase):
                 )
         # Clean up test files
         if os.path.exists(join(currdir,self.problem+'_result.lp')):
-            os.remove(join(currdir,self.problem+'_result.lp'))
+           os.remove(join(currdir,self.problem+'_result.lp'))
 
 
 @unittest.skipIf(not yaml_available, "YAML is not available")

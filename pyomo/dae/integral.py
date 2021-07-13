@@ -8,12 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.base.plugin import ModelComponentFactory
+from pyomo.common.deprecation import RenamedClass
+from pyomo.core.base.component import ModelComponentFactory
 from pyomo.dae.contset import ContinuousSet
 from pyomo.dae.diffvar import DAE_Error
 from pyomo.core.base.expression import (Expression,
                                         _GeneralExpressionData,
-                                        SimpleExpression,
+                                        ScalarExpression,
                                         IndexedExpression)
 
 __all__ = ('Integral', )
@@ -50,7 +51,7 @@ class Integral(Expression):
         if len(args) == 0:
             raise ValueError("Integral must be indexed by a ContinuousSet")
         elif len(args) == 1:
-            return SimpleIntegral.__new__(SimpleIntegral)
+            return ScalarIntegral.__new__(ScalarIntegral)
         else:
             return IndexedIntegral.__new__(IndexedIntegral)
 
@@ -127,7 +128,7 @@ class Integral(Expression):
         return self._wrt
 
 
-class SimpleIntegral(SimpleExpression, Integral):
+class ScalarIntegral(ScalarExpression, Integral):
     """
         An integral that will have no indexing sets after applying a numerical
         integration transformation
@@ -137,6 +138,9 @@ class SimpleIntegral(SimpleExpression, Integral):
         _GeneralExpressionData.__init__(self, None, component=self)
         Integral.__init__(self, *args, **kwds)
 
+    def clear(self):
+        self._data = {}
+
     def is_fully_discretized(self):
         """
         Checks to see if all ContinuousSets indexing this Integral have been
@@ -145,6 +149,11 @@ class SimpleIntegral(SimpleExpression, Integral):
         if 'scheme' not in self._wrt.get_discretization_info():
             return False
         return True
+
+
+class SimpleIntegral(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarIntegral
+    __renamed__version__ = '6.0'
 
 
 class IndexedIntegral(IndexedExpression, Integral):

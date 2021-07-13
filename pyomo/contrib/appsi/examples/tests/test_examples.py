@@ -1,6 +1,10 @@
 from pyomo.contrib.appsi.examples import getting_started
 import pyomo.common.unittest as unittest
 import pyomo.environ as pe
+try:
+    from pyomo.contrib.appsi.cmodel import cmodel
+except ImportError:
+    raise unittest.SkipTest('appsi extensions are not available')
 
 
 class TestExamples(unittest.TestCase):

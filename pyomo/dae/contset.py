@@ -11,8 +11,8 @@
 import logging
 import bisect
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base.plugin import ModelComponentFactory
-from pyomo.core.base.set import SortedSimpleSet
+from pyomo.core.base.set import SortedScalarSet
+from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.numvalue import native_numeric_types
 
 logger = logging.getLogger('pyomo.dae')
@@ -22,7 +22,7 @@ __all__ = ['ContinuousSet']
 @ModelComponentFactory.register(
                    "A bounded continuous numerical range optionally containing"
                    " discrete points of interest.")
-class ContinuousSet(SortedSimpleSet):
+class ContinuousSet(SortedScalarSet):
     """ Represents a bounded continuous domain
 
         Minimally, this set must contain two numeric values defining the
@@ -224,7 +224,7 @@ class ContinuousSet(SortedSimpleSet):
 
         # TBD: If a user specifies bounds they will be added to the set
         # unless the user specified bounds have been overwritten during
-        # OrderedSimpleSet construction. This can lead to some unintuitive
+        # OrderedScalarSet construction. This can lead to some unintuitive
         # behavior when the ContinuousSet is both initialized with values and
         # bounds are specified. The current implementation is consistent
         # with how 'Set' treats this situation.
