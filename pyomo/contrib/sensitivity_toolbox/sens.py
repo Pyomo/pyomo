@@ -674,7 +674,8 @@ class SensitivityInterface(object):
             # We now replace the provided parameters in the user's
             # expressions. Only do this if we have to, i.e. the
             # user provided some parameters rather than all vars.
-            self._replace_parameters_in_constraints(variableSubMap)
+            block._replaced_map = \
+                    self._replace_parameters_in_constraints(variableSubMap)
 
             # Assume that we just replaced some params
             block._has_replaced_expressions = True
