@@ -1,5 +1,5 @@
-Pyomo Interface to MC++
-=======================
+MC++ Interface
+==============
 
 The Pyomo-MC++ interface allows for bounding of factorable functions using the MC++ library developed by
 the OMEGA research group at Imperial College London.
