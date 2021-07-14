@@ -5936,3 +5936,19 @@ c : Size=3, Index=CHOICES, Active=True
         self.assertEqual(len(m.a), 0)
         m.b = Set(initialize=b_rule, dimen=2)
         self.assertEqual(len(m.b), 0)
+
+    def test_issue_1112(self):
+        m = ConcreteModel()
+        m.a = Set(initialize=[1,2,3])
+        #
+        vals = list(m.a.values())
+        self.assertEqual(len(vals), 1)
+        self.assertIs(vals[0], m.a)
+        #
+        cross = m.a.cross(m.a)
+        self.assertIs(type(cross), SetProduct_OrderedSet)
+        #
+        vals = list(m.a.cross(m.a).values())
+        self.assertEqual(len(vals), 1)
+        self.assertIsInstance(vals[0], SetProduct_OrderedSet)
+        self.assertIsNot(vals[0], cross)
