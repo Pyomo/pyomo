@@ -12,7 +12,7 @@
 """
 import os
 import pyomo.common.unittest as unittest
-from six import StringIO
+from io import StringIO
 import logging
 
 import pyomo.environ as pyo

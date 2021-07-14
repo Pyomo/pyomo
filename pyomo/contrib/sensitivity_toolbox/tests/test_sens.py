@@ -12,7 +12,7 @@
 Unit Tests for interfacing with sIPOPT and k_aug
 """
 
-from six import StringIO
+from io import StringIO
 import logging
 import pyomo.common.unittest as unittest
 
