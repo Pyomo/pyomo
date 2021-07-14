@@ -2027,11 +2027,19 @@ A : Size=1, Index=None, Ordered=True
                 TypeError, "Cannot apply a Set operator to an "
                 r"indexed Set component \(J\)"):
             m.I | m.J
+        with self.assertRaisesRegex(
+                TypeError, "Cannot apply a Set operator to an "
+                r"indexed Set component \(J\)"):
+            m.J | m.I
         m.x = Suffix()
         with self.assertRaisesRegex(
                 TypeError, "Cannot apply a Set operator to a "
                 r"non-Set Suffix component \(x\)"):
             m.I | m.x
+        with self.assertRaisesRegex(
+                TypeError, "Cannot apply a Set operator to a "
+                r"non-Set Suffix component \(x\)"):
+            m.x | m.I
         m.y = Var([1,2])
         with self.assertRaisesRegex(
                 TypeError, "Cannot apply a Set operator to an "
@@ -2041,6 +2049,14 @@ A : Size=1, Index=None, Ordered=True
                 TypeError, "Cannot apply a Set operator to a "
                 r"non-Set component data \(y\[1\]\)"):
             m.I | m.y[1]
+        with self.assertRaisesRegex(
+                TypeError, "Cannot apply a Set operator to an "
+                r"indexed Var component \(y\)"):
+            m.y | m.I
+        with self.assertRaisesRegex(
+                TypeError, "Cannot apply a Set operator to a "
+                r"non-Set component data \(y\[1\]\)"):
+            m.y[1] | m.I
 
 class TestSetIntersection(unittest.TestCase):
     def test_pickle(self):

@@ -105,7 +105,7 @@ implemented) through Mixin classes.
 def process_setarg(arg):
     if isinstance(arg, _SetDataBase):
         return arg
-    elif isinstance(arg, IndexedComponent):
+    elif isinstance(arg, IndexedComponent) and arg.is_indexed():
         raise TypeError("Cannot apply a Set operator to an "
                         "indexed %s component (%s)"
                         % (arg.ctype.__name__, arg.name,))
@@ -1057,49 +1057,34 @@ class _SetData(_SetDataBase):
     __mul__ = cross
 
     def __ror__(self, other):
-        # See the discussion of Set vs SetOf in _processArgs below
+        # See the discussion of Set vs SetOf in process_setarg above
         #
         # return SetOf(other) | self
-        tmp = SetOf(other)
-        ans = Set(initialize=tmp, ordered=tmp.isordered())
-        ans.construct()
-        return ans | self
+        return process_setarg(other) | self
 
     def __rand__(self, other):
-        # See the discussion of Set vs SetOf in _processArgs below
+        # See the discussion of Set vs SetOf in process_setarg above
         #
         # return SetOf(other) & self
-        tmp = SetOf(other)
-        ans = Set(initialize=tmp, ordered=tmp.isordered())
-        ans.construct()
-        return ans & self
+        return process_setarg(other) & self
 
     def __rsub__(self, other):
-        # See the discussion of Set vs SetOf in _processArgs below
+        # See the discussion of Set vs SetOf in process_setarg above
         #
         # return SetOf(other) - self
-        tmp = SetOf(other)
-        ans = Set(initialize=tmp, ordered=tmp.isordered())
-        ans.construct()
-        return ans - self
+        return process_setarg(other) - self
 
     def __rxor__(self, other):
-        # See the discussion of Set vs SetOf in _processArgs below
+        # See the discussion of Set vs SetOf in process_setarg above
         #
         # return SetOf(other) ^ self
-        tmp = SetOf(other)
-        ans = Set(initialize=tmp, ordered=tmp.isordered())
-        ans.construct()
-        return ans ^ self
+        return process_setarg(other) ^ self
 
     def __rmul__(self, other):
-        # See the discussion of Set vs SetOf in _processArgs below
+        # See the discussion of Set vs SetOf in process_setarg above
         #
         # return SetOf(other) * self
-        tmp = SetOf(other)
-        ans = Set(initialize=tmp, ordered=tmp.isordered())
-        ans.construct()
-        return ans * self
+        return process_setarg(other) * self
 
     def __lt__(self,other):
         """
