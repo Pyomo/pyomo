@@ -119,24 +119,37 @@ class TestMindtPy(unittest.TestCase):
             # test handle_main_other_conditions
             main_mip, main_mip_results = solve_main(solve_data, config)
             main_mip_results.solver.termination_condition = tc.infeasible
+            print(solve_data.results.solver.termination_condition)
             handle_main_other_conditions(
                 solve_data.mip, main_mip_results, solve_data, config)
+            self.assertIs(
+                solve_data.results.solver.termination_condition, tc.feasible)
+
             main_mip_results.solver.termination_condition = tc.unbounded
             handle_main_other_conditions(
                 solve_data.mip, main_mip_results, solve_data, config)
+            self.assertIn(main_mip.MindtPy_utils.objective_bound,
+                          main_mip.component_data_objects(ctype=Constraint))
+
+            main_mip.MindtPy_utils.del_component('objective_bound')
             main_mip_results.solver.termination_condition = tc.infeasibleOrUnbounded
             handle_main_other_conditions(
                 solve_data.mip, main_mip_results, solve_data, config)
-            main_mip_results.solver.termination_condition = tc.infeasible
-            handle_main_other_conditions(
-                solve_data.mip, main_mip_results, solve_data, config)
+            self.assertIn(main_mip.MindtPy_utils.objective_bound,
+                          main_mip.component_data_objects(ctype=Constraint))
+
             main_mip_results.solver.termination_condition = tc.maxTimeLimit
             handle_main_other_conditions(
                 solve_data.mip, main_mip_results, solve_data, config)
+            self.assertIs(
+                solve_data.results.solver.termination_condition, tc.maxTimeLimit)
+
             main_mip_results.solver.termination_condition = tc.other
             main_mip_results.solution.status = SolutionStatus.feasible
             handle_main_other_conditions(
                 solve_data.mip, main_mip_results, solve_data, config)
+            for v1, v2 in zip(main_mip.MindtPy_utils.variable_list, solve_data.working_model.MindtPy_utils.variable_list):
+                self.assertEqual(v1.value, v2.value)
 
             # test handle_feasibility_subproblem_tc
             feas_subproblem = solve_data.working_model.clone()
@@ -251,10 +264,17 @@ class TestMindtPy(unittest.TestCase):
             fp_nlp = solve_data.working_model.clone()
             config.fp_main_norm = 'L1'
             generate_norm_constraint(fp_nlp, solve_data, config)
+            self.assertIsNotNone(fp_nlp.MindtPy_utils.find_component(
+                'L1_norm_constraint'))
+
             config.fp_main_norm = 'L2'
             generate_norm_constraint(fp_nlp, solve_data, config)
+            self.assertIsNotNone(fp_nlp.find_component('norm_constraint'))
+
+            fp_nlp.del_component('norm_constraint')
             config.fp_main_norm = 'L_infinity'
             generate_norm_constraint(fp_nlp, solve_data, config)
+            self.assertIsNotNone(fp_nlp.find_component('norm_constraint'))
 
             # test set_solver_options
             config.mip_solver = 'gams'
