@@ -176,7 +176,7 @@ The sensitivity toolbox requires either sIPOPT or k_aug to be installed and avai
 * https://github.com/dthierry/k_aug
 
 .. note:: 
-   If you get an error that ``ipopt_sens`` or ``k_aug`` and ``dot_sens``cannot be found, double check your installation and make sure the build directories containing the executables were added to your system PATH.
+   If you get an error that ``ipopt_sens`` or ``k_aug`` and ``dot_sens`` cannot be found, double check your installation and make sure the build directories containing the executables were added to your system PATH.
 
 
 Sensitivity Toolbox Interface
