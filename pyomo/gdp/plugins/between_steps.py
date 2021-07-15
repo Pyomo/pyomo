@@ -26,6 +26,7 @@ from pyomo.core import ( Block, Constraint, Var, SortComponents, Transformation,
 #                         Suffix, ComponentMap )
 from pyomo.common.collections import ComponentSet
 from pyomo.repn import generate_standard_repn
+from pyomo.core.expr import current as EXPR
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import preprocess_targets, is_child_of, target_list, _to_dict
@@ -38,6 +39,27 @@ logger = logging.getLogger('pyomo.gdp.between_steps')
 from nose.tools import set_trace
 
 NAME_BUFFER = {}
+
+def _generate_additively_separable_repn(expr):
+    repn = generate_standard_repn(expr, compute_values=True)
+    nonlinear_part = repn.nonlinear_expr
+    if nonlinear_part.__class__ is not EXPR.SumExpression:
+        # This isn't separable, so we just have the one expression
+        return {'nonlinear_vars': [(v for v in
+                                    EXPR.identify_variables(
+                                        nonlinear_part))],
+                'nonlinear_exprs': [nonlinear_part]}
+
+    # else, it was a SumExpression, and we will break it into the summands,
+    # recording which variables are there.
+    nonlinear_decomp = {'nonlinear_vars': [],
+                        'nonlinear_exprs': []}
+    for summand in nonlinear_part.args:
+        nonlinear_decomp['nonlinear_exprs'].append(summand)
+        nonlinear_decomp['nonlinear_vars'].append(
+            (v for v in EXPR.identify_variables(summand)))
+
+    return nonlinear_decopm
 
 def _arbitrary_partition(disjunction):
     pass
@@ -126,6 +148,24 @@ class BetweenSteps_Transformation(Transformation):
         these Constraints in the variable_partitions argument.
         """
     ))
+    CONFIG.declare('assume_fixed_vars_permanent', ConfigValue(
+        default=True,# TODO: John, I'm kind of tempted to make this the
+                     # default... We have to do more work if it's not True. It's
+                     # inconsistent with bigm and hull, but matches cutting
+                     # planes kind of (because cutting planes gives up... Wait,
+                     # cutting planes could also do what I'm doing here...)
+                     # Anyway, thoughts?
+        domain=bool,
+        description="Boolean indicating whether or not to transform so that the "
+        "the transformed model will still be valid when fixed Vars are unfixed.",
+        doc="""
+        If True, the transformation will create a correct model even if fixed
+        variable are later unfixed. That is, bounds will be calculated based
+        on fixed variables' bounds, not their values. However, if fixed 
+        variables will never be unfixed, a possibly tigher model will result, 
+        and fixed variables need not have bounds.
+        """
+    ))
     CONFIG.declare('verbose', ConfigValue(
         default=False,
         domain=bool,
@@ -161,9 +201,25 @@ class BetweenSteps_Transformation(Transformation):
             else:
                 self.verbose = False
 
+            if not self._config.assume_fixed_vars_permanent:
+                # TODO: This actually a place where I want everything that
+                # appears in an accessible expression, so component_data_objects
+                # is wrong...
+                fixed_vars = ComponentMap()
+                for v in instance.component_data_objects(
+                        Var, active=True, descend_into=(Block, Disjunct)):
+                    if v.fixed:
+                        fixed_vars[v] = v.value
+                        v.fixed = False
+
             self._apply_to_impl(instance)
 
         finally:
+            # restore fixed variables
+            if not self._config.assume_fixed_vars_permanent:
+                for v, val in fixed_vars.items():
+                    v.fix(value)
+
             del self._config
             del self.verbose
             # clear the global name buffer
@@ -261,7 +317,7 @@ class BetweenSteps_Transformation(Transformation):
             # was there a default
             partition = variable_partitions.get(None)
             if partition is None:
-                # It not, see what method to use to calculate one
+                # If not, see what method to use to calculate one
                 method = partition_method.get(obj)
                 # was there a default method?
                 if method is None:
@@ -399,3 +455,5 @@ class BetweenSteps_Transformation(Transformation):
                                          
             obj.deactivate()
             return transformed_disjunct
+
+    
