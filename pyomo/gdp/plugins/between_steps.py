@@ -16,22 +16,21 @@ Relaxations between big-M and Convex Hull Reformulations," 2021.
 """
 from __future__ import division
 
-from pyomo.common.config import (ConfigBlock, ConfigValue)#,
-#                                 NonNegativeFloat, PositiveInt, In)
+from pyomo.common.config import (ConfigBlock, ConfigValue)
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import ( Block, Constraint, Var, SortComponents, Transformation,
                          TransformationFactory, TraversalStrategy,
-                         NonNegativeIntegers)#,
-#                         value, Reals, NonNegativeReals,
-#                         Suffix, ComponentMap )
+                         NonNegativeIntegers, value, ConcreteModel,
+                         NonNegativeIntegers, Objective, ComponentMap)
 from pyomo.common.collections import ComponentSet
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr import current as EXPR
+from pyomo.opt import SolverFactory
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import preprocess_targets, is_child_of, target_list, _to_dict
-
-from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
+from pyomo.gdp.util import (preprocess_targets, is_child_of, target_list,
+                            _to_dict, verify_successful_solve, NORMAL,
+                            clone_without_expression_components )
 
 import logging
 logger = logging.getLogger('pyomo.gdp.between_steps')
@@ -40,9 +39,7 @@ from nose.tools import set_trace
 
 NAME_BUFFER = {}
 
-def _generate_additively_separable_repn(expr):
-    repn = generate_standard_repn(expr, compute_values=True)
-    nonlinear_part = repn.nonlinear_expr
+def _generate_additively_separable_repn(nonlinear_part):
     if nonlinear_part.__class__ is not EXPR.SumExpression:
         # This isn't separable, so we just have the one expression
         return {'nonlinear_vars': [(v for v in
@@ -59,10 +56,12 @@ def _generate_additively_separable_repn(expr):
         nonlinear_decomp['nonlinear_vars'].append(
             (v for v in EXPR.identify_variables(summand)))
 
-    return nonlinear_decopm
+    return nonlinear_decomp
 
 def _arbitrary_partition(disjunction):
     pass
+
+
 
 @TransformationFactory.register('gdp.between_steps',
                                 doc="Reformulates a convex disjunctive model "
@@ -174,6 +173,34 @@ class BetweenSteps_Transformation(Transformation):
         Set to True for verbose output, False otherwise.
         """
     ))
+    # ESJ: TODO: I'm not quite sure how best to do this... I kinda want a
+    # callback, but I kinda want to not mess with solver stuff... I guess it
+    # could optionally take a SolverFactory as an argument, would be the
+    # cleanest way to do it?
+    CONFIG.declare('compute_bounds_method', ConfigValue(
+        default=None,
+        description="""Function which takes an expression and returns both a 
+        lower and upper bound for it.""",
+        doc="""Callback for computing bounds on expressions, in order to bound
+        the auxilary variables created by the transformation. Some 
+        pre-implemented options include
+            * compute_optimal_bounds (the default), and
+            * pyomo.contrib.fbbt.fbbt.compute_bounds_on_expr (a faster but 
+              weaker alternative),
+        or you can write your own callback which accepts an Expression object
+        and returns a tuple (LB, UB) where either element can be None if no
+        valid bound could be found.
+        """
+    ))
+    CONFIG.declare('subproblem_solver', ConfigValue(
+        default=SolverFactory('ipopt'),
+        description="""SolverFactory object to use for computing expression 
+        bounds, if doing so optimally.""",
+        doc="""
+        If compute_bounds_method is 'compute_optimal_bounds,' this SolverFactory
+        will be used to solve the subproblems.
+        """
+    ))
     # TODO: Maybe a way to specify your own bounds??
 
     def __init__(self):
@@ -200,6 +227,9 @@ class BetweenSteps_Transformation(Transformation):
                 self.verbose = True
             else:
                 self.verbose = False
+
+            if self._config.compute_bounds_method is None:
+                self._config.compute_bounds_method = self.compute_optimal_bounds
 
             if not self._config.assume_fixed_vars_permanent:
                 # TODO: This actually a place where I want everything that
@@ -398,6 +428,10 @@ class BetweenSteps_Transformation(Transformation):
             leq_constraints = self._get_leq_constraints(cons)
             for (body, rhs) in leq_constraints:
                 repn = generate_standard_repn(body)
+                nonlinear_repn = None
+                if repn.nonlinear_expr is not None:
+                    nonlinear_repn = _generate_additively_separable_repn(
+                        repn.nonlinear_expr)
                 split_exprs = []
                 split_aux_vars = []
                 for var_list in partition:
@@ -422,19 +456,45 @@ class BetweenSteps_Transformation(Transformation):
                                                 "partition." % (v1.name, v2.name,
                                                                 cons.name))
                             expr += repn.quadratic_coefs[i]*v1*v2
-                    for i, v in enumerate(repn.nonlinear_vars):
-                        # TODO I have no idea what to do with these
-                        raise NotImplementedError("I don't know what these "
-                                                  "can look like!")
-                
+                    if nonlinear_repn is not None:
+                        for i, v_list in enumerate(
+                                nonlinear_repn['nonlinear_vars']):
+                            # check if v_list is a subset of var_list. If it is
+                            # not and there is no intersection, we move on. If
+                            # it is not and there is an intersection, we raise
+                            # an error: It's not a valid partition. If it is,
+                            # then we add this piece of the expression.
+                            expr_var_set = ComponentSet(v_list)
+                            # subset?
+                            if all(v in var_list for v in expr_var_set):
+                                expr += nonlinear_repn['nonlinear_exprs'][i]
+                            # intersection?
+                            elif len(expr_var_set & var_list) != 0:
+                                raise GDP_Error("Variables which appear in the "
+                                                "expression %s are in different "
+                                                "partitions, but this "
+                                                "expression doesn't appear "
+                                                "additively separable. Please "
+                                                "expand it if it is additively "
+                                                "separable or, more likely, "
+                                                "ensure that all the "
+                                                "constraints in the disjunction "
+                                                "are additively separable with "
+                                                "respect to the specified "
+                                                "partition." % 
+                                                nonlinear_repn[
+                                                    'nonlinear_exprs'][i])
+                                                
                     # now we have the piece of the expression, we need bounds on
                     # it. We first check if they were specified via args. If not
-                    # we use fbbt.
+                    # we use specified method to calculate them. (Probably fbbt
+                    # or actually optimizing the function over the box defined
+                    # by the variable bounds)
 
                     # TODO: need to implement a bounds arg and try to retrieve
                     # them here. Only do the below if that fails.
 
-                    expr_lb, expr_ub = compute_bounds_on_expr(expr)
+                    expr_lb, expr_ub = self._config.compute_bounds_method(expr)
                     if expr_lb is None or expr_ub is None:
                         raise GDP_Error("Expression %s from constraint %s "
                                         "is unbounded! Please specify a bound "
@@ -456,4 +516,36 @@ class BetweenSteps_Transformation(Transformation):
             obj.deactivate()
             return transformed_disjunct
 
-    
+    # ESJ: TODO: This is a terrible name.. Like, wrt WHAT, Emma?
+    def compute_optimal_bounds(self, expr):
+        m = ConcreteModel()
+        m.x = Var(NonNegativeIntegers, dense=False)
+        substitute_map = {}
+        for i,v in enumerate(EXPR.identify_variables(expr)):
+            m.x[i].setlb(v.lb)
+            m.x[i].setub(v.ub)
+            substitute_map[id(v)] = m.x[i]
+        m.obj = Objective(expr=clone_without_expression_components(
+            expr,
+            substitute=substitute_map))
+        opt = self._config.subproblem_solver
+        results = opt.solve(m)
+        if verify_successful_solve(results) is not NORMAL:
+            logger.warning("Problem to find lower bound for expression %s"
+                           "did not solve normally.\n\n%s" % (expr, results))
+            LB = None
+        else:
+            # TODO: we probably need tolerance or rounding or something
+            # here... Ideally we'd get the LB from the solver, but ipopt for
+            # example doesn't even gives us one so...
+            LB = value(m.obj.expr)
+        m.obj.sense = -1
+        results = opt.solve(m)
+        if verify_successful_solve(results) is not NORMAL:
+            logger.warning("Problem to find upper bound for expression %s"
+                           "did not solve normally.\n\n%s" % (expr, results))
+            UB = None
+        else:
+            UB = value(m.obj.expr)
+        
+        return (LB, UB)
