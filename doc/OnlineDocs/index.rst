@@ -26,6 +26,7 @@ with a diverse set of optimization capabilities.
    library_reference/index.rst
    contribution_guide.rst
    contributed_packages/index.rst
+   related_packages.rst
    bibliography.rst
 
 Indices and Tables

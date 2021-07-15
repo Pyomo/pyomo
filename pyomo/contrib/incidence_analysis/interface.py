@@ -128,8 +128,9 @@ class IncidenceGraphInterface(object):
         # later on.
         # WARNING: This cache will become invalid if the user alters their
         #          model.
-        self.cached = IncidenceMatrixType.NONE
-        if isinstance(model, PyomoNLP):
+        if model is None:
+            self.cached = IncidenceMatrixType.NONE
+        elif isinstance(model, PyomoNLP):
             nlp = model
             self.cached = IncidenceMatrixType.NUMERIC
             self.variables = nlp.get_pyomo_variables()
@@ -151,7 +152,7 @@ class IncidenceGraphInterface(object):
                     self.variables,
                     self.constraints,
                     )
-        elif model is not None:
+        else:
             raise TypeError(
                 "Unsupported type for incidence matrix. Expected "
                 "%s or %s but got %s."

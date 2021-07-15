@@ -20,12 +20,18 @@ from io import StringIO
 
 from pyomo.common.dependencies import networkx_available, matplotlib_available
 from pyomo.common.log import LoggingIntercept
-from pyomo.environ import ConcreteModel, Constraint, Objective, Var, Integers, minimize, RangeSet, Block, ConstraintList
+from pyomo.common.tempfiles import TempfileManager
+from pyomo.environ import (
+    ConcreteModel, Constraint, Objective, Var, Integers, minimize,
+    RangeSet, Block, ConstraintList,
+)
 from pyomo.contrib.community_detection.detection import (
     detect_communities, CommunityMap,
     community_louvain_available, community_louvain
 )
-from pyomo.contrib.community_detection.community_graph import generate_model_graph
+from pyomo.contrib.community_detection.community_graph import (
+    generate_model_graph,
+)
 
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
 from pyomo.solvers.tests.models.QP_simple import QP_simple
@@ -619,7 +625,10 @@ class TestDecomposition(unittest.TestCase):
         model = decode_model_1()
         community_map_object = detect_communities(model)
 
-        fig, pos = community_map_object.visualize_model_graph(filename='test_visualize_model_graph_1')
+        with TempfileManager:
+            fig, pos = community_map_object.visualize_model_graph(
+                filename=TempfileManager.create_tempfile(
+                    'test_visualize_model_graph_1.png'))
         correct_pos_dict_length = 5
 
         self.assertTrue(isinstance(pos, dict))
@@ -630,8 +639,11 @@ class TestDecomposition(unittest.TestCase):
         model = decode_model_2()
         community_map_object = detect_communities(model)
 
-        fig, pos = community_map_object.visualize_model_graph(type_of_graph='bipartite',
-                                                              filename='test_visualize_model_graph_2')
+        with TempfileManager:
+            fig, pos = community_map_object.visualize_model_graph(
+                type_of_graph='bipartite',
+                filename=TempfileManager.create_tempfile(
+                    'test_visualize_model_graph_2.png'))
         correct_pos_dict_length = 13
 
         self.assertTrue(isinstance(pos, dict))

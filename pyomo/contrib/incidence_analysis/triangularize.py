@@ -11,11 +11,12 @@
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.common.dependencies import networkx as nx
 
+
 def block_triangularize(matrix, matching=None):
     """
     Computes the necessary information to permute a matrix to block-lower
-    triangular form, i.e. a partition of rows and columns an ordered set
-    of diagonal blocks in such a permutation.
+    triangular form, i.e. a partition of rows and columns into an ordered
+    set of diagonal blocks in such a permutation.
 
     Arguments
     ---------
