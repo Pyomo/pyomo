@@ -112,7 +112,7 @@ def _generate_component_items(components):
 def sensitivity_calculation(method, instance, paramList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None):
     """This function accepts a Pyomo ConcreteModel, a list of parameters, and
-    their corresponding perterbation list. The model is then augmented with
+    their corresponding perturbation list. The model is then augmented with
     dummy constraints required to call sipopt or k_aug to get an approximation
     of the perturbed solution.
     
@@ -170,7 +170,7 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
         ipopt_sens = SolverFactory('ipopt_sens', solver_io='nl')
         ipopt_sens.options['run_sens'] = 'yes'
 
-        # Send the model to the ipopt_sens and collect the solution
+        # Send the model to ipopt_sens and collect the solution
         results = ipopt_sens.solve(m, keepfiles=keepfiles, tee=tee)
 
     elif method == 'k_aug':
@@ -194,13 +194,13 @@ def get_dsdp(model, theta_names, theta, tee=False):
     The following terms are used to define the output dimensions:
     Ncon   = number of constraints
     Nvar   = number of variables (Nx + Ntheta)
-    Nx     = the numer of decision (primal) variables
+    Nx     = number of decision (primal) variables
     Ntheta = number of uncertain parameters.
 
     Parameters
     ----------
     model: Pyomo ConcreteModel
-        model should includes an objective function
+        model should include an objective function
     theta_names: list of strings
         List of Var names
     theta: dict
@@ -286,13 +286,13 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     The following terms are used to define the output dimensions:
     Ncon   = number of constraints
     Nvar   = number of variables (Nx + Ntheta)
-    Nx     = the numer of decision (primal) variables
+    Nx     = number of decision (primal) variables
     Ntheta = number of uncertain parameters.
 
     Parameters
     ----------
     model: Pyomo ConcreteModel
-        model should includes an objective function
+        model should include an objective function
     theta_names: list of strings
         List of Var names
     tee: bool, optional
@@ -310,13 +310,13 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
         Ncon by Nvar size sparse matrix. A Jacobian matrix of the
         constraints with respect to the (decision variables, parameters)
         at the optimal solution. Each row contains [column number,
-        row number, and value], colum order follows variable order in col
+        row number, and value], column order follows variable order in col
         and index starts from 1. Note that it follows k_aug.
         If no constraint exists, return []
     col: list
-        Size Nvar. list of variable names
+        Size Nvar list of variable names
     row: list
-        Size Ncon+1. List of constraints and objective function names
+        Size Ncon+1 list of constraints and objective function names.
         The final element is the objective function name.
     line_dic: dict
         column numbers of the theta_names in the model. Index starts from 1
@@ -328,7 +328,7 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     Exception
         When ipopt fails 
     """
-    #Create the solver plugin using the ASL interface
+    # Create the solver plugin using the ASL interface
     ipopt = SolverFactory('ipopt',solver_io='nl')
     if solver_options is not None:
         ipopt.options = solver_options
@@ -348,7 +348,7 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
 
     results = ipopt.solve(model,tee=tee)
 
-    # Rasie Exception if ipopt fails 
+    # Raise exception if ipopt fails 
     if (results.solver.status == SolverStatus.warning):
         raise Exception(results.solver.Message)
 
@@ -525,7 +525,7 @@ class SensitivityInterface(object):
         block._paramList = None
 
         # This will hold any constraints where we have replaced
-        # parameters with vairables.
+        # parameters with variables.
         block.constList = ConstraintList()
 
         return block
