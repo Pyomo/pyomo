@@ -11,7 +11,6 @@
 __all__ = ['Constraint', '_ConstraintData', 'ConstraintList',
            'simple_constraint_rule', 'simple_constraintlist_rule']
 
-import inspect
 import io
 import sys
 import logging
@@ -29,19 +28,17 @@ from pyomo.core.base.component import (
     ActiveComponentData, ModelComponentFactory,
 )
 from pyomo.core.base.indexed_component import (
-    ActiveIndexedComponent, UnindexedComponent_set,
+    ActiveIndexedComponent, UnindexedComponent_set, rule_wrapper,
 )
 from pyomo.core.base.misc import (tabular_writer)
 from pyomo.core.base.set import Set
-from pyomo.core.base.util import (
-    disable_methods, Initializer,
-    IndexedCallInitializer, CountedCallInitializer
+from pyomo.core.base.disable_methods import disable_methods
+from pyomo.core.base.initializer import (
+    Initializer, IndexedCallInitializer, CountedCallInitializer,
 )
 
 
 logger = logging.getLogger('pyomo.core')
-
-_simple_constraint_rule_types = set([ type(None), bool ])
 
 _rule_returned_none_error = """Constraint '%s': rule returned None.
 
@@ -51,44 +48,7 @@ Constraint.Infeasible.  The most common cause of this error is
 forgetting to include the "return" statement at the end of your rule.
 """
 
-
-def _map_constraint_result(fn, none_val, args, kwargs):
-    if fn.__class__ in _simple_constraint_rule_types:
-        #
-        # If the argument is a boolean or None, then this is a
-        # trivial constraint expression.
-        #
-        value = fn
-    else:
-        #
-        # Otherwise, the argument is a functor, so call it to
-        # generate the constraint expression.
-        #
-        value = fn( *args, **kwargs )
-    #
-    # Map the value to a constant:
-    #   None        to none_val
-    #   True        Feasible constraint
-    #   False       Infeasible constraint
-    #
-    if value.__class__ in _simple_constraint_rule_types:
-        if value is None:
-            return none_val
-        elif value is True:
-            return Constraint.Feasible
-        elif value is False:
-            return Constraint.Infeasible
-    return value
-
-_map_constraint_funcdef = \
-"""def wrapper_function%s:
-    args, varargs, kwds, local_env = inspect.getargvalues(
-        inspect.currentframe())
-    args = tuple(local_env[_] for _ in args) + (varargs or ())
-    return _map_constraint_result(fn, %s, args, (kwds or {}))
-"""
-
-def simple_constraint_rule( fn ):
+def simple_constraint_rule(rule):
     """
     This is a decorator that translates None/True/False return
     values into Constraint.Skip/Constraint.Feasible/Constraint.Infeasible.
@@ -103,23 +63,13 @@ def simple_constraint_rule( fn ):
 
     model.c = Constraint(rule=simple_constraint_rule(...))
     """
-    if type(fn) in _simple_constraint_rule_types:
-        return _map_constraint_result(fn, Constraint.Skip, None, None)
-    # Because some of our processing of initializer functions relies on
-    # knowing the number of positional arguments, we will go to extra
-    # effort here to preserve the original function signature.
-    _funcdef = _map_constraint_funcdef % (
-        str(inspect.signature(fn)), 'ConstraintList.Skip'
-    )
-    # Create the wrapper in a temporary environment that mimics this
-    # function's environment.
-    _env = dict(globals())
-    _env.update(locals())
-    exec(_funcdef, _env)
-    return _env['wrapper_function']
+    return rule_wrapper(rule, {
+        None: Constraint.Skip,
+        True: Constraint.Feasible,
+        False: Constraint.Infeasible,
+    })
 
-
-def simple_constraintlist_rule( fn ):
+def simple_constraintlist_rule(rule):
     """
     This is a decorator that translates None/True/False return values
     into ConstraintList.End/Constraint.Feasible/Constraint.Infeasible.
@@ -134,21 +84,11 @@ def simple_constraintlist_rule( fn ):
 
     model.c = ConstraintList(expr=simple_constraintlist_rule(...))
     """
-    if type(fn) in _simple_constraint_rule_types:
-        return _map_constraint_result(fn, ConstraintList.End, None, None)
-    # Because some of our processing of initializer functions relies on
-    # knowing the number of positional arguments, we will go to extra
-    # effort here to preserve the original function signature.
-    _funcdef = _map_constraint_funcdef % (
-        str(inspect.signature(fn)), 'ConstraintList.End'
-    )
-    # Create the wrapper in a temporary environment that mimics this
-    # function's environment.
-    _env = dict(globals())
-    _env.update(locals())
-    exec(_funcdef, _env)
-    return _env['wrapper_function']
-
+    return rule_wrapper(rule, {
+        None: ConstraintList.End,
+        True: Constraint.Feasible,
+        False: Constraint.Infeasible,
+    })
 
 #
 # This class is a pure interface
@@ -745,29 +685,29 @@ class Constraint(ActiveIndexedComponent):
 
         timer = ConstructionTimer(self)
         if is_debug_set(logger):
-            logger.debug("Constructing constraint %s"
-                         % (self.name))
+            logger.debug("Constructing constraint %s" % (self.name))
 
+        rule = self.rule
         try:
             # We do not (currently) accept data for constructing Constraints
             index = None
             assert data is None
 
-            if self.rule is None:
+            if rule is None:
                 # If there is no rule, then we are immediately done.
                 return
 
-            if self.rule.constant() and self.is_indexed():
+            if rule.constant() and self.is_indexed():
                 raise IndexError(
                     "Constraint '%s': Cannot initialize multiple indices "
                     "of a constraint with a single expression" %
                     (self.name,) )
 
             block = self.parent_block()
-            if self.rule.contains_indices():
+            if rule.contains_indices():
                 # The index is coming in externally; we need to validate it
-                for index in self.rule.indices():
-                    self[index] = self.rule(block, index)
+                for index in rule.indices():
+                    self[index] = rule(block, index)
             elif not self.index_set().isfinite():
                 # If the index is not finite, then we cannot iterate
                 # over it.  Since the rule doesn't provide explicit
@@ -778,14 +718,12 @@ class Constraint(ActiveIndexedComponent):
             else:
                 # Bypass the index validation and create the member directly
                 for index in self.index_set():
-                    self._setitem_when_not_present(
-                        index, self.rule(block, index)
-                    )
+                    self._setitem_when_not_present(index, rule(block, index))
         except Exception:
             err = sys.exc_info()[1]
             logger.error(
                 "Rule failed when generating expression for "
-                "constraint %s with index %s:\n%s: %s"
+                "Constraint %s with index %s:\n%s: %s"
                 % (self.name,
                    str(index),
                    type(err).__name__,
@@ -852,9 +790,7 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
     """
 
     def __init__(self, *args, **kwds):
-        _GeneralConstraintData.__init__(self,
-                                        component=self,
-                                        expr=None)
+        _GeneralConstraintData.__init__(self, component=self, expr=None)
         Constraint.__init__(self, *args, **kwds)
 
     #

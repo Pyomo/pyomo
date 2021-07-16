@@ -2977,7 +2977,9 @@ class TestSetErrors(PyomoModel):
         a=Set()
         b=Set(a)
         with self.assertRaisesRegex(
-                TypeError, "Cannot apply a Set operator to an indexed"):
+                #TypeError, "Cannot apply a Set operator to an indexed"):
+                ValueError, "Error retrieving component IndexedSet\[None\]: "
+                "The component has not been constructed."):
             c=Set(within=b, dimen=2)
             c.construct()
 

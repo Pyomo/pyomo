@@ -22,8 +22,9 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import (
     native_types, native_numeric_types, as_numeric, value,
 )
-from pyomo.core.base.util import (
-    disable_methods, InitializerBase, Initializer, 
+from pyomo.core.base.disable_methods import disable_methods
+from pyomo.core.base.initializer import (
+    InitializerBase, Initializer,
     CountedCallInitializer, IndexedCallInitializer,
 )
 from pyomo.core.base.range import (
@@ -35,6 +36,7 @@ from pyomo.core.base.component import (
 )
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, normalize_index,
+    rule_wrapper,
 )
 from pyomo.core.base.global_set import (
     GlobalSets, GlobalSetBase,
@@ -206,8 +208,7 @@ def set_options(**kwds):
         return func
     return decorator
 
-
-def simple_set_rule( fn ):
+def simple_set_rule(rule):
     """
     This is a decorator that translates None into Set.End.
     This supports a simpler syntax in set rules, though these can be
@@ -219,26 +220,7 @@ def simple_set_rule( fn ):
     def A_rule(model, i, j):
         ...
     """
-
-    # Because some of our processing of initializer functions relies on
-    # knowing the number of positional arguments, we will go to extra
-    # effort here to preserve the original function signature.
-    _funcdef = """def wrapper_function%s:
-        args, varargs, kwds, local_env = inspect.getargvalues(
-            inspect.currentframe())
-        args = tuple(local_env[_] for _ in args) + (varargs or ())
-        value = fn(*args, **(kwds or {}))
-        # Map None -> Set.End
-        if value is None:
-            return Set.End
-        return value
-""" % (str(inspect.signature(fn)),)
-    # Create the wrapper in a temporary environment that mimics this
-    # function's environment.
-    _env = dict(globals())
-    _env.update(locals())
-    exec(_funcdef, _env)
-    return _env['wrapper_function']
+    return rule_wrapper(rule, {None: Set.End})
 
 
 class UnknownSetDimen(object): pass

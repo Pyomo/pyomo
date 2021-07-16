@@ -10,6 +10,7 @@
 
 __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 
+import inspect
 import logging
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
@@ -133,6 +134,92 @@ def _get_indexed_component_data_name(component, index):
             del component._data[index]
     return ans
 
+_rule_returned_none_error = """%s '%s': rule returned None.
+
+%s rules must return either a valid expression, numeric value, or
+%s.Skip.  The most common cause of this error is forgetting to
+include the "return" statement at the end of your rule.
+"""
+
+def rule_result_substituter(result_map):
+    _map = result_map
+    _map_types = set(type(key) for key in result_map)
+
+    def rule_result_substituter_impl(rule, *args, **kwargs):
+        if rule.__class__ in _map_types:
+            #
+            # The argument is a trivial type and will be mapped
+            #
+            value = rule
+        else:
+            #
+            # Otherwise, the argument is a functor, so call it to
+            # generate the rule result.
+            #
+            value = rule( *args, **kwargs )
+        #
+        # Map the returned value:
+        #
+        if value.__class__ in _map_types and value in _map:
+            return _map[value]
+        return value
+
+    return rule_result_substituter_impl
+
+_map_rule_funcdef = \
+"""def wrapper_function%s:
+    args, varargs, kwds, local_env = inspect.getargvalues(
+        inspect.currentframe())
+    args = tuple(local_env[_] for _ in args) + (varargs or ())
+    return wrapping_fcn(rule, *args, **(kwds or {}))
+"""
+
+def rule_wrapper(rule, wrapping_fcn, positional_arg_map=None):
+    """Wrap a rule with another function
+
+    This utility method provides a way to wrap a function (rule) with
+    another function while preserving the original function signature.
+    This is important for rules, as the :py:func:`Initializer`
+    argument processor relies on knowing the number of positional
+    arguments.
+
+    Parameters
+    ----------
+    rule: function
+        The original rule being wrapped
+    wrapping_fcn: function or Dict
+        The wrapping function.  The `wrapping_fcn` will be called with
+        ``(rule, *args, **kwargs)``.  For convenience, if a `dict` is
+        passed as the `wrapping_fcn`, then the result of
+        :py:func:`rule_result_substituter(wrapping_fcn)` is used as the
+        wrapping function.
+    positional_arg_map: iterable[int]
+        An iterable of indices of rule positional arguments to expose in
+        the wrapped function signature.  For example,
+        `positional_arg_map=(2, 0)` and `rule=fcn(a, b, c)` would produce a
+        wrapped function with a signature `wrapper_function(c, a)`
+
+    """
+    if isinstance(wrapping_fcn, dict):
+        wrapping_fcn = rule_result_substituter(wrapping_fcn)
+        if not inspect.isfunction(rule):
+            return wrapping_fcn(rule)
+    # Because some of our processing of initializer functions relies on
+    # knowing the number of positional arguments, we will go to extra
+    # effort here to preserve the original function signature.
+    rule_sig = inspect.signature(rule)
+    if positional_arg_map is not None:
+        param = list(rule_sig.parameters.values())
+        rule_sig = rule_sig.replace(
+            parameters=(param[i] for i in positional_arg_map))
+    _funcdef = _map_rule_funcdef % (str(rule_sig),)
+    # Create the wrapper in a temporary environment that mimics this
+    # function's environment.
+    _env = dict(globals())
+    _env.update(locals())
+    exec(_funcdef, _env)
+    return _env['wrapper_function']
+
 
 class IndexedComponent(Component):
     """
@@ -235,8 +322,13 @@ class IndexedComponent(Component):
     def to_dense_data(self):
         """TODO"""
         for idx in self._index:
-            if idx not in self._data:
+            if idx in self._data:
+                continue
+            try:
                 self._getitem_when_not_present(idx)
+            except KeyError:
+                # Rule could have returned Skip, which we will silently ignore
+                pass
 
     def clear(self):
         """Clear the data in this component"""
