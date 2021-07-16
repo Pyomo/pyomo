@@ -4000,7 +4000,7 @@ def DeclareGlobalSet(obj, caller_globals=None):
     pseudo-singletons, in that copy.deepcopy (and Model.clone()) will
     not duplcicate them, and when you pickle and restore objects
     containing GlobalSets will still refer to the same object.  The
-    declaed GlobalSet object will be an instance of the original Set
+    declared GlobalSet object will be an instance of the original Set
     type.
 
     """

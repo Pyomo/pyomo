@@ -3291,6 +3291,22 @@ class TestGlobalSets(unittest.TestCase):
         self.assertEqual(str(Reals), 'Reals')
         self.assertEqual(str(Integers), 'Integers')
 
+    def test_block_independent(self):
+        m = ConcreteModel()
+        with self.assertRaisesRegex(
+                RuntimeError,
+                "Cannot assign a GlobalSet 'Reals' to model 'unknown'"):
+            m.a_set = Reals
+        self.assertEqual(str(Reals), 'Reals')
+        self.assertIsNone(Reals._parent)
+        m.blk = Block()
+        with self.assertRaisesRegex(
+                RuntimeError,
+                "Cannot assign a GlobalSet 'Reals' to block 'blk'"):
+            m.blk.a_set = Reals
+        self.assertEqual(str(Reals), 'Reals')
+        self.assertIsNone(Reals._parent)
+
     def test_iteration(self):
         with self.assertRaisesRegex(
                 TypeError, "'GlobalSet' object is not iterable "
