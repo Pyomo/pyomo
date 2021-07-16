@@ -656,7 +656,7 @@ class _GeneralConstraintData(_ConstraintData):
                 return self._body <= self._upper
             elif self._upper is None:
                 return self._lower <= self._body
-            return self._lower <= self._body <= self._upper
+            return logical_expr.inequality(self._lower, self._body, self._upper)
 
 
 @ModelComponentFactory.register("General constraint expressions.")

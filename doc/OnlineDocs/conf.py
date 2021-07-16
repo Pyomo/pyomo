@@ -271,6 +271,8 @@ import pyomo.opt
 # solvers are not available
 ipopt_available = bool(pyomo.opt.check_available_solvers('ipopt'))
 sipopt_available = bool(pyomo.opt.check_available_solvers('ipopt_sens'))
+k_aug_available = bool(pyomo.opt.check_available_solvers('k_aug'))
+dot_sens_available = bool(pyomo.opt.check_available_solvers('dot_sens'))
 baron_available = bool(pyomo.opt.check_available_solvers('baron'))
 glpk_available = bool(pyomo.opt.check_available_solvers('glpk'))
 baron = pyomo.opt.SolverFactory('baron')
