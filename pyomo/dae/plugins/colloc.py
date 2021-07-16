@@ -593,11 +593,11 @@ class Collocation_Discretization_Transformation(Transformation):
             raise IndexError("ContinuousSet '%s' is not an indexing set of"
                              " the variable '%s'" % (ds.name, var.name))
         varidx = var.index_set()
-        if not hasattr(varidx, 'set_tuple'):
+        if not varidx.subsets():
             if ds is not varidx:
                 raise IndexError("ContinuousSet '%s' is not an indexing set of"
                                  " the variable '%s'" % (ds.name, var.name))
-        elif ds not in varidx.set_tuple:
+        elif ds not in varidx.subsets():
             raise IndexError("ContinuousSet '%s' is not an indexing set of the"
                              " variable '%s'" % (ds.name, var.name))
 
