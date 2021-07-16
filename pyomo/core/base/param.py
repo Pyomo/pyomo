@@ -303,7 +303,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             return idx in self._data
         return idx in self._index
 
-    def __iter__(self):
+    def keys(self):
         """
         Iterate over the keys in the dictionary.  If the default value is
         specified, then iterate over all keys in the component index.

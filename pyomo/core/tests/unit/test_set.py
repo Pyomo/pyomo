@@ -2027,11 +2027,19 @@ A : Size=1, Index=None, Ordered=True
                 TypeError, "Cannot apply a Set operator to an "
                 r"indexed Set component \(J\)"):
             m.I | m.J
+        with self.assertRaisesRegex(
+                TypeError, "Cannot apply a Set operator to an "
+                r"indexed Set component \(J\)"):
+            m.J | m.I
         m.x = Suffix()
         with self.assertRaisesRegex(
                 TypeError, "Cannot apply a Set operator to a "
                 r"non-Set Suffix component \(x\)"):
             m.I | m.x
+        with self.assertRaisesRegex(
+                TypeError, "Cannot apply a Set operator to a "
+                r"non-Set Suffix component \(x\)"):
+            m.x | m.I
         m.y = Var([1,2])
         with self.assertRaisesRegex(
                 TypeError, "Cannot apply a Set operator to an "
@@ -2041,6 +2049,14 @@ A : Size=1, Index=None, Ordered=True
                 TypeError, "Cannot apply a Set operator to a "
                 r"non-Set component data \(y\[1\]\)"):
             m.I | m.y[1]
+        with self.assertRaisesRegex(
+                TypeError, "Cannot apply a Set operator to an "
+                r"indexed Var component \(y\)"):
+            m.y | m.I
+        with self.assertRaisesRegex(
+                TypeError, "Cannot apply a Set operator to a "
+                r"non-Set component data \(y\[1\]\)"):
+            m.y[1] | m.I
 
 class TestSetIntersection(unittest.TestCase):
     def test_pickle(self):
@@ -5920,3 +5936,19 @@ c : Size=3, Index=CHOICES, Active=True
         self.assertEqual(len(m.a), 0)
         m.b = Set(initialize=b_rule, dimen=2)
         self.assertEqual(len(m.b), 0)
+
+    def test_issue_1112(self):
+        m = ConcreteModel()
+        m.a = Set(initialize=[1,2,3])
+        #
+        vals = list(m.a.values())
+        self.assertEqual(len(vals), 1)
+        self.assertIs(vals[0], m.a)
+        #
+        cross = m.a.cross(m.a)
+        self.assertIs(type(cross), SetProduct_OrderedSet)
+        #
+        vals = list(m.a.cross(m.a).values())
+        self.assertEqual(len(vals), 1)
+        self.assertIsInstance(vals[0], SetProduct_OrderedSet)
+        self.assertIsNot(vals[0], cross)

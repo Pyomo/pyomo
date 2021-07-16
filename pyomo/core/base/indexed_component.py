@@ -279,7 +279,15 @@ class IndexedComponent(Component):
         """Return true if the index is in the dictionary"""
         return idx in self._data
 
+    # The default implementation is for keys() and __iter__ to be
+    # synonyms.  The logic is implemented in keys() so that
+    # keys/values/items continue to work for components that implement
+    # other definitions for __iter__ (e.g., Set)
     def __iter__(self):
+        """Return an iterator of the keys in the dictionary"""
+        return self.keys()
+
+    def keys(self):
         """Iterate over the keys in the dictionary"""
 
         if hasattr(self._index, 'isfinite') and not self._index.isfinite():
@@ -341,6 +349,14 @@ You can silence this warning by one of three ways:
                             yield idx
                 return _sparse_iter_gen(self)
 
+    def values(self):
+        """Return an iterator of the component data objects in the dictionary"""
+        return (self[s] for s in self.keys())
+
+    def items(self):
+        """Return an iterator of (index,data) tuples from the dictionary"""
+        return((s, self[s]) for s in self.keys())
+
     @deprecated('The iterkeys method is deprecated. Use dict.keys().',
                 version='6.0')
     def iterkeys(self):
@@ -358,20 +374,6 @@ You can silence this warning by one of three ways:
     def iteritems(self):
         """Return a list (index,data) tuples from the dictionary"""
         return self.items()
-
-    def keys(self):
-        """Return an iterator of the keys in the dictionary"""
-        return iter(self)
-
-    def values(self):
-        """Return an iterator of the component data objects in the dictionary"""
-        for s in self:
-            yield self[s]
-
-    def items(self):
-        """Return an iterator of (index,data) tuples from the dictionary"""
-        for s in self:
-            yield s, self[s]
 
     def __getitem__(self, index):
         """
