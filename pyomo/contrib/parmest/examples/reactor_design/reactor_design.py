@@ -13,7 +13,7 @@ pyomo\examples\doc\pyomobook\nonlinear-ch\react_design\ReactorDesign.py
 """
 import numpy as np
 import pandas as pd
-from pyomo.environ import ConcreteModel, Var, PositiveReals, Objective, Constraint, maximize, SolverFactory
+from pyomo.environ import ConcreteModel, RangeSet, Var, PositiveReals, Objective, Constraint, maximize, SolverFactory
 from romodel import UncSet, UncParam
 
 def reactor_design_model(data):
@@ -63,6 +63,52 @@ def reactor_design_model(data):
     return model
 
 
+def reactor_design_model_indexed(data):
+    
+    # Create the concrete model
+    model = ConcreteModel()
+    
+    # Rate constants
+    model.rxn = RangeSet(1,3)
+    
+    model.k = Var(model.rxn, initialize = 5.0/6.0, within=PositiveReals) 
+    model.k[1].fixed = True
+    model.k[2].fixed = True
+    model.k[3].fixed = True
+    
+    # Inlet concentration of A, gmol/m^3
+    model.caf = Var(initialize = float(data['caf']), within=PositiveReals)
+    model.caf.fixed = True
+    
+	# Space velocity (flowrate/volume)
+    model.sv = Var(initialize = float(data['sv']), within=PositiveReals)
+    model.sv.fixed = True
+    
+    # Outlet concentration of each component
+    model.ca = Var(initialize = 5000.0, within=PositiveReals) 
+    model.cb = Var(initialize = 2000.0, within=PositiveReals) 
+    model.cc = Var(initialize = 2000.0, within=PositiveReals) 
+    model.cd = Var(initialize = 1000.0, within=PositiveReals)
+    
+    # Objective
+    model.obj = Objective(expr = model.cb, sense=maximize)
+    
+    # Constraints
+    model.ca_bal = Constraint(expr = (0 == model.sv * model.caf \
+                     - model.sv * model.ca - model.k[1] * model.ca \
+                     -  2.0 * model.k[3] * model.ca ** 2.0))
+    
+    model.cb_bal = Constraint(expr=(0 == -model.sv * model.cb \
+                     + model.k[1] * model.ca - model.k[2] * model.cb))
+    
+    model.cc_bal = Constraint(expr=(0 == -model.sv * model.cc \
+                     + model.k[2] * model.cb))
+    
+    model.cd_bal = Constraint(expr=(0 == -model.sv * model.cd \
+                     + model.k[3] * model.ca ** 2.0))
+    
+    return model
+
 
 def reactor_design_model_RO(data, theta, cov):
     
@@ -82,7 +128,7 @@ def reactor_design_model_RO(data, theta, cov):
         for j, kj in enumerate(theta_names):
             lhs += (model.k[ki] - mu[i])*A[i][j]*(model.k[kj] - mu[j])
     model.E.cons = Constraint(expr=lhs <= 1)
-        
+
     # Inlet concentration of A, gmol/m^3
     model.caf = Var(initialize = float(data['caf']), within=PositiveReals)
     model.caf.fixed = True
