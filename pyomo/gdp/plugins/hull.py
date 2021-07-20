@@ -798,7 +798,7 @@ class Hull_Reformulation(Transformation):
         if obj.is_indexed():
             constraintMap['transformedConstraints'][obj] = newConstraint
         # add mapping of transformed constraint container back to original
-        # constraint container (or SimpleConstraint)
+        # constraint container (or ScalarConstraint)
         constraintMap['srcConstraints'][newConstraint] = obj
 
         for i in sorted(obj.keys()):
@@ -883,9 +883,9 @@ class Hull_Reformulation(Transformation):
                 else:
                     newConstraint.add('eq', newConsExpr)
                     # map to the _ConstraintData (And yes, for
-                    # SimpleConstraints, this is overwriting the map to the
+                    # ScalarConstraints, this is overwriting the map to the
                     # container we made above, and that is what I want to
-                    # happen. SimpleConstraints will map to lists. For
+                    # happen. ScalarConstraints will map to lists. For
                     # IndexedConstraints, we can map the container to the
                     # container, but more importantly, we are mapping the
                     # _ConstraintDatas to each other above)
@@ -1089,7 +1089,7 @@ class Hull_Reformulation(Transformation):
 
 @TransformationFactory.register(
     'gdp.chull',
-    doc="Deprecated name for the hull reformulation. Please use 'gdp.hull'.")
+    doc="[DEPRECATED] please use 'gdp.hull' to get the Hull transformation.")
 @deprecated("The 'gdp.chull' name is deprecated. "
             "Please use the more apt 'gdp.hull' instead.",
             logger='pyomo.gdp',

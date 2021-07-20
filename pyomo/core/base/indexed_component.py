@@ -10,15 +10,17 @@
 
 __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 
+import inspect
 import logging
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
-from pyomo.core.expr.numvalue import native_types
+from pyomo.core.expr.numvalue import native_types, NumericNDArray
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common import DeveloperError
+from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
 
 from collections.abc import Sequence
@@ -132,6 +134,92 @@ def _get_indexed_component_data_name(component, index):
             del component._data[index]
     return ans
 
+_rule_returned_none_error = """%s '%s': rule returned None.
+
+%s rules must return either a valid expression, numeric value, or
+%s.Skip.  The most common cause of this error is forgetting to
+include the "return" statement at the end of your rule.
+"""
+
+def rule_result_substituter(result_map):
+    _map = result_map
+    _map_types = set(type(key) for key in result_map)
+
+    def rule_result_substituter_impl(rule, *args, **kwargs):
+        if rule.__class__ in _map_types:
+            #
+            # The argument is a trivial type and will be mapped
+            #
+            value = rule
+        else:
+            #
+            # Otherwise, the argument is a functor, so call it to
+            # generate the rule result.
+            #
+            value = rule( *args, **kwargs )
+        #
+        # Map the returned value:
+        #
+        if value.__class__ in _map_types and value in _map:
+            return _map[value]
+        return value
+
+    return rule_result_substituter_impl
+
+_map_rule_funcdef = \
+"""def wrapper_function%s:
+    args, varargs, kwds, local_env = inspect.getargvalues(
+        inspect.currentframe())
+    args = tuple(local_env[_] for _ in args) + (varargs or ())
+    return wrapping_fcn(rule, *args, **(kwds or {}))
+"""
+
+def rule_wrapper(rule, wrapping_fcn, positional_arg_map=None):
+    """Wrap a rule with another function
+
+    This utility method provides a way to wrap a function (rule) with
+    another function while preserving the original function signature.
+    This is important for rules, as the :py:func:`Initializer`
+    argument processor relies on knowing the number of positional
+    arguments.
+
+    Parameters
+    ----------
+    rule: function
+        The original rule being wrapped
+    wrapping_fcn: function or Dict
+        The wrapping function.  The `wrapping_fcn` will be called with
+        ``(rule, *args, **kwargs)``.  For convenience, if a `dict` is
+        passed as the `wrapping_fcn`, then the result of
+        :py:func:`rule_result_substituter(wrapping_fcn)` is used as the
+        wrapping function.
+    positional_arg_map: iterable[int]
+        An iterable of indices of rule positional arguments to expose in
+        the wrapped function signature.  For example,
+        `positional_arg_map=(2, 0)` and `rule=fcn(a, b, c)` would produce a
+        wrapped function with a signature `wrapper_function(c, a)`
+
+    """
+    if isinstance(wrapping_fcn, dict):
+        wrapping_fcn = rule_result_substituter(wrapping_fcn)
+        if not inspect.isfunction(rule):
+            return wrapping_fcn(rule)
+    # Because some of our processing of initializer functions relies on
+    # knowing the number of positional arguments, we will go to extra
+    # effort here to preserve the original function signature.
+    rule_sig = inspect.signature(rule)
+    if positional_arg_map is not None:
+        param = list(rule_sig.parameters.values())
+        rule_sig = rule_sig.replace(
+            parameters=(param[i] for i in positional_arg_map))
+    _funcdef = _map_rule_funcdef % (str(rule_sig),)
+    # Create the wrapper in a temporary environment that mimics this
+    # function's environment.
+    _env = dict(globals())
+    _env.update(locals())
+    exec(_funcdef, _env)
+    return _env['wrapper_function']
+
 
 class IndexedComponent(Component):
     """
@@ -234,8 +322,13 @@ class IndexedComponent(Component):
     def to_dense_data(self):
         """TODO"""
         for idx in self._index:
-            if idx not in self._data:
+            if idx in self._data:
+                continue
+            try:
                 self._getitem_when_not_present(idx)
+            except KeyError:
+                # Rule could have returned Skip, which we will silently ignore
+                pass
 
     def clear(self):
         """Clear the data in this component"""
@@ -278,7 +371,15 @@ class IndexedComponent(Component):
         """Return true if the index is in the dictionary"""
         return idx in self._data
 
+    # The default implementation is for keys() and __iter__ to be
+    # synonyms.  The logic is implemented in keys() so that
+    # keys/values/items continue to work for components that implement
+    # other definitions for __iter__ (e.g., Set)
     def __iter__(self):
+        """Return an iterator of the keys in the dictionary"""
+        return self.keys()
+
+    def keys(self):
         """Iterate over the keys in the dictionary"""
 
         if hasattr(self._index, 'isfinite') and not self._index.isfinite():
@@ -340,35 +441,31 @@ You can silence this warning by one of three ways:
                             yield idx
                 return _sparse_iter_gen(self)
 
+    def values(self):
+        """Return an iterator of the component data objects in the dictionary"""
+        return (self[s] for s in self.keys())
+
+    def items(self):
+        """Return an iterator of (index,data) tuples from the dictionary"""
+        return((s, self[s]) for s in self.keys())
+
     @deprecated('The iterkeys method is deprecated. Use dict.keys().',
-                version='TBD')
+                version='6.0')
     def iterkeys(self):
         """Return a list of keys in the dictionary"""
         return self.keys()
 
     @deprecated('The itervalues method is deprecated. Use dict.values().',
-                version='TBD')
+                version='6.0')
     def itervalues(self):
         """Return a list of the component data objects in the dictionary"""
         return self.values()
 
     @deprecated('The iteritems method is deprecated. Use dict.items().',
-                version='TBD')
+                version='6.0')
     def iteritems(self):
         """Return a list (index,data) tuples from the dictionary"""
         return self.items()
-
-    def keys(self):
-        """Return an iterator of the keys in the dictionary"""
-        return [ x for x in self ]
-
-    def values(self):
-        """Return an iterator of the component data objects in the dictionary"""
-        return [ self[x] for x in self ]
-
-    def items(self):
-        """Return an iterator of (index,data) tuples from the dictionary"""
-        return [ (x, self[x]) for x in self ]
 
     def __getitem__(self, index):
         """
@@ -708,7 +805,7 @@ value() function.""" % ( self.name, i ))
             if not structurally_valid:
                 raise IndexError(
                     "Index %s contains an invalid number of entries for "
-                    "component %s. Expected %s, got %s." 
+                    "component %s. Expected %s, got %s."
                     % (idx, self.name, set_dim, slice_dim))
             return IndexedComponent_slice(self, fixed, sliced, ellipsis)
         elif _found_numeric:
@@ -849,3 +946,41 @@ class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
             for component_data in self.values():
                 component_data.deactivate()
 
+
+class IndexedComponent_NDArrayMixin(object):
+    """Support using IndexedComponent with numpy.ndarray
+
+    This IndexedComponent mixin class adds support for implicitly using
+    the IndexedComponent as a term in an expression with numpy ndarray
+    objects.
+
+    """
+
+    def __array__(self, dtype=None):
+        if not self.is_indexed():
+            ans = NumericNDArray(shape=(1,), dtype=object)
+            ans[0] = self
+            return ans
+
+        _dim = self.dim()
+        if _dim is None:
+            raise TypeError(
+                "Cannot convert a non-dimensioned Pyomo IndexedComponent "
+                "(%s) into a numpy array" % (self,))
+        bounds = self.index_set().bounds()
+        if not isinstance(bounds[0], Sequence):
+            bounds = ((bounds[0],), (bounds[1],))
+        if any(b != 0 for b in bounds[0]):
+            raise TypeError(
+                "Cannot convert a Pyomo IndexedComponent "
+                "(%s) with bounds [%s, %s] into a numpy array" % (
+                    self, bounds[0], bounds[1]))
+        shape = tuple(b+1 for b in bounds[1])
+        ans = NumericNDArray(shape=shape, dtype=object)
+        for k, v in self.items():
+            ans[k] = v
+        return ans
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        return NumericNDArray.__array_ufunc__(
+            None, ufunc, method, *inputs, **kwargs)

@@ -71,7 +71,7 @@ def setup_environment(data):
     #
     postsolve = getattr(data.options, 'postsolve', None)
     if postsolve:
-        if not yaml_available and data.options.postsolve.results_format == 'yaml':
+        if data.options.postsolve.results_format == 'yaml' and not yaml_available:
             raise ValueError("Configuration specifies a yaml file, but pyyaml is not installed!")
     #
     global start_time
@@ -829,9 +829,7 @@ class PyomoCommandLogContext(object):
 
     def __enter__(self):
         _pyomo = logging.getLogger('pyomo')
-        _pyutilib = logging.getLogger('pyutilib')
-        self.original = ( _pyomo.level, _pyomo.handlers,
-                          _pyutilib.level, _pyutilib.handlers )
+        self.original = ( _pyomo.level, _pyomo.handlers)
 
         #
         # Configure the logger
@@ -842,13 +840,10 @@ class PyomoCommandLogContext(object):
             _pyomo.setLevel(logging.WARNING)
         elif self.options.runtime.logging == 'info':
             _pyomo.setLevel(logging.INFO)
-            _pyutilib.setLevel(logging.INFO)
         elif self.options.runtime.logging == 'verbose':
             _pyomo.setLevel(logging.DEBUG)
-            _pyutilib.setLevel(logging.DEBUG)
         elif self.options.runtime.logging == 'debug':
             _pyomo.setLevel(logging.DEBUG)
-            _pyutilib.setLevel(logging.DEBUG)
         elif _pyomo.getEffectiveLevel() == logging.NOTSET:
             _pyomo.setLevel(logging.WARNING)
 
@@ -856,9 +851,7 @@ class PyomoCommandLogContext(object):
             _logfile = self.options.runtime.logfile
             self.fileLogger = logging.FileHandler(_logfile, 'w')
             _pyomo.handlers = []
-            _pyutilib.handlers = []
             _pyomo.addHandler(self.fileLogger)
-            _pyutilib.addHandler(self.fileLogger)
             # TBD: This seems dangerous in Windows, as the process will
             # have multiple open file handles pointing to the same file.
             self.capture = capture_output(_logfile)
@@ -870,9 +863,6 @@ class PyomoCommandLogContext(object):
         _pyomo = logging.getLogger('pyomo')
         _pyomo.setLevel(self.original[0])
         _pyomo.handlers = self.original[1]
-        _pyutilib = logging.getLogger('pyutilib')
-        _pyutilib.setLevel(self.original[2])
-        _pyutilib.handlers = self.original[3]
 
         if self.fileLogger is not None:
             self.fileLogger.close()

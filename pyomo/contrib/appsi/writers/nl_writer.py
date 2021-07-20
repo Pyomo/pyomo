@@ -45,6 +45,10 @@ class NLWriter(PersistentBase):
     def config(self, val: WriterConfig):
         self._config = val
 
+    @property
+    def symbol_map(self):
+        return self._symbol_map
+
     def set_instance(self, model):
         saved_config = self.config
         saved_update_config = self.update_config

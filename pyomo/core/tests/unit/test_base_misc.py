@@ -54,6 +54,16 @@ class TestSortedRobust(unittest.TestCase):
         a = sorted_robust([('str1', 'str1'), ((1,), 'str2')])
         self.assertEqual(a, [('str1', 'str1'), ((1,), 'str2')])
 
+        # ensure it doesn't throw an error
+        # Test for issue https://github.com/Pyomo/pyomo/issues/2019
+        sorted_robust(
+            [
+                (("10_1", 2), None),
+                ((10, 2), None)
+            ],
+            key=lambda x: x[0]
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

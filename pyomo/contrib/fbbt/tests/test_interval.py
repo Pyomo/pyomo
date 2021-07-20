@@ -67,8 +67,9 @@ class TestInterval(unittest.TestCase):
         self.assertEqual(lb, 10)
         self.assertEqual(ub, interval.inf)
 
-        with self.assertRaises(interval.IntervalException):
-            lb, ub = interval.inv(0, 0, feasibility_tol=1e-8)
+        lb, ub = interval.inv(0, 0, feasibility_tol=1e-8)
+        self.assertEqual(lb, -interval.inf)
+        self.assertEqual(ub, interval.inf)
 
         lb, ub = interval.inv(-0.1, 0, feasibility_tol=1e-8)
         self.assertEqual(lb, -interval.inf)
@@ -78,11 +79,13 @@ class TestInterval(unittest.TestCase):
         self.assertAlmostEqual(lb, -10)
         self.assertAlmostEqual(ub, -5)
 
-        with self.assertRaises(interval.IntervalException):
-            lb, ub = interval.inv(0, -1e-16, feasibility_tol=1e-8)
+        lb, ub = interval.inv(0, -1e-16, feasibility_tol=1e-8)
+        self.assertEqual(lb, -interval.inf)
+        self.assertEqual(ub, interval.inf)
 
-        with self.assertRaises(interval.IntervalException):
-            lb, ub = interval.inv(1e-16, 0, feasibility_tol=1e-8)
+        lb, ub = interval.inv(1e-16, 0, feasibility_tol=1e-8)
+        self.assertEqual(lb, -interval.inf)
+        self.assertEqual(ub, interval.inf)
 
         lb, ub = interval.inv(-1, 1, feasibility_tol=1e-8)
         self.assertAlmostEqual(lb, -interval.inf)
@@ -106,6 +109,23 @@ class TestInterval(unittest.TestCase):
                     self.assertTrue(np.all(zl <= _z))
                     self.assertTrue(np.all(zu >= _z))
 
+    def test_div_edge_cases(self):
+        lb, ub = interval.div(0, -1e-16, 0, 0, 1e-8)
+        self.assertEqual(lb, -interval.inf)
+        self.assertEqual(ub, interval.inf)
+
+        lb, ub = interval.div(0, 1e-16, 0, 0, 1e-8)
+        self.assertEqual(lb, -interval.inf)
+        self.assertEqual(ub, interval.inf)
+
+        lb, ub = interval.div(-1e-16, 0, 0, 0, 1e-8)
+        self.assertEqual(lb, -interval.inf)
+        self.assertEqual(ub, interval.inf)
+
+        lb, ub = interval.div(1e-16, 0, 0, 0, 1e-8)
+        self.assertEqual(lb, -interval.inf)
+        self.assertEqual(ub, interval.inf)
+
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_pow(self):
         x_bounds = [(np.random.uniform(0, 2), np.random.uniform(2, 5)),
@@ -118,12 +138,10 @@ class TestInterval(unittest.TestCase):
                     (np.random.uniform(-5, -2), np.random.uniform(-2, 0))]
         for xl, xu in x_bounds:
             for yl, yu in y_bounds:
+                zl, zu = interval.power(xl, xu, yl, yu, feasibility_tol=1e-8)
                 if xl == 0 and xu == 0 and yu < 0:
-                    with self.assertRaises(interval.IntervalException):
-                        zl, zu = interval.power(xl, xu, yl, yu, feasibility_tol=1e-8)
-                    continue
-                else:
-                    zl, zu = interval.power(xl, xu, yl, yu, feasibility_tol=1e-8)
+                    self.assertEqual(zl, -interval.inf)
+                    self.assertEqual(zu, interval.inf)
                 x = np.linspace(xl, xu, 100)
                 y = np.linspace(yl, yu, 100)
                 for _x in x:
@@ -160,9 +178,10 @@ class TestInterval(unittest.TestCase):
                         if _yl > _yu:
                             continue
                         if _xl == 0 and _xu == 0 and _yu < 0:
-                            with self.assertRaises(interval.IntervalException):
-                                lb, ub = interval.power(_xl, _xu, _yl, _yu, feasibility_tol=1e-8)
-                        elif _yl == _yu and _yl != round(_yl) and (_xu < 0 or (_xu <= 0 and _yu < 0)):
+                            lb, ub = interval.power(_xl, _xu, _yl, _yu, feasibility_tol=1e-8)
+                            self.assertEqual(lb, -interval.inf)
+                            self.assertEqual(ub, interval.inf)
+                        elif _yl == _yu and _yl != round(_yl) and (_xu < 0 or (_xu < 0 and _yu < 0)):
                             with self.assertRaises((InfeasibleConstraintException, interval.IntervalException)):
                                 lb, ub = interval.power(_xl, _xu, _yl, _yu, feasibility_tol=1e-8)
                         else:
@@ -327,3 +346,7 @@ class TestInterval(unittest.TestCase):
         lb, ub = interval._inverse_power1(-1, -1e-12, 2, 2, -interval.inf, interval.inf, feasibility_tol=1e-8)
         self.assertAlmostEqual(lb, 0)
         self.assertAlmostEqual(ub, 0)
+
+        lb, ub = interval.mul(0, 0, -interval.inf, interval.inf)
+        self.assertEqual(lb, -interval.inf)
+        self.assertEqual(ub, interval.inf)

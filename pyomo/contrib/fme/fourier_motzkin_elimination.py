@@ -60,7 +60,7 @@ def vars_to_eliminate_list(x):
     else:
         raise ValueError(
             "Expected Var or list of Vars."
-            "\n\tRecieved %s" % type(x))
+            "\n\tReceived %s" % type(x))
 
 def gcd(a,b):
     while b != 0:

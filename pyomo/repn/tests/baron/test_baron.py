@@ -12,13 +12,19 @@
 #
 
 import os
-
 from filecmp import cmp
+from io import StringIO
+
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import ConcreteModel, Var, Param,  Constraint, Objective,  Block, sin
+from pyomo.common.fileutils import this_file_dir
 
-thisdir = os.path.dirname(os.path.abspath(__file__))
+from pyomo.environ import (
+    ConcreteModel, Var, Param,  Constraint, Objective,  Block, sin,
+    maximize, Binary, Suffix
+)
+
+thisdir = this_file_dir()
 
 
 class Test(unittest.TestCase):
@@ -160,6 +166,49 @@ class Test(unittest.TestCase):
         m.p = Param(initialize=1, mutable=True)
         m.c = Constraint(expr=m.x * m.p ** 1.2 == 0)
         self._check_baseline(m)
+
+    def test_branching_priorities(self):
+        m = ConcreteModel()
+        m.x = Var(within=Binary)
+        m.y = Var([1, 2, 3], within=Binary)
+        m.c = Constraint(expr=m.y[1]*m.y[2] - 2*m.x >= 0)
+        m.obj = Objective(expr=m.y[1]+m.y[2], sense=maximize)
+        m.priority = Suffix(direction=Suffix.EXPORT)
+        m.priority[m.x] = 1
+        # Note this checks that y[3] is filtered out
+        m.priority[m.y] = 2
+        self._check_baseline(m)
+
+    def test_invalid_suffix(self):
+        m = ConcreteModel()
+        m.x = Var(within=Binary)
+        m.y = Var([1, 2, 3], within=Binary)
+        m.c = Constraint(expr=m.y[1]*m.y[2] - 2*m.x >= 0)
+        m.obj = Objective(expr=m.y[1]+m.y[2], sense=maximize)
+        m.priorities = Suffix(direction=Suffix.EXPORT)
+        m.priorities[m.x] = 1
+        m.priorities[m.y] = 2
+        with self.assertRaisesRegex(
+                ValueError, "The BARON writer can not export suffix "
+                "with name 'priorities'. Either remove it from "
+                "the model or deactivate it."):
+            m.write(StringIO(), format='bar')
+        m._name = 'TestModel'
+        with self.assertRaisesRegex(
+                ValueError, "The BARON writer can not export suffix "
+                "with name 'priorities'. Either remove it from "
+                "the model 'TestModel' or deactivate it."):
+            m.write(StringIO(), format='bar')
+        p = m.priorities
+        del m.priorities
+        m.blk = Block()
+        m.blk.sub = Block()
+        m.blk.sub.priorities = p
+        with self.assertRaisesRegex(
+                ValueError, "The BARON writer can not export suffix "
+                "with name 'priorities'. Either remove it from "
+                "the block 'blk.sub' or deactivate it."):
+            m.write(StringIO(), format='bar')
 
 
 #class TestBaron_writer(unittest.TestCase):

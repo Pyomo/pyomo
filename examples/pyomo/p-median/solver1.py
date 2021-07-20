@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# Imports from Pyomo and PyUtilib
+# Imports from Pyomo
 from pyomo.core import *
 from pyomo.common.plugin import *
 from pyomo.opt import *
@@ -25,7 +25,7 @@ class MySolver(object):
     # Solve the specified problem and return
     # a SolverResults object
     def solve(self, instance, **kwds):
-        print "Starting greedy heuristic"
+        print("Starting greedy heuristic")
         val, instance = self._greedy(instance)
         n = value(instance.N)
         # Setup results

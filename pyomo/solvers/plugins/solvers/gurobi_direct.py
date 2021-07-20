@@ -12,8 +12,11 @@ import logging
 import re
 import sys
 
-from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
+from pyomo.common.dependencies import attempt_import
+from pyomo.common.errors import ApplicationError
+from pyomo.common.tempfiles import TempfileManager
+from pyomo.common.tee import capture_output
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
 from pyomo.repn import generate_standard_repn
@@ -41,10 +44,38 @@ def _is_numeric(x):
         return False
     return True
 
+
+def _parse_gurobi_version(gurobipy, avail):
+    if not avail:
+        return
+    GurobiDirect._version = gurobipy.gurobi.version()
+    GurobiDirect._name = "Gurobi %s.%s%s" % GurobiDirect._version
+    while len(GurobiDirect._version) < 4:
+        GurobiDirect._version += (0,)
+    GurobiDirect._version = GurobiDirect._version[:4]
+    GurobiDirect._version_major = GurobiDirect._version[0]
+
+gurobipy, gurobipy_available = attempt_import(
+    'gurobipy',
+    # Other forms of exceptions can be thrown by the gurobi python
+    # import.  For example, a gurobipy.GurobiError exception is thrown
+    # if all tokens for Gurobi are already in use; assuming, of course,
+    # the license is a token license.  Unfortunately, you can't import
+    # without a license, which means we can't explicitly test for that
+    # exception!
+    catch_exceptions=(Exception,),
+    callback=_parse_gurobi_version,
+)
+
+
 @SolverFactory.register('gurobi_direct', doc='Direct python interface to Gurobi')
 class GurobiDirect(DirectSolver):
 
     _verified_license = None
+    _import_messages = ''
+    _name = None
+    _version = 0
+    _version_major = 0
 
     def __init__(self, **kwds):
         if 'type' not in kwds:
@@ -58,30 +89,7 @@ class GurobiDirect(DirectSolver):
         self._callback = None
         self._callback_func = None
 
-        self._name = None
-        try:
-            import gurobipy
-            self._gurobipy = gurobipy
-            self._python_api_exists = True
-            self._version = self._gurobipy.gurobi.version()
-            self._name = "Gurobi %s.%s%s" % self._version
-            while len(self._version) < 4:
-                self._version += (0,)
-            self._version = self._version[:4]
-            self._version_major = self._version[0]
-        except ImportError:
-            self._python_api_exists = False
-        except Exception as e:
-            # other forms of exceptions can be thrown by the gurobi python
-            # import. for example, a gurobipy.GurobiError exception is thrown
-            # if all tokens for Gurobi are already in use. assuming, of
-            # course, the license is a token license. unfortunately, you can't
-            # import without a license, which means we can't test for the
-            # exception above!
-            logger.error(
-                "Import of gurobipy failed - gurobi message=%s\n" % (e,))
-            self._python_api_exists = False
-
+        self._python_api_exists = gurobipy_available
         self._range_constraints = set()
 
         self._max_obj_degree = 2
@@ -96,24 +104,46 @@ class GurobiDirect(DirectSolver):
         self._capabilities.sos2 = True
 
         # fix for compatibility with pre-5.0 Gurobi
-        if self._python_api_exists and \
-           (self._version_major < 5):
+        #
+        # Note: Unfortunately, this will trigger the immediate import
+        #    of the gurobipy module
+        if gurobipy_available and GurobiDirect._version_major < 5:
             self._max_constraint_degree = 1
             self._capabilities.quadratic_constraint = False
 
+        # remove the instance-level definition of the gurobi version:
+        # because the version comes from an imported module, only one
+        # version of gurobi is supported (and stored as a class attribute)
+        del self._version
+
     def available(self, exception_flag=True):
-        if not super().available(exception_flag):
+        if not gurobipy_available:
+            if exception_flag:
+                gurobipy.log_import_warning(logger=__name__)
+                raise ApplicationError(
+                    "No Python bindings available for %s solver plugin"
+                    % (type(self),))
             return False
         if self._verified_license is None:
-            try:
-                # verify that we can get a Gurobi license
-                m = self._gurobipy.Model()
-                m.dispose()
-                GurobiDirect._verified_license = True
-            except Exception as e:
-                logger.error(
-                    "Could not create Model - gurobi message=%s\n" % (e,))
-                GurobiDirect._verified_license = False
+            with capture_output(capture_fd=True) as OUT:
+                try:
+                    # verify that we can get a Gurobi license
+                    # Gurobipy writes out license file information when creating
+                    # the environment
+                    m = gurobipy.Model()
+                    m.dispose()
+                    GurobiDirect._verified_license = True
+                except Exception as e:
+                    GurobiDirect._import_messages += \
+                        "\nCould not create Model - gurobi message=%s\n" % (e,)
+                    GurobiDirect._verified_license = False
+            if OUT.getvalue():
+                GurobiDirect._import_messages += "\n" + OUT.getvalue()
+        if exception_flag and not self._verified_license:
+            logger.warning(GurobiDirect._import_messages)
+            raise ApplicationError(
+                "Could not create a gurobipy Model for %s solver plugin"
+                % (type(self),))
         return self._verified_license
 
     def _apply_solver(self):
@@ -171,7 +201,7 @@ class GurobiDirect(DirectSolver):
         if self._version_major >= 5:
             for suffix in self._suffixes:
                 if re.match(suffix, "dual"):
-                    self._solver_model.setParam(self._gurobipy.GRB.Param.QCPDual, 1)
+                    self._solver_model.setParam(gurobipy.GRB.Param.QCPDual, 1)
 
         self._solver_model.optimize(self._callback)
         self._needs_updated = False
@@ -190,7 +220,7 @@ class GurobiDirect(DirectSolver):
 
         if len(repn.linear_vars) > 0:
             referenced_vars.update(repn.linear_vars)
-            new_expr = self._gurobipy.LinExpr(repn.linear_coefs, [self._pyomo_var_to_solver_var_map[i] for i in repn.linear_vars])
+            new_expr = gurobipy.LinExpr(repn.linear_coefs, [self._pyomo_var_to_solver_var_map[i] for i in repn.linear_vars])
         else:
             new_expr = 0.0
 
@@ -226,11 +256,11 @@ class GurobiDirect(DirectSolver):
         if var.has_lb():
             lb = value(var.lb)
         else:
-            lb = -self._gurobipy.GRB.INFINITY
+            lb = -gurobipy.GRB.INFINITY
         if var.has_ub():
             ub = value(var.ub)
         else:
-            ub = self._gurobipy.GRB.INFINITY
+            ub = gurobipy.GRB.INFINITY
         return lb, ub
 
     def _add_var(self, var):
@@ -255,9 +285,9 @@ class GurobiDirect(DirectSolver):
         self._solver_var_to_pyomo_var_map = ComponentMap()
         try:
             if model.name is not None:
-                self._solver_model = self._gurobipy.Model(model.name)
+                self._solver_model = gurobipy.Model(model.name)
             else:
-                self._solver_model = self._gurobipy.Model()
+                self._solver_model = gurobipy.Model()
         except Exception:
             e = sys.exc_info()[1]
             msg = ("Unable to create Gurobi model. "
@@ -319,7 +349,7 @@ class GurobiDirect(DirectSolver):
 
         if con.equality:
             gurobipy_con = self._solver_model.addConstr(lhs=gurobi_expr,
-                                                        sense=self._gurobipy.GRB.EQUAL,
+                                                        sense=gurobipy.GRB.EQUAL,
                                                         rhs=value(con.lower),
                                                         name=conname)
         elif con.has_lb() and con.has_ub():
@@ -330,12 +360,12 @@ class GurobiDirect(DirectSolver):
             self._range_constraints.add(con)
         elif con.has_lb():
             gurobipy_con = self._solver_model.addConstr(lhs=gurobi_expr,
-                                                        sense=self._gurobipy.GRB.GREATER_EQUAL,
+                                                        sense=gurobipy.GRB.GREATER_EQUAL,
                                                         rhs=value(con.lower),
                                                         name=conname)
         elif con.has_ub():
             gurobipy_con = self._solver_model.addConstr(lhs=gurobi_expr,
-                                                        sense=self._gurobipy.GRB.LESS_EQUAL,
+                                                        sense=gurobipy.GRB.LESS_EQUAL,
                                                         rhs=value(con.upper),
                                                         name=conname)
         else:
@@ -357,9 +387,9 @@ class GurobiDirect(DirectSolver):
         conname = self._symbol_map.getSymbol(con, self._labeler)
         level = con.level
         if level == 1:
-            sos_type = self._gurobipy.GRB.SOS_TYPE1
+            sos_type = gurobipy.GRB.SOS_TYPE1
         elif level == 2:
-            sos_type = self._gurobipy.GRB.SOS_TYPE2
+            sos_type = gurobipy.GRB.SOS_TYPE2
         else:
             raise ValueError("Solver does not support SOS "
                              "level {0} constraints".format(level))
@@ -395,11 +425,11 @@ class GurobiDirect(DirectSolver):
         :return: gurobipy.GRB.CONTINUOUS or gurobipy.GRB.BINARY or gurobipy.GRB.INTEGER
         """
         if var.is_binary():
-            vtype = self._gurobipy.GRB.BINARY
+            vtype = gurobipy.GRB.BINARY
         elif var.is_integer():
-            vtype = self._gurobipy.GRB.INTEGER
+            vtype = gurobipy.GRB.INTEGER
         elif var.is_continuous():
-            vtype = self._gurobipy.GRB.CONTINUOUS
+            vtype = gurobipy.GRB.CONTINUOUS
         else:
             raise ValueError('Variable domain type is not recognized for {0}'.format(var.domain))
         return vtype
@@ -415,9 +445,9 @@ class GurobiDirect(DirectSolver):
             raise ValueError('Cannot add inactive objective to solver.')
 
         if obj.sense == minimize:
-            sense = self._gurobipy.GRB.MINIMIZE
+            sense = gurobipy.GRB.MINIMIZE
         elif obj.sense == maximize:
-            sense = self._gurobipy.GRB.MAXIMIZE
+            sense = gurobipy.GRB.MAXIMIZE
         else:
             raise ValueError('Objective sense is not recognized: {0}'.format(obj.sense))
 
@@ -456,10 +486,10 @@ class GurobiDirect(DirectSolver):
                 raise RuntimeError("***The gurobi_direct solver plugin cannot extract solution suffix="+suffix)
 
         gprob = self._solver_model
-        grb = self._gurobipy.GRB
+        grb = gurobipy.GRB
         status = gprob.Status
 
-        if gprob.getAttr(self._gurobipy.GRB.Attr.IsMIP):
+        if gprob.getAttr(gurobipy.GRB.Attr.IsMIP):
             if extract_reduced_costs:
                 logger.warning("Cannot get reduced costs for MIP.")
             if extract_duals:
@@ -470,7 +500,7 @@ class GurobiDirect(DirectSolver):
         self.results = SolverResults()
         soln = Solution()
 
-        self.results.solver.name = self._name
+        self.results.solver.name = GurobiDirect._name
         self.results.solver.wallclock_time = gprob.Runtime
 
         if status == grb.LOADED:  # problem is loaded, but no solution
@@ -582,25 +612,25 @@ class GurobiDirect(DirectSolver):
             try:
                 self.results.problem.upper_bound = gprob.ObjVal
                 self.results.problem.lower_bound = gprob.ObjVal
-            except (self._gurobipy.GurobiError, AttributeError):
+            except (gurobipy.GurobiError, AttributeError):
                 pass
         elif gprob.ModelSense == 1:  # minimizing
             try:
                 self.results.problem.upper_bound = gprob.ObjVal
-            except (self._gurobipy.GurobiError, AttributeError):
+            except (gurobipy.GurobiError, AttributeError):
                 pass
             try:
                 self.results.problem.lower_bound = gprob.ObjBound
-            except (self._gurobipy.GurobiError, AttributeError):
+            except (gurobipy.GurobiError, AttributeError):
                 pass
         elif gprob.ModelSense == -1:  # maximizing
             try:
                 self.results.problem.upper_bound = gprob.ObjBound
-            except (self._gurobipy.GurobiError, AttributeError):
+            except (gurobipy.GurobiError, AttributeError):
                 pass
             try:
                 self.results.problem.lower_bound = gprob.ObjVal
-            except (self._gurobipy.GurobiError, AttributeError):
+            except (gurobipy.GurobiError, AttributeError):
                 pass
         else:
             raise RuntimeError('Unrecognized gurobi objective sense: {0}'.format(gprob.ModelSense))
@@ -719,7 +749,7 @@ class GurobiDirect(DirectSolver):
     def _warm_start(self):
         for pyomo_var, gurobipy_var in self._pyomo_var_to_solver_var_map.items():
             if pyomo_var.value is not None:
-                gurobipy_var.setAttr(self._gurobipy.GRB.Attr.Start, value(pyomo_var))
+                gurobipy_var.setAttr(gurobipy.GRB.Attr.Start, value(pyomo_var))
         self._needs_updated = True
 
     def _load_vars(self, vars_to_load=None):

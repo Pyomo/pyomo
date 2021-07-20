@@ -168,7 +168,7 @@ class BigM_Transformation(Transformation):
 
     def _get_bigm_suffix_list(self, block, stopping_block=None):
         # Note that you can only specify suffixes on BlockData objects or
-        # SimpleBlocks. Though it is possible at this point to stick them
+        # ScalarBlocks. Though it is possible at this point to stick them
         # on whatever components you want, we won't pick them up.
         suffix_list = []
 
@@ -632,7 +632,7 @@ class BigM_Transformation(Transformation):
             newConstraint = Constraint(obj.index_set(),
                                        disjunctionRelaxationBlock.lbub)
             # we map the container of the original to the container of the
-            # transformed constraint. Don't do this if obj is a SimpleConstraint
+            # transformed constraint. Don't do this if obj is a ScalarConstraint
             # because we will treat that like a _ConstraintData and map to a
             # list of transformed _ConstraintDatas
             constraintMap['transformedConstraints'][obj] = newConstraint
@@ -699,7 +699,7 @@ class BigM_Transformation(Transformation):
             # save the source information
             bigm_src[c] = (lower, upper)
 
-            # Handle indices for both SimpleConstraint and IndexedConstraint
+            # Handle indices for both ScalarConstraint and IndexedConstraint
             if i.__class__ is tuple:
                 i_lb = i + ('lb',)
                 i_ub = i + ('ub',)
@@ -886,43 +886,15 @@ class BigM_Transformation(Transformation):
                     fixed_vars[v] = value(v)
                     v.fixed = False
 
-        # Calculate a best guess at M
-        repn = generate_standard_repn(expr, quadratic=False)
-        M = [0, 0]
-
-        if not repn.is_nonlinear():
-            if repn.constant is not None:
-                for i in (0, 1):
-                    if M[i] is not None:
-                        M[i] += repn.constant
-
-            for i, coef in enumerate(repn.linear_coefs or []):
-                var = repn.linear_vars[i]
-                bounds = (value(var.lb), value(var.ub))
-                for i in (0, 1):
-                    # reverse the bounds if the coefficient is negative
-                    if coef > 0:
-                        j = i
-                    else:
-                        j = 1 - i
-
-                    if bounds[i] is not None:
-                        M[j] += value(bounds[i]) * coef
-                    else:
-                        raise GDP_Error(
-                            "Cannot estimate M for "
-                            "expressions with unbounded variables."
-                            "\n\t(found unbounded var '%s' while processing "
-                            "constraint '%s')" % (var.name, name))
+        expr_lb, expr_ub = compute_bounds_on_expr(expr)
+        if expr_lb is None or expr_ub is None:
+            raise GDP_Error("Cannot estimate M for unbounded "
+                            "expressions.\n\t(found while processing "
+                            "constraint '%s'). Please specify a value of M " 
+                            "or ensure all variables that appear in the "
+                            "constraint are bounded." % name)
         else:
-            # expression is nonlinear. Try using `contrib.fbbt` to estimate.
-            expr_lb, expr_ub = compute_bounds_on_expr(expr)
-            if expr_lb is None or expr_ub is None:
-                raise GDP_Error("Cannot estimate M for unbounded nonlinear "
-                                "expressions.\n\t(found while processing "
-                                "constraint '%s')" % name)
-            else:
-                M = (expr_lb, expr_ub)
+            M = (expr_lb, expr_ub)
 
         # clean up if we unfixed things (fixed_vars is empty if we were assuming
         # fixed vars are fixed for life)

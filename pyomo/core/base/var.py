@@ -8,11 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar']
+__all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar',
+           'ScalarVar']
 
 import logging
 from weakref import ref as weakref_ref
 
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
@@ -21,7 +23,9 @@ from pyomo.core.base.numvalue import (
 )
 from pyomo.core.base.set_types import Reals, Binary
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
-from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
+from pyomo.core.base.indexed_component import (
+    IndexedComponent, UnindexedComponent_set, IndexedComponent_NDArrayMixin
+)
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import Set, _SetDataBase
 from pyomo.core.base.units_container import units
@@ -520,7 +524,7 @@ class _GeneralVarData(_VarData):
 
 
 @ModelComponentFactory.register("Decision variables.")
-class Var(IndexedComponent):
+class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
     """A numeric variable, which may be defined over an index.
 
     Args:
@@ -548,7 +552,7 @@ class Var(IndexedComponent):
         if cls != Var:
             return super(Var, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
-            return SimpleVar.__new__(SimpleVar)
+            return ScalarVar.__new__(ScalarVar)
         else:
             return IndexedVar.__new__(IndexedVar)
 
@@ -834,7 +838,7 @@ class Var(IndexedComponent):
                                 ]
                  )
 
-class SimpleVar(_GeneralVarData, Var):
+class ScalarVar(_GeneralVarData, Var):
     """A single variable."""
 
     def __init__(self, *args, **kwd):
@@ -983,6 +987,12 @@ class SimpleVar(_GeneralVarData, Var):
             % (self.name))
 
     free=unfix
+
+
+class SimpleVar(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarVar
+    __renamed__version__ = '6.0'
+
 
 class IndexedVar(Var):
     """An array of variables."""

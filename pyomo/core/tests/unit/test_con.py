@@ -1182,7 +1182,7 @@ class MiscConTests(unittest.TestCase):
         a = Constraint()
         a.construct()
         #
-        # Even though we construct a SimpleConstraint,
+        # Even though we construct a ScalarConstraint,
         # if it is not initialized that means it is "empty"
         # and we should encounter errors when trying to access the
         # _ConstraintData interface methods until we assign
@@ -1242,31 +1242,31 @@ class MiscConTests(unittest.TestCase):
         self.assertEqual(a._constructed, False)
         self.assertEqual(len(a), 0)
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a()
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a.body
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a.lower
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a.upper
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a.equality
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a.strict_lower
         with self.assertRaisesRegex(
-                RuntimeError, "Cannot access .* on AbstractSimpleConstraint"
+                RuntimeError, "Cannot access .* on AbstractScalarConstraint"
                 ".*before it has been constructed"):
             a.strict_upper
 
@@ -1319,18 +1319,6 @@ class MiscConTests(unittest.TestCase):
             self.fail("Can only return tuples of length 2 or 3")
         except ValueError:
             pass
-
-    @unittest.skipIf(not logical_expr._using_chained_inequality, "Chained inequalities are not supported.")
-    def test_chainedInequalityError(self):
-        m = ConcreteModel()
-        m.x = Var()
-        a = m.x <= 0
-        if m.x <= 0:
-            pass
-        m.c = Constraint()
-        self.assertRaisesRegex(
-            TypeError, "Relational expression used in an unexpected "
-            "Boolean context.", m.c.set_value, a)
 
     def test_tuple_constraint_create(self):
         def rule1(model):
@@ -1515,6 +1503,16 @@ class MiscConTests(unittest.TestCase):
         model.B = Set()
         model.C = model.A | model.B
         model.x = Constraint(model.C)
+
+    def test_ranged_inequality_expr(self):
+        model = ConcreteModel()
+        model.v = Var()
+        model.l = Param(initialize=1, mutable=True)
+        model.u = Param(initialize=3, mutable=True)
+        model.con = Constraint(expr=inequality(model.l, model.v, model.u))
+        self.assertIs(model.con.expr.args[0], model.l)
+        self.assertIs(model.con.expr.args[1], model.v)
+        self.assertIs(model.con.expr.args[2], model.u)
 
 
 if __name__ == "__main__":
