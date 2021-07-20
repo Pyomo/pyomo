@@ -581,7 +581,7 @@ class Gurobi(PersistentBase, PersistentSolver):
     def _remove_params(self, params: List[_ParamData]):
         pass
 
-    def update_variables(self, variables: List[_GeneralVarData]):
+    def _update_variables(self, variables: List[_GeneralVarData]):
         for var in variables:
             var_id = id(var)
             if var_id not in self._pyomo_var_to_solver_var_map:
