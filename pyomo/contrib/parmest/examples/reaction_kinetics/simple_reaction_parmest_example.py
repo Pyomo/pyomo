@@ -8,6 +8,17 @@ from pyomo.environ import (ConcreteModel, Param, Var, PositiveReals, Objective,
 #from idaes.core.util import get_default_solver
 import pyomo.contrib.parmest.parmest as parmest
 
+''' Example from Y. Bard's "Nonlinear Parameter Estimation"
+
+This example shows:
+1. How to define the unknown (to be regressed parameters) with an index
+2. How to call parmest to only estimate some of the parameters (and fix the rest)
+
+Code provided by Paul Akula.
+
+'''
+
+
 # =======================================================================
 data = [{'experiment': 1, 'x1': 0.1, 'x2': 100, 'y': 0.98},
         {'experiment': 2, 'x1': 0.2, 'x2': 100, 'y': 0.983},
@@ -44,14 +55,10 @@ def simple_reaction_model(data):
     model.y = Expression(expr=exp(-model.k[1] *
                                   model.x1 * exp(-model.k[2] / model.x2)))
                                   
-    # fix the rate constants
+    # fix all of the regressed parameters
     model.k.fix()
 
-    # linked variables and constraints
-    #model.k1 = Var(initialize=750, within=PositiveReals)
-    #model.k2 = Var(initialize=1200, within=PositiveReals)
-    #model.eq_L1 = Constraint(expr = model.k1 == model.k[1])
-    #model.eq_L2 = Constraint(expr = model.k2 == model.k[2])
+
     #===================================================================
     # Stage-specific cost computations
     def ComputeFirstStageCost_rule(model):
@@ -74,13 +81,18 @@ if __name__ == "__main__":
     # =======================================================================
     # Parameter estimation without covariance estimate
     #solver = get_default_solver
+    
+    # Only estimate the parameter k[1]. The parameter k[2] will remain fixed
+    # at its initial value
     theta_names = ['k[1]']
+    
     pest = parmest.Estimator(simple_reaction_model, data, theta_names)
     obj, theta = pest.theta_est()
     print(obj)
     print(theta)
+    
     #=======================================================================
-    # Parameter estimation covariance estimate
+    # Estimate the covariance matrix
     
     obj, theta, cov = pest.theta_est(calc_cov=True)
     print(obj)
