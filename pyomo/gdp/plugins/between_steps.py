@@ -31,6 +31,7 @@ from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (preprocess_targets, is_child_of, target_list,
                             _to_dict, verify_successful_solve, NORMAL,
                             clone_without_expression_components )
+from math import floor
 
 import logging
 logger = logging.getLogger('pyomo.gdp.between_steps')
@@ -42,10 +43,8 @@ NAME_BUFFER = {}
 def _generate_additively_separable_repn(nonlinear_part):
     if nonlinear_part.__class__ is not EXPR.SumExpression:
         # This isn't separable, so we just have the one expression
-        return {'nonlinear_vars': [(v for v in
-                                    EXPR.identify_variables(
-                                        nonlinear_part))],
-                'nonlinear_exprs': [nonlinear_part]}
+        return {'nonlinear_vars': tuple(v for v in EXPR.identify_variables(
+            nonlinear_part)), 'nonlinear_exprs': [nonlinear_part]}
 
     # else, it was a SumExpression, and we will break it into the summands,
     # recording which variables are there.
@@ -54,14 +53,35 @@ def _generate_additively_separable_repn(nonlinear_part):
     for summand in nonlinear_part.args:
         nonlinear_decomp['nonlinear_exprs'].append(summand)
         nonlinear_decomp['nonlinear_vars'].append(
-            (v for v in EXPR.identify_variables(summand)))
+            tuple(v for v in EXPR.identify_variables(summand)))
 
     return nonlinear_decomp
 
-def _arbitrary_partition(disjunction):
-    pass
+def arbitrary_partition(disjunction, P):
+    # collect variables
+    v_set = ComponentSet()
+    for disj in disjunction.disjuncts:
+        for c in disj.component_data_objects(Constraint, descend_into=Block,
+                                             active=True):
+            for v in EXPR.identify_variables(c.body):
+                v_set.add(v)
 
+    # assign them to partitions
+    partitions = []
+    V = len(v_set)
+    whole = floor(V/P)
+    for partition in range(V % P):
+        partitions.append(ComponentSet())
+        # add whole + 1 vars
+        for i in range(whole + 1):
+            partitions[partition].add(v_set.pop())
+    # for the rest, add whole vars
+    for partition in range(V % P, P):
+        partitions.append(ComponentSet())
+        for i in range(whole):
+            partitions[partition].add(v_set.pop())
 
+    return partitions
 
 @TransformationFactory.register('gdp.between_steps',
                                 doc="Reformulates a convex disjunctive model "
@@ -134,12 +154,15 @@ class BetweenSteps_Transformation(Transformation):
         """
     ))
     CONFIG.declare('variable_partitioning_method', ConfigValue(
-        default=_arbitrary_partition,
+        default=arbitrary_partition,
         domain=_to_dict,
         description="""Method to partition the variables. By default, the 
         partitioning will be done arbitrarily. Other options include: TODO""",
         doc="""
         A function which takes some stuff and return variable partitions. 
+
+        Note that you must give a value for 'P' if you are using this method
+        to calculate partitions.
 
         Note that if any constraints contain partially additively separable
         functions, the partitions for the Disjunctions cannot be calculated
@@ -201,8 +224,52 @@ class BetweenSteps_Transformation(Transformation):
         will be used to solve the subproblems.
         """
     ))
-    # TODO: Maybe a way to specify your own bounds??
+    #  I think we might still have a need for a not-generate_standard_repn
+    # cousin because of manually specifying bounds. Suppose I have this
+    # disjunction: [x^2 + y^2 + z^2 <= 1] v [(x – 3)^2 + (y – 3)^2 + (z - 3)^2
+    # <= 1] and I want to 2-split with partitions {x}, and {y,z} and specify my
+    # own bounds. I think one thing that makes sense is giving the
+    # transformation a map to specify the bounds. Something like: {disj1.c:
+    # [(lb(x^2), ub(x^2)), (lb(y^2 + z^2), ub(y^2 + z^2)], disj2.c: [(lb((x –
+    # 3)^2), ub((x – 3)^2)), lb((y – 3)^2 + (z - 3)^2), ub((y – 3)^2 + (z -
+    # 3)^2))]}. Or something… But basically, I can give a tuple of bounds for
+    # each partition for each constraint that I am splitting. But the point of
+    # all this is, that I’m a human thinking about spheres, so I actually want
+    # to give bounds on the expressions I wrote down, not on what I would get
+    # from generate_standard_repn. But if we’re going to let people be human in
+    # this way, then we need some sort of representation that would keep the
+    # constants with their friends, because I meant 0 <= (x-3)^2 <= 32 for
+    # example, instead of 0 <= x^2 <= 32. And I don’t currently have a way to
+    # know that without some modified generate_standard_repn that gives me a
+    # {nonlinear_vars: [x, y, z], nonlinear_exprs: [(x-3)^2, (y-3)^2, (z –
+    # 3)^2]} kind of thing…
 
+    # Else, we could have the user give us the piece of the expression they are
+    # bounding directly, but then we’d have to check that they add up to the
+    # right stuff and that sounds really clunky.
+
+    # CONFIG.declare('bounds', ConfigValue(
+    #     default=None,
+    #     description="""Dictionary (or ComponentMap) mapping Constraints to a 
+    #     list of (LB, UB) tuples, where, at index i in the list LB and UB are 
+    #     lower and upper bounds, respectively, on the subexpression of the key 
+    #     corresponding to the ith variable partition specified in the 
+    #     'variable_partitions' argument.""",
+    #     doc="""
+    #     Mapping of Constraint keys to lists of (LB, UB) pairs of length P.
+    #     The tuple at index i in the list specifies the lower and upper bounds 
+    #     to use on the subexpression of the body of the constraint corresponding 
+    #     to the ith variable partition specified in the 'variable_partitions' 
+    #     argument.
+
+    #     Note that to specify bounds, you must also manually specify the variable 
+    #     partitions for the Disjunctions containing the Constraints in this map.
+    #     For any Constraints not in the map, bounds will be calculated using the 
+    #     method specified in the 'compute_bounds_method' argument or using the 
+    #     default method of minimizing and maximizing the expression over the 
+    #     variable domains.
+    #     """
+    # ))
     def __init__(self):
         super(BetweenSteps_Transformation, self).__init__()
 
@@ -264,7 +331,9 @@ class BetweenSteps_Transformation(Transformation):
         instance.add_component(unique_component_name( 
             instance, '_pyomo_gdp_between_steps_reformulation'),
                                transformation_block)
-        self.variable_partitions = self._config.variable_partitions
+        self.variable_partitions = self._config.variable_partitions if \
+                                   self._config.variable_partitions is not None \
+                                   else {}
         self.partitioning_method = self._config.variable_partitioning_method
 
         # we can support targets as usual.
@@ -353,11 +422,21 @@ class BetweenSteps_Transformation(Transformation):
                 if method is None:
                     method = partition_method.get(None)
                 # if all else fails, set it to our default
-                method = method if method is not None else _arbitrary_partition
+                method = method if method is not None else arbitrary_partition
+
+                # now figure out P
+                P = self._config.P.get(obj)
+                if P is None:
+                    P = self._config.P.get(None)
+                if P is None:
+                    raise GDP_Error("No value for P was given for disjunction "
+                                    "%s! Please specify a value of P (number of "
+                                    "partitions), if you do not specify the "
+                                    "partitions directly." % obj.name)
                 # it's this method's job to scream if it can't handle what's
                 # here, we can only assume it worked for now, since it's a
                 # callback.
-                partition = method(obj)
+                partition = method(obj, P)
         # these have to be ComponentSets
         partition = [ComponentSet(var_list) for var_list in partition]
                 
@@ -457,19 +536,18 @@ class BetweenSteps_Transformation(Transformation):
                                                                 cons.name))
                             expr += repn.quadratic_coefs[i]*v1*v2
                     if nonlinear_repn is not None:
-                        for i, v_list in enumerate(
+                        for i, expr_var_set in enumerate(
                                 nonlinear_repn['nonlinear_vars']):
                             # check if v_list is a subset of var_list. If it is
                             # not and there is no intersection, we move on. If
                             # it is not and there is an intersection, we raise
                             # an error: It's not a valid partition. If it is,
                             # then we add this piece of the expression.
-                            expr_var_set = ComponentSet(v_list)
                             # subset?
                             if all(v in var_list for v in expr_var_set):
                                 expr += nonlinear_repn['nonlinear_exprs'][i]
                             # intersection?
-                            elif len(expr_var_set & var_list) != 0:
+                            elif len(ComponentSet(expr_var_set) & var_list) != 0:
                                 raise GDP_Error("Variables which appear in the "
                                                 "expression %s are in different "
                                                 "partitions, but this "
