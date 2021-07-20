@@ -8,7 +8,7 @@ from pyomo.environ import (ConcreteModel, Param, Var, PositiveReals, Objective,
 #from idaes.core.util import get_default_solver
 import pyomo.contrib.parmest.parmest as parmest
 
-''' Example from Y. Bard's "Nonlinear Parameter Estimation"
+''' Example from Y. Bard, "Nonlinear Parameter Estimation", (pg. 124)
 
 This example shows:
 1. How to define the unknown (to be regressed parameters) with an index
@@ -20,6 +20,9 @@ Code provided by Paul Akula.
 
 
 # =======================================================================
+''' Data from Table 5.2 in  Y. Bard, "Nonlinear Parameter Estimation", (pg. 124)
+'''
+
 data = [{'experiment': 1, 'x1': 0.1, 'x2': 100, 'y': 0.98},
         {'experiment': 2, 'x1': 0.2, 'x2': 100, 'y': 0.983},
         {'experiment': 3, 'x1': 0.3, 'x2': 100, 'y': 0.955},
