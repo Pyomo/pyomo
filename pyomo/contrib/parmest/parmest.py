@@ -651,7 +651,7 @@ class Estimator(object):
         Parameters
         ----------
         solver: string, optional
-            "ef_ipopt" or "k_aug". Default is "ef_ipopt".
+            Currently only "ef_ipopt" is supported. Default is "ef_ipopt".
         return_values: list, optional
             List of Variable names used to return values from the model
         bootlist: list, optional
@@ -667,8 +667,6 @@ class Estimator(object):
             A dictionary of all values for theta
         variable values: pd.DataFrame
             Variable values for each variable name in return_values (only for solver='ef_ipopt')
-        Hessian: dict
-            A dictionary of dictionaries for the Hessian (only for solver='k_aug')
         cov: pd.DataFrame
             Covariance matrix of the fitted parameters (only for solver='ef_ipopt')
         """
