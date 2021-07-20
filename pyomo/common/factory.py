@@ -29,11 +29,7 @@ class Factory(object):
         self._doc = {}
 
     def __call__(self, name, **kwds):
-        if 'exception' in kwds:
-            exception = kwds['exception']
-            del kwds['exception']
-        else:
-            exception = False
+        exception = kwds.pop('exception', False)
         name = str(name)
         if not name in self._cls:
             if not exception:

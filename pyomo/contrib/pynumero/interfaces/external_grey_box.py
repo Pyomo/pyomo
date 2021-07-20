@@ -18,7 +18,7 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base import Var, Set, Constraint, value
 from pyomo.core.base.block import _BlockData, Block, declare_custom_block
-from pyomo.core.base.util import Initializer
+from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.set import UnindexedComponent_set
 from pyomo.core.base.reference import Reference
 
