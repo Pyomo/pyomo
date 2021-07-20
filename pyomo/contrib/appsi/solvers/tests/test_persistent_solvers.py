@@ -412,6 +412,18 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
         self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
+        m.x.fix(0)
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 2)
+        m.x.value = 2
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 2)
+        self.assertAlmostEqual(m.y.value, 3)
+        m.x.value = 0
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 2)
 
     @parameterized.expand(input=all_solvers)
     def test_mutable_param_with_range(self, name: str, opt_class: Type[PersistentSolver]):

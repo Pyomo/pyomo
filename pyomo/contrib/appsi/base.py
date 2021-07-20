@@ -839,8 +839,13 @@ class PersistentBase(abc.ABC):
         self.remove_params([p for p in block.component_data_objects(ctype=Param, descend_into=True, sort=False)])
 
     @abc.abstractmethod
-    def update_variables(self, variables: List[_GeneralVarData]):
+    def _update_variables(self, variables: List[_GeneralVarData]):
         pass
+
+    def update_variables(self, variables: List[_GeneralVarData]):
+        for v in variables:
+            self._vars[id(v)] = (v, v.lb, v.ub, v.is_fixed(), v.domain, v.value)
+        self._update_variables(variables)
 
     @abc.abstractmethod
     def update_params(self):
