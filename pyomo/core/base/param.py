@@ -20,8 +20,9 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
-from pyomo.core.base.indexed_component import IndexedComponent, \
-    UnindexedComponent_set
+from pyomo.core.base.indexed_component import (
+    IndexedComponent, UnindexedComponent_set, IndexedComponent_NDArrayMixin
+)
 from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
 from pyomo.core.base.numvalue import (
     NumericValue, native_types, value as expr_value
@@ -214,7 +215,7 @@ class _ParamData(ComponentData, NumericValue):
 
 
 @ModelComponentFactory.register("Parameter data that is used to define a model instance.")
-class Param(IndexedComponent):
+class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     """
     A parameter value, which may be defined over an index.
 
@@ -302,7 +303,7 @@ class Param(IndexedComponent):
             return idx in self._data
         return idx in self._index
 
-    def __iter__(self):
+    def keys(self):
         """
         Iterate over the keys in the dictionary.  If the default value is
         specified, then iterate over all keys in the component index.

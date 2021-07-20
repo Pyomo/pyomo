@@ -18,8 +18,9 @@ from pyomo.core.expr.numvalue import ZeroConstant, native_numeric_types, as_nume
 from pyomo.core import Constraint, Var, Block, Set
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.block import _BlockData
-from pyomo.core.base.util import (
-    disable_methods, Initializer, IndexedCallInitializer, CountedCallInitializer
+from pyomo.core.base.disable_methods import disable_methods
+from pyomo.core.base.initializer import (
+    Initializer, IndexedCallInitializer, CountedCallInitializer,
 )
 
 import logging

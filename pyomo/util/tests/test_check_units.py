@@ -109,8 +109,6 @@ class TestUnitsChecking(unittest.TestCase):
         def sqrt_con(m,i):
             return sqrt(m.v[i]) == sqrt(m.x[i]/m.t[i])
 
-        m.obj = Objective(expr=m.v, sense=maximize)
-
         assert_units_consistent(m)  # check model
         assert_units_consistent(m.x)  # check var
         assert_units_consistent(m.t)  # check var
