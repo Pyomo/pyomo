@@ -43,7 +43,60 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
 
         return m
 
-    def check_transformation_block(self, m, aux1lb, aux1ub, aux2lb, aux2ub):
+    def check_disj_constraint(self, c1, upper, auxVar1, auxVar2):
+        self.assertIsNone(c1.lower)
+        c1.pprint()
+        self.assertEqual(value(c1.upper), upper)
+        repn = generate_standard_repn(c1.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 2)
+        self.assertEqual(repn.constant, 0)
+        self.assertIs(repn.linear_vars[0], auxVar1)
+        self.assertIs(repn.linear_vars[1], auxVar2)
+        self.assertEqual(repn.linear_coefs[0], 1)        
+        self.assertEqual(repn.linear_coefs[1], 1)
+
+    def check_global_constraint_disj1(self, c1, auxVar, var1, var2):
+        self.assertIsNone(c1.lower)
+        self.assertEqual(c1.upper, 0)
+        repn = generate_standard_repn(c1.body)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertEqual(len(repn.quadratic_vars), 2)
+        self.assertEqual(repn.linear_coefs[0], -1)
+        self.assertIs(repn.linear_vars[0], auxVar)
+        self.assertEqual(repn.quadratic_coefs[0], 1)
+        self.assertEqual(repn.quadratic_coefs[1], 1)
+        self.assertIs(repn.quadratic_vars[0][0], var1)
+        self.assertIs(repn.quadratic_vars[0][1], var1)
+        self.assertIs(repn.quadratic_vars[1][0], var2)
+        self.assertIs(repn.quadratic_vars[1][1], var2)
+        self.assertIsNone(repn.nonlinear_expr)
+
+    def check_global_constraint_disj2(self, c1, auxVar, var1, var2):
+        self.assertIsNone(c1.lower)
+        self.assertEqual(c1.upper, 0)
+        repn = generate_standard_repn(c1.body)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 3)
+        self.assertEqual(len(repn.quadratic_vars), 2)
+        self.assertEqual(repn.linear_coefs[0], -6)
+        self.assertEqual(repn.linear_coefs[1], -6)
+        self.assertEqual(repn.linear_coefs[2], -1)
+        self.assertIs(repn.linear_vars[0], var1)
+        self.assertIs(repn.linear_vars[1], var2)
+        self.assertIs(repn.linear_vars[2], auxVar)
+        self.assertEqual(repn.quadratic_coefs[0], 1)
+        self.assertEqual(repn.quadratic_coefs[1], 1)
+        self.assertIs(repn.quadratic_vars[0][0], var1)
+        self.assertIs(repn.quadratic_vars[0][1], var1)
+        self.assertIs(repn.quadratic_vars[1][0], var2)
+        self.assertIs(repn.quadratic_vars[1][1], var2)
+        self.assertIsNone(repn.nonlinear_expr)
+
+    def check_transformation_block_structure(self, m, aux11lb, aux11ub, aux12lb,
+                                             aux12ub, aux21lb, aux21ub, aux22lb,
+                                             aux22ub):
         b = m.component("_pyomo_gdp_between_steps_reformulation")
         self.assertIsInstance(b, Block)
 
@@ -67,128 +120,62 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         aux_vars1 = disj1.component(
             "disjunction_disjuncts[0].constraint[1]_aux_vars")
         self.assertEqual(len(aux_vars1), 2)
-        self.assertEqual(aux_vars1[0].lb, aux1lb)
-        self.assertEqual(aux_vars1[0].ub, aux1ub)
-        self.assertEqual(aux_vars1[1].lb, aux1lb)
-        self.assertEqual(aux_vars1[1].ub, aux1ub)
+        self.assertEqual(aux_vars1[0].lb, aux11lb)
+        self.assertEqual(aux_vars1[0].ub, aux11ub)
+        self.assertEqual(aux_vars1[1].lb, aux12lb)
+        self.assertEqual(aux_vars1[1].ub, aux12ub)
         aux_vars2 = disj2.component(
             "disjunction_disjuncts[1].constraint[1]_aux_vars")
         self.assertEqual(len(aux_vars2), 2)
-        self.assertEqual(aux_vars2[0].lb, aux2lb)
-        self.assertEqual(aux_vars2[0].ub, aux2ub)
-        self.assertEqual(aux_vars2[1].lb, aux2lb)
-        self.assertEqual(aux_vars2[1].ub, aux2ub)
+        self.assertEqual(aux_vars2[0].lb, aux21lb)
+        self.assertEqual(aux_vars2[0].ub, aux21ub)
+        self.assertEqual(aux_vars2[1].lb, aux22lb)
+        self.assertEqual(aux_vars2[1].ub, aux22ub)
 
-        # check the constraints on the disjuncts
+        return b, disj1, disj2, aux_vars1, aux_vars2
+
+    def check_disjunct_constraints(self, disj1, disj2, aux_vars1, aux_vars2):
         c = disj1.component("disjunction_disjuncts[0].constraint[1]")
         self.assertEqual(len(c), 1)
         c1 = c[0]
-        self.assertIsNone(c1.lower)
-        self.assertEqual(c1.upper, 1)
-        repn = generate_standard_repn(c1.body)
-        self.assertTrue(repn.is_linear())
-        self.assertEqual(len(repn.linear_vars), 2)
-        self.assertEqual(repn.constant, 0)
-        self.assertIs(repn.linear_vars[0], aux_vars1[0])
-        self.assertIs(repn.linear_vars[1], aux_vars1[1])
-        self.assertEqual(repn.linear_coefs[0], 1)        
-        self.assertEqual(repn.linear_coefs[1], 1)
-
+        self.check_disj_constraint(c1, 1, aux_vars1[0], aux_vars1[1])
         c = disj2.component("disjunction_disjuncts[1].constraint[1]")
         self.assertEqual(len(c), 1)
         c2 = c[0]
-        self.assertIsNone(c2.lower)
-        self.assertEqual(value(c2.upper), -35)
-        repn = generate_standard_repn(c2.body)
-        self.assertTrue(repn.is_linear())
-        self.assertEqual(len(repn.linear_vars), 2)
-        self.assertEqual(repn.constant, 0)
-        self.assertIs(repn.linear_vars[0], aux_vars2[0])
-        self.assertIs(repn.linear_vars[1], aux_vars2[1])
-        self.assertEqual(repn.linear_coefs[0], 1)        
-        self.assertEqual(repn.linear_coefs[1], 1)
+        self.check_disj_constraint(c2, -35, aux_vars2[0], aux_vars2[1])
+
+
+    def check_transformation_block(self, m, aux11lb, aux11ub, aux12lb, aux12ub,
+                                   aux21lb, aux21ub, aux22lb, aux22ub):
+        (b, disj1, disj2, 
+         aux_vars1, 
+         aux_vars2) = self.check_transformation_block_structure(m, aux11lb,
+                                                                aux11ub,
+                                                                aux12lb,
+                                                                aux12ub,
+                                                                aux21lb,
+                                                                aux21ub,
+                                                                aux22lb,
+                                                                aux22ub)
+
+        self.check_disjunct_constraints(disj1, disj2, aux_vars1, aux_vars2)
 
         # check the global constraints
         c = b.component(
             "disjunction_disjuncts[0].constraint[1]_split_constraints")
         self.assertEqual(len(c), 2)
         c1 = c[0]
-        self.assertIsNone(c1.lower)
-        self.assertEqual(c1.upper, 0)
-        repn = generate_standard_repn(c1.body)
-        self.assertEqual(repn.constant, 0)
-        self.assertEqual(len(repn.linear_vars), 1)
-        self.assertEqual(len(repn.quadratic_vars), 2)
-        self.assertEqual(repn.linear_coefs[0], -1)
-        self.assertIs(repn.linear_vars[0], aux_vars1[0])
-        self.assertEqual(repn.quadratic_coefs[0], 1)
-        self.assertEqual(repn.quadratic_coefs[1], 1)
-        self.assertIs(repn.quadratic_vars[0][0], m.x[1])
-        self.assertIs(repn.quadratic_vars[0][1], m.x[1])
-        self.assertIs(repn.quadratic_vars[1][0], m.x[2])
-        self.assertIs(repn.quadratic_vars[1][1], m.x[2])
-        self.assertIsNone(repn.nonlinear_expr)
-
+        self.check_global_constraint_disj1(c1, aux_vars1[0], m.x[1], m.x[2])
         c2 = c[1]
-        self.assertIsNone(c2.lower)
-        self.assertEqual(c2.upper, 0)
-        repn = generate_standard_repn(c2.body)
-        self.assertEqual(repn.constant, 0)
-        self.assertEqual(len(repn.linear_vars), 1)
-        self.assertEqual(len(repn.quadratic_vars), 2)
-        self.assertIs(repn.linear_vars[0], aux_vars1[1])
-        self.assertEqual(repn.quadratic_coefs[0], 1)
-        self.assertEqual(repn.quadratic_coefs[1], 1)
-        self.assertIs(repn.quadratic_vars[0][0], m.x[3])
-        self.assertIs(repn.quadratic_vars[0][1], m.x[3])
-        self.assertIs(repn.quadratic_vars[1][0], m.x[4])
-        self.assertIs(repn.quadratic_vars[1][1], m.x[4])
-        self.assertIsNone(repn.nonlinear_expr)
+        self.check_global_constraint_disj1(c2, aux_vars1[1], m.x[3], m.x[4])
 
         c = b.component(
             "disjunction_disjuncts[1].constraint[1]_split_constraints")
         self.assertEqual(len(c), 2)
         c1 = c[0]
-        self.assertIsNone(c1.lower)
-        self.assertEqual(c1.upper, 0)
-        repn = generate_standard_repn(c1.body)
-        self.assertEqual(repn.constant, 0)
-        self.assertEqual(len(repn.linear_vars), 3)
-        self.assertEqual(len(repn.quadratic_vars), 2)
-        self.assertEqual(repn.linear_coefs[0], -6)
-        self.assertEqual(repn.linear_coefs[1], -6)
-        self.assertEqual(repn.linear_coefs[2], -1)
-        self.assertIs(repn.linear_vars[0], m.x[1])
-        self.assertIs(repn.linear_vars[1], m.x[2])
-        self.assertIs(repn.linear_vars[2], aux_vars2[0])
-        self.assertEqual(repn.quadratic_coefs[0], 1)
-        self.assertEqual(repn.quadratic_coefs[1], 1)
-        self.assertIs(repn.quadratic_vars[0][0], m.x[1])
-        self.assertIs(repn.quadratic_vars[0][1], m.x[1])
-        self.assertIs(repn.quadratic_vars[1][0], m.x[2])
-        self.assertIs(repn.quadratic_vars[1][1], m.x[2])
-        self.assertIsNone(repn.nonlinear_expr)
-
+        self.check_global_constraint_disj2(c1, aux_vars2[0], m.x[1], m.x[2])
         c2 = c[1]
-        self.assertIsNone(c2.lower)
-        self.assertEqual(c2.upper, 0)
-        repn = generate_standard_repn(c2.body)
-        self.assertEqual(repn.constant, 0)
-        self.assertEqual(len(repn.linear_vars), 3)
-        self.assertEqual(len(repn.quadratic_vars), 2)
-        self.assertEqual(repn.linear_coefs[0], -6)
-        self.assertEqual(repn.linear_coefs[1], -6)
-        self.assertEqual(repn.linear_coefs[2], -1)
-        self.assertIs(repn.linear_vars[0], m.x[3])
-        self.assertIs(repn.linear_vars[1], m.x[4])
-        self.assertIs(repn.linear_vars[2], aux_vars2[1])
-        self.assertEqual(repn.quadratic_coefs[0], 1)
-        self.assertEqual(repn.quadratic_coefs[1], 1)
-        self.assertIs(repn.quadratic_vars[0][0], m.x[3])
-        self.assertIs(repn.quadratic_vars[0][1], m.x[3])
-        self.assertIs(repn.quadratic_vars[1][0], m.x[4])
-        self.assertIs(repn.quadratic_vars[1][1], m.x[4])
-        self.assertIsNone(repn.nonlinear_expr)
+        self.check_global_constraint_disj2(c2, aux_vars2[1], m.x[3], m.x[4])
 
     def test_transformation_block_fbbt_bounds(self):
         m = self.makeModel()
@@ -198,7 +185,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
             compute_bounds_method=compute_bounds_on_expr)
 
-        self.check_transformation_block(m, 0, 72, -72, 96)
+        self.check_transformation_block(m, 0, 72, 0, 72, -72, 96, -72, 96)
 
     @unittest.skipIf('gurobi_direct' not in solvers, 
                      'Gurobi direct solver not available')
@@ -214,21 +201,18 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
             subproblem_solver=SolverFactory('gurobi_direct'))
         
-        self.check_transformation_block(m, 0, 72, -18, 32)
+        self.check_transformation_block(m, 0, 72, 0, 72, -18, 32, -18, 32)
 
-    # def test_transformation_block_specified_bounds(self):
-    #     m = self.makeModel()
+    def test_transformation_block_specified_bounds(self):
+        m = self.makeModel()
 
-    #     TransformationFactory('gdp.between_steps').apply_to(
-    #         m,
-    #         variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
-    #         # ESJ: Shoot, I don't actually know how to do this... Because it
-    #         # matters where the constant ends up. Because what I would write
-    #         # down is the below. But this is wrong since the expression for the
-    #         # constraint in the second Disjunct gets expanded and the constant
-    #         # moved to the RHS.
-    #         bounds={m.disjunction.disjuncts[0].constraint[1]: [(0,32), (0,32)],
-    #                 m.disjunction.disjuncts[1].constraint[1]: [(0,32), (0,32)]})
+        TransformationFactory('gdp.between_steps').apply_to(
+            m,
+            variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
+            bounds={m.disjunction.disjuncts[0].constraint[1]: [(0,32), (0,32)],
+                    m.disjunction.disjuncts[1].constraint[1]: [(0,32), (0,32)]})
+
+        self.check_transformation_block(m, 0, 32, 0, 32, -18, 14, -18, 14)
 
     @unittest.skipIf('gurobi_direct' not in solvers, 
                      'Gurobi direct solver not available')
@@ -244,7 +228,36 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             P=2,
             subproblem_solver=SolverFactory('gurobi_direct'))
         
-        self.check_transformation_block(m, 0, 72, -18, 32)
+        self.check_transformation_block(m, 0, 72, 0, 72, -18, 32, -18, 32)
+
+    @unittest.skipIf('gurobi_direct' not in solvers, 
+                     'Gurobi direct solver not available')
+    def test_assume_fixed_vars_permanent(self):
+        m = self.makeModel()
+        m.x[1].fix(0)
+
+        # I'm using Gurobi because I'm assuming exact equality is going to work
+        # out. And it definitely won't with ipopt. (And Gurobi direct is way
+        # faster than the LP interface to Gurobi for this... I assume because
+        # writing nonlinear expressions is slow?)
+        TransformationFactory('gdp.between_steps').apply_to(
+            m,
+            variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
+            assume_fixed_vars_permanent=True,
+            subproblem_solver=SolverFactory('gurobi_direct'))
+
+        # TODO: What is the expected behavior here? I was assuming the
+        # below. Buit honestly, if you have promised they are staying fixed, we
+        # don't need the actual var objects to appear in the global
+        # constraints... And that is what happens when we have
+        # compute_values=True in generate_standard_repn. If we make it false,
+        # then they appear in the "constant" of the constraints on the disjunct,
+        # which I find way more disturbing. I think if we wanted the below, I'd
+        # have to work with both versions of standard_repn...
+        (b, disj1, disj2, 
+         aux_vars1, 
+         aux_vars2) = self.check_transformation_block(m, 0, 36, 0, 72, -9, 16,
+                                                      -18, 32)
 
     @unittest.skipIf('gurobi_direct' not in solvers, 
                      'Gurobi direct solver not available')
@@ -306,7 +319,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertEqual(len(c), 1)
         c1 = c[0]
         self.assertIsNone(c1.lower)
-        self.assertEqual(c1.upper, 1)
+        self.assertEqual(value(c1.upper), 1)
         repn = generate_standard_repn(c1.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 3)

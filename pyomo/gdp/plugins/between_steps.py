@@ -57,6 +57,48 @@ def _generate_additively_separable_repn(nonlinear_part):
 
     return nonlinear_decomp
 
+def stringify_partition(partition):
+    string = "{"
+    for part in partition:
+        string += "{"
+        for v in part:
+            string += "%s," % v.name
+        string = string[:-1]
+        string += "}, "
+    string = string[:-2]
+    string += "}"
+
+    return string
+
+def partition_original_expression(expression, partition):
+    expr_parts = [0 for part in partition]
+    exprs = ComponentSet([expression])
+    while exprs:
+        expr = exprs.pop()
+        vars = ComponentSet(EXPR.identify_variables(expr))
+        for i, part in enumerate(partition):
+            # if vars is a subset of part
+            if all(v in part for v in vars):
+                expr_parts[i] += expr
+            elif expr.__class__ is EXPR.SumExpression:
+                for arg in expr.args:
+                    exprs.add(arg)
+            # if they are disjoint
+            elif all(v not in part for v in vars):
+                continue
+            # else, they intersect, but vars isn't a subset of part, and this
+            # isn't a SumExpression, so we don't know how to break it. Give up.
+            else:
+                raise RuntimeError("Does not appear that, as written, the "
+                                   "expression %s is "
+                                   "additively separable with respect to the "
+                                   "partition %s. If it is, please expand and "
+                                   "distribute constants so it is a "
+                                   "SumExpression." % (expression,
+                                                       stringify_partition(
+                                                           partition)))
+    return expr_parts
+
 def arbitrary_partition(disjunction, P):
     # collect variables
     v_set = ComponentSet()
@@ -248,28 +290,29 @@ class BetweenSteps_Transformation(Transformation):
     # bounding directly, but then we’d have to check that they add up to the
     # right stuff and that sounds really clunky.
 
-    # CONFIG.declare('bounds', ConfigValue(
-    #     default=None,
-    #     description="""Dictionary (or ComponentMap) mapping Constraints to a 
-    #     list of (LB, UB) tuples, where, at index i in the list LB and UB are 
-    #     lower and upper bounds, respectively, on the subexpression of the key 
-    #     corresponding to the ith variable partition specified in the 
-    #     'variable_partitions' argument.""",
-    #     doc="""
-    #     Mapping of Constraint keys to lists of (LB, UB) pairs of length P.
-    #     The tuple at index i in the list specifies the lower and upper bounds 
-    #     to use on the subexpression of the body of the constraint corresponding 
-    #     to the ith variable partition specified in the 'variable_partitions' 
-    #     argument.
+    CONFIG.declare('bounds', ConfigValue(
+        default={},
+        domain=_to_dict,
+        description="""Dictionary (or ComponentMap) mapping Constraints to a 
+        list of (LB, UB) tuples, where, at index i in the list LB and UB are 
+        lower and upper bounds, respectively, on the subexpression of the key 
+        corresponding to the ith variable partition specified in the 
+        'variable_partitions' argument.""",
+        doc="""
+        Mapping of Constraint keys to lists of (LB, UB) pairs of length P.
+        The tuple at index i in the list specifies the lower and upper bounds 
+        to use on the subexpression of the body of the constraint corresponding 
+        to the ith variable partition specified in the 'variable_partitions' 
+        argument.
 
-    #     Note that to specify bounds, you must also manually specify the variable 
-    #     partitions for the Disjunctions containing the Constraints in this map.
-    #     For any Constraints not in the map, bounds will be calculated using the 
-    #     method specified in the 'compute_bounds_method' argument or using the 
-    #     default method of minimizing and maximizing the expression over the 
-    #     variable domains.
-    #     """
-    # ))
+        Note that to specify bounds, you must also manually specify the variable 
+        partitions for the Disjunctions containing the Constraints in this map.
+        For any Constraints not in the map, bounds will be calculated using the 
+        method specified in the 'compute_bounds_method' argument or using the 
+        default method of minimizing and maximizing the expression over the 
+        variable domains.
+        """
+    ))
     def __init__(self):
         super(BetweenSteps_Transformation, self).__init__()
 
@@ -502,18 +545,43 @@ class BetweenSteps_Transformation(Transformation):
             transBlock.add_component(unique_component_name(
                 transBlock, cons_name + "_split_constraints"), split_constraints)
 
+            # Process bounds if there are any. Note that we need to do this here
+            # because we are about to potentially change the Constraint
+            # expression and we are assuming the bounds were given using the
+            # representation the user specified.
+            bounds = self._config.bounds.get(cons)
+            if bounds is None:
+                bounds = self._config.bounds.get(None)
+            if bounds is not None:
+                P = len(partition)
+                if len(bounds) != P:
+                    raise GDP_Error("The bounds specified for constraint %s do "
+                                    "not have the same length as the number of "
+                                    "splits. They should be of length %s." %
+                                    (cons_name, P))
+
+                expr_partition = partition_original_expression(cons.body,
+                                                               partition)
+
+                # adjust the bounds (move the constant because it will get moved
+                # below)
+                for i, expr in enumerate(expr_partition):
+                    repn = generate_standard_repn(expr)
+                    bounds[i] = (bounds[i][0] - repn.constant, bounds[i][1] -
+                                 repn.constant)
+
             # this is a list which might have two constraints in it if we had
             # both a lower and upper value.
             leq_constraints = self._get_leq_constraints(cons)
             for (body, rhs) in leq_constraints:
-                repn = generate_standard_repn(body)
+                repn = generate_standard_repn(body, compute_values=True)
                 nonlinear_repn = None
                 if repn.nonlinear_expr is not None:
                     nonlinear_repn = _generate_additively_separable_repn(
                         repn.nonlinear_expr)
                 split_exprs = []
                 split_aux_vars = []
-                for var_list in partition:
+                for idx, var_list in enumerate(partition):
                     # we are going to recreate the piece of the expression
                     # involving the vars in var_list
                     split_exprs.append(0)
@@ -569,14 +637,15 @@ class BetweenSteps_Transformation(Transformation):
                     # or actually optimizing the function over the box defined
                     # by the variable bounds)
 
-                    # TODO: need to implement a bounds arg and try to retrieve
-                    # them here. Only do the below if that fails.
-
-                    expr_lb, expr_ub = self._config.compute_bounds_method(expr)
+                    if bounds is not None:
+                        expr_lb, expr_ub = bounds[idx]
+                    else:
+                        expr_lb, expr_ub = self._config.compute_bounds_method(
+                            expr)
                     if expr_lb is None or expr_ub is None:
                         raise GDP_Error("Expression %s from constraint %s "
                                         "is unbounded! Please specify a bound "
-                                        "in the TODO-some-bounds-arg arg "
+                                        "in the 'bounds' arg "
                                         "or ensure all variables that appear "
                                         "in the constraint are bounded." % 
                                         (expr, cons.name))
