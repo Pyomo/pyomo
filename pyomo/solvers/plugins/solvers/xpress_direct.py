@@ -170,11 +170,13 @@ class XpressDirect(DirectSolver):
 
         self._solver_model.setlogfile(self._log_file)
         if self._keepfiles:
-            print("Solver log file: "+self.log_file)
+            print("Solver log file: "+self._log_file)
 
-        # setting a log file in xpress disables all output
-        # this callback prints all messages to stdout
-        if self._tee:
+        # Setting a log file in xpress disables all output
+        # in xpress versions less than 36.
+        # This callback prints all messages to stdout
+        # when using those xpress versions.
+        if self._tee and XpressDirect._version[0] < 36:
             self._solver_model.addcbmessage(_print_message, None, 0)
 
         # set xpress options
@@ -203,11 +205,23 @@ class XpressDirect(DirectSolver):
                 self._solver_model.setControl(key, contr_type(option))
 
         start_time = time.time()
-        self._solver_model.solve()
+        if self._tee:
+            self._solver_model.solve()
+        else:
+            # In xpress versions greater than or equal 36,
+            # it seems difficult to completely suppress console
+            # output without disabling logging altogether.
+            # As a work around, we capature all screen output
+            # when tee is False.
+            try:
+                with capture_output() as OUT:
+                    self._solver_model.solve()
+            except:
+                raise
         self._opt_time = time.time() - start_time
 
         self._solver_model.setlogfile('')
-        if self._tee:
+        if self._tee and XpressDirect._version[0] < 36:
             self._solver_model.removecbmessage(_print_message, None)
 
         # FIXME: can we get a return code indicating if XPRESS had a significant failure?
