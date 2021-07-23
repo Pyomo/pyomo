@@ -9,9 +9,9 @@
 #  ___________________________________________________________________________
 
 from __future__ import division
-from pyomo.core import Constraint, minimize, value, maximize, Var
+from pyomo.core import Constraint, minimize, value, maximize
 from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, solve_feasibility_subproblem
+from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, solve_feasibility_subproblem, handle_nlp_subproblem_tc
 from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables, get_main_elapsed_time, time_code
 from pyomo.contrib.mindtpy.util import get_integer_solution
 from math import copysign
@@ -26,6 +26,7 @@ from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.opt.results import ProblemSense
 from pyomo.contrib.mindtpy.mip_solve import handle_main_optimal, solve_main
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts
+from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
@@ -547,7 +548,7 @@ class LazyOACallback_cplex(LazyConstraintCallback):
 
     def __call__(self):
         """
-        This is an inherent function in LazyConstraintCallback in cplex. 
+        This is an inherent function in LazyConstraintCallback in cplex.
         This function is called whenever an integer solution is found during the branch and bound process
         """
         solve_data = self.solve_data
@@ -636,3 +637,120 @@ class LazyOACallback_cplex(LazyConstraintCallback):
         else:
             self.handle_lazy_subproblem_other_termination(fixed_nlp, fixed_nlp_result.solver.termination_condition,
                                                           solve_data, config)
+
+
+# Gurobi
+
+
+def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
+    if cb_where == gurobipy.GRB.Callback.MIPSOL:
+        """
+        This is an inherent function in LazyConstraintCallback in cplex. 
+        This function is called whenever an integer solution is found during the branch and bound process
+        """
+
+        if solve_data.should_terminate:
+            cb_opt._solver_model.terminate()
+            return
+        cb_opt.cbGetSolution(vars=cb_m.MindtPy_utils.variable_list)
+        handle_lazy_main_feasible_solution_gurobi(
+            cb_m, cb_opt, solve_data, config)
+
+        # if config.add_cuts_at_incumbent:
+        #     self.copy_lazy_var_list_values(opt,
+        #                                    main_mip.MindtPy_utils.variable_list,
+        #                                    solve_data.mip.MindtPy_utils.variable_list,
+        #                                    config)
+        #     if config.strategy == 'OA':
+        #         self.add_lazy_oa_cuts(
+        #             solve_data.mip, None, solve_data, config, opt)
+
+        # # regularization is activated after the first feasible solution is found.
+        # if config.add_regularization is not None and solve_data.best_solution_found is not None:
+        #     # the main problem might be unbounded, regularization is activated only when a valid bound is provided.
+        #     if not solve_data.bound_improved and not solve_data.solution_improved:
+        #         config.logger.info('the bound and the best found solution have neither been improved.'
+        #                            'We will skip solving the regularization problem and the Fixed-NLP subproblem')
+        #         solve_data.solution_improved = False
+        #         return
+        #     if ((solve_data.objective_sense == minimize and solve_data.LB != float('-inf'))
+        #             or (solve_data.objective_sense == maximize and solve_data.UB != float('inf'))):
+        #         main_mip, main_mip_results = solve_main(
+        #             solve_data, config, regularization_problem=True)
+        #         self.handle_lazy_regularization_problem(
+        #             main_mip, main_mip_results, solve_data, config)
+
+        if solve_data.LB + config.bound_tolerance >= solve_data.UB:
+            config.logger.info(
+                'MindtPy exiting on bound convergence. '
+                'LB: {} + (tol {}) >= UB: {}\n'.format(
+                    solve_data.LB, config.bound_tolerance, solve_data.UB))
+            solve_data.results.solver.termination_condition = tc.optimal
+            cb_opt._solver_model.terminate()
+            return
+
+        # # check if the same integer combination is obtained.
+        # solve_data.curr_int_sol = get_integer_solution(
+        #     solve_data.working_model, string_zero=True)
+
+        # if solve_data.curr_int_sol in set(solve_data.integer_list):
+        #     config.logger.info('This integer combination has been explored. '
+        #                        'We will skip solving the Fixed-NLP subproblem.')
+        #     solve_data.solution_improved = False
+        #     if config.strategy == 'GOA':
+        #         if config.add_no_good_cuts:
+        #             var_values = list(
+        #                 v.value for v in solve_data.working_model.MindtPy_utils.variable_list)
+        #             self.add_lazy_no_good_cuts(
+        #                 var_values, solve_data, config, opt)
+        #         return
+        #     elif config.strategy == 'OA':
+        #         return
+        # else:
+        #     solve_data.integer_list.append(solve_data.curr_int_sol)
+
+        # solve subproblem
+        # The constraint linearization happens in the handlers
+        fixed_nlp, fixed_nlp_result = solve_subproblem(solve_data, config)
+
+        handle_nlp_subproblem_tc(
+            fixed_nlp, fixed_nlp_result, solve_data, config, cb_opt)
+
+
+def handle_lazy_main_feasible_solution_gurobi(cb_m, cb_opt, solve_data, config):
+    """ This function is called during the branch and bound of main mip, more exactly when a feasible solution is found and LazyCallback is activated.
+    Copy the result to working model and update upper or lower bound.
+    In LP-NLP, upper or lower bound are updated during solving the main problem
+
+    Parameters
+    ----------
+    cb_m: Pyomo model
+        the MIP main problem
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+    opt: SolverFactory
+        the mip solver
+    """
+    # proceed. Just need integer values
+    cb_opt.cbGetSolution(vars=cb_m.MindtPy_utils.variable_list)
+    # this value copy is useful since we need to fix subproblem based on the solution of the main problem
+    copy_var_list_values(cb_m.MindtPy_utils.variable_list,
+                         solve_data.working_model.MindtPy_utils.variable_list,
+                         config)
+    if solve_data.objective_sense == minimize:
+        solve_data.LB = max(
+            cb_opt.cbGet(gurobipy.GRB.Callback.MIPSOL_OBJBND), solve_data.LB)
+        solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
+        solve_data.LB_progress.append(solve_data.LB)
+    else:
+        solve_data.UB = min(
+            cb_opt.cbGet(gurobipy.GRB.Callback.MIPSOL_OBJBND), solve_data.UB)
+        solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
+        solve_data.UB_progress.append(solve_data.UB)
+    config.logger.info(
+        'MIP %s: OBJ (at current node): %s  Bound: %s  LB: %s  UB: %s  TIME: %s'
+        % (solve_data.mip_iter, cb_opt.cbGet(gurobipy.GRB.Callback.MIPSOL_OBJ), cb_opt.cbGet(gurobipy.GRB.Callback.MIPSOL_OBJBND),
+            solve_data.LB, solve_data.UB, round(get_main_elapsed_time(
+                solve_data.timing), 2)))

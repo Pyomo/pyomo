@@ -19,7 +19,10 @@ from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbound
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.common.dependencies import attempt_import
 from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function, set_solver_options
+from pyomo.solvers.plugins.solvers.gurobi_persistent import GurobiPersistent
+
 logger = logging.getLogger('pyomo.contrib.mindtpy')
+
 
 single_tree, single_tree_available = attempt_import(
     'pyomo.contrib.mindtpy.single_tree')
@@ -127,22 +130,40 @@ def setup_mip_solver(solve_data, config, regularization_problem):
     if regularization_problem:
         mainopt = SolverFactory(config.mip_regularization_solver)
     else:
-        mainopt = SolverFactory(config.mip_solver)
+        if config.mip_solver == 'gurobi_persistent' and config.single_tree:
+            @SolverFactory.register('gurobi_persistent4mindtpy', doc='Persistent python interface to Gurobi')
+            class GurobiPersistent4MindtPy(GurobiPersistent):
+
+                def _intermediate_callback(self):
+                    def f(gurobi_model, where):
+                        self._callback_func(self._pyomo_model, self,
+                                            where, self.solve_data, self.config)
+                    return f
+            GurobiPersistent4MindtPy.solve_data = solve_data
+            GurobiPersistent4MindtPy.config = config
+            mainopt = SolverFactory('gurobi_persistent4mindtpy')
+            print('gurobi_persistent4mindtpy')
+        else:
+            mainopt = SolverFactory(config.mip_solver)
+
     # determine if persistent solver is called.
     if isinstance(mainopt, PersistentSolver):
         mainopt.set_instance(solve_data.mip, symbolic_solver_labels=True)
     if config.single_tree and not regularization_problem:
-        # Configuration of lazy callback
-        lazyoa = mainopt._solver_model.register_callback(
-            single_tree.LazyOACallback_cplex)
-        # pass necessary data and parameters to lazyoa
-        lazyoa.main_mip = solve_data.mip
-        lazyoa.solve_data = solve_data
-        lazyoa.config = config
-        lazyoa.opt = mainopt
-        mainopt._solver_model.set_warning_stream(None)
-        mainopt._solver_model.set_log_stream(None)
-        mainopt._solver_model.set_error_stream(None)
+        # Configuration of cplex lazy callback
+        if config.mip_solver == 'cplex_persistent':
+            lazyoa = mainopt._solver_model.register_callback(
+                single_tree.LazyOACallback_cplex)
+            # pass necessary data and parameters to lazyoa
+            lazyoa.main_mip = solve_data.mip
+            lazyoa.solve_data = solve_data
+            lazyoa.config = config
+            lazyoa.opt = mainopt
+            mainopt._solver_model.set_warning_stream(None)
+            mainopt._solver_model.set_log_stream(None)
+            mainopt._solver_model.set_error_stream(None)
+        if config.mip_solver == 'gurobi_persistent':
+            mainopt.set_callback(single_tree.LazyOACallback_gurobi)
     if config.use_tabu_list:
         tabulist = mainopt._solver_model.register_callback(
             tabu_list.IncumbentCallback_cplex)

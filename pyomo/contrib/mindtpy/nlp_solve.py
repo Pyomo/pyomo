@@ -113,11 +113,11 @@ def solve_subproblem(solve_data, config):
     return fixed_nlp, results
 
 
-def handle_nlp_subproblem_tc(fixed_nlp, result, solve_data, config):
+def handle_nlp_subproblem_tc(fixed_nlp, result, solve_data, config, cb_opt=None):
     if result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
-        handle_subproblem_optimal(fixed_nlp, solve_data, config)
+        handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt)
     elif result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
-        handle_subproblem_infeasible(fixed_nlp, solve_data, config)
+        handle_subproblem_infeasible(fixed_nlp, solve_data, config, cb_opt)
     elif result.solver.termination_condition is tc.maxTimeLimit:
         config.logger.info(
             'NLP subproblem failed to converge within the time limit.')
@@ -136,7 +136,7 @@ def handle_nlp_subproblem_tc(fixed_nlp, result, solve_data, config):
 # The next few functions deal with handling the solution we get from the above NLP solver function
 
 
-def handle_subproblem_optimal(fixed_nlp, solve_data, config, fp=False):
+def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=False):
     """
     This function copies the result of the NLP solver function ('solve_subproblem') to the working model, updates
     the bounds, adds OA and no-good cuts, and then stores the new solution if it is the new best solution. This
@@ -205,7 +205,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, fp=False):
         copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
-        add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
+        add_oa_cuts(solve_data.mip, dual_values, solve_data, config, cb_opt)
     elif config.strategy == 'GOA':
         copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
@@ -225,7 +225,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, fp=False):
     config.call_after_subproblem_feasible(fixed_nlp, solve_data)
 
 
-def handle_subproblem_infeasible(fixed_nlp, solve_data, config):
+def handle_subproblem_infeasible(fixed_nlp, solve_data, config, cb_opt=None):
     """
     Solves feasibility problem and adds cut according to the specified strategy
 
@@ -274,7 +274,8 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config):
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
         if config.strategy == 'OA':
-            add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
+            add_oa_cuts(solve_data.mip, dual_values,
+                        solve_data, config, cb_opt)
         elif config.strategy == 'GOA':
             add_affine_cuts(solve_data, config)
     # Add a no-good cut to exclude this discrete option

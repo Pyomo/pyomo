@@ -447,6 +447,9 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
     if solver_name in {'cplex', 'gurobi', 'gurobi_persistent'}:
         opt.options['timelimit'] = remaining
         opt.options['mipgap'] = config.mip_solver_mipgap
+        if solver_name == 'gurobi_persistent' and config.single_tree:
+            opt.set_gurobi_param('PreCrush', 1)
+            opt.set_gurobi_param('LazyConstraints', 1)
         if regularization == True:
             if solver_name == 'cplex':
                 if config.solution_limit is not None:

@@ -434,7 +434,8 @@ def check_config(config):
     if config.single_tree:
         config.iteration_limit = 1
         config.add_slack = False
-        config.mip_solver = 'cplex_persistent'
+        if config.mip_solver not in {'cplex_persistent', 'gurobi_persistent'}:
+            config.mip_solver = 'cplex_persistent'
         config.logger.info(
             'Single tree implementation is activated. The defalt MIP solver is cplex_persistent')
         if config.threads > 1:
