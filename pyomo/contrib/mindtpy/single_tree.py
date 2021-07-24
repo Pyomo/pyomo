@@ -25,7 +25,7 @@ from cplex.callbacks import LazyConstraintCallback
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.opt.results import ProblemSense
 from pyomo.contrib.mindtpy.mip_solve import handle_main_optimal, solve_main
-from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts
+from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_no_good_cuts
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 
 
@@ -656,14 +656,9 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
         handle_lazy_main_feasible_solution_gurobi(
             cb_m, cb_opt, solve_data, config)
 
-        # if config.add_cuts_at_incumbent:
-        #     self.copy_lazy_var_list_values(opt,
-        #                                    main_mip.MindtPy_utils.variable_list,
-        #                                    solve_data.mip.MindtPy_utils.variable_list,
-        #                                    config)
-        #     if config.strategy == 'OA':
-        #         self.add_lazy_oa_cuts(
-        #             solve_data.mip, None, solve_data, config, opt)
+        if config.add_cuts_at_incumbent:
+            if config.strategy == 'OA':
+                add_oa_cuts(solve_data.mip, None, solve_data, config, cb_opt)
 
         # # regularization is activated after the first feasible solution is found.
         # if config.add_regularization is not None and solve_data.best_solution_found is not None:
@@ -690,24 +685,23 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
             return
 
         # # check if the same integer combination is obtained.
-        # solve_data.curr_int_sol = get_integer_solution(
-        #     solve_data.working_model, string_zero=True)
+        solve_data.curr_int_sol = get_integer_solution(
+            solve_data.working_model, string_zero=True)
 
-        # if solve_data.curr_int_sol in set(solve_data.integer_list):
-        #     config.logger.info('This integer combination has been explored. '
-        #                        'We will skip solving the Fixed-NLP subproblem.')
-        #     solve_data.solution_improved = False
-        #     if config.strategy == 'GOA':
-        #         if config.add_no_good_cuts:
-        #             var_values = list(
-        #                 v.value for v in solve_data.working_model.MindtPy_utils.variable_list)
-        #             self.add_lazy_no_good_cuts(
-        #                 var_values, solve_data, config, opt)
-        #         return
-        #     elif config.strategy == 'OA':
-        #         return
-        # else:
-        #     solve_data.integer_list.append(solve_data.curr_int_sol)
+        if solve_data.curr_int_sol in set(solve_data.integer_list):
+            config.logger.info('This integer combination has been explored. '
+                               'We will skip solving the Fixed-NLP subproblem.')
+            solve_data.solution_improved = False
+            if config.strategy == 'GOA':
+                if config.add_no_good_cuts:
+                    var_values = list(
+                        v.value for v in solve_data.working_model.MindtPy_utils.variable_list)
+                    add_no_good_cuts(var_values, solve_data, config)
+                return
+            elif config.strategy == 'OA':
+                return
+        else:
+            solve_data.integer_list.append(solve_data.curr_int_sol)
 
         # solve subproblem
         # The constraint linearization happens in the handlers
