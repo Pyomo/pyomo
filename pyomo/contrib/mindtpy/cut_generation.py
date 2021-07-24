@@ -65,7 +65,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                            for var in EXPR.identify_variables(constr.body))
                         + value(constr.body) - rhs)
                     - (slack_var if config.add_slack else 0) <= 0)
-                if config.single_tree and config.mip_solver == 'gurobi_persistent' and solve_data.mip_iter > 0:
+                if config.single_tree and config.mip_solver == 'gurobi_persistent' and solve_data.mip_iter > 0 and cb_opt is not None:
                     cb_opt.cbLazy(
                         target_model.MindtPy_utils.cuts.oa_cuts[len(target_model.MindtPy_utils.cuts.oa_cuts)])
 
@@ -84,7 +84,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                               - (slack_var if config.add_slack else 0)
                               <= value(constr.upper))
                     )
-                    if config.single_tree and config.mip_solver == 'gurobi_persistent' and solve_data.mip_iter > 0:
+                    if config.single_tree and config.mip_solver == 'gurobi_persistent' and solve_data.mip_iter > 0 and cb_opt is not None:
                         cb_opt.cbLazy(
                             target_model.MindtPy_utils.cuts.oa_cuts[len(target_model.MindtPy_utils.cuts.oa_cuts)])
 
@@ -101,7 +101,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                               + (slack_var if config.add_slack else 0)
                               >= value(constr.lower))
                     )
-                    if config.single_tree and config.mip_solver == 'gurobi_persistent' and solve_data.mip_iter > 0:
+                    if config.single_tree and config.mip_solver == 'gurobi_persistent' and solve_data.mip_iter > 0 and cb_opt is not None:
                         cb_opt.cbLazy(
                             target_model.MindtPy_utils.cuts.oa_cuts[len(target_model.MindtPy_utils.cuts.oa_cuts)])
 

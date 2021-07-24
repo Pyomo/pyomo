@@ -24,7 +24,7 @@ import cplex
 from cplex.callbacks import LazyConstraintCallback
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.opt.results import ProblemSense
-from pyomo.contrib.mindtpy.mip_solve import handle_main_optimal, solve_main
+from pyomo.contrib.mindtpy.mip_solve import handle_main_optimal, solve_main, handle_regularization_main_tc
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_no_good_cuts
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 
@@ -661,19 +661,19 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
                 add_oa_cuts(solve_data.mip, None, solve_data, config, cb_opt)
 
         # # regularization is activated after the first feasible solution is found.
-        # if config.add_regularization is not None and solve_data.best_solution_found is not None:
-        #     # the main problem might be unbounded, regularization is activated only when a valid bound is provided.
-        #     if not solve_data.bound_improved and not solve_data.solution_improved:
-        #         config.logger.info('the bound and the best found solution have neither been improved.'
-        #                            'We will skip solving the regularization problem and the Fixed-NLP subproblem')
-        #         solve_data.solution_improved = False
-        #         return
-        #     if ((solve_data.objective_sense == minimize and solve_data.LB != float('-inf'))
-        #             or (solve_data.objective_sense == maximize and solve_data.UB != float('inf'))):
-        #         main_mip, main_mip_results = solve_main(
-        #             solve_data, config, regularization_problem=True)
-        #         self.handle_lazy_regularization_problem(
-        #             main_mip, main_mip_results, solve_data, config)
+        if config.add_regularization is not None and solve_data.best_solution_found is not None:
+            # the main problem might be unbounded, regularization is activated only when a valid bound is provided.
+            if not solve_data.bound_improved and not solve_data.solution_improved:
+                config.logger.info('the bound and the best found solution have neither been improved.'
+                                   'We will skip solving the regularization problem and the Fixed-NLP subproblem')
+                solve_data.solution_improved = False
+                return
+            if ((solve_data.objective_sense == minimize and solve_data.LB != float('-inf'))
+                    or (solve_data.objective_sense == maximize and solve_data.UB != float('inf'))):
+                main_mip, main_mip_results = solve_main(
+                    solve_data, config, regularization_problem=True)
+                handle_regularization_main_tc(
+                    main_mip, main_mip_results, solve_data, config)
 
         if solve_data.LB + config.bound_tolerance >= solve_data.UB:
             config.logger.info(

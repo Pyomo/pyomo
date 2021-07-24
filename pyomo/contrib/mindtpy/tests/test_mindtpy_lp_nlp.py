@@ -176,6 +176,111 @@ class TestMindtPy(unittest.TestCase):
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
 
+    def test_RLPNLP_L1_GUROBI(self):
+        """Test the LP/NLP decomposition algorithm.(GUROBI)"""
+        with SolverFactory('mindtpy') as opt:
+            for model in model_list:
+                results = opt.solve(model, strategy='OA',
+                                    mip_solver=required_solvers[2],
+                                    nlp_solver=required_solvers[0],
+                                    single_tree=True,
+                                    add_regularization='level_L1')
+
+                self.assertIn(results.solver.termination_condition,
+                              [TerminationCondition.optimal, TerminationCondition.feasible])
+                self.assertAlmostEqual(
+                    value(model.objective.expr), model.optimal_value, places=1)
+
+    def test_RLPNLP_L2_GUROBI(self):
+        """Test the LP/NLP decomposition algorithm.(GUROBI)"""
+        with SolverFactory('mindtpy') as opt:
+            for model in model_list:
+                results = opt.solve(model, strategy='OA',
+                                    mip_solver=required_solvers[1],
+                                    nlp_solver=required_solvers[0],
+                                    single_tree=True,
+                                    add_regularization='level_L2')
+
+                self.assertIn(results.solver.termination_condition,
+                              [TerminationCondition.optimal, TerminationCondition.feasible])
+                self.assertAlmostEqual(
+                    value(model.objective.expr), model.optimal_value, places=1)
+
+    def test_RLPNLP_Linf_GUROBI(self):
+        """Test the LP/NLP decomposition algorithm.(GUROBI)"""
+        with SolverFactory('mindtpy') as opt:
+            for model in model_list:
+                results = opt.solve(model, strategy='OA',
+                                    mip_solver=required_solvers[2],
+                                    nlp_solver=required_solvers[0],
+                                    single_tree=True,
+                                    add_regularization='level_L_infinity')
+
+                self.assertIn(results.solver.termination_condition,
+                              [TerminationCondition.optimal, TerminationCondition.feasible])
+                self.assertAlmostEqual(
+                    value(model.objective.expr), model.optimal_value, places=1)
+
+    def test_RLPNLP_grad_lag_GUROBI(self):
+        """Test the LP/NLP decomposition algorithm.(GUROBI)"""
+        with SolverFactory('mindtpy') as opt:
+            for model in model_list:
+                results = opt.solve(model, strategy='OA',
+                                    mip_solver=required_solvers[2],
+                                    nlp_solver=required_solvers[0],
+                                    single_tree=True,
+                                    add_regularization='grad_lag')
+
+                self.assertIn(results.solver.termination_condition,
+                              [TerminationCondition.optimal, TerminationCondition.feasible])
+                self.assertAlmostEqual(
+                    value(model.objective.expr), model.optimal_value, places=1)
+
+    def test_RLPNLP_hess_lag_GUROBI(self):
+        """Test the LP/NLP decomposition algorithm.(GUROBI)"""
+        with SolverFactory('mindtpy') as opt:
+            for model in model_list:
+                results = opt.solve(model, strategy='OA',
+                                    mip_solver=required_solvers[2],
+                                    nlp_solver=required_solvers[0],
+                                    single_tree=True,
+                                    add_regularization='hess_lag')
+
+                self.assertIn(results.solver.termination_condition,
+                              [TerminationCondition.optimal, TerminationCondition.feasible])
+                self.assertAlmostEqual(
+                    value(model.objective.expr), model.optimal_value, places=1)
+
+    def test_RLPNLP_hess_only_lag_GUROBI(self):
+        """Test the LP/NLP decomposition algorithm.(GUROBI)"""
+        with SolverFactory('mindtpy') as opt:
+            for model in model_list:
+                results = opt.solve(model, strategy='OA',
+                                    mip_solver=required_solvers[2],
+                                    nlp_solver=required_solvers[0],
+                                    single_tree=True,
+                                    add_regularization='hess_only_lag')
+
+                self.assertIn(results.solver.termination_condition,
+                              [TerminationCondition.optimal, TerminationCondition.feasible])
+                self.assertAlmostEqual(
+                    value(model.objective.expr), model.optimal_value, places=1)
+
+    def test_RLPNLP_sqp_lag_GUROBI(self):
+        """Test the LP/NLP decomposition algorithm.(GUROBI)"""
+        with SolverFactory('mindtpy') as opt:
+            for model in model_list:
+                results = opt.solve(model, strategy='OA',
+                                    mip_solver=required_solvers[2],
+                                    nlp_solver=required_solvers[0],
+                                    single_tree=True,
+                                    add_regularization='sqp_lag')
+
+                self.assertIn(results.solver.termination_condition,
+                              [TerminationCondition.optimal, TerminationCondition.feasible])
+                self.assertAlmostEqual(
+                    value(model.objective.expr), model.optimal_value, places=1)
+
 
 if __name__ == '__main__':
     unittest.main()
