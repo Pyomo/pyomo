@@ -23,7 +23,7 @@ from pyomo.contrib.mindtpy.tests.online_doc_example import OnlineDocExample
 from pyomo.environ import SolverFactory, value
 from pyomo.opt import TerminationCondition
 
-required_solvers = ('ipopt', 'cplex_persistent')
+required_solvers = ('ipopt', 'cplex_persistent', 'gurobi_persistent')
 if all(SolverFactory(s).available(False) for s in required_solvers):
     subsolvers_available = True
 else:
@@ -49,6 +49,20 @@ class TestMindtPy(unittest.TestCase):
             for model in model_list:
                 results = opt.solve(model, strategy='OA',
                                     mip_solver=required_solvers[1],
+                                    nlp_solver=required_solvers[0],
+                                    single_tree=True)
+
+                self.assertIn(results.solver.termination_condition,
+                              [TerminationCondition.optimal, TerminationCondition.feasible])
+                self.assertAlmostEqual(
+                    value(model.objective.expr), model.optimal_value, places=1)
+
+    def test_LPNLP_GUROBI(self):
+        """Test the LP/NLP decomposition algorithm(GUROBI)."""
+        with SolverFactory('mindtpy') as opt:
+            for model in model_list:
+                results = opt.solve(model, strategy='OA',
+                                    mip_solver=required_solvers[2],
                                     nlp_solver=required_solvers[0],
                                     single_tree=True)
 

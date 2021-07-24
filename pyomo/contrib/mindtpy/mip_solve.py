@@ -142,7 +142,6 @@ def setup_mip_solver(solve_data, config, regularization_problem):
             GurobiPersistent4MindtPy.solve_data = solve_data
             GurobiPersistent4MindtPy.config = config
             mainopt = SolverFactory('gurobi_persistent4mindtpy')
-            print('gurobi_persistent4mindtpy')
         else:
             mainopt = SolverFactory(config.mip_solver)
 
