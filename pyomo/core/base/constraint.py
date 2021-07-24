@@ -673,7 +673,11 @@ class Constraint(ActiveIndexedComponent):
         kwargs.setdefault('ctype', Constraint)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
-        self.rule = Initializer(_init, treat_sequences_as_mappings=False)
+        # Special case: we accept 2- and 3-tuples as constraints
+        if type(_init) is tuple:
+            self.rule = Initializer(_init, treat_sequences_as_mappings=False)
+        else:
+            self.rule = Initializer(_init)
 
     def construct(self, data=None):
         """
