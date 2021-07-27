@@ -10,32 +10,9 @@
 
 # TODO: this import is for historical backwards compatibility and should
 # probably be removed
-
-import pyomo.core.expr.numvalue
-import pyomo.core.expr.logical_expr
 from pyomo.common.collections import ComponentMap
-from pyomo.core.expr.symbol_map import SymbolMap
-import pyomo.core.base.action
-import pyomo.core.base.boolean_var
-import pyomo.core.base.check
-import pyomo.core.base.component
-import pyomo.core.base.config
-import pyomo.core.base.constraint
-import pyomo.core.base.expression
-import pyomo.core.base.global_set
-import pyomo.core.base.indexed_component
-import pyomo.core.base.indexed_component_slice
-import pyomo.core.base.label
-import pyomo.core.base.logical_constraint
-import pyomo.core.base.misc
-import pyomo.core.base.param
-import pyomo.core.base.range
-import pyomo.core.base.set_types
-import pyomo.core.base.set
-import pyomo.core.base.units_container
-import pyomo.core.base.util
-import pyomo.core.base.var
 
+from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.expr.numvalue import (nonpyomo_leaf_types,
                                       native_types,
                                       native_numeric_types,
@@ -115,8 +92,6 @@ from pyomo.core.base.transformation import (
     Transformation,
     TransformationFactory,
 )
-#
-import pyomo.core.base.util
 
 from pyomo.core.base.instance2dat import instance2dat
 
@@ -125,12 +100,13 @@ from pyomo.core.base.set import (
     set_options, RealSet, IntegerSet, BooleanSet,
 )
 
-from weakref import ref as weakref_ref
-
-#
-# This is a hack to strip out modules, which shouldn't have been included in these imports
-#
-import types
-_locals = locals()
-__all__ = [__name for __name in _locals.keys() if (not __name.startswith('_') and not isinstance(_locals[__name],types.ModuleType)) or __name == '_' ]
-__all__.append('pyomo')
+from pyomo.common.deprecation import relocated_module_attribute
+relocated_module_attribute(
+    'SimpleBlock', 'pyomo.core.base.block.SimpleBlock', version='6.0')
+relocated_module_attribute(
+    'SimpleVar', 'pyomo.core.base.var.SimpleVar', version='6.0')
+relocated_module_attribute(
+    'SimpleBooleanVar', 'pyomo.core.base.boolean_var.SimpleBooleanVar',
+    version='6.0'
+)
+del relocated_module_attribute
