@@ -44,7 +44,7 @@ def _dense_to_full_sparse(matrix):
     """
     # TODO: Allow methods to hard-code Jacobian/Hessian sparsity structure
     # in the case it is known a priori.
-    # TODO: Decompose matrices to infer maximum-fill-in sparsity structure.
+    # TODO: Decompose matrices to infer maximum fill-in sparsity structure.
     nrow, ncol = matrix.shape
     row = []
     col = []
