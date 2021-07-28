@@ -59,7 +59,7 @@ def _dense_to_full_sparse(matrix):
     return sps.coo_matrix((data, (row, col)), shape=(nrow, ncol))
 
 
-def get_hessian_of_constraint(constraint, wrt1=None, wrt2=None):
+def get_hessian_of_constraint(constraint, wrt1=None, wrt2=None, nlp=None):
     constraints = [constraint]
     if wrt1 is None and wrt2 is None:
         variables = list(identify_variables(constraint.expr, include_fixed=False))
@@ -75,32 +75,42 @@ def get_hessian_of_constraint(constraint, wrt1=None, wrt2=None):
         wrt1 = wrt2
         variables = wrt1
 
-    block = create_subsystem_block(constraints, variables=variables)
-    # Could fix input_vars so I don't evaluate the Hessian with respect
-    # to variables I don't care about...
+    if nlp is None:
+        block = create_subsystem_block(constraints, variables=variables)
+        # Could fix input_vars so I don't evaluate the Hessian with respect
+        # to variables I don't care about...
 
-    # HUGE HACK: Variables not included in a constraint are not written
-    # to the nl file, so we cannot take the derivative with respect to
-    # them, even though we know this derivative is zero. To work around,
-    # we make sure all variables appear on the block in the form of a
-    # dummy constraint. Then we can take derivatives of any constraint
-    # with respect to them. Conveniently, the extract_submatrix_
-    # call deals with extracting the variables and constraint we care
-    # about, in the proper order.
-    block._dummy_var = Var()
-    block._dummy_con = Constraint(expr=sum(variables) == block._dummy_var)
-    block._obj = Objective(expr=0.0)
-    nlp = PyomoNLP(block)
+        # HUGE HACK: Variables not included in a constraint are not written
+        # to the nl file, so we cannot take the derivative with respect to
+        # them, even though we know this derivative is zero. To work around,
+        # we make sure all variables appear on the block in the form of a
+        # dummy constraint. Then we can take derivatives of any constraint
+        # with respect to them. Conveniently, the extract_submatrix_
+        # call deals with extracting the variables and constraint we care
+        # about, in the proper order.
+        block._dummy_var = Var()
+        block._dummy_con = Constraint(expr=sum(variables) == block._dummy_var)
+        block._obj = Objective(expr=0.0)
+        nlp = PyomoNLP(block)
+
+    saved_duals = nlp.get_duals()
+    saved_obj_factor = nlp.get_obj_factor()
+    temp_duals = np.zeros(len(saved_duals))
 
     # NOTE: This makes some assumption about how the Lagrangian is constructed.
     # TODO: Define the convention we assume and convert if necessary.
-    duals = [0.0, 0.0]
     idx = nlp.get_constraint_indices(constraints)[0]
-    duals[idx] = 1.0
-    nlp.set_duals(duals)
+    temp_duals[idx] = 1.0
+    nlp.set_duals(temp_duals)
+    nlp.set_obj_factor(0.0)
+
     # NOTE: The returned matrix preserves explicit zeros. I.e. it contains
     # coordinates for every entry that could possibly be nonzero.
-    return nlp.extract_submatrix_hessian_lag(wrt1, wrt2)
+    submatrix = nlp.extract_submatrix_hessian_lag(wrt1, wrt2)
+
+    nlp.set_obj_factor(saved_obj_factor)
+    nlp.set_duals(saved_duals)
+    return submatrix
 
 
 class ExternalPyomoModel(ExternalGreyBoxModel):
@@ -245,9 +255,9 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         ny = len(y)
         nx = len(x)
 
-        hgxx = [get_hessian_of_constraint(con, x) for con in g]
-        hgxy = [get_hessian_of_constraint(con, x, y) for con in g]
-        hgyy = [get_hessian_of_constraint(con, y) for con in g]
+        hgxx = [get_hessian_of_constraint(con, x, nlp=nlp) for con in g]
+        hgxy = [get_hessian_of_constraint(con, x, y, nlp=nlp) for con in g]
+        hgyy = [get_hessian_of_constraint(con, y, nlp=nlp) for con in g]
 
         # Each term should be a length-ny list of nx-by-nx matrices
         # TODO: Make these 3-d numpy arrays.
@@ -299,9 +309,9 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         nf = len(f)
         nx = len(x)
 
-        hfxx = [get_hessian_of_constraint(con, x) for con in f]
-        hfxy = [get_hessian_of_constraint(con, x, y) for con in f]
-        hfyy = [get_hessian_of_constraint(con, y) for con in f]
+        hfxx = [get_hessian_of_constraint(con, x, nlp=nlp) for con in f]
+        hfxy = [get_hessian_of_constraint(con, x, y, nlp=nlp) for con in f]
+        hfyy = [get_hessian_of_constraint(con, y, nlp=nlp) for con in f]
 
         d2ydx2 = self.evaluate_hessian_external_variables()
 
