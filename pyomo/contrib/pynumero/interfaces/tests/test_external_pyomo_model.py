@@ -261,13 +261,6 @@ class Model2by2(object):
             ])
         return [d2y0dxdx, d2y1dxdx]
 
-"""
-Tests should cover:
-    1. Residual, Jacobian, and Hessian evaluation
-    2. Embed in an ExternalGreyBoxBlock
-    3. Convert to a CyIpoptNLP and solve
-"""
-
 
 class TestGetHessianOfConstraint(unittest.TestCase):
 
@@ -441,10 +434,6 @@ class TestExternalPyomoModel(unittest.TestCase):
         for x in x_init_list:
             external_model.set_input_values(x)
             jac = external_model.evaluate_jacobian_equality_constraints()
-            # evaluate_jacobian_equality_constraints involves an LU
-            # factorization and repeated back-solve. SciPy returns a
-            # dense matrix from this operation. I am not sure if I should
-            # cast it to a sparse matrix. For now it is dense...
             self.assertAlmostEqual(
                     jac.toarray()[0][0],
                     model.evaluate_jacobian(x[0]),
