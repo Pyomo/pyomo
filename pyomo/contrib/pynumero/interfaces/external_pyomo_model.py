@@ -255,9 +255,9 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         ny = len(y)
         nx = len(x)
 
-        hgxx = [get_hessian_of_constraint(con, x, nlp=nlp) for con in g]
-        hgxy = [get_hessian_of_constraint(con, x, y, nlp=nlp) for con in g]
-        hgyy = [get_hessian_of_constraint(con, y, nlp=nlp) for con in g]
+        hgxx = np.array([get_hessian_of_constraint(con, x, nlp=nlp) for con in g])
+        hgxy = np.array([get_hessian_of_constraint(con, x, y, nlp=nlp) for con in g])
+        hgyy = np.array([get_hessian_of_constraint(con, y, nlp=nlp) for con in g])
 
         # Each term should be a length-ny list of nx-by-nx matrices
         # TODO: Make these 3-d numpy arrays.
@@ -309,9 +309,9 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         nf = len(f)
         nx = len(x)
 
-        hfxx = [get_hessian_of_constraint(con, x, nlp=nlp) for con in f]
-        hfxy = [get_hessian_of_constraint(con, x, y, nlp=nlp) for con in f]
-        hfyy = [get_hessian_of_constraint(con, y, nlp=nlp) for con in f]
+        hfxx = np.array([get_hessian_of_constraint(con, x, nlp=nlp) for con in f])
+        hfxy = np.array([get_hessian_of_constraint(con, x, y, nlp=nlp) for con in f])
+        hfyy = np.array([get_hessian_of_constraint(con, y, nlp=nlp) for con in f])
 
         d2ydx2 = self.evaluate_hessian_external_variables()
 
