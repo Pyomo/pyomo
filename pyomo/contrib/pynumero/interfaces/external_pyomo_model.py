@@ -20,7 +20,6 @@ from pyomo.util.subsystems import (
         TemporarySubsystemManager,
         )
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
-from pyomo.contrib.pynumero.interfaces.utils import CondensedSparseSummation
 from pyomo.contrib.pynumero.interfaces.external_grey_box import (
         ExternalGreyBoxModel,
         )
