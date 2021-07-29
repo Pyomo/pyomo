@@ -255,38 +255,36 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         ny = len(y)
         nx = len(x)
 
-        hgxx = np.array([get_hessian_of_constraint(con, x, nlp=nlp) for con in g])
-        hgxy = np.array([get_hessian_of_constraint(con, x, y, nlp=nlp) for con in g])
-        hgyy = np.array([get_hessian_of_constraint(con, y, nlp=nlp) for con in g])
+        hgxx = np.array([
+            get_hessian_of_constraint(con, x, nlp=nlp).toarray() for con in g
+            ])
+        hgxy = np.array([
+            get_hessian_of_constraint(con, x, y, nlp=nlp).toarray() for con in g
+            ])
+        hgyy = np.array([
+            get_hessian_of_constraint(con, y, nlp=nlp).toarray() for con in g
+            ])
 
-        # Each term should be a length-ny list of nx-by-nx matrices
-        # TODO: Make these 3-d numpy arrays.
-        term1 = hgxx # Sparse matrix
-        term2 = []
-        for hessian in hgxy:
-            # Sparse matrix times dense matrix. The result is sparse
-            # if the sparse matrix is low rank.
-            _prod = hessian.dot(dydx)
-            term2.append(_prod + _prod.transpose())
-        # Dense matrix times sparse matrix times dense matrix.
-        # I believe the product is always dense.
-        term3 = [dydx.transpose().dot(hessian.toarray()).dot(dydx)
-                for hessian in hgyy]
+        # This term is sparse, but we do not exploit it.
+        term1 = hgxx
 
-        # List of nx-by-nx matrices
-        sum_ = [t1 + t2 + t3 for t1, t2, t3 in zip(term1, term2, term3)]
+        # This is what we want.
+        # prod[i,j,k] = sum(hgxy[i,:,j] * dydx[:,k])
+        prod = hgxy.dot(dydx)
+        # Swap the second and third axes of the tensor
+        term2 = prod + prod.transpose((0, 2, 1))
+        # The term2 tensor could have some sparsity worth exploiting.
 
-        # TODO: Store this as 3d array, use np.reshape to perform
-        # backsolve in a single call.
-        vectors = [[np.array([matrix[i, j] for matrix in sum_])
-                for j in range(nx)] for i in range(nx)]
-        solved_vectors = [[jgy_fact.solve(vector) for vector in vlist]
-            for vlist in vectors]
-        d2ydx2 = [
-            -np.array([[vec[i] for vec in vlist]
-            for vlist in solved_vectors])
-            for i in range(ny)
-            ]
+        # matrix.dot(tensor) is not what we want. Reverse order of product.
+        # Exploit symmetry of hgyy to only perform one transpose.
+        term3 = hgyy.dot(dydx).transpose((0, 2, 1)).dot(dydx)
+
+        rhs = term1 + term2 + term3
+
+        rhs.shape = (ny, nx*nx)
+        sol = jgy_fact.solve(rhs)
+        sol.shape = (ny, nx, nx)
+        d2ydx2 = -sol
 
         return d2ydx2
 
@@ -306,40 +304,32 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
 
         dydx = self.evaluate_jacobian_external_variables()
 
+        ny = len(y)
         nf = len(f)
         nx = len(x)
 
-        hfxx = np.array([get_hessian_of_constraint(con, x, nlp=nlp) for con in f])
-        hfxy = np.array([get_hessian_of_constraint(con, x, y, nlp=nlp) for con in f])
-        hfyy = np.array([get_hessian_of_constraint(con, y, nlp=nlp) for con in f])
+        hfxx = np.array([
+            get_hessian_of_constraint(con, x, nlp=nlp).toarray() for con in f
+            ])
+        hfxy = np.array([
+            get_hessian_of_constraint(con, x, y, nlp=nlp).toarray() for con in f
+            ])
+        hfyy = np.array([
+            get_hessian_of_constraint(con, y, nlp=nlp).toarray() for con in f
+            ])
 
         d2ydx2 = self.evaluate_hessian_external_variables()
 
-        # Each term should be a length-ny list of nx-by-nx matrices
-        # TODO: Make these 3-d numpy arrays.
         term1 = hfxx
-        term2 = []
-        for hessian in hfxy:
-            _prod = hessian.dot(dydx)
-            term2.append(_prod + _prod.transpose())
-        term3 = [dydx.transpose().dot(hessian.toarray()).dot(dydx)
-                for hessian in hfyy]
+        prod = hfxy.dot(dydx)
+        term2 = prod + prod.transpose((0, 2, 1))
+        term3 = hfyy.dot(dydx).transpose((0, 2, 1)).dot(dydx)
 
-        # Extract each of the nx^2 vectors from d2ydx2
-        vectors = [[np.array([matrix[i, j] for matrix in d2ydx2])
-                for j in range(nx)] for i in range(nx)]
-        # Multiply by jfy
-        product_vectors = [[jfy.dot(vector) for vector in vlist]
-            for vlist in vectors]
-        term4 = [
-            np.array([[vec[i] for vec in vlist]
-            for vlist in product_vectors])
-            for i in range(nf)
-            ]
+        d2ydx2.shape = (ny, nx*nx)
+        term4 = jfy.dot(d2ydx2)
+        term4.shape = (nf, nx, nx)
 
-        # List of nx-by-nx matrices
-        d2fdx2 = [t1 + t2 + t3 + t4
-                for t1, t2, t3, t4 in zip(term1, term2, term3, term4)]
+        d2fdx2 = term1 + term2 + term3 + term4
         return d2fdx2
 
     def evaluate_hessian_equality_constraints(self):
