@@ -274,8 +274,8 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         term2 = prod + prod.transpose((0, 2, 1))
         # The term2 tensor could have some sparsity worth exploiting.
 
-        # matrix.dot(tensor) is not what we want. Reverse order of product.
-        # Exploit symmetry of hgyy to only perform one transpose.
+        # matrix.dot(tensor) is not what we want, so we reverse the order of the
+        # product. Exploit symmetry of hgyy to only perform one transpose.
         term3 = hgyy.dot(dydx).transpose((0, 2, 1)).dot(dydx)
 
         rhs = term1 + term2 + term3
