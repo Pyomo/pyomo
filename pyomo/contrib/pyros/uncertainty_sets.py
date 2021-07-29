@@ -525,6 +525,16 @@ class BudgetSet(PolyhedralSet):
             raise AttributeError("RHS vector entries must be >= 0.")
         # === Non-emptiness is implied by the set
 
+        # === Add constraints such that uncertain params are >= 0
+        # === This adds >=0 bound on all parameters in the set
+        cols = mat.shape[1]
+        identity = np.identity(cols) * -1
+        for row in identity:
+            budget_membership_mat.append(row.tolist())
+
+        for i in range(identity.shape[0]):
+            rhs_vec.append(0)
+
         self.coefficients_mat = budget_membership_mat
         self.rhs_vec = rhs_vec
 
