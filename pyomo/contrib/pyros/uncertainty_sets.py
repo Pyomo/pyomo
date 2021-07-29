@@ -26,7 +26,7 @@ import functools
 import math
 from enum import Enum
 from pyomo.common.dependencies import numpy as np, scipy as sp
-from pyomo.core.base import ConcreteModel, Objective, maximize, minimize
+from pyomo.core.base import ConcreteModel, Objective, maximize, minimize, Block
 from pyomo.core.base.constraint import ConstraintList
 from pyomo.core.base.var import Var, _VarData, IndexedVar
 from pyomo.core.base.param import Param, _ParamData, IndexedParam
@@ -101,6 +101,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         """
         # === Determine bounds on all uncertain params
         bounding_model = ConcreteModel()
+        bounding_model.util = Block() # So that boundedness checks work for Cardinality and FactorModel sets
         bounding_model.uncertain_param_vars = IndexedVar(range(len(config.uncertain_params)), initialize=1)
         for idx, param in enumerate(config.uncertain_params):
             bounding_model.uncertain_param_vars[idx].value = param.value

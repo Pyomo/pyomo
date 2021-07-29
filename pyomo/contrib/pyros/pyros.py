@@ -336,9 +336,6 @@ class PyROS(object):
             raise AttributeError("The nominal_uncertain_param_vals list must be the same length"
                                  "as the uncertain_params list")
 
-        # === Validate uncertainty set
-        validate_uncertainty_set(config=config)
-
         # === Create data containers
         model_data = ROSolveResults()
         model_data.timing = Bunch()
@@ -362,6 +359,9 @@ class PyROS(object):
             model_data.util_block = unique_component_name(model, 'util')
             model.add_component(model_data.util_block, util)
             # Note:  model.component(model_data.util_block) is util
+
+            # === Validate uncertainty set happens here, requires util block for Cardinality and FactorModel sets
+            validate_uncertainty_set(config=config)
 
             # === Deactivate objective on model
             for o in model.component_data_objects(Objective):
