@@ -248,6 +248,77 @@ class InEnum(object):
         raise ValueError("%r is not a valid %s" % (
             value, self._domain.__name__))
 
+class Module:
+    """ Domain validator for modules.
+
+    Modules can be specified as module objects, by module name,
+    or by the path to the module's file. If specified by path, the
+    path string has the same path expansion features supported by
+    the :py:class:`Path` class.
+
+    Note that modules imported by file path may not be recognized as
+    part of a package, and as such they should not use relative package
+    importing (such as ``from . import foo``).
+
+    Parameters
+    ----------
+    basePath: None, str, ConfigValue
+        The base path that will be prepended to any non-absolute path
+        values provided.  If None, defaults to :py:attr:`Path.BasePath`.
+
+    expandPath: bool
+        If True, then the value will be expanded and normalized.  If
+        False, the string representation of the value will be used
+        unchanged.  If None, expandPath will defer to the (negated)
+        value of :py:attr:`Path.SuppressPathExpansion`.
+
+    The following code shows the three ways you can specify a module: by file
+    name, by module name, or by module object. Regardless of how the module is
+    specified, what is stored in the configuration is a module object.
+
+    .. doctest::
+        >>> from pyomo.common.config import (
+        ...     ConfigDict, ConfigValue, Module
+        ... )
+        >>> config = ConfigDict()
+        >>> config.declare('my_module', ConfigValue(
+        ...     domain=Module(),
+        ... ))
+        >>> # Set using file path
+        >>> config.my_module = '../../pyomo/common/tests/config_plugin.py'
+        >>> # Set using python module name, as a string
+        >>> config.my_module = 'os.path'
+        >>> # Set using an imported module object
+        >>> import os.path
+        >>> config.my_module = os.path
+    """
+    def __init__(self, basePath=None, expandPath=None):
+        self.basePath = basePath
+        self.expandPath = expandPath
+
+    def __call__(self, module_id):
+        # If it's already a module, just return it
+        from inspect import ismodule
+        if ismodule(module_id):
+            return module_id
+
+        # Try to import it as a module
+        import importlib
+        try:
+            m = importlib.import_module(str(module_id))
+            return m
+        except (ModuleNotFoundError, TypeError):
+            # This wasn't a module name
+            # Ignore the exception and move on to path-based loading
+            pass
+        # Any other kind of exception will be thrown out of this method
+
+        # If we're still here, try loading by path
+        path_domain = Path(self.basePath, self.expandPath)
+        path = path_domain(str(module_id))
+        import pyomo.common.fileutils
+        m = pyomo.common.fileutils.import_file(path)
+        return m
 
 class Path(object):
     """Domain validator for path-like options.
