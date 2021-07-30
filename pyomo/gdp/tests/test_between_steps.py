@@ -147,7 +147,6 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         c2 = c[0]
         self.check_disj_constraint(c2, -35, aux_vars2[0], aux_vars2[1])
 
-
     def check_transformation_block(self, m, aux11lb, aux11ub, aux12lb, aux12ub,
                                    aux21lb, aux21ub, aux22lb, aux22ub):
         (b, disj1, disj2, 
@@ -260,8 +259,53 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         # because it will allow for a tighter relaxation.
         (b, disj1, disj2, 
          aux_vars1, 
-         aux_vars2) = self.check_transformation_block(m, 0, 36, 0, 72, -9, 16,
-                                                      -18, 32)
+         aux_vars2) = self.check_transformation_block_structure(m, 0, 36, 0, 72,
+                                                                -9, 16, -18, 32)
+
+        # check disjunct constraints
+        self.check_disjunct_constraints(disj1, disj2, aux_vars1, aux_vars2)
+
+        # now we can check the global constraints--these are what is different
+        # because x[1] is gone.
+        c = b.component(
+            "disjunction_disjuncts[0].constraint[1]_split_constraints")
+        self.assertEqual(len(c), 2)
+        c1 = c[0]
+        self.assertIsNone(c1.lower)
+        self.assertEqual(c1.upper, 0)
+        repn = generate_standard_repn(c1.body)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertEqual(len(repn.quadratic_vars), 1)
+        self.assertEqual(repn.linear_coefs[0], -1)
+        self.assertIs(repn.linear_vars[0], aux_vars1[0])
+        self.assertEqual(repn.quadratic_coefs[0], 1)
+        self.assertIs(repn.quadratic_vars[0][0], m.x[2])
+        self.assertIs(repn.quadratic_vars[0][1], m.x[2])
+        self.assertIsNone(repn.nonlinear_expr)
+        c2 = c[1]
+        self.check_global_constraint_disj1(c2, aux_vars1[1], m.x[3], m.x[4])
+
+        c = b.component(
+            "disjunction_disjuncts[1].constraint[1]_split_constraints")
+        self.assertEqual(len(c), 2)
+        c1 = c[0]
+        self.assertIsNone(c1.lower)
+        self.assertEqual(c1.upper, 0)
+        repn = generate_standard_repn(c1.body)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 2)
+        self.assertEqual(len(repn.quadratic_vars), 1)
+        self.assertEqual(repn.linear_coefs[0], -6)
+        self.assertEqual(repn.linear_coefs[1], -1)
+        self.assertIs(repn.linear_vars[0], m.x[2])
+        self.assertIs(repn.linear_vars[1], aux_vars2[0])
+        self.assertEqual(repn.quadratic_coefs[0], 1)
+        self.assertIs(repn.quadratic_vars[0][0], m.x[2])
+        self.assertIs(repn.quadratic_vars[0][1], m.x[2])
+        self.assertIsNone(repn.nonlinear_expr)
+        c2 = c[1]
+        self.check_global_constraint_disj2(c2, aux_vars2[1], m.x[3], m.x[4])
 
     @unittest.skipIf('gurobi_direct' not in solvers, 
                      'Gurobi direct solver not available')
