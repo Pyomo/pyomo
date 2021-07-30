@@ -183,8 +183,8 @@ def deprecation_warning(msg, logger=None, version=None,
         # globals() is *this* module.  Walking up the stack to find the
         # frame where the globals() changes tells us the module that is
         # issuing the deprecation warning.  As we assume that *that*
-        # module will not trigger it's own deprecation warnings, we will
-        # walk farther up until the globals changes again.
+        # module will not trigger its own deprecation warnings, we will
+        # walk farther up until the globals() changes again.
         calling_frame = _find_calling_frame(2)
     if calling_frame is not None:
         info = inspect.getframeinfo(calling_frame)
