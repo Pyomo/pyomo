@@ -31,6 +31,8 @@ from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (preprocess_targets, is_child_of, target_list,
                             _to_dict, verify_successful_solve, NORMAL,
                             clone_without_expression_components )
+from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
+
 from math import floor
 
 import logging
@@ -56,48 +58,6 @@ def _generate_additively_separable_repn(nonlinear_part):
             tuple(v for v in EXPR.identify_variables(summand)))
 
     return nonlinear_decomp
-
-def stringify_partition(partition):
-    string = "{"
-    for part in partition:
-        string += "{"
-        for v in part:
-            string += "%s," % v.name
-        string = string[:-1]
-        string += "}, "
-    string = string[:-2]
-    string += "}"
-
-    return string
-
-def partition_original_expression(expression, partition):
-    expr_parts = [0 for part in partition]
-    exprs = ComponentSet([expression])
-    while exprs:
-        expr = exprs.pop()
-        vars = ComponentSet(EXPR.identify_variables(expr))
-        for i, part in enumerate(partition):
-            # if vars is a subset of part
-            if all(v in part for v in vars):
-                expr_parts[i] += expr
-            elif expr.__class__ is EXPR.SumExpression:
-                for arg in expr.args:
-                    exprs.add(arg)
-            # if they are disjoint
-            elif all(v not in part for v in vars):
-                continue
-            # else, they intersect, but vars isn't a subset of part, and this
-            # isn't a SumExpression, so we don't know how to break it. Give up.
-            else:
-                raise RuntimeError("Does not appear that, as written, the "
-                                   "expression %s is "
-                                   "additively separable with respect to the "
-                                   "partition %s. If it is, please expand and "
-                                   "distribute constants so it is a "
-                                   "SumExpression." % (expression,
-                                                       stringify_partition(
-                                                           partition)))
-    return expr_parts
 
 def arbitrary_partition(disjunction, P):
     # collect variables
@@ -266,53 +226,6 @@ class BetweenSteps_Transformation(Transformation):
         will be used to solve the subproblems.
         """
     ))
-    #  I think we might still have a need for a not-generate_standard_repn
-    # cousin because of manually specifying bounds. Suppose I have this
-    # disjunction: [x^2 + y^2 + z^2 <= 1] v [(x – 3)^2 + (y – 3)^2 + (z - 3)^2
-    # <= 1] and I want to 2-split with partitions {x}, and {y,z} and specify my
-    # own bounds. I think one thing that makes sense is giving the
-    # transformation a map to specify the bounds. Something like: {disj1.c:
-    # [(lb(x^2), ub(x^2)), (lb(y^2 + z^2), ub(y^2 + z^2)], disj2.c: [(lb((x –
-    # 3)^2), ub((x – 3)^2)), lb((y – 3)^2 + (z - 3)^2), ub((y – 3)^2 + (z -
-    # 3)^2))]}. Or something… But basically, I can give a tuple of bounds for
-    # each partition for each constraint that I am splitting. But the point of
-    # all this is, that I’m a human thinking about spheres, so I actually want
-    # to give bounds on the expressions I wrote down, not on what I would get
-    # from generate_standard_repn. But if we’re going to let people be human in
-    # this way, then we need some sort of representation that would keep the
-    # constants with their friends, because I meant 0 <= (x-3)^2 <= 32 for
-    # example, instead of 0 <= x^2 <= 32. And I don’t currently have a way to
-    # know that without some modified generate_standard_repn that gives me a
-    # {nonlinear_vars: [x, y, z], nonlinear_exprs: [(x-3)^2, (y-3)^2, (z –
-    # 3)^2]} kind of thing…
-
-    # Else, we could have the user give us the piece of the expression they are
-    # bounding directly, but then we’d have to check that they add up to the
-    # right stuff and that sounds really clunky.
-
-    CONFIG.declare('bounds', ConfigValue(
-        default={},
-        domain=_to_dict,
-        description="""Dictionary (or ComponentMap) mapping Constraints to a 
-        list of (LB, UB) tuples, where, at index i in the list LB and UB are 
-        lower and upper bounds, respectively, on the subexpression of the key 
-        corresponding to the ith variable partition specified in the 
-        'variable_partitions' argument.""",
-        doc="""
-        Mapping of Constraint keys to lists of (LB, UB) pairs of length P.
-        The tuple at index i in the list specifies the lower and upper bounds 
-        to use on the subexpression of the body of the constraint corresponding 
-        to the ith variable partition specified in the 'variable_partitions' 
-        argument.
-
-        Note that to specify bounds, you must also manually specify the variable 
-        partitions for the Disjunctions containing the Constraints in this map.
-        For any Constraints not in the map, bounds will be calculated using the 
-        method specified in the 'compute_bounds_method' argument or using the 
-        default method of minimizing and maximizing the expression over the 
-        variable domains.
-        """
-    ))
     def __init__(self):
         super(BetweenSteps_Transformation, self).__init__()
 
@@ -338,8 +251,15 @@ class BetweenSteps_Transformation(Transformation):
             else:
                 self.verbose = False
 
-            if self._config.compute_bounds_method is None:
-                self._config.compute_bounds_method = self.compute_optimal_bounds
+            # TODO: This should be a domain function for the configvalue
+            method = self._config.compute_bounds_method
+            if method is None or method == 'optimal':
+                self._compute_bounds = self.compute_optimal_bounds
+            elif method == 'fbbt':
+                self._compute_bounds = self.compute_bounds_fbbt
+            else:
+                raise GDP_Error("Unrecognized 'compute_bounds_method' "
+                                "argument: %s" % method)
 
             if not self._config.assume_fixed_vars_permanent:
                 # TODO: This actually a place where I want everything that
@@ -525,6 +445,7 @@ class BetweenSteps_Transformation(Transformation):
             transBlock,
             obj.getname(fully_qualified=True, name_buffer=NAME_BUFFER)),
                                  transformed_disjunct)
+        instance = obj.model()
         for cons in obj.component_data_objects(Constraint, active=True,
                                                sort=SortComponents.deterministic,
                                                descend_into=Block):
@@ -544,31 +465,6 @@ class BetweenSteps_Transformation(Transformation):
             split_constraints = Constraint(NonNegativeIntegers)
             transBlock.add_component(unique_component_name(
                 transBlock, cons_name + "_split_constraints"), split_constraints)
-
-            # Process bounds if there are any. Note that we need to do this here
-            # because we are about to potentially change the Constraint
-            # expression and we are assuming the bounds were given using the
-            # representation the user specified.
-            bounds = self._config.bounds.get(cons)
-            if bounds is None:
-                bounds = self._config.bounds.get(None)
-            if bounds is not None:
-                P = len(partition)
-                if len(bounds) != P:
-                    raise GDP_Error("The bounds specified for constraint %s do "
-                                    "not have the same length as the number of "
-                                    "splits. They should be of length %s." %
-                                    (cons_name, P))
-
-                expr_partition = partition_original_expression(cons.body,
-                                                               partition)
-
-                # adjust the bounds (move the constant because it will get moved
-                # below)
-                for i, expr in enumerate(expr_partition):
-                    repn = generate_standard_repn(expr)
-                    bounds[i] = (bounds[i][0] - repn.constant, bounds[i][1] -
-                                 repn.constant)
 
             # this is a list which might have two constraints in it if we had
             # both a lower and upper value.
@@ -631,17 +527,8 @@ class BetweenSteps_Transformation(Transformation):
                                                 nonlinear_repn[
                                                     'nonlinear_exprs'][i])
                                                 
-                    # now we have the piece of the expression, we need bounds on
-                    # it. We first check if they were specified via args. If not
-                    # we use specified method to calculate them. (Probably fbbt
-                    # or actually optimizing the function over the box defined
-                    # by the variable bounds)
-
-                    if bounds is not None:
-                        expr_lb, expr_ub = bounds[idx]
-                    else:
-                        expr_lb, expr_ub = self._config.compute_bounds_method(
-                            expr)
+                    expr_lb, expr_ub = self._compute_bounds( expr, instance,
+                                                             transBlock)
                     if expr_lb is None or expr_ub is None:
                         raise GDP_Error("Expression %s from constraint %s "
                                         "is unbounded! Please specify a bound "
@@ -663,20 +550,30 @@ class BetweenSteps_Transformation(Transformation):
             obj.deactivate()
             return transformed_disjunct
 
-    # ESJ: TODO: This is a terrible name.. Like, wrt WHAT, Emma?
-    def compute_optimal_bounds(self, expr):
-        m = ConcreteModel()
-        m.x = Var(NonNegativeIntegers, dense=False)
-        substitute_map = {}
-        for i,v in enumerate(EXPR.identify_variables(expr)):
-            m.x[i].setlb(v.lb)
-            m.x[i].setub(v.ub)
-            substitute_map[id(v)] = m.x[i]
-        m.obj = Objective(expr=clone_without_expression_components(
-            expr,
-            substitute=substitute_map))
+    def compute_optimal_bounds(self, expr, instance, transBlock):
+        # computes bounds on expr by minimizing and maximizing expr over the
+        # variable bounds and the global constraints
+
+        # leave out what we've been doing, store state
+        transBlock.deactivate()
+        active_disjuncts = []
+        for disj in instance.component_data_objects(Disjunct,
+                                                    descend_into=Block,
+                                                    active=True):
+            disj.deactivate()
+            active_disjuncts.append(disj)
+        active_objs = []
+        for obj in instance.component_data_objects(Objective,
+                                                   descend_into=Block,
+                                                   active=True):
+            obj.deactivate()
+            active_objs.append(obj)
+
+        # add temporary objective and calculate bounds
+        obj = Objective(expr=expr)
+        instance.add_component(unique_component_name(instance, "tmp_obj"), obj)
         opt = self._config.subproblem_solver
-        results = opt.solve(m)
+        results = opt.solve(instance)
         if verify_successful_solve(results) is not NORMAL:
             logger.warning("Problem to find lower bound for expression %s"
                            "did not solve normally.\n\n%s" % (expr, results))
@@ -685,14 +582,26 @@ class BetweenSteps_Transformation(Transformation):
             # TODO: we probably need tolerance or rounding or something
             # here... Ideally we'd get the LB from the solver, but ipopt for
             # example doesn't even gives us one so...
-            LB = value(m.obj.expr)
-        m.obj.sense = -1
-        results = opt.solve(m)
+            LB = value(obj.expr)
+        obj.sense = -1
+        results = opt.solve(instance)
         if verify_successful_solve(results) is not NORMAL:
             logger.warning("Problem to find upper bound for expression %s"
                            "did not solve normally.\n\n%s" % (expr, results))
             UB = None
         else:
-            UB = value(m.obj.expr)
+            UB = value(obj.expr)
+
+        # clean up
+        instance.del_component(obj)
+        del obj
+        for disj in active_disjuncts:
+            disj.activate()
+        for obj in active_objs:
+            obj.activate()
+        transBlock.activate()
         
         return (LB, UB)
+
+    def compute_bounds_fbbt(self, expr, instance, transBlock):
+        return compute_bounds_on_expr(expr)

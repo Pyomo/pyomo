@@ -18,7 +18,6 @@ from pyomo.core import Block, value
 from pyomo.core.expr import current as EXPR
 import pyomo.gdp.tests.common_tests as ct
 from pyomo.repn import generate_standard_repn
-from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.opt import check_available_solvers
 
 from nose.tools import set_trace
@@ -120,17 +119,21 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         aux_vars1 = disj1.component(
             "disjunction_disjuncts[0].constraint[1]_aux_vars")
         self.assertEqual(len(aux_vars1), 2)
-        self.assertEqual(aux_vars1[0].lb, aux11lb)
-        self.assertEqual(aux_vars1[0].ub, aux11ub)
-        self.assertEqual(aux_vars1[1].lb, aux12lb)
-        self.assertEqual(aux_vars1[1].ub, aux12ub)
+        # TODO: gurobi default constraint tolerance is 1e-6, so let's say that's
+        # our goal too. Have to tighten Gurobi's tolerance to even get here
+        # though... And are we okay with LBs being too high rather than too low,
+        # and vice versa for UB?
+        self.assertAlmostEqual(aux_vars1[0].lb, aux11lb, places=6)
+        self.assertAlmostEqual(aux_vars1[0].ub, aux11ub, places=6)
+        self.assertAlmostEqual(aux_vars1[1].lb, aux12lb, places=6)
+        self.assertAlmostEqual(aux_vars1[1].ub, aux12ub, places=6)
         aux_vars2 = disj2.component(
             "disjunction_disjuncts[1].constraint[1]_aux_vars")
-        self.assertEqual(len(aux_vars2), 2)
-        self.assertEqual(aux_vars2[0].lb, aux21lb)
-        self.assertEqual(aux_vars2[0].ub, aux21ub)
-        self.assertEqual(aux_vars2[1].lb, aux22lb)
-        self.assertEqual(aux_vars2[1].ub, aux22ub)
+        self.assertAlmostEqual(len(aux_vars2), 2)
+        self.assertAlmostEqual(aux_vars2[0].lb, aux21lb, places=6)
+        self.assertAlmostEqual(aux_vars2[0].ub, aux21ub, places=6)
+        self.assertAlmostEqual(aux_vars2[1].lb, aux22lb, places=6)
+        self.assertAlmostEqual(aux_vars2[1].ub, aux22ub, places=6)
 
         return b, disj1, disj2, aux_vars1, aux_vars2
 
@@ -183,7 +186,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.between_steps').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
-            compute_bounds_method=compute_bounds_on_expr)
+            compute_bounds_method='fbbt')
 
         self.check_transformation_block(m, 0, 72, 0, 72, -72, 96, -72, 96)
 
@@ -203,14 +206,20 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         
         self.check_transformation_block(m, 0, 72, 0, 72, -18, 32, -18, 32)
 
-    def test_transformation_block_specified_bounds(self):
+    def test_transformation_block_better_bounds_in_global_constraints(self):
         m = self.makeModel()
+        m.c1 = Constraint(expr=m.x[1]**2 + m.x[2]**2 <= 32)
+        m.c2 = Constraint(expr=m.x[3]**2 + m.x[4]**2 <= 32)
+        m.c3 = Constraint(expr=(3 - m.x[1])**2 + (3 - m.x[2])**2 <= 32)
+        m.c4 = Constraint(expr=(3 - m.x[3])**2 + (3 - m.x[4])**2 <= 32)
+        opt = SolverFactory('gurobi_direct')
+        opt.options['NonConvex'] = 2
+        opt.options['FeasibilityTol'] = 1e-8
 
         TransformationFactory('gdp.between_steps').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
-            bounds={m.disjunction.disjuncts[0].constraint[1]: [(0,32), (0,32)],
-                    m.disjunction.disjuncts[1].constraint[1]: [(0,32), (0,32)]})
+            subproblem_solver=opt)
 
         self.check_transformation_block(m, 0, 32, 0, 32, -18, 14, -18, 14)
 
@@ -218,7 +227,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
                      'Gurobi direct solver not available')
     def test_transformation_block_arbitrary_even_partition(self):
         m = self.makeModel()
-
+        
         # I'm using Gurobi because I'm assuming exact equality is going to work
         # out. And it definitely won't with ipopt. (And Gurobi direct is way
         # faster than the LP interface to Gurobi for this... I assume because
@@ -246,14 +255,9 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             assume_fixed_vars_permanent=True,
             subproblem_solver=SolverFactory('gurobi_direct'))
 
-        # TODO: What is the expected behavior here? I was assuming the
-        # below. Buit honestly, if you have promised they are staying fixed, we
-        # don't need the actual var objects to appear in the global
-        # constraints... And that is what happens when we have
-        # compute_values=True in generate_standard_repn. If we make it false,
-        # then they appear in the "constant" of the constraints on the disjunct,
-        # which I find way more disturbing. I think if we wanted the below, I'd
-        # have to work with both versions of standard_repn...
+        # This actually changes the structure of the model because fixed vars
+        # move to the constants. I think this is fair, and we should allow it
+        # because it will allow for a tighter relaxation.
         (b, disj1, disj2, 
          aux_vars1, 
          aux_vars2) = self.check_transformation_block(m, 0, 36, 0, 72, -9, 16,
@@ -672,7 +676,7 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.between_steps').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
-            compute_bounds_method=compute_bounds_on_expr)
+            compute_bounds_method='fbbt')
 
         self.check_transformation_block(m, 0, (2*6**4)**0.25, 0, (2*5**4)**0.25)
 
@@ -691,4 +695,4 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
             TransformationFactory('gdp.between_steps').apply_to,
             m,
             variable_partitions=[[m.x[3], m.x[2]], [m.x[1], m.x[4]]],
-            compute_bounds_method=compute_bounds_on_expr)
+            compute_bounds_method='fbbt')
