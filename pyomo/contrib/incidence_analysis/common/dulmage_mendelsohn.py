@@ -53,6 +53,8 @@ def dulmage_mendelsohn(bg, top_nodes=None, matching=None):
     """
     top, bot = bipartite_sets(bg, top_nodes)
     bot_nodes = [n for n in bg if n not in top]
+    if top_nodes is None:
+        top_nodes = [n for n in bg if n in top]
 
     if matching is None:
         # This maps top->bot AND bot->top
