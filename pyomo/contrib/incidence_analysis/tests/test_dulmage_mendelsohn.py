@@ -118,10 +118,29 @@ class TestGasExpansionDMMatrixInterface(unittest.TestCase):
         constraints = list(m.component_data_objects(pyo.Constraint))
         imat = get_structural_incidence_matrix(variables, constraints)
 
+        var_idx_map = ComponentMap((v, i) for i, v in enumerate(variables))
+        con_idx_map = ComponentMap((c, i) for i, c in enumerate(constraints))
+
         N, M = imat.shape
         self.assertEqual(N, M)
 
         row_partition, col_partition = dulmage_mendelsohn(imat)
+
+        # Only unmatched constraint is ideal_gas[0]
+        unmatched_rows = [con_idx_map[m.ideal_gas[0]]]
+        self.assertEqual(row_partition[0], unmatched_rows)
+        # No other constraints can possibly be unmatched.
+        self.assertEqual(row_partition[1], [])
+        # The potentially unmatched variables have four constraints
+        # between them
+        matched_con_set = set(con_idx_map[con] for con in constraints
+                if con is not m.ideal_gas[0])
+        self.assertEqual(set(row_partition[2]), matched_con_set)
+
+        # All variables are potentially unmatched
+        potentially_unmatched_set = set(range(len(variables)))
+        potentially_unmatched = col_partition[0] + col_partition[1]
+        self.assertEqual(set(potentially_unmatched), potentially_unmatched_set)
 
 
 if __name__ == "__main__":
