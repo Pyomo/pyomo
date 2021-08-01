@@ -9,7 +9,10 @@
 #  ___________________________________________________________________________
 
 from networkx.classes.digraph import DiGraph
-from networkx.algorithms.traversal.breadth_first_search import bfs_successors
+from networkx.algorithms.traversal.breadth_first_search import (
+        bfs_successors,
+        bfs_edges,
+        )
 from networkx.algorithms.bipartite.basic import sets as bipartite_sets
 from networkx.algorithms.bipartite.matching import maximum_matching
 from networkx.algorithms.components import connected_components
@@ -39,11 +42,10 @@ def _get_reachable_from(digraph, sources):
     _filter = set()
     reachable = []
     for node in sources:
-        successors = dict(bfs_successors(digraph, node))
-        for i in successors[node]:
-            if i not in _filter:
-                _filter.add(i)
-                reachable.append(i)
+        for i, j in bfs_edges(digraph, node):
+            if j not in _filter:
+                _filter.add(j)
+                reachable.append(j)
     return reachable, _filter
 
 
