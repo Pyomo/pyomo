@@ -21,6 +21,7 @@ from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
 
 import pyomo.common.unittest as unittest
 
+
 def make_gas_expansion_model(N=2):
     """
     This is the simplest model I could think of that has a
@@ -104,6 +105,23 @@ class TestGasExpansionDMMatrixInterface(unittest.TestCase):
         # All nodes belong to the "well-determined" subset
         self.assertEqual(len(row_partition[3]), M)
         self.assertEqual(len(col_partition[3]), N)
+
+    def test_square_ill_posed_model(self):
+        N = 1
+        m = make_gas_expansion_model(N)
+        m.P[0].fix()
+        m.rho[0].fix()
+        m.T[0].fix()
+
+        variables = [v for v in m.component_data_objects(pyo.Var)
+                if not v.fixed]
+        constraints = list(m.component_data_objects(pyo.Constraint))
+        imat = get_structural_incidence_matrix(variables, constraints)
+
+        N, M = imat.shape
+        self.assertEqual(N, M)
+
+        row_partition, col_partition = dulmage_mendelsohn(imat)
 
 
 if __name__ == "__main__":
