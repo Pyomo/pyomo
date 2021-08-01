@@ -12,6 +12,7 @@ from networkx.classes.digraph import DiGraph
 from networkx.algorithms.traversal.breadth_first_search import bfs_successors
 from networkx.algorithms.bipartite.basic import sets as bipartite_sets
 from networkx.algorithms.bipartite.matching import maximum_matching
+from networkx.algorithms.components import connected_components
 
 
 def _get_projected_digraph(bg, matching, top_nodes):
@@ -49,7 +50,7 @@ def _get_reachable_from(digraph, sources):
 def dulmage_mendelsohn(bg, top_nodes=None, matching=None):
     """
     The Dulmage-Mendelsohn decomposition for bipartite graphs.
-    This is coarse decomposition.
+    This is the coarse decomposition.
     """
     top, bot = bipartite_sets(bg, top_nodes)
     bot_nodes = [n for n in bg if n not in top]
@@ -57,8 +58,15 @@ def dulmage_mendelsohn(bg, top_nodes=None, matching=None):
         top_nodes = [n for n in bg if n in top]
 
     if matching is None:
+        conn_comp = [bg.subgraph(c) for c in connected_components(bg)]
+        matchings = [
+                maximum_matching(comp, top_nodes=[n for n in comp if n in top])
+                for comp in conn_comp
+                ]
         # This maps top->bot AND bot->top
-        matching = maximum_matching(bg, top_nodes=top_nodes)
+        #matching = maximum_matching(bg, top_nodes=top_nodes)
+        matching = {n1: n2 for m in matchings for n1, n2 in m.items()}
+
     t_unmatched = [t for t in top_nodes if t not in matching]
     b_unmatched = [b for b in bot_nodes if b not in matching]
 
