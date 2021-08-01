@@ -9,10 +9,7 @@
 #  ___________________________________________________________________________
 
 from networkx.classes.digraph import DiGraph
-from networkx.algorithms.traversal.breadth_first_search import (
-        bfs_successors,
-        bfs_edges,
-        )
+from networkx.algorithms.traversal.breadth_first_search import bfs_edges
 from networkx.algorithms.bipartite.basic import sets as bipartite_sets
 from networkx.algorithms.bipartite.matching import maximum_matching
 from networkx.algorithms.components import connected_components
