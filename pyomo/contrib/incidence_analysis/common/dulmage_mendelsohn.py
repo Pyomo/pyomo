@@ -51,6 +51,8 @@ def dulmage_mendelsohn(bg, top_nodes=None, matching=None):
     The Dulmage-Mendelsohn decomposition for bipartite graphs.
     This is the coarse decomposition.
     """
+    # TODO: Should top_nodes be required? We can try to infer, but
+    # the result is in terms of this partition...
     top, bot = bipartite_sets(bg, top_nodes)
     bot_nodes = [n for n in bg if n not in top]
     if top_nodes is None:
