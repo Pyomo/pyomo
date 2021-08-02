@@ -16,8 +16,6 @@ from pyomo.contrib.incidence_analysis.common.dulmage_mendelsohn import (
 def dulmage_mendelsohn(matrix_or_graph, top_nodes=None, matching=None):
     """
     """
-    # TODO: What if matrix/graph is disconnected?
-    # DM function should handle disconnected graphs, but need to test this.
     if isinstance(matrix_or_graph, nx.Graph):
         # The purpose of handling graphs here is that if we construct NX graphs
         # directly from Pyomo expressions, we can do away with our SciPy
