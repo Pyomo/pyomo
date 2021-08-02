@@ -142,6 +142,34 @@ class TestGasExpansionDMMatrixInterface(unittest.TestCase):
         potentially_unmatched = col_partition[0] + col_partition[1]
         self.assertEqual(set(potentially_unmatched), potentially_unmatched_set)
 
+    def test_rectangular_system(self):
+        N_model = 2
+        m = make_gas_expansion_model(N_model)
+        variables = list(m.component_data_objects(pyo.Var))
+        constraints = list(m.component_data_objects(pyo.Constraint))
+
+        imat = get_structural_incidence_matrix(variables, constraints)
+        M, N = imat.shape
+        self.assertEqual(M, 4*N_model+1)
+        self.assertEqual(N, 4*(N_model+1))
+
+        row_partition, col_partition = dulmage_mendelsohn(imat)
+
+        # No unmatched constraints
+        self.assertEqual(row_partition[0], [])
+        self.assertEqual(row_partition[1], [])
+
+        # All constraints are matched with potentially unmatched variables
+        matched_con_set = set(range(len(constraints)))
+        self.assertEqual(set(row_partition[2]), matched_con_set)
+
+        # 3 unmatched variables
+        self.assertEqual(len(col_partition[0]), 3)
+        # All variables are potentially unmatched
+        potentially_unmatched = col_partition[0] + col_partition[1]
+        potentially_unmatched_set = set(range(len(variables)))
+        self.assertEqual(set(potentially_unmatched), potentially_unmatched_set)
+
 
 if __name__ == "__main__":
     unittest.main()
