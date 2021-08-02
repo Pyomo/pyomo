@@ -82,8 +82,11 @@ def get_structural_incidence_matrix(variables, constraints, include_fixed=True):
 
     Arguments
     ---------
-    variables: A list of Pyomo variable data objects
-    constraints: A list of Pyomo constraint data objects
+    variables: List of Pyomo VarData objects
+    constraints: List of Pyomo ConstraintData objects
+    include_fixed: Bool
+        Flag for whether fixed variables should be included in the matrix
+        nonzeros
 
     Returns
     -------
