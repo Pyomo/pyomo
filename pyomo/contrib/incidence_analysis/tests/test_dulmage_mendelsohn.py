@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.environ as pyo
+import pyomo.dae as dae
 from pyomo.common.dependencies import networkx_available
 from pyomo.common.dependencies import scipy_available
 from pyomo.common.collections import ComponentSet, ComponentMap
@@ -68,6 +69,39 @@ def make_gas_expansion_model(N=2):
     def ideal_gas(m, i):
         return m.P[i] - m.rho[i]*m.R*m.T[i] == 0
     m.ideal_gas = pyo.Constraint(m.streams, rule=ideal_gas)
+
+    return m
+
+
+def make_dynamic_model(**disc_args):
+    # Level control model
+    m = pyo.ConcreteModel()
+    m.time = dae.ContinuousSet(initialize=[0.0, 10.0])
+    m.height = pyo.Var(m.time, initialize=1.0)
+    m.flow_in = pyo.Var(m.time, initialize=1.0)
+    m.flow_out = pyo.Var(m.time, initialize=0.5)
+    m.dhdt = dae.DerivativeVar(m.height, wrt=m.time, initialize=0.0)
+
+    m.area = pyo.Param(initialize=1.0)
+    m.flow_const = pyo.Param(initialize=0.5)
+
+    def diff_eqn_rule(m, t):
+        return m.area*m.dhdt[t] - (m.flow_in[t] - m.flow_out[t]) == 0
+    m.diff_eqn = pyo.Constraint(m.time, rule=diff_eqn_rule)
+
+    def flow_out_rule(m, t):
+        return m.flow_out[t] - (m.flow_const*pyo.sqrt(m.height[t])) == 0
+    m.flow_out_eqn = pyo.Constraint(m.time, rule=flow_out_rule)
+
+    default_disc_args = {
+            "wrt": m.time,
+            "nfe": 5,
+            "scheme": "BACKWARD",
+            }
+    default_disc_args.update(disc_args)
+
+    discretizer = pyo.TransformationFactory("dae.finite_difference")
+    discretizer.apply_to(m, **default_disc_args)
 
     return m
 
@@ -169,6 +203,55 @@ class TestGasExpansionDMMatrixInterface(unittest.TestCase):
         potentially_unmatched = col_partition[0] + col_partition[1]
         potentially_unmatched_set = set(range(len(variables)))
         self.assertEqual(set(potentially_unmatched), potentially_unmatched_set)
+
+
+@unittest.skipUnless(networkx_available, "networkx is not available.")
+@unittest.skipUnless(scipy_available, "scipy is not available.")
+class TestDynamicModel(unittest.TestCase):
+
+    def test_rectangular_model(self):
+        m = make_dynamic_model()
+
+        m.height[0].fix()
+
+        variables = [v for v in m.component_data_objects(pyo.Var)
+                if not v.fixed]
+        constraints = list(m.component_data_objects(pyo.Constraint))
+
+        imat = get_structural_incidence_matrix(variables, constraints)
+        M, N = imat.shape
+        var_idx_map = ComponentMap((v, i) for i, v in enumerate(variables))
+        con_idx_map = ComponentMap((c, i) for i, c in enumerate(constraints))
+
+        row_partition, col_partition = dulmage_mendelsohn(imat)
+
+        # No unmatched rows
+        self.assertEqual(row_partition[0], [])
+        self.assertEqual(row_partition[1], [])
+
+        # Assert that the square subsystem contains the components we expect
+        self.assertEqual(len(row_partition[3]), 1)
+        self.assertEqual(row_partition[3][0], con_idx_map[m.flow_out_eqn[0]])
+
+        self.assertEqual(len(col_partition[3]), 1)
+        self.assertEqual(col_partition[3][0], var_idx_map[m.flow_out[0]])
+
+        # Assert that underdetermined subsystem contains the components
+        # we expect
+
+        # Rows matched with potentially unmatched columns
+        self.assertEqual(len(row_partition[2]), M-1)
+        row_indices = set([i for i in range(M)
+            if i != con_idx_map[m.flow_out_eqn[0]]])
+        self.assertEqual(set(row_partition[2]), row_indices)
+
+        # Potentially unmatched columns
+        self.assertEqual(len(col_partition[0]), N-M)
+        self.assertEqual(len(col_partition[1]), M-1)
+        potentially_unmatched = col_partition[0]+col_partition[1]
+        col_indices = set([i for i in range(N)
+            if i != var_idx_map[m.flow_out[0]]])
+        self.assertEqual(set(potentially_unmatched), col_indices)
 
 
 if __name__ == "__main__":
