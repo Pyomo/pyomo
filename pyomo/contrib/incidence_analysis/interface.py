@@ -16,7 +16,7 @@ from pyomo.core.base.objective import Objective
 from pyomo.core.base.reference import Reference
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentSet, ComponentMap
-from pyomo.common.dependencies import scipy_available
+from pyomo.common.dependencies import scipy_available, networkx_available
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.triangularize import block_triangularize
 from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
@@ -25,6 +25,8 @@ from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
     import scipy as sp
+if networkx_available:
+    import networkx as nx
 
 
 class IncidenceMatrixType(enum.Enum):
@@ -41,6 +43,37 @@ def _check_unindexed(complist):
                     "ComponentData objects. Got %s, which is indexed."
                     % comp.name
                     )
+
+
+def get_incidence_graph(variables, constraints, include_fixed=True):
+    """
+    This function gets the incidence graph of Pyomo variables and constraints.
+
+    Arguments:
+    ----------
+    variables: List of Pyomo VarData objects
+        Variables that will appear in incidence graph
+    constraints: List of Pyomo ConstraintData objects
+        Constraints that will appear in incidence graph
+    include_fixed: Bool
+        Flag for whether fixed variable should be included in the incidence
+
+    Returns:
+    --------
+    NetworkX Graph
+        
+    """
+    _check_unindexed(variables+constraints)
+    N, M = len(variables), len(constraints)
+    graph = nx.Graph()
+    graph.add_nodes_from(range(M), bipartite=0)
+    graph.add_nodes_from(range(M, M+N), bipartite=1)
+    var_node_map = ComponentMap((v, M+i) for i, v in enumerate(variables))
+    for i, con in enumerate(constraints):
+        for var in identify_variables(con.body, include_fixed=include_fixed):
+            if var in var_node_map:
+                graph.add_edge(i, var_node_map[var])
+    return graph
 
 
 def get_structural_incidence_matrix(variables, constraints, include_fixed=True):
