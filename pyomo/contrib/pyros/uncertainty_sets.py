@@ -14,11 +14,7 @@ Supports the following classes of uncertainty sets:
 - Cardinality/Gamma
 - Discrete
 - FactorModel
-
-Every uncertainty set must have:
-function set_as_constraint(): a method returning a Constraint representation of the uncertainty set.
-function point_in_set(): a method which takes a point and determines if it is in the uncertainty set.
-
+- IntersectedSet
 """
 
 import abc

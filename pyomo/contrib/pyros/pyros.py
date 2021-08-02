@@ -236,9 +236,6 @@ def pyros_config():
                     "If the dictionary is empty (default), then p-robustness constraints are not added. "
                     "See Note for how to specify arguments."
     ))
-    CONFIG.declare("ID", ConfigValue(
-        default=0, domain=int
-    ))
 
     return CONFIG
 
