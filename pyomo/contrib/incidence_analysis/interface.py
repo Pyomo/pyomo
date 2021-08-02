@@ -19,6 +19,9 @@ from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import scipy_available
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.triangularize import block_triangularize
+from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
+        dulmage_mendelsohn,
+        )
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
     import scipy as sp
@@ -238,3 +241,20 @@ class IncidenceGraphInterface(object):
         # Switch the order of the maps here to match the method call.
         # Hopefully this does not get too confusing...
         return var_block_map, con_block_map
+
+    def dulmage_mendelsohn(self, variables=None, constraints=None):
+        """
+        """
+        variables, constraints = self._validate_input(variables, constraints)
+        matrix = self._extract_submatrix(variables, constraints)
+
+        row_partition, col_partition = dulmage_mendelsohn(matrix.tocoo())
+        con_partition = tuple(
+                [constraints[i] for i in subset] for subset in row_partition
+                )
+        var_partition = tuple(
+                [variables[i] for i in subset] for subset in col_partition
+                )
+        # Switch the order of the maps here to match the method call.
+        # Hopefully this does not get too confusing...
+        return var_partition, con_partition
