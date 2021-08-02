@@ -15,6 +15,8 @@ from pyomo.contrib.incidence_analysis.common.dulmage_mendelsohn import (
 
 def dulmage_mendelsohn(matrix_or_graph, top_nodes=None, matching=None):
     """
+    COO matrix or NetworkX graph interface to the coarse Dulmage Mendelsohn
+    partition.
     """
     if isinstance(matrix_or_graph, nx.Graph):
         # The purpose of handling graphs here is that if we construct NX graphs
