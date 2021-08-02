@@ -17,7 +17,11 @@ def dulmage_mendelsohn(matrix_or_graph, top_nodes=None, matching=None):
     """
     """
     # TODO: What if matrix/graph is disconnected?
+    # DM function should handle disconnected graphs, but need to test this.
     if isinstance(matrix_or_graph, nx.Graph):
+        # The purpose of handling graphs here is that if we construct NX graphs
+        # directly from Pyomo expressions, we can do away with our SciPy
+        # dependency (and associated overhead).
         graph = matrix_or_graph
         partition = dm_nx(graph, top_nodes=top_nodes, matching=matching)
     else:
@@ -27,9 +31,24 @@ def dulmage_mendelsohn(matrix_or_graph, top_nodes=None, matching=None):
         nxb = nx.algorithms.bipartite
         from_biadjacency_matrix = nxb.matrix.from_biadjacency_matrix
 
+        if matching is not None:
+            # If a matching was provided for a COO matrix, we assume it
+            # maps row indices to column indices, for compatibility with
+            # output of our maximum_matching function.
+
+            # NetworkX graph has column nodes offset by M
+            matching = {i: j+M for i, j in matching.items()}
+            inv_matching = {j: i for i, j in matching.items()}
+            # DM function requires matching map to contain inverse matching too
+            matching.update(inv_matching)
+
         # Matrix rows have bipartite=0, columns have bipartite=1
         bg = from_biadjacency_matrix(matrix)
-        row_partition, col_partition = dm_nx(bg, top_nodes=list(range(M)))
+        row_partition, col_partition = dm_nx(
+                bg,
+                top_nodes=list(range(M)),
+                matching=matching,
+                )
 
         partition = (
                 row_partition,
