@@ -16,11 +16,17 @@ from pyomo.contrib.incidence_analysis.interface import (
         IncidenceGraphInterface,
         get_structural_incidence_matrix,
         get_numeric_incidence_matrix,
+        get_incidence_graph,
         )
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.triangularize import block_triangularize
+from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
+        dulmage_mendelsohn,
+        )
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
+if networkx_available:
+    from networkx.algorithms.bipartite.matrix import from_biadjacency_matrix
 from pyomo.contrib.pynumero.asl import AmplInterface
 
 import pyomo.common.unittest as unittest
@@ -71,6 +77,38 @@ def make_gas_expansion_model(N=2):
     def ideal_gas(m, i):
         return m.P[i] - m.rho[i]*m.R*m.T[i] == 0
     m.ideal_gas = pyo.Constraint(m.streams, rule=ideal_gas)
+
+    return m
+
+
+def make_degenerate_solid_phase_model():
+    """
+    From the solid phase thermo package of a moving bed chemical looping
+    combustion reactor. This example was first presented in [1]
+    
+    [1] Parker, R. Nonlinear programming strategies for dynamic models of
+    chemical looping combustion reactors. Pres. AIChE Annual Meeting, 2020.
+
+    """
+    m = pyo.ConcreteModel()
+    m.components = pyo.Set(initialize=[1,2,3])
+    m.x = pyo.Var(m.components, initialize=1/3)
+    m.flow_comp = pyo.Var(m.components, initialize=10)
+    m.flow = pyo.Var(initialize=30)
+    m.rho = pyo.Var(initialize=1)
+
+    # These are rough approximations of the relevant equations, with the same
+    # incidence.
+    m.sum_eqn = pyo.Constraint(expr=sum(m.x[j] for j in m.components) - 1 == 0)
+    m.holdup_eqn = pyo.Constraint(m.components, expr={
+        j: m.x[j]*m.rho - 1 == 0 for j in m.components
+        })
+    m.density_eqn = pyo.Constraint(expr=
+            1/m.rho - sum(1/m.x[j] for j in m.components) == 0
+            )
+    m.flow_eqn = pyo.Constraint(m.components, expr={
+        j: m.x[j]*m.flow - m.flow_comp[j] == 0 for j in m.components
+        })
 
     return m
 
@@ -799,6 +837,93 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
                 self.assertEqual(con_block_map[model.expansion[i]], i)
                 self.assertEqual(con_block_map[model.mbal[i]], i)
                 self.assertEqual(con_block_map[model.ebal[i]], i)
+
+
+class TestDulmageMendelsohnInterface(unittest.TestCase):
+
+    def test_degenerate_solid_phase_model(self):
+        m = make_degenerate_solid_phase_model()
+        variables = list(m.component_data_objects(pyo.Var))
+        constraints = list(m.component_data_objects(pyo.Constraint))
+
+        igraph = IncidenceGraphInterface()
+        var_dmp, con_dmp = igraph.dulmage_mendelsohn(variables, constraints)
+
+        underconstrained_vars = ComponentSet(m.flow_comp.values())
+        underconstrained_vars.add(m.flow)
+        underconstrained_cons = ComponentSet(m.flow_eqn.values())
+
+        self.assertEqual(len(var_dmp[0]+var_dmp[1]), len(underconstrained_vars))
+        for var in var_dmp[0]+var_dmp[1]:
+            self.assertIn(var, underconstrained_vars)
+
+        self.assertEqual(len(con_dmp[2]), len(underconstrained_cons))
+        for con in con_dmp[2]:
+            self.assertIn(con, underconstrained_cons)
+
+        overconstrained_cons = ComponentSet(m.holdup_eqn.values())
+        overconstrained_cons.add(m.density_eqn)
+        overconstrained_cons.add(m.sum_eqn)
+        overconstrained_vars = ComponentSet(m.x.values())
+        overconstrained_vars.add(m.rho)
+
+        self.assertEqual(len(var_dmp[2]), len(overconstrained_vars))
+        for var in var_dmp[2]:
+            self.assertIn(var, overconstrained_vars)
+
+        self.assertEqual(len(con_dmp[0]+con_dmp[1]), len(overconstrained_cons))
+        for con in con_dmp[0]+con_dmp[1]:
+            self.assertIn(con, overconstrained_cons)
+
+    def test_incidence_graph(self):
+        m = make_degenerate_solid_phase_model()
+        variables = list(m.component_data_objects(pyo.Var))
+        constraints = list(m.component_data_objects(pyo.Constraint))
+        graph = get_incidence_graph(variables, constraints)
+        matrix = get_structural_incidence_matrix(variables, constraints)
+        from_matrix = from_biadjacency_matrix(matrix)
+
+        self.assertEqual(graph.nodes, from_matrix.nodes)
+        self.assertEqual(graph.edges, from_matrix.edges)
+
+    def test_dm_graph_interface(self):
+        m = make_degenerate_solid_phase_model()
+        variables = list(m.component_data_objects(pyo.Var))
+        constraints = list(m.component_data_objects(pyo.Constraint))
+        graph = get_incidence_graph(variables, constraints)
+
+        M, N = len(constraints), len(variables)
+
+        con_dmp, var_dmp = dulmage_mendelsohn(graph)
+        con_dmp = tuple([constraints[i] for i in subset] for subset in con_dmp)
+        var_dmp = tuple([variables[i-M] for i in subset] for subset in var_dmp)
+
+        underconstrained_vars = ComponentSet(m.flow_comp.values())
+        underconstrained_vars.add(m.flow)
+        underconstrained_cons = ComponentSet(m.flow_eqn.values())
+
+        self.assertEqual(len(var_dmp[0]+var_dmp[1]), len(underconstrained_vars))
+        for var in var_dmp[0]+var_dmp[1]:
+            self.assertIn(var, underconstrained_vars)
+
+        self.assertEqual(len(con_dmp[2]), len(underconstrained_cons))
+        for con in con_dmp[2]:
+            self.assertIn(con, underconstrained_cons)
+
+        overconstrained_cons = ComponentSet(m.holdup_eqn.values())
+        overconstrained_cons.add(m.density_eqn)
+        overconstrained_cons.add(m.sum_eqn)
+        overconstrained_vars = ComponentSet(m.x.values())
+        overconstrained_vars.add(m.rho)
+
+        self.assertEqual(len(var_dmp[2]), len(overconstrained_vars))
+        for var in var_dmp[2]:
+            self.assertIn(var, overconstrained_vars)
+
+        self.assertEqual(len(con_dmp[0]+con_dmp[1]), len(overconstrained_cons))
+        for con in con_dmp[0]+con_dmp[1]:
+            self.assertIn(con, overconstrained_cons)
+
 
 if __name__ == "__main__":
     unittest.main()
