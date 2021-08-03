@@ -643,12 +643,23 @@ class LazyOACallback_cplex(LazyConstraintCallback):
 
 
 def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
+    """
+        This is a GUROBI callback function defined for LP/NLP based B&B algorithm. 
+        Parameters
+        ----------
+        cb_m: Pyomo model
+            the MIP main problem
+        cb_opt: SolverFactory
+            the gurobi_persistent solver
+        cb_where: int
+            an enum member of gurobipy.GRB.Callback
+        solve_data: MindtPy Data Container
+            data container that holds solve-instance data
+        config: ConfigBlock
+            contains the specific configurations for the algorithm
+    """
     if cb_where == gurobipy.GRB.Callback.MIPSOL:
-        """
-        This is an inherent function in LazyConstraintCallback in cplex. 
-        This function is called whenever an integer solution is found during the branch and bound process
-        """
-
+        # gurobipy.GRB.Callback.MIPSOL means that an integer solution is found during the branch and bound process
         if solve_data.should_terminate:
             cb_opt._solver_model.terminate()
             return
@@ -720,12 +731,12 @@ def handle_lazy_main_feasible_solution_gurobi(cb_m, cb_opt, solve_data, config):
     ----------
     cb_m: Pyomo model
         the MIP main problem
+    cb_opt: SolverFactory
+        the gurobi_persistent solver
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
     config: ConfigBlock
         contains the specific configurations for the algorithm
-    opt: SolverFactory
-        the mip solver
     """
     # proceed. Just need integer values
     cb_opt.cbGetSolution(vars=cb_m.MindtPy_utils.variable_list)

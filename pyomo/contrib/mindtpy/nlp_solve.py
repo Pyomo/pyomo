@@ -42,7 +42,7 @@ def solve_subproblem(solve_data, config):
     Returns
     -------
     fixed_nlp: Pyomo model
-        Fixed-NLP from the model
+        integer-variable-fixed NLP model
     results: Pyomo results object
         result from solving the Fixed-NLP
     """
@@ -114,6 +114,22 @@ def solve_subproblem(solve_data, config):
 
 
 def handle_nlp_subproblem_tc(fixed_nlp, result, solve_data, config, cb_opt=None):
+    '''
+    This function handles different terminaton conditions of the fixed-NLP subproblem.
+
+    Parameters
+    ----------
+    fixed_nlp: Pyomo model
+        integer-variable-fixed NLP model
+    results: Pyomo results object
+        result from solving the Fixed-NLP
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+    cb_opt: SolverFactory
+            the gurobi_persistent solver
+    '''
     if result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
         handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt)
     elif result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
@@ -145,7 +161,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
     Parameters
     ----------
     fixed_nlp: Pyomo model
-        Fixed-NLP from the model
+        integer-variable-fixed NLP model
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
     config: ConfigBlock
@@ -234,10 +250,14 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config, cb_opt=None):
 
     Parameters
     ----------
+    fixed_nlp: Pyomo model
+        integer-variable-fixed NLP model
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
     config: ConfigBlock
         contains the specific configurations for the algorithm
+    cb_opt: SolverFactory
+            the gurobi_persistent solver
     """
     # TODO try something else? Reinitialize with different initial
     # value?

@@ -448,6 +448,8 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
         opt.options['timelimit'] = remaining
         opt.options['mipgap'] = config.mip_solver_mipgap
         if solver_name == 'gurobi_persistent' and config.single_tree:
+            # PreCrush: Controls presolve reductions that affect user cuts
+            # You should consider setting this parameter to 1 if you are using callbacks to add your own cuts.
             opt.set_gurobi_param('PreCrush', 1)
             opt.set_gurobi_param('LazyConstraints', 1)
         if regularization == True:
