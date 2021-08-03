@@ -381,7 +381,7 @@ class DesignOfExperiments:
 
                 # solve model
                 if self.mode =='sequential_sipopt':
-                    m_sipopt = sensitivity_calculation('sipopt', mod, list_original, list_perturb, tee=self.tee_opt)
+                    m_sipopt = sensitivity_calculation('sipopt', mod, list_original, list_perturb, tee=self.tee_opt, solver_options='ma57')
                 # TODO: add k_aug solver
                 else:
                     m_sipopt = sensitivity_calculation('k_aug', mod, list_original, list_perturb, tee=True)

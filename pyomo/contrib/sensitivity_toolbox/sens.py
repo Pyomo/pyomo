@@ -169,6 +169,8 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
     if method == 'sipopt':
         ipopt_sens = SolverFactory('ipopt_sens', solver_io='nl')
         ipopt_sens.options['run_sens'] = 'yes'
+        if solver_options is not None:
+            ipopt_sens.options['linear_solver'] = solver_options
 
         # Send the model to ipopt_sens and collect the solution
         results = ipopt_sens.solve(m, keepfiles=keepfiles, tee=tee)
