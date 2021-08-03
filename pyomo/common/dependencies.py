@@ -584,11 +584,27 @@ def _finalize_matplotlib(module, available):
         module.use('Agg')
     import matplotlib.pyplot
 
+def _finalize_numpy(np, available):
+    if not available:
+        return
+    import pyomo.core.expr.numvalue as _numvalue
+    _numvalue.RegisterBooleanType(np.bool_)
+    for t in (np.int_, np.intc, np.intp,
+              np.int8, np.int16, np.int32, np.int64,
+              np.uint8, np.uint16, np.uint32, np.uint64):
+        _numvalue.RegisterIntegerType(t)
+        _numvalue.RegisterBooleanType(t)
+    for t in (np.float_, np.float16, np.float32, np.float64, np.ndarray):
+        _numvalue.RegisterNumericType(t)
+        _numvalue.RegisterBooleanType(t)
 
-yaml, yaml_available = attempt_import('yaml', callback=_finalize_yaml)
+
+yaml, yaml_available = attempt_import(
+    'yaml', callback=_finalize_yaml)
 pympler, pympler_available = attempt_import(
     'pympler', callback=_finalize_pympler)
-numpy, numpy_available = attempt_import('numpy')
+numpy, numpy_available = attempt_import(
+    'numpy', callback=_finalize_numpy)
 scipy, scipy_available = attempt_import(
     'scipy', callback=_finalize_scipy,
     deferred_submodules=['stats', 'sparse', 'spatial', 'integrate'])
