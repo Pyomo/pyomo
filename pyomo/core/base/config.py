@@ -11,8 +11,9 @@
 import os
 import json
 
+import pyomo.common.envvar as envvar
 from pyomo.common.config import (
-    ConfigBase, ConfigBlock, ConfigValue, ADVANCED_OPTION, PYOMO_CONFIG_DIR,
+    ConfigBase, ConfigBlock, ConfigValue, ADVANCED_OPTION,
 )
 from pyomo.common.dependencies import yaml, yaml_available, yaml_load_args
 import logging
@@ -30,7 +31,7 @@ class _PyomoOptions(object):
         sources.append((yaml, 'yml', yaml_available, 'yaml', yaml_load_args))
         sources.append((yaml, 'yaml', yaml_available, 'yaml', yaml_load_args))
         for parser, suffix, available, library, parser_args in sources:
-            cfg_file = os.path.join( PYOMO_CONFIG_DIR, 'config.'+suffix)
+            cfg_file = os.path.join(envvar.PYOMO_CONFIG_DIR, 'config.'+suffix)
             if not os.path.exists(cfg_file):
                 continue
             if not available:
