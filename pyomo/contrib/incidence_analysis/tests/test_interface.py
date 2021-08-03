@@ -839,6 +839,8 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
                 self.assertEqual(con_block_map[model.ebal[i]], i)
 
 
+@unittest.skipUnless(networkx_available, "networkx is not available.")
+@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestDulmageMendelsohnInterface(unittest.TestCase):
 
     def test_degenerate_solid_phase_model(self):

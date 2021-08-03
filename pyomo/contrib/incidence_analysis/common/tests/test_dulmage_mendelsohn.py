@@ -9,12 +9,16 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-import networkx as nx
+from pyomo.common.dependencies import (
+        networkx as nx,
+        networkx_available,
+        )
 from pyomo.contrib.incidence_analysis.common.dulmage_mendelsohn import (
         dulmage_mendelsohn,
         )
 
 
+@unittest.skipUnless(networkx_available, "networkx is not available")
 class TestPothenFanExample(unittest.TestCase):
     """
     Test on the first example graph from Pothen and Fan, 1990.
@@ -106,6 +110,7 @@ class TestPothenFanExample(unittest.TestCase):
         self.assertEqual(set(nodes), right_square)
 
 
+@unittest.skipUnless(networkx_available, "networkx is not available")
 class TestDisconnectedModel(unittest.TestCase):
     """
     An error is raised if top_nodes are not provided for a disconnected
