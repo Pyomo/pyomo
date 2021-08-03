@@ -11,16 +11,17 @@
 """Utility functions and classes for the MindtPy solver."""
 from __future__ import division
 import logging
-from pyomo.common.collections import ComponentMap
+from pyomo.common.collections import ComponentMap, Bunch
 from pyomo.core import (Block, Constraint,
                         Objective, Reals, Suffix, Var, minimize, RangeSet, ConstraintList, TransformationFactory)
 from pyomo.core.expr import differentiate
 from pyomo.core.expr import current as EXPR
-from pyomo.opt import SolverFactory
+from pyomo.opt import SolverFactory, SolverResults
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.common.dependencies import attempt_import
+from pyomo.contrib.fbbt.fbbt import fbbt
 
 pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 numpy = attempt_import('numpy')[0]
@@ -424,7 +425,7 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
             contains the specific configurations for the algorithm
         solver_type: String
             The type of the solver, i.e. mip or nlp
-        regularization (bool, optional): Boolean. 
+        regularization (bool, optional): Boolean.
             Defaults to False.
     """
     # TODO: integrate nlp_args here
@@ -544,3 +545,59 @@ def get_integer_solution(model, string_zero=False):
             else:
                 temp.append(int(round(var.value)))
     return tuple(temp)
+
+
+def setup_solve_data(model, config):
+    solve_data = MindtPySolveData()
+    solve_data.results = SolverResults()
+    solve_data.timing = Bunch()
+    solve_data.curr_int_sol = []
+    solve_data.should_terminate = False
+    solve_data.integer_list = []
+
+    # if the objective function is a constant, dual bound constraint is not added.
+    obj = next(model.component_data_objects(ctype=Objective, active=True))
+    if obj.expr.polynomial_degree() == 0:
+        config.use_dual_bound = False
+
+    if config.use_fbbt:
+        fbbt(model)
+        # TODO: logging_level is not logging.INFO here
+        config.logger.info(
+            'Use the fbbt to tighten the bounds of variables')
+
+    solve_data.original_model = model
+    solve_data.working_model = model.clone()
+
+    # Set up iteration counters
+    solve_data.nlp_iter = 0
+    solve_data.mip_iter = 0
+    solve_data.mip_subiter = 0
+    solve_data.nlp_infeasible_counter = 0
+    if config.init_strategy == 'FP':
+        solve_data.fp_iter = 1
+
+    # set up bounds
+    solve_data.LB = float('-inf')
+    solve_data.UB = float('inf')
+    solve_data.LB_progress = [solve_data.LB]
+    solve_data.UB_progress = [solve_data.UB]
+    if config.single_tree and (config.add_no_good_cuts or config.use_tabu_list):
+        solve_data.stored_bound = {}
+    if config.strategy == 'GOA' and (config.add_no_good_cuts or config.use_tabu_list):
+        solve_data.num_no_good_cuts_added = {}
+
+    # Flag indicating whether the solution improved in the past
+    # iteration or not
+    solve_data.solution_improved = False
+    solve_data.bound_improved = False
+
+    if config.nlp_solver == 'ipopt':
+        if not hasattr(solve_data.working_model, 'ipopt_zL_out'):
+            solve_data.working_model.ipopt_zL_out = Suffix(
+                direction=Suffix.IMPORT)
+        if not hasattr(solve_data.working_model, 'ipopt_zU_out'):
+            solve_data.working_model.ipopt_zU_out = Suffix(
+                direction=Suffix.IMPORT)
+
+    return solve_data

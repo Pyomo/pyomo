@@ -144,9 +144,9 @@ class EightProcessFlowsheet(ConcreteModel):
         m.pureint4 = Constraint(expr=m.Y[3] - m.Y[8] <= 0)
 
         """Cost (objective) function definition"""
-        m.cost = Objective(expr=sum(Y[j] * CF[j] for j in J) +
-                           sum(X[i] * CV[i] for i in I) + CONSTANT,
-                           sense=minimize)
+        m.objective = Objective(expr=sum(Y[j] * CF[j] for j in J) +
+                                sum(X[i] * CV[i] for i in I) + CONSTANT,
+                                sense=minimize)
 
         """Bound definitions"""
         # x (flow) upper bounds
@@ -155,3 +155,4 @@ class EightProcessFlowsheet(ConcreteModel):
                  20: 10, 21: 2, 22: 10, 25: 3}  # add bounds for variables in nonlinear constraints
         for i, x_ub in x_ubs.items():
             X[i].setub(x_ub)
+        m.optimal_value = 68
