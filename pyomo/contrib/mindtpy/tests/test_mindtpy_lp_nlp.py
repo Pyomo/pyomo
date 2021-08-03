@@ -23,12 +23,17 @@ from pyomo.contrib.mindtpy.tests.online_doc_example import OnlineDocExample
 from pyomo.environ import SolverFactory, value
 from pyomo.opt import TerminationCondition
 
-required_solvers = ('ipopt', 'cplex_persistent', 'gurobi_persistent')
-required_mip_solvers = ('cplex_persistent', 'gurobi_persistent')
-if all(SolverFactory(s).available(False) for s in required_solvers):
+required_nlp_solvers = 'ipopt'
+required_mip_solvers = ['cplex_persistent', 'gurobi_persistent']
+
+
+if SolverFactory(required_nlp_solvers).available(False) and any(SolverFactory(s).available(False) for s in required_mip_solvers):
     subsolvers_available = True
+    available_mip_solvers = [s for s in required_mip_solvers
+                             if SolverFactory(s).available(False)]
 else:
     subsolvers_available = False
+
 
 model_list = [EightProcessFlowsheet(convex=True),
               ConstraintQualificationExample(),
@@ -38,7 +43,7 @@ model_list = [EightProcessFlowsheet(convex=True),
 
 @unittest.skipIf(not subsolvers_available,
                  'Required subsolvers %s are not available'
-                 % (required_solvers,))
+                 % ([required_nlp_solvers] + required_mip_solvers))
 @unittest.skipIf(not pyomo.core.base.symbolic.differentiate_available,
                  'Symbolic differentiation is not available')
 class TestMindtPy(unittest.TestCase):
@@ -48,10 +53,10 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                for mip_solver in required_mip_solvers:
+                for mip_solver in available_mip_solvers:
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
-                                        nlp_solver=required_solvers[0],
+                                        nlp_solver=required_nlp_solvers,
                                         single_tree=True)
 
                     self.assertIn(results.solver.termination_condition,
@@ -63,10 +68,10 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                for mip_solver in required_mip_solvers:
+                for mip_solver in available_mip_solvers:
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
-                                        nlp_solver=required_solvers[0],
+                                        nlp_solver=required_nlp_solvers,
                                         single_tree=True,
                                         add_regularization='level_L1')
 
@@ -79,10 +84,10 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                for mip_solver in required_mip_solvers:
+                for mip_solver in available_mip_solvers:
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
-                                        nlp_solver=required_solvers[0],
+                                        nlp_solver=required_nlp_solvers,
                                         single_tree=True,
                                         add_regularization='level_L2')
 
@@ -95,10 +100,10 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                for mip_solver in required_mip_solvers:
+                for mip_solver in available_mip_solvers:
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
-                                        nlp_solver=required_solvers[0],
+                                        nlp_solver=required_nlp_solvers,
                                         single_tree=True,
                                         add_regularization='level_L_infinity')
 
@@ -111,10 +116,10 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                for mip_solver in required_mip_solvers:
+                for mip_solver in available_mip_solvers:
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
-                                        nlp_solver=required_solvers[0],
+                                        nlp_solver=required_nlp_solvers,
                                         single_tree=True,
                                         add_regularization='grad_lag')
 
@@ -127,10 +132,10 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                for mip_solver in required_mip_solvers:
+                for mip_solver in available_mip_solvers:
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
-                                        nlp_solver=required_solvers[0],
+                                        nlp_solver=required_nlp_solvers,
                                         single_tree=True,
                                         add_regularization='hess_lag')
 
@@ -143,10 +148,10 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                for mip_solver in required_mip_solvers:
+                for mip_solver in available_mip_solvers:
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
-                                        nlp_solver=required_solvers[0],
+                                        nlp_solver=required_nlp_solvers,
                                         single_tree=True,
                                         add_regularization='hess_only_lag')
 
@@ -159,10 +164,10 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                for mip_solver in required_mip_solvers:
+                for mip_solver in available_mip_solvers:
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
-                                        nlp_solver=required_solvers[0],
+                                        nlp_solver=required_nlp_solvers,
                                         single_tree=True,
                                         add_regularization='sqp_lag')
 
