@@ -166,6 +166,10 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
         data container that holds solve-instance data
     config: ConfigBlock
         contains the specific configurations for the algorithm
+    cb_opt: SolverFactory
+        the gurobi_persistent solver
+    fp: bool, optional
+        this parameter acts as a Boolean flag that signals whether it is in the loop of feasibility pump
     """
     copy_var_list_values(
         fixed_nlp.MindtPy_utils.variable_list,
