@@ -24,6 +24,7 @@ from pyomo.environ import SolverFactory, value
 from pyomo.opt import TerminationCondition
 
 required_solvers = ('ipopt', 'cplex_persistent', 'gurobi_persistent')
+required_mip_solvers = ('cplex_persistent', 'gurobi_persistent')
 if all(SolverFactory(s).available(False) for s in required_solvers):
     subsolvers_available = True
 else:
@@ -47,239 +48,128 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
-                                    mip_solver=required_solvers[1],
-                                    nlp_solver=required_solvers[0],
-                                    single_tree=True)
+                for mip_solver in required_mip_solvers:
+                    results = opt.solve(model, strategy='OA',
+                                        mip_solver=mip_solver,
+                                        nlp_solver=required_solvers[0],
+                                        single_tree=True)
 
-                self.assertIn(results.solver.termination_condition,
-                              [TerminationCondition.optimal, TerminationCondition.feasible])
-                self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
-
-    def test_LPNLP_GUROBI(self):
-        """Test the LP/NLP decomposition algorithm(GUROBI)."""
-        with SolverFactory('mindtpy') as opt:
-            for model in model_list:
-                results = opt.solve(model, strategy='OA',
-                                    mip_solver=required_solvers[2],
-                                    nlp_solver=required_solvers[0],
-                                    single_tree=True)
-
-                self.assertIn(results.solver.termination_condition,
-                              [TerminationCondition.optimal, TerminationCondition.feasible])
-                self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
+                    self.assertIn(results.solver.termination_condition,
+                                  [TerminationCondition.optimal, TerminationCondition.feasible])
+                    self.assertAlmostEqual(
+                        value(model.objective.expr), model.optimal_value, places=1)
 
     def test_RLPNLP_L1(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
-                                    mip_solver=required_solvers[1],
-                                    nlp_solver=required_solvers[0],
-                                    single_tree=True,
-                                    add_regularization='level_L1')
+                for mip_solver in required_mip_solvers:
+                    results = opt.solve(model, strategy='OA',
+                                        mip_solver=mip_solver,
+                                        nlp_solver=required_solvers[0],
+                                        single_tree=True,
+                                        add_regularization='level_L1')
 
-                self.assertIn(results.solver.termination_condition,
-                              [TerminationCondition.optimal, TerminationCondition.feasible])
-                self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
+                    self.assertIn(results.solver.termination_condition,
+                                  [TerminationCondition.optimal, TerminationCondition.feasible])
+                    self.assertAlmostEqual(
+                        value(model.objective.expr), model.optimal_value, places=1)
 
     def test_RLPNLP_L2(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
-                                    mip_solver=required_solvers[1],
-                                    nlp_solver=required_solvers[0],
-                                    single_tree=True,
-                                    add_regularization='level_L2')
+                for mip_solver in required_mip_solvers:
+                    results = opt.solve(model, strategy='OA',
+                                        mip_solver=mip_solver,
+                                        nlp_solver=required_solvers[0],
+                                        single_tree=True,
+                                        add_regularization='level_L2')
 
-                self.assertIn(results.solver.termination_condition,
-                              [TerminationCondition.optimal, TerminationCondition.feasible])
-                self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
+                    self.assertIn(results.solver.termination_condition,
+                                  [TerminationCondition.optimal, TerminationCondition.feasible])
+                    self.assertAlmostEqual(
+                        value(model.objective.expr), model.optimal_value, places=1)
 
     def test_RLPNLP_Linf(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
-                                    mip_solver=required_solvers[1],
-                                    nlp_solver=required_solvers[0],
-                                    single_tree=True,
-                                    add_regularization='level_L_infinity')
+                for mip_solver in required_mip_solvers:
+                    results = opt.solve(model, strategy='OA',
+                                        mip_solver=mip_solver,
+                                        nlp_solver=required_solvers[0],
+                                        single_tree=True,
+                                        add_regularization='level_L_infinity')
 
-                self.assertIn(results.solver.termination_condition,
-                              [TerminationCondition.optimal, TerminationCondition.feasible])
-                self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
+                    self.assertIn(results.solver.termination_condition,
+                                  [TerminationCondition.optimal, TerminationCondition.feasible])
+                    self.assertAlmostEqual(
+                        value(model.objective.expr), model.optimal_value, places=1)
 
     def test_RLPNLP_grad_lag(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
-                                    mip_solver=required_solvers[1],
-                                    nlp_solver=required_solvers[0],
-                                    single_tree=True,
-                                    add_regularization='grad_lag')
+                for mip_solver in required_mip_solvers:
+                    results = opt.solve(model, strategy='OA',
+                                        mip_solver=mip_solver,
+                                        nlp_solver=required_solvers[0],
+                                        single_tree=True,
+                                        add_regularization='grad_lag')
 
-                self.assertIn(results.solver.termination_condition,
-                              [TerminationCondition.optimal, TerminationCondition.feasible])
-                self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
+                    self.assertIn(results.solver.termination_condition,
+                                  [TerminationCondition.optimal, TerminationCondition.feasible])
+                    self.assertAlmostEqual(
+                        value(model.objective.expr), model.optimal_value, places=1)
 
     def test_RLPNLP_hess_lag(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
-                                    mip_solver=required_solvers[1],
-                                    nlp_solver=required_solvers[0],
-                                    single_tree=True,
-                                    add_regularization='hess_lag')
+                for mip_solver in required_mip_solvers:
+                    results = opt.solve(model, strategy='OA',
+                                        mip_solver=mip_solver,
+                                        nlp_solver=required_solvers[0],
+                                        single_tree=True,
+                                        add_regularization='hess_lag')
 
-                self.assertIn(results.solver.termination_condition,
-                              [TerminationCondition.optimal, TerminationCondition.feasible])
-                self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
+                    self.assertIn(results.solver.termination_condition,
+                                  [TerminationCondition.optimal, TerminationCondition.feasible])
+                    self.assertAlmostEqual(
+                        value(model.objective.expr), model.optimal_value, places=1)
 
     def test_RLPNLP_hess_only_lag(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
-                                    mip_solver=required_solvers[1],
-                                    nlp_solver=required_solvers[0],
-                                    single_tree=True,
-                                    add_regularization='hess_only_lag')
+                for mip_solver in required_mip_solvers:
+                    results = opt.solve(model, strategy='OA',
+                                        mip_solver=mip_solver,
+                                        nlp_solver=required_solvers[0],
+                                        single_tree=True,
+                                        add_regularization='hess_only_lag')
 
-                self.assertIn(results.solver.termination_condition,
-                              [TerminationCondition.optimal, TerminationCondition.feasible])
-                self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
+                    self.assertIn(results.solver.termination_condition,
+                                  [TerminationCondition.optimal, TerminationCondition.feasible])
+                    self.assertAlmostEqual(
+                        value(model.objective.expr), model.optimal_value, places=1)
 
     def test_RLPNLP_sqp_lag(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
-                                    mip_solver=required_solvers[1],
-                                    nlp_solver=required_solvers[0],
-                                    single_tree=True,
-                                    add_regularization='sqp_lag')
+                for mip_solver in required_mip_solvers:
+                    results = opt.solve(model, strategy='OA',
+                                        mip_solver=mip_solver,
+                                        nlp_solver=required_solvers[0],
+                                        single_tree=True,
+                                        add_regularization='sqp_lag')
 
-                self.assertIn(results.solver.termination_condition,
-                              [TerminationCondition.optimal, TerminationCondition.feasible])
-                self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
-
-    def test_RLPNLP_L1_GUROBI(self):
-        """Test the LP/NLP decomposition algorithm.(GUROBI)"""
-        with SolverFactory('mindtpy') as opt:
-            for model in model_list:
-                results = opt.solve(model, strategy='OA',
-                                    mip_solver=required_solvers[2],
-                                    nlp_solver=required_solvers[0],
-                                    single_tree=True,
-                                    add_regularization='level_L1')
-
-                self.assertIn(results.solver.termination_condition,
-                              [TerminationCondition.optimal, TerminationCondition.feasible])
-                self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
-
-    def test_RLPNLP_L2_GUROBI(self):
-        """Test the LP/NLP decomposition algorithm.(GUROBI)"""
-        with SolverFactory('mindtpy') as opt:
-            for model in model_list:
-                results = opt.solve(model, strategy='OA',
-                                    mip_solver=required_solvers[1],
-                                    nlp_solver=required_solvers[0],
-                                    single_tree=True,
-                                    add_regularization='level_L2')
-
-                self.assertIn(results.solver.termination_condition,
-                              [TerminationCondition.optimal, TerminationCondition.feasible])
-                self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
-
-    def test_RLPNLP_Linf_GUROBI(self):
-        """Test the LP/NLP decomposition algorithm.(GUROBI)"""
-        with SolverFactory('mindtpy') as opt:
-            for model in model_list:
-                results = opt.solve(model, strategy='OA',
-                                    mip_solver=required_solvers[2],
-                                    nlp_solver=required_solvers[0],
-                                    single_tree=True,
-                                    add_regularization='level_L_infinity')
-
-                self.assertIn(results.solver.termination_condition,
-                              [TerminationCondition.optimal, TerminationCondition.feasible])
-                self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
-
-    def test_RLPNLP_grad_lag_GUROBI(self):
-        """Test the LP/NLP decomposition algorithm.(GUROBI)"""
-        with SolverFactory('mindtpy') as opt:
-            for model in model_list:
-                results = opt.solve(model, strategy='OA',
-                                    mip_solver=required_solvers[2],
-                                    nlp_solver=required_solvers[0],
-                                    single_tree=True,
-                                    add_regularization='grad_lag')
-
-                self.assertIn(results.solver.termination_condition,
-                              [TerminationCondition.optimal, TerminationCondition.feasible])
-                self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
-
-    def test_RLPNLP_hess_lag_GUROBI(self):
-        """Test the LP/NLP decomposition algorithm.(GUROBI)"""
-        with SolverFactory('mindtpy') as opt:
-            for model in model_list:
-                results = opt.solve(model, strategy='OA',
-                                    mip_solver=required_solvers[2],
-                                    nlp_solver=required_solvers[0],
-                                    single_tree=True,
-                                    add_regularization='hess_lag')
-
-                self.assertIn(results.solver.termination_condition,
-                              [TerminationCondition.optimal, TerminationCondition.feasible])
-                self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
-
-    def test_RLPNLP_hess_only_lag_GUROBI(self):
-        """Test the LP/NLP decomposition algorithm.(GUROBI)"""
-        with SolverFactory('mindtpy') as opt:
-            for model in model_list:
-                results = opt.solve(model, strategy='OA',
-                                    mip_solver=required_solvers[2],
-                                    nlp_solver=required_solvers[0],
-                                    single_tree=True,
-                                    add_regularization='hess_only_lag')
-
-                self.assertIn(results.solver.termination_condition,
-                              [TerminationCondition.optimal, TerminationCondition.feasible])
-                self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
-
-    def test_RLPNLP_sqp_lag_GUROBI(self):
-        """Test the LP/NLP decomposition algorithm.(GUROBI)"""
-        with SolverFactory('mindtpy') as opt:
-            for model in model_list:
-                results = opt.solve(model, strategy='OA',
-                                    mip_solver=required_solvers[2],
-                                    nlp_solver=required_solvers[0],
-                                    single_tree=True,
-                                    add_regularization='sqp_lag')
-
-                self.assertIn(results.solver.termination_condition,
-                              [TerminationCondition.optimal, TerminationCondition.feasible])
-                self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
+                    self.assertIn(results.solver.termination_condition,
+                                  [TerminationCondition.optimal, TerminationCondition.feasible])
+                    self.assertAlmostEqual(
+                        value(model.objective.expr), model.optimal_value, places=1)
 
 
 if __name__ == '__main__':
