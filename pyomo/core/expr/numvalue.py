@@ -519,7 +519,7 @@ Dynamic registration is supported for convenience, but there are known
 limitations to this approach.  We recommend explicitly registering
 numeric types using the following functions:
     RegisterNumericType(), RegisterIntegerType(), RegisterBooleanType()."""
-                % (type(obj).__name__,))
+                % (obj_class.__name__,))
         except:
             pass
         return retval
@@ -948,6 +948,10 @@ functions.""" % (self.name,))
         """
         return _generate_other_expression(_abs,self, None)
 
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        return NumericNDArray.__array_ufunc__(
+            None, ufunc, method, *inputs, **kwargs)
+
     def to_string(self, verbose=None, labeler=None, smap=None,
                   compute_values=False):
         """
@@ -1032,7 +1036,10 @@ pyomo_constant_types.add(NumericConstant)
 # We use as_numeric() so that the constant is also in the cache
 ZeroConstant = as_numeric(0)
 
-
+#
+# Note: the "if numpy_available" in the class definition also ensures
+# that the numpy types are registered if numpy is in fact available
+#
 class NumericNDArray(np.ndarray if numpy_available else object):
     """An ndarray subclass that stores Pyomo numeric expressions"""
 
