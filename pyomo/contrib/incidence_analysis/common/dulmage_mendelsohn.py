@@ -8,11 +8,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from networkx.classes.digraph import DiGraph
-from networkx.algorithms.traversal.breadth_first_search import bfs_edges
-from networkx.algorithms.bipartite.basic import sets as bipartite_sets
-from networkx.algorithms.bipartite.matching import maximum_matching
-from networkx.algorithms.components import connected_components
+from pyomo.common.dependencies import networkx_available
+
+if networkx_available:
+    from networkx.classes.digraph import DiGraph
+    from networkx.algorithms.traversal.breadth_first_search import bfs_edges
+    from networkx.algorithms.bipartite.basic import sets as bipartite_sets
+    from networkx.algorithms.bipartite.matching import maximum_matching
+    from networkx.algorithms.components import connected_components
 
 
 def _get_projected_digraph(bg, matching, top_nodes):
