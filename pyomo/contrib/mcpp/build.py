@@ -12,7 +12,7 @@ import os
 import shutil
 import tempfile
 
-import pyomo.common.envars as envvar
+import pyomo.common.envvar as envvar
 
 from pyomo.common.fileutils import this_file_dir, find_dir
 from pyomo.common.download import FileDownloader
