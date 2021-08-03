@@ -133,7 +133,7 @@ class RunAllNEOSSolvers(object):
     def test_mosek(self):
         self._run('mosek')
 
-    def test_mosek(self):
+    def test_octeract(self):
         self._run('octeract')
 
     def test_ooqp(self):
