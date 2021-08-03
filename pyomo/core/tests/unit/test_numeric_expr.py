@@ -2591,7 +2591,7 @@ class TestGeneralExpressionGeneration(unittest.TestCase):
         #
         # Check for errors when generating expressions with invalid indices
         #
-        m = AbstractModel()
+        m = ConcreteModel()
         m.A = Set()
         m.p = Param(m.A, mutable=True)
         m.x = Var(m.A)
