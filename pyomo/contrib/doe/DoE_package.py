@@ -336,7 +336,7 @@ class DesignOfExperiments:
             return FIM_analysis
 
 
-        elif self.mode=='sequential_sipopt':
+        elif self.mode in ['sequential_sipopt', 'sequential_kaug']:
             # create scenario class for a base case
             scena_gen = Scenario_generator(self.param_init, formula=None, step=self.step)
             scenario_all = scena_gen.simultaneous_scenario()
@@ -380,9 +380,11 @@ class DesignOfExperiments:
                     list_perturb.append(eval('mod.'+elem+'[0]'))
 
                 # solve model
-                m_sipopt = sensitivity_calculation('sipopt', mod, list_original, list_perturb, tee=self.tee_opt)
+                if self.mode =='sequential_sipopt':
+                    m_sipopt = sensitivity_calculation('sipopt', mod, list_original, list_perturb, tee=self.tee_opt)
                 # TODO: add k_aug solver
-                #m_sipopt = sensitivity_calculation('k_aug', mod, list_original, list_perturb, tee=True)
+                else:
+                    m_sipopt = sensitivity_calculation('k_aug', mod, list_original, list_perturb, tee=True)
 
                 # extract sipopt result
                 for j in self.measurement_variables:
