@@ -654,6 +654,8 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
 
     def construct(self, data=None):
         """Construct this component."""
+        if self._constructed:
+            return
         if is_debug_set(logger):   #pragma:nocover
             try:
                 name = str(self.name)
@@ -665,8 +667,6 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                 "Constructing Variable, name=%s, from data=%s"
                 % (name, str(data)))
 
-        if self._constructed:
-            return
         timer = ConstructionTimer(self)
         self._constructed=True
 
