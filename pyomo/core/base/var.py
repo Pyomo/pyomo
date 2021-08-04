@@ -19,6 +19,7 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
+from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.expr.numvalue import (
     NumericValue, value, is_potentially_variable, native_numeric_types,
 )
@@ -35,6 +36,15 @@ logger = logging.getLogger('pyomo.core')
 
 _no_lower_bound = {None, -float('inf')}
 _no_upper_bound = {None, float('inf')}
+_VARDATA_API = (
+    # including 'domain' runs afoul of logic in Block._add_implicit_sets()
+    # 'domain',
+    'bounds', 'lower', 'upper', 'lb', 'ub', 'has_lb', 'has_ub',
+    'setlb', 'setub',
+    'is_integer', 'is_binary', 'is_continuous',
+    'is_fixed', 'fix', 'unfix', 'free', 'set_value', 'value',
+    # Note: we can't disable fixed / stale as they are public attributes
+)
 
 class _VarData(ComponentData, NumericValue):
     """
@@ -545,19 +555,19 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
             `index_set()` when constructing the Var (True) or just the
             variables returned by `initialize`/`rule` (False).  Defaults
             to True.
-        units (pyomo units expression, optional): Set the units corresponding                                                  
+        units (pyomo units expression, optional): Set the units corresponding
             to the entries in this variable.
     """
 
     _ComponentDataClass = _GeneralVarData
 
     def __new__(cls, *args, **kwds):
-        if cls != Var:
+        if cls is not Var:
             return super(Var, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args)==1):
-            return ScalarVar.__new__(ScalarVar)
+            return super(Var, cls).__new__(AbstractScalarVar)
         else:
-            return IndexedVar.__new__(IndexedVar)
+            return super(Var, cls).__new__(IndexedVar)
 
     def __init__(self, *args, **kwd):
         #
@@ -841,13 +851,12 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                                 ]
                  )
 
+
 class ScalarVar(_GeneralVarData, Var):
     """A single variable."""
 
     def __init__(self, *args, **kwd):
-        _GeneralVarData.__init__(self,
-                                 domain=None,
-                                 component=self)
+        _GeneralVarData.__init__(self, domain=None, component=self)
         Var.__init__(self, *args, **kwd)
 
     #
@@ -859,135 +868,9 @@ class ScalarVar(_GeneralVarData, Var):
     # will automatically pick up both the Component and Data base classes.
     #
 
-    #
-    # Override abstract interface methods to first check for
-    # construction
-    #
-
-    # NOTE: that we can't provide these errors for
-    # fixed and stale because they are attributes
-
-    @property
-    def value(self):
-        """Return the value for this variable."""
-        if self._constructed:
-            return _GeneralVarData.value.fget(self)
-        raise ValueError(
-            "Accessing the value of variable '%s' "
-            "before the Var has been constructed (there "
-            "is currently no value to return)."
-            % (self.name))
-    @value.setter
-    def value(self, val):
-        """Set the value for this variable."""
-        if self._constructed:
-            return _GeneralVarData.value.fset(self, val)
-        raise ValueError(
-            "Setting the value of variable '%s' "
-            "before the Var has been constructed (there "
-            "is currently nothing to set."
-            % (self.name))
-
-    @property
-    def domain(self):
-        """Return the domain for this variable."""
-        # NOTE: we can't do the right thing here because
-        #       of the behavior of block._add_temporary_set
-        return _GeneralVarData.domain.fget(self)
-        #if self._constructed:
-        #    return _GeneralVarData.domain.fget(self)
-        #raise ValueError(
-        #    "Accessing the domain of variable '%s' "
-        #    "before the Var has been constructed (there "
-        #    "is currently no domain to return)."
-        #    % (self.name))
-    @domain.setter
-    def domain(self, domain):
-        """Set the domain for this variable."""
-        if self._constructed:
-            return _GeneralVarData.domain.fset(self, domain)
-        raise ValueError(
-            "Setting the domain of variable '%s' "
-            "before the Var has been constructed (there "
-            "is currently nothing to set."
-            % (self.name))
-
-    @property
-    def lb(self):
-        """Return the numeric value of the variable lower bound."""
-        if self._constructed:
-            return _GeneralVarData.lb.fget(self)
-        raise ValueError(
-            "Accessing the lower bound of variable '%s' "
-            "before the Var has been constructed (there "
-            "is currently nothing to return)."
-            % (self.name))
-    @lb.setter
-    def lb(self, lb):
-        self.setlb(lb)
-
-    @property
-    def ub(self):
-        """Return the numeric value of the variable upper bound."""
-        if self._constructed:
-            return _GeneralVarData.ub.fget(self)
-        raise ValueError(
-            "Accessing the upper bound of variable '%s' "
-            "before the Var has been constructed (there "
-            "is currently nothing to return)."
-            % (self.name))
-    @ub.setter
-    def ub(self, ub):
-        self.setub(ub)
-
-    def setlb(self, val):
-        """
-        Set the lower bound for this variable after validating that
-        the value is fixed (or None).
-        """
-        if self._constructed:
-            return _GeneralVarData.setlb(self, val)
-        raise ValueError(
-            "Setting the lower bound of variable '%s' "
-            "before the Var has been constructed (there "
-            "is currently nothing to set)."
-            % (self.name))
-
-    def setub(self, val):
-        """
-        Set the upper bound for this variable after validating that
-        the value is fixed (or None).
-        """
-        if self._constructed:
-            return _GeneralVarData.setub(self, val)
-        raise ValueError(
-            "Setting the upper bound of variable '%s' "
-            "before the Var has been constructed (there "
-            "is currently nothing to set)."
-            % (self.name))
-
-    def fix(self, value=NoArgumentGiven):
-        """
-        Set the fixed indicator to True. Value argument is optional,
-        indicating the variable should be fixed at its current value.
-        """
-        if self._constructed:
-            return _GeneralVarData.fix(self, value)
-        raise ValueError(
-            "Fixing variable '%s' "
-            "before the Var has been constructed (there "
-            "is currently nothing to set)."
-            % (self.name))
-
-    def unfix(self):
-        """Sets the fixed indicator to False."""
-        if self._constructed:
-            return _GeneralVarData.unfix(self)
-        raise ValueError(
-            "Freeing variable '%s' "
-            "before the Var has been constructed (there "
-            "is currently nothing to set)."
-            % (self.name))
+@disable_methods(_VARDATA_API)
+class AbstractScalarVar(ScalarVar):
+    pass
 
 
 class SimpleVar(metaclass=RenamedClass):
