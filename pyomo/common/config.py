@@ -384,7 +384,7 @@ class DynamicImplicitDomain(object):
     ----------
     callback: Callable[[str, object], ConfigBase]
         A callable (function) that is passed the ConfigDict key and
-        value, and is expected to returnt the appropriate Config object
+        value, and is expected to return the appropriate Config object
         (ConfigValue, ConfigList, or ConfigDict)
 
     """
