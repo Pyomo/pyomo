@@ -32,7 +32,7 @@ class TestPothenFanExample(unittest.TestCase):
         right_nodes = list(range(n_r))
 
         bg.add_nodes_from(left_nodes, bipartite=0)
-        bg.add_nodes_from([n_l+i for i in right_nodes], bipartite=1)
+        bg.add_nodes_from([n_l + i for i in right_nodes], bipartite=1)
 
         paper_edges = [
                 (1, 1),
@@ -69,7 +69,7 @@ class TestPothenFanExample(unittest.TestCase):
                 (12, 11),
                 ]
 
-        edges = [(i-1, j-1+n_l) for i, j in paper_edges]
+        edges = [(i - 1, j - 1 + n_l) for i, j in paper_edges]
         bg.add_edges_from(edges)
 
         return bg
@@ -151,7 +151,7 @@ class TestDisconnectedModel(unittest.TestCase):
                 (5, 6),
                 (6, 6),
                 ]
-        edges = [(i, j+N) for i, j in edges]
+        edges = [(i, j + N) for i, j in edges]
         graph.add_edges_from(edges)
         return graph, top_nodes
 
@@ -168,11 +168,11 @@ class TestDisconnectedModel(unittest.TestCase):
         underconstrained_top = {0, 1}
         underconstrained_bot = {7, 8, 9}
         self.assertEqual(underconstrained_top, set(top_dmp[2]))
-        self.assertEqual(underconstrained_bot, set(bot_dmp[0]+bot_dmp[1]))
+        self.assertEqual(underconstrained_bot, set(bot_dmp[0] + bot_dmp[1]))
 
         overconstrained_top = {5, 6}
         overconstrained_bot = {13}
-        self.assertEqual(overconstrained_top, set(top_dmp[0]+top_dmp[1]))
+        self.assertEqual(overconstrained_top, set(top_dmp[0] + top_dmp[1]))
         self.assertEqual(overconstrained_bot, set(bot_dmp[2]))
 
         wellconstrained_top = {2, 3, 4}

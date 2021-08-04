@@ -31,7 +31,7 @@ def make_gas_expansion_model(N=2):
     of isentropic expansions.
     """
     m = pyo.ConcreteModel()
-    m.streams = pyo.Set(initialize=range(N+1))
+    m.streams = pyo.Set(initialize=range(N + 1))
     m.rho = pyo.Var(m.streams, initialize=1)
     m.P = pyo.Var(m.streams, initialize=1)
     m.F = pyo.Var(m.streams, initialize=1)
@@ -184,8 +184,8 @@ class TestGasExpansionDMMatrixInterface(unittest.TestCase):
 
         imat = get_structural_incidence_matrix(variables, constraints)
         M, N = imat.shape
-        self.assertEqual(M, 4*N_model+1)
-        self.assertEqual(N, 4*(N_model+1))
+        self.assertEqual(M, 4*N_model + 1)
+        self.assertEqual(N, 4*(N_model + 1))
 
         row_partition, col_partition = dulmage_mendelsohn(imat)
 
@@ -246,9 +246,9 @@ class TestDynamicModel(unittest.TestCase):
         self.assertEqual(set(row_partition[2]), row_indices)
 
         # Potentially unmatched columns
-        self.assertEqual(len(col_partition[0]), N-M)
-        self.assertEqual(len(col_partition[1]), M-1)
-        potentially_unmatched = col_partition[0]+col_partition[1]
+        self.assertEqual(len(col_partition[0]), N - M)
+        self.assertEqual(len(col_partition[1]), M - 1)
+        potentially_unmatched = col_partition[0] + col_partition[1]
         col_indices = set([i for i in range(N)
             if i != var_idx_map[m.flow_out[0]]])
         self.assertEqual(set(potentially_unmatched), col_indices)
