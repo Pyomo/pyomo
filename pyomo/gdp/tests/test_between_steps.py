@@ -205,6 +205,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         
         self.check_transformation_block(m, 0, 72, 0, 72, -18, 32, -18, 32)
 
+    @unittest.skipIf('gurobi_direct' not in solvers, 
+                     'Gurobi direct solver not available')
     def test_transformation_block_better_bounds_in_global_constraints(self):
         m = self.makeModel()
         m.c1 = Constraint(expr=m.x[1]**2 + m.x[2]**2 <= 32)
@@ -320,7 +322,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             m,
             P=3,
             subproblem_solver=SolverFactory('gurobi_direct'))
-        
+
         b = m.component("_pyomo_gdp_between_steps_reformulation")
         self.assertIsInstance(b, Block)
 
@@ -495,6 +497,20 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertIs(repn.quadratic_vars[0][0], m.x[4])
         self.assertIs(repn.quadratic_vars[0][1], m.x[4])
 
+    def test_transformed_disjuncts_mapped_correctly(self):
+        m = self.makeModel()
+
+        TransformationFactory('gdp.between_steps').apply_to(
+            m,
+            variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
+            compute_bounds_method='fbbt')
+
+        b = m.component("_pyomo_gdp_between_steps_reformulation")
+        self.assertIs(m.disjunction.disjuncts[0].transformation_block(),
+                      b.disjunction.disjuncts[0])
+        self.assertIs(m.disjunction.disjuncts[1].transformation_block(),
+                      b.disjunction.disjuncts[1])
+
 class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
     def makeModel(self):
         m = ConcreteModel()
@@ -534,7 +550,6 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
         # var)
         self.assertTrue(len(disj1.component_map(Var)), 2)
         self.assertTrue(len(disj2.component_map(Var)), 2)
-
 
         aux_vars1 = disj1.component(
             "disjunction_disjuncts[0].constraint[1]_aux_vars")
@@ -740,3 +755,69 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
             m,
             variable_partitions=[[m.x[3], m.x[2]], [m.x[1], m.x[4]]],
             compute_bounds_method='fbbt')
+
+    def test_non_additively_separable_expression(self):
+        m = self.makeModel()
+        # I'm adding a dumb constraint, but I just want to make sure that a
+        # not-additively-separable but legal-according-to-the-partition
+        # constraint gets through as expected. As an added bonus, this checks
+        # how things work when part of the expression is empty for one part in
+        # the partition.
+        m.disjunction.disjuncts[0].another_constraint = Constraint(
+            expr=m.x[1]**3 <= 0.5)
+
+        TransformationFactory('gdp.between_steps').apply_to(
+            m,
+            variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
+            compute_bounds_method='fbbt')
+
+        # we just need to check the first Disjunct's transformation
+        b = m.component("_pyomo_gdp_between_steps_reformulation")
+        disj1 = b.disjunction.disjuncts[0]
+        
+        self.assertTrue(len(disj1.component_map(Constraint)), 2)
+        # has indicator_var and two sets of auxilary variables
+        self.assertTrue(len(disj1.component_map(Var)), 3)
+        self.assertTrue(len(disj1.component_map(Constraint)), 2)
+
+        aux_vars1 = disj1.component(
+            "disjunction_disjuncts[0].constraint[1]_aux_vars")
+        # we check these in test_transformation_block_fbbt_bounds
+
+        aux_vars2 = disj1.component(
+            "disjunction_disjuncts[0].another_constraint_aux_vars")
+        self.assertEqual(len(aux_vars2), 1)
+        self.assertEqual(aux_vars2[0].lb, -8)
+        self.assertEqual(aux_vars2[0].ub, 216)
+
+        # check the constraint
+        cons = disj1.component("disjunction_disjuncts[0].another_constraint")
+        self.assertEqual(len(cons), 1)
+        cons = cons[0]
+        self.assertIsNone(cons.lower)
+        self.assertEqual(cons.upper, 0.5)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertEqual(repn.linear_coefs[0], 1)
+        self.assertIs(repn.linear_vars[0], aux_vars2[0])
+
+        # now check the global constraint
+        cons = b.component(
+            "disjunction_disjuncts[0].another_constraint_split_constraints")
+        self.assertEqual(len(cons), 1)
+        cons = cons[0]
+        self.assertIsNone(cons.lower)
+        self.assertEqual(cons.upper, 0)
+        repn = generate_standard_repn(cons.body)
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertEqual(repn.linear_coefs[0], -1)
+        self.assertIs(repn.linear_vars[0], aux_vars2[0])
+        self.assertEqual(len(repn.nonlinear_vars), 1)
+        self.assertIs(repn.nonlinear_vars[0], m.x[1])
+        nonlinear = repn.nonlinear_expr
+        self.assertIsInstance(nonlinear, EXPR.PowExpression)
+        self.assertIs(nonlinear.args[0], m.x[1])
+        self.assertEqual(nonlinear.args[1], 3)

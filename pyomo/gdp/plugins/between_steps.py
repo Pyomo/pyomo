@@ -32,6 +32,7 @@ from pyomo.gdp.util import (preprocess_targets, is_child_of, target_list,
                             _to_dict, verify_successful_solve, NORMAL,
                             clone_without_expression_components )
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
+from weakref import ref as weakref_ref
 
 from math import floor
 
@@ -45,8 +46,8 @@ NAME_BUFFER = {}
 def _generate_additively_separable_repn(nonlinear_part):
     if nonlinear_part.__class__ is not EXPR.SumExpression:
         # This isn't separable, so we just have the one expression
-        return {'nonlinear_vars': tuple(v for v in EXPR.identify_variables(
-            nonlinear_part)), 'nonlinear_exprs': [nonlinear_part]}
+        return {'nonlinear_vars': [tuple(v for v in EXPR.identify_variables(
+            nonlinear_part))], 'nonlinear_exprs': [nonlinear_part]}
 
     # else, it was a SumExpression, and we will break it into the summands,
     # recording which variables are there.
@@ -251,7 +252,6 @@ class BetweenSteps_Transformation(Transformation):
             else:
                 self.verbose = False
 
-            # TODO: This should be a domain function for the configvalue
             method = self._config.compute_bounds_method
             if method is None or method == 'optimal':
                 self._compute_bounds = self.compute_optimal_bounds
@@ -410,11 +410,14 @@ class BetweenSteps_Transformation(Transformation):
                                                                   transBlock))
 
         # make a new disjunction with the transformed guys
-        transBlock.add_component(unique_component_name(
-            transBlock,
-            obj.getname(fully_qualified=True, name_buffer=NAME_BUFFER)),
-                                 Disjunction(expr=[disj for disj in
-                                                   transformed_disjuncts]))
+        transformed_disjunction = Disjunction(expr=[disj for disj in
+                                                    transformed_disjuncts])
+        transBlock.add_component(
+            unique_component_name(transBlock, 
+                                  obj.getname(fully_qualified=True, 
+                                              name_buffer=NAME_BUFFER)),
+            transformed_disjunction)
+        obj._algebraic_constraint = weakref_ref(transformed_disjunction)
 
         obj.deactivate()
 
@@ -441,6 +444,7 @@ class BetweenSteps_Transformation(Transformation):
                         % ( obj.name, value(obj.indicator_var) ))
 
         transformed_disjunct = Disjunct()
+        obj._transformation_block = weakref_ref(transformed_disjunct)
         transBlock.add_component(unique_component_name(
             transBlock,
             obj.getname(fully_qualified=True, name_buffer=NAME_BUFFER)),
@@ -508,7 +512,7 @@ class BetweenSteps_Transformation(Transformation):
                             # an error: It's not a valid partition. If it is,
                             # then we add this piece of the expression.
                             # subset?
-                            if all(v in var_list for v in expr_var_set):
+                            if all(v in var_list for v in list(expr_var_set)):
                                 expr += nonlinear_repn['nonlinear_exprs'][i]
                             # intersection?
                             elif len(ComponentSet(expr_var_set) & var_list) != 0:
@@ -536,23 +540,29 @@ class BetweenSteps_Transformation(Transformation):
                                         "or ensure all variables that appear "
                                         "in the constraint are bounded." % 
                                         (expr, cons.name))
-                    aux_var = aux_vars[len(aux_vars)]
-                    aux_var.setlb(expr_lb)
-                    aux_var.setub(expr_ub)                    
-                    split_aux_vars.append(aux_var)
-                    split_constraints[
-                        len(split_constraints)] = expr <= aux_var
+                    # if the expression was empty wrt the partition, we don't
+                    # need to bother with any of this. The aux_var doesn't need
+                    # to exist because it would be 0.
+                    if type(expr) is not int or expr != 0: 
+                        aux_var = aux_vars[len(aux_vars)]
+                        aux_var.setlb(expr_lb)
+                        aux_var.setub(expr_ub)  
+                        split_aux_vars.append(aux_var)
+                        split_constraints[
+                            len(split_constraints)] = expr <= aux_var
                 transformed_constraint[
                     len(transformed_constraint)] = sum(v for v in
                                                        split_aux_vars) <= \
                     rhs - repn.constant
                                          
-            obj.deactivate()
-            return transformed_disjunct
+        obj.deactivate()
+        return transformed_disjunct
 
     def compute_optimal_bounds(self, expr, instance, transBlock):
         # computes bounds on expr by minimizing and maximizing expr over the
-        # variable bounds and the global constraints
+        # variable bounds and the global constraints. Note that even if expr is
+        # convex and the global constraints are a convex set, the max problem is
+        # nonconvex!
 
         # leave out what we've been doing, store state
         transBlock.deactivate()
