@@ -820,7 +820,6 @@ class CuttingPlane_Transformation(Transformation):
 
     def _get_disaggregated_vars(self, hull):
         disaggregatedVars = ComponentSet()
-        hull_xform = TransformationFactory('gdp.hull')
         for disjunction in hull.component_data_objects( Disjunction,
                                                         descend_into=(Disjunct,
                                                                       Block)):
