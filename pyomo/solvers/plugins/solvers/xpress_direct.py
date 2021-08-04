@@ -213,11 +213,8 @@ class XpressDirect(DirectSolver):
             # output without disabling logging altogether.
             # As a work around, we capature all screen output
             # when tee is False.
-            try:
-                with capture_output() as OUT:
-                    self._solver_model.solve()
-            except:
-                raise
+            with capture_output() as OUT:
+                self._solver_model.solve()
         self._opt_time = time.time() - start_time
 
         self._solver_model.setlogfile('')
