@@ -123,12 +123,21 @@ from pyomo.core.base import util
 
 from pyomo.core.base.instance2dat import instance2dat
 
+from pyomo.core.util import (prod, quicksum, sum_product, dot_product,
+                             summation, sequence)
+
 # These APIs are deprecated and should be removed in the near future
 from pyomo.core.base.set import (
     set_options, RealSet, IntegerSet, BooleanSet,
 )
 
-from pyomo.core.util import (prod, quicksum, sum_product, dot_product,
-                             summation, sequence)
-
-from weakref import ref as weakref_ref
+from pyomo.common.deprecation import relocated_module_attribute
+relocated_module_attribute(
+    'SimpleBlock', 'pyomo.core.base.block.SimpleBlock', version='6.0')
+relocated_module_attribute(
+    'SimpleVar', 'pyomo.core.base.var.SimpleVar', version='6.0')
+relocated_module_attribute(
+    'SimpleBooleanVar', 'pyomo.core.base.boolean_var.SimpleBooleanVar',
+    version='6.0'
+)
+del relocated_module_attribute

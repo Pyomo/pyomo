@@ -1063,64 +1063,38 @@ class ArraySet(PyomoModel):
 
     def test_or(self):
         """Check that set union works"""
-        # In the set rewrite, the following now works!
-        # try:
-        #     self.instance.A | self.instance.tmpset3
-        # except TypeError:
-        #     pass
-        # else:
-        #     self.fail("fail test_or")
-        self.assertEqual(self.instance.A | self.instance.tmpset3,
-                         self.instance.A)
+        with self.assertRaisesRegex(
+                TypeError, r'Cannot apply a Set operator to an indexed Set '
+                r'component \(A\)'):
+            self.instance.A | self.instance.tmpset3
 
     def test_and(self):
         """Check that set intersection works"""
-        # In the set rewrite, the following now works!
-        # try:
-        #     self.instance.tmp = self.instance.A & self.instance.tmpset3
-        # except TypeError:
-        #     pass
-        # else:
-        #     self.fail("fail test_and")
-        self.assertEqual(self.instance.A & self.instance.tmpset3,
-                         EmptySet)
+        with self.assertRaisesRegex(
+                TypeError, r'Cannot apply a Set operator to an indexed Set '
+                r'component \(A\)'):
+            self.instance.A & self.instance.tmpset3
 
     def test_xor(self):
         """Check that set exclusive or works"""
-        # In the set rewrite, the following now works!
-        # try:
-        #     self.instance.A ^ self.instance.tmpset3
-        # except TypeError:
-        #     pass
-        # else:
-        #     self.fail("fail test_xor")
-        self.assertEqual(self.instance.A ^ self.instance.tmpset3,
-                         self.instance.A)
+        with self.assertRaisesRegex(
+                TypeError, r'Cannot apply a Set operator to an indexed Set '
+                r'component \(A\)'):
+            self.instance.A ^ self.instance.tmpset3
 
     def test_diff(self):
         """Check that set difference works"""
-        # In the set rewrite, the following now works!
-        # try:
-        #     self.instance.A - self.instance.tmpset3
-        # except TypeError:
-        #     pass
-        # else:
-        #     self.fail("fail test_diff")
-        self.assertEqual(self.instance.A - self.instance.tmpset3,
-                         self.instance.A)
+        with self.assertRaisesRegex(
+                TypeError, r'Cannot apply a Set operator to an indexed Set '
+                r'component \(A\)'):
+            self.instance.A - self.instance.tmpset3
 
     def test_mul(self):
         """Check that set cross-product works"""
-        # In the set rewrite, the following now works!
-        # try:
-        #     self.instance.A * self.instance.tmpset3
-        # except TypeError:
-        #     pass
-        # else:
-        #     self.fail("fail test_mul")
-        # Note: cross product with an empty set is an empty set
-        self.assertEqual(self.instance.A * self.instance.tmpset3,
-                         [])
+        with self.assertRaisesRegex(
+                TypeError, r'Cannot apply a Set operator to an indexed Set '
+                r'component \(A\)'):
+            self.instance.A * self.instance.tmpset3
 
     def test_override_values(self):
         m = ConcreteModel()
@@ -3003,7 +2977,9 @@ class TestSetErrors(PyomoModel):
         a=Set()
         b=Set(a)
         with self.assertRaisesRegex(
-                TypeError, "Cannot apply a Set operator to an indexed"):
+                #TypeError, "Cannot apply a Set operator to an indexed"):
+                ValueError, "Error retrieving component IndexedSet\[None\]: "
+                "The component has not been constructed."):
             c=Set(within=b, dimen=2)
             c.construct()
 

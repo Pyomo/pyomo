@@ -15,7 +15,6 @@ Ref:
 """
 
 from __future__ import division
-from pyomo.core.base.util import Initializer
 from pyomo.environ import (ConcreteModel, Constraint, Reals, Integers,
                            Objective, Var, sqrt, minimize, exp)
 from pyomo.environ import SolverFactory, value

@@ -22,8 +22,9 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import (
     native_types, native_numeric_types, as_numeric, value,
 )
-from pyomo.core.base.util import (
-    disable_methods, InitializerBase, Initializer, 
+from pyomo.core.base.disable_methods import disable_methods
+from pyomo.core.base.initializer import (
+    InitializerBase, Initializer,
     CountedCallInitializer, IndexedCallInitializer,
 )
 from pyomo.core.base.range import (
@@ -35,6 +36,7 @@ from pyomo.core.base.component import (
 )
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, normalize_index,
+    rule_wrapper,
 )
 from pyomo.core.base.global_set import (
     GlobalSets, GlobalSetBase,
@@ -105,7 +107,7 @@ implemented) through Mixin classes.
 def process_setarg(arg):
     if isinstance(arg, _SetDataBase):
         return arg
-    elif isinstance(arg, IndexedComponent):
+    elif isinstance(arg, IndexedComponent) and arg.is_indexed():
         raise TypeError("Cannot apply a Set operator to an "
                         "indexed %s component (%s)"
                         % (arg.ctype.__name__, arg.name,))
@@ -206,8 +208,7 @@ def set_options(**kwds):
         return func
     return decorator
 
-
-def simple_set_rule( fn ):
+def simple_set_rule(rule):
     """
     This is a decorator that translates None into Set.End.
     This supports a simpler syntax in set rules, though these can be
@@ -219,26 +220,7 @@ def simple_set_rule( fn ):
     def A_rule(model, i, j):
         ...
     """
-
-    # Because some of our processing of initializer functions relies on
-    # knowing the number of positional arguments, we will go to extra
-    # effort here to preserve the original function signature.
-    _funcdef = """def wrapper_function%s:
-        args, varargs, kwds, local_env = inspect.getargvalues(
-            inspect.currentframe())
-        args = tuple(local_env[_] for _ in args) + (varargs or ())
-        value = fn(*args, **(kwds or {}))
-        # Map None -> Set.End
-        if value is None:
-            return Set.End
-        return value
-""" % (str(inspect.signature(fn)),)
-    # Create the wrapper in a temporary environment that mimics this
-    # function's environment.
-    _env = dict(globals())
-    _env.update(locals())
-    exec(_funcdef, _env)
-    return _env['wrapper_function']
+    return rule_wrapper(rule, {None: Set.End})
 
 
 class UnknownSetDimen(object): pass
@@ -1057,49 +1039,34 @@ class _SetData(_SetDataBase):
     __mul__ = cross
 
     def __ror__(self, other):
-        # See the discussion of Set vs SetOf in _processArgs below
+        # See the discussion of Set vs SetOf in process_setarg above
         #
         # return SetOf(other) | self
-        tmp = SetOf(other)
-        ans = Set(initialize=tmp, ordered=tmp.isordered())
-        ans.construct()
-        return ans | self
+        return process_setarg(other) | self
 
     def __rand__(self, other):
-        # See the discussion of Set vs SetOf in _processArgs below
+        # See the discussion of Set vs SetOf in process_setarg above
         #
         # return SetOf(other) & self
-        tmp = SetOf(other)
-        ans = Set(initialize=tmp, ordered=tmp.isordered())
-        ans.construct()
-        return ans & self
+        return process_setarg(other) & self
 
     def __rsub__(self, other):
-        # See the discussion of Set vs SetOf in _processArgs below
+        # See the discussion of Set vs SetOf in process_setarg above
         #
         # return SetOf(other) - self
-        tmp = SetOf(other)
-        ans = Set(initialize=tmp, ordered=tmp.isordered())
-        ans.construct()
-        return ans - self
+        return process_setarg(other) - self
 
     def __rxor__(self, other):
-        # See the discussion of Set vs SetOf in _processArgs below
+        # See the discussion of Set vs SetOf in process_setarg above
         #
         # return SetOf(other) ^ self
-        tmp = SetOf(other)
-        ans = Set(initialize=tmp, ordered=tmp.isordered())
-        ans.construct()
-        return ans ^ self
+        return process_setarg(other) ^ self
 
     def __rmul__(self, other):
-        # See the discussion of Set vs SetOf in _processArgs below
+        # See the discussion of Set vs SetOf in process_setarg above
         #
         # return SetOf(other) * self
-        tmp = SetOf(other)
-        ans = Set(initialize=tmp, ordered=tmp.isordered())
-        ans.construct()
-        return ans * self
+        return process_setarg(other) * self
 
     def __lt__(self,other):
         """
@@ -1377,6 +1344,23 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
 
     def pop(self):
         return self._values.pop()
+
+
+class _ScalarOrderedSetMixin(object):
+    # This mixin is required because scalar ordered sets implement
+    # __getitem__() as an alias of card()
+    __slots__ = ()
+
+    def values(self):
+        """Return an iterator of the component data objects in the dictionary"""
+        if list(self.keys()):
+            yield self
+
+    def items(self):
+        """Return an iterator of (index,data) tuples from the dictionary"""
+        _keys = list(self.keys())
+        if _keys:
+            yield _keys[0], self
 
 
 class _OrderedSetMixin(object):
@@ -2213,7 +2197,7 @@ class FiniteSimpleSet(metaclass=RenamedClass):
     __renamed__version__ = '6.0'
 
 
-class OrderedScalarSet(_InsertionOrderSetData, Set):
+class OrderedScalarSet(_ScalarOrderedSetMixin, _InsertionOrderSetData, Set):
     def __init__(self, **kwds):
         # In case someone inherits from us, we will provide a rational
         # default for the "ordered" flag
@@ -2228,7 +2212,7 @@ class OrderedSimpleSet(metaclass=RenamedClass):
     __renamed__version__ = '6.0'
 
 
-class SortedScalarSet(_SortedSetData, Set):
+class SortedScalarSet(_ScalarOrderedSetMixin, _SortedSetData, Set):
     def __init__(self, **kwds):
         # In case someone inherits from us, we will provide a rational
         # default for the "ordered" flag
@@ -2364,7 +2348,7 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
 class UnorderedSetOf(SetOf):
     pass
 
-class OrderedSetOf(_OrderedSetMixin, SetOf):
+class OrderedSetOf(_ScalarOrderedSetMixin, _OrderedSetMixin, SetOf):
     def __getitem__(self, index):
         i = self._to_0_based_index(index)
         try:
@@ -2938,7 +2922,8 @@ class InfiniteSimpleRangeSet(metaclass=RenamedClass):
     __renamed__version__ = '6.0'
 
 
-class FiniteScalarRangeSet(_FiniteRangeSetData, RangeSet):
+class FiniteScalarRangeSet(_ScalarOrderedSetMixin,
+                           _FiniteRangeSetData, RangeSet):
     def __init__(self, *args, **kwds):
         _FiniteRangeSetData.__init__(self, component=self)
         RangeSet.__init__(self, *args, **kwds)
@@ -3239,7 +3224,8 @@ class SetUnion_FiniteSet(_FiniteSetMixin, SetUnion_InfiniteSet):
         return len(set0) + sum(1 for s in set1 if s not in set0)
 
 
-class SetUnion_OrderedSet(_OrderedSetMixin, SetUnion_FiniteSet):
+class SetUnion_OrderedSet(_ScalarOrderedSetMixin, _OrderedSetMixin,
+                          SetUnion_FiniteSet):
     __slots__ = tuple()
 
     def __getitem__(self, index):
@@ -3377,7 +3363,8 @@ class SetIntersection_FiniteSet(_FiniteSetMixin, SetIntersection_InfiniteSet):
         return sum(1 for _ in self)
 
 
-class SetIntersection_OrderedSet(_OrderedSetMixin, SetIntersection_FiniteSet):
+class SetIntersection_OrderedSet(_ScalarOrderedSetMixin, _OrderedSetMixin,
+                                 SetIntersection_FiniteSet):
     __slots__ = tuple()
 
     def __getitem__(self, index):
@@ -3465,7 +3452,8 @@ class SetDifference_FiniteSet(_FiniteSetMixin, SetDifference_InfiniteSet):
         return sum(1 for _ in self)
 
 
-class SetDifference_OrderedSet(_OrderedSetMixin, SetDifference_FiniteSet):
+class SetDifference_OrderedSet(_ScalarOrderedSetMixin, _OrderedSetMixin,
+                               SetDifference_FiniteSet):
     __slots__ = tuple()
 
     def __getitem__(self, index):
@@ -3571,8 +3559,9 @@ class SetSymmetricDifference_FiniteSet(_FiniteSetMixin,
         return sum(1 for _ in self)
 
 
-class SetSymmetricDifference_OrderedSet(_OrderedSetMixin,
-                                         SetSymmetricDifference_FiniteSet):
+class SetSymmetricDifference_OrderedSet(_ScalarOrderedSetMixin,
+                                        _OrderedSetMixin,
+                                        SetSymmetricDifference_FiniteSet):
     __slots__ = tuple()
 
     def __getitem__(self, index):
@@ -3849,7 +3838,8 @@ class SetProduct_FiniteSet(_FiniteSetMixin, SetProduct_InfiniteSet):
         return ans
 
 
-class SetProduct_OrderedSet(_OrderedSetMixin, SetProduct_FiniteSet):
+class SetProduct_OrderedSet(_ScalarOrderedSetMixin, _OrderedSetMixin,
+                            SetProduct_FiniteSet):
     __slots__ = tuple()
 
     def __getitem__(self, index):
@@ -3992,7 +3982,7 @@ def DeclareGlobalSet(obj, caller_globals=None):
     pseudo-singletons, in that copy.deepcopy (and Model.clone()) will
     not duplcicate them, and when you pickle and restore objects
     containing GlobalSets will still refer to the same object.  The
-    declaed GlobalSet object will be an instance of the original Set
+    declared GlobalSet object will be an instance of the original Set
     type.
 
     """

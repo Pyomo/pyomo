@@ -45,6 +45,10 @@ class NLWriter(PersistentBase):
     def config(self, val: WriterConfig):
         self._config = val
 
+    @property
+    def symbol_map(self):
+        return self._symbol_map
+
     def set_instance(self, model):
         saved_config = self.config
         saved_update_config = self.update_config
@@ -147,7 +151,7 @@ class NLWriter(PersistentBase):
             self._symbol_map.removeSymbol(p)
             self._param_labeler.remove_obj(p)
 
-    def update_variables(self, variables: List[_GeneralVarData]):
+    def _update_variables(self, variables: List[_GeneralVarData]):
         for v in variables:
             cv = self._pyomo_var_to_solver_var_map[id(v)]
             if not v.is_continuous():

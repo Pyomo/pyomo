@@ -138,7 +138,7 @@ class LPWriter(PersistentBase):
             self._symbol_map.removeSymbol(p)
             self._param_labeler.remove_obj(p)
 
-    def update_variables(self, variables: List[_GeneralVarData]):
+    def _update_variables(self, variables: List[_GeneralVarData]):
         for v in variables:
             cv = self._pyomo_var_to_solver_var_map[id(v)]
             if v.is_binary():
