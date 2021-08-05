@@ -360,7 +360,7 @@ class TeeStream(object):
         # and a peculiar error ("libgcc_s.so.1 must be installed for
         # pthread_cancel to work"; see https://bugs.python.org/issue18748)
         #
-        # To accomplish this, er will keep two handle lists: one is the
+        # To accomplish this, we will keep two handle lists: one is the
         # set of "active" handles that the (merged reader) thread is
         # using, and the other the list of all handles so the original
         # thread can close them after the reader thread terminates.
