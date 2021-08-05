@@ -17,12 +17,13 @@ from weakref import ref as weakref_ref
 
 from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from pyomo.common.log import is_debug_set
-from pyomo.common.modeling import NoArgumentGiven
+from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, IndexedComponent_NDArrayMixin
 )
+from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
 from pyomo.core.base.numvalue import (
     NumericValue, native_types, value as expr_value
@@ -132,7 +133,7 @@ class _ParamData(ComponentData, NumericValue):
     # operations like validation efficient.  As it stands now, if
     # set_value is called without specifying an index, this call
     # involves a linear scan of the _data dict.
-    def set_value(self, value, idx=NoArgumentGiven):
+    def set_value(self, value, idx=NOTSET):
         #
         # If this param has units, then we need to check the incoming
         # value and see if it is "units compatible".  We only need to
@@ -261,11 +262,16 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             return IndexedParam.__new__(IndexedParam)
 
     def __init__(self, *args, **kwd):
-        self._rule          = kwd.pop('rule', Param.NoValue )
-        self._rule          = kwd.pop('initialize', self._rule )
+        _init = self._pop_from_kwargs(
+            'Param', kwd, ('rule', 'initialize'), NOTSET)
+        self._rule = Initializer(_init,
+                                 treat_sequences_as_mappings=False,
+                                 arg_not_specified=NOTSET)
+        self.domain = self._pop_from_kwargs('Param', kwd, ('domain', 'within'))
+        if self.domain is None:
+            self.domain = _ImplicitAny(owner=self, name='Any')
+
         self._validate      = kwd.pop('validate', None )
-        self.domain         = kwd.pop('domain', None )
-        self.domain         = kwd.pop('within', self.domain )
         self._mutable       = kwd.pop('mutable', Param.DefaultMutable )
         self._default_val   = kwd.pop('default', Param.NoValue )
         self._dense_initialize = kwd.pop('initialize_as_dense', False)
@@ -273,14 +279,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         if self._units is not None:
             self._units = units.get_units(self._units)
             self._mutable = True
-        #
-        if 'repn' in kwd:
-            logger.error(
-                "The 'repn' keyword is not a validate keyword argument for Param")
-        #
-        if self.domain is None:
-            self.domain = _ImplicitAny(owner=self, name='Any')
-        #
+
         kwd.setdefault('ctype', Param)
         IndexedComponent.__init__(self, *args, **kwd)
 
@@ -668,14 +667,14 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         # Check if the value is valid within the current domain
         #
         if validate_domain and not value in self.domain:
-            if index is NoArgumentGiven:
+            if index is NOTSET:
                 index = data.index()
             raise ValueError(
                 "Invalid parameter value: %s[%s] = '%s', value type=%s.\n"
                 "\tValue not in parameter domain %s" %
                 (self.name, index, value, type(value), self.domain.name))
         if self._validate:
-            if index is NoArgumentGiven:
+            if index is NOTSET:
                 index = data.index()
             valid = apply_parameterized_indexed_rule(
                 self, self._validate, self.parent_block(), value, index )
@@ -897,65 +896,71 @@ This has resulted in the conversion of the source to dense form.
         constructed.  We throw an exception if a user tries
         to use an uninitialized Param.
         """
+        if self._constructed:
+            return
+
+        timer = ConstructionTimer(self)
         if is_debug_set(logger):   #pragma:nocover
             logger.debug("Constructing Param, name=%s, from data=%s"
                          % ( self.name, str(data) ))
-        #
-        if self._constructed:
-            return
-        timer = ConstructionTimer(self)
-        #
-        # If the default value is a simple type, we check it versus
-        # the domain.
-        #
-        val = self._default_val
-        if val is not Param.NoValue \
-                and type(val) in native_types \
-                and val not in self.domain:
-            raise ValueError(
-                "Default value (%s) is not valid for Param %s domain %s" %
-                (str(val), self.name, self.domain.name))
-        #
-        # Flag that we are in the "during construction" phase
-        #
-        self._constructed = None
-        #
-        # Step #1: initialize data from rule value
-        #
-        if self._rule is not Param.NoValue:
-            self._initialize_from(self._rule)
-        #
-        # Step #2: allow any user-specified (external) data to override
-        # the initialization
-        #
-        if data is not None:
+
+        try:
+            #
+            # If the default value is a simple type, we check it versus
+            # the domain.
+            #
+            val = self._default_val
+            if val is not Param.NoValue \
+               and type(val) in native_types \
+               and val not in self.domain:
+                raise ValueError(
+                    "Default value (%s) is not valid for Param %s domain %s" %
+                    (str(val), self.name, self.domain.name))
+            #
+            # Flag that we are in the "during construction" phase
+            #
+            self._constructed = None
+            #
+            # Step #1: initialize data from rule value
+            #
+            self._construct_from_rule_using_setitem()
+            #
+            # Step #2: allow any user-specified (external) data to override
+            # the initialization
+            #
+            if data is not None:
+                try:
+                    data_items = data.items()
+                except AttributeError:
+                    raise ValueError(
+                        "Attempting to initialize parameter=%s with data=%s.\n"
+                        "\tData type is not a mapping type, and a Mapping is "
+                        "expected." % (self.name, str(data)) )
+            else:
+                data_items = iter(())
+
             try:
-                for key, val in data.items():
+                for key, val in data_items:
                     self._setitem_when_not_present(
                         self._validate_index(key), val)
-            except Exception:
+            except:
                 msg = sys.exc_info()[1]
-                if type(data) is not dict:
-                   raise ValueError(
-                       "Attempting to initialize parameter=%s with data=%s.\n"
-                       "\tData type is not a dictionary, and a dictionary is "
-                       "expected." % (self.name, str(data)) )
-                else:
-                    raise RuntimeError(
-                        "Failed to set value for param=%s, index=%s, value=%s."
-                        "\n\tsource error message=%s"
-                        % (self.name, str(key), str(val), str(msg)) )
-        #
-        # Flag that things are fully constructed now (and changing an
-        # inmutable Param is now an exception).
-        #
-        self._constructed = True
+                raise RuntimeError(
+                    "Failed to set value for param=%s, index=%s, value=%s.\n"
+                    "\tsource error message=%s"
+                    % (self.name, str(key), str(val), str(msg)) )
+            #
+            # Flag that things are fully constructed now (and changing an
+            # inmutable Param is now an exception).
+            #
+            self._constructed = True
 
-        # populate all other indices with default data
-        # (avoids calling _set_contains on self._index at runtime)
-        if self._dense_initialize:
-            self.to_dense_data()
-        timer.report()
+            # populate all other indices with default data
+            # (avoids calling _set_contains on self._index at runtime)
+            if self._dense_initialize:
+                self.to_dense_data()
+        finally:
+            timer.report()
 
     def _pprint(self):
         """
@@ -1023,8 +1028,8 @@ class ScalarParam(_ParamData, Param):
                 "the Param has been constructed (there is currently no "
                 "value to return)." % (self.name,) )
 
-    def set_value(self, value, index=NoArgumentGiven):
-        if index is NoArgumentGiven:
+    def set_value(self, value, index=NOTSET):
+        if index is NOTSET:
             index = None
         if self._constructed and not self._mutable:
             _raise_modifying_immutable_error(self, index)
