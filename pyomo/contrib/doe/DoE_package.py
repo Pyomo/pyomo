@@ -101,7 +101,7 @@ class DesignOfExperiments:
             grid_search_dv_dimension = 0
             for i in self.dv_name:
                 if i in self.dv_apply_time:
-                    grid_search_dv_dimension += len(list(self.dv_apply_time[i].values()))
+                    grid_search_dv_dimension += len((self.dv_apply_time[i]))
             if grid_search_dv_dimension != 2:
                 raise ValueError('Deign variable should be 2')
 
@@ -519,7 +519,7 @@ class DesignOfExperiments:
 
         return result_object_list, fim_list
 
-    def run_grid_search(self, design_values, dv_ranges, dv_apply_time, mode='sequential_finite',
+    def run_grid_search(self, design_values, design_ranges, design_dimension_names, design_control_time, mode='sequential_finite',
                         tee_option=False, scale_nominal_param_value=False, scale_constant_value=1,
                         filename=None, formula='central', step=0.001):
         '''
@@ -535,9 +535,9 @@ class DesignOfExperiments:
         Parameters:
         -----------
         design_values: a dict whose keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
-        dv_ranges: a dict whose keys are design variable names, values are a list of design variable values to go over
-        dv_apply_time: a dict whose keys are design variable names, values are a list of control time points that
-        should be fixed to the values in dv_ranges
+        design_ranges: a list of design variable values to go over
+        design_dimension_names: a list of design variable names of each design range
+        deisgn_control_time: a list of control time points that should be fixed to the values in dv_ranges
         mode: use Mode='sequential_finite', 'simultaneous_finite', 'sequential_sipopt', 'sequential_kaug'
         tee_option: if IPOPT console output is made
         scale_nominal_param_value: if True, the parameters are scaled by its own nominal value in param_init
@@ -552,8 +552,9 @@ class DesignOfExperiments:
         -------
         result_combine: a list of dictionaries, which stores the FIM info from every grid searched.
         '''
-        self.dv_ranges = dv_ranges
-        self.dv_apply_time = dv_apply_time
+        self.design_ranges = design_ranges
+        self.design_dimension_names = design_dimension_names
+        self.design_control_time = design_control_time
         self.formula = formula
         self.mode = mode
         self.scale_nominal_param_value = scale_nominal_param_value
@@ -565,11 +566,11 @@ class DesignOfExperiments:
         # calculate how much the FIM element is scaled
         self.fim_scale_constant_value = self.scale_constant_value ** 2
 
-        self.__check_inputs(check_mode=True, check_dimension_dv=True)
+        self.__check_inputs(check_mode=True, check_dimension_dv=False)
 
         # when defining design space, design variable values are defined as in design_values argument
         # the design var value defined in dv_ranges only applies to control time points given in dv_apply_time
-        self.dv_control_times = list(dv_apply_time.values())
+        grid_dimension = len(design_ranges)
 
         # to store all FIM results
         result_combine = []
@@ -580,57 +581,54 @@ class DesignOfExperiments:
         # iteration 0
         count = 0
         # how many sets of design variables will be run
-        total_count = len(dv_ranges[self.dv_name[0]]) * len(dv_ranges[self.dv_name[1]])
+        total_count = 1
+        for i in range(grid_dimension):
+            total_count *= len(design_ranges[i])
 
-        # loop over design variables
-        for i, value_0 in enumerate(dv_ranges[self.dv_name[0]]):
-            for j, value_1 in enumerate(dv_ranges[self.dv_name[1]]):
-                # generate the design variable dictionary needed for running compute_FIM
-                design_iter = {}
+        # generate combinations of design variable values to go over
+        search_design_set = product(*design_ranges)
 
-                # first copy value from design_Values
-                dv_iter1 = design_values[self.dv_name[0]].copy()
-                dv_iter2 = design_values[self.dv_name[1]].copy()
+        # loop over deign value combinations
+        for design_set_iter in search_design_set:
+            # generate the design variable dictionary needed for running compute_FIM
+            # first copy value from design_Values
+            design_iter = design_values.copy()
 
-                # for timepoints given in dv_apply_times, change its value to be the ones in dv_ranges to go over
-                for t, tim in enumerate(self.dv_control_times[0]):
-                    dv_iter1[tim] = value_0
-                design_iter[self.dv_name[0]] = dv_iter1
+            # update the controlled value of certain time points for certain design variables
+            for i in range(grid_dimension):
+                for v, value in enumerate(self.design_control_time[i]):
+                    design_iter[design_dimension_names[i]][value] = list(design_set_iter)[i]
 
-                for t, tim in enumerate(self.dv_control_times[1]):
-                    dv_iter2[tim] = value_1
-                design_iter[self.dv_name[1]] = dv_iter2
+            print('=======This is the ', count+1, 'th iteration=======')
+            print('Design variable values of this iteration:', design_iter)
 
-                print('=======This is the ', count+1, 'th iteration=======')
-                print('Design variable values of this iteration:', design_iter)
+            t_each_begin = time.time()
 
-                t_each_begin = time.time()
+            # call compute_FIM to get FIM
+            result_iter = self.compute_FIM(design_iter, mode=self.mode,
+                                           tee_opt=tee_option,
+                                           scale_nominal_param_value=self.scale_nominal_param_value,
+                                           formula=formula, step=step)
 
-                # call compute_FIM to get FIM
-                result_iter = self.compute_FIM(design_iter, mode=self.mode,
-                                               tee_opt=tee_option,
-                                               scale_nominal_param_value=self.scale_nominal_param_value,
-                                               formula=formula, step=step)
+            if (self.mode=='simultaneous_finite'):
+                result_iter.extract_FIM(self.m, self.design_timeset, self.square_result, self.obj_opt)
 
-                if (self.mode=='simultaneous_finite'):
-                    result_iter.extract_FIM(self.m, self.design_timeset, self.square_result, self.obj_opt)
+            elif (self.mode == 'sequential_finite'):
+                result_iter.calculate_FIM(self.jac, self.design_values)
 
-                elif (self.mode == 'sequential_finite'):
-                    result_iter.calculate_FIM(self.jac, self.design_values)
+            elif (self.mode == 'sequential_sipopt'):
+                result_iter.calculate_FIM(self.jac, self.design_values)
 
-                elif (self.mode == 'sequential_sipopt'):
-                    result_iter.calculate_FIM(self.jac, self.design_values)
+            t_now = time.time()
 
-                t_now = time.time()
+            if self.verbose:
+                # give run information at each iteration
+                print('This is the ', count+1, ' run out of ', total_count, 'run.')
+                print('The code has run %.04f seconds.'% (t_now-t_begin))
+                print('Estimated remaining time: %.4f seconds' % ((t_now-t_begin)/(count+1)*(total_count-count-1)))
+            count += 1
 
-                if self.verbose:
-                    # give run information at each iteration
-                    print('This is the ', count+1, ' run out of ', total_count, 'run.')
-                    print('The code has run %.04f seconds.'% (t_now-t_begin))
-                    print('Estimated remaining time: %.4f seconds' % ((t_now-t_begin)/(count+1)*(total_count-count-1)))
-                count += 1
-
-                result_combine.append(result_iter)
+            result_combine.append(result_iter)
 
         t_end = time.time()
         print('The whole run takes ', t_end - t_begin, ' s.')
