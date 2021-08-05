@@ -209,6 +209,11 @@ setup_kwargs = dict(
             'sympy',     # differentiation
             'xlrd',      # dataportals
             'z3-solver', # community_detection
+            #
+            # subprocess output is merged more reliably if
+            # 'PeekNamedPipe' is available from pywin32
+            'pywin32;platform_system=="Windows"',
+            #
             # The following optional dependencies are difficult to
             # install on PyPy (binary wheels are not available), so we
             # will only "require" them on other (CPython) platforms:
