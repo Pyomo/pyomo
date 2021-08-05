@@ -419,7 +419,9 @@ class TeeStream(object):
 
     def __del__(self):
         # Implement __del__ to guarantee that file descriptors are closed
-        self.close()
+        # ... but only if we are not called by the GC in the handler thread
+        if threading.current_thread() not in self._threads:
+            self.close()
 
     def _start(self, handle):
         if not _peek_available:
