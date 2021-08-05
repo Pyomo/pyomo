@@ -260,10 +260,10 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     def __new__(cls, *args, **kwds):
         if cls != Param:
             return super(Param, cls).__new__(cls)
-        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
-            return ScalarParam.__new__(ScalarParam)
+        if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
+            return super(Param, cls).__new__(ScalarParam)
         else:
-            return IndexedParam.__new__(IndexedParam)
+            return super(Param, cls).__new__(IndexedParam)
 
     def __init__(self, *args, **kwd):
         _init = self._pop_from_kwargs(
