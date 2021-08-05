@@ -1,17 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.patches import Ellipse
-import matplotlib.transforms as transforms
-from scipy.stats import chi2
 from pyomo.environ import *
 from pyomo.dae import *
 import pandas as pd
 import time
-import os
 import pickle
-import csv
-#import idaes
-#from pyomo.contrib.sensitivity_toolbox.sens import sipopt
+from itertools import permutations, product
 from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation
 
 
@@ -19,10 +13,12 @@ class DesignOfExperiments:
     def __init__(self, param_init, design_variable_timepoints, measurement_variables, measurement_timeset, create_model, solver=None,
                  prior_FIM=None, discretize_model=None, verbose=True):
         '''
-        This package solves DOE by optimization, and enumeration.
-        Optimization feature can solve dynamic or static models, while enumeration only solves static models where design variables are constant throughout the experiment.
-        They both support integrating with Pyomo.DAE.
-        
+        This package enables model-based design of experiments analysis with Pyomo. Both direct optimization and enumeration modes are supported.
+        NLP sensitivity tools, e.g.,  sipopt and k_aug, are supported to accelerate analysis via enumeration.
+        It can be applied to dynamic models, where design variables are controlled throughout the experiment.
+
+        Parameters:
+        -----------
         param_init: a dictionary of parameter names and values. If they are an indexed variable, put the variable name and index, such as 'theta["A1"]'. Note: if sIPOPT is used, parameter shouldn't be indexed. 
         design_variable_timepoints: a dictionary, keys are design variable names, values are its control time points.
                 if this design var is independent of time (constant), set the time to [0]
@@ -102,7 +98,11 @@ class DesignOfExperiments:
         if check_dimension_dv:
             # input check, only for heatmap
             # check if there are two design variables and two ranges
-            if not len(self.dv_ranges.keys()) == 2:
+            grid_search_dv_dimension = 0
+            for i in self.dv_name:
+                if i in self.dv_apply_time:
+                    grid_search_dv_dimension += len(list(self.dv_apply_time[i].values()))
+            if grid_search_dv_dimension != 2:
                 raise ValueError('Deign variable should be 2')
 
 
@@ -117,22 +117,32 @@ class DesignOfExperiments:
         the given initial points, and then unfix the design variable and do the
         optimization.
 
-        Args:
-            design_values: initial point for optimization, a dict whose keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
-            if_optimize: if True, continue to do optimization. else, just run square problem with given design variable values
-            obj_opt: choose from 'det' and 'trace'
-            scale_nominal_param_value: if scale Jacobian by the corresponding parameter nominal value
-            scale_constant_value: how many order of magnitudes the Jacobian value is magnified by. Use when the Jac or FIM value is too small
-            if_cho: if true, cholesky decomposition is used for Objective function (to optimize determinant).
-                L_LB: if FIM is P.D., the diagonal element should be positive, so we can set a LB like 1E-10
-                L_initial: initialize the L
-            formula: Finite difference formula, choose from 'central', 'forward', 'backward', None
-            step: Finite difference sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
-            check: if True check input toggles consistency to be checked multiple times.
+        Parameters:
+        -----------
+        design_values: initial point for optimization, a dict whose keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
+        if_optimize: if True, continue to do optimization. else, just run square problem with given design variable values
+        obj_opt: supporting maximizing the 'det' determinant or the 'trace' trace of the FIM
+        scale_nominal_param_value: if scale Jacobian by the corresponding parameter nominal value
+        scale_constant_value: how many order of magnitudes the Jacobian value is scaled by. Use when the Jac or FIM value is too small
+        if_cho: if true, cholesky decomposition is used for Objective function (to optimize determinant).
+            L_LB: if FIM is P.D., the diagonal element should be positive, so we can set a LB like 1E-10
+            L_initial: initialize the L
+        formula: Finite difference formula, choose from 'central', 'forward', 'backward', None
+        step: Finite difference sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
+        check: if True check input toggles consistency to be checked multiple times.
 
         Returns:
-            analysis_square: result summary of the square problem solved at the initial point
-            analysis_optimize: result summary of the optimization problem solved
+        --------
+        analysis_square: result summary of the square problem solved at the initial point
+        analysis_optimize: result summary of the optimization problem solved
+
+        Steps:
+        ------
+        1, Build two-stage stochastic programming optimization model where scenarios correspond to
+        finite difference approximations for the Jacobian of the response variables with respect to calibrated model parameters
+        2, Fix the experiment design decisions and solve a square (i.e., zero degrees of freedom) instance of the two-stage DOE problem.
+        This step is for initialization.
+        3, Unfix the experiment design decisions and solve the two-stage DOE problem.
         '''
 
         # store inputs in object
@@ -148,8 +158,8 @@ class DesignOfExperiments:
         self.step = step
         self.tee_opt = True
 
-        # calculate how much the FIM element is magnified
-        # FIM = Q.T@Q, the FIM is scaled by squared value the Jacobian is scaled
+        # calculate how much the FIM element is scaled by a constant number
+        # FIM = Jacobian.T@Jacobian, the FIM is scaled by squared value the Jacobian is scaled
         self.fim_scale_constant_value = self.scale_constant_value **2
 
         # check if inputs are valid
@@ -188,33 +198,34 @@ class DesignOfExperiments:
         '''
         This function solves a square Pyomo model with fixed design variables to compute the FIM.
         The problem is structured in one of the four following modes:
-        1, simultaneous_finite: Calculate a multiple scenario model. Sensitivity info estimated by finite difference
+        1, simultaneous_finite: Calculate a multiple scenario model. Sensitivity info estimated by finite difference. Instead of 1,
         2, sequential_finite: Calculates a one scenario model multiple times for
         multiple scenarios. Sensitivity info estimated by finite difference
         3, sequential_sipopt: calculate sensitivity by sIPOPT.
         4, sequential_kaug: calculate sensitivity by k_aug
 
-        Argument:
-        General:
-            design_values: a dict whose keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
-            mode: use Mode='sequential_finite', 'simultaneous_finite', 'sequential_sipopt', 'sequential_kaug'
-            FIM_store_name: if storing the FIM in a .csv, give the file name here as a string, '**.csv' or '**.txt'.
-            specified_prior: if user needs a different prior, replace this toggle without creating a new object
-            tee_opt: if IPOPT console output is printed
-            scale_nominal_param_value: if True, the parameters are scaled by its own nominal value in param_init
-            scale_constant_value: how many order of magnitudes the Jacobian value is magnified by. Use when the Jac or FIM value is too small
+        Parameters:
+        -----------
+        design_values: a dict whose keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
+        mode: use Mode='sequential_finite', 'simultaneous_finite', 'sequential_sipopt', 'sequential_kaug'
+        FIM_store_name: if storing the FIM in a .csv, give the file name here as a string, '**.csv' or '**.txt'.
+        specified_prior: if user needs a different prior, replace this toggle without creating a new object
+        tee_opt: if IPOPT console output is printed
+        scale_nominal_param_value: if True, the parameters are scaled by its own nominal value in param_init
+        scale_constant_value: how many order of magnitudes the Jacobian value is scaled by. Use when the Jac or FIM value is too small
 
         Only effective when finite=True:
-            formula: choose from 'central', 'forward', 'backward', None
-            step: Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
+        formula: choose from 'central', 'forward', 'backward', None
+        step: Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
 
         Cholesky option:
         if_Cho: if true, Cholesky decomposition is used for Objective function (to optimize determinant).
-                L_LB: if FIM is positive definite, the diagonal element should be positive, so we can set a LB like 1E-10
-                L_initial: initialize the L
+        L_LB: if FIM is positive definite, the diagonal element should be positive, so we can set a LB like 1E-10
+        L_initial: initialize the L
 
         Return:
-            FIM_analysis: result summary object of this solve
+        -------
+        FIM_analysis: result summary object of this solve
         '''
         # save inputs in object
         self.design_values = design_values
@@ -226,7 +237,7 @@ class DesignOfExperiments:
 
         # This method only solves square problem
         self.optimize = False
-        # Set the OF to 0 helps solve square problem quickly
+        # Set the Objective Function to 0 helps solve square problem quickly
         self.obj_opt = 'zero'
         self.tee_opt = tee_opt
 
@@ -234,8 +245,8 @@ class DesignOfExperiments:
         self.L_LB = L_LB
         self.L_initial = L_initial
 
-        # calculate how much the FIM element is magnified
-        # As FIM~Q.T@Q, FIM is scaled twice the number the Q is scaled
+        # calculate how much the FIM element is scaled by a constant number
+        # As FIM~Jacobian.T@Jacobian, FIM is scaled twice the number the Q is scaled
         self.fim_scale_constant_value = self.scale_constant_value ** 2
 
         # check inputs valid
@@ -322,7 +333,7 @@ class DesignOfExperiments:
                 jac[para] = list_jac
 
 
-            # analyze results
+            # Assemble and analyze results
             if specified_prior is None:
                 prior_in_use = self.prior_FIM
             else:
@@ -330,7 +341,7 @@ class DesignOfExperiments:
 
             FIM_analysis = FIM_result(self.param, prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
-            # add jacobian info to the object so that users can have access
+            # Store the Jacobian information for access by users
             self.jac = jac
 
             return FIM_analysis
@@ -369,7 +380,7 @@ class DesignOfExperiments:
                     time_set.append(value(t))
 
                 # add sIPOPT perturbation parameters
-                mod = self.__add_para(mod, perturb=pa)
+                mod = self.__add_parameter(mod, perturb=pa)
 
                 # parameter name lists for sipopt
                 list_original = []
@@ -422,38 +433,42 @@ class DesignOfExperiments:
                 # get Jacobian dict, keys are parameter name, values are sensitivity info
                 jac[para] = list_jac
 
-            # analyze results
+            # check if another prior experiment FIM is provided other than the user-specified one
             if specified_prior is None:
                 prior_in_use = self.prior_FIM
             else:
                 prior_in_use = specified_prior
 
-            # analyze results
+            # Assemble and analyze results
             FIM_analysis = FIM_result(self.param, prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
             self.jac = jac
-            #self.square_result = None
 
             return FIM_analysis
 
+        else:
+            raise ValueError('This is not a valid mode. Choose from "sequential_finite", "simultaneous_finite", "sequential_sipopt", "sequential_kaug"')
 
-    def sequential_exp(self, design_values_set, mode='sequential_finite', tee_option=False,
+
+    def generate_sequential_experiments(self, design_values_set, mode='sequential_finite', tee_option=False,
                        scale_nominal_param_value=False, scale_constant_value=1,
                        formula='central', step=0.001):
         '''
         Run a series of experiments sequentially, and use the FIM from one experiment as the prior information for the next experiment
-        Args:
-            design_values_set: a list of experiments, each element is one design_values dictionary
-            mode: use Mode='sequential_finite', 'simultaneous_finite', 'sequential_sipopt', 'sequential_kaug'
-            tee_option: if IPOPT console output is printed
-            scale_nominal_param_value: if True, the parameters are scaled by its own nominal value in param_init
-            scale_constant_value: how many order of magnitudes the Jacobian value is magnified by. Use when the Jac or FIM value is too small
-            formula: choose from 'central', 'forward', 'backward', None
-            step: Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
+        Parameters:
+        -----------
+        design_values_set: a list of experiments, each element is one design_values dictionary
+        mode: use Mode='sequential_finite', 'simultaneous_finite', 'sequential_sipopt', 'sequential_kaug'
+        tee_option: if IPOPT console output is printed
+        scale_nominal_param_value: if True, the parameters are scaled by its own nominal value in param_init
+        scale_constant_value: how many order of magnitudes the Jacobian value is scaled by. Use when the Jac or FIM value is too small
+        formula: choose from 'central', 'forward', 'backward', None
+        step: Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
 
         Returns:
-            result_obj_list: a list of the result summary objects of every experiment
-            fim_list: a list of the FIM of every experiment
+        --------
+        result_obj_list: a list of the result summary objects of every experiment
+        fim_list: a list of the FIM of every experiment
         '''
         # how many exps to run in a row
         self.no_exp = len(design_values_set)
@@ -462,9 +477,10 @@ class DesignOfExperiments:
         self.mode = mode
         self.scale_nominal_param_value = scale_nominal_param_value
         self.scale_constant_value = scale_constant_value
-        self.obj_opt = 'det'
+        # Set the Objective Function to 0 helps solve square problem quickly
+        self.obj_opt = 'zero'
 
-        # calculate how much the FIM element is magnified
+        # calculate how much the FIM element is scaled by a constant number
         self.fim_scale_constant_value = self.scale_constant_value ** 2
 
         self.__check_inputs(check_mode=True, check_dimension_dv=False)
@@ -516,36 +532,37 @@ class DesignOfExperiments:
         3, Sequential_sipopt: calculate sensitivity by sIPOPT.
         4, Sequential_kaug: calculate sensitivity by k_aug
 
-        Argument:
-        General:
-            design_values: a dict whose keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
-            dv_ranges: a dict whose keys are design variable names, values are a list of design variable values to go over
-            dv_apply_time: a dict whose keys are design variable names, values are a list of control time points that
-            should be fixed to the values in dv_ranges
-            mode: use Mode='sequential_finite', 'simultaneous_finite', 'sequential_sipopt', 'sequential_kaug'
-            tee_option: if IPOPT console output is made
-            scale_nominal_param_value: if True, the parameters are scaled by its own nominal value in param_init
-            scale_constant_value: how many order of magnitudes the Jacobian value is magnified by. Use when the Jac or FIM value is too small
-            filename: if True, grid search results stored with this file name
+        Parameters:
+        -----------
+        design_values: a dict whose keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
+        dv_ranges: a dict whose keys are design variable names, values are a list of design variable values to go over
+        dv_apply_time: a dict whose keys are design variable names, values are a list of control time points that
+        should be fixed to the values in dv_ranges
+        mode: use Mode='sequential_finite', 'simultaneous_finite', 'sequential_sipopt', 'sequential_kaug'
+        tee_option: if IPOPT console output is made
+        scale_nominal_param_value: if True, the parameters are scaled by its own nominal value in param_init
+        scale_constant_value: how many order of magnitudes the Jacobian value is scaled by. Use when the Jac or FIM value is too small
+        filename: if True, grid search results stored with this file name
 
         Only effective when finite=True:
-            formula: choose from 'central', 'forward', 'backward', None
-            step: Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
+        formula: choose from 'central', 'forward', 'backward', None
+        step: Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
 
         Return:
-            result_combine: a list of dictionaries, which stores the FIM info from every grid searched.
+        -------
+        result_combine: a list of dictionaries, which stores the FIM info from every grid searched.
         '''
         self.dv_ranges = dv_ranges
         self.dv_apply_time = dv_apply_time
         self.formula = formula
         self.mode = mode
-        # it can be det or trace as it is not optimizing now. put it here for the check_inputs()
         self.scale_nominal_param_value = scale_nominal_param_value
         self.scale_constant_value = scale_constant_value
-        self.obj_opt='det'
+        # Set the Objective Function to 0 helps solve square problem quickly
+        self.obj_opt='zero'
         self.filename = filename
 
-        # calculate how much the FIM element is magnified
+        # calculate how much the FIM element is scaled
         self.fim_scale_constant_value = self.scale_constant_value ** 2
 
         self.__check_inputs(check_mode=True, check_dimension_dv=True)
@@ -633,22 +650,24 @@ class DesignOfExperiments:
         '''
         This method is used for 1D sensitivity analysis.
         TODO: Let's decide if we are gonna keep this. This seems not necessary to this package.
-        Args:
-            design_values: a dict whose keys are design variable names,
-                            values are a dict whose keys are time point and values are the design variable value at that time point
-            design_var_range: a dict, the key is the design variable name to conduct analysis,
-                            the value is a list [Lower bound, Upper bound] for this sensitivity analysis
-            sensitivity_step: the interval of the design range. For e.g., 0.2 in [2,3], then design variable is computed at [2,2.2,2.4,2.6,2.8]
-            compare_opt: which design criteria is to compare. Choose from 'A', 'D', 'E', 'ME'
-            mode: use Mode='sequential_finite', 'simultaneous_finite', 'sequential_sipopt', 'sequential_kaug'
-            tee_option: if IPOPT console output is printed
-            scale_nominal_param_value: if True, the parameters are scaled by its own nominal value in param_init
-            scale_constant_value: how many order of magnitudes the Jacobian value is magnified by. Use when the Jac or FIM value is too small
-            formula: choose from 'central', 'forward', 'backward', None
-            step: Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
+        Parameters:
+        -----------
+        design_values: a dict whose keys are design variable names,
+                        values are a dict whose keys are time point and values are the design variable value at that time point
+        design_var_range: a dict, the key is the design variable name to conduct analysis,
+                        the value is a list [Lower bound, Upper bound] for this sensitivity analysis
+        sensitivity_step: the interval of the design range. For e.g., 0.2 in [2,3], then design variable is computed at [2,2.2,2.4,2.6,2.8]
+        compare_opt: which design criteria is to compare. Choose from 'A', 'D', 'E', 'ME'
+        mode: use Mode='sequential_finite', 'simultaneous_finite', 'sequential_sipopt', 'sequential_kaug'
+        tee_option: if IPOPT console output is printed
+        scale_nominal_param_value: if True, the parameters are scaled by its own nominal value in param_init
+        scale_constant_value: how many order of magnitudes the Jacobian value is scaled by. Use when the Jac or FIM value is too small
+        formula: choose from 'central', 'forward', 'backward', None
+        step: Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
 
         Returns:
-            result_list: a list of the specified optimality value
+        --------
+        result_list: a list of the specified optimality value
         '''
 
         self.design_values = design_values
@@ -656,9 +675,10 @@ class DesignOfExperiments:
         self.mode = mode
         self.scale_nominal_param_value = scale_nominal_param_value
         self.scale_constant_value = scale_constant_value
+        # Set the Objective Function to 0 helps solve square problem quickly
         self.obj_opt = 'zero'
 
-        # calculate how much the FIM element is magnified
+        # calculate how much the FIM element is scaled
         self.fim_scale_constant_value = self.scale_constant_value ** 2
 
         self.__check_inputs(check_mode=True, check_dimension_dv=False)
@@ -723,26 +743,27 @@ class DesignOfExperiments:
         '''
         Add features for DOE.
 
-        Information needed from self object:
-            self.measurement_variables: the variable name of the model output, for e.g., ['CA', 'CB', 'CC'].
-            self.measurement_timeset: a list of measurement time points. can be different from control time points
-            self.design_values: a dict of dictionaries, keys are the name of design variables, values are a dict where keys are the time points, values are the design variable value at that time point
+        Parameters:
+        -----------
+        self.measurement_variables: the variable name of the model output, for e.g., ['CA', 'CB', 'CC'].
+        self.measurement_timeset: a list of measurement time points. can be different from control time points
+        self.design_values: a dict of dictionaries, keys are the name of design variables, values are a dict where keys are the time points, values are the design variable value at that time point
 
-        DoE options:
-            self.optimize: if True, solve the problem unfixing the design variables. if False, solve the problem as a
-            square problem
-            self.obj_opt: choose from 'det' or 'trace'. Optimization problem maximizes determinant or trace.
-            self.scale_nominal_param_value: if True, scale FIM but not scale Jacobian. This toggle can be opened for better performance when the
-            problem is poorly scaled.
-            self.tee_opt: if True, print IPOPT console output
-            self.cho_opt: if true, cholesky decomposition is used for Objective function (to optimize determinant). If true, determinant will not be calculated.
-                self.L_LB: if FIM is P.D., the diagonal element should be positive, so we can set a LB like 1E-10
-                self.L_initial: initialize the L
-            self.formula: choose from 'central', 'forward', 'backward', None
-            self.step: Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
+        self.optimize: if True, solve the problem unfixing the design variables. if False, solve the problem as a
+        square problem
+        self.obj_opt: choose from 'det' or 'trace'. Optimization problem maximizes determinant or trace.
+        self.scale_nominal_param_value: if True, scale FIM but not scale Jacobian. This toggle can be opened for better performance when the
+        problem is poorly scaled.
+        self.tee_opt: if True, print IPOPT console output
+        self.cho_opt: if true, cholesky decomposition is used for Objective function (to optimize determinant). If true, determinant will not be calculated.
+            self.L_LB: if FIM is P.D., the diagonal element should be positive, so we can set a LB like 1E-10
+            self.L_initial: initialize the L
+        self.formula: choose from 'central', 'forward', 'backward', None
+        self.step: Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
 
         Return:
-            m: the solved DOE model
+        -------
+        m: the solved DOE model
         '''
         # call generator function to get scenario dictionary
         scena_gen = Scenario_generator(self.param_init, formula=self.formula, step=self.step, store=True)
@@ -871,7 +892,7 @@ class DesignOfExperiments:
 
         def trace_calc(m):
             '''
-            Calculate FIM elements. Can magnify each element with 1000 for performance
+            Calculate FIM elements. Can scale each element with 1000 for performance
             '''
             sum_x = 0  
             for j in m.para_set:
@@ -887,7 +908,7 @@ class DesignOfExperiments:
             '''
             r_list = list(range(len(m.para_set)))
             # get all permutations 
-            object_p = permutations(r_list)
+            object_p = itertools.permutations(r_list)
             list_p = list(object_p)
 
             # generate a name_order to iterate \sigma_i
@@ -918,11 +939,11 @@ class DesignOfExperiments:
                 return Constraint.Skip
 
 
-        ### Constraints and OF
+        ### Constraints and Objective function
         m.dC_value = Constraint(m.y_set, m.para_set, m.tmea_set, rule=jac_numerical)
         m.ele_rule = Constraint(m.para_set, m.para_set, rule=calc_FIM)  
 
-        # Only giving OF when there's DOF. Make OBJ=0 when it's a square problem, which helps converge. 
+        # Only giving the objective function when there's Degree of freedom. Make OBJ=0 when it's a square problem, which helps converge.
         if self.optimize:
             # if cholesky, calculating L and evaluate the OBJ with Cholesky decomposition
             if self.cho_opt:
@@ -947,13 +968,15 @@ class DesignOfExperiments:
     def __fix_design(self, m, design_val, fix_opt=True):
         ''' Fix design variable
 
-        Args:
-            m: model
-            design_val: design variable values dict
-            fix_opt: if True, fix. Else, unfix
+        Parameters:
+        -----------
+        m: model
+        design_val: design variable values dict
+        fix_opt: if True, fix. Else, unfix
 
         Returns:
-            m: model
+        --------
+        m: model
         '''
         # loop over the design variables and time index and to fix values specified in design_val
         for d, dname in enumerate(self.dv_name):
@@ -979,11 +1002,14 @@ class DesignOfExperiments:
         If it's a square problem, fix design variable and solve.
         Else, fix design variable and solve square problem firstly, then unfix them and solve the optimization problem
 
+        Parameters:
+        -----------
         m:model
         fix: if True, solve two times (square first). Else, just solve the square problem
 
         Return:
-            solver_results: solver results
+        -------
+        solver_results: solver results
         '''
         ### Solve square problem
         mod = self.__fix_design(m, self.design_values, fix_opt=fix)
@@ -993,17 +1019,20 @@ class DesignOfExperiments:
 
         return solver_result
 
-    def __add_para(self, m, perturb=0):
+    def __add_parameter(self, m, perturb=0):
         '''
         For sIPOPT: add parameter perturbation set
+
+        Parameters:
+        -----------
         m: model name
         self.param_names: perturbation parameter names
         perturb: which parameter to perturb
         '''
         # model parameters perturbation, backward disturb
-        param_do = self.param_v.copy()
+        param_backward = self.param_v.copy()
         # perturb parameter
-        param_do[perturb] *= (1-self.step)
+        param_backward[perturb] *= (1-self.step)
 
         # generate sIPOPT perturbed parameter names
         param_perturb_names = self.param.copy()
@@ -1016,7 +1045,7 @@ class DesignOfExperiments:
         if self.verbose:
             print('Perturbation parameters are set:')
         for change in range(len(self.perturb_names)):
-            setattr(m, self.perturb_names[change], Param(m.scena, initialize=param_do[change]))
+            setattr(m, self.perturb_names[change], Param(m.scena, initialize=param_backward[change]))
             if self.verbose:
                 print(self.perturb_names[change], ': ', value(eval('m.'+self.perturb_names[change]+'[0]')))
         return m
@@ -1028,9 +1057,10 @@ class Scenario_generator:
         DoE library first calls this function to generate scenarios.
         For sequential and simultaneous models, call different functions in this class.
 
-        Args:
+        Parameters:
+        -----------
         para_dict: a Dict of parameter, keys are names, values are their nominal value. for e.g.,
-                        {'A1': 84.79085853498033, 'A2': 371.71773413976416, 'E1': 7.777032028026428, 'E2': 15.047135137500822}
+                        {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
         formula: choose from 'central', 'forward', 'backward', None.
         step: Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
         store: if store results
@@ -1055,17 +1085,18 @@ class Scenario_generator:
         '''
         Generate scenario dict for simultaneous models
 
-        Return:
-            scena_overall: a dictionary containing scenarios dictionaries.
-            scena_overall[name of parameter]: a dict, keys are the scenario name(numeric integer starting from 0), values are parameter value in this scenario
-            scena_overall['jac-index']: keys are parameter name, values are the scenario names perturbing this parameter.
-            scena_overall['eps-abs']: keys are parameter name, values are the step it is perturbed
-            scena_overall['scena-name']: a list of scenario names
+        Returns:
+        -------
+        scena_overall: a dictionary containing scenarios dictionaries.
+        scena_overall[name of parameter]: a dict, keys are the scenario name(numeric integer starting from 0), values are parameter value in this scenario
+        scena_overall['jac-index']: keys are parameter name, values are the scenario names perturbing this parameter.
+        scena_overall['eps-abs']: keys are parameter name, values are the step it is perturbed
+        scena_overall['scena-name']: a list of scenario names
 
-            For e.g., if a dict {'P':100, 'D':20} is given, step=0.1, formula='central', it will return:
-            scena_overall = {'P': {0: 101.0, 1: 100, 2: 99.0, 3: 100}, 'D': {0: 20, 1: 20.2, 2: 20, 3: 19.8}, 'jac-index': {'P': [0, 2], 'D': [1, 3]}, 'eps-abs': {'P': 2.0, 'D': 0.4}, 'scena-name': [0, 1, 2, 3]}
-            if formula ='forward', it will return:
-            scena_overall = {'P':{'0':110, '1':100, '2':100}, 'D':{'0':20, '1':22, '2':20}, 'jac-index':{'P':[0,2], 'D':[1,2]}, 'eps-abs':{'P':10,'D':2}, 'scena-name': [0,1,2]}
+        For e.g., if a dict {'P':100, 'D':20} is given, step=0.1, formula='central', it will return:
+        scena_overall = {'P': {0: 101.0, 1: 100, 2: 99.0, 3: 100}, 'D': {0: 20, 1: 20.2, 2: 20, 3: 19.8}, 'jac-index': {'P': [0, 2], 'D': [1, 3]}, 'eps-abs': {'P': 2.0, 'D': 0.4}, 'scena-name': [0, 1, 2, 3]}
+        if formula ='forward', it will return:
+        scena_overall = {'P':{'0':110, '1':100, '2':100}, 'D':{'0':20, '1':22, '2':20}, 'jac-index':{'P':[0,2], 'D':[1,2]}, 'eps-abs':{'P':10,'D':2}, 'scena-name': [0,1,2]}
         '''
         # generate scenarios
         scena_keys, scena = self.__scena_generate(self.scenario_nominal, self.formula)
@@ -1088,11 +1119,11 @@ class Scenario_generator:
         '''
         Generate a single scenario class for one of the sequential models
 
-        Parameters
+        Parameters:
         ----------
         count: the No. of the sequential models
 
-        Returns
+        Returns:
         -------
         scenario_next: scenario dict for this sequential model
         '''
@@ -1108,7 +1139,7 @@ class Scenario_generator:
         '''
         Generate object and some 'parameters' for sequential models
 
-        Returns (added to self object)
+        Returns (added to self object):
         -------
         self.scena_keys: scenario name, a list of numbers
         self.scena: a list of parameter dictionaries for all sequential models
@@ -1148,7 +1179,8 @@ class Scenario_generator:
         '''
         Generate scenario logics
 
-        Return: (store in self object)
+        Returns: (store in self object)
+        --------
         self.scena_keys: a list of scenario names
         self.scena: a dict, keys are scenario names, values are a list of parameter values
         '''
@@ -1210,17 +1242,18 @@ class Scenario_data:
         form: choose from 'central', 'forward', 'backward', 'none'.
         step: stepsize of a fraction, such as 0.01
 
-        Return:
-            scena_dict: a dictionary containing scenarios dictionaries.
-            scena_dict[name of parameter]: a dict, keys are the scenario name(numeric integer starting from 0), values are parameter value in this scenario
-            scena_dict['jac-index']: keys are parameter name, values are the scenario names perturbing this parameter.
-            scena_dict['eps-abs']: keys are parameter name, values are the step it is perturbed
-            scena_dict['scena-name']: a list of scenario names
+        Returns:
+        --------
+        scena_dict: a dictionary containing scenarios dictionaries.
+        scena_dict[name of parameter]: a dict, keys are the scenario name(numeric integer starting from 0), values are parameter value in this scenario
+        scena_dict['jac-index']: keys are parameter name, values are the scenario names perturbing this parameter.
+        scena_dict['eps-abs']: keys are parameter name, values are the step it is perturbed
+        scena_dict['scena-name']: a list of scenario names
 
-            For e.g., if a dict {'P':100, 'D':20} is given, step=0.1, formula='central', it will return:
-            scena_dict = {'P': {0: 101.0, 1: 100, 2: 99.0, 3: 100}, 'D': {0: 20, 1: 20.2, 2: 20, 3: 19.8}, 'jac-index': {'P': [0, 2], 'D': [1, 3]}, 'eps-abs': {'P': 2.0, 'D': 0.4}, 'scena-name': [0, 1, 2, 3]}
-            if formula ='forward', it will return:
-            scena_dict = {'P':{'0':110, '1':100, '2':100}, 'D':{'0':20, '1':22, '2':20}, 'jac-index':{'P':[0,2], 'D':[1,2]}, 'eps-abs':{'P':10,'D':2}, 'scena-name': [0,1,2]}
+        For e.g., if a dict {'P':100, 'D':20} is given, step=0.1, formula='central', it will return:
+        scena_dict = {'P': {0: 101.0, 1: 100, 2: 99.0, 3: 100}, 'D': {0: 20, 1: 20.2, 2: 20, 3: 19.8}, 'jac-index': {'P': [0, 2], 'D': [1, 3]}, 'eps-abs': {'P': 2.0, 'D': 0.4}, 'scena-name': [0, 1, 2, 3]}
+        if formula ='forward', it will return:
+        scena_dict = {'P':{'0':110, '1':100, '2':100}, 'D':{'0':20, '1':22, '2':20}, 'jac-index':{'P':[0,2], 'D':[1,2]}, 'eps-abs':{'P':10,'D':2}, 'scena-name': [0,1,2]}
         '''
         # get info from parameter dictionary
         self.para_dict = parameter_dict
@@ -1285,13 +1318,14 @@ class FIM_result:
         '''
         Analyze the FIM result for a single run
 
-        Args:
-            para_name: parameter names
-            prior_FIM: if there's prior FIM to be added
-            store_FIM: if storing the FIM in a .csv, give the file name here as a string, '**.csv' or '**.txt'.
-            scale_constant_value: the constant value used to scale the sensitivity
-            max_condition_number: max condition number
-            verbose: if print statements are used
+        Parameters:
+        -----------
+        para_name: parameter names
+        prior_FIM: if there's prior FIM to be added
+        store_FIM: if storing the FIM in a .csv, give the file name here as a string, '**.csv' or '**.txt'.
+        scale_constant_value: the constant value used to scale the sensitivity
+        max_condition_number: max condition number
+        verbose: if print statements are used
         '''
         self.para_name = para_name
         self.prior_FIM = prior_FIM
@@ -1305,28 +1339,31 @@ class FIM_result:
         '''
         Calculate FIM from Jacobian information. This is for grid search (combined models) results
 
-        Args:
-            jaco_info: jacobian dictionary
-            dv_values: design variable value dictionary
-            sq_result: solver status returned by IPOPT
+        Parameters:
+        -----------
+        jaco_info: jacobian dictionary
+        dv_values: design variable value dictionary
+        sq_result: solver status returned by IPOPT
 
         Return:
-            fim_info: a FIM dictionary
-                ~['FIM']: FIM itself
-                ~[design variable name]: design variable values at each time point
-                ~['Trace']: Trace
-                ~['Determinant']: determinant
-                ~['Condition number:']: condition number
-                ~['Minimal eigen value:']: minimal eigen value
-                ~['Eigen values:']: all eigen values
-                ~['Eigen vectors:']: all eigen vectors
-            solver_info: a solver infomation dictionary
-                ~['square']: square result solver status
+        ------
+        fim_info: a FIM dictionary containing the following key:value pairs
+            ~['FIM']: a list containing FIM itself
+            ~[design variable name]: a list of design variable values at each time point
+            ~['Trace']: a scalar number of Trace
+            ~['Determinant']: a scalar number of determinant
+            ~['Condition number:']: a scalar number of condition number
+            ~['Minimal eigen value:']: a scalar number of minimal eigen value
+            ~['Eigen values:']: a list of all eigen values
+            ~['Eigen vectors:']: a list of all eigen vectors
+        solver_info: a solver infomation dictionary containing the following key:value pairs
+            ~['square']: a string of square result solver status
         '''
         self.result = result
         self.doe_result = None
         # create a dict for FIM. It has the same keys as the Jacobian dict.
 
+        # get number of parameters
         no_param = len(self.para_name)
         ### calculate the FIM
         fim = np.zeros((no_param, no_param))
@@ -1348,11 +1385,13 @@ class FIM_result:
 
         if np.linalg.cond(fim) > self.max_condition_number:
             print("Warning: FIM is near singular.")
+            print('The condition number is:', np.linalg.cond(fim), ';')
+            print('A condition number bigger than ', self.max_condition_number, ' is considered near singular.')
 
         # call private methods
         self.__print_FIM_info(fim, dv_set=dv_values)
         if self.result is not None:
-            self.__solver_info()
+            self.__get_solver_info()
 
         # if given store file name, store the FIM
         if (self.store_FIM is not None):
@@ -1362,32 +1401,34 @@ class FIM_result:
         '''
         Extract FIM from an invasive model
 
-        Args:
-            m: model
-            dv_set: design variable value dictionary
-            result: problem solver status by IPOPT
-            obj: chosen from 'det' and 'trace'
-            add_fim: if the given FIM needs to be added. Do not add for optimize_doe().
+        Parameters:
+        -----------
+        m: model
+        dv_set: design variable value dictionary
+        result: problem solver status by IPOPT
+        obj: chosen from 'det' and 'trace'
+        add_fim: if the given FIM needs to be added. Do not add for optimize_doe().
 
         Return:
-            fim_info: a FIM dictionary
-                ~['FIM']: FIM itself
-                ~[design variable name]: design variable values at each time point
-                ~['Trace']: Trace
-                ~['Determinant']: determinant
-                ~['Condition number:']: condition number
-                ~['Minimal eigen value:']: minimal eigen value
-                ~['Eigen values:']: all eigen values
-                ~['Eigen vectors:']: all eigen vectors
-            model_info: model solutions dictionary
-                ~['obj']: objective function value
-                ~['det']: determinant calculated by the model (different from FIM_info['det'] which
-                is calculated by numpy)
-                -['trace']: trace calculated by the model
-                -[design variable name]: design variable solution
-            solver_status: a solver infomation dictionary
-                ~['square']: square result solver status
-                -['doe']: doe result solver status
+        ------
+        fim_info: a FIM dictionary containing the following key:value pairs
+            ~['FIM']: a list of FIM itself
+            ~[design variable name]: a list of design variable values at each time point
+            ~['Trace']: a scalar number of Trace
+            ~['Determinant']: a scalar number of determinant
+            ~['Condition number:']: a scalar number of condition number
+            ~['Minimal eigen value:']: a scalar number of minimal eigen value
+            ~['Eigen values:']: a list of all eigen values
+            ~['Eigen vectors:']: a list of all eigen vectors
+        model_info: model solutions dictionary containing the following key:value pairs
+            ~['obj']: a scalar number of objective function value
+            ~['det']: a scalar number of determinant calculated by the model (different from FIM_info['det'] which
+            is calculated by numpy)
+            -['trace']: a scalar number of trace calculated by the model
+            -[design variable name]: a list of design variable solution
+        solver_status: a solver infomation dictionary containing the following key:value pairs
+            ~['square']: a string of square result solver status
+            -['doe']: a string of doe result solver status
         '''
         self.result = result
         self.obj = obj
@@ -1395,7 +1436,9 @@ class FIM_result:
 
         # Extract FIM infomation
         FIM = np.ones((no_para, no_para))
+        # loop over row
         for n1, name1 in enumerate(self.para_name):
+            # loop over column
             for n2, name2 in enumerate(self.para_name):
                 FIM[n1, n2] = value(m.FIM[name1, name2]) / self.fim_scale_constant_value
 
@@ -1404,14 +1447,14 @@ class FIM_result:
             if (self.prior_FIM is not None):
                 try:
                     FIM = FIM + self.prior_FIM
-                    print('Existed information has been added.')
+                    print('FIM prior has been added.')
                 except:
-                    raise ValueError('Check the shape of prior FIM')
+                    raise ValueError('Prior FIM has shape ', np.shape(self.prior_FIM), ', but expecting shape ', np.shape(FIM))
 
         # call private methods
         self.__print_FIM_info(FIM, dv_set=dv_set)
         self.__solution_info(m, dv_set)
-        self.__solver_info()
+        self.__get_solver_info()
 
         # if given store file name, store the FIM
         if (self.store_FIM is not None):
@@ -1421,20 +1464,22 @@ class FIM_result:
         '''
         using a dictionary to store all FIM information
 
-        Args:
-            FIM: the Fisher Information Matrix, needs to be P.D. and symmetric
-            dv_set: design variable dictionary
+        Parameters:
+        -----------
+        FIM: the Fisher Information Matrix, needs to be P.D. and symmetric
+        dv_set: design variable dictionary
 
         Return:
-            self attributes:
-                ~['FIM']: FIM itself
-                ~[design variable name]: design variable values at each time point
-                ~['Trace']: Trace
-                ~['Determinant']: determinant
-                ~['Condition number:']: condition number
-                ~['Minimal eigen value:']: minimal eigen value
-                ~['Eigen values:']: all eigen values
-                ~['Eigen vectors:']: all eigen vectors
+        ------
+        fim_info: a FIM dictionary containing the following key:value pairs
+            ~['FIM']: a list of FIM itself
+            ~[design variable name]: a list of design variable values at each time point
+            ~['Trace']: a scalar number of Trace
+            ~['Determinant']: a scalar number of determinant
+            ~['Condition number:']: a scalar number of condition number
+            ~['Minimal eigen value:']: a scalar number of minimal eigen value
+            ~['Eigen values:']: a list of all eigen values
+            ~['Eigen vectors:']: a list of all eigen vectors
         '''
         eig = np.linalg.eigvals(FIM)
         self.FIM = FIM
@@ -1467,17 +1512,19 @@ class FIM_result:
         '''
         Solution information. Only for optimization problem
 
-        Args:
-            m: model
-            dv_set: design variable dictionary
+        Parameters:
+        -----------
+        m: model
+        dv_set: design variable dictionary
 
         Return:
-            self attributes: model solved information dictionary
-                ~['obj']: objective function value
-                ~['det']: determinant calculated by the model (different from FIM_info['det'] which
-                is calculated by numpy)
-                -['trace']: trace calculated by the model
-                -[design variable name]: design variable solution
+        ------
+        model_info: model solutions dictionary containing the following key:value pairs
+            ~['obj']: a scalar number of objective function value
+            ~['det']: a scalar number of determinant calculated by the model (different from FIM_info['det'] which
+            is calculated by numpy)
+            -['trace']: a scalar number of trace calculated by the model
+            -[design variable name]: a list of design variable solution
         '''
         self.obj_value = value(m.obj)
         print('Model objective:', self.obj_value)
@@ -1511,12 +1558,15 @@ class FIM_result:
         FIM_store = pd.DataFrame(store_dict)
         FIM_store.to_csv(self.store_FIM, index=False)
 
-    def __solver_info(self):
+    def __get_solver_info(self):
         '''
         Solver information dictionary
 
         Return:
-            self.status: solver status
+        ------
+        solver_status: a solver infomation dictionary containing the following key:value pairs
+            ~['square']: a string of square result solver status
+            -['doe']: a string of doe result solver status
         '''
         print('======problem solver output======')
 
@@ -1538,14 +1588,16 @@ class Grid_Search_Result:
         This class deals with the FIM results from grid search,
         turns them into heatmaps.
 
-        Args:
-            dv_ranges: a dict whose keys are design variable names, values are a list of design variable values to go over
-            FIM_result_list: FIM results list from grid search functions
-            store_optimality_name: a csv file name containing all four optimalities value
-            verbose: if print statements
+        Parameters:
+        -----------
+        dv_ranges: a dict whose keys are design variable names, values are a list of design variable values to go over
+        FIM_result_list: FIM results list from grid search functions
+        store_optimality_name: a csv file name containing all four optimalities value
+        verbose: if print statements
 
         Return:
-            heatmap
+        ------
+        heatmap
         '''
         # design variables
         self.dv_names = list(dv_ranges.keys())
@@ -1618,12 +1670,18 @@ class Grid_Search_Result:
         '''
         draw heatmaps of the three criteria
 
+        Parameters:
+        -----------
         title_text: name of the heatmap, a string
         xlabel_text: x label title, a string, should be the second design varialbe in the dv_ranges
         ylabel_text: y label title, a string, should be the first design variable in the dv_ranges
         font_axes: axis font size
         font_tick: axis tick font size
         log_scale: if True, the result matrix will be scaled by log10
+
+        Note:
+        ----
+        Return 4 heatmaps for A, D, E, Modified E-criteria
         '''
         # Get meshgrids of design variables and results for plotting
 
@@ -1722,39 +1780,19 @@ class Grid_Search_Result:
         ba.set_label('log10(cond(FIM))')
         plt.title(title_text + ' - Modified E-optimality')
         plt.show()
-
-
-def permutations(lst, r=None):
-    '''Function for calculating determinant
-    It generates unrepeatable permutations reordering elements in the given list
-    
-    Argument:
-        lst: a list for permutation 
-        
-    Return:
-        All permutations of this list
-    
-    Adapted from https://stackoverflow.com/questions/58924650/finding-determinant-of-a-nxn-matrix-using-leibniz-formula-on-python
-    '''
-    if len(lst) <= 1:
-        return [lst]
-    templst = []
-    for i in range(len(lst)):
-        part = lst[:i] + lst[i+1:]
-        for j in permutations(part):
-            templst.append(lst[i:i+1] + j)
-    return templst
     
 def sgn(p):
     '''
     Give the signature of a permutation
     
-    Argument:
-        p: the permutation (a list)
+    Parameters:
+    -----------
+    p: the permutation (a list)
         
-    Return: 
-        1 if the number of exchange is an even number 
-        -1 if the number is an odd number 
+    Return:
+    ------
+    1 if the number of exchange is an even number
+    -1 if the number is an odd number
     '''
 
     if len(p) == 1:
@@ -1775,18 +1813,21 @@ def sgn(p):
         return -1  
     
 def simulate_discretize_model(m,NFE,collo=True,initialize=True):
-    ''' Simulation, discretize, and initialize the Pyomo model
+    ''' Simulation, discretize, and initialize the Pyomo model.
+    This is only used with Pyomo.DAE models.
     
-    Arguments:
-        m: Pyomo model
-        NFE: number of finite elements to consider (integer)
-        initialize: if True, initialize the discretized model with the 
-             integrator solution (boolean)
+    Parameters:
+    -----------
+    m: Pyomo model
+    NFE: number of finite elements to consider (integer)
+    initialize: if True, initialize the discretized model with the
+         integrator solution (boolean)
     
     Returns:
-        sim: Simulator object from Pyomo.DAE
-        tsim: Timesteps returned from simulator
-        profiles: Results returned from simulator
+    -------
+    sim: Simulator object from Pyomo.DAE
+    tsim: Timesteps returned from simulator
+    profiles: Results returned from simulator
     '''
     # Simulate the model using casadi
     sim = Simulator(m, package='casadi')
