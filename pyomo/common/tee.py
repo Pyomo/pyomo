@@ -23,8 +23,18 @@ import threading
 import time
 from io import StringIO
 
-_mswindows = sys.platform.startswith('win')
 _poll_interval = 0.0001
+_poll_rampup_limit = 0.099
+# reader polling: number of timeouts with no data before increasing the
+# polling interval
+_poll_rampup = 10
+# polling timeout when waiting to close threads.  This will bail on
+# closing threast after a minimum of 13.1 seconds and a worst case of
+# ~(13.1 * #threads) seconds
+_poll_timeout = 3  # 15 rounds: 0.0001 * 2**15 == 3.2768
+_poll_timeout_deadlock = 200  # 21 rounds: 0.0001 * 2**21 == 209.7152
+
+_mswindows = sys.platform.startswith('win')
 try:
     if _mswindows:
         from msvcrt import get_osfhandle
@@ -370,11 +380,15 @@ class TeeStream(object):
             if not self._threads:
                 break
             _poll *= 2
-            if _poll >= 2:  # bail after a total of 2 seconds * #threads
+            if _poll_timeout <= _poll < 2*_poll_timeout:
                 if in_exception:
                     # We are already processing an exception: no reason
-                    # to trigger another
+                    # to trigger another, nor to deadlock for an extended time
                     break
+                logger.warning(
+                    "Significant delay observed waiting to join reader "
+                    "threads, possible output stream deadlock")
+            elif _poll >= _poll_timeout_deadlock:
                 raise RuntimeError(
                     "TeeStream: deadlock observed joining reader threads")
 
@@ -429,16 +443,23 @@ class TeeStream(object):
         noop = []
         handles = self._handles
         _poll = _poll_interval
-        _fast_poll_ct = 10
+        _fast_poll_ct = _poll_rampup
         new_data = '' # something not None
         while handles:
             if new_data is None:
+                # For performance reasons, we use very aggressive
+                # polling at the beginning (_poll_interval) and then
+                # ramp up to a much more modest polling interval
+                # (_poll_rampup_limit) as the process runs and the
+                # frequency of new data appearing on the pipe slows
                 if _fast_poll_ct:
                     _fast_poll_ct -= 1
                     if not _fast_poll_ct:
                         _poll *= 10
-                        if _poll < 0.095:
-                            _fast_poll_ct = 10
+                        if _poll < _poll_rampup_limit:
+                            # reset the counter (to potentially increase
+                            # the polling interval again)
+                            _fast_poll_ct = _poll_rampup
             else:
                 new_data = None
             if _mswindows:
