@@ -1281,8 +1281,8 @@ class MiscParamTests(unittest.TestCase):
             #self.fail("can't set the value of an unitialized parameter")
         #except AttributeError:
             #pass
-        instance=model.create_instance()
-        instance.a.value=3
+        instance = model.create_instance()
+        instance.a.value = 3
         #try:
             #instance.a.default='2'
             #self.fail("can't set a bad default value")
@@ -1305,6 +1305,8 @@ class MiscParamTests(unittest.TestCase):
             self.fail("can't set a parameter with a bad value")
         except ValueError:
             pass
+        # check that the value was preserved
+        self.assertEqual(value(instance.c[3]), 2)
 
     def test_iter(self):
         model=AbstractModel()
