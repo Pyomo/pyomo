@@ -53,7 +53,7 @@ class TestTeeStream(unittest.TestCase):
             # flush() and short pause should help
             t.STDOUT.write("Hello\nWorld")
             t.STDOUT.flush()
-            time.sleep(tee._poll_interval*10)
+            time.sleep(tee._poll_interval*100)
             t.STDERR.write("interrupting\ncow")
             t.STDERR.flush()
             # For determinism, it is important that the STDERR message
@@ -171,7 +171,7 @@ class TestTeeStream(unittest.TestCase):
     def test_deadlock(self):
         class MockStream(object):
             def write(self, data):
-                time.sleep(0.1)
+                time.sleep(0.2)
 
         _save = tee._poll_timeout, tee._poll_timeout_deadlock
         tee._poll_timeout = tee._poll_interval * 2**5  # 0.0032
