@@ -139,10 +139,10 @@ class redirect_fd(object):
         # or else the new file that points to the original (duplicated)
         # file descriptor
         if self.target_file is not None:
-            setattr(sys, self.std, self.original_file)
             self.target_file.flush()
             self.target_file.close()
             self.target_file = None
+            setattr(sys, self.std, self.original_file)
         # Restore stdout's FD (implicitly closing the FD we opened)
         os.dup2(self.original_fd, self.fd, inheritable=bool(self.std))
         # Close the temporary FD
@@ -186,8 +186,8 @@ class capture_output(object):
 
     def __exit__(self, et, ev, tb):
         if self.fd_redirect is not None:
-            self.fd_redirect[0].__exit__(et, ev, tb)
             self.fd_redirect[1].__exit__(et, ev, tb)
+            self.fd_redirect[0].__exit__(et, ev, tb)
             self.fd_redirect = None
         FAIL = self.tee.STDOUT is not sys.stdout
         self.tee.__exit__(et, ev, tb)
@@ -258,7 +258,6 @@ class _StreamHandle(object):
             self.write_pipe = None
 
     def finalize(self, ostreams):
-        self.close()
         self.decodeIncomingBuffer()
         if ostreams:
             # Turn off buffering for the final write
@@ -337,6 +336,7 @@ class TeeStream(object):
         self._stdout = None
         self._stderr = None
         self._handles = []
+        self._active_handles = []
         self._threads = []
 
     @property
@@ -355,12 +355,22 @@ class TeeStream(object):
         if encoding is None:
             encoding = self.encoding
         handle = _StreamHandle(mode, buffering, encoding, newline)
+        # Note that is it VERY important to close file handles in the
+        # same thread that opens it.  If you don't you can see deadlocks
+        # and a peculiar error ("libgcc_s.so.1 must be installed for
+        # pthread_cancel to work"; see https://bugs.python.org/issue18748)
+        #
+        # To accomplish this, er will keep two handle lists: one is the
+        # set of "active" handles that the (merged reader) thread is
+        # using, and the other the list of all handles so the original
+        # thread can close them after the reader thread terminates.
         if handle.buffering:
-            self._handles.append(handle)
+            self._active_handles.append(handle)
         else:
             # Unbuffered handles should appear earlier in the list so
             # that they get processed first
-            self._handles.insert(0, handle)
+            self._active_handles.insert(0, handle)
+        self._handles.append(handle)
         self._start(handle)
         return handle.write_file
 
@@ -392,8 +402,12 @@ class TeeStream(object):
                 raise RuntimeError(
                     "TeeStream: deadlock observed joining reader threads")
 
+        for h in list(self._handles):
+            h.finalize(self.ostreams)
+
         self._threads.clear()
         self._handles.clear()
+        self._active_handles.clear()
         self._stdout = None
         self._stderr = None
 
@@ -427,7 +441,6 @@ class TeeStream(object):
         while True:
             new_data = os.read(handle.read_pipe, io.DEFAULT_BUFFER_SIZE)
             if not new_data:
-                handle.finalize(self.ostreams)
                 break
             handle.decoder_buffer += new_data
 
@@ -441,7 +454,7 @@ class TeeStream(object):
 
     def _mergedReader(self):
         noop = []
-        handles = self._handles
+        handles = self._active_handles
         _poll = _poll_interval
         _fast_poll_ct = _poll_rampup
         new_data = '' # something not None
@@ -472,7 +485,6 @@ class TeeStream(object):
                             handle.decoder_buffer += new_data
                             break
                     except:
-                        handle.finalize(self.ostreams)
                         handles.remove(handle)
                         new_data = None
                 if new_data is None:
@@ -497,7 +509,6 @@ class TeeStream(object):
                 handle = ready_handles[0]
                 new_data = os.read(handle.read_pipe, io.DEFAULT_BUFFER_SIZE)
                 if not new_data:
-                    handle.finalize(self.ostreams)
                     handles.remove(handle)
                     continue
                 handle.decoder_buffer += new_data
