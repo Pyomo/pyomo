@@ -152,8 +152,12 @@ class _ParamData(ComponentData, NumericValue):
                 num_value=_src_magnitude, from_units=_src_units,
                 to_units=_comp._units)
 
-        self._value = value
-        _comp._validate_value(idx, value, data=self)
+        old_value, self._value = self._value, value
+        try:
+            _comp._validate_value(idx, value, data=self)
+        except:
+            self._value = old_value
+            raise
 
     def __call__(self, exception=True):
         """
@@ -611,11 +615,15 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             obj.set_value(value, index)
             return obj
         else:
-            self._data[index] = value
+            old_value, self._data[index] = self._data[index], value
             # Because we do not have a _ParamData, we cannot rely on the
             # validation that occurs in _ParamData.set_value()
-            self._validate_value(index, value)
-            return value
+            try:
+                self._validate_value(index, value)
+                return value
+            except:
+                self._data[index] = old_value
+                raise
 
     def _setitem_when_not_present(self, index, value, _check_domain=True):
         #
