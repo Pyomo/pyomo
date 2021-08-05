@@ -15,15 +15,24 @@ import os
 
 import pyomo.common.unittest as unittest
 from pyomo.common.errors import ApplicationError
+from pyomo.common.fileutils import this_file_dir
 
 from pyomo.opt.base import UnknownSolver
 from pyomo.opt.base.solvers import SolverFactory
 from pyomo.opt.solver import SystemCallSolver
 
-thisdir = os.path.dirname(os.path.abspath(__file__))
+thisdir = os.path.normpath(this_file_dir())
 exedirname = "exe_dir"
 exedir = os.path.join(thisdir, exedirname)
-exedir_user = exedir.replace(os.path.expanduser("~"), "~", 1)
+user_home = os.path.normpath(os.path.expanduser("~"))
+user_home_pos = exedir.find(user_home)
+exedir_user = exedir
+if user_home_pos >= 0:
+    _test_user_exedir = os.path.join(
+        user_home, exedir[user_home_pos + len(user_home) + 1:])
+    if os.path.samefile(exedir, _test_user_exedir):
+        exedir_user = os.path.join(
+            "~", exedir[user_home_pos + len(user_home) + 1:])
 
 notexe_nopath  = "file_not_executable"
 notexe_abspath = os.path.join(exedir, notexe_nopath)
@@ -225,8 +234,10 @@ class TestSystemCallSolver(unittest.TestCase):
         with SystemCallSolver(type='test') as opt:
             self.assertEqual(id(opt._user_executable), id(None))
             opt.set_executable(isexe_abspath_user)
-            self.assertEqual(opt._user_executable, isexe_abspath)
-            self.assertEqual(opt.executable(), isexe_abspath)
+            self.assertTrue(os.path.samefile(
+                opt._user_executable, isexe_abspath))
+            self.assertTrue(os.path.samefile(
+                opt.executable(), isexe_abspath))
             opt._user_executable = None
             opt.set_executable(isexe_abspath_user, validate=False)
             self.assertEqual(opt._user_executable, isexe_abspath_user)
@@ -281,8 +292,13 @@ class TestSystemCallSolver(unittest.TestCase):
             with SolverFactory(name, executable=isexe_abspath_user) as opt:
                 if isinstance(opt, UnknownSolver):
                     continue
-                self.assertEqual(opt._user_executable, isexe_abspath)
-                self.assertEqual(opt.executable(), isexe_abspath)
+                # Note the user path could be different from our
+                # computed path due to symlinks.  Check that the
+                # executable is the same file.
+                self.assertTrue(os.path.samefile(
+                    opt._user_executable, isexe_abspath))
+                self.assertTrue(os.path.samefile(
+                    opt.executable(), isexe_abspath))
 
 if __name__ == "__main__":
     unittest.main()
