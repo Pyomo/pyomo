@@ -133,6 +133,7 @@ class DependenciesCommand(Command):
 
     def _print_deps(self, deplist):
         implementation_name = sys.implementation.name
+        platform_system = platform.system()
         python_version = '.'.join(platform.python_version_tuple()[:2])
         for entry in deplist:
             dep, _, condition = (_.strip() for _ in entry.partition(';'))
@@ -212,7 +213,7 @@ setup_kwargs = dict(
             #
             # subprocess output is merged more reliably if
             # 'PeekNamedPipe' is available from pywin32
-            'pywin32;platform_system=="Windows"',
+            'pywin32; platform_system=="Windows"',
             #
             # The following optional dependencies are difficult to
             # install on PyPy (binary wheels are not available), so we
