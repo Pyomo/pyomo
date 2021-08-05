@@ -26,7 +26,7 @@ from pyomo.core.expr.expr_common import (
     _ipow, _lt, _le, _eq
 )
 # TODO: update imports of these objects to pull from numeric_types
-from pyomo.core.expr.numeric_types import (
+from pyomo.common.numeric_types import (
     nonpyomo_leaf_types, native_types, native_numeric_types,
     native_integer_types, native_boolean_types, native_logical_types,
     RegisterNumericType, RegisterIntegerType, RegisterBooleanType,

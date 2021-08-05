@@ -14,7 +14,8 @@ import importlib
 import logging
 import sys
 
-from pyomo.common.deprecation import deprecated, deprecation_warning
+from .deprecation import deprecated, deprecation_warning
+from . import numeric_types
 
 class DeferredImportError(ImportError):
     pass
@@ -587,16 +588,15 @@ def _finalize_matplotlib(module, available):
 def _finalize_numpy(np, available):
     if not available:
         return
-    import pyomo.core.expr.numeric_types as _numerictypes
-    _numerictypes.RegisterBooleanType(np.bool_)
+    numeric_types.RegisterBooleanType(np.bool_)
     for t in (np.int_, np.intc, np.intp,
               np.int8, np.int16, np.int32, np.int64,
               np.uint8, np.uint16, np.uint32, np.uint64):
-        _numerictypes.RegisterIntegerType(t)
-        _numerictypes.RegisterBooleanType(t)
+        numeric_types.RegisterIntegerType(t)
+        numeric_types.RegisterBooleanType(t)
     for t in (np.float_, np.float16, np.float32, np.float64, np.ndarray):
-        _numerictypes.RegisterNumericType(t)
-        _numerictypes.RegisterBooleanType(t)
+        numeric_types.RegisterNumericType(t)
+        numeric_types.RegisterBooleanType(t)
 
 
 yaml, yaml_available = attempt_import(
