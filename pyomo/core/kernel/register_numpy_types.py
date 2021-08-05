@@ -54,9 +54,10 @@ for t in native_boolean_types:
 
 
 # Complex
-numpy_complex_names = ['complex_', 'complex64', 'complex128']
+numpy_complex_names = []
 numpy_complex = []
 if _has_numpy:
+    numpy_complex_names.extend(('complex_', 'complex64', 'complex128'))
     for _type_name in numpy_complex_names:
         try:
             _type = getattr(numpy, _type_name)
