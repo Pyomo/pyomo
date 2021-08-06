@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from collections import namedtuple
 from pyomo.common.dependencies import networkx as nx
 from pyomo.contrib.incidence_analysis.common.dulmage_mendelsohn import (
         dulmage_mendelsohn as dm_nx,
@@ -16,6 +17,15 @@ from pyomo.contrib.incidence_analysis.common.dulmage_mendelsohn import (
 This module imports the general Dulmage-Mendelsohn-on-a-graph function
 from "common" and implements an interface for coo_matrix-like objects.
 """
+
+RowPartition = namedtuple(
+        "RowPartition",
+        ["unmatched", "overconstrained", "underconstrained", "square"],
+        )
+ColPartition = namedtuple(
+        "ColPartition",
+        ["unmatched", "underconstrained", "overconstrained", "square"],
+        )
 
 def dulmage_mendelsohn(matrix_or_graph, top_nodes=None, matching=None):
     """
@@ -26,7 +36,13 @@ def dulmage_mendelsohn(matrix_or_graph, top_nodes=None, matching=None):
         # The purpose of handling graphs here is that if we construct NX graphs
         # directly from Pyomo expressions, we can do away with our SciPy
         # dependency (and associated overhead).
+        # In this case, top_nodes should correspond to constraints.
         graph = matrix_or_graph
+        if top_nodes is None:
+            raise ValueError(
+                    "top_nodes must be specified if a graph is provided,"
+                    "\notherwise the result is ambiguous."
+                    )
         partition = dm_nx(graph, top_nodes=top_nodes, matching=matching)
     else:
         # Assume matrix_or_graph is a scipy coo_matrix
@@ -61,4 +77,5 @@ def dulmage_mendelsohn(matrix_or_graph, top_nodes=None, matching=None):
                 # to get values corresponding to indices in user's matrix.
                 )
 
+    partition = (RowPartition(*partition[0]), ColPartition(*partition[1]))
     return partition
