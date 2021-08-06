@@ -12,6 +12,10 @@ from pyomo.common.dependencies import networkx as nx
 from pyomo.contrib.incidence_analysis.common.dulmage_mendelsohn import (
         dulmage_mendelsohn as dm_nx,
         )
+"""
+This module imports the general Dulmage-Mendelsohn-on-a-graph function
+from "common" and implements an interface for coo_matrix-like objects.
+"""
 
 def dulmage_mendelsohn(matrix_or_graph, top_nodes=None, matching=None):
     """
