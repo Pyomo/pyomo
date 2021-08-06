@@ -43,14 +43,17 @@ if _has_numpy:
 for t in native_boolean_types:
     if t.__module__ == 'numpy':
         if t in native_integer_types:
-            numpy_int.append(t)
-            numpy_int_names.append(t.__name__)
+            if t.__name__ not in numpy_int_names:
+                numpy_int.append(t)
+                numpy_int_names.append(t.__name__)
         elif t in native_numeric_types:
-            numpy_float.append(t)
-            numpy_float_names.append(t.__name__)
+            if t.__name__ not in numpy_float_names:
+                numpy_float.append(t)
+                numpy_float_names.append(t.__name__)
         else:
-            numpy_bool.append(t)
-            numpy_bool_names.append(t.__name__)
+            if t.__name__ not in numpy_bool_names:
+                numpy_bool.append(t)
+                numpy_bool_names.append(t.__name__)
 
 
 # Complex
