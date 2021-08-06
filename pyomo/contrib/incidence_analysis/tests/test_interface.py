@@ -819,7 +819,8 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
 
         M, N = len(constraints), len(variables)
 
-        con_dmp, var_dmp = dulmage_mendelsohn(graph)
+        top_nodes = list(range(M))
+        con_dmp, var_dmp = dulmage_mendelsohn(graph, top_nodes=top_nodes)
         con_dmp = tuple([constraints[i] for i in subset] for subset in con_dmp)
         var_dmp = tuple([variables[i-M] for i in subset] for subset in var_dmp)
 
