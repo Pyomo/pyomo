@@ -18,6 +18,13 @@ if networkx_available:
     from networkx.algorithms.components import connected_components
 
 
+"""
+This module implements the coarse Dulmage-Mendelsohn partition on a Networkx
+bipartite graph. It exists in this common directory as it does not depend on
+the rest of the package, or Pyomo except through the import of NetworkX.
+"""
+
+
 def _get_projected_digraph(bg, matching, top_nodes):
     """
     """
