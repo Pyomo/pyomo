@@ -165,8 +165,10 @@ class NumericRange(object):
             # as length-1 ndarrays, we will include a special case that
             # will unpack things that look like single element arrays.
             try:
+                # Note: trap "value[0] is not value" to catch things like
+                # single-character strings
                 if hasattr(value, '__len__') and hasattr(value, '__getitem__') \
-                   and len(value) == 1:
+                   and len(value) == 1 and value[0] is not value:
                     return value[0] in self
             except:
                 pass
