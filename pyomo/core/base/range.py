@@ -175,7 +175,7 @@ class NumericRange(object):
             # See if this class behaves like a "normal" number: both
             # comparable and creatable
             try:
-                if not ( bool(value > 0) ^ bool(value <= 0) ):
+                if not ( bool(value - 0 > 0) ^ bool(value - 0 <= 0) ):
                     return False
                 elif value.__class__(0) != 0 or not value.__class__(0) == 0:
                     return False
