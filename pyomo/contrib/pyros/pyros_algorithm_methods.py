@@ -88,6 +88,7 @@ def ROSolver_iterative_solve(model_data, config):
     if len(master_data.master_model.scenarios[0,0].util.uncertain_params) != len(violation):
         raise ValueError
 
+
     # === Set the nominal uncertain parameters to the violation values
     for i, v in enumerate(violation):
         master_data.master_model.scenarios[0, 0].util.uncertain_params[i].value = v
@@ -107,6 +108,10 @@ def ROSolver_iterative_solve(model_data, config):
                         master_data.master_model.scenarios[0, 0].first_stage_objective +
                         master_data.master_model.scenarios[0, 0].second_stage_objective <= master_data.master_model.zeta )
         master_data.master_model.scenarios[0,0].util.first_stage_variables.append(master_data.master_model.zeta)
+
+    # === Add deterministic constraints to ComponentSet on original so that these become part of separation model
+    master_data.original.util.deterministic_constraints = \
+        ComponentSet(c for c in master_data.original.component_data_objects(Constraint, descend_into=True))
 
     # === Make separation problem model once before entering the solve loop
     separation_model = separation_problem_methods.make_separation_problem(model_data=master_data, config=config)
@@ -236,6 +241,7 @@ def ROSolver_iterative_solve(model_data, config):
         # === Solve Separation Problem
         separation_data.iteration = k
         separation_data.master_nominal_scenario = master_data.master_model.scenarios[0,0]
+
         separation_data.master_model = master_data.master_model
 
         separation_solns, violating_realizations, constr_violations, is_global, \

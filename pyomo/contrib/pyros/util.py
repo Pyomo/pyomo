@@ -340,11 +340,13 @@ def validate_kwarg_inputs(model, config):
 
 def substitute_ssv_in_dr_constraints(model, constraint):
     '''
-    Makes a generate_standard_repn for the dr constraints. Generate new expression with replace_expression to ignore
-    the ssv component (replace with 0?) or build in a loop but skip ssv.
-    Then, replace_expression with substitution_map between ssv and the new expression. Deactivate or del_component the original dr equation.
+    Generate the standard_repn for the dr constraints. Generate new expression with replace_expression to ignore
+    the ssv component.
+    Then, replace_expression with substitution_map between ssv and the new expression.
+    Deactivate or del_component the original dr equation.
     Then, return modified model and do coefficient matching as normal.
     :param model: the working_model
+    :param constraint: an equality constraint from the working model identified to be of the form h(x,z,q) = 0.
     :return:
     '''
     dr_eqns = model.util.decision_rule_eqns
@@ -389,10 +391,8 @@ def is_certain_parameter(uncertain_param_index, config):
     '''
     if config.uncertainty_set.parameter_bounds:
         param_bounds = config.uncertainty_set.parameter_bounds[uncertain_param_index]
-        if math.isclose(a=param_bounds[0], b=param_bounds[1], rel_tol=PARAM_IS_CERTAIN_REL_TOL, abs_tol=PARAM_IS_CERTAIN_ABS_TOL):
-            return True
-        else:
-            return False
+        return math.isclose(a=param_bounds[0], b=param_bounds[1],
+                            rel_tol=PARAM_IS_CERTAIN_REL_TOL, abs_tol=PARAM_IS_CERTAIN_ABS_TOL)
     else:
         return False # cannot be determined without bounds
 
@@ -769,8 +769,14 @@ def identify_objective_functions(model, config):
         elif not vars_in_term:
             const_obj_expr += term
     # convention to add constant objective term to first stage costs
-    m.first_stage_objective = Expression(expr=first_stage_cost_expr + const_obj_expr)
-    m.second_stage_objective = Expression(expr=second_stage_cost_expr)
+    # IFF the const_obj_term does not contain an uncertain param! Else, it is second-stage cost
+    mutable_params_in_const_term = identify_mutable_parameters(expr=const_obj_expr)
+    if any(q in ComponentSet(model.util.uncertain_params) for q in mutable_params_in_const_term):
+        m.first_stage_objective = Expression(expr=first_stage_cost_expr )
+        m.second_stage_objective = Expression(expr=second_stage_cost_expr + const_obj_expr)
+    else:
+        m.first_stage_objective = Expression(expr=first_stage_cost_expr + const_obj_expr)
+        m.second_stage_objective = Expression(expr=second_stage_cost_expr)
     return
 
 
@@ -866,7 +872,7 @@ def output_logger(config, **kwargs):
     if "disclaimer" in kwargs:
         if kwargs["disclaimer"]:
            print("======================================== DISCLAIMER =======================================\n"
-                    "PyROS is still under development. This version is a beta release.\n"
+                    "PyROS is still under development. \n"
                     "Please provide feedback and/or report any issues by opening a Pyomo ticket.\n"
                     "===========================================================================================\n")
     # === ALL LOGGER RETURN MESSAGES

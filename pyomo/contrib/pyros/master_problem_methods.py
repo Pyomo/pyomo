@@ -2,7 +2,7 @@
 Functions for handling the construction and solving of the GRCS master problem via ROSolver
 """
 from pyomo.core.base import (ConcreteModel, Block,
-                             Var, Expression,
+                             Var,
                              Objective, Constraint,
                              ConstraintList)
 from pyomo.opt import TerminationCondition as tc
@@ -17,7 +17,6 @@ from pyomo.contrib.pyros.solve_data import (MasterProblemData,
                                             MasterResult)
 from pyomo.opt.results import check_optimal_termination
 from pyomo.core import TransformationFactory
-from pyomo.contrib.viewer.report import degrees_of_freedom
 import itertools as it
 import os
 from copy import deepcopy
@@ -52,7 +51,7 @@ def solve_master_feasibility_problem(model_data, config):
         raise RuntimeError("NLP solver %s is not available." %
                            config.solver)
     try:
-        results = solver.solve(model, tee=False)
+        results = solver.solve(model, tee=config.tee)
     except ValueError as err:
         if 'Cannot load a SolverResults object with bad status: error' in str(err):
             results.solver.termination_condition = tc.error

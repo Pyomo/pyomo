@@ -129,10 +129,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         """
         Return True if the uncertainty set is nonempty, else False.
         """
-        if self.is_bounded(config):
-            return True
-        else:
-            return False
+        return self.is_bounded(config)
 
     def is_valid(self, config):
         """

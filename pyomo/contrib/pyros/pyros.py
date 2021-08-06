@@ -42,7 +42,7 @@ from pyomo.contrib.pyros.pyros_algorithm_methods import ROSolver_iterative_solve
 from pyomo.contrib.pyros.uncertainty_sets import uncertainty_sets
 from pyomo.core.base import Constraint
 
-__version__ =  "0.1.0 (beta)"
+__version__ =  "1.0.0"
 
 class NonNegIntOrMinusOne(object):
 
@@ -58,7 +58,7 @@ class NonNegIntOrMinusOne(object):
                 "Expected non-negative int, but received %s" % (obj,))
         return ans
 
-class PositiveIntOrMinusOne(object):
+def PositiveIntOrMinusOne():
 
     def __call__(self, obj):
         '''
