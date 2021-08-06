@@ -95,16 +95,6 @@ class DesignOfExperiments:
             if self.mode not in ['simultaneous_finite', 'sequential_finite', 'sequential_sipopt', 'sequential_kaug']:
                 print('Wrong mode. Choose from "simultaneous_finite", "sequential_finite", "0sequential_sipopt", "sequential_kaug"')
 
-        if check_dimension_dv:
-            # input check, only for heatmap
-            # check if there are two design variables and two ranges
-            grid_search_dv_dimension = 0
-            for i in self.dv_name:
-                if i in self.dv_apply_time:
-                    grid_search_dv_dimension += len((self.dv_apply_time[i]))
-            if grid_search_dv_dimension != 2:
-                raise ValueError('Deign variable should be 2')
-
 
 
     def optimize_doe(self,  design_values, if_optimize=True, obj_opt='det',
@@ -552,21 +542,18 @@ class DesignOfExperiments:
         -------
         result_combine: a list of dictionaries, which stores the FIM info from every grid searched.
         '''
-        self.design_ranges = design_ranges
-        self.design_dimension_names = design_dimension_names
-        self.design_control_time = design_control_time
-        self.formula = formula
-        self.mode = mode
-        self.scale_nominal_param_value = scale_nominal_param_value
-        self.scale_constant_value = scale_constant_value
+        #self.formula = formula
+        #self.mode = mode
+        #self.scale_nominal_param_value = scale_nominal_param_value
+        #self.scale_constant_value = scale_constant_value
         # Set the Objective Function to 0 helps solve square problem quickly
         self.obj_opt='zero'
         self.filename = filename
 
         # calculate how much the FIM element is scaled
-        self.fim_scale_constant_value = self.scale_constant_value ** 2
+        self.fim_scale_constant_value = scale_constant_value ** 2
 
-        self.__check_inputs(check_mode=True, check_dimension_dv=False)
+        #self.__check_inputs(check_mode=True, check_dimension_dv=False)
 
         # when defining design space, design variable values are defined as in design_values argument
         # the design var value defined in dv_ranges only applies to control time points given in dv_apply_time
@@ -584,6 +571,7 @@ class DesignOfExperiments:
         total_count = 1
         for i in range(grid_dimension):
             total_count *= len(design_ranges[i])
+        print(total_count, ' design vectors will be searched.')
 
         # generate combinations of design variable values to go over
         search_design_set = product(*design_ranges)
@@ -596,7 +584,7 @@ class DesignOfExperiments:
 
             # update the controlled value of certain time points for certain design variables
             for i in range(grid_dimension):
-                for v, value in enumerate(self.design_control_time[i]):
+                for v, value in enumerate(design_control_time[i]):
                     design_iter[design_dimension_names[i]][value] = list(design_set_iter)[i]
 
             print('=======This is the ', count+1, 'th iteration=======')
@@ -605,18 +593,19 @@ class DesignOfExperiments:
             t_each_begin = time.time()
 
             # call compute_FIM to get FIM
-            result_iter = self.compute_FIM(design_iter, mode=self.mode,
+            result_iter = self.compute_FIM(design_iter, mode=mode,
                                            tee_opt=tee_option,
-                                           scale_nominal_param_value=self.scale_nominal_param_value,
+                                           scale_nominal_param_value=scale_nominal_param_value,
+                                           scale_constant_value = scale_constant_value,
                                            formula=formula, step=step)
 
-            if (self.mode=='simultaneous_finite'):
-                result_iter.extract_FIM(self.m, self.design_timeset, self.square_result, self.obj_opt)
+            if (mode=='simultaneous_finite'):
+                result_iter.extract_FIM(self.m, self.design_timeset, self.square_result, obj_opt)
 
-            elif (self.mode == 'sequential_finite'):
+            elif (mode == 'sequential_finite'):
                 result_iter.calculate_FIM(self.jac, self.design_values)
 
-            elif (self.mode == 'sequential_sipopt'):
+            elif (mode == 'sequential_sipopt'):
                 result_iter.calculate_FIM(self.jac, self.design_values)
 
             t_now = time.time()
@@ -633,13 +622,19 @@ class DesignOfExperiments:
         t_end = time.time()
         print('The whole run takes ', t_end - t_begin, ' s.')
 
+        # For user's access
+        self.all_fim = result_combine
+
+        # Create figure drawing object
+        figure_draw_object = Grid_Search_Result(design_ranges, design_dimension_names, design_control_time, result_combine)
+
         # store results
         if self.filename is not None:
             f = open(filename, 'wb')
             pickle.dump(result_combine, f)
             f.close()
 
-        return result_combine
+        return figure_draw_object
 
     def sensitivity_analysis_1D(self, design_values, design_var_range, sensitivity_step=0.1, compare_opt='D',
                                 mode='sequential_finite', tee_option=False,
@@ -1581,7 +1576,7 @@ class FIM_result:
 
 
 class Grid_Search_Result:
-    def __init__(self, dv_ranges, FIM_result_list, store_optimality_name=None, verbose=True):
+    def __init__(self, design_ranges, design_dimension_names, design_control_time, FIM_result_list, store_optimality_name=None, verbose=True):
         '''
         This class deals with the FIM results from grid search,
         turns them into heatmaps.
@@ -1598,11 +1593,14 @@ class Grid_Search_Result:
         heatmap
         '''
         # design variables
-        self.dv_names = list(dv_ranges.keys())
-        self.dv_ranges = dv_ranges
+        self.design_names = design_dimension_names
+        self.design_ranges = design_ranges
+        self.design_control_time = design_control_time
         self.FIM_result_list = FIM_result_list
-        self.len_range1 = len(dv_ranges[self.dv_names[0]])
-        self.len_range2 = len(dv_ranges[self.dv_names[1]])
+
+
+        #self.len_range1 = len(dv_ranges[self.dv_names[0]])
+        #self.len_range2 = len(dv_ranges[self.dv_names[1]])
         self.store_optimality_name = store_optimality_name
         self.verbose = verbose
 
@@ -1663,6 +1661,16 @@ class Grid_Search_Result:
             column_names = [self.dv_names[0], self.dv_names[1], 'A', 'D', 'E', 'ME']
             store_df = pd.DataFrame(store_all_results, columns=column_names)
             store_df.to_csv(self.store_optimality_name, index=False)
+
+    def curve1D(self, sensitivity_ranges):
+        '''
+        Draw 1D sensitivity analysis. It can be applied to results of any dimensions, but requires design variable values in other dimensions be fixed.
+        Returns:
+
+        '''
+        return None
+
+    def heatmap3D(self):
 
     def heatmap(self, title_text, xlabel_text, ylabel_text, font_axes=16, font_tick=14, log_scale=True):
         '''
