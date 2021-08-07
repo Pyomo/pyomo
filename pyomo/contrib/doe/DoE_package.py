@@ -362,7 +362,10 @@ class DesignOfExperiments:
                     mod = self.discretize_model(mod)
 
                 # fix model DOF
-                mod = self.__fix_design(mod, self.design_values, fix_opt=True)
+                if self.mode =='sequential_sipopt':
+                    mod = self.__fix_design(mod, self.design_values, fix_opt=True)
+
+                mod.obj = Objective(rule=0.0, sense=minimize)
 
                 # extract (discretized) time
                 time_set = []
@@ -371,6 +374,11 @@ class DesignOfExperiments:
 
                 # add sIPOPT perturbation parameters
                 mod = self.__add_parameter(mod, perturb=pa)
+
+                if self.mode == 'sequential_kaug':
+                    self.__solve_doe(mod, fix=True)
+
+
 
                 # parameter name lists for sipopt
                 list_original = []
@@ -400,15 +408,25 @@ class DesignOfExperiments:
 
                         else:
                             # if it is not fixed, record its perturbed value
-                            perturb_value = eval('m_sipopt.sens_sol_state_1[m_sipopt.' + j + '[0,' + str(t) + ']]')
+                            if self.mode =='sequential_sipopt':
+                                perturb_value = eval('m_sipopt.sens_sol_state_1[m_sipopt.' + j + '[0,' + str(t) + ']]')
+                            else:
+                                perturb_value = eval('m_sipopt.' + j + '[0,' + str(t) + ']()')
                         perturb_mea.append(perturb_value)
 
                         # base case values
-                        base_value = eval('m_sipopt.'+j+'[0,' + str(t) + '].value')
+                        if self.mode =='sequential_sipopt':
+                            base_value = eval('m_sipopt.'+j+'[0,' + str(t) + '].value')
+                        else:
+                            base_value = value(eval('mod.' + j + '[0,' + str(t) + ']'))
+
                         base_mea.append(base_value)
+
                 # store extracted measurements
                 all_perturb_measure.append(perturb_mea)
                 all_base_measure.append(base_mea)
+                print(all_perturb_measure)
+                print(all_base_measure)
 
 
             # After collecting outputs from all scenarios, calculate sensitivity
@@ -1671,6 +1689,7 @@ class Grid_Search_Result:
         return None
 
     def heatmap3D(self):
+        return None
 
     def heatmap(self, title_text, xlabel_text, ylabel_text, font_axes=16, font_tick=14, log_scale=True):
         '''
