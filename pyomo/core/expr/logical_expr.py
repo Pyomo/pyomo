@@ -81,8 +81,8 @@ class RangedExpression(_LinearOperatorExpression):
     }
 
     def __init__(self, args, strict):
-        super(RangedExpression,self).__init__(args)
-        self._strict = strict
+        super(RangedExpression, self).__init__(args)
+        self._strict = RangedExpression.STRICT[strict]
 
     def nargs(self):
         return 3
@@ -269,8 +269,7 @@ def inequality(lower=None, body=None, upper=None, strict=False):
         return InequalityExpression((lower, upper), strict)
     if upper is None:
         return InequalityExpression((lower, body), strict)
-    return RangedExpression((lower, body, upper),
-                            RangedExpression.STRICT[strict])
+    return RangedExpression((lower, body, upper), strict)
 
 
 class EqualityExpression(_LinearOperatorExpression):
