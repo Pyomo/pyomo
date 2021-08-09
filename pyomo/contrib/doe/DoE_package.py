@@ -361,7 +361,7 @@ class DesignOfExperiments:
                 if self.discretize_model is not None:
                     mod = self.discretize_model(mod)
 
-                # fix model DOF
+                # For sIPOPT, fix model DOF
                 if self.mode =='sequential_sipopt':
                     mod = self.__fix_design(mod, self.design_values, fix_opt=True)
 
@@ -375,10 +375,9 @@ class DesignOfExperiments:
                 # add sIPOPT perturbation parameters
                 mod = self.__add_parameter(mod, perturb=pa)
 
+                # solve the square problem with the original parameters for k_aug mode, since k_aug does not calculate these
                 if self.mode == 'sequential_kaug':
                     self.__solve_doe(mod, fix=True)
-
-
 
                 # parameter name lists for sipopt
                 list_original = []
@@ -403,8 +402,6 @@ class DesignOfExperiments:
                         # check if this variable is fixed
                         if (measure_var[0,t].fixed == True):
                             perturb_value = value(measure_var[0,t])
-                            #if self.verbose:
-                            #    print(measure_var[0, t], ' is fixed')
 
                         else:
                             # if it is not fixed, record its perturbed value
@@ -531,7 +528,7 @@ class DesignOfExperiments:
                         tee_option=False, scale_nominal_param_value=False, scale_constant_value=1,
                         filename=None, formula='central', step=0.001):
         '''
-        Enumerate through full factorial grid search for two design variables;
+        Enumerate through full factorial grid search for design variables;
         solve square problems sequentially to compute FIMs.
         It calculates FIM with sensitivity information from four ways:
         1, Simultaneous: Calculate a multiple scenario model. Sensitivity info estimated by finite difference
@@ -558,12 +555,8 @@ class DesignOfExperiments:
 
         Return:
         -------
-        result_combine: a list of dictionaries, which stores the FIM info from every grid searched.
+        figure_draw_object: a combined result object of class Grid_search_result
         '''
-        #self.formula = formula
-        #self.mode = mode
-        #self.scale_nominal_param_value = scale_nominal_param_value
-        #self.scale_constant_value = scale_constant_value
         # Set the Objective Function to 0 helps solve square problem quickly
         self.obj_opt='zero'
         self.filename = filename
@@ -571,14 +564,12 @@ class DesignOfExperiments:
         # calculate how much the FIM element is scaled
         self.fim_scale_constant_value = scale_constant_value ** 2
 
-        #self.__check_inputs(check_mode=True, check_dimension_dv=False)
-
         # when defining design space, design variable values are defined as in design_values argument
         # the design var value defined in dv_ranges only applies to control time points given in dv_apply_time
         grid_dimension = len(design_ranges)
 
         # to store all FIM results
-        result_combine = []
+        result_combine = {}
 
         # time 0
         t_begin = time.time()
@@ -635,7 +626,8 @@ class DesignOfExperiments:
                 print('Estimated remaining time: %.4f seconds' % ((t_now-t_begin)/(count+1)*(total_count-count-1)))
             count += 1
 
-            result_combine.append(result_iter)
+            # the combined result object are organized as a dictionary, keys are a tuple of the design variable values, values are a result object
+            result_combine[tuple(design_set_iter)] = result_iter
 
         t_end = time.time()
         print('The whole run takes ', t_end - t_begin, ' s.')
@@ -1596,19 +1588,17 @@ class FIM_result:
 class Grid_Search_Result:
     def __init__(self, design_ranges, design_dimension_names, design_control_time, FIM_result_list, store_optimality_name=None, verbose=True):
         '''
-        This class deals with the FIM results from grid search,
-        turns them into heatmaps.
+        This class deals with the FIM results from grid search, providing A, D, E, ME-criteria results for each design variable.
+        Can choose to draw 1D sensitivity curves and 2D heatmaps.
 
         Parameters:
         -----------
-        dv_ranges: a dict whose keys are design variable names, values are a list of design variable values to go over
-        FIM_result_list: FIM results list from grid search functions
+        design_ranges: a dict whose keys are design variable names, values are a list of design variable values to go over
+        design_dimension_names: a list of design variables names
+        design_control_time: a list of design control timesets
+        FIM_result_list: a dictionary containing FIM results, keys are a tuple of design variable values, values are FIM result objects
         store_optimality_name: a csv file name containing all four optimalities value
         verbose: if print statements
-
-        Return:
-        ------
-        heatmap
         '''
         # design variables
         self.design_names = design_dimension_names
@@ -1616,102 +1606,272 @@ class Grid_Search_Result:
         self.design_control_time = design_control_time
         self.FIM_result_list = FIM_result_list
 
-
-        #self.len_range1 = len(dv_ranges[self.dv_names[0]])
-        #self.len_range2 = len(dv_ranges[self.dv_names[1]])
         self.store_optimality_name = store_optimality_name
         self.verbose = verbose
 
-    def __extract_criteria(self):
+    def extract_criteria(self):
         '''
-        Extract criteria values from each FIM info class
+        Extract design criteria values for every 'grid' (design variable combination) searched.
+
+        Returns:
+        -------
+        self.store_all_results_dataframe: a pandas dataframe with columns as design variable names and A, D, E, ME-criteria names.
+            Each row contains the design variable value for this 'grid', and the 4 design criteria value for this 'grid'.
         '''
-        # initialize the resulted matrix
-        # A-opt results in numpy array
-        cri_a = np.zeros((self.len_range1, self.len_range2))
-        # D-opt
-        cri_d = np.zeros((self.len_range1, self.len_range2))
-        # E-opt
-        cri_e = np.zeros((self.len_range1, self.len_range2))
-        # Modified E-opt
-        cri_e_cond = np.zeros((self.len_range1, self.len_range2))
 
         # a list store all results
         store_all_results = []
 
-        # loop over design space
-        for no_i, i in enumerate(self.dv_ranges[self.dv_names[0]]):
-            for no_j, j in enumerate(self.dv_ranges[self.dv_names[1]]):
-                if self.verbose:
-                    print('At ', self.dv_names[0], '=', i, ', ', self.dv_names[1], '= ', j, ':')
+        # generate combinations of design variable values to go over
+        search_design_set = product(*self.design_ranges)
 
-                # map the FIM info class to the overall list
-                fim_result_no = no_j + no_i * self.len_range2
-                fim_iter = self.FIM_result_list[fim_result_no]
+        # loop over deign value combinations
+        for design_set_iter in search_design_set:
+            if self.verbose:
+                print('Design variable: ', self.design_names)
+                print('Value          : ', design_set_iter)
 
-                if self.verbose:
-                    print('We found the class where ', self.dv_names[0], '=', fim_iter.dv_info[self.dv_names[0]], ',',
-                          self.dv_names[1], '=', fim_iter.dv_info[self.dv_names[1]])
+            # locate this grid in the dictionary of combined results
+            result_object_asdict = {k:v for k,v in self.FIM_result_list.items() if k==design_set_iter}
+            # an result object is identified by a tuple of the design variable value it uses
+            result_object_iter = result_object_asdict[design_set_iter]
 
-                cri_a[no_i][no_j] = fim_iter.trace
-                cri_d[no_i][no_j] = fim_iter.det
-                cri_e[no_i][no_j] = fim_iter.min_eig
-                cri_e_cond[no_i][no_j] = fim_iter.cond
+            # store results as a row in the dataframe
+            store_iteration_result = list(design_set_iter)
+            store_iteration_result.append(result_object_iter.trace)
+            store_iteration_result.append(result_object_iter.det)
+            store_iteration_result.append(result_object_iter.min_eig)
+            store_iteration_result.append(result_object_iter.cond)
 
-                # store results
-                store_iteration_result = [i, j, fim_iter.trace, fim_iter.det, fim_iter.min_eig, fim_iter.cond]
-                store_all_results.append(store_iteration_result)
+            # add this row to the dataframe
+            store_all_results.append(store_iteration_result)
 
-                if self.verbose:
-                    print('A-optimal result is', cri_a[no_i][no_j], 'D-optimal result is', cri_d[no_i][no_j],
-                          'E-optimal(minimal eigenvalue) result is', cri_e[no_i][no_j],
-                          'Modified E-optimal (condition number) result is', cri_e_cond[no_i][no_j])
+        # generate column names for the dataframe
+        column_names = []
+        # this count is for repeated design variable names which can happen in dynamic problems
+        count = 0
+        for i in self.design_names:
+            # if a name is in the design variable name list more than once, name them as name_itself, name_itself2, ...
+            # this is because it can be errornous when we extract values from a dataframe with two columns having the same name
+            if i in column_names:
+                count += 1
+                i = i+str(count+1)
+            column_names.append(i)
+
+        # Each design criteria has a column to store values
+        column_names.append('A')
+        column_names.append('D')
+        column_names.append('E')
+        column_names.append('ME')
+        # generate the dataframe
+        self.store_all_results_dataframe = pd.DataFrame(store_all_results, columns=column_names)
+        # if needs to store the values
+        if self.store_optimality_name is not None:
+            store_df.to_csv(self.store_optimality_name, index=False)
+
+
+    def figure_drawing(self, fixed_design_dimensions, sensitivity_dimension, title_text, xlabel_text, ylabel_text, font_axes=16, font_tick=14, log_scale=True):
+        '''
+        Extract results needed for drawing figures from the overall result dataframe.
+        Draw 1D sensitivity curve or 2D heatmap.
+        It can be applied to results of any dimensions, but requires design variable values in other dimensions be fixed.
+
+        Parameters:
+        ----------
+        fixed_design_dimensions: a dictionary, keys are the design variable names to be fixed, values are the value of it to be fixed.
+        sensitivity_dimension: a list of design variable names to draw figures.
+            If only one name is given, a 1D sensitivity curve is drawn
+            if two names are given, a 2D heatmap is drawn.
+        title_text: name of the figure, a string
+        xlabel_text: x label title, a string.
+            In a 1D sensitivity curve, it is the design variable by which the curve is drawn.
+            In a 2D heatmap, it should be the second design varialbe in the design_ranges
+        ylabel_text: y label title, a string.
+            A 1D sensitivity cuve does not need it. In a 2D heatmap, it should be the first design variable in the dv_ranges
+        font_axes: axes label font size
+        font_tick: tick label font size
+        log_scale: if True, the result matrix will be scaled by log10
+
+        Returns:
+        --------
+        None
+        '''
+        self.fixed_design_names = list(fixed_design_dimensions.keys())
+        self.fixed_design_values = list(fixed_design_dimensions.values())
+        self.sensitivity_dimension = sensitivity_dimension
+
+        assert (len(self.fixed_design_names)+len(self.sensitivity_dimension)==len(self.design_names)), \
+            'Error: All dimensions except for those the figures are drawn by should be fixed.'
+
+        assert (len(self.sensitivity_dimension) is in [1,2]), 'Error: Either 1D or 2D figures can be drawn.'
+
+        # generate a combination of logic sentences to filter the results of the DOF needed.
+        if len(self.fixed_design_names) != 0:
+            filter = ''
+            for i in range(len(self.fixed_design_names)):
+                filter += '(self.store_all_results_dataframe['
+                filter += str(self.fixed_design_names[i])
+                filter += ']=='
+                filter += str(self.fixed_design_values[i])
+                filter += ')'
+                if i != (len(self.fixed_design_names)-1):
+                    filter += '&'
+            # extract results with other dimensions fixed
+            figure_result_data = self.store_all_results_dataframe.loc[eval(filter)]
+        # if there is no other fixed dimensions
+        else:
+            figure_result_data = self.store_all_results_dataframe
+
+        # add results for figures
+        self.figure_result_data = figure_result_data
+
+        # if one design variable name is given as DOF, draw 1D sensitivity curve
+        if (len(sensitivity_dimension) == 1):
+            self.__curve1D(title_text, xlabel_text, font_axes=16, font_tick=14, log_scale=True)
+        # if two design variable names are given as DOF, draw 2D heatmaps
+        elif (len(sensitivity_dimension) == 2):
+            self.__heatmap(title_text, xlabel_text, ylabel_text, font_axes=16, font_tick=14, log_scale=True)
+
+
+    def __curve1D(self, title_text, xlabel_text, font_axes=16, font_tick=14, log_scale=True):
+        '''
+        Draw 1D sensitivity curves for all design criteria
+
+        Parameters:
+        ----------
+        title_text: name of the figure, a string
+        xlabel_text: x label title, a string.
+            In a 1D sensitivity curve, it is the design variable by which the curve is drawn.
+        font_axes: axes label font size
+        font_tick: tick label font size
+        log_scale: if True, the result matrix will be scaled by log10
+
+        Returns:
+        --------
+        4 Figures of 1D sensitivity curves for each criteria
+        '''
+
+        # extract the range of the DOF design variable
+        x_range = self.figure_result_data[self.sensitivity_dimension[0]].values.tolist()
+
+        # decide if the results are log scaled
+        if log_scale:
+            y_range_A = np.log10(self.figure_result_data['A'].values.tolist())
+            y_range_D = np.log10(self.figure_result_data['D'].values.tolist())
+            y_range_E = np.log10(self.figure_result_data['E'].values.tolist())
+            y_range_ME = np.log10(self.figure_result_data['ME'].values.tolist())
+        else:
+            y_range_A = self.figure_result_data['A'].values.tolist()
+            y_range_D = self.figure_result_data['D'].values.tolist()
+            y_range_E = self.figure_result_data['E'].values.tolist()
+            y_range_ME = self.figure_result_data['ME'].values.tolist()
+
+        # Draw A-optimality
+        fig = plt.figure()
+        plt.rc('axes', titlesize=font_axes)
+        plt.rc('axes', labelsize=font_axes)
+        plt.rc('xtick', labelsize=font_tick)
+        plt.rc('ytick', labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {'mathtext.default': 'regular'}
+        #plt.rcParams.update(params)
+        ax.plot(x_range, y_range_A)
+        ax.scatter(x_range, y_range_A)
+        ax.set_ylabel('$log_{10}$ Trace')
+        ax.set_xlabel(xlabel_text)
+        plt.title(title_text + ' - A optimality')
+        plt.show()
+
+        # Draw D-optimality
+        fig = plt.figure()
+        plt.rc('axes', titlesize=font_axes)
+        plt.rc('axes', labelsize=font_axes)
+        plt.rc('xtick', labelsize=font_tick)
+        plt.rc('ytick', labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {'mathtext.default': 'regular'}
+        # plt.rcParams.update(params)
+        ax.plot(x_range, y_range_D)
+        ax.scatter(x_range, y_range_D)
+        ax.set_ylabel('$log_{10}$ Determinant')
+        ax.set_xlabel(xlabel_text)
+        plt.title(title_text + ' - D optimality')
+        plt.show()
+
+        # Draw E-optimality
+        fig = plt.figure()
+        plt.rc('axes', titlesize=font_axes)
+        plt.rc('axes', labelsize=font_axes)
+        plt.rc('xtick', labelsize=font_tick)
+        plt.rc('ytick', labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {'mathtext.default': 'regular'}
+        # plt.rcParams.update(params)
+        ax.plot(x_range, y_range_E)
+        ax.scatter(x_range, y_range_E)
+        ax.set_ylabel('$log_{10}$ Minimal eigenvalue')
+        ax.set_xlabel(xlabel_text)
+        plt.title(title_text + ' - E optimality')
+        plt.show()
+
+        # Draw Modified E-optimality
+        fig = plt.figure()
+        plt.rc('axes', titlesize=font_axes)
+        plt.rc('axes', labelsize=font_axes)
+        plt.rc('xtick', labelsize=font_tick)
+        plt.rc('ytick', labelsize=font_tick)
+        ax = fig.add_subplot(111)
+        params = {'mathtext.default': 'regular'}
+        # plt.rcParams.update(params)
+        ax.plot(x_range, y_range_ME)
+        ax.scatter(x_range, y_range_ME)
+        ax.set_ylabel('$log_{10}$ Condition number')
+        ax.set_xlabel(xlabel_text)
+        plt.title(title_text + ' - Modified E optimality')
+        plt.show()
+
+    def __heatmap(self, title_text, xlabel_text, ylabel_text, font_axes=16, font_tick=14, log_scale=True):
+        '''
+        Draw 2D heatmaps for all design criteria
+
+        Parameters:
+        ----------
+        title_text: name of the figure, a string
+        xlabel_text: x label title, a string.
+            In a 2D heatmap, it should be the second design varialbe in the design_ranges
+        ylabel_text: y label title, a string.
+            In a 2D heatmap, it should be the first design variable in the dv_ranges
+        font_axes: axes label font size
+        font_tick: tick label font size
+        log_scale: if True, the result matrix will be scaled by log10
+
+        Returns:
+        --------
+        4 Figures of 2D heatmap for each criteria
+        '''
+
+        # achieve the design variable ranges this figure needs
+        x_range = list(set(self.figure_result_data[self.sensitivity_dimension[0]].values.tolist()))
+        y_range = list(set(self.figure_result_data[self.sensitivity_dimension[1]].values.tolist()))
+
+        # extract the design criteria values
+        A_range = self.figure_result_data['A'].values.tolist()
+        D_range = self.figure_result_data['D'].values.tolist()
+        E_range = self.figure_result_data['E'].values.tolist()
+        ME_range = self.figure_result_data['ME'].values.tolist()
+
+        # reshape the design criteria values for heatmaps
+        cri_a = np.asarray(A_range).reshape(len(x_range), len(y_range))
+        cri_d = np.asarray(D_range).reshape(len(x_range), len(y_range))
+        cri_e = np.asarray(E_range).reshape(len(x_range), len(y_range))
+        cri_e_cond = np.asarray(ME_range).reshape(len(x_range), len(y_range))
 
         self.cri_a = cri_a
         self.cri_d = cri_d
         self.cri_e = cri_e
         self.cri_e_cond = cri_e_cond
-        # give user access to all results
-        self.all_result = store_all_results
 
-        # store optimality values
-        if self.store_optimality_name is not None:
-            column_names = [self.dv_names[0], self.dv_names[1], 'A', 'D', 'E', 'ME']
-            store_df = pd.DataFrame(store_all_results, columns=column_names)
-            store_df.to_csv(self.store_optimality_name, index=False)
-
-    def curve1D(self, sensitivity_ranges):
-        '''
-        Draw 1D sensitivity analysis. It can be applied to results of any dimensions, but requires design variable values in other dimensions be fixed.
-        Returns:
-
-        '''
-        return None
-
-    def heatmap3D(self):
-        return None
-
-    def heatmap(self, title_text, xlabel_text, ylabel_text, font_axes=16, font_tick=14, log_scale=True):
-        '''
-        draw heatmaps of the three criteria
-
-        Parameters:
-        -----------
-        title_text: name of the heatmap, a string
-        xlabel_text: x label title, a string, should be the second design varialbe in the dv_ranges
-        ylabel_text: y label title, a string, should be the first design variable in the dv_ranges
-        font_axes: axis font size
-        font_tick: axis tick font size
-        log_scale: if True, the result matrix will be scaled by log10
-
-        Note:
-        ----
-        Return 4 heatmaps for A, D, E, Modified E-criteria
-        '''
-        # Get meshgrids of design variables and results for plotting
-
-        self.__extract_criteria()
-
+        # decide if log scaled
         if log_scale:
             hes_a = np.log10(self.cri_a)
             hes_e = np.log10(self.cri_e)
@@ -1723,9 +1883,11 @@ class Grid_Search_Result:
             hes_d = self.cri_d
             hes_e2 = self.cri_e_cond
 
-        xLabel = self.dv_ranges[self.dv_names[0]]
-        yLabel = self.dv_ranges[self.dv_names[1]]
+        # set heatmap x,y ranges
+        xLabel = x_range
+        yLabel = y_range
 
+        # A-optimality
         fig = plt.figure()
         plt.rc('axes', titlesize=font_axes)
         plt.rc('axes', labelsize=font_axes)
@@ -1746,6 +1908,7 @@ class Grid_Search_Result:
         plt.title(title_text + ' - A optimality')
         plt.show()
 
+        # D-optimality
         fig = plt.figure()
         plt.rc('axes', titlesize=font_axes)
         plt.rc('axes', labelsize=font_axes)
@@ -1766,6 +1929,7 @@ class Grid_Search_Result:
         plt.title(title_text + ' - D optimality')
         plt.show()
 
+        # E-optimality
         fig = plt.figure()
         plt.rc('axes', titlesize=font_axes)
         plt.rc('axes', labelsize=font_axes)
@@ -1786,6 +1950,7 @@ class Grid_Search_Result:
         plt.title(title_text + ' - E optimality')
         plt.show()
 
+        # modified E-optimality
         fig = plt.figure()
         plt.rc('axes', titlesize=font_axes)
         plt.rc('axes', labelsize=font_axes)
@@ -1805,6 +1970,7 @@ class Grid_Search_Result:
         ba.set_label('log10(cond(FIM))')
         plt.title(title_text + ' - Modified E-optimality')
         plt.show()
+
     
 def sgn(p):
     '''
