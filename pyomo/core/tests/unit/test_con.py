@@ -24,6 +24,7 @@ import pyomo.common.unittest as unittest
 from pyomo.environ import ConcreteModel, AbstractModel, Var, Constraint, \
     ConstraintList, Param, RangeSet, Set, Expression, value, \
     simple_constraintlist_rule, simple_constraint_rule, inequality
+from pyomo.core.expr.current import SumExpression
 from pyomo.core.expr import logical_expr
 from pyomo.core.base.constraint import _GeneralConstraintData
 
@@ -142,13 +143,23 @@ class TestConstraintCreation(unittest.TestCase):
         def rule(model):
             return (model.x, model.y, None)
         model.c = Constraint(rule=rule)
-        self.assertRaises(ValueError, model.create_instance)
+        # We now recognize this as a valid inequality
+        #self.assertRaises(ValueError, model.create_instance)
+        instance = model.create_instance()
+        self.assertEqual(instance.c.lower, None)
+        self.assertIsInstance(instance.c.body, SumExpression)
+        self.assertEqual(instance.c.upper, 0)
 
         model = self.create_model(abstract=True)
         def rule(model):
             return (None, model.y, model.z)
         model.c = Constraint(rule=rule)
-        self.assertRaises(ValueError, model.create_instance)
+        # We now recognize this as a valid inequality
+        #self.assertRaises(ValueError, model.create_instance)
+        instance = model.create_instance()
+        self.assertEqual(instance.c.lower, None)
+        self.assertIsInstance(instance.c.body, SumExpression)
+        self.assertEqual(instance.c.upper, 0)
 
     def test_tuple_construct_2sided_inequality(self):
         model = self.create_model()
@@ -166,13 +177,29 @@ class TestConstraintCreation(unittest.TestCase):
         def rule(model):
             return (model.x, model.y, 1)
         model.c = Constraint(rule=rule)
-        self.assertRaises(ValueError, model.create_instance)
+        instance = model.create_instance()
+        with self.assertRaisesRegex(
+                ValueError, "Constraint 'c' is a Ranged Inequality "
+                "with a variable lower bound"):
+            instance.c.lower
+        self.assertIs(instance.c.body, instance.y)
+        self.assertEqual(instance.c.upper, 1)
+        instance.x.fix(3)
+        self.assertEqual(value(instance.c.lower), 3)
 
         model = self.create_model(abstract=True)
         def rule(model):
             return (0, model.y, model.z)
         model.c = Constraint(rule=rule)
-        self.assertRaises(ValueError, model.create_instance)
+        instance = model.create_instance()
+        self.assertEqual(instance.c.lower, 0)
+        self.assertIs(instance.c.body, instance.y)
+        with self.assertRaisesRegex(
+                ValueError, "Constraint 'c' is a Ranged Inequality "
+                "with a variable upper bound"):
+            instance.c.upper
+        instance.z.fix(3)
+        self.assertEqual(value(instance.c.upper), 3)
 
     def test_expr_construct_equality(self):
         model = self.create_model()
@@ -361,21 +388,35 @@ class TestConstraintCreation(unittest.TestCase):
     def test_nondata_bounds(self):
         model = ConcreteModel()
         model.c = Constraint()
+        model.v = Var([1,2,3])
         model.e1 = Expression()
         model.e2 = Expression()
         model.e3 = Expression()
-        with self.assertRaises(ValueError):
-            model.c.set_value((model.e1, model.e2, model.e3))
-        model.e1.expr = 1.0
-        model.e2.expr = 1.0
-        model.e3.expr = 1.0
-        with self.assertRaises(ValueError):
-            model.c.set_value((model.e1, model.e2, model.e3))
-        model.p1 = Param(mutable=True)
-        model.p2 = Param(mutable=True)
-        model.c.set_value((model.p1, model.e1, model.p2))
-        model.e1.expr = None
-        model.c.set_value((model.p1, model.e1, model.p2))
+        model.c.set_value((model.e1, model.e2, model.e3))
+        self.assertIsNone(model.c._lower)
+        self.assertIsNone(model.c._body)
+        self.assertIsNone(model.c._upper)
+        self.assertIs(model.c.lower, model.e1)
+        self.assertIs(model.c.body, model.e2)
+        self.assertIs(model.c.upper, model.e3)
+        model.e1.expr = 1
+        model.e2.expr = 2
+        model.e3.expr = 3
+        self.assertEqual(value(model.c.lower), 1)
+        self.assertEqual(value(model.c.body), 2)
+        self.assertEqual(value(model.c.upper), 3)
+        model.e1 = model.v[1]
+        model.e2 = model.v[2]
+        model.e3 = model.v[3]
+        with self.assertRaisesRegex(
+                ValueError, "Constraint 'c' is a Ranged Inequality "
+                "with a variable lower bound"):
+            model.c.lower
+        self.assertIs(model.c.body.expr, model.v[2])
+        with self.assertRaisesRegex(
+                ValueError, "Constraint 'c' is a Ranged Inequality "
+                "with a variable upper bound"):
+            model.c.upper
 
     # make sure we can use a mutable param that
     # has not been given a value in the upper bound
@@ -629,8 +670,9 @@ class TestSimpleCon(unittest.TestCase):
         ans = ans <= 1
         model.c = Constraint(expr=ans)
 
-        #self.assertRaises(ValueError, model.c)
-        self.assertEqual(model.c(),None)
+        with self.assertRaisesRegex(
+                ValueError, "No value for uninitialized NumericValue object x"):
+            value(model.c)
         model.x = 2
         self.assertEqual(model.c(), 2)
         self.assertEqual(value(model.c.body), 2)
@@ -1327,8 +1369,10 @@ class MiscConTests(unittest.TestCase):
         model.x = Var()
         model.y = Var()
         model.z = Var()
-        model.o = Constraint(rule=rule1)
-
+        model.c = Constraint(rule=rule1)
+        self.assertEqual(model.c.lower, 0)
+        self.assertIs(model.c.body, model.x)
+        self.assertEqual(model.c.upper, 0)
         #
         def rule1(model):
             return (model.y,model.x,model.z)
@@ -1336,8 +1380,15 @@ class MiscConTests(unittest.TestCase):
         model.x = Var()
         model.y = Var()
         model.z = Var()
-        model.o = Constraint(rule=rule1)
-        self.assertRaises(ValueError, model.create_instance)
+        model.c = Constraint(rule=rule1)
+        instance = model.create_instance()
+        with self.assertRaisesRegex(ValueError, "Constraint 'c' is a Ranged "
+                                    "Inequality with a variable lower bound"):
+            instance.c.lower
+        self.assertIs(instance.c.body, instance.x)
+        with self.assertRaisesRegex(ValueError, "Constraint 'c' is a Ranged "
+                                    "Inequality with a variable upper bound"):
+            instance.c.upper
         #
 
     def test_expression_constructor_coverage(self):
