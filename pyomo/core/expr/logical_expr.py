@@ -54,7 +54,6 @@ import operator
 #
 #-------------------------------------------------------
 
-
 class RangedExpression(_LinearOperatorExpression):
     """
     Ranged expressions, which define relations with a lower and upper bound::
@@ -69,6 +68,17 @@ class RangedExpression(_LinearOperatorExpression):
 
     __slots__ = ('_strict',)
     PRECEDENCE = 9
+
+    # Shared tuples for the most common RangedExpression objects encountered
+    # in math programming.  Creating a single (shared) tuple saves memory
+    STRICT = {
+        False: (False, False),
+        True: (True, True),
+        (True, True): (True, True),
+        (False, False): (False, False),
+        (True, False): (True, False),
+        (False, True): (False, True),
+    }
 
     def __init__(self, args, strict):
         super(RangedExpression,self).__init__(args)
@@ -250,7 +260,8 @@ def inequality(lower=None, body=None, upper=None, strict=False):
         return InequalityExpression((lower, upper), strict)
     if upper is None:
         return InequalityExpression((lower, body), strict)
-    return RangedExpression((lower, body, upper), (strict, strict))
+    return RangedExpression((lower, body, upper),
+                            RangedExpression.STRICT[strict])
 
 
 class EqualityExpression(_LinearOperatorExpression):
