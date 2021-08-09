@@ -19,7 +19,7 @@ import logging
 import traceback
 
 logger = logging.getLogger('pyomo.core')
-from pyomo.common.errors import PyomoException
+from pyomo.common.errors import PyomoException, DeveloperError
 from pyomo.common.deprecation import deprecation_warning
 from .numvalue import (
     native_types,
