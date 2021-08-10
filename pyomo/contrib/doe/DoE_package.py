@@ -38,13 +38,13 @@ class DesignOfExperiments:
         
         # parameters
         self.param_init = param_init
-        self.param = list(param_init.keys())
-        self.param_v = list(param_init.values())
+        self.param_name = list(param_init.keys())
+        self.param_value = list(param_init.values())
         # design variable name
         self.design_timeset = design_variable_timepoints
-        self.dv_name = list(self.design_timeset.keys())
+        self.design_name = list(self.design_timeset.keys())
         # the control time point for each design variable
-        self.dv_time = list(self.design_timeset.values())
+        self.design_time = list(self.design_timeset.values())
         # model output (measurement) name
         self.measurement_variables = measurement_variables
         # model measurement time
@@ -67,22 +67,22 @@ class DesignOfExperiments:
         # if print statements
         self.verbose = verbose
         
-    def __check_inputs(self, check_mode=False, check_dimension_dv=False):
+    def __check_inputs(self, check_mode=False):
         '''Check if inputs are consistent
 
         Parameters
         ----------
         check_mode: check FIM calculation mode
-        check_dimension_dv: if the number of design variable is checked for heatmap
         '''
-        if self.obj_opt not in ['det', 'trace', 'zero']:
+        if self.objective_option not in ['det', 'trace', 'zero']:
             raise ValueError('Error: Objective function should be chosen from "det", "zero" and "trace"')
 
         if self.formula not in ['central', 'forward', 'backward', None]:
             raise ValueError('Error: Finite difference scheme should be chosen from "central", "forward", "backward" and "none".')
 
         if self.prior_FIM is not None:
-            assert (np.shape(self.prior_FIM)[0] == np.shape(self.prior_FIM)[1]), 'Prior information should be a n*n matrix.'
+            assert (np.shape(self.prior_FIM)[0] == np.shape(self.prior_FIM)[1]), \
+                'Expect prior information matrix shape: ['+str(len(self.param_name))+','+str(len(self.param_name)) +']'
 
         if self.scale_nominal_param_value:
             print('Sensitivity information is scaled by its corresponding parameter nominal value.')
@@ -91,14 +91,13 @@ class DesignOfExperiments:
             print('Sensitivity information is scaled by constant ', self.scale_constant_value, ' times itself.')
 
         if check_mode:
-            # finite or sipopt needs to be chosen
             if self.mode not in ['simultaneous_finite', 'sequential_finite', 'sequential_sipopt', 'sequential_kaug']:
                 print('Wrong mode. Choose from "simultaneous_finite", "sequential_finite", "0sequential_sipopt", "sequential_kaug"')
 
 
 
-    def optimize_doe(self,  design_values, if_optimize=True, obj_opt='det',
-                     scale_nominal_param_value=False, scale_constant_value=1, if_cho=False, L_LB = 1E-10, L_initial=None,
+    def optimize_doe(self,  design_values, if_optimize=True, objective_option='det',
+                     scale_nominal_param_value=False, scale_constant_value=1, if_Cholesky=False, L_LB = 1E-10, L_initial=None,
                      formula='central', step=0.001, check=True):
         '''
         Optimize DOE problem with design variables being the decisions.
@@ -111,10 +110,10 @@ class DesignOfExperiments:
         -----------
         design_values: initial point for optimization, a dict whose keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
         if_optimize: if True, continue to do optimization. else, just run square problem with given design variable values
-        obj_opt: supporting maximizing the 'det' determinant or the 'trace' trace of the FIM
+        objective_option: supporting maximizing the 'det' determinant or the 'trace' trace of the FIM
         scale_nominal_param_value: if scale Jacobian by the corresponding parameter nominal value
         scale_constant_value: how many order of magnitudes the Jacobian value is scaled by. Use when the Jac or FIM value is too small
-        if_cho: if true, cholesky decomposition is used for Objective function (to optimize determinant).
+        if_Cholesky: if true, cholesky decomposition is used for Objective function (to optimize determinant).
             L_LB: if FIM is P.D., the diagonal element should be positive, so we can set a LB like 1E-10
             L_initial: initialize the L
         formula: Finite difference formula, choose from 'central', 'forward', 'backward', None
@@ -138,10 +137,10 @@ class DesignOfExperiments:
         # store inputs in object
         self.design_values = design_values
         self.optimize = if_optimize
-        self.obj_opt = obj_opt
+        self.objective_option = objective_option
         self.scale_nominal_param_value = scale_nominal_param_value
         self.scale_constant_value = scale_constant_value
-        self.cho_opt = if_cho
+        self.Cholesky_option = if_Cholesky
         self.L_LB = L_LB
         self.L_initial = L_initial
         self.formula = formula
@@ -155,7 +154,7 @@ class DesignOfExperiments:
         # check if inputs are valid
         # simultaneous mode does not need to check mode and dimension of design variables
         if check:
-            self.__check_inputs(check_mode=False, check_dimension_dv=False)
+            self.__check_inputs(check_mode=False)
 
         # build the large DOE pyomo model
         m = self.__create_doe_model()
@@ -166,15 +165,15 @@ class DesignOfExperiments:
         # result_square: solver result
         result_square = self.__solve_doe(m, fix=True)
 
-        analysis_square = FIM_result(self.param, prior_FIM=self.prior_FIM, scale_constant_value=self.scale_constant_value)
-        analysis_square.extract_FIM(m, self.design_timeset, result_square, obj=obj_opt)
+        analysis_square = FIM_result(self.param_name, prior_FIM=self.prior_FIM, scale_constant_value=self.scale_constant_value)
+        analysis_square.extract_FIM(m, self.design_timeset, result_square, obj=objective_option)
 
         if self.optimize:
             # solve problem with DOF then
             result_doe = self.__solve_doe(m, fix=False)
 
-            analysis_optimize = FIM_result(self.param, prior_FIM=self.prior_FIM)
-            analysis_optimize.extract_FIM(m, self.design_timeset, result_doe, obj=obj_opt)
+            analysis_optimize = FIM_result(self.param_name, prior_FIM=self.prior_FIM)
+            analysis_optimize.extract_FIM(m, self.design_timeset, result_doe, obj=objective_option)
 
             return analysis_square, analysis_optimize
 
@@ -184,7 +183,7 @@ class DesignOfExperiments:
 
     def compute_FIM(self, design_values, mode='sequential_finite', FIM_store_name=None, specified_prior=None,
                     tee_opt=True, scale_nominal_param_value=False, scale_constant_value=1, formula='central', step=0.01,
-                    if_Cho=False, L_LB=1E-10, L_initial=None):
+                    if_Cholesky=False, L_LB=1E-10, L_initial=None):
         '''
         This function solves a square Pyomo model with fixed design variables to compute the FIM.
         The problem is structured in one of the four following modes:
@@ -209,7 +208,7 @@ class DesignOfExperiments:
         step: Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
 
         Cholesky option:
-        if_Cho: if true, Cholesky decomposition is used for Objective function (to optimize determinant).
+        if_Cholesky: if true, Cholesky decomposition is used for Objective function (to optimize determinant).
         L_LB: if FIM is positive definite, the diagonal element should be positive, so we can set a LB like 1E-10
         L_initial: initialize the L
 
@@ -228,10 +227,10 @@ class DesignOfExperiments:
         # This method only solves square problem
         self.optimize = False
         # Set the Objective Function to 0 helps solve square problem quickly
-        self.obj_opt = 'zero'
+        self.objective_option = 'zero'
         self.tee_opt = tee_opt
 
-        self.cho_opt = if_Cho
+        self.Cholesky_option = if_Cholesky
         self.L_LB = L_LB
         self.L_initial = L_initial
 
@@ -240,7 +239,7 @@ class DesignOfExperiments:
         self.fim_scale_constant_value = self.scale_constant_value ** 2
 
         # check inputs valid
-        self.__check_inputs(check_mode=True, check_dimension_dv=False)
+        self.__check_inputs(check_mode=True)
 
         # if using simultaneous model
         if (self.mode == 'simultaneous_finite'):
@@ -255,7 +254,7 @@ class DesignOfExperiments:
             else:
                 prior_in_use = specified_prior
 
-            FIM_analysis = FIM_result(self.param, prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
+            FIM_analysis = FIM_result(self.param_name, prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
             # add the formed simultaneous model to the object so that users can have access
             self.m = m
@@ -264,7 +263,7 @@ class DesignOfExperiments:
             return FIM_analysis
 
         elif self.mode=='sequential_finite':
-            no_para = len(self.param)
+            no_para = len(self.param_name)
 
             # if using sequential model
             # call generator function to get scenario dictionary
@@ -306,7 +305,7 @@ class DesignOfExperiments:
                 output_record[no_s] = output_combine
 
             # After collecting outputs from all scenarios, calculate sensitivity
-            for para in self.param:
+            for para in self.param_name:
                 # extract involved scenario No. for each parameter from scenario class
                 involved_s = scena_gen.scenario_para[para]
                 # each parameter has two involved scenarios
@@ -329,7 +328,7 @@ class DesignOfExperiments:
             else:
                 prior_in_use = specified_prior
 
-            FIM_analysis = FIM_result(self.param, prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
+            FIM_analysis = FIM_result(self.param_name, prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
             # Store the Jacobian information for access by users
             self.jac = jac
@@ -350,7 +349,7 @@ class DesignOfExperiments:
             jac={}
 
             # loop over parameters
-            for pa in range(len(self.param)):
+            for pa in range(len(self.param_name)):
                 perturb_mea = []
                 base_mea = []
 
@@ -382,7 +381,7 @@ class DesignOfExperiments:
                 # parameter name lists for sipopt
                 list_original = []
                 list_perturb = []
-                for ele in self.param:
+                for ele in self.param_name:
                     list_original.append(eval('mod.'+ele+'[0]'))
                 for elem in self.perturb_names:
                     list_perturb.append(eval('mod.'+elem+'[0]'))
@@ -390,7 +389,6 @@ class DesignOfExperiments:
                 # solve model
                 if self.mode =='sequential_sipopt':
                     m_sipopt = sensitivity_calculation('sipopt', mod, list_original, list_perturb, tee=self.tee_opt, solver_options='ma57')
-                # TODO: add k_aug solver
                 else:
                     m_sipopt = sensitivity_calculation('k_aug', mod, list_original, list_perturb, tee=True)
 
@@ -427,7 +425,7 @@ class DesignOfExperiments:
 
 
             # After collecting outputs from all scenarios, calculate sensitivity
-            for count, para in enumerate(self.param):
+            for count, para in enumerate(self.param_name):
                 list_jac = []
                 for i in range(len(all_perturb_measure[0])):
                     if self.scale_nominal_param_value:
@@ -445,7 +443,7 @@ class DesignOfExperiments:
                 prior_in_use = specified_prior
 
             # Assemble and analyze results
-            FIM_analysis = FIM_result(self.param, prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
+            FIM_analysis = FIM_result(self.param_name, prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
             self.jac = jac
 
@@ -483,12 +481,12 @@ class DesignOfExperiments:
         self.scale_nominal_param_value = scale_nominal_param_value
         self.scale_constant_value = scale_constant_value
         # Set the Objective Function to 0 helps solve square problem quickly
-        self.obj_opt = 'zero'
+        self.objective_option = 'zero'
 
         # calculate how much the FIM element is scaled by a constant number
         self.fim_scale_constant_value = self.scale_constant_value ** 2
 
-        self.__check_inputs(check_mode=True, check_dimension_dv=False)
+        self.__check_inputs(check_mode=True)
 
         # store all results object list
         result_object_list = []
@@ -513,9 +511,9 @@ class DesignOfExperiments:
                                            formula=formula, step=step)
 
             if (self.mode == 'simultaneous_finite'):
-                result_iter.extract_FIM(self.m, self.design_timeset, self.square_result, self.obj_opt, add_fim=True)
+                result_iter.extract_FIM(self.m, self.design_timeset, self.square_result, self.objective_option, add_fim=True)
 
-            elif (self.mode in ['sequential_finite', 'sequential_sipopt']):
+            elif (self.mode in ['sequential_finite', 'sequential_sipopt', 'sequential_kaug']):
                 result_iter.calculate_FIM(self.jac, self.design_values)
 
             # attach these results to the store list
@@ -558,7 +556,7 @@ class DesignOfExperiments:
         figure_draw_object: a combined result object of class Grid_search_result
         '''
         # Set the Objective Function to 0 helps solve square problem quickly
-        self.obj_opt='zero'
+        self.objective_option='zero'
         self.filename = filename
 
         # calculate how much the FIM element is scaled
@@ -609,12 +607,9 @@ class DesignOfExperiments:
                                            formula=formula, step=step)
 
             if (mode=='simultaneous_finite'):
-                result_iter.extract_FIM(self.m, self.design_timeset, self.square_result, obj_opt)
+                result_iter.extract_FIM(self.m, self.design_timeset, self.square_result, objective_option)
 
-            elif (mode == 'sequential_finite'):
-                result_iter.calculate_FIM(self.jac, self.design_values)
-
-            elif (mode == 'sequential_sipopt'):
+            elif (mode in ['sequential_finite', 'sequential_sipopt', 'sequential_kaug']):
                 result_iter.calculate_FIM(self.jac, self.design_values)
 
             t_now = time.time()
@@ -646,101 +641,6 @@ class DesignOfExperiments:
 
         return figure_draw_object
 
-    def sensitivity_analysis_1D(self, design_values, design_var_range, sensitivity_step=0.1, compare_opt='D',
-                                mode='sequential_finite', tee_option=False,
-                                scale_nominal_param_value=False, scale_constant_value=1,
-                                formula='central', step=0.001):
-        '''
-        This method is used for 1D sensitivity analysis.
-        TODO: Let's decide if we are gonna keep this. This seems not necessary to this package.
-        Parameters:
-        -----------
-        design_values: a dict whose keys are design variable names,
-                        values are a dict whose keys are time point and values are the design variable value at that time point
-        design_var_range: a dict, the key is the design variable name to conduct analysis,
-                        the value is a list [Lower bound, Upper bound] for this sensitivity analysis
-        sensitivity_step: the interval of the design range. For e.g., 0.2 in [2,3], then design variable is computed at [2,2.2,2.4,2.6,2.8]
-        compare_opt: which design criteria is to compare. Choose from 'A', 'D', 'E', 'ME'
-        mode: use Mode='sequential_finite', 'simultaneous_finite', 'sequential_sipopt', 'sequential_kaug'
-        tee_option: if IPOPT console output is printed
-        scale_nominal_param_value: if True, the parameters are scaled by its own nominal value in param_init
-        scale_constant_value: how many order of magnitudes the Jacobian value is scaled by. Use when the Jac or FIM value is too small
-        formula: choose from 'central', 'forward', 'backward', None
-        step: Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
-
-        Returns:
-        --------
-        result_list: a list of the specified optimality value
-        '''
-
-        self.design_values = design_values
-        self.formula = formula
-        self.mode = mode
-        self.scale_nominal_param_value = scale_nominal_param_value
-        self.scale_constant_value = scale_constant_value
-        # Set the Objective Function to 0 helps solve square problem quickly
-        self.obj_opt = 'zero'
-
-        # calculate how much the FIM element is scaled
-        self.fim_scale_constant_value = self.scale_constant_value ** 2
-
-        self.__check_inputs(check_mode=True, check_dimension_dv=False)
-
-        # get the name and the range of the design variable to conduct analysis
-        vary_dv_name = list(design_var_range.keys())
-        vary_range_list = list(design_var_range.values())
-        vary_range = np.arange(vary_range_list[0][0], vary_range_list[0][1], step=sensitivity_step)
-        if self.verbose:
-            print('Sensitivity analysis is for ', vary_dv_name, ' at the range ', vary_range_list)
-            print('At the points:', vary_range)
-
-        dv_time_set = list(design_values[vary_dv_name[0]].keys())
-
-        # store the criteria value of every run
-        result_list= []
-        # loop over the test points
-        for i in range(len(vary_range)):
-            if self.verbose:
-                print('This is the ',i,'-th iteration')
-            design_value_list = design_values.copy()
-            for t in dv_time_set:
-                design_value_list[vary_dv_name[0]][t] = vary_range[i]
-            if self.verbose:
-                print('Design variables for this run:', design_value_list)
-
-            # compute square problems
-            result_iter = self.compute_FIM(design_value_list, mode=self.mode,
-                                           tee_opt=tee_option,
-                                           scale_nominal_param_value=self.scale_nominal_param_value,
-                                           formula=formula, step=step)
-
-            if (self.mode == 'simultaneous_finite'):
-                result_iter.extract_FIM(self.m, self.design_timeset, self.square_result, self.obj_opt)
-
-            elif (self.mode in ['sequential_finite','sequential_sipopt']):
-                result_iter.calculate_FIM(self.jac, self.design_values)
-
-            # decide which design criteria is the user asked for
-            if compare_opt == 'A':
-                result_list.append(result_iter.trace)
-
-            elif compare_opt =='D':
-                result_list.append(result_iter.det)
-
-            elif compare_opt =='E':
-                result_list.append(result_iter.min_eig)
-
-            elif compare_opt =='ME':
-                result_list.append(result_iter.cond)
-
-        sensi_result_dict = {}
-        for i in range(len(result_list)):
-            sensi_result_dict[vary_range[i]] = result_list[i]
-
-        if self.verbose:
-            print('The result list:', result_list)
-        return sensi_result_dict
-
 
     def __create_doe_model(self):
         '''
@@ -754,11 +654,11 @@ class DesignOfExperiments:
 
         self.optimize: if True, solve the problem unfixing the design variables. if False, solve the problem as a
         square problem
-        self.obj_opt: choose from 'det' or 'trace'. Optimization problem maximizes determinant or trace.
+        self.objective_option: choose from 'det' or 'trace'. Optimization problem maximizes determinant or trace.
         self.scale_nominal_param_value: if True, scale FIM but not scale Jacobian. This toggle can be opened for better performance when the
         problem is poorly scaled.
         self.tee_opt: if True, print IPOPT console output
-        self.cho_opt: if true, cholesky decomposition is used for Objective function (to optimize determinant). If true, determinant will not be calculated.
+        self.Cholesky_option: if true, cholesky decomposition is used for Objective function (to optimize determinant). If true, determinant will not be calculated.
             self.L_LB: if FIM is P.D., the diagonal element should be positive, so we can set a LB like 1E-10
             self.L_initial: initialize the L
         self.formula: choose from 'central', 'forward', 'backward', None
@@ -766,7 +666,7 @@ class DesignOfExperiments:
 
         Return:
         -------
-        m: the solved DOE model
+        m: the DOE model
         '''
         # call generator function to get scenario dictionary
         scena_gen = Scenario_generator(self.param_init, formula=self.formula, step=self.step, store=True)
@@ -784,8 +684,8 @@ class DesignOfExperiments:
             time_set.append(value(t))
 
         # create parameter, measurement, time and measurement time set
-        m.para_set = Set(initialize=self.param)
-        param_name = self.param
+        m.para_set = Set(initialize=self.param_name)
+        param_name = self.param_name
         m.y_set = Set(initialize=self.measurement_variables)
         m.t_set = Set(initialize=time_set)
         m.tmea_set = Set(initialize=self.measurement_timeset)
@@ -800,8 +700,8 @@ class DesignOfExperiments:
                 raise ValueError('Warning: Measure timepoints should be in the time list.')
 
         # check if control time points are in the time set
-        for d in range(len(self.dv_name)):
-            for t in self.dv_time[d]:
+        for d in range(len(self.design_name)):
+            for t in self.design_time[d]:
                 if not (t in m.t):
                     raise ValueError('Warning: Control timepoints should be in the time list.')
 
@@ -817,26 +717,26 @@ class DesignOfExperiments:
                 return 0
         m.FIM = Var(m.para_set, m.para_set, initialize=identity_matrix)
 
-        if self.obj_opt=='trace':
+        if self.objective_option=='trace':
             # Trace of FIM
             m.trace = Var(initialize=1, within=NonNegativeReals)
-        elif self.obj_opt=='det':
+        elif self.objective_option=='det':
             # Determinant of FIM
             m.det = Var(initialize=0.5, within=NonNegativeReals)
-        elif (self.obj_opt != 'zero'):
+        elif (self.objective_option != 'zero'):
             raise ValueError('Undefined objective function type. Available options are "trace" and "det".')
 
-
+        # reformulate the L matrix initial point to a dictionary
         if self.L_initial is not None:
             dict_cho={}
             for i, bu in enumerate(m.para_set):
                 for j, un in enumerate(m.para_set):
                     dict_cho[(bu,un)] = self.L_initial[i][j]
-
+        # use the L dictionary to initialize L matrix
         def init_cho(m,i,j):
             return dict_cho[(i,j)]
 
-        if self.cho_opt:
+        if self.Cholesky_option:
             # Define elements of Cholesky decomposition matrix as Pyomo variables and either
             # Initialize with L in L_initial
             if self.L_initial is not None:
@@ -949,18 +849,18 @@ class DesignOfExperiments:
         # Only giving the objective function when there's Degree of freedom. Make OBJ=0 when it's a square problem, which helps converge.
         if self.optimize:
             # if cholesky, calculating L and evaluate the OBJ with Cholesky decomposition
-            if self.cho_opt:
+            if self.Cholesky_option:
                 m.cholesky_cons = Constraint(m.para_set, m.para_set, rule=cholesky_imp)
                 m.obj = Objective(expr=2*sum(log(m.L_ele[j,j]) for j in m.para_set), sense=maximize)
             # if not cholesky but determinant, calculating det and evaluate the OBJ with det 
-            elif (self.obj_opt=='det'):
+            elif (self.objective_option=='det'):
                 m.det_rule =  Constraint(rule=det_general)
                 m.obj = Objective(expr=log(m.det), sense=maximize)
             # if not determinant or cholesky, calculating the OBJ with trace
-            elif (self.obj_opt=='trace'):
+            elif (self.objective_option=='trace'):
                 m.trace_rule = Constraint(rule=trace_calc)
                 m.obj = Objective(expr=log(m.trace), sense=maximize)
-            elif (self.obj_opt=='zero'):
+            elif (self.objective_option=='zero'):
                 m.obj = Objective(expr=0)
         else:
             m.obj = Objective(expr=0)
@@ -982,8 +882,8 @@ class DesignOfExperiments:
         m: model
         '''
         # loop over the design variables and time index and to fix values specified in design_val
-        for d, dname in enumerate(self.dv_name):
-            for t, time in enumerate(self.dv_time[d]):
+        for d, dname in enumerate(self.design_name):
+            for t, time in enumerate(self.design_time[d]):
                 newvar = eval('m.' + dname + '[' + str(time) + ']')
                 fix_v = design_val[dname][time]
                 if fix_opt:
@@ -1033,13 +933,13 @@ class DesignOfExperiments:
         perturb: which parameter to perturb
         '''
         # model parameters perturbation, backward disturb
-        param_backward = self.param_v.copy()
+        param_backward = self.param_value.copy()
         # perturb parameter
         param_backward[perturb] *= (1-self.step)
 
         # generate sIPOPT perturbed parameter names
-        param_perturb_names = self.param.copy()
-        for x, xname in enumerate(self.param):
+        param_perturb_names = self.param_name.copy()
+        for x, xname in enumerate(self.param_name):
             param_perturb_names[x] = xname+'_pert'
         if self.verbose:
             print('perturb names are:', param_perturb_names)
@@ -1703,10 +1603,12 @@ class Grid_Search_Result:
         assert (len(self.fixed_design_names)+len(self.sensitivity_dimension)==len(self.design_names)), \
             'Error: All dimensions except for those the figures are drawn by should be fixed.'
 
-        assert (len(self.sensitivity_dimension) is in [1,2]), 'Error: Either 1D or 2D figures can be drawn.'
+        assert (len(self.sensitivity_dimension) in [1,2]), 'Error: Either 1D or 2D figures can be drawn.'
 
         # generate a combination of logic sentences to filter the results of the DOF needed.
         if len(self.fixed_design_names) != 0:
+            if self.verbose:
+                print( self.fixed_design_names, 'is/are fixed.')
             filter = ''
             for i in range(len(self.fixed_design_names)):
                 filter += '(self.store_all_results_dataframe['
@@ -1727,9 +1629,13 @@ class Grid_Search_Result:
 
         # if one design variable name is given as DOF, draw 1D sensitivity curve
         if (len(sensitivity_dimension) == 1):
+            if self.verbose:
+                print('1D sensitivity curve is plotted with ', self.sensitivity_dimension[0], '.')
             self.__curve1D(title_text, xlabel_text, font_axes=16, font_tick=14, log_scale=True)
         # if two design variable names are given as DOF, draw 2D heatmaps
         elif (len(sensitivity_dimension) == 2):
+            if self.verbose:
+                print('2D heatmap is plotted with ', self.sensitivity_dimension, '.')
             self.__heatmap(title_text, xlabel_text, ylabel_text, font_axes=16, font_tick=14, log_scale=True)
 
 
