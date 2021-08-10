@@ -1,5 +1,5 @@
-Pyomo Interface to z3 SMT Sat Solver
-====================================
+z3 SMT Sat Solver Interface
+===========================
 
 The z3 Satisfiability Solver interface can convert pyomo variables and expressions for
 use with the z3 Satisfiability Solver

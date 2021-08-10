@@ -26,7 +26,7 @@ from pyomo.core.base.misc import (apply_indexed_rule,
                                   tabular_writer)
 from pyomo.core.base.numvalue import (NumericValue,
                                       as_numeric)
-from pyomo.core.base.util import is_functor
+from pyomo.core.base.initializer import Initializer
 
 logger = logging.getLogger('pyomo.core')
 
@@ -146,23 +146,18 @@ class _GeneralExpressionDataImpl(_ExpressionData):
         expr       The expression owned by this data.
     """
 
-    __pickle_slots__ = ('_expr', '_is_owned')
-
-    # any derived classes need to declare these as their slots,
-    # but ignore them in their __getstate__ implementation
-    __expression_slots__ = __pickle_slots__
+    __pickle_slots__ = ('_expr',)
 
     __slots__ = ()
 
     def __init__(self, expr=None):
         self._expr = as_numeric(expr) if (expr is not None) else None
-        self._is_owned = True
 
     def create_node_with_local_data(self, values):
         """
-        Construct a simple expression after constructing the 
+        Construct a simple expression after constructing the
         contained expression.
-   
+
         This class provides a consistent interface for constructing a
         node, which is used in tree visitor scripts.
         """
@@ -173,12 +168,13 @@ class _GeneralExpressionDataImpl(_ExpressionData):
 
     def __getstate__(self):
         state = super(_GeneralExpressionDataImpl, self).__getstate__()
-        for i in _GeneralExpressionDataImpl.__expression_slots__:
+        for i in _GeneralExpressionDataImpl.__pickle_slots__:
             state[i] = getattr(self, i)
         return state
 
-    def __setstate__(self, state):
-        super(_GeneralExpressionDataImpl, self).__setstate__(state)
+    # Note: because NONE of the slots on this class need to be edited,
+    #       we don't need to implement a specialized __setstate__
+    #       method.
 
     #
     # Abstract Interface
@@ -223,7 +219,7 @@ class _GeneralExpressionData(_GeneralExpressionDataImpl,
         _component  The expression component.
     """
 
-    __slots__ = _GeneralExpressionDataImpl.__expression_slots__
+    __slots__ = _GeneralExpressionDataImpl.__pickle_slots__
 
     def __init__(self, expr=None, component=None):
         _GeneralExpressionDataImpl.__init__(self, expr)
@@ -232,7 +228,8 @@ class _GeneralExpressionData(_GeneralExpressionDataImpl,
                           else None
 
 
-@ModelComponentFactory.register("Named expressions that can be used in other expressions.")
+@ModelComponentFactory.register(
+    "Named expressions that can be used in other expressions.")
 class Expression(IndexedComponent):
     """
     A shared expression container, which may be defined over a index.
@@ -245,8 +242,8 @@ class Expression(IndexedComponent):
     """
 
     _ComponentDataClass = _GeneralExpressionData
-    NoConstraint    = (1000,)
-    Skip            = (1000,)
+    # This seems like a copy-paste error, and should be renamed/removed
+    NoConstraint = IndexedComponent.Skip
 
     def __new__(cls, *args, **kwds):
         if cls != Expression:
@@ -257,24 +254,24 @@ class Expression(IndexedComponent):
             return IndexedExpression.__new__(IndexedExpression)
 
     def __init__(self, *args, **kwds):
-        self._init_rule = kwds.pop('rule', None)
-        self._init_expr = kwds.pop('initialize', None)
-        self._init_expr = kwds.pop('expr', self._init_expr)
-        if is_functor(self._init_expr) and \
-           (not isinstance(self._init_expr, NumericValue)):
-            raise TypeError(
-                "A callable type that is not a Pyomo "
-                "expression can not be used to initialize "
-                "an Expression object. Use 'rule' to initalize "
-                "with function types.")
-        if (self._init_rule is not None) and \
-           (self._init_expr is not None):
+        _init = tuple(
+            arg for arg in
+            (kwds.pop(_arg, None) for _arg in ('rule', 'expr', 'initialize'))
+            if arg is not None
+        )
+        if len(_init) == 1:
+            _init = _init[0]
+        elif not _init:
+            _init = None
+        else:
             raise ValueError(
-                "Both a rule and an expression can not be "
-                "used to initialized an Expression object")
+                "Duplicate initialization: Expression() only "
+                "accepts one of 'rule=', 'expr=', and 'initialize='")
 
         kwds.setdefault('ctype', Expression)
         IndexedComponent.__init__(self, *args, **kwds)
+
+        self.rule = Initializer(_init)
 
     def _pprint(self):
         return (
@@ -334,64 +331,74 @@ class Expression(IndexedComponent):
         for index, new_value in new_values.items():
             self._data[index].set_value(new_value)
 
-    def _getitem_when_not_present(self, index):
-        # TBD: Is this desired behavior?  I can see implicitly setting
-        # an Expression if it was not originally defined, but I am less
-        # convinced that implicitly creating an Expression (like what
-        # works with a Var) makes sense.  [JDS 25 Nov 17]
-        return self._setitem_when_not_present(index, None)
+    def _getitem_when_not_present(self, idx):
+        if self.rule is None:
+            _init = None
+            # TBD: Is this desired behavior?  I can see implicitly setting
+            # an Expression if it was not originally defined, but I am less
+            # convinced that implicitly creating an Expression (like what
+            # works with a Var) makes sense.  [JDS 25 Nov 17]
+            #raise KeyError(idx)
+        else:
+            _init = self.rule(self.parent_block(), idx)
+        obj = self._setitem_when_not_present(idx, _init)
+        #if obj is None:
+        #    raise KeyError(idx)
+        return obj
 
     def construct(self, data=None):
         """ Apply the rule to construct values in this set """
+        if self._constructed:
+            return
+        self._constructed = True
 
+        timer = ConstructionTimer(self)
         if is_debug_set(logger):
             logger.debug(
                 "Constructing Expression, name=%s, from data=%s"
                 % (self.name, str(data)))
 
-        if self._constructed:
-            return
-        timer = ConstructionTimer(self)
-        self._constructed = True
+        rule = self.rule
+        try:
+            # We do not (currently) accept data for constructing Constraints
+            index = None
+            assert data is None
 
-        _init_expr = self._init_expr
-        _init_rule = self._init_rule
-        #
-        # We no longer need these
-        #
-        self._init_expr = None
-        # Utilities like DAE assume this stays around
-        #self._init_rule = None
+            if rule is None:
+                # Historically, Expression objects were dense (but None):
+                rule = Initializer(lambda *args: None)
+                # If there is no rule, then we are immediately done.
+                #return
 
-        if not self.is_indexed():
-            self._data[None] = self
-
-        #
-        # Construct and initialize members
-        #
-        if _init_rule is not None:
-            # construct and initialize with a rule
-            if self.is_indexed():
-                for key in self._index:
-                    self.add(key,
-                             apply_indexed_rule(
-                                 self,
-                                 _init_rule,
-                                 self._parent(),
-                                 key))
+            block = self.parent_block()
+            if rule.contains_indices():
+                # The index is coming in externally; we need to validate it
+                for index in rule.indices():
+                    self[index] = rule(block, index)
+            elif not self.index_set().isfinite():
+                # If the index is not finite, then we cannot iterate
+                # over it.  Since the rule doesn't provide explicit
+                # indices, then there is nothing we can do (the
+                # assumption is that the user will trigger specific
+                # indices to be created at a later time).
+                pass
             else:
-                self.add(None, _init_rule(self._parent()))
-        else:
-            # construct and initialize with a value
-            if _init_expr.__class__ is dict:
-                for key in self._index:
-                    if key not in _init_expr:
-                        continue
-                    self.add(key, _init_expr[key])
-            else:
-                for key in self._index:
-                    self.add(key, _init_expr)
-        timer.report()
+                # Bypass the index validation and create the member directly
+                for index in self.index_set():
+                    self._setitem_when_not_present(index, rule(block, index))
+        except Exception:
+            err = sys.exc_info()[1]
+            logger.error(
+                "Rule failed when generating expression for "
+                "Expression %s with index %s:\n%s: %s"
+                % (self.name,
+                   str(index),
+                   type(err).__name__,
+                   err))
+            raise
+        finally:
+            timer.report()
+
 
 class ScalarExpression(_GeneralExpressionData, Expression):
 
@@ -485,7 +492,7 @@ class ScalarExpression(_GeneralExpressionData, Expression):
 
 class SimpleExpression(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarExpression
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class IndexedExpression(Expression):

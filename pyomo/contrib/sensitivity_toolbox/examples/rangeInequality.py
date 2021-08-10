@@ -11,7 +11,7 @@
 
 from pyomo.environ import ConcreteModel, Param, Var, Constraint, inequality
 
-from pyomo.contrib.sensitivity_toolbox.sens import sipopt
+from pyomo.contrib.sensitivity_toolbox.sens import sensitivity_calculation
 
 
 def create_model():
@@ -38,5 +38,5 @@ if __name__=='__main__':
     m.pert_b = Param(initialize=1.01)
 
 
-    m_sipopt = sipopt(m,[m.a,m.b],[m.pert_a,m.pert_b],
-                      streamSoln=True)
+    m_sipopt = sensitivity_calculation('sipopt', m,[m.a,m.b],[m.pert_a,m.pert_b],
+                      tee=True)

@@ -1,0 +1,37 @@
+OPTIONS {
+Summary: 0;
+}
+
+BINARY_VARIABLES x, y_1_, y_2_;
+
+POSITIVE_VARIABLES ONE_VAR_CONST__;
+
+LOWER_BOUNDS{
+x: 0;
+y_1_: 0;
+y_2_: 0;
+}
+
+UPPER_BOUNDS{
+x: 1;
+y_1_: 1;
+y_2_: 1;
+}
+
+BRANCHING_PRIORITIES{
+x: 1;
+y_1_: 2;
+y_2_: 2;
+}
+
+EQUATIONS c_e_FIX_ONE_VAR_CONST__, c;
+
+c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;
+c: y_1_ * y_2_ + (-2) * x >= 0;
+
+OBJ: maximize y_1_ + y_2_;
+
+STARTING_POINT{
+ONE_VAR_CONST__: 1;
+}
+

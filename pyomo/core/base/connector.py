@@ -273,7 +273,7 @@ class ScalarConnector(Connector, _ConnectorData):
 
 class SimpleConnector(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarConnector
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class IndexedConnector(Connector):

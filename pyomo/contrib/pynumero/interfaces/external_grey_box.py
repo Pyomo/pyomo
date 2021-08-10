@@ -18,7 +18,7 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base import Var, Set, Constraint, value
 from pyomo.core.base.block import _BlockData, Block, declare_custom_block
-from pyomo.core.base.util import Initializer
+from pyomo.core.base.initializer import Initializer
 
 from ..sparse.block_matrix import BlockMatrix
 
@@ -369,7 +369,7 @@ class ScalarExternalGreyBoxBlock(ExternalGreyBoxBlockData, ExternalGreyBoxBlock)
 
 class SimpleExternalGreyBoxBlock(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarExternalGreyBoxBlock
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class IndexedExternalGreyBoxBlock(Block):

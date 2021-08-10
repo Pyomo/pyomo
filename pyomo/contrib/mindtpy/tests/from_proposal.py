@@ -24,4 +24,5 @@ class ProposalModel(ConcreteModel):
         m.c3 = Constraint(expr=m.y - 10*sqrt(m.x+0.1) <= 0)
         m.c4 = Constraint(expr=-m.x-m.y <= -5)
 
-        m.obj = Objective(expr=m.x - m.y / 4.5 + 2, sense=minimize)
+        m.objective = Objective(expr=m.x - m.y / 4.5 + 2, sense=minimize)
+        m.optimal_value = 0.66555

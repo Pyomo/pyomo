@@ -535,7 +535,7 @@ class ScalarBooleanVar(_GeneralBooleanVarData, BooleanVar):
 
 class SimpleBooleanVar(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarBooleanVar
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class IndexedBooleanVar(BooleanVar):

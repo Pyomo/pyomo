@@ -26,9 +26,10 @@ if not AmplInterface.available():
 
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 
-try:
-    import ipopt
-except ImportError:
+from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
+    cyipopt_available
+)
+if not cyipopt_available:
     raise unittest.SkipTest("Pynumero needs cyipopt to run CyIpoptSolver tests")
 
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import CyIpoptNLP

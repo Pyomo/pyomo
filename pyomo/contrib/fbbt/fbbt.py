@@ -83,7 +83,10 @@ def _prop_bnds_leaf_to_root_ProductExpression(node, bnds_dict, feasibility_tol):
     arg1, arg2 = node.args
     lb1, ub1 = bnds_dict[arg1]
     lb2, ub2 = bnds_dict[arg2]
-    bnds_dict[node] = interval.mul(lb1, ub1, lb2, ub2)
+    if arg1 is arg2:
+        bnds_dict[node] = interval.power(lb1, ub1, 2, 2, feasibility_tol)
+    else:
+        bnds_dict[node] = interval.mul(lb1, ub1, lb2, ub2)
 
 
 def _prop_bnds_leaf_to_root_SumExpression(node, bnds_dict, feasibility_tol):
@@ -106,6 +109,19 @@ def _prop_bnds_leaf_to_root_SumExpression(node, bnds_dict, feasibility_tol):
         arg = node.arg(i)
         lb2, ub2 = bnds_dict[arg]
         lb, ub = interval.add(lb, ub, lb2, ub2)
+    bnds_dict[node] = (lb, ub)
+
+
+def _prop_bnds_leaf_to_root_LinearExpression(node: numeric_expr.LinearExpression, bnds_dict, feasibility_tol):
+    """
+    This is very similar to sum expression
+    """
+    lb, ub = bnds_dict[node.constant]
+    for coef, v in zip(node.linear_coefs, node.linear_vars):
+        coef_bnds = bnds_dict[coef]
+        v_bnds = bnds_dict[v]
+        term_bounds = interval.mul(*coef_bnds, *v_bnds)
+        lb, ub = interval.add(lb, ub, *term_bounds)
     bnds_dict[node] = (lb, ub)
 
 
@@ -431,6 +447,7 @@ _prop_bnds_leaf_to_root_map[numeric_expr.SumExpression] = _prop_bnds_leaf_to_roo
 _prop_bnds_leaf_to_root_map[numeric_expr.MonomialTermExpression] = _prop_bnds_leaf_to_root_ProductExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.NegationExpression] = _prop_bnds_leaf_to_root_NegationExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.UnaryFunctionExpression] = _prop_bnds_leaf_to_root_UnaryFunctionExpression
+_prop_bnds_leaf_to_root_map[numeric_expr.LinearExpression] = _prop_bnds_leaf_to_root_LinearExpression
 
 _prop_bnds_leaf_to_root_map[numeric_expr.NPV_ProductExpression] = _prop_bnds_leaf_to_root_ProductExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.NPV_DivisionExpression] = _prop_bnds_leaf_to_root_DivisionExpression
@@ -462,8 +479,12 @@ def _prop_bnds_root_to_leaf_ProductExpression(node, bnds_dict, feasibility_tol):
     lb0, ub0 = bnds_dict[node]
     lb1, ub1 = bnds_dict[arg1]
     lb2, ub2 = bnds_dict[arg2]
-    _lb1, _ub1 = interval.div(lb0, ub0, lb2, ub2, feasibility_tol)
-    _lb2, _ub2 = interval.div(lb0, ub0, lb1, ub1, feasibility_tol)
+    if arg1 is arg2:
+        _lb1, _ub1 = interval._inverse_power1(lb0, ub0, 2, 2, orig_xl=lb1, orig_xu=ub1, feasibility_tol=feasibility_tol)
+        _lb2, _ub2 = _lb1, _ub1
+    else:
+        _lb1, _ub1 = interval.div(lb0, ub0, lb2, ub2, feasibility_tol)
+        _lb2, _ub2 = interval.div(lb0, ub0, lb1, ub1, feasibility_tol)
     if _lb1 > lb1:
         lb1 = _lb1
     if _ub1 < ub1:
@@ -549,6 +570,49 @@ def _prop_bnds_root_to_leaf_SumExpression(node, bnds_dict, feasibility_tol):
     if _ub < ub:
         ub = _ub
     bnds_dict[node.arg(0)] = (lb, ub)
+
+
+def _prop_bnds_root_to_leaf_LinearExpression(node: numeric_expr.LinearExpression,
+                                             bnds_dict: ComponentMap,
+                                             feasibility_tol: float):
+    """
+    This is very similar to SumExpression.
+    """
+    # first accumulate bounds
+    accumulated_bounds = list()
+    accumulated_bounds.append(bnds_dict[node.constant])
+    lb0, ub0 = bnds_dict[node]
+    for coef, v in zip(node.linear_coefs, node.linear_vars):
+        _lb0, _ub0 = accumulated_bounds[-1]
+        _lb_coef, _ub_coef = bnds_dict[coef]
+        _lb_v, _ub_v = bnds_dict[v]
+        _lb_term, _ub_term = interval.mul(_lb_coef, _ub_coef, _lb_v, _ub_v)
+        accumulated_bounds.append(interval.add(_lb0, _ub0, _lb_term, _ub_term))
+    if lb0 > accumulated_bounds[-1][0]:
+        accumulated_bounds[-1] = (lb0, accumulated_bounds[-1][1])
+    if ub0 < accumulated_bounds[-1][1]:
+        accumulated_bounds[-1] = (accumulated_bounds[-1][0], ub0)
+
+    for i in reversed(range(len(node.linear_coefs))):
+        lb0, ub0 = accumulated_bounds[i + 1]
+        lb1, ub1 = accumulated_bounds[i]
+        coef = node.linear_coefs[i]
+        v = node.linear_vars[i]
+        coef_bnds = bnds_dict[coef]
+        v_bnds = bnds_dict[v]
+        lb2, ub2 = interval.mul(*coef_bnds, *v_bnds)
+        _lb1, _ub1 = interval.sub(lb0, ub0, lb2, ub2)
+        _lb2, _ub2 = interval.sub(lb0, ub0, lb1, ub1)
+        if _lb1 > lb1:
+            lb1 = _lb1
+        if _ub1 < ub1:
+            ub1 = _ub1
+        if _lb2 > lb2:
+            lb2 = _lb2
+        if _ub2 < ub2:
+            ub2 = _ub2
+        accumulated_bounds[i] = (lb1, ub1)
+        bnds_dict[v] = interval.div(lb2, ub2, *coef_bnds, feasibility_tol=feasibility_tol)
 
 
 def _prop_bnds_root_to_leaf_DivisionExpression(node, bnds_dict, feasibility_tol):
@@ -970,6 +1034,7 @@ _prop_bnds_root_to_leaf_map[numeric_expr.SumExpression] = _prop_bnds_root_to_lea
 _prop_bnds_root_to_leaf_map[numeric_expr.MonomialTermExpression] = _prop_bnds_root_to_leaf_ProductExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.NegationExpression] = _prop_bnds_root_to_leaf_NegationExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.UnaryFunctionExpression] = _prop_bnds_root_to_leaf_UnaryFunctionExpression
+_prop_bnds_root_to_leaf_map[numeric_expr.LinearExpression] = _prop_bnds_root_to_leaf_LinearExpression
 
 _prop_bnds_root_to_leaf_map[numeric_expr.NPV_ProductExpression] = _prop_bnds_root_to_leaf_ProductExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.NPV_DivisionExpression] = _prop_bnds_root_to_leaf_DivisionExpression
@@ -1034,6 +1099,8 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
             return True, None
 
         if node.is_variable_type():
+            if node in self.bnds_dict:
+                return True, None
             if node.is_fixed():
                 lb = value(node.value)
                 ub = lb
@@ -1047,6 +1114,17 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
                 if lb - self.feasibility_tol > ub:
                     raise InfeasibleConstraintException('Variable has a lower bound which is larger than its upper bound: {0}'.format(str(node)))
             self.bnds_dict[node] = (lb, ub)
+            return True, None
+
+        if node.__class__ is numeric_expr.LinearExpression:
+            const_val = value(node.constant)
+            self.bnds_dict[node.constant] = (const_val, const_val)
+            for coef in node.linear_coefs:
+                coef_val = value(coef)
+                self.bnds_dict[coef] = (coef_val, coef_val)
+            for v in node.linear_vars:
+                self.visiting_potential_leaf(v)
+            _prop_bnds_leaf_to_root_LinearExpression(node, self.bnds_dict, self.feasibility_tol)
             return True, None
 
         if not node.is_expression_type():
@@ -1143,6 +1221,12 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
                 node.setlb(lb)
             if ub != interval.inf:
                 node.setub(ub)
+            return True, None
+
+        if node.__class__ is numeric_expr.LinearExpression:
+            _prop_bnds_root_to_leaf_LinearExpression(node, self.bnds_dict, self.feasibility_tol)
+            for v in node.linear_vars:
+                self.visiting_potential_leaf(v)
             return True, None
 
         if not node.is_expression_type():
@@ -1276,7 +1360,7 @@ def _fbbt_block(m, config):
     var_ubs = ComponentMap()
     n_cons = 0
     for c in m.component_data_objects(ctype=Constraint, active=True,
-                                      descend_into=True, sort=True):
+                                      descend_into=config.descend_into, sort=True):
         for v in identify_variables(c.body):
             if v not in var_to_con_map:
                 var_to_con_map[v] = list()
@@ -1301,7 +1385,7 @@ def _fbbt_block(m, config):
 
     improved_vars = ComponentSet()
     for c in m.component_data_objects(ctype=Constraint, active=True,
-                                      descend_into=True, sort=True):
+                                      descend_into=config.descend_into, sort=True):
         _new_var_bounds = _fbbt_con(c, config)
         n_fbbt += 1
         new_var_bounds.update(_new_var_bounds)
@@ -1339,7 +1423,7 @@ def _fbbt_block(m, config):
 
 
 def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, feasibility_tol=1e-8, max_iter=10,
-         improvement_tol=1e-4):
+         improvement_tol=1e-4, descend_into=True):
     """
     Perform FBBT on a constraint, block, or model. For more control,
     use _fbbt_con and _fbbt_block. For detailed documentation, see
@@ -1387,11 +1471,13 @@ def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, feasibi
     ft_config = ConfigValue(default=feasibility_tol, domain=NonNegativeFloat)
     mi_config = ConfigValue(default=max_iter, domain=NonNegativeInt)
     improvement_tol_config = ConfigValue(default=improvement_tol, domain=NonNegativeFloat)
+    descend_into_config = ConfigValue(default=descend_into)
     config.declare('deactivate_satisfied_constraints', dsc_config)
     config.declare('integer_tol', integer_tol_config)
     config.declare('feasibility_tol', ft_config)
     config.declare('max_iter', mi_config)
     config.declare('improvement_tol', improvement_tol_config)
+    config.declare('descend_into', descend_into_config)
 
     new_var_bounds = ComponentMap()
     if comp.ctype == Constraint:

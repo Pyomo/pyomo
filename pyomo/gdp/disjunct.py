@@ -151,7 +151,7 @@ class AutoLinkedBooleanVar(ScalarBooleanVar):
             "Either express constraints on indicator_var using "
             "LogicalConstraints or work with the associated binary "
             "variable from indicator_var.get_associated_binary()"
-            % (self.name,), version='TBD')
+            % (self.name,), version='6.0')
         return self.get_associated_binary()
 
     @property
@@ -441,7 +441,7 @@ class ScalarDisjunct(_DisjunctData, Disjunct):
 
 class SimpleDisjunct(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarDisjunct
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class IndexedDisjunct(Disjunct):
@@ -740,7 +740,7 @@ class ScalarDisjunction(_DisjunctionData, Disjunction):
 
 class SimpleDisjunction(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarDisjunction
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.0'
 
 
 class IndexedDisjunction(Disjunction):

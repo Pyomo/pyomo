@@ -25,8 +25,9 @@ problems = ['convex_var',
             'step_var']
 
 testing_solvers = {}
+testing_solvers['gurobi','nl'] = False
 #testing_solvers['cplex','lp'] = False
-testing_solvers['cplex','nl'] = False
+#testing_solvers['cplex','nl'] = False
 #testing_solvers['ipopt','nl'] = False
 #testing_solvers['cplex','python'] = False
 #testing_solvers['_cplex_persistent','python'] = False

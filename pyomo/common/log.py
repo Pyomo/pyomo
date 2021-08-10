@@ -17,12 +17,11 @@
 #
 # Utility classes for working with the logger
 #
-
+import io
 import logging
 import re
 import sys
 import textwrap
-from io import TextIOBase
 
 from pyomo.common.deprecation import deprecated
 from pyomo.common.fileutils import PYOMO_ROOT_DIR
@@ -294,7 +293,10 @@ class LoggingIntercept(object):
         >>> buf.getvalue()
     """
 
-    def __init__(self, output, module=None, level=logging.WARNING):
+    def __init__(self, output=None, module=None, level=logging.WARNING):
+        if output is None:
+            output = io.StringIO()
+        self.output = output
         self.handler = logging.StreamHandler(output)
         self.handler.setFormatter(logging.Formatter('%(message)s'))
         self.handler.setLevel(level)
@@ -308,6 +310,7 @@ class LoggingIntercept(object):
         logger.propagate = 0
         logger.setLevel(self.handler.level)
         logger.addHandler(self.handler)
+        return self.output
 
     def __exit__(self, et, ev, tb):
         logger = logging.getLogger(self.module)
@@ -318,7 +321,7 @@ class LoggingIntercept(object):
             logger.handlers.append(h)
 
 
-class LogStream(TextIOBase):
+class LogStream(io.TextIOBase):
     """
     This class logs whatever gets sent to the write method.
     This is useful for logging solver output (a LogStream
