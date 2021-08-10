@@ -3955,6 +3955,17 @@ class Test(unittest.TestCase):
         rep = generate_standard_repn(e, compute_values=True, quadratic=False)
         self.assertEqual(str(rep.to_expression()), "(1 + v)*(1 + v)")
 
+    def test_product6(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+
+        e = (m.x + m.y) * (m.x - m.y) * (m.x ** 2 + m.y ** 2)
+        rep = generate_standard_repn(e)
+        self.assertEqual(str(rep.to_expression()), "(x + y)*(x - y)*(x**2 + y**2)")
+        self.assertTrue(rep.is_nonlinear())
+        self.assertFalse(rep.is_quadratic())
+
     def test_vars(self): 
         m = ConcreteModel()
         m.v = Var(initialize=2)
