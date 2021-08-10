@@ -613,6 +613,13 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
                     ans.quadratic[ndx] += multiplier*lcoef*rcoef
                 else:
                     ans.quadratic[ndx] = multiplier*lcoef*rcoef
+
+        # If there are a product of quadratic terms, return a none linear expression
+        if len(lhs.quadratic) > 0 and len(rhs.quadratic) > 0 and len(lhs.linear) == 0 and len(rhs.linear) == 0:
+            # TODO raise an error ?
+            logging.getLogger('pyomo.core').warning("The problem is not quadratic")
+            return _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic=False)
+
         # TODO - Use quicksum here?
         el_linear = multiplier*sum(coef*idMap[key] for key, coef in lhs.linear.items())
         er_linear = multiplier*sum(coef*idMap[key] for key, coef in rhs.linear.items())
