@@ -500,7 +500,7 @@ class _GeneralConstraintData(_ConstraintData):
                 del self.parent_component()[self.index()]
                 return
             elif expr is Constraint.Infeasible:
-                # TODO: greate a trivial infeasible constraint.  This
+                # TODO: create a trivial infeasible constraint.  This
                 # could be useful in the case of GDP where certain
                 # disjuncts are trivially infeasible, but we would still
                 # like to express the disjunction.
