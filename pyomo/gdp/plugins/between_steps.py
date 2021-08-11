@@ -160,9 +160,11 @@ class BetweenSteps_Transformation(Transformation):
         default=arbitrary_partition,
         domain=_to_dict,
         description="""Method to partition the variables. By default, the 
-        partitioning will be done arbitrarily. Other options include: TODO""",
+        partitioning will be done arbitrarily.""",
         doc="""
-        A function which takes some stuff and return variable partitions. 
+        A function which takes a Disjunction object and a number P and return 
+        a valid partitioning of the variables that appear in the disjunction 
+        into P partitions. 
 
         Note that you must give a value for 'P' if you are using this method
         to calculate partitions.
@@ -174,12 +176,7 @@ class BetweenSteps_Transformation(Transformation):
         """
     ))
     CONFIG.declare('assume_fixed_vars_permanent', ConfigValue(
-        default=True,# TODO: John, I'm kind of tempted to make this the
-                     # default... We have to do more work if it's not True. It's
-                     # inconsistent with bigm and hull, but matches cutting
-                     # planes kind of (because cutting planes gives up... Wait,
-                     # cutting planes could also do what I'm doing here...)
-                     # Anyway, thoughts?
+        default=False,
         domain=bool,
         description="Boolean indicating whether or not to transform so that the "
         "the transformed model will still be valid when fixed Vars are unfixed.",
