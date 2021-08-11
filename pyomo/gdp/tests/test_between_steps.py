@@ -947,10 +947,6 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         c2 = c[1]
         self.check_global_constraint_disj2(c2, aux_vars2[1], m.x[3], m.x[4])
 
-    # TODO: there's a bug where if you call the model with an incomplete
-    # partition specified, something happens instead of it screaming!
-    @unittest.skipIf('gurobi_direct' not in solvers, 
-                     'Gurobi direct solver not available')
     def test_incomplete_partition_error(self):
         m = self.makeModel()
         self.assertRaisesRegex(
@@ -964,7 +960,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             TransformationFactory('gdp.between_steps').apply_to,
             m,
             variable_partitions=[[m.x[1]], [m.x[2]]],
-            subproblem_solver=SolverFactory('gurobi_direct'))
+            compute_bounds_method='fbbt')
         
 class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
     def makeModel(self):
