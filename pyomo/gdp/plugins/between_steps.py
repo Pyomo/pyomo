@@ -269,7 +269,7 @@ class BetweenSteps_Transformation(Transformation):
                 for v in instance.component_data_objects(
                         Var, active=True, descend_into=(Block, Disjunct)):
                     if v.fixed:
-                        fixed_vars[v] = v.value
+                        fixed_vars[v] = value(v)
                         v.fixed = False
 
             self._apply_to_impl(instance)
@@ -278,7 +278,7 @@ class BetweenSteps_Transformation(Transformation):
             # restore fixed variables
             if not self._config.assume_fixed_vars_permanent:
                 for v, val in fixed_vars.items():
-                    v.fix(value)
+                    v.fix(val)
 
             del self._config
             del self.verbose
