@@ -711,8 +711,6 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             "b.another_disjunction_disjuncts[1].constraint[1]_split_constraints")
         self.check_second_disjunction_global_constraint_disj2(c, aux_vars2)
 
-    # TODO: there's a bug where if you call the model with an incomplete
-    # partition specified, something happens instead of it screaming!
 
     @unittest.skipIf('gurobi_direct' not in solvers, 
                      'Gurobi direct solver not available')
@@ -949,6 +947,25 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         c2 = c[1]
         self.check_global_constraint_disj2(c2, aux_vars2[1], m.x[3], m.x[4])
 
+    # TODO: there's a bug where if you call the model with an incomplete
+    # partition specified, something happens instead of it screaming!
+    @unittest.skipIf('gurobi_direct' not in solvers, 
+                     'Gurobi direct solver not available')
+    def test_incomplete_partition_error(self):
+        m = self.makeModel()
+        self.assertRaisesRegex(
+            GDP_Error,
+            "Partition specified for disjunction "
+            "containing Disjunct 'disjunction_disjuncts\[0\]' does not "
+            "include all the variables that appear "
+            "in the disjunction. The following variables "
+            "are not assigned to any part of the "
+            "partition: 'x\[3\]', 'x\[4\]'",
+            TransformationFactory('gdp.between_steps').apply_to,
+            m,
+            variable_partitions=[[m.x[1]], [m.x[2]]],
+            subproblem_solver=SolverFactory('gurobi_direct'))
+        
 class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
     def makeModel(self):
         m = ConcreteModel()

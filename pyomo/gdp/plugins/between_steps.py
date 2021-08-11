@@ -481,6 +481,11 @@ class BetweenSteps_Transformation(Transformation):
                         repn.nonlinear_expr)
                 split_exprs = []
                 split_aux_vars = []
+                vars_not_accounted_for = ComponentSet(v for v in
+                                                      EXPR.identify_variables(
+                                                          body,
+                                                          include_fixed=False))
+                vars_accounted_for = ComponentSet()
                 for idx, var_list in enumerate(partition):
                     # we are going to recreate the piece of the expression
                     # involving the vars in var_list
@@ -489,6 +494,7 @@ class BetweenSteps_Transformation(Transformation):
                     for i, v in enumerate(repn.linear_vars):
                         if v in var_list:
                             expr += repn.linear_coefs[i]*v
+                            vars_accounted_for.add(v)
                     for i, (v1, v2) in enumerate(repn.quadratic_vars):
                         if v1 in var_list:
                             if v2 not in var_list:
@@ -503,6 +509,8 @@ class BetweenSteps_Transformation(Transformation):
                                                 "partition." % (v1.name, v2.name,
                                                                 cons.name))
                             expr += repn.quadratic_coefs[i]*v1*v2
+                            vars_accounted_for.add(v1)
+                            vars_accounted_for.add(v2)
                     if nonlinear_repn is not None:
                         for i, expr_var_set in enumerate(
                                 nonlinear_repn['nonlinear_vars']):
@@ -514,6 +522,8 @@ class BetweenSteps_Transformation(Transformation):
                             # subset?
                             if all(v in var_list for v in list(expr_var_set)):
                                 expr += nonlinear_repn['nonlinear_exprs'][i]
+                                for var in expr_var_set:
+                                    vars_accounted_for.add(var)
                             # intersection?
                             elif len(ComponentSet(expr_var_set) & var_list) != 0:
                                 raise GDP_Error("Variables which appear in the "
@@ -530,7 +540,7 @@ class BetweenSteps_Transformation(Transformation):
                                                 "partition." % 
                                                 nonlinear_repn[
                                                     'nonlinear_exprs'][i])
-                                                
+                    
                     expr_lb, expr_ub = self._compute_bounds( expr, instance,
                                                              transBlock)
                     if expr_lb is None or expr_ub is None:
@@ -550,6 +560,20 @@ class BetweenSteps_Transformation(Transformation):
                         split_aux_vars.append(aux_var)
                         split_constraints[
                             len(split_constraints)] = expr <= aux_var
+
+                if len(vars_accounted_for) < len(vars_not_accounted_for):
+                        orphans = vars_not_accounted_for - vars_accounted_for
+                        orphan_string = ""
+                        for v in orphans:
+                            orphan_string += "'%s', " % v.name
+                        orphan_string = orphan_string[:-2]
+                        raise GDP_Error("Partition specified for disjunction "
+                                        "containing Disjunct '%s' does not "
+                                        "include all the variables that appear "
+                                        "in the disjunction. The following "
+                                        "variables are not assigned to any part "
+                                        "of the partition: %s" % (obj.name, 
+                                                                  orphan_string))
                 transformed_constraint[
                     len(transformed_constraint)] = sum(v for v in
                                                        split_aux_vars) <= \
