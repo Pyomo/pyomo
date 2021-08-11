@@ -330,15 +330,6 @@ class BetweenSteps_Transformation(Transformation):
                     "It was of type %s and can't be transformed."
                     % (t.name, type(t)) )
 
-        # call hull on the whole thing and return.
-        TransformationFactory('gdp.hull').apply_to(instance,
-                                                   targets=transformation_block)
-
-        # TODO: What do we want to do about mappings? We could go through now
-        # and follow the chain, so to speak. I think that might be the right
-        # answer. I've never really found the perfect solution. But we will need
-        # some of them when we try using this inside of cuttingplanes.
-
     def _transform_block(self, obj, transBlock):
         for i in sorted(obj.keys()):
             self._transform_blockData(obj[i], transBlock)
