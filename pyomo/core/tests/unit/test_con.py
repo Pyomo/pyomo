@@ -24,7 +24,10 @@ import pyomo.common.unittest as unittest
 from pyomo.environ import ConcreteModel, AbstractModel, Var, Constraint, \
     ConstraintList, Param, RangeSet, Set, Expression, value, \
     simple_constraintlist_rule, simple_constraint_rule, inequality
-from pyomo.core.expr.current import SumExpression
+from pyomo.core.expr.current import (
+    SumExpression, EqualityExpression, InequalityExpression,
+    RangedExpression,
+)
 from pyomo.core.expr import logical_expr
 from pyomo.core.base.constraint import _GeneralConstraintData
 
@@ -1182,6 +1185,32 @@ class Test2DArrayCon(unittest.TestCase):
 
 class MiscConTests(unittest.TestCase):
 
+    def test_infeasible(self):
+        m = ConcreteModel()
+        with self.assertRaisesRegex(
+                ValueError, "Constraint 'c' is always infeasible"):
+            m.c = Constraint(expr=Constraint.Infeasible)
+        self.assertEqual(m.c._data, {})
+
+        with self.assertRaisesRegex(
+                ValueError, "Constraint 'c' is always infeasible"):
+            m.c = Constraint.Infeasible
+        self.assertEqual(m.c._data, {})
+        self.assertIsNone(m.c.expr)
+
+        m.c = (0, 1, 2)
+        self.assertIn(None, m.c._data)
+        self.assertEqual(m.c.lb, 0)
+        self.assertEqual(m.c.ub, 2)
+
+        with self.assertRaisesRegex(
+                ValueError, "Constraint 'c' is always infeasible"):
+            m.c = Constraint.Infeasible
+        self.assertEqual(m.c._data, {})
+        self.assertIsNone(m.c.expr)
+        self.assertEqual(m.c.lb, None)
+        self.assertEqual(m.c.ub, None)
+
     def test_slack_methods(self):
         model = ConcreteModel()
         model.x = Var(initialize=2.0)
@@ -1565,6 +1594,112 @@ class MiscConTests(unittest.TestCase):
         self.assertIs(model.con.expr.args[1], model.v)
         self.assertIs(model.con.expr.args[2], model.u)
 
+    def test_potentially_variable_bounds(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.l = Expression()
+        m.u = Expression()
+        m.c = Constraint(expr=inequality(m.l, m.x, m.u))
+        self.assertIs(m.c.lower, m.l)
+        self.assertIs(m.c.upper, m.u)
+        with self.assertRaisesRegex(
+                ValueError, 'No value for uninitialized NumericValue object l'):
+            m.c.lb
+        with self.assertRaisesRegex(
+                ValueError, 'No value for uninitialized NumericValue object u'):
+            m.c.ub
+
+        m.l = 5
+        m.u = 10
+        self.assertIs(m.c.lower, m.l)
+        self.assertIs(m.c.upper, m.u)
+        self.assertEqual(m.c.lb, 5)
+        self.assertEqual(m.c.ub, 10)
+
+        m.l.expr = m.x
+        with self.assertRaisesRegex(
+                ValueError, r"Constraint 'c' is a Ranged Inequality "
+                "with a variable lower bound"):
+            m.c.lower
+        self.assertIs(m.c.upper, m.u)
+        with self.assertRaisesRegex(
+                ValueError, r"Constraint 'c' is a Ranged Inequality "
+                "with a variable lower bound"):
+            m.c.lb
+        self.assertEqual(m.c.ub, 10)
+
+        m.l = 15
+        m.u.expr = m.x
+        self.assertIs(m.c.lower, m.l)
+        with self.assertRaisesRegex(
+                ValueError, r"Constraint 'c' is a Ranged Inequality "
+                "with a variable upper bound"):
+            m.c.upper
+        self.assertEqual(m.c.lb, 15)
+        with self.assertRaisesRegex(
+                ValueError, r"Constraint 'c' is a Ranged Inequality "
+                "with a variable upper bound"):
+            m.c.ub
+
+        m.l = -float('inf')
+        m.u = float('inf')
+        self.assertIs(m.c.lower, m.l)
+        self.assertIs(m.c.upper, m.u)
+        self.assertIsNone(m.c.lb)
+        self.assertIsNone(m.c.ub)
+
+        m.l = float('inf')
+        m.u = -float('inf')
+        self.assertIs(m.c.lower, m.l)
+        self.assertIs(m.c.upper, m.u)
+        with self.assertRaisesRegex(
+                ValueError, r"Constraint 'c' created with an invalid "
+                r"non-finite lower bound \(inf\)"):
+            m.c.lb
+        with self.assertRaisesRegex(
+                ValueError, r"Constraint 'c' created with an invalid "
+                r"non-finite upper bound \(-inf\)"):
+            m.c.ub
+
+        m.l = float('nan')
+        m.u = -float('nan')
+        self.assertIs(m.c.lower, m.l)
+        self.assertIs(m.c.upper, m.u)
+        with self.assertRaisesRegex(
+                ValueError, r"Constraint 'c' created with an invalid "
+                r"non-finite lower bound \(nan\)"):
+            m.c.lb
+        with self.assertRaisesRegex(
+                ValueError, r"Constraint 'c' created with an invalid "
+                r"non-finite upper bound \(nan\)"):
+            m.c.ub
+
+    def test_tuple_expression(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.p = Param(mutable=True, initialize=0)
+        m.c = Constraint()
+
+        m.c = (m.x, m.y)
+        self.assertTrue(m.c.equality)
+        self.assertIs(type(m.c.expr), EqualityExpression)
+
+        with self.assertRaisesRegex(
+                ValueError, "Constraint 'c' does not have a proper value. "
+                "Equality Constraints expressed as 2-tuples cannot "
+                "contain None"):
+            m.c = (m.x, None)
+
+        with self.assertRaisesRegex(
+                ValueError, r"Constraint 'c' created with an invalid "
+                r"non-finite lower bound \(inf\)"):
+            m.c = (m.x, float('inf'))
+
+        with self.assertRaisesRegex(
+                ValueError, r"Equality constraint 'c' defined with "
+                "non-finite term"):
+            m.c = EqualityExpression((m.x, None))
 
 if __name__ == "__main__":
     unittest.main()

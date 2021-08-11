@@ -324,6 +324,8 @@ class _GeneralConstraintData(_ConstraintData):
     def _lb(self):
         if self._body is not None:
             bound = self._lower
+        elif self._expr is None:
+            return None
         else:
             bound = self._expr.arg(0)
             if not is_fixed(bound):
@@ -337,6 +339,8 @@ class _GeneralConstraintData(_ConstraintData):
     def _ub(self):
         if self._body is not None:
             bound = self._upper
+        elif self._expr is None:
+            return None
         else:
             bound = self._expr.arg(2)
             if not is_fixed(bound):
@@ -398,7 +402,7 @@ class _GeneralConstraintData(_ConstraintData):
             else:
                 raise ValueError(
                     "Constraint '%s' created with an invalid non-finite "
-                    "lower bound (%s)." % (self.name, bound))
+                    "upper bound (%s)." % (self.name, bound))
         return bound
 
     @property
@@ -435,7 +439,7 @@ class _GeneralConstraintData(_ConstraintData):
     def set_value(self, expr):
         """Set the expression on this constraint."""
         # Clear any previously-cached normalized constraint
-        self._lower = self._upper = self._body = None
+        self._lower = self._upper = self._body = self._expr = None
 
         _expr_type = expr.__class__
         if hasattr(expr, 'is_relational'):
@@ -495,16 +499,15 @@ class _GeneralConstraintData(_ConstraintData):
         # Ignore an 'empty' constraints
         #
         elif _expr_type is type:
-            self._expr = None
+            del self.parent_component()[self.index()]
             if expr is Constraint.Skip:
-                del self.parent_component()[self.index()]
                 return
             elif expr is Constraint.Infeasible:
                 # TODO: create a trivial infeasible constraint.  This
                 # could be useful in the case of GDP where certain
                 # disjuncts are trivially infeasible, but we would still
                 # like to express the disjunction.
-                del self.parent_component()[self.index()]
+                #del self.parent_component()[self.index()]
                 raise ValueError(
                     "Constraint '%s' is always infeasible"
                     % (self.name,) )
