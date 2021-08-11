@@ -223,7 +223,7 @@ class BetweenSteps_Transformation(Transformation):
         description="""SolverFactory object to use for computing expression 
         bounds, if doing so optimally.""",
         doc="""
-        If compute_bounds_method is 'compute_optimal_bounds,' this SolverFactory
+        If compute_bounds_method is 'optimal', this SolverFactory
         will be used to solve the subproblems.
         """
     ))
@@ -544,11 +544,13 @@ class BetweenSteps_Transformation(Transformation):
                     expr_lb, expr_ub = self._compute_bounds( expr, instance,
                                                              transBlock)
                     if expr_lb is None or expr_ub is None:
-                        raise GDP_Error("Expression %s from constraint %s "
-                                        "is unbounded! Please specify a bound "
-                                        "in the 'bounds' arg "
-                                        "or ensure all variables that appear "
-                                        "in the constraint are bounded." % 
+                        raise GDP_Error("Expression %s from constraint '%s' "
+                                        "is unbounded! Please ensure all "
+                                        "variables that appear "
+                                        "in the constraint are bounded or "
+                                        "specify compute_bounds_method='optimal'"
+                                        " if the expression is bounded by the "
+                                        "global constraints." % 
                                         (expr, cons.name))
                     # if the expression was empty wrt the partition, we don't
                     # need to bother with any of this. The aux_var doesn't need

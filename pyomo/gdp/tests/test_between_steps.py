@@ -961,6 +961,23 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             m,
             variable_partitions=[[m.x[1]], [m.x[2]]],
             compute_bounds_method='fbbt')
+
+    def test_unbounded_expression_error(self):
+        m = self.makeModel()
+        for i in m.x:
+            m.x[i].setub(None)
+
+        self.assertRaisesRegex(
+            GDP_Error,
+            "Expression x\[1\]\*x\[1\] from constraint "
+            "'disjunction_disjuncts\[0\].constraint\[1\]' is unbounded! "
+            "Please ensure all variables that appear in the constraint are "
+            "bounded or specify compute_bounds_method='optimal' if the "
+            "expression is bounded by the global constraints.",
+            TransformationFactory('gdp.between_steps').apply_to,
+            m,
+            variable_partitions=[[m.x[1]], [m.x[2]], [m.x[3], m.x[4]]],
+            compute_bounds_method='fbbt')
         
 class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
     def makeModel(self):
