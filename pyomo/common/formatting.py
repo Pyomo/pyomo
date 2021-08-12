@@ -15,7 +15,7 @@ def tostr(value, quote_str=False):
     """Convert a value to a string
 
     This function is a thin wrapper around `str(value)` to resolve a
-    problemmatic __str__ implementation in the standard Python container
+    problematic __str__ implementation in the standard Python container
     types (tuple, list, and dict).  Those classes implement __str__ the
     same as __repr__ (by calling repr() on each contained object).  That
     is frequently undesirable, as you may wish the string representation
@@ -24,7 +24,7 @@ def tostr(value, quote_str=False):
 
     This function generates string representations for native Python
     containers (tuple, list, and dict) that contains the string
-    representations of the containes objects.  In addition, it also
+    representations of the contained objects.  In addition, it also
     applies the same special handling to any types that derive from the
     standard containers without overriding either __repn__ or __str__.
 

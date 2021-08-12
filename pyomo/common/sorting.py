@@ -121,7 +121,7 @@ def sorted_robust(iterable, key=None, reverse=False):
     # fall back on our slow, but robust sort", we will need to cache the
     # incoming arg: it may be a generator, in which case we would need
     # to exhaust it so we can cache all the values for the case that the
-    # forst sort attempt fails.  Given that, it is simpler / easire to
+    # first sort attempt fails.  Given that, it is simpler / easier to
     # take *all* incoming args and create a new list, then use list's
     # in-place sort().  By copying *all* incoming data, we avoid
     # possible side effects in the case that the user provided a list.
