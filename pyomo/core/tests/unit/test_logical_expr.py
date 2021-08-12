@@ -30,7 +30,7 @@ from pyomo.core.expr.logical_expr import (
 class TestGenerate_RelationalExpression(unittest.TestCase):
 
     def setUp(self):
-        m = ConcreteModel()
+        m = AbstractModel()
         m.I = Set()
         m.a = Var()
         m.b = Var()
