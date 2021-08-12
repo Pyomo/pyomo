@@ -29,6 +29,7 @@ Domain validators
    InEnum
    Path
    PathList
+   DynamicImplicitDomain
 
 .. autoclass:: ConfigBase
    :members:
@@ -46,6 +47,10 @@ Domain validators
 
 .. autoclass:: ConfigValue
    :show-inheritance:
+   :members:
+   :undoc-members:
+
+.. autoclass:: DynamicImplicitDomain
    :members:
    :undoc-members:
 

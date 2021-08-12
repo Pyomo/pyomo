@@ -35,12 +35,10 @@ from pyomo.contrib.gdpopt.util import (copy_var_list_values, create_utility_bloc
                                        time_code, setup_results_object, process_objective, lower_logger_level_to)
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
-from pyomo.contrib.mindtpy.util import MindtPySolveData, model_is_valid
+from pyomo.contrib.mindtpy.util import model_is_valid, setup_solve_data
 from pyomo.core import (Block, ConstraintList, NonNegativeReals,
                         Set, Suffix, Var, VarList, TransformationFactory, Objective, RangeSet)
-from pyomo.opt import SolverFactory, SolverResults
-from pyomo.common.collections import Bunch
-from pyomo.contrib.fbbt.fbbt import fbbt
+from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
@@ -79,29 +77,10 @@ class MindtPySolver(object):
         """
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
-
-        solve_data = MindtPySolveData()
-        solve_data.results = SolverResults()
-        solve_data.timing = Bunch()
-        solve_data.curr_int_sol = []
-        solve_data.should_terminate = False
-        solve_data.integer_list = []
-
         check_config(config)
 
-        # if the objective function is a constant, dual bound constraint is not added.
-        obj = next(model.component_data_objects(ctype=Objective, active=True))
-        if obj.expr.polynomial_degree() == 0:
-            config.use_dual_bound = False
+        solve_data = setup_solve_data(model, config)
 
-        if config.use_fbbt:
-            fbbt(model)
-            # TODO: logging_level is not logging.INFO here
-            config.logger.info(
-                'Use the fbbt to tighten the bounds of variables')
-
-        solve_data.original_model = model
-        solve_data.working_model = model.clone()
         if config.integer_to_binary:
             TransformationFactory('contrib.integer_to_binary'). \
                 apply_to(solve_data.working_model)
@@ -169,30 +148,6 @@ class MindtPySolver(object):
                 doc='explored no-good cuts')
             lin.feasible_no_good_cuts.deactivate()
 
-            # Set up iteration counters
-            solve_data.nlp_iter = 0
-            solve_data.mip_iter = 0
-            solve_data.mip_subiter = 0
-            solve_data.nlp_infeasible_counter = 0
-            if config.init_strategy == 'FP':
-                solve_data.fp_iter = 1
-
-            # set up bounds
-            solve_data.LB = float('-inf')
-            solve_data.UB = float('inf')
-            solve_data.LB_progress = [solve_data.LB]
-            solve_data.UB_progress = [solve_data.UB]
-            if config.single_tree and (config.add_no_good_cuts or config.use_tabu_list):
-                solve_data.stored_bound = {}
-            if config.strategy == 'GOA' and (config.add_no_good_cuts or config.use_tabu_list):
-                solve_data.num_no_good_cuts_added = {}
-
-            # Set of NLP iterations for which cuts were generated
-            lin.nlp_iters = Set(dimen=1)
-
-            # Set of MIP iterations for which cuts were generated in ECP
-            lin.mip_iters = Set(dimen=1)
-
             if config.feasibility_norm == 'L1' or config.feasibility_norm == 'L2':
                 feas.nl_constraint_set = RangeSet(len(MindtPy.nonlinear_constraint_list),
                                                   doc='Integer index set over the nonlinear constraints.')
@@ -206,19 +161,6 @@ class MindtPySolver(object):
             if config.add_slack:
                 lin.slack_vars = VarList(
                     bounds=(0, config.max_slack), initialize=0, domain=NonNegativeReals)
-
-            # Flag indicating whether the solution improved in the past
-            # iteration or not
-            solve_data.solution_improved = False
-            solve_data.bound_improved = False
-
-            if config.nlp_solver == 'ipopt':
-                if not hasattr(solve_data.working_model, 'ipopt_zL_out'):
-                    solve_data.working_model.ipopt_zL_out = Suffix(
-                        direction=Suffix.IMPORT)
-                if not hasattr(solve_data.working_model, 'ipopt_zU_out'):
-                    solve_data.working_model.ipopt_zU_out = Suffix(
-                        direction=Suffix.IMPORT)
 
             # Initialize the main problem
             with time_code(solve_data.timing, 'initialization'):

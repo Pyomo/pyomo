@@ -14,8 +14,8 @@
 
 1 Block Declarations
     cc : Size=1, Index=None, Active=True
-        Key  : Arg0   : Arg1               : Active
-        None : y + x3 : x1 + 2*x2  ==  1.0 :   True
+        Key  : Arg0   : Arg1             : Active
+        None : y + x3 : x1 + 2*x2  ==  1 :   True
         1 Constraint Declarations
             c : Size=1, Index=None, Active=True
                 Key  : Lower : Body      : Upper : Active
