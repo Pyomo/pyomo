@@ -4131,7 +4131,7 @@ class Test(unittest.TestCase):
 
         e = m.v + m.w >= 2
         rep = generate_standard_repn(e, compute_values=True)
-        self.assertEqual(str(rep.to_expression()), "2.0  <=  v + w")
+        self.assertEqual(str(rep.to_expression()), "2  <=  v + w")
 
     def test_external_fn(self):
         def _g(*args):
