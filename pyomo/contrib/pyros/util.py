@@ -16,6 +16,7 @@ from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.expr.visitor import identify_variables, identify_mutable_parameters, replace_expressions
 from pyomo.core.expr.sympy_tools import sympyify_expression, sympy2pyomo_expression
 from pyomo.common.dependencies import scipy as sp
+from pyomo.core.expr.numvalue import native_types
 import itertools as it
 import timeit
 from contextlib import contextmanager
@@ -494,7 +495,7 @@ def coefficient_matching(model, constraint, uncertain_params, config):
         val = generate_standard_repn(swapped.body, compute_values=False)
 
         if val.constant is not None:
-            if hasattr(val.constant, "is_potentially_variable"):
+            if type(val.constant) not in native_types:
                 temp_expr = replace_expressions(val.constant, substitution_map=var_to_param_substitution_map_reverse)
                 if temp_expr.is_potentially_variable():
                     model.coefficient_matching_constraints.add(expr=temp_expr == 0)
@@ -510,7 +511,7 @@ def coefficient_matching(model, constraint, uncertain_params, config):
                 robust_infeasible = True
         if val.linear_coefs is not None:
             for coeff in val.linear_coefs:
-                if hasattr(coeff, "is_potentially_variable"):
+                if type(coeff) not in native_types:
                     temp_expr = replace_expressions(coeff, substitution_map=var_to_param_substitution_map_reverse)
                     if temp_expr.is_potentially_variable():
                         model.coefficient_matching_constraints.add(expr=temp_expr == 0)
@@ -526,7 +527,7 @@ def coefficient_matching(model, constraint, uncertain_params, config):
                     robust_infeasible = True
         if val.quadratic_coefs:
             for coeff in val.quadratic_coefs:
-                if hasattr(coeff, "is_potentially_variable"):
+                if type(coeff) not in native_types:
                     temp_expr = replace_expressions(coeff, substitution_map=var_to_param_substitution_map_reverse)
                     if temp_expr.is_potentially_variable():
                         model.coefficient_matching_constraints.add(expr=temp_expr == 0)

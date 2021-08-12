@@ -805,7 +805,8 @@ class EllipsoidalSet(UncertaintySet):
 
         Args:
             center: Vector (``list``) of uncertain parameter values around which deviations are restrained.
-            shape_matrix: Positive semidefinite matrix.
+            shape_matrix: Positive semi-definite matrix, effectively a covariance matrix for
+            constraint and bounds determination.
             scale: Right-hand side value for the ellipsoid.
         """
 
@@ -845,7 +846,7 @@ class EllipsoidalSet(UncertaintySet):
         # === Ensure matrix is not degenerate, for determining inferred bounds
         try:
             for i in range(len(shape_matrix)):
-                np.power(1.0 / shape_matrix[i][i], 0.5)
+                np.power(shape_matrix[i][i], 0.5)
         except:
             raise AttributeError("Shape matrix must be non-degenerate.")
 
@@ -873,8 +874,8 @@ class EllipsoidalSet(UncertaintySet):
         scale = self.scale
         nom_value = self.center
         P = self.shape_matrix
-        parameter_bounds = [(nom_value[i] - np.power(1.0 / P[i][i], 0.5) * scale,
-                             nom_value[i] + np.power(1.0 / P[i][i], 0.5) * scale) for i in range(self.dim)]
+        parameter_bounds = [(nom_value[i] - np.power(P[i][i], 0.5) * scale,
+                             nom_value[i] + np.power(P[i][i], 0.5) * scale) for i in range(self.dim)]
         return parameter_bounds
 
     def set_as_constraint(self, uncertain_params, **kwargs):

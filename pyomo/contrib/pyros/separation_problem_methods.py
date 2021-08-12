@@ -250,10 +250,7 @@ def solve_separation_problem(model_data, config):
     config_sep_priority_dict = config.separation_priority_order
     actual_sep_priority_dict = ComponentMap()
     for perf_con in model_data.separation_model.util.performance_constraints:
-        if perf_con.name not in config_sep_priority_dict.keys():
-            actual_sep_priority_dict[perf_con] = 0
-        else:
-            actual_sep_priority_dict[perf_con] = config_sep_priority_dict[perf_con.name]
+        actual_sep_priority_dict[perf_con] = config_sep_priority_dict.get(perf_con.name, 0)
 
     # "Bin" the objectives based on priorities
     sorted_unique_priorities = sorted(list(set(actual_sep_priority_dict.values())), reverse=True)
