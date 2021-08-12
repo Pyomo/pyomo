@@ -361,7 +361,8 @@ jobs:
         }
         if (-not (Test-Path "$INSTALLER" -PathType Leaf)) {
             echo "...downloading GAMS"
-            Invoke-WebRequest -Uri "$URL" -OutFile "$INSTALLER"
+            Invoke-WebRequest -Uri "$URL" -OutFile "$INSTALLER" `
+                -RetryIntervalSec 30 -MaximumRetryCount 8 -TimeoutSec 150
         }
         echo "...installing GAMS"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
@@ -411,7 +412,8 @@ jobs:
         }
         if (-not (Test-Path "$INSTALLER" -PathType Leaf)) {
             echo "...downloading BARON ($URL)"
-            Invoke-WebRequest -Uri "$URL" -OutFile "$INSTALLER"
+            Invoke-WebRequest -Uri "$URL" -OutFile "$INSTALLER" `
+                -RetryIntervalSec 30 -MaximumRetryCount 8 -TimeoutSec 150
         }
         echo "...installing BARON"
         if ( "${{matrix.TARGET}}" -eq "win" ) {
