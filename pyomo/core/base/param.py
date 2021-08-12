@@ -303,7 +303,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             return idx in self._data
         return idx in self._index
 
-    def __iter__(self):
+    def keys(self):
         """
         Iterate over the keys in the dictionary.  If the default value is
         specified, then iterate over all keys in the component index.
@@ -522,7 +522,10 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             # reasonable values produces an informative error.
             if self._mutable:
                 # Note: _ParamData defaults to Param.NoValue
-                ans = self._data[index] = _ParamData(self)
+                if self.is_indexed():
+                    ans = self._data[index] = _ParamData(self)
+                else:
+                    ans = self._data[index] = self
                 return ans
             if self.is_indexed():
                 idx_str = '%s[%s]' % (self.name, index,)

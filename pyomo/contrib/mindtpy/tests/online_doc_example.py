@@ -30,10 +30,11 @@ class OnlineDocExample(ConcreteModel):
         """Create the problem."""
         kwargs.setdefault('name', 'OnlineDocExample')
         super(OnlineDocExample, self).__init__(*args, **kwargs)
-        model = self
-        model.x = Var(bounds=(1.0, 10.0), initialize=5.0)
-        model.y = Var(within=Binary)
-        model.c1 = Constraint(expr=(model.x-4.0)**2 -
-                              model.x <= 50.0*(1-model.y))
-        model.c2 = Constraint(expr=model.x*log(model.x) + 5 <= 50.0*(model.y))
-        model.objective = Objective(expr=model.x, sense=minimize)
+        m = self
+        m.x = Var(bounds=(1.0, 10.0), initialize=5.0)
+        m.y = Var(within=Binary)
+        m.c1 = Constraint(expr=(m.x-4.0)**2 -
+                          m.x <= 50.0*(1-m.y))
+        m.c2 = Constraint(expr=m.x*log(m.x) + 5 <= 50.0*(m.y))
+        m.objective = Objective(expr=m.x, sense=minimize)
+        m.optimal_value = 2.438447

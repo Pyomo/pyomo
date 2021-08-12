@@ -137,6 +137,8 @@ class TestPyomoEnviron(unittest.TestCase):
             'tempfile',
             'textwrap',
             'typing',
+            'win32file',
+            'win32pipe',
         }
         # Non-standard-library TPLs that Pyomo will load unconditionally
         ref.add('ply')

@@ -1,6 +1,6 @@
 cc : Size=1, Index=None, Active=True
-    Key  : Arg0            : Arg1              : Active
-    None : 0.0  <=  y + x2 : x2 - x3  <=  -1.0 :   True
+    Key  : Arg0          : Arg1            : Active
+    None : 0  <=  y + x2 : x2 - x3  <=  -1 :   True
     2 Disjunct Declarations
         expr1 : Size=1, Index=None, Active=True
             1 Var Declarations
@@ -13,8 +13,8 @@ cc : Size=1, Index=None, Active=True
                     Key  : Lower : Body   : Upper : Active
                     None :   0.0 : y + x2 :  +Inf :   True
                 c1 : Size=1, Index=None, Active=True
-                    Key  : Lower : Body             : Upper : Active
-                    None :   0.0 : -1.0 - (x2 - x3) :   0.0 :   True
+                    Key  : Lower : Body           : Upper : Active
+                    None :   0.0 : -1 - (x2 - x3) :   0.0 :   True
 
             1 BooleanVar Declarations
                 indicator_var : Size=1, Index=None
@@ -33,8 +33,8 @@ cc : Size=1, Index=None, Active=True
                     Key  : Lower : Body   : Upper : Active
                     None :   0.0 : y + x2 :   0.0 :   True
                 c1 : Size=1, Index=None, Active=True
-                    Key  : Lower : Body             : Upper : Active
-                    None :   0.0 : -1.0 - (x2 - x3) :  +Inf :   True
+                    Key  : Lower : Body           : Upper : Active
+                    None :   0.0 : -1 - (x2 - x3) :  +Inf :   True
 
             1 BooleanVar Declarations
                 indicator_var : Size=1, Index=None

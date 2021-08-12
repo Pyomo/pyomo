@@ -44,7 +44,7 @@ from pyomo.common.config import (
     ConfigList, MarkImmutable, ImmutableConfigValue,
     PositiveInt, NegativeInt, NonPositiveInt, NonNegativeInt,
     PositiveFloat, NegativeFloat, NonPositiveFloat, NonNegativeFloat,
-    In, Path, PathList, ConfigEnum,
+    In, Path, PathList, ConfigEnum, DynamicImplicitDomain,
     _UnpickleableDomain, _picklable,
 )
 from pyomo.common.log import LoggingIntercept
@@ -438,6 +438,42 @@ class TestConfigDomains(unittest.TestCase):
             cfg.enum = 3
         with self.assertRaisesRegex(ValueError, '.*invalid value'):
             cfg.enum ='ITEM_THREE'
+
+    def test_DynamicImplicitDomain(self):
+        def _rule(key, val):
+            ans = ConfigDict()
+            if 'i' in key:
+                ans.declare('option_i', ConfigValue(domain=int, default=1))
+            if 'f' in key:
+                ans.declare('option_f', ConfigValue(domain=float, default=2))
+            if 's' in key:
+                ans.declare('option_s', ConfigValue(domain=str, default=3))
+            if 'l' in key:
+                raise ValueError('invalid key: %s' % key)
+            return ans(val)
+        cfg = ConfigDict(
+            implicit=True, implicit_domain=DynamicImplicitDomain(_rule))
+        self.assertEqual(len(cfg), 0)
+        test = cfg({'hi': {'option_i': 10},
+                    'fast': {'option_f': 20}})
+        self.assertEqual(len(test), 2)
+        self.assertEqual(test.hi.value(), {'option_i': 10})
+        self.assertEqual(test.fast.value(), {'option_f': 20, 'option_s': '3'})
+
+        test2 = cfg(test)
+        self.assertIsNot(test.hi, test2.hi)
+        self.assertIsNot(test.fast, test2.fast)
+        self.assertEqual(test.value(), test2.value())
+
+        self.assertEqual(len(test2), 2)
+        fit = test2.get('fit', {})
+        self.assertEqual(len(test2), 2)
+        self.assertEqual(fit.value(), {'option_f': 2, 'option_i': 1})
+
+        with self.assertRaisesRegex(ValueError, "invalid key: fail"):
+            test = cfg({'hi': {'option_i': 10},
+                        'fast': {'option_f': 20},
+                        'fail': {'option_f': 20}})
 
 
 class TestImmutableConfigValue(unittest.TestCase):
@@ -2337,9 +2373,6 @@ c: 1.0
         with self.assertRaisesRegexp(
                 ValueError, "config 'dd' is already assigned to ConfigDict ''"):
             cfg.declare('dd', cfg.get('b'))
-        with self.assertRaisesRegexp(
-                ValueError, "Illegal character in config 'd\[1\]'"):
-            cfg.declare('d[1]', ConfigValue(1))
 
 
     def test_declare_from(self):

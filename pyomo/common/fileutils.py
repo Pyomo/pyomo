@@ -25,8 +25,8 @@ import platform
 import importlib.util
 import sys
 
+from . import envvar
 from .deprecation import deprecated
-from . import config
 
 def this_file(stack_offset=1):
     """Returns the file name for the module that calls this function.
@@ -316,10 +316,10 @@ def find_library(libname, cwd=True, include_PATH=True, pathlist=None):
     if pathlist is None:
         # Note: PYOMO_CONFIG_DIR/lib comes before LD_LIBRARY_PATH, and
         # PYOMO_CONFIG_DIR/bin comes immediately before PATH
-        pathlist = [ os.path.join(config.PYOMO_CONFIG_DIR, 'lib') ]
+        pathlist = [ os.path.join(envvar.PYOMO_CONFIG_DIR, 'lib') ]
         pathlist.extend(os.environ.get('LD_LIBRARY_PATH','').split(os.pathsep))
         if include_PATH:
-            pathlist.append( os.path.join(config.PYOMO_CONFIG_DIR, 'bin') )
+            pathlist.append( os.path.join(envvar.PYOMO_CONFIG_DIR, 'bin') )
     elif isinstance(pathlist, str):
         pathlist = pathlist.split(os.pathsep)
     else:
@@ -386,7 +386,7 @@ def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):
 
     """
     if pathlist is None:
-        pathlist = [ os.path.join(config.PYOMO_CONFIG_DIR, 'bin') ]
+        pathlist = [ os.path.join(envvar.PYOMO_CONFIG_DIR, 'bin') ]
     elif isinstance(pathlist, str):
         pathlist = pathlist.split(os.pathsep)
     else:
@@ -608,7 +608,7 @@ class PathManager(object):
         >>> import os
         >>> from stat import S_IXUSR, S_IXGRP, S_IXOTH
         >>> _testfile = os.path.join(
-        ...    pyomo.common.config.PYOMO_CONFIG_DIR, 'bin', 'demo_exec_file')
+        ...    pyomo.common.envvar.PYOMO_CONFIG_DIR, 'bin', 'demo_exec_file')
         >>> _del_testfile = not os.path.exists(_testfile)
         >>> if _del_testfile:
         ...     open(_testfile,'w').close()
@@ -654,13 +654,13 @@ class PathManager(object):
     The ``Executable`` singleton looks for executables in the system
     ``PATH`` and in the list of directories specified by the ``pathlist``
     attribute.  ``Executable.pathlist`` defaults to a list containing the
-    ``os.path.join(pyomo.common.config.PYOMO_CONFIG_DIR, 'bin')``.
+    ``os.path.join(pyomo.common.envvar.PYOMO_CONFIG_DIR, 'bin')``.
 
     The ``Library`` singleton looks for executables in the system
     ``LD_LIBRARY_PATH``, ``PATH`` and in the list of directories
     specified by the ``pathlist`` attribute.  ``Library.pathlist``
     defaults to a list containing the
-    ``os.path.join(pyomo.common.config.PYOMO_CONFIG_DIR, 'lib')``.
+    ``os.path.join(pyomo.common.envvar.PYOMO_CONFIG_DIR, 'lib')``.
 
     Users may also override the normal file resolution by explicitly
     setting the location using :py:meth:`set_path`:
@@ -668,7 +668,7 @@ class PathManager(object):
     .. doctest::
 
         >>> Executable('demo_exec_file').set_path(os.path.join(
-        ...     pyomo.common.config.PYOMO_CONFIG_DIR, 'bin', 'demo_exec_file'))
+        ...     pyomo.common.envvar.PYOMO_CONFIG_DIR, 'bin', 'demo_exec_file'))
 
     Explicitly setting the path is an absolute operation and will
     set the location whether or not that location points to an actual
@@ -690,7 +690,7 @@ class PathManager(object):
         >>> loc = Executable('demo_exec_file').executable
         >>> print(os.path.isfile(loc))
         >>> Executable('demo_exec_file').executable = os.path.join(
-        ...     pyomo.common.config.PYOMO_CONFIG_DIR, 'bin', 'demo_exec_file')
+        ...     pyomo.common.envvar.PYOMO_CONFIG_DIR, 'bin', 'demo_exec_file')
         >>> Executable('demo_exec_file').executable = None
 
     .. doctest::

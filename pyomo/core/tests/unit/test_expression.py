@@ -331,16 +331,6 @@ class TestExpression(unittest.TestCase):
         self.assertEqual(a.is_fixed(), True)
 
 
-    def test_bad_init_wrong_type(self):
-        model = ConcreteModel()
-        def _some_rule(model):
-            return 1.0
-        with self.assertRaises(TypeError):
-            model.e = Expression(expr=_some_rule)
-        with self.assertRaises(TypeError):
-            model.e = Expression([1], expr=_some_rule)
-        del _some_rule
-
     def test_display(self):
         model = ConcreteModel()
         model.e = Expression()
@@ -454,17 +444,14 @@ E : Size=2
         del _some_rule
         def _some_rule(model):
             return Expression.Skip
-        # non-indexed Expression does not recognized
-        # Expression.Skip
-        with self.assertRaises(ValueError):
-            model.e = Expression(rule=_some_rule)
+        model.e = Expression(rule=_some_rule)
+        self.assertEqual(len(model.e), 0)
 
     def test_nonindexed_construct_expr(self):
         model = ConcreteModel()
-        # non-indexed Expression does not recognized
-        # Expression.Skip
-        with self.assertRaises(ValueError):
-            model.e = Expression(expr=Expression.Skip)
+        model.e = Expression(expr=Expression.Skip)
+        self.assertEqual(len(model.e), 0)
+        model.del_component(model.e)
         model.e = Expression()
         self.assertEqual(model.e.extract_values(),
                          {None: None})
@@ -502,6 +489,9 @@ E : Size=2
         model.idx = Set(initialize=[1,2,3])
         model.E = Expression(model.idx, rule=lambda m,i: Expression.Skip)
         self.assertEqual(len(model.E), 0)
+        expr = model.E[1]
+        self.assertIsNone(expr)
+        model.E[1] = None
         expr = model.E[1]
         self.assertIs(type(expr), _GeneralExpressionData)
         self.assertIs(expr.value, None)

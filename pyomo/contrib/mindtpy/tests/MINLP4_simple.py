@@ -15,7 +15,6 @@ Ref:
 """
 
 from __future__ import division
-from pyomo.core.base.util import Initializer
 from pyomo.environ import (ConcreteModel, Constraint, Reals, Integers,
                            Objective, Var, sqrt, minimize, exp)
 from pyomo.environ import SolverFactory, value
@@ -36,4 +35,5 @@ class SimpleMINLP4(ConcreteModel):
         m.c2 = Constraint(expr=1/m.x + 1/m.y - sqrt(m.x) * sqrt(m.y) <= -1)
         m.c3 = Constraint(expr=2*m.x - 5*m.y <= -1)
 
-        m.obj = Objective(expr=-6 * m.x - m.y, sense=minimize)
+        m.objective = Objective(expr=-6 * m.x - m.y, sense=minimize)
+        m.optimal_value = -56.981
