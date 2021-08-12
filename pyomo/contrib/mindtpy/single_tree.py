@@ -20,14 +20,14 @@ from pyomo.core.expr import current as EXPR
 from math import fabs
 from pyomo.repn import generate_standard_repn
 import logging
-import cplex
 from cplex.callbacks import LazyConstraintCallback
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.opt.results import ProblemSense
 from pyomo.contrib.mindtpy.mip_solve import handle_main_optimal, solve_main, handle_regularization_main_tc
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_no_good_cuts
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
-
+from pyomo.common.dependencies import attempt_import
+cplex, cplex_available = attempt_import('cplex')
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
