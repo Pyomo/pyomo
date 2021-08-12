@@ -19,6 +19,7 @@ from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedCla
 from pyomo.common.errors import DeveloperError, PyomoException
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
+from pyomo.common.sorting import sorted_robust
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import (
     native_types, native_numeric_types, as_numeric, value,
@@ -42,7 +43,6 @@ from pyomo.core.base.indexed_component import (
 from pyomo.core.base.global_set import (
     GlobalSets, GlobalSetBase,
 )
-from pyomo.core.base.misc import sorted_robust
 
 from collections.abc import Sequence
 

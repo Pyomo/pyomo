@@ -16,6 +16,7 @@ import logging
 from weakref import ref as weakref_ref
 
 from pyomo.common.deprecation import RenamedClass
+from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.constraint import Constraint
@@ -28,8 +29,7 @@ from pyomo.core.base.indexed_component import \
     (ActiveIndexedComponent,
      UnindexedComponent_set,
      _get_indexed_component_data_name, )
-from pyomo.core.base.misc import (apply_indexed_rule,
-                                  tabular_writer)
+from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import Set
 
 logger = logging.getLogger('pyomo.core')
