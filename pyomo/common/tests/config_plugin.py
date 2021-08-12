@@ -7,20 +7,10 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+from pyomo.common.config import ConfigDict, ConfigValue
 
-# The log should be imported first so that the Pyomo LogHandler can be
-# set up as soon as possible
-from . import log
-from . import envvar
-
-from .factory import Factory
-
-from .fileutils import (
-    Executable, Library,
-    # The following will be deprecated soon
-    register_executable, registered_executable, unregister_executable
-)
-from . import config, dependencies, timing
-from .deprecation import deprecated
-from .errors import DeveloperError
-from ._command import pyomo_command, get_pyomo_commands
+def get_configuration(config):
+    ans = ConfigDict()
+    ans.declare('key1', ConfigValue(default=0, domain=int))
+    ans.declare('key2', ConfigValue(default=5, domain=str))
+    return ans(config)

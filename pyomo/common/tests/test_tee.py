@@ -53,7 +53,7 @@ class TestTeeStream(unittest.TestCase):
             # flush() and short pause should help
             t.STDOUT.write("Hello\nWorld")
             t.STDOUT.flush()
-            time.sleep(tee._poll_interval*10)
+            time.sleep(tee._poll_interval*100)
             t.STDERR.write("interrupting\ncow")
             t.STDERR.flush()
             # For determinism, it is important that the STDERR message
@@ -168,6 +168,29 @@ class TestTeeStream(unittest.TestCase):
         finally:
             sys.stdout, sys.stderr = old
 
+    def test_deadlock(self):
+        class MockStream(object):
+            def write(self, data):
+                time.sleep(0.2)
+
+        _save = tee._poll_timeout, tee._poll_timeout_deadlock
+        tee._poll_timeout = tee._poll_interval * 2**5  # 0.0032
+        tee._poll_timeout_deadlock = tee._poll_interval * 2**7 # 0.0128
+
+        try:
+            with LoggingIntercept() as LOG, self.assertRaisesRegex(
+                    RuntimeError, 'deadlock'):
+                with tee.TeeStream(MockStream()) as t:
+                    err = t.STDERR
+                    err.write('*')
+            self.assertEqual(
+                'Significant delay observed waiting to join reader '
+                'threads, possible output stream deadlock\n',
+                LOG.getvalue()
+            )
+        finally:
+            tee._poll_timeout, tee._poll_timeout_deadlock = _save
+
 class TestFileDescriptor(unittest.TestCase):
     def setUp(self):
         self.out = sys.stdout
@@ -176,6 +199,7 @@ class TestFileDescriptor(unittest.TestCase):
     def tearDown(self):
         sys.stdout = self.out
         os.dup2(self.out_fd, 1)
+        os.close(self.out_fd)
 
     def _generate_output(self, redirector):
         with redirector:
@@ -289,6 +313,9 @@ class TestFileDescriptor(unittest.TestCase):
 
         self.assertEqual(OUT.getvalue(), "to_stdout_1\nto_fd1_1\n")
         with os.fdopen(r, 'r') as FILE:
-            os.close(w)
             os.close(1)
+            os.close(w)
             self.assertEqual(FILE.read(), "to_stdout_2\nto_fd1_2\n")
+
+if __name__ == '__main__':
+    unittest.main()

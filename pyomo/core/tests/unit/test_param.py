@@ -1405,6 +1405,32 @@ q : Size=3, Index=Any, Domain=Any, Default=None, Mutable=True
 1 Declarations: p
         """.strip())
 
+    def test_scalar_get_mutable_when_not_present(self):
+        m = ConcreteModel()
+        m.p = Param(mutable=True)
+        self.assertEqual(m.p._data, {})
+        m.x_p = Var(bounds=(0, m.p))
+        self.assertEqual(m.p._data, {})
+        self.assertIs(m.p[None], m.p)
+        self.assertEqual(len(m.p._data), 1)
+        self.assertIs(m.p._data[None], m.p)
+        m.p = 10
+        self.assertEqual(m.x_p.bounds, (0, 10))
+        m.p = 20
+        self.assertEqual(m.x_p.bounds, (0, 20))
+
+    def test_scalar_set_mutable_when_not_present(self):
+        m = ConcreteModel()
+        m.p = Param(mutable=True)
+        self.assertEqual(m.p._data, {})
+        m.p = 10
+        self.assertEqual(len(m.p._data), 1)
+        self.assertIs(m.p._data[None], m.p)
+        m.x_p = Var(bounds=(0, m.p))
+        self.assertEqual(m.x_p.bounds, (0, 10))
+        m.p = 20
+        self.assertEqual(m.x_p.bounds, (0, 20))
+
 
 def createNonIndexedParamMethod(func, init_xy, new_xy, tol=1e-10):
 

@@ -585,7 +585,7 @@ class Component(_ComponentBase):
             else:
                 ans = name_repr(local_name)
         else:
-            # Note: we want "getattr(x.parent_block(), x.localname) == x"
+            # Note: we want "getattr(x.parent_block(), x.local_name) == x"
             # so we do not want to call _safe_name_str, as that could
             # add quotes or otherwise escape the string.
             ans = local_name

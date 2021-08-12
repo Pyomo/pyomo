@@ -11,7 +11,6 @@ Ref:
 
 """
 from __future__ import division
-
 from math import pi
 
 from pyomo.environ import (Binary, ConcreteModel, Constraint,
@@ -35,3 +34,4 @@ class Feasibility_Pump2(ConcreteModel):
 
         m.c1 = Constraint(expr=m.y - sin(m.x * pi * (5 / 3)) <= 0)
         m.c2 = Constraint(expr=- m.y - sin(m.x * pi * (5 / 3)) <= 0)
+        m.optimal_value = 0

@@ -36,3 +36,4 @@ class Feasibility_Pump1(ConcreteModel):
                           (m.y2-0.5) * (m.y2-0.5) <= 0.25)
         m.c2 = Constraint(expr=m.x - m.y1 <= 3)
         m.c3 = Constraint(expr=m.y2 <= 0)
+        m.optimal_value = 0

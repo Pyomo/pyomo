@@ -25,7 +25,7 @@ jobs:
   build:
     name: ${{ matrix.TARGET }}/${{ matrix.python }}${{ matrix.other }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:

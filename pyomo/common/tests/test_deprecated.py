@@ -450,7 +450,7 @@ class TestRenamedClass(unittest.TestCase):
             out.getvalue().replace("\n", " ").strip(),
             r"^DEPRECATED: Declaring class 'DeprecatedClassSubclass' "
             r"derived from 'DeprecatedClass'.  "
-            r"The class 'DeprecatedClass' has been renamed to 'NewClass'  "
+            r"The class 'DeprecatedClass' has been renamed to 'NewClass'.  "
             r"\(deprecated in X.y\) \(called from [^\)]*\)$",
         )
 
@@ -478,7 +478,7 @@ class TestRenamedClass(unittest.TestCase):
         self.assertRegex(
             out.getvalue().replace("\n", " ").strip(),
             r"^DEPRECATED: Instantiating class 'DeprecatedClass'.  "
-            r"The class 'DeprecatedClass' has been renamed to 'NewClass'  "
+            r"The class 'DeprecatedClass' has been renamed to 'NewClass'.  "
             r"\(deprecated in X.y\) \(called from [^\)]*\)$",
         )
 
@@ -508,8 +508,8 @@ class TestRenamedClass(unittest.TestCase):
             self.assertRegex(
                 out.getvalue().replace("\n", " ").strip(),
                 r"^DEPRECATED: Checking type relative to 'DeprecatedClass'.  "
-                r"The class 'DeprecatedClass' has been renamed to 'NewClass'  "
-                r"\(deprecated in X.y\) \(called from [^\)]*\)$",
+                r"The class 'DeprecatedClass' has been renamed to 'NewClass'."
+                r"  \(deprecated in X.y\) \(called from [^\)]*\)$",
             )
 
         #
@@ -531,8 +531,8 @@ class TestRenamedClass(unittest.TestCase):
             self.assertRegex(
                 out.getvalue().replace("\n", " ").strip(),
                 r"^DEPRECATED: Checking type relative to 'DeprecatedClass'.  "
-                r"The class 'DeprecatedClass' has been renamed to 'NewClass'  "
-                r"\(deprecated in X.y\) \(called from [^\)]*\)$",
+                r"The class 'DeprecatedClass' has been renamed to 'NewClass'."
+                r"  \(deprecated in X.y\) \(called from [^\)]*\)$",
             )
 
         #
