@@ -761,7 +761,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                     % (self.name, str(key), str(val), str(msg)) )
             #
             # Flag that things are fully constructed now (and changing an
-            # inmutable Param is now an exception).
+            # immutable Param is now an exception).
             #
             self._constructed = True
 
