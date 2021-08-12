@@ -44,33 +44,29 @@ from pyomo.core.base import Constraint
 
 __version__ =  "1.0.0"
 
-class NonNegIntOrMinusOne(object):
+def NonNegIntOrMinusOne(obj):
+    '''
+    if obj is a non-negative int, return the non-negative int
+    if obj is -1, return -1
+    else, error
+    '''
+    ans = int(obj)
+    if ans != float(obj) or (ans < 0 and ans != -1):
+        raise ValueError(
+            "Expected non-negative int, but received %s" % (obj,))
+    return ans
 
-    def __call__(self, obj):
-        '''
-        if obj is a non-negative int, return the non-negative int
-        if obj is -1, return -1
-        else, error
-        '''
-        ans = int(obj)
-        if ans != float(obj) or (ans < 0 and ans != -1):
-            raise ValueError(
-                "Expected non-negative int, but received %s" % (obj,))
-        return ans
-
-def PositiveIntOrMinusOne():
-
-    def __call__(self, obj):
-        '''
-        if obj is a positive int, return the int
-        if obj is -1, return -1
-        else, error
-        '''
-        ans = int(obj)
-        if ans != float(obj) or (ans <= 0 and ans != -1):
-            raise ValueError(
-                "Expected non-negative int, but received %s" % (obj,))
-        return ans
+def PositiveIntOrMinusOne(obj):
+    '''
+    if obj is a positive int, return the int
+    if obj is -1, return -1
+    else, error
+    '''
+    ans = int(obj)
+    if ans != float(obj) or (ans <= 0 and ans != -1):
+        raise ValueError(
+            "Expected positive int, but received %s" % (obj,))
+    return ans
 
 
 class SolverResolvable(object):
@@ -190,7 +186,7 @@ def pyros_config():
 
     ))
     CONFIG.declare("max_iter", ConfigValue(
-        default=-1, domain=PositiveIntOrMinusOne(),
+        default=-1, domain=PositiveIntOrMinusOne,
         description="Optional. Default = -1. Iteration limit for the GRCS algorithm. '-1' is no iteration limit."
     ))
     CONFIG.declare("robust_feasibility_tolerance", ConfigValue(
