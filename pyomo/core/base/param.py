@@ -525,7 +525,10 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             # reasonable values produces an informative error.
             if self._mutable:
                 # Note: _ParamData defaults to Param.NoValue
-                ans = self._data[index] = _ParamData(self)
+                if self.is_indexed():
+                    ans = self._data[index] = _ParamData(self)
+                else:
+                    ans = self._data[index] = self
                 return ans
             if self.is_indexed():
                 idx_str = '%s[%s]' % (self.name, index,)

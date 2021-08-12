@@ -453,6 +453,12 @@ class constraint(_MutableBoundsConstraintMixin,
                             "expression restricted to storage of "
                             "numeric data."
                             % (self.name))
+                elif arg1 is not None and is_numeric_data(arg1):
+                    # Special case (reflect behavior of AML): if the
+                    # upper bound is None and the "body" is only data,
+                    # then shift the body to the UB and the LB to the
+                    # body
+                    arg0, arg1, arg2 = arg2, arg0, arg1
 
                 self.lb = arg0
                 self.body  = arg1

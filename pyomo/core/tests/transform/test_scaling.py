@@ -198,7 +198,7 @@ class TestScaleModelTransformation(unittest.TestCase):
         # Note that because the model was not renamed,
         # v3_ref is still intact.
 
-        lhs = m.c2.expr.arg(0)
+        lhs = m.c2.body
         monom_factor = lhs.arg(0)
         scale_factor = (m.scaling_factor[m.c2]/
                         m.scaling_factor[m.v2])

@@ -943,7 +943,7 @@ value() function.""" % ( self.name, i ))
             if value is not _NotSpecified:
                 obj.set_value(value)
         except:
-            del self._data[index]
+            self._data.pop(index, None)
             raise
         return obj
 
