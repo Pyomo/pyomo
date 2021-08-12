@@ -58,9 +58,9 @@ class _robust_sort_keyfcn(object):
             # 1a: Check if the value is comparable to a float.  If
             # it is, sort it as if it were a float.
             try:
-                val < 1.
-                1. < val
-                _typename = float.__name__
+                # Extra check that the comparison returns a meaningful result
+                if bool(val < 1.) != bool(1. < val or 1. == val):
+                    _typename = float.__name__
             except:
                 pass
         except:
