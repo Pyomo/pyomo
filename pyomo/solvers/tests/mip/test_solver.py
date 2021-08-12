@@ -12,25 +12,11 @@
 #
 
 import os
-from os.path import abspath, dirname
-pyomodir = dirname(abspath(__file__))+"/../.."
-currdir = dirname(abspath(__file__))+os.sep
 
 import pyomo.common.unittest as unittest
-from pyomo.common.tempfiles import TempfileManager
 
 import pyomo.opt
 import pyomo.solvers.plugins.solvers
-
-old_tempdir = None
-def setUpModule():
-    global old_tempdir
-    old_tempdir = TempfileManager.tempdir
-    TempfileManager.tempdir = currdir
-
-def tearDownModule():
-    TempfileManager.tempdir = old_tempdir
-
 
 class MockSolver2(pyomo.opt.OptSolver):
 
@@ -49,7 +35,6 @@ class OptSolverDebug(unittest.TestCase):
 
     def tearDown(self):
         pyomo.opt.SolverFactory.unregister('stest2')
-        TempfileManager.clear_tempfiles()
 
     def test_solver_init1(self):
         """

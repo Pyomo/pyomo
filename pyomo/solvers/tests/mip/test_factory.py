@@ -12,12 +12,8 @@
 #
 
 import os
-from os.path import abspath, dirname
-pyomodir = dirname(abspath(__file__))+"/../.."
-currdir = dirname(abspath(__file__))+os.sep
 
 import pyomo.common.unittest as unittest
-from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.opt import (AbstractProblemWriter, AbstractResultsReader,
                        OptSolver, ReaderFactory,
@@ -26,15 +22,6 @@ from pyomo.opt.base.solvers import UnknownSolver
 from pyomo.opt.plugins.sol import ResultsReader_sol
 from pyomo.solvers.plugins.solvers import PICO
 
-
-old_tempdir = None
-def setUpModule():
-    global old_tempdir
-    old_tempdir = TempfileManager.tempdir
-    TempfileManager.tempdir = currdir
-
-def tearDownModule():
-    TempfileManager.tempdir = old_tempdir
 
 class MockWriter(AbstractProblemWriter):
 
@@ -63,7 +50,6 @@ class OptFactoryDebug(unittest.TestCase):
         import pyomo.environ
 
     def tearDown(self):
-        TempfileManager.clear_tempfiles()
         ReaderFactory.unregister('rtest3')
         ReaderFactory.unregister('stest3')
         ReaderFactory.unregister('wtest3')

@@ -15,6 +15,7 @@ from weakref import ref as weakref_ref
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.deprecation import RenamedClass
+from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.timing import ConstructionTimer
@@ -24,7 +25,7 @@ from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.indexed_component import \
     IndexedComponent, UnindexedComponent_set
-from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
+from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.numvalue import as_numeric, value
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.base.label import alphanum_label_from_name

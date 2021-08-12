@@ -17,17 +17,24 @@ Contributed packages distributed with Pyomo:
    
    community.rst
    gdpopt.rst
-   mcpp.rst
    mindtpy.rst
    multistart.rst
-   parmest/index.rst
    preprocessing.rst
+   parmest/index.rst
    pynumero/index.rst
-   satsolver.rst
+   pyros.rst
    sensitivity_toolbox.rst
+
+Contributed Pyomo interfaces to other packages:
+
+.. toctree::
+   :maxdepth: 1
    
+   mcpp.rst
+   satsolver.rst
+
 
 Contributed packages distributed independently of Pyomo, but accessible
 through ``pyomo.contrib``:
 
-* `pyomo.contrib.simplemodel <http://pyomocontrib-simplemodel.readthedocs.io/en/latest/source.html>`_
+* `pyomo.contrib.simplemodel <http://pyomo-simplemodel.readthedocs.io/en/latest>`_

@@ -29,6 +29,26 @@ class GlobalSetBase(object):
         # Override str() to always print out the global set name
         return self.name
 
+    #
+    # Override the private "_parent" attribute: as this is a
+    # _global_ set, we disallow assigning the set to a block.
+    #
+    @property
+    def _parent(self):
+        return None
+
+    @_parent.setter
+    def _parent(self, val):
+        if val is None:
+            return
+        val = val() # dereference the weakref
+        raise RuntimeError(
+            "Cannot assign a GlobalSet '%s' to %s '%s'"
+            % (self.global_name,
+               'model' if val.model() is val else 'block',
+               val.name or 'unknown')
+        )
+
 # FIXME: This mocks up part of the Set API until we can break up the set
 # module to resolve circular dependencies and can make this a proper
 # GlobalSet (Scalar IndexedComponent objects are indexed by
