@@ -208,10 +208,10 @@ class TestNumPy(unittest.TestCase):
         m.v = Var(m.ix_set)
         expr = m.p[1] > m.v[1]
         self.assertIsInstance(expr, InequalityExpression)
-        self.assertEqual(str(expr), "v[1]  <  0.0")
+        self.assertEqual(str(expr), "v[1]  <  0")
         expr = m.p[2] > m.v[2]
         self.assertIsInstance(expr, InequalityExpression)
-        self.assertEqual(str(expr), "v[2]  <  5.0")
+        self.assertEqual(str(expr), "v[2]  <  5")
 
 
 if __name__ == '__main__':
