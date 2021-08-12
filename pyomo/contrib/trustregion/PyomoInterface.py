@@ -12,19 +12,56 @@ import logging
 
 import numpy as np
 from math import inf
+# This class is a replacement for set that allows Pyomo
+# modeling components to be used as entries.
 from pyomo.common.collections import ComponentSet
+# Check for uniqueness of component names and add random numbers
+# until uniqueness is gained (i.e., my username is taken; let's add
+# my student ID # to it)
 from pyomo.common.modeling import unique_component_name
+# Block: As discussed with John, a Block is basically the idea of a
+# "dense matrix" within a sparse matrix
+# Var: Variable (changes)
+# Param: Parameter (constant)
+# VarList: Variable objects, not-fixed length; "List of decision variables"
+# ConstraintList: List of the constraint expressions
+# Constraint: The constraint! I.e., "I want to get the most utility out of XYZ,
+# but I can't spend more than $#." The second part is the constraint.
+# Objective: The first part is the objective - "I want to get the most utility"
+# RangeSet: I'm fuzzier on this one - the docstring says that it's a set of
+# numeric values, based on NumericRange objects. But I don't get the use of it.
+# value: You can call something like m.x.value and get the numeric value or None.
+# ConcreteModel: A Block - Concrete has a flag that it has already been constructed.
+# Reals: Assuming a mathematical approach to this, Reals are non-imaginary
+# numbers (can be expressed in infinite decimal expansion)
+# sqrt: Obvious
+# max/min: The "rule" you can use for your Objective
 from pyomo.core import (
     Block, Var, Param, VarList, ConstraintList, Constraint, Objective,
     RangeSet, value, ConcreteModel, Reals, sqrt, minimize, maximize,
 )
+# This imports a lot of stuff...
 from pyomo.core.expr import current as EXPR
+# This is a subset of ExternalFunction, which is an idea that apparently never
+# got finished. Goal: external function not processed through the ASL.
+# You could call out to a Python function instead of ASL in the theory behind
+# this one. In TR, it makes sense to use this because you are running the 
+# process over and over again to make new surrogate models.
+# Basically... It's a mess, and I need to care about that.
 from pyomo.core.base.external import PythonCallbackFunction
+# According to John, he isn't sure why nonpyomo_leaf_types is necessary
+# when it's almost exactly the same as native_types.
+# It may be because AMPL allows for strings as EF arguments.
 from pyomo.core.base.numvalue import nonpyomo_leaf_types
+# Solver stuff!
 from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
+# This is generating a set of points that is added to the cache file
+# for exploring a the trust region. I'm still kind of fuzzy about how
+# exactly this is generated - what principles are being used for this?
 from pyomo.contrib.trustregion.GeometryGenerator import (
     generate_quadratic_rom_geometry
 )
+# Replaces "None" values with the appropriate actual bound values
 from pyomo.contrib.trustregion.helper import maxIgnoreNone, minIgnoreNone
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
@@ -47,7 +84,7 @@ class ReplaceEFVisitor(EXPR.ExpressionReplacementVisitor):
         if id(node._fcn) not in self.efSet:
             return node
         # At this point we know this is an ExternalFunctionExpression
-        # node that we want to replace with an auliliary variable (y)
+        # node that we want to replace with an auxiliary variable (y)
         new_args = []
         seen = ComponentSet()
         # TODO: support more than PythonCallbackFunctions

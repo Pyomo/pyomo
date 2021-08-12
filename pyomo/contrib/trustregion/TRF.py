@@ -8,15 +8,19 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from math import pow
+from math import pow # raise to a power
 from numpy import inf
-from numpy.linalg import norm
+from numpy.linalg import norm # Defaults to Frob norm
+# The filter
 from pyomo.contrib.trustregion.filterMethod import (
     FilterElement, Filter)
+# Helper functions - one of which is kind of... Unnecessary
 from pyomo.contrib.trustregion.helper import (cloneXYZ, packXYZ)
 from pyomo.contrib.trustregion.Logger import Logger
+# The link to Pyomo stuff
 from pyomo.contrib.trustregion.PyomoInterface import (
     PyomoInterface, ROMType)
+
 
 def TRF(m, eflist, config):
     """The main function of the Trust Region Filter algorithm
