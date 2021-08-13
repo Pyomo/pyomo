@@ -3927,19 +3927,19 @@ class Test(unittest.TestCase):
 
         e = (1 + m.v + m.w + m.v**2)*(m.v + m.w + m.v**2)
         rep = generate_standard_repn(e, compute_values=True)
-        self.assertEqual(str(rep.to_expression()), "v + w + 2*v**2 + 2*(v*w) + w**2 + (v + w)*(v*v) + v*v*(v + w)")
+        self.assertEqual(str(rep.to_expression()), "(1 + v + w + v**2)*(v + w + v**2)")
         rep = generate_standard_repn(e, compute_values=True, quadratic=False)
         self.assertEqual(str(rep.to_expression()), "(1 + v + w + v**2)*(v + w + v**2)")
 
         e = (m.v + m.w + m.v**2)*(1 + m.v + m.w + m.v**2)
         rep = generate_standard_repn(e, compute_values=True)
-        self.assertEqual(str(rep.to_expression()), "v + w + 2*v**2 + 2*(v*w) + w**2 + (v + w)*(v*v) + v*v*(v + w)")
+        self.assertEqual(str(rep.to_expression()), "(v + w + v**2)*(1 + v + w + v**2)")
         rep = generate_standard_repn(e, compute_values=True, quadratic=False)
         self.assertEqual(str(rep.to_expression()), "(v + w + v**2)*(1 + v + w + v**2)")
 
         e = (1 + m.v + m.w + m.v**2)*(1 + m.v + m.w + m.v**2)
         rep = generate_standard_repn(e, compute_values=True)
-        self.assertEqual(str(rep.to_expression()), "1 + 2*v + 2*w + 3*v**2 + 2*(v*w) + w**2 + (v + w)*(v*v) + v*v*(v + w)")
+        self.assertEqual(str(rep.to_expression()), "(1 + v + w + v**2)*(1 + v + w + v**2)")
         rep = generate_standard_repn(e, compute_values=True, quadratic=False)
         self.assertEqual(str(rep.to_expression()), "(1 + v + w + v**2)*(1 + v + w + v**2)")
 
