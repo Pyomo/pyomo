@@ -13,19 +13,19 @@ from pyomo.common.dependencies import networkx_available
 from pyomo.common.dependencies import scipy_available
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.contrib.incidence_analysis.interface import (
-        IncidenceGraphInterface,
-        get_structural_incidence_matrix,
-        get_numeric_incidence_matrix,
-        get_incidence_graph,
-        )
+    IncidenceGraphInterface,
+    get_structural_incidence_matrix,
+    get_numeric_incidence_matrix,
+    get_incidence_graph,
+    )
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.triangularize import block_triangularize
 from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
-        dulmage_mendelsohn,
-        )
+    dulmage_mendelsohn,
+    )
 from pyomo.contrib.incidence_analysis.tests.models_for_testing import (
-        make_gas_expansion_model,
-        make_degenerate_solid_phase_model,
+    make_gas_expansion_model,
+    make_degenerate_solid_phase_model,
         )
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP

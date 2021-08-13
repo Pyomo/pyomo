@@ -14,15 +14,15 @@ from pyomo.common.dependencies import networkx_available
 from pyomo.common.dependencies import scipy_available
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.contrib.incidence_analysis.interface import (
-        get_structural_incidence_matrix,
-        )
+    get_structural_incidence_matrix,
+    )
 from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
-        dulmage_mendelsohn,
-        )
+    dulmage_mendelsohn,
+    )
 from pyomo.contrib.incidence_analysis.tests.models_for_testing import (
-        make_gas_expansion_model,
-        make_dynamic_model,
-        )
+    make_gas_expansion_model,
+    make_dynamic_model,
+    )
 
 import pyomo.common.unittest as unittest
 
