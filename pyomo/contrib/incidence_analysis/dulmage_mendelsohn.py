@@ -30,7 +30,10 @@ ColPartition = namedtuple(
 def dulmage_mendelsohn(matrix_or_graph, top_nodes=None, matching=None):
     """
     COO matrix or NetworkX graph interface to the coarse Dulmage Mendelsohn
-    partition.
+    partition. The matrix or graph should correspond to a Pyomo model.
+    top_nodes must be provided if a NetworkX graph is used, and should
+    correspond to Pyomo constraints.
+
     """
     if isinstance(matrix_or_graph, nx.Graph):
         # The purpose of handling graphs here is that if we construct NX graphs
@@ -44,6 +47,10 @@ def dulmage_mendelsohn(matrix_or_graph, top_nodes=None, matching=None):
                     "\notherwise the result is ambiguous."
                     )
         partition = dm_nx(graph, top_nodes=top_nodes, matching=matching)
+        # RowPartition and ColPartition do not make sense for a general graph.
+        # However, here we assume that this graph comes from a Pyomo model,
+        # and that "top nodes" are constraints.
+        partition = (RowPartition(*partition[0]), ColPartition(*partition[1]))
     else:
         # Assume matrix_or_graph is a scipy coo_matrix
         matrix = matrix_or_graph
