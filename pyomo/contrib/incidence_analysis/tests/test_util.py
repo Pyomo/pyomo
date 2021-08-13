@@ -14,14 +14,14 @@ from pyomo.common.dependencies import networkx_available
 from pyomo.common.dependencies import scipy_available
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.contrib.incidence_analysis.util import (
-        TemporarySubsystemManager,
-        generate_strongly_connected_components,
-        solve_strongly_connected_components,
-        )
+    TemporarySubsystemManager,
+    generate_strongly_connected_components,
+    solve_strongly_connected_components,
+    )
 from pyomo.contrib.incidence_analysis.tests.models_for_testing import (
-        make_gas_expansion_model,
-        make_dynamic_model,
-        )
+    make_gas_expansion_model,
+    make_dynamic_model,
+    )
 import pyomo.common.unittest as unittest
 
 
