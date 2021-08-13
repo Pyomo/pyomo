@@ -2661,16 +2661,15 @@ class Test(unittest.TestCase):
         #
         self.assertTrue(len(rep.linear_vars) == 0)
         self.assertTrue(len(rep.linear_coefs) == 0)
-        self.assertTrue(len(rep.quadratic_vars) == 1)
-        self.assertTrue(len(rep.quadratic_coefs) == 1)
+        self.assertTrue(len(rep.quadratic_vars) == 0)
+        self.assertTrue(len(rep.quadratic_coefs) == 0)
         self.assertFalse(rep.nonlinear_expr is None)
         self.assertEqual(len(rep.nonlinear_vars), 3)
-        baseline = { bc_key:5 }
+        baseline = {}
         self.assertEqual(baseline, repn_to_dict(rep))
         s = pickle.dumps(rep)
         rep = pickle.loads(s)
-        bc_key_ = (id(rep.quadratic_vars[0][0]),id(rep.quadratic_vars[0][1])) if id(rep.quadratic_vars[0][0]) <= id(rep.quadratic_vars[0][1]) else (id(rep.quadratic_vars[0][1]),id(rep.quadratic_vars[0][0]))
-        baseline = { bc_key_:5 }
+        baseline = {}
         self.assertEqual(baseline, repn_to_dict(rep))
 
         # Do not collect quadratics
