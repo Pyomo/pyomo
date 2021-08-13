@@ -37,8 +37,9 @@ def dulmage_mendelsohn(matrix_or_graph, top_nodes=None, matching=None):
     """
     if isinstance(matrix_or_graph, nx.Graph):
         # The purpose of handling graphs here is that if we construct NX graphs
-        # directly from Pyomo expressions, we can do away with our SciPy
-        # dependency (and associated overhead).
+        # directly from Pyomo expressions, we can eliminate the overhead of
+        # convering expressions to a matrix, then the matrix to a graph.
+        #
         # In this case, top_nodes should correspond to constraints.
         graph = matrix_or_graph
         if top_nodes is None:
