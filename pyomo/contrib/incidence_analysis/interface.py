@@ -279,6 +279,17 @@ class IncidenceGraphInterface(object):
 
     def dulmage_mendelsohn(self, variables=None, constraints=None):
         """
+        Returns the Dulmage-Mendelsohn partition of the incidence graph
+        of the provided variables and constraints.
+
+        Returns:
+        --------
+        ColPartition namedtuple and RowPartition namedtuple.
+        The ColPartition is returned first to match the order of variables
+        and constraints in the method arguments.
+        These partition variables (columns) and constraints (rows)
+        into overconstrained, underconstrained, unmatched, and square.
+
         """
         variables, constraints = self._validate_input(variables, constraints)
         matrix = self._extract_submatrix(variables, constraints)
