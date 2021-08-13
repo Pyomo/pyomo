@@ -10,12 +10,12 @@
 
 import pyomo.common.unittest as unittest
 from pyomo.common.dependencies import (
-        networkx as nx,
-        networkx_available,
-        )
+    networkx as nx,
+    networkx_available,
+    )
 from pyomo.contrib.incidence_analysis.common.dulmage_mendelsohn import (
-        dulmage_mendelsohn,
-        )
+    dulmage_mendelsohn,
+    )
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available")
