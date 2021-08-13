@@ -577,11 +577,14 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     if not lhs_nonl_None or not rhs_nonl_None:
         return Results(nonl=multiplier*exp)
+
+    # If the resulting expression has a polynomial degree greater than 2
+    # (1 if quadratic is False), then simply return this as a general
+    # nonlinear expression
     #
-    # If not collecting quadratic terms and both terms are linear, then simply return the nonlinear expression
-    #
-    if not quadratic and len(lhs.linear) > 0 and len(rhs.linear) > 0:
-        # NOTE: We treat a product of linear terms as nonlinear unless quadratic is True
+    if ( max(1 if lhs.linear else 0, 2 if quadratic and lhs.quadratic else 0) +
+         max(1 if rhs.linear else 0, 2 if quadratic and rhs.quadratic else 0)
+         > (2 if quadratic else 1) ):
         return Results(nonl=multiplier*exp)
 
     ans = Results()
@@ -613,13 +616,6 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
                     ans.quadratic[ndx] += multiplier*lcoef*rcoef
                 else:
                     ans.quadratic[ndx] = multiplier*lcoef*rcoef
-
-        # If there are a product of quadratic terms, return a none linear expression
-        if len(lhs.quadratic) > 0 and len(rhs.quadratic) > 0 and len(lhs.linear) == 0 and len(rhs.linear) == 0:
-            # TODO raise an error ?
-            logging.getLogger('pyomo.core').warning("The problem is not quadratic")
-            return _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic=False)
-
         # TODO - Use quicksum here?
         el_linear = multiplier*sum(coef*idMap[key] for key, coef in lhs.linear.items())
         er_linear = multiplier*sum(coef*idMap[key] for key, coef in rhs.linear.items())
