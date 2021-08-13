@@ -21,8 +21,8 @@ from pyomo.common.dependencies import networkx as nx
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.triangularize import block_triangularize
 from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
-        dulmage_mendelsohn,
-        )
+    dulmage_mendelsohn,
+    )
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
     import scipy as sp
