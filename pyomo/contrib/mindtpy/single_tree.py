@@ -27,12 +27,11 @@ from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, solve_feasibility_
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core import Constraint, minimize, value, maximize
 cplex, cplex_available = attempt_import('cplex')
-from cplex.callbacks import LazyConstraintCallback
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 
-class LazyOACallback_cplex(LazyConstraintCallback):
+class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback):
     """Inherent class in Cplex to call Lazy callback."""
 
     def copy_lazy_var_list_values(self, opt, from_list, to_list, config,

@@ -432,12 +432,13 @@ def check_config(config):
         if config.mip_regularization_solver is None:
             config.mip_regularization_solver = config.mip_solver
     if config.single_tree:
+        config.logger.info('Single tree implementation is activated.')
         config.iteration_limit = 1
         config.add_slack = False
         if config.mip_solver not in {'cplex_persistent', 'gurobi_persistent'}:
             config.mip_solver = 'cplex_persistent'
-        config.logger.info(
-            'Single tree implementation is activated. The defalt MIP solver is cplex_persistent')
+            config.logger.info(
+                'Only cplex_persistent and gurobi_persistent are supported for LP/NLP based Branch and Bound method. The MIP solver has been changed to cplex_persistent.')
         if config.threads > 1:
             config.threads = 1
             config.logger.info(
