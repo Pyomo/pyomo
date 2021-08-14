@@ -31,7 +31,7 @@ cplex, cplex_available = attempt_import('cplex')
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 
-class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback):
+class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_available else object):
     """Inherent class in Cplex to call Lazy callback."""
 
     def copy_lazy_var_list_values(self, opt, from_list, to_list, config,
