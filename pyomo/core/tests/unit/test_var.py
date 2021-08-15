@@ -1405,6 +1405,7 @@ class MiscVarTests(unittest.TestCase):
     def test_set_bounds_units(self):
         m = ConcreteModel()
         m.x = Var(units=units.g)
+        m.p = Param(mutable=True, initialize=1, units=units.kg)
         m.x.setlb(5)
         self.assertEqual(m.x.lb, 5)
         m.x.setlb(6*units.g)
@@ -1413,6 +1414,10 @@ class MiscVarTests(unittest.TestCase):
         self.assertEqual(m.x.lb, 7000)
         with self.assertRaises(UnitsError):
             m.x.setlb(1*units.s)
+        m.x.setlb(m.p)
+        self.assertEqual(m.x.lb, 1000)
+        m.p = 2 * units.kg
+        self.assertEqual(m.x.lb, 2000)
 
         m.x.setub(2)
         self.assertEqual(m.x.ub, 2)
@@ -1421,7 +1426,11 @@ class MiscVarTests(unittest.TestCase):
         m.x.setub(4*units.kg)
         self.assertEqual(m.x.ub, 4000)
         with self.assertRaises(UnitsError):
-            m.x.setlb(1*units.s)
+            m.x.setub(1*units.s)
+        m.x.setub(m.p)
+        self.assertEqual(m.x.ub, 2000)
+        m.p = 3 * units.kg
+        self.assertEqual(m.x.ub, 3000)
 
 
 if __name__ == "__main__":

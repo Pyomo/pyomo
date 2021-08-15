@@ -72,9 +72,9 @@ class SimpleMINLP(ConcreteModel):
         m.const7 = Constraint(expr=m.Y[1] + m.Y[2] + m.Y[3] >= 1)
 
         """Cost (objective) function definition"""
-        m.cost = Objective(expr=Y[1] + 1.5 * Y[2] + 0.5 * Y[3] + X[1] ** 2 + X[2] ** 2,
-                           sense=minimize)
-
+        m.objective = Objective(expr=Y[1] + 1.5 * Y[2] + 0.5 * Y[3] + X[1] ** 2 + X[2] ** 2,
+                                sense=minimize)
+        m.optimal_value = 3.5
         """Bound definitions"""
         # x (continuous) upper bounds
         x_ubs = {1: 4, 2: 4}

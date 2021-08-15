@@ -57,7 +57,7 @@ class FlagType(type):
             return cls.__module__ + "." + cls.__qualname__
 
     def __str__(cls):
-        return __name__
+        return cls.__name__
 
 
 class NOTSET(object, metaclass=FlagType):

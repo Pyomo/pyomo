@@ -1,6 +1,6 @@
 cc : Size=1, Index=None, Active=True
-    Key  : Arg0                      : Arg1            : Active
-    None : 1.0  <=  x1 + 2*x2 + 3*x3 : 0.0  <=  y + x1 :   True
+    Key  : Arg0                    : Arg1          : Active
+    None : 1  <=  x1 + 2*x2 + 3*x3 : 0  <=  y + x1 :   True
     1 Var Declarations
         v : Size=1, Index=None
             Key  : Lower : Value : Upper : Fixed : Stale : Domain
@@ -11,7 +11,7 @@ cc : Size=1, Index=None, Active=True
             Key  : Lower : Body   : Upper : Active
             None :   0.0 : y + x1 :  +Inf :   True
         ve : Size=1, Index=None, Active=True
-            Key  : Lower : Body                            : Upper : Active
-            None :   0.0 : cc.v - (x1 + 2*x2 + 3*x3 - 1.0) :   0.0 :   True
+            Key  : Lower : Body                          : Upper : Active
+            None :   0.0 : cc.v - (x1 + 2*x2 + 3*x3 - 1) :   0.0 :   True
 
     3 Declarations: c v ve

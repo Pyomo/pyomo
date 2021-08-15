@@ -123,6 +123,17 @@ def _wrap_func(func, msg, logger, version, remove_in):
     wrapper.__doc__ += _deprecation_docstring(func, msg, version, remove_in)
     return wrapper
 
+def _find_calling_frame(module_offset):
+    g = [globals()]
+    calling_frame = inspect.currentframe().f_back
+    while calling_frame is not None:
+        if calling_frame.f_globals is g[-1]:
+            calling_frame = calling_frame.f_back
+        elif len(g) < module_offset:
+            g.append(calling_frame.f_globals)
+        else:
+            break
+    return calling_frame
 
 def deprecation_warning(msg, logger=None, version=None,
                         remove_in=None, calling_frame=None):
@@ -149,28 +160,36 @@ def deprecation_warning(msg, logger=None, version=None,
             the deprecation warning.
 
     """
-    msg = textwrap.fill(
-        'DEPRECATED: %s' % (_default_msg(None, msg, version, remove_in),),
-        width=70)
-    if calling_frame is None:
-        try:
-            g = globals()
-            calling_frame = inspect.currentframe().f_back
-            while calling_frame is not None and calling_frame.f_globals is g:
-                calling_frame = calling_frame.f_back
-        except:
-            pass
-    if calling_frame is not None:
-        info = inspect.getframeinfo(calling_frame)
-        msg += "\n(called from %s:%s)" % (info.filename.strip(), info.lineno)
-
     if logger is None:
         if calling_frame is not None:
-            logger = calling_frame.f_globals['__package__']
+            cf = calling_frame
+        else:
+            # The relevant module is the one that holds the
+            # function/method that called deprecation_warning
+            cf = _find_calling_frame(1)
+        if cf is not None:
+            logger = cf.f_globals['__package__']
             if logger is not None and not logger.startswith('pyomo'):
                 logger = None
         if logger is None:
             logger = 'pyomo'
+
+    msg = textwrap.fill(
+        'DEPRECATED: %s' % (_default_msg(None, msg, version, remove_in),),
+        width=70)
+    if calling_frame is None:
+        # The useful thing to let the user know is what called the
+        # function that generated the deprecation warning.  The current
+        # globals() is *this* module.  Walking up the stack to find the
+        # frame where the globals() changes tells us the module that is
+        # issuing the deprecation warning.  As we assume that *that*
+        # module will not trigger its own deprecation warnings, we will
+        # walk farther up until the globals() changes again.
+        calling_frame = _find_calling_frame(2)
+    if calling_frame is not None:
+        info = inspect.getframeinfo(calling_frame)
+        msg += "\n(called from %s:%s)" % (info.filename.strip(), info.lineno)
+
     logging.getLogger(logger).warning(msg)
 
 
@@ -210,10 +229,17 @@ def deprecated(msg=None, logger=None, version=None, remove_in=None):
 def _import_object(name, target, version, remove_in):
     from importlib import import_module
     modname, targetname = target.rsplit('.',1)
+    _object = getattr(import_module(modname), targetname)
+    if inspect.isclass(_object):
+        _type = 'class'
+    elif inspect.isfunction(_object):
+        _type = 'function'
+    else:
+        _type = 'attribute'
     deprecation_warning(
-        "the '%s' class has been moved to '%s'" % (name, target),
-        version=version, remove_in=remove_in)
-    return getattr(import_module(modname), targetname)
+        "the '%s' %s has been moved to '%s'.  Please update your import."
+        % (name, _type, target), version=version, remove_in=remove_in)
+    return _object
 
 class _ModuleGetattrBackport_27(object):
     """Backport for support of module.__getattr__
@@ -385,9 +411,10 @@ class RenamedClass(type):
                 version = classdict.get('__renamed__version__')
                 remove_in = classdict.get('__renamed__remove_in__')
                 deprecation_warning(
-                    "%s  The class '%s' has been renamed to '%s'" % (
+                    "%s  The class '%s' has been renamed to '%s'." % (
                         msg, name, new_class.__name__),
-                    version=version, remove_in=remove_in)
+                    version=version, remove_in=remove_in,
+                    calling_frame=_find_calling_frame(1))
             classdict['__renamed__warning__'] = __renamed__warning__
 
             if '__renamed__version__' not in classdict:

@@ -2,7 +2,7 @@
 Functions for handling the construction and solving of the GRCS master problem via ROSolver
 """
 from pyomo.core.base import (ConcreteModel, Block,
-                             Var, Expression,
+                             Var,
                              Objective, Constraint,
                              ConstraintList)
 from pyomo.opt import TerminationCondition as tc
@@ -10,18 +10,16 @@ from pyomo.core.expr import value
 from pyomo.core.base.set_types import NonNegativeIntegers, NonNegativeReals
 from pyomo.contrib.pyros.util import (selective_clone,
                                       ObjectiveType,
-                                      grcsTerminationCondition,
+                                      pyrosTerminationCondition,
                                       process_termination_condition_master_problem,
                                       output_logger)
 from pyomo.contrib.pyros.solve_data import (MasterProblemData,
                                             MasterResult)
 from pyomo.opt.results import check_optimal_termination
 from pyomo.core import TransformationFactory
-import copy
 import itertools as it
 import os
 from copy import deepcopy
-
 
 def initial_construct_master(model_data):
     """
@@ -52,7 +50,6 @@ def solve_master_feasibility_problem(model_data, config):
     if not solver.available():
         raise RuntimeError("NLP solver %s is not available." %
                            config.solver)
-
     try:
         results = solver.solve(model, tee=config.tee)
     except ValueError as err:
@@ -92,7 +89,7 @@ def minimize_dr_vars(model_data, config):
     for idx in range(len(decision_rule_vars)):
         polishing_model.scenarios[0,0].add_component(
                 "polishing_var_" + str(idx),
-                Var(index_set, initialize=0, domain=NonNegativeReals))
+                Var(index_set, initialize=1e6, domain=NonNegativeReals))
         polishing_model.tau_vars.append(
             getattr(polishing_model.scenarios[0,0], "polishing_var_" + str(idx))
         )
@@ -194,10 +191,10 @@ def minimize_dr_vars(model_data, config):
         raise RuntimeError("NLP solver %s is not available." %
                            config.solver)
     try:
-        results = solver.solve(polishing_model, tee=False)
+        results = solver.solve(polishing_model, tee=config.tee)
         polish_soln.termination_condition = results.solver.termination_condition
     except ValueError as err:
-        polish_soln.grcs_termination_condition = grcsTerminationCondition.subsolver_error
+        polish_soln.pyros_termination_condition = pyrosTerminationCondition.subsolver_error
         polish_soln.termination_condition = tc.error
         raise
 
@@ -320,13 +317,13 @@ def solver_call_master(model_data, config, solver, solve_data):
                 results.solver.termination_condition = tc.error
                 results.solver.message = str(err)
                 master_soln.results = results
-                master_soln.grcs_termination_condition = grcsTerminationCondition.subsolver_error
+                master_soln.pyros_termination_condition = pyrosTerminationCondition.subsolver_error
                 return master_soln, ()
             else:
                 raise
         solver_term_cond_dict[str(solver)] = str(results.solver.termination_condition)
         master_soln.termination_condition = results.solver.termination_condition
-        master_soln.grcs_termination_condition = None  # determined later in the algorithm
+        master_soln.pyros_termination_condition = None  # determined later in the algorithm
         master_soln.fsv_vals = list(v.value for v in nlp_model.scenarios[0, 0].util.first_stage_variables)
 
         if config.objective_focus is ObjectiveType.nominal:
@@ -353,7 +350,7 @@ def solver_call_master(model_data, config, solver, solve_data):
         name = os.path.join(save_dir,  config.uncertainty_set.type + "_" + model_data.original.name + "_master_" + str(model_data.iteration) + ".bar")
         nlp_model.write(name, io_options={'symbolic_solver_labels':True})
         output_logger(config=config, master_error=True, status_dict=solver_term_cond_dict, filename=name, iteration=model_data.iteration)
-    master_soln.grcs_termination_condition = grcsTerminationCondition.subsolver_error
+    master_soln.pyros_termination_condition = pyrosTerminationCondition.subsolver_error
     return master_soln
 
 
