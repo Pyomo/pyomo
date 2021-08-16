@@ -17,7 +17,8 @@ import pyomo.common.unittest as unittest
 
 from pyomo.common import DeveloperError
 from pyomo.common.deprecation import (
-    deprecated, deprecation_warning, relocated_module_attribute, RenamedClass
+    deprecated, deprecation_warning, relocated_module_attribute, RenamedClass,
+    _import_object
 )
 from pyomo.common.log import LoggingIntercept
 
@@ -378,11 +379,50 @@ class TestRelocated(unittest.TestCase):
         self.assertIn('Foo_2', dir(relocated))
         self.assertIs(relocated.Foo, Bar)
 
+        # Note that relocated defines a __getattr__, which changes how
+        # attribute processing is handled in python 3.7+
         with self.assertRaisesRegex(
                 AttributeError,
                 "(?:module 'pyomo.common.tests.relocated')|"
                 "(?:'module' object) has no attribute 'Baz'"):
             relocated.Baz.data
+        if sys.version_info[:2] >= (3, 7):
+            self.assertEqual(relocated.Foo_3, '_3')
+
+        with self.assertRaisesRegex(
+                AttributeError,
+                "(?:module 'pyomo.common.tests.test_deprecated')|"
+                "(?:'module' object) has no attribute 'Baz'"):
+            sys.modules[__name__].Baz.data
+
+
+    def test_relocated_message(self):
+        with LoggingIntercept() as LOG:
+            self.assertIs(_import_object(
+                'oldName', 'pyomo.common.tests.test_deprecated.logger',
+                'TBD', None), logger)
+        self.assertRegex(
+            LOG.getvalue().replace('\n', ' '),
+            "DEPRECATED: the 'oldName' attribute has been moved to "
+            "'pyomo.common.tests.test_deprecated.logger'")
+
+        with LoggingIntercept() as LOG:
+            self.assertIs(_import_object(
+                'oldName', 'pyomo.common.tests.test_deprecated._import_object',
+                'TBD', None), _import_object)
+        self.assertRegex(
+            LOG.getvalue().replace('\n', ' '),
+            "DEPRECATED: the 'oldName' function has been moved to "
+            "'pyomo.common.tests.test_deprecated._import_object'")
+
+        with LoggingIntercept() as LOG:
+            self.assertIs(_import_object(
+                'oldName', 'pyomo.common.tests.test_deprecated.TestRelocated',
+                'TBD', None), TestRelocated)
+        self.assertRegex(
+            LOG.getvalue().replace('\n', ' '),
+            "DEPRECATED: the 'oldName' class has been moved to "
+            "'pyomo.common.tests.test_deprecated.TestRelocated'")
 
 
 class TestRenamedClass(unittest.TestCase):
@@ -410,7 +450,7 @@ class TestRenamedClass(unittest.TestCase):
             out.getvalue().replace("\n", " ").strip(),
             r"^DEPRECATED: Declaring class 'DeprecatedClassSubclass' "
             r"derived from 'DeprecatedClass'.  "
-            r"The class 'DeprecatedClass' has been renamed to 'NewClass'  "
+            r"The class 'DeprecatedClass' has been renamed to 'NewClass'.  "
             r"\(deprecated in X.y\) \(called from [^\)]*\)$",
         )
 
@@ -438,7 +478,7 @@ class TestRenamedClass(unittest.TestCase):
         self.assertRegex(
             out.getvalue().replace("\n", " ").strip(),
             r"^DEPRECATED: Instantiating class 'DeprecatedClass'.  "
-            r"The class 'DeprecatedClass' has been renamed to 'NewClass'  "
+            r"The class 'DeprecatedClass' has been renamed to 'NewClass'.  "
             r"\(deprecated in X.y\) \(called from [^\)]*\)$",
         )
 
@@ -468,8 +508,8 @@ class TestRenamedClass(unittest.TestCase):
             self.assertRegex(
                 out.getvalue().replace("\n", " ").strip(),
                 r"^DEPRECATED: Checking type relative to 'DeprecatedClass'.  "
-                r"The class 'DeprecatedClass' has been renamed to 'NewClass'  "
-                r"\(deprecated in X.y\) \(called from [^\)]*\)$",
+                r"The class 'DeprecatedClass' has been renamed to 'NewClass'."
+                r"  \(deprecated in X.y\) \(called from [^\)]*\)$",
             )
 
         #
@@ -491,8 +531,8 @@ class TestRenamedClass(unittest.TestCase):
             self.assertRegex(
                 out.getvalue().replace("\n", " ").strip(),
                 r"^DEPRECATED: Checking type relative to 'DeprecatedClass'.  "
-                r"The class 'DeprecatedClass' has been renamed to 'NewClass'  "
-                r"\(deprecated in X.y\) \(called from [^\)]*\)$",
+                r"The class 'DeprecatedClass' has been renamed to 'NewClass'."
+                r"  \(deprecated in X.y\) \(called from [^\)]*\)$",
             )
 
         #

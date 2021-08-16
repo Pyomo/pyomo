@@ -1186,6 +1186,23 @@ class MiscParamTests(unittest.TestCase):
             return 0.0
         model.p = Param(model.A, initialize=rule)
 
+    def test_invalid_default(self):
+        # Verify that we can initialize a parameter with an empty set.
+        model = ConcreteModel()
+        with self.assertRaisesRegex(
+                ValueError, r'Default value \(-1\) is not valid for '
+                r'Param p domain NonNegativeIntegers'):
+            model.p = Param(default=-1, within=NonNegativeIntegers)
+
+    def test_invalid_data(self):
+        # Verify that we can initialize a parameter with an empty set.
+        model = AbstractModel()
+        model.p = Param()
+        with self.assertRaisesRegex(
+                ValueError,
+                r'Attempting to initialize parameter=p with data=\[\]'):
+            model.create_instance(data={None: {'p': []}})
+
     def test_param_validate(self):
         """Test Param `validate` and `within` throw ValueError when not valid.
 
@@ -1204,12 +1221,14 @@ class MiscParamTests(unittest.TestCase):
             return False
 
         # 1. Immutable Param (unindexed)
-        with self.assertRaisesRegex(ValueError, "Value not in parameter domain"):
+        with self.assertRaisesRegex(
+                ValueError, "Value not in parameter domain"):
             m = ConcreteModel()
             m.p1 = Param(initialize=-3, within=NonNegativeReals)
 
         # 2. Immutable Param (indexed)
-        with self.assertRaisesRegex(ValueError, "Value not in parameter domain"):
+        with self.assertRaisesRegex(
+                ValueError, "Value not in parameter domain"):
             m = ConcreteModel()
             m.A = RangeSet(1, 2)
             m.p2 = Param(m.A, initialize=-3, within=NonNegativeReals)
@@ -1220,13 +1239,15 @@ class MiscParamTests(unittest.TestCase):
             m.p5 = Param(initialize=1, validate=validation_rule)
 
         # 4. Mutable Param (unindexed)
-        with self.assertRaisesRegex(ValueError, "Value not in parameter domain"):
+        with self.assertRaisesRegex(
+                ValueError, "Value not in parameter domain"):
             m = ConcreteModel()
             m.p3 = Param(within=NonNegativeReals, mutable=True)
             m.p3 = -3
 
         # 5. Mutable Param (indexed)
-        with self.assertRaisesRegex(ValueError, "Value not in parameter domain"):
+        with self.assertRaisesRegex(
+                ValueError, "Value not in parameter domain"):
             m = ConcreteModel()
             m.A = RangeSet(1, 2)
             m.p4 = Param(m.A, within=NonNegativeReals, mutable=True)
@@ -1237,6 +1258,21 @@ class MiscParamTests(unittest.TestCase):
             m = ConcreteModel()
             m.p6 = Param(mutable=True, validate=validation_rule)
             m.p6 = 1
+
+        # If we initialize a mutable Param and override it with data
+        # that is not valid, the param should be left with the original
+        # valid value
+        a = AbstractModel()
+        a.p = Param(within=NonNegativeReals)
+        a.p = 1
+        with self.assertRaisesRegex(
+                ValueError, "Value not in parameter domain"):
+            a.p = -2
+        with self.assertRaisesRegex(
+                RuntimeError, "Value not in parameter domain"):
+            m = a.create_instance({None: {'p': {None: -1}}})
+        m = a.create_instance()
+        self.assertEqual(value(m.p), 1)
 
     def test_get_uninitialized(self):
         model=AbstractModel()
@@ -1281,8 +1317,8 @@ class MiscParamTests(unittest.TestCase):
             #self.fail("can't set the value of an unitialized parameter")
         #except AttributeError:
             #pass
-        instance=model.create_instance()
-        instance.a.value=3
+        instance = model.create_instance()
+        instance.a.value = 3
         #try:
             #instance.a.default='2'
             #self.fail("can't set a bad default value")
@@ -1305,6 +1341,8 @@ class MiscParamTests(unittest.TestCase):
             self.fail("can't set a parameter with a bad value")
         except ValueError:
             pass
+        # check that the value was preserved
+        self.assertEqual(value(instance.c[3]), 2)
 
     def test_iter(self):
         model=AbstractModel()
@@ -1404,6 +1442,32 @@ q : Size=3, Index=Any, Domain=Any, Default=None, Mutable=True
 
 1 Declarations: p
         """.strip())
+
+    def test_scalar_get_mutable_when_not_present(self):
+        m = ConcreteModel()
+        m.p = Param(mutable=True)
+        self.assertEqual(m.p._data, {})
+        m.x_p = Var(bounds=(0, m.p))
+        self.assertEqual(m.p._data, {})
+        self.assertIs(m.p[None], m.p)
+        self.assertEqual(len(m.p._data), 1)
+        self.assertIs(m.p._data[None], m.p)
+        m.p = 10
+        self.assertEqual(m.x_p.bounds, (0, 10))
+        m.p = 20
+        self.assertEqual(m.x_p.bounds, (0, 20))
+
+    def test_scalar_set_mutable_when_not_present(self):
+        m = ConcreteModel()
+        m.p = Param(mutable=True)
+        self.assertEqual(m.p._data, {})
+        m.p = 10
+        self.assertEqual(len(m.p._data), 1)
+        self.assertIs(m.p._data[None], m.p)
+        m.x_p = Var(bounds=(0, m.p))
+        self.assertEqual(m.x_p.bounds, (0, 10))
+        m.p = 20
+        self.assertEqual(m.x_p.bounds, (0, 20))
 
 
 def createNonIndexedParamMethod(func, init_xy, new_xy, tol=1e-10):

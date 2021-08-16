@@ -133,6 +133,10 @@ class RunAllNEOSSolvers(object):
     def test_mosek(self):
         self._run('mosek')
 
+    @unittest.expectedFailure
+    def test_octeract(self):
+        self._run('octeract')
+
     def test_ooqp(self):
         if self.sense == pyo.maximize:
             # OOQP does not recognize maximization problems and

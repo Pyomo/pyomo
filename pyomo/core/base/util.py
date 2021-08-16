@@ -20,13 +20,13 @@ relocated_module_attribute(
     'disable_methods', 'pyomo.core.base.disable_methods.disable_methods',
     version='TBD')
 relocated_module_attribute(
-    'Initialzer', 'pyomo.core.base.initialzer.Initialzer',
+    'Initializer', 'pyomo.core.base.initializer.Initializer',
     version='TBD')
 relocated_module_attribute(
-    'IndexedCallInitialzer', 'pyomo.core.base.initialzer.Initialzer',
+    'IndexedCallInitializer', 'pyomo.core.base.initializer.Initializer',
     version='TBD')
 relocated_module_attribute(
-    'CountedCallInitialzer', 'pyomo.core.base.initialzer.Initialzer',
+    'CountedCallInitializer', 'pyomo.core.base.initializer.Initializer',
     version='TBD')
 
 def is_functor(obj):

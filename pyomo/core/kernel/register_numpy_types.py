@@ -8,113 +8,64 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.expr.numvalue import \
-   RegisterNumericType, \
-   RegisterIntegerType, \
-   RegisterBooleanType
+from pyomo.common.deprecation import deprecation_warning
+deprecation_warning(
+    "pyomo.core.kernel.register_numpy_types is deprecated.  NumPy type "
+    "registration is handled automatically by pyomo.common.dependencies.numpy",
+    version='TBD',
+)
 
-try:
-    import numpy
-    _has_numpy = True
-except:     #pragma:nocover
-    _has_numpy = False
+from pyomo.core.expr.numvalue import (
+    RegisterNumericType, RegisterIntegerType, RegisterBooleanType,
+    native_numeric_types, native_integer_types, native_boolean_types,
+)
 
-#
-# Collect NumPy Types
-#
-# The full list of available types is dependent on numpy version and
-# the compiler used to build numpy. The following list of types was
-# taken from the NumPy v1.8 Manual at scipy.org
-#
+from pyomo.common.dependencies import numpy, numpy_available as _has_numpy
 
-# Boolean
-numpy_bool_names = []
-numpy_bool_names.append('bool_')
-numpy_bool = []
-if _has_numpy:
-    for _type_name in numpy_bool_names:
-        try:
-            _type = getattr(numpy,_type_name)
-            numpy_bool.append(_type)
-        except:     #pragma:nocover
-            pass
+# Ensure that the types were registered
+bool(_has_numpy)
 
-# Integers
 numpy_int_names = []
-numpy_int_names.append('int_')
-numpy_int_names.append('intc')
-numpy_int_names.append('intp')
-numpy_int_names.append('int8')
-numpy_int_names.append('int16')
-numpy_int_names.append('int32')
-numpy_int_names.append('int64')
-numpy_int_names.append('uint8')
-numpy_int_names.append('uint16')
-numpy_int_names.append('uint32')
-numpy_int_names.append('uint64')
 numpy_int = []
-if _has_numpy:
-    for _type_name in numpy_int_names:
-        try:
-            _type = getattr(numpy,_type_name)
-            numpy_int.append(_type)
-        except:     #pragma:nocover
-            pass
-
-# Reals
 numpy_float_names = []
-numpy_float_names.append('float_')
-numpy_float_names.append('float16')
-numpy_float_names.append('float32')
-numpy_float_names.append('float64')
 numpy_float = []
+numpy_bool_names = []
+numpy_bool = []
+
 if _has_numpy:
-    for _type_name in numpy_float_names:
-        try:
-            _type = getattr(numpy,_type_name)
-            numpy_float.append(_type)
-        except:     #pragma:nocover
-            pass
+    # Historically, the lists included several numpy aliases
+    numpy_int_names.extend(('int_', 'intc', 'intp'))
+    numpy_int.extend((numpy.int_, numpy.intc, numpy.intp))
+    numpy_float_names.append('float_')
+    numpy_float.append(numpy.float_)
+
+# Re-build the old numpy_* lists
+for t in native_boolean_types:
+    if t.__module__ == 'numpy':
+        if t in native_integer_types:
+            if t.__name__ not in numpy_int_names:
+                numpy_int.append(t)
+                numpy_int_names.append(t.__name__)
+        elif t in native_numeric_types:
+            if t.__name__ not in numpy_float_names:
+                numpy_float.append(t)
+                numpy_float_names.append(t.__name__)
+        else:
+            if t.__name__ not in numpy_bool_names:
+                numpy_bool.append(t)
+                numpy_bool_names.append(t.__name__)
+
 
 # Complex
 numpy_complex_names = []
-numpy_complex_names.append('complex_')
-numpy_complex_names.append('complex64')
-numpy_complex_names.append('complex128')
 numpy_complex = []
 if _has_numpy:
+    numpy_complex_names.extend(('complex_', 'complex64', 'complex128'))
     for _type_name in numpy_complex_names:
         try:
-            _type = getattr(numpy,_type_name)
+            _type = getattr(numpy, _type_name)
             numpy_complex.append(_type)
         except:     #pragma:nocover
             pass
 
-
-#
-# Register NumPy Types
-#
-
-# Register NumPy boolean types as Boolean
-for _type in numpy_bool:
-    RegisterBooleanType(_type)
-
-# Register NumPy integer types as Integer (this will also update
-# Numeric/Reals) and as Boolean
-for _type in numpy_int:
-    RegisterIntegerType(_type)
-    RegisterBooleanType(_type)
-
-# Register NumPy float types as Numeric and as Boolean
-for _type in numpy_float:
-    RegisterNumericType(_type)
-    RegisterBooleanType(_type)
-
-# Note: If complex types are to be registered it will need to be
-#       with a different registration function than
-#       RegisterNumericType because this updates the type set used
-#       by Reals.
-
-#for _type in numpy_complex:
-#    pass
 

@@ -16,14 +16,15 @@ from weakref import ref as weakref_ref
 
 from pyomo.common.log import is_debug_set
 from pyomo.common.deprecation import deprecated, RenamedClass
+from pyomo.common.modeling import NOTSET
+from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.indexed_component import (
     IndexedComponent,
     UnindexedComponent_set, )
-from pyomo.core.base.misc import (apply_indexed_rule,
-                                  tabular_writer)
+from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.numvalue import (NumericValue,
                                       as_numeric)
 from pyomo.core.base.initializer import Initializer
@@ -285,7 +286,10 @@ class Expression(IndexedComponent):
         kwds.setdefault('ctype', Expression)
         IndexedComponent.__init__(self, *args, **kwds)
 
-        self.rule = Initializer(_init)
+        # Historically, Expression objects were dense (but None):
+        # setting arg_not_specified causes Initializer to recognize
+        # _init==None as a constant initializer returning None
+        self._rule = Initializer(_init, arg_not_specified=NOTSET)
 
     def _pprint(self):
         return (
@@ -346,7 +350,7 @@ class Expression(IndexedComponent):
             self._data[index].set_value(new_value)
 
     def _getitem_when_not_present(self, idx):
-        if self.rule is None:
+        if self._rule is None:
             _init = None
             # TBD: Is this desired behavior?  I can see implicitly setting
             # an Expression if it was not originally defined, but I am less
@@ -354,7 +358,7 @@ class Expression(IndexedComponent):
             # works with a Var) makes sense.  [JDS 25 Nov 17]
             #raise KeyError(idx)
         else:
-            _init = self.rule(self.parent_block(), idx)
+            _init = self._rule(self.parent_block(), idx)
         obj = self._setitem_when_not_present(idx, _init)
         #if obj is None:
         #    raise KeyError(idx)
@@ -372,44 +376,10 @@ class Expression(IndexedComponent):
                 "Constructing Expression, name=%s, from data=%s"
                 % (self.name, str(data)))
 
-        rule = self.rule
         try:
             # We do not (currently) accept data for constructing Constraints
-            index = None
             assert data is None
-
-            if rule is None:
-                # Historically, Expression objects were dense (but None):
-                rule = Initializer(lambda *args: None)
-                # If there is no rule, then we are immediately done.
-                #return
-
-            block = self.parent_block()
-            if rule.contains_indices():
-                # The index is coming in externally; we need to validate it
-                for index in rule.indices():
-                    self[index] = rule(block, index)
-            elif not self.index_set().isfinite():
-                # If the index is not finite, then we cannot iterate
-                # over it.  Since the rule doesn't provide explicit
-                # indices, then there is nothing we can do (the
-                # assumption is that the user will trigger specific
-                # indices to be created at a later time).
-                pass
-            else:
-                # Bypass the index validation and create the member directly
-                for index in self.index_set():
-                    self._setitem_when_not_present(index, rule(block, index))
-        except Exception:
-            err = sys.exc_info()[1]
-            logger.error(
-                "Rule failed when generating expression for "
-                "Expression %s with index %s:\n%s: %s"
-                % (self.name,
-                   str(index),
-                   type(err).__name__,
-                   err))
-            raise
+            self._construct_from_rule_using_setitem()
         finally:
             timer.report()
 

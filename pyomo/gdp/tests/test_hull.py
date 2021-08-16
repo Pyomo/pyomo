@@ -15,7 +15,7 @@ import logging
 from pyomo.environ import (TransformationFactory, Block, Set, Constraint, Var,
                            RealSet, ComponentMap, value, log, ConcreteModel,
                            Any, Suffix, SolverFactory, RangeSet, Param,
-                           Objective, TerminationCondition)
+                           Objective, TerminationCondition, Reference)
 from pyomo.repn import generate_standard_repn
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
@@ -62,17 +62,23 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m = models.makeTwoTermDisj_Nonlinear()
         TransformationFactory('gdp.hull').apply_to(m)
 
-        disjBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts
+        transBlock = m._pyomo_gdp_hull_reformulation
+        disjBlock = transBlock.relaxedDisjuncts
         # same on both disjuncts
         for i in [0,1]:
             relaxationBlock = disjBlock[i]
-            w = relaxationBlock.disaggregatedVars.w
             x = relaxationBlock.disaggregatedVars.x
-            y = relaxationBlock.disaggregatedVars.y
-            # variables created
-            self.assertIsInstance(w, Var)
+            if i == 1: # this disjunct as x, w, and no y
+                w = relaxationBlock.disaggregatedVars.w
+                y = transBlock._disaggregatedVars[0]
+            elif i == 0: # this disjunct as x, y, and no w
+                y = relaxationBlock.disaggregatedVars.y                
+                w = transBlock._disaggregatedVars[1]
+            # variables created (w and y can be Vars or VarDatas depending on
+            # the disjunct)
+            self.assertIs(w.ctype, Var)
             self.assertIsInstance(x, Var)
-            self.assertIsInstance(y, Var)
+            self.assertIs(y.ctype, Var)
             # the are in reals
             self.assertIsInstance(w.domain, RealSet)
             self.assertIsInstance(x.domain, RealSet)
@@ -185,8 +191,9 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         ct.check_linear_coef(self, repn, m.d[1].indicator_var, -3)
         self.assertEqual(repn.constant, 0)
 
-    def check_bound_constraints(self, cons, disvar, indvar, lb, ub):
+    def check_bound_constraints_on_disjBlock(self, cons, disvar, indvar, lb, ub):
         self.assertIsInstance(cons, Constraint)
+
         # both lb and ub
         self.assertEqual(len(cons), 2)
         varlb = cons['lb']
@@ -209,23 +216,59 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         ct.check_linear_coef(self, repn, indvar, -ub)
         ct.check_linear_coef(self, repn, disvar, 1)
 
+    def check_bound_constraints_on_disjunctionBlock(self, varlb, varub, disvar,
+                                                    indvar, lb, ub):
+        self.assertIsNone(varlb.lower)
+        self.assertEqual(varlb.upper, 0)
+        repn = generate_standard_repn(varlb.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, lb)
+        self.assertEqual(len(repn.linear_vars), 2)
+        ct.check_linear_coef(self, repn, indvar, -lb)
+        ct.check_linear_coef(self, repn, disvar, -1)
+
+        self.assertIsNone(varub.lower)
+        self.assertEqual(varub.upper, 0)
+        repn = generate_standard_repn(varub.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, -ub)
+        self.assertEqual(len(repn.linear_vars), 2)
+        ct.check_linear_coef(self, repn, indvar, ub)
+        ct.check_linear_coef(self, repn, disvar, 1)
+
     def test_disaggregatedVar_bounds(self):
         m = models.makeTwoTermDisj_Nonlinear()
         TransformationFactory('gdp.hull').apply_to(m)
-
-        disjBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts
+        
+        transBlock = m._pyomo_gdp_hull_reformulation
+        disjBlock = transBlock.relaxedDisjuncts
         for i in [0,1]:
             # check bounds constraints for each variable on each of the two
             # disjuncts.
-            self.check_bound_constraints(disjBlock[i].w_bounds,
-                                         disjBlock[i].disaggregatedVars.w,
-                                         m.d[i].indicator_var, 2, 7)
-            self.check_bound_constraints(disjBlock[i].x_bounds,
-                                         disjBlock[i].disaggregatedVars.x,
-                                         m.d[i].indicator_var, 1, 8)
-            self.check_bound_constraints(disjBlock[i].y_bounds,
-                                         disjBlock[i].disaggregatedVars.y,
-                                         m.d[i].indicator_var, -10, -3)
+            self.check_bound_constraints_on_disjBlock(
+                disjBlock[i].x_bounds,
+                disjBlock[i].disaggregatedVars.x,
+                m.d[i].indicator_var, 1, 8)
+            if i == 1: # this disjunct has x, w, and no y
+                self.check_bound_constraints_on_disjBlock(
+                    disjBlock[i].w_bounds,
+                    disjBlock[i].disaggregatedVars.w,
+                    m.d[i].indicator_var, 2, 7)
+                self.check_bound_constraints_on_disjunctionBlock(
+                    transBlock._boundsConstraints[0,'lb'],
+                    transBlock._boundsConstraints[0,'ub'],
+                    transBlock._disaggregatedVars[0],
+                    m.d[0].indicator_var, -10, -3)
+            elif i == 0: # this disjunct has x, y, and no w
+                self.check_bound_constraints_on_disjBlock(
+                    disjBlock[i].y_bounds,
+                    disjBlock[i].disaggregatedVars.y,
+                    m.d[i].indicator_var, -10, -3)
+                self.check_bound_constraints_on_disjunctionBlock(
+                    transBlock._boundsConstraints[1,'lb'],
+                    transBlock._boundsConstraints[1,'ub'],
+                    transBlock._disaggregatedVars[1],
+                    m.d[1].indicator_var, 2, 7)
 
     def test_error_for_or(self):
         m = models.makeTwoTermDisj_Nonlinear()
@@ -251,17 +294,18 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m = models.makeTwoTermDisj_Nonlinear()
         hull = TransformationFactory('gdp.hull')
         hull.apply_to(m)
-        disjBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts
+        transBlock = m._pyomo_gdp_hull_reformulation
+        disjBlock = transBlock.relaxedDisjuncts
 
         self.check_disaggregation_constraint(
             hull.get_disaggregation_constraint(m.w, m.disjunction), m.w,
-            disjBlock[0].disaggregatedVars.w, disjBlock[1].disaggregatedVars.w)
+            disjBlock[1].disaggregatedVars.w, transBlock._disaggregatedVars[1])
         self.check_disaggregation_constraint(
             hull.get_disaggregation_constraint(m.x, m.disjunction), m.x,
             disjBlock[0].disaggregatedVars.x, disjBlock[1].disaggregatedVars.x)
         self.check_disaggregation_constraint(
             hull.get_disaggregation_constraint(m.y, m.disjunction), m.y,
-            disjBlock[0].disaggregatedVars.y, disjBlock[1].disaggregatedVars.y)
+            disjBlock[0].disaggregatedVars.y, transBlock._disaggregatedVars[0])
 
     def test_xor_constraint_mapping(self):
         ct.check_xor_constraint_mapping(self, 'hull')
@@ -328,13 +372,18 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         hull = TransformationFactory('gdp.hull')
         hull.apply_to(m)
 
-        disjBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts
+        transBlock = m._pyomo_gdp_hull_reformulation
+        disjBlock = transBlock.relaxedDisjuncts
 
         for i in [0,1]:
             mappings = ComponentMap()
-            mappings[m.w] = disjBlock[i].disaggregatedVars.w
-            mappings[m.y] = disjBlock[i].disaggregatedVars.y
             mappings[m.x] = disjBlock[i].disaggregatedVars.x
+            if i == 1: # this disjunct as x, w, and no y
+                mappings[m.w] = disjBlock[i].disaggregatedVars.w
+                mappings[m.y] = transBlock._disaggregatedVars[0]
+            elif i == 0: # this disjunct as x, y, and no w
+                mappings[m.y] = disjBlock[i].disaggregatedVars.y
+                mappings[m.w] = transBlock._disaggregatedVars[1]
 
             for orig, disagg in mappings.items():
                 self.assertIs(hull.get_src_var(disagg), orig)
@@ -345,19 +394,30 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         hull = TransformationFactory('gdp.hull')
         hull.apply_to(m)
 
-        disjBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts
+        transBlock = m._pyomo_gdp_hull_reformulation 
+        disjBlock = transBlock.relaxedDisjuncts
 
         for i in [0,1]:
             mappings = ComponentMap()
-            # [ESJ 11/05/2019] I think this test was useless before... I think
-            # this *map* was useless before. It should be disaggregated variable
-            # to the constraints, not the original variable? Why did this even
-            # work??
-            mappings[disjBlock[i].disaggregatedVars.w] = disjBlock[i].w_bounds
-            mappings[disjBlock[i].disaggregatedVars.y] = disjBlock[i].y_bounds
             mappings[disjBlock[i].disaggregatedVars.x] = disjBlock[i].x_bounds
+            if i == 1: # this disjunct has x, w, and no y
+                mappings[disjBlock[i].disaggregatedVars.w] = disjBlock[i].\
+                                                             w_bounds
+                mappings[transBlock._disaggregatedVars[0]] = Reference(
+                    transBlock._boundsConstraints[0,...])
+            elif i == 0: # this disjunct has x, y, and no w
+                mappings[disjBlock[i].disaggregatedVars.y] = disjBlock[i].\
+                                                             y_bounds
+                mappings[transBlock._disaggregatedVars[1]] = Reference(
+                    transBlock._boundsConstraints[1,...])
             for var, cons in mappings.items():
-                self.assertIs(hull.get_var_bounds_constraint(var), cons)
+                returned_cons =  hull.get_var_bounds_constraint(var)
+                # This sometimes refers a reference to the right part of a
+                # larger indexed constraint, so the indexed constraints
+                # themselves might not be the same object. The ConstraintDatas
+                # are though:
+                for key, constraintData in cons.items():
+                    self.assertIs(returned_cons[key], constraintData)
 
     def test_create_using_nonlinear(self):
         m = models.makeTwoTermDisj_Nonlinear()
@@ -403,7 +463,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         disj1y = hull.get_disaggregated_var(m.disj2.y, m.disj1)
         disj2y = hull.get_disaggregated_var(m.disj2.y, m.disj2)
         self.assertIs(disj1y,
-                      m.disj1._transformation_block().disaggregatedVars.y)
+                      m.disj1._transformation_block().parent_block().\
+                      _disaggregatedVars[0])
         self.assertIs(disj2y,
                       m.disj2._transformation_block().disaggregatedVars.y)
         self.assertIs(hull.get_src_var(disj1y), m.disj2.y)
@@ -441,19 +502,56 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         hull = TransformationFactory('gdp.hull')
         hull.apply_to(m)
         # check that all the variables are disaggregated
-        for disj in [m.disj1, m.disj2, m.disj3, m.disj4]:
+        # disj1 has both x and y
+        disj = m.disj1
+        transBlock = disj.transformation_block()
+        varBlock = transBlock.disaggregatedVars
+        self.assertEqual(len([v for v in
+                              varBlock.component_data_objects(Var)]), 2)
+        x = varBlock.component("x")
+        y = varBlock.component("y")
+        self.assertIsInstance(x, Var)
+        self.assertIsInstance(y, Var)
+        self.assertIs(hull.get_disaggregated_var(m.disj1.x, disj), x)
+        self.assertIs(hull.get_src_var(x), m.disj1.x)
+        self.assertIs(hull.get_disaggregated_var(m.disj1.y, disj), y)
+        self.assertIs(hull.get_src_var(y), m.disj1.y)
+        # disj2 and disj4 have just y
+        for disj in [m.disj2, m.disj4]:
             transBlock = disj.transformation_block()
             varBlock = transBlock.disaggregatedVars
             self.assertEqual(len([v for v in
-                                  varBlock.component_data_objects(Var)]), 2)
-            x = varBlock.component("x")
+                                  varBlock.component_data_objects(Var)]), 1)
             y = varBlock.component("y")
-            self.assertIsInstance(x, Var)
             self.assertIsInstance(y, Var)
-            self.assertIs(hull.get_disaggregated_var(m.disj1.x, disj), x)
-            self.assertIs(hull.get_src_var(x), m.disj1.x)
             self.assertIs(hull.get_disaggregated_var(m.disj1.y, disj), y)
             self.assertIs(hull.get_src_var(y), m.disj1.y)
+        # disj3 has just x
+        disj = m.disj3
+        transBlock = disj.transformation_block()
+        varBlock = transBlock.disaggregatedVars
+        self.assertEqual(len([v for v in
+                              varBlock.component_data_objects(Var)]), 1)
+        x = varBlock.component("x")
+        self.assertIsInstance(x, Var)
+        self.assertIs(hull.get_disaggregated_var(m.disj1.x, disj), x)
+        self.assertIs(hull.get_src_var(x), m.disj1.x)
+
+        # there is a spare x on disjunction1's block
+        x2 = m.disjunction1.algebraic_constraint().parent_block().\
+             _disaggregatedVars[0]
+        self.assertIs(hull.get_disaggregated_var(m.disj1.x, m.disj2), x2)
+        self.assertIs(hull.get_src_var(x2), m.disj1.x)
+
+        # and both a spare x and y on disjunction2's block
+        x2 = m.disjunction2.algebraic_constraint().parent_block().\
+             _disaggregatedVars[0]
+        y1 = m.disjunction2.algebraic_constraint().parent_block().\
+             _disaggregatedVars[1]
+        self.assertIs(hull.get_disaggregated_var(m.disj1.x, m.disj4), x2)
+        self.assertIs(hull.get_src_var(x2), m.disj1.x)
+        self.assertIs(hull.get_disaggregated_var(m.disj1.y, m.disj3), y1)
+        self.assertIs(hull.get_src_var(y1), m.disj1.y)
 
     def check_name_collision_disaggregated_vars(self, m, disj, name):
         hull = TransformationFactory('gdp.hull')
@@ -471,8 +569,9 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertIs(hull.get_src_var(x2), m.x)
 
     def test_disaggregated_var_name_collision(self):
-        # same model as the test above, but now I am putting what was disj1.y
-        # as m.x, just to invite disaster.
+        # same model as the test above, but now I am putting what was disj1.y as
+        # m.x, just to invite disaster, and adding constraints that involve all
+        # the variables so they will all be disaggregated on the Disjunct
         m = ConcreteModel()
         m.x = Var(bounds=(2, 11))
         m.disj1 = Disjunct()
@@ -480,12 +579,15 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m.disj1.cons1 = Constraint(expr=m.disj1.x + m.x <= 5)
         m.disj2 = Disjunct()
         m.disj2.cons = Constraint(expr=m.x >= 8)
+        m.disj2.cons1 = Constraint(expr=m.disj1.x == 3)
         m.disjunction1 = Disjunction(expr=[m.disj1, m.disj2])
 
         m.disj3 = Disjunct()
         m.disj3.cons = Constraint(expr=m.disj1.x >= 7)
+        m.disj3.cons1 = Constraint(expr=m.x >= 10)
         m.disj4 = Disjunct()
         m.disj4.cons = Constraint(expr=m.x == 3)
+        m.disj4.cons1 = Constraint(expr=m.disj1.x == 4)
         m.disjunction2 = Disjunction(expr=[m.disj3, m.disj4])
 
         hull = TransformationFactory('gdp.hull')
@@ -536,10 +638,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             TransformationFactory('gdp.hull').apply_to,
             m)
 
-    def test_indexed_constraints_in_disjunct(self):
-        m = models.makeThreeTermDisj_IndexedConstraints()
-
-        TransformationFactory('gdp.hull').apply_to(m)
+    def check_threeTermDisj_IndexedConstraints(self, m, lb):
         transBlock = m._pyomo_gdp_hull_reformulation
 
         # 2 blocks: the original Disjunct and the transformation block
@@ -548,21 +647,57 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertEqual(
             len(list(m.component_objects(Disjunct))), 1)
 
-        # Each relaxed disjunct should have 3 disaggregated vars, but i "d[i].c"
+        # Each relaxed disjunct should have i disaggregated vars and i "d[i].c"
         # Constraints
         for i in [1,2,3]:
             relaxed = transBlock.relaxedDisjuncts[i-1]
             self.assertEqual(
-                len(list(relaxed.disaggregatedVars.component_objects(Var))), 3)
+                len(list(relaxed.disaggregatedVars.component_objects( Var))), i)
             self.assertEqual(
-                len(list(relaxed.disaggregatedVars.component_data_objects(Var))),
-                3)
+                len(list(relaxed.disaggregatedVars.component_data_objects(
+                    Var))), i)
+            # we always have the x[1] bounds constraint, then however many
+            # original constraints were on the Disjunct
             self.assertEqual(
-                len(list(relaxed.component_objects(Constraint))), 4)
-            # Note: m.x LB == 0, so only 3 bounds constriants (not 6)
-            self.assertEqual(
-                len(list(relaxed.component_data_objects(Constraint))), 3+i)
+                len(list(relaxed.component_objects(Constraint))), 1+i)
+            if lb == 0:
+                # i bounds constraints and i transformed constraints
+                self.assertEqual(
+                    len(list(relaxed.component_data_objects(Constraint))), i+i)
+            else:
+                # 2*i bounds constraints and i transformed constraints
+                self.assertEqual(
+                    len(list(relaxed.component_data_objects(Constraint))), 2*i+i)
+
             self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)
+
+        # the remaining disaggregated variables are on the disjunction
+        # transformation block
+        self.assertEqual(len(list(transBlock.component_objects(
+            Var, descend_into=False))), 1)
+        self.assertEqual(len(list(transBlock.component_data_objects(
+            Var, descend_into=False))), 2)
+        # as are the XOR, reaggregation and their bounds constraints
+        self.assertEqual(len(list(transBlock.component_objects(
+            Constraint, descend_into=False))), 3)
+        
+        if lb == 0:
+            # 3 reaggregation + 2 bounds + 1 xor (because one bounds constraint
+            # is on the parent transformation block, and we don't need lb
+            # constraints if lb = 0)
+            self.assertEqual(len(list(transBlock.component_data_objects(
+                Constraint, descend_into=False))), 6)
+        else:
+            # 3 reaggregation + 4 bounds + 1 xor
+            self.assertEqual(len(list(transBlock.component_data_objects(
+                Constraint, descend_into=False))), 8)
+
+    def test_indexed_constraints_in_disjunct(self):
+        m = models.makeThreeTermDisj_IndexedConstraints()
+
+        TransformationFactory('gdp.hull').apply_to(m)
+
+        self.check_threeTermDisj_IndexedConstraints(m, lb=0)
 
     def test_virtual_indexed_constraints_in_disjunct(self):
         m = ConcreteModel()
@@ -577,28 +712,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m.disjunction = Disjunction(expr=[m.d[i] for i in m.I])
 
         TransformationFactory('gdp.hull').apply_to(m)
-        transBlock = m._pyomo_gdp_hull_reformulation
 
-        # 2 blocks: the original Disjunct and the transformation block
-        self.assertEqual(
-            len(list(m.component_objects(Block, descend_into=False))), 1)
-        self.assertEqual(
-            len(list(m.component_objects(Disjunct))), 1)
-
-        # Each relaxed disjunct should have 3 disaggregated vars, but i "d[i].c"
-        # Constraints
-        for i in [1,2,3]:
-            relaxed = transBlock.relaxedDisjuncts[i-1]
-            self.assertEqual(
-                len(list(relaxed.disaggregatedVars.component_objects( Var))), 3)
-            self.assertEqual(
-                len(list(relaxed.disaggregatedVars.component_data_objects(
-                    Var))), 3)
-            self.assertEqual(
-                len(list(relaxed.component_objects(Constraint))), 4)
-            self.assertEqual(
-                len(list(relaxed.component_data_objects(Constraint))), 3*2+i)
-            self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)
+        self.check_threeTermDisj_IndexedConstraints(m, lb=-1)
 
     def test_do_not_transform_deactivated_constraintDatas(self):
         m = models.makeTwoTermDisj_IndexedConstraints()
@@ -652,6 +767,66 @@ class MultiTermDisj(unittest.TestCase, CommonTests):
     def test_create_using(self):
         m = models.makeThreeTermIndexedDisj()
         self.diff_apply_to_and_create_using(m)
+
+    def test_do_not_disaggregate_more_than_necessary(self):
+        m = models.makeThreeTermDisjunctionWithOneVarInOneDisjunct()
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
+
+        # check that there are only two disaggregated copies of x
+        x1 = hull.get_disaggregated_var(m.x, m.d1)
+        self.assertEqual(x1.lb, -2)
+        self.assertEqual(x1.ub, 8)
+        self.assertIs(hull.get_src_var(x1), m.x)
+
+        x2 = m.disjunction.algebraic_constraint().parent_block().\
+             _disaggregatedVars[0]
+        self.assertIs(hull.get_src_var(x2), m.x)
+        self.assertIs(hull.get_disaggregated_var(m.x, m.d2), x2)
+        self.assertIs(hull.get_disaggregated_var(m.x, m.d3), x2)
+
+        # check the bounds constraints for the second copy of x
+        bounds = hull.get_var_bounds_constraint(x2)
+        self.assertEqual(len(bounds), 2)
+        # -2(1 - d1.indicator_var) <= x2
+        self.assertIsNone(bounds['lb'].lower)
+        self.assertEqual(bounds['lb'].upper, 0)
+        repn = generate_standard_repn(bounds['lb'].body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 2)
+        self.assertIs(repn.linear_vars[1], x2)
+        self.assertIs(repn.linear_vars[0],
+                      m.d1.indicator_var.get_associated_binary())
+        self.assertEqual(repn.linear_coefs[0], 2)
+        self.assertEqual(repn.linear_coefs[1], -1)
+        self.assertEqual(repn.constant, -2)
+        # x2 <= 8(1 - d1.indicator_var)
+        self.assertIsNone(bounds['ub'].lower)
+        self.assertEqual(bounds['ub'].upper, 0)
+        repn = generate_standard_repn(bounds['ub'].body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 2)
+        self.assertIs(repn.linear_vars[0], x2)
+        self.assertIs(repn.linear_vars[1],
+                      m.d1.indicator_var.get_associated_binary())
+        self.assertEqual(repn.linear_coefs[1], 8)
+        self.assertEqual(repn.linear_coefs[0], 1)
+        self.assertEqual(repn.constant, -8)
+
+        # check the disaggregation constraint
+        c = hull.get_disaggregation_constraint(m.x, m.disjunction)
+        self.assertEqual(c.lower, 0)
+        self.assertEqual(c.upper, 0)
+        repn = generate_standard_repn(c.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 3)
+        self.assertIs(repn.linear_vars[0], m.x)
+        self.assertIs(repn.linear_vars[1], x2)
+        self.assertIs(repn.linear_vars[2], x1)
+        self.assertEqual(repn.linear_coefs[0], 1)
+        self.assertEqual(repn.linear_coefs[1], -1)
+        self.assertEqual(repn.linear_coefs[2], -1)
+        self.assertEqual(repn.constant, 0)
 
 class IndexedDisjunction(unittest.TestCase, CommonTests):
     def setUp(self):
@@ -1038,7 +1213,6 @@ class DisaggregatedVarNamingConflict(unittest.TestCase):
 
         disaggregationConstraints = m._pyomo_gdp_hull_reformulation.\
                                     disaggregationConstraints
-        disaggregationConstraints.pprint()
         consmap = [
             (m.component("b.x"), disaggregationConstraints[(0, None)]),
             (m.b.x, disaggregationConstraints[(1, None)])
@@ -1417,7 +1591,6 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         self.assertIsInstance(dis_cons_inner_disjunction, Constraint)
         self.assertTrue(dis_cons_inner_disjunction.active)
         self.assertEqual(len(dis_cons_inner_disjunction), 1)
-        dis_cons_inner_disjunction.pprint()
         self.assertTrue(dis_cons_inner_disjunction[(0,None,'eq')].active)
         self.assertEqual(dis_cons_inner_disjunction[(0,None,'eq')].lower, 0)
         self.assertEqual(dis_cons_inner_disjunction[(0,None,'eq')].upper, 0)
@@ -1641,9 +1814,11 @@ class TestSpecialCases(unittest.TestCase):
         rd = i._pyomo_gdp_hull_reformulation.relaxedDisjuncts[1]
         varBlock = rd.disaggregatedVars
         # z should be disaggregated because we can't be sure it's not somewhere
-        # else on the model
-        self.assertEqual(sorted(varBlock.component_map(Var)), ['x','y','z'])
-        self.assertEqual(len(rd.component_map(Constraint)), 4)
+        # else on the model. (Note however that the copy of x corresponding to
+        # this disjunct is on the disjunction block)
+        self.assertEqual(sorted(varBlock.component_map(Var)), ['y','z'])
+        # constraint on the disjunction block
+        self.assertEqual(len(rd.component_map(Constraint)), 3)
         # bounds haven't changed on original
         self.assertEqual(i.d2.z.bounds, (7,9))
         # check disaggregated variable
@@ -1664,8 +1839,8 @@ class TestSpecialCases(unittest.TestCase):
         i = TransformationFactory('gdp.hull').create_using(m)
         rd = i._pyomo_gdp_hull_reformulation.relaxedDisjuncts[1]
         varBlock = rd.disaggregatedVars
-        self.assertEqual(sorted(varBlock.component_map(Var)), ['x','y','z'])
-        self.assertEqual(len(rd.component_map(Constraint)), 4)
+        self.assertEqual(sorted(varBlock.component_map(Var)), ['y','z'])
+        self.assertEqual(len(rd.component_map(Constraint)), 3)
         # original bounds unchanged
         self.assertEqual(i.d2.z.bounds, (-9,-7))
         # check disaggregated variable
@@ -1846,9 +2021,7 @@ class TestErrors(unittest.TestCase):
         self.assertEqual(repn.constant, 0)
         ct.check_linear_coef(
             self, repn, disjunct1.disaggregatedVars.binary_indicator_var, -1)
-        ct.check_linear_coef(self, repn,
-                             transBlock.relaxedDisjuncts[1].disaggregatedVars.\
-                             binary_indicator_var, -1)
+        ct.check_linear_coef(self, repn, transBlock._disaggregatedVars[0], -1)
         d4_ind_dis = transBlock.disaggregationConstraints[2, None]
         self.assertEqual(d4_ind_dis.lower, 0)
         self.assertEqual(d4_ind_dis.upper, 0)
@@ -1859,10 +2032,7 @@ class TestErrors(unittest.TestCase):
         ct.check_linear_coef(
             self, repn,
             disjunct1.disaggregatedVars.binary_indicator_var_4, -1)
-        ct.check_linear_coef(
-            self, repn,
-            transBlock.relaxedDisjuncts[1].disaggregatedVars.\
-            binary_indicator_var_9, -1)
+        ct.check_linear_coef( self, repn, transBlock._disaggregatedVars[1], -1)
 
     def test_mapping_method_errors(self):
         m = models.makeTwoTermDisj_Nonlinear()
@@ -1873,7 +2043,7 @@ class TestErrors(unittest.TestCase):
         with LoggingIntercept(log, 'pyomo.gdp.hull', logging.ERROR):
             self.assertRaisesRegex(
                 AttributeError,
-                "'NoneType' object has no attribute '_bigMConstraintMap'",
+                "'NoneType' object has no attribute 'parent_block'",
                 hull.get_var_bounds_constraint,
                 m.w)
         self.assertRegex(
@@ -1901,7 +2071,7 @@ class TestErrors(unittest.TestCase):
         with LoggingIntercept(log, 'pyomo.gdp.hull', logging.ERROR):
             self.assertRaisesRegex(
                 AttributeError,
-                "'NoneType' object has no attribute '_disaggregatedVarMap'",
+                "'NoneType' object has no attribute 'parent_block'",
                 hull.get_src_var,
                 m.w)
         self.assertRegex(
