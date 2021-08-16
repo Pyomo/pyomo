@@ -301,9 +301,9 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     gradient_c: scipy.sparse.csr.csr_matrix
         Ncon by Nvar size sparse matrix. A Jacobian matrix of the
         constraints with respect to the (decision variables, parameters)
-        at the optimal solution. Each row contains [column number,
-        row number, and value], column order follows variable order in col
-        and index starts from 1. Note that it follows k_aug.
+        at the optimal solution. Each row contains [row number,
+        column number, and value], column order follows variable order in col
+        and index starts from 0. Note that it follows k_aug.
         If no constraint exists, return []
     col: list
         Size Nvar list of variable names
