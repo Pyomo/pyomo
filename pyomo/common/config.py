@@ -18,6 +18,7 @@
 import argparse
 import builtins
 import enum
+import importlib
 import inspect
 import io
 import logging
@@ -29,6 +30,7 @@ from textwrap import wrap
 import types
 
 from pyomo.common.deprecation import deprecated, relocated_module_attribute
+from pyomo.common.fileutils import import_file
 from pyomo.common.modeling import NoArgumentGiven
 
 logger = logging.getLogger('pyomo.common.config')
@@ -234,6 +236,7 @@ class InEnum(object):
         raise ValueError("%r is not a valid %s" % (
             value, self._domain.__name__))
 
+
 class Module:
     """ Domain validator for modules.
 
@@ -284,15 +287,12 @@ class Module:
 
     def __call__(self, module_id):
         # If it's already a module, just return it
-        from inspect import ismodule
-        if ismodule(module_id):
+        if inspect.ismodule(module_id):
             return module_id
 
         # Try to import it as a module
-        import importlib
         try:
-            m = importlib.import_module(str(module_id))
-            return m
+            return importlib.import_module(str(module_id))
         except (ModuleNotFoundError, TypeError):
             # This wasn't a module name
             # Ignore the exception and move on to path-based loading
@@ -302,9 +302,8 @@ class Module:
         # If we're still here, try loading by path
         path_domain = Path(self.basePath, self.expandPath)
         path = path_domain(str(module_id))
-        import pyomo.common.fileutils
-        m = pyomo.common.fileutils.import_file(path)
-        return m
+        return import_file(path)
+
 
 class Path(object):
     """Domain validator for path-like options.
@@ -464,6 +463,7 @@ def add_docstring_list(docstring, configdict, indent_by=4):
             indent_spacing=0,
             width=256
         ).splitlines(True))
+
 
 # Note: Enum uses a metaclass to work its magic.  To get a deprecation
 # warning when creating a subclass of ConfigEnum, we need to decorate
@@ -1520,6 +1520,7 @@ ConfigBase.generate_documentation.formats = {
         'item_end': "",
     }
 }
+
 
 class ConfigValue(ConfigBase):
     """Store and manipulate a single configuration value.
