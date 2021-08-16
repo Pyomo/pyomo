@@ -578,11 +578,14 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     if not lhs_nonl_None or not rhs_nonl_None:
         return Results(nonl=multiplier*exp)
+
+    # If the resulting expression has a polynomial degree greater than 2
+    # (1 if quadratic is False), then simply return this as a general
+    # nonlinear expression
     #
-    # If not collecting quadratic terms and both terms are linear, then simply return the nonlinear expression
-    #
-    if not quadratic and len(lhs.linear) > 0 and len(rhs.linear) > 0:
-        # NOTE: We treat a product of linear terms as nonlinear unless quadratic is True
+    if ( max(1 if lhs.linear else 0, 2 if quadratic and lhs.quadratic else 0) +
+         max(1 if rhs.linear else 0, 2 if quadratic and rhs.quadratic else 0)
+         > (2 if quadratic else 1) ):
         return Results(nonl=multiplier*exp)
 
     ans = Results()
