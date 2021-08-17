@@ -172,7 +172,8 @@ class StreamBasedExpressionVisitor(object):
                 deprecation_warning(
                     "Note that the API for the StreamBasedExpressionVisitor "
                     "has changed to include the child index for the %s() "
-                    "method.  Please update your walker callbacks." % (name,))
+                    "method.  Please update your walker callbacks." % (name,),
+                    version='5.7.0')
                 def wrap(fcn, nargs):
                     def wrapper(*args):
                         return fcn(*args[:nargs])

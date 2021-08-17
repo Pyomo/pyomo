@@ -644,13 +644,15 @@ class Model(ScalarBlock):
             kwds.pop('clone')
             deprecation_warning(
                 "Model.create_instance() no longer accepts the 'clone' "
-                "argument: the base abstract model is always cloned.")
+                "argument: the base abstract model is always cloned.",
+                version='5.4')
         if 'preprocess' in kwds:
             kwds.pop('preprocess')
             deprecation_warning(
                 "Model.create_instance() no longer accepts the preprocess' "
                 "argument: preprocessing is always deferred to when the "
-                "model is sent to the solver")
+                "model is sent to the solver",
+                version='5.4')
         if kwds:
             msg = \
 """Model.create_instance() passed the following unrecognized keyword
@@ -662,7 +664,8 @@ arguments (which have been ignored):"""
         if self.is_constructed():
             deprecation_warning(
                 "Cannot call Model.create_instance() on a constructed "
-                "model; returning a clone of the current model instance.")
+                "model; returning a clone of the current model instance.",
+                version='5.4')
             return self.clone()
 
         if report_timing:
@@ -735,7 +738,7 @@ arguments (which have been ignored):"""
             deprecation_warning(
                 "The report_timing argument to Model.load() is deprecated.  "
                 "Use pyomo.common.timing.report_timing() to enable reporting "
-                "construction timing")
+                "construction timing", version='5.4')
         if arg is None or isinstance(arg, str):
             dp = DataPortal(filename=arg, model=self)
         elif type(arg) is DataPortal:

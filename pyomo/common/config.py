@@ -37,7 +37,7 @@ logger = logging.getLogger('pyomo.common.config')
 
 relocated_module_attribute(
     'PYOMO_CONFIG_DIR', 'pyomo.common.envvar.PYOMO_CONFIG_DIR',
-    version='TBD')
+    version='6.1')
 
 USER_OPTION = 0
 ADVANCED_OPTION = 1

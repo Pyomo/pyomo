@@ -21,10 +21,10 @@ logger = logging.getLogger('pyomo.core')
 
 relocated_module_attribute(
     'tabular_writer', 'pyomo.common.formatting.tabular_writer',
-    version='TBD')
+    version='6.1')
 relocated_module_attribute(
     'sorted_robust', 'pyomo.common.sorting.sorted_robust',
-    version='TBD')
+    version='6.1')
 
 
 def display(obj, ostream=None):
