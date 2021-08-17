@@ -6,7 +6,7 @@ from pyomo.core.base.objective import (Objective,
                                        maximize,
                                        value)
 from pyomo.core.base import Var, Param
-from pyomo.common.collections import ComponentSet
+from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import numpy as np
 from pyomo.contrib.pyros.util import (ObjectiveType,
                                       get_time_from_solver,
@@ -16,7 +16,7 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr.current import (replace_expressions,
                                      identify_mutable_parameters,
                                      identify_variables)
-from pyomo.contrib.pyros.util import get_main_elapsed_time
+from pyomo.contrib.pyros.util import get_main_elapsed_time, is_certain_parameter
 from pyomo.contrib.pyros.uncertainty_sets import Geometry
 import os
 from copy import deepcopy
@@ -35,10 +35,9 @@ def add_uncertainty_set_constraints(model, config):
 
     # === Pre-process out any uncertain parameters which have q_LB = q_ub via (q_ub - q_lb)/max(1,|q_UB|) <= TOL
     #     before building the uncertainty set constraint(s)
-    param_bounds = config.uncertainty_set.parameter_bounds
-    TOL = 1e-4
-    for i, tup in enumerate(param_bounds):
-        if (tup[1] - tup[0]) / max(1, abs(tup[1])) <= TOL:
+    uncertain_params = config.uncertain_params
+    for i in range(len(uncertain_params)):
+        if is_certain_parameter(uncertain_param_index=i, config=config):
             # This parameter is effectively certain for this set, can remove it from the uncertainty set
             # We do this by fixing it in separation to its nominal value
             model.util.uncertain_param_vars[i].fix(config.nominal_uncertain_param_vals[i])
@@ -64,7 +63,7 @@ def make_separation_objective_functions(model, config):
             c.deactivate() # These are x \in X constraints, not active in separation because x is fixed to x* from previous master
     model.util.performance_constraints = performance_constraints
     model.util.separation_objectives = []
-    map_obj_to_constr_names = {}
+    map_obj_to_constr = ComponentMap()
 
     if len(model.util.performance_constraints) == 0:
         raise ValueError("No performance constraints identified for the postulated robust optimization problem.")
@@ -75,14 +74,14 @@ def make_separation_objective_functions(model, config):
         if c.upper is not None:
             # This is an <= constraint, maximized in separation
             obj = Objective(expr=c.body - c.upper, sense=maximize)
-            map_obj_to_constr_names[c.name] = obj
+            map_obj_to_constr[c] = obj
             model.add_component("separation_obj_" + str(idx), obj)
             model.util.separation_objectives.append(obj)
         elif c.lower is not None:
             # This is an >= constraint, not supported
             raise ValueError("All inequality constraints in model must be in standard form (<= RHS)")
 
-    model.util.map_obj_to_constr_names = map_obj_to_constr_names
+    model.util.map_obj_to_constr = map_obj_to_constr
     for obj in model.util.separation_objectives:
         obj.deactivate()
 
@@ -95,15 +94,17 @@ def make_separation_problem(model_data, config):
     Add uncertainty set constraints and separation objectives
     """
     separation_model = model_data.original.clone()
+    separation_model.del_component("coefficient_matching_constraints")
+    separation_model.del_component("coefficient_matching_constraints_index")
 
     uncertain_params = separation_model.util.uncertain_params
     separation_model.util.uncertain_param_vars = param_vars = Var(range(len(uncertain_params)))
-    map_new_constraint_list_names_to_original_con_names = {}
+    map_new_constraint_list_to_original_con = ComponentMap()
 
     if config.objective_focus is ObjectiveType.worst_case:
         separation_model.util.zeta = Param(initialize=0, mutable=True)
         constr = Constraint(expr= separation_model.first_stage_objective + separation_model.second_stage_objective
-                                  <= separation_model.util.zeta)
+                                  - separation_model.util.zeta <= 0)
         separation_model.add_component("epigraph_constr", constr)
 
     substitution_map = {}
@@ -133,16 +134,20 @@ def make_separation_problem(model_data, config):
             else:
                 raise ValueError("Unable to parse constraint for building the separation problem.")
             c.deactivate()
-            map_new_constraint_list_names_to_original_con_names[
-                constraints[constraints.index_set().last()].name] = c.name
+            map_new_constraint_list_to_original_con[
+                constraints[constraints.index_set().last()]] = c
 
-    separation_model.util.map_constr_list_names_to_original_con_names = map_new_constraint_list_names_to_original_con_names
+    separation_model.util.map_new_constraint_list_to_original_con = map_new_constraint_list_to_original_con
 
     # === Add objectives first so that the uncertainty set
     #     Constraints do not get picked up into the set
     #	  of performance constraints which become objectives
     make_separation_objective_functions(separation_model, config)
     add_uncertainty_set_constraints(separation_model, config)
+
+    # === Deactivate h(x,q) == 0 constraints
+    for c in separation_model.util.h_x_q_constraints:
+        c.deactivate()
 
     return separation_model
 
@@ -237,29 +242,30 @@ def solve_separation_problem(model_data, config):
     local_solve_time = 0
 
     # List of objective functions
-    objectives_map = model_data.separation_model.util.map_obj_to_constr_names
-    constraint_map_to_master = model_data.separation_model.util.map_constr_list_names_to_original_con_names
+    objectives_map = model_data.separation_model.util.map_obj_to_constr
+    constraint_map_to_master = model_data.separation_model.util.map_new_constraint_list_to_original_con
 
     # Add additional or remaining separation objectives to the dict
     # (those either not assigned an explicit priority or those added by Pyros for ssv bounds)
-    sep_priority_dict = config.separation_priority_order
+    config_sep_priority_dict = config.separation_priority_order
+    actual_sep_priority_dict = ComponentMap()
     for perf_con in model_data.separation_model.util.performance_constraints:
-        if perf_con.name not in sep_priority_dict.keys():
-            sep_priority_dict[perf_con.name] = 0
+        actual_sep_priority_dict[perf_con] = config_sep_priority_dict.get(perf_con.name, 0)
 
     # "Bin" the objectives based on priorities
-    sorted_unique_priorities = sorted(list(set(sep_priority_dict.values())), reverse=True)
-
+    sorted_unique_priorities = sorted(list(set(actual_sep_priority_dict.values())), reverse=True)
+    set_of_deterministic_constraints = model_data.separation_model.util.deterministic_constraints
+    if hasattr(model_data.separation_model, "epigraph_constr"):
+        set_of_deterministic_constraints.add(model_data.separation_model.epigraph_constr)
     for is_global in (False, True):
         solver = config.global_solver if \
             (is_global or config.bypass_local_separation) else config.local_solver
         solve_data_list = []
-        list_of_deterministic_constraint_names = list(c.local_name for c in
-                                        model_data.master_nominal_scenario.component_data_objects(Constraint, descend_into=True))
+
         for val in sorted_unique_priorities:
             # Descending ordered by value
             # The list of performance constraints with this priority
-            perf_constraints = [constr_name for constr_name, priority in sep_priority_dict.items() if priority == val]
+            perf_constraints = [constr_name for constr_name, priority in actual_sep_priority_dict.items() if priority == val]
             for perf_con in perf_constraints:
                 #config.progress_logger.info("Separating constraint " + str(perf_con))
                 try:
@@ -268,7 +274,7 @@ def solve_separation_problem(model_data, config):
                     raise ValueError("Error in mapping separation objective to its master constraint form.")
                 separation_obj.activate()
 
-                if perf_con in list_of_deterministic_constraint_names:
+                if perf_con in set_of_deterministic_constraints:
                     nom_constraint = perf_con
                 else:
                     nom_constraint = constraint_map_to_master[perf_con]
@@ -350,6 +356,7 @@ def is_violation(model_data, config, solve_data):
     active_objective = next(model_data.separation_model.component_data_objects(Objective, active=True))
 
     if value(active_objective)/denom > tol:
+
         violating_param_realization = list(
             p.value for p in list(model_data.separation_model.util.uncertain_param_vars.values())
         )
@@ -394,6 +401,9 @@ def initialize_separation(model_data, config):
             v.deactivate()
         for v in model_data.separation_model.util.decision_rule_vars:
             v.fix()
+
+    if any(c.active for c in model_data.separation_model.util.h_x_q_constraints):
+        raise AttributeError("All h(x,q) type constraints must be deactivated in separation.")
 
     return
 
@@ -464,13 +474,23 @@ def discrete_solve(model_data, config, solver, is_global):
     """
     # Constraint are grouped by dim(uncertain_param) groups for each scenario in D
     solve_data_list = []
-    conlist = model_data.separation_model.util.uncertainty_set_constraint
+    # === Remove (skip over) already accounted for violations
     chunk_size = len(model_data.separation_model.util.uncertain_param_vars)
-    constraints = list(conlist.values())
+    conlist = model_data.separation_model.util.uncertainty_set_constraint
+    _constraints = list(conlist.values())
+    constraints_to_skip = ComponentSet()
     conlist.deactivate()
 
+    for pnt in model_data.points_added_to_master:
+        _idx = config.uncertainty_set.scenarios.index(tuple(pnt))
+        skip_index_list = list(range(chunk_size * _idx, chunk_size * _idx + chunk_size))
+        for _index in range(len(_constraints)):
+            if _index  in skip_index_list:
+                constraints_to_skip.add(_constraints[_index])
+    constraints = list(c for c in _constraints if c not in constraints_to_skip)
+
     for i in range(0, len(constraints), chunk_size):
-        chunk = constraints[i:i + chunk_size]
+        chunk = list(constraints[i:i + chunk_size])
         for idx, con in enumerate(chunk):
             con.activate()
             model_data.separation_model.util.uncertain_param_vars[idx].fix(con.lower)
