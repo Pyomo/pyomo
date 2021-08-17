@@ -229,10 +229,17 @@ def deprecated(msg=None, logger=None, version=None, remove_in=None):
 def _import_object(name, target, version, remove_in):
     from importlib import import_module
     modname, targetname = target.rsplit('.',1)
+    _object = getattr(import_module(modname), targetname)
+    if inspect.isclass(_object):
+        _type = 'class'
+    elif inspect.isfunction(_object):
+        _type = 'function'
+    else:
+        _type = 'attribute'
     deprecation_warning(
-        "the '%s' class has been moved to '%s'.  Please update your import."
-        % (name, target), version=version, remove_in=remove_in)
-    return getattr(import_module(modname), targetname)
+        "the '%s' %s has been moved to '%s'.  Please update your import."
+        % (name, _type, target), version=version, remove_in=remove_in)
+    return _object
 
 class _ModuleGetattrBackport_27(object):
     """Backport for support of module.__getattr__

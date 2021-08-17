@@ -319,8 +319,8 @@ class WalkerTests(unittest.TestCase):
         e = sin(M.x) + M.x*M.y + 3 <= 0
         walker = ReplacementWalkerTest1(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertEqual("sin(x) + x*y + 3  <=  0.0", str(e))
-        self.assertEqual("sin(w[1]) + w[1]*w[2] + 3  <=  0.0", str(f))
+        self.assertEqual("sin(x) + x*y + 3  <=  0", str(e))
+        self.assertEqual("sin(w[1]) + w[1]*w[2] + 3  <=  0", str(f))
 
     def test_replacement_walker4(self):
         M = ConcreteModel()
@@ -466,8 +466,8 @@ class WalkerTests2(unittest.TestCase):
         e = sin(M.x) + M.x*M.y + 3 <= 0
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertEqual("sin(x) + x*y + 3  <=  0.0", str(e))
-        self.assertEqual("sin(2*w[1]) + 2*w[1]*(2*w[2]) + 3  <=  0.0", str(f))
+        self.assertEqual("sin(x) + x*y + 3  <=  0", str(e))
+        self.assertEqual("sin(2*w[1]) + 2*w[1]*(2*w[2]) + 3  <=  0", str(f))
 
     def test_replacement_walker4(self):
         M = ConcreteModel()
@@ -572,8 +572,8 @@ class WalkerTests3(unittest.TestCase):
         e = sin(M.x) + M.x*M.y + 3 <= 0
         walker = ReplacementWalkerTest3(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertEqual("sin(x) + x*y + 3  <=  0.0", str(e))
-        self.assertEqual("sin(2*w[1]) + 2*w[1]*y + 3  <=  0.0", str(f))
+        self.assertEqual("sin(x) + x*y + 3  <=  0", str(e))
+        self.assertEqual("sin(2*w[1]) + 2*w[1]*y + 3  <=  0", str(f))
 
     def test_replacement_walker4(self):
         M = ConcreteModel()
@@ -680,8 +680,8 @@ class WalkerTests_ReplaceInternal(unittest.TestCase):
 
         e = sum(m.y[i] for i in m.y) == 0
         f = ReplacementWalker_ReplaceInternal().dfs_postorder_stack(e)
-        self.assertEqual("y[1] + y[2] + y[3]  ==  0.0", str(e))
-        self.assertEqual("y[1] + y[2] + y[3]  ==  0.0", str(f))
+        self.assertEqual("y[1] + y[2] + y[3]  ==  0", str(e))
+        self.assertEqual("y[1] + y[2] + y[3]  ==  0", str(f))
         self.assertIs(e, f)
 
     def test_replace(self):
@@ -691,8 +691,8 @@ class WalkerTests_ReplaceInternal(unittest.TestCase):
 
         e = m.y[1]*m.y[2] + m.y[2]*m.y[3]  ==  0
         f = ReplacementWalker_ReplaceInternal().dfs_postorder_stack(e)
-        self.assertEqual("y[1]*y[2] + y[2]*y[3]  ==  0.0", str(e))
-        self.assertEqual("y[1] + y[2] + (y[2] + y[3])  ==  0.0", str(f))
+        self.assertEqual("y[1]*y[2] + y[2]*y[3]  ==  0", str(e))
+        self.assertEqual("y[1] + y[2] + (y[2] + y[3])  ==  0", str(f))
         self.assertIs(type(f.arg(0)), SumExpression)
         self.assertEqual(f.arg(0).nargs(), 2)
         self.assertIs(type(f.arg(0).arg(0)), SumExpression)
@@ -707,8 +707,8 @@ class WalkerTests_ReplaceInternal(unittest.TestCase):
 
         e = m.y[1]*m.y[2]*m.y[2]*m.y[3]  ==  0
         f = ReplacementWalker_ReplaceInternal().dfs_postorder_stack(e)
-        self.assertEqual("y[1]*y[2]*y[2]*y[3]  ==  0.0", str(e))
-        self.assertEqual("y[1] + y[2] + y[2] + y[3]  ==  0.0", str(f))
+        self.assertEqual("y[1]*y[2]*y[2]*y[3]  ==  0", str(e))
+        self.assertEqual("y[1] + y[2] + y[2] + y[3]  ==  0", str(f))
         self.assertIs(type(f.arg(0)), SumExpression)
         self.assertEqual(f.arg(0).nargs(), 4)
 
