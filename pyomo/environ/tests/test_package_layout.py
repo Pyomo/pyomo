@@ -17,6 +17,9 @@ from pyomo.common.fileutils import PYOMO_ROOT_DIR
 import pyomo.common.unittest as unittest
 
 
+# List of directories under `pyomo` that intentionally do NOT have
+# __init__.py files (because they contain no Python files - or Python
+# files used in testing and explicitly NOT part of the "Pyomo package"
 _NON_MODULE_DIRS = {
     'contrib/appsi/build',
     'checker/doc',
