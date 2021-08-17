@@ -1381,7 +1381,7 @@ class _OrderedSetMixin(object):
         deprecation_warning(
             "Using __getitem__ to return a set value from its (ordered) "
             "position is deprecated.  Please use card()",
-            version='TBD', remove_in='7.0')
+            version='6.1', remove_in='7.0')
         return self.card(key)
 
     def isordered(self):
@@ -1928,7 +1928,7 @@ class Set(IndexedComponent):
         if 'virtual' in kwds:
             deprecation_warning(
                 "Pyomo Sets ignore the 'virtual' keyword argument",
-                logger='pyomo.core.base')
+                logger='pyomo.core.base', version='5.6.7')
             kwds.pop('virtual')
 
         IndexedComponent.__init__(self, *args, **kwds)

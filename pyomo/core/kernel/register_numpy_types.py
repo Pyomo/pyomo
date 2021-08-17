@@ -12,7 +12,7 @@ from pyomo.common.deprecation import deprecation_warning
 deprecation_warning(
     "pyomo.core.kernel.register_numpy_types is deprecated.  NumPy type "
     "registration is handled automatically by pyomo.common.dependencies.numpy",
-    version='TBD',
+    version='6.1',
 )
 
 from pyomo.core.expr.numvalue import (
