@@ -25,22 +25,22 @@ import pyomo.common.unittest as unittest
 _NON_MODULE_DIRS = {
     join('contrib', 'appsi', 'build'),
     join('checker', 'doc'),
-    join('checker', 'tests', 'examples')
-    join('contrib', 'appsi', 'cmodel', 'src')
-    join('contrib', 'pynumero', 'src')
-    join('core', 'tests', 'data', 'baselines')
-    join('core', 'tests', 'diet', 'baselines')
-    join('opt', 'tests', 'solver', 'exe_dir')
-    join('solvers', 'tests', 'checks', 'data')
-    join('solvers', 'tests', 'mip', 'asl')
-    join('solvers', 'tests', 'mip', 'cbc')
-    join('solvers', 'tests', 'mip', 'cplex')
-    join('solvers', 'tests', 'mip', 'glpk')
-    join('solvers', 'tests', 'mip', 'pico')
-    join('solvers', 'tests', 'piecewise_linear', 'baselines')
-    join('solvers', 'tests', 'piecewise_linear', 'kernel_baselines')
-    join('solvers', 'tests', 'piecewise_linear', 'kernel_problems')
-    join('solvers', 'tests', 'piecewise_linear', 'problems')
+    join('checker', 'tests', 'examples'),
+    join('contrib', 'appsi', 'cmodel', 'src'),
+    join('contrib', 'pynumero', 'src'),
+    join('core', 'tests', 'data', 'baselines'),
+    join('core', 'tests', 'diet', 'baselines'),
+    join('opt', 'tests', 'solver', 'exe_dir'),
+    join('solvers', 'tests', 'checks', 'data'),
+    join('solvers', 'tests', 'mip', 'asl'),
+    join('solvers', 'tests', 'mip', 'cbc'),
+    join('solvers', 'tests', 'mip', 'cplex'),
+    join('solvers', 'tests', 'mip', 'glpk'),
+    join('solvers', 'tests', 'mip', 'pico'),
+    join('solvers', 'tests', 'piecewise_linear', 'baselines'),
+    join('solvers', 'tests', 'piecewise_linear', 'kernel_baselines'),
+    join('solvers', 'tests', 'piecewise_linear', 'kernel_problems'),
+    join('solvers', 'tests', 'piecewise_linear', 'problems'),
 }
 
 class TestPackageLayout(unittest.TestCase):
