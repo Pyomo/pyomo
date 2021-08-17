@@ -14,6 +14,8 @@ Pyomo 6.1    13 Aug 2021
   - Resolve TeeStream deadlock issues (#2072)
   - Move PYOMO_CONFIG_DIR into pyomo.common.envvar (#2065)
   - Add a DynamicImplicitDomain domain validator (#2043)
+  - Generate standard repn misidentifies nonlinear expr (#2074)
+  - Add Module() validator to the config system (#2062)
 - Core
   - Yield Iterator from IndexedComponent (#2007)
   - Use yield from in pyomo.core (#1984)
@@ -27,11 +29,14 @@ Pyomo 6.1    13 Aug 2021
   - Allow native numeric types in relational expressions (#2073)
 - Documentation
   - Create a list of related packages (#2016)
+  - Fixing symbol names in Initializer deprecation layer (#2079)
+  - Depr OrderedSet.__getitem__ in favor of OrderedSet.card() (#2053)
 - Solver Interfaces
   - Clean up dependencies and solver.available() IO (#2011)
   - Update Baron writer to recognize priority Suffix (#2035)
   - Add OCTERACT to the list of known NEOS solvers (#2064)
   - Resolve tee issues with Xpress 8.9+ (#2059)
+  - Increase timeout for version request (#2083)
 - Testing
   - Miscellaneous testing fixes (#2023)
   - Improve management of tempfiles in tests (#2036)
@@ -49,11 +54,15 @@ Pyomo 6.1    13 Aug 2021
   - FBBT: Improved handling for product expressions (#2038)
   - Methods for generating and solving strongly connected components of a 
     square model in incidence_analysis (#2009)
+  - Add Dulmage-Mendelsohn partition to incidence_analysis (#2063)
   - PETSc: Remove PETSc solver (#1986)
   - PyROS: Pyomo Robust Optimization Solver (#2006, #2061)
   - Add kaug dsdp mode to sensitivity_toolbox (#1613)
   - APPSI: API Cleanup (#1944), bug-fix in update_variables (#2051)
   - MindtPy: Increase code coverage (#2021)
+  - MindtPy: Replace is not by != (#2081)
+  - PyNumero: ExternalGreyBox subclass to embed implicit functions
+    (#2022)
 
 
 -------------------------------------------------------------------------------
