@@ -11,6 +11,7 @@
 # Unit Tests for pyomo.base.misc
 #
 import os
+from os.path import join
 
 from pyomo.common.fileutils import PYOMO_ROOT_DIR
 
@@ -22,24 +23,24 @@ import pyomo.common.unittest as unittest
 # contain Python files that are only used in testing and explicitly NOT
 # part of the "Pyomo package")
 _NON_MODULE_DIRS = {
-    'contrib/appsi/build',
-    'checker/doc',
-    'checker/tests/examples',
-    'contrib/appsi/cmodel/src',
-    'contrib/pynumero/src',
-    'core/tests/data/baselines',
-    'core/tests/diet/baselines',
-    'opt/tests/solver/exe_dir',
-    'solvers/tests/checks/data',
-    'solvers/tests/mip/asl',
-    'solvers/tests/mip/cbc',
-    'solvers/tests/mip/cplex',
-    'solvers/tests/mip/glpk',
-    'solvers/tests/mip/pico',
-    'solvers/tests/piecewise_linear/baselines',
-    'solvers/tests/piecewise_linear/kernel_baselines',
-    'solvers/tests/piecewise_linear/kernel_problems',
-    'solvers/tests/piecewise_linear/problems',
+    join('contrib', 'appsi', 'build'),
+    join('checker', 'doc'),
+    join('checker', 'tests', 'examples')
+    join('contrib', 'appsi', 'cmodel', 'src')
+    join('contrib', 'pynumero', 'src')
+    join('core', 'tests', 'data', 'baselines')
+    join('core', 'tests', 'diet', 'baselines')
+    join('opt', 'tests', 'solver', 'exe_dir')
+    join('solvers', 'tests', 'checks', 'data')
+    join('solvers', 'tests', 'mip', 'asl')
+    join('solvers', 'tests', 'mip', 'cbc')
+    join('solvers', 'tests', 'mip', 'cplex')
+    join('solvers', 'tests', 'mip', 'glpk')
+    join('solvers', 'tests', 'mip', 'pico')
+    join('solvers', 'tests', 'piecewise_linear', 'baselines')
+    join('solvers', 'tests', 'piecewise_linear', 'kernel_baselines')
+    join('solvers', 'tests', 'piecewise_linear', 'kernel_problems')
+    join('solvers', 'tests', 'piecewise_linear', 'problems')
 }
 
 class TestPackageLayout(unittest.TestCase):
