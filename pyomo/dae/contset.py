@@ -265,19 +265,20 @@ class ContinuousSet(SortedScalarSet):
         -------
         `float` or `None` 
         """
-        lo = 1
-        hi = len(self) + 1
-        i = bisect.bisect_right(self, target, lo=lo, hi=hi)
+        lo = 0
+        hi = len(self)
+        arr = list(self)
+        i = bisect.bisect_right(arr, target, lo=lo, hi=hi)
         # i is the index at which target should be inserted if it is to be
         # right of any equal components. 
 
         if i == lo:
             # target is less than every entry of the set
-            nearest_index = i
+            nearest_index = i + 1
             delta = self.card(nearest_index) - target
         elif i == hi:
             # target is greater than or equal to every entry of the set
-            nearest_index = i-1
+            nearest_index = i
             delta = target - self.card(nearest_index)
         else:
             # p_le <= target < p_g
@@ -286,7 +287,7 @@ class ContinuousSet(SortedScalarSet):
             # delta = min(delta_left, delta_right)
             # Tie goes to the index on the left.
             delta, nearest_index = min(
-                (abs(target - self.card(j)), j) for j in [i-1, i]
+                (abs(target - self.card(j)), j) for j in [i, i+1]
             )
 
         if tolerance is not None:
