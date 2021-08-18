@@ -1,4 +1,4 @@
-We are pleased to announce the release of Pyomo 6.0.1.
+We are pleased to announce the release of Pyomo 6.1.1.
 
 Pyomo is a collection of Python software packages that supports a
 diverse set of optimization capabilities for formulating and analyzing
@@ -9,18 +9,12 @@ The following are highlights of the 6.0 release series:
 
  - Improved stability and robustness of core Pyomo code and solver interfaces
  - Integration of Boolean variables into GDP
- - New packages: APPSI, structural model analysis, external grey box models
-
-Note: As a major release, Pyomo 6.0 has certain backwards
-incompatibilities with the 5.x series and the 2nd Edition of the Pyomo
-Book.  Most notably:
-
- - Removed support for Python 2.7 or 3.5
- - Moved PySP into a separate package at https://github.com/Pyomo/pysp
- - Renamed "Simple" components to "Scalar" components
- - Removed support for implicit ranged inequalities (a <= m.x <= b)
- - Removed support for component reconstruct method
- - Removed support for casting relational expressions to bool
+ - Integration of NumPy support into the Pyomo expression system
+ - New packages:
+    - APPSI (Auto-Persistent Pyomo Solver Interfaces)
+    - External grey box models
+    - PyROS (Pyomo Robust Optimization Solver)
+    - Structural model analysis
 
 A full list of updates and changes is available in the CHANGELOG.txt
 

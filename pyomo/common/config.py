@@ -18,6 +18,7 @@
 import argparse
 import builtins
 import enum
+import importlib
 import inspect
 import io
 import logging
@@ -29,13 +30,14 @@ from textwrap import wrap
 import types
 
 from pyomo.common.deprecation import deprecated, relocated_module_attribute
+from pyomo.common.fileutils import import_file
 from pyomo.common.modeling import NoArgumentGiven
 
 logger = logging.getLogger('pyomo.common.config')
 
 relocated_module_attribute(
     'PYOMO_CONFIG_DIR', 'pyomo.common.envvar.PYOMO_CONFIG_DIR',
-    version='TBD')
+    version='6.1')
 
 USER_OPTION = 0
 ADVANCED_OPTION = 1
@@ -235,6 +237,74 @@ class InEnum(object):
             value, self._domain.__name__))
 
 
+class Module:
+    """ Domain validator for modules.
+
+    Modules can be specified as module objects, by module name,
+    or by the path to the module's file. If specified by path, the
+    path string has the same path expansion features supported by
+    the :py:class:`Path` class.
+
+    Note that modules imported by file path may not be recognized as
+    part of a package, and as such they should not use relative package
+    importing (such as ``from . import foo``).
+
+    Parameters
+    ----------
+    basePath: None, str, ConfigValue
+        The base path that will be prepended to any non-absolute path
+        values provided.  If None, defaults to :py:attr:`Path.BasePath`.
+
+    expandPath: bool
+        If True, then the value will be expanded and normalized.  If
+        False, the string representation of the value will be used
+        unchanged.  If None, expandPath will defer to the (negated)
+        value of :py:attr:`Path.SuppressPathExpansion`.
+
+    The following code shows the three ways you can specify a module: by file
+    name, by module name, or by module object. Regardless of how the module is
+    specified, what is stored in the configuration is a module object.
+
+    .. doctest::
+        >>> from pyomo.common.config import (
+        ...     ConfigDict, ConfigValue, Module
+        ... )
+        >>> config = ConfigDict()
+        >>> config.declare('my_module', ConfigValue(
+        ...     domain=Module(),
+        ... ))
+        >>> # Set using file path
+        >>> config.my_module = '../../pyomo/common/tests/config_plugin.py'
+        >>> # Set using python module name, as a string
+        >>> config.my_module = 'os.path'
+        >>> # Set using an imported module object
+        >>> import os.path
+        >>> config.my_module = os.path
+    """
+    def __init__(self, basePath=None, expandPath=None):
+        self.basePath = basePath
+        self.expandPath = expandPath
+
+    def __call__(self, module_id):
+        # If it's already a module, just return it
+        if inspect.ismodule(module_id):
+            return module_id
+
+        # Try to import it as a module
+        try:
+            return importlib.import_module(str(module_id))
+        except (ModuleNotFoundError, TypeError):
+            # This wasn't a module name
+            # Ignore the exception and move on to path-based loading
+            pass
+        # Any other kind of exception will be thrown out of this method
+
+        # If we're still here, try loading by path
+        path_domain = Path(self.basePath, self.expandPath)
+        path = path_domain(str(module_id))
+        return import_file(path)
+
+
 class Path(object):
     """Domain validator for path-like options.
 
@@ -393,6 +463,7 @@ def add_docstring_list(docstring, configdict, indent_by=4):
             indent_spacing=0,
             width=256
         ).splitlines(True))
+
 
 # Note: Enum uses a metaclass to work its magic.  To get a deprecation
 # warning when creating a subclass of ConfigEnum, we need to decorate
@@ -1449,6 +1520,7 @@ ConfigBase.generate_documentation.formats = {
         'item_end': "",
     }
 }
+
 
 class ConfigValue(ConfigBase):
     """Store and manipulate a single configuration value.

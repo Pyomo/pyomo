@@ -34,7 +34,7 @@ logger = logging.getLogger('pyomo.contrib.sensitivity_toolbox')
 @deprecated("The sipopt function has been deprecated. Use the sensitivity_calculation() "
             "function with method='sipopt' to access this functionality.",
             logger='pyomo.contrib.sensitivity_toolbox',
-            version='TBD')
+            version='6.1')
 def sipopt(instance, paramSubList, perturbList,
            cloneModel=True, tee=False, keepfiles=False,
            streamSoln=False):
@@ -46,7 +46,7 @@ def sipopt(instance, paramSubList, perturbList,
 @deprecated("The kaug function has been deprecated. Use the sensitivity_calculation() "
             "function with method='k_aug' to access this functionality.", 
             logger='pyomo.contrib.sensitivity_toolbox',
-            version='TBD')
+            version='6.1')
 def kaug(instance, paramSubList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None,
          streamSoln=False):

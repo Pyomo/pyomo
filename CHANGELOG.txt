@@ -3,6 +3,75 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.1.1  17 Aug 2021
+-------------------------------------------------------------------------------
+
+- General
+  - Adding missing __init__.py files across Pyomo (#2086)
+
+-------------------------------------------------------------------------------
+Pyomo 6.1    17 Aug 2021
+-------------------------------------------------------------------------------
+
+- General
+  - Support using TicTocTimer as a context manager (#2012)
+  - Add optional dependency target in setup.py (#2017)
+  - Added utilities for subsets of model components (#1998)
+  - Improvements in deprecation warning system (#2045, #2058, #2056)
+  - Resolve TeeStream deadlock issues (#2072)
+  - Move PYOMO_CONFIG_DIR into pyomo.common.envvar (#2065)
+  - Add a DynamicImplicitDomain domain validator (#2043)
+  - Generate standard repn misidentifies nonlinear expr (#2074)
+  - Add Module() validator to the config system (#2062)
+- Core
+  - Yield Iterator from IndexedComponent (#2007)
+  - Use yield from in pyomo.core (#1984)
+  - Improvements to sorted_robust and string formatting (#2020, #2024)
+  - Integrating numpy with the Pyomo expression system (#2027, #2034, #2070)
+  - Resolve Set bugs (#2048)
+  - Prevent attaching global Sets to Blocks (#2042)
+  - Correct scalar mutable param getitem implementation (#2066)
+  - Fix Var bounds with unitted mutable Params (#2067)
+  - Improve @disable_methods decorator (#2069)
+  - Allow native numeric types in relational expressions (#2073)
+  - Fixing symbol names in Initializer deprecation layer (#2079)
+  - Deprecate OrderedSet.__getitem__ in favor of OrderedSet.card() (#2053)
+- Documentation
+  - Create a list of related packages (#2016)
+- Solver Interfaces
+  - Clean up dependencies and solver.available() IO (#2011)
+  - Update Baron writer to recognize priority Suffix (#2035)
+  - Add OCTERACT to the list of known NEOS solvers (#2064)
+  - Resolve tee issues with Xpress 8.9+ (#2059)
+  - Increase timeout for ASL version request (#2083)
+- Testing
+  - Miscellaneous testing fixes (#2023)
+  - Improve management of tempfiles in tests (#2036)
+  - Update GHA to ubuntu-latest; resolve ampl/mp build error (#2015)
+  - Move constrained_layout tests to 'expensive' suite (#2018)
+  - Update xpress, appsi tests to manage CWD (#2031)
+  - Improve comparison of Book examples to baselines (#2044)
+  - Add retry/timeout to powershell downloads (#2077)
+- GDP Updates
+  - gdp.hull: Only create one disaggregated variable for all Disjuncts in
+    which a Var does not appear (#2005)
+- Contributed Packages
+  - FBBT: descend_into option for FBBT (#2025)
+  - FBBT: Interval arithmetic edge cases for FBBT (#2026)
+  - FBBT: Improved handling for product expressions (#2038)
+  - incidence_analysis: methods for generating and solving strongly
+    connected components of a square model (#2009)
+  - incidence_analysis: Add Dulmage-Mendelsohn partition (#2063)
+  - PETSc: Remove PETSc solver (#1986)
+  - PyROS: Pyomo Robust Optimization Solver (#2006, #2061)
+  - sensitivity_toolbox: Add kaug dsdp mode (#1613)
+  - APPSI: API Cleanup (#1944), bug-fix in update_variables (#2051)
+  - MindtPy: Increase code coverage (#2021)
+  - MindtPy: Replace is not by != (#2081)
+  - PyNumero: ExternalGreyBox subclass to embed implicit functions (#2022)
+
+
+-------------------------------------------------------------------------------
 Pyomo 6.0.1   4 Jun 2021
 -------------------------------------------------------------------------------
 

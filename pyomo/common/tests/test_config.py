@@ -44,7 +44,7 @@ from pyomo.common.config import (
     ConfigList, MarkImmutable, ImmutableConfigValue,
     PositiveInt, NegativeInt, NonPositiveInt, NonNegativeInt,
     PositiveFloat, NegativeFloat, NonPositiveFloat, NonNegativeFloat,
-    In, Path, PathList, ConfigEnum, DynamicImplicitDomain,
+    In, Module, Path, PathList, ConfigEnum, DynamicImplicitDomain,
     _UnpickleableDomain, _picklable,
 )
 from pyomo.common.log import LoggingIntercept
@@ -407,6 +407,29 @@ class TestConfigDomains(unittest.TestCase):
         c.a = ()
         self.assertEqual(len(c.a), 0)
         self.assertIs(type(c.a), list)
+
+    def test_Module(self):
+        c = ConfigDict()
+
+        c.declare('a', ConfigValue(domain=Module(), default=None))
+        self.assertEqual(c.a, None)
+
+        # Set using python module name to be imported
+        c.a = 'os.path'
+        import os.path
+        self.assertIs(c.a, os.path)
+
+        # Set to python module object
+        import os
+        c.a = os
+        self.assertIs(c.a, os)
+
+        # Set using path to python file
+        this_file = __file__
+        this_folder = os.path.dirname(__file__)
+        to_import = os.path.join(this_folder, 'test_config.py')
+        c.a = to_import
+        self.assertEqual(c.a.__file__, to_import)
 
     def test_ConfigEnum(self):
         out = StringIO()
