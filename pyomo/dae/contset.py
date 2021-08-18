@@ -274,18 +274,20 @@ class ContinuousSet(SortedScalarSet):
         if i == lo:
             # target is less than every entry of the set
             nearest_index = i
-            delta = self[nearest_index] - target
+            delta = self.card(nearest_index) - target
         elif i == hi:
             # target is greater than or equal to every entry of the set
             nearest_index = i-1
-            delta = target - self[nearest_index]
+            delta = target - self.card(nearest_index)
         else:
             # p_le <= target < p_g
             # delta_left = target - p_le
             # delta_right = p_g - target
             # delta = min(delta_left, delta_right)
             # Tie goes to the index on the left.
-            delta, nearest_index = min((abs(target - self[j]), j) for j in [i-1, i])
+            delta, nearest_index = min(
+                (abs(target - self.card(j)), j) for j in [i-1, i]
+            )
 
         if tolerance is not None:
             if delta > tolerance:
