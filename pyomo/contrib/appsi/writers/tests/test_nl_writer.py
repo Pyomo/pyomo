@@ -1,14 +1,12 @@
 import pyomo.common.unittest as unittest
 from pyomo.common.tempfiles import TempfileManager
 import pyomo.environ as pe
-try:
-    from pyomo.contrib.appsi.cmodel import cmodel
-except ImportError:
-    raise unittest.SkipTest('appsi extensions are not available')
 from pyomo.contrib import appsi
+from pyomo.contrib.appsi.cmodel import cmodel_available
 import os
 
 
+@unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestNLWriter(unittest.TestCase):
     def _write_and_check_header(self, m, correct_lines):
         writer = appsi.writers.NLWriter()

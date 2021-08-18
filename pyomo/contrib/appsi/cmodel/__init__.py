@@ -28,4 +28,9 @@ def _importer():
 
     return appsi_cmodel
 
-cmodel, cmodel_available = _attempt_import('appsi_cmodel', importer=_importer)
+cmodel, cmodel_available = _attempt_import(
+    'appsi_cmodel',
+    error_message=('Appsi requires building a small c++ extension. '
+                   'Please use thye "pyomo build-extensions" command'),
+    importer=_importer,
+)
