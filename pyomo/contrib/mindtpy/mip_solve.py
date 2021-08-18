@@ -18,8 +18,8 @@ from pyomo.contrib.gdpopt.util import copy_var_list_values, SuppressInfeasibleWa
 from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.common.dependencies import attempt_import
-from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function, set_solver_options
-from pyomo.solvers.plugins.solvers.gurobi_persistent import GurobiPersistent
+from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function, set_solver_options, GurobiPersistent4MindtPy
+
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
@@ -131,17 +131,9 @@ def setup_mip_solver(solve_data, config, regularization_problem):
         mainopt = SolverFactory(config.mip_regularization_solver)
     else:
         if config.mip_solver == 'gurobi_persistent' and config.single_tree:
-            @SolverFactory.register('gurobi_persistent4mindtpy', doc='Persistent python interface to Gurobi')
-            class GurobiPersistent4MindtPy(GurobiPersistent):
-
-                def _intermediate_callback(self):
-                    def f(gurobi_model, where):
-                        self._callback_func(self._pyomo_model, self,
-                                            where, self.solve_data, self.config)
-                    return f
-            GurobiPersistent4MindtPy.solve_data = solve_data
-            GurobiPersistent4MindtPy.config = config
-            mainopt = SolverFactory('gurobi_persistent4mindtpy')
+            mainopt = GurobiPersistent4MindtPy()
+            mainopt.solve_data = solve_data
+            mainopt.config = config
         else:
             mainopt = SolverFactory(config.mip_solver)
 
