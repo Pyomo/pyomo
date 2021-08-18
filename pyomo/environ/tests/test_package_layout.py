@@ -23,7 +23,6 @@ import pyomo.common.unittest as unittest
 # contain Python files that are only used in testing and explicitly NOT
 # part of the "Pyomo package")
 _NON_MODULE_DIRS = {
-    join('contrib', 'appsi', 'build'),
     join('checker', 'doc'),
     join('checker', 'tests', 'examples'),
     join('contrib', 'appsi', 'cmodel', 'src'),
