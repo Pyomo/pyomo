@@ -25,12 +25,11 @@ from pyomo.opt import TerminationCondition
 
 required_nlp_solvers = 'ipopt'
 required_mip_solvers = ['cplex_persistent', 'gurobi_persistent']
+available_mip_solvers = [s for s in required_mip_solvers
+                         if SolverFactory(s).available(False)]
 
-
-if SolverFactory(required_nlp_solvers).available(False) and any(SolverFactory(s).available(False) for s in required_mip_solvers):
+if SolverFactory(required_nlp_solvers).available(False) and available_mip_solvers:
     subsolvers_available = True
-    available_mip_solvers = [s for s in required_mip_solvers
-                             if SolverFactory(s).available(False)]
 else:
     subsolvers_available = False
 
