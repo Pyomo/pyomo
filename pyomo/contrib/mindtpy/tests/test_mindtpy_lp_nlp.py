@@ -49,35 +49,37 @@ model_list = [EightProcessFlowsheet(convex=True),
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 
+    @unittest.skipUnless('cplex_persistent' in available_mip_solvers,
+                         'cplex_persistent solver is not available')
     def test_LPNLP_CPLEX(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                if 'cplex_persistent' in required_mip_solvers:
-                    results = opt.solve(model, strategy='OA',
-                                        mip_solver='cplex_persistent',
-                                        nlp_solver=required_nlp_solvers,
-                                        single_tree=True)
+                results = opt.solve(model, strategy='OA',
+                                    mip_solver='cplex_persistent',
+                                    nlp_solver=required_nlp_solvers,
+                                    single_tree=True)
 
-                    self.assertIn(results.solver.termination_condition,
-                                  [TerminationCondition.optimal, TerminationCondition.feasible])
-                    self.assertAlmostEqual(
-                        value(model.objective.expr), model.optimal_value, places=1)
+                self.assertIn(results.solver.termination_condition,
+                              [TerminationCondition.optimal, TerminationCondition.feasible])
+                self.assertAlmostEqual(
+                    value(model.objective.expr), model.optimal_value, places=1)
 
+    @unittest.skipUnless('gurobi_persistent' in available_mip_solvers,
+                         'gurobi_persistent solver is not available')
     def test_LPNLP_GUROBI(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                if 'gurobi_persistent' in required_mip_solvers:
-                    results = opt.solve(model, strategy='OA',
-                                        mip_solver='gurobi_persistent',
-                                        nlp_solver=required_nlp_solvers,
-                                        single_tree=True)
+                results = opt.solve(model, strategy='OA',
+                                    mip_solver='gurobi_persistent',
+                                    nlp_solver=required_nlp_solvers,
+                                    single_tree=True)
 
-                    self.assertIn(results.solver.termination_condition,
-                                  [TerminationCondition.optimal, TerminationCondition.feasible])
-                    self.assertAlmostEqual(
-                        value(model.objective.expr), model.optimal_value, places=1)
+                self.assertIn(results.solver.termination_condition,
+                              [TerminationCondition.optimal, TerminationCondition.feasible])
+                self.assertAlmostEqual(
+                    value(model.objective.expr), model.optimal_value, places=1)
 
     def test_RLPNLP_L1(self):
         """Test the LP/NLP decomposition algorithm."""
