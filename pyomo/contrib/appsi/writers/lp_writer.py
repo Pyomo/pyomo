@@ -10,16 +10,10 @@ from pyomo.core.expr.numvalue import value
 from pyomo.contrib.appsi.base import PersistentBase
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.common.timing import HierarchicalTimer
+from pyomo.core.kernel.objective import minimize, maximize
 from .config import WriterConfig
 from .cmodel_converter import PyomoToCModelWalker
-from pyomo.common.dependencies import attempt_import
-from pyomo.core.kernel.objective import minimize, maximize
-
-
-cmodel, cmodel_available = attempt_import('pyomo.contrib.appsi.cmodel.cmodel',
-                                          'Appsi requires building a small c++ extension. '
-                                          'Please use thye "pyomo build-extensions" command')
-
+from ..cmodel import cmodel, cmodel_available
 
 id = id
 
