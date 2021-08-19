@@ -203,8 +203,17 @@ def deprecation_warning(msg, logger=None, version=None,
     if calling_frame is not None:
         info = inspect.getframeinfo(calling_frame)
         msg += "\n(called from %s:%s)" % (info.filename.strip(), info.lineno)
+        if deprecation_warning.emitted_warnings is not None:
+            if msg in deprecation_warning.emitted_warnings:
+                return
+            deprecation_warning.emitted_warnings.add(msg)
 
     logging.getLogger(logger).warning(msg)
+
+if in_testing_environment():
+    deprecation_warning.emitted_warnings = None
+else:
+    deprecation_warning.emitted_warnings = set()
 
 
 def deprecated(msg=None, logger=None, version=None, remove_in=None):
