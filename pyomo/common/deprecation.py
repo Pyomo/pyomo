@@ -204,19 +204,12 @@ def deprecation_warning(msg, logger=None, version=None,
         info = inspect.getframeinfo(calling_frame)
         msg += "\n(called from %s:%s)" % (info.filename.strip(), info.lineno)
         if deprecation_warning.emitted_warnings is not None:
-            # In normal operation only emit a deprecation message once
-            # for any context (file/line)
             if msg in deprecation_warning.emitted_warnings:
                 return
             deprecation_warning.emitted_warnings.add(msg)
-        elif deprecation_warning.last_warning == msg:
-            # hide repeated warnings, even when nose/pytest/sphinx are running
-            return
-        deprecation_warning.last_warning = msg
 
     logging.getLogger(logger).warning(msg)
 
-deprecation_warning.last_warning = None
 if in_testing_environment():
     deprecation_warning.emitted_warnings = None
 else:
