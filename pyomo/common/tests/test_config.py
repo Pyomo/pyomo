@@ -2382,7 +2382,7 @@ c: 1.0
         # test that dir is sorted
         self.assertEqual(dir(cfg), sorted(dir(cfg)))
         # check that inconsistent name is flagged
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Key 'b' not defined in ConfigDict ''"):
             cfg.b = cfg.declare('bb', ConfigValue(2, int))
 
@@ -2390,10 +2390,10 @@ c: 1.0
     def test_declaration_errors(self):
         cfg = ConfigDict()
         cfg.b = cfg.declare('b', ConfigValue(2, int))
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "duplicate config 'b' defined for ConfigDict ''"):
             cfg.b = cfg.declare('b', ConfigValue(2, int))
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "config 'dd' is already assigned to ConfigDict ''"):
             cfg.declare('dd', cfg.get('b'))
 
