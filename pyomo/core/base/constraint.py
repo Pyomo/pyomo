@@ -25,6 +25,7 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr import logical_expr
 from pyomo.core.expr.numvalue import (
     NumericValue, value, as_numeric, is_fixed, native_numeric_types,
+    is_constant,
 )
 from pyomo.core.base.component import (
     ActiveComponentData, ModelComponentFactory,
@@ -411,9 +412,13 @@ class _GeneralConstraintData(_ConstraintData):
         if self._expr.__class__ is logical_expr.EqualityExpression:
             return True
         elif self._expr.__class__ is logical_expr.RangedExpression:
-            # TODO: this is a very restrictive form of structural equality.
-            lb = self._expr.arg(0)
-            if lb is not None and lb is self._expr.arg(2):
+            lb, _, ub = self._expr.args
+            if lb is None:
+                return False  # unbounded
+            if lb is ub:
+                return True  # structurally equal
+            if is_constant(lb) and is_constant(ub) and value(lb) == value(ub):
+                # Should we consider an equality tolerance?
                 return True
         return False
 

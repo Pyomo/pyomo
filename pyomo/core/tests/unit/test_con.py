@@ -170,10 +170,105 @@ class TestConstraintCreation(unittest.TestCase):
             return (0, model.y, 1)
         model.c = Constraint(rule=rule)
 
-        self.assertEqual(model.c.equality,         False)
-        self.assertEqual(model.c.lower,             0)
-        self.assertIs   (model.c.body,              model.y)
-        self.assertEqual(model.c.upper,             1)
+        self.assertEqual(model.c.equality, False)
+        self.assertEqual(model.c.lower, 0)
+        self.assertIs   (model.c.body, model.y)
+        self.assertEqual(model.c.upper, 1)
+
+        model = self.create_model()
+        def rule(model):
+            return (0, model.y, 0)
+        model.c = Constraint(rule=rule)
+
+        self.assertEqual(model.c.equality, True)
+        self.assertEqual(model.c.lower, 0)
+        self.assertIs   (model.c.body, model.y)
+        self.assertEqual(model.c.upper, 0)
+
+        # Test mixed bound types (int / float)
+        model = self.create_model()
+        def rule(model):
+            return (0, model.y, 0.)
+        model.c = Constraint(rule=rule)
+
+        self.assertEqual(model.c.equality, True)
+        self.assertEqual(model.c.lower, 0)
+        self.assertIs   (model.c.body, model.y)
+        self.assertEqual(model.c.upper, 0)
+
+    def test_tuple_construct_2sided_mutable_inequality(self):
+        model = self.create_model()
+        model.p = Param(initialize=0, mutable=True)
+        model.q = Param(initialize=0., mutable=True)
+        def rule(model):
+            return (0, model.y, model.q)
+        model.c = Constraint(rule=rule)
+
+        self.assertEqual(model.c.equality, False)
+        self.assertEqual(model.c.lower, 0)
+        self.assertIs(model.c.body, model.y)
+        self.assertIs(model.c.upper, model.q)
+        self.assertEqual(model.c.lb, 0)
+        self.assertEqual(model.c.ub, 0)
+
+        def rule(model):
+            return (model.p, model.y, 0)
+        model.d = Constraint(rule=rule)
+
+        self.assertEqual(model.d.equality, False)
+        self.assertIs(model.d.lower, model.p)
+        self.assertIs(model.d.body, model.y)
+        self.assertEqual(model.d.upper, 0)
+        self.assertEqual(model.d.lb, 0)
+        self.assertEqual(model.d.ub, 0)
+
+        def rule(model):
+            return (model.p, model.y, model.q)
+        model.e = Constraint(rule=rule)
+
+        self.assertEqual(model.e.equality, False)
+        self.assertIs(model.e.lower, model.p)
+        self.assertIs(model.e.body, model.y)
+        self.assertIs(model.e.upper, model.q)
+        self.assertEqual(model.e.lb, 0)
+        self.assertEqual(model.e.ub, 0)
+
+    def test_tuple_construct_2sided_immutable_inequality(self):
+        model = self.create_model()
+        model.p = Param(initialize=0, mutable=False)
+        model.q = Param(initialize=0., mutable=False)
+        def rule(model):
+            return (0, model.y, model.q)
+        model.c = Constraint(rule=rule)
+
+        self.assertEqual(model.c.equality, True)
+        self.assertEqual(model.c.lower, 0)
+        self.assertIs(model.c.body, model.y)
+        self.assertIs(model.c.upper, model.q)
+        self.assertEqual(model.c.lb, 0)
+        self.assertEqual(model.c.ub, 0)
+
+        def rule(model):
+            return (model.p, model.y, 0)
+        model.d = Constraint(rule=rule)
+
+        self.assertEqual(model.d.equality, True)
+        self.assertIs(model.d.lower, model.p)
+        self.assertIs(model.d.body, model.y)
+        self.assertEqual(model.d.upper, 0)
+        self.assertEqual(model.d.lb, 0)
+        self.assertEqual(model.d.ub, 0)
+
+        def rule(model):
+            return (model.p, model.y, model.q)
+        model.e = Constraint(rule=rule)
+
+        self.assertEqual(model.e.equality, True)
+        self.assertIs(model.e.lower, model.p)
+        self.assertIs(model.e.body, model.y)
+        self.assertIs(model.e.upper, model.q)
+        self.assertEqual(model.e.lb, 0)
+        self.assertEqual(model.e.ub, 0)
 
     def test_tuple_construct_invalid_2sided_inequality(self):
         model = self.create_model(abstract=True)
