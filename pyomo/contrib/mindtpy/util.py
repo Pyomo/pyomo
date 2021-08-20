@@ -22,6 +22,7 @@ from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.common.dependencies import attempt_import
 from pyomo.contrib.fbbt.fbbt import fbbt
+from pyomo.solvers.plugins.solvers.gurobi_persistent import GurobiPersistent
 
 pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 numpy = attempt_import('numpy')[0]
@@ -447,6 +448,11 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
     if solver_name in {'cplex', 'gurobi', 'gurobi_persistent'}:
         opt.options['timelimit'] = remaining
         opt.options['mipgap'] = config.mip_solver_mipgap
+        if solver_name == 'gurobi_persistent' and config.single_tree:
+            # PreCrush: Controls presolve reductions that affect user cuts
+            # You should consider setting this parameter to 1 if you are using callbacks to add your own cuts.
+            opt.set_gurobi_param('PreCrush', 1)
+            opt.set_gurobi_param('LazyConstraints', 1)
         if regularization == True:
             if solver_name == 'cplex':
                 if config.solution_limit is not None:
@@ -601,3 +607,12 @@ def setup_solve_data(model, config):
                 direction=Suffix.IMPORT)
 
     return solve_data
+
+
+class GurobiPersistent4MindtPy(GurobiPersistent):
+
+    def _intermediate_callback(self):
+        def f(gurobi_model, where):
+            self._callback_func(self._pyomo_model, self,
+                                where, self.solve_data, self.config)
+        return f
