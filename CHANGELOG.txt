@@ -3,6 +3,21 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.1.2  20 Aug 2021
+-------------------------------------------------------------------------------
+
+- General
+  - Add test for missing/extra __init__.py files (#2090)
+  - Update deprecation warnings to only be emitted once per context (#2095)
+- Core
+  - Replace Set.card() with Set.at() (#2096)
+- DAE
+  - Remove use of OrderedSet.__getitem__ from contset.py (#2091)
+- Contributed Packages
+  - APPSI: Build/install APPSI extension outside of source tree (#2092)
+  - MindtPy: Support gurobi_persistent in LP/NLP-based B&B algorithm (#2071)
+
+-------------------------------------------------------------------------------
 Pyomo 6.1.1  17 Aug 2021
 -------------------------------------------------------------------------------
 
