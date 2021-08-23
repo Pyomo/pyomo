@@ -44,7 +44,7 @@ from pyomo.common.config import (
     ConfigList, MarkImmutable, ImmutableConfigValue,
     PositiveInt, NegativeInt, NonPositiveInt, NonNegativeInt,
     PositiveFloat, NegativeFloat, NonPositiveFloat, NonNegativeFloat,
-    In, Module, Path, PathList, ConfigEnum, DynamicImplicitDomain,
+    In, ListOf, Module, Path, PathList, ConfigEnum, DynamicImplicitDomain,
     _UnpickleableDomain, _picklable,
 )
 from pyomo.common.log import LoggingIntercept
@@ -407,6 +407,41 @@ class TestConfigDomains(unittest.TestCase):
         c.a = ()
         self.assertEqual(len(c.a), 0)
         self.assertIs(type(c.a), list)
+
+    def test_ListOf(self):
+        c = ConfigDict()
+        c.declare('a', ConfigValue(domain=ListOf(int), default=None))
+        self.assertEqual(c.a, None)
+        c.a = 5
+        self.assertEqual(c.a, [5])
+        c.a = (5, 6.6)
+        self.assertEqual(c.a, [5, 6])
+
+        ref=(r"(?m)Failed casting a\s+to ListOf\(int\)\s+"
+             r"Error: invalid literal for int\(\) with base 10: 'a'")
+        with self.assertRaisesRegex(ValueError, ref):
+            c.a = 'a'
+
+        c.declare('b', ConfigValue(domain=ListOf(str), default=None))
+        self.assertEqual(c.b, None)
+        c.b = "Hello, World"
+        self.assertEqual(c.b, ["Hello, World"])
+        c.b = ("A", 6)
+        self.assertEqual(c.b, ["A", "6"])
+
+        c.declare('c', ConfigValue(domain=ListOf(int, PositiveInt)))
+        self.assertEqual(c.c, None)
+        c.c = 6
+        self.assertEqual(c.c, [6])
+
+        ref=(r"(?m)Failed casting %s\s+to ListOf\(PositiveInt\)\s+"
+             r"Error: Expected positive int, but received %s")
+        with self.assertRaisesRegex(ValueError, ref % (6.5, 6.5)):
+            c.c = 6.5
+        with self.assertRaisesRegex(ValueError, ref % (r"\[0\]", "0")):
+            c.c = [0]
+        c.c = [3, 6, 9]
+        self.assertEqual(c.c, [3, 6, 9])
 
     def test_Module(self):
         c = ConfigDict()

@@ -237,7 +237,40 @@ class InEnum(object):
             value, self._domain.__name__))
 
 
-class Module:
+class ListOf(object):
+    """Domain validator for lists of a specified type
+
+    Parameters
+    ----------
+    itemtype: type
+        The type for each element in the list
+
+    domain: Callable
+        A domain validator (callable that takes the incoming value,
+        validates it, and returns the appropriate domain type) for each
+        element in the list.  If not specified, defaults to the
+        `itemtype`.
+
+    """
+    def __init__(self, itemtype, domain=None):
+        self.itemtype = itemtype
+        if domain is None:
+            self.domain = self.itemtype
+        else:
+            self.domain = domain
+        self.__name__ = 'ListOf(%s)' % (
+            getattr(self.domain, '__name__', self.domain),)
+
+    def __call__(self, value):
+        if hasattr(value, '__iter__') and not isinstance(value, self.itemtype):
+            return [self.domain(v) for v in value]
+        else:
+            return [self.domain(value)]
+
+    def __repr__(self):
+        return "ListOf(%s)" % domain.__name__
+
+class Module(object):
     """ Domain validator for modules.
 
     Modules can be specified as module objects, by module name,
