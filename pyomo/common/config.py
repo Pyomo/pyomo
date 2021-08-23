@@ -270,6 +270,7 @@ class ListOf(object):
     def __repr__(self):
         return "ListOf(%s)" % domain.__name__
 
+
 class Module(object):
     """ Domain validator for modules.
 
@@ -628,6 +629,8 @@ validators for common use cases:
    NonNegativeFloat
    In
    InEnum
+   ListOf
+   Module
    Path
    PathList
 
