@@ -267,9 +267,6 @@ class ListOf(object):
         else:
             return [self.domain(value)]
 
-    def __repr__(self):
-        return "ListOf(%s)" % domain.__name__
-
 
 class Module(object):
     """ Domain validator for modules.
