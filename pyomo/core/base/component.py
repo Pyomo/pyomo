@@ -17,8 +17,7 @@ from weakref import ref as weakref_ref
 import pyomo.common
 from pyomo.common.deprecation import deprecated, relocated_module_attribute
 from pyomo.common.factory import Factory
-from pyomo.common.fileutils import StreamIndenter
-from pyomo.common.formatting import tabular_writer
+from pyomo.common.formatting import tabular_writer, StreamIndenter
 from pyomo.common.modeling import NOTSET
 from pyomo.common.sorting import sorted_robust
 from pyomo.core.pyomoobject import PyomoObject

@@ -13,7 +13,7 @@ from io import StringIO
 
 import pyomo.common.unittest as unittest
 
-from pyomo.common.formatting import tostr, tabular_writer
+from pyomo.common.formatting import tostr, tabular_writer, StreamIndenter
 
 class DerivedList(list): pass
 class DerivedTuple(tuple): pass
@@ -168,4 +168,20 @@ Key : i : j
     : 2 : cccc
 """
         self.assertEqual(ref.strip(), os.getvalue().strip())
+
+
+class TestStreamIndenter(unittest.TestCase):
+    def test_StreamIndenter_noprefix(self):
+        OUT1 = StringIO()
+        OUT2 = StreamIndenter(OUT1)
+        OUT2.write('Hello?\nHello, world!')
+        self.assertEqual('    Hello?\n    Hello, world!',
+                         OUT2.getvalue())
+
+    def test_StreamIndenter_prefix(self):
+        prefix = 'foo:'
+        OUT1 = StringIO()
+        OUT2 = StreamIndenter(OUT1, prefix)
+        OUT2.write('Hello?\nHello, world!')
+        self.assertEqual('foo:Hello?\nfoo:Hello, world!', OUT2.getvalue())
 
