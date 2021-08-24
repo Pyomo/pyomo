@@ -26,7 +26,7 @@ import pyomo.common.envvar as envvar
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.fileutils import (
     this_file, this_file_dir, find_file, find_library, find_executable, 
-    PathManager, _system, _path, _exeExt, _libExt, _ExecutableData,
+    PathManager, _system, _path, _exeExt, _libExt, ExecutableData,
     import_file,
 )
 from pyomo.common.download import FileDownloader
@@ -410,7 +410,7 @@ class TestFileUtils(unittest.TestCase):
 
 
     def test_PathManager(self):
-        Executable = PathManager(find_executable, _ExecutableData)
+        Executable = PathManager(find_executable, ExecutableData)
         self.tmpdir = os.path.abspath(tempfile.mkdtemp())
 
         envvar.PYOMO_CONFIG_DIR = self.tmpdir

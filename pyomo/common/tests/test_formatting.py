@@ -21,6 +21,7 @@ class DerivedDict(dict): pass
 class DerivedStr(str): pass
 NamedTuple = namedtuple('NamedTuple', ['x', 'y'])
 
+
 class TestToStr(unittest.TestCase):
     def test_new_type_float(self):
         self.assertEqual(tostr(0.5), '0.5')
@@ -49,6 +50,7 @@ class TestToStr(unittest.TestCase):
     def test_new_type_namedtuple(self):
         self.assertEqual(tostr(NamedTuple(1, 2)), 'NamedTuple(x=1, y=2)')
         self.assertIs(tostr.handlers[NamedTuple], tostr.handlers[None])
+
 
 class TestTabularWriter(unittest.TestCase):
     def test_unicode_table(self):

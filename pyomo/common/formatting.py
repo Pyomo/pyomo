@@ -7,6 +7,14 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+"""This module provides general utilities for producing formated I/O
+
+.. autosummary::
+
+   tostr
+   tabular_writer
+   StreamIndenter
+"""
 
 import types
 from pyomo.common.sorting import sorted_robust
@@ -87,6 +95,7 @@ tostr.handlers = {
     ),
     None: lambda value, quote_str: str(value),
 }
+
 
 def tabular_writer(ostream, prefix, data, header, row_generator):
     """Output data in tabular form
