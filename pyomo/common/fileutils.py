@@ -667,6 +667,7 @@ class PathManager(object):
 
         >>> loc = Executable('demo_exec_file').executable
         >>> print(os.path.isfile(loc))
+        True
         >>> Executable('demo_exec_file').executable = os.path.join(
         ...     pyomo.common.envvar.PYOMO_CONFIG_DIR, 'bin', 'demo_exec_file')
         >>> Executable('demo_exec_file').executable = None
