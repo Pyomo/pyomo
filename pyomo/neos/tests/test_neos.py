@@ -133,7 +133,6 @@ class RunAllNEOSSolvers(object):
     def test_mosek(self):
         self._run('mosek')
 
-    @unittest.expectedFailure
     def test_octeract(self):
         self._run('octeract')
 
