@@ -123,7 +123,10 @@ if __name__ == '__main__':
         sys.exit()
 
     if len(sys.argv) > 1:
-        geomParamSet = range(*tuple(int(i) for i in sys.argv[1].split(':')))
+        if ':' in sys.argv[1]:
+            geomParamSet = range(*tuple(int(i) for i in sys.argv[1].split(':')))
+        else:
+            geomParamSet = [int(sys.argv[1])]
     else:
         geomParamSet = range(1, 24)
     if len(sys.argv) > 2:
