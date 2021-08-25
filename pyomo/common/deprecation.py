@@ -182,13 +182,7 @@ def deprecation_warning(msg, logger=None, version=None,
             # function/method that called deprecation_warning
             cf = _find_calling_frame(1)
         if cf is not None:
-            if '__package__' in cf.f_globals:
-                logger = cf.f_globals['__package__']
-            else:
-                # likely in something like Sphinx doctest.  Check
-                # __builtins__, but fall back on no logger context.
-                logger = cf.f_globals.get('__builtins__', {}).get(
-                    '__package__', None)
+            logger = cf.f_globals.get('__package__', None)
             if logger is not None and not logger.startswith('pyomo'):
                 logger = None
         if logger is None:
