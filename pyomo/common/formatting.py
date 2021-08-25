@@ -7,7 +7,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-"""This module provides general utilities for producing formated I/O
+"""This module provides general utilities for producing formatted I/O
 
 .. autosummary::
 
