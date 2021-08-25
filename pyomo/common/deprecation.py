@@ -182,7 +182,7 @@ def deprecation_warning(msg, logger=None, version=None,
             # function/method that called deprecation_warning
             cf = _find_calling_frame(1)
         if cf is not None:
-            logger = cf.f_globals['__package__']
+            logger = cf.f_globals.get('__package__', None)
             if logger is not None and not logger.startswith('pyomo'):
                 logger = None
         if logger is None:
@@ -399,14 +399,14 @@ class RenamedClass(type):
         >>> class DerivedOldClass(OldClass):
         ...     pass
         WARNING: DEPRECATED: Declaring class 'DerivedOldClass' derived from
-            'OldClass'. The class 'OldClass' has been renamed to 'NewClass'
+            'OldClass'. The class 'OldClass' has been renamed to 'NewClass'.
             (deprecated in 6.0) ...
 
         As does instantiating the old class:
 
         >>> old = OldClass()
         WARNING: DEPRECATED: Instantiating class 'OldClass'.  The class
-            'OldClass' has been renamed to 'NewClass'  (deprecated in 6.0) ...
+            'OldClass' has been renamed to 'NewClass'.  (deprecated in 6.0) ...
 
         Finally, isinstance and issubclass still work, for example:
 
@@ -417,7 +417,7 @@ class RenamedClass(type):
         >>> new = NewSubclass()
         >>> isinstance(new, OldClass)
         WARNING: DEPRECATED: Checking type relative to 'OldClass'.  The class
-            'OldClass' has been renamed to 'NewClass'  (deprecated in 6.0) ...
+            'OldClass' has been renamed to 'NewClass'.  (deprecated in 6.0) ...
         True
 
     """
