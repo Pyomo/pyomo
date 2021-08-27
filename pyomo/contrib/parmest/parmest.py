@@ -1005,7 +1005,7 @@ class Estimator(object):
         assert isinstance(alphas, list)
         assert isinstance(test_theta_values, (type(None), dict, pd.Series, pd.DataFrame))
         
-        if isinstance(test_theta_values, dict):
+        if isinstance(test_theta_values, (dict, pd.Series)):
             test_theta_values = pd.Series(test_theta_values).to_frame().transpose()
             
         training_results = theta_values.copy()
