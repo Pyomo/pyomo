@@ -13,6 +13,7 @@ import filecmp
 import glob
 import os
 import os.path
+import re
 import subprocess
 import sys
 from itertools import zip_longest
@@ -228,7 +229,17 @@ def filter(line):
 
 def filter_file_contents(lines):
     filtered = []
+    deprecated = None
     for line in lines:
+        # Ignore all deprecation warnings
+        if line.startswith('WARNING: DEPRECATED:'):
+            deprecated = ''
+        if deprecated is not None:
+            deprecated += line
+            if re.search(r'\(called\s+from[^)]+\)', deprecated):
+                deprecated = None
+            continue
+
         if not line or filter(line):
             continue
 

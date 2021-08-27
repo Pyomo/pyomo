@@ -14,7 +14,10 @@ import importlib
 import logging
 import sys
 
-from pyomo.common.deprecation import deprecated, deprecation_warning
+from .deprecation import (
+    deprecated, deprecation_warning, in_testing_environment,
+)
+from . import numeric_types
 
 class DeferredImportError(ImportError):
     pass
@@ -580,15 +583,30 @@ def _finalize_matplotlib(module, available):
     # we are in the middle of testing, we need to switch the backend to
     # 'Agg', otherwise attempts to generate plots on CI services without
     # terminal windows will fail.
-    if any(m in sys.modules for m in ('nose', 'nose2', 'sphinx', 'pytest')):
+    if in_testing_environment():
         module.use('Agg')
     import matplotlib.pyplot
 
+def _finalize_numpy(np, available):
+    if not available:
+        return
+    numeric_types.RegisterBooleanType(np.bool_)
+    for t in (np.int_, np.intc, np.intp,
+              np.int8, np.int16, np.int32, np.int64,
+              np.uint8, np.uint16, np.uint32, np.uint64):
+        numeric_types.RegisterIntegerType(t)
+        numeric_types.RegisterBooleanType(t)
+    for t in (np.float_, np.float16, np.float32, np.float64, np.ndarray):
+        numeric_types.RegisterNumericType(t)
+        numeric_types.RegisterBooleanType(t)
 
-yaml, yaml_available = attempt_import('yaml', callback=_finalize_yaml)
+
+yaml, yaml_available = attempt_import(
+    'yaml', callback=_finalize_yaml)
 pympler, pympler_available = attempt_import(
     'pympler', callback=_finalize_pympler)
-numpy, numpy_available = attempt_import('numpy')
+numpy, numpy_available = attempt_import(
+    'numpy', callback=_finalize_numpy)
 scipy, scipy_available = attempt_import(
     'scipy', callback=_finalize_scipy,
     deferred_submodules=['stats', 'sparse', 'spatial', 'integrate'])

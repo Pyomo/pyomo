@@ -22,12 +22,12 @@ from io import StringIO
 
 import pyomo.common.unittest as unittest
 
-import pyomo.common.config as config
+import pyomo.common.envvar as envvar
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.fileutils import (
     this_file, this_file_dir, find_file, find_library, find_executable, 
-    PathManager, _system, _path, _exeExt, _libExt, _ExecutableData,
-    import_file, StreamIndenter
+    PathManager, _system, _path, _exeExt, _libExt, ExecutableData,
+    import_file,
 )
 from pyomo.common.download import FileDownloader
 
@@ -46,12 +46,12 @@ class TestFileUtils(unittest.TestCase):
     def setUp(self):
         self.tmpdir = None
         self.basedir = os.path.abspath(os.path.curdir)
-        self.config = config.PYOMO_CONFIG_DIR
+        self.config = envvar.PYOMO_CONFIG_DIR
         self.ld_library_path = os.environ.get('LD_LIBRARY_PATH', None)
         self.path = os.environ.get('PATH', None)
 
     def tearDown(self):
-        config.PYOMO_CONFIG_DIR = self.config
+        envvar.PYOMO_CONFIG_DIR = self.config
         os.chdir(self.basedir)
         if self.tmpdir:
             shutil.rmtree(self.tmpdir)
@@ -113,20 +113,6 @@ class TestFileUtils(unittest.TestCase):
         with self.assertRaises(FileNotFoundError) as context:
             import_file(os.path.join(_this_file_dir, 'import_ex'))
         self.assertTrue('File does not exist' in str(context.exception))
-
-    def test_StreamIndenter_noprefix(self):
-        OUT1 = StringIO()
-        OUT2 = StreamIndenter(OUT1)
-        OUT2.write('Hello?\nHello, world!')
-        self.assertEqual('    Hello?\n    Hello, world!',
-                         OUT2.getvalue())
-
-    def test_StreamIndenter_prefix(self):
-        prefix = 'foo:'
-        OUT1 = StringIO()
-        OUT2 = StreamIndenter(OUT1, prefix)
-        OUT2.write('Hello?\nHello, world!')
-        self.assertEqual('foo:Hello?\nfoo:Hello, world!', OUT2.getvalue())
 
     def test_system(self):
         self.assertTrue(platform.system().lower().startswith(_system()))
@@ -244,7 +230,7 @@ class TestFileUtils(unittest.TestCase):
         _lib = ctypes.cdll.LoadLibrary(a)
         self.assertIsNotNone(_lib)
 
-        config.PYOMO_CONFIG_DIR = self.tmpdir
+        envvar.PYOMO_CONFIG_DIR = self.tmpdir
         config_libdir = os.path.join(self.tmpdir, 'lib')
         os.mkdir(config_libdir)
         config_bindir = os.path.join(self.tmpdir, 'bin')
@@ -341,7 +327,7 @@ class TestFileUtils(unittest.TestCase):
         self.tmpdir = os.path.abspath(tempfile.mkdtemp())
         os.chdir(self.tmpdir)
 
-        config.PYOMO_CONFIG_DIR = self.tmpdir
+        envvar.PYOMO_CONFIG_DIR = self.tmpdir
         config_libdir = os.path.join(self.tmpdir, 'lib')
         os.mkdir(config_libdir)
         config_bindir = os.path.join(self.tmpdir, 'bin')
@@ -424,10 +410,10 @@ class TestFileUtils(unittest.TestCase):
 
 
     def test_PathManager(self):
-        Executable = PathManager(find_executable, _ExecutableData)
+        Executable = PathManager(find_executable, ExecutableData)
         self.tmpdir = os.path.abspath(tempfile.mkdtemp())
 
-        config.PYOMO_CONFIG_DIR = self.tmpdir
+        envvar.PYOMO_CONFIG_DIR = self.tmpdir
         config_bindir = os.path.join(self.tmpdir, 'bin')
         os.mkdir(config_bindir)
 

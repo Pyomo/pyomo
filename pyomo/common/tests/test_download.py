@@ -16,10 +16,9 @@ import tempfile
 import subprocess
 
 import pyomo.common.unittest as unittest
-
+import pyomo.common.envvar as envvar
 
 from pyomo.common import DeveloperError
-from pyomo.common.config import PYOMO_CONFIG_DIR
 from pyomo.common.fileutils import this_file
 from pyomo.common.download import FileDownloader, distro_available
 from pyomo.common.tee import capture_output
@@ -112,9 +111,10 @@ class Test_FileDownloader(unittest.TestCase):
         f = FileDownloader()
         self.assertIsNone(f._fname)
         f.set_destination_filename('foo')
-        self.assertEqual(f._fname, os.path.join(PYOMO_CONFIG_DIR, 'foo'))
+        self.assertEqual(f._fname,
+                         os.path.join(envvar.PYOMO_CONFIG_DIR, 'foo'))
         # By this point, the CONFIG_DIR is guaranteed to have been created
-        self.assertTrue(os.path.isdir(PYOMO_CONFIG_DIR))
+        self.assertTrue(os.path.isdir(envvar.PYOMO_CONFIG_DIR))
 
         f.target = self.tmpdir
         f.set_destination_filename('foo')

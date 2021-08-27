@@ -94,7 +94,7 @@ class ASL(SystemCallSolver):
             return _extract_version('')
         try:
             results = subprocess.run([solver_exec, "-v"],
-                                     timeout=2,
+                                     timeout=5,
                                      stdout=subprocess.PIPE,
                                      stderr=subprocess.STDOUT,
                                      universal_newlines=True)

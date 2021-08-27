@@ -5,11 +5,8 @@ parameterized, param_available = attempt_import('parameterized')
 if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 parameterized = parameterized.parameterized
-try:
-    from pyomo.contrib.appsi.cmodel import cmodel
-except ImportError:
-    raise unittest.SkipTest('appsi extensions are not available')
 from pyomo.contrib.appsi.base import TerminationCondition, Results, PersistentSolver
+from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc
 from typing import Type
 from pyomo.core.expr.numeric_expr import LinearExpression
@@ -56,7 +53,7 @@ best objective bound                       x
 fixed variables
 """
 
-
+@unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestSolvers(unittest.TestCase):
     @parameterized.expand(input=all_solvers)
     def test_range_constraint(self, name: str, opt_class: Type[PersistentSolver]):
@@ -412,6 +409,18 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
         self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
+        m.x.fix(0)
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 2)
+        m.x.value = 2
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 2)
+        self.assertAlmostEqual(m.y.value, 3)
+        m.x.value = 0
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 2)
 
     @parameterized.expand(input=all_solvers)
     def test_mutable_param_with_range(self, name: str, opt_class: Type[PersistentSolver]):
@@ -549,6 +558,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, -0.42630274815985264)
 
 
+@unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestLegacySolverInterface(unittest.TestCase):
     @parameterized.expand(input=all_solvers)
     def test_param_updates(self, name: str, opt_class: Type[PersistentSolver]):

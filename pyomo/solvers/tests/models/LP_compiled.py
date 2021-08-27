@@ -83,9 +83,9 @@ class LP_compiled(_BaseTestModel):
         assert cdata.body() == 2
         assert not cdata.equality
         cdata = model.c.add((0, 1, None))
-        assert cdata.lower == 0
-        assert cdata.upper is None
-        assert cdata.body() == 1
+        assert cdata.lower is None
+        assert cdata.upper == 1
+        assert cdata.body() == 0
         assert not cdata.equality
         cdata = model.c.add((None, 0, 1))
         assert cdata.lower is None

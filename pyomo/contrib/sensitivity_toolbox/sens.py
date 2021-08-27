@@ -8,19 +8,11 @@
 # This software is distributed under the 3-clause BSD License
 # ______________________________________________________________________________
 from pyomo.environ import (
-        Param,
-        Var,
-        Block,
-        ComponentMap,
-        Objective,
-        Constraint,
-        ConstraintList,
-        Suffix,
-        value,
-        ComponentUID,
-        )
+    Param, Var, Block, ComponentMap, Objective, Constraint,
+    ConstraintList, Suffix, value, ComponentUID,
+)
 
-from pyomo.core.base.misc import sorted_robust
+from pyomo.common.sorting import sorted_robust
 from pyomo.core.expr.current import ExpressionReplacementVisitor
 
 from pyomo.common.modeling import unique_component_name
@@ -42,7 +34,7 @@ logger = logging.getLogger('pyomo.contrib.sensitivity_toolbox')
 @deprecated("The sipopt function has been deprecated. Use the sensitivity_calculation() "
             "function with method='sipopt' to access this functionality.",
             logger='pyomo.contrib.sensitivity_toolbox',
-            version='TBD')
+            version='6.1')
 def sipopt(instance, paramSubList, perturbList,
            cloneModel=True, tee=False, keepfiles=False,
            streamSoln=False):
@@ -54,7 +46,7 @@ def sipopt(instance, paramSubList, perturbList,
 @deprecated("The kaug function has been deprecated. Use the sensitivity_calculation() "
             "function with method='k_aug' to access this functionality.", 
             logger='pyomo.contrib.sensitivity_toolbox',
-            version='TBD')
+            version='6.1')
 def kaug(instance, paramSubList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None,
          streamSoln=False):
