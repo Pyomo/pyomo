@@ -11,9 +11,8 @@
 Continuously stirred tank reactor model, based on
 pyomo\examples\doc\pyomobook\nonlinear-ch\react_design\ReactorDesign.py
 """
-import numpy as np
 import pandas as pd
-from pyomo.environ import ConcreteModel, RangeSet, Var, PositiveReals, Objective, Constraint, maximize, SolverFactory
+from pyomo.environ import ConcreteModel, Var, PositiveReals, Objective, Constraint, maximize, SolverFactory
 
 def reactor_design_model(data):
     
@@ -60,7 +59,7 @@ def reactor_design_model(data):
                      + model.k3 * model.ca ** 2.0))
     
     return model
-    
+
 if __name__ == "__main__":
     
     # For a range of sv values, return ca, cb, cc, and cd

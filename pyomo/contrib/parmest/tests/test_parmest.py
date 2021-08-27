@@ -67,8 +67,8 @@ class TestRooneyBiegler(unittest.TestCase):
         objval, thetavals = self.pest.theta_est()
 
         self.assertAlmostEqual(objval, 4.3317112, places=2)
-        self.assertAlmostEqual(thetavals['asymptote'], 19.1426, places=2) 
-        self.assertAlmostEqual(thetavals['rate_constant'], 0.5311, places=2) 
+        self.assertAlmostEqual(thetavals['asymptote'], 19.1426, places=2)  # 19.1426 from the paper
+        self.assertAlmostEqual(thetavals['rate_constant'], 0.5311, places=2)  # 19.1426 from the paper
 
     @unittest.skipIf(not graphics.imports_available,
                      "parmest.graphics imports are unavailable")
@@ -193,8 +193,8 @@ class TestRooneyBiegler(unittest.TestCase):
         objval, thetavals, cov = self.pest.theta_est(calc_cov=True)
 
         self.assertAlmostEqual(objval, 4.3317112, places=2)
-        self.assertAlmostEqual(thetavals['asymptote'], 19.1426, places=2) 
-        self.assertAlmostEqual(thetavals['rate_constant'], 0.5311, places=2)
+        self.assertAlmostEqual(thetavals['asymptote'], 19.1426, places=2) # 19.1426 from the paper
+        self.assertAlmostEqual(thetavals['rate_constant'], 0.5311, places=2) # 19.1426 from the paper
 
         # Covariance matrix
         self.assertAlmostEqual(cov.iloc[0,0], 6.30579403, places=2) # 6.22864 from paper

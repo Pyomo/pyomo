@@ -1,3 +1,21 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+''' 
+Example from Y. Bard, "Nonlinear Parameter Estimation", (pg. 124)
+
+This example shows:
+1. How to define the unknown (to be regressed parameters) with an index
+2. How to call parmest to only estimate some of the parameters (and fix the rest)
+
+Code provided by Paul Akula.
+'''
 import pandas as pd
 from pandas import DataFrame
 from os import path
@@ -7,17 +25,6 @@ from pyomo.environ import (ConcreteModel, Param, Var, PositiveReals, Objective,
 
 #from idaes.core.util import get_default_solver
 import pyomo.contrib.parmest.parmest as parmest
-
-''' Example from Y. Bard, "Nonlinear Parameter Estimation", (pg. 124)
-
-This example shows:
-1. How to define the unknown (to be regressed parameters) with an index
-2. How to call parmest to only estimate some of the parameters (and fix the rest)
-
-Code provided by Paul Akula.
-
-'''
-
 
 # =======================================================================
 ''' Data from Table 5.2 in  Y. Bard, "Nonlinear Parameter Estimation", (pg. 124)
@@ -83,23 +90,19 @@ if __name__ == "__main__":
 
     # =======================================================================
     # Parameter estimation without covariance estimate
-    #solver = get_default_solver
-    
     # Only estimate the parameter k[1]. The parameter k[2] will remain fixed
     # at its initial value
     theta_names = ['k[1]']
-    
     pest = parmest.Estimator(simple_reaction_model, data, theta_names)
     obj, theta = pest.theta_est()
     print(obj)
     print(theta)
-    
+    print()
     #=======================================================================
-    # Estimate the covariance matrix
-    
+    # Estimate both k1 and k2 and compute the covariance matrix
+    theta_names = ['k']
+    pest = parmest.Estimator(simple_reaction_model, data, theta_names)
     obj, theta, cov = pest.theta_est(calc_cov=True)
     print(obj)
     print(theta)
     print(cov)
-    
-    #=======================================================================
