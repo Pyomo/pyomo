@@ -6,7 +6,7 @@ import pandas as pd
 import time
 import pickle
 from itertools import permutations, product
-from pyomo.contrib.sensitivity_toolbox.sens import sipopt
+from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculation
 
 
 class DesignOfExperiments: 
@@ -174,10 +174,12 @@ class DesignOfExperiments:
 
             analysis_optimize = FIM_result(self.param_name, prior_FIM=self.prior_FIM)
             analysis_optimize.extract_FIM(m, self.design_timeset, result_doe, obj=objective_option)
+            analysis_optimize.model = m
 
             return analysis_square, analysis_optimize
 
         else:
+            analysis_optimize.model = m
             return analysis_square
 
 
@@ -245,9 +247,14 @@ class DesignOfExperiments:
         if (self.mode == 'simultaneous_finite'):
             m = self.__create_doe_model()
 
+            time0 = time.time()
             # solve model, achieve results for square problem, and results for optimization problem
             square_result = self.__solve_doe(m, fix=True)
-
+            time1 = time.time()
+            
+            if self.verbose:
+                print('This run takes wall clock time: ', time1-time0, ' s.')
+            
             # analyze results
             if specified_prior is None:
                 prior_in_use = self.prior_FIM
@@ -274,7 +281,8 @@ class DesignOfExperiments:
             output_record = {}
             # dict for storing Jacobian
             jac = {}
-
+            
+            time0 = time.time()
             # loop over each scenario
             for no_s in (scena_gen.scena_keys):
 
@@ -303,6 +311,9 @@ class DesignOfExperiments:
                         C_value = eval('mod.' + j + '[0,' + str(t) + ']')
                         output_combine.append(value(C_value))
                 output_record[no_s] = output_combine
+                
+            time1 = time.time()
+            print('This run takes wall clock time: ', time1-time0, ' s.')
 
             # After collecting outputs from all scenarios, calculate sensitivity
             for para in self.param_name:
@@ -347,7 +358,8 @@ class DesignOfExperiments:
             all_base_measure = []
             # store jacobian info
             jac={}
-
+               
+            time0 = time.time()
             # loop over parameters
             for pa in range(len(self.param_name)):
                 perturb_mea = []
@@ -390,7 +402,7 @@ class DesignOfExperiments:
                 if self.mode =='sequential_sipopt':
                     m_sipopt = sensitivity_calculation('sipopt', mod, list_original, list_perturb, tee=self.tee_opt, solver_options='ma57')
                 else:
-                    m_sipopt = sensitivity_calculation('k_aug', mod, list_original, list_perturb, tee=True)
+                    m_sipopt = sensitivity_calculation('k_aug', mod, list_original, list_perturb, tee=self.tee_opt, solver_options='ma57')
 
                 # extract sipopt result
                 for j in self.measurement_variables:
@@ -423,7 +435,9 @@ class DesignOfExperiments:
                 print(all_perturb_measure)
                 print(all_base_measure)
 
-
+            time1 = time.time()
+            if self.verbose:
+                print('This run takes wall clock time: ', time1-time0, ' s.')
             # After collecting outputs from all scenarios, calculate sensitivity
             for count, para in enumerate(self.param_name):
                 list_jac = []
@@ -607,7 +621,7 @@ class DesignOfExperiments:
                                            formula=formula, step=step)
 
             if (mode=='simultaneous_finite'):
-                result_iter.extract_FIM(self.m, self.design_timeset, self.square_result, objective_option)
+                result_iter.extract_FIM(self.m, self.design_timeset, self.square_result, self.objective_option)
 
             elif (mode in ['sequential_finite', 'sequential_sipopt', 'sequential_kaug']):
                 result_iter.calculate_FIM(self.jac, self.design_values)
