@@ -43,6 +43,47 @@ USER_OPTION = 0
 ADVANCED_OPTION = 1
 DEVELOPER_OPTION = 2
 
+def Bool(val):
+    """Domain validator for bool-like objects.
+
+    This is a more strict domain than ``bool``, as it will error on
+    values that do not "look" like a Boolean value (i.e., it accepts
+    ``True``, ``False``, 0, 1, and the case insensitive strings
+    ``'true'``, ``'false'``, ``'yes'``, ``'no'``, ``'t'``, ``'f'``,
+    ``'y'``, and ``'n'``)
+
+    """
+    if type(val) is bool:
+        return val
+    if isinstance(val, str):
+        v = val.upper()
+        if v in {'TRUE', 'YES', 'T', 'Y', '1'}:
+            return True
+        if v in {'FALSE', 'NO', 'F', 'N', '0'}:
+            return False
+    elif int(val) == float(val):
+        v = int(val)
+        if v in {0, 1}:
+            return bool(v)
+    raise ValueError(
+        "Expected Boolean, but received %s" % (val,))
+
+def Integer(val):
+    """Domain validation function admitting integers
+
+    This domain will admit integers, as well as any values that are
+    "reasonably exactly" convertible to integers.  This is more strict
+    than ``int``, as it will generate errors for floating point values
+    that are not integer.
+
+    """
+    ans = int(val)
+    # We want to give an error for floating point numbers...
+    if ans != float(val):
+        raise ValueError(
+            "Expected integer, but received %s" % (val,))
+    return ans
+
 def PositiveInt(val):
     """Domain validation function admitting strictly positive integers
 
