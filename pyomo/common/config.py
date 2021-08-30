@@ -657,6 +657,8 @@ validators for common use cases:
 
 .. autosummary::
 
+   Bool
+   Integer
    PositiveInt
    NegativeInt
    NonNegativeInt
