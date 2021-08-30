@@ -87,6 +87,7 @@ class TempfileManagerClass(object):
        True
 
        >>> TempfileManager.pop()
+       <pyomo.common.tempfiles.TempfileContext object ...>
        >>> os.path.exists(fname)
        False
        >>> os.path.exists(dname)
