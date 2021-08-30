@@ -7,7 +7,7 @@ from pyomo.core.base.var import _GeneralVarData, Var
 from pyomo.core.base.param import _ParamData, Param
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.objective import _GeneralObjectiveData
-from pyomo.common.collections import ComponentMap, OrderedSet
+from pyomo.common.collections import ComponentMap, OrderedSet, ComponentSet
 from .utils.get_objective import get_objective
 from .utils.identify_named_expressions import identify_named_expressions
 from pyomo.common.timing import HierarchicalTimer
@@ -582,8 +582,8 @@ class PersistentBase(abc.ABC):
             self._set_objective(obj)
 
     def add_block(self, block):
-        self.add_variables([var for var in block.component_data_objects(Var, descend_into=True, sort=False)])
-        self.add_params([p for p in block.component_data_objects(Param, descend_into=True, sort=False)])
+        self.add_variables(ComponentSet(var for var in block.component_data_objects(Var, descend_into=True, sort=False)))
+        self.add_params(ComponentSet(p for p in block.component_data_objects(Param, descend_into=True, sort=False)))
         self.add_constraints([con for con in block.component_data_objects(Constraint, descend_into=True,
                                                                           active=True, sort=False)])
         self.add_sos_constraints([con for con in block.component_data_objects(SOSConstraint, descend_into=True,
@@ -650,8 +650,8 @@ class PersistentBase(abc.ABC):
                                                                              active=True, sort=False)])
         self.remove_sos_constraints([con for con in block.component_data_objects(ctype=SOSConstraint, descend_into=True,
                                                                                  active=True, sort=False)])
-        self.remove_variables([var for var in block.component_data_objects(ctype=Var, descend_into=True, sort=False)])
-        self.remove_params([p for p in block.component_data_objects(ctype=Param, descend_into=True, sort=False)])
+        self.remove_variables(ComponentSet(var for var in block.component_data_objects(ctype=Var, descend_into=True, sort=False)))
+        self.remove_params(ComponentSet(p for p in block.component_data_objects(ctype=Param, descend_into=True, sort=False)))
 
     @abc.abstractmethod
     def update_variables(self, variables: List[_GeneralVarData]):
