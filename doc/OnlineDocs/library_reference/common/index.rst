@@ -13,4 +13,5 @@ or rely on any other parts of Pyomo.
    deprecation.rst
    fileutils.rst
    formatting.rst
+   tempfiles.rst
    timing.rst
