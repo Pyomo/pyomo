@@ -346,8 +346,17 @@ class UpdateConfig(ConfigDict):
     update_params: bool
     update_named_expressions: bool
     """
-    def __init__(self):
-        super(UpdateConfig, self).__init__()
+    def __init__(self,
+                 description=None,
+                 doc=None,
+                 implicit=False,
+                 implicit_domain=None,
+                 visibility=0):
+        super(UpdateConfig, self).__init__(description=description,
+                                           doc=doc,
+                                           implicit=implicit,
+                                           implicit_domain=implicit_domain,
+                                           visibility=visibility)
 
         self.declare('check_for_new_or_removed_constraints', ConfigValue(domain=bool))
         self.declare('check_for_new_or_removed_vars', ConfigValue(domain=bool))
