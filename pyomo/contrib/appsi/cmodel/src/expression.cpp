@@ -644,7 +644,7 @@ void ExternalOperator::propagate_degree_forward(int* degrees, double* values)
 {
   // External functions are always considered nonlinear
   // Anything larger than 2 is nonlinear
-  degrees[index] = 3
+  degrees[index] = 3;
 }
 
 
