@@ -4,7 +4,6 @@ try:
     from pyomo.contrib.appsi.cmodel import cmodel
 except ImportError:
     raise unittest.SkipTest('appsi extensions are not available')
-from pyomo.contrib.appsi.solvers import Ipopt
 from pyomo.common.getGSL import find_GSL
 
 
@@ -14,6 +13,10 @@ class TestIpoptPersistent(unittest.TestCase):
         if not DLL:
             self.skipTest('Could not find the amplgls.dll library')
 
+        opt = pe.SolverFactory('appsi_ipopt')
+        if not opt.available(exception_flag=False):
+            raise unittest.SkipTest
+
         m = pe.ConcreteModel()
         m.hypot = pe.ExternalFunction(library=DLL, function='gsl_hypot')
         m.x = pe.Var(bounds=(-10, 10), initialize=2)
@@ -21,7 +24,6 @@ class TestIpoptPersistent(unittest.TestCase):
         e = 2 * m.hypot(m.x, m.x * m.y)
         m.c = pe.Constraint(expr=e == 2.82843)
         m.obj = pe.Objective(expr=m.x)
-        opt: Ipopt = pe.SolverFactory('appsi_ipopt')
         res = opt.solve(m)
         pe.assert_optimal_termination(res)
         self.assertAlmostEqual(pe.value(m.c.body) - pe.value(m.c.lower), 0)
