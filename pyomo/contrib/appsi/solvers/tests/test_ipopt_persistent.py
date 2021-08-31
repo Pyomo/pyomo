@@ -1,27 +1,11 @@
 import pyomo.environ as pe
-from pyomo.common.dependencies import attempt_import
 import pyomo.common.unittest as unittest
-parameterized, param_available = attempt_import('parameterized')
-if not param_available:
-    raise unittest.SkipTest('Parameterized is not available.')
-parameterized = parameterized.parameterized
 try:
     from pyomo.contrib.appsi.cmodel import cmodel
 except ImportError:
     raise unittest.SkipTest('appsi extensions are not available')
-from pyomo.contrib.appsi.base import TerminationCondition, Results, PersistentSolver
-from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc
-from typing import Type
-from pyomo.core.expr.numeric_expr import LinearExpression
-import os
+from pyomo.contrib.appsi.solvers import Ipopt
 from pyomo.common.getGSL import find_GSL
-
-
-all_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt), ('cplex', Cplex), ('cbc', Cbc)]
-mip_solvers = [('gurobi', Gurobi), ('cplex', Cplex), ('cbc', Cbc)]
-nlp_solvers = [('ipopt', Ipopt)]
-qcp_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt), ('cplex', Cplex)]
-miqcqp_solvers = [('gurobi', Gurobi), ('cplex', Cplex)]
 
 
 class TestIpoptPersistent(unittest.TestCase):
