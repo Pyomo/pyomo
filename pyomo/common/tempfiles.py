@@ -52,8 +52,8 @@ class TempfileManagerClass(object):
     :class:`TempfileContext` contexts.  It implements a basic stack,
     where users can :meth:`push()` a new context (causing it to become
     the current "active" context) and :meth:`pop()` contexts off
-    (optionally deleting all files associated with the context.  In
-    general usage, users will either use the this class to create new
+    (optionally deleting all files associated with the context).  In
+    general usage, users will either use this class to create new
     tempfile contexts and use them explicitly (i.e., through a context
     manager):
 
