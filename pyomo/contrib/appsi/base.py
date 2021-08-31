@@ -774,7 +774,12 @@ class PersistentBase(abc.ABC):
 
     def add_block(self, block):
         self.add_variables(list(OrderedDict((id(var), var) for var in block.component_data_objects(Var, descend_into=True, sort=False)).values()))
-        self.add_params(list(OrderedDict((id(p), p) for p in block.component_data_objects(Param, descend_into=True, sort=False)).values()))
+        param_dict = OrderedDict()
+        for p in block.component_objects(Param, descend_into=True, sort=False):
+            if p.mutable:
+                for _p in p.values():
+                    param_dict[id(_p)] = _p
+        self.add_params(list(param_dict.values()))
         self.add_constraints([con for con in block.component_data_objects(Constraint, descend_into=True,
                                                                           active=True, sort=False)])
         self.add_sos_constraints([con for con in block.component_data_objects(SOSConstraint, descend_into=True,
@@ -888,7 +893,11 @@ class PersistentBase(abc.ABC):
         timer.stop('vars')
         timer.start('params')
         if config.check_for_new_or_removed_params:
-            current_params_dict = {id(p): p for p in self._model.component_data_objects(Param, descend_into=True, sort=False)}
+            current_params_dict = dict()
+            for p in self._model.component_objects(Param, descend_into=True, sort=False):
+                if p.mutable:
+                    for _p in p.values():
+                        current_params_dict[id(_p)] = _p
             for p_id, p in current_params_dict.items():
                 if p_id not in self._params:
                     new_params.append(p)
