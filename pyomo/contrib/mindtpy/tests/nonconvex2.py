@@ -46,3 +46,4 @@ class Nonconvex2(ConcreteModel):
         m.c6 = Constraint(expr=-m.y7 - m.y8 <= -1)
         m.c7 = Constraint(expr=3 * m.y1 + m.y2 + 2 * m.y3 + 3 *
                           m.y4 + 2 * m.y5 + m.y6 + 3 * m.y7 + 2 * m.y8 <= 10)
+        m.optimal_value = -0.94347

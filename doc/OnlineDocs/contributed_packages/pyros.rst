@@ -360,17 +360,17 @@ PyROS will return one of six termination conditions upon completion. These termi
 +---------------------------------------------------+----------------------------------------------------------------+
 |  **Termination Condition**                        | **Description**                                                |
 +---------------------------------------------------+----------------------------------------------------------------+
-|   ``grcsTerminationCondition.robust_optimal``     |  The final solution is robust optimal                          |
+|   ``pyrosTerminationCondition.robust_optimal``    |  The final solution is robust optimal                          |
 +---------------------------------------------------+----------------------------------------------------------------+
-|   ``grcsTerminationCondition.robust_feasible``    |  The final solution is robust feasible                         |
+|   ``pyrosTerminationCondition.robust_feasible``   |  The final solution is robust feasible                         |
 +---------------------------------------------------+----------------------------------------------------------------+
-|   ``grcsTerminationCondition.robust_infeasible``  |  The posed problem is robust infeasible                        |
+|   ``pyrosTerminationCondition.robust_infeasible`` |  The posed problem is robust infeasible                        |
 +---------------------------------------------------+----------------------------------------------------------------+
-|   ``grcsTerminationCondition.max_iter``           |  Maximum number of GRCS iteration reached                      |
+|   ``pyrosTerminationCondition.max_iter``          |  Maximum number of GRCS iteration reached                      |
 +---------------------------------------------------+----------------------------------------------------------------+
-|   ``grcsTerminationCondition.time_out``           |  Maximum number of time reached                                |
+|   ``pyrosTerminationCondition.time_out``          |  Maximum number of time reached                                |
 +---------------------------------------------------+----------------------------------------------------------------+
-|   ``grcsTerminationCondition.subsolver_error``    |  Unacceptable return status(es) from a user-supplied sub-solver|
+|   ``pyrosTerminationCondition.subsolver_error``   |  Unacceptable return status(es) from a user-supplied sub-solver|
 +---------------------------------------------------+----------------------------------------------------------------+
 
 
@@ -409,19 +409,19 @@ If we choose to designate all variables as either design or state variables, wit
   >>> # === Query results ===
   >>> time = results_1.time
   >>> iterations = results_1.iterations
-  >>> termination_condition = results_1.grcs_termination_condition
+  >>> termination_condition = results_1.pyros_termination_condition
   >>> objective = results_1.final_objective_value
   >>> # === Print some results ===
   >>> single_stage_final_objective = round(objective,-1)
   >>> print("Final objective value: %s" % single_stage_final_objective)
   Final objective value: 48367380.0
   >>> print("PyROS termination condition: %s" % termination_condition)
-  PyROS termination condition: grcsTerminationCondition.robust_optimal
+  PyROS termination condition: pyrosTerminationCondition.robust_optimal
 
 PyROS Results Object
 """""""""""""""""""""""""""
 The results object returned by PyROS allows you to query the following information from the solve call:
-total iterations of the algorithm ``iterations``, CPU time ``time``, the GRCS algorithm termination condition ``grcs_termination_condition``,
+total iterations of the algorithm ``iterations``, CPU time ``time``, the GRCS algorithm termination condition ``pyros_termination_condition``,
 and the final objective function value ``final_objective_value``. If the option ``load_solution`` = ``True`` (default), the variables in the model will be
 loaded to the solution determined by PyROS and can be obtained by querying the model variables. Note that in the results obtained above, we set ``load_solution`` = ``False``.
 This is to ensure that the next set of runs shown here can utilize the original deterministic model, as the initial point can affect the performance of sub-solvers.
@@ -505,7 +505,7 @@ We can then loop through this array and call PyROS within a loop to identify rob
   ...                                        "solve_master_globally": True,
   ...                                        "decision_rule_order": 1
   ...                                     })
-  ...   if results.grcs_termination_condition != pyros.grcsTerminationCondition.robust_optimal:
+  ...   if results.pyros_termination_condition != pyros.pyrosTerminationCondition.robust_optimal:
   ...       print("This instance didn't solve to robust optimality.")
   ...       robust_optimal_objective.append("-----")
   ...   else:

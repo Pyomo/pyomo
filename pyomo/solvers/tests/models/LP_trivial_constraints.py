@@ -51,9 +51,9 @@ class LP_trivial_constraints(_BaseTestModel):
         assert cdata.body() == 2
         assert not cdata.equality
         cdata = model.c.add((0, 1, None))
-        assert cdata.lower == 0
-        assert cdata.upper is None
-        assert cdata.body() == 1
+        assert cdata.lower is None
+        assert cdata.upper == 1
+        assert cdata.body() == 0
         assert not cdata.equality
         cdata = model.c.add((None, 0, 1))
         assert cdata.lower is None
@@ -111,9 +111,9 @@ class LP_trivial_constraints_kernel(LP_trivial_constraints):
         assert cdata.body() == 2
         assert not cdata.equality
         cdata = model.c[5] = pmo.constraint((0, 1, None))
-        assert cdata.lb == 0
-        assert cdata.ub is None
-        assert cdata.body() == 1
+        assert cdata.lb is None
+        assert cdata.ub == 1
+        assert cdata.body() == 0
         assert not cdata.equality
         cdata = model.c[6] = pmo.constraint((None, 0, 1))
         assert cdata.lb is None

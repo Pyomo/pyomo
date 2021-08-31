@@ -8,14 +8,27 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import inspect
 import pyomo.common.unittest as unittest
 
 from pyomo.common import DeveloperError
 from pyomo.core.base.disable_methods import disable_methods
+from pyomo.common.modeling import NOTSET
+
+class LocalClass(object):
+    def __init__(self, name):
+        self._name = name
+
+    def __str__(self):
+        return self._name
+
+local_instance = LocalClass('local')
 
 class _simple(object):
     def __init__(self, name):
         self.name = name
+        self._d = 'd'
+        self._e = 'e'
 
     def construct(self, data=None):
         return 'construct'
@@ -31,20 +44,67 @@ class _simple(object):
 
     @property
     def d(self):
-        return 'd'
+        return self._d
+    @d.setter
+    def d(self, value='d'):
+        self._d = value
 
     @property
     def e(self):
-        return 'e'
+        return self._e
+    @e.setter
+    def e(self, value='e'):
+        self._e = value
 
-    def f(self, arg1, arg2=1):
-        return "f%s%s" % (arg1, arg2)
+    def f(self, arg1, arg2=1, arg3=NOTSET, arg4=local_instance):
+        return "f:%s,%s,%s,%s" % (arg1, arg2, arg3, arg4)
 
-@disable_methods(('a',('b', 'custom_msg'),'d',('e', 'custom_pmsg'),'f'))
+    @property
+    def g(self):
+        return 'g'
+
+    @property
+    def h(self):
+        return 'h'
+
+
+@disable_methods(('a',('b', 'custom_msg'),'d',('e', 'custom_pmsg'),'f',
+                  'g',('h', 'custom_pmsg')))
 class _abstract_simple(_simple):
     pass
 
 class TestDisableMethods(unittest.TestCase):
+    def test_signature(self):
+        # check that signatures are properly preserved
+        self.assertEqual(inspect.signature(_simple.construct),
+                         inspect.signature(_abstract_simple.construct))
+        self.assertEqual(inspect.signature(_simple.a),
+                         inspect.signature(_abstract_simple.a))
+        self.assertEqual(inspect.signature(_simple.b),
+                         inspect.signature(_abstract_simple.b))
+        self.assertEqual(inspect.signature(_simple.c),
+                         inspect.signature(_abstract_simple.c))
+        self.assertEqual(inspect.signature(_simple.d.fget),
+                         inspect.signature(_abstract_simple.d.fget))
+        self.assertEqual(inspect.signature(_simple.d.fset),
+                         inspect.signature(_abstract_simple.d.fset))
+        self.assertEqual(inspect.signature(_simple.e.fget),
+                         inspect.signature(_abstract_simple.e.fget))
+        self.assertEqual(inspect.signature(_simple.e.fset),
+                         inspect.signature(_abstract_simple.e.fset))
+
+        self.assertEqual(inspect.signature(_simple.f),
+                         inspect.signature(_abstract_simple.f))
+
+        self.assertEqual(inspect.signature(_simple.g.fget),
+                         inspect.signature(_abstract_simple.g.fget))
+        self.assertIsNone(_simple.g.fset)
+        self.assertIsNone(_abstract_simple.g.fset)
+        self.assertEqual(inspect.signature(_simple.h.fget),
+                         inspect.signature(_abstract_simple.h.fget))
+        self.assertIsNone(_simple.h.fset)
+        self.assertIsNone(_abstract_simple.h.fset)
+
     def test_disable(self):
         x = _abstract_simple('foo')
         self.assertIs(type(x), _abstract_simple)
@@ -79,12 +139,24 @@ class TestDisableMethods(unittest.TestCase):
         # wrapped function
         with self.assertRaisesRegex(
                 TypeError, r"f\(\) takes "):
-            x.f(1,2,3)
+            x.f(1,2,3,4,5)
         with self.assertRaisesRegex(
                 RuntimeError, "Cannot access 'f' on _abstract_simple "
                 "'foo' before it has been constructed"):
             x.f(1,2)
 
+        with self.assertRaisesRegex(
+                RuntimeError, "Cannot access property 'g' on _abstract_simple "
+                "'foo' before it has been constructed"):
+            x.g
+        with self.assertRaisesRegex(AttributeError, "can't set attribute"):
+            x.g = 1
+        with self.assertRaisesRegex(
+                RuntimeError, "Cannot custom_pmsg _abstract_simple "
+                "'foo' before it has been constructed"):
+            x.h
+        with self.assertRaisesRegex(AttributeError, "can't set attribute"):
+            x.h = 1
 
         self.assertEqual(x.construct(), 'construct')
         self.assertIs(type(x), _simple)
@@ -93,8 +165,14 @@ class TestDisableMethods(unittest.TestCase):
         self.assertEqual(x.b(), 'b')
         self.assertEqual(x.c(), 'c')
         self.assertEqual(x.d, 'd')
+        x.d = 1
+        self.assertEqual(x.d, 1)
         self.assertEqual(x.e, 'e')
-        self.assertEqual(x.f(1,2), 'f12')
+        x.e = 2
+        self.assertEqual(x.e, 2)
+        self.assertEqual(x.f(1,2), 'f:1,2,NOTSET,local')
+        self.assertEqual(x.g, 'g')
+        self.assertEqual(x.h, 'h')
 
     def test_bad_api(self):
         with self.assertRaisesRegex(

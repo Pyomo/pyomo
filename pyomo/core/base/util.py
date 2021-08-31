@@ -13,8 +13,21 @@
 #
 import inspect
 
+from pyomo.common.deprecation import relocated_module_attribute
 from pyomo.core.base.indexed_component import normalize_index
 
+relocated_module_attribute(
+    'disable_methods', 'pyomo.core.base.disable_methods.disable_methods',
+    version='6.1')
+relocated_module_attribute(
+    'Initializer', 'pyomo.core.base.initializer.Initializer',
+    version='6.1')
+relocated_module_attribute(
+    'IndexedCallInitializer', 'pyomo.core.base.initializer.Initializer',
+    version='6.1')
+relocated_module_attribute(
+    'CountedCallInitializer', 'pyomo.core.base.initializer.Initializer',
+    version='6.1')
 
 def is_functor(obj):
     """

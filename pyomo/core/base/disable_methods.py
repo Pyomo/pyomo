@@ -10,6 +10,7 @@
 
 import functools
 import inspect
+import sys
 
 from pyomo.common import DeveloperError
 
@@ -32,7 +33,7 @@ _disabled_error = (
     "%s.construct()."
 )
 
-def _disable_method(fcn, msg=None):
+def _disable_method(fcn, msg=None, exception=RuntimeError):
     _name = fcn.__name__
     if msg is None:
         msg = "access '%s' on" % (_name,)
@@ -43,38 +44,53 @@ def _disable_method(fcn, msg=None):
     # an error).  For backwards compatability with Python 2.x, we will
     # create a temporary (local) function using exec that matches the
     # function signature passed in and raises an exception
-    args = str(inspect.signature(fcn))
+    sig = inspect.signature(fcn)
+
+    params = list(sig.parameters.values())
+    for i, param in enumerate(params):
+        if param.default is inspect.Parameter.empty:
+            continue
+        # The function that we are going to wrap needs to have the same
+        # notional signature as the original function (positional args,
+        # optional args, kwargs), but things like the default values do
+        # not have to be the same (as functools.wraps will transfer over
+        # defaults).  As some default values (types, local object
+        # instances) do not transfer well when casting the signature to
+        # a string, we will convert all optional positional arguments to
+        # have a default value of None
+        params[i] = param.replace(default=None)
+    sig = sig.replace(parameters=params)
+    args = str(sig)
     assert args == '(self)' or args.startswith('(self,')
 
     # lambda comes through with a function name "<lambda>".  We will
     # use exec here to create a function (in a private namespace)
-    # that will have the correct name.
+    # that will have the correct name and signature.
     _env = {'_msg': msg, '_name': _name}
     _funcdef = """def %s%s:
-        raise RuntimeError("%s" %% (_msg, type(self).__name__,
+        raise %s("%s" %% (_msg, type(self).__name__,
             self.name, _name, self.name))
-""" % (_name, args, _disabled_error)
+""" % (_name, args, exception.__name__, _disabled_error)
     exec(_funcdef, _env)
     return functools.wraps(fcn)(_env[_name])
 
 
-def _disable_property(fcn, msg=None):
+def _disable_property(fcn, msg=None, exception=RuntimeError):
     _name = fcn.fget.__name__
     if msg is None:
         _gmsg = "access property '%s' on" % (_name,)
     else:
         _gmsg = msg
-    def getter(self, *args, **kwds):
-        raise RuntimeError(_disabled_error % (
-            _gmsg, type(self).__name__, self.name, _name, self.name))
+    getter = _disable_method(fcn.fget, _gmsg, exception)
 
-    if msg is None:
-        _smsg = "set property '%s' on" % (_name,)
+    if fcn.fset is None:
+        setter = None
     else:
-        _smsg = msg
-    def setter(self, *args, **kwds):
-        raise RuntimeError(_disabled_error % (
-            _smsg, type(self).__name__, self.name, _name, self.name))
+        if msg is None:
+            _smsg = "set property '%s' on" % (_name,)
+        else:
+            _smsg = msg
+        setter = _disable_method(fcn.fset, _smsg, exception)
 
     return property(fget=getter, fset=setter, doc=fcn.__doc__)
 
@@ -101,19 +117,22 @@ def disable_methods(methods):
         cls.construct = construct
 
         for method in methods:
+            msg = None
+            exc = RuntimeError
             if type(method) is tuple:
-                method, msg = method
-            else:
-                msg = None
+                if len(method) == 2:
+                    method, msg = method
+                else:
+                    method, msg, exc = method
             if not hasattr(base, method):
                 raise DeveloperError(
                     "Cannot disable method %s on %s: not present on base class"
                     % (method, cls))
             base_method = getattr(base, method)
             if type(base_method) is property:
-                setattr(cls, method, _disable_property(base_method, msg))
+                setattr(cls, method, _disable_property(base_method, msg, exc))
             else:
-                setattr(cls, method, _disable_method(base_method, msg))
+                setattr(cls, method, _disable_method(base_method, msg, exc))
         return cls
 
     return class_decorator
