@@ -264,6 +264,7 @@ class TempfileContext:
 
         """
         dir = self._resolve_tempdir(dir)
+        # Note: ans == (fd, fname)
         ans = tempfile.mkstemp(suffix=suffix, prefix=prefix, dir=dir, text=text)
         self.tempfiles.append(ans)
         return ans
@@ -336,10 +337,7 @@ class TempfileContext:
     def create_tempfile(self, suffix=None, prefix=None, text=False, dir=None):
         """Create a unique temporary file.
 
-        If this context is generating sequential files (see
-        :meth:`sequential_files()`), the directory name will be
-        generated as ``prefix + counter + suffix``; otherwise, the name
-        is generated as in :func:`tempfile.mkstemp()`.
+        The file name is generated as in :func:`tempfile.mkstemp()`.
 
         Any file handles to the new file (e.g., from :meth:`mkstemp`)
         are closed.
@@ -359,10 +357,7 @@ class TempfileContext:
     def create_tempdir(self, suffix=None, prefix=None, dir=None):
         """Create a unique temporary directory.
 
-        If this context is generating sequential files (see
-        :meth:`sequential_files()`), the directory name will be
-        generated as ``prefix + counter + suffix``; otherwise, the name
-        is generated as in :func:`fileutil.mkdtemp()`.
+        The file name is generated as in :func:`tempfile.mkdtemp()`.
 
         Returns
         -------
