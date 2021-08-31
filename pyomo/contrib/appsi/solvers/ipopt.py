@@ -22,6 +22,7 @@ import sys
 from typing import Dict
 from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.errors import PyomoException
+import os
 
 
 logger = logging.getLogger(__name__)
