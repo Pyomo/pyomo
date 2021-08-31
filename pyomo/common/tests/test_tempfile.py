@@ -243,42 +243,6 @@ class Test_LegacyTestSuite(unittest.TestCase):
         fname = os.path.basename(fname)
         self.assertTrue(fname.endswith('bar'))
 
-    def test_create4(self):
-        """Test create logic - no options"""
-        TempfileManager.sequential_files(2)
-        fname = TempfileManager.create_tempfile()
-        OUTPUT = open(fname, 'w')
-        OUTPUT.write('tempfile\n')
-        OUTPUT.close()
-        self.assertEqual(len(list(glob.glob(tempdir + '*'))), 1)
-        fname = os.path.basename(fname)
-        self.assertEqual(fname, 'tmp2')
-        #
-        TempfileManager.unique_files()
-        fname = TempfileManager.create_tempfile()
-        OUTPUT = open(fname, 'w')
-        OUTPUT.write('tempfile\n')
-        OUTPUT.close()
-        self.assertEqual(len(list(glob.glob(tempdir + '*'))), 2)
-        fname = os.path.basename(fname)
-        self.assertNotEqual(fname, 'tmp3')
-        self.assertTrue(fname.startswith('tmp'))
-
-    def test_create4_dir(self):
-        """Test create logic - no options"""
-        TempfileManager.sequential_files(2)
-        fname = TempfileManager.create_tempdir()
-        self.assertEqual(len(list(glob.glob(tempdir + '*'))), 1)
-        fname = os.path.basename(fname)
-        self.assertEqual(fname, 'tmp2')
-        #
-        TempfileManager.unique_files()
-        fname = TempfileManager.create_tempdir()
-        self.assertEqual(len(list(glob.glob(tempdir + '*'))), 2)
-        fname = os.path.basename(fname)
-        self.assertNotEqual(fname, 'tmp3')
-        self.assertTrue(fname.startswith('tmp'))
-
 
 class Test_TempfileManager(unittest.TestCase):
 
@@ -362,47 +326,12 @@ class Test_TempfileManager(unittest.TestCase):
         self.assertFalse(os.path.exists(sub_fname))
 
     def test_sequential_files(self):
-        ctx1 = self.TM.push()
-        ctx2 = self.TM.push()
-        tempdir = ctx1.mkdtemp()
-        self.TM.sequential_files(10)
-        fname10 = self.TM.create_tempfile(".txt", "test", dir=tempdir)
-        with open(fname10, 'w') as FILE:
-            FILE.write("original\n")
-        self.assertEqual(fname10, os.path.join(tempdir, "test10.txt"))
-        fname11 = self.TM.create_tempfile(".txt", "test", dir=tempdir)
-        self.assertEqual(fname11, os.path.join(tempdir, "test11.txt"))
-        dname = self.TM.create_tempdir(".txt", "test", dir=tempdir)
-        self.assertEqual(dname, os.path.join(tempdir, "test12.txt"))
-
-        fname = self.TM.create_tempfile(dir=tempdir)
-        self.assertEqual(os.path.basename(fname),
-                         tempfile.gettempprefix() + "13")
-        fname = self.TM.create_tempfile(dir=tempdir.encode())
-        self.assertEqual(os.path.basename(fname),
-                         tempfile.gettempprefixb() + b"14")
-
-        self.TM.unique_files()
-        fname = self.TM.create_tempfile(".txt", "test", dir=tempdir)
-        self.assertNotEqual(os.path.basename(fname), "test14.txt")
-
-        _orig_del = tempfiles.DELETE_COUNTED_CONFLICTS
-        try:
-            tempfiles.DELETE_COUNTED_CONFLICTS = False
-            self.TM.sequential_files(10)
-            fname = self.TM.create_tempfile(".txt", "test", dir=tempdir)
-            self.assertEqual(fname, os.path.join(tempdir, "test13.txt"))
-
-            tempfiles.DELETE_COUNTED_CONFLICTS = True
-            self.TM.sequential_files(10)
-            fname = self.TM.create_tempfile(".txt", "test", dir=tempdir)
-            self.assertEqual(fname, os.path.join(tempdir, "test10.txt"))
-            with open(fname, 'r') as FILE:
-                self.assertEqual(FILE.read(), "")
-        finally:
-            tempfiles.DELETE_COUNTED_CONFLICTS = _orig_del
-        ctx1 = self.TM.pop()
-        ctx2 = self.TM.pop()
+        with LoggingIntercept() as LOG:
+            self.assertIsNone(self.TM.sequential_files())
+        self.assertIn(
+            "The TempfileManager.sequential_files() method has been removed",
+            LOG.getvalue().replace('\n',' '))
+        self.assertIsNone(self.TM.unique_files())
 
     def test_gettempprefix(self):
         ctx = self.TM.new_context()

@@ -21,7 +21,7 @@ import tempfile
 import logging
 import shutil
 import weakref
-from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.deprecation import deprecated, deprecation_warning
 try:
     from pyutilib.component.config.tempfiles import (
         TempfileManager as pyutilib_mngr
@@ -30,7 +30,6 @@ except ImportError:
     pyutilib_mngr = None
 
 deletion_errors_are_fatal = True
-DELETE_COUNTED_CONFLICTS = True
 
 logger = logging.getLogger(__name__)
 
@@ -144,13 +143,17 @@ class TempfileManagerClass(object):
         while self._context_stack:
             self.pop(remove)
 
+    @deprecated("The TempfileManager.sequential_files() method has been "
+                "removed.  All temporary files are created with guaranteed "
+                "unique names.  Users wishing sequentially numbered files "
+                "should create a temporary (empty) directory using mkdtemp "
+                "/ create_tempdir and place the sequential files within it.",
+                version='TBD')
     def sequential_files(self, ctr=0):
-        """:meth:`TempfileContext.sequential_files` for the active context"""
-        self._context_stack[-1].sequential_files(ctr)
+        pass
 
     def unique_files(self):
-        """:meth:`TempfileContext.unique_files` for the active context"""
-        self._context_stack[-1].unique_files()
+        pass
 
     def new_context(self):
         """Create and return an new tempfile context
@@ -231,7 +234,6 @@ class TempfileContext:
 
     def __init__(self, manager):
         self.manager = weakref.ref(manager)
-        self.ctr = None
         self.tempfiles = []
         self.tempdir = None
 
@@ -330,31 +332,6 @@ class TempfileContext:
         """
         return tempfile.gettempprefixb()
 
-    def sequential_files(self, ctr=0):
-        """Start generating sequential files, using the specified counter.
-
-        The sequential files are named using ``prefix + counter +
-        suffix``.  While the ``counter`` defaults to an integer
-        beginning at 0, any object that supports ``__str__`` and
-        ``__iadd__`` may be used.
-
-        Parameters
-        ----------
-        ctr:
-            "Counter" used to generate the name sequence
-
-        """
-        self.ctr = ctr
-
-    def unique_files(self):
-        """Stop generating sequential files
-
-        This returns the name generator to the default one used in
-        :func:`tempfile.mkstemp()`.
-
-        """
-        self.ctr = None
-
     def create_tempfile(self, suffix=None, prefix=None, text=False, dir=None):
         """Create a unique temporary file.
 
@@ -375,8 +352,6 @@ class TempfileContext:
         fd, fname = self.mkstemp(suffix=suffix, prefix=prefix,
                                  dir=dir, text=text)
         os.close(fd)
-        if self.ctr is not None:
-            fname = self._make_counted_object(fname, prefix, suffix)
         self.tempfiles[-1] = (None, fname)
         return fname
 
@@ -395,8 +370,6 @@ class TempfileContext:
 
         """
         dirname = self.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
-        if self.ctr is not None:
-            dirname = self._make_counted_object(dirname, prefix, suffix)
         self.tempfiles[-1] = (None, dirname)
         return dirname
 
@@ -441,7 +414,6 @@ class TempfileContext:
                     except OSError:
                         pass
                 self._remove_filesystem_object(name)
-        self.ctr = None
         self.tempfiles.clear()
 
     def _resolve_tempdir(self, dir=None):
@@ -460,37 +432,6 @@ class TempfileContext:
                 "pyomo.common.tempfiles", version='5.7.2')
             return pyutilib_mngr.tempdir
         return None
-
-    def _make_counted_object(self, target, prefix, suffix):
-        if suffix is None:
-            suffix = target.__class__()
-        if prefix is None:
-            if isinstance(target, bytes):
-                prefix = self.gettempprefixb()
-            else:
-                prefix = self.gettempprefix()
-        while True:
-            next_id = str(self.ctr)
-            self.ctr += 1
-            if isinstance(target, bytes):
-                next_id = next_id.encode()
-            new_target = os.path.join(
-                os.path.dirname(target),
-                prefix + next_id + suffix
-            )
-            if not os.path.exists(new_target):
-                break
-            if DELETE_COUNTED_CONFLICTS:
-                # Delete any file having the sequential name and then rename
-                logger.warning("Deleting a pre-existing (sequential) "
-                               "temporary file: %s" % new_target)
-                self._remove_filesystem_object(new_target)
-                break
-            # Fall through to incrementing the counter until we find an
-            # available name
-
-        shutil.move(target, new_target)
-        return new_target
 
     def _remove_filesystem_object(self, name):
         if not os.path.exists(name):
