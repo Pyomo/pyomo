@@ -42,7 +42,7 @@ def yaml_load(arg):
 from pyomo.common.config import (
     ConfigDict, ConfigValue,
     ConfigList, MarkImmutable, ImmutableConfigValue,
-    PositiveInt, NegativeInt, NonPositiveInt, NonNegativeInt,
+    Bool, Integer, PositiveInt, NegativeInt, NonPositiveInt, NonNegativeInt,
     PositiveFloat, NegativeFloat, NonPositiveFloat, NonNegativeFloat,
     In, ListOf, Module, Path, PathList, ConfigEnum, DynamicImplicitDomain,
     _UnpickleableDomain, _picklable,
@@ -62,6 +62,69 @@ class GlobalClass(object):
 
 
 class TestConfigDomains(unittest.TestCase):
+    def test_Bool(self):
+        c = ConfigDict()
+        c.declare('a', ConfigValue(True, Bool))
+        self.assertEqual(c.a, True)
+        c.a = False
+        self.assertEqual(c.a, False)
+        c.a = 1
+        self.assertEqual(c.a, True)
+        c.a = 'n'
+        self.assertEqual(c.a, False)
+        c.a = 'T'
+        self.assertEqual(c.a, True)
+        c.a = 'no'
+        self.assertEqual(c.a, False)
+        c.a = '1'
+        self.assertEqual(c.a, True)
+        c.a = 0.
+        self.assertEqual(c.a, False)
+        c.a = True
+        self.assertEqual(c.a, True)
+        c.a = 0
+        self.assertEqual(c.a, False)
+        c.a = 'y'
+        self.assertEqual(c.a, True)
+        c.a = 'F'
+        self.assertEqual(c.a, False)
+        c.a = 'yes'
+        self.assertEqual(c.a, True)
+        c.a = '0'
+        self.assertEqual(c.a, False)
+        c.a = 1.
+        self.assertEqual(c.a, True)
+
+        with self.assertRaises(ValueError):
+            c.a = 2
+        self.assertEqual(c.a, True)
+        with self.assertRaises(ValueError):
+            c.a = 'a'
+        self.assertEqual(c.a, True)
+        with self.assertRaises(ValueError):
+            c.a = 0.5
+        self.assertEqual(c.a, True)
+
+    def test_Integer(self):
+        c = ConfigDict()
+        c.declare('a', ConfigValue(5, Integer))
+        self.assertEqual(c.a, 5)
+        c.a = 4.
+        self.assertEqual(c.a, 4)
+        c.a = -6
+        self.assertEqual(c.a, -6)
+        c.a = '10'
+        self.assertEqual(c.a, 10)
+        with self.assertRaises(ValueError):
+            c.a = 2.6
+        self.assertEqual(c.a, 10)
+        with self.assertRaises(ValueError):
+            c.a = 'a'
+        self.assertEqual(c.a, 10)
+        with self.assertRaises(ValueError):
+            c.a = '1.1'
+        self.assertEqual(c.a, 10)
+
     def test_PositiveInt(self):
         c = ConfigDict()
         c.declare('a', ConfigValue(5, PositiveInt))
