@@ -7,8 +7,8 @@ from pyomo.core.base.var import _GeneralVarData, Var
 from pyomo.core.base.param import _ParamData, Param
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.objective import _GeneralObjectiveData
-from pyomo.core.base.suffix import Suffix
-from pyomo.common.collections import ComponentMap, OrderedSet
+from pyomo.common.collections import ComponentMap, ComponentSet, OrderedSet
+from collections import OrderedDict
 from .utils.get_objective import get_objective
 from .utils.identify_named_expressions import identify_named_expressions
 from pyomo.common.timing import HierarchicalTimer
@@ -654,6 +654,7 @@ class PersistentBase(abc.ABC):
         self._objective_expr = None
         self._objective_sense = None
         self._named_expressions = dict()  # maps constraint to list of tuples (named_expr, named_expr.expr)
+        self._external_functions = ComponentMap()
         self._obj_named_expressions = list()
         self._update_config = UpdateConfig()
         self._referenced_variables = dict()  # number of constraints/objectives each variable is used in
@@ -708,8 +709,10 @@ class PersistentBase(abc.ABC):
             if con in self._named_expressions:
                 raise ValueError('constraint {name} has already been added'.format(name=con.name))
             self._active_constraints[con] = (con.lower, con.body, con.upper)
-            named_exprs, variables, fixed_vars = identify_named_expressions(con.body)
+            named_exprs, variables, fixed_vars, external_functions = identify_named_expressions(con.body)
             self._named_expressions[con] = [(e, e.expr) for e in named_exprs]
+            if len(external_functions) > 0:
+                self._external_functions[con] = external_functions
             self._vars_referenced_by_con[con] = variables
             for v in variables:
                 self._referenced_variables[id(v)] += 1
@@ -744,12 +747,15 @@ class PersistentBase(abc.ABC):
         if self._objective is not None:
             for v in self._vars_referenced_by_obj:
                 self._referenced_variables[id(v)] -= 1
+            self._external_functions.pop(self._objective, None)
         if obj is not None:
             self._objective = obj
             self._objective_expr = obj.expr
             self._objective_sense = obj.sense
-            named_exprs, variables, fixed_vars = identify_named_expressions(obj.expr)
+            named_exprs, variables, fixed_vars, external_functions = identify_named_expressions(obj.expr)
             self._obj_named_expressions = [(i, i.expr) for i in named_exprs]
+            if len(external_functions) > 0:
+                self._external_functions[obj] = external_functions
             self._vars_referenced_by_obj = variables
             for v in variables:
                 self._referenced_variables[id(v)] += 1
@@ -767,8 +773,8 @@ class PersistentBase(abc.ABC):
             self._set_objective(obj)
 
     def add_block(self, block):
-        self.add_variables([var for var in block.component_data_objects(Var, descend_into=True, sort=False)])
-        self.add_params([p for p in block.component_data_objects(Param, descend_into=True, sort=False)])
+        self.add_variables(list(OrderedDict((id(var), var) for var in block.component_data_objects(Var, descend_into=True, sort=False)).values()))
+        self.add_params(list(OrderedDict((id(p), p) for p in block.component_data_objects(Param, descend_into=True, sort=False)).values()))
         self.add_constraints([con for con in block.component_data_objects(Constraint, descend_into=True,
                                                                           active=True, sort=False)])
         self.add_sos_constraints([con for con in block.component_data_objects(SOSConstraint, descend_into=True,
@@ -790,6 +796,7 @@ class PersistentBase(abc.ABC):
                 self._referenced_variables[id(v)] -= 1
             del self._active_constraints[con]
             del self._named_expressions[con]
+            self._external_functions.pop(con, None)
             del self._vars_referenced_by_con[con]
 
     @abc.abstractmethod
@@ -835,8 +842,8 @@ class PersistentBase(abc.ABC):
                                                                              active=True, sort=False)])
         self.remove_sos_constraints([con for con in block.component_data_objects(ctype=SOSConstraint, descend_into=True,
                                                                                  active=True, sort=False)])
-        self.remove_variables([var for var in block.component_data_objects(ctype=Var, descend_into=True, sort=False)])
-        self.remove_params([p for p in block.component_data_objects(ctype=Param, descend_into=True, sort=False)])
+        self.remove_variables(list(OrderedDict((id(var), var) for var in block.component_data_objects(ctype=Var, descend_into=True, sort=False)).values()))
+        self.remove_params(list(OrderedDict((id(p), p) for p in block.component_data_objects(ctype=Param, descend_into=True, sort=False)).values()))
 
     @abc.abstractmethod
     def _update_variables(self, variables: List[_GeneralVarData]):

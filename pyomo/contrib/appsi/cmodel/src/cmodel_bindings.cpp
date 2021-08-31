@@ -21,6 +21,7 @@ PYBIND11_MODULE(appsi_cmodel, m)
   m.def("create_vars", &create_vars);
   m.def("create_params", &create_params);
   m.def("create_constants", &create_constants);
+  m.def("external_helper", &external_helper);
   py::class_<Node, std::shared_ptr<Node> >(m, "Node")
     .def("is_variable_type", &Node::is_variable_type)
     .def("is_param_type", &Node::is_param_type)

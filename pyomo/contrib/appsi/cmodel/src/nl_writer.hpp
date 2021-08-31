@@ -24,6 +24,7 @@ public:
   std::shared_ptr<std::vector<std::shared_ptr<Var> > > all_vars;
   std::shared_ptr<std::vector<std::shared_ptr<ExpressionBase> > > all_linear_coefficients;
   std::shared_ptr<std::vector<std::shared_ptr<Node> > > nonlinear_prefix_notation;
+  std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > external_operators;
   bool is_nonlinear();
 };
 
