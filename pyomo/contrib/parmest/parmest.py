@@ -337,11 +337,7 @@ class Estimator(object):
                     # If the component that was found is not a variable,
                     # this will generate an exception (and the warning
                     # in the 'except')
-                    if var_validate.is_indexed():
-                        for v in var_validate.values():
-                            v.fixed = False
-                    else:
-                        var_validate.fixed = False
+                    var_validate.unfix()
                     # We want to standardize on the CUID string
                     # representation
                     self.theta_names[i] = repr(var_cuid)
