@@ -356,12 +356,20 @@ class Ipopt(PersistentSolver):
         for k, v in self.solver_options.items():
             cmd.append(str(k) + '=' + str(v))
 
+        env = os.environ.copy()
+        if 'PYOMO_AMPLFUNC' in env:
+            if 'AMPLFUNC' in env:
+                env['AMPLFUNC'] += "\n" + env['PYOMO_AMPLFUNC']
+            else:
+                env['AMPLFUNC'] = env['PYOMO_AMPLFUNC']
+
         with TeeStream(*ostreams) as t:
             timer.start('subprocess')
             cp = subprocess.run(cmd,
                                 timeout=timeout,
                                 stdout=t.STDOUT,
                                 stderr=t.STDERR,
+                                env=env,
                                 universal_newlines=True)
             timer.stop('subprocess')
 

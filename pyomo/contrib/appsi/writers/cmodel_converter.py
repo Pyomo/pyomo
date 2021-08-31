@@ -54,6 +54,10 @@ def _pyomo_to_cmodel_ProductExpression(node, values, walker: PyomoToCModelWalker
     return values[0] * values[1]
 
 
+def _pyomo_to_cmodel_ExternalFunctionExpression(node: _expr.ExternalFunctionExpression, values, walker: PyomoToCModelWalker):
+    return cmodel.external_helper(node._fcn._function, values)
+
+
 def _pyomo_to_cmodel_SumExpression(node, values, walker: PyomoToCModelWalker):
     return sum(values)
 
@@ -162,6 +166,7 @@ def _pyomo_to_cmodel_UnaryFunctionExpression(node, values, walker: PyomoToCModel
 
 _pyomo_to_cmodel_map = dict()
 _pyomo_to_cmodel_map[_expr.ProductExpression] = _pyomo_to_cmodel_ProductExpression
+_pyomo_to_cmodel_map[_expr.ExternalFunctionExpression] = _pyomo_to_cmodel_ExternalFunctionExpression
 _pyomo_to_cmodel_map[_expr.DivisionExpression] = _pyomo_to_cmodel_DivisionExpression
 _pyomo_to_cmodel_map[_expr.ReciprocalExpression] = _pyomo_to_cmodel_ReciprocalExpression
 _pyomo_to_cmodel_map[_expr.PowExpression] = _pyomo_to_cmodel_PowExpression
