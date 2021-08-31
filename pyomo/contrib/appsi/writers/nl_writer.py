@@ -16,6 +16,7 @@ from .cmodel_converter import PyomoToCModelWalker
 from pyomo.common.collections import OrderedSet
 import os
 from ..cmodel import cmodel, cmodel_available
+from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
 
 
 class NLWriter(PersistentBase):
@@ -233,30 +234,9 @@ class NLWriter(PersistentBase):
 
     def _set_pyomo_amplfunc_env(self):
         if self._external_functions:
-            env_str = ''
             external_Libs = OrderedSet()
             for con, ext_funcs in self._external_functions.items():
                 external_Libs.update([i._fcn._library for i in ext_funcs])
-            for _lib in external_Libs:
-                _lib = _lib.strip()
-                if (' ' not in _lib
-                     or (_lib[0] == '"' and _lib[-1] == '"'
-                          and '"' not in _lib[1:-1] )
-                     or (_lib[0] == "'" and _lib[-1] == "'"
-                          and "'" not in _lib[1:-1])):
-                    pass
-                elif '"' not in _lib:
-                    _lib = '"' + _lib + '"'
-                elif "'" not in _lib:
-                    _lib = "'" + _lib + "'"
-                else:
-                    raise RuntimeError(
-                        "Cannot pass the AMPL external function library\n\t%s\n"
-                        "to the ASL because the string contains spaces, "
-                        "single quote and\ndouble quote characters." % (_lib,))
-                if env_str:
-                    env_str += "\n"
-                env_str += _lib
-            os.environ["PYOMO_AMPLFUNC"] = env_str
+            set_pyomo_amplfunc_env(external_Libs)
         elif "PYOMO_AMPLFUNC" in os.environ:
             del os.environ["PYOMO_AMPLFUNC"]

@@ -398,10 +398,7 @@ class Ipopt(PersistentSolver):
 
         env = os.environ.copy()
         if 'PYOMO_AMPLFUNC' in env:
-            if 'AMPLFUNC' in env:
-                env['AMPLFUNC'] += "\n" + env['PYOMO_AMPLFUNC']
-            else:
-                env['AMPLFUNC'] = env['PYOMO_AMPLFUNC']
+            env['AMPLFUNC'] = "\n".join(filter(None, (env.get('AMPLFUNC', None), env.get('PYOMO_AMPLFUNC', None))))
 
         with TeeStream(*ostreams) as t:
             timer.start('subprocess')

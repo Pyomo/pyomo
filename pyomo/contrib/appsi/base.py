@@ -7,7 +7,8 @@ from pyomo.core.base.var import _GeneralVarData, Var
 from pyomo.core.base.param import _ParamData, Param
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.objective import _GeneralObjectiveData
-from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.collections import ComponentMap, ComponentSet, OrderedSet
+from collections import OrderedDict
 from .utils.get_objective import get_objective
 from .utils.identify_named_expressions import identify_named_expressions
 from pyomo.common.timing import HierarchicalTimer
@@ -653,7 +654,7 @@ class PersistentBase(abc.ABC):
         self._objective_expr = None
         self._objective_sense = None
         self._named_expressions = dict()  # maps constraint to list of tuples (named_expr, named_expr.expr)
-        self._external_functions = dict()
+        self._external_functions = ComponentMap()
         self._obj_named_expressions = list()
         self._update_config = UpdateConfig()
         self._referenced_variables = dict()  # number of constraints/objectives each variable is used in
@@ -746,6 +747,7 @@ class PersistentBase(abc.ABC):
         if self._objective is not None:
             for v in self._vars_referenced_by_obj:
                 self._referenced_variables[id(v)] -= 1
+            self._external_functions.pop(self._objective, None)
         if obj is not None:
             self._objective = obj
             self._objective_expr = obj.expr
@@ -771,8 +773,8 @@ class PersistentBase(abc.ABC):
             self._set_objective(obj)
 
     def add_block(self, block):
-        self.add_variables(ComponentSet(var for var in block.component_data_objects(Var, descend_into=True, sort=False)))
-        self.add_params(ComponentSet(p for p in block.component_data_objects(Param, descend_into=True, sort=False)))
+        self.add_variables(list(OrderedDict((id(var), var) for var in block.component_data_objects(Var, descend_into=True, sort=False)).values()))
+        self.add_params(list(OrderedDict((id(p), p) for p in block.component_data_objects(Param, descend_into=True, sort=False)).values()))
         self.add_constraints([con for con in block.component_data_objects(Constraint, descend_into=True,
                                                                           active=True, sort=False)])
         self.add_sos_constraints([con for con in block.component_data_objects(SOSConstraint, descend_into=True,
@@ -840,8 +842,8 @@ class PersistentBase(abc.ABC):
                                                                              active=True, sort=False)])
         self.remove_sos_constraints([con for con in block.component_data_objects(ctype=SOSConstraint, descend_into=True,
                                                                                  active=True, sort=False)])
-        self.remove_variables(ComponentSet(var for var in block.component_data_objects(ctype=Var, descend_into=True, sort=False)))
-        self.remove_params(ComponentSet(p for p in block.component_data_objects(ctype=Param, descend_into=True, sort=False)))
+        self.remove_variables(list(OrderedDict((id(var), var) for var in block.component_data_objects(ctype=Var, descend_into=True, sort=False)).values()))
+        self.remove_params(list(OrderedDict((id(p), p) for p in block.component_data_objects(ctype=Param, descend_into=True, sort=False)).values()))
 
     @abc.abstractmethod
     def _update_variables(self, variables: List[_GeneralVarData]):
