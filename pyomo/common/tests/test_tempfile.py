@@ -305,7 +305,8 @@ class Test_TempfileManager(unittest.TestCase):
         sub_fname = os.path.join(dname, "testfile")
         self.TM.add_tempfile(fname)
         with self.assertRaisesRegex(
-                IOError, "Temporary file does not exist: %s" % sub_fname):
+                IOError, "Temporary file does not exist: %s"
+                % sub_fname.replace('\\', '\\\\')):
             self.TM.add_tempfile(sub_fname)
         self.TM.add_tempfile(sub_fname, exists=False)
         with open(sub_fname, "w") as FILE:

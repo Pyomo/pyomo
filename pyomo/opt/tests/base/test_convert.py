@@ -71,6 +71,7 @@ class MockArg4(MockArg):
 class OptConvertDebug(unittest.TestCase):
 
     def setUp(self):
+        TempfileManager.push()
         TempfileManager.tempdir = currdir
 
     def tearDown(self):
