@@ -125,17 +125,17 @@ class TempfileManagerClass(object):
         self._context_stack = None
 
     def create_tempfile(self, suffix=None, prefix=None, text=False, dir=None):
-        """:meth:`TempfileContext.create_tempfile` for the active context"""
+        "Call :meth:`TempfileContext.create_tempfile` on the active context"
         return self._context_stack[-1].create_tempfile(
             suffix=suffix, prefix=prefix, text=text, dir=dir)
 
     def create_tempdir(self, suffix=None, prefix=None, dir=None):
-        """:meth:`TempfileContext.create_tempdir` for the active context"""
+        "Call :meth:`TempfileContext.create_tempdir` on the active context"
         return self._context_stack[-1].create_tempdir(
             suffix=suffix, prefix=prefix, dir=dir)
 
     def add_tempfile(self, filename, exists=True):
-        """:meth:`TempfileContext.add_tempfile` for the active context"""
+        "Call :meth:`TempfileContext.add_tempfile` on the active context"
         return self._context_stack[-1].add_tempfile(
             filename=filename, exists=exists)
 
@@ -403,7 +403,7 @@ class TempfileContext:
     def add_tempfile(self, filename, exists=True):
         """Declare the specified file/directory to be temporary.
 
-        This adds the doecified path as a "temporary" object to this
+        This adds the specified path as a "temporary" object to this
         context's list of managed temporary paths (i.e., it will be
         potentially be deleted when the context is released (see
         :meth:`release`).
