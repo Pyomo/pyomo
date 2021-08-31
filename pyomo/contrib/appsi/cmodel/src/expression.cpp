@@ -428,6 +428,8 @@ void MultiplyOperator::evaluate(double* values)
 
 void ExternalOperator::evaluate(double* values)
 {
+  // It would be nice to implement this, but it will take some more work.
+  // This would require dynamic linking to the external function.
   assert (false);
 }
 
@@ -640,7 +642,9 @@ void MultiplyOperator::propagate_degree_forward(int* degrees, double* values)
 
 void ExternalOperator::propagate_degree_forward(int* degrees, double* values)
 {
-  assert (false);
+  // External functions are always considered nonlinear
+  // Anything larger than 2 is nonlinear
+  degrees[index] = 3
 }
 
 
