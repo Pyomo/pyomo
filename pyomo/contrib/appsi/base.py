@@ -7,8 +7,7 @@ from pyomo.core.base.var import _GeneralVarData, Var
 from pyomo.core.base.param import _ParamData, Param
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.objective import _GeneralObjectiveData
-from pyomo.core.base.suffix import Suffix
-from pyomo.common.collections import ComponentMap, OrderedSet, ComponentSet
+from pyomo.common.collections import ComponentMap, ComponentSet
 from .utils.get_objective import get_objective
 from .utils.identify_named_expressions import identify_named_expressions
 from pyomo.common.timing import HierarchicalTimer
@@ -654,6 +653,7 @@ class PersistentBase(abc.ABC):
         self._objective_expr = None
         self._objective_sense = None
         self._named_expressions = dict()  # maps constraint to list of tuples (named_expr, named_expr.expr)
+        self._external_functions = dict()
         self._obj_named_expressions = list()
         self._update_config = UpdateConfig()
         self._referenced_variables = dict()  # number of constraints/objectives each variable is used in
@@ -708,8 +708,10 @@ class PersistentBase(abc.ABC):
             if con in self._named_expressions:
                 raise ValueError('constraint {name} has already been added'.format(name=con.name))
             self._active_constraints[con] = (con.lower, con.body, con.upper)
-            named_exprs, variables, fixed_vars = identify_named_expressions(con.body)
+            named_exprs, variables, fixed_vars, external_functions = identify_named_expressions(con.body)
             self._named_expressions[con] = [(e, e.expr) for e in named_exprs]
+            if len(external_functions) > 0:
+                self._external_functions[con] = external_functions
             self._vars_referenced_by_con[con] = variables
             for v in variables:
                 self._referenced_variables[id(v)] += 1
@@ -748,8 +750,10 @@ class PersistentBase(abc.ABC):
             self._objective = obj
             self._objective_expr = obj.expr
             self._objective_sense = obj.sense
-            named_exprs, variables, fixed_vars = identify_named_expressions(obj.expr)
+            named_exprs, variables, fixed_vars, external_functions = identify_named_expressions(obj.expr)
             self._obj_named_expressions = [(i, i.expr) for i in named_exprs]
+            if len(external_functions) > 0:
+                self._external_functions[obj] = external_functions
             self._vars_referenced_by_obj = variables
             for v in variables:
                 self._referenced_variables[id(v)] += 1
@@ -790,6 +794,7 @@ class PersistentBase(abc.ABC):
                 self._referenced_variables[id(v)] -= 1
             del self._active_constraints[con]
             del self._named_expressions[con]
+            self._external_functions.pop(con, None)
             del self._vars_referenced_by_con[con]
 
     @abc.abstractmethod
