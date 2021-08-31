@@ -40,11 +40,6 @@ class TempfileManagerClass(object):
     Pyomo declares a global instance of this class as ``TempfileManager``:
 
     .. doctest::
-       :hide:
-
-       >>> import os
-
-    .. doctest::
 
        >>> from pyomo.common.tempfiles import TempfileManager
 
@@ -59,6 +54,7 @@ class TempfileManagerClass(object):
 
     .. doctest::
 
+       >>> import os
        >>> with TempfileManager.new_context() as tempfile:
        ...     fd, fname = tempfile.mkstemp()
        ...     dname = tempfile.mkdtemp()
