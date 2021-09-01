@@ -89,12 +89,16 @@ class PyomoNLP(AslNLP):
             # The NL writer advertises the external function libraries
             # through the PYOMO_AMPLFUNC environment variable; merge it
             # with any preexisting AMPLFUNC definitions
-            amplfunc = "\n".join(
-                val for val in (
-                    os.environ.get('AMPLFUNC', ''),
-                    os.environ.get('PYOMO_AMPLFUNC', ''),
-                ) if val)
-            with CtypesEnviron(AMPLFUNC=amplfunc):
+            amplfunc = "\n".join(filter(None, (
+                os.environ.get('AMPLFUNC', None),
+                os.environ.get('PYOMO_AMPLFUNC', None),
+            )))
+            # Use the CtypesEnviron to clear the AMPLFUNC variable
+            # everywhere (python, dlls, etc).
+            with CtypesEnviron(AMPLFUNC=''):
+                # Now just set the AMPLFUNC in the python env (for
+                # AmplInterface to see)
+                os.environ['AMPLFUNC'] = amplfunc
                 super(PyomoNLP, self).__init__(nl_file)
 
             # keep pyomo model in cache
