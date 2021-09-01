@@ -102,7 +102,7 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
 
     Parameters
     ----------
-    ostream: RawIOBase
+    ostream: io.TextIOBase
         the stream to write to
     prefix: str
         prefix each generated line with this string
