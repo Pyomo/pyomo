@@ -93,12 +93,7 @@ class PyomoNLP(AslNLP):
                 os.environ.get('AMPLFUNC', None),
                 os.environ.get('PYOMO_AMPLFUNC', None),
             )))
-            # Use the CtypesEnviron to clear the AMPLFUNC variable
-            # everywhere (python, dlls, etc).
-            with CtypesEnviron(AMPLFUNC=''):
-                # Now just set the AMPLFUNC in the python env (for
-                # AmplInterface to see)
-                os.environ['AMPLFUNC'] = amplfunc
+            with CtypesEnviron(AMPLFUNC=amplfunc):
                 super(PyomoNLP, self).__init__(nl_file)
 
             # keep pyomo model in cache
