@@ -3618,18 +3618,18 @@ class TestSet(unittest.TestCase):
             self.assertTrue(_s.isordered())
             self.assertTrue(_s.isfinite())
             for i,v in enumerate(_l):
-                self.assertEqual(_s[i+1], v)
+                self.assertEqual(_s.at(i+1), v)
             with self.assertRaisesRegex(IndexError, "I index out of range"):
-                _s[len(_l)+1]
+                _s.at(len(_l)+1)
             with self.assertRaisesRegex(IndexError, "I index out of range"):
-                _s[len(_l)+2]
+                _s.at(len(_l)+2)
 
             for i,v in enumerate(reversed(_l)):
-                self.assertEqual(_s[-(i+1)], v)
+                self.assertEqual(_s.at(-(i+1)), v)
             with self.assertRaisesRegex(IndexError, "I index out of range"):
-                _s[-len(_l)-1]
+                _s.at(-len(_l)-1)
             with self.assertRaisesRegex(IndexError, "I index out of range"):
-                _s[-len(_l)-2]
+                _s.at(-len(_l)-2)
 
             for i,v in enumerate(_l):
                 self.assertEqual(_s.ord(v), i+1)
@@ -5575,6 +5575,28 @@ class TestDeprecation(unittest.TestCase):
             output.getvalue(),
             r"^DEPRECATED: check_values\(\) is deprecated: Sets only "
             r"contain valid")
+
+    def test_getitem(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=['a','b'])
+        with LoggingIntercept() as OUT:
+            self.assertIs(m.I[None], m.I)
+        self.assertEqual(OUT.getvalue(), "")
+
+        with LoggingIntercept() as OUT:
+            self.assertEqual(m.I[2], 'b')
+        self.assertRegex(
+            OUT.getvalue().replace('\n', ' '),
+            r"^DEPRECATED: Using __getitem__ to return a set value from "
+            r"its \(ordered\) position is deprecated.  Please use at\(\)")
+
+        with LoggingIntercept() as OUT:
+            self.assertEqual(m.I.card(2), 'b')
+        self.assertRegex(
+            OUT.getvalue().replace('\n', ' '),
+            r"^DEPRECATED: card\(\) was incorrectly added to the Set API.  "
+            r"Please use at\(\)")
+
 
 
 class TestIssues(unittest.TestCase):

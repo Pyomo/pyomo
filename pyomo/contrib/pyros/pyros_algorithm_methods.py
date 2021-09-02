@@ -5,10 +5,11 @@ Methods for the execution of the grcs algorithm
 from pyomo.core.base import Objective, ConstraintList, Var, Constraint, Block
 from pyomo.opt.results import TerminationCondition
 from pyomo.contrib.pyros import master_problem_methods, separation_problem_methods
-from pyomo.contrib.pyros.solve_data import SeparationProblemData
-from pyomo.contrib.pyros.util import ObjectiveType, get_time_from_solver, grcsTerminationCondition
-from pyomo.contrib.pyros.util import get_main_elapsed_time, output_logger
+from pyomo.contrib.pyros.solve_data import SeparationProblemData, MasterResult
+from pyomo.contrib.pyros.util import ObjectiveType, get_time_from_solver, pyrosTerminationCondition
+from pyomo.contrib.pyros.util import get_main_elapsed_time, output_logger, coefficient_matching
 from pyomo.core.base import value
+from pyomo.common.collections import ComponentSet
 
 def update_grcs_solve_data(pyros_soln, term_cond, nominal_data, timing_data, separation_data, master_soln, k):
     '''
@@ -24,7 +25,7 @@ def update_grcs_solve_data(pyros_soln, term_cond, nominal_data, timing_data, sep
     :param k: Iteration counter
     :return: None
     '''
-    pyros_soln.grcs_termination_condition = term_cond
+    pyros_soln.pyros_termination_condition = term_cond
     pyros_soln.total_iters = k
     pyros_soln.nominal_data = nominal_data
     pyros_soln.timing_data = timing_data
@@ -45,6 +46,36 @@ def ROSolver_iterative_solve(model_data, config):
     #     Otherwise, the default init value for the params is used as nominal_uncertain_param_vals
     violation = list(p for p in config.nominal_uncertain_param_vals)
 
+    # === Do coefficient matching
+    constraints = [c for c in model_data.working_model.component_data_objects(Constraint) if c.equality
+                   and c not in ComponentSet(model_data.working_model.util.decision_rule_eqns)]
+    model_data.working_model.util.h_x_q_constraints = ComponentSet()
+    for c in constraints:
+        coeff_matching_success, robust_infeasible = coefficient_matching(model=model_data.working_model, constraint=c,
+                                                          uncertain_params=model_data.working_model.util.uncertain_params,
+                                                          config=config)
+        if not coeff_matching_success and not robust_infeasible:
+            raise ValueError("Equality constraint \"%s\" cannot be guaranteed to be robustly feasible, "
+                             "given the current partitioning between first-stage, second-stage and state variables. "
+                             "You might consider editing this constraint to reference some second-stage "
+                             "and/or state variable(s)."
+                             % c.name)
+        elif not coeff_matching_success and robust_infeasible:
+            config.progress_logger.info("PyROS has determined that the model is robust infeasible. "
+                                        "One reason for this is that equality constraint \"%s\" cannot be satisfied "
+                                        "against all realizations of uncertainty, "
+                                        "given the current partitioning between first-stage, second-stage and state variables. "
+                                         "You might consider editing this constraint to reference some (additional) second-stage "
+                                         "and/or state variable(s)."
+                                         % c.name)
+            return None, None
+        else:
+            pass
+
+    # h(x,q) == 0 becomes h'(x) == 0
+    for c in model_data.working_model.util.h_x_q_constraints:
+        c.deactivate()
+
     # === Build the master problem and master problem data container object
     master_data = master_problem_methods.initial_construct_master(model_data)
 
@@ -56,6 +87,7 @@ def ROSolver_iterative_solve(model_data, config):
     master_data.master_model.scenarios[0, 0].transfer_attributes_from(master_data.original.clone())
     if len(master_data.master_model.scenarios[0,0].util.uncertain_params) != len(violation):
         raise ValueError
+
 
     # === Set the nominal uncertain parameters to the violation values
     for i, v in enumerate(violation):
@@ -77,6 +109,9 @@ def ROSolver_iterative_solve(model_data, config):
                         master_data.master_model.scenarios[0, 0].second_stage_objective <= master_data.master_model.zeta )
         master_data.master_model.scenarios[0,0].util.first_stage_variables.append(master_data.master_model.zeta)
 
+    # === Add deterministic constraints to ComponentSet on original so that these become part of separation model
+    master_data.original.util.deterministic_constraints = \
+        ComponentSet(c for c in master_data.original.component_data_objects(Constraint, descend_into=True))
 
     # === Make separation problem model once before entering the solve loop
     separation_model = separation_problem_methods.make_separation_problem(model_data=master_data, config=config)
@@ -84,7 +119,7 @@ def ROSolver_iterative_solve(model_data, config):
     # === Create separation problem data container object and add information to catalog during solve
     separation_data = SeparationProblemData()
     separation_data.separation_model = separation_model
-    separation_data.points_separated = [] # contains all points separated in the separation problem
+    separation_data.points_separated = [] # contains last point separated in the separation problem
     separation_data.points_added_to_master = [config.nominal_uncertain_param_vals] # explicitly robust against in master
     separation_data.constraint_violations = [] # list of constraint violations for each iteration
     separation_data.total_global_separation_solves = 0 # number of times global solve is used
@@ -132,15 +167,15 @@ def ROSolver_iterative_solve(model_data, config):
         master_soln.master_problem_subsolver_statuses.append(master_soln.results.solver.termination_condition)
 
         # === Check for robust infeasibility or error or time-out in master problem solve
-        if master_soln.master_subsolver_results[1] is grcsTerminationCondition.robust_infeasible:
-            term_cond = grcsTerminationCondition.robust_infeasible
+        if master_soln.master_subsolver_results[1] is pyrosTerminationCondition.robust_infeasible:
+            term_cond = pyrosTerminationCondition.robust_infeasible
             output_logger(config=config, robust_infeasible=True)
-        elif master_soln.grcs_termination_condition is grcsTerminationCondition.subsolver_error:
-            term_cond = grcsTerminationCondition.subsolver_error
+        elif master_soln.pyros_termination_condition is pyrosTerminationCondition.subsolver_error:
+            term_cond = pyrosTerminationCondition.subsolver_error
         else:
             term_cond = None
-        if term_cond == grcsTerminationCondition.subsolver_error or \
-                term_cond == grcsTerminationCondition.robust_infeasible:
+        if term_cond == pyrosTerminationCondition.subsolver_error or \
+                term_cond == pyrosTerminationCondition.robust_infeasible:
             update_grcs_solve_data(pyros_soln=model_data, k=k, term_cond=term_cond,
                                    nominal_data=nominal_data,
                                    timing_data=timing_data,
@@ -152,7 +187,7 @@ def ROSolver_iterative_solve(model_data, config):
         if config.time_limit:
             if elapsed >= config.time_limit:
                 output_logger(config=config, time_out=True, elapsed=elapsed)
-                update_grcs_solve_data(pyros_soln=model_data, k=k, term_cond=grcsTerminationCondition.time_out,
+                update_grcs_solve_data(pyros_soln=model_data, k=k, term_cond=pyrosTerminationCondition.time_out,
                                        nominal_data=nominal_data,
                                        timing_data=timing_data,
                                        separation_data=separation_data,
@@ -206,6 +241,7 @@ def ROSolver_iterative_solve(model_data, config):
         # === Solve Separation Problem
         separation_data.iteration = k
         separation_data.master_nominal_scenario = master_data.master_model.scenarios[0,0]
+
         separation_data.master_model = master_data.master_model
 
         separation_solns, violating_realizations, constr_violations, is_global, \
@@ -235,7 +271,7 @@ def ROSolver_iterative_solve(model_data, config):
         if config.time_limit:
             if elapsed >= config.time_limit:
                 output_logger(config=config, time_out=True, elapsed=elapsed)
-                termination_condition = grcsTerminationCondition.time_out
+                termination_condition = pyrosTerminationCondition.time_out
                 update_grcs_solve_data(pyros_soln=model_data, k=k, term_cond=termination_condition,
                                        nominal_data=nominal_data,
                                        timing_data=timing_data,
@@ -251,7 +287,7 @@ def ROSolver_iterative_solve(model_data, config):
                                   for sep_soln_list in separation_solns for s in sep_soln_list)) or \
             (not is_global and any((s.termination_condition not in local_solve_term_conditions)
                                   for sep_soln_list in separation_solns for s in sep_soln_list)):
-            termination_condition = grcsTerminationCondition.subsolver_error
+            termination_condition = pyrosTerminationCondition.subsolver_error
             update_grcs_solve_data(pyros_soln=model_data, k=k, term_cond=termination_condition,
                                    nominal_data=nominal_data,
                                    timing_data=timing_data,
@@ -263,10 +299,10 @@ def ROSolver_iterative_solve(model_data, config):
         if not any(s.found_violation for sep_soln_list in separation_solns for s in sep_soln_list) and is_global:
             if config.solve_master_globally and config.objective_focus is ObjectiveType.worst_case:
                 output_logger(config=config, robust_optimal=True)
-                termination_condition = grcsTerminationCondition.robust_optimal
+                termination_condition = pyrosTerminationCondition.robust_optimal
             else:
                 output_logger(config=config, robust_feasible=True)
-                termination_condition = grcsTerminationCondition.robust_feasible
+                termination_condition = pyrosTerminationCondition.robust_feasible
             update_grcs_solve_data(pyros_soln=model_data, k=k, term_cond=termination_condition,
                                    nominal_data=nominal_data,
                                    timing_data=timing_data,
@@ -281,7 +317,7 @@ def ROSolver_iterative_solve(model_data, config):
         k += 1
 
     output_logger(config=config, max_iter=True)
-    update_grcs_solve_data(pyros_soln=model_data, k=k, term_cond=grcsTerminationCondition.max_iter,
+    update_grcs_solve_data(pyros_soln=model_data, k=k, term_cond=pyrosTerminationCondition.max_iter,
                            nominal_data=nominal_data,
                            timing_data=timing_data,
                            separation_data=separation_data,

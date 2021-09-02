@@ -18,16 +18,16 @@ from pyomo.core.base.indexed_component import normalize_index
 
 relocated_module_attribute(
     'disable_methods', 'pyomo.core.base.disable_methods.disable_methods',
-    version='TBD')
+    version='6.1')
 relocated_module_attribute(
-    'Initialzer', 'pyomo.core.base.initialzer.Initialzer',
-    version='TBD')
+    'Initializer', 'pyomo.core.base.initializer.Initializer',
+    version='6.1')
 relocated_module_attribute(
-    'IndexedCallInitialzer', 'pyomo.core.base.initialzer.Initialzer',
-    version='TBD')
+    'IndexedCallInitializer', 'pyomo.core.base.initializer.Initializer',
+    version='6.1')
 relocated_module_attribute(
-    'CountedCallInitialzer', 'pyomo.core.base.initialzer.Initialzer',
-    version='TBD')
+    'CountedCallInitializer', 'pyomo.core.base.initializer.Initializer',
+    version='6.1')
 
 def is_functor(obj):
     """
