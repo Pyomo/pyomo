@@ -133,6 +133,7 @@ class DesignOfExperiments:
         This step is for initialization.
         3. Unfix the experiment design decisions and solve the two-stage DOE problem.
         '''
+        time0 = time.time()
 
         # store inputs in object
         self.design_values = design_values
@@ -176,10 +177,19 @@ class DesignOfExperiments:
             analysis_optimize.extract_FIM(m, self.design_timeset, result_doe, obj=objective_option)
             analysis_optimize.model = m
 
+            time1 = time.time()
+            if self.verbose:
+                print('Total wall clock time [s]:', time1-time0)
+
             return analysis_square, analysis_optimize
 
         else:
             analysis_optimize.model = m
+
+            time1 = time.time()
+            if self.verbose:
+                print('Total wall clock time [s]:', time1 - time0)
+
             return analysis_square
 
 
@@ -645,13 +655,13 @@ class DesignOfExperiments:
         self.all_fim = result_combine
 
         # Create figure drawing object
-        figure_draw_object = Grid_Search_Result(design_ranges, design_dimension_names, design_control_time, result_combine)
+        figure_draw_object = Grid_Search_Result(design_ranges, design_dimension_names, design_control_time, result_combine, store_optimality_name=filename)
 
         # store results
-        if self.filename is not None:
-            f = open(filename, 'wb')
-            pickle.dump(result_combine, f)
-            f.close()
+        #if self.filename is not None:
+        #    f = open(filename, 'wb')
+        #    pickle.dump(result_combine, f)
+        #    f.close()
 
         return figure_draw_object
 
@@ -1614,7 +1624,7 @@ class Grid_Search_Result:
         self.store_all_results_dataframe = pd.DataFrame(store_all_results, columns=column_names)
         # if needs to store the values
         if self.store_optimality_name is not None:
-            store_df.to_csv(self.store_optimality_name, index=False)
+            self.store_all_results_dataframe.to_csv(self.store_optimality_name, index=False)
 
 
     def figure_drawing(self, fixed_design_dimensions, sensitivity_dimension, title_text, xlabel_text, ylabel_text, font_axes=16, font_tick=14, log_scale=True):
