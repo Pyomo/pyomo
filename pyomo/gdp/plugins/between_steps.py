@@ -257,12 +257,11 @@ class BetweenSteps_Transformation(Transformation):
                                 "argument: %s" % method)
 
             if not self._config.assume_fixed_vars_permanent:
-                # TODO: This actually a place where I want everything that
-                # appears in an accessible expression, so component_data_objects
-                # is wrong...
                 fixed_vars = ComponentMap()
-                for v in instance.component_data_objects(
-                        Var, active=True, descend_into=(Block, Disjunct)):
+                for v in get_vars_from_constraints(instance, include_fixed=True,
+                                                   active=True,
+                                                   descend_into=(Block,
+                                                                 Disjunct)):
                     if v.fixed:
                         fixed_vars[v] = value(v)
                         v.fixed = False
