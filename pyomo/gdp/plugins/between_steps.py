@@ -26,6 +26,7 @@ from pyomo.common.collections import ComponentSet
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr import current as EXPR
 from pyomo.opt import SolverFactory
+from pyomo.util.vars_from_expressions import get_vars_from_constraints
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (preprocess_targets, is_child_of, target_list,
@@ -64,11 +65,8 @@ def arbitrary_partition(disjunction, P):
     # collect variables
     v_set = ComponentSet()
     for disj in disjunction.disjuncts:
-        for c in disj.component_data_objects(Constraint, descend_into=Block,
-                                             active=True):
-            for v in EXPR.identify_variables(c.body):
-                v_set.add(v)
-
+        v_set.update(get_vars_from_constraints(disj, descend_into=Block,
+                                               active=True))
     # assign them to partitions
     partitions = []
     V = len(v_set)
