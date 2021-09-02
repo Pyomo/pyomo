@@ -14,7 +14,9 @@ from pyomo.environ import (TransformationFactory, Constraint, ConcreteModel,
                            Any, Reference)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.util import GDP_Error
-from pyomo.gdp.plugins.between_steps import arbitrary_partition
+from pyomo.gdp.plugins.between_steps import (arbitrary_partition,
+                                             compute_optimal_bounds,
+                                             compute_fbbt_bounds)
 from pyomo.core import Block, value
 from pyomo.core.expr import current as EXPR
 import pyomo.gdp.tests.common_tests as ct
@@ -195,7 +197,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.between_steps').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
-            compute_bounds_method='fbbt')
+            compute_bounds_method=compute_fbbt_bounds)
 
         self.check_transformation_block(m, 0, 72, 0, 72, -72, 96, -72, 96)
 
@@ -211,7 +213,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.between_steps').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
-            subproblem_solver=SolverFactory('gurobi_direct'))
+            compute_bounds_solver=SolverFactory('gurobi_direct'),
+            compute_bounds_method=compute_optimal_bounds)
         
         self.check_transformation_block(m, 0, 72, 0, 72, -18, 32, -18, 32)
 
@@ -230,7 +233,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.between_steps').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
-            subproblem_solver=opt)
+            compute_bounds_solver=opt,
+            compute_bounds_method=compute_optimal_bounds)
 
         self.check_transformation_block(m, 0, 32, 0, 32, -18, 14, -18, 14)
 
@@ -246,7 +250,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.between_steps').apply_to(
             m,
             P=2,
-            subproblem_solver=SolverFactory('gurobi_direct'))
+            compute_bounds_solver=SolverFactory('gurobi_direct'),
+            compute_bounds_method=compute_optimal_bounds)
         
         self.check_transformation_block(m, 0, 72, 0, 72, -18, 32, -18, 32)
 
@@ -264,7 +269,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
             assume_fixed_vars_permanent=False,
-            subproblem_solver=SolverFactory('gurobi_direct'))
+            compute_bounds_solver=SolverFactory('gurobi_direct'),
+            compute_bounds_method=compute_optimal_bounds)
         
         self.assertTrue(m.x[1].fixed)
         self.assertEqual(value(m.x[1]), 0)
@@ -287,7 +293,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
             assume_fixed_vars_permanent=True,
-            subproblem_solver=SolverFactory('gurobi_direct'))
+            compute_bounds_solver=SolverFactory('gurobi_direct'),
+            compute_bounds_method=compute_optimal_bounds)
 
         # This actually changes the structure of the model because fixed vars
         # move to the constants. I think this is fair, and we should allow it
@@ -354,7 +361,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.between_steps').apply_to(
             m,
             P=3,
-            subproblem_solver=SolverFactory('gurobi_direct'))
+            compute_bounds_solver=SolverFactory('gurobi_direct'),
+            compute_bounds_method=compute_optimal_bounds)
 
         b = m.component("_pyomo_gdp_between_steps_reformulation")
         self.assertIsInstance(b, Block)
@@ -509,7 +517,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.between_steps').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
-            compute_bounds_method='fbbt')
+            compute_bounds_method=compute_fbbt_bounds)
 
         b = m.component("_pyomo_gdp_between_steps_reformulation")
         self.assertIs(m.disjunction.disjuncts[0].transformation_block(),
@@ -525,7 +533,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.between_steps').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
-            compute_bounds_method='fbbt')
+            compute_bounds_method=compute_fbbt_bounds)
 
         b = m.component("_pyomo_gdp_between_steps_reformulation")
         self.assertIs(m.disjunction.algebraic_constraint(), b.disjunction)
@@ -636,7 +644,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.between_steps').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
-            compute_bounds_method='fbbt',
+            compute_bounds_method=compute_fbbt_bounds,
             targets=[m.disjunction])
 
         # should be the same as before
@@ -657,7 +665,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.between_steps').apply_to(
             m,
             variable_partitions=[[m.x[1]], [m.x[2]]],
-            subproblem_solver=SolverFactory('gurobi_direct'),
+            compute_bounds_solver=SolverFactory('gurobi_direct'),
+            compute_bounds_method=compute_optimal_bounds,
             targets=[m.b])
 
         # we didn't transform the disjunction not on b
@@ -726,7 +735,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             variable_partitions={
                 m.b[1].another_disjunction: [[m.x[1]], [m.x[2]]],
                 m.b[0].disjunction: [[m.x[1], m.x[2]], [m.x[3], m.x[4]]]},
-            subproblem_solver=SolverFactory('gurobi_direct'),
+            compute_bounds_solver=SolverFactory('gurobi_direct'),
+            compute_bounds_method=compute_optimal_bounds,
             targets=[m.b])
 
         b = m.component("_pyomo_gdp_between_steps_reformulation")
@@ -845,7 +855,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             variable_partitions={
                 m.indexed[0]: [[m.x[1]], [m.x[2]]],
                 m.indexed[1]: [[m.x[1], m.x[2]], [m.x[3], m.x[4]]]},
-            subproblem_solver=SolverFactory('gurobi_direct'),
+            compute_bounds_solver=SolverFactory('gurobi_direct'),
+            compute_bounds_method=compute_optimal_bounds,
             targets=[m.indexed])
 
         b = m.component("_pyomo_gdp_between_steps_reformulation")
@@ -960,7 +971,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             TransformationFactory('gdp.between_steps').apply_to,
             m,
             variable_partitions=[[m.x[1]], [m.x[2]]],
-            compute_bounds_method='fbbt')
+            compute_bounds_method=compute_fbbt_bounds)
 
     def test_unbounded_expression_error(self):
         m = self.makeModel()
@@ -972,12 +983,12 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             "Expression x\[1\]\*x\[1\] from constraint "
             "'disjunction_disjuncts\[0\].constraint\[1\]' is unbounded! "
             "Please ensure all variables that appear in the constraint are "
-            "bounded or specify compute_bounds_method='optimal' if the "
-            "expression is bounded by the global constraints.",
+            "bounded or specify compute_bounds_method=compute_optimal_bounds "
+            "if the expression is bounded by the global constraints.",
             TransformationFactory('gdp.between_steps').apply_to,
             m,
             variable_partitions=[[m.x[1]], [m.x[2]], [m.x[3], m.x[4]]],
-            compute_bounds_method='fbbt')
+            compute_bounds_method=compute_fbbt_bounds)
         
 class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
     def makeModel(self):
@@ -1204,7 +1215,7 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.between_steps').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
-            compute_bounds_method='fbbt')
+            compute_bounds_method=compute_fbbt_bounds)
 
         self.check_transformation_block(m, 0, (2*6**4)**0.25, 0, (2*5**4)**0.25)
 
@@ -1223,7 +1234,7 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
             TransformationFactory('gdp.between_steps').apply_to,
             m,
             variable_partitions=[[m.x[3], m.x[2]], [m.x[1], m.x[4]]],
-            compute_bounds_method='fbbt')
+            compute_bounds_method=compute_fbbt_bounds)
 
     def test_non_additively_separable_expression(self):
         m = self.makeModel()
@@ -1238,7 +1249,7 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.between_steps').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
-            compute_bounds_method='fbbt')
+            compute_bounds_method=compute_fbbt_bounds)
 
         # we just need to check the first Disjunct's transformation
         b = m.component("_pyomo_gdp_between_steps_reformulation")

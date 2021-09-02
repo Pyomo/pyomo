@@ -84,6 +84,68 @@ def arbitrary_partition(disjunction, P):
 
     return partitions
 
+def compute_optimal_bounds(expr, instance, transBlock, opt):
+    # computes bounds on expr by minimizing and maximizing expr over the
+    # variable bounds and the global constraints. Note that even if expr is
+    # convex and the global constraints are a convex set, the max problem is
+    # nonconvex!
+    if opt is None:
+        raise GDP_Error("No solver was specified to optimize the "
+                        "subproblems for computing expression bounds!"
+                        "Please specify a configured solver in the "
+                        "'compute_bounds_solver' argument if using "
+                        "'compute_optimal_bounds.'")
+
+    # leave out what we've been doing, store state
+    transBlock.deactivate()
+    active_disjuncts = []
+    for disj in instance.component_data_objects(Disjunct,
+                                                descend_into=Block,
+                                                active=True):
+        disj.deactivate()
+        active_disjuncts.append(disj)
+    active_objs = []
+    for obj in instance.component_data_objects(Objective,
+                                               descend_into=Block,
+                                               active=True):
+        obj.deactivate()
+        active_objs.append(obj)
+
+    # add temporary objective and calculate bounds
+    obj = Objective(expr=expr)
+    instance.add_component(unique_component_name(instance, "tmp_obj"), obj)
+    results = opt.solve(instance)
+    if verify_successful_solve(results) is not NORMAL:
+        logger.warning("Problem to find lower bound for expression %s"
+                       "did not solve normally.\n\n%s" % (expr, results))
+        LB = None
+    else:
+        # This has some risks, if you're using a solver the gives a lower bound,
+        # getting that would be better. But this is why this is a callback.
+        LB = value(obj.expr)
+    obj.sense = -1
+    results = opt.solve(instance)
+    if verify_successful_solve(results) is not NORMAL:
+        logger.warning("Problem to find upper bound for expression %s"
+                       "did not solve normally.\n\n%s" % (expr, results))
+        UB = None
+    else:
+        UB = value(obj.expr)
+
+    # clean up
+    instance.del_component(obj)
+    del obj
+    for disj in active_disjuncts:
+        disj.activate()
+    for obj in active_objs:
+        obj.activate()
+    transBlock.activate()
+
+    return (LB, UB)
+
+def compute_fbbt_bounds(expr, instance, transBlock, opt):
+    return compute_bounds_on_expr(expr)
+
 @TransformationFactory.register('gdp.between_steps',
                                 doc="Reformulates a convex disjunctive model "
                                 "by splitting additively separable constraints"
@@ -194,32 +256,32 @@ class BetweenSteps_Transformation(Transformation):
         Set to True for verbose output, False otherwise.
         """
     ))
-    # ESJ: TODO: I'm not quite sure how best to do this... I kinda want a
-    # callback, but I kinda want to not mess with solver stuff... I guess it
-    # could optionally take a SolverFactory as an argument, would be the
-    # cleanest way to do it?
     CONFIG.declare('compute_bounds_method', ConfigValue(
-        default=None,
-        description="""Function which takes an expression and returns both a 
-        lower and upper bound for it.""",
+        default=compute_fbbt_bounds,
+        description="""Function which takes an expression, the instance, 
+        the between_steps transformation block, and a configured solver and 
+        returns both a lower and upper bound for the expression.""",
         doc="""Callback for computing bounds on expressions, in order to bound
         the auxilary variables created by the transformation. Some 
         pre-implemented options include
-            * compute_optimal_bounds (the default), and
-            * pyomo.contrib.fbbt.fbbt.compute_bounds_on_expr (a faster but 
-              weaker alternative),
-        or you can write your own callback which accepts an Expression object
-        and returns a tuple (LB, UB) where either element can be None if no
-        valid bound could be found.
+            * compute_optimal_bounds, and
+            * compute_fbbt_bounds (the default),
+        or you can write your own callback which accepts an Expression object, 
+        the original instance, the between steps transformation block, and a 
+        configured solver and returns a tuple (LB, UB) where either element 
+        can be None if no valid bound could be found.
         """
     ))
-    CONFIG.declare('subproblem_solver', ConfigValue(
-        default=SolverFactory('ipopt'),
-        description="""SolverFactory object to use for computing expression 
-        bounds, if doing so optimally.""",
+    CONFIG.declare('compute_bounds_solver', ConfigValue(
+        default=None,
+        description="""Solver object to pass to compute_bounds_method. 
+        This is required if you are using 'compute_optimal_bounds'.""",
         doc="""
-        If compute_bounds_method is 'optimal', this SolverFactory
-        will be used to solve the subproblems.
+        Configured solver object for use in the compute_bounds_method.
+
+        In particular, if compute_bounds_method is 'compute_optimal_bounds', 
+        this will be used to solve the subproblems, so needs to handle non-convex
+        problems if any Disjunctions contain nonlinear constraints.
         """
     ))
     def __init__(self):
@@ -246,15 +308,6 @@ class BetweenSteps_Transformation(Transformation):
                 self.verbose = True
             else:
                 self.verbose = False
-
-            method = self._config.compute_bounds_method
-            if method is None or method == 'optimal':
-                self._compute_bounds = self.compute_optimal_bounds
-            elif method == 'fbbt':
-                self._compute_bounds = self.compute_bounds_fbbt
-            else:
-                raise GDP_Error("Unrecognized 'compute_bounds_method' "
-                                "argument: %s" % method)
 
             if not self._config.assume_fixed_vars_permanent:
                 fixed_vars = ComponentMap()
@@ -526,14 +579,16 @@ class BetweenSteps_Transformation(Transformation):
                                                 nonlinear_repn[
                                                     'nonlinear_exprs'][i])
                     
-                    expr_lb, expr_ub = self._compute_bounds( expr, instance,
-                                                             transBlock)
+                    expr_lb, expr_ub = self._config.compute_bounds_method( 
+                        expr, instance, transBlock, 
+                        self._config.compute_bounds_solver)
                     if expr_lb is None or expr_ub is None:
                         raise GDP_Error("Expression %s from constraint '%s' "
                                         "is unbounded! Please ensure all "
                                         "variables that appear "
                                         "in the constraint are bounded or "
-                                        "specify compute_bounds_method='optimal'"
+                                        "specify compute_bounds_method="
+                                        "compute_optimal_bounds"
                                         " if the expression is bounded by the "
                                         "global constraints." % 
                                         (expr, cons.name))
@@ -568,61 +623,3 @@ class BetweenSteps_Transformation(Transformation):
                                          
         obj.deactivate()
         return transformed_disjunct
-
-    def compute_optimal_bounds(self, expr, instance, transBlock):
-        # computes bounds on expr by minimizing and maximizing expr over the
-        # variable bounds and the global constraints. Note that even if expr is
-        # convex and the global constraints are a convex set, the max problem is
-        # nonconvex!
-
-        # leave out what we've been doing, store state
-        transBlock.deactivate()
-        active_disjuncts = []
-        for disj in instance.component_data_objects(Disjunct,
-                                                    descend_into=Block,
-                                                    active=True):
-            disj.deactivate()
-            active_disjuncts.append(disj)
-        active_objs = []
-        for obj in instance.component_data_objects(Objective,
-                                                   descend_into=Block,
-                                                   active=True):
-            obj.deactivate()
-            active_objs.append(obj)
-
-        # add temporary objective and calculate bounds
-        obj = Objective(expr=expr)
-        instance.add_component(unique_component_name(instance, "tmp_obj"), obj)
-        opt = self._config.subproblem_solver
-        results = opt.solve(instance)
-        if verify_successful_solve(results) is not NORMAL:
-            logger.warning("Problem to find lower bound for expression %s"
-                           "did not solve normally.\n\n%s" % (expr, results))
-            LB = None
-        else:
-            # TODO: we probably need tolerance or rounding or something
-            # here... Ideally we'd get the LB from the solver, but ipopt for
-            # example doesn't even gives us one so...
-            LB = value(obj.expr)
-        obj.sense = -1
-        results = opt.solve(instance)
-        if verify_successful_solve(results) is not NORMAL:
-            logger.warning("Problem to find upper bound for expression %s"
-                           "did not solve normally.\n\n%s" % (expr, results))
-            UB = None
-        else:
-            UB = value(obj.expr)
-
-        # clean up
-        instance.del_component(obj)
-        del obj
-        for disj in active_disjuncts:
-            disj.activate()
-        for obj in active_objs:
-            obj.activate()
-        transBlock.activate()
-        
-        return (LB, UB)
-
-    def compute_bounds_fbbt(self, expr, instance, transBlock):
-        return compute_bounds_on_expr(expr)
