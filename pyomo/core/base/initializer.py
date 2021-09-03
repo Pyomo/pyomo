@@ -85,7 +85,7 @@ def Initializer(init,
             if pandas_available and isinstance(init, pandas.Series):
                 initializer_map[init.__class__] = ItemInitializer
         elif any(c.__name__ == 'DataFrame' for c in init.__class__.__mro__):
-            if pandas_available and isinstance(init, pandas.DataFrams):
+            if pandas_available and isinstance(init, pandas.DataFrame):
                 initializer_map[init.__class__] = DataFrameInitializer
         else:
             # Note: this picks up (among other things) all string instances
