@@ -7,6 +7,7 @@ import numpy as np
 def discretizer(m, NFE=32):
     discretizer = TransformationFactory('dae.collocation')
     discretizer.apply_to(m, nfe=NFE, ncp=3, wrt=m.t)
+    #m = discretizer.reduce_collocation_points(m, var=m.T, ncp=1, contset=m.t)
     return m 
 
 def create_model_dae(scena, const=False, controls={0: 300, 0.125: 300, 0.25: 300, 0.375: 300, 0.5: 300, 0.625: 300, 0.75: 300, 0.875: 300, 1: 300}, 

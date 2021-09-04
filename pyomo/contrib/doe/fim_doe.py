@@ -164,21 +164,32 @@ class DesignOfExperiments:
 
         # Solve square problem first
         # result_square: solver result
+        time0_solve = time.time()
         result_square = self.__solve_doe(m, fix=True)
+        time1_solve = time.time()
+
+        time_solve1 = time1_solve-time0_solve
 
         analysis_square = FIM_result(self.param_name, prior_FIM=self.prior_FIM, scale_constant_value=self.scale_constant_value)
         analysis_square.extract_FIM(m, self.design_timeset, result_square, obj=objective_option)
 
+
         if self.optimize:
             # solve problem with DOF then
+            time0_solve2 = time.time()
             result_doe = self.__solve_doe(m, fix=False)
+            time1_solve2 = time.time()
+
+            time_solve2 = time1_solve2 - time0_solve2
 
             analysis_optimize = FIM_result(self.param_name, prior_FIM=self.prior_FIM)
             analysis_optimize.extract_FIM(m, self.design_timeset, result_doe, obj=objective_option)
             analysis_optimize.model = m
 
+
             time1 = time.time()
             if self.verbose:
+                print('Total solve time with simultaneous_finite mode (Wall clock) [s]:', time_solve1 + time_solve2)
                 print('Total wall clock time [s]:', time1-time0)
 
             return analysis_square, analysis_optimize
@@ -188,6 +199,7 @@ class DesignOfExperiments:
 
             time1 = time.time()
             if self.verbose:
+                print('Total solve time with simultaneous_finite mode (Wall clock) [s]:', time_solve1)
                 print('Total wall clock time [s]:', time1 - time0)
 
             return analysis_square
@@ -228,6 +240,7 @@ class DesignOfExperiments:
         -------
         FIM_analysis: result summary object of this solve
         '''
+
         # save inputs in object
         self.design_values = design_values
         self.mode = mode
@@ -255,15 +268,20 @@ class DesignOfExperiments:
 
         # if using simultaneous model
         if (self.mode == 'simultaneous_finite'):
+            time0_build = time.time()
             m = self.__create_doe_model()
+            time1_build = time.time()
 
-            time0 = time.time()
+            time0_solve = time.time()
             # solve model, achieve results for square problem, and results for optimization problem
             square_result = self.__solve_doe(m, fix=True)
-            time1 = time.time()
-            
+            time1_solve = time.time()
+
+            time_build = time1_build - time0_build
+            time_solve = time1_solve - time0_solve
             if self.verbose:
-                print('This run takes wall clock time: ', time1-time0, ' s.')
+                print('Build time with simultaneous_finite mode [s]:', time_build)
+                print('Solve time with simultaneous_finite mode [s]:', time_solve)
             
             # analyze results
             if specified_prior is None:
@@ -276,6 +294,8 @@ class DesignOfExperiments:
             # add the formed simultaneous model to the object so that users can have access
             self.m = m
             self.square_result = square_result
+            FIM_analysis.build_time = time_build
+            FIM_analysis.solve_time = time_solve
 
             return FIM_analysis
 
@@ -291,8 +311,9 @@ class DesignOfExperiments:
             output_record = {}
             # dict for storing Jacobian
             jac = {}
-            
-            time0 = time.time()
+
+            time_allbuild = []
+            time_allsolve = []
             # loop over each scenario
             for no_s in (scena_gen.scena_keys):
 
@@ -300,7 +321,10 @@ class DesignOfExperiments:
                 # create the model
                 # TODO:(long term) add options to create model once and then update. only try this after the
                 # package is completed and unitest is finished
+                time0_build = time.time()
                 mod = self.create_model(scenario_iter)
+                time1_build = time.time()
+                time_allbuild.append(time1_build-time0_build)
 
                 # discretize if needed
                 if self.discretize_model is not None:
@@ -312,7 +336,10 @@ class DesignOfExperiments:
                     time_set.append(value(t))
 
                 # solve model
+                time0_solve = time.time()
                 square_result = self.__solve_doe(mod, fix=True)
+                time1_solve = time.time()
+                time_allsolve.append(time1_solve-time0_solve)
 
                 # loop over measurement item and time to store model measurements
                 output_combine = []
@@ -321,9 +348,7 @@ class DesignOfExperiments:
                         C_value = eval('mod.' + j + '[0,' + str(t) + ']')
                         output_combine.append(value(C_value))
                 output_record[no_s] = output_combine
-                
-            time1 = time.time()
-            print('This run takes wall clock time: ', time1-time0, ' s.')
+
 
             # After collecting outputs from all scenarios, calculate sensitivity
             for para in self.param_name:
@@ -342,6 +367,9 @@ class DesignOfExperiments:
                 # get Jacobian dict, keys are parameter name, values are sensitivity info
                 jac[para] = list_jac
 
+            if self.verbose:
+                print('Build time with sequential_finite mode [s]:', sum(time_allbuild))
+                print('Solve time with sequential_finite mode [s]:', sum(time_allsolve))
 
             # Assemble and analyze results
             if specified_prior is None:
@@ -353,6 +381,8 @@ class DesignOfExperiments:
 
             # Store the Jacobian information for access by users
             self.jac = jac
+            FIM_analysis.build_time = sum(time_allbuild)
+            FIM_analysis.solve_time = sum(time_allsolve)
 
             return FIM_analysis
 
@@ -368,15 +398,19 @@ class DesignOfExperiments:
             all_base_measure = []
             # store jacobian info
             jac={}
-               
-            time0 = time.time()
+
+            time_allbuild = []
+            time_allsolve = []
             # loop over parameters
             for pa in range(len(self.param_name)):
                 perturb_mea = []
                 base_mea = []
 
                 # create model
+                time0_build = time.time()
                 mod = self.create_model(scenario_all)
+                time1_build = time.time()
+                time_allbuild.append(time1_build - time0_build)
 
                 # discretize if needed
                 if self.discretize_model is not None:
@@ -410,9 +444,14 @@ class DesignOfExperiments:
 
                 # solve model
                 if self.mode =='sequential_sipopt':
+                    time0_solve = time.time()
                     m_sipopt = sensitivity_calculation('sipopt', mod, list_original, list_perturb, tee=self.tee_opt, solver_options='ma57')
                 else:
+                    time0_solve = time.time()
                     m_sipopt = sensitivity_calculation('k_aug', mod, list_original, list_perturb, tee=self.tee_opt, solver_options='ma57')
+
+                time1_solve = time.time()
+                time_allsolve.append(time1_solve - time0_solve)
 
                 # extract sipopt result
                 for j in self.measurement_variables:
@@ -445,9 +484,6 @@ class DesignOfExperiments:
                 print(all_perturb_measure)
                 print(all_base_measure)
 
-            time1 = time.time()
-            if self.verbose:
-                print('This run takes wall clock time: ', time1-time0, ' s.')
             # After collecting outputs from all scenarios, calculate sensitivity
             for count, para in enumerate(self.param_name):
                 list_jac = []
@@ -469,7 +505,13 @@ class DesignOfExperiments:
             # Assemble and analyze results
             FIM_analysis = FIM_result(self.param_name, prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
+            if self.verbose:
+                print('Build time with sequential_sipopt or kaug mode [s]:', sum(time_allbuild))
+                print('Solve time with sequential_sipopt or kaug mode [s]:', sum(time_allsolve))
+
             self.jac = jac
+            FIM_analysis.build_time = sum(time_allbuild)
+            FIM_analysis.solve_time = sum(time_allsolve)
 
             return FIM_analysis
 
@@ -579,6 +621,10 @@ class DesignOfExperiments:
         -------
         figure_draw_object: a combined result object of class Grid_search_result
         '''
+
+        # time 0
+        t_enumeration_begin = time.time()
+
         # Set the Objective Function to 0 helps solve square problem quickly
         self.objective_option='zero'
         self.filename = filename
@@ -593,8 +639,7 @@ class DesignOfExperiments:
         # to store all FIM results
         result_combine = {}
 
-        # time 0
-        t_begin = time.time()
+
 
         # iteration 0
         count = 0
@@ -606,6 +651,9 @@ class DesignOfExperiments:
 
         # generate combinations of design variable values to go over
         search_design_set = product(*design_ranges)
+
+        build_time_store=[]
+        solve_time_store=[]
 
         # loop over deign value combinations
         for design_set_iter in search_design_set:
@@ -621,14 +669,14 @@ class DesignOfExperiments:
             print('=======This is the ', count+1, 'th iteration=======')
             print('Design variable values of this iteration:', design_iter)
 
-            t_each_begin = time.time()
-
             # call compute_FIM to get FIM
             result_iter = self.compute_FIM(design_iter, mode=mode,
                                            tee_opt=tee_option,
                                            scale_nominal_param_value=scale_nominal_param_value,
                                            scale_constant_value = scale_constant_value,
                                            formula=formula, step=step)
+            build_time_store.append(result_iter.build_time)
+            solve_time_store.append(result_iter.solve_time)
 
             if (mode=='simultaneous_finite'):
                 result_iter.extract_FIM(self.m, self.design_timeset, self.square_result, self.objective_option)
@@ -641,15 +689,12 @@ class DesignOfExperiments:
             if self.verbose:
                 # give run information at each iteration
                 print('This is the ', count+1, ' run out of ', total_count, 'run.')
-                print('The code has run %.04f seconds.'% (t_now-t_begin))
-                print('Estimated remaining time: %.4f seconds' % ((t_now-t_begin)/(count+1)*(total_count-count-1)))
+                print('The code has run %.04f seconds.'% (t_now-t_enumeration_begin))
+                print('Estimated remaining time: %.4f seconds' % ((t_now-t_enumeration_begin)/(count+1)*(total_count-count-1)))
             count += 1
 
             # the combined result object are organized as a dictionary, keys are a tuple of the design variable values, values are a result object
             result_combine[tuple(design_set_iter)] = result_iter
-
-        t_end = time.time()
-        print('The whole run takes ', t_end - t_begin, ' s.')
 
         # For user's access
         self.all_fim = result_combine
@@ -662,6 +707,12 @@ class DesignOfExperiments:
         #    f = open(filename, 'wb')
         #    pickle.dump(result_combine, f)
         #    f.close()
+
+        t_enumeration_stop = time.time()
+        if self.verbose:
+            print('Overall model building time [s]:', sum(build_time_store))
+            print('Overall model solve time [s]:', sum(solve_time_store))
+            print('Overall wall clock time [s]:', t_enumeration_stop - t_enumeration_begin)
 
         return figure_draw_object
 
