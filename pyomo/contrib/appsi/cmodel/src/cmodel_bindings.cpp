@@ -19,10 +19,16 @@ PYBIND11_MODULE(appsi_cmodel, m)
   m.def("process_lp_constraints", &process_lp_constraints);
   m.def("appsi_exp", &appsi_exp);
   m.def("appsi_log", &appsi_log);
+  m.def("appsi_sum", &appsi_sum);
   m.def("create_vars", &create_vars);
   m.def("create_params", &create_params);
   m.def("create_constants", &create_constants);
   m.def("external_helper", &external_helper);
+  py::class_<Repn, std::shared_ptr<Repn> >(m, "Repn")
+    .def_readwrite("constant", &Repn::constant)
+    .def_readwrite("linear", &Repn::linear)
+    .def_readwrite("quadratic", &Repn::quadratic)
+    .def_readwrite("nonlinear", &Repn::nonlinear);
   py::class_<Node, std::shared_ptr<Node> >(m, "Node")
     .def("is_variable_type", &Node::is_variable_type)
     .def("is_param_type", &Node::is_param_type)
@@ -51,7 +57,8 @@ PYBIND11_MODULE(appsi_cmodel, m)
     .def("__rtruediv__", [](ExpressionBase &a, double b){return a.__rtruediv__(b);}, py::is_operator())
     .def("__rpow__", [](ExpressionBase &a, double b){return a.__rpow__(b);}, py::is_operator())
     .def("__str__", &ExpressionBase::__str__)
-    .def("evaluate", &ExpressionBase::evaluate);
+    .def("evaluate", &ExpressionBase::evaluate)
+    .def("generate_repn", &ExpressionBase::generate_repn);
   py::class_<Var, ExpressionBase, std::shared_ptr<Var> >(m, "Var")
     .def(py::init<>())
     .def(py::init<double>())
