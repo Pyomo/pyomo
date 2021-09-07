@@ -154,8 +154,6 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
         m.ipopt_zU_in.update(m.ipopt_zU_out)  #: important!    
 
         k_aug.options['dsdp_mode'] = ""  #: sensitivity mode!
-        #if solver_options is not None:
-        #    k_aug.options['linear_solver'] = solver_options
         k_aug_interface.k_aug(m, tee=tee)
 
     sens.perturb_parameters(perturbList)
@@ -175,118 +173,101 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
 
     return m
 
-def get_dsdp(model, theta_names, theta, var_dic={},
-             tee=False, solver_options=None):
-    """This function calculates gradient vector of the (decision variables, 
-    parameters) with respect to the paramerters (theta_names). 
+def get_dsdp(model, theta_names, theta, tee=False):
+    """This function calculates gradient vector of the variables
+        with respect to the parameters (theta_names).
+
     e.g) min f:  p1*x1+ p2*(x2^2) + p1*p2
          s.t  c1: x1 + x2 = p1
               c2: x2 + x3 = p2
               0 <= x1, x2, x3 <= 10
               p1 = 10
               p2 = 5
-    the function retuns dx/dp and dp/dp, and colum orders.
-    
+    the function retuns dx/dp and dp/dp, and column orders.
+
     The following terms are used to define the output dimensions:
     Ncon   = number of constraints
     Nvar   = number of variables (Nx + Ntheta)
-    Nx     = the numer of decision (primal) variables
+    Nx     = number of decision (primal) variables
     Ntheta = number of uncertain parameters.
+
     Parameters
     ----------
     model: Pyomo ConcreteModel
-        model should includes an objective function
+        model should include an objective function
     theta_names: list of strings
         List of Var names
     theta: dict
         Estimated parameters e.g) from parmest
     tee: bool, optional
         Indicates that ef solver output should be teed
-    solver_options: dict, optional
-        Provides options to the solver (also the name of an attribute)
-    var_dic: dictionary
-        If any original variable contains "'", need an auxiliary dictionary 
-        with keys theta_names without "'", values with "'".
-        e.g) var_dic= 
-        {'fs.properties.tau[benzene,toluene]': 
-        "fs.properties.tau['benzene','toluene']",
-        'fs.properties.tau[toluene,benzene]': 
-        "fs.properties.tau['toluene','benzene']"}
+
     Returns
     -------
     dsdp: scipy.sparse.csr.csr_matrix
-        Ntheta by Nvar size sparse matrix. A Jacobian matrix of the 
-        (decision variables, parameters) with respect to paramerters 
-        (=theta_name). number of rows = len(theta_name), 
-        number of columns= len(col)
+        Ntheta by Nvar size sparse matrix. A Jacobian matrix of the
+        (decision variables, parameters) with respect to parameters
+        (theta_names). number of rows = len(theta_name), number of
+        columns = len(col)
     col: list
         List of variable names
     """
-    m = model.clone()
-    original_Param = []
-    perturbed_Param = []
-    m.extra = ConstraintList()
-    kk = 0
-    if var_dic == {}:
-        for i in theta_names:
-            var_dic[i] = i
-    '''
-    for v in theta_names:
-        v_tmp = str(kk)
-        original_param_object = Param(initialize=theta[v], mutable=True)
-        perturbed_param_object = Param(initialize=theta[v])
-        m.add_component("original_"+v_tmp, original_param_object)
-        m.add_component("perturbed_"+v_tmp, perturbed_param_object)
-        m.extra.add(eval('m.'+var_dic[v]) - eval('m.original_'+v_tmp) == 0 )
-        original_Param.append(original_param_object)
-        perturbed_Param.append(perturbed_param_object)
-        kk = kk + 1
-    m_kaug_dsdp = sensitivity_calculation('kaug',m,original_Param,
-                                          perturbed_Param, tee)
-    '''
-    for i, name in enumerate(theta_names):
-        orig_param = Param(initialize=theta[name], mutable=True)
-        ptb_param = Param(initialize=theta[name])
-        m.add_component("original_%s" % i, orig_param)
-        m.add_component("perturbed_%s" % i,ptb_param)
-        cuid = ComponentUID(name)
-        var = cuid.find_component_on(m)
-        m.extra.add(var - orig_param == 0)
-        original_Param.append(orig_param)
-        perturbed_Param.append(ptb_param)
+    # Get parameters from names. In SensitivityInterface, we expect
+    # these to be parameters on the original model.
+    param_list = []
+    for name in theta_names:
+        comp = model.find_component(name)
+        if comp is None:
+            raise RuntimeError("Cannot find component %s on model" % name)
+        if comp.ctype is Var:
+            # If theta_names correspond to Vars in the model, these vars
+            # need to be fixed.
+            comp.fix()
+        param_list.append(comp)
 
-    m_kaug_dsdp = sensitivity_calculation('kaug',m,original_Param,
-                                          perturbed_Param, tee)
-    try:
-        with open ("./dsdp/col_row.col", "r") as myfile:
-            col = myfile.read().splitlines()
-        with open ("./dsdp/col_row.row", "r") as myfile:
-            row = myfile.read().splitlines()
-        dsdp = np.loadtxt("./dsdp/dsdp_in_.in")
-    except Exception as e:
-        print('File not found.')
+    sens = SensitivityInterface(model, clone_model=True)
+    m = sens.model_instance
+
+    # Setup model and calculate sensitivity matrix with k_aug
+    sens.setup_sensitivity(param_list)
+    k_aug = K_augInterface()
+    k_aug.k_aug(m, tee=tee)
+
+    # Write row and col files in a temp dir, then immediately
+    # read into a Python data structure.
+    nl_data = {}
+    with InTempDir():
+        base_fname = "col_row"
+        nl_file = ".".join((base_fname, "nl"))
+        row_file = ".".join((base_fname, "row"))
+        col_file = ".".join((base_fname, "col"))
+        m.write(nl_file, io_options={"symbolic_solver_labels": True})
+        for fname in [nl_file, row_file, col_file]:
+            with open(fname, "r") as fp:
+                nl_data[fname] = fp.read()
+
+    # Create more useful data structures from strings
+    dsdp = np.fromstring(k_aug.data["dsdp_in_.in"], sep="\n\t")
+    col = nl_data[col_file].strip("\n").split("\n")
+    row = nl_data[row_file].strip("\n").split("\n")
+
     dsdp = dsdp.reshape((len(theta_names), int(len(dsdp)/len(theta_names))))
     dsdp = dsdp[:len(theta_names), :len(col)]
-    try:
-        shutil.rmtree('dsdp', ignore_errors=True)
-    except OSError:
-        pass
-    col = [i for i in col 
-           if SensitivityInterface.get_default_block_name() not in i]
+
+    col = [i for i in col if sens.get_default_block_name() not in i]
     dsdp_out = np.zeros((len(theta_names),len(col)))
-    # e.g) k_aug dsdp returns -dx1/dx1 = -1.0
     for i in range(len(theta_names)):
         for j in range(len(col)):
-            if SensitivityInterface.get_default_block_name() not in col[j]:
-                dsdp_out[i,j] =  -dsdp[i, j] 
+            if sens.get_default_block_name() not in col[j]:
+                dsdp_out[i,j] = -dsdp[i, j] # e.g) k_aug dsdp returns -dx1/dx1 = -1.0
 
-    return sparse.csr_matrix(dsdp_out), col
-
+    return scipy.sparse.csr_matrix(dsdp_out), col
 
 
 def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     """This function calculates gradient vector of the objective function 
-       and constraints with respect to the variables in theta_names.
+       and constraints with respect to the variables and parameters.
+
     e.g) min f:  p1*x1+ p2*(x2^2) + p1*p2
          s.t  c1: x1 + x2 = p1
               c2: x2 + x3 = p2
@@ -295,60 +276,61 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
               p2 = 5
     - Variables = (x1, x2, x3, p1, p2)
     - Fix p1 and p2 with estimated values
+
     The following terms are used to define the output dimensions:
     Ncon   = number of constraints
     Nvar   = number of variables (Nx + Ntheta)
-    Nx     = the numer of decision (primal) variables
+    Nx     = number of decision (primal) variables
     Ntheta = number of uncertain parameters.
+
     Parameters
     ----------
     model: Pyomo ConcreteModel
-        model should includes an objective function 
+        model should include an objective function
     theta_names: list of strings
         List of Var names
     tee: bool, optional
         Indicates that ef solver output should be teed
     solver_options: dict, optional
         Provides options to the solver (also the name of an attribute)
-    
+
     Returns
     -------
     gradient_f: numpy.ndarray
-        Length Nvar array. A gradient vector of the objective function 
-        with respect to the (decision variables, parameters) 
-        at the optimal solution
+        Length Nvar array. A gradient vector of the objective function
+        with respect to the (decision variables, parameters) at the optimal
+        solution
     gradient_c: scipy.sparse.csr.csr_matrix
-        Ncon by Nvar size sparse matrix. A Jacobian matrix of the constraints 
-        with respect to the (decision variables, parameters) at the optimal 
-        solution. Each row contains [column number, row number, and value], 
-        colum order follows variable order in col and index starts from 1. 
-        Note that it follows k_aug. If no constraint exists, return []
+        Ncon by Nvar size sparse matrix. A Jacobian matrix of the
+        constraints with respect to the (decision variables, parameters)
+        at the optimal solution. Each row contains [row number,
+        column number, and value], column order follows variable order in col
+        and index starts from 0. Note that it follows k_aug.
+        If no constraint exists, return []
     col: list
-        Size Nvar. list of variable names
+        Size Nvar list of variable names
     row: list
-        Size Ncon+1. List of constraints and objective function names
+        Size Ncon+1 list of constraints and objective function names.
         The final element is the objective function name.
     line_dic: dict
         column numbers of the theta_names in the model. Index starts from 1
+
     Raises
     ------
     RuntimeError
-        When ipopt or kaug or dotsens is not available
+        When ipopt or k_aug or dotsens is not available
     Exception
         When ipopt fails 
     """
-    #Create the solver plugin using the ASL interface
+    # Create the solver plugin using the ASL interface
     ipopt = SolverFactory('ipopt',solver_io='nl')
     if solver_options is not None:
         ipopt.options = solver_options
-    kaug = SolverFactory('k_aug',solver_io='nl')
-    dotsens = SolverFactory('dot_sens',solver_io='nl')
+    k_aug = SolverFactory('k_aug',solver_io='nl')
     if not ipopt.available(False):
         raise RuntimeError('ipopt is not available')
-    if not kaug.available(False):
+    if not k_aug.available(False):
         raise RuntimeError('k_aug is not available')
-    if not dotsens.available(False):
-        raise RuntimeError('dotsens is not available')
 
     # Declare Suffixes
     _add_sensitivity_suffixes(model)
@@ -356,10 +338,11 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     # K_AUG SUFFIXES
     model.dof_v = Suffix(direction=Suffix.EXPORT)  #: SUFFIX FOR K_AUG
     model.rh_name = Suffix(direction=Suffix.IMPORT)  #: SUFFIX FOR K_AUG AS WELL
-    kaug.options["print_kkt"] = ""
+    k_aug.options["print_kkt"] = ""
+
     results = ipopt.solve(model,tee=tee)
 
-    # Rasie Exception if ipopt fails 
+    # Raise exception if ipopt fails 
     if (results.solver.status == SolverStatus.warning):
         raise Exception(results.solver.Message)
 
@@ -367,58 +350,51 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
         f_mean = value(o)
     model.ipopt_zL_in.update(model.ipopt_zL_out)
     model.ipopt_zU_in.update(model.ipopt_zU_out)
-    #: run k_aug
-    kaug.solve(model, tee=tee)  #: always call k_aug AFTER ipopt.
-    model.write('col_row.nl', format='nl', 
-                io_options={'symbolic_solver_labels':True})
-    # get the column numbers of theta
-    line_dic = {}
-    try:
-        for v in theta_names:
-            line_dic[v] = line_num('col_row.col', v)
-        # load gradient of the objective function
-        gradient_f = np.loadtxt("./GJH/gradient_f_print.txt")
-        with open ("col_row.col", "r") as myfile:
-            col = myfile.read().splitlines()
-        col = [i for i in col 
-               if SensitivityInterface.get_default_block_name() not in i]
-        with open ("col_row.row", "r") as myfile:
-            row = myfile.read().splitlines()
-    except Exception as e:
-         print('File not found.')
-         raise e
-    # load gradient of all constraints (sparse)
-    # If no constraint exists, return []
-    num_constraints = len(list(model.component_data_objects(Constraint,
-                                                            active=True,
-                                                            descend_into=True)))
+
+    # run k_aug
+    k_aug_interface = K_augInterface(k_aug=k_aug)
+    k_aug_interface.k_aug(model, tee=tee)  #: always call k_aug AFTER ipopt.
+
+    nl_data = {}
+    with InTempDir():
+        base_fname = "col_row"
+        nl_file = ".".join((base_fname, "nl"))
+        row_file = ".".join((base_fname, "row"))
+        col_file = ".".join((base_fname, "col"))
+        model.write(nl_file, io_options={"symbolic_solver_labels": True})
+        for fname in [nl_file, row_file, col_file]:
+            with open(fname, "r") as fp:
+                nl_data[fname] = fp.read()
+
+    col = nl_data[col_file].strip("\n").split("\n")
+    row = nl_data[row_file].strip("\n").split("\n")
+
+    # get the column numbers of "parameters"
+    line_dic = {name: col.index(name) for name in theta_names}
+
+    grad_f_file = os.path.join("GJH", "gradient_f_print.txt")
+    grad_f_string = k_aug_interface.data[grad_f_file]
+    gradient_f = np.fromstring(grad_f_string, sep="\n\t")
+    col = [i for i in col if SensitivityInterface.get_default_block_name() not in i]
+
+    grad_c_file = os.path.join("GJH", "A_print.txt")
+    grad_c_string = k_aug_interface.data[grad_c_file]
+    gradient_c = np.fromstring(grad_c_string, sep="\n\t")
+
+    # Jacobian file is in "COO format," i.e. an nnz-by-3 array.
+    # Reshape to a numpy array that matches this format.
+    gradient_c = gradient_c.reshape((-1, 3))
+
+    num_constraints = len(row)-1 # Objective is included as a row
     if num_constraints > 0 :
-        try:
-            # load text file from kaug
-            gradient_c = np.loadtxt("./GJH/A_print.txt")
-            # This is a sparse matrix
-            # gradient_c[:,0] are column index
-            # gradient_c[:,1] are data index
-            # gradient_c[:,1] are the matrix values
-        except Exception as e:
-            print('kaug file ./GJH/A_print.txt not found.')
-        
-        # Subtract 1 from row and column indices to convert from 
-        # start at 1 (kaug) to start at 0 (numpy)
         row_idx = gradient_c[:,1]-1
         col_idx = gradient_c[:,0]-1
         data = gradient_c[:,2]
-        gradient_c = sparse.csr_matrix((data, (row_idx, col_idx)), 
-                                       shape=(len(row)-1, len(col)))
+        gradient_c = scipy.sparse.csr_matrix((data, (row_idx, col_idx)),
+                shape=(num_constraints, len(col)))
     else:
         gradient_c = np.array([])
-    # remove all generated files
-    
-    shutil.move("col_row.nl", "./GJH/")
-    shutil.move("col_row.col", "./GJH/")
-    shutil.move("col_row.row", "./GJH/")
-    shutil.rmtree('GJH', ignore_errors=True)
-    
+
     return gradient_f, gradient_c, col,row, line_dic
 
 
