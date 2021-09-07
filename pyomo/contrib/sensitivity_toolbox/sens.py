@@ -8,39 +8,33 @@
 # This software is distributed under the 3-clause BSD License
 # ______________________________________________________________________________
 from pyomo.environ import (
-        Param,
-        Var,
-        Block,
-        ComponentMap,
-        Objective,
-        Constraint,
-        ConstraintList,
-        Suffix,
-        value,
-        ComponentUID,
-        )
+    Param, Var, Block, ComponentMap, Objective, Constraint,
+    ConstraintList, Suffix, value, ComponentUID,
+)
 
-from pyomo.core.base.misc import sorted_robust
+from pyomo.common.sorting import sorted_robust
 from pyomo.core.expr.current import ExpressionReplacementVisitor
 
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecated
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt import SolverFactory, SolverStatus
+from pyomo.contrib.sensitivity_toolbox.k_aug import K_augInterface, InTempDir
 import logging
 import os
+import io
 import shutil
 from pyomo.common.dependencies import (
     numpy as np, numpy_available
     )
-from scipy import sparse
+from pyomo.common.dependencies import scipy, scipy_available
 
 logger = logging.getLogger('pyomo.contrib.sensitivity_toolbox')
 
-@deprecated("""The sipopt function has been deprecated. Use the 
-            sensitivity_calculation() function with method='sipopt' 
-            to access this functionality.""",
+@deprecated("The sipopt function has been deprecated. Use the sensitivity_calculation() "
+            "function with method='sipopt' to access this functionality.",
             logger='pyomo.contrib.sensitivity_toolbox',
-            version='TBD')
+            version='6.1')
 def sipopt(instance, paramSubList, perturbList,
            cloneModel=True, tee=False, keepfiles=False,
            streamSoln=False):
@@ -49,15 +43,14 @@ def sipopt(instance, paramSubList, perturbList,
 
     return m
 
-@deprecated("""The kaug function has been deprecated. 
-            Use the sensitivity_calculation() function 
-            with method='kaug' to access this functionality.""", 
+@deprecated("The kaug function has been deprecated. Use the sensitivity_calculation() "
+            "function with method='k_aug' to access this functionality.", 
             logger='pyomo.contrib.sensitivity_toolbox',
-            version='TBD')
+            version='6.1')
 def kaug(instance, paramSubList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None,
          streamSoln=False):
-    m = sensitivity_calculation('kaug', instance, paramSubList, perturbList,
+    m = sensitivity_calculation('k_aug', instance, paramSubList, perturbList,
          cloneModel, tee, keepfiles, solver_options)
 
     return m
@@ -110,27 +103,26 @@ def _generate_component_items(components):
 
 def sensitivity_calculation(method, instance, paramList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None):
-    """This function accepts a Pyomo ConcreteModel, a list of parameters, along
-    with their corresponding perterbation list. The model is then converted
-    into the design structure required to call sipopt or k_aug to get an 
-    approximation perturbed solution with updated bounds on the decision 
-    variable. 
+    """This function accepts a Pyomo ConcreteModel, a list of parameters, and
+    their corresponding perturbation list. The model is then augmented with
+    dummy constraints required to call sipopt or k_aug to get an approximation
+    of the perturbed solution.
     
     Parameters
     ----------
     method: string
         'sipopt' or 'k_aug'
-    instance: ConcreteModel
-        pyomo model object
+    instance: Block
+        pyomo block or model object
     paramSubList: list
-        list of mutable parameters
+        list of mutable parameters or fixed variables
     perturbList: list
         list of perturbed parameter values
     cloneModel: bool, optional
         indicator to clone the model. If set to False, the original
         model will be altered
     tee: bool, optional
-        indicator to stream IPOPT solution
+        indicator to stream solver log
     keepfiles: bool, optional
         preserve solver interface files
     solver_options: dict, optional
@@ -138,68 +130,48 @@ def sensitivity_calculation(method, instance, paramList, perturbList,
     
     Returns
     -------
-    model: ConcreteModel
-        if method == 'sipopt', 
-        the model modified for use with sipopt.  The returned model has
-        three :class:`Suffix` members defined:
-        - ``model.sol_state_1``: the approximated results at the
-          perturbation point
-        - ``model.sol_state_1_z_L``: the updated lower bound
-        - ``model.sol_state_1_z_U``: the updated upper bound
-        
-        if method == 'k_sug', 
-        the model modified for use with k_aug. The model includes 
-        approximate solution with the new parameter values.    
+    The model that was manipulated by the sensitivity interface
+
     """
     
     sens = SensitivityInterface(instance, clone_model=cloneModel)
     sens.setup_sensitivity(paramList)
 
     m = sens.model_instance
-
-    if method == 'kaug':
-        kaug = SolverFactory('k_aug', solver_io='nl')
-        dotsens = SolverFactory('dot_sens', solver_io='nl')
+    
+    if method not in {"k_aug", "sipopt"}:
+        raise ValueError("Only methods 'k_aug' and 'sipopt' are supported'")
+    
+    if method == 'k_aug':
+        k_aug = SolverFactory('k_aug', solver_io='nl')
+        dot_sens = SolverFactory('dot_sens', solver_io='nl')
         ipopt = SolverFactory('ipopt', solver_io='nl')
+
+        k_aug_interface = K_augInterface(k_aug=k_aug, dot_sens=dot_sens)
 
         ipopt.solve(m, tee=tee)
         m.ipopt_zL_in.update(m.ipopt_zL_out)  #: important!
         m.ipopt_zU_in.update(m.ipopt_zU_out)  #: important!    
 
-        kaug.options['dsdp_mode'] = ""  #: sensitivity mode!
-        kaug.solve(m, tee=tee)
-        m.write('col_row.nl', format='nl', 
-                io_options={'symbolic_solver_labels':True})
+        k_aug.options['dsdp_mode'] = ""  #: sensitivity mode!
+        #if solver_options is not None:
+        #    k_aug.options['linear_solver'] = solver_options
+        k_aug_interface.k_aug(m, tee=tee)
 
     sens.perturb_parameters(perturbList)
 
     if method == 'sipopt':
         ipopt_sens = SolverFactory('ipopt_sens', solver_io='nl')
         ipopt_sens.options['run_sens'] = 'yes'
+        if solver_options is not None:
+            ipopt_sens.options['linear_solver'] = solver_options
 
-        # Send the model to the ipopt_sens and collect the solution
+        # Send the model to ipopt_sens and collect the solution
         results = ipopt_sens.solve(m, keepfiles=keepfiles, tee=tee)
 
-    elif method == 'kaug':
-        dotsens.options["dsdp_mode"] = ""
-        dotsens.solve(m, tee=tee)
-        try:
-            os.makedirs("dsdp")
-        except FileExistsError:
-            # directory already exists
-            pass
-        try:
-            shutil.move("dsdp_in_.in","./dsdp/")
-            shutil.move("col_row.nl","./dsdp/")
-            shutil.move("col_row.col","./dsdp/")
-            shutil.move("col_row.row","./dsdp/")
-            shutil.move("conorder.txt","./dsdp/")
-            shutil.move("delta_p.out","./dsdp/")
-            shutil.move("dot_out.out","./dsdp/")
-            shutil.move("timings_dot_driver_dsdp.txt", "./dsdp/")
-            shutil.move("timings_k_aug_dsdp.txt", "./dsdp/")
-        except OSError:
-            pass
+    elif method == 'k_aug':
+        dot_sens.options["dsdp_mode"] = ""
+        k_aug_interface.dot_sens(m, tee=tee)
 
     return m
 
@@ -309,6 +281,8 @@ def get_dsdp(model, theta_names, theta, var_dic={},
                 dsdp_out[i,j] =  -dsdp[i, j] 
 
     return sparse.csr_matrix(dsdp_out), col
+
+
 
 def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     """This function calculates gradient vector of the objective function 
@@ -447,23 +421,28 @@ def get_dfds_dcds(model, theta_names, tee=False, solver_options=None):
     
     return gradient_f, gradient_c, col,row, line_dic
 
+
 def line_num(file_name, target):
-    """This function returns the line inumber contain 'target' in the file_name.
-    This function identities constraints that have variables in theta_names.
+    """This function returns the line number that contains 'target' in the
+    file_name. This function identifies constraints that have variables
+    in theta_names.
+
     Parameters
     ----------
     file_name: string
-        file name includes information of variabe order (col_row.col)
+        file includes the variable order (i.e. col file)
     target: string
         variable name to check
+
     Returns
     -------
     count: int
-        line number of target in the file_name
+        line number of target in the file
+
     Raises
     ------
     Exception
-        When col_row.col does not include target
+        When file does not include target
     """
     with open(file_name) as f:
         count = int(1)
@@ -472,6 +451,7 @@ def line_num(file_name, target):
                 return int(count)
             count += 1
     raise Exception(file_name + " does not include "+target)
+
 
 class SensitivityInterface(object):
 
@@ -563,7 +543,7 @@ class SensitivityInterface(object):
         block._paramList = None
 
         # This will hold any constraints where we have replaced
-        # parameters with vairables.
+        # parameters with variables.
         block.constList = ConstraintList()
 
         return block
@@ -712,7 +692,8 @@ class SensitivityInterface(object):
             # We now replace the provided parameters in the user's
             # expressions. Only do this if we have to, i.e. the
             # user provided some parameters rather than all vars.
-            self._replace_parameters_in_constraints(variableSubMap)
+            block._replaced_map = \
+                    self._replace_parameters_in_constraints(variableSubMap)
 
             # Assume that we just replaced some params
             block._has_replaced_expressions = True
