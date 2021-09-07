@@ -15,6 +15,7 @@
 PYBIND11_MODULE(appsi_cmodel, m)
 {
   m.attr("inf") = inf;
+  m.def("generate_prefix_notation", &generate_prefix_notation);
   m.def("process_lp_constraints", &process_lp_constraints);
   m.def("appsi_exp", &appsi_exp);
   m.def("appsi_log", &appsi_log);

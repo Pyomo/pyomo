@@ -1022,6 +1022,67 @@ std::vector<std::shared_ptr<Constant> > create_constants(int n_constants)
 }
 
 
+std::vector<py::object> generate_prefix_notation(py::object expr)
+{
+  py::int_ ione = 1;
+  py::float_ fone = 1.0;
+  py::type int_ = py::type::of(ione);
+  py::type float_ = py::type::of(fone);
+  py::bool_ is_expression_type;
+
+  std::vector<py::object> res;
+
+  py::type tmp_type = py::type::of(expr);
+
+  if (tmp_type.is(int_) || tmp_type.is(float_))
+    {
+      res.push_back(expr);
+      return res;
+    }
+
+  is_expression_type = expr.attr("is_expression_type")();
+  if (!is_expression_type)
+    {
+      res.push_back(expr);
+      return res;
+    }
+
+  std::vector<py::object> expr_stack;
+  expr_stack.push_back(expr);
+  py::list reversed_args;
+  py::object builtins = py::module_::import("builtins");
+  py::object reversed = builtins.attr("reversed");
+  
+  while (expr_stack.size() > 0)
+    {
+      expr = expr_stack.back();
+      res.push_back(expr);
+      expr_stack.pop_back();
+
+      tmp_type = py::type::of(expr);
+
+      if (tmp_type.is(int_) || tmp_type.is(float_))
+	{
+	  continue;
+	}
+
+      is_expression_type = expr.attr("is_expression_type")();
+      if (!is_expression_type)
+	{
+	  continue;
+	}
+
+      reversed_args = py::list(reversed(expr.attr("args")));
+      for (py::handle arg : reversed_args)
+	{
+	  expr_stack.push_back(arg.cast<py::object>());
+	}
+    }
+
+  return res;
+}
+
+
 /*
 int main()
 {
