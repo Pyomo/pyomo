@@ -8,6 +8,7 @@ import pickle
 from itertools import permutations, product
 from sens import get_dsdp
 from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculation
+from idaes.apps.uncertainty_propagation.sens import get_dsdp
 
 
 class DesignOfExperiments: 
@@ -92,7 +93,7 @@ class DesignOfExperiments:
             print('Sensitivity information is scaled by constant ', self.scale_constant_value, ' times itself.')
 
         if check_mode:
-            if self.mode not in ['simultaneous_finite', 'sequential_finite', 'sequential_sipopt', 'sequential_kaug']:
+            if self.mode not in ['simultaneous_finite', 'sequential_finite', 'sequential_sipopt', 'sequential_kaug', 'direct_kaug']:
                 print('Wrong mode. Choose from "simultaneous_finite", "sequential_finite", "0sequential_sipopt", "sequential_kaug"')
 
 
@@ -401,6 +402,7 @@ class DesignOfExperiments:
             # store jacobian info
             jac={}
 
+            # time building time and solving time store list
             time_allbuild = []
             time_allsolve = []
             # loop over parameters
@@ -519,6 +521,85 @@ class DesignOfExperiments:
 
         elif self.mode =='direct_kaug':
             print('===In construction===')
+
+            # create scenario class for a base case
+            scena_gen = Scenario_generator(self.param_init, formula=None, step=self.step)
+            scenario_all = scena_gen.simultaneous_scenario()
+
+            # create model
+            time0_build = time.time()
+            mod = self.create_model(scenario_all)
+            time1_build = time.time()
+            time_build = time1_build - time0_build
+
+            # discretize if needed
+            if self.discretize_model is not None:
+                mod = self.discretize_model(mod)
+
+            # get all time
+            t_all = []
+            for t in mod.t:
+                t_all.append(t)
+
+            measurement_accurate_time = []
+            # check if measurement time points are in this time set
+            for tt in self.measurement_timeset:
+                if tt not in t_all:
+                    print('A measurement time point not measured by this model: ', tt)
+                # For e.g. if a measurement time point is 0.0 in the model but is given as 0, it is corrected here.
+                measurement_accurate_time.append(t_all[t_all.index(tt)])
+
+            # fix model DOF
+            mod = self.__fix_design(mod, self.design_values, fix_opt=True)
+
+            # set ub and lb to parameters
+            for par in self.param_name:
+                component = eval('mod.'+par+'[0]')
+                component.setlb(self.param_init[par])
+                component.setub(self.param_init[par])
+
+            # generate parameter name list and value dictionary with index
+            var_name = []
+            var_dict = {}
+
+            for name in self.param_name:
+                var_name.append(name+'[0]')
+                var_dict[name+'[0]'] = self.param_init[name]
+
+            time0_solve = time.time()
+            dsdp_re, col = get_dsdp(mod, var_name, var_dict, tee=self.tee_opt)
+            time1_solve = time.time()
+            time_solve = time1_solve - time0_solve
+            print(col)
+
+            # analyze result
+            dsdp_array = dsdp_re.toarray().T
+            # here for construction. Remove after finishing.
+            dd = pd.DataFrame(dsdp_array)
+            dd.to_csv('dsdp_test.csv')
+            # store dsdp returned
+            dsdp_extract = []
+            # get right lines from results
+            measurement_index = []
+            measurement_names = []
+            for mname in self.measurement_variables:
+                for tim in measurement_accurate_time:
+                    measure_name = mname+'[0,'+str(tim)+']'
+                    measurement_names.append(measure_name)
+                    # get right line number in kaug results
+                    kaug_no = col.index(measure_name)
+                    measurement_index.append(kaug_no)
+                    # get right line of dsdp
+                    dsdp_extract.append(dsdp_array[kaug_no])
+
+            if self.verbose:
+                print('Build time with direct kaug mode [s]:', time_build)
+                print('Solve time with direct kaug mode [s]:', time_solve)
+
+            #FIM_analysis.build_time = time_build
+            #FIM_analysis.solve_time = time_solve
+
+            return dsdp_extract
 
 
         else:
