@@ -6,6 +6,7 @@ import pandas as pd
 import time
 import pickle
 from itertools import permutations, product
+from sens import get_dsdp
 from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculation
 
 
@@ -216,6 +217,7 @@ class DesignOfExperiments:
         multiple scenarios. Sensitivity info estimated by finite difference
         3. sequential_sipopt: calculate sensitivity by sIPOPT.
         4. sequential_kaug: calculate sensitivity by k_aug
+        5, direct_kaug: calculate sensitivity by k_aug with direct sensitivity. **In construction**
 
         Parameters:
         -----------
@@ -514,6 +516,10 @@ class DesignOfExperiments:
             FIM_analysis.solve_time = sum(time_allsolve)
 
             return FIM_analysis
+
+        elif self.mode =='direct_kaug':
+            print('===In construction===')
+
 
         else:
             raise ValueError('This is not a valid mode. Choose from "sequential_finite", "simultaneous_finite", "sequential_sipopt", "sequential_kaug"')
