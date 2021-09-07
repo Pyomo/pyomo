@@ -458,10 +458,15 @@ def create_model_alge(scena, CA_init=5, T_init=300, C_init=1):
     m.R = 8.31446261815324 # J / K / mole
        
     # Define parameters
-    m.A1 = Param(m.scena, initialize=scena['A1'],mutable=True)
-    m.A2 = Param(m.scena, initialize=scena['A2'],mutable=True)
-    m.E1 = Param(m.scena, initialize=scena['E1'],mutable=True)
-    m.E2 = Param(m.scena, initialize=scena['E2'],mutable=True)
+    #m.A1 = Param(m.scena, initialize=scena['A1'],mutable=True)
+    #m.A2 = Param(m.scena, initialize=scena['A2'],mutable=True)
+    #m.E1 = Param(m.scena, initialize=scena['E1'],mutable=True)
+    #m.E2 = Param(m.scena, initialize=scena['E2'],mutable=True)
+    
+    m.A1 = Var(m.scena, initialize = m.scena_all['A1'])
+    m.A2 = Var(m.scena, initialize = m.scena_all['A2'])
+    m.E1 = Var(m.scena, initialize = m.scena_all['E1'])
+    m.E2 = Var(m.scena, initialize = m.scena_all['E2'])
     
     # Concentration variables under perturbation
     m.CA = Var(m.scena, m.t, initialize=C_init, within=NonNegativeReals)
@@ -541,6 +546,10 @@ def create_model_alge(scena, CA_init=5, T_init=300, C_init=1):
         else:
             return m.T[t] == m.T[0]
         
+    def obj_rule(m):
+        return 0
+    
+    m.Obj = Objective(rule=obj_rule, sense=maximize)
         
     # calculating C, Jacobian, FIM
     m.k1_pert_rule = Constraint(m.scena, m.t, rule=cal_kp1)
