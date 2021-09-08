@@ -64,6 +64,19 @@ public:
   virtual bool is_constant_type() {return false;}
   virtual bool is_leaf() {return false;}
   virtual bool is_external() {return false;}
+  virtual bool is_binary_operator() {return false;}
+  virtual bool is_unary_operator() {return false;}
+  virtual bool is_linear_operator() {return false;}
+  virtual bool is_sum_operator() {return false;}
+  virtual bool is_multiply_operator() {return false;}
+  virtual bool is_add_operator() {return false;}
+  virtual bool is_subtract_operator() {return false;}
+  virtual bool is_divide_operator() {return false;}
+  virtual bool is_power_operator() {return false;}
+  virtual bool is_negation_operator() {return false;}
+  virtual bool is_exp_operator() {return false;}
+  virtual bool is_log_operator() {return false;}
+  virtual bool is_external_operator() {return false;}
   virtual double get_value_from_array(double*) = 0;
   virtual int get_degree_from_array(int*) = 0;
   virtual std::string get_string_from_array(std::string*) = 0;
@@ -105,6 +118,7 @@ public:
   virtual std::shared_ptr<std::vector<std::shared_ptr<Var> > > identify_variables() = 0;
   virtual std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > identify_external_operators() = 0;
   virtual std::shared_ptr<std::vector<std::shared_ptr<Node> > > get_prefix_notation() = 0;
+  virtual std::shared_ptr<ExpressionBase> distribute_products() = 0;
 
   std::shared_ptr<ExpressionBase> shared_from_this() {return std::static_pointer_cast<ExpressionBase>(Node::shared_from_this());}
 
@@ -133,6 +147,7 @@ public:
   std::shared_ptr<std::vector<std::shared_ptr<Node> > > get_prefix_notation() override;
   void set_repn_info(bool*, bool) override;
   void set_repn_info(int*, int) override;
+  std::shared_ptr<ExpressionBase> distribute_products() override;
 };
 
 
@@ -213,6 +228,7 @@ public:
   void set_repn_info(int*, int) override;
   bool get_accounted_for_from_array(bool*) override;
   std::shared_ptr<Repn> generate_repn() override;
+  std::shared_ptr<ExpressionBase> distribute_products() override;
 };
 
 
@@ -236,6 +252,8 @@ public:
   void set_repn_info(bool*, bool) override;
   void set_repn_info(int*, int) override;
   bool get_accounted_for_from_array(bool*) override;
+  void distribute_products(std::shared_ptr<std::vector<std::shared_ptr<Operator> > > new_operators, std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators_to_process, std::shared_ptr<std::unordered_set<std::shared_ptr<Node> > > already_processed, std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced);
+  virtual std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced) = 0;
 };
 
 
@@ -248,6 +266,7 @@ public:
   std::shared_ptr<Node> operand1;
   std::shared_ptr<Node> operand2;
   void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) override;
+  bool is_binary_operator() override;
 };
 
 
@@ -259,6 +278,7 @@ public:
   void identify_variables(std::set<std::shared_ptr<Node> >&) override;
   std::shared_ptr<Node> operand;
   void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) override;
+  bool is_unary_operator() override;
 };
 
 
@@ -277,6 +297,8 @@ public:
   std::string name() override {return "LinearOperator";};
   void write_nl_string(std::ofstream&) override;
   void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) override;
+  bool is_linear_operator() override;
+  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced) override;
 };
 
 
@@ -294,6 +316,8 @@ public:
   std::string name() override {return "SumOperator";};
   void write_nl_string(std::ofstream&) override;
   void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) override;
+  bool is_sum_operator() override;
+  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced) override;
 };
 
 
@@ -308,6 +332,9 @@ public:
   void print(std::string*) override;
   std::string name() override {return "MultiplyOperator";};
   void write_nl_string(std::ofstream&) override;
+  void distribute_products(std::shared_ptr<std::vector<std::shared_ptr<Operator> > > new_operators, std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators_to_process, std::shared_ptr<std::unordered_set<std::shared_ptr<Node> > > already_processed, std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced) override;
+  bool is_multiply_operator() override;
+  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced) override;
 };
 
 
@@ -328,6 +355,8 @@ public:
   std::shared_ptr<std::vector<std::shared_ptr<Node> > > operands = std::make_shared<std::vector<std::shared_ptr<Node> > >();
   std::string function_name;
   int external_function_index = -1;
+  bool is_external_operator() override;
+  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced) override;
 };
 
 
@@ -342,6 +371,8 @@ public:
   void print(std::string*) override;
   std::string name() override {return "AddOperator";};
   void write_nl_string(std::ofstream&) override;
+  bool is_add_operator() override;
+  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced) override;
 };
 
 
@@ -356,6 +387,8 @@ public:
   void print(std::string*) override;
   std::string name() override {return "SubtractOperator";};
   void write_nl_string(std::ofstream&) override;
+  bool is_subtract_operator() override;
+  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced) override;
 };
 
 
@@ -370,6 +403,8 @@ public:
   void print(std::string*) override;
   std::string name() override {return "DivideOperator";};
   void write_nl_string(std::ofstream&) override;
+  bool is_divide_operator() override;
+  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced) override;
 };
 
 
@@ -384,6 +419,8 @@ public:
   void print(std::string*) override;
   std::string name() override {return "PowerOperator";};
   void write_nl_string(std::ofstream&) override;
+  bool is_power_operator() override;
+  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced) override;
 };
 
 
@@ -398,6 +435,8 @@ public:
   void print(std::string*) override;
   std::string name() override {return "NegationOperator";};
   void write_nl_string(std::ofstream&) override;
+  bool is_negation_operator() override;
+  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced) override;
 };
 
 
@@ -412,6 +451,8 @@ public:
   void print(std::string*) override;
   std::string name() override {return "ExpOperator";};
   void write_nl_string(std::ofstream&) override;
+  bool is_exp_operator() override;
+  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced) override;
 };
 
 
@@ -426,6 +467,8 @@ public:
   void print(std::string*) override;
   std::string name() override {return "LogOperator";};
   void write_nl_string(std::ofstream&) override;
+  bool is_log_operator() override;
+  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced) override;
 };
 
 

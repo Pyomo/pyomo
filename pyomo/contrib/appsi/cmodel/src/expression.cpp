@@ -2039,6 +2039,416 @@ void LogOperator::write_nl_string(std::ofstream& f)
 }
 
 
+std::shared_ptr<Operator> LinearOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced)
+{
+  
+  
+  bool replace_op1 = needs_replaced->count(operand1);
+  bool replace_op2 = needs_replaced->count(operand2);
+  if (replace_op1 || replace_op2)
+    {
+      std::shared_ptr<MultiplyOperator> new_op = std::make_shared<MultiplyOperator>();
+      if (replace_op1)
+	{
+	  new_op->operand1 = needs_replaced->at(operand1);
+	}
+      else
+	{
+	  new_op->operand1 = operand1;
+	}
+      if (replace_op2)
+	{
+	  new_op->operand2 = needs_replaced->at(operand2);
+	}
+      else
+	{
+	  new_op->operand2 = operand2;
+	}
+      return new_op;
+    }
+  else
+    {
+      return shared_from_this();
+    }
+}
+
+
+std::shared_ptr<Operator> MultiplyOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced)
+{
+  bool replace_op1 = needs_replaced->count(operand1);
+  bool replace_op2 = needs_replaced->count(operand2);
+  if (replace_op1 || replace_op2)
+    {
+      std::shared_ptr<MultiplyOperator> new_op = std::make_shared<MultiplyOperator>();
+      if (replace_op1)
+	{
+	  new_op->operand1 = needs_replaced->at(operand1);
+	}
+      else
+	{
+	  new_op->operand1 = operand1;
+	}
+      if (replace_op2)
+	{
+	  new_op->operand2 = needs_replaced->at(operand2);
+	}
+      else
+	{
+	  new_op->operand2 = operand2;
+	}
+      return new_op;
+    }
+  else
+    {
+      return shared_from_this();
+    }
+}
+
+
+std::shared_ptr<Operator> MultiplyOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced)
+{
+  bool replace_op1 = needs_replaced->count(operand1);
+  bool replace_op2 = needs_replaced->count(operand2);
+  if (replace_op1 || replace_op2)
+    {
+      std::shared_ptr<MultiplyOperator> new_op = std::make_shared<MultiplyOperator>();
+      if (replace_op1)
+	{
+	  new_op->operand1 = needs_replaced->at(operand1);
+	}
+      else
+	{
+	  new_op->operand1 = operand1;
+	}
+      if (replace_op2)
+	{
+	  new_op->operand2 = needs_replaced->at(operand2);
+	}
+      else
+	{
+	  new_op->operand2 = operand2;
+	}
+      return new_op;
+    }
+  else
+    {
+      return shared_from_this();
+    }
+}
+
+
+std::shared_ptr<ExpressionBase> Expression::distribute_products()
+{
+  std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators_to_process = std::make_shared<std::vector<std::shared_ptr<Operator> > >();
+  std::shared_ptr<std::vector<std::shared_ptr<Operator> > > new_operators = std::make_shared<std::vector<std::shared_ptr<Operator> > >();
+  std::shared_ptr<std::unordered_set<std::shared_ptr<Node> > > already_processed = std::make_shared<std::unordered_set<std::shared_ptr<Node> > >();
+  std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced = std::make_shared<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > >();
+
+  for (std::shared_ptr<Operator> &op : (*operators))
+    {
+      operators_to_process->push_back(op);
+    }
+
+  std::shared_ptr<Operator> op;
+  while (operators_to_process->size() > 0)
+    {
+      op = operators_to_process->back();
+      operators_to_process->pop_back();
+      if (already_processed->count(op))
+	{
+	  continue;
+	}
+      op->distribute_products(new_operators, operators_to_process, already_processed, needs_replaced);
+    }
+
+  std::shared_ptr<Expression> res = std::make_shared<Expression>();
+  int ndx = new_operators->size() - 1;
+  while (ndx >= 0)
+    {
+      op = new_operators->at(ndx);
+      op = op->replace_operands(needs_replaced);
+      res->operators->push_back(op);
+      ndx -= 1;
+    }
+
+  return res;
+}
+
+
+std::shared_ptr<ExpressionBase> Leaf::distribute_products()
+{
+  return shared_from_this();
+}
+
+
+void Operator::distribute_products(std::shared_ptr<std::vector<std::shared_ptr<Operator> > > new_operators, std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators_to_process, std::shared_ptr<std::unordered_set<std::shared_ptr<Node> > > already_processed, std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced)
+{
+  new_operators->push_back(shared_from_this());
+}
+
+
+void _add_product(std::shared_ptr<Node> op1, std::shared_ptr<Node> op2, std::shared_ptr<SumOperator> _sum, std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators_to_process)
+{
+  std::shared_ptr<MultiplyOperator> m = std::make_shared<MultiplyOperator>();
+  m->operand1 = op1;
+  m->operand2 = op2;
+  _sum->operands->push_back(m);
+  operators_to_process->push_back(m);
+}
+
+
+void _subtract_product(std::shared_ptr<Node> op1, std::shared_ptr<Node> op2, std::shared_ptr<SumOperator> _sum, std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators_to_process)
+{
+  std::shared_ptr<MultiplyOperator> m = std::make_shared<MultiplyOperator>();
+  m->operand1 = op1;
+  m->operand2 = op2;
+  std::shared_ptr<NegationOperator> _neg = std::make_shared<NegationOperator>();
+  _neg->operand = m;
+  _sum->operands->push_back(_neg);
+  operators_to_process->push_back(m);
+  operators_to_process->push_back(_neg);
+}
+
+
+void MultiplyOperator::distribute_products(std::shared_ptr<std::vector<std::shared_ptr<Operator> > > new_operators, std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators_to_process, std::shared_ptr<std::unordered_set<std::shared_ptr<Node> > > already_processed, std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced)
+{
+  if (operand1->is_add_operator())
+    {
+      std::shared_ptr<AddOperator> op1 = std::dynamic_pointer_cast<AddOperator>(operand1);
+      std::shared_ptr<SumOperator> _sum = std::make_shared<SumOperator>();
+      if (operand2->is_add_operator())
+	{
+	  std::shared_ptr<AddOperator> op2 = std::dynamic_pointer_cast<AddOperator>(operand2);
+	  _add_product(op1->operand1, op2->operand1, _sum, operators_to_process);
+	  _add_product(op1->operand1, op2->operand2, _sum, operators_to_process);
+	  _add_product(op1->operand2, op2->operand1, _sum, operators_to_process);
+	  _add_product(op1->operand2, op2->operand2, _sum, operators_to_process);
+	}
+      else if (operand2->is_subtract_operator())
+	{
+	  std::shared_ptr<SubtractOperator> op2 = std::dynamic_pointer_cast<SubtractOperator>(operand2);
+	  _add_product(op1->operand1, op2->operand1, _sum, operators_to_process);
+	  _subtract_product(op1->operand1, op2->operand2, _sum, operators_to_process);
+	  _add_product(op1->operand2, op2->operand1, _sum, operators_to_process);
+	  _subtract_product(op1->operand2, op2->operand2, _sum, operators_to_process);
+	}
+      else if (operand2->is_sum_operator())
+	{
+	  std::shared_ptr<SumOperator> op2 = std::dynamic_pointer_cast<SumOperator>(operand2);
+	  for (std::shared_ptr<Node> op2_op : *(op2->operands))
+	    {
+	      _add_product(op1->operand1, op2_op, _sum, operators_to_process);
+	      _add_product(op1->operand2, op2_op, _sum, operators_to_process);
+	    }
+	}
+      else
+	{
+	  _add_product(op1->operand1, operand2, _sum, operators_to_process);
+	  _add_product(op1->operand2, operand2, _sum, operators_to_process);
+	}
+      new_operators->push_back(_sum);
+      already_processed->insert(operand1);
+      already_processed->insert(operand2);
+      needs_replaced.at(shared_from_this()) = _sum;
+    }
+  else if (operand1->is_subtract_operator())
+    {
+      std::shared_ptr<SubtractOperator> op1 = std::dynamic_pointer_cast<SubtractOperator>(operand1);
+      std::shared_ptr<SumOperator> _sum = std::make_shared<SumOperator>();
+      if (operand2->is_add_operator())
+	{
+	  std::shared_ptr<AddOperator> op2 = std::dynamic_pointer_cast<AddOperator>(operand2);
+	  _add_product(op1->operand1, op2->operand1, _sum, operators_to_process);
+	  _add_product(op1->operand1, op2->operand2, _sum, operators_to_process);
+	  _subtract_product(op1->operand2, op2->operand1, _sum, operators_to_process);
+	  _subtract_product(op1->operand2, op2->operand2, _sum, operators_to_process);
+	}
+      else if (operand2->is_subtract_operator())
+	{
+	  std::shared_ptr<SubtractOperator> op2 = std::dynamic_pointer_cast<SubtractOperator>(operand2);
+	  _add_product(op1->operand1, op2->operand1, _sum, operators_to_process);
+	  _subtract_product(op1->operand1, op2->operand2, _sum, operators_to_process);
+	  _subtract_product(op1->operand2, op2->operand1, _sum, operators_to_process);
+	  _add_product(op1->operand2, op2->operand2, _sum, operators_to_process);
+	}
+      else if (operand2->is_sum_operator())
+	{
+	  std::shared_ptr<SumOperator> op2 = std::dynamic_pointer_cast<SumOperator>(operand2);
+	  for (std::shared_ptr<Node> op2_op : *(op2->operands))
+	    {
+	      _add_product(op1->operand1, op2_op, _sum, operators_to_process);
+	      _subtract_product(op1->operand2, op2_op, _sum, operators_to_process);
+	    }
+	}
+      else
+	{
+	  _add_product(op1->operand1, operand2, _sum, operators_to_process);
+	  _subtract_product(op1->operand2, operand2, _sum, operators_to_process);
+	}
+      new_operators->push_back(_sum);
+      already_processed->insert(operand1);
+      already_processed->insert(operand2);
+      needs_replaced.at(shared_from_this()) = _sum;
+    }
+  else if (operand1->is_sum_operator())
+    {
+      std::shared_ptr<SumOperator> op1 = std::dynamic_pointer_cast>SumOperator>(operand1);
+      std::shared_ptr<SumOperator> _sum = std::make_shared<SumOperator>();
+      for (std::shared_ptr<Node> op1_op : *(op1->operands))
+	{
+	  if (operand2->is_add_operator())
+	    {
+	      std::shared_ptr<AddOperator> op2 = std::dynamic_pointer_cast<AddOperator>(operand2);
+	      _add_product(op1_op, op2->operand1, _sum, operators_to_process);
+	      _add_product(op1_op, op2->operand2, _sum, operators_to_process);
+	    }
+	  else if (operand2->is_subtract_operator())
+	    {
+	      std::shared_ptr<SubtractOperator> op2 = std::dynamic_pointer_cast<SubtractOperator>(operand2);
+	      _add_product(op1_op, op2->operand1, _sum, operators_to_process);
+	      _subtract_product(op1_op, op2->operand2, _sum, operators_to_process);
+	    }
+	  else if (operand2->is_sum_operator())
+	    {
+	      std::shared_ptr<SumOperator> op2 = std::dynamic_pointer_cast<SumOperator>(operand2);
+	      for (std::shared_ptr<Node> op2_op : *(op2->operands))
+		{
+		  _add_product(op1_op, op2_op, _sum, operators_to_process);
+		}
+	    }
+	  else
+	    {
+	      _add_product(op1_op, operand2, _sum, operators_to_process);
+	    }
+	}
+      new_operators->push_back(_sum);
+      already_processed->insert(operand1);
+      already_processed->insert(operand2);
+      needs_replaced.at(shared_from_this()) = _sum;
+    }
+  else
+    {
+      if (operand2->is_add_operator() || operand2->is_subtract_operator() || operand2->is_sum_operator())
+	{
+	  std::shared_ptr<SumOperator> _sum = std::make_shared<SumOperator>();
+	  if (operand2->is_add_operator())
+	    {
+	      std::shared_ptr<AddOperator> op2 = std::dynamic_pointer_cast<AddOperator>(operand2);
+	      _add_product(operand1, op2->operand1, _sum, operators_to_process);
+	      _add_product(operand1, op2->operand2, _sum, operators_to_process);
+	    }
+	  else if (operand2->is_subtract_operator())
+	    {
+	      std::shared_ptr<SubtractOperator> op2 = std::dynamic_pointer_cast<SubtractOperator>(operand2);
+	      _add_product(operand1, op2->operand1, _sum, operators_to_process);
+	      _subtract_product(operand1, op2->operand2, _sum, operators_to_process);
+	    }
+	  else 
+	    {
+	      assert (operand2->is_sum_operator());
+	      std::shared_ptr<SumOperator> op2 = std::dynamic_pointer_cast<SumOperator>(operand2);
+	      for (std::shared_ptr<Node> op2_op : *(op2->operands))
+		{
+		  _add_product(operand1, op2_op, _sum, operators_to_process);
+		}
+	    }
+	  new_operators->push_back(_sum);
+	  already_processed->insert(operand1);
+	  already_processed->insert(operand2);
+	  needs_replaced.at(shared_from_this()) = _sum;
+	}
+      else
+	{
+	  new_operators->push_back(shared_from_this());
+	}
+    }
+}
+
+
+bool BinaryOperator::is_binary_operator()
+{
+  return true;
+}
+
+
+bool UnaryOperator::is_unary_operator()
+{
+  return true;
+}
+
+
+bool LinearOperator::is_linear_operator()
+{
+  return true;
+}
+
+
+bool SumOperator::is_sum_operator()
+{
+  return true;
+}
+
+
+bool MultiplyOperator::is_multiply_operator()
+{
+  return true;
+}
+
+
+bool AddOperator::is_add_operator()
+{
+  return true;
+}
+
+
+bool SubtractOperator::is_subtract_operator()
+{
+  return true;
+}
+
+
+bool DivideOperator::is_divide_operator()
+{
+  return true;
+}
+
+
+bool PowerOperator::is_power_operator()
+{
+  return true;
+}
+
+
+bool NegationOperator::is_negation_operator()
+{
+  return true;
+}
+
+
+bool ExpOperator::is_exp_operator()
+{
+  return true;
+}
+
+
+bool LogOperator::is_log_operator()
+{
+  return true;
+}
+
+
+bool ExternalOperator::is_external_operator()
+{
+  return true;
+}
+
+
+bool BinaryOperator::is_binary_operator()
+{
+  return true;
+}
+
+
 std::vector<std::shared_ptr<Var> > create_vars(int n_vars)
 {
   std::vector<std::shared_ptr<Var> > res;
