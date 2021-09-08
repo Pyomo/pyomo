@@ -570,7 +570,7 @@ class DesignOfExperiments:
             dsdp_re, col = get_dsdp(mod, var_name, var_dict, tee=self.tee_opt)
             time1_solve = time.time()
             time_solve = time1_solve - time0_solve
-            print(col)
+            #print(col)
 
             # analyze result
             dsdp_array = dsdp_re.toarray().T
@@ -592,14 +592,38 @@ class DesignOfExperiments:
                     # get right line of dsdp
                     dsdp_extract.append(dsdp_array[kaug_no])
 
+            # Convert sensitivity if scaled by constants or parameters.
+            # Convert sensitivity to a dictionary
+            jac = {}
+            for par in self.param_name:
+                jac[par] = []
+
+            for d in range(len(dsdp_extract)):
+                for p, par in enumerate(self.param_name):
+                    if self.scale_nominal_param_value:
+                        jac[par].append(self.param_init[par]*dsdp_extract[d][p]*self.scale_constant_value)
+                    else:
+                        jac[par].append(dsdp_extract[d][p]*self.scale_constant_value)
+
             if self.verbose:
                 print('Build time with direct kaug mode [s]:', time_build)
                 print('Solve time with direct kaug mode [s]:', time_solve)
 
-            #FIM_analysis.build_time = time_build
-            #FIM_analysis.solve_time = time_solve
+            # check if another prior experiment FIM is provided other than the user-specified one
+            if specified_prior is None:
+                prior_in_use = self.prior_FIM
+            else:
+                prior_in_use = specified_prior
 
-            return dsdp_extract
+            # Assemble and analyze results
+            FIM_analysis = FIM_result(self.param_name, prior_FIM=prior_in_use, store_FIM=FIM_store_name,
+                                      scale_constant_value=self.scale_constant_value)
+
+            self.jac = jac
+            FIM_analysis.build_time = time_build
+            FIM_analysis.solve_time = time_solve
+
+            return FIM_analysis
 
 
         else:
