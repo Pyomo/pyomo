@@ -16,7 +16,7 @@ from pyomo.opt.base import SolverFactory, OptSolver
 from pyomo.solvers.plugins.solvers.ASL import ASL
 
 from pyomo.common.config import ( 
-    ConfigBlock, ConfigValue, 
+    ConfigDict, ConfigValue, 
     PositiveInt, PositiveFloat, 
     NonNegativeFloat, In)
 from pyomo.core import Var, value
@@ -35,25 +35,23 @@ __version__ = (0, 2, 0)
     )
 class TrustRegionSolver(OptSolver):
     """
-    A trust region filter method for black box / glass box optimizaiton
+    A trust region filter method for black box / glass box optimization
     Solves nonlinear optimization problems containing external function calls
     through automatic construction of reduced models (ROM), also known as
     surrogate models.
     Currently implements linear and quadratic reduced models.
-    See Eason, Biegler (2016) AIChE Journal for more details
+    See Eason, Biegler (2016/2018) AIChE Journal for more details
 
-    Arguments:
     """
-    #    + param.CONFIG.generte_yaml_template()
 
-    CONFIG = ConfigBlock('Trust Region')
+    CONFIG = ConfigDict('Trust Region')
 
     CONFIG.declare('solver', ConfigValue(
         default='ipopt',
         description='solver to use, defaults to ipopt',
         doc = ''))
 
-    CONFIG.declare('solver_options', ConfigBlock(
+    CONFIG.declare('solver_options', ConfigDict(
         implicit=True,
         description='options to pass to the subproblem solver',
         doc = ''))
