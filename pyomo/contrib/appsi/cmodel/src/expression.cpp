@@ -2039,31 +2039,40 @@ void LogOperator::write_nl_string(std::ofstream& f)
 }
 
 
-std::shared_ptr<Operator> LinearOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced)
+std::shared_ptr<Operator> LinearOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
 {
-  
-  
-  bool replace_op1 = needs_replaced->count(operand1);
-  bool replace_op2 = needs_replaced->count(operand2);
-  if (replace_op1 || replace_op2)
+  // this should never do anything
+  return shared_from_this();
+}
+
+
+std::shared_ptr<Operator> SumOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
+{
+  bool replace_any_op = false;
+  bool replace_op;
+
+  for (std::shared_ptr<Node> &op : (*operands))
     {
-      std::shared_ptr<MultiplyOperator> new_op = std::make_shared<MultiplyOperator>();
-      if (replace_op1)
+      replace_op = needs_replaced->count(op);
+      replace_any_op = replace_any_op || replace_op;
+    }
+
+  if (replace_any_op)
+    {
+      std::shared_ptr<SumOperator> new_op = std::make_shared<SumOperator>();
+      for (std::shared_ptr<Node> &op : (*operands))
 	{
-	  new_op->operand1 = needs_replaced->at(operand1);
+	  replace_op = needs_replaced->count(op);
+	  if (replace_op)
+	    {
+	      new_op->operands->push_back(needs_replaced->at(op));
+	    }
+	  else
+	    {
+	      new_op->operands->push_back(op);
+	    }
 	}
-      else
-	{
-	  new_op->operand1 = operand1;
-	}
-      if (replace_op2)
-	{
-	  new_op->operand2 = needs_replaced->at(operand2);
-	}
-      else
-	{
-	  new_op->operand2 = operand2;
-	}
+      (*needs_replaced)[shared_from_this()] = new_op;
       return new_op;
     }
   else
@@ -2073,7 +2082,7 @@ std::shared_ptr<Operator> LinearOperator::replace_operands(std::shared_ptr<std::
 }
 
 
-std::shared_ptr<Operator> MultiplyOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced)
+std::shared_ptr<Operator> MultiplyOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
 {
   bool replace_op1 = needs_replaced->count(operand1);
   bool replace_op2 = needs_replaced->count(operand2);
@@ -2096,6 +2105,7 @@ std::shared_ptr<Operator> MultiplyOperator::replace_operands(std::shared_ptr<std
 	{
 	  new_op->operand2 = operand2;
 	}
+      (*needs_replaced)[shared_from_this()] = new_op;
       return new_op;
     }
   else
@@ -2105,13 +2115,13 @@ std::shared_ptr<Operator> MultiplyOperator::replace_operands(std::shared_ptr<std
 }
 
 
-std::shared_ptr<Operator> MultiplyOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced)
+std::shared_ptr<Operator> AddOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
 {
   bool replace_op1 = needs_replaced->count(operand1);
   bool replace_op2 = needs_replaced->count(operand2);
   if (replace_op1 || replace_op2)
     {
-      std::shared_ptr<MultiplyOperator> new_op = std::make_shared<MultiplyOperator>();
+      std::shared_ptr<AddOperator> new_op = std::make_shared<AddOperator>();
       if (replace_op1)
 	{
 	  new_op->operand1 = needs_replaced->at(operand1);
@@ -2128,6 +2138,193 @@ std::shared_ptr<Operator> MultiplyOperator::replace_operands(std::shared_ptr<std
 	{
 	  new_op->operand2 = operand2;
 	}
+      (*needs_replaced)[shared_from_this()] = new_op;
+      return new_op;
+    }
+  else
+    {
+      return shared_from_this();
+    }
+}
+
+
+std::shared_ptr<Operator> SubtractOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
+{
+  bool replace_op1 = needs_replaced->count(operand1);
+  bool replace_op2 = needs_replaced->count(operand2);
+  if (replace_op1 || replace_op2)
+    {
+      std::shared_ptr<SubtractOperator> new_op = std::make_shared<SubtractOperator>();
+      if (replace_op1)
+	{
+	  new_op->operand1 = needs_replaced->at(operand1);
+	}
+      else
+	{
+	  new_op->operand1 = operand1;
+	}
+      if (replace_op2)
+	{
+	  new_op->operand2 = needs_replaced->at(operand2);
+	}
+      else
+	{
+	  new_op->operand2 = operand2;
+	}
+      (*needs_replaced)[shared_from_this()] = new_op;
+      return new_op;
+    }
+  else
+    {
+      return shared_from_this();
+    }
+}
+
+
+std::shared_ptr<Operator> DivideOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
+{
+  bool replace_op1 = needs_replaced->count(operand1);
+  bool replace_op2 = needs_replaced->count(operand2);
+  if (replace_op1 || replace_op2)
+    {
+      std::shared_ptr<DivideOperator> new_op = std::make_shared<DivideOperator>();
+      if (replace_op1)
+	{
+	  new_op->operand1 = needs_replaced->at(operand1);
+	}
+      else
+	{
+	  new_op->operand1 = operand1;
+	}
+      if (replace_op2)
+	{
+	  new_op->operand2 = needs_replaced->at(operand2);
+	}
+      else
+	{
+	  new_op->operand2 = operand2;
+	}
+      (*needs_replaced)[shared_from_this()] = new_op;
+      return new_op;
+    }
+  else
+    {
+      return shared_from_this();
+    }
+}
+
+
+std::shared_ptr<Operator> PowerOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
+{
+  bool replace_op1 = needs_replaced->count(operand1);
+  bool replace_op2 = needs_replaced->count(operand2);
+  if (replace_op1 || replace_op2)
+    {
+      std::shared_ptr<PowerOperator> new_op = std::make_shared<PowerOperator>();
+      if (replace_op1)
+	{
+	  new_op->operand1 = needs_replaced->at(operand1);
+	}
+      else
+	{
+	  new_op->operand1 = operand1;
+	}
+      if (replace_op2)
+	{
+	  new_op->operand2 = needs_replaced->at(operand2);
+	}
+      else
+	{
+	  new_op->operand2 = operand2;
+	}
+      (*needs_replaced)[shared_from_this()] = new_op;
+      return new_op;
+    }
+  else
+    {
+      return shared_from_this();
+    }
+}
+
+
+std::shared_ptr<Operator> NegationOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
+{
+  bool replace_op = needs_replaced->count(operand);
+  if (replace_op)
+    {
+      std::shared_ptr<NegationOperator> new_op = std::make_shared<NegationOperator>();
+      new_op->operand = needs_replaced->at(operand);
+      (*needs_replaced)[shared_from_this()] = new_op;
+      return new_op;
+    }
+  else
+    {
+      return shared_from_this();
+    }
+}
+
+
+std::shared_ptr<Operator> ExpOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
+{
+  bool replace_op = needs_replaced->count(operand);
+  if (replace_op)
+    {
+      std::shared_ptr<ExpOperator> new_op = std::make_shared<ExpOperator>();
+      new_op->operand = needs_replaced->at(operand);
+      (*needs_replaced)[shared_from_this()] = new_op;
+      return new_op;
+    }
+  else
+    {
+      return shared_from_this();
+    }
+}
+
+
+std::shared_ptr<Operator> LogOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
+{
+  bool replace_op = needs_replaced->count(operand);
+  if (replace_op)
+    {
+      std::shared_ptr<LogOperator> new_op = std::make_shared<LogOperator>();
+      new_op->operand = needs_replaced->at(operand);
+      (*needs_replaced)[shared_from_this()] = new_op;
+      return new_op;
+    }
+  else
+    {
+      return shared_from_this();
+    }
+}
+
+
+std::shared_ptr<Operator> ExternalOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
+{
+  bool replace_any_op = false;
+  bool replace_op;
+
+  for (std::shared_ptr<Node> &op : (*operands))
+    {
+      replace_op = needs_replaced->count(op);
+      replace_any_op = replace_any_op || replace_op;
+    }
+
+  if (replace_any_op)
+    {
+      std::shared_ptr<ExternalOperator> new_op = std::make_shared<ExternalOperator>();
+      for (std::shared_ptr<Node> &op : (*operands))
+	{
+	  replace_op = needs_replaced->count(op);
+	  if (replace_op)
+	    {
+	      new_op->operands->push_back(needs_replaced->at(op));
+	    }
+	  else
+	    {
+	      new_op->operands->push_back(op);
+	    }
+	}
+      (*needs_replaced)[shared_from_this()] = new_op;
       return new_op;
     }
   else
@@ -2142,7 +2339,7 @@ std::shared_ptr<ExpressionBase> Expression::distribute_products()
   std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators_to_process = std::make_shared<std::vector<std::shared_ptr<Operator> > >();
   std::shared_ptr<std::vector<std::shared_ptr<Operator> > > new_operators = std::make_shared<std::vector<std::shared_ptr<Operator> > >();
   std::shared_ptr<std::unordered_set<std::shared_ptr<Node> > > already_processed = std::make_shared<std::unordered_set<std::shared_ptr<Node> > >();
-  std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced = std::make_shared<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > >();
+  std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced = std::make_shared<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > >();
 
   for (std::shared_ptr<Operator> &op : (*operators))
     {
@@ -2162,13 +2359,27 @@ std::shared_ptr<ExpressionBase> Expression::distribute_products()
     }
 
   std::shared_ptr<Expression> res = std::make_shared<Expression>();
+  res->n_operators = new_operators->size();
   int ndx = new_operators->size() - 1;
-  while (ndx >= 0)
+
+  if (needs_replaced->size() > 0)
     {
-      op = new_operators->at(ndx);
-      op = op->replace_operands(needs_replaced);
-      res->operators->push_back(op);
-      ndx -= 1;
+      while (ndx >= 0)
+	{
+	  op = new_operators->at(ndx);
+	  op = op->replace_operands(needs_replaced);
+	  res->operators->push_back(op);
+	  ndx -= 1;
+	}      
+    }
+  else
+    {
+      while (ndx >= 0)
+	{
+	  op = new_operators->at(ndx);
+	  res->operators->push_back(op);
+	  ndx -= 1;
+	}
     }
 
   return res;
@@ -2181,7 +2392,7 @@ std::shared_ptr<ExpressionBase> Leaf::distribute_products()
 }
 
 
-void Operator::distribute_products(std::shared_ptr<std::vector<std::shared_ptr<Operator> > > new_operators, std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators_to_process, std::shared_ptr<std::unordered_set<std::shared_ptr<Node> > > already_processed, std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced)
+void Operator::distribute_products(std::shared_ptr<std::vector<std::shared_ptr<Operator> > > new_operators, std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators_to_process, std::shared_ptr<std::unordered_set<std::shared_ptr<Node> > > already_processed, std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
 {
   new_operators->push_back(shared_from_this());
 }
@@ -2210,7 +2421,7 @@ void _subtract_product(std::shared_ptr<Node> op1, std::shared_ptr<Node> op2, std
 }
 
 
-void MultiplyOperator::distribute_products(std::shared_ptr<std::vector<std::shared_ptr<Operator> > > new_operators, std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators_to_process, std::shared_ptr<std::unordered_set<std::shared_ptr<Node> > > already_processed, std::shared_ptr<std::unordered_map<std::shared_ptr<Operator>, std::shared_ptr<Operator> > > needs_replaced)
+void MultiplyOperator::distribute_products(std::shared_ptr<std::vector<std::shared_ptr<Operator> > > new_operators, std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators_to_process, std::shared_ptr<std::unordered_set<std::shared_ptr<Node> > > already_processed, std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
 {
   if (operand1->is_add_operator())
     {
@@ -2249,7 +2460,7 @@ void MultiplyOperator::distribute_products(std::shared_ptr<std::vector<std::shar
       new_operators->push_back(_sum);
       already_processed->insert(operand1);
       already_processed->insert(operand2);
-      needs_replaced.at(shared_from_this()) = _sum;
+      (*needs_replaced)[shared_from_this()] = _sum;
     }
   else if (operand1->is_subtract_operator())
     {
@@ -2288,11 +2499,11 @@ void MultiplyOperator::distribute_products(std::shared_ptr<std::vector<std::shar
       new_operators->push_back(_sum);
       already_processed->insert(operand1);
       already_processed->insert(operand2);
-      needs_replaced.at(shared_from_this()) = _sum;
+      (*needs_replaced)[shared_from_this()] = _sum;
     }
   else if (operand1->is_sum_operator())
     {
-      std::shared_ptr<SumOperator> op1 = std::dynamic_pointer_cast>SumOperator>(operand1);
+      std::shared_ptr<SumOperator> op1 = std::dynamic_pointer_cast<SumOperator>(operand1);
       std::shared_ptr<SumOperator> _sum = std::make_shared<SumOperator>();
       for (std::shared_ptr<Node> op1_op : *(op1->operands))
 	{
@@ -2324,7 +2535,7 @@ void MultiplyOperator::distribute_products(std::shared_ptr<std::vector<std::shar
       new_operators->push_back(_sum);
       already_processed->insert(operand1);
       already_processed->insert(operand2);
-      needs_replaced.at(shared_from_this()) = _sum;
+      (*needs_replaced)[shared_from_this()] = _sum;
     }
   else
     {
@@ -2355,7 +2566,7 @@ void MultiplyOperator::distribute_products(std::shared_ptr<std::vector<std::shar
 	  new_operators->push_back(_sum);
 	  already_processed->insert(operand1);
 	  already_processed->insert(operand2);
-	  needs_replaced.at(shared_from_this()) = _sum;
+	  (*needs_replaced)[shared_from_this()] = _sum;
 	}
       else
 	{
@@ -2443,9 +2654,20 @@ bool ExternalOperator::is_external_operator()
 }
 
 
-bool BinaryOperator::is_binary_operator()
+std::string Repn::__str__()
 {
-  return true;
+  std::string res = "constant: ";
+  res += constant->__str__();
+  res += "\n";
+  res += "linear: ";
+  res += linear->__str__();
+  res += "\n";
+  res += "quadratic: ";
+  res += quadratic->__str__();
+  res += "\n";
+  res += "nonlinear: ";
+  res += nonlinear->__str__();
+  return res;
 }
 
 

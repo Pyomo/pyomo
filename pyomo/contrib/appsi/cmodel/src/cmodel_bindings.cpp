@@ -28,7 +28,8 @@ PYBIND11_MODULE(appsi_cmodel, m)
     .def_readwrite("constant", &Repn::constant)
     .def_readwrite("linear", &Repn::linear)
     .def_readwrite("quadratic", &Repn::quadratic)
-    .def_readwrite("nonlinear", &Repn::nonlinear);
+    .def_readwrite("nonlinear", &Repn::nonlinear)
+    .def("__str__", &Repn::__str__);
   py::class_<Node, std::shared_ptr<Node> >(m, "Node")
     .def("is_variable_type", &Node::is_variable_type)
     .def("is_param_type", &Node::is_param_type)
@@ -58,6 +59,7 @@ PYBIND11_MODULE(appsi_cmodel, m)
     .def("__rpow__", [](ExpressionBase &a, double b){return a.__rpow__(b);}, py::is_operator())
     .def("__str__", &ExpressionBase::__str__)
     .def("evaluate", &ExpressionBase::evaluate)
+    .def("distribute_products", &ExpressionBase::distribute_products)
     .def("generate_repn", &ExpressionBase::generate_repn);
   py::class_<Var, ExpressionBase, std::shared_ptr<Var> >(m, "Var")
     .def(py::init<>())
