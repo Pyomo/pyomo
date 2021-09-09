@@ -93,9 +93,10 @@ class BaselineTests(Tests):
 
     @parameterized.parameterized.expand(input=invalidlist)
     def gams_writer_test_invalid(self, name, targetdir):
-        with TempfileManager, self.assertRaisesRegex(
+        with self.assertRaisesRegex(
                 RuntimeError, "GAMS files cannot represent the unary function"):
-            testFile = join(currdir, name + '.test.gms')
+            testFile = TempfileManager.create_tempfile(
+                suffix=name + '.test.gms')
             cmd = ['--output=' + testFile,
                    join(targetdir, name + '_testCase.py')]
             if os.path.exists(join(targetdir, name + '.dat')):

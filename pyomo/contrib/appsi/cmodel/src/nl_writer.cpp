@@ -9,6 +9,8 @@ NLBase::NLBase(std::shared_ptr<ExpressionBase> _constant_expr,
   constant_expr = _constant_expr;
   nonlinear_vars = _nonlinear_expr->identify_variables();
 
+  external_operators = _nonlinear_expr->identify_external_operators();
+
   linear_vars = std::make_shared<std::vector<std::shared_ptr<Var> > >();
   for (std::shared_ptr<Var> v : _linear_vars)
     {
@@ -136,11 +138,26 @@ void NLWriter::write(std::string filename)
   std::vector<std::shared_ptr<NLConstraint> > all_cons;
   std::vector<std::shared_ptr<NLConstraint> > active_nonlinear_cons;
   std::vector<std::shared_ptr<NLConstraint> > active_linear_cons;
+  std::map<std::string, int> external_function_indices;
 
   for (std::shared_ptr<Var> v : *(objective->all_vars))
     {
       v->index = -1;
       grad_obj_nnz += 1;
+    }
+
+  for (std::shared_ptr<ExternalOperator> n : *(objective->external_operators))
+    {
+      std::map<std::string, int>::iterator it = external_function_indices.find(n->function_name);
+      if (it != external_function_indices.end())
+	{
+	  n->external_function_index = it->second;
+	}
+      else
+	{
+	  n->external_function_index = external_function_indices.size();
+	  external_function_indices[n->function_name] = n->external_function_index;
+	}
     }
 
   // it is important that nonlinear constraints come first here
@@ -162,6 +179,19 @@ void NLWriter::write(std::string filename)
 	    {
 	      active_nonlinear_cons.push_back(con);
 	      all_cons.push_back(con);
+	    }
+	  for (std::shared_ptr<ExternalOperator> n : *(con->external_operators))
+	    {
+	      std::map<std::string, int>::iterator it = external_function_indices.find(n->function_name);
+	      if (it != external_function_indices.end())
+		{
+		  n->external_function_index = it->second;
+		}
+	      else
+		{
+		  n->external_function_index = external_function_indices.size();
+		  external_function_indices[n->function_name] = n->external_function_index;
+		}
 	    }
 	}
     }
@@ -394,11 +424,17 @@ void NLWriter::write(std::string filename)
     {
       f << nl_vars_in_cons.size() << " " << nl_vars_in_obj_or_cons.size() << " " << nl_vars_in_both.size() << "\n";
     }
-  f << "0 0 0 1\n";
+  f << "0 " << external_function_indices.size()  << " 0 1\n";
   f << "0 0 0 0 0\n";
   f << jac_nnz << " " << grad_obj_nnz << "\n";
   f << "0 0\n";
   f << "0 0 0 0 0\n";
+
+  // now write the names of the external functions
+  for (std::map<std::string, int>::iterator it=external_function_indices.begin(); it!=external_function_indices.end(); ++it)
+    {
+      f << "F" << it->second << " 1 -1 " << it->first << "\n";
+    }
 
   // now write the nonlinear parts of the constraints in prefix notation
   ndx = 0;

@@ -71,6 +71,33 @@ std::shared_ptr<ExpressionBase> binary_helper(std::shared_ptr<ExpressionBase> n1
 }
 
 
+std::shared_ptr<ExpressionBase> external_helper(std::string function_name, std::vector<std::shared_ptr<ExpressionBase> > operands)
+{
+  std::shared_ptr<ExternalOperator> oper = std::make_shared<ExternalOperator>();
+  oper->function_name = function_name;
+  std::shared_ptr<Expression> expr = std::make_shared<Expression>();
+  for (std::shared_ptr<Node> n : operands)
+    {
+      if (n->is_leaf())
+	{
+	  oper->operands->push_back(n);
+	}
+      else
+	{
+	  std::shared_ptr<Expression> n_expr = std::dynamic_pointer_cast<Expression>(n);
+	  oper->operands->push_back(n_expr->operators->back());
+	  for (unsigned int i=0; i<n_expr->n_operators; ++i)
+	    {
+	      expr->operators->push_back(n_expr->operators->at(i));
+	    }
+	}
+    }
+  expr->operators->push_back(oper);
+  expr->n_operators = expr->operators->size();
+  return expr;
+}
+
+
 std::shared_ptr<ExpressionBase> unary_helper(std::shared_ptr<ExpressionBase> n1, std::shared_ptr<UnaryOperator> oper)
 {
   std::shared_ptr<Expression> expr = std::make_shared<Expression>();
@@ -326,6 +353,12 @@ std::shared_ptr<ExpressionBase> ExpressionBase::__rpow__(double other)
 }
 
 
+bool ExternalOperator::is_external()
+{
+  return true;
+}
+
+
 bool Leaf::is_leaf()
 {
   return true;
@@ -390,6 +423,14 @@ double Operator::get_value_from_array(double* val_array)
 void MultiplyOperator::evaluate(double* values)
 {
   values[index] = operand1->get_value_from_array(values) * operand2->get_value_from_array(values);
+}
+
+
+void ExternalOperator::evaluate(double* values)
+{
+  // It would be nice to implement this, but it will take some more work.
+  // This would require dynamic linking to the external function.
+  assert (false);
 }
 
 
@@ -471,6 +512,18 @@ void BinaryOperator::identify_variables(std::set<std::shared_ptr<Node> > &var_se
 }
 
 
+void ExternalOperator::identify_variables(std::set<std::shared_ptr<Node> > &var_set)
+{
+  for (unsigned int i=0; i<operands->size(); ++i)
+    {
+      if (operands->at(i)->is_variable_type())
+	{
+	  var_set.insert(operands->at(i));
+	}
+    }
+}
+
+
 std::shared_ptr<std::vector<std::shared_ptr<Var> > > Expression::identify_variables()
 {
   std::set<std::shared_ptr<Node> > var_set;
@@ -509,6 +562,48 @@ std::shared_ptr<std::vector<std::shared_ptr<Var> > > Param::identify_variables()
 }
 
 
+std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > Expression::identify_external_operators()
+{
+  std::set<std::shared_ptr<Node> > external_set;
+  for (unsigned int i=0; i<n_operators; ++i)
+    {
+      if (operators->at(i)->is_external())
+	{
+	  external_set.insert(operators->at(i));
+	}
+    }
+  std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > res = std::make_shared<std::vector<std::shared_ptr<ExternalOperator> > >();
+  for (std::shared_ptr<Node> n : external_set)
+    {
+      res->push_back(std::dynamic_pointer_cast<ExternalOperator>(n));
+    }
+  return res;
+}
+
+
+std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > Var::identify_external_operators()
+{
+  std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > res = std::make_shared<std::vector<std::shared_ptr<ExternalOperator> > >();
+  return res;
+}
+
+
+std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > Constant::identify_external_operators()
+{
+  std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > res = std::make_shared<std::vector<std::shared_ptr<ExternalOperator> > >();
+  return res;
+}
+
+
+std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > Param::identify_external_operators()
+{
+  std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > res = std::make_shared<std::vector<std::shared_ptr<ExternalOperator> > >();
+  return res;
+}
+
+
+
+
 int Var::get_degree_from_array(int* degree_array)
 {
   return 1;
@@ -542,6 +637,14 @@ int Operator::get_degree_from_array(int* degree_array)
 void MultiplyOperator::propagate_degree_forward(int* degrees, double* values)
 {
   degrees[index] = operand1->get_degree_from_array(degrees) + operand2->get_degree_from_array(degrees);
+}
+
+
+void ExternalOperator::propagate_degree_forward(int* degrees, double* values)
+{
+  // External functions are always considered nonlinear
+  // Anything larger than 2 is nonlinear
+  degrees[index] = 3;
 }
 
 
@@ -700,6 +803,20 @@ void MultiplyOperator::print(std::string* string_array)
 }
 
 
+void ExternalOperator::print(std::string* string_array)
+{
+  std::string res = function_name + "(";
+  for (unsigned int i=0; i<(operands->size() - 1); ++i)
+    {
+      res += operands->at(i)->get_string_from_array(string_array);
+      res += ", ";
+    }
+  res += operands->back()->get_string_from_array(string_array);
+  res += ")";
+  string_array[index] = res;
+}
+
+
 void DivideOperator::print(std::string* string_array)
 {
   string_array[index] = ("(" +
@@ -783,6 +900,17 @@ void UnaryOperator::fill_prefix_notation_stack(std::shared_ptr<std::vector<std::
 }
 
 
+void ExternalOperator::fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack)
+{
+  int i = operands->size() - 1;
+  while (i >= 0)
+    {
+      stack->push_back(operands->at(i));
+      i -= 1;
+    }
+}
+
+
 void Var::write_nl_string(std::ofstream& f)
 {
   f << "v" << index << "\n";
@@ -810,6 +938,12 @@ void Expression::write_nl_string(std::ofstream& f)
 void MultiplyOperator::write_nl_string(std::ofstream& f)
 {
   f << "o2\n";
+}
+
+
+void ExternalOperator::write_nl_string(std::ofstream& f)
+{
+  f << "f" << external_function_index << " " << operands->size() << "\n";
 }
 
 
