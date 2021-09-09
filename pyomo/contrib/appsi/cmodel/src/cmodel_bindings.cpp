@@ -23,6 +23,7 @@ PYBIND11_MODULE(appsi_cmodel, m)
   m.def("create_vars", &create_vars);
   m.def("create_params", &create_params);
   m.def("create_constants", &create_constants);
+  m.def("generate_repns", &generate_repns);
   m.def("external_helper", &external_helper);
   py::class_<Repn, std::shared_ptr<Repn> >(m, "Repn")
     .def_readwrite("constant", &Repn::constant)

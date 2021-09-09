@@ -502,6 +502,6 @@ public:
 std::vector<std::shared_ptr<Var> > create_vars(int n_vars);
 std::vector<std::shared_ptr<Param> > create_params(int n_params);
 std::vector<std::shared_ptr<Constant> > create_constants(int n_constants);
-
+std::vector<std::shared_ptr<Repn> > generate_repns(std::vector<std::shared_ptr<ExpressionBase> > exprs);
 
 std::vector<py::object> generate_prefix_notation(py::object);

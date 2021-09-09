@@ -2671,6 +2671,18 @@ std::string Repn::__str__()
 }
 
 
+std::vector<std::shared_ptr<Repn> > generate_repns(std::vector<std::shared_ptr<ExpressionBase> > exprs)
+{
+  std::vector<std::shared_ptr<Repn> > res;
+  for (std::shared_ptr<ExpressionBase> &e : exprs)
+    {
+      res.push_back(e->distribute_products()->generate_repn());
+      //res.push_back(e->generate_repn());
+    }
+  return res;
+}
+
+
 std::vector<std::shared_ptr<Var> > create_vars(int n_vars)
 {
   std::vector<std::shared_ptr<Var> > res;
