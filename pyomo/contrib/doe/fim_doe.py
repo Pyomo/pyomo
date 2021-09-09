@@ -9,7 +9,7 @@ from itertools import permutations, product
 from sens import get_dsdp
 from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculation
 from idaes.apps.uncertainty_propagation.sens import get_dsdp
-
+#from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
 class DesignOfExperiments: 
     def __init__(self, param_init, design_variable_timepoints, measurement_variables, measurement_timeset, create_model, solver=None,
@@ -541,12 +541,13 @@ class DesignOfExperiments:
             for t in mod.t:
                 t_all.append(t)
 
+            # Check if measurement time points are in this time set
+            # Also correct the measurement time points
+            # For e.g. if a measurement time point is 0.0 in the model but is given as 0, it is corrected here
             measurement_accurate_time = []
-            # check if measurement time points are in this time set
             for tt in self.measurement_timeset:
                 if tt not in t_all:
                     print('A measurement time point not measured by this model: ', tt)
-                # For e.g. if a measurement time point is 0.0 in the model but is given as 0, it is corrected here.
                 measurement_accurate_time.append(t_all[t_all.index(tt)])
 
             # fix model DOF
@@ -561,38 +562,53 @@ class DesignOfExperiments:
             # generate parameter name list and value dictionary with index
             var_name = []
             var_dict = {}
-
             for name in self.param_name:
                 var_name.append(name+'[0]')
                 var_dict[name+'[0]'] = self.param_init[name]
 
+            # call k_aug get_dsdp function
             time0_solve = time.time()
             dsdp_re, col = get_dsdp(mod, var_name, var_dict, tee=self.tee_opt)
             time1_solve = time.time()
             time_solve = time1_solve - time0_solve
-            #print(col)
 
             # analyze result
             dsdp_array = dsdp_re.toarray().T
             # here for construction. Remove after finishing.
             dd = pd.DataFrame(dsdp_array)
-            dd.to_csv('dsdp_test.csv')
             # store dsdp returned
             dsdp_extract = []
             # get right lines from results
             measurement_index = []
             measurement_names = []
+            # produce the sensitivity for fixed variables
+            zero_sens = np.zeros(len(self.param_name))
+            # loop over measurement variables and their time points
             for mname in self.measurement_variables:
                 for tim in measurement_accurate_time:
+                    # get the measurement name in the model
                     measure_name = mname+'[0,'+str(tim)+']'
                     measurement_names.append(measure_name)
                     # get right line number in kaug results
-                    kaug_no = col.index(measure_name)
-                    measurement_index.append(kaug_no)
-                    # get right line of dsdp
-                    dsdp_extract.append(dsdp_array[kaug_no])
+                    if self.discretize_model is not None:
+                        # for DAE model, some variables are fixed
+                        try:
+                            kaug_no = col.index(measure_name)
+                            measurement_index.append(kaug_no)
+                            # get right line of dsdp
+                            dsdp_extract.append(dsdp_array[kaug_no])
+                        except:
+                            if self.verbose:
+                                print('The variable is fixed:', measure_name)
+                            # for fixed variables, the sensitivity are a zero vector
+                            dsdp_extract.append(zero_sens)
+                    else:
+                        kaug_no = col.index(measure_name)
+                        measurement_index.append(kaug_no)
+                        # get right line of dsdp
+                        dsdp_extract.append(dsdp_array[kaug_no])
 
-            # Convert sensitivity if scaled by constants or parameters.
+            # Extract and calculate sensitivity if scaled by constants or parameters.
             # Convert sensitivity to a dictionary
             jac = {}
             for par in self.param_name:
@@ -600,6 +616,7 @@ class DesignOfExperiments:
 
             for d in range(len(dsdp_extract)):
                 for p, par in enumerate(self.param_name):
+                    # if scaled by parameter value or constant value
                     if self.scale_nominal_param_value:
                         jac[par].append(self.param_init[par]*dsdp_extract[d][p]*self.scale_constant_value)
                     else:
@@ -711,6 +728,7 @@ class DesignOfExperiments:
         multiple scenarios. Sensitivity info estimated by finite difference
         3. Sequential_sipopt: calculate sensitivity by sIPOPT.
         4. Sequential_kaug: calculate sensitivity by k_aug
+        5, direct_kaug: calculate sensitivity by k_aug with direct sensitivity. **In construction**
 
         Parameters:
         -----------
@@ -792,7 +810,7 @@ class DesignOfExperiments:
             if (mode=='simultaneous_finite'):
                 result_iter.extract_FIM(self.m, self.design_timeset, self.square_result, self.objective_option)
 
-            elif (mode in ['sequential_finite', 'sequential_sipopt', 'sequential_kaug']):
+            elif (mode in ['sequential_finite', 'sequential_sipopt', 'sequential_kaug', 'direct_kaug']):
                 result_iter.calculate_FIM(self.jac, self.design_values)
 
             t_now = time.time()
