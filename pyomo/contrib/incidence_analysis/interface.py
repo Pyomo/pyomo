@@ -123,8 +123,8 @@ def get_numeric_incidence_matrix(variables, constraints):
     _check_unindexed(comps)
     block = create_subsystem_block(constraints, variables)
     block._obj = Objective(expr=0)
-    _nlp = PyomoNLP(block)
-    return _nlp.extract_submatrix_jacobian(variables, constraints)
+    nlp = PyomoNLP(block)
+    return nlp.extract_submatrix_jacobian(variables, constraints)
 
 
 class IncidenceGraphInterface(object):
