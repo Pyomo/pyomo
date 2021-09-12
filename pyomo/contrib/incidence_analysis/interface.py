@@ -295,6 +295,16 @@ class IncidenceGraphInterface(object):
 
     def get_diagonal_blocks(self, variables=None, constraints=None):
         """
+        Returns the diagonal blocks in a block triangularization of the
+        incidence matrix of the provided constraints with respect to the
+        provided variables.
+
+        Returns
+        -------
+        tuple of lists
+        The first list contains lists that partition the variables,
+        the second lists contains lists that partition the constraints.
+
         """
         variables, constraints = self._validate_input(variables, constraints)
         matrix = self._extract_submatrix(variables, constraints)
