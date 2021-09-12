@@ -156,6 +156,18 @@ class IncidenceGraphInterface(object):
         if model is None:
             self.cached = IncidenceMatrixType.NONE
         elif isinstance(model, PyomoNLP):
+            if not active:
+                raise ValueError(
+                    "Cannot get the Jacobian of inactive constraints from the "
+                    "nl interface (PyomoNLP).\nPlease set the `active` flag "
+                    "to True."
+                )
+            if include_fixed:
+                raise ValueError(
+                    "Cannot get the Jacobian with respect to fixed variables "
+                    "from the nl interface (PyomoNLP).\nPlease set the "
+                    "`include_fixed` flag to False."
+                )
             nlp = model
             self.cached = IncidenceMatrixType.NUMERIC
             self.variables = nlp.get_pyomo_variables()
