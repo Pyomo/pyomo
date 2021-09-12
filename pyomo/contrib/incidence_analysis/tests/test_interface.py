@@ -890,5 +890,48 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
             self.assertIn(con, overconstrained_cons)
 
 
+class TestExtraVars(unittest.TestCase):
+
+    def test_unused_var(self):
+        m = pyo.ConcreteModel()
+        m.v1 = pyo.Var()
+        m.v2 = pyo.Var()
+        m.c1 = pyo.Constraint(expr=m.v1 == 1.0)
+        igraph = IncidenceGraphInterface(m)
+        self.assertEqual(igraph.incidence_matrix.shape, (1, 1))
+
+    def test_reference(self):
+        m = pyo.ConcreteModel()
+        m.v1 = pyo.Var()
+        m.ref = pyo.Reference(m.v1)
+        m.c1 = pyo.Constraint(expr=m.v1 == 1.0)
+        igraph = IncidenceGraphInterface(m)
+        self.assertEqual(igraph.incidence_matrix.shape, (1, 1))
+
+
+class TestExceptions(unittest.TestCase):
+
+    def test_nlp_fixed_error(self):
+        m = pyo.ConcreteModel()
+        m.v1 = pyo.Var()
+        m.v2 = pyo.Var()
+        m.c1 = pyo.Constraint(expr=m.v1 + m.v2 == 1.0)
+        m.v2.fix(2.0)
+        m._obj = pyo.Objective(expr=0.0)
+        nlp = PyomoNLP(m)
+        with self.assertRaisesRegex(ValueError, "fixed variables"):
+            igraph = IncidenceGraphInterface(nlp, include_fixed=True)
+
+    def test_nlp_active_error(self):
+        m = pyo.ConcreteModel()
+        m.v1 = pyo.Var()
+        m.c1 = pyo.Constraint(expr=m.v1 == 1.0)
+        m.c2 = pyo.Constraint(expr=m.v1 == 2.0)
+        m._obj = pyo.Objective(expr=0.0)
+        nlp = PyomoNLP(m)
+        with self.assertRaisesRegex(ValueError, "inactive constraints"):
+            igraph = IncidenceGraphInterface(nlp, active=False)
+
+
 if __name__ == "__main__":
     unittest.main()
