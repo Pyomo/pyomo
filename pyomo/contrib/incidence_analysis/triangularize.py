@@ -105,6 +105,24 @@ def get_blocks_from_maps(row_block_map, col_block_map):
     block triangularization from maps of row/column coordiates to
     block indices.
 
+    Arguments
+    ---------
+    row_block_map: dict
+        Dict mapping each row coordinate to the coordinate of the 
+        block it belongs to
+
+    col_block_map: dict
+        Dict mapping each column coordinate to the coordinate of the
+        block it belongs to
+
+    Returns
+    -------
+    tuple of lists
+        The first list is a list-of-lists of row indices that partitions
+        the indices into diagonal blocks. The second list is a
+        list-of-lists of column indices that partitions the indices into
+        diagonal blocks.
+
     """
     blocks = set(row_block_map.values())
     assert blocks == set(col_block_map.values())
