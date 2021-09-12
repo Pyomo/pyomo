@@ -800,6 +800,45 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
         for con in con_dmp[0]+con_dmp[1]:
             self.assertIn(con, overconstrained_cons)
 
+    def test_named_tuple(self):
+        m = make_degenerate_solid_phase_model()
+        variables = list(m.component_data_objects(pyo.Var))
+        constraints = list(m.component_data_objects(pyo.Constraint))
+
+        igraph = IncidenceGraphInterface()
+        var_dmp, con_dmp = igraph.dulmage_mendelsohn(variables, constraints)
+
+        underconstrained_vars = ComponentSet(m.flow_comp.values())
+        underconstrained_vars.add(m.flow)
+        underconstrained_cons = ComponentSet(m.flow_eqn.values())
+
+        dmp_vars_under = var_dmp.unmatched + var_dmp.underconstrained
+        dmp_vars_over = var_dmp.overconstrained
+        dmp_cons_under = con_dmp.underconstrained
+        dmp_cons_over = con_dmp.unmatched + con_dmp.overconstrained
+
+        self.assertEqual(len(dmp_vars_under), len(underconstrained_vars))
+        for var in dmp_vars_under:
+            self.assertIn(var, underconstrained_vars)
+
+        self.assertEqual(len(dmp_cons_under), len(underconstrained_cons))
+        for con in dmp_cons_under:
+            self.assertIn(con, underconstrained_cons)
+
+        overconstrained_cons = ComponentSet(m.holdup_eqn.values())
+        overconstrained_cons.add(m.density_eqn)
+        overconstrained_cons.add(m.sum_eqn)
+        overconstrained_vars = ComponentSet(m.x.values())
+        overconstrained_vars.add(m.rho)
+
+        self.assertEqual(len(dmp_vars_over), len(overconstrained_vars))
+        for var in dmp_vars_over:
+            self.assertIn(var, overconstrained_vars)
+
+        self.assertEqual(len(dmp_cons_over), len(overconstrained_cons))
+        for con in dmp_cons_over:
+            self.assertIn(con, overconstrained_cons)
+
     def test_incidence_graph(self):
         m = make_degenerate_solid_phase_model()
         variables = list(m.component_data_objects(pyo.Var))
