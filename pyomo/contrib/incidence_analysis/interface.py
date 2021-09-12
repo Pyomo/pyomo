@@ -20,7 +20,11 @@ from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import scipy_available
 from pyomo.common.dependencies import networkx as nx
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
-from pyomo.contrib.incidence_analysis.triangularize import block_triangularize
+from pyomo.contrib.incidence_analysis.triangularize import (
+    block_triangularize,
+    get_diagonal_blocks,
+    get_blocks_from_maps,
+    )
 from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
     dulmage_mendelsohn,
     RowPartition,
@@ -202,6 +206,9 @@ class IncidenceGraphInterface(object):
                 % (PyomoNLP, Block, type(model))
                 )
 
+        self.row_block_map = None
+        self.col_block_map = None
+
     def _validate_input(self, variables, constraints):
         if variables is None:
             if self.cached is IncidenceMatrixType.NONE:
@@ -274,6 +281,10 @@ class IncidenceGraphInterface(object):
         matrix = self._extract_submatrix(variables, constraints)
 
         row_block_map, col_block_map = block_triangularize(matrix.tocoo())
+        # Cache maps in case we want to get diagonal blocks quickly in the
+        # future.
+        self.row_block_map = row_block_map
+        self.col_block_map = col_block_map
         con_block_map = ComponentMap((constraints[i], idx)
                 for i, idx in row_block_map.items())
         var_block_map = ComponentMap((variables[j], idx)
@@ -281,6 +292,22 @@ class IncidenceGraphInterface(object):
         # Switch the order of the maps here to match the method call.
         # Hopefully this does not get too confusing...
         return var_block_map, con_block_map
+
+    def get_diagonal_blocks(self, variables=None, constraints=None):
+        """
+        """
+        variables, constraints = self._validate_input(variables, constraints)
+        matrix = self._extract_submatrix(variables, constraints)
+
+        if self.row_block_map is None or self.col_block_map is None:
+            block_rows, block_cols = get_diagonal_blocks(matrix)
+        else:
+            block_rows, block_cols = get_blocks_from_maps(
+                self.row_block_map, self.col_block_map
+            )
+        block_cons = [[constraints[i] for i in block] for block in block_rows]
+        block_vars = [[variables[i] for i in block] for block in block_cols]
+        return block_vars, block_cons
 
     def dulmage_mendelsohn(self, variables=None, constraints=None):
         """
