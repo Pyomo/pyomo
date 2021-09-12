@@ -78,6 +78,15 @@ def get_incidence_graph(variables, constraints, include_fixed=True):
     return graph
 
 
+def _generate_variables_in_constraints(constraints, include_fixed=False):
+    known_vars = ComponentSet()
+    for con in constraints:
+        for var in identify_variables(con.expr, include_fixed=include_fixed):
+            if var not in known_vars:
+                known_vars.add(var)
+                yield var
+
+
 def get_structural_incidence_matrix(variables, constraints, include_fixed=True):
     """
     This function gets the incidence matrix of Pyomo constraints and variables.
@@ -136,7 +145,7 @@ class IncidenceGraphInterface(object):
     model without constructing multiple PyomoNLPs.
     """
 
-    def __init__(self, model=None):
+    def __init__(self, model=None, active=True, include_fixed=False):
         """
         """
         # If the user gives us a model or an NLP, we assume they want us
@@ -158,8 +167,14 @@ class IncidenceGraphInterface(object):
             self.incidence_matrix = nlp.evaluate_jacobian_eq()
         elif isinstance(model, Block):
             self.cached = IncidenceMatrixType.STRUCTURAL
-            self.variables = list(model.component_data_objects(Var))
-            self.constraints = list(model.component_data_objects(Constraint))
+            self.constraints = list(
+                model.component_data_objects(Constraint, active=active)
+            )
+            self.variables = list(
+                _generate_variables_in_constraints(
+                    self.constraints, include_fixed=include_fixed
+                )
+            )
             self.var_index_map = ComponentMap(
                     (var, i) for i, var in enumerate(self.variables))
             self.con_index_map = ComponentMap(
