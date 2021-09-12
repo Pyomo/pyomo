@@ -989,6 +989,8 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
             self.assertIn(con, overconstrained_cons)
 
 
+@unittest.skipUnless(networkx_available, "networkx is not available.")
+@unittest.skipUnless(scipy_available, "scipy is not available.")
 class TestExtraVars(unittest.TestCase):
 
     def test_unused_var(self):
@@ -1008,6 +1010,9 @@ class TestExtraVars(unittest.TestCase):
         self.assertEqual(igraph.incidence_matrix.shape, (1, 1))
 
 
+@unittest.skipUnless(networkx_available, "networkx is not available.")
+@unittest.skipUnless(scipy_available, "scipy is not available.")
+@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
 class TestExceptions(unittest.TestCase):
 
     def test_nlp_fixed_error(self):
