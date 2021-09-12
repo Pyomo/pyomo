@@ -128,7 +128,7 @@ public:
 
 std::shared_ptr<ExpressionBase> appsi_exp(std::shared_ptr<ExpressionBase> n);
 std::shared_ptr<ExpressionBase> appsi_log(std::shared_ptr<ExpressionBase> n);
-std::shared_ptr<ExpressionBase> appsi_sum(std::vector<std::shared_ptr<ExpressionBase> > exprs_to_sum);
+std::shared_ptr<ExpressionBase> appsi_sum(std::vector<std::shared_ptr<ExpressionBase> >& exprs_to_sum);
 std::shared_ptr<ExpressionBase> external_helper(std::string function_name, std::vector<std::shared_ptr<ExpressionBase> > operands);
 
 
@@ -248,7 +248,7 @@ public:
   virtual void print(std::string*) = 0;
   virtual std::string name() = 0;
   virtual void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) = 0;
-  virtual void generate_repn(std::shared_ptr<TmpRepn>, int*, bool*, bool*, bool*, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>) = 0;
+  virtual void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) = 0;
   void set_repn_info(bool*, bool) override;
   void set_repn_info(int*, int) override;
   bool get_accounted_for_from_array(bool*) override;
@@ -292,7 +292,7 @@ public:
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
   void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::shared_ptr<TmpRepn>, int*, bool*, bool*, bool*, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
   void print(std::string*) override;
   std::string name() override {return "LinearOperator";};
   void write_nl_string(std::ofstream&) override;
@@ -311,7 +311,7 @@ public:
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
   void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::shared_ptr<TmpRepn>, int*, bool*, bool*, bool*, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
   void print(std::string*) override;
   std::string name() override {return "SumOperator";};
   void write_nl_string(std::ofstream&) override;
@@ -328,7 +328,7 @@ public:
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
   void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::shared_ptr<TmpRepn>, int*, bool*, bool*, bool*, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
   void print(std::string*) override;
   std::string name() override {return "MultiplyOperator";};
   void write_nl_string(std::ofstream&) override;
@@ -345,7 +345,7 @@ public:
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
   void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::shared_ptr<TmpRepn>, int*, bool*, bool*, bool*, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
   void print(std::string*) override;
   std::string name() override {return "ExternalOperator";};
   void write_nl_string(std::ofstream&) override;
@@ -367,7 +367,7 @@ public:
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
   void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::shared_ptr<TmpRepn>, int*, bool*, bool*, bool*, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
   void print(std::string*) override;
   std::string name() override {return "AddOperator";};
   void write_nl_string(std::ofstream&) override;
@@ -383,7 +383,7 @@ public:
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
   void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::shared_ptr<TmpRepn>, int*, bool*, bool*, bool*, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
   void print(std::string*) override;
   std::string name() override {return "SubtractOperator";};
   void write_nl_string(std::ofstream&) override;
@@ -399,7 +399,7 @@ public:
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
   void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::shared_ptr<TmpRepn>, int*, bool*, bool*, bool*, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
   void print(std::string*) override;
   std::string name() override {return "DivideOperator";};
   void write_nl_string(std::ofstream&) override;
@@ -415,7 +415,7 @@ public:
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
   void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::shared_ptr<TmpRepn>, int*, bool*, bool*, bool*, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
   void print(std::string*) override;
   std::string name() override {return "PowerOperator";};
   void write_nl_string(std::ofstream&) override;
@@ -431,7 +431,7 @@ public:
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
   void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::shared_ptr<TmpRepn>, int*, bool*, bool*, bool*, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
   void print(std::string*) override;
   std::string name() override {return "NegationOperator";};
   void write_nl_string(std::ofstream&) override;
@@ -447,7 +447,7 @@ public:
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
   void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::shared_ptr<TmpRepn>, int*, bool*, bool*, bool*, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
   void print(std::string*) override;
   std::string name() override {return "ExpOperator";};
   void write_nl_string(std::ofstream&) override;
@@ -463,7 +463,7 @@ public:
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
   void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::shared_ptr<TmpRepn>, int*, bool*, bool*, bool*, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>, std::shared_ptr<SumOperator>) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
   void print(std::string*) override;
   std::string name() override {return "LogOperator";};
   void write_nl_string(std::ofstream&) override;
