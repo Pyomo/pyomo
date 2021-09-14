@@ -21,7 +21,11 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.core import ( Block, Constraint, Var, SortComponents, Transformation,
                          TransformationFactory, TraversalStrategy,
                          NonNegativeIntegers, value, ConcreteModel,
-                         NonNegativeIntegers, Objective, ComponentMap)
+                         NonNegativeIntegers, Objective, ComponentMap,
+                         BooleanVar, LogicalConstraint, Connector, Expression,
+                         Suffix, Param, Set, SetOf, RangeSet)
+from pyomo.core.base.external import ExternalFunction
+from pyomo.network import Port
 from pyomo.common.collections import ComponentSet
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr import current as EXPR
@@ -31,7 +35,10 @@ from pyomo.util.vars_from_expressions import get_vars_from_constraints
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (preprocess_targets, is_child_of, target_list,
                             _to_dict, verify_successful_solve, NORMAL,
-                            clone_without_expression_components )
+                            clone_without_expression_components,
+                            _warn_for_active_disjunction,
+                            _warn_for_active_disjunct,
+                            _warn_for_active_logical_constraint)
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from weakref import ref as weakref_ref
 
@@ -40,9 +47,10 @@ from math import floor
 import logging
 logger = logging.getLogger('pyomo.gdp.between_steps')
 
-from nose.tools import set_trace
-
 NAME_BUFFER = {}
+
+# DEBUG
+from nose.tools import set_trace
 
 def _generate_additively_separable_repn(nonlinear_part):
     if nonlinear_part.__class__ is not EXPR.SumExpression:
@@ -248,14 +256,6 @@ class BetweenSteps_Transformation(Transformation):
         and fixed variables need not have bounds.
         """
     ))
-    CONFIG.declare('verbose', ConfigValue(
-        default=False,
-        domain=bool,
-        description="""Enable verbose output.""",
-        doc="""
-        Set to True for verbose output, False otherwise.
-        """
-    ))
     CONFIG.declare('compute_bounds_method', ConfigValue(
         default=compute_fbbt_bounds,
         description="""Function which takes an expression, the instance, 
@@ -286,6 +286,29 @@ class BetweenSteps_Transformation(Transformation):
     ))
     def __init__(self):
         super(BetweenSteps_Transformation, self).__init__()
+        self.handlers = {
+            Constraint:  self._transform_constraint,
+            Var:         False,
+            BooleanVar:  False,
+            Connector:   False,
+            Expression:  False,
+            Suffix:      False,
+            Param:       False,
+            Set:         False,
+            SetOf:       False,
+            RangeSet:    False,
+            Disjunction: self._warn_for_active_disjunction,
+            Disjunct:    self._warn_for_active_disjunct,
+            Block:       False, # We can descend into Blocks in this
+                                # transformation, so we will never hit them when
+                                # we go looking for components. (That is, we are
+                                # going to flatten the structure within a
+                                # Disjunct and we don't care.)
+            LogicalConstraint: self._warn_for_active_logical_statement,
+            ExternalFunction: False,
+            Port:        False, # not Arcs, because those are deactivated after
+                                # the network.expand_arcs transformation
+        }
 
     def _apply_to(self, instance, **kwds):
         if not instance.ctype in (Block, Disjunct):
@@ -300,14 +323,6 @@ class BetweenSteps_Transformation(Transformation):
             assert not NAME_BUFFER
             self._config = self.CONFIG(kwds.pop('options', {}))
             self._config.set_value(kwds)
-
-            if self._config.verbose and log_level > logging.INFO:
-                logger.setLevel(logging.INFO)
-                self.verbose = True
-            elif log_level <= logging.INFO:
-                self.verbose = True
-            else:
-                self.verbose = False
 
             if not self._config.assume_fixed_vars_permanent:
                 fixed_vars = ComponentMap()
@@ -328,7 +343,6 @@ class BetweenSteps_Transformation(Transformation):
                     v.fix(val)
 
             del self._config
-            del self.verbose
             # clear the global name buffer
             NAME_BUFFER.clear()
             # restore logging level
@@ -392,7 +406,8 @@ class BetweenSteps_Transformation(Transformation):
                 sort=SortComponents.deterministic,
                 descend_into=(Block, Disjunct),
                 descent_order=TraversalStrategy.PostfixDFS):
-            self._transform_disjunction(disjunction, transBlock)
+            self._transform_disjunctionData(disjunction, disjunction.index(),
+                                            transBlock)
     
     def _transform_disjunction(self, obj, transBlock):
         if not obj.active:
@@ -426,9 +441,15 @@ class BetweenSteps_Transformation(Transformation):
                 method = method if method is not None else arbitrary_partition
 
                 # now figure out P
-                P = self._config.P.get(obj)
-                if P is None:
-                    P = self._config.P.get(None)
+                if self._config.P is None:
+                    # This will just end in failure below. (We're checking here
+                    # because we don't need a value of P if the partitions were
+                    # specified for every Disjunction.)
+                    P = None
+                else:
+                    P = self._config.P.get(obj)
+                    if P is None:
+                        P = self._config.P.get(None)
                 if P is None:
                     raise GDP_Error("No value for P was given for disjunction "
                                     "%s! Please specify a value of P (number of "
@@ -467,11 +488,11 @@ class BetweenSteps_Transformation(Transformation):
             constraints.append((cons.body, cons.upper))
         return constraints
 
-    def _transform_disjunct(self, obj, partition, transBlock):
+    def _transform_disjunct(self, disjunct, partition, transBlock):
         # deactivated -> either we've already transformed or user deactivated
-        if not obj.active:
-            if obj.indicator_var.is_fixed():
-                if not value(obj.indicator_var):
+        if not disjunct.active:
+            if disjunct.indicator_var.is_fixed():
+                if not value(disjunct.indicator_var):
                     # The user cleanly deactivated the disjunct: there
                     # is nothing for us to do here.
                     return
@@ -479,147 +500,189 @@ class BetweenSteps_Transformation(Transformation):
                     raise GDP_Error(
                         "The disjunct '%s' is deactivated, but the "
                         "indicator_var is fixed to %s. This makes no sense."
-                        % ( obj.name, value(obj.indicator_var) ))
+                        % ( disjunct.name, value(disjunct.indicator_var) ))
 
         transformed_disjunct = Disjunct()
-        obj._transformation_block = weakref_ref(transformed_disjunct)
+        disjunct._transformation_block = weakref_ref(transformed_disjunct)
         transBlock.add_component(unique_component_name(
             transBlock,
-            obj.getname(fully_qualified=True, name_buffer=NAME_BUFFER)),
+            disjunct.getname(fully_qualified=True, name_buffer=NAME_BUFFER)),
                                  transformed_disjunct)
-        instance = obj.model()
-        for cons in obj.component_data_objects(Constraint, active=True,
-                                               sort=SortComponents.deterministic,
-                                               descend_into=Block):
-            cons_name = cons.getname(fully_qualified=True,
-                                     name_buffer=NAME_BUFFER)
+        for obj in disjunct.component_data_objects(
+                active=True,
+                sort=SortComponents.deterministic,
+                descend_into=Block):
+            handler = self.handlers.get(obj.ctype, None)
+            if not handler:
+                if handler is None:
+                    raise GDP_Error(
+                        "No between_steps transformation handler registered "
+                        "for modeling components of type %s. If your "
+                        "disjuncts contain non-GDP Pyomo components that "
+                        "require transformation, please transform them first."
+                        % obj.ctype)
+                continue
+            # we are really only transforming constraints and checking for
+            # anything nutty (active Disjuncts, etc) here, so pass through what
+            # is necessary for transforming Constraints
+            handler(obj, disjunct, transformed_disjunct, transBlock, partition)
 
-            # create place on transformed Disjunct for the new constraint and
-            # for the auxilary variables
-            transformed_constraint = Constraint(NonNegativeIntegers)
-            transformed_disjunct.add_component(unique_component_name(
-                transformed_disjunct, cons_name), transformed_constraint)
-            aux_vars = Var(NonNegativeIntegers, dense=False)
-            transformed_disjunct.add_component(unique_component_name(
-                transformed_disjunct, cons_name + "_aux_vars"), aux_vars)
-
-            # create a place on the transBlock for the split constraints
-            split_constraints = Constraint(NonNegativeIntegers)
-            transBlock.add_component(unique_component_name(
-                transBlock, cons_name + "_split_constraints"), split_constraints)
-
-            # this is a list which might have two constraints in it if we had
-            # both a lower and upper value.
-            leq_constraints = self._get_leq_constraints(cons)
-            for (body, rhs) in leq_constraints:
-                repn = generate_standard_repn(body, compute_values=True)
-                nonlinear_repn = None
-                if repn.nonlinear_expr is not None:
-                    nonlinear_repn = _generate_additively_separable_repn(
-                        repn.nonlinear_expr)
-                split_exprs = []
-                split_aux_vars = []
-                vars_not_accounted_for = ComponentSet(v for v in
-                                                      EXPR.identify_variables(
-                                                          body,
-                                                          include_fixed=False))
-                vars_accounted_for = ComponentSet()
-                for idx, var_list in enumerate(partition):
-                    # we are going to recreate the piece of the expression
-                    # involving the vars in var_list
-                    split_exprs.append(0)
-                    expr = split_exprs[-1]
-                    for i, v in enumerate(repn.linear_vars):
-                        if v in var_list:
-                            expr += repn.linear_coefs[i]*v
-                            vars_accounted_for.add(v)
-                    for i, (v1, v2) in enumerate(repn.quadratic_vars):
-                        if v1 in var_list:
-                            if v2 not in var_list:
-                                raise GDP_Error("Variables %s and %s are "
-                                                "multiplied in Constraint %s,"
-                                                "but they are in different "
-                                                "partitions! Please ensure that "
-                                                "all the constraints in the "
-                                                "disjunction are "
-                                                "additively separable with "
-                                                "respect to the specified "
-                                                "partition." % (v1.name, v2.name,
-                                                                cons.name))
-                            expr += repn.quadratic_coefs[i]*v1*v2
-                            vars_accounted_for.add(v1)
-                            vars_accounted_for.add(v2)
-                    if nonlinear_repn is not None:
-                        for i, expr_var_set in enumerate(
-                                nonlinear_repn['nonlinear_vars']):
-                            # check if v_list is a subset of var_list. If it is
-                            # not and there is no intersection, we move on. If
-                            # it is not and there is an intersection, we raise
-                            # an error: It's not a valid partition. If it is,
-                            # then we add this piece of the expression.
-                            # subset?
-                            if all(v in var_list for v in list(expr_var_set)):
-                                expr += nonlinear_repn['nonlinear_exprs'][i]
-                                for var in expr_var_set:
-                                    vars_accounted_for.add(var)
-                            # intersection?
-                            elif len(ComponentSet(expr_var_set) & var_list) != 0:
-                                raise GDP_Error("Variables which appear in the "
-                                                "expression %s are in different "
-                                                "partitions, but this "
-                                                "expression doesn't appear "
-                                                "additively separable. Please "
-                                                "expand it if it is additively "
-                                                "separable or, more likely, "
-                                                "ensure that all the "
-                                                "constraints in the disjunction "
-                                                "are additively separable with "
-                                                "respect to the specified "
-                                                "partition." % 
-                                                nonlinear_repn[
-                                                    'nonlinear_exprs'][i])
-                    
-                    expr_lb, expr_ub = self._config.compute_bounds_method( 
-                        expr, instance, transBlock, 
-                        self._config.compute_bounds_solver)
-                    if expr_lb is None or expr_ub is None:
-                        raise GDP_Error("Expression %s from constraint '%s' "
-                                        "is unbounded! Please ensure all "
-                                        "variables that appear "
-                                        "in the constraint are bounded or "
-                                        "specify compute_bounds_method="
-                                        "compute_optimal_bounds"
-                                        " if the expression is bounded by the "
-                                        "global constraints." % 
-                                        (expr, cons.name))
-                    # if the expression was empty wrt the partition, we don't
-                    # need to bother with any of this. The aux_var doesn't need
-                    # to exist because it would be 0.
-                    if type(expr) is not int or expr != 0: 
-                        aux_var = aux_vars[len(aux_vars)]
-                        aux_var.setlb(expr_lb)
-                        aux_var.setub(expr_ub)  
-                        split_aux_vars.append(aux_var)
-                        split_constraints[
-                            len(split_constraints)] = expr <= aux_var
-
-                if len(vars_accounted_for) < len(vars_not_accounted_for):
-                        orphans = vars_not_accounted_for - vars_accounted_for
-                        orphan_string = ""
-                        for v in orphans:
-                            orphan_string += "'%s', " % v.name
-                        orphan_string = orphan_string[:-2]
-                        raise GDP_Error("Partition specified for disjunction "
-                                        "containing Disjunct '%s' does not "
-                                        "include all the variables that appear "
-                                        "in the disjunction. The following "
-                                        "variables are not assigned to any part "
-                                        "of the partition: %s" % (obj.name, 
-                                                                  orphan_string))
-                transformed_constraint[
-                    len(transformed_constraint)] = sum(v for v in
-                                                       split_aux_vars) <= \
-                    rhs - repn.constant
-                                         
-        obj.deactivate()
+        disjunct.deactivate()
         return transformed_disjunct
+
+    def _transform_constraint(self, cons, disjunct, transformed_disjunct,
+                              transBlock, partition):
+        instance = disjunct.model()
+        cons_name = cons.getname(fully_qualified=True,
+                                 name_buffer=NAME_BUFFER)
+
+        # create place on transformed Disjunct for the new constraint and
+        # for the auxilary variables
+        transformed_constraint = Constraint(NonNegativeIntegers)
+        transformed_disjunct.add_component(unique_component_name(
+            transformed_disjunct, cons_name), transformed_constraint)
+        aux_vars = Var(NonNegativeIntegers, dense=False)
+        transformed_disjunct.add_component(unique_component_name(
+            transformed_disjunct, cons_name + "_aux_vars"), aux_vars)
+
+        # create a place on the transBlock for the split constraints
+        split_constraints = Constraint(NonNegativeIntegers)
+        transBlock.add_component(unique_component_name(
+            transBlock, cons_name + "_split_constraints"), split_constraints)
+
+        # this is a list which might have two constraints in it if we had
+        # both a lower and upper value.
+        leq_constraints = self._get_leq_constraints(cons)
+        for (body, rhs) in leq_constraints:
+            repn = generate_standard_repn(body, compute_values=True)
+            nonlinear_repn = None
+            if repn.nonlinear_expr is not None:
+                nonlinear_repn = _generate_additively_separable_repn(
+                    repn.nonlinear_expr)
+            split_exprs = []
+            split_aux_vars = []
+            vars_not_accounted_for = ComponentSet(v for v in
+                                                  EXPR.identify_variables(
+                                                      body,
+                                                      include_fixed=False))
+            vars_accounted_for = ComponentSet()
+            for idx, var_list in enumerate(partition):
+                # we are going to recreate the piece of the expression
+                # involving the vars in var_list
+                split_exprs.append(0)
+                expr = split_exprs[-1]
+                for i, v in enumerate(repn.linear_vars):
+                    if v in var_list:
+                        expr += repn.linear_coefs[i]*v
+                        vars_accounted_for.add(v)
+                for i, (v1, v2) in enumerate(repn.quadratic_vars):
+                    if v1 in var_list:
+                        if v2 not in var_list:
+                            raise GDP_Error("Variables %s and %s are "
+                                            "multiplied in Constraint %s,"
+                                            "but they are in different "
+                                            "partitions! Please ensure that "
+                                            "all the constraints in the "
+                                            "disjunction are "
+                                            "additively separable with "
+                                            "respect to the specified "
+                                            "partition." % (v1.name, v2.name,
+                                                            cons.name))
+                        expr += repn.quadratic_coefs[i]*v1*v2
+                        vars_accounted_for.add(v1)
+                        vars_accounted_for.add(v2)
+                if nonlinear_repn is not None:
+                    for i, expr_var_set in enumerate(
+                            nonlinear_repn['nonlinear_vars']):
+                        # check if v_list is a subset of var_list. If it is
+                        # not and there is no intersection, we move on. If
+                        # it is not and there is an intersection, we raise
+                        # an error: It's not a valid partition. If it is,
+                        # then we add this piece of the expression.
+                        # subset?
+                        if all(v in var_list for v in list(expr_var_set)):
+                            expr += nonlinear_repn['nonlinear_exprs'][i]
+                            for var in expr_var_set:
+                                vars_accounted_for.add(var)
+                        # intersection?
+                        elif len(ComponentSet(expr_var_set) & var_list) != 0:
+                            raise GDP_Error("Variables which appear in the "
+                                            "expression %s are in different "
+                                            "partitions, but this "
+                                            "expression doesn't appear "
+                                            "additively separable. Please "
+                                            "expand it if it is additively "
+                                            "separable or, more likely, "
+                                            "ensure that all the "
+                                            "constraints in the disjunction "
+                                            "are additively separable with "
+                                            "respect to the specified "
+                                            "partition. If you did not "
+                                            "specify a partition, only "
+                                            "a value of P, note that to "
+                                            "automatically partition the "
+                                            "variables, we assume all the "
+                                            "expressions are additively "
+                                            "separable." % 
+                                            nonlinear_repn[
+                                                'nonlinear_exprs'][i])
+
+                expr_lb, expr_ub = self._config.compute_bounds_method( 
+                    expr, instance, transBlock, 
+                    self._config.compute_bounds_solver)
+                if expr_lb is None or expr_ub is None:
+                    raise GDP_Error("Expression %s from constraint '%s' "
+                                    "is unbounded! Please ensure all "
+                                    "variables that appear "
+                                    "in the constraint are bounded or "
+                                    "specify compute_bounds_method="
+                                    "compute_optimal_bounds"
+                                    " if the expression is bounded by the "
+                                    "global constraints." % 
+                                    (expr, cons.name))
+                # if the expression was empty wrt the partition, we don't
+                # need to bother with any of this. The aux_var doesn't need
+                # to exist because it would be 0.
+                if type(expr) is not int or expr != 0: 
+                    aux_var = aux_vars[len(aux_vars)]
+                    aux_var.setlb(expr_lb)
+                    aux_var.setub(expr_ub)  
+                    split_aux_vars.append(aux_var)
+                    split_constraints[
+                        len(split_constraints)] = expr <= aux_var
+
+            if len(vars_accounted_for) < len(vars_not_accounted_for):
+                    orphans = vars_not_accounted_for - vars_accounted_for
+                    orphan_string = ""
+                    for v in orphans:
+                        orphan_string += "'%s', " % v.name
+                    orphan_string = orphan_string[:-2]
+                    raise GDP_Error("Partition specified for disjunction "
+                                    "containing Disjunct '%s' does not "
+                                    "include all the variables that appear "
+                                    "in the disjunction. The following "
+                                    "variables are not assigned to any part "
+                                    "of the partition: %s" % (disjunct.name, 
+                                                              orphan_string))
+            transformed_constraint[
+                len(transformed_constraint)] = sum(v for v in
+                                                   split_aux_vars) <= \
+                rhs - repn.constant
+        # deactivate the constraint since we've transformed it
+        cons.deactivate()                             
+
+    def _warn_for_active_disjunction(self, disjunction, disjunct,
+                                     transformed_disjunct, transBlock,
+                                     partition):
+        _warn_for_active_disjunction(disjunction, disjunct, NAME_BUFFER)
+
+    def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct,
+                                  transformed_disjunct, transBlock,
+                                  partition):
+        _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER)
+
+    def _warn_for_active_logical_statement( self, logical_statment, disjunct,
+                                            transformed_disjunct, transBlock,
+                                            partition):
+        _warn_for_active_logical_constraint(logical_statment, disjunct,
+                                            NAME_BUFFER)

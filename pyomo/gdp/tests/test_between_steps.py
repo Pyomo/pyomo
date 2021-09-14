@@ -23,13 +23,11 @@ import pyomo.gdp.tests.common_tests as ct
 from pyomo.repn import generate_standard_repn
 from pyomo.opt import check_available_solvers
 
-from nose.tools import set_trace
-
 solvers = check_available_solvers('gurobi_direct')
 
 class CommonTests:
-    def diff_apply_to_and_create_using(self, model):
-        ct.diff_apply_to_and_create_using(self, model, 'gdp.between_steps')
+    def diff_apply_to_and_create_using(self, model, P):
+        ct.diff_apply_to_and_create_using(self, model, 'gdp.between_steps', P=P)
 
 class PaperTwoCircleExample(unittest.TestCase, CommonTests):
     def makeModel(self):
@@ -989,7 +987,11 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             m,
             variable_partitions=[[m.x[1]], [m.x[2]], [m.x[3], m.x[4]]],
             compute_bounds_method=compute_fbbt_bounds)
-        
+
+    def test_create_using(self):
+        m = self.makeModel()
+        self.diff_apply_to_and_create_using(m, P=2)
+
 class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
     def makeModel(self):
         m = ConcreteModel()
@@ -1230,7 +1232,13 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
             "additively separable. Please expand it if it is additively "
             "separable or, more likely, ensure that all the constraints in "
             "the disjunction are additively separable with respect to the "
-            "specified partition.",
+            "specified partition. If you did not "
+            "specify a partition, only "
+            "a value of P, note that to "
+            "automatically partition the "
+            "variables, we assume all the "
+            "expressions are additively "
+            "separable.",
             TransformationFactory('gdp.between_steps').apply_to,
             m,
             variable_partitions=[[m.x[3], m.x[2]], [m.x[1], m.x[4]]],
@@ -1301,3 +1309,103 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
         self.assertIsInstance(nonlinear, EXPR.PowExpression)
         self.assertIs(nonlinear.args[0], m.x[1])
         self.assertEqual(nonlinear.args[1], 3)
+
+    def test_create_using(self):
+        m = self.makeModel()
+        self.diff_apply_to_and_create_using(m, P=2)
+
+    def test_infeasible_value_of_P(self):
+        m = self.makeModel()
+
+        self.assertRaisesRegex(
+            GDP_Error,
+            "Variables which appear in the "
+            "expression \(x\[3\]\*\*4 \+ x\[4\]\*\*4\)\*\*0.25 are in different "
+            "partitions, but this "
+            "expression doesn't appear "
+            "additively separable. Please "
+            "expand it if it is additively "
+            "separable or, more likely, "
+            "ensure that all the "
+            "constraints in the disjunction "
+            "are additively separable with "
+            "respect to the specified "
+            "partition. If you did not "
+            "specify a partition, only "
+            "a value of P, note that to "
+            "automatically partition the "
+            "variables, we assume all the "
+            "expressions are additively "
+            "separable.",
+            TransformationFactory('gdp.between_steps').apply_to,
+            m, 
+            P=3)
+
+# This is just a pile of tests that are structural that we use for bigm and
+# hull, so might as well for here too.
+class CommonModels(unittest.TestCase, CommonTests):
+    def test_user_deactivated_disjuncts(self):
+        ct.check_user_deactivated_disjuncts(self, 'between_steps',
+                                            check_trans_block=False, P=2)
+        # ESJ: This is interesting... Should we allow Disjunctions with one
+        # Disjunct? Because else we have to go looking for this case, I
+        # think. Between steps would have to fix the indicator_variable of what
+        # it made and I guess make a dummy thing if there was only one? Or is
+        # the right approach to transform the whole thing and then deactivate
+        # the new GDP objects according to what the user had done here?
+
+    def test_improperly_deactivated_disjuncts(self):
+        ct.check_improperly_deactivated_disjuncts(self, 'between_steps', P=2)
+        
+    def test_do_not_transform_userDeactivated_indexedDisjunction(self):
+        ct.check_do_not_transform_userDeactivated_indexedDisjunction(
+            self, 'between_steps', P=2)
+
+    def test_disjunction_deactivated(self):
+        ct.check_disjunction_deactivated(self, 'between_steps', P=2)
+
+    def test_disjunctDatas_deactivated(self):
+        ct.check_disjunctDatas_deactivated(self, 'between_steps', P=2)
+
+    def test_deactivated_constraints(self):
+        ct.check_deactivated_constraints(self, 'between_steps', P=2)
+
+    def test_deactivated_disjuncts(self):
+        ct.check_deactivated_disjuncts(self, 'between_steps', P=2)
+
+    def test_deactivated_disjunctions(self):
+        ct.check_deactivated_disjunctions(self, 'between_steps', P=2)
+
+    def test_constraints_deactivated_indexedDisjunction(self):
+        ct.check_constraints_deactivated_indexedDisjunction(self,
+                                                            'between_steps', P=2)
+    # targets
+
+    def test_only_targets_inactive(self):
+        ct.check_only_targets_inactive(self, 'between_steps', P=2)
+
+    def test_target_not_a_component_error(self):
+        ct.check_target_not_a_component_error(self, 'between_steps', P=2)
+
+    def test_indexedDisj_targets_inactive(self):
+        ct.check_indexedDisj_targets_inactive(self, 'between_steps', P=2)
+
+    def test_warn_for_untransformed(self):
+        ct.check_warn_for_untransformed(self, 'between_steps', P=2)
+
+    # ESJ: This is nuts, I am such an idiot. Why on Earth did I map the
+    # container to something? Why does the container *have* an
+    # _algebraic_constraint?? That makes no sense. Can I deprecate it?
+    def test_disjData_targets_inactive(self):
+        ct.check_disjData_targets_inactive(self, 'between_steps', P=2)
+
+    def test_indexedBlock_targets_inactive(self):
+        ct.check_indexedBlock_targets_inactive(self, 'between_steps', P=2)
+
+    def test_blockData_targets_inactive(self):
+        ct.check_blockData_targets_inactive(self, 'between_steps', P=2)
+
+# TODO: 1) I think that we do need a transform_block_on_disjunct method because
+# we do need to maintain the block structure in case you partially transformed a
+# model and then solved a block. 2) Need to think through exactly what should
+# happen with nested disjunctions
