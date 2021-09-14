@@ -692,6 +692,122 @@ std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > Param::identif
 }
 
 
+bool Leaf::get_unique_degree_from_array(bool* unique_degrees)
+{
+  return true;
+}
+
+
+bool Expression::get_unique_degree_from_array(bool* unique_degrees)
+{
+  return unique_degrees[n_operators-1];
+}
+
+
+bool Operator::get_unique_degree_from_array(bool* unique_degrees)
+{
+  return unique_degrees[index];
+}
+
+
+std::shared_ptr<Repn> ExpressionBase::get_repn_from_vector(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees)
+{
+  return generate_repn();
+}
+
+
+std::shared_ptr<Repn> Expression::get_repn_from_vector(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees)
+{
+  if (unique_degrees[n_operators-1])
+    {
+      std::shared_ptr<Repn> repn = std::make_shared<Repn>();
+      repn->reset_with_constants();
+      int deg = degrees[n_operators-1];
+      if (deg == 0)
+	{
+	  repn->constant = shared_from_this();
+	}
+      else if (deg == 1)
+	{
+	  repn->linear = shared_from_this();
+	}
+      else if (deg == 2)
+	{
+	  repn->quadratic = shared_from_this();
+	}
+      else
+	{
+	  repn->nonlinear = shared_from_this();
+	}
+      return repn;
+    }
+  else
+    {
+      return repns.at(n_operators-1);
+    }
+}
+
+
+std::shared_ptr<Repn> Operator::get_repn_from_vector(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees)
+{
+  if (unique_degrees[index])
+    {
+      std::shared_ptr<ExpressionBase> expr = expression_from_operator();
+      std::shared_ptr<Repn> repn = repns[index];
+      repn->reset_with_constants();
+      int deg = degrees[index];
+      if (deg == 0)
+	{
+	  repn->constant = expr;
+	}
+      else if (deg == 1)
+	{
+	  repn->linear = expr;
+	}
+      else if (deg == 2)
+	{
+	  repn->quadratic = expr;
+	}
+      else
+	{
+	  repn->nonlinear = expr;
+	}
+      return repn;
+    }
+  else
+    {
+      return repns[index];
+    }
+}
+
+
+std::shared_ptr<ExpressionBase> Operator::expression_from_operator()
+{
+  std::shared_ptr<std::vector<std::shared_ptr<Node> > > prefix_notation = std::make_shared<std::vector<std::shared_ptr<Node> > >();
+  std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack = std::make_shared<std::vector<std::shared_ptr<Node> > >();
+  std::shared_ptr<Node> node;
+  stack->push_back(shared_from_this());
+  while (stack->size() > 0)
+    {
+      node = stack->back();
+      stack->pop_back();
+      prefix_notation->push_back(node);
+      node->fill_prefix_notation_stack(stack);
+    }
+  
+  std::shared_ptr<Expression> res = std::make_shared<Expression>();
+  int ndx = prefix_notation->size() - 1;
+  while (ndx >= 0)
+    {
+      if (prefix_notation->at(ndx)->is_operator_type())
+	{
+	  res->operators->push_back(std::dynamic_pointer_cast<Operator>(prefix_notation->at(ndx)));
+	}
+      ndx -= 1;
+    }
+  res->n_operators = res->operators->size();
+  return res;
+}
 
 
 int Var::get_degree_from_array(int* degree_array)
@@ -721,60 +837,6 @@ int Expression::get_degree_from_array(int* degree_array)
 int Operator::get_degree_from_array(int* degree_array)
 {
   return degree_array[index];
-}
-
-
-bool Leaf::get_accounted_for_from_array(bool* accounted_for)
-{
-  return false;
-}
-
-
-bool Expression::get_accounted_for_from_array(bool* accounted_for)
-{
-  return accounted_for[n_operators-1];
-}
-
-
-bool Operator::get_accounted_for_from_array(bool* accounted_for)
-{
-  return accounted_for[index];
-}
-
-
-void Leaf::set_repn_info(bool* _array, bool _value)
-{
-  ;
-}
-
-
-void Leaf::set_repn_info(int* _array, int _value)
-{
-  ;
-}
-
-
-void Expression::set_repn_info(bool* _array, bool _value)
-{
-  _array[n_operators-1] = _value;
-}
-
-
-void Expression::set_repn_info(int* _array, int _value)
-{
-  _array[n_operators-1] = _value;
-}
-
-
-void Operator::set_repn_info(bool* _array, bool _value)
-{
-  _array[index] = _value;
-}
-
-
-void Operator::set_repn_info(int* _array, int _value)
-{
-  _array[index] = _value;
 }
 
 
@@ -887,116 +949,6 @@ void LogOperator::propagate_degree_forward(int* degrees, double* values)
 }
 
 
-void AddOperator::propagate_repn_info_backward(int* degrees, bool* push, bool* negate)
-{
-  if (push[index])
-    {
-      operand1->set_repn_info(degrees, degrees[index]);
-      operand1->set_repn_info(push, true);
-      operand2->set_repn_info(degrees, degrees[index]);
-      operand2->set_repn_info(push, true);
-    }
-  operand1->set_repn_info(negate, negate[index]);
-  operand2->set_repn_info(negate, negate[index]);
-}
-
-
-void SubtractOperator::propagate_repn_info_backward(int* degrees, bool* push, bool* negate)
-{
-  if (push[index])
-    {
-      operand1->set_repn_info(degrees, degrees[index]);
-      operand1->set_repn_info(push, true);
-      operand2->set_repn_info(degrees, degrees[index]);
-      operand2->set_repn_info(push, true);
-    }
-  operand1->set_repn_info(negate, negate[index]);
-  operand2->set_repn_info(negate, !negate[index]);
-}
-
-
-void MultiplyOperator::propagate_repn_info_backward(int* degrees, bool* push, bool* negate)
-{
-  operand1->set_repn_info(degrees, degrees[index]);
-  operand1->set_repn_info(push, true);
-  operand2->set_repn_info(degrees, degrees[index]);
-  operand2->set_repn_info(push, true);
-}
-
-
-void DivideOperator::propagate_repn_info_backward(int* degrees, bool* push, bool* negate)
-{
-  operand1->set_repn_info(degrees, degrees[index]);
-  operand1->set_repn_info(push, true);
-  operand2->set_repn_info(degrees, degrees[index]);
-  operand2->set_repn_info(push, true);
-}
-
-
-void PowerOperator::propagate_repn_info_backward(int* degrees, bool* push, bool* negate)
-{
-  operand1->set_repn_info(degrees, degrees[index]);
-  operand1->set_repn_info(push, true);
-  operand2->set_repn_info(degrees, degrees[index]);
-  operand2->set_repn_info(push, true);
-}
-
-
-void NegationOperator::propagate_repn_info_backward(int* degrees, bool* push, bool* negate)
-{
-  if (push[index])
-    {
-      operand->set_repn_info(degrees, degrees[index]);
-      operand->set_repn_info(push, true);
-    }
-  operand->set_repn_info(negate, !negate[index]);
-}
-
-
-void ExpOperator::propagate_repn_info_backward(int* degrees, bool* push, bool* negate)
-{
-  operand->set_repn_info(degrees, degrees[index]);
-  operand->set_repn_info(push, true);
-}
-
-
-void LogOperator::propagate_repn_info_backward(int* degrees, bool* push, bool* negate)
-{
-  operand->set_repn_info(degrees, degrees[index]);
-  operand->set_repn_info(push, true);
-}
-
-
-void ExternalOperator::propagate_repn_info_backward(int* degrees, bool* push, bool* negate)
-{
-  for (std::shared_ptr<Node> &operand : (*operands))
-    {
-      operand->set_repn_info(degrees, degrees[index]);
-      operand->set_repn_info(push, true);
-    }
-}
-
-
-void SumOperator::propagate_repn_info_backward(int* degrees, bool* push, bool* negate)
-{
-  for (std::shared_ptr<Node> &n : *operands)
-    {
-      if (push[index])
-	{
-	  n->set_repn_info(degrees, degrees[index]);
-	  n->set_repn_info(push, true);
-	}
-      n->set_repn_info(negate, negate[index]);
-    }
-}
-
-
-void LinearOperator::propagate_repn_info_backward(int* degrees, bool* push, bool* negate)
-{
-  ;
-}
-
-
 void Repn::reset_with_constants()
 {
   constant = std::make_shared<Constant>();
@@ -1006,391 +958,258 @@ void Repn::reset_with_constants()
 }
 
 
-void TmpRepn::reset_with_expressions()
-{
-  constant = std::make_shared<Expression>();
-  linear = std::make_shared<Expression>();
-  quadratic = std::make_shared<Expression>();
-  nonlinear = std::make_shared<Expression>();
-}
-
-
-void AddOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees)
+void AddOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees)
 {
   std::shared_ptr<Repn> res = std::make_shared<Repn>();
   repns.push_back(res);
-  std::shared_ptr<Repn> repn1, repn2;
-  if (!(operand1->is_operator_type()))
+  if (!(get_unique_degree_from_array(unique_degrees)))
     {
-      std::shared_ptr<ExpressionBase> op1 = std::dynamic_pointer_cast<ExpressionBase>(operand1);
-      repn1 = op1->generate_repn();
+      std::shared_ptr<Repn> repn1, repn2;
+      repn1 = operand1->get_repn_from_vector(repns, degrees, unique_degrees);
+      repn2 = operand2->get_repn_from_vector(repns, degrees, unique_degrees);
+      res->constant = *(repn1->constant) + *(repn2->constant); 
+      res->linear = *(repn1->linear) + *(repn2->linear); 
+      res->quadratic = *(repn1->quadratic) + *(repn2->quadratic); 
+      res->nonlinear = *(repn1->nonlinear) + *(repn2->nonlinear);
     }
-  else
-    {
-      std::shared_ptr<Operator> op1 = std::dynamic_pointer_cast<Operator>(operand1);
-      repn1 = repns[op1->index];
-    }
-  if (!(operand2->is_operator_type()))
-    {
-      std::shared_ptr<ExpressionBase> op2 = std::dynamic_pointer_cast<ExpressionBase>(operand2);
-      repn2 = op2->generate_repn();
-    }
-  else
-    {
-      std::shared_ptr<Operator> op2 = std::dynamic_pointer_cast<Operator>(operand2);
-      repn2 = repns[op2->index];
-    }
-  res->constant = *(repn1->constant) + *(repn2->constant); 
-  res->linear = *(repn1->linear) + *(repn2->linear); 
-  res->quadratic = *(repn1->quadratic) + *(repn2->quadratic); 
-  res->nonlinear = *(repn1->nonlinear) + *(repn2->nonlinear);
 }
 
 
-void SubtractOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees)
+void SubtractOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees)
 {
   std::shared_ptr<Repn> res = std::make_shared<Repn>();
   repns.push_back(res);
-  std::shared_ptr<Repn> repn1, repn2;
-  if (!(operand1->is_operator_type()))
+  if (!(get_unique_degree_from_array(unique_degrees)))
     {
-      std::shared_ptr<ExpressionBase> op1 = std::dynamic_pointer_cast<ExpressionBase>(operand1);
-      repn1 = op1->generate_repn();
+      std::shared_ptr<Repn> repn1, repn2;
+      repn1 = operand1->get_repn_from_vector(repns, degrees, unique_degrees);
+      repn2 = operand2->get_repn_from_vector(repns, degrees, unique_degrees);
+      res->constant = *(repn1->constant) - *(repn2->constant); 
+      res->linear = *(repn1->linear) - *(repn2->linear); 
+      res->quadratic = *(repn1->quadratic) - *(repn2->quadratic); 
+      res->nonlinear = *(repn1->nonlinear) - *(repn2->nonlinear);
     }
-  else
-    {
-      std::shared_ptr<Operator> op1 = std::dynamic_pointer_cast<Operator>(operand1);
-      repn1 = repns[op1->index];
-    }
-  if (!(operand2->is_operator_type()))
-    {
-      std::shared_ptr<ExpressionBase> op2 = std::dynamic_pointer_cast<ExpressionBase>(operand2);
-      repn2 = op2->generate_repn();
-    }
-  else
-    {
-      std::shared_ptr<Operator> op2 = std::dynamic_pointer_cast<Operator>(operand2);
-      repn2 = repns[op2->index];
-    }
-  res->constant = *(repn1->constant) - *(repn2->constant); 
-  res->linear = *(repn1->linear) - *(repn2->linear); 
-  res->quadratic = *(repn1->quadratic) - *(repn2->quadratic); 
-  res->nonlinear = *(repn1->nonlinear) - *(repn2->nonlinear);
 }
 
 
-void SumOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees)
+void SumOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees)
 {
   std::shared_ptr<Repn> res = std::make_shared<Repn>();
   repns.push_back(res);
-  std::shared_ptr<Repn> other;
-  std::vector<std::shared_ptr<ExpressionBase> > constants;
-  std::vector<std::shared_ptr<ExpressionBase> > linears;
-  std::vector<std::shared_ptr<ExpressionBase> > quadratics;
-  std::vector<std::shared_ptr<ExpressionBase> > nonlinears;
-  for (std::shared_ptr<Node> &op : (*operands))
+  if (!(get_unique_degree_from_array(unique_degrees)))
     {
-      if (!(op->is_operator_type()))
+      std::shared_ptr<Repn> other;
+      std::vector<std::shared_ptr<ExpressionBase> > constants;
+      std::vector<std::shared_ptr<ExpressionBase> > linears;
+      std::vector<std::shared_ptr<ExpressionBase> > quadratics;
+      std::vector<std::shared_ptr<ExpressionBase> > nonlinears;
+      for (std::shared_ptr<Node> &op : (*operands))
+        {
+	  other = op->get_repn_from_vector(repns, degrees, unique_degrees);
+      	  constants.push_back(other->constant);
+      	  linears.push_back(other->linear);
+      	  quadratics.push_back(other->quadratic);
+      	  nonlinears.push_back(other->nonlinear);
+        }
+      res->constant = appsi_sum(constants);
+      res->linear = appsi_sum(linears);
+      res->quadratic = appsi_sum(quadratics);
+      res->nonlinear = appsi_sum(nonlinears);
+    }
+}
+
+
+void MultiplyOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees)
+{
+  std::shared_ptr<Repn> res = std::make_shared<Repn>();
+  repns.push_back(res);
+  if (!(get_unique_degree_from_array(unique_degrees)))
+    {
+      std::shared_ptr<Repn> repn1, repn2;
+      repn1 = operand1->get_repn_from_vector(repns, degrees, unique_degrees);
+      repn2 = operand2->get_repn_from_vector(repns, degrees, unique_degrees);
+      res->constant = *(repn1->constant) * *(repn2->constant);
+      res->linear = *(*(repn1->constant) * *(repn2->linear)) + *(*(repn2->constant) * *(repn1->linear));
+      res->quadratic = *(*(*(repn1->linear) * *(repn2->linear)) + *(*(repn1->constant) * *(repn2->quadratic))) + *(*(repn1->quadratic) * *(repn2->constant));
+      res->nonlinear = (*(*(*(*(*(*(*(*(*(*(repn1->nonlinear) * *(repn2->constant))
+					+ *(*(repn1->nonlinear) * *(repn2->linear)))
+				      + *(*(repn1->nonlinear) * *(repn2->quadratic)))
+				    + *(*(repn1->nonlinear) * *(repn2->nonlinear)))
+				  + *(*(repn1->quadratic) * *(repn2->linear)))
+				+ *(*(repn1->quadratic) * *(repn2->quadratic)))
+			      + *(*(repn1->quadratic) * *(repn2->nonlinear)))
+			    + *(*(repn1->linear) * *(repn2->quadratic)))
+			  + *(*(repn1->linear) * *(repn2->nonlinear)))
+			+ *(*(repn1->constant) * *(repn2->nonlinear)));
+    }
+}
+
+
+void DivideOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees)
+{
+  std::shared_ptr<Repn> res = std::make_shared<Repn>();
+  repns.push_back(res);
+  if (!(get_unique_degree_from_array(unique_degrees)))
+    {
+      std::shared_ptr<Repn> repn1, repn2;
+      repn1 = operand1->get_repn_from_vector(repns, degrees, unique_degrees);
+      repn2 = operand2->get_repn_from_vector(repns, degrees, unique_degrees);
+      int deg2;
+      deg2 = operand2->get_degree_from_array(degrees);
+      if (deg2 != 0)
 	{
-	  std::shared_ptr<ExpressionBase> _op = std::dynamic_pointer_cast<ExpressionBase>(op);
-	  other = _op->generate_repn();
-	  assert (_op->is_leaf());
-	  constants.push_back(other->constant);
-	  linears.push_back(other->linear);
+	  res->reset_with_constants();
+	  res->nonlinear = *(*(*(*(repn1->constant) + *(repn1->linear)) + *(repn1->quadratic)) + *(repn1->nonlinear)) / *(*(*(*(repn2->constant) + *(repn2->linear)) + *(repn2->quadratic)) + *(repn2->nonlinear));
 	}
       else
 	{
-	  std::shared_ptr<Operator> _op = std::dynamic_pointer_cast<Operator>(op);
-	  other = repns[_op->index];
-	  constants.push_back(other->constant);
-	  linears.push_back(other->linear);
-	  quadratics.push_back(other->quadratic);
-	  nonlinears.push_back(other->nonlinear);
+	  std::shared_ptr<ExpressionBase> denom = (*(*(*(repn2->constant) + *(repn2->linear)) + *(repn2->quadratic)) + *(repn2->nonlinear));
+	  res->constant = *(repn1->constant) / *denom;
+	  res->linear = *(repn1->linear) / *denom;
+	  res->quadratic = *(repn1->quadratic) / *denom;
+	  res->nonlinear = *(repn1->nonlinear) / *denom;
 	}
-    }
-  res->constant = appsi_sum(constants);
-  res->linear = appsi_sum(linears);
-  res->quadratic = appsi_sum(quadratics);
-  res->nonlinear = appsi_sum(nonlinears);
-}
-
-
-void MultiplyOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees)
-{
-  std::shared_ptr<Repn> res = std::make_shared<Repn>();
-  repns.push_back(res);
-  std::shared_ptr<Repn> repn1, repn2;
-  if (!(operand1->is_operator_type()))
-    {
-      std::shared_ptr<ExpressionBase> op1 = std::dynamic_pointer_cast<ExpressionBase>(operand1);
-      repn1 = op1->generate_repn();
-    }
-  else
-    {
-      std::shared_ptr<Operator> op1 = std::dynamic_pointer_cast<Operator>(operand1);
-      repn1 = repns[op1->index];
-    }
-  if (!(operand2->is_operator_type()))
-    {
-      std::shared_ptr<ExpressionBase> op2 = std::dynamic_pointer_cast<ExpressionBase>(operand2);
-      repn2 = op2->generate_repn();
-    }
-  else
-    {
-      std::shared_ptr<Operator> op2 = std::dynamic_pointer_cast<Operator>(operand2);
-      repn2 = repns[op2->index];
-    }
-  res->constant = *(repn1->constant) * *(repn2->constant);
-  res->linear = *(*(repn1->constant) * *(repn2->linear)) + *(*(repn2->constant) * *(repn1->linear));
-  res->quadratic = *(*(*(repn1->linear) * *(repn2->linear)) + *(*(repn1->constant) * *(repn2->quadratic))) + *(*(repn1->quadratic) * *(repn2->constant));
-  res->nonlinear = (*(*(*(*(*(*(*(*(*(*(repn1->nonlinear) * *(repn2->constant))
-				    + *(*(repn1->nonlinear) * *(repn2->linear)))
-				  + *(*(repn1->nonlinear) * *(repn2->quadratic)))
-				+ *(*(repn1->nonlinear) * *(repn2->nonlinear)))
-			      + *(*(repn1->quadratic) * *(repn2->linear)))
-			    + *(*(repn1->quadratic) * *(repn2->quadratic)))
-			  + *(*(repn1->quadratic) * *(repn2->nonlinear)))
-			+ *(*(repn1->linear) * *(repn2->quadratic)))
-		      + *(*(repn1->linear) * *(repn2->nonlinear)))
-		    + *(*(repn1->constant) * *(repn2->nonlinear)));
-}
-
-
-void DivideOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees)
-{
-  std::shared_ptr<Repn> res = std::make_shared<Repn>();
-  repns.push_back(res);
-  std::shared_ptr<Repn> repn1, repn2;
-  int deg2;
-  deg2 = operand2->get_degree_from_array(degrees);
-  if (!(operand1->is_operator_type()))
-    {
-      std::shared_ptr<ExpressionBase> op1 = std::dynamic_pointer_cast<ExpressionBase>(operand1);
-      repn1 = op1->generate_repn();
-    }
-  else
-    {
-      std::shared_ptr<Operator> op1 = std::dynamic_pointer_cast<Operator>(operand1);
-      repn1 = repns[op1->index];
-    }
-  if (!(operand2->is_operator_type()))
-    {
-      std::shared_ptr<ExpressionBase> op2 = std::dynamic_pointer_cast<ExpressionBase>(operand2);
-      repn2 = op2->generate_repn();
-    }
-  else
-    {
-      std::shared_ptr<Operator> op2 = std::dynamic_pointer_cast<Operator>(operand2);
-      repn2 = repns[op2->index];
-    }
-  if (deg2 != 0)
-    {
-      res->reset_with_constants();
-      res->nonlinear = *(*(*(*(repn1->constant) + *(repn1->linear)) + *(repn1->quadratic)) + *(repn1->nonlinear)) / *(*(*(*(repn2->constant) + *(repn2->linear)) + *(repn2->quadratic)) + *(repn2->nonlinear));
-    }
-  else
-    {
-      std::shared_ptr<ExpressionBase> denom = (*(*(*(repn2->constant) + *(repn2->linear)) + *(repn2->quadratic)) + *(repn2->nonlinear));
-      res->constant = *(repn1->constant) / *denom;
-      res->linear = *(repn1->linear) / *denom;
-      res->quadratic = *(repn1->quadratic) / *denom;
-      res->nonlinear = *(repn1->nonlinear) / *denom;
     }
 }
 
 
-void PowerOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees)
+void PowerOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees)
 {
   std::shared_ptr<Repn> res = std::make_shared<Repn>();
   repns.push_back(res);
-  std::shared_ptr<Repn> repn1, repn2;
-  int deg2;
-  deg2 = operand2->get_degree_from_array(degrees);
-  if (!(operand1->is_operator_type()))
+  if (!(get_unique_degree_from_array(unique_degrees)))
     {
-      std::shared_ptr<ExpressionBase> op1 = std::dynamic_pointer_cast<ExpressionBase>(operand1);
-      repn1 = op1->generate_repn();
-    }
-  else
-    {
-      std::shared_ptr<Operator> op1 = std::dynamic_pointer_cast<Operator>(operand1);
-      repn1 = repns[op1->index];
-    }
-  if (!(operand2->is_operator_type()))
-    {
-      std::shared_ptr<ExpressionBase> op2 = std::dynamic_pointer_cast<ExpressionBase>(operand2);
-      repn2 = op2->generate_repn();
-    }
-  else
-    {
-      std::shared_ptr<Operator> op2 = std::dynamic_pointer_cast<Operator>(operand2);
-      repn2 = repns[op2->index];
-    }
-  if (operand2->is_constant_type())
-    {
-      std::shared_ptr<Constant> op2 = std::dynamic_pointer_cast<Constant>(operand2);
-      if (op2->value == 0)
+      std::shared_ptr<Repn> repn1, repn2;
+      repn1 = operand1->get_repn_from_vector(repns, degrees, unique_degrees);
+      repn2 = operand2->get_repn_from_vector(repns, degrees, unique_degrees);
+      int deg2;
+      deg2 = operand2->get_degree_from_array(degrees);
+      if (operand2->is_constant_type())
 	{
-	  res->reset_with_constants();
-	  res->constant = std::make_shared<Constant>(1.0);
-	}
-      else if (op2->value == 1)
-	{
-	  res->constant = repn1->constant;
-	  res->linear = repn1->linear;
-	  res->quadratic = repn1->quadratic;
-	  res->nonlinear = repn1->nonlinear;
-	}
-      else if (op2->value == 2)
-	{
-	  res->constant = repn1->constant->__pow__(2);
-	  res->linear = Constant(2) * *(*(repn1->constant) * *(repn1->linear));
-	  res->quadratic = *(Constant(2) * *(*(repn1->constant) * *(repn1->quadratic))) + *(repn1->linear->__pow__(2));
-	  res->nonlinear = *(*(*(*(*(Constant(2) * *(*(repn1->constant) * *(repn1->nonlinear)))
-				   + *(Constant(2) * *(*(repn1->linear) * *(repn1->quadratic))))
-				 + *(Constant(2) * *(*(repn1->linear) * *(repn1->nonlinear))))
-			       + *(repn1->quadratic->__pow__(2)))
-			     + *(Constant(2) * *(*(repn1->quadratic) * *(repn1->nonlinear)))) + *(*(repn1->nonlinear) * *(repn1->nonlinear));
+	  std::shared_ptr<Constant> op2 = std::dynamic_pointer_cast<Constant>(operand2);
+	  if (op2->value == 0)
+	    {
+	      res->reset_with_constants();
+	      res->constant = std::make_shared<Constant>(1.0);
+	    }
+	  else if (op2->value == 1)
+	    {
+	      res->constant = repn1->constant;
+	      res->linear = repn1->linear;
+	      res->quadratic = repn1->quadratic;
+	      res->nonlinear = repn1->nonlinear;
+	    }
+	  else if (op2->value == 2)
+	    {
+	      res->constant = repn1->constant->__pow__(2);
+	      res->linear = Constant(2) * *(*(repn1->constant) * *(repn1->linear));
+	      res->quadratic = *(Constant(2) * *(*(repn1->constant) * *(repn1->quadratic))) + *(repn1->linear->__pow__(2));
+	      res->nonlinear = *(*(*(*(*(Constant(2) * *(*(repn1->constant) * *(repn1->nonlinear)))
+				       + *(Constant(2) * *(*(repn1->linear) * *(repn1->quadratic))))
+				     + *(Constant(2) * *(*(repn1->linear) * *(repn1->nonlinear))))
+				   + *(repn1->quadratic->__pow__(2)))
+				 + *(Constant(2) * *(*(repn1->quadratic) * *(repn1->nonlinear)))) + *(*(repn1->nonlinear) * *(repn1->nonlinear));
+	    }
+	  else
+	    {
+	      std::shared_ptr<ExpressionBase> base_expr = (*(*(*(repn1->constant) + *(repn1->linear)) + *(repn1->quadratic)) + *(repn1->nonlinear));
+	      res->reset_with_constants();
+	      res->nonlinear = base_expr->__pow__(*op2);
+	    }
 	}
       else
 	{
 	  std::shared_ptr<ExpressionBase> base_expr = (*(*(*(repn1->constant) + *(repn1->linear)) + *(repn1->quadratic)) + *(repn1->nonlinear));
+	  std::shared_ptr<ExpressionBase> pow_expr = (*(*(*(repn2->constant) + *(repn2->linear)) + *(repn2->quadratic)) + *(repn2->nonlinear));
 	  res->reset_with_constants();
-	  res->nonlinear = base_expr->__pow__(*op2);
+	  res->nonlinear = base_expr->__pow__(*pow_expr);
 	}
     }
-  else
-    {
-      std::shared_ptr<ExpressionBase> base_expr = (*(*(*(repn1->constant) + *(repn1->linear)) + *(repn1->quadratic)) + *(repn1->nonlinear));
-      std::shared_ptr<ExpressionBase> pow_expr = (*(*(*(repn2->constant) + *(repn2->linear)) + *(repn2->quadratic)) + *(repn2->nonlinear));
-      res->reset_with_constants();
-      res->nonlinear = base_expr->__pow__(*pow_expr);
-    }
 }
 
 
-void NegationOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees)
+void NegationOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees)
 {
   std::shared_ptr<Repn> res = std::make_shared<Repn>();
   repns.push_back(res);
-  std::shared_ptr<Repn> repn1;
-  if (!(operand->is_operator_type()))
+  if (!(get_unique_degree_from_array(unique_degrees)))
     {
-      std::shared_ptr<ExpressionBase> op1 = std::dynamic_pointer_cast<ExpressionBase>(operand);
-      repn1 = op1->generate_repn();
+      std::shared_ptr<Repn> repn1;
+      repn1 = operand->get_repn_from_vector(repns, degrees, unique_degrees);
+      res->constant = - *(repn1->constant); 
+      res->linear = - *(repn1->linear); 
+      res->quadratic = - *(repn1->quadratic); 
+      res->nonlinear = - *(repn1->nonlinear);
     }
-  else
-    {
-      std::shared_ptr<Operator> op1 = std::dynamic_pointer_cast<Operator>(operand);
-      repn1 = repns[op1->index];
-    }
-  res->constant = - *(repn1->constant); 
-  res->linear = - *(repn1->linear); 
-  res->quadratic = - *(repn1->quadratic); 
-  res->nonlinear = - *(repn1->nonlinear);
 }
 
 
-void ExpOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees)
+void ExpOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees)
 {
   std::shared_ptr<Repn> res = std::make_shared<Repn>();
   repns.push_back(res);
-  std::shared_ptr<Repn> repn1;
-  int deg1;
-  deg1 = operand->get_degree_from_array(degrees);
-  if (!(operand->is_operator_type()))
+  if (!(get_unique_degree_from_array(unique_degrees)))
     {
-      std::shared_ptr<ExpressionBase> op1 = std::dynamic_pointer_cast<ExpressionBase>(operand);
-      repn1 = op1->generate_repn();
-    }
-  else
-    {
-      std::shared_ptr<Operator> op1 = std::dynamic_pointer_cast<Operator>(operand);
-      repn1 = repns[op1->index];
-    }
-  if (deg1 == 0)
-    {
-      res->reset_with_constants();
-      res->constant = appsi_exp(repn1->constant);
-    }
-  else
-    {
-      res->reset_with_constants();
-      std::shared_ptr<ExpressionBase> exp_expr = (*(*(*(repn1->constant) + *(repn1->linear)) + *(repn1->quadratic)) + *(repn1->nonlinear));
-      res->nonlinear = appsi_exp(exp_expr);
-    }
-}
-
-
-void LogOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees)
-{
-  std::shared_ptr<Repn> res = std::make_shared<Repn>();
-  repns.push_back(res);
-  std::shared_ptr<Repn> repn1;
-  int deg1;
-  deg1 = operand->get_degree_from_array(degrees);
-  if (!(operand->is_operator_type()))
-    {
-      std::shared_ptr<ExpressionBase> op1 = std::dynamic_pointer_cast<ExpressionBase>(operand);
-      repn1 = op1->generate_repn();
-    }
-  else
-    {
-      std::shared_ptr<Operator> op1 = std::dynamic_pointer_cast<Operator>(operand);
-      repn1 = repns[op1->index];
-    }
-  if (deg1 == 0)
-    {
-      res->reset_with_constants();
-      res->constant = appsi_log(repn1->constant);
-    }
-  else
-    {
-      res->reset_with_constants();
-      std::shared_ptr<ExpressionBase> exp_expr = (*(*(*(repn1->constant) + *(repn1->linear)) + *(repn1->quadratic)) + *(repn1->nonlinear));
-      res->nonlinear = appsi_log(exp_expr);
-    }
-}
-
-
-void ExternalOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees)
-{
-  std::vector<std::shared_ptr<ExpressionBase> > new_operands;
-  for (std::shared_ptr<Node> &operand : (*operands))
-    {
-      if (!(operand->is_operator_type()))
+      std::shared_ptr<Repn> repn1;
+      repn1 = operand->get_repn_from_vector(repns, degrees, unique_degrees);
+      int deg1;
+      deg1 = operand->get_degree_from_array(degrees);
+      if (deg1 == 0)
 	{
-	  std::shared_ptr<ExpressionBase> op1 = std::dynamic_pointer_cast<ExpressionBase>(operand);
-	  new_operands.push_back(op1);
+	  res->reset_with_constants();
+	  res->constant = appsi_exp(repn1->constant);
 	}
       else
 	{
-	  std::shared_ptr<Operator> op1 = std::dynamic_pointer_cast<Operator>(operand);
-	  std::shared_ptr<Repn> repn1 = repns[op1->index];
-	  std::shared_ptr<ExpressionBase> repn_expr = (*(*(*(repn1->constant) + *(repn1->linear)) + *(repn1->quadratic)) + *(repn1->nonlinear));
-	  new_operands.push_back(repn_expr);
+	  res->reset_with_constants();
+	  std::shared_ptr<ExpressionBase> exp_expr = (*(*(*(repn1->constant) + *(repn1->linear)) + *(repn1->quadratic)) + *(repn1->nonlinear));
+	  res->nonlinear = appsi_exp(exp_expr);
 	}
     }
-  
-  std::shared_ptr<Repn> res = std::make_shared<Repn>();
-  repns.push_back(res);
-  res->reset_with_constants();
-  res->nonlinear = external_helper(function_name, new_operands);
 }
 
 
-void LinearOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees)
+void LogOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees)
 {
   std::shared_ptr<Repn> res = std::make_shared<Repn>();
   repns.push_back(res);
-  res->reset_with_constants();
-  std::shared_ptr<Expression> linear_part = std::make_shared<Expression>();
-  res->linear = linear_part;
-  std::shared_ptr<LinearOperator> new_oper = std::make_shared<LinearOperator>();
-  new_oper->variables = variables;
-  new_oper->coefficients = coefficients;
-  linear_part->operators->push_back(new_oper);
-  linear_part->n_operators = 1;
+  if (!(get_unique_degree_from_array(unique_degrees)))
+    {
+      std::shared_ptr<Repn> repn1;
+      repn1 = operand->get_repn_from_vector(repns, degrees, unique_degrees);
+      int deg1;
+      deg1 = operand->get_degree_from_array(degrees);
+      if (deg1 == 0)
+	{
+	  res->reset_with_constants();
+	  res->constant = appsi_log(repn1->constant);
+	}
+      else
+	{
+	  res->reset_with_constants();
+	  std::shared_ptr<ExpressionBase> exp_expr = (*(*(*(repn1->constant) + *(repn1->linear)) + *(repn1->quadratic)) + *(repn1->nonlinear));
+	  res->nonlinear = appsi_log(exp_expr);
+	}
+    }
+}
+
+
+void ExternalOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees)
+{
+  std::shared_ptr<Repn> res = std::make_shared<Repn>();
+  repns.push_back(res);
+  if (!(get_unique_degree_from_array(unique_degrees)))
+    {
+      res->reset_with_constants();
+      res->nonlinear = expression_from_operator();
+    }
+}
+
+
+void LinearOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees)
+{
+  std::shared_ptr<Repn> res = std::make_shared<Repn>();
+  repns.push_back(res);
 }
 
 
@@ -1399,6 +1218,7 @@ std::shared_ptr<Repn> Expression::generate_repn()
   std::vector<std::shared_ptr<Repn> > repns;
   int degrees[n_operators];
   double values[n_operators];
+  bool unique_degrees[n_operators];
   std::shared_ptr<Operator> oper;
   for (unsigned int i=0; i<n_operators; ++i)
     {
@@ -1406,10 +1226,11 @@ std::shared_ptr<Repn> Expression::generate_repn()
       oper->index = i;
       oper->evaluate(values);
       oper->propagate_degree_forward(degrees, values);
-      oper->generate_repn(repns, degrees);
+      oper->propagate_unique_degree(degrees, unique_degrees);
+      oper->generate_repn(repns, degrees, unique_degrees);
     }
 
-  return repns.at(n_operators-1);
+  return get_repn_from_vector(repns, degrees, unique_degrees);
 }
 
 
@@ -1437,6 +1258,103 @@ std::shared_ptr<Repn> Param::generate_repn()
   res->reset_with_constants();
   res->constant = shared_from_this();
   return res;
+}
+
+
+void AddOperator::propagate_unique_degree(int* degrees, bool* unique_degrees)
+{
+  int deg1, deg2;
+  deg1 = operand1->get_degree_from_array(degrees);
+  deg2 = operand2->get_degree_from_array(degrees);
+  bool unique1, unique2;
+  unique1 = operand1->get_unique_degree_from_array(unique_degrees);
+  unique2 = operand2->get_unique_degree_from_array(unique_degrees);
+  if (unique1 && unique2 && (deg1 == deg2))
+    {
+      unique_degrees[index] = true;
+    }
+  else
+    {
+      unique_degrees[index] = false;
+    }
+}
+
+
+void SumOperator::propagate_unique_degree(int* degrees, bool* unique_degrees)
+{
+  int deg;
+  deg = operands->at(0)->get_degree_from_array(degrees);
+  unique_degrees[index] = true;
+  for (std::shared_ptr<Node> &op : *(operands))
+    {
+      if (deg != op->get_degree_from_array(degrees) || !(op->get_unique_degree_from_array(unique_degrees)))
+	{
+	  unique_degrees[index] = false;
+	  break;
+	}
+    }
+}
+
+
+void SubtractOperator::propagate_unique_degree(int* degrees, bool* unique_degrees)
+{
+  int deg1, deg2;
+  deg1 = operand1->get_degree_from_array(degrees);
+  deg2 = operand2->get_degree_from_array(degrees);
+  bool unique1, unique2;
+  unique1 = operand1->get_unique_degree_from_array(unique_degrees);
+  unique2 = operand2->get_unique_degree_from_array(unique_degrees);
+  if (unique1 && unique2 && (deg1 == deg2))
+    {
+      unique_degrees[index] = true;
+    }
+  else
+    {
+      unique_degrees[index] = false;
+    }
+}
+
+
+void BinaryOperator::propagate_unique_degree(int* degrees, bool* unique_degrees)
+{
+  bool unique1, unique2;
+  unique1 = operand1->get_unique_degree_from_array(unique_degrees);
+  unique2 = operand2->get_unique_degree_from_array(unique_degrees);
+  
+  if (unique1 && unique2)
+    {
+      unique_degrees[index] = true;
+    }
+  else
+    {
+      unique_degrees[index] = false;
+    }
+}
+
+
+void ExternalOperator::propagate_unique_degree(int* degrees, bool* unique_degrees)
+{
+  unique_degrees[index] = true;
+  for (std::shared_ptr<Node> &op : *(operands))
+    {
+      if (!(op->get_unique_degree_from_array(unique_degrees)))
+	{
+	  unique_degrees[index] = false;
+	  break;
+	}
+    }
+}
+
+
+void UnaryOperator::propagate_unique_degree(int* degrees, bool* unique_degrees)
+{
+  unique_degrees[index] = operand->get_unique_degree_from_array(unique_degrees);
+}
+
+
+void LinearOperator::propagate_unique_degree(int* degrees, bool* unique_degrees)
+{
+  unique_degrees[index] = true;
 }
 
 
@@ -1656,7 +1574,7 @@ void SumOperator::fill_prefix_notation_stack(std::shared_ptr<std::vector<std::sh
 
 void LinearOperator::fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack)
 {
-  throw std::string("This should not be encountered");
+  ; // This is treated as a leaf in this context; write_nl_string will take care of it
 }
 
 
@@ -1691,7 +1609,11 @@ void Constant::write_nl_string(std::ofstream& f)
 
 void Expression::write_nl_string(std::ofstream& f)
 {
-  assert (false);
+  std::shared_ptr<std::vector<std::shared_ptr<Node> > > prefix_notation = get_prefix_notation();
+  for (std::shared_ptr<Node> &node : *(prefix_notation))
+    {
+      node->write_nl_string(f);
+    }
 }
 
 
@@ -1723,7 +1645,21 @@ void SumOperator::write_nl_string(std::ofstream& f)
 
 void LinearOperator::write_nl_string(std::ofstream& f)
 {
-  throw std::string("This should not be encountered");
+  if (variables->size() == 2)
+    {
+      f << "o0\n";
+    }
+  else
+    {
+      f << "o54\n";
+      f << variables->size() << "\n";
+    }
+  for (unsigned int ndx=0; ndx<variables->size(); ++ndx)
+    {
+      f << "o2\n";
+      coefficients->at(ndx)->write_nl_string(f);
+      variables->at(ndx)->write_nl_string(f);
+    }
 }
 
 
@@ -1766,543 +1702,6 @@ void ExpOperator::write_nl_string(std::ofstream& f)
 void LogOperator::write_nl_string(std::ofstream& f)
 {
   f << "o43\n";
-}
-
-
-std::shared_ptr<Operator> LinearOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
-{
-  // this should never do anything
-  return shared_from_this();
-}
-
-
-std::shared_ptr<Operator> SumOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
-{
-  bool replace_any_op = false;
-  bool replace_op;
-
-  for (std::shared_ptr<Node> &op : (*operands))
-    {
-      replace_op = needs_replaced->count(op);
-      replace_any_op = replace_any_op || replace_op;
-    }
-
-  if (replace_any_op)
-    {
-      std::shared_ptr<SumOperator> new_op = std::make_shared<SumOperator>();
-      for (std::shared_ptr<Node> &op : (*operands))
-	{
-	  replace_op = needs_replaced->count(op);
-	  if (replace_op)
-	    {
-	      new_op->operands->push_back(needs_replaced->at(op));
-	    }
-	  else
-	    {
-	      new_op->operands->push_back(op);
-	    }
-	}
-      (*needs_replaced)[shared_from_this()] = new_op;
-      return new_op;
-    }
-  else
-    {
-      return shared_from_this();
-    }
-}
-
-
-std::shared_ptr<Operator> MultiplyOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
-{
-  bool replace_op1 = needs_replaced->count(operand1);
-  bool replace_op2 = needs_replaced->count(operand2);
-  if (replace_op1 || replace_op2)
-    {
-      std::shared_ptr<MultiplyOperator> new_op = std::make_shared<MultiplyOperator>();
-      if (replace_op1)
-	{
-	  new_op->operand1 = needs_replaced->at(operand1);
-	}
-      else
-	{
-	  new_op->operand1 = operand1;
-	}
-      if (replace_op2)
-	{
-	  new_op->operand2 = needs_replaced->at(operand2);
-	}
-      else
-	{
-	  new_op->operand2 = operand2;
-	}
-      (*needs_replaced)[shared_from_this()] = new_op;
-      return new_op;
-    }
-  else
-    {
-      return shared_from_this();
-    }
-}
-
-
-std::shared_ptr<Operator> AddOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
-{
-  bool replace_op1 = needs_replaced->count(operand1);
-  bool replace_op2 = needs_replaced->count(operand2);
-  if (replace_op1 || replace_op2)
-    {
-      std::shared_ptr<AddOperator> new_op = std::make_shared<AddOperator>();
-      if (replace_op1)
-	{
-	  new_op->operand1 = needs_replaced->at(operand1);
-	}
-      else
-	{
-	  new_op->operand1 = operand1;
-	}
-      if (replace_op2)
-	{
-	  new_op->operand2 = needs_replaced->at(operand2);
-	}
-      else
-	{
-	  new_op->operand2 = operand2;
-	}
-      (*needs_replaced)[shared_from_this()] = new_op;
-      return new_op;
-    }
-  else
-    {
-      return shared_from_this();
-    }
-}
-
-
-std::shared_ptr<Operator> SubtractOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
-{
-  bool replace_op1 = needs_replaced->count(operand1);
-  bool replace_op2 = needs_replaced->count(operand2);
-  if (replace_op1 || replace_op2)
-    {
-      std::shared_ptr<SubtractOperator> new_op = std::make_shared<SubtractOperator>();
-      if (replace_op1)
-	{
-	  new_op->operand1 = needs_replaced->at(operand1);
-	}
-      else
-	{
-	  new_op->operand1 = operand1;
-	}
-      if (replace_op2)
-	{
-	  new_op->operand2 = needs_replaced->at(operand2);
-	}
-      else
-	{
-	  new_op->operand2 = operand2;
-	}
-      (*needs_replaced)[shared_from_this()] = new_op;
-      return new_op;
-    }
-  else
-    {
-      return shared_from_this();
-    }
-}
-
-
-std::shared_ptr<Operator> DivideOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
-{
-  bool replace_op1 = needs_replaced->count(operand1);
-  bool replace_op2 = needs_replaced->count(operand2);
-  if (replace_op1 || replace_op2)
-    {
-      std::shared_ptr<DivideOperator> new_op = std::make_shared<DivideOperator>();
-      if (replace_op1)
-	{
-	  new_op->operand1 = needs_replaced->at(operand1);
-	}
-      else
-	{
-	  new_op->operand1 = operand1;
-	}
-      if (replace_op2)
-	{
-	  new_op->operand2 = needs_replaced->at(operand2);
-	}
-      else
-	{
-	  new_op->operand2 = operand2;
-	}
-      (*needs_replaced)[shared_from_this()] = new_op;
-      return new_op;
-    }
-  else
-    {
-      return shared_from_this();
-    }
-}
-
-
-std::shared_ptr<Operator> PowerOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
-{
-  bool replace_op1 = needs_replaced->count(operand1);
-  bool replace_op2 = needs_replaced->count(operand2);
-  if (replace_op1 || replace_op2)
-    {
-      std::shared_ptr<PowerOperator> new_op = std::make_shared<PowerOperator>();
-      if (replace_op1)
-	{
-	  new_op->operand1 = needs_replaced->at(operand1);
-	}
-      else
-	{
-	  new_op->operand1 = operand1;
-	}
-      if (replace_op2)
-	{
-	  new_op->operand2 = needs_replaced->at(operand2);
-	}
-      else
-	{
-	  new_op->operand2 = operand2;
-	}
-      (*needs_replaced)[shared_from_this()] = new_op;
-      return new_op;
-    }
-  else
-    {
-      return shared_from_this();
-    }
-}
-
-
-std::shared_ptr<Operator> NegationOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
-{
-  bool replace_op = needs_replaced->count(operand);
-  if (replace_op)
-    {
-      std::shared_ptr<NegationOperator> new_op = std::make_shared<NegationOperator>();
-      new_op->operand = needs_replaced->at(operand);
-      (*needs_replaced)[shared_from_this()] = new_op;
-      return new_op;
-    }
-  else
-    {
-      return shared_from_this();
-    }
-}
-
-
-std::shared_ptr<Operator> ExpOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
-{
-  bool replace_op = needs_replaced->count(operand);
-  if (replace_op)
-    {
-      std::shared_ptr<ExpOperator> new_op = std::make_shared<ExpOperator>();
-      new_op->operand = needs_replaced->at(operand);
-      (*needs_replaced)[shared_from_this()] = new_op;
-      return new_op;
-    }
-  else
-    {
-      return shared_from_this();
-    }
-}
-
-
-std::shared_ptr<Operator> LogOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
-{
-  bool replace_op = needs_replaced->count(operand);
-  if (replace_op)
-    {
-      std::shared_ptr<LogOperator> new_op = std::make_shared<LogOperator>();
-      new_op->operand = needs_replaced->at(operand);
-      (*needs_replaced)[shared_from_this()] = new_op;
-      return new_op;
-    }
-  else
-    {
-      return shared_from_this();
-    }
-}
-
-
-std::shared_ptr<Operator> ExternalOperator::replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
-{
-  bool replace_any_op = false;
-  bool replace_op;
-
-  for (std::shared_ptr<Node> &op : (*operands))
-    {
-      replace_op = needs_replaced->count(op);
-      replace_any_op = replace_any_op || replace_op;
-    }
-
-  if (replace_any_op)
-    {
-      std::shared_ptr<ExternalOperator> new_op = std::make_shared<ExternalOperator>();
-      for (std::shared_ptr<Node> &op : (*operands))
-	{
-	  replace_op = needs_replaced->count(op);
-	  if (replace_op)
-	    {
-	      new_op->operands->push_back(needs_replaced->at(op));
-	    }
-	  else
-	    {
-	      new_op->operands->push_back(op);
-	    }
-	}
-      (*needs_replaced)[shared_from_this()] = new_op;
-      return new_op;
-    }
-  else
-    {
-      return shared_from_this();
-    }
-}
-
-
-std::shared_ptr<ExpressionBase> Expression::distribute_products()
-{
-  std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators_to_process = std::make_shared<std::vector<std::shared_ptr<Operator> > >();
-  std::shared_ptr<std::vector<std::shared_ptr<Operator> > > new_operators = std::make_shared<std::vector<std::shared_ptr<Operator> > >();
-  std::shared_ptr<std::unordered_set<std::shared_ptr<Node> > > already_processed = std::make_shared<std::unordered_set<std::shared_ptr<Node> > >();
-  std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced = std::make_shared<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > >();
-
-  for (std::shared_ptr<Operator> &op : (*operators))
-    {
-      operators_to_process->push_back(op);
-    }
-
-  std::shared_ptr<Operator> op;
-  while (operators_to_process->size() > 0)
-    {
-      op = operators_to_process->back();
-      operators_to_process->pop_back();
-      if (already_processed->count(op))
-	{
-	  continue;
-	}
-      op->distribute_products(new_operators, operators_to_process, already_processed, needs_replaced);
-    }
-
-  std::shared_ptr<Expression> res = std::make_shared<Expression>();
-  res->n_operators = new_operators->size();
-  int ndx = new_operators->size() - 1;
-
-  if (needs_replaced->size() > 0)
-    {
-      while (ndx >= 0)
-	{
-	  op = new_operators->at(ndx);
-	  op = op->replace_operands(needs_replaced);
-	  res->operators->push_back(op);
-	  ndx -= 1;
-	}      
-    }
-  else
-    {
-      while (ndx >= 0)
-	{
-	  op = new_operators->at(ndx);
-	  res->operators->push_back(op);
-	  ndx -= 1;
-	}
-    }
-
-  return res;
-}
-
-
-std::shared_ptr<ExpressionBase> Leaf::distribute_products()
-{
-  return shared_from_this();
-}
-
-
-void Operator::distribute_products(std::shared_ptr<std::vector<std::shared_ptr<Operator> > > new_operators, std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators_to_process, std::shared_ptr<std::unordered_set<std::shared_ptr<Node> > > already_processed, std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
-{
-  new_operators->push_back(shared_from_this());
-}
-
-
-void _add_product(std::shared_ptr<Node> op1, std::shared_ptr<Node> op2, std::shared_ptr<SumOperator> _sum, std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators_to_process)
-{
-  std::shared_ptr<MultiplyOperator> m = std::make_shared<MultiplyOperator>();
-  m->operand1 = op1;
-  m->operand2 = op2;
-  _sum->operands->push_back(m);
-  operators_to_process->push_back(m);
-}
-
-
-void _subtract_product(std::shared_ptr<Node> op1, std::shared_ptr<Node> op2, std::shared_ptr<SumOperator> _sum, std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators_to_process)
-{
-  std::shared_ptr<MultiplyOperator> m = std::make_shared<MultiplyOperator>();
-  m->operand1 = op1;
-  m->operand2 = op2;
-  std::shared_ptr<NegationOperator> _neg = std::make_shared<NegationOperator>();
-  _neg->operand = m;
-  _sum->operands->push_back(_neg);
-  operators_to_process->push_back(m);
-  operators_to_process->push_back(_neg);
-}
-
-
-void MultiplyOperator::distribute_products(std::shared_ptr<std::vector<std::shared_ptr<Operator> > > new_operators, std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators_to_process, std::shared_ptr<std::unordered_set<std::shared_ptr<Node> > > already_processed, std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced)
-{
-  if (operand1->is_add_operator())
-    {
-      std::shared_ptr<AddOperator> op1 = std::dynamic_pointer_cast<AddOperator>(operand1);
-      std::shared_ptr<SumOperator> _sum = std::make_shared<SumOperator>();
-      if (operand2->is_add_operator())
-	{
-	  std::shared_ptr<AddOperator> op2 = std::dynamic_pointer_cast<AddOperator>(operand2);
-	  _add_product(op1->operand1, op2->operand1, _sum, operators_to_process);
-	  _add_product(op1->operand1, op2->operand2, _sum, operators_to_process);
-	  _add_product(op1->operand2, op2->operand1, _sum, operators_to_process);
-	  _add_product(op1->operand2, op2->operand2, _sum, operators_to_process);
-	}
-      else if (operand2->is_subtract_operator())
-	{
-	  std::shared_ptr<SubtractOperator> op2 = std::dynamic_pointer_cast<SubtractOperator>(operand2);
-	  _add_product(op1->operand1, op2->operand1, _sum, operators_to_process);
-	  _subtract_product(op1->operand1, op2->operand2, _sum, operators_to_process);
-	  _add_product(op1->operand2, op2->operand1, _sum, operators_to_process);
-	  _subtract_product(op1->operand2, op2->operand2, _sum, operators_to_process);
-	}
-      else if (operand2->is_sum_operator())
-	{
-	  std::shared_ptr<SumOperator> op2 = std::dynamic_pointer_cast<SumOperator>(operand2);
-	  for (std::shared_ptr<Node> op2_op : *(op2->operands))
-	    {
-	      _add_product(op1->operand1, op2_op, _sum, operators_to_process);
-	      _add_product(op1->operand2, op2_op, _sum, operators_to_process);
-	    }
-	}
-      else
-	{
-	  _add_product(op1->operand1, operand2, _sum, operators_to_process);
-	  _add_product(op1->operand2, operand2, _sum, operators_to_process);
-	}
-      new_operators->push_back(_sum);
-      already_processed->insert(operand1);
-      already_processed->insert(operand2);
-      (*needs_replaced)[shared_from_this()] = _sum;
-    }
-  else if (operand1->is_subtract_operator())
-    {
-      std::shared_ptr<SubtractOperator> op1 = std::dynamic_pointer_cast<SubtractOperator>(operand1);
-      std::shared_ptr<SumOperator> _sum = std::make_shared<SumOperator>();
-      if (operand2->is_add_operator())
-	{
-	  std::shared_ptr<AddOperator> op2 = std::dynamic_pointer_cast<AddOperator>(operand2);
-	  _add_product(op1->operand1, op2->operand1, _sum, operators_to_process);
-	  _add_product(op1->operand1, op2->operand2, _sum, operators_to_process);
-	  _subtract_product(op1->operand2, op2->operand1, _sum, operators_to_process);
-	  _subtract_product(op1->operand2, op2->operand2, _sum, operators_to_process);
-	}
-      else if (operand2->is_subtract_operator())
-	{
-	  std::shared_ptr<SubtractOperator> op2 = std::dynamic_pointer_cast<SubtractOperator>(operand2);
-	  _add_product(op1->operand1, op2->operand1, _sum, operators_to_process);
-	  _subtract_product(op1->operand1, op2->operand2, _sum, operators_to_process);
-	  _subtract_product(op1->operand2, op2->operand1, _sum, operators_to_process);
-	  _add_product(op1->operand2, op2->operand2, _sum, operators_to_process);
-	}
-      else if (operand2->is_sum_operator())
-	{
-	  std::shared_ptr<SumOperator> op2 = std::dynamic_pointer_cast<SumOperator>(operand2);
-	  for (std::shared_ptr<Node> op2_op : *(op2->operands))
-	    {
-	      _add_product(op1->operand1, op2_op, _sum, operators_to_process);
-	      _subtract_product(op1->operand2, op2_op, _sum, operators_to_process);
-	    }
-	}
-      else
-	{
-	  _add_product(op1->operand1, operand2, _sum, operators_to_process);
-	  _subtract_product(op1->operand2, operand2, _sum, operators_to_process);
-	}
-      new_operators->push_back(_sum);
-      already_processed->insert(operand1);
-      already_processed->insert(operand2);
-      (*needs_replaced)[shared_from_this()] = _sum;
-    }
-  else if (operand1->is_sum_operator())
-    {
-      std::shared_ptr<SumOperator> op1 = std::dynamic_pointer_cast<SumOperator>(operand1);
-      std::shared_ptr<SumOperator> _sum = std::make_shared<SumOperator>();
-      for (std::shared_ptr<Node> op1_op : *(op1->operands))
-	{
-	  if (operand2->is_add_operator())
-	    {
-	      std::shared_ptr<AddOperator> op2 = std::dynamic_pointer_cast<AddOperator>(operand2);
-	      _add_product(op1_op, op2->operand1, _sum, operators_to_process);
-	      _add_product(op1_op, op2->operand2, _sum, operators_to_process);
-	    }
-	  else if (operand2->is_subtract_operator())
-	    {
-	      std::shared_ptr<SubtractOperator> op2 = std::dynamic_pointer_cast<SubtractOperator>(operand2);
-	      _add_product(op1_op, op2->operand1, _sum, operators_to_process);
-	      _subtract_product(op1_op, op2->operand2, _sum, operators_to_process);
-	    }
-	  else if (operand2->is_sum_operator())
-	    {
-	      std::shared_ptr<SumOperator> op2 = std::dynamic_pointer_cast<SumOperator>(operand2);
-	      for (std::shared_ptr<Node> op2_op : *(op2->operands))
-		{
-		  _add_product(op1_op, op2_op, _sum, operators_to_process);
-		}
-	    }
-	  else
-	    {
-	      _add_product(op1_op, operand2, _sum, operators_to_process);
-	    }
-	}
-      new_operators->push_back(_sum);
-      already_processed->insert(operand1);
-      already_processed->insert(operand2);
-      (*needs_replaced)[shared_from_this()] = _sum;
-    }
-  else
-    {
-      if (operand2->is_add_operator() || operand2->is_subtract_operator() || operand2->is_sum_operator())
-	{
-	  std::shared_ptr<SumOperator> _sum = std::make_shared<SumOperator>();
-	  if (operand2->is_add_operator())
-	    {
-	      std::shared_ptr<AddOperator> op2 = std::dynamic_pointer_cast<AddOperator>(operand2);
-	      _add_product(operand1, op2->operand1, _sum, operators_to_process);
-	      _add_product(operand1, op2->operand2, _sum, operators_to_process);
-	    }
-	  else if (operand2->is_subtract_operator())
-	    {
-	      std::shared_ptr<SubtractOperator> op2 = std::dynamic_pointer_cast<SubtractOperator>(operand2);
-	      _add_product(operand1, op2->operand1, _sum, operators_to_process);
-	      _subtract_product(operand1, op2->operand2, _sum, operators_to_process);
-	    }
-	  else 
-	    {
-	      assert (operand2->is_sum_operator());
-	      std::shared_ptr<SumOperator> op2 = std::dynamic_pointer_cast<SumOperator>(operand2);
-	      for (std::shared_ptr<Node> op2_op : *(op2->operands))
-		{
-		  _add_product(operand1, op2_op, _sum, operators_to_process);
-		}
-	    }
-	  new_operators->push_back(_sum);
-	  already_processed->insert(operand1);
-	  already_processed->insert(operand2);
-	  (*needs_replaced)[shared_from_this()] = _sum;
-	}
-      else
-	{
-	  new_operators->push_back(shared_from_this());
-	}
-    }
 }
 
 

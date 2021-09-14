@@ -60,7 +60,6 @@ PYBIND11_MODULE(appsi_cmodel, m)
     .def("__rpow__", [](ExpressionBase &a, double b){return a.__rpow__(b);}, py::is_operator())
     .def("__str__", &ExpressionBase::__str__)
     .def("evaluate", &ExpressionBase::evaluate)
-    .def("distribute_products", &ExpressionBase::distribute_products)
     .def("generate_repn", &ExpressionBase::generate_repn);
   py::class_<Var, ExpressionBase, std::shared_ptr<Var> >(m, "Var")
     .def(py::init<>())

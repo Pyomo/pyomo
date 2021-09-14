@@ -46,7 +46,6 @@ class ExpOperator;
 class LogOperator;
 class ExternalOperator;
 class Repn;
-class TmpRepn;
 
 
 extern double inf;
@@ -79,12 +78,11 @@ public:
   virtual bool is_external_operator() {return false;}
   virtual double get_value_from_array(double*) = 0;
   virtual int get_degree_from_array(int*) = 0;
+  virtual bool get_unique_degree_from_array(bool*) = 0;
+  virtual std::shared_ptr<Repn> get_repn_from_vector(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) = 0;
   virtual std::string get_string_from_array(std::string*) = 0;
   virtual void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) = 0;
   virtual void write_nl_string(std::ofstream&) = 0;
-  virtual void set_repn_info(bool*, bool) = 0;
-  virtual void set_repn_info(int*, int) = 0;
-  virtual bool get_accounted_for_from_array(bool*) = 0;
 };
 
 
@@ -118,11 +116,11 @@ public:
   virtual std::shared_ptr<std::vector<std::shared_ptr<Var> > > identify_variables() = 0;
   virtual std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > identify_external_operators() = 0;
   virtual std::shared_ptr<std::vector<std::shared_ptr<Node> > > get_prefix_notation() = 0;
-  virtual std::shared_ptr<ExpressionBase> distribute_products() = 0;
 
   std::shared_ptr<ExpressionBase> shared_from_this() {return std::static_pointer_cast<ExpressionBase>(Node::shared_from_this());}
 
   void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) override {;}
+  std::shared_ptr<Repn> get_repn_from_vector(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
 };
 
 
@@ -142,12 +140,9 @@ public:
   bool is_leaf() override;
   double evaluate() override;
   double get_value_from_array(double*) override;
-  bool get_accounted_for_from_array(bool*) override;
+  bool get_unique_degree_from_array(bool*) override;
   std::string get_string_from_array(std::string*) override;
   std::shared_ptr<std::vector<std::shared_ptr<Node> > > get_prefix_notation() override;
-  void set_repn_info(bool*, bool) override;
-  void set_repn_info(int*, int) override;
-  std::shared_ptr<ExpressionBase> distribute_products() override;
 };
 
 
@@ -219,16 +214,14 @@ public:
   double evaluate() override;
   double get_value_from_array(double*) override;
   int get_degree_from_array(int*) override;
+  bool get_unique_degree_from_array(bool*) override;
   std::shared_ptr<std::vector<std::shared_ptr<Var> > > identify_variables() override;
   std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > identify_external_operators() override;
   std::string get_string_from_array(std::string*) override;
   std::shared_ptr<std::vector<std::shared_ptr<Node> > > get_prefix_notation() override;
   void write_nl_string(std::ofstream&) override;
-  void set_repn_info(bool*, bool) override;
-  void set_repn_info(int*, int) override;
-  bool get_accounted_for_from_array(bool*) override;
   std::shared_ptr<Repn> generate_repn() override;
-  std::shared_ptr<ExpressionBase> distribute_products() override;
+  std::shared_ptr<Repn> get_repn_from_vector(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
 };
 
 
@@ -244,16 +237,14 @@ public:
   bool is_operator_type() override;
   double get_value_from_array(double*) override;
   int get_degree_from_array(int*) override;
+  bool get_unique_degree_from_array(bool*) override;
   std::string get_string_from_array(std::string*) override;
   virtual void print(std::string*) = 0;
   virtual std::string name() = 0;
-  virtual void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) = 0;
-  virtual void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) = 0;
-  void set_repn_info(bool*, bool) override;
-  void set_repn_info(int*, int) override;
-  bool get_accounted_for_from_array(bool*) override;
-  virtual void distribute_products(std::shared_ptr<std::vector<std::shared_ptr<Operator> > > new_operators, std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators_to_process, std::shared_ptr<std::unordered_set<std::shared_ptr<Node> > > already_processed, std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced);
-  virtual std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced) = 0;
+  virtual void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) = 0;
+  virtual void propagate_unique_degree(int* degrees, bool* unique_degrees) = 0;
+  std::shared_ptr<Repn> get_repn_from_vector(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
+  std::shared_ptr<ExpressionBase> expression_from_operator();
 };
 
 
@@ -267,6 +258,7 @@ public:
   std::shared_ptr<Node> operand2;
   void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) override;
   bool is_binary_operator() override;
+  void propagate_unique_degree(int* degrees, bool* unique_degrees) override;
 };
 
 
@@ -279,6 +271,7 @@ public:
   std::shared_ptr<Node> operand;
   void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) override;
   bool is_unary_operator() override;
+  void propagate_unique_degree(int* degrees, bool* unique_degrees) override;
 };
 
 
@@ -291,14 +284,13 @@ public:
   std::shared_ptr<std::vector<std::shared_ptr<ExpressionBase> > > coefficients;
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
-  void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "LinearOperator";};
   void write_nl_string(std::ofstream&) override;
   void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) override;
   bool is_linear_operator() override;
-  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced) override;
+  void propagate_unique_degree(int* degrees, bool* unique_degrees) override;
 };
 
 
@@ -310,14 +302,13 @@ public:
   std::shared_ptr<std::vector<std::shared_ptr<Node> > > operands = std::make_shared<std::vector<std::shared_ptr<Node> > >();
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
-  void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "SumOperator";};
   void write_nl_string(std::ofstream&) override;
   void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) override;
   bool is_sum_operator() override;
-  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced) override;
+  void propagate_unique_degree(int* degrees, bool* unique_degrees) override;
 };
 
 
@@ -327,14 +318,11 @@ public:
   MultiplyOperator() = default;
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
-  void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "MultiplyOperator";};
   void write_nl_string(std::ofstream&) override;
-  void distribute_products(std::shared_ptr<std::vector<std::shared_ptr<Operator> > > new_operators, std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators_to_process, std::shared_ptr<std::unordered_set<std::shared_ptr<Node> > > already_processed, std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced) override;
   bool is_multiply_operator() override;
-  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced) override;
 };
 
 
@@ -344,8 +332,7 @@ public:
   ExternalOperator() = default;
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
-  void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "ExternalOperator";};
   void write_nl_string(std::ofstream&) override;
@@ -356,7 +343,7 @@ public:
   std::string function_name;
   int external_function_index = -1;
   bool is_external_operator() override;
-  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced) override;
+  void propagate_unique_degree(int* degrees, bool* unique_degrees) override;
 };
 
 
@@ -366,13 +353,12 @@ public:
   AddOperator() = default;
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
-  void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "AddOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_add_operator() override;
-  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced) override;
+  void propagate_unique_degree(int* degrees, bool* unique_degrees) override;
 };
 
 
@@ -382,13 +368,12 @@ public:
   SubtractOperator() = default;
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
-  void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "SubtractOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_subtract_operator() override;
-  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced) override;
+  void propagate_unique_degree(int* degrees, bool* unique_degrees) override;
 };
 
 
@@ -398,13 +383,11 @@ public:
   DivideOperator() = default;
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
-  void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "DivideOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_divide_operator() override;
-  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced) override;
 };
 
 
@@ -414,13 +397,11 @@ public:
   PowerOperator() = default;
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
-  void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "PowerOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_power_operator() override;
-  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced) override;
 };
 
 
@@ -430,13 +411,11 @@ public:
   NegationOperator() = default;
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
-  void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "NegationOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_negation_operator() override;
-  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced) override;
 };
 
 
@@ -446,13 +425,11 @@ public:
   ExpOperator() = default;
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
-  void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "ExpOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_exp_operator() override;
-  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced) override;
 };
 
 
@@ -462,13 +439,11 @@ public:
   LogOperator() = default;
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
-  void propagate_repn_info_backward(int* degrees, bool* push, bool* negate) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "LogOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_log_operator() override;
-  std::shared_ptr<Operator> replace_operands(std::shared_ptr<std::unordered_map<std::shared_ptr<Node>, std::shared_ptr<Node> > > needs_replaced) override;
 };
 
 
@@ -483,19 +458,6 @@ public:
   std::shared_ptr<ExpressionBase> nonlinear;
   void reset_with_constants();
   std::string __str__();
-};
-
-
-class TmpRepn
-{
-public:
-  TmpRepn() = default;
-  ~TmpRepn() = default;
-  std::shared_ptr<Expression> constant;
-  std::shared_ptr<Expression> linear;
-  std::shared_ptr<Expression> quadratic;
-  std::shared_ptr<Expression> nonlinear;
-  void reset_with_expressions();
 };
 
 
