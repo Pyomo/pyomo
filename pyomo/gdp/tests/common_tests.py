@@ -492,10 +492,8 @@ def check_only_targets_inactive(self, transformation, **kwargs):
         **kwargs)
 
     self.assertFalse(m.disjunction1.active)
-    self.assertIsNotNone(m.disjunction1._algebraic_constraint)
     # disjunction2 still active
     self.assertTrue(m.disjunction2.active)
-    self.assertIsNone(m.disjunction2._algebraic_constraint)
 
     self.assertFalse(m.disjunct1[0].active)
     self.assertFalse(m.disjunct1[1].active)
@@ -657,11 +655,9 @@ def check_disjData_targets_inactive(self, transformation, **kwargs):
         targets=[m.disjunction1[2]],
         **kwargs)
 
-    self.assertIsNotNone(m.disjunction1[2]._algebraic_constraint)
     self.assertFalse(m.disjunction1[2].active)
 
     self.assertTrue(m.disjunct1.active)
-    self.assertIsNotNone(m.disjunction1._algebraic_constraint)
     self.assertTrue(m.disjunct1[1,0].active)
     self.assertIsNone(m.disjunct1[1,0]._transformation_block)
     self.assertTrue(m.disjunct1[1,1].active)

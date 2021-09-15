@@ -1402,9 +1402,6 @@ class CommonModels(unittest.TestCase, CommonTests):
     def test_warn_for_untransformed(self):
         ct.check_warn_for_untransformed(self, 'between_steps', P=2)
 
-    # ESJ: This is nuts, I am such an idiot. Why on Earth did I map the
-    # container to something? Why does the container *have* an
-    # _algebraic_constraint?? That makes no sense. Can I deprecate it?
     def test_disjData_targets_inactive(self):
         ct.check_disjData_targets_inactive(self, 'between_steps', P=2)
 
@@ -1413,8 +1410,3 @@ class CommonModels(unittest.TestCase, CommonTests):
 
     def test_blockData_targets_inactive(self):
         ct.check_blockData_targets_inactive(self, 'between_steps', P=2)
-
-# TODO: 1) I think that we do need a transform_block_on_disjunct method because
-# we do need to maintain the block structure in case you partially transformed a
-# model and then solved a block. 2) Need to think through exactly what should
-# happen with nested disjunctions

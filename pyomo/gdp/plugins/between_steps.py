@@ -248,9 +248,10 @@ class BetweenSteps_Transformation(Transformation):
             * compute_optimal_bounds, and
             * compute_fbbt_bounds (the default),
         or you can write your own callback which accepts an Expression object, 
-        the original instance, the between steps transformation block, and a 
-        configured solver and returns a tuple (LB, UB) where either element 
-        can be None if no valid bound could be found.
+        the original instance, a model containing the variables and global 
+        constraints of the original isntance, and a configured solver and 
+        returns a tuple (LB, UB) where either element can be None if no valid 
+        bound could be found.
         """
     ))
     CONFIG.declare('compute_bounds_solver', ConfigValue(
