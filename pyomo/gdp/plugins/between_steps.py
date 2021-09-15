@@ -23,7 +23,7 @@ from pyomo.core import ( Block, Constraint, Var, SortComponents, Transformation,
                          NonNegativeIntegers, value, ConcreteModel,
                          NonNegativeIntegers, Objective, ComponentMap,
                          BooleanVar, LogicalConstraint, Connector, Expression,
-                         Suffix, Param, Set, SetOf, RangeSet)
+                         Suffix, Param, Set, SetOf, RangeSet, Reference)
 from pyomo.core.base.external import ExternalFunction
 from pyomo.network import Port
 from pyomo.common.collections import ComponentSet
@@ -92,7 +92,7 @@ def arbitrary_partition(disjunction, P):
 
     return partitions
 
-def compute_optimal_bounds(expr, instance, transBlock, opt):
+def compute_optimal_bounds(expr, instance, global_constraints, opt):
     # computes bounds on expr by minimizing and maximizing expr over the
     # variable bounds and the global constraints. Note that even if expr is
     # convex and the global constraints are a convex set, the max problem is
@@ -104,25 +104,11 @@ def compute_optimal_bounds(expr, instance, transBlock, opt):
                         "'compute_bounds_solver' argument if using "
                         "'compute_optimal_bounds.'")
 
-    # leave out what we've been doing, store state
-    transBlock.deactivate()
-    active_disjuncts = []
-    for disj in instance.component_data_objects(Disjunct,
-                                                descend_into=Block,
-                                                active=True):
-        disj.deactivate()
-        active_disjuncts.append(disj)
-    active_objs = []
-    for obj in instance.component_data_objects(Objective,
-                                               descend_into=Block,
-                                               active=True):
-        obj.deactivate()
-        active_objs.append(obj)
-
     # add temporary objective and calculate bounds
     obj = Objective(expr=expr)
-    instance.add_component(unique_component_name(instance, "tmp_obj"), obj)
-    results = opt.solve(instance)
+    global_constraints.add_component(unique_component_name(instance, "tmp_obj"),
+                                     obj)
+    results = opt.solve(global_constraints)
     if verify_successful_solve(results) is not NORMAL:
         logger.warning("Problem to find lower bound for expression %s"
                        "did not solve normally.\n\n%s" % (expr, results))
@@ -132,7 +118,7 @@ def compute_optimal_bounds(expr, instance, transBlock, opt):
         # getting that would be better. But this is why this is a callback.
         LB = value(obj.expr)
     obj.sense = -1
-    results = opt.solve(instance)
+    results = opt.solve(global_constraints)
     if verify_successful_solve(results) is not NORMAL:
         logger.warning("Problem to find upper bound for expression %s"
                        "did not solve normally.\n\n%s" % (expr, results))
@@ -141,13 +127,8 @@ def compute_optimal_bounds(expr, instance, transBlock, opt):
         UB = value(obj.expr)
 
     # clean up
-    instance.del_component(obj)
+    global_constraints.del_component(obj)
     del obj
-    for disj in active_disjuncts:
-        disj.activate()
-    for obj in active_objs:
-        obj.activate()
-    transBlock.activate()
 
     return (LB, UB)
 
@@ -349,16 +330,31 @@ class BetweenSteps_Transformation(Transformation):
             logger.setLevel(original_log_level)
 
     def _apply_to_impl(self, instance):
-        # create a transformation block on which we will create the reformulated
-        # GDP...
-        transformation_block = Block()
-        instance.add_component(unique_component_name( 
-            instance, '_pyomo_gdp_between_steps_reformulation'),
-                               transformation_block)
         self.variable_partitions = self._config.variable_partitions if \
                                    self._config.variable_partitions is not None \
                                    else {}
         self.partitioning_method = self._config.variable_partitioning_method
+
+        # create a model to store the global constraints on that we will pass to
+        # the compute_bounds_method, for if it wants them. We're making it a
+        # separate model because we don't need it again and because I was
+        # hitting #2130 by making it a block and attaching it to the instance.
+        global_constraints = ConcreteModel()
+        for cons in instance.component_objects( 
+                Constraint, active=True, descend_into=Block,
+                sort=SortComponents.deterministic):
+            global_constraints.add_component(unique_component_name(
+                global_constraints, cons.getname(fully_qualified=True,
+                                                 name_buffer=NAME_BUFFER)), 
+                                             Reference(cons))
+        for var in instance.component_objects(Var, descend_into=(Block,
+                                                                 Disjunct),
+                                              sort=SortComponents.deterministic):
+            global_constraints.add_component(unique_component_name(
+                global_constraints, var.getname(fully_qualified=True,
+                                                name_buffer=NAME_BUFFER)), 
+                                             Reference(var))
+        self._global_constraints = global_constraints
 
         # we can support targets as usual.
         targets = self._config.targets
@@ -379,26 +375,36 @@ class BetweenSteps_Transformation(Transformation):
                     % (t.name, instance.name))
             elif t.ctype is Disjunction:
                 if t.is_indexed():
-                    self._transform_disjunction(t, transformation_block)
+                    self._transform_disjunction(t)
                 else:
-                    self._transform_disjunctionData(t, t.index(),
-                                                    transformation_block)
+                    self._transform_disjunctionData(t, t.index())
             elif t.ctype in (Block, Disjunct):
                 if t.is_indexed():
-                    self._transform_block(t, transformation_block)
+                    self._transform_block(t)
                 else:
-                    self._transform_blockData(t, transformation_block)
+                    self._transform_blockData(t)
             else:
                 raise GDP_Error(
                     "Target '%s' was not a Block, Disjunct, or Disjunction. "
                     "It was of type %s and can't be transformed."
                     % (t.name, type(t)) )
 
-    def _transform_block(self, obj, transBlock):
-        for i in sorted(obj.keys()):
-            self._transform_blockData(obj[i], transBlock)
+    def _add_transformation_block(self, block):
+        # create a transformation block on which we will create the reformulated
+        # GDP...
+        transformation_block = Block()
+        block.add_component(
+            unique_component_name( block,
+                                   '_pyomo_gdp_between_steps_reformulation'),
+            transformation_block)
 
-    def _transform_blockData(self, obj, transBlock):
+        return transformation_block
+
+    def _transform_block(self, obj):
+        for i in sorted(obj.keys()):
+            self._transform_blockData(obj[i])
+
+    def _transform_blockData(self, obj):
         # Transform every (active) disjunction in the block
         for disjunction in obj.component_data_objects(
                 Disjunction,
@@ -406,12 +412,13 @@ class BetweenSteps_Transformation(Transformation):
                 sort=SortComponents.deterministic,
                 descend_into=(Block, Disjunct),
                 descent_order=TraversalStrategy.PostfixDFS):
-            self._transform_disjunctionData(disjunction, disjunction.index(),
-                                            transBlock)
+            self._transform_disjunctionData(disjunction, disjunction.index())
     
-    def _transform_disjunction(self, obj, transBlock):
+    def _transform_disjunction(self, obj):
         if not obj.active:
             return
+
+        transBlock = self._add_transformation_block(obj.parent_block())
             
         # relax each of the disjunctionDatas
         for i in sorted(obj.keys()):
@@ -419,9 +426,12 @@ class BetweenSteps_Transformation(Transformation):
 
         obj.deactivate()
 
-    def _transform_disjunctionData(self, obj, idx, transBlock):
+    def _transform_disjunctionData(self, obj, idx, transBlock=None):
         if not obj.active:
             return
+
+        if transBlock is None:
+            transBlock = self._add_transformation_block(obj.parent_block())
 
         variable_partitions = self.variable_partitions
         partition_method = self.partitioning_method
@@ -628,7 +638,7 @@ class BetweenSteps_Transformation(Transformation):
                                                 'nonlinear_exprs'][i])
 
                 expr_lb, expr_ub = self._config.compute_bounds_method( 
-                    expr, instance, transBlock, 
+                    expr, instance, self._global_constraints, 
                     self._config.compute_bounds_solver)
                 if expr_lb is None or expr_ub is None:
                     raise GDP_Error("Expression %s from constraint '%s' "

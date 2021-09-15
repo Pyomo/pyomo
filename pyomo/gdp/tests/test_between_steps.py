@@ -672,7 +672,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertIsNone(m.disjunction.disjuncts[0].transformation_block)
         self.assertIsNone(m.disjunction.disjuncts[1].transformation_block)
 
-        b = m.component("_pyomo_gdp_between_steps_reformulation")
+        b = m.b.component("_pyomo_gdp_between_steps_reformulation")
         self.assertIsInstance(b, Block)
 
         # check we declared the right things
@@ -737,18 +737,27 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             compute_bounds_method=compute_optimal_bounds,
             targets=[m.b])
 
-        b = m.component("_pyomo_gdp_between_steps_reformulation")
-        self.assertIsInstance(b, Block)
+        b0 = m.b[0].component("_pyomo_gdp_between_steps_reformulation")
+        self.assertIsInstance(b0, Block)
 
         # check we declared the right things
-        self.assertEqual(len(b.component_map(Disjunction)), 2)
-        self.assertEqual(len(b.component_map(Disjunct)), 4)
-        self.assertEqual(len(b.component_map(Constraint)), 4) # global
-                                                              # constraints
+        self.assertEqual(len(b0.component_map(Disjunction)), 1)
+        self.assertEqual(len(b0.component_map(Disjunct)), 2)
+        self.assertEqual(len(b0.component_map(Constraint)), 2) # global
+                                                               # constraints
+        b1 = m.b[1].component("_pyomo_gdp_between_steps_reformulation")
+        self.assertIsInstance(b1, Block)
+
+        # check we declared the right things
+        self.assertEqual(len(b1.component_map(Disjunction)), 1)
+        self.assertEqual(len(b1.component_map(Disjunct)), 2)
+        self.assertEqual(len(b1.component_map(Constraint)), 2) # global
+                                                               # constraints
+
         ############################
         # Check the added disjunction
         #############################
-        disjunction = b.component("b[1].another_disjunction")
+        disjunction = b1.component("b[1].another_disjunction")
         self.assertIsInstance(disjunction, Disjunction)
         self.assertEqual(len(disjunction.disjuncts), 2)
         # each Disjunct has one constraint
@@ -779,18 +788,18 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.check_disj_constraint(c2[0], -12, aux_vars2[0], aux_vars2[1])
 
         # check global constraints
-        c = b.component("b[1].another_disjunction_disjuncts[0]."
+        c = b1.component("b[1].another_disjunction_disjuncts[0]."
                         "constraint[1]_split_constraints")
         self.check_second_disjunction_global_constraint_disj1(c, aux_vars1)
         
-        c = b.component("b[1].another_disjunction_disjuncts[1]."
+        c = b1.component("b[1].another_disjunction_disjuncts[1]."
                         "constraint[1]_split_constraints")
         self.check_second_disjunction_global_constraint_disj2(c, aux_vars2)
 
         ############################
         # Check the original disjunction
         #############################
-        disjunction = b.component("b[0].disjunction")
+        disjunction = b0.component("b[0].disjunction")
         self.assertIsInstance(disjunction, Disjunction)
         self.assertEqual(len(disjunction.disjuncts), 2)
         # each Disjunct has one constraint
@@ -820,7 +829,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.check_disj_constraint(c2[0], -35, aux_vars2[0], aux_vars2[1])
 
         # check global constraints
-        c = b.component(
+        c = b0.component(
             "b[0].disjunction_disjuncts[0].constraint[1]_split_constraints")
         self.assertEqual(len(c), 2)
         c1 = c[0]
@@ -828,7 +837,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         c2 = c[1]
         self.check_global_constraint_disj1(c2, aux_vars1[1], m.x[3], m.x[4])
 
-        c = b.component(
+        c = b0.component(
             "b[0].disjunction_disjuncts[1].constraint[1]_split_constraints")
         self.assertEqual(len(c), 2)
         c1 = c[0]
