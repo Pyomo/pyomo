@@ -3,70 +3,37 @@
 
 std::shared_ptr<ExpressionBase> binary_helper(std::shared_ptr<ExpressionBase> n1, std::shared_ptr<ExpressionBase> n2, std::shared_ptr<BinaryOperator> oper)
 {
-  std::shared_ptr<Expression> expr = std::make_shared<Expression>();
+  std::shared_ptr<Expression> expr;
   if (n1->is_leaf() && n2->is_leaf())
     {
       oper->operand1 = n1;
       oper->operand2 = n2;
+      expr = std::make_shared<Expression>();
     }
   else if (n1->is_leaf())
     {
       oper->operand1 = n1;
       std::shared_ptr<Expression> n2_expr = std::dynamic_pointer_cast<Expression>(n2);
-      oper->operand2 = n2_expr->operators->back();
-      if (n2_expr->operators->size() == n2_expr->n_operators)
-	{
-	  expr->operators = n2_expr->operators;
-	}
-      else
-	{
-	  for (unsigned int i=0; i<n2_expr->n_operators; ++i)
-	    {
-	      expr->operators->push_back(n2_expr->operators->at(i));
-	    }
-	}
+      expr = n2_expr->copy_expr();
+      oper->operand2 = n2_expr->last_operator();
     }
   else if (n2->is_leaf())
     {
       std::shared_ptr<Expression> n1_expr = std::dynamic_pointer_cast<Expression>(n1);
-      oper->operand1 = n1_expr->operators->back();
+      oper->operand1 = n1_expr->last_operator();
       oper->operand2 = n2;
-      if (n1_expr->operators->size() == n1_expr->n_operators)
-	{
-	  expr->operators = n1_expr->operators;
-	}
-      else
-	{
-	  for (unsigned int i=0; i<n1_expr->n_operators; ++i)
-	    {
-	      expr->operators->push_back(n1_expr->operators->at(i));
-	    }
-	}
+      expr = n1_expr->copy_expr();
     }
   else
     {
       std::shared_ptr<Expression> n1_expr = std::dynamic_pointer_cast<Expression>(n1);
       std::shared_ptr<Expression> n2_expr = std::dynamic_pointer_cast<Expression>(n2);
-      oper->operand1 = n1_expr->operators->back();
-      oper->operand2 = n2_expr->operators->back();
-      if (n1_expr->operators->size() == n1_expr->n_operators)
-	{
-	  expr->operators = n1_expr->operators;
-	}
-      else
-	{
-	  for (unsigned int i=0; i<n1_expr->n_operators; ++i)
-	    {
-	      expr->operators->push_back(n1_expr->operators->at(i));
-	    }
-	}
-      for (unsigned int i=0; i<n2_expr->n_operators; ++i)
-	{
-	  expr->operators->push_back(n2_expr->operators->at(i));
-	}
+      oper->operand1 = n1_expr->last_operator();
+      oper->operand2 = n2_expr->last_operator();
+      expr = n1_expr->copy_expr();
+      expr->extend_operators(n2_expr);
     }
-  expr->operators->push_back(oper);
-  expr->n_operators = expr->operators->size();
+  expr->add_operator(oper);
   return expr;
 }
 
@@ -85,44 +52,30 @@ std::shared_ptr<ExpressionBase> external_helper(std::string function_name, std::
       else
 	{
 	  std::shared_ptr<Expression> n_expr = std::dynamic_pointer_cast<Expression>(n);
-	  oper->operands->push_back(n_expr->operators->back());
-	  for (unsigned int i=0; i<n_expr->n_operators; ++i)
-	    {
-	      expr->operators->push_back(n_expr->operators->at(i));
-	    }
+	  expr->extend_operators(n_expr);
+	  oper->operands->push_back(n_expr->last_operator());
 	}
     }
-  expr->operators->push_back(oper);
-  expr->n_operators = expr->operators->size();
+  expr->add_operator(oper);
   return expr;
 }
 
 
 std::shared_ptr<ExpressionBase> unary_helper(std::shared_ptr<ExpressionBase> n1, std::shared_ptr<UnaryOperator> oper)
 {
-  std::shared_ptr<Expression> expr = std::make_shared<Expression>();
+  std::shared_ptr<Expression> expr;
   if (n1->is_leaf())
     {
       oper->operand = n1;
+      expr = std::make_shared<Expression>();
     }
   else
     {
       std::shared_ptr<Expression> n1_expr = std::dynamic_pointer_cast<Expression>(n1);
-      oper->operand = n1_expr->operators->back();
-      if (n1_expr->operators->size() == n1_expr->n_operators)
-	{
-	  expr->operators = n1_expr->operators;
-	}
-      else
-	{
-	  for (unsigned int i=0; i<n1_expr->n_operators; ++i)
-	    {
-	      expr->operators->push_back(n1_expr->operators->at(i));
-	    }
-	}
+      oper->operand = n1_expr->last_operator();
+      expr = n1_expr->copy_expr();
     }
-  expr->operators->push_back(oper);
-  expr->n_operators = expr->operators->size();
+  expr->add_operator(oper);
   return expr;
 }
 
@@ -313,15 +266,11 @@ std::shared_ptr<ExpressionBase> appsi_sum(std::vector<std::shared_ptr<Expression
       else
 	{
 	  std::shared_ptr<Expression> other = std::dynamic_pointer_cast<Expression>(e);
-	  for (unsigned int i=0; i<other->n_operators; ++i)
-	    {
-	      res->operators->push_back(other->operators->at(i));
-	    }
-	  sum_op->operands->push_back(other->operators->at(other->n_operators - 1));
+	  res->extend_operators(other);
+	  sum_op->operands->push_back(other->last_operator());
 	}
     }
-  res->operators->push_back(sum_op);
-  res->n_operators = res->operators->size();
+  res->add_operator(sum_op);
   return res;
 }
 
@@ -451,9 +400,62 @@ bool Operator::is_operator_type()
 }
 
 
+std::shared_ptr<Expression> Expression::copy_expr()
+{
+  std::shared_ptr<Expression> new_expr = std::make_shared<Expression>();
+  if (operators->size() == n_operators())
+    {
+      new_expr->operators = operators;
+      new_expr->_n_operators = n_operators();
+    }
+  else
+    {
+      for (unsigned int i=0; i<n_operators(); ++i)
+	{
+	  new_expr->add_operator(operators->at(i));
+	}
+    }
+  return new_expr;
+}
+
+
+std::shared_ptr<Operator> Expression::last_operator()
+{
+  return operators->at(n_operators() - 1);
+}
+
+
+void Expression::add_operator(std::shared_ptr<Operator> op)
+{
+  if (n_operators() == operators->size())
+    {
+      operators->push_back(op);
+      _n_operators += 1;
+    }
+  else
+    {
+      throw std::string("Cannot modify this expression");
+    }
+}
+
+
+void Expression::extend_operators(std::shared_ptr<Expression> other)
+{
+  for (unsigned int i=0; i<other->n_operators(); ++i)
+    {
+      add_operator(other->operators->at(i));
+    }
+}
+
+
 std::vector<std::shared_ptr<Operator> > Expression::get_operators()
 {
-  return *operators;
+  std::vector<std::shared_ptr<Operator> > res;
+  for (unsigned int i=0; i<n_operators(); ++i)
+    {
+      res.push_back(operators->at(i));
+    }
+  return res;
 }
 
 double Leaf::get_value_from_array(double* val_array)
@@ -464,7 +466,7 @@ double Leaf::get_value_from_array(double* val_array)
 
 double Expression::get_value_from_array(double* val_array)
 {
-  return val_array[n_operators-1];
+  return val_array[n_operators()-1];
 }
 
 
@@ -552,8 +554,8 @@ void LogOperator::evaluate(double* values)
 
 double Expression::evaluate()
 {
-  double* values = new double[n_operators];
-  for (unsigned int i=0; i<n_operators; ++i)
+  double* values = new double[n_operators()];
+  for (unsigned int i=0; i<n_operators(); ++i)
     {
       operators->at(i)->index = i;
       operators->at(i)->evaluate(values);
@@ -622,7 +624,7 @@ void SumOperator::identify_variables(std::set<std::shared_ptr<Node> > &var_set)
 std::shared_ptr<std::vector<std::shared_ptr<Var> > > Expression::identify_variables()
 {
   std::set<std::shared_ptr<Node> > var_set;
-  for (unsigned int i=0; i<n_operators; ++i)
+  for (unsigned int i=0; i<n_operators(); ++i)
     {
       operators->at(i)->identify_variables(var_set);
     }
@@ -660,7 +662,7 @@ std::shared_ptr<std::vector<std::shared_ptr<Var> > > Param::identify_variables()
 std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > Expression::identify_external_operators()
 {
   std::set<std::shared_ptr<Node> > external_set;
-  for (unsigned int i=0; i<n_operators; ++i)
+  for (unsigned int i=0; i<n_operators(); ++i)
     {
       if (operators->at(i)->is_external())
 	{
@@ -705,7 +707,7 @@ bool Leaf::get_unique_degree_from_array(bool* unique_degrees)
 
 bool Expression::get_unique_degree_from_array(bool* unique_degrees)
 {
-  return unique_degrees[n_operators-1];
+  return unique_degrees[n_operators()-1];
 }
 
 
@@ -723,11 +725,11 @@ std::shared_ptr<Repn> ExpressionBase::get_repn_from_vector(std::vector<std::shar
 
 std::shared_ptr<Repn> Expression::get_repn_from_vector(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees)
 {
-  if (unique_degrees[n_operators-1])
+  if (unique_degrees[n_operators()-1])
     {
       std::shared_ptr<Repn> repn = std::make_shared<Repn>();
       repn->reset_with_constants();
-      int deg = degrees[n_operators-1];
+      int deg = degrees[n_operators()-1];
       if (deg == 0)
 	{
 	  repn->constant = shared_from_this();
@@ -748,7 +750,7 @@ std::shared_ptr<Repn> Expression::get_repn_from_vector(std::vector<std::shared_p
     }
   else
     {
-      return repns.at(n_operators-1);
+      return repns.at(n_operators()-1);
     }
 }
 
@@ -806,11 +808,10 @@ std::shared_ptr<ExpressionBase> Operator::expression_from_operator()
     {
       if (prefix_notation->at(ndx)->is_operator_type())
 	{
-	  res->operators->push_back(std::dynamic_pointer_cast<Operator>(prefix_notation->at(ndx)));
+	  res->add_operator(std::dynamic_pointer_cast<Operator>(prefix_notation->at(ndx)));
 	}
       ndx -= 1;
     }
-  res->n_operators = res->operators->size();
   return res;
 }
 
@@ -835,7 +836,7 @@ int Constant::get_degree_from_array(int* degree_array)
 
 int Expression::get_degree_from_array(int* degree_array)
 {
-  return degree_array[n_operators-1];
+  return degree_array[n_operators()-1];
 }
 
 
@@ -1221,11 +1222,11 @@ void LinearOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, i
 std::shared_ptr<Repn> Expression::generate_repn()
 {
   std::vector<std::shared_ptr<Repn> > repns;
-  int degrees[n_operators];
-  double values[n_operators];
-  bool unique_degrees[n_operators];
+  int degrees[n_operators()];
+  double values[n_operators()];
+  bool unique_degrees[n_operators()];
   std::shared_ptr<Operator> oper;
-  for (unsigned int i=0; i<n_operators; ++i)
+  for (unsigned int i=0; i<n_operators(); ++i)
     {
       oper = operators->at(i);
       oper->index = i;
@@ -1383,15 +1384,15 @@ std::string Constant::__str__()
 
 std::string Expression::__str__()
 {
-  std::string* string_array = new std::string[n_operators];
+  std::string* string_array = new std::string[n_operators()];
   std::shared_ptr<Operator> oper;
-  for (unsigned int i=0; i<n_operators; ++i)
+  for (unsigned int i=0; i<n_operators(); ++i)
     {
       oper = operators->at(i);
       oper->index = i;
       oper->print(string_array);
     }
-  std::string res = string_array[n_operators-1];
+  std::string res = string_array[n_operators()-1];
   delete[] string_array;
   return res;
 }
@@ -1405,7 +1406,7 @@ std::string Leaf::get_string_from_array(std::string* string_array)
 
 std::string Expression::get_string_from_array(std::string* string_array)
 {
-  return string_array[n_operators-1];
+  return string_array[n_operators()-1];
 }
 
 
@@ -1540,7 +1541,7 @@ std::shared_ptr<std::vector<std::shared_ptr<Node> > > Expression::get_prefix_not
   std::shared_ptr<std::vector<std::shared_ptr<Node> > > res = std::make_shared<std::vector<std::shared_ptr<Node> > >();
   std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack = std::make_shared<std::vector<std::shared_ptr<Node> > >();
   std::shared_ptr<Node> node;
-  stack->push_back(operators->at(n_operators - 1));
+  stack->push_back(last_operator());
   while (stack->size() > 0)
     {
       node = stack->back();

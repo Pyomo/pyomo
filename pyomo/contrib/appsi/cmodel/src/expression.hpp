@@ -207,8 +207,6 @@ class Expression: public ExpressionBase
 {
 public:
   Expression() = default;
-  unsigned int n_operators = 0;
-  std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators = std::make_shared<std::vector<std::shared_ptr<Operator> > >();
   std::string __str__() override;
   bool is_expression_type() override;
   double evaluate() override;
@@ -223,6 +221,14 @@ public:
   std::shared_ptr<Repn> generate_repn() override;
   std::shared_ptr<Repn> get_repn_from_vector(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   std::vector<std::shared_ptr<Operator> > get_operators();
+  unsigned int n_operators() {return _n_operators;}
+  std::shared_ptr<Expression> copy_expr();
+  std::shared_ptr<Operator> last_operator();
+  void add_operator(std::shared_ptr<Operator>);
+  void extend_operators(std::shared_ptr<Expression>);
+private:
+  std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators = std::make_shared<std::vector<std::shared_ptr<Operator> > >();
+  unsigned int _n_operators = 0;
 };
 
 
