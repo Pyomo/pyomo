@@ -83,8 +83,11 @@ PYBIND11_MODULE(appsi_cmodel, m)
     .def(py::init<>())
     .def(py::init<double>())
     .def_readwrite("value", &Constant::value);
+  py::class_<Operator, Node, std::shared_ptr<Operator> >(m, "Operator")
+    .def("expression_from_operator", &Operator::expression_from_operator);
   py::class_<Expression, ExpressionBase, std::shared_ptr<Expression> >(m, "Expression")
-    .def(py::init<>());
+    .def(py::init<>())
+    .def("get_operators", &Expression::get_operators);
   py::class_<NLBase, std::shared_ptr<NLBase> >(m, "NLBase");
   py::class_<NLConstraint, NLBase, std::shared_ptr<NLConstraint> >(m, "NLConstraint")
     .def_readwrite("lb", &NLConstraint::lb)

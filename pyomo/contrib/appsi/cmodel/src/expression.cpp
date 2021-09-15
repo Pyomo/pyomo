@@ -451,6 +451,11 @@ bool Operator::is_operator_type()
 }
 
 
+std::vector<std::shared_ptr<Operator> > Expression::get_operators()
+{
+  return *operators;
+}
+
 double Leaf::get_value_from_array(double* val_array)
 {
   return value;

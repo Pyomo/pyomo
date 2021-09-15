@@ -222,6 +222,7 @@ public:
   void write_nl_string(std::ofstream&) override;
   std::shared_ptr<Repn> generate_repn() override;
   std::shared_ptr<Repn> get_repn_from_vector(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
+  std::vector<std::shared_ptr<Operator> > get_operators();
 };
 
 
