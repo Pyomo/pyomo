@@ -196,7 +196,7 @@ tort = 50
 temp_base = 298.15
 
 
-def create_model(scena, temp=313.15, temp_bath=313.15, y=0.15, para=212, ua=5.0E6, opt = True, conti=False, optimize_trace=True, diff=0, eps=0.01, energy = True, doe_model=True, est_tr=False, est_ua=False, k_aug=False, temp_option=1, isotherm = True, chemsorb = True, physsorb = True, dispersion = False, fix_pres = False, v_fix=False):
+def create_model(scena, temp_feed=313.15, temp_bath=313.15, y=0.15, para=212, ua=5.0E6, opt = True, conti=False, optimize_trace=True, diff=0, eps=0.01, energy = True, doe_model=True, est_tr=False, est_ua=False, k_aug=False, temp_option=1, isotherm = True, chemsorb = True, physsorb = True, dispersion = False, fix_pres = False, v_fix=False):
     ''' 
     Creates a concrete Pyomo model and adds sets/parameters.
     Toggles are saved into the model object.
@@ -249,8 +249,7 @@ def create_model(scena, temp=313.15, temp_bath=313.15, y=0.15, para=212, ua=5.0E
     m.dispersion = dispersion
     m.fix_pres = fix_pres
     m.v_fix = v_fix
-    
-    m.temp_bath = temp_bath
+
     m.scena_all = scena
     m.scena = Set(initialize=scena['scena-name'])
     
@@ -272,13 +271,13 @@ def create_model(scena, temp=313.15, temp_bath=313.15, y=0.15, para=212, ua=5.0E
     
     # Original bed temperature, [K]
     if m.doe_model:
-        m.temp_orig = Var(initialize=temp, bounds=(100, 600))
-    elif m.conti:
-        m.temp_orig = Var(initialize=temp, bounds=(293, 373))
+        m.temp_feed = Var(initialize=temp_feed, bounds=(100, 600))
+        m.temp_bath = Var(initialize=temp_bath, bounds=(274, 600))
     else:
-        m.temp_orig = temp
+        m.temp_feed = temp_feed
+        m.temp_bath = temp_bath
 
-    print('The inlet gas temperature is ', value(m.temp_orig))
+    print('The inlet gas temperature is ', value(m.temp_feed))
     
     if m.conti:
         m.yfeed = Var(m.COMPS, initialize=yfeed, bounds=(0.1,0.45), within=NonNegativeReals)
@@ -307,7 +306,7 @@ def create_model(scena, temp=313.15, temp_bath=313.15, y=0.15, para=212, ua=5.0E
     m.den_inert = Param(initialize=totp_f*100/(m.temp_bath*RPV))
 
     # Total feed density, [mol/m3]
-    m.totden_f = Param(initialize=totp_f*100/(m.temp_orig*RPV))
+    m.totden_f = Param(initialize=totp_f*100/(m.temp_feed*RPV))
     
     print('The inlet feed density is', value(m.totden_f), '[mol/m3]')
     
@@ -344,9 +343,9 @@ def create_model(scena, temp=313.15, temp_bath=313.15, y=0.15, para=212, ua=5.0E
     if not m.energy:
         # For continuous, temp and yfeed will be variable
         if m.conti:
-            m.temp = Var(initialize = m.temp_orig, bounds=(293.15, 373.15), within=NonNegativeReals) 
+            m.temp = Var(initialize = m.temp_feed, bounds=(293.15, 373.15), within=NonNegativeReals)
         else:
-            m.temp = Param(initialize=m.temp_orig)
+            m.temp = Param(initialize=m.temp_feed)
             
         # define inv_k_oc, inv_k_op according to perturbation
         # inv_k_oc is in [1/s], therefore the k_trans is in [1/s]
@@ -616,7 +615,7 @@ def add_variables(m,tf=3600, timesteps=None, start=0):
     # Temperature [K]
     if m.energy:
         # temperature is initialized to be the T_inlet. As this is the gas temperature, it should be started to be the inlet gas temperature. 
-        #m.temp = Var(m.perturb, m.zgrid, m.t, initialize=value(m.temp_orig), bounds=(273.15,500.15), within=NonNegativeReals)
+        #m.temp = Var(m.perturb, m.zgrid, m.t, initialize=value(m.temp_feed), bounds=(273.15,500.15), within=NonNegativeReals)
         m.temp = Var(m.scena, m.zgrid, m.t, initialize=m.temp_bath, bounds=(273.15,500.15), within=NonNegativeReals)
         #m.temp = Var(m.perturb, m.zgrid, m.t, initialize=m.temp_water,  bounds=(273.15,1000), within=NonNegativeReals)
         m.dTdt = DerivativeVar(m.temp, wrt=m.t)
@@ -690,9 +689,9 @@ def add_variables(m,tf=3600, timesteps=None, start=0):
             h in [J/mol]
             '''
             if i=='N2':
-                return 29*(m.temp_orig-temp_base) + 1.85E-3/2*(m.temp_orig**2-temp_base**2) - 9.65E-6/3*(m.temp_orig**3-temp_base**3) + 16.64E-9/4*(m.temp_orig**4-temp_base**4) -117/m.temp_orig + 117/temp_base
+                return 29*(m.temp_feed-temp_base) + 1.85E-3/2*(m.temp_feed**2-temp_base**2) - 9.65E-6/3*(m.temp_feed**3-temp_base**3) + 16.64E-9/4*(m.temp_feed**4-temp_base**4) -117/m.temp_feed + 117/temp_base
             elif i=='CO2':
-                return 25*(m.temp_orig-temp_base) + 55.19E-3/2*(m.temp_orig**2 - temp_base**2) - 33.69E-6/3*(m.temp_orig**3 - temp_base**3) + 7.95E-9/4*(m.temp_orig**4 - temp_base**4) +136638/m.temp_orig - 136638/temp_base
+                return 25*(m.temp_feed-temp_base) + 55.19E-3/2*(m.temp_feed**2 - temp_base**2) - 33.69E-6/3*(m.temp_feed**3 - temp_base**3) + 7.95E-9/4*(m.temp_feed**4 - temp_base**4) +136638/m.temp_feed - 136638/temp_base
 
         m.h_feed = Expression(m.COMPS, rule=h_feed_rule)
         
@@ -2389,7 +2388,7 @@ def extract3(m,result):
         if m.energy:
             store = pd.DataFrame({'time': time,
                               'position':space,
-                              'T_inlet': m.temp_orig, 
+                              'T_inlet': m.temp_feed,
                               'y_inlet': m.yfeed['CO2'],
                               status: 0,
                               'fco2': FCO21, 
@@ -2465,7 +2464,7 @@ def extract3(m,result):
         # TODO: add the third set 
             store = pd.DataFrame({'time': time,
                               'position':space,
-                              'T_inlet': m.temp_orig, 
+                              'T_inlet': m.temp_feed,
                               'y_inlet': m.yfeed['CO2'],
                               'fco2': FCO21, 
                               'den_N2': C_N21,

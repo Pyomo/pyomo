@@ -7,13 +7,13 @@ import time
 import pickle
 from itertools import permutations, product
 #from sens import get_dsdp
-#from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculation
+from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculation
 from idaes.apps.uncertainty_propagation.sens import get_dsdp
 #from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
 class DesignOfExperiments: 
     def __init__(self, param_init, design_variable_timepoints, measurement_variables, measurement_timeset, create_model, solver=None,
-                 prior_FIM=None, discretize_model=None, verbose=True):
+                 prior_FIM=None, discretize_model=None, verbose=True, args=None):
         '''
         This package enables model-based design of experiments analysis with Pyomo. Both direct optimization and enumeration modes are supported.
         NLP sensitivity tools, e.g.,  sipopt and k_aug, are supported to accelerate analysis via enumeration.
@@ -36,6 +36,7 @@ class DesignOfExperiments:
         prior_FIM: Fisher information matrix (FIM) for prior experiments, default=None
         discretize_model: A user-specified function that deiscretizes the model. Only use with Pyomo.DAE, default=None
         verbose: if print statements are made
+        args: Other arguments of the create_model function, in a list
         '''  
         
         # parameters
@@ -53,6 +54,7 @@ class DesignOfExperiments:
         self.measurement_timeset = measurement_timeset
         # create_model()
         self.create_model = create_model
+        self.args = args
         # check if user-defined solver is given
         if solver is not None:
             self.solver = solver
@@ -325,7 +327,7 @@ class DesignOfExperiments:
                 # TODO:(long term) add options to create model once and then update. only try this after the
                 # package is completed and unitest is finished
                 time0_build = time.time()
-                mod = self.create_model(scenario_iter)
+                mod = self.create_model(scenario_iter, self.args)
                 time1_build = time.time()
                 time_allbuild.append(time1_build-time0_build)
 
@@ -412,7 +414,7 @@ class DesignOfExperiments:
 
                 # create model
                 time0_build = time.time()
-                mod = self.create_model(scenario_all)
+                mod = self.create_model(scenario_all, self.args)
                 time1_build = time.time()
                 time_allbuild.append(time1_build - time0_build)
 
@@ -424,7 +426,7 @@ class DesignOfExperiments:
                 if self.mode =='sequential_sipopt':
                     mod = self.__fix_design(mod, self.design_values, fix_opt=True)
 
-                mod.obj = Objective(rule=0.0, sense=minimize)
+                #mod.obj = Objective(rule=0.0, sense=minimize)
 
                 # extract (discretized) time
                 time_set = []
@@ -528,7 +530,7 @@ class DesignOfExperiments:
 
             # create model
             time0_build = time.time()
-            mod = self.create_model(scenario_all)
+            mod = self.create_model(scenario_all, self.args)
             time1_build = time.time()
             time_build = time1_build - time0_build
 
@@ -877,7 +879,7 @@ class DesignOfExperiments:
         scenario_all = scena_gen.simultaneous_scenario()
         
         # create model
-        m = self.create_model(scenario_all)
+        m = self.create_model(scenario_all, self.args)
         # discretize if discretization function is provided
         if self.discretize_model is not None:
             m = self.discretize_model(m)
