@@ -881,7 +881,7 @@ def check_trans_block_created(self, transformation):
     m = models.makeTwoTermDisjOnBlock()
     TransformationFactory('gdp.%s' % transformation).apply_to(m)
 
-    # test that the transformation block go created on the model
+    # test that the transformation block got created on the block
     transBlock = m.b.component('_pyomo_gdp_%s_reformulation' % transformation)
     self.assertIsInstance(transBlock, Block)
     disjBlock = transBlock.component("relaxedDisjuncts")
@@ -1039,9 +1039,9 @@ def check_iteratively_adding_disjunctions_transform_model(self, transformation):
 # If you transform a block as if it is a model, the transformation should
 # only modify the block you passed it, else when you solve the block, you
 # are missing the disjunction you thought was on there.
-def check_transformation_simple_block(self, transformation):
+def check_transformation_simple_block(self, transformation, **kwargs):
     m = models.makeTwoTermDisjOnBlock()
-    TransformationFactory('gdp.%s' % transformation).apply_to(m.b)
+    TransformationFactory('gdp.%s' % transformation).apply_to(m.b, **kwargs)
 
     # transformation block not on m
     self.assertIsNone(
@@ -1051,9 +1051,9 @@ def check_transformation_simple_block(self, transformation):
     self.assertIsInstance(m.b.component("_pyomo_gdp_%s_reformulation" %
                                         transformation), Block)
 
-def check_transform_block_data(self, transformation):
+def check_transform_block_data(self, transformation, **kwargs):
     m = models.makeDisjunctionsOnIndexedBlock()
-    TransformationFactory('gdp.%s' % transformation).apply_to(m.b[0])
+    TransformationFactory('gdp.%s' % transformation).apply_to(m.b[0], **kwargs)
 
     self.assertIsNone(
         m.component("_pyomo_gdp_%s_reformulation" % transformation))
@@ -1061,9 +1061,10 @@ def check_transform_block_data(self, transformation):
     self.assertIsInstance(m.b[0].component("_pyomo_gdp_%s_reformulation" %
                                            transformation), Block)
 
-def check_simple_block_target(self, transformation):
+def check_simple_block_target(self, transformation, **kwargs):
     m = models.makeTwoTermDisjOnBlock()
-    TransformationFactory('gdp.%s' % transformation).apply_to(m, targets=[m.b])
+    TransformationFactory('gdp.%s' % transformation).apply_to(m, targets=[m.b],
+                                                              **kwargs)
 
     # transformation block not on m
     self.assertIsNone(
@@ -1073,10 +1074,11 @@ def check_simple_block_target(self, transformation):
     self.assertIsInstance(m.b.component("_pyomo_gdp_%s_reformulation" %
                                         transformation), Block)
 
-def check_block_data_target(self, transformation):
+def check_block_data_target(self, transformation, **kwargs):
     m = models.makeDisjunctionsOnIndexedBlock()
     TransformationFactory('gdp.%s' % transformation).apply_to(m,
-                                                              targets=[m.b[0]])
+                                                              targets=[m.b[0]],
+                                                              **kwargs)
 
     self.assertIsNone(
         m.component("_pyomo_gdp_%s_reformulation" % transformation))
@@ -1084,9 +1086,10 @@ def check_block_data_target(self, transformation):
     self.assertIsInstance(m.b[0].component("_pyomo_gdp_%s_reformulation" %
                                            transformation), Block)
 
-def check_indexed_block_target(self, transformation):
+def check_indexed_block_target(self, transformation, **kwargs):
     m = models.makeDisjunctionsOnIndexedBlock()
-    TransformationFactory('gdp.%s' % transformation).apply_to(m, targets=[m.b])
+    TransformationFactory('gdp.%s' % transformation).apply_to(m, targets=[m.b],
+                                                              **kwargs)
 
     # We expect the transformation block on each of the BlockDatas. Because
     # it is always going on the parent block of the disjunction.
@@ -1098,12 +1101,13 @@ def check_indexed_block_target(self, transformation):
         self.assertIsInstance( m.b[i].component("_pyomo_gdp_%s_reformulation" %
                                                 transformation), Block)
 
-def check_block_targets_inactive(self, transformation):
+def check_block_targets_inactive(self, transformation, **kwargs):
     m = models.makeTwoTermDisjOnBlock()
     m = models.add_disj_not_on_block(m)
     TransformationFactory('gdp.%s' % transformation).apply_to(
         m,
-        targets=[m.b])
+        targets=[m.b],
+        **kwargs)
 
     self.assertFalse(m.b.disjunct[0].active)
     self.assertFalse(m.b.disjunct[1].active)
@@ -1139,7 +1143,7 @@ def check_block_only_targets_transformed(self, transformation):
 
 # common error messages
 
-def check_transform_empty_disjunction(self, transformation):
+def check_transform_empty_disjunction(self, transformation, **kwargs):
     m = ConcreteModel()
     m.empty = Disjunction(expr=[])
 
@@ -1148,9 +1152,10 @@ def check_transform_empty_disjunction(self, transformation):
         "Disjunction 'empty' is empty. This is likely indicative of a "
         "modeling error.*",
         TransformationFactory('gdp.%s' % transformation).apply_to,
-        m)
+        m, **kwargs)
 
-def check_deactivated_disjunct_nonzero_indicator_var(self, transformation):
+def check_deactivated_disjunct_nonzero_indicator_var(self, transformation,
+                                                     **kwargs):
     m = ConcreteModel()
     m.x = Var(bounds=(0,8))
     m.disjunction = Disjunction(expr=[m.x == 0, m.x >= 4])
@@ -1163,9 +1168,10 @@ def check_deactivated_disjunct_nonzero_indicator_var(self, transformation):
         r"The disjunct 'disjunction_disjuncts\[0\]' is deactivated, but the "
         r"indicator_var is fixed to True. This makes no sense.",
         TransformationFactory('gdp.%s' % transformation).apply_to,
-        m)
+        m, **kwargs)
 
-def check_deactivated_disjunct_unfixed_indicator_var(self, transformation):
+def check_deactivated_disjunct_unfixed_indicator_var(self, transformation,
+                                                     **kwargs):
     m = ConcreteModel()
     m.x = Var(bounds=(0,8))
     m.disjunction = Disjunction(expr=[m.x == 0, m.x >= 4])
@@ -1181,7 +1187,7 @@ def check_deactivated_disjunct_unfixed_indicator_var(self, transformation):
         r"\(If the intent is to deactivate the disjunct, fix its "
         r"indicator_var to False.\)",
         TransformationFactory('gdp.%s' % transformation).apply_to,
-        m)
+        m, **kwargs)
 
 def check_retrieving_nondisjunctive_components(self, transformation):
     m = models.makeTwoTermDisj()
@@ -1225,7 +1231,7 @@ def check_retrieving_nondisjunctive_components(self, transformation):
         trans.get_src_disjunction,
         m.another_global_cons)
 
-def check_silly_target(self, transformation):
+def check_silly_target(self, transformation, **kwargs):
     m = models.makeTwoTermDisj()
     self.assertRaisesRegex(
         GDP_Error,
@@ -1235,7 +1241,7 @@ def check_silly_target(self, transformation):
         r"can't be transformed.",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m,
-        targets=[m.d[1].c1])
+        targets=[m.d[1].c1], **kwargs)
 
 def check_ask_for_transformed_constraint_from_untransformed_disjunct(
         self, transformation):
@@ -1250,7 +1256,8 @@ def check_ask_for_transformed_constraint_from_untransformed_disjunct(
         trans.get_transformed_constraints,
         m.disjunct[2, 'b'].cons_b)
 
-def check_error_for_same_disjunct_in_multiple_disjunctions(self, transformation):
+def check_error_for_same_disjunct_in_multiple_disjunctions(self, transformation,
+                                                           **kwargs):
     m = models.makeDisjunctInMultipleDisjunctions()
     self.assertRaisesRegex(
         GDP_Error,
@@ -1258,9 +1265,10 @@ def check_error_for_same_disjunct_in_multiple_disjunctions(self, transformation)
         r"but a disjunction it appears in has not. Putting the same "
         r"disjunct in multiple disjunctions is not supported.",
         TransformationFactory('gdp.%s' % transformation).apply_to,
-        m)
+        m, **kwargs)
 
-def check_cannot_call_transformation_on_disjunction(self, transformation):
+def check_cannot_call_transformation_on_disjunction(self, transformation,
+                                                    **kwargs):
     m = models.makeTwoTermIndexedDisjunction()
     trans = TransformationFactory('gdp.%s' % transformation)
     self.assertRaisesRegex(
@@ -1271,7 +1279,8 @@ def check_cannot_call_transformation_on_disjunction(self, transformation):
         r"the case of nested disjunctions\).",
         trans.apply_to,
         m.disjunction, 
-        targets=m.disjunction[1]
+        targets=m.disjunction[1],
+        **kwargs
     )
 
 # This is really neurotic, but test that we will create an infeasible XOR
@@ -1313,7 +1322,7 @@ def setup_infeasible_xor_because_all_disjuncts_deactivated(self, transformation)
 
     return m
 
-def check_disjunction_target_err(self, transformation):
+def check_disjunction_target_err(self, transformation, **kwargs):
     m = models.makeNestedDisjunctions()
     # deactivate the disjunction that would transform the nested Disjuncts so
     # that we see it is possible to get the error.
@@ -1324,15 +1333,17 @@ def check_disjunction_target_err(self, transformation):
         "disjunct 'simpledisjunct'!.*",
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m,
-        targets=[m.disjunction])
+        targets=[m.disjunction], 
+        **kwargs)
 
 
 # nested disjunctions: hull and bigm have very different handling for nested
 # disjunctions, but these tests check *that* everything is transformed, not how
 
-def check_disjuncts_inactive_nested(self, transformation):
+def check_disjuncts_inactive_nested(self, transformation, **kwargs):
     m = models.makeNestedDisjunctions()
-    TransformationFactory('gdp.%s' % transformation).apply_to(m, targets=(m,))
+    TransformationFactory('gdp.%s' % transformation).apply_to(m, targets=(m,),
+                                                              **kwargs)
 
     self.assertFalse(m.disjunction.active)
     self.assertFalse(m.simpledisjunct.active)
@@ -1341,12 +1352,14 @@ def check_disjuncts_inactive_nested(self, transformation):
     self.assertFalse(m.disjunct.active)
 
 def check_deactivated_disjunct_leaves_nested_disjunct_active(self,
-                                                             transformation):
+                                                             transformation,
+                                                             **kwargs):
     m = models.makeNestedDisjunctions_FlatDisjuncts()
     m.d1.deactivate()
     # Specifying 'targets' prevents the HACK_GDP_Disjunct_Reclassifier
     # transformation of Disjuncts to Blocks
-    TransformationFactory('gdp.%s' % transformation).apply_to(m, targets=[m])
+    TransformationFactory('gdp.%s' % transformation).apply_to(m, targets=[m],
+                                                              **kwargs)
 
     self.assertFalse(m.d1.active)
     self.assertTrue(m.d1.indicator_var.fixed)
@@ -1365,7 +1378,8 @@ def check_deactivated_disjunct_leaves_nested_disjunct_active(self,
     m.d1.deactivate()
     # Specifying 'targets' prevents the HACK_GDP_Disjunct_Reclassifier
     # transformation of Disjuncts to Blocks
-    TransformationFactory('gdp.%s' % transformation).apply_to(m, targets=[m])
+    TransformationFactory('gdp.%s' % transformation).apply_to(m, targets=[m],
+                                                              **kwargs)
 
     self.assertFalse(m.d1.active)
     self.assertTrue(m.d1.indicator_var.fixed)
@@ -1404,11 +1418,12 @@ def check_mappings_between_disjunctions_and_xors(self, transformation):
         self.assertIs(disjunction.algebraic_constraint(), xor)
         self.assertIs(transform.get_src_disjunction(xor), disjunction)
 
-def check_disjunct_targets_inactive(self, transformation):
+def check_disjunct_targets_inactive(self, transformation, **kwargs):
     m = models.makeNestedDisjunctions()
     TransformationFactory('gdp.%s' % transformation).apply_to(
         m,
-        targets=[m.simpledisjunct])
+        targets=[m.simpledisjunct],
+        **kwargs)
 
     self.assertTrue(m.disjunct.active)
     self.assertTrue(m.disjunct[0].active)
@@ -1454,11 +1469,12 @@ def check_disjunct_only_targets_transformed(self, transformation):
                       m.simpledisjunct.component(
                           'innerdisjunct%d'%i).transformation_block())
 
-def check_disjunctData_targets_inactive(self, transformation):
+def check_disjunctData_targets_inactive(self, transformation, **kwargs):
     m = models.makeNestedDisjunctions()
     TransformationFactory('gdp.%s' % transformation).apply_to(
         m,
-        targets=[m.disjunct[1]])
+        targets=[m.disjunct[1]],
+        **kwargs)
 
     self.assertTrue(m.disjunct[0].active)
     self.assertTrue(m.disjunct[1].active)
@@ -1578,20 +1594,22 @@ def check_unique_reference_to_nested_indicator_var(self, transformation):
 # checks for handling of benign types that could be on disjuncts we're
 # transforming
 
-def check_RangeSet(self, transformation):
+def check_RangeSet(self, transformation, **kwargs):
     m = models.makeDisjunctWithRangeSet()
-    TransformationFactory('gdp.%s' % transformation).apply_to(m)
+    TransformationFactory('gdp.%s' % transformation).apply_to(m, **kwargs)
     self.assertIsInstance(m.d1.s, RangeSet)
 
-def check_Expression(self, transformation):
+def check_Expression(self, transformation, **kwargs):
     m = models.makeDisjunctWithExpression()
-    TransformationFactory('gdp.%s' % transformation).apply_to(m)
+    TransformationFactory('gdp.%s' % transformation).apply_to(m, **kwargs)
     self.assertIsInstance(m.d1.e, Expression)
 
-def check_untransformed_network_raises_GDPError(self, transformation):
+def check_untransformed_network_raises_GDPError(self, transformation, **kwargs):
     m = models.makeNetworkDisjunction()
     if transformation == 'bigm':
         error_name = 'BigM'
+    elif transformation == 'between_steps':
+        error_name = 'between_steps'
     else:
         error_name = 'hull'
     self.assertRaisesRegex(
@@ -1601,7 +1619,7 @@ def check_untransformed_network_raises_GDPError(self, transformation):
         "your disjuncts contain non-GDP Pyomo components that require "
         "transformation, please transform them first." % error_name,
         TransformationFactory('gdp.%s' % transformation).apply_to,
-        m)
+        m, **kwargs)
 
 def check_network_disjucts(self, minimize, transformation):
     m = models.makeExpandedNetworkDisjunction(minimize=minimize)

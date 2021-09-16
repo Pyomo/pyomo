@@ -1356,12 +1356,6 @@ class CommonModels(unittest.TestCase, CommonTests):
     def test_user_deactivated_disjuncts(self):
         ct.check_user_deactivated_disjuncts(self, 'between_steps',
                                             check_trans_block=False, P=2)
-        # ESJ: This is interesting... Should we allow Disjunctions with one
-        # Disjunct? Because else we have to go looking for this case, I
-        # think. Between steps would have to fix the indicator_variable of what
-        # it made and I guess make a dummy thing if there was only one? Or is
-        # the right approach to transform the whole thing and then deactivate
-        # the new GDP objects according to what the user had done here?
 
     def test_improperly_deactivated_disjuncts(self):
         ct.check_improperly_deactivated_disjuncts(self, 'between_steps', P=2)
@@ -1410,3 +1404,77 @@ class CommonModels(unittest.TestCase, CommonTests):
 
     def test_blockData_targets_inactive(self):
         ct.check_blockData_targets_inactive(self, 'between_steps', P=2)
+
+    # transforming blocks
+
+    def test_transformation_simple_block(self):
+        ct.check_transformation_simple_block(self, 'between_steps', P=2)
+
+    def test_transform_block_data(self):
+        ct.check_transform_block_data(self, 'between_steps', P=2)
+
+    def test_simple_block_target(self):
+        ct.check_simple_block_target(self, 'between_steps', P=2)
+
+    def test_block_data_target(self):
+        ct.check_block_data_target(self, 'between_steps', P=2)
+
+    def test_indexed_block_target(self):
+        ct.check_indexed_block_target(self, 'between_steps', P=2)
+
+    def test_block_targets_inactive(self):
+        ct.check_block_targets_inactive(self, 'between_steps', P=2)
+
+    # common error messages
+
+    def test_transform_empty_disjunction(self):
+        ct.check_transform_empty_disjunction(self, 'between_steps', P=2)
+
+    def test_deactivated_disjunct_nonzero_indicator_var(self):
+        ct.check_deactivated_disjunct_nonzero_indicator_var(self,
+                                                            'between_steps', P=2)
+
+    def test_deactivated_disjunct_unfixed_indicator_var(self):
+        ct.check_deactivated_disjunct_unfixed_indicator_var(self,
+                                                            'between_steps', P=2)
+    
+    def test_silly_target(self):
+        ct.check_silly_target(self, 'between_steps', P=2)
+
+    def test_error_for_same_disjunct_in_multiple_disjunctions(self):
+        ct.check_error_for_same_disjunct_in_multiple_disjunctions(
+            self, 'between_steps', P=2)
+
+    def test_cannot_call_transformation_on_disjunction(self):
+        ct.check_cannot_call_transformation_on_disjunction(self,
+                                                           'between_steps', P=2)
+
+    def test_disjunction_target_err(self):
+        ct.check_disjunction_target_err(self, 'between_steps', P=2)
+
+    # nested disjunctions (only checking that everything is transformed)
+
+    def test_disjuncts_inactive_nested(self):
+        ct.check_disjuncts_inactive_nested(self, 'between_steps', P=2)
+
+    def test_deactivated_disjunct_leaves_nested_disjunct_active(self):
+        ct.check_deactivated_disjunct_leaves_nested_disjunct_active(
+            self, 'between_steps', P=2)
+
+    def test_disjunct_targets_inactive(self):
+        ct.check_disjunct_targets_inactive(self, 'between_steps', P=2)
+
+    def test_disjunctData_targets_inactive(self):
+        ct.check_disjunctData_targets_inactive(self, 'between_steps', P=2)
+
+    # check handling for benign types
+
+    def test_RangeSet(self):
+        ct.check_RangeSet(self, 'between_steps', P=2)
+
+    def test_Expression(self):
+        ct.check_Expression(self, 'between_steps', P=2)
+
+    def test_untransformed_network_raises_GDPError(self):
+        ct.check_untransformed_network_raises_GDPError(self, 'between_steps',
+                                                       P=2)

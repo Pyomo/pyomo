@@ -49,9 +49,6 @@ logger = logging.getLogger('pyomo.gdp.between_steps')
 
 NAME_BUFFER = {}
 
-# DEBUG
-from nose.tools import set_trace
-
 def _generate_additively_separable_repn(nonlinear_part):
     if nonlinear_part.__class__ is not EXPR.SumExpression:
         # This isn't separable, so we just have the one expression
@@ -281,11 +278,7 @@ class BetweenSteps_Transformation(Transformation):
             RangeSet:    False,
             Disjunction: self._warn_for_active_disjunction,
             Disjunct:    self._warn_for_active_disjunct,
-            Block:       False, # We can descend into Blocks in this
-                                # transformation, so we will never hit them when
-                                # we go looking for components. (That is, we are
-                                # going to flatten the structure within a
-                                # Disjunct and we don't care.)
+            Block:       self._transform_block_on_disjunct,
             LogicalConstraint: self._warn_for_active_logical_statement,
             ExternalFunction: False,
             Port:        False, # not Arcs, because those are deactivated after
@@ -316,6 +309,17 @@ class BetweenSteps_Transformation(Transformation):
                         fixed_vars[v] = value(v)
                         v.fixed = False
 
+                fixed_indicator_vars = ComponentMap()
+                for disjunct in instance.component_data_objects(
+                        Disjunct,
+                        descend_into=(Block,
+                                      Disjunct),
+                        active=True):
+                    ind_var = disjunct.indicator_var
+                    if ind_var.fixed:
+                        fixed_indicator_vars[disjunct] = value(ind_var)
+                        ind_var.fixed = False
+
             self._apply_to_impl(instance)
 
         finally:
@@ -323,6 +327,8 @@ class BetweenSteps_Transformation(Transformation):
             if not self._config.assume_fixed_vars_permanent:
                 for v, val in fixed_vars.items():
                     v.fix(val)
+                for disjunct, val in fixed_indicator_vars.items():
+                    disjunct.transformation_block().indicator_var.fix(val)
 
             del self._config
             # clear the global name buffer
@@ -415,6 +421,11 @@ class BetweenSteps_Transformation(Transformation):
                 descent_order=TraversalStrategy.PostfixDFS):
             self._transform_disjunctionData(disjunction, disjunction.index())
     
+    def _transform_block_on_disjunct(self, block, disjunct,
+                                     transformed_disjunct, transBlock,
+                                     partition):
+        self._transform_blockData(block)
+
     def _transform_disjunction(self, obj):
         if not obj.active:
             return
@@ -430,6 +441,13 @@ class BetweenSteps_Transformation(Transformation):
     def _transform_disjunctionData(self, obj, idx, transBlock=None):
         if not obj.active:
             return
+
+        # Just because it's unlikely this is what someone meant to do...
+        if len(obj.disjuncts) == 0:
+            raise GDP_Error("Disjunction '%s' is empty. This is "
+                            "likely indicative of a modeling error."  %
+                            obj.getname(fully_qualified=True,
+                                        name_buffer=NAME_BUFFER))
 
         if transBlock is None:
             transBlock = self._add_transformation_block(obj.parent_block())
@@ -475,9 +493,10 @@ class BetweenSteps_Transformation(Transformation):
                 
         transformed_disjuncts = []
         for disjunct in obj.disjuncts:
-            transformed_disjuncts.append(self._transform_disjunct(disjunct,
-                                                                  partition,
-                                                                  transBlock))
+            transformed_disjunct = self._transform_disjunct(disjunct, partition,
+                                                            transBlock)
+            if transformed_disjunct is not None:
+                transformed_disjuncts.append(transformed_disjunct)
 
         # make a new disjunction with the transformed guys
         transformed_disjunction = Disjunction(expr=[disj for disj in
@@ -512,6 +531,22 @@ class BetweenSteps_Transformation(Transformation):
                         "The disjunct '%s' is deactivated, but the "
                         "indicator_var is fixed to %s. This makes no sense."
                         % ( disjunct.name, value(disjunct.indicator_var) ))
+            if disjunct._transformation_block is None:
+                raise GDP_Error(
+                    "The disjunct '%s' is deactivated, but the "
+                    "indicator_var is not fixed and the disjunct does not "
+                    "appear to have been relaxed. This makes no sense. "
+                    "(If the intent is to deactivate the disjunct, fix its "
+                    "indicator_var to False.)"
+                    % ( disjunct.name, ))
+
+        if disjunct._transformation_block is not None:
+            # we've transformed it, which means this is the second time it's
+            # appearing in a Disjunction
+            raise GDP_Error(
+                    "The disjunct '%s' has been transformed, but a disjunction "
+                    "it appears in has not. Putting the same disjunct in "
+                    "multiple disjunctions is not supported." % disjunct.name)
 
         transformed_disjunct = Disjunct()
         disjunct._transformation_block = weakref_ref(transformed_disjunct)
@@ -519,10 +554,11 @@ class BetweenSteps_Transformation(Transformation):
             transBlock,
             disjunct.getname(fully_qualified=True, name_buffer=NAME_BUFFER)),
                                  transformed_disjunct)
+
         for obj in disjunct.component_data_objects(
                 active=True,
                 sort=SortComponents.deterministic,
-                descend_into=Block):
+                descend_into=False):
             handler = self.handlers.get(obj.ctype, None)
             if not handler:
                 if handler is None:
@@ -538,7 +574,7 @@ class BetweenSteps_Transformation(Transformation):
             # is necessary for transforming Constraints
             handler(obj, disjunct, transformed_disjunct, transBlock, partition)
 
-        disjunct.deactivate()
+        disjunct._deactivate_without_fixing_indicator()
         return transformed_disjunct
 
     def _transform_constraint(self, cons, disjunct, transformed_disjunct,
