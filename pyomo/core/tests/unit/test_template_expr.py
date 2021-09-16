@@ -333,12 +333,12 @@ class TestTemplatizeRule(unittest.TestCase):
         template, indices = templatize_constraint(m.c)
         self.assertEqual(len(indices), 1)
         self.assertIs(indices[0]._set, m.I)
-        self.assertEqual(str(template), "x[_1]  <=  0.0")
+        self.assertEqual(str(template), "x[_1]  <=  0")
         # Test that the RangeSet iterator was put back
         self.assertEqual(list(m.I), list(range(1,4)))
         # Evaluate the template
         indices[0].set_value(2)
-        self.assertEqual(str(resolve_template(template)), 'x[2]  <=  0.0')
+        self.assertEqual(str(resolve_template(template)), 'x[2]  <=  0')
 
     def test_simple_rule_nonfinite_set(self):
         m = ConcreteModel()
@@ -350,10 +350,10 @@ class TestTemplatizeRule(unittest.TestCase):
         template, indices = templatize_constraint(m.c)
         self.assertEqual(len(indices), 1)
         self.assertIs(indices[0]._set, Integers)
-        self.assertEqual(str(template), "x[_1]  <=  0.0")
+        self.assertEqual(str(template), "x[_1]  <=  0")
         # Evaluate the template
         indices[0].set_value(2)
-        self.assertEqual(str(resolve_template(template)), 'x[2]  <=  0.0')
+        self.assertEqual(str(resolve_template(template)), 'x[2]  <=  0')
 
     def test_simple_abstract_rule(self):
         m = AbstractModel()
@@ -376,7 +376,7 @@ class TestTemplatizeRule(unittest.TestCase):
         template, indices = templatize_constraint(m.c)
         self.assertEqual(len(indices), 1)
         self.assertIs(indices[0]._set, m.I)
-        self.assertEqual(str(template), "x[_1]  <=  0.0")
+        self.assertEqual(str(template), "x[_1]  <=  0")
 
     def test_simple_sum_rule(self):
         m = ConcreteModel()
@@ -392,17 +392,17 @@ class TestTemplatizeRule(unittest.TestCase):
         self.assertIs(indices[0]._set, m.I)
         self.assertEqual(
             template.to_string(verbose=True),
-            "templatesum(getitem(x, _1, _2), iter(_2, J))  <=  0.0"
+            "templatesum(getitem(x, _1, _2), iter(_2, J))  <=  0"
         )
         self.assertEqual(
             str(template),
-            "SUM(x[_1,_2] for _2 in J)  <=  0.0"
+            "SUM(x[_1,_2] for _2 in J)  <=  0"
         )
         # Evaluate the template
         indices[0].set_value(2)
         self.assertEqual(
             str(resolve_template(template)),
-            'x[2,1] + x[2,2] + x[2,3]  <=  0.0'
+            'x[2,1] + x[2,2] + x[2,3]  <=  0'
         )
 
     def test_nested_sum_rule(self):
@@ -422,12 +422,12 @@ class TestTemplatizeRule(unittest.TestCase):
             template.to_string(verbose=True),
             "templatesum("
             "templatesum(getitem(x, _2, _1, _3), iter(_3, getitem(K, _2))), "
-            "iter(_1, J), iter(_2, I))  <=  0.0"
+            "iter(_1, J), iter(_2, I))  <=  0"
         )
         self.assertEqual(
             str(template),
             "SUM(SUM(x[_2,_1,_3] for _3 in K[_2]) "
-            "for _1 in J for _2 in I)  <=  0.0"
+            "for _1 in J for _2 in I)  <=  0"
         )
         # Evaluate the template
         self.assertEqual(
@@ -440,7 +440,7 @@ class TestTemplatizeRule(unittest.TestCase):
             '(x[3,2,10] + x[3,2,20] + x[3,2,30]) + '
             '(x[1,3,10]) + '
             '(x[2,3,10] + x[2,3,20]) + '
-            '(x[3,3,10] + x[3,3,20] + x[3,3,30])  <=  0.0'
+            '(x[3,3,10] + x[3,3,20] + x[3,3,30])  <=  0'
         )
 
     def test_multidim_nested_sum_rule(self):
@@ -461,12 +461,12 @@ class TestTemplatizeRule(unittest.TestCase):
             template.to_string(verbose=True),
             "templatesum("
             "templatesum(getitem(x, _2, _1, _3), iter(_3, getitem(K, _2))), "
-            "iter(_1, _2, JI))  <=  0.0"
+            "iter(_1, _2, JI))  <=  0"
         )
         self.assertEqual(
             str(template),
             "SUM(SUM(x[_2,_1,_3] for _3 in K[_2]) "
-            "for _1, _2 in JI)  <=  0.0"
+            "for _1, _2 in JI)  <=  0"
         )
         # Evaluate the template
         self.assertEqual(
@@ -479,7 +479,7 @@ class TestTemplatizeRule(unittest.TestCase):
             '(x[3,2,10] + x[3,2,20] + x[3,2,30]) + '
             '(x[1,3,10]) + '
             '(x[2,3,10] + x[2,3,20]) + '
-            '(x[3,3,10] + x[3,3,20] + x[3,3,30])  <=  0.0'
+            '(x[3,3,10] + x[3,3,20] + x[3,3,30])  <=  0'
         )
 
     def test_multidim_nested_sum_rule(self):
@@ -500,12 +500,12 @@ class TestTemplatizeRule(unittest.TestCase):
             template.to_string(verbose=True),
             "templatesum("
             "templatesum(getitem(x, _2, _1, _3), iter(_3, getitem(K, _2))), "
-            "iter(_1, _2, JI))  <=  0.0"
+            "iter(_1, _2, JI))  <=  0"
         )
         self.assertEqual(
             str(template),
             "SUM(SUM(x[_2,_1,_3] for _3 in K[_2]) "
-            "for _1, _2 in JI)  <=  0.0"
+            "for _1, _2 in JI)  <=  0"
         )
         # Evaluate the template
         self.assertEqual(
@@ -518,7 +518,7 @@ class TestTemplatizeRule(unittest.TestCase):
             '(x[3,2,10] + x[3,2,20] + x[3,2,30]) + '
             '(x[1,3,10]) + '
             '(x[2,3,10] + x[2,3,20]) + '
-            '(x[3,3,10] + x[3,3,20] + x[3,3,30])  <=  0.0'
+            '(x[3,3,10] + x[3,3,20] + x[3,3,30])  <=  0'
         )
 
     def test_multidim_nested_getattr_sum_rule(self):
@@ -543,12 +543,12 @@ class TestTemplatizeRule(unittest.TestCase):
             "templatesum("
             "templatesum(getitem(x, _2, _1, _3), "
             "iter(_3, getattr(getitem(b, _2), 'K'))), "
-            "iter(_1, _2, JI))  <=  0.0"
+            "iter(_1, _2, JI))  <=  0"
         )
         self.assertEqual(
             str(template),
             "SUM(SUM(x[_2,_1,_3] for _3 in b[_2].K) "
-            "for _1, _2 in JI)  <=  0.0"
+            "for _1, _2 in JI)  <=  0"
         )
         # Evaluate the template
         self.assertEqual(
@@ -561,7 +561,7 @@ class TestTemplatizeRule(unittest.TestCase):
             '(x[3,2,10] + x[3,2,20] + x[3,2,30]) + '
             '(x[1,3,10]) + '
             '(x[2,3,10] + x[2,3,20]) + '
-            '(x[3,3,10] + x[3,3,20] + x[3,3,30])  <=  0.0'
+            '(x[3,3,10] + x[3,3,20] + x[3,3,30])  <=  0'
         )
 
 

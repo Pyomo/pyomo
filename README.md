@@ -91,3 +91,8 @@ following terms and conditions for your contributions:
    includes your contributions, you represent that you have received
    permission to make contributions and grant the required license on
    behalf of that employer.
+
+
+### Related Packages
+
+See https://pyomo.readthedocs.io/en/latest/related_packages.html.

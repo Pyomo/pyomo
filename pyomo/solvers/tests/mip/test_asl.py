@@ -10,30 +10,28 @@
 
 import json
 import os
-from os.path import abspath, dirname, join
-pyomodir = dirname(abspath(__file__))+os.sep+".."+os.sep+".."+os.sep
-currdir = dirname(abspath(__file__))+os.sep
-
+from os.path import join
 from filecmp import cmp
+
 import pyomo.common.unittest as unittest
+
 import pyomo.common
+from pyomo.common.fileutils import this_file_dir
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.core import ConcreteModel
 from pyomo.opt import ResultsFormat, SolverResults, SolverFactory
 
+currdir = this_file_dir()
+deleteFiles = True
+
 old_ignore_time = None
-old_tempdir = None
 def setUpModule():
-    global old_tempdir
     global old_ignore_time
-    old_tempdir = TempfileManager.tempdir
     old_ignore_time = SolverResults.default_print_options.ignore_time
     SolverResults.default_print_options.ignore_time = True
-    TempfileManager.tempdir = currdir
 
 def tearDownModule():
-    TempfileManager.tempdir = old_tempdir
     SolverResults.default_print_options.ignore_time = old_ignore_time
 
 cplexamp_available = False
@@ -50,10 +48,7 @@ class mock_all(unittest.TestCase):
         self.do_setup(False)
 
     def do_setup(self,flag):
-        global tmpdir
-        tmpdir = os.getcwd()
-        os.chdir(currdir)
-        TempfileManager.sequential_files(0)
+        TempfileManager.push()
         if flag:
             if not cplexamp_available:
                 self.skipTest("The 'cplexamp' command is not available")
@@ -62,10 +57,7 @@ class mock_all(unittest.TestCase):
             self.asl = SolverFactory('_mock_asl:cplexamp')
 
     def tearDown(self):
-        global tmpdir
-        TempfileManager.clear_tempfiles()
-        TempfileManager.unique_files()
-        os.chdir(tmpdir)
+        TempfileManager.pop(remove=deleteFiles or self.currentTestPassed())
         self.asl = None
 
     def test_path(self):
@@ -76,21 +68,18 @@ class mock_all(unittest.TestCase):
 
     def test_solve4(self):
         """ Test ASL - test4.nl """
-        results = self.asl.solve(currdir+"test4.nl",
-                                 logfile=currdir+"test_solve4.log",
+        _log = TempfileManager.create_tempfile(".test_solve4.log")
+        _out = TempfileManager.create_tempfile(".test_solve4.txt")
+
+        results = self.asl.solve(join(currdir, "test4.nl"),
+                                 logfile=_log,
                                  suffixes=['.*'])
-        results.write(filename=currdir+"test_solve4.txt",
-                      times=False,
-                      format='json')
-        with open(join(currdir, "test_solve4.txt"), 'r') as out, \
-            open(join(currdir, "test4_asl.txt"), 'r') as txt:
+        results.write(filename=_out, times=False, format='json')
+        _baseline = join(currdir, "test4_asl.txt")
+        with open(_out, 'r') as out, open(_baseline, 'r') as txt:
             self.assertStructuredAlmostEqual(json.load(txt), json.load(out),
                                              abstol=1e-4,
                                              allow_second_superset=True)
-
-        os.remove(currdir+"test_solve4.log")
-        if os.path.exists(currdir+"test4.soln"):
-            os.remove(currdir+"test4.soln")
 
     #
     # This test is disabled, but it's useful for interactively exercising
@@ -147,4 +136,5 @@ class mip_all(mock_all):
 
 
 if __name__ == "__main__":
+    deleteFiles = False
     unittest.main()

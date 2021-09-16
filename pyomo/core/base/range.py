@@ -161,8 +161,23 @@ class NumericRange(object):
     def __contains__(self, value):
         # NumericRanges must hold items that are comparable to ints
         if value.__class__ not in self._types_comparable_to_int:
+            # Special case: because numpy is fond of returning scalars
+            # as length-1 ndarrays, we will include a special case that
+            # will unpack things that look like single element arrays.
             try:
-                if value.__class__(0) != 0:
+                # Note: trap "value[0] is not value" to catch things like
+                # single-character strings
+                if hasattr(value, '__len__') and hasattr(value, '__getitem__') \
+                   and len(value) == 1 and value[0] is not value:
+                    return value[0] in self
+            except:
+                pass
+            # See if this class behaves like a "normal" number: both
+            # comparable and creatable
+            try:
+                if not ( bool(value - 0 > 0) ^ bool(value - 0 <= 0) ):
+                    return False
+                elif value.__class__(0) != 0 or not value.__class__(0) == 0:
                     return False
                 else:
                     self._types_comparable_to_int.add(value.__class__)

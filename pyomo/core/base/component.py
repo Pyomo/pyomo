@@ -18,10 +18,11 @@ import pyomo.common
 from pyomo.common.deprecation import deprecated, relocated_module_attribute
 from pyomo.common.factory import Factory
 from pyomo.common.fileutils import StreamIndenter
+from pyomo.common.formatting import tabular_writer
 from pyomo.common.modeling import NOTSET
+from pyomo.common.sorting import sorted_robust
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base.component_namer import name_repr, index_repr
-from pyomo.core.base.misc import tabular_writer, sorted_robust
 
 logger = logging.getLogger('pyomo.core')
 
@@ -584,7 +585,7 @@ class Component(_ComponentBase):
             else:
                 ans = name_repr(local_name)
         else:
-            # Note: we want "getattr(x.parent_block(), x.localname) == x"
+            # Note: we want "getattr(x.parent_block(), x.local_name) == x"
             # so we do not want to call _safe_name_str, as that could
             # add quotes or otherwise escape the string.
             ans = local_name

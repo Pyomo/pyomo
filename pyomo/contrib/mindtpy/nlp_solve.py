@@ -42,7 +42,7 @@ def solve_subproblem(solve_data, config):
     Returns
     -------
     fixed_nlp: Pyomo model
-        Fixed-NLP from the model
+        integer-variable-fixed NLP model
     results: Pyomo results object
         result from solving the Fixed-NLP
     """
@@ -113,11 +113,27 @@ def solve_subproblem(solve_data, config):
     return fixed_nlp, results
 
 
-def handle_nlp_subproblem_tc(fixed_nlp, result, solve_data, config):
+def handle_nlp_subproblem_tc(fixed_nlp, result, solve_data, config, cb_opt=None):
+    '''
+    This function handles different terminaton conditions of the fixed-NLP subproblem.
+
+    Parameters
+    ----------
+    fixed_nlp: Pyomo model
+        integer-variable-fixed NLP model
+    results: Pyomo results object
+        result from solving the Fixed-NLP
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    config: ConfigBlock
+        contains the specific configurations for the algorithm
+    cb_opt: SolverFactory
+            the gurobi_persistent solver
+    '''
     if result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
-        handle_subproblem_optimal(fixed_nlp, solve_data, config)
+        handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt)
     elif result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
-        handle_subproblem_infeasible(fixed_nlp, solve_data, config)
+        handle_subproblem_infeasible(fixed_nlp, solve_data, config, cb_opt)
     elif result.solver.termination_condition is tc.maxTimeLimit:
         config.logger.info(
             'NLP subproblem failed to converge within the time limit.')
@@ -136,7 +152,7 @@ def handle_nlp_subproblem_tc(fixed_nlp, result, solve_data, config):
 # The next few functions deal with handling the solution we get from the above NLP solver function
 
 
-def handle_subproblem_optimal(fixed_nlp, solve_data, config, fp=False):
+def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=False):
     """
     This function copies the result of the NLP solver function ('solve_subproblem') to the working model, updates
     the bounds, adds OA and no-good cuts, and then stores the new solution if it is the new best solution. This
@@ -145,11 +161,15 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, fp=False):
     Parameters
     ----------
     fixed_nlp: Pyomo model
-        Fixed-NLP from the model
+        integer-variable-fixed NLP model
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
     config: ConfigBlock
         contains the specific configurations for the algorithm
+    cb_opt: SolverFactory
+        the gurobi_persistent solver
+    fp: bool, optional
+        this parameter acts as a Boolean flag that signals whether it is in the loop of feasibility pump
     """
     copy_var_list_values(
         fixed_nlp.MindtPy_utils.variable_list,
@@ -205,7 +225,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, fp=False):
         copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
-        add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
+        add_oa_cuts(solve_data.mip, dual_values, solve_data, config, cb_opt)
     elif config.strategy == 'GOA':
         copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
@@ -225,7 +245,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, fp=False):
     config.call_after_subproblem_feasible(fixed_nlp, solve_data)
 
 
-def handle_subproblem_infeasible(fixed_nlp, solve_data, config):
+def handle_subproblem_infeasible(fixed_nlp, solve_data, config, cb_opt=None):
     """
     Solves feasibility problem and adds cut according to the specified strategy
 
@@ -234,10 +254,14 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config):
 
     Parameters
     ----------
+    fixed_nlp: Pyomo model
+        integer-variable-fixed NLP model
     solve_data: MindtPy Data Container
         data container that holds solve-instance data
     config: ConfigBlock
         contains the specific configurations for the algorithm
+    cb_opt: SolverFactory
+            the gurobi_persistent solver
     """
     # TODO try something else? Reinitialize with different initial
     # value?
@@ -274,7 +298,8 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config):
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
         if config.strategy == 'OA':
-            add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
+            add_oa_cuts(solve_data.mip, dual_values,
+                        solve_data, config, cb_opt)
         elif config.strategy == 'GOA':
             add_affine_cuts(solve_data, config)
     # Add a no-good cut to exclude this discrete option
@@ -376,34 +401,33 @@ def solve_feasibility_subproblem(solve_data, config):
             with time_code(solve_data.timing, 'feasibility subproblem'):
                 feas_soln = nlpopt.solve(
                     feas_subproblem, tee=config.nlp_solver_tee, **nlp_args)
-    subprob_terminate_cond = feas_soln.solver.termination_condition
+    handle_feasibility_subproblem_tc(
+        feas_soln.solver.termination_condition, MindtPy, solve_data, config)
+    return feas_subproblem, feas_soln
+
+
+def handle_feasibility_subproblem_tc(subprob_terminate_cond, MindtPy, solve_data, config):
     if subprob_terminate_cond in {tc.optimal, tc.locallyOptimal, tc.feasible}:
         copy_var_list_values(
             MindtPy.variable_list,
             solve_data.working_model.MindtPy_utils.variable_list,
             config)
+        if value(MindtPy.feas_obj.expr) <= config.zero_tolerance:
+            config.logger.warning('The objective value %.4E of feasibility problem is less than zero_tolerance. '
+                                  'This indicates that the nlp subproblem is feasible, although it is found infeasible in the previous step. '
+                                  'Check the nlp solver output' % value(MindtPy.feas_obj.expr))
     elif subprob_terminate_cond in {tc.infeasible, tc.noSolution}:
         config.logger.error('Feasibility subproblem infeasible. '
                             'This should never happen.')
         solve_data.should_terminate = True
         solve_data.results.solver.status = SolverStatus.error
-        return feas_subproblem, feas_soln
     elif subprob_terminate_cond is tc.maxIterations:
         config.logger.error('Subsolver reached its maximum number of iterations without converging, '
                             'consider increasing the iterations limit of the subsolver or reviewing your formulation.')
         solve_data.should_terminate = True
         solve_data.results.solver.status = SolverStatus.error
-        return feas_subproblem, feas_soln
     else:
-        config.error('MindtPy unable to handle feasibility subproblem termination condition '
-                     'of {}'.format(subprob_terminate_cond))
+        config.logger.error('MindtPy unable to handle feasibility subproblem termination condition '
+                            'of {}'.format(subprob_terminate_cond))
         solve_data.should_terminate = True
         solve_data.results.solver.status = SolverStatus.error
-        return feas_subproblem, feas_soln
-
-    if value(MindtPy.feas_obj.expr) <= config.zero_tolerance:
-        config.logger.warning('The objective value %.4E of feasibility problem is less than zero_tolerance. '
-                              'This indicates that the nlp subproblem is feasible, although it is found infeasible in the previous step. '
-                              'Check the nlp solver output' % value(MindtPy.feas_obj.expr))
-
-    return feas_subproblem, feas_soln

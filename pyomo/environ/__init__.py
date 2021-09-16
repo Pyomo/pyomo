@@ -114,7 +114,7 @@ from pyomo.core import expr, base, beta, kernel, plugins
 from pyomo.core.base import util
 
 from pyomo.core import (numvalue, numeric_expr, boolean_value,
-                             current, symbol_map, sympy_tools, 
+                             current, symbol_map, sympy_tools,
                              taylor_series, visitor, expr_common, expr_errors,
                              calculus, native_types,
                              linear_expression, nonlinear_expression,
@@ -132,20 +132,20 @@ from pyomo.core import (numvalue, numeric_expr, boolean_value,
                              maximize, PyomoOptions, Expression, CuidLabeler,
                              CounterLabeler, NumericLabeler,
                              CNameLabeler, TextLabeler,
-                             AlphaNumericTextLabeler, NameLabeler, ShortNameLabeler, 
-                             name, Component, ComponentUID, BuildAction, 
+                             AlphaNumericTextLabeler, NameLabeler, ShortNameLabeler,
+                             name, Component, ComponentUID, BuildAction,
                              BuildCheck, Set, SetOf, simple_set_rule, RangeSet,
                              Param, Var, VarList, ScalarVar,
                              BooleanVar, BooleanVarList, ScalarBooleanVar,
                              logical_expr, simple_constraint_rule,
                              simple_constraintlist_rule, ConstraintList,
-                             Constraint, LogicalConstraint, 
+                             Constraint, LogicalConstraint,
                              LogicalConstraintList, simple_objective_rule,
                              simple_objectivelist_rule, Objective,
                              ObjectiveList, Connector, SOSConstraint,
                              Piecewise, active_export_suffix_generator,
-                             active_import_suffix_generator, Suffix, 
-                             ExternalFunction, symbol_map_from_instance, 
+                             active_import_suffix_generator, Suffix,
+                             ExternalFunction, symbol_map_from_instance,
                              Reference, Reals, PositiveReals, NonPositiveReals,
                              NegativeReals, NonNegativeReals, Integers,
                              PositiveIntegers, NonPositiveIntegers,
@@ -154,12 +154,12 @@ from pyomo.core import (numvalue, numeric_expr, boolean_value,
                              UnitInterval, PercentFraction, RealInterval,
                              IntegerInterval, display, SortComponents,
                              TraversalStrategy, Block, ScalarBlock,
-                             active_components, components, 
-                             active_components_data, components_data, 
+                             active_components, components,
+                             active_components_data, components_data,
                              global_option, Model, ConcreteModel,
                              AbstractModel,
                              ModelComponentFactory, Transformation,
-                             TransformationFactory, instance2dat, 
+                             TransformationFactory, instance2dat,
                              set_options, RealSet, IntegerSet, BooleanSet,
                              prod, quicksum, sum_product, dot_product,
                              summation, sequence)
@@ -170,4 +170,15 @@ from pyomo.opt import (
     assert_optimal_termination
     )
 from pyomo.core.base.units_container import units
-from weakref import ref as weakref_ref
+
+# These APIs are deprecated and should be removed in the near future
+from pyomo.common.deprecation import relocated_module_attribute
+relocated_module_attribute(
+    'SimpleBlock', 'pyomo.core.base.block.SimpleBlock', version='6.0')
+relocated_module_attribute(
+    'SimpleVar', 'pyomo.core.base.var.SimpleVar', version='6.0')
+relocated_module_attribute(
+    'SimpleBooleanVar', 'pyomo.core.base.boolean_var.SimpleBooleanVar',
+    version='6.0'
+)
+del relocated_module_attribute

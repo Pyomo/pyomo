@@ -14,8 +14,11 @@ import re
 import sys
 import time
 
-from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
+from pyomo.common.dependencies import attempt_import
+from pyomo.common.errors import ApplicationError
+from pyomo.common.tee import capture_output
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
 from pyomo.repn import generate_standard_repn
@@ -47,8 +50,67 @@ def _print_message(xp_prob, _, msg, *args):
         sys.stdout.write(msg+'\n')
         sys.stdout.flush()
 
+def _finalize_xpress_import(xpress, avail):
+    if not avail:
+        return
+    XpressDirect._version = tuple(
+        int(k) for k in xpress.getversion().split('.'))
+    XpressDirect._name = "Xpress %s.%s.%s" % XpressDirect._version
+    # in versions prior to 34, xpress raised a RuntimeError, but
+    # in more recent versions it raises a
+    # xpress.ModelError. We'll cache the appropriate one here
+    if XpressDirect._version[0] < 34:
+        XpressDirect.XpressException = RuntimeError
+    else:
+        XpressDirect.XpressException = xpress.ModelError
+
+class _xpress_importer_class(object):
+    # We want to be able to *update* the message that the deferred
+    # import generates using the stdout recorded during the actual
+    # import.  As strings are immutable in Python, we will give this
+    # *class* as the error message, so that we can update the embedded
+    # string later.
+    def __init__(self):
+        self.import_message = ""
+
+    def __str__(self):
+        return str(self.import_message)
+
+    def __call__(self):
+        _cwd = os.getcwd()
+        try:
+            with capture_output() as OUT:
+                import xpress
+        finally:
+            # In some versions of XPRESS (notably 8.9.0), `import
+            # xpress` temporarily changes the CWD.  If the import fails
+            # (e.g., due to an expired license), the CWD is not always
+            # restored.  This block ensures that the CWD is preserved.
+            os.chdir(_cwd)
+            self.import_message += OUT.getvalue()
+        return xpress
+
+_xpress_importer = _xpress_importer_class()
+xpress, xpress_available = attempt_import(
+    'xpress',
+    error_message=_xpress_importer,
+    # Other forms of exceptions can be thrown by the xpress python
+    # import.  For example, an xpress.InterfaceError exception is thrown
+    # if the Xpress license is not valid.  Unfortunately, you can't
+    # import without a license, which means we can't test for that
+    # explicit exception!
+    catch_exceptions=(Exception,),
+    importer=_xpress_importer,
+    callback=_finalize_xpress_import,
+)
+
+
 @SolverFactory.register('xpress_direct', doc='Direct python interface to XPRESS')
 class XpressDirect(DirectSolver):
+
+    _name = None
+    _version = None
+    XpressException = RuntimeError
 
     def __init__(self, **kwds):
         if 'type' not in kwds:
@@ -59,41 +121,9 @@ class XpressDirect(DirectSolver):
         self._pyomo_con_to_solver_con_map = dict()
         self._solver_con_to_pyomo_con_map = ComponentMap()
 
-        self._name = None
-        _cwd = os.getcwd()
-        try:
-            import xpress 
-            self._xpress = xpress
-            self._python_api_exists = True
-            self._version = tuple(
-                    int(k) for k in self._xpress.getversion().split('.'))
-            self._name = "Xpress %s.%s.%s" % self._version
-            self._version_major = self._version[0]
-            # in versions prior to 34, xpress raised a RuntimeError, but in more
-            # recent versions it raises a xpress.ModelError. We'll cache the appropriate
-            # one here
-            if self._version_major < 34:
-                self._XpressException = RuntimeError
-            else:
-                self._XpressException = xpress.ModelError
-        except ImportError:
-            self._python_api_exists = False
-        except Exception as e:
-            # other forms of exceptions can be thrown by the xpress python
-            # import. for example, a xpress.InterfaceError exception is thrown
-            # if the Xpress license is not valid. Unfortunately, you can't
-            # import without a license, which means we can't test for the
-            # exception above!
-            print("Import of xpress failed - xpress message=" + str(e) + "\n")
-            self._python_api_exists = False
-        finally:
-            # In some versions of XPRESS (notably 8.9.0), `import
-            # xpress` temporarily changes the CWD.  If the import fails
-            # (e.g., due to an expired license), the CWD is not always
-            # restored.  This block ensures that the CWD is preserved.
-            os.chdir(_cwd)
-
         self._range_constraints = set()
+
+        self._python_api_exists = xpress_available
 
         # TODO: this isn't a limit of XPRESS, which implements an SLP
         #       method for NLPs. But it is a limit of *this* interface
@@ -113,6 +143,21 @@ class XpressDirect(DirectSolver):
         self._capabilities.sos1 = True
         self._capabilities.sos2 = True
 
+        # remove the instance-level definition of the xpress version:
+        # because the version comes from an imported module, only one
+        # version of xpress is supported (and stored as a class attribute)
+        del self._version
+
+    def available(self, exception_flag=True):
+        """True if the solver is available."""
+
+        if exception_flag and not xpress_available:
+            xpress.log_import_warning(logger=__name__)
+            raise ApplicationError(
+                "No Python bindings available for %s solver plugin"
+                % (type(self),))
+        return bool(xpress_available)
+
     def _apply_solver(self):
         if not self._save_results:
             for block in self._pyomo_model.block_data_objects(descend_into=True,
@@ -125,11 +170,13 @@ class XpressDirect(DirectSolver):
 
         self._solver_model.setlogfile(self._log_file)
         if self._keepfiles:
-            print("Solver log file: "+self.log_file)
+            print("Solver log file: "+self._log_file)
 
-        # setting a log file in xpress disables all output
-        # this callback prints all messages to stdout
-        if self._tee:
+        # Setting a log file in xpress disables all output
+        # in xpress versions less than 36.
+        # This callback prints all messages to stdout
+        # when using those xpress versions.
+        if self._tee and XpressDirect._version[0] < 36:
             self._solver_model.addcbmessage(_print_message, None, 0)
 
         # set xpress options
@@ -142,13 +189,13 @@ class XpressDirect(DirectSolver):
         # xpress is picky about the type which is passed
         # into a control. So we will infer and cast
         # get the xpress valid controls
-        xp_controls = self._xpress.controls
+        xp_controls = xpress.controls
         for key, option in self.options.items():
             if key == 'mipgap': # handled above
                 continue
-            try: 
+            try:
                 self._solver_model.setControl(key, option)
-            except self._XpressException:
+            except XpressDirect.XpressException:
                 # take another try, converting to its type
                 # we'll wrap this in a function to raise the
                 # xpress error
@@ -158,11 +205,20 @@ class XpressDirect(DirectSolver):
                 self._solver_model.setControl(key, contr_type(option))
 
         start_time = time.time()
-        self._solver_model.solve()
+        if self._tee:
+            self._solver_model.solve()
+        else:
+            # In xpress versions greater than or equal 36,
+            # it seems difficult to completely suppress console
+            # output without disabling logging altogether.
+            # As a work around, we capature all screen output
+            # when tee is False.
+            with capture_output() as OUT:
+                self._solver_model.solve()
         self._opt_time = time.time() - start_time
 
         self._solver_model.setlogfile('')
-        if self._tee:
+        if self._tee and XpressDirect._version[0] < 36:
             self._solver_model.removecbmessage(_print_message, None)
 
         # FIXME: can we get a return code indicating if XPRESS had a significant failure?
@@ -180,7 +236,7 @@ class XpressDirect(DirectSolver):
         #       will cause an exception when constructing expressions
         if len(repn.linear_vars) > 0:
             referenced_vars.update(repn.linear_vars)
-            new_expr = self._xpress.Sum(float(coef)*self._pyomo_var_to_solver_var_map[var] for coef,var in zip(repn.linear_coefs, repn.linear_vars))
+            new_expr = xpress.Sum(float(coef)*self._pyomo_var_to_solver_var_map[var] for coef,var in zip(repn.linear_coefs, repn.linear_vars))
         else:
             new_expr = 0.0
 
@@ -215,11 +271,11 @@ class XpressDirect(DirectSolver):
         if var.has_lb():
             lb = value(var.lb)
         else:
-            lb = -self._xpress.infinity
+            lb = -xpress.infinity
         if var.has_ub():
             ub = value(var.ub)
         else:
-            ub = self._xpress.infinity
+            ub = xpress.infinity
         return lb, ub
 
     def _add_var(self, var):
@@ -227,12 +283,12 @@ class XpressDirect(DirectSolver):
         vartype = self._xpress_vartype_from_var(var)
         lb, ub = self._xpress_lb_ub_from_var(var)
 
-        xpress_var = self._xpress.var(name=varname, lb=lb, ub=ub, vartype=vartype)
+        xpress_var = xpress.var(name=varname, lb=lb, ub=ub, vartype=vartype)
         self._solver_model.addVariable(xpress_var)
 
         ## bounds on binary variables don't seem to be set correctly
         ## by the method above
-        if vartype == self._xpress.binary:
+        if vartype == xpress.binary:
             if lb == ub:
                 self._solver_model.chgbounds([xpress_var], ['B'], [lb])
             else:
@@ -251,9 +307,9 @@ class XpressDirect(DirectSolver):
         self._solver_var_to_pyomo_var_map = ComponentMap()
         try:
             if model.name is not None:
-                self._solver_model = self._xpress.problem(name=model.name)
+                self._solver_model = xpress.problem(name=model.name)
             else:
-                self._solver_model = self._xpress.problem()
+                self._solver_model = xpress.problem()
         except Exception:
             e = sys.exc_info()[1]
             msg = ("Unable to create Xpress model. "
@@ -283,7 +339,7 @@ class XpressDirect(DirectSolver):
         else:
             xpress_expr, referenced_vars = self._get_expr_from_pyomo_expr(
                 con.body,
-                self._max_constraint_degree) 
+                self._max_constraint_degree)
 
         if con.has_lb():
             if not is_fixed(con.lower):
@@ -295,27 +351,27 @@ class XpressDirect(DirectSolver):
                                  "is not constant.".format(con))
 
         if con.equality:
-            xpress_con = self._xpress.constraint(body=xpress_expr,
-                                                 sense=self._xpress.eq,
-                                                 rhs=value(con.lower),
-                                                 name=conname)
+            xpress_con = xpress.constraint(body=xpress_expr,
+                                           sense=xpress.eq,
+                                           rhs=value(con.lower),
+                                           name=conname)
         elif con.has_lb() and con.has_ub():
-            xpress_con = self._xpress.constraint(body=xpress_expr,
-                                                 sense=self._xpress.range,
-                                                 lb=value(con.lower),
-                                                 ub=value(con.upper),
-                                                 name=conname)
+            xpress_con = xpress.constraint(body=xpress_expr,
+                                           sense=xpress.range,
+                                           lb=value(con.lower),
+                                           ub=value(con.upper),
+                                           name=conname)
             self._range_constraints.add(xpress_con)
         elif con.has_lb():
-            xpress_con = self._xpress.constraint(body=xpress_expr,
-                                                 sense=self._xpress.geq,
-                                                 rhs=value(con.lower),
-                                                 name=conname)
+            xpress_con = xpress.constraint(body=xpress_expr,
+                                           sense=xpress.geq,
+                                           rhs=value(con.lower),
+                                           name=conname)
         elif con.has_ub():
-            xpress_con = self._xpress.constraint(body=xpress_expr,
-                                                 sense=self._xpress.leq,
-                                                 rhs=value(con.upper),
-                                                 name=conname)
+            xpress_con = xpress.constraint(body=xpress_expr,
+                                           sense=xpress.leq,
+                                           rhs=value(con.upper),
+                                           name=conname)
         else:
             raise ValueError("Constraint does not have a lower "
                              "or an upper bound: {0} \n".format(con))
@@ -356,7 +412,7 @@ class XpressDirect(DirectSolver):
             self._referenced_variables[v] += 1
             weights.append(w)
 
-        xpress_con = self._xpress.sos(xpress_vars, weights, level, conname)
+        xpress_con = xpress.sos(xpress_vars, weights, level, conname)
         self._solver_model.addSOS(xpress_con)
         self._pyomo_con_to_solver_con_map[con] = xpress_con
         self._solver_con_to_pyomo_con_map[xpress_con] = con
@@ -368,15 +424,15 @@ class XpressDirect(DirectSolver):
         :return: xpress.continuous or xpress.binary or xpress.integer
         """
         if var.is_binary():
-            vartype = self._xpress.binary
+            vartype = xpress.binary
         elif var.is_integer():
-            vartype = self._xpress.integer
+            vartype = xpress.integer
         elif var.is_continuous():
-            vartype = self._xpress.continuous
+            vartype = xpress.continuous
         else:
             raise ValueError('Variable domain type is not recognized for {0}'.format(var.domain))
         return vartype
-    
+
     def _set_objective(self, obj):
         if self._objective is not None:
             for var in self._vars_referenced_by_obj:
@@ -388,9 +444,9 @@ class XpressDirect(DirectSolver):
             raise ValueError('Cannot add inactive objective to solver.')
 
         if obj.sense == minimize:
-            sense = self._xpress.minimize
+            sense = xpress.minimize
         elif obj.sense == maximize:
-            sense = self._xpress.maximize
+            sense = xpress.maximize
         else:
             raise ValueError('Objective sense is not recognized: {0}'.format(obj.sense))
 
@@ -427,7 +483,7 @@ class XpressDirect(DirectSolver):
                 raise RuntimeError("***The xpress_direct solver plugin cannot extract solution suffix="+suffix)
 
         xprob = self._solver_model
-        xp = self._xpress
+        xp = xpress
         xprob_attrs = xprob.attributes
 
         ## XPRESS's status codes depend on this
@@ -445,7 +501,7 @@ class XpressDirect(DirectSolver):
         self.results = SolverResults()
         soln = Solution()
 
-        self.results.solver.name = self._name
+        self.results.solver.name = XpressDirect._name
         self.results.solver.wallclock_time = self._opt_time
 
         if is_mip:
@@ -574,25 +630,25 @@ class XpressDirect(DirectSolver):
             try:
                 self.results.problem.upper_bound = xprob_attrs.lpobjval
                 self.results.problem.lower_bound = xprob_attrs.lpobjval
-            except (self._XpressException, AttributeError):
+            except (XpressDirect.XpressException, AttributeError):
                 pass
         elif xprob_attrs.objsense == 1.0:  # minimizing MIP
             try:
                 self.results.problem.upper_bound = xprob_attrs.mipbestobjval
-            except (self._XpressException, AttributeError):
+            except (XpressDirect.XpressException, AttributeError):
                 pass
             try:
                 self.results.problem.lower_bound = xprob_attrs.bestbound
-            except (self._XpressException, AttributeError):
+            except (XpressDirect.XpressException, AttributeError):
                 pass
         elif xprob_attrs.objsense == -1.0:  # maximizing MIP
             try:
                 self.results.problem.upper_bound = xprob_attrs.bestbound
-            except (self._XpressException, AttributeError):
+            except (XpressDirect.XpressException, AttributeError):
                 pass
             try:
                 self.results.problem.lower_bound = xprob_attrs.mipbestobjval
-            except (self._XpressException, AttributeError):
+            except (XpressDirect.XpressException, AttributeError):
                 pass
         else:
             raise RuntimeError('Unrecognized xpress objective sense: {0}'.format(xprob_attrs.objsense))
@@ -608,7 +664,7 @@ class XpressDirect(DirectSolver):
         self.results.problem.number_of_integer_variables = xprob_attrs.mipents
         self.results.problem.number_of_continuous_variables = xprob_attrs.cols - xprob_attrs.mipents
         self.results.problem.number_of_objectives = 1
-        self.results.problem.number_of_solutions = xprob_attrs.mipsols if is_mip else 1 
+        self.results.problem.number_of_solutions = xprob_attrs.mipsols if is_mip else 1
 
         # if a solve was stopped by a limit, we still need to check to
         # see if there is a solution available - this may not always

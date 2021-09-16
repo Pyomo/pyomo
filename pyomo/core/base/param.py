@@ -17,11 +17,13 @@ from weakref import ref as weakref_ref
 
 from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from pyomo.common.log import is_debug_set
-from pyomo.common.modeling import NoArgumentGiven
+from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
-from pyomo.core.base.indexed_component import IndexedComponent, \
-    UnindexedComponent_set
+from pyomo.core.base.indexed_component import (
+    IndexedComponent, UnindexedComponent_set, IndexedComponent_NDArrayMixin
+)
+from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
 from pyomo.core.base.numvalue import (
     NumericValue, native_types, value as expr_value
@@ -131,7 +133,7 @@ class _ParamData(ComponentData, NumericValue):
     # operations like validation efficient.  As it stands now, if
     # set_value is called without specifying an index, this call
     # involves a linear scan of the _data dict.
-    def set_value(self, value, idx=NoArgumentGiven):
+    def set_value(self, value, idx=NOTSET):
         #
         # If this param has units, then we need to check the incoming
         # value and see if it is "units compatible".  We only need to
@@ -150,8 +152,12 @@ class _ParamData(ComponentData, NumericValue):
                 num_value=_src_magnitude, from_units=_src_units,
                 to_units=_comp._units)
 
-        self._value = value
-        _comp._validate_value(idx, value, data=self)
+        old_value, self._value = self._value, value
+        try:
+            _comp._validate_value(idx, value, data=self)
+        except:
+            self._value = old_value
+            raise
 
     def __call__(self, exception=True):
         """
@@ -214,7 +220,7 @@ class _ParamData(ComponentData, NumericValue):
 
 
 @ModelComponentFactory.register("Parameter data that is used to define a model instance.")
-class Param(IndexedComponent):
+class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     """
     A parameter value, which may be defined over an index.
 
@@ -254,17 +260,22 @@ class Param(IndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Param:
             return super(Param, cls).__new__(cls)
-        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
-            return ScalarParam.__new__(ScalarParam)
+        if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
+            return super(Param, cls).__new__(ScalarParam)
         else:
-            return IndexedParam.__new__(IndexedParam)
+            return super(Param, cls).__new__(IndexedParam)
 
     def __init__(self, *args, **kwd):
-        self._rule          = kwd.pop('rule', Param.NoValue )
-        self._rule          = kwd.pop('initialize', self._rule )
+        _init = self._pop_from_kwargs(
+            'Param', kwd, ('rule', 'initialize'), NOTSET)
+        self._rule = Initializer(_init,
+                                 treat_sequences_as_mappings=False,
+                                 arg_not_specified=NOTSET)
+        self.domain = self._pop_from_kwargs('Param', kwd, ('domain', 'within'))
+        if self.domain is None:
+            self.domain = _ImplicitAny(owner=self, name='Any')
+
         self._validate      = kwd.pop('validate', None )
-        self.domain         = kwd.pop('domain', None )
-        self.domain         = kwd.pop('within', self.domain )
         self._mutable       = kwd.pop('mutable', Param.DefaultMutable )
         self._default_val   = kwd.pop('default', Param.NoValue )
         self._dense_initialize = kwd.pop('initialize_as_dense', False)
@@ -272,14 +283,7 @@ class Param(IndexedComponent):
         if self._units is not None:
             self._units = units.get_units(self._units)
             self._mutable = True
-        #
-        if 'repn' in kwd:
-            logger.error(
-                "The 'repn' keyword is not a validate keyword argument for Param")
-        #
-        if self.domain is None:
-            self.domain = _ImplicitAny(owner=self, name='Any')
-        #
+
         kwd.setdefault('ctype', Param)
         IndexedComponent.__init__(self, *args, **kwd)
 
@@ -302,7 +306,7 @@ class Param(IndexedComponent):
             return idx in self._data
         return idx in self._index
 
-    def __iter__(self):
+    def keys(self):
         """
         Iterate over the keys in the dictionary.  If the default value is
         specified, then iterate over all keys in the component index.
@@ -521,7 +525,10 @@ class Param(IndexedComponent):
             # reasonable values produces an informative error.
             if self._mutable:
                 # Note: _ParamData defaults to Param.NoValue
-                ans = self._data[index] = _ParamData(self)
+                if self.is_indexed():
+                    ans = self._data[index] = _ParamData(self)
+                else:
+                    ans = self._data[index] = self
                 return ans
             if self.is_indexed():
                 idx_str = '%s[%s]' % (self.name, index,)
@@ -611,11 +618,15 @@ class Param(IndexedComponent):
             obj.set_value(value, index)
             return obj
         else:
-            self._data[index] = value
+            old_value, self._data[index] = self._data[index], value
             # Because we do not have a _ParamData, we cannot rely on the
             # validation that occurs in _ParamData.set_value()
-            self._validate_value(index, value)
-            return value
+            try:
+                self._validate_value(index, value)
+                return value
+            except:
+                self._data[index] = old_value
+                raise
 
     def _setitem_when_not_present(self, index, value, _check_domain=True):
         #
@@ -667,14 +678,14 @@ class Param(IndexedComponent):
         # Check if the value is valid within the current domain
         #
         if validate_domain and not value in self.domain:
-            if index is NoArgumentGiven:
+            if index is NOTSET:
                 index = data.index()
             raise ValueError(
                 "Invalid parameter value: %s[%s] = '%s', value type=%s.\n"
                 "\tValue not in parameter domain %s" %
                 (self.name, index, value, type(value), self.domain.name))
         if self._validate:
-            if index is NoArgumentGiven:
+            if index is NOTSET:
                 index = data.index()
             valid = apply_parameterized_indexed_rule(
                 self, self._validate, self.parent_block(), value, index )
@@ -684,204 +695,6 @@ class Param(IndexedComponent):
                     "\tValue failed parameter validation rule" %
                     ( self.name, index, value, type(value) ) )
 
-    def _initialize_from(self, _init):
-        """
-        Initialize data from a rule or data
-        """
-        _init_type = type(_init)
-        _isDict = _init_type is dict
-
-        if _isDict or _init_type in native_types:
-            #
-            # We skip the other tests if we have a dictionary or constant
-            # value, as these are the most common cases.
-            #
-            pass
-
-        elif _init_type is types.FunctionType:
-            #
-            # Initializing from a function
-            #
-            if not self.is_indexed():
-                #
-                # A scalar value has a single value.
-                # We call __setitem__, which does checks on the value.
-                #
-                self._setitem_when_not_present(None, _init(self.parent_block()))
-                return
-            else:
-                #
-                # An indexed parameter, where we call the function for each
-                # index.
-                #
-                self_parent = self.parent_block()
-                #
-                try:
-                    #
-                    # Create an iterator for the indices.  We assume that
-                    # it returns flattened tuples. Otherwise,
-                    # the validation process is far too expensive.
-                    #
-                    _iter = self._index.__iter__()
-                    idx = next(_iter)
-                    #
-                    # If a function returns a dict (or
-                    # dict-like thing), then we initialize the Param object
-                    # by reseting _init and _isDict
-                    #
-                    # Note that this logic allows the user to call a
-                    # function without an index
-                    #
-                    val = apply_indexed_rule(self, _init, self_parent, idx)
-
-                    #
-                    # The following is a simplification of the main
-                    # _initialize_from logic.  The idea is that if the
-                    # function returns a scalar-like thing, use it to
-                    # initialize this index and re-call the function for
-                    # the next value.  However, if the function returns
-                    # something that is dict-like, then use the dict to
-                    # initialize everything and do not re-call the
-                    # initialize function.
-                    #
-                    # Note: while scalar components are technically
-                    # "dict-like", we will treat them as scalars and
-                    # re-call the initialize function.
-                    #
-                    _dict_like = False
-                    if type(val) is dict:
-                        _dict_like = True
-                    elif isinstance(val, IndexedComponent):
-                        _dict_like = val.is_indexed()
-                    elif hasattr(val, '__getitem__') \
-                            and not isinstance(val, NumericValue):
-                        try:
-                            for x in _init:
-                                _init.__getitem__(x)
-                            _dict_like = True
-                        except:
-                            pass
-
-                    if _dict_like:
-                        _init = val
-                        _isDict = True
-                    else:
-                        #
-                        # At this point, we know the value is specific
-                        # to this index (i.e., not likely to be a
-                        # dict-like thing), and that the index is valid;
-                        # so, it is safe to use _setitem_impl
-                        # (which will perform all the domain /
-                        # validation checking)
-                        #
-                        self._setitem_when_not_present(idx, val)
-                        #
-                        # Now iterate over the rest of the index set.
-                        #
-                        for idx in _iter:
-                            self._setitem_when_not_present(
-                                idx, apply_indexed_rule(
-                                    self, _init, self_parent, idx))
-                        return
-                except StopIteration:
-                    #
-                    # The index set was empty... The parameter is indexed by
-                    # an empty set, or an empty set tuple. Rare, but it has
-                    # happened.
-                    #
-                    return
-
-        elif isinstance(_init, NumericValue):
-            #
-            # Reduce NumericValues to scalars.  This allows us to treat
-            # scalar components as numbers and not
-            # as indexed components with a index set of [None]
-            #
-            _init = _init()
-
-        elif isinstance(_init, IndexedComponent):
-            #
-            # Ideally, we want to reduce IndexedComponents to
-            # a dict, but without "densifying" it.  However, since
-            # there is no way to (easily) get the default value, we
-            # will take the "less surprising" route of letting the
-            # source become dense, so that we get the expected copy.
-            #
-            # TBD: Are there use-cases where we want to maintain sparsity?
-            #
-            _init_keys_len = sum(1 for _ in _init.keys())
-            sparse_src = len(_init) != _init_keys_len
-            tmp = dict( _init.iteritems() )
-            if sparse_src and len(_init) == _init_keys_len:
-                logger.warning("""
-Initializing Param %s using a sparse mutable indexed component (%s).
-This has resulted in the conversion of the source to dense form.
-""" % (self.name, _init.name))
-            _init = tmp
-            _isDict = True
-
-        #
-        # If the _init is not a native dictionary, but it
-        # behaves like one (that is, it could be converted to a
-        # dict with "dict((key,_init[key]) for key in _init)"),
-        # then we will treat it as such
-        #
-        # TODO: Establish a use-case for this.  This iteration is
-        # expensive.
-        #
-        if not _isDict and hasattr(_init, '__getitem__'):
-            try:
-                _isDict = True
-                for x in _init:
-                    _init.__getitem__(x)
-            except:
-                _isDict = False
-        #
-        # Now, we either have a scalar or a dictionary
-        #
-        if _isDict:
-            #
-            # Because this is a user-specified dictionary, we
-            # must use the normal (expensive) __setitem__ route
-            # so that the individual indices are validated.
-            #
-            for key in _init:
-                self[key] = _init[key]
-        else:
-            try:
-                #
-                # A constant is being supplied as a default to
-                # a parameter.  This happens for indexed parameters,
-                # particularly when dealing with mutable parameters.
-                #
-                # We look at the first iteration index separately to
-                # to validate the value against the domain once.
-                #
-                _iter = self._index.__iter__()
-                idx = next(_iter)
-                self._setitem_when_not_present(idx, _init)
-                #
-                # Note: the following is safe for both indexed and
-                # non-indexed parameters: for non-indexed, the first
-                # idx (above) will be None, and the for-loop below
-                # will NOT be called.
-                #
-                if self._mutable:
-                    _init = self[idx]._value
-                    for idx in _iter:
-                        self._setitem_when_not_present(idx, _init)
-                else:
-                    _init = self[idx]
-                    for idx in _iter:
-                        self._setitem_when_not_present(
-                            idx, _init, _check_domain=False )
-            except StopIteration:
-                #
-                # The index set was empty...
-                # The parameter is indexed by an empty set, or an empty set tuple.
-                # Rare, but it has happened.
-                #
-                pass
 
     def construct(self, data=None):
         """
@@ -896,65 +709,71 @@ This has resulted in the conversion of the source to dense form.
         constructed.  We throw an exception if a user tries
         to use an uninitialized Param.
         """
+        if self._constructed:
+            return
+
+        timer = ConstructionTimer(self)
         if is_debug_set(logger):   #pragma:nocover
             logger.debug("Constructing Param, name=%s, from data=%s"
                          % ( self.name, str(data) ))
-        #
-        if self._constructed:
-            return
-        timer = ConstructionTimer(self)
-        #
-        # If the default value is a simple type, we check it versus
-        # the domain.
-        #
-        val = self._default_val
-        if val is not Param.NoValue \
-                and type(val) in native_types \
-                and val not in self.domain:
-            raise ValueError(
-                "Default value (%s) is not valid for Param %s domain %s" %
-                (str(val), self.name, self.domain.name))
-        #
-        # Flag that we are in the "during construction" phase
-        #
-        self._constructed = None
-        #
-        # Step #1: initialize data from rule value
-        #
-        if self._rule is not Param.NoValue:
-            self._initialize_from(self._rule)
-        #
-        # Step #2: allow any user-specified (external) data to override
-        # the initialization
-        #
-        if data is not None:
+
+        try:
+            #
+            # If the default value is a simple type, we check it versus
+            # the domain.
+            #
+            val = self._default_val
+            if val is not Param.NoValue \
+               and type(val) in native_types \
+               and val not in self.domain:
+                raise ValueError(
+                    "Default value (%s) is not valid for Param %s domain %s" %
+                    (str(val), self.name, self.domain.name))
+            #
+            # Flag that we are in the "during construction" phase
+            #
+            self._constructed = None
+            #
+            # Step #1: initialize data from rule value
+            #
+            self._construct_from_rule_using_setitem()
+            #
+            # Step #2: allow any user-specified (external) data to override
+            # the initialization
+            #
+            if data is not None:
+                try:
+                    data_items = data.items()
+                except AttributeError:
+                    raise ValueError(
+                        "Attempting to initialize parameter=%s with data=%s.\n"
+                        "\tData type is not a mapping type, and a Mapping is "
+                        "expected." % (self.name, str(data)) )
+            else:
+                data_items = iter(())
+
             try:
-                for key, val in data.items():
+                for key, val in data_items:
                     self._setitem_when_not_present(
                         self._validate_index(key), val)
-            except Exception:
+            except:
                 msg = sys.exc_info()[1]
-                if type(data) is not dict:
-                   raise ValueError(
-                       "Attempting to initialize parameter=%s with data=%s.\n"
-                       "\tData type is not a dictionary, and a dictionary is "
-                       "expected." % (self.name, str(data)) )
-                else:
-                    raise RuntimeError(
-                        "Failed to set value for param=%s, index=%s, value=%s."
-                        "\n\tsource error message=%s"
-                        % (self.name, str(key), str(val), str(msg)) )
-        #
-        # Flag that things are fully constructed now (and changing an
-        # inmutable Param is now an exception).
-        #
-        self._constructed = True
+                raise RuntimeError(
+                    "Failed to set value for param=%s, index=%s, value=%s.\n"
+                    "\tsource error message=%s"
+                    % (self.name, str(key), str(val), str(msg)) )
+            #
+            # Flag that things are fully constructed now (and changing an
+            # immutable Param is now an exception).
+            #
+            self._constructed = True
 
-        # populate all other indices with default data
-        # (avoids calling _set_contains on self._index at runtime)
-        if self._dense_initialize:
-            self.to_dense_data()
-        timer.report()
+            # populate all other indices with default data
+            # (avoids calling _set_contains on self._index at runtime)
+            if self._dense_initialize:
+                self.to_dense_data()
+        finally:
+            timer.report()
 
     def _pprint(self):
         """
@@ -1022,8 +841,8 @@ class ScalarParam(_ParamData, Param):
                 "the Param has been constructed (there is currently no "
                 "value to return)." % (self.name,) )
 
-    def set_value(self, value, index=NoArgumentGiven):
-        if index is NoArgumentGiven:
+    def set_value(self, value, index=NOTSET):
+        if index is NOTSET:
             index = None
         if self._constructed and not self._mutable:
             _raise_modifying_immutable_error(self, index)

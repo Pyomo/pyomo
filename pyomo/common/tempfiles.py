@@ -30,14 +30,24 @@ except ImportError:
 
 deletion_errors_are_fatal = True
 
+class _TempfileContext(object):
+    def __init__(self):
+        self.ctr = -1
+        self.files = []
+
+    def append(self, filename):
+        self.files.append(filename)
+
+    def __iter__(self):
+        return iter(self.files)
 
 class TempfileManagerClass:
     """A class that manages temporary files."""
 
     def __init__(self, **kwds):
         self.tempdir = None
-        self._tempfiles = [[]]
-        self._ctr = -1
+        self._tempfiles = []
+        self.push()
 
     def create_tempfile(self, suffix=None, prefix=None, text=False, dir=None):
         """Create a unique temporary file
@@ -65,20 +75,20 @@ class TempfileManagerClass:
 
         ans = tempfile.mkstemp(suffix=suffix, prefix=prefix, text=text, dir=dir)
         ans = list(ans)
-        if not os.path.isabs(ans[1]):  #pragma:nocover
-            fname = os.path.join(dir, ans[1])
-        else:
-            fname = ans[1]
+        fname = os.path.abspath(ans[1])
         os.close(ans[0])
-        if self._ctr >= 0:
-            new_fname = os.path.join(dir, prefix + str(self._ctr) + suffix)
+        if self._tempfiles[-1].ctr >= 0:
+            new_fname = os.path.join(
+                os.path.dirname(fname),
+                prefix + str(self._tempfiles[-1].ctr) + suffix
+            )
             # Delete any file having the sequential name and then
             # rename
             if os.path.exists(new_fname):
                 os.remove(new_fname)
             shutil.move(fname, new_fname)
             fname = new_fname
-            self._ctr += 1
+            self._tempfiles[-1].ctr += 1
         self._tempfiles[-1].append(fname)
         return fname
 
@@ -107,15 +117,18 @@ class TempfileManagerClass:
                         "pyomo.common.tempfiles", version='5.7.2')
 
         dirname = tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
-        if self._ctr >= 0:
-            new_dirname = os.path.join(dir, prefix + str(self._ctr) + suffix)
+        if self._tempfiles[-1].ctr >= 0:
+            new_dirname = os.path.join(
+                os.path.dirname(dirname),
+                prefix + str(self._tempfiles[-1].ctr) + suffix
+            )
             # Delete any directory having the sequential name and then
             # rename
             if os.path.exists(new_dirname):
                 shutil.rmtree(new_dirname)
             shutil.move(dirname, new_dirname)
             dirname = new_dirname
-            self._ctr += 1
+            self._tempfiles[-1].ctr += 1
 
         self._tempfiles[-1].append(dirname)
         return dirname
@@ -129,24 +142,24 @@ class TempfileManagerClass:
 
     def clear_tempfiles(self, remove=True):
         """Delete all temporary files."""
-        while len(self._tempfiles) > 1:
+        while self._tempfiles:
             self.pop(remove)
-        self.pop(remove)
+        self.push()
 
     def sequential_files(self, ctr=0):
         """Start generating sequential files, using the specified counter"""
-        self._ctr = ctr
+        self._tempfiles[-1].ctr = ctr
 
     def unique_files(self):
         """Stop generating sequential files, using the specified counter"""
-        self._ctr = -1
+        self._tempfiles[-1].ctr = -1
 
     #
     # Support "with" statements, where the pop automatically
     # takes place on exit.
     #
     def push(self):
-        self._tempfiles.append([])
+        self._tempfiles.append(_TempfileContext())
         return self
 
     def __enter__(self):
@@ -184,9 +197,6 @@ class TempfileManagerClass:
                                     logger = logging.getLogger(__name__)
                                     logger.warning("Unable to delete temporary "
                                                    "file %s" % (filename,))
-
-        if len(self._tempfiles) == 0:
-            self._tempfiles = [[]]
 
 
 TempfileManager = TempfileManagerClass()

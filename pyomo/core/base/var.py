@@ -23,7 +23,9 @@ from pyomo.core.base.numvalue import (
 )
 from pyomo.core.base.set_types import Reals, Binary
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
-from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
+from pyomo.core.base.indexed_component import (
+    IndexedComponent, UnindexedComponent_set, IndexedComponent_NDArrayMixin
+)
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import Set, _SetDataBase
 from pyomo.core.base.units_container import units
@@ -460,50 +462,14 @@ class _GeneralVarData(_VarData):
         Set the lower bound for this variable after validating that
         the value is fixed (or None).
         """
-        # Note: is_fixed(None) returns True
-        if not is_fixed(val):
-            raise ValueError(
-                "Non-fixed input of type '%s' supplied as variable lower "
-                "bound - legal types must be fixed expressions or variables."
-                % (type(val),))
-        if type(val) in native_numeric_types or val is None:
-            # TODO: warn/error: check if this Var has units: assigning
-            # a dimensionless value to a united variable should be an error
-            pass
-        else:
-            if self.parent_component()._units is not None:
-                _src_magnitude = value(val)
-                _src_units = units.get_units(val)
-                val = units.convert_value(
-                    num_value=_src_magnitude, from_units=_src_units,
-                    to_units=self.parent_component()._units)
-        self._lb = val
-
+        self._lb = self._process_bound(val, 'lower')
 
     def setub(self, val):
         """
         Set the upper bound for this variable after validating that
         the value is fixed (or None).
         """
-        # Note: is_fixed(None) returns True
-        if not is_fixed(val):
-            raise ValueError(
-                "Non-fixed input of type '%s' supplied as variable upper "
-                "bound - legal types are fixed expressions or variables."
-                "parameters"
-                % (type(val),))
-        if type(val) in native_numeric_types or val is None:
-            # TODO: warn/error: check if this Var has units: assigning
-            # a dimensionless value to a united variable should be an error
-            pass
-        else:
-            if self.parent_component()._units is not None:
-                _src_magnitude = value(val)
-                _src_units = units.get_units(val)
-                val = units.convert_value(
-                    num_value=_src_magnitude, from_units=_src_units,
-                    to_units=self.parent_component()._units)
-        self._ub = val
+        self._ub = self._process_bound(val, 'upper')
 
     def fix(self, value=NoArgumentGiven):
         """
@@ -520,9 +486,29 @@ class _GeneralVarData(_VarData):
 
     free = unfix
 
+    def _process_bound(self, val, bound_type):
+        # Note: is_fixed(None) returns True
+        if not is_fixed(val):
+            raise ValueError(
+                "Non-fixed input of type '%s' supplied as variable %s "
+                "bound - legal types must be constants or fixed expressions."
+                % (type(val), bound_type))
+        if type(val) in native_numeric_types or val is None:
+            # TODO: warn/error: check if this Var has units: assigning
+            # a dimensionless value to a united variable should be an error
+            pass
+        else:
+            # We want to create an expression and not just convert the
+            # current value so that things like mutable Params behave as
+            # expected.
+            if self.parent_component()._units is not None:
+                val = units.convert(
+                    val, to_units=self.parent_component()._units)
+        return val
+
 
 @ModelComponentFactory.register("Decision variables.")
-class Var(IndexedComponent):
+class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
     """A numeric variable, which may be defined over an index.
 
     Args:

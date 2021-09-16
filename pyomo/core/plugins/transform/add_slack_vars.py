@@ -21,12 +21,12 @@ NAME_BUFFER = {}
 
 def target_list(x):
     deprecation_msg = ("In future releases ComponentUID targets will no "
-                      "longer be supported in the core.add_slack_variables "
-                      "transformation. Specify targets as a Constraint or "
-                      "list of Constraints.")
+                       "longer be supported in the core.add_slack_variables "
+                       "transformation. Specify targets as a Constraint or "
+                       "list of Constraints.")
     if isinstance(x, ComponentUID):
         if deprecation_msg:
-            deprecation_warning(deprecation_msg)
+            deprecation_warning(deprecation_msg, version='5.7.1')
             # only emit the message once
             deprecation_msg = None
         # [ESJ 07/15/2020] We have to just pass it through because we need the
@@ -39,7 +39,7 @@ def target_list(x):
         for i in x:
             if isinstance(i, ComponentUID):
                 if deprecation_msg:
-                    deprecation_warning(deprecation_msg)
+                    deprecation_warning(deprecation_msg, version='5.7.1')
                     deprecation_msg = None
                 # same as above...
                 ans.append(i)

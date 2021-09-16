@@ -13,69 +13,32 @@ from pyomo.common.dependencies import networkx_available
 from pyomo.common.dependencies import scipy_available
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.contrib.incidence_analysis.interface import (
-        IncidenceGraphInterface,
-        get_structural_incidence_matrix,
-        get_numeric_incidence_matrix,
-        )
+    IncidenceGraphInterface,
+    get_structural_incidence_matrix,
+    get_numeric_incidence_matrix,
+    get_incidence_graph,
+    )
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.triangularize import block_triangularize
+from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
+    dulmage_mendelsohn,
+    )
+from pyomo.contrib.incidence_analysis.tests.models_for_testing import (
+    make_gas_expansion_model,
+    make_degenerate_solid_phase_model,
+        )
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
+if networkx_available:
+    from networkx.algorithms.bipartite.matrix import from_biadjacency_matrix
+from pyomo.contrib.pynumero.asl import AmplInterface
+
 import pyomo.common.unittest as unittest
-
-
-def make_gas_expansion_model(N=2):
-    """
-    This is the simplest model I could think of that has a
-    subsystem with a non-trivial block triangularization.
-    Something like a gas (somehow) undergoing a series
-    of isentropic expansions.
-    """
-    m = pyo.ConcreteModel()
-    m.streams = pyo.Set(initialize=range(N+1))
-    m.rho = pyo.Var(m.streams, initialize=1)
-    m.P = pyo.Var(m.streams, initialize=1)
-    m.F = pyo.Var(m.streams, initialize=1)
-    m.T = pyo.Var(m.streams, initialize=1)
-
-    m.R = pyo.Param(initialize=8.31)
-    m.Q = pyo.Param(m.streams, initialize=1)
-    m.gamma = pyo.Param(initialize=1.4*m.R.value)
-
-    def mbal(m, i):
-        if i == 0:
-            return pyo.Constraint.Skip
-        else:
-            return m.rho[i-1]*m.F[i-1] - m.rho[i]*m.F[i] == 0
-    m.mbal = pyo.Constraint(m.streams, rule=mbal)
-
-    def ebal(m, i):
-        if i == 0:
-            return pyo.Constraint.Skip
-        else:
-            return (
-                    m.rho[i-1]*m.F[i-1]*m.T[i-1] +
-                    m.Q[i] -
-                    m.rho[i]*m.F[i]*m.T[i] == 0
-                    )
-    m.ebal = pyo.Constraint(m.streams, rule=ebal)
-
-    def expansion(m, i):
-        if i == 0:
-            return pyo.Constraint.Skip
-        else:
-            return m.P[i]/m.P[i-1] - (m.rho[i]/m.rho[i-1])**m.gamma == 0
-    m.expansion = pyo.Constraint(m.streams, rule=expansion)
-
-    def ideal_gas(m, i):
-        return m.P[i] - m.rho[i]*m.R*m.T[i] == 0
-    m.ideal_gas = pyo.Constraint(m.streams, rule=ideal_gas)
-
-    return m
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
+@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
 class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
     """
     This class tests the get_numeric_incidence_matrix function on
@@ -460,6 +423,7 @@ class TestGasExpansionStructuralIncidenceMatrix(unittest.TestCase):
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
+@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
 class TestGasExpansionModelInterfaceClassNumeric(unittest.TestCase):
     # In these tests, we pass the interface a PyomoNLP and cache
     # its Jacobian.
@@ -796,6 +760,96 @@ class TestGasExpansionModelInterfaceClassNoCache(unittest.TestCase):
                 self.assertEqual(con_block_map[model.expansion[i]], i)
                 self.assertEqual(con_block_map[model.mbal[i]], i)
                 self.assertEqual(con_block_map[model.ebal[i]], i)
+
+
+@unittest.skipUnless(networkx_available, "networkx is not available.")
+@unittest.skipUnless(scipy_available, "scipy is not available.")
+class TestDulmageMendelsohnInterface(unittest.TestCase):
+
+    def test_degenerate_solid_phase_model(self):
+        m = make_degenerate_solid_phase_model()
+        variables = list(m.component_data_objects(pyo.Var))
+        constraints = list(m.component_data_objects(pyo.Constraint))
+
+        igraph = IncidenceGraphInterface()
+        var_dmp, con_dmp = igraph.dulmage_mendelsohn(variables, constraints)
+
+        underconstrained_vars = ComponentSet(m.flow_comp.values())
+        underconstrained_vars.add(m.flow)
+        underconstrained_cons = ComponentSet(m.flow_eqn.values())
+
+        self.assertEqual(len(var_dmp[0]+var_dmp[1]), len(underconstrained_vars))
+        for var in var_dmp[0]+var_dmp[1]:
+            self.assertIn(var, underconstrained_vars)
+
+        self.assertEqual(len(con_dmp[2]), len(underconstrained_cons))
+        for con in con_dmp[2]:
+            self.assertIn(con, underconstrained_cons)
+
+        overconstrained_cons = ComponentSet(m.holdup_eqn.values())
+        overconstrained_cons.add(m.density_eqn)
+        overconstrained_cons.add(m.sum_eqn)
+        overconstrained_vars = ComponentSet(m.x.values())
+        overconstrained_vars.add(m.rho)
+
+        self.assertEqual(len(var_dmp[2]), len(overconstrained_vars))
+        for var in var_dmp[2]:
+            self.assertIn(var, overconstrained_vars)
+
+        self.assertEqual(len(con_dmp[0]+con_dmp[1]), len(overconstrained_cons))
+        for con in con_dmp[0]+con_dmp[1]:
+            self.assertIn(con, overconstrained_cons)
+
+    def test_incidence_graph(self):
+        m = make_degenerate_solid_phase_model()
+        variables = list(m.component_data_objects(pyo.Var))
+        constraints = list(m.component_data_objects(pyo.Constraint))
+        graph = get_incidence_graph(variables, constraints)
+        matrix = get_structural_incidence_matrix(variables, constraints)
+        from_matrix = from_biadjacency_matrix(matrix)
+
+        self.assertEqual(graph.nodes, from_matrix.nodes)
+        self.assertEqual(graph.edges, from_matrix.edges)
+
+    def test_dm_graph_interface(self):
+        m = make_degenerate_solid_phase_model()
+        variables = list(m.component_data_objects(pyo.Var))
+        constraints = list(m.component_data_objects(pyo.Constraint))
+        graph = get_incidence_graph(variables, constraints)
+
+        M, N = len(constraints), len(variables)
+
+        top_nodes = list(range(M))
+        con_dmp, var_dmp = dulmage_mendelsohn(graph, top_nodes=top_nodes)
+        con_dmp = tuple([constraints[i] for i in subset] for subset in con_dmp)
+        var_dmp = tuple([variables[i-M] for i in subset] for subset in var_dmp)
+
+        underconstrained_vars = ComponentSet(m.flow_comp.values())
+        underconstrained_vars.add(m.flow)
+        underconstrained_cons = ComponentSet(m.flow_eqn.values())
+
+        self.assertEqual(len(var_dmp[0]+var_dmp[1]), len(underconstrained_vars))
+        for var in var_dmp[0]+var_dmp[1]:
+            self.assertIn(var, underconstrained_vars)
+
+        self.assertEqual(len(con_dmp[2]), len(underconstrained_cons))
+        for con in con_dmp[2]:
+            self.assertIn(con, underconstrained_cons)
+
+        overconstrained_cons = ComponentSet(m.holdup_eqn.values())
+        overconstrained_cons.add(m.density_eqn)
+        overconstrained_cons.add(m.sum_eqn)
+        overconstrained_vars = ComponentSet(m.x.values())
+        overconstrained_vars.add(m.rho)
+
+        self.assertEqual(len(var_dmp[2]), len(overconstrained_vars))
+        for var in var_dmp[2]:
+            self.assertIn(var, overconstrained_vars)
+
+        self.assertEqual(len(con_dmp[0]+con_dmp[1]), len(overconstrained_cons))
+        for con in con_dmp[0]+con_dmp[1]:
+            self.assertIn(con, overconstrained_cons)
+
 
 if __name__ == "__main__":
     unittest.main()
