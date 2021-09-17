@@ -196,26 +196,30 @@ tort = 50
 temp_base = 298.15
 
 
-def create_model(scena, temp_feed=313.15, temp_bath=313.15, y=0.15, para=212, ua=5.0E6, opt = True, conti=False, optimize_trace=True, diff=0, eps=0.01, energy = True, doe_model=True, est_tr=False, est_ua=False, k_aug=False, temp_option=1, isotherm = True, chemsorb = True, physsorb = True, dispersion = False, fix_pres = False, v_fix=False):
+def create_model(scena, temp_feed=313.15, temp_bath=313.15, y=0.15, doe_model=True, k_aug=False, opt = False, optimize_trace=True, diff=0, eps=0.01):
     ''' 
     Creates a concrete Pyomo model and adds sets/parameters.
     Toggles are saved into the model object.
     
-    Arguments: 
-        temp: the gas feed temperature, [K]
-        temp_bath: the water bathing temperature, [K]. If the energy balance is not included, temp == temp_bath
-        y: CO2 feed composition, [0,1]
-        para: the value of fitted_transport_parameter
-        opt: if true, toggle on the design of experiments objective
-        conti: if true, make the experiment design decisions (T, yinlet) degrees of freedom
-        diff: 0: no derivative estimate, 1: forward, -1: backward, 2: central
-        eps: step size for the finite difference perturbation
-        energy: decide if energy balance is added to the model 
-        doe_model: if this model is for the DesignOfExperiment.py. if true, k and ua will be defined as variable, not expressions.
-        est_tr: if transport_coefficient will be estimated 
-        est_ua: if ua will be estimated 
-        k_aug: if this model is created for k_aug solver to get sensitivities
-        temp_option: 1: Twall=313.15K; 2: Twall=Tinlet; 3(to be added):Tinlet=313.15K, Twall=specified temp. 
+    Arguments:
+        scena: achieved from DOE package. Containing the parameter values in each scenario and scenario names.
+        Three design variables:
+            temp_feed: the gas feed temperature, [K]
+            temp_bath: the water bathing temperature, [K]. If the energy balance is not included, temp == temp_bath
+            y: CO2 feed composition, [0,1]
+        Options:
+            doe_model: if this model is for DOE package. if True, it is formed as a input-output square model:
+                objective being 0
+                Parameters are defined as Param (... mutable=True)
+            k_aug: (active when doe_model is True) if this model is for k_aug mode for DOE package. Same as doe_model except that parameters are defined as Var.
+                Note: this k_aug model can also be used for parameter estimation
+            opt: Form it as a DOE optimization problem
+                calculate FIM invasively
+                objective being trace or det
+                optimize_trace: if True, optimize trace. if not, optimize det.
+                diff: 0: no derivative estimate, 1: forward, -1: backward, 2: central
+                eps: step size for the finite difference perturbation
+        energy: decide if energy balance is added to the model
         isotherm: decide if isotherm part is opened. Must open if one of the chemsorb/physsorb is opened.
         chemsorb: decide if chemical adsorption part is opened to calculate adsorption kinetics
         physsorb: decide if physical adsorption part is opened to calculate adsorption kinetics
@@ -230,33 +234,26 @@ def create_model(scena, temp_feed=313.15, temp_bath=313.15, y=0.15, para=212, ua
     m = ConcreteModel()
 
     # Store model toggles
-    m.para = para
-    m.ua_init = ua
+    m.scena_all = scena
+    m.doe_model = doe_model
+    m.k_aug = k_aug
     m.opt     = opt
-    m.conti = conti
     m.optimize_trace = optimize_trace
     m.diff = diff
     m.eps = eps
-    m.energy = energy
-    m.doe_model = doe_model
-    m.est_tr = est_tr
-    m.est_ua = est_ua
-    m.k_aug = k_aug
-    m.temp_option = temp_option
-    m.isotherm = isotherm
-    m.chemsorb = chemsorb
-    m.physsorb = physsorb
-    m.dispersion = dispersion
-    m.fix_pres = fix_pres
-    m.v_fix = v_fix
 
-    m.scena_all = scena
+    # existing toggles for debugging
+    m.energy = True
+    m.isotherm = True
+    m.chemsorb = True
+    m.physsorb = True
+    m.dispersion = False
+    m.fix_pres = False
+    m.v_fix = False
+
+    # define scenario
     m.scena = Set(initialize=scena['scena-name'])
-    
-    # If DOE is open, estimation cannot be opened, vice versa 
-    #assert (m.est_tr or m.est_ua) != m.opt, 'Parameter estimation and design of experiment cannot be run simultaneously'
-    assert m.opt >= m.conti, 'DoE must be opened when continuous DoE is opened'
-    
+
     # declare components set
     m.COMPS = Set(initialize=['N2','CO2'])
 
@@ -273,21 +270,9 @@ def create_model(scena, temp_feed=313.15, temp_bath=313.15, y=0.15, para=212, ua
     if m.doe_model:
         m.temp_feed = Var(initialize=temp_feed, bounds=(100, 600))
         m.temp_bath = Var(initialize=temp_bath, bounds=(274, 600))
-    else:
-        m.temp_feed = temp_feed
-        m.temp_bath = temp_bath
-
-    print('The inlet gas temperature is ', value(m.temp_feed))
-    
-    if m.conti:
-        m.yfeed = Var(m.COMPS, initialize=yfeed, bounds=(0.1,0.45), within=NonNegativeReals)
-    elif m.doe_model:
         m.yfeed = Var(initialize=y, bounds=(0,1), within=NonNegativeReals)
-    else:
-        m.yfeed = Param(m.COMPS, initialize=yfeed)
         
-    
-    
+
     # Film mass transfer coefficient, m/s
     m.kf = Param(m.COMPS, initialize=k_f)
 
@@ -303,41 +288,27 @@ def create_model(scena, temp_feed=313.15, temp_bath=313.15, y=0.15, para=212, ua
     # Initial bed N2 concentration at time 0.0 [mol/m3]
     # LHS: mol/m3
     # RHS: [kPa] / ([K] * [kJ/mol/K]) = Pa/(J/mol) = mol/m^3
-    m.den_inert = Param(initialize=totp_f*100/(m.temp_bath*RPV))
+    m.den_inert = Expression(initialize=totp_f * 100 / (m.temp_bath * RPV))
 
     # Total feed density, [mol/m3]
-    m.totden_f = Param(initialize=totp_f*100/(m.temp_feed*RPV))
-    
+    m.totden_f = Expression(initialize=totp_f*100/(m.temp_feed*RPV))
+
     print('The inlet feed density is', value(m.totden_f), '[mol/m3]')
-    
-    
-        
-    def den_f_rule(m,i):
-        return m.yfeed[i]*value(m.totden_f)
-    
+
     def den_f_rule_doe(m,i):
         if i=='CO2':
             return m.yfeed*value(m.totden_f)
         elif i=='N2':
             return (1-m.yfeed)*value(m.totden_f)
-    
-    if m.doe_model:
-        m.den_f = Expression(m.COMPS, rule=den_f_rule_doe)
-    else:
-        m.den_f = Expression(m.COMPS, rule=den_f_rule)
+
+    m.den_f = Expression(m.COMPS, rule=den_f_rule_doe)
         
-    # Estimate coefficient for parameter estimation 
-    if not m.est_tr:
-        if m.doe_model: 
-            m.fitted_transport_coefficient = Param(m.scena, initialize=m.scena_all['fitted_transport_coefficient'], mutable=True)
-        elif m.k_aug:
-            m.fitted_transport_coefficient = Var(m.scena, initialize=m.para)
-            #m.fitted_transport_coefficient.setlb(m.para)
-            #m.fitted_transport_coefficient.setub(m.para)
-        else:
-            m.fitted_transport_coefficient = Expression(m.perturb, rule=perturbations_k)
-    else:
-        m.fitted_transport_coefficient = Var(initialize=para,bounds=(100,300))
+    # Estimate coefficient for parameter estimation
+    if ((m.doe_model) and (not m.k_aug)):
+        m.fitted_transport_coefficient = Param(m.scena, initialize=m.scena_all['fitted_transport_coefficient'], mutable=True)
+    elif m.k_aug:
+        m.fitted_transport_coefficient = Var(m.scena, initialize=m.scena_all['fitted_transport_coefficient'], bounds=(100,300))
+
         
     # energy balance is added 
     if not m.energy:
@@ -563,7 +534,7 @@ def jac_bounds(m, t):
     '''
     return (-1, 1)
 
-def add_variables(m,tf=3600, timesteps=None, start=0):
+def add_variables(m,tf=3200, timesteps=None, start=0):
     '''
     Add variables to the Pyomo model using the toggles previously specified.
     
@@ -576,9 +547,6 @@ def add_variables(m,tf=3600, timesteps=None, start=0):
         
     Return: None 
     '''
-    
-    # Store option
-    m.dynamic = dynamic
     
     # Time [s]
     if timesteps is None:
@@ -614,29 +582,18 @@ def add_variables(m,tf=3600, timesteps=None, start=0):
         
     # Temperature [K]
     if m.energy:
-        # temperature is initialized to be the T_inlet. As this is the gas temperature, it should be started to be the inlet gas temperature. 
-        #m.temp = Var(m.perturb, m.zgrid, m.t, initialize=value(m.temp_feed), bounds=(273.15,500.15), within=NonNegativeReals)
+        # temperature is initialized to be the T_inlet. As this is the gas temperature, it should be started to be the inlet gas temperature.
         m.temp = Var(m.scena, m.zgrid, m.t, initialize=m.temp_bath, bounds=(273.15,500.15), within=NonNegativeReals)
-        #m.temp = Var(m.perturb, m.zgrid, m.t, initialize=m.temp_water,  bounds=(273.15,1000), within=NonNegativeReals)
         m.dTdt = DerivativeVar(m.temp, wrt=m.t)
-        
-        
-        if not m.est_ua:
-            # W/m3/K, value 0.2839 from [Dowling, 2012]
-            # Estimated value 1.4E7 W/m3/K (DOE run2)
-            # 1.4E4 kW/m3/K --> 1.4E1 W/cm3/K
-            if m.doe_model:
-                m.ua =  Param(m.scena, initialize=m.scena_all['ua'], mutable=True)
-            elif m.k_aug:
-                m.ua = Var(m.scena, initialize=m.ua_init)
-                #m.ua.setlb(m.ua_init)
-                #m.ua.setub(m.ua_init)
-            else:
-                m.ua = Expression(m.scena, rule=perturbations_ua)
-        else:
-            m.ua = Var(initialize=m.ua_init,bounds=(5, 12))
-            #m.ua = Var(initialize=m.ua_init, bounds=(10,20))
-            
+
+        # W/m3/K, value 0.2839 from [Dowling, 2012]
+        # Estimated value 1.4E7 W/m3/K (DOE run2)
+        # 1.4E4 kW/m3/K --> 1.4E1 W/cm3/K
+        if ((m.doe_model) and (not m.k_aug)):
+            m.ua =  Param(m.scena, initialize=m.scena_all['ua'], mutable=True)
+        elif m.k_aug:
+            m.ua = Var(m.scena, initialize=m.scena_all['ua'], bounds=(5, 12))
+
         # define inv_k_oc, inv_k_op according to perturbation
         def inv_k_oc_init_en(m, j, z, t):
             '''
@@ -651,9 +608,9 @@ def add_variables(m,tf=3600, timesteps=None, start=0):
             return m.fitted_transport_coefficient[j]+1/(K_p0*exp(-E_p/(RPV*m.temp[j,z,t]) + E_p/(RPV*T0)))
 
         # For square problem/optimization problem, parameter, k_oc/p are parameters
-        if (not m.est_tr) and (not m.k_aug):
-            m.inv_K_oc = Expression(m.scena, m.zgrid, m.t, rule=inv_k_oc_init_en)
-            m.inv_K_op = Expression(m.scena, m.zgrid, m.t, rule=inv_k_op_init_en)
+        #if not m.k_aug:
+        m.inv_K_oc = Expression(m.scena, m.zgrid, m.t, rule=inv_k_oc_init_en)
+        m.inv_K_op = Expression(m.scena, m.zgrid, m.t, rule=inv_k_op_init_en)
             
         # If not square problem, k_oc/p are defined as parameters variable with temperature, defined in add_model()
           
@@ -941,14 +898,8 @@ def energy_balance(m, j, z, t):
         duhdz = (m.v[j,z,t]*0.01*h_sum - m.v[j,z-1,t]*0.01*h_sum_back)/dz
     
     # LHS: K/s
-    # RHS: (kg/m3 * kJ/kg/s * 1000J/1kJ - J/m3/s - J/s/m3/K *K)/ (J/m3/K) = K/s 
-    #if m.temp_option==2:
-    #    return m.dTdt[j,z,t] == (den_bed*sum_hdn*1000 - duhdz - exp(m.ua[j])*(m.temp[j,z,t]-m.temp_bath))/dividant
-    #elif m.temp_option==1:
-    if m.est_ua or m.k_aug:
-        return m.dTdt[j,z,t] == (den_b*sum_hdn*1000 - duhdz - exp(m.ua)*(m.temp[j,z,t]-m.temp_bath))/dividant
-    else:
-        return m.dTdt[j,z,t] == (den_b*sum_hdn*1000 - duhdz - exp(m.ua[j])*(m.temp[j,z,t]-m.temp_bath))/dividant
+    # RHS: (kg/m3 * kJ/kg/s * 1000J/1kJ - J/m3/s - J/s/m3/K *K)/ (J/m3/K) = K/s
+    return m.dTdt[j,z,t] == (den_b*sum_hdn*1000 - duhdz - exp(m.ua[j])*(m.temp[j,z,t]-m.temp_bath))/dividant
     
 def dalton(m, j, z, t):
     '''
@@ -1201,33 +1152,19 @@ def chem_adsorb(m, j, i, z, t):
         
     Return: an ODE for chemical adsorption amount [kmol/kg sorbent]
     '''
-    # For parameter estimation, no perturbation index for inv_K_oc
-    if m.est_tr or m.k_aug:
-        if m.energy:
-            return m.dnchemdt[j,i,z,t] == (1/m.inv_K_oc[j,z,t])*(m.nchemstar_mod[j,i,z,t] - m.nchem[j,i,z,t])
-        else:
-            return m.dnchemdt[j,i,z,t] == (1/m.inv_K_oc[j,z,t])*(m.nchemstar_mod[j,i,z,t] - m.nchem[j,i,z,t])
-    # For DoE, inv_K_oc is indexed with perturbation 
+    if m.energy:
+        return m.dnchemdt[j,i,z,t] == (1/m.inv_K_oc[j,z,t])*(m.nchemstar_mod[j,i,z,t] - m.nchem[j,i,z,t])
     else:
-        if m.energy:
-            return m.dnchemdt[j,i,z,t] == (1/m.inv_K_oc[j,z,t])*(m.nchemstar_mod[j,i,z,t] - m.nchem[j,i,z,t])
-        else:
-            return m.dnchemdt[j,i,z,t] == (1/m.inv_K_oc[j])*(m.nchemstar_mod[j,i,z,t] - m.nchem[j,i,z,t])
+        return m.dnchemdt[j,i,z,t] == (1/m.inv_K_oc[j])*(m.nchemstar_mod[j,i,z,t] - m.nchem[j,i,z,t])
 
 def phys_adsorb_nonlinear(m, j, i, z, t):
     '''
     Calculate chemical adsorption kinetics without linear pressure part 
     '''
-    if m.est_tr or m.k_aug:
-        #if m.energy:
-        #    return m.dnphysdt[j,i,z,t] == (1/m.inv_K_op[j,z,t])*(m.nphysstar[j,i,z,t] - m.nphys[j,i,z,t])
-        #else:
+    if m.energy:
         return m.dnphysdt[j,i,z,t] == (1/m.inv_K_op[j,z,t])*(m.nphysstar[j,i,z,t] - m.nphys[j,i,z,t])
     else:
-        if m.energy:
-            return m.dnphysdt[j,i,z,t] == (1/m.inv_K_op[j,z,t])*(m.nphysstar[j,i,z,t] - m.nphys[j,i,z,t])
-        else:
-            return m.dnphysdt[j,i,z,t] == (1/m.inv_K_op[j])*(m.nphysstar[j,i,z,t] - m.nphys[j,i,z,t])
+        return m.dnphysdt[j,i,z,t] == (1/m.inv_K_op[j])*(m.nphysstar[j,i,z,t] - m.nphys[j,i,z,t])
 
 def kinetics_para_express(m,j,z,t):
     '''
@@ -1242,7 +1179,7 @@ def kinetics_para_express(m,j,z,t):
     '''
     # LHS: s; # RHS: (m*m/(1*m*m/s)) + 1/(1/s * 1) 
     if m.energy:
-        return m.fitted_transport_coefficient + 1/(K_c0*exp(-E_c/(RPV*m.temp[j,z,t]) + E_c/(RPV*T0) + small_bound))
+        return m.fitted_transport_coefficient[j] + 1/(K_c0*exp(-E_c/(RPV*m.temp[j,z,t]) + E_c/(RPV*T0) + small_bound))
     else:
         return m.fitted_transport_coefficient + 1/(K_c0*exp(-E_c/(RPV*m.temp) + E_c/(RPV*T0) + small_bound))
 
@@ -1260,7 +1197,7 @@ def kinetics_para2_express(m,j,z,t):
     '''
     # LHS: s; # RHS: (m*m/(1*m*m/s)) + 1/(1/s * 1)
     if m.energy:
-        return m.fitted_transport_coefficient + 1/(K_p0*exp(-E_p/(RPV*m.temp[j,z,t]) + E_p/(RPV*T0)+ small_bound))
+        return m.fitted_transport_coefficient[j] + 1/(K_p0*exp(-E_p/(RPV*m.temp[j,z,t]) + E_p/(RPV*T0)+ small_bound))
     else:
         return m.fitted_transport_coefficient + 1/(K_p0*exp(-E_p/(RPV*m.temp) + E_p/(RPV*T0)+ small_bound))
 
@@ -1401,14 +1338,12 @@ def add_equations(mod):
     mod.ideal_gas_law = Constraint(mod.scena, mod.zgrid, mod.t, rule=ideal)
     
     # measurements
-    if not mod.k_aug:
-        mod.FCO2 = Expression(mod.scena, mod.zgrid, mod.t, rule=FCO2_calc)
+    mod.FCO2 = Expression(mod.scena, mod.zgrid, mod.t, rule=FCO2_calc)
     
     
-    if mod.opt and mod.conti:
+    if mod.opt:
         
         mod.jac = Expression(mod.dv, mod.t, rule=jac_ele)
-       
         
         # add an expression to calculate the Jacobian elements
         if mod.energy:
@@ -1426,33 +1361,36 @@ def add_equations(mod):
         
     if not mod.fix_pres:
         if not mod.v_fix:
-            mod.ergun_equation = Constraint(mod.perturb, mod.zgrid, mod.t, rule=ergun)
+            mod.ergun_equation = Constraint(mod.scena, mod.zgrid, mod.t, rule=ergun)
 
     if mod.doe_model:
-        mod.gas_mass_balance = Constraint(mod.perturb, mod.COMPS, mod.zgrid, mod.t, rule = gas_comp_mb_doe)
+        mod.gas_mass_balance = Constraint(mod.scena, mod.COMPS, mod.zgrid, mod.t, rule = gas_comp_mb_doe)
     else:
-        mod.gas_mass_balance = Constraint(mod.perturb, mod.COMPS, mod.zgrid, mod.t, rule = gas_comp_mb)
+        mod.gas_mass_balance = Constraint(mod.scena, mod.COMPS, mod.zgrid, mod.t, rule = gas_comp_mb)
 
     if mod.energy:
-        mod.energy_balance_law = Constraint(mod.perturb, mod.zgrid, mod.t, rule = energy_balance)
+        mod.energy_balance_law = Constraint(mod.scena, mod.zgrid, mod.t, rule = energy_balance)
         
-    mod.partial_pressure = Constraint(mod.perturb, mod.SCOMPS, mod.zgrid, mod.t, rule=calc_surface_pressure)
-    mod.chemical_isotherm = Constraint(mod.perturb, mod.SCOMPS, mod.zgrid, mod.t, rule=chem_isotherm)
-    mod.physical_isotherm = Constraint(mod.perturb, mod.SCOMPS, mod.zgrid, mod.t, rule=phys_isotherm)
+    mod.partial_pressure = Constraint(mod.scena, mod.SCOMPS, mod.zgrid, mod.t, rule=calc_surface_pressure)
+    mod.chemical_isotherm = Constraint(mod.scena, mod.SCOMPS, mod.zgrid, mod.t, rule=chem_isotherm)
+    mod.physical_isotherm = Constraint(mod.scena, mod.SCOMPS, mod.zgrid, mod.t, rule=phys_isotherm)
 
     if alpha_variable:
-        mod.alpha_constraint = Constraint(mod.perturb, mod.SCOMPS, mod.zgrid, mod.t, rule=alpha_calc)
+        mod.alpha_constraint = Constraint(mod.scena, mod.SCOMPS, mod.zgrid, mod.t, rule=alpha_calc)
     else:
-        mod.alpha = Expression(mod.perturb, mod.SCOMPS, mod.zgrid, mod.t, rule=alpha_calc)
+        mod.alpha = Expression(mod.scena, mod.SCOMPS, mod.zgrid, mod.t, rule=alpha_calc)
 
-    if mod.est_tr or mod.k_aug:
-        mod.inv_K_oc = Expression(mod.perturb, mod.zgrid, mod.t, rule=kinetics_para_express)
-        mod.inv_K_op = Expression(mod.perturb, mod.zgrid, mod.t, rule=kinetics_para2_express)
+    #if mod.k_aug:
+    #    mod.inv_K_oc = Expression(mod.scena, mod.zgrid, mod.t, rule=kinetics_para_express)
+    #    mod.inv_K_op = Expression(mod.scena, mod.zgrid, mod.t, rule=kinetics_para2_express)
 
-    mod.physical_adsorption = Constraint(mod.perturb, mod.SCOMPS, mod.zgrid, mod.t, rule=phys_adsorb_nonlinear) 
+    if mod.k_aug:
+        mod.obj = Objective(rule=ObjRule_con, sense=minimize)
 
-    mod.chemical_isotherm_mod = Constraint(mod.perturb, mod.SCOMPS, mod.zgrid, mod.t, rule=chem_isotherm_mod)
-    mod.chemical_adsorption = Constraint(mod.perturb, mod.SCOMPS, mod.zgrid, mod.t, rule=chem_adsorb)
+    mod.physical_adsorption = Constraint(mod.scena, mod.SCOMPS, mod.zgrid, mod.t, rule=phys_adsorb_nonlinear)
+
+    mod.chemical_isotherm_mod = Constraint(mod.scena, mod.SCOMPS, mod.zgrid, mod.t, rule=chem_isotherm_mod)
+    mod.chemical_adsorption = Constraint(mod.scena, mod.SCOMPS, mod.zgrid, mod.t, rule=chem_adsorb)
             
 
             
@@ -1472,7 +1410,7 @@ def fix_initial_bed(m, v_init=2.0):
     Initialize the bed. 
     Make component density and phys/chem adsorption all over the bed at time0 to be 0.0. 
     '''
-    for j in m.perturb:
+    for j in m.scena:
         for z in m.zgrid:
             m.C[j,'CO2',z, m.t0].fix(small_initial)
             m.v[j,z,m.t0].fix(v_init)
@@ -1516,7 +1454,7 @@ def extract2d(m, var):
     for i,t in enumerate(m.t):
         for j,z in enumerate(m.zgrid):
             if m.diff == 0:
-                D1[j,i] = value(var['base',z,t])
+                D1[j,i] = value(var[0,z,t])
             elif m.diff == 1:
                 D1[j,i] = value(var['base',z,t])
                 D2[j,i] = value(var['forward_k',z,t])
@@ -1563,9 +1501,9 @@ def extract3d(m, var, ind):
     for i,t in enumerate(m.t):
         for j,z in enumerate(m.zgrid):
             if m.diff ==0:
-                D1[j,i] = value(var['base',ind,z,t])
+                D1[j,i] = value(var[0,ind,z,t])
             elif m.diff ==1:
-                D1[j,i] = value(var['base',ind,z,t])
+                D1[j,i] = value(var[0,ind,z,t])
                 D2[j,i] = value(var['forward_k',ind,z,t])
                 D3[j,i] = value(var['forward_ua',ind,z,t])
             elif m.diff ==-1:
@@ -2389,7 +2327,7 @@ def extract3(m,result):
             store = pd.DataFrame({'time': time,
                               'position':space,
                               'T_inlet': m.temp_feed,
-                              'y_inlet': m.yfeed['CO2'],
+                              'y_inlet': m.yfeed,
                               status: 0,
                               'fco2': FCO21, 
                               'den_N2': C_N21,
@@ -2586,7 +2524,7 @@ def initial_bed_csv(m, store_):
         
 
     # Loop for every time and grid nodes
-    for j in m.perturb:
+    for j in m.scena:
         for z in m.zgrid:
             for i in m.t:
                 z_ = value(z) /(Ngrid)
