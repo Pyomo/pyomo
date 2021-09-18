@@ -354,7 +354,7 @@ class DesignOfExperiments:
                 output_combine = []
                 for j in self.measurement_variables:
                     for t in self.measurement_timeset:
-                        C_value = eval('mod.' + j + '[0,19,' + str(t) + ']')
+                        C_value = eval('mod.' + j + '[0,' + str(t) + ']')
                         output_combine.append(value(C_value))
                 output_record[no_s] = output_combine
 
@@ -478,16 +478,16 @@ class DesignOfExperiments:
                         else:
                             # if it is not fixed, record its perturbed value
                             if self.mode =='sequential_sipopt':
-                                perturb_value = eval('m_sipopt.sens_sol_state_1[m_sipopt.' + j + '[0,' + str(t) + ']]')
+                                perturb_value = eval('m_sipopt.sens_sol_state_1[m_sipopt.' + j + '[0,19' + str(t) + ']]')
                             else:
-                                perturb_value = eval('m_sipopt.' + j + '[0,' + str(t) + ']()')
+                                perturb_value = eval('m_sipopt.' + j + '[0,19' + str(t) + ']()')
                         perturb_mea.append(perturb_value)
 
                         # base case values
                         if self.mode =='sequential_sipopt':
-                            base_value = eval('m_sipopt.'+j+'[0,' + str(t) + '].value')
+                            base_value = eval('m_sipopt.'+j+'[0,19' + str(t) + '].value')
                         else:
-                            base_value = value(eval('mod.' + j + '[0,' + str(t) + ']'))
+                            base_value = value(eval('mod.' + j + '[0,19' + str(t) + ']'))
 
                         base_mea.append(base_value)
 
@@ -585,6 +585,8 @@ class DesignOfExperiments:
             dsdp_array = dsdp_re.toarray().T
             # here for construction. Remove after finishing.
             dd = pd.DataFrame(dsdp_array)
+            # here for fixed bed
+            self.dsdp = dsdp_array
             # store dsdp returned
             dsdp_extract = []
             # get right lines from results
@@ -596,27 +598,27 @@ class DesignOfExperiments:
             for mname in self.measurement_variables:
                 for tim in measurement_accurate_time:
                     # get the measurement name in the model
-                    measure_name = mname+'[0,'+str(tim)+']'
+                    measure_name = mname+'[0,19,'+str(tim)+']'
                     measurement_names.append(measure_name)
                     # get right line number in kaug results
-                    if self.discretize_model is not None:
+                    #if self.discretize_model is not None:
                         # for DAE model, some variables are fixed
-                        try:
-                            kaug_no = col.index(measure_name)
-                            measurement_index.append(kaug_no)
-                            # get right line of dsdp
-                            dsdp_extract.append(dsdp_array[kaug_no])
-                        except:
-                            if self.verbose:
-                                print('The variable is fixed:', measure_name)
-                            # for fixed variables, the sensitivity are a zero vector
-                            dsdp_extract.append(zero_sens)
-                    else:
+                    try:
                         kaug_no = col.index(measure_name)
                         measurement_index.append(kaug_no)
                         # get right line of dsdp
                         dsdp_extract.append(dsdp_array[kaug_no])
-
+                    except:
+                        if self.verbose:
+                            print('The variable is fixed:', measure_name)
+                        # for fixed variables, the sensitivity are a zero vector
+                        dsdp_extract.append(zero_sens)
+                    #else:
+                    #    kaug_no = col.index(measure_name)
+                    #    measurement_index.append(kaug_no)
+                        # get right line of dsdp
+                    #    dsdp_extract.append(dsdp_array[kaug_no])
+            print('dsdp extract is:', dsdp_extract)
             # Extract and calculate sensitivity if scaled by constants or parameters.
             # Convert sensitivity to a dictionary
             jac = {}
@@ -1096,20 +1098,20 @@ class DesignOfExperiments:
         '''
         # loop over the design variables and time index and to fix values specified in design_val
         for d, dname in enumerate(self.design_name):
-            newvar = eval('m.' + dname)
-            fix_v = design_val[dname][0]
+            # if design variables are indexed by time
+            if self.design_time[d] is not None:
+                for t, time in enumerate(self.design_time[d]):
+                    newvar = eval('m.' + dname + '[' + str(time) + ']')
+                    fix_v = design_val[dname][time]
+            else:
+                newvar = eval('m.' + dname)
+                fix_v = design_val[dname][0]
+
             if fix_opt:
                 newvar.fix(fix_v)
                 print(newvar, 'is fixed at ', fix_v)
             else:
                 newvar.unfix()
-            #for t, time in enumerate(self.design_time[d]):
-            #    newvar = eval('m.' + dname + '[' + str(time) + ']')
-            #    fix_v = design_val[dname][time]
-            #    if fix_opt:
-            #        newvar.fix(fix_v)
-            #    else:
-            #        newvar.unfix()
         return m
 
     def __solve_with_default_ipopt(self):
