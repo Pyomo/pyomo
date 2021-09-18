@@ -37,6 +37,7 @@ class DesignOfExperiments:
         discretize_model: A user-specified function that deiscretizes the model. Only use with Pyomo.DAE, default=None
         verbose: if print statements are made
         args: Other arguments of the create_model function, in a list
+        measurement_extra_index: if measurement variables have extra index between scenario and time indexes. A dictionary, keys are the measurement names, values are a list of indexes.
         '''  
         
         # parameters
@@ -211,7 +212,9 @@ class DesignOfExperiments:
 
 
     def compute_FIM(self, design_values, mode='sequential_finite', FIM_store_name=None, specified_prior=None,
-                    tee_opt=True, scale_nominal_param_value=False, scale_constant_value=1, formula='central', step=0.01,
+                    tee_opt=True, scale_nominal_param_value=False, scale_constant_value=1,
+                    store_output = None, read_output=None,
+                    formula='central', step=0.01,
                     if_Cholesky=False, L_LB=1E-10, L_initial=None):
         '''
         This function solves a square Pyomo model with fixed design variables to compute the FIM.
@@ -313,80 +316,85 @@ class DesignOfExperiments:
             scena_gen = Scenario_generator(self.param_init, formula=self.formula, step=self.step)
             scena_gen.generate_sequential_para()
 
-            # dict for storing model outputs
-            output_record = {}
-            # dict for storing Jacobian
-            jac = {}
-            models = []
-            time_allbuild = []
-            time_allsolve = []
-            # loop over each scenario
-            for no_s in (scena_gen.scena_keys):
+            # if measurements are provided
+            if read_output is not None:
+                with open(read_output, 'rb') as f:
+                    output_record = pickle.load(f)
+                    f.close()
+                jac = self.__finite_calculation(output_record, scena_gen)
+            # if measurements are not provided
+            else:
+                # dict for storing model outputs
+                output_record = {}
+                # dict for storing Jacobian
+                models = []
+                time_allbuild = []
+                time_allsolve = []
+                # loop over each scenario
+                for no_s in (scena_gen.scena_keys):
 
-                scenario_iter = scena_gen.next_sequential_scenario(no_s)
-                print('This scenario:', scenario_iter)
-                # create the model
-                # TODO:(long term) add options to create model once and then update. only try this after the
-                # package is completed and unitest is finished
-                time0_build = time.time()
-                mod = self.create_model(scenario_iter, self.args)
-                time1_build = time.time()
-                time_allbuild.append(time1_build-time0_build)
+                    scenario_iter = scena_gen.next_sequential_scenario(no_s)
+                    print('This scenario:', scenario_iter)
+                    # create the model
+                    # TODO:(long term) add options to create model once and then update. only try this after the
+                    # package is completed and unitest is finished
+                    time0_build = time.time()
+                    mod = self.create_model(scenario_iter, self.args)
+                    time1_build = time.time()
+                    time_allbuild.append(time1_build-time0_build)
 
-                print('Parameters: ', value(mod.fitted_transport_coefficient[0]), ',', value(mod.ua[0]))
+                    print('Parameters: ', value(mod.fitted_transport_coefficient[0]), ',', value(mod.ua[0]))
 
-                # discretize if needed
-                if self.discretize_model is not None:
-                    mod = self.discretize_model(mod)
+                    # discretize if needed
+                    if self.discretize_model is not None:
+                        mod = self.discretize_model(mod)
 
-                # extract (discretized) time
-                time_set = []
-                for t in mod.t:
-                    time_set.append(value(t))
+                    # extract (discretized) time
+                    time_set = []
+                    for t in mod.t:
+                        time_set.append(value(t))
 
-                # solve model
-                time0_solve = time.time()
-                square_result = self.__solve_doe(mod, fix=True)
-                time1_solve = time.time()
-                time_allsolve.append(time1_solve-time0_solve)
-                models.append(mod)
+                    # solve model
+                    time0_solve = time.time()
+                    square_result = self.__solve_doe(mod, fix=True)
+                    time1_solve = time.time()
+                    time_allsolve.append(time1_solve-time0_solve)
+                    models.append(mod)
 
-                # loop over measurement item and time to store model measurements
-                output_combine = []
-                for j in self.measurement_variables:
-                    for t in self.measurement_timeset:
-                        if self.measurement_extra_index is None:
-                            C_value = eval('mod.' + j + '[0,' + str(t) + ']')
-                            output_combine.append(value(C_value))
-                        else:
-                            for ind in self.measurement_extra_index:
-                                C_value = eval('mod.' + j + '[0,' + str(ind) +',' + str(t) + ']')
+                    # loop over measurement item and time to store model measurements
+                    output_combine = []
+                    for j in self.measurement_variables:
+                        if self.measurement_extra_index[j] is None:
+                            for t in self.measurement_timeset:
+                                C_value = eval('mod.' + j + '[0,' + str(t) + ']')
                                 output_combine.append(value(C_value))
-                output_record[no_s] = output_combine
+                        else:
+                            for ind in self.measurement_extra_index[j]:
+                                for t in self.measurement_timeset:
+                                    C_value = eval('mod.' + j + '[0,' + str(ind) +',' + str(t) + ']')
+                                    output_combine.append(value(C_value))
+                    output_record[no_s] = output_combine
 
-                print('Output this time: ', output_record[no_s])
+                    print('Output this time: ', output_record[no_s])
+
+                if store_output is not None:
+                    f = open(store_output, 'wb')
+                    pickle.dump(output_record, f)
+                    f.close()
+
+                # calculate jacobian
+                jac = self.__finite_calculation(output_record, scena_gen)
 
 
-            # After collecting outputs from all scenarios, calculate sensitivity
-            for para in self.param_name:
-                # extract involved scenario No. for each parameter from scenario class
-                involved_s = scena_gen.scenario_para[para]
-                # each parameter has two involved scenarios
-                s1 = involved_s[0]
-                s2 = involved_s[1]
-                list_jac = []
-                for i in range(len(output_record[s1])):
-                    if self.scale_nominal_param_value:
-                        sensi = (output_record[s1][i] - output_record[s2][i]) / scena_gen.eps_abs[para] *self.param_init[para] *self.scale_constant_value
-                    else:
-                        sensi = (output_record[s1][i] - output_record[s2][i]) / scena_gen.eps_abs[para]*self.scale_constant_value
-                    list_jac.append(sensi)
-                # get Jacobian dict, keys are parameter name, values are sensitivity info
-                jac[para] = list_jac
+                if self.verbose:
+                    print('Build time with sequential_finite mode [s]:', sum(time_allbuild))
+                    print('Solve time with sequential_finite mode [s]:', sum(time_allsolve))
 
-            if self.verbose:
-                print('Build time with sequential_finite mode [s]:', sum(time_allbuild))
-                print('Solve time with sequential_finite mode [s]:', sum(time_allsolve))
+                FIM_analysis.build_time = sum(time_allbuild)
+                FIM_analysis.solve_time = sum(time_allsolve)
+
+                # return all models formed
+                self.models = models
 
             # Assemble and analyze results
             if specified_prior is None:
@@ -397,11 +405,8 @@ class DesignOfExperiments:
             FIM_analysis = FIM_result(self.param_name, prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
             # Store the Jacobian information for access by users
-            self.models = models
-            self.jac = jac
-            FIM_analysis.build_time = sum(time_allbuild)
-            FIM_analysis.solve_time = sum(time_allsolve)
 
+            self.jac = jac
             return FIM_analysis
 
 
@@ -663,6 +668,37 @@ class DesignOfExperiments:
         else:
             raise ValueError('This is not a valid mode. Choose from "sequential_finite", "simultaneous_finite", "sequential_sipopt", "sequential_kaug"')
 
+    def __finite_calculation(self, output_record, scena_gen):
+        '''Calculate Jacobian for sequential_finite mode
+
+        Args:
+            output_record: output record
+            scena_gen: scena_gen generated
+
+        Returns:
+
+        '''
+        jac = {}
+        # After collecting outputs from all scenarios, calculate sensitivity
+        for para in self.param_name:
+            # extract involved scenario No. for each parameter from scenario class
+            involved_s = scena_gen.scenario_para[para]
+            # each parameter has two involved scenarios
+            s1 = involved_s[0]
+            s2 = involved_s[1]
+            list_jac = []
+            for i in range(len(output_record[s1])):
+                if self.scale_nominal_param_value:
+                    sensi = (output_record[s1][i] - output_record[s2][i]) / scena_gen.eps_abs[para] * self.param_init[
+                        para] * self.scale_constant_value
+                else:
+                    sensi = (output_record[s1][i] - output_record[s2][i]) / scena_gen.eps_abs[
+                        para] * self.scale_constant_value
+                list_jac.append(sensi)
+            # get Jacobian dict, keys are parameter name, values are sensitivity info
+            jac[para] = list_jac
+
+        return jac
 
     def generate_sequential_experiments(self, design_values_set, mode='sequential_finite', tee_option=False,
                        scale_nominal_param_value=False, scale_constant_value=1,
