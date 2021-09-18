@@ -316,13 +316,14 @@ class DesignOfExperiments:
             output_record = {}
             # dict for storing Jacobian
             jac = {}
-
+            models = []
             time_allbuild = []
             time_allsolve = []
             # loop over each scenario
             for no_s in (scena_gen.scena_keys):
 
                 scenario_iter = scena_gen.next_sequential_scenario(no_s)
+                print('This scenario:', scenario_iter)
                 # create the model
                 # TODO:(long term) add options to create model once and then update. only try this after the
                 # package is completed and unitest is finished
@@ -330,6 +331,8 @@ class DesignOfExperiments:
                 mod = self.create_model(scenario_iter, self.args)
                 time1_build = time.time()
                 time_allbuild.append(time1_build-time0_build)
+
+                print('Parameters: ', value(mod.fitted_transport_coefficient[0]), ',', value(mod.ua[0]))
 
                 # discretize if needed
                 if self.discretize_model is not None:
@@ -345,14 +348,17 @@ class DesignOfExperiments:
                 square_result = self.__solve_doe(mod, fix=True)
                 time1_solve = time.time()
                 time_allsolve.append(time1_solve-time0_solve)
+                models.append(mod)
 
                 # loop over measurement item and time to store model measurements
                 output_combine = []
                 for j in self.measurement_variables:
                     for t in self.measurement_timeset:
-                        C_value = eval('mod.' + j + '[0,' + str(t) + ']')
+                        C_value = eval('mod.' + j + '[0,19,' + str(t) + ']')
                         output_combine.append(value(C_value))
                 output_record[no_s] = output_combine
+
+                print('Output this time: ', output_record[no_s])
 
 
             # After collecting outputs from all scenarios, calculate sensitivity
@@ -385,6 +391,7 @@ class DesignOfExperiments:
             FIM_analysis = FIM_result(self.param_name, prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
             # Store the Jacobian information for access by users
+            self.models = models
             self.jac = jac
             FIM_analysis.build_time = sum(time_allbuild)
             FIM_analysis.solve_time = sum(time_allsolve)
@@ -1089,13 +1096,20 @@ class DesignOfExperiments:
         '''
         # loop over the design variables and time index and to fix values specified in design_val
         for d, dname in enumerate(self.design_name):
-            for t, time in enumerate(self.design_time[d]):
-                newvar = eval('m.' + dname + '[' + str(time) + ']')
-                fix_v = design_val[dname][time]
-                if fix_opt:
-                    newvar.fix(fix_v)
-                else:
-                    newvar.unfix()
+            newvar = eval('m.' + dname)
+            fix_v = design_val[dname][0]
+            if fix_opt:
+                newvar.fix(fix_v)
+                print(newvar, 'is fixed at ', fix_v)
+            else:
+                newvar.unfix()
+            #for t, time in enumerate(self.design_time[d]):
+            #    newvar = eval('m.' + dname + '[' + str(time) + ']')
+            #    fix_v = design_val[dname][time]
+            #    if fix_opt:
+            #        newvar.fix(fix_v)
+            #    else:
+            #        newvar.unfix()
         return m
 
     def __solve_with_default_ipopt(self):
