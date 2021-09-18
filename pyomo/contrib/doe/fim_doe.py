@@ -13,7 +13,7 @@ from idaes.apps.uncertainty_propagation.sens import get_dsdp
 
 class DesignOfExperiments: 
     def __init__(self, param_init, design_variable_timepoints, measurement_variables, measurement_timeset, create_model, solver=None,
-                 prior_FIM=None, discretize_model=None, verbose=True, args=None):
+                 prior_FIM=None, discretize_model=None, verbose=True, args=None, measurement_extra_index=None):
         '''
         This package enables model-based design of experiments analysis with Pyomo. Both direct optimization and enumeration modes are supported.
         NLP sensitivity tools, e.g.,  sipopt and k_aug, are supported to accelerate analysis via enumeration.
@@ -55,6 +55,7 @@ class DesignOfExperiments:
         # create_model()
         self.create_model = create_model
         self.args = args
+        self.measurement_extra_index = measurement_extra_index
         # check if user-defined solver is given
         if solver is not None:
             self.solver = solver
@@ -354,8 +355,13 @@ class DesignOfExperiments:
                 output_combine = []
                 for j in self.measurement_variables:
                     for t in self.measurement_timeset:
-                        C_value = eval('mod.' + j + '[0,' + str(t) + ']')
-                        output_combine.append(value(C_value))
+                        if self.measurement_extra_index is None:
+                            C_value = eval('mod.' + j + '[0,' + str(t) + ']')
+                            output_combine.append(value(C_value))
+                        else:
+                            for ind in self.measurement_extra_index:
+                                C_value = eval('mod.' + j + '[0,' + str(ind) +',' + str(t) + ']')
+                                output_combine.append(value(C_value))
                 output_record[no_s] = output_combine
 
                 print('Output this time: ', output_record[no_s])
@@ -478,16 +484,16 @@ class DesignOfExperiments:
                         else:
                             # if it is not fixed, record its perturbed value
                             if self.mode =='sequential_sipopt':
-                                perturb_value = eval('m_sipopt.sens_sol_state_1[m_sipopt.' + j + '[0,19' + str(t) + ']]')
+                                perturb_value = eval('m_sipopt.sens_sol_state_1[m_sipopt.' + j + '[0,' + str(t) + ']]')
                             else:
-                                perturb_value = eval('m_sipopt.' + j + '[0,19' + str(t) + ']()')
+                                perturb_value = eval('m_sipopt.' + j + '[0,' + str(t) + ']()')
                         perturb_mea.append(perturb_value)
 
                         # base case values
                         if self.mode =='sequential_sipopt':
-                            base_value = eval('m_sipopt.'+j+'[0,19' + str(t) + '].value')
+                            base_value = eval('m_sipopt.'+j+'[0,' + str(t) + '].value')
                         else:
-                            base_value = value(eval('mod.' + j + '[0,19' + str(t) + ']'))
+                            base_value = value(eval('mod.' + j + '[0,' + str(t) + ']'))
 
                         base_mea.append(base_value)
 
