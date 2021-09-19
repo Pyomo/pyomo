@@ -249,6 +249,104 @@ std::shared_ptr<ExpressionBase> appsi_log(std::shared_ptr<ExpressionBase> n)
 }
 
 
+std::shared_ptr<ExpressionBase> appsi_log10(std::shared_ptr<ExpressionBase> n)
+{
+  if (n->is_constant_type())
+    {
+      return std::make_shared<Constant>(std::log10(n->evaluate()));
+    }
+  else
+    {
+      std::shared_ptr<Log10Operator> oper = std::make_shared<Log10Operator>();
+      return unary_helper(n->shared_from_this(), oper);
+    }
+}
+
+
+std::shared_ptr<ExpressionBase> appsi_sin(std::shared_ptr<ExpressionBase> n)
+{
+  if (n->is_constant_type())
+    {
+      return std::make_shared<Constant>(std::sin(n->evaluate()));
+    }
+  else
+    {
+      std::shared_ptr<SinOperator> oper = std::make_shared<SinOperator>();
+      return unary_helper(n->shared_from_this(), oper);
+    }
+}
+
+
+std::shared_ptr<ExpressionBase> appsi_cos(std::shared_ptr<ExpressionBase> n)
+{
+  if (n->is_constant_type())
+    {
+      return std::make_shared<Constant>(std::cos(n->evaluate()));
+    }
+  else
+    {
+      std::shared_ptr<CosOperator> oper = std::make_shared<CosOperator>();
+      return unary_helper(n->shared_from_this(), oper);
+    }
+}
+
+
+std::shared_ptr<ExpressionBase> appsi_tan(std::shared_ptr<ExpressionBase> n)
+{
+  if (n->is_constant_type())
+    {
+      return std::make_shared<Constant>(std::tan(n->evaluate()));
+    }
+  else
+    {
+      std::shared_ptr<TanOperator> oper = std::make_shared<TanOperator>();
+      return unary_helper(n->shared_from_this(), oper);
+    }
+}
+
+
+std::shared_ptr<ExpressionBase> appsi_asin(std::shared_ptr<ExpressionBase> n)
+{
+  if (n->is_constant_type())
+    {
+      return std::make_shared<Constant>(std::asin(n->evaluate()));
+    }
+  else
+    {
+      std::shared_ptr<AsinOperator> oper = std::make_shared<AsinOperator>();
+      return unary_helper(n->shared_from_this(), oper);
+    }
+}
+
+
+std::shared_ptr<ExpressionBase> appsi_acos(std::shared_ptr<ExpressionBase> n)
+{
+  if (n->is_constant_type())
+    {
+      return std::make_shared<Constant>(std::acos(n->evaluate()));
+    }
+  else
+    {
+      std::shared_ptr<AcosOperator> oper = std::make_shared<AcosOperator>();
+      return unary_helper(n->shared_from_this(), oper);
+    }
+}
+
+
+std::shared_ptr<ExpressionBase> appsi_atan(std::shared_ptr<ExpressionBase> n)
+{
+  if (n->is_constant_type())
+    {
+      return std::make_shared<Constant>(std::atan(n->evaluate()));
+    }
+  else
+    {
+      std::shared_ptr<AtanOperator> oper = std::make_shared<AtanOperator>();
+      return unary_helper(n->shared_from_this(), oper);
+    }
+}
+
+
 std::shared_ptr<ExpressionBase> appsi_sum(std::vector<std::shared_ptr<ExpressionBase> > &exprs_to_sum)
 {
   if (exprs_to_sum.size() == 0)
@@ -549,6 +647,48 @@ void ExpOperator::evaluate(double* values)
 void LogOperator::evaluate(double* values)
 {
   values[index] = std::log(operand->get_value_from_array(values));
+}
+
+
+void Log10Operator::evaluate(double* values)
+{
+  values[index] = std::log10(operand->get_value_from_array(values));
+}
+
+
+void SinOperator::evaluate(double* values)
+{
+  values[index] = std::sin(operand->get_value_from_array(values));
+}
+
+
+void CosOperator::evaluate(double* values)
+{
+  values[index] = std::cos(operand->get_value_from_array(values));
+}
+
+
+void TanOperator::evaluate(double* values)
+{
+  values[index] = std::tan(operand->get_value_from_array(values));
+}
+
+
+void AsinOperator::evaluate(double* values)
+{
+  values[index] = std::asin(operand->get_value_from_array(values));
+}
+
+
+void AcosOperator::evaluate(double* values)
+{
+  values[index] = std::acos(operand->get_value_from_array(values));
+}
+
+
+void AtanOperator::evaluate(double* values)
+{
+  values[index] = std::atan(operand->get_value_from_array(values));
 }
 
 
@@ -929,7 +1069,7 @@ void NegationOperator::propagate_degree_forward(int* degrees, double* values)
 }
 
 
-void ExpOperator::propagate_degree_forward(int* degrees, double* values)
+void UnaryOperator::propagate_degree_forward(int* degrees, double* values)
 {
   if (operand->get_degree_from_array(degrees) == 0)
     {
@@ -942,16 +1082,57 @@ void ExpOperator::propagate_degree_forward(int* degrees, double* values)
 }
 
 
-void LogOperator::propagate_degree_forward(int* degrees, double* values)
+std::shared_ptr<ExpressionBase> ExpOperator::call_unary_function(std::shared_ptr<ExpressionBase> e)
 {
-  if (operand->get_degree_from_array(degrees) == 0)
-    {
-      degrees[index] = 0;
-    }
-  else
-    {
-      degrees[index] = 3;
-    }
+  return appsi_exp(e);
+}
+
+
+std::shared_ptr<ExpressionBase> LogOperator::call_unary_function(std::shared_ptr<ExpressionBase> e)
+{
+  return appsi_log(e);
+}
+
+
+std::shared_ptr<ExpressionBase> Log10Operator::call_unary_function(std::shared_ptr<ExpressionBase> e)
+{
+  return appsi_log10(e);
+}
+
+
+std::shared_ptr<ExpressionBase> SinOperator::call_unary_function(std::shared_ptr<ExpressionBase> e)
+{
+  return appsi_sin(e);
+}
+
+
+std::shared_ptr<ExpressionBase> CosOperator::call_unary_function(std::shared_ptr<ExpressionBase> e)
+{
+  return appsi_cos(e);
+}
+
+
+std::shared_ptr<ExpressionBase> TanOperator::call_unary_function(std::shared_ptr<ExpressionBase> e)
+{
+  return appsi_tan(e);
+}
+
+
+std::shared_ptr<ExpressionBase> AsinOperator::call_unary_function(std::shared_ptr<ExpressionBase> e)
+{
+  return appsi_asin(e);
+}
+
+
+std::shared_ptr<ExpressionBase> AcosOperator::call_unary_function(std::shared_ptr<ExpressionBase> e)
+{
+  return appsi_acos(e);
+}
+
+
+std::shared_ptr<ExpressionBase> AtanOperator::call_unary_function(std::shared_ptr<ExpressionBase> e)
+{
+  return appsi_atan(e);
 }
 
 
@@ -1150,7 +1331,7 @@ void NegationOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns,
 }
 
 
-void ExpOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees)
+void UnaryOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees)
 {
   std::shared_ptr<Repn> res = std::make_shared<Repn>();
   repns.push_back(res);
@@ -1163,38 +1344,13 @@ void ExpOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int*
       if (deg1 == 0)
 	{
 	  res->reset_with_constants();
-	  res->constant = appsi_exp(repn1->constant);
+	  res->constant = call_unary_function(repn1->constant);
 	}
       else
 	{
 	  res->reset_with_constants();
 	  std::shared_ptr<ExpressionBase> exp_expr = (*(*(*(repn1->constant) + *(repn1->linear)) + *(repn1->quadratic)) + *(repn1->nonlinear));
-	  res->nonlinear = appsi_exp(exp_expr);
-	}
-    }
-}
-
-
-void LogOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees)
-{
-  std::shared_ptr<Repn> res = std::make_shared<Repn>();
-  repns.push_back(res);
-  if (!(get_unique_degree_from_array(unique_degrees)))
-    {
-      std::shared_ptr<Repn> repn1;
-      repn1 = operand->get_repn_from_vector(repns, degrees, unique_degrees);
-      int deg1;
-      deg1 = operand->get_degree_from_array(degrees);
-      if (deg1 == 0)
-	{
-	  res->reset_with_constants();
-	  res->constant = appsi_log(repn1->constant);
-	}
-      else
-	{
-	  res->reset_with_constants();
-	  std::shared_ptr<ExpressionBase> exp_expr = (*(*(*(repn1->constant) + *(repn1->linear)) + *(repn1->quadratic)) + *(repn1->nonlinear));
-	  res->nonlinear = appsi_log(exp_expr);
+	  res->nonlinear = call_unary_function(exp_expr);
 	}
     }
 }
@@ -1504,6 +1660,62 @@ void LogOperator::print(std::string* string_array)
 }
 
 
+void Log10Operator::print(std::string* string_array)
+{
+  string_array[index] = ("log10(" +
+			 operand->get_string_from_array(string_array) +
+			 ")");
+}
+
+
+void SinOperator::print(std::string* string_array)
+{
+  string_array[index] = ("sin(" +
+			 operand->get_string_from_array(string_array) +
+			 ")");
+}
+
+
+void CosOperator::print(std::string* string_array)
+{
+  string_array[index] = ("cos(" +
+			 operand->get_string_from_array(string_array) +
+			 ")");
+}
+
+
+void TanOperator::print(std::string* string_array)
+{
+  string_array[index] = ("tan(" +
+			 operand->get_string_from_array(string_array) +
+			 ")");
+}
+
+
+void AsinOperator::print(std::string* string_array)
+{
+  string_array[index] = ("asin(" +
+			 operand->get_string_from_array(string_array) +
+			 ")");
+}
+
+
+void AcosOperator::print(std::string* string_array)
+{
+  string_array[index] = ("acos(" +
+			 operand->get_string_from_array(string_array) +
+			 ")");
+}
+
+
+void AtanOperator::print(std::string* string_array)
+{
+  string_array[index] = ("atan(" +
+			 operand->get_string_from_array(string_array) +
+			 ")");
+}
+
+
 void LinearOperator::print(std::string* string_array)
 {
   std::string res = "(" + coefficients->at(0)->__str__() + "*" + variables->at(0)->__str__();
@@ -1711,6 +1923,48 @@ void LogOperator::write_nl_string(std::ofstream& f)
 }
 
 
+void Log10Operator::write_nl_string(std::ofstream& f)
+{
+  f << "o42\n";
+}
+
+
+void SinOperator::write_nl_string(std::ofstream& f)
+{
+  f << "o41\n";
+}
+
+
+void CosOperator::write_nl_string(std::ofstream& f)
+{
+  f << "o46\n";
+}
+
+
+void TanOperator::write_nl_string(std::ofstream& f)
+{
+  f << "o38\n";
+}
+
+
+void AsinOperator::write_nl_string(std::ofstream& f)
+{
+  f << "o51\n";
+}
+
+
+void AcosOperator::write_nl_string(std::ofstream& f)
+{
+  f << "o53\n";
+}
+
+
+void AtanOperator::write_nl_string(std::ofstream& f)
+{
+  f << "o49\n";
+}
+
+
 bool BinaryOperator::is_binary_operator()
 {
   return true;
@@ -1850,64 +2104,215 @@ std::vector<std::shared_ptr<Constant> > create_constants(int n_constants)
 }
 
 
-std::vector<py::object> generate_prefix_notation(py::object expr)
+std::shared_ptr<Node> appsi_operator_from_pyomo_expr(py::handle expr, py::dict var_map, py::dict param_map)
 {
   py::int_ ione = 1;
   py::float_ fone = 1.0;
   py::type int_ = py::type::of(ione);
   py::type float_ = py::type::of(fone);
-  py::bool_ is_expression_type;
+  py::object ScalarParam = py::module_::import("pyomo.core.base.param").attr("ScalarParam");
+  py::object _ParamData = py::module_::import("pyomo.core.base.param").attr("_ParamData");
+  py::object ScalarVar = py::module_::import("pyomo.core.base.var").attr("ScalarVar");
+  py::object _GeneralVarData = py::module_::import("pyomo.core.base.var").attr("_GeneralVarData");
+  py::object numeric_expr = py::module_::import("pyomo.core.expr.numeric_expr");
+  py::object NegationExpression = numeric_expr.attr("NegationExpression");
+  py::object NPV_NegationExpression = numeric_expr.attr("NPV_NegationExpression");
+  py::object ExternalFunctionExpression = numeric_expr.attr("ExternalFunctionExpression");
+  py::object NPV_ExternalFunctionExpression = numeric_expr.attr("NPV_ExternalFunctionExpression");
+  py::object PowExpression = numeric_expr.attr("PowExpression");
+  py::object NPV_PowExpression = numeric_expr.attr("NPV_PowExpression");
+  py::object ProductExpression = numeric_expr.attr("ProductExpression");
+  py::object NPV_ProductExpression = numeric_expr.attr("NPV_ProductExpression");
+  py::object MonomialTermExpression = numeric_expr.attr("MonomialTermExpression");
+  py::object DivisionExpression = numeric_expr.attr("DivisionExpression");
+  py::object NPV_DivisionExpression = numeric_expr.attr("NPV_DivisionExpression");
+  py::object SumExpression = numeric_expr.attr("SumExpression");
+  py::object NPV_SumExpression = numeric_expr.attr("NPV_SumExpression");
+  py::object UnaryFunctionExpression = numeric_expr.attr("UnaryFunctionExpression");
+  py::object NPV_UnaryFunctionExpression = numeric_expr.attr("NPV_UnaryFunctionExpression");
+  py::object LinearExpression = numeric_expr.attr("LinearExpression");
+  py::object builtins = py::module_::import("builtins");
+  py::object id = builtins.attr("id");
 
-  std::vector<py::object> res;
-
+  
   py::type tmp_type = py::type::of(expr);
 
   if (tmp_type.is(int_) || tmp_type.is(float_))
     {
-      res.push_back(expr);
-      return res;
+      return std::make_shared<Constant>(expr.cast<double>());
     }
-
-  is_expression_type = expr.attr("is_expression_type")();
-  if (!is_expression_type)
+  else if (tmp_type.is(ScalarParam) || tmp_type.is(_ParamData))
     {
-      res.push_back(expr);
-      return res;
+      return param_map[id(expr)].cast<std::shared_ptr<Node> >();
     }
-
-  std::vector<py::object> expr_stack;
-  expr_stack.push_back(expr);
-  py::list reversed_args;
-  py::object builtins = py::module_::import("builtins");
-  py::object reversed = builtins.attr("reversed");
-  
-  while (expr_stack.size() > 0)
+  else if (tmp_type.is(ScalarVar) || tmp_type.is(_GeneralVarData))
     {
-      expr = expr_stack.back();
-      res.push_back(expr);
-      expr_stack.pop_back();
-
-      tmp_type = py::type::of(expr);
-
-      if (tmp_type.is(int_) || tmp_type.is(float_))
+      return var_map[id(expr)].cast<std::shared_ptr<Node> >();
+    }
+  else if (tmp_type.is(MonomialTermExpression))
+    {
+      return std::make_shared<MultiplyOperator>();
+    }
+  else if (tmp_type.is(ProductExpression) || tmp_type.is(NPV_ProductExpression))
+    {
+      return std::make_shared<MultiplyOperator>();
+    }
+  else if (tmp_type.is(SumExpression) || tmp_type.is(NPV_SumExpression))
+    {
+      return std::make_shared<SumOperator>();
+    }
+  else if (tmp_type.is(NegationExpression) || tmp_type.is(NPV_NegationExpression))
+    {
+      return std::make_shared<NegationOperator>();
+    }
+  else if (tmp_type.is(DivisionExpression) || tmp_type.is(NPV_DivisionExpression))
+    {
+      return std::make_shared<DivideOperator>();
+    }
+  else if (tmp_type.is(LinearExpression))
+    {
+      return std::make_shared<LinearOperator>();
+    }
+  else if (tmp_type.is(PowExpression) || tmp_type.is(NPV_PowExpression))
+    {
+      return std::make_shared<PowerOperator>();
+    }
+  else if (tmp_type.is(UnaryFunctionExpression) || tmp_type.is(NPV_UnaryFunctionExpression))
+    {
+      std::string function_name = expr.attr("getname")().cast<std::string>();
+      if (function_name == "exp")
 	{
-	  continue;
+	  return std::make_shared<ExpOperator>();
 	}
-
-      is_expression_type = expr.attr("is_expression_type")();
-      if (!is_expression_type)
+      else if (function_name == "log")
 	{
-	  continue;
+	  return std::make_shared<LogOperator>();
 	}
-
-      reversed_args = py::list(reversed(expr.attr("args")));
-      for (py::handle arg : reversed_args)
+      else if (function_name == "log10")
 	{
-	  expr_stack.push_back(arg.cast<py::object>());
+	  return std::make_shared<Log10Operator>();
+	}
+      else if (function_name == "sin")
+	{
+	  return std::make_shared<SinOperator>();
+	}
+      else if (function_name == "cos")
+	{
+	  return std::make_shared<CosOperator>();
+	}
+      else if (function_name == "tan")
+	{
+	  return std::make_shared<TanOperator>();
+	}
+      else if (function_name == "asin")
+	{
+	  return std::make_shared<AsinOperator>();
+	}
+      else if (function_name == "acos")
+	{
+	  return std::make_shared<AcosOperator>();
+	}
+      else if (function_name == "atan")
+	{
+	  return std::make_shared<AtanOperator>();
+	}
+      else
+	{
+	  throw py::value_error("Unrecognized expression type");
 	}
     }
+  else
+    {
+      throw py::value_error("Unrecognized expression type");
+    }
+}
 
-  return res;
+
+std::shared_ptr<ExpressionBase> appsi_expr_from_pyomo_expr(py::handle expr, py::dict var_map, py::dict param_map)
+{
+  py::object numeric_expr = py::module_::import("pyomo.core.expr.numeric_expr");
+  py::object NegationExpression = numeric_expr.attr("NegationExpression");
+  py::object NPV_NegationExpression = numeric_expr.attr("NPV_NegationExpression");
+  py::object ExternalFunctionExpression = numeric_expr.attr("ExternalFunctionExpression");
+  py::object NPV_ExternalFunctionExpression = numeric_expr.attr("NPV_ExternalFunctionExpression");
+  py::object PowExpression = numeric_expr.attr("PowExpression");
+  py::object NPV_PowExpression = numeric_expr.attr("NPV_PowExpression");
+  py::object ProductExpression = numeric_expr.attr("ProductExpression");
+  py::object NPV_ProductExpression = numeric_expr.attr("NPV_ProductExpression");
+  py::object MonomialTermExpression = numeric_expr.attr("MonomialTermExpression");
+  py::object DivisionExpression = numeric_expr.attr("DivisionExpression");
+  py::object NPV_DivisionExpression = numeric_expr.attr("NPV_DivisionExpression");
+  py::object SumExpression = numeric_expr.attr("SumExpression");
+  py::object NPV_SumExpression = numeric_expr.attr("NPV_SumExpression");
+  py::object UnaryFunctionExpression = numeric_expr.attr("UnaryFunctionExpression");
+  py::object NPV_UnaryFunctionExpression = numeric_expr.attr("NPV_UnaryFunctionExpression");
+  py::object LinearExpression = numeric_expr.attr("LinearExpression");
+
+  std::shared_ptr<Node> node;
+  node = appsi_operator_from_pyomo_expr(expr, var_map, param_map);
+  if (node->is_operator_type())
+    {
+      std::vector<std::shared_ptr<Node> > oper_stack;
+      std::vector<py::handle> expr_stack;
+      expr_stack.push_back(expr);
+      oper_stack.push_back(node);
+
+      std::shared_ptr<Node> root = node;
+
+      py::type tmp_type = py::type::of(expr);
+
+      while (expr_stack.size() > 0)
+	{
+	  py::handle _expr = expr_stack.back();
+	  node = oper_stack.back();
+	  expr_stack.pop_back();
+	  oper_stack.pop_back();
+	  tmp_type = py::type::of(_expr);
+
+	  if (tmp_type.is(ProductExpression))
+	    {
+	      std::shared_ptr<MultiplyOperator> oper = std::dynamic_pointer_cast<MultiplyOperator>(node);
+	      py::tuple expr_args = _expr.attr("args");
+	      oper->operand1 = appsi_operator_from_pyomo_expr(expr_args[0], var_map, param_map);
+	      oper->operand2 = appsi_operator_from_pyomo_expr(expr_args[1], var_map, param_map);
+	      if (oper->operand1->is_operator_type())
+		{
+		  expr_stack.push_back(expr_args[0]);
+		  oper_stack.push_back(oper->operand1);
+		}
+	      if (oper->operand2->is_operator_type())
+		{
+		  expr_stack.push_back(expr_args[1]);
+		  oper_stack.push_back(oper->operand2);
+		}
+	    }
+	  else if (tmp_type.is(SumExpression))
+	    {
+	      std::shared_ptr<SumOperator> oper = std::dynamic_pointer_cast<SumOperator>(node);
+	      py::tuple expr_args = _expr.attr("args");
+	      std::shared_ptr<Node> _operand;
+	      for (py::handle arg : expr_args)
+		{
+		  _operand = appsi_operator_from_pyomo_expr(arg, var_map, param_map);
+		  oper->operands->push_back(_operand);
+		  if (_operand->is_operator_type())
+		    {
+		      expr_stack.push_back(arg);
+		      oper_stack.push_back(_operand);
+		    }
+		}
+	    }
+	  else
+	    {
+	      throw py::value_error("Unrecognized expression type");
+	    }
+	}
+      return std::dynamic_pointer_cast<Operator>(root)->expression_from_operator();
+    }
+  else
+    {
+      return std::dynamic_pointer_cast<ExpressionBase>(node);
+    }
 }
 
 

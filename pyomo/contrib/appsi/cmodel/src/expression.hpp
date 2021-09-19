@@ -126,6 +126,13 @@ public:
 
 std::shared_ptr<ExpressionBase> appsi_exp(std::shared_ptr<ExpressionBase> n);
 std::shared_ptr<ExpressionBase> appsi_log(std::shared_ptr<ExpressionBase> n);
+std::shared_ptr<ExpressionBase> appsi_log10(std::shared_ptr<ExpressionBase> n);
+std::shared_ptr<ExpressionBase> appsi_sin(std::shared_ptr<ExpressionBase> n);
+std::shared_ptr<ExpressionBase> appsi_cos(std::shared_ptr<ExpressionBase> n);
+std::shared_ptr<ExpressionBase> appsi_tan(std::shared_ptr<ExpressionBase> n);
+std::shared_ptr<ExpressionBase> appsi_asin(std::shared_ptr<ExpressionBase> n);
+std::shared_ptr<ExpressionBase> appsi_acos(std::shared_ptr<ExpressionBase> n);
+std::shared_ptr<ExpressionBase> appsi_atan(std::shared_ptr<ExpressionBase> n);
 std::shared_ptr<ExpressionBase> appsi_sum(std::vector<std::shared_ptr<ExpressionBase> >& exprs_to_sum);
 std::shared_ptr<ExpressionBase> external_helper(std::string function_name, std::vector<std::shared_ptr<ExpressionBase> > operands);
 
@@ -278,7 +285,10 @@ public:
   std::shared_ptr<Node> operand;
   void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) override;
   bool is_unary_operator() override;
+  void propagate_degree_forward(int* degrees, double* values) override;
   void propagate_unique_degree(int* degrees, bool* unique_degrees) override;
+  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
+  virtual std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) = 0;
 };
 
 
@@ -423,6 +433,7 @@ public:
   std::string name() override {return "NegationOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_negation_operator() override;
+  std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) override;
 };
 
 
@@ -431,12 +442,11 @@ class ExpOperator: public UnaryOperator
 public:
   ExpOperator() = default;
   void evaluate(double* values) override;
-  void propagate_degree_forward(int* degrees, double* values) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "ExpOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_exp_operator() override;
+  std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) override;
 };
 
 
@@ -445,12 +455,95 @@ class LogOperator: public UnaryOperator
 public:
   LogOperator() = default;
   void evaluate(double* values) override;
-  void propagate_degree_forward(int* degrees, double* values) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "LogOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_log_operator() override;
+  std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) override;
+};
+
+
+class Log10Operator: public UnaryOperator
+{
+public:
+  Log10Operator() = default;
+  void evaluate(double* values) override;
+  void print(std::string*) override;
+  std::string name() override {return "Log10Operator";};
+  void write_nl_string(std::ofstream&) override;
+  std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) override;
+};
+
+
+class SinOperator: public UnaryOperator
+{
+public:
+  SinOperator() = default;
+  void evaluate(double* values) override;
+  void print(std::string*) override;
+  std::string name() override {return "SinOperator";};
+  void write_nl_string(std::ofstream&) override;
+  std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) override;
+};
+
+
+class CosOperator: public UnaryOperator
+{
+public:
+  CosOperator() = default;
+  void evaluate(double* values) override;
+  void print(std::string*) override;
+  std::string name() override {return "CosOperator";};
+  void write_nl_string(std::ofstream&) override;
+  std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) override;
+};
+
+
+class TanOperator: public UnaryOperator
+{
+public:
+  TanOperator() = default;
+  void evaluate(double* values) override;
+  void print(std::string*) override;
+  std::string name() override {return "TanOperator";};
+  void write_nl_string(std::ofstream&) override;
+  std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) override;
+};
+
+
+class AsinOperator: public UnaryOperator
+{
+public:
+  AsinOperator() = default;
+  void evaluate(double* values) override;
+  void print(std::string*) override;
+  std::string name() override {return "AsinOperator";};
+  void write_nl_string(std::ofstream&) override;
+  std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) override;
+};
+
+
+class AcosOperator: public UnaryOperator
+{
+public:
+  AcosOperator() = default;
+  void evaluate(double* values) override;
+  void print(std::string*) override;
+  std::string name() override {return "AcosOperator";};
+  void write_nl_string(std::ofstream&) override;
+  std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) override;
+};
+
+
+class AtanOperator: public UnaryOperator
+{
+public:
+  AtanOperator() = default;
+  void evaluate(double* values) override;
+  void print(std::string*) override;
+  std::string name() override {return "AtanOperator";};
+  void write_nl_string(std::ofstream&) override;
+  std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) override;
 };
 
 
@@ -472,5 +565,4 @@ std::vector<std::shared_ptr<Var> > create_vars(int n_vars);
 std::vector<std::shared_ptr<Param> > create_params(int n_params);
 std::vector<std::shared_ptr<Constant> > create_constants(int n_constants);
 std::vector<std::shared_ptr<Repn> > generate_repns(std::vector<std::shared_ptr<ExpressionBase> > exprs);
-
-std::vector<py::object> generate_prefix_notation(py::object);
+std::shared_ptr<ExpressionBase> appsi_expr_from_pyomo_expr(py::handle expr, py::dict var_map, py::dict param_map);
