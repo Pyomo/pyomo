@@ -326,6 +326,12 @@ class DesignOfExperiments:
             else:
                 # dict for storing model outputs
                 output_record = {}
+                # Temp: dict for fixed bed
+                output_record_fco2 = {}
+                output_record_tmid = {}
+                output_record_tend = {}
+                output_record_botht = {}
+
                 # dict for storing Jacobian
                 models = []
                 time_allbuild = []
@@ -362,7 +368,38 @@ class DesignOfExperiments:
                     models.append(mod)
 
                     # loop over measurement item and time to store model measurements
-                    output_combine = []
+                    output_combine_fco2 = []
+                    output_combine_tmid = []
+                    output_combine_tend = []
+                    output_combine_botht = []
+                    #
+                    for j in ['FCO2']:
+                        for t in self.measurement_timeset:
+                            C_value = eval('mod.' + j + '[0,19,' + str(t) + ']')
+                            output_combine_fco2.append(value(C_value))
+                            output_combine_tmid.append(value(C_value))
+                            output_combine_tend.append(value(C_value))
+                            output_combine_botht.append(value(C_value))
+                    output_record_fco2[no_s] = output_combine_fco2
+
+                    for j in ['temp']:
+                        for t in self.measurement_timeset:
+                            C_value = eval('mod.'+ j + '[0,10,' + str(t) + ']')
+                            output_combine_tmid.append(value(C_value))
+                            output_combine_botht.append(value(C_value))
+
+                    output_record_tmid[no_s] = output_combine_tmid
+
+                    for j in ['temp']:
+                        for t in self.measurement_timeset:
+                            C_value = eval('mod.'+ j + '[0,19,' + str(t) + ']')
+                            output_combine_tend.append(value(C_value))
+                            output_combine_botht.append(value(C_value))
+
+                    output_record_tend[no_s] = output_combine_tend
+                    output_record_botht[no_s] = output_combine_botht
+
+                    '''
                     for j in self.measurement_variables:
                         if self.measurement_extra_index[j] is None:
                             for t in self.measurement_timeset:
@@ -374,13 +411,27 @@ class DesignOfExperiments:
                                     C_value = eval('mod.' + j + '[0,' + str(ind) +',' + str(t) + ']')
                                     output_combine.append(value(C_value))
                     output_record[no_s] = output_combine
-
+                        
                     print('Output this time: ', output_record[no_s])
-
+                    '''
                 if store_output is not None:
-                    f = open(store_output, 'wb')
-                    pickle.dump(output_record, f)
+                    #f = open(store_output, 'wb')
+                    #pickle.dump(output_record, f)
+                    #f.close()
+                    f = open(store_output+'_fco2', 'wb')
+                    pickle.dump(output_record_fco2, f)
                     f.close()
+                    g = open(store_output+'_tmid', 'wb')
+                    pickle.dump(output_record_tmid, g)
+                    g.close()
+                    h = open(store_output+'_tend', 'wb')
+                    pickle.dump(output_record_tend, h)
+                    h.close()
+                    e = open(store_output+'_botht', 'wb')
+                    pickle.dump(output_record_botht, e)
+                    e.close()
+
+                output_record = output_record_botht.copy()
 
                 # calculate jacobian
                 jac = self.__finite_calculation(output_record, scena_gen)
@@ -389,9 +440,6 @@ class DesignOfExperiments:
                 if self.verbose:
                     print('Build time with sequential_finite mode [s]:', sum(time_allbuild))
                     print('Solve time with sequential_finite mode [s]:', sum(time_allsolve))
-
-                FIM_analysis.build_time = sum(time_allbuild)
-                FIM_analysis.solve_time = sum(time_allsolve)
 
                 # return all models formed
                 self.models = models
@@ -407,6 +455,11 @@ class DesignOfExperiments:
             # Store the Jacobian information for access by users
 
             self.jac = jac
+
+            if read_output is None:
+                FIM_analysis.build_time = sum(time_allbuild)
+                FIM_analysis.solve_time = sum(time_allsolve)
+
             return FIM_analysis
 
 
@@ -770,7 +823,7 @@ class DesignOfExperiments:
         return result_object_list, fim_list
 
     def run_grid_search(self, design_values, design_ranges, design_dimension_names, design_control_time, mode='sequential_finite',
-                        tee_option=False, scale_nominal_param_value=False, scale_constant_value=1,
+                        tee_option=False, scale_nominal_param_value=False, scale_constant_value=1, store_name= None, read_name=None,
                         filename=None, formula='central', step=0.001):
         '''
         Enumerate through full grid search for any number of design variables;
@@ -851,32 +904,49 @@ class DesignOfExperiments:
             print('=======This is the ', count+1, 'th iteration=======')
             print('Design variable values of this iteration:', design_iter)
 
+            # generate store name
+            if store_name is None:
+                store_output_name = None
+            else:
+                store_output_name = store_name + str(count)
+
+            if read_name is not None:
+                read_input_name = read_name+str(count)+'_fco2'
+            else:
+                read_input_name = None
+
             # call compute_FIM to get FIM
-            result_iter = self.compute_FIM(design_iter, mode=mode,
-                                           tee_opt=tee_option,
-                                           scale_nominal_param_value=scale_nominal_param_value,
-                                           scale_constant_value = scale_constant_value,
-                                           formula=formula, step=step)
-            build_time_store.append(result_iter.build_time)
-            solve_time_store.append(result_iter.solve_time)
+            try:
+                result_iter = self.compute_FIM(design_iter, mode=mode,
+                                               tee_opt=tee_option,
+                                               scale_nominal_param_value=scale_nominal_param_value,
+                                               scale_constant_value = scale_constant_value,
+                                               store_output=store_output_name, read_output=read_input_name,
+                                               formula=formula, step=step)
+                build_time_store.append(result_iter.build_time)
+                solve_time_store.append(result_iter.solve_time)
 
-            if (mode=='simultaneous_finite'):
-                result_iter.extract_FIM(self.m, self.design_timeset, self.square_result, self.objective_option)
+                if (mode=='simultaneous_finite'):
+                    result_iter.extract_FIM(self.m, self.design_timeset, self.square_result, self.objective_option)
 
-            elif (mode in ['sequential_finite', 'sequential_sipopt', 'sequential_kaug', 'direct_kaug']):
-                result_iter.calculate_FIM(self.jac, self.design_values)
+                elif (mode in ['sequential_finite', 'sequential_sipopt', 'sequential_kaug', 'direct_kaug']):
+                    result_iter.calculate_FIM(self.jac, self.design_values)
 
-            t_now = time.time()
+                t_now = time.time()
 
-            if self.verbose:
-                # give run information at each iteration
-                print('This is the ', count+1, ' run out of ', total_count, 'run.')
-                print('The code has run %.04f seconds.'% (t_now-t_enumeration_begin))
-                print('Estimated remaining time: %.4f seconds' % ((t_now-t_enumeration_begin)/(count+1)*(total_count-count-1)))
-            count += 1
+                if self.verbose:
+                    # give run information at each iteration
+                    print('This is the ', count+1, ' run out of ', total_count, 'run.')
+                    print('The code has run %.04f seconds.'% (t_now-t_enumeration_begin))
+                    print('Estimated remaining time: %.4f seconds' % ((t_now-t_enumeration_begin)/(count+1)*(total_count-count-1)))
+                count += 1
 
-            # the combined result object are organized as a dictionary, keys are a tuple of the design variable values, values are a result object
-            result_combine[tuple(design_set_iter)] = result_iter
+                # the combined result object are organized as a dictionary, keys are a tuple of the design variable values, values are a result object
+                result_combine[tuple(design_set_iter)] = result_iter
+
+            except:
+                print(':::::::::::ERROR: Cannot converge this run.::::::::::::')
+                result_combine[tuple(design_set_iter)] = None
 
         # For user's access
         self.all_fim = result_combine
