@@ -10,12 +10,13 @@
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.core.base.component import ModelComponentFactory
-from pyomo.dae.contset import ContinuousSet
-from pyomo.dae.diffvar import DAE_Error
+from pyomo.core.base.indexed_component import rule_wrapper
 from pyomo.core.base.expression import (Expression,
                                         _GeneralExpressionData,
                                         ScalarExpression,
                                         IndexedExpression)
+from pyomo.dae.contset import ContinuousSet
+from pyomo.dae.diffvar import DAE_Error
 
 __all__ = ('Integral', )
 
@@ -110,14 +111,19 @@ class Integral(Expression):
             raise ValueError(
                 "Must specify an integral expression")
 
-        def _trap_rule(m, *a):
+        _is_indexed = bool(len(arg))
+
+        def _trap_rule(rule, m, *a):
             ds = sorted(m.find_component(wrt.local_name))
             return sum(0.5 * (ds[i + 1] - ds[i]) *
-                       (intexp(m, * (a[0:loc] + (ds[i + 1],) + a[loc:])) +
-                        intexp(m, * (a[0:loc] + (ds[i],) + a[loc:])))
+                       (rule(m, * (a[0:loc] + (ds[i + 1],) + a[loc:])) +
+                        rule(m, * (a[0:loc] + (ds[i],) + a[loc:])))
                        for i in range(len(ds) - 1))
 
-        kwds['rule'] = _trap_rule    
+        # Note that position_map is mapping arguments (block, *args), so
+        # must be 1 more than len(args), and loc has to be offset by one
+        kwds['rule'] = rule_wrapper(intexp, _trap_rule, positional_arg_map=(
+            i for i in range(len(args)+1) if i != loc+1))
         kwds.setdefault('ctype', Integral)
         Expression.__init__(self, *arg, **kwds)
 

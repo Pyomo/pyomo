@@ -29,7 +29,7 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.core.expr import native_numeric_types, native_types
 import pyomo.core.base.set as SetModule
 from pyomo.core.base.indexed_component import normalize_index
-from pyomo.core.base.util import (
+from pyomo.core.base.initializer import (
     ConstantInitializer, ItemInitializer, IndexedCallInitializer,
 )
 from pyomo.core.base.set import (
@@ -2027,11 +2027,19 @@ A : Size=1, Index=None, Ordered=True
                 TypeError, "Cannot apply a Set operator to an "
                 r"indexed Set component \(J\)"):
             m.I | m.J
+        with self.assertRaisesRegex(
+                TypeError, "Cannot apply a Set operator to an "
+                r"indexed Set component \(J\)"):
+            m.J | m.I
         m.x = Suffix()
         with self.assertRaisesRegex(
                 TypeError, "Cannot apply a Set operator to a "
                 r"non-Set Suffix component \(x\)"):
             m.I | m.x
+        with self.assertRaisesRegex(
+                TypeError, "Cannot apply a Set operator to a "
+                r"non-Set Suffix component \(x\)"):
+            m.x | m.I
         m.y = Var([1,2])
         with self.assertRaisesRegex(
                 TypeError, "Cannot apply a Set operator to an "
@@ -2041,6 +2049,14 @@ A : Size=1, Index=None, Ordered=True
                 TypeError, "Cannot apply a Set operator to a "
                 r"non-Set component data \(y\[1\]\)"):
             m.I | m.y[1]
+        with self.assertRaisesRegex(
+                TypeError, "Cannot apply a Set operator to an "
+                r"indexed Var component \(y\)"):
+            m.y | m.I
+        with self.assertRaisesRegex(
+                TypeError, "Cannot apply a Set operator to a "
+                r"non-Set component data \(y\[1\]\)"):
+            m.y[1] | m.I
 
 class TestSetIntersection(unittest.TestCase):
     def test_pickle(self):
@@ -3275,6 +3291,22 @@ class TestGlobalSets(unittest.TestCase):
         self.assertEqual(str(Reals), 'Reals')
         self.assertEqual(str(Integers), 'Integers')
 
+    def test_block_independent(self):
+        m = ConcreteModel()
+        with self.assertRaisesRegex(
+                RuntimeError,
+                "Cannot assign a GlobalSet 'Reals' to model 'unknown'"):
+            m.a_set = Reals
+        self.assertEqual(str(Reals), 'Reals')
+        self.assertIsNone(Reals._parent)
+        m.blk = Block()
+        with self.assertRaisesRegex(
+                RuntimeError,
+                "Cannot assign a GlobalSet 'Reals' to block 'blk'"):
+            m.blk.a_set = Reals
+        self.assertEqual(str(Reals), 'Reals')
+        self.assertIsNone(Reals._parent)
+
     def test_iteration(self):
         with self.assertRaisesRegex(
                 TypeError, "'GlobalSet' object is not iterable "
@@ -3586,18 +3618,18 @@ class TestSet(unittest.TestCase):
             self.assertTrue(_s.isordered())
             self.assertTrue(_s.isfinite())
             for i,v in enumerate(_l):
-                self.assertEqual(_s[i+1], v)
+                self.assertEqual(_s.at(i+1), v)
             with self.assertRaisesRegex(IndexError, "I index out of range"):
-                _s[len(_l)+1]
+                _s.at(len(_l)+1)
             with self.assertRaisesRegex(IndexError, "I index out of range"):
-                _s[len(_l)+2]
+                _s.at(len(_l)+2)
 
             for i,v in enumerate(reversed(_l)):
-                self.assertEqual(_s[-(i+1)], v)
+                self.assertEqual(_s.at(-(i+1)), v)
             with self.assertRaisesRegex(IndexError, "I index out of range"):
-                _s[-len(_l)-1]
+                _s.at(-len(_l)-1)
             with self.assertRaisesRegex(IndexError, "I index out of range"):
-                _s[-len(_l)-2]
+                _s.at(-len(_l)-2)
 
             for i,v in enumerate(_l):
                 self.assertEqual(_s.ord(v), i+1)
@@ -5544,6 +5576,28 @@ class TestDeprecation(unittest.TestCase):
             r"^DEPRECATED: check_values\(\) is deprecated: Sets only "
             r"contain valid")
 
+    def test_getitem(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=['a','b'])
+        with LoggingIntercept() as OUT:
+            self.assertIs(m.I[None], m.I)
+        self.assertEqual(OUT.getvalue(), "")
+
+        with LoggingIntercept() as OUT:
+            self.assertEqual(m.I[2], 'b')
+        self.assertRegex(
+            OUT.getvalue().replace('\n', ' '),
+            r"^DEPRECATED: Using __getitem__ to return a set value from "
+            r"its \(ordered\) position is deprecated.  Please use at\(\)")
+
+        with LoggingIntercept() as OUT:
+            self.assertEqual(m.I.card(2), 'b')
+        self.assertRegex(
+            OUT.getvalue().replace('\n', ' '),
+            r"^DEPRECATED: card\(\) was incorrectly added to the Set API.  "
+            r"Please use at\(\)")
+
+
 
 class TestIssues(unittest.TestCase):
     def test_issue_43(self):
@@ -5812,6 +5866,7 @@ c : Size=3, Index=CHOICES, Active=True
 
     @unittest.skipIf(NamedTuple is None, "typing module not available")
     def test_issue_938(self):
+        self.maxDiff = None
         NodeKey = NamedTuple('NodeKey', [('id', int)])
         ArcKey = NamedTuple('ArcKey',
                             [('node_from', NodeKey), ('node_to', NodeKey)])
@@ -5920,3 +5975,19 @@ c : Size=3, Index=CHOICES, Active=True
         self.assertEqual(len(m.a), 0)
         m.b = Set(initialize=b_rule, dimen=2)
         self.assertEqual(len(m.b), 0)
+
+    def test_issue_1112(self):
+        m = ConcreteModel()
+        m.a = Set(initialize=[1,2,3])
+        #
+        vals = list(m.a.values())
+        self.assertEqual(len(vals), 1)
+        self.assertIs(vals[0], m.a)
+        #
+        cross = m.a.cross(m.a)
+        self.assertIs(type(cross), SetProduct_OrderedSet)
+        #
+        vals = list(m.a.cross(m.a).values())
+        self.assertEqual(len(vals), 1)
+        self.assertIsInstance(vals[0], SetProduct_OrderedSet)
+        self.assertIsNot(vals[0], cross)

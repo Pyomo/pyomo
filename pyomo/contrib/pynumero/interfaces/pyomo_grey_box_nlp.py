@@ -83,7 +83,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
                     # check that no variables are fixed
                     fixed_vars.extend(v for v in data.inputs.values() if v.fixed)
                     fixed_vars.extend(v for v in data.outputs.values() if v.fixed)
-                    greybox_nlp = _ExternalGreyBoxAsNLP(greybox)
+                    greybox_nlp = _ExternalGreyBoxAsNLP(data)
                     greybox_nlps.append(greybox_nlp)
 
         if fixed_vars:
@@ -95,6 +95,8 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
             raise NotImplementedError('PyomoNLPWithGreyBoxBlocks does not support fixed inputs or outputs')
 
         # let's build up the union of all the primal variables names
+        # RBP: Why use names here? Why not just ComponentSet of all
+        # data objects?
         primals_names = set(self._pyomo_nlp.primals_names())
         for gbnlp in greybox_nlps:
             primals_names.update(gbnlp.primals_names())
@@ -360,6 +362,8 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
     def evaluate_hessian_lag(self, out=None):
         list_of_hessians = [nlp.evaluate_hessian_lag() for nlp in self._nlps]
         if self._sparse_hessian_summation is None:
+            # This is assuming that the nonzero structures of Hessians
+            # do not change
             self._sparse_hessian_summation = CondensedSparseSummation(list_of_hessians)
         ret = self._sparse_hessian_summation.sum(list_of_hessians)
 

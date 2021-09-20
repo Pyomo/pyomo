@@ -214,6 +214,61 @@ class TestNumericRange(unittest.TestCase):
         self.assertNotIn(-1.1, NR(10, None, -2))
         self.assertNotIn(1.1, NR(0, None, 2))
 
+        # test special cases (for implicit numpy ndarray compatibility)
+        self.assertNotIn('z', NR(0, None, 0))
+        self.assertNotIn(['z'], NR(0, None, 0))
+        self.assertIn([1], NR(0, None, 0))
+        self.assertNotIn([-1], NR(0, None, 0))
+        self.assertIn({0:1}, NR(0, None, 0))
+        self.assertNotIn({0:-1}, NR(0, None, 0))
+        self.assertNotIn({1:1}, NR(0, None, 0))
+
+        class _Unrelated(object):
+            pass
+        self.assertNotIn(_Unrelated(), NR(0, None, 0))
+        self.assertNotIn(_Unrelated, NR._types_comparable_to_int)
+
+        class _NonComparable(_Unrelated):
+            def __init__(self, val):
+                self.val = val
+            def __sub__(self, other):
+                return self
+            def __gt__(self, other):
+                return True
+            def __le__(self, other):
+                return True
+        self.assertNotIn(_NonComparable(1), NR(0, None, 0))
+        self.assertNotIn(_NonComparable, NR._types_comparable_to_int)
+
+        class _NotCastable(_NonComparable):
+            def __lt__(self, other):
+                return True
+            def __eq__(self, other):
+                return True
+            def __ne__(self, other):
+                return True
+        self.assertNotIn(_NotCastable(1), NR(0, None, 0))
+        self.assertNotIn(_NotCastable, NR._types_comparable_to_int)
+
+        class _Custom(object):
+            def __init__(self, val):
+                self.val = val
+            def __lt__(self, other):
+                return self.val < other
+            def __gt__(self, other):
+                return self.val > other
+            def __le__(self, other):
+                return self.val <= other
+            def __ge__(self, other):
+                return self.val >= other
+            def __eq__(self, other):
+                return self.val == other
+            def __sub__(self, other):
+                return self.val - other
+        self.assertIn(_Custom(1), NR(0, None, 0))
+        self.assertIn(_Custom, NR._types_comparable_to_int)
+        NR._types_comparable_to_int.discard(_Custom)
+
     def test_isdisjoint(self):
         def _isdisjoint(expected_result, a, b):
             self.assertIs(expected_result, a.isdisjoint(b))

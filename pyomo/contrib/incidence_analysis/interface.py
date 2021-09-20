@@ -17,8 +17,12 @@ from pyomo.core.base.reference import Reference
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import scipy_available
+from pyomo.common.dependencies import networkx as nx
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.triangularize import block_triangularize
+from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
+    dulmage_mendelsohn,
+    )
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
     import scipy as sp
@@ -40,14 +44,48 @@ def _check_unindexed(complist):
                     )
 
 
+def get_incidence_graph(variables, constraints, include_fixed=True):
+    """
+    This function gets the incidence graph of Pyomo variables and constraints.
+
+    Arguments:
+    ----------
+    variables: List of Pyomo VarData objects
+        Variables that will appear in incidence graph
+    constraints: List of Pyomo ConstraintData objects
+        Constraints that will appear in incidence graph
+    include_fixed: Bool
+        Flag for whether fixed variable should be included in the incidence
+
+    Returns:
+    --------
+    NetworkX Graph
+        
+    """
+    _check_unindexed(variables+constraints)
+    N, M = len(variables), len(constraints)
+    graph = nx.Graph()
+    graph.add_nodes_from(range(M), bipartite=0)
+    graph.add_nodes_from(range(M, M+N), bipartite=1)
+    var_node_map = ComponentMap((v, M+i) for i, v in enumerate(variables))
+    for i, con in enumerate(constraints):
+        for var in identify_variables(con.body, include_fixed=include_fixed):
+            if var in var_node_map:
+                graph.add_edge(i, var_node_map[var])
+    return graph
+
+
 def get_structural_incidence_matrix(variables, constraints, include_fixed=True):
     """
     This function gets the incidence matrix of Pyomo constraints and variables.
 
     Arguments
     ---------
-    variables: A list of Pyomo variable data objects
-    constraints: A list of Pyomo constraint data objects
+    variables: List of Pyomo VarData objects
+    constraints: List of Pyomo ConstraintData objects
+    include_fixed: Bool
+        Flag for whether fixed variables should be included in the matrix
+        nonzeros
 
     Returns
     -------
@@ -128,8 +166,9 @@ class IncidenceGraphInterface(object):
         # later on.
         # WARNING: This cache will become invalid if the user alters their
         #          model.
-        self.cached = IncidenceMatrixType.NONE
-        if isinstance(model, PyomoNLP):
+        if model is None:
+            self.cached = IncidenceMatrixType.NONE
+        elif isinstance(model, PyomoNLP):
             nlp = model
             self.cached = IncidenceMatrixType.NUMERIC
             self.variables = nlp.get_pyomo_variables()
@@ -151,7 +190,7 @@ class IncidenceGraphInterface(object):
                     self.variables,
                     self.constraints,
                     )
-        elif model is not None:
+        else:
             raise TypeError(
                 "Unsupported type for incidence matrix. Expected "
                 "%s or %s but got %s."
@@ -237,3 +276,31 @@ class IncidenceGraphInterface(object):
         # Switch the order of the maps here to match the method call.
         # Hopefully this does not get too confusing...
         return var_block_map, con_block_map
+
+    def dulmage_mendelsohn(self, variables=None, constraints=None):
+        """
+        Returns the Dulmage-Mendelsohn partition of the incidence graph
+        of the provided variables and constraints.
+
+        Returns:
+        --------
+        ColPartition namedtuple and RowPartition namedtuple.
+        The ColPartition is returned first to match the order of variables
+        and constraints in the method arguments.
+        These partition variables (columns) and constraints (rows)
+        into overconstrained, underconstrained, unmatched, and square.
+
+        """
+        variables, constraints = self._validate_input(variables, constraints)
+        matrix = self._extract_submatrix(variables, constraints)
+
+        row_partition, col_partition = dulmage_mendelsohn(matrix.tocoo())
+        con_partition = tuple(
+                [constraints[i] for i in subset] for subset in row_partition
+                )
+        var_partition = tuple(
+                [variables[i] for i in subset] for subset in col_partition
+                )
+        # Switch the order of the maps here to match the method call.
+        # Hopefully this does not get too confusing...
+        return var_partition, con_partition

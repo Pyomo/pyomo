@@ -71,7 +71,7 @@ def setup_environment(data):
     #
     postsolve = getattr(data.options, 'postsolve', None)
     if postsolve:
-        if not yaml_available and data.options.postsolve.results_format == 'yaml':
+        if data.options.postsolve.results_format == 'yaml' and not yaml_available:
             raise ValueError("Configuration specifies a yaml file, but pyyaml is not installed!")
     #
     global start_time
