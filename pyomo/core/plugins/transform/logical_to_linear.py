@@ -32,17 +32,23 @@ class LogicalToLinear(IsomorphicTransformation):
         for boolean_var in model.component_objects(ctype=BooleanVar,
                                                    descend_into=(Block,
                                                                  Disjunct)):
-            new_varlist = None
+            new_varlists = {}
             for bool_vardata in boolean_var.values():
+                # we have neither the list nor an associated binary
+                parent_block = bool_vardata.parent_block()
+                new_varlist = new_varlists.get(parent_block)
                 if new_varlist is None and \
                    bool_vardata.get_associated_binary() is None:
                     new_var_list_name = unique_component_name(
-                        model,
+                        parent_block,
                         boolean_var.local_name + '_asbinary')
                     new_varlist = VarList(domain=Binary)
-                    setattr(model, new_var_list_name, new_varlist)
+                    setattr(parent_block, new_var_list_name, new_varlist)
+                    new_varlists[parent_block] = new_varlist
 
                 if bool_vardata.get_associated_binary() is None:
+                    # we already have a list, but need to create the associated
+                    # binary
                     new_binary_vardata = new_varlist.add()
                     bool_vardata.associate_binary_var(new_binary_vardata)
                     if bool_vardata.value is not None:
@@ -52,6 +58,11 @@ class LogicalToLinear(IsomorphicTransformation):
 
         # Process statements in global (entire model) context
         _process_logical_constraints_in_logical_context(model)
+        # Now go do the ones on Blocks
+        for block in model.component_data_objects(Block,
+                                                  descend_into=(Block, Disjunct),
+                                                  active=True):
+            _process_logical_constraints_in_logical_context(block)
         # Process statements that appear in disjuncts
         for disjunct in model.component_data_objects(Disjunct,
                                                      descend_into=(Block,
@@ -62,7 +73,7 @@ class LogicalToLinear(IsomorphicTransformation):
 
 def update_boolean_vars_from_binary(model, integer_tolerance=1e-5):
     """Updates all Boolean variables based on the value of their linked binary
-variables."""
+    variables."""
     for boolean_var in model.component_data_objects(BooleanVar,
                                                     descend_into=(Block,
                                                                   Disjunct)):
@@ -77,7 +88,6 @@ variables."""
                                  "%s = %s" % (binary_var.name, binary_var.value))
             boolean_var.stale = binary_var.stale
 
-
 def _process_logical_constraints_in_logical_context(context):
     new_xfrm_block_name = unique_component_name(context, 'logic_to_linear')
     new_xfrm_block = Block(doc="Transformation objects for logic_to_linear")
@@ -91,7 +101,7 @@ def _process_logical_constraints_in_logical_context(context):
     cnf_statements = []
     # Convert all logical constraints to CNF
     for logical_constraint in context.component_data_objects(
-            ctype=LogicalConstraint, active=True):
+            ctype=LogicalConstraint, active=True, descend_into=False):
         cnf_statements.extend(to_cnf(logical_constraint.body, new_boolvarlist,
                                      indicator_map))
         logical_constraint.deactivate()

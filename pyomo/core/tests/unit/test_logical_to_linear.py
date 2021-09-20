@@ -362,6 +362,11 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
                                                             m.b.Y[3])))
         TransformationFactory('core.logical_to_linear').apply_to(m)
 
+        boolean_var = m.b.component("Y_asbinary")
+        self.assertIsInstance(boolean_var, Var)
+        notAVar = m.component("Y_asbinary")
+        self.assertIsNone(notAVar)
+
         transBlock = m.b.component("logic_to_linear")
         self.assertIsInstance(transBlock, Block)
         notAThing = m.component("logic_to_linear")
@@ -388,6 +393,20 @@ class TestLogicalToLinearBackmap(unittest.TestCase):
         self.assertTrue(m.Y[1].value)
         self.assertFalse(m.Y[2].value)
         self.assertIsNone(m.Y[3].value)
+
+    def test_backmap_hierarchical_model(self):
+        m = _generate_boolean_model(3)
+        m.b = Block()
+        m.b.Y = BooleanVar()
+        TransformationFactory('core.logical_to_linear').apply_to(m)
+        m.Y_asbinary[1].value = 1
+        m.Y_asbinary[2].value = 0
+        m.b.Y_asbinary.value = 1
+        update_boolean_vars_from_binary(m)
+        self.assertTrue(m.Y[1].value)
+        self.assertFalse(m.Y[2].value)
+        self.assertIsNone(m.Y[3].value)
+        self.assertTrue(m.b.Y.value)
 
     def test_backmap_noninteger(self):
         m = _generate_boolean_model(2)
