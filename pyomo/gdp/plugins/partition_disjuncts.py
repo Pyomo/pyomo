@@ -20,10 +20,10 @@ from pyomo.common.config import (ConfigBlock, ConfigValue)
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import ( Block, Constraint, Var, SortComponents, Transformation,
                          TransformationFactory, TraversalStrategy,
-                         NonNegativeIntegers, value, ConcreteModel,
-                         NonNegativeIntegers, Objective, ComponentMap,
-                         BooleanVar, LogicalConstraint, Connector, Expression,
-                         Suffix, Param, Set, SetOf, RangeSet, Reference)
+                         NonNegativeIntegers, value, ConcreteModel, Objective,
+                         ComponentMap, BooleanVar, LogicalConstraint, Connector,
+                         Expression, Suffix, Param, Set, SetOf, RangeSet,
+                         Reference)
 from pyomo.core.base.external import ExternalFunction
 from pyomo.network import Port
 from pyomo.common.collections import ComponentSet
@@ -408,6 +408,9 @@ class PartitionDisjuncts_Transformation(Transformation):
                 '_pyomo_gdp_partition_disjuncts_reformulation'),
             transformation_block)
 
+        transformation_block.indicator_var_equalities = Constraint(
+            NonNegativeIntegers)
+
         return transformation_block
 
     def _add_var_reference(self, var, disjunct, transformed_disjunct,
@@ -509,6 +512,13 @@ class PartitionDisjuncts_Transformation(Transformation):
                                                             transBlock)
             if transformed_disjunct is not None:
                 transformed_disjuncts.append(transformed_disjunct)
+                # [ESJ 9/20/21]: TODO: These should be LogicalConstraints, but
+                # I'm not sure we should do that until the writers will complain
+                # about stuff they don't understand.
+                transBlock.indicator_var_equalities[
+                    len(transBlock.indicator_var_equalities)] = \
+                        disjunct.binary_indicator_var == \
+                        transformed_disjunct.binary_indicator_var
 
         # make a new disjunction with the transformed guys
         transformed_disjunction = Disjunction(expr=[disj for disj in
