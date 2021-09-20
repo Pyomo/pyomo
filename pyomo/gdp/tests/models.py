@@ -763,7 +763,8 @@ def makeNetworkDisjunction(minimize=True):
     blue_box.inlet_wkbx = ntwk.Port(initialize={"x":blue_box.x_wkbx})
     blue_box.outlet_dest = ntwk.Port(initialize={"x":blue_box.x_dest})
 
-    blue_box.multiplier_constr = Constraint(expr=blue_box.x_dest == 2*blue_box.x_wkbx)
+    blue_box.multiplier_constr = Constraint(expr=blue_box.x_dest == \
+                                            2*blue_box.x_wkbx)
 
     # orange arcs
     orange.a1 = ntwk.Arc(source=feed.outlet, destination=wkbx.inlet)

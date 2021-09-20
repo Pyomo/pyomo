@@ -26,9 +26,6 @@ import pyomo.opt
 linear_solvers = pyomo.opt.check_available_solvers(
     'glpk','cbc','gurobi','cplex')
 
-# debug
-from nose.tools import set_trace
-
 # utility functions
 
 def check_linear_coef(self, repn, var, coef):
@@ -1608,8 +1605,8 @@ def check_untransformed_network_raises_GDPError(self, transformation, **kwargs):
     m = models.makeNetworkDisjunction()
     if transformation == 'bigm':
         error_name = 'BigM'
-    elif transformation == 'between_steps':
-        error_name = 'between_steps'
+    elif transformation == 'partition_disjuncts':
+        error_name = 'partition_disjuncts'
     else:
         error_name = 'hull'
     self.assertRaisesRegex(
@@ -1621,9 +1618,9 @@ def check_untransformed_network_raises_GDPError(self, transformation, **kwargs):
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m, **kwargs)
 
-def check_network_disjucts(self, minimize, transformation):
+def check_network_disjuncts(self, minimize, transformation, **kwds):
     m = models.makeExpandedNetworkDisjunction(minimize=minimize)
-    TransformationFactory('gdp.%s' % transformation).apply_to(m)
+    TransformationFactory('gdp.%s' % transformation).apply_to(m, **kwds)
     results = SolverFactory(linear_solvers[0]).solve(m)
     self.assertEqual(results.solver.termination_condition,
                      TerminationCondition.optimal)

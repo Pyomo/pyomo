@@ -2352,8 +2352,8 @@ class NetworkDisjuncts(unittest.TestCase, CommonTests):
 
     @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
     def test_solution_maximize(self):
-        ct.check_network_disjucts(self, minimize=False, transformation='hull')
+        ct.check_network_disjuncts(self, minimize=False, transformation='hull')
 
     @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
     def test_solution_minimize(self):
-        ct.check_network_disjucts(self, minimize=True, transformation='hull')
+        ct.check_network_disjuncts(self, minimize=True, transformation='hull')

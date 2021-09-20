@@ -14,9 +14,9 @@ from pyomo.environ import (TransformationFactory, Constraint, ConcreteModel,
                            Any, Reference)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.util import GDP_Error
-from pyomo.gdp.plugins.between_steps import (arbitrary_partition,
-                                             compute_optimal_bounds,
-                                             compute_fbbt_bounds)
+from pyomo.gdp.plugins.partition_disjuncts import (arbitrary_partition,
+                                                   compute_optimal_bounds,
+                                                   compute_fbbt_bounds)
 from pyomo.core import Block, value
 from pyomo.core.expr import current as EXPR
 import pyomo.gdp.tests.common_tests as ct
@@ -27,7 +27,8 @@ solvers = check_available_solvers('gurobi_direct')
 
 class CommonTests:
     def diff_apply_to_and_create_using(self, model, P):
-        ct.diff_apply_to_and_create_using(self, model, 'gdp.between_steps', P=P)
+        ct.diff_apply_to_and_create_using(self, model,
+                                          'gdp.partition_disjuncts', P=P)
 
 class PaperTwoCircleExample(unittest.TestCase, CommonTests):
     def makeModel(self):
@@ -115,7 +116,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
     def check_transformation_block_structure(self, m, aux11lb, aux11ub, aux12lb,
                                              aux12ub, aux21lb, aux21ub, aux22lb,
                                              aux22ub):
-        b = m.component("_pyomo_gdp_between_steps_reformulation")
+        b = m.component("_pyomo_gdp_partition_disjuncts_reformulation")
         self.assertIsInstance(b, Block)
 
         # check we declared the right things
@@ -132,9 +133,9 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertEqual(len(disj1.component_map(Constraint)), 1)
         self.assertEqual(len(disj2.component_map(Constraint)), 1)
         # each Disjunct has two variables declared on it (aux vars and indicator
-        # var)
-        self.assertEqual(len(disj1.component_map(Var)), 2)
-        self.assertEqual(len(disj2.component_map(Var)), 2)
+        # var), plus a reference to the indicator_var from the original Disjunct
+        self.assertEqual(len(disj1.component_map(Var)), 3)
+        self.assertEqual(len(disj2.component_map(Var)), 3)
 
         aux_vars1 = disj1.component(
             "disjunction_disjuncts[0].constraint[1]_aux_vars")
@@ -192,7 +193,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
     def test_transformation_block_fbbt_bounds(self):
         m = self.makeModel()
 
-        TransformationFactory('gdp.between_steps').apply_to(
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
             compute_bounds_method=compute_fbbt_bounds)
@@ -208,7 +209,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         # out. And it definitely won't with ipopt. (And Gurobi direct is way
         # faster than the LP interfeace to Gurobi for this... I assume because
         # writing nonlinear expressions is slow?)
-        TransformationFactory('gdp.between_steps').apply_to(
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
             compute_bounds_solver=SolverFactory('gurobi_direct'),
@@ -228,7 +229,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         opt.options['NonConvex'] = 2
         opt.options['FeasibilityTol'] = 1e-8
 
-        TransformationFactory('gdp.between_steps').apply_to(
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
             compute_bounds_solver=opt,
@@ -245,7 +246,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         # out. And it definitely won't with ipopt. (And Gurobi direct is way
         # faster than the LP interface to Gurobi for this... I assume because
         # writing nonlinear expressions is slow?)
-        TransformationFactory('gdp.between_steps').apply_to(
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
             m,
             P=2,
             compute_bounds_solver=SolverFactory('gurobi_direct'),
@@ -263,7 +264,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         # out. And it definitely won't with ipopt. (And Gurobi direct is way
         # faster than the LP interface to Gurobi for this... I assume because
         # writing nonlinear expressions is slow?)
-        TransformationFactory('gdp.between_steps').apply_to(
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
             assume_fixed_vars_permanent=False,
@@ -287,7 +288,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         # out. And it definitely won't with ipopt. (And Gurobi direct is way
         # faster than the LP interface to Gurobi for this... I assume because
         # writing nonlinear expressions is slow?)
-        TransformationFactory('gdp.between_steps').apply_to(
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
             assume_fixed_vars_permanent=True,
@@ -356,13 +357,13 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         # out. And it definitely won't with ipopt. (And Gurobi direct is way
         # faster than the LP interface to Gurobi for this... I assume because
         # writing nonlinear expressions is slow?)
-        TransformationFactory('gdp.between_steps').apply_to(
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
             m,
             P=3,
             compute_bounds_solver=SolverFactory('gurobi_direct'),
             compute_bounds_method=compute_optimal_bounds)
 
-        b = m.component("_pyomo_gdp_between_steps_reformulation")
+        b = m.component("_pyomo_gdp_partition_disjuncts_reformulation")
         self.assertIsInstance(b, Block)
 
         # check we declared the right things
@@ -379,9 +380,10 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertEqual(len(disj1.component_map(Constraint)), 1)
         self.assertEqual(len(disj2.component_map(Constraint)), 1)
         # each Disjunct has three variables declared on it (aux vars and
-        # indicator var)
-        self.assertEqual(len(disj1.component_map(Var)), 2)
-        self.assertEqual(len(disj2.component_map(Var)), 2)
+        # indicator var), plus a reference to the indicator_var of the original
+        # Disjunct
+        self.assertEqual(len(disj1.component_map(Var)), 3)
+        self.assertEqual(len(disj2.component_map(Var)), 3)
 
         aux_vars1 = disj1.component(
             "disjunction_disjuncts[0].constraint[1]_aux_vars")
@@ -512,12 +514,12 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         # transformation
         m = self.makeModel()
 
-        TransformationFactory('gdp.between_steps').apply_to(
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
             compute_bounds_method=compute_fbbt_bounds)
 
-        b = m.component("_pyomo_gdp_between_steps_reformulation")
+        b = m.component("_pyomo_gdp_partition_disjuncts_reformulation")
         self.assertIs(m.disjunction.disjuncts[0].transformation_block(),
                       b.disjunction.disjuncts[0])
         self.assertIs(m.disjunction.disjuncts[1].transformation_block(),
@@ -528,12 +530,12 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         # transformation
         m = self.makeModel()
 
-        TransformationFactory('gdp.between_steps').apply_to(
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
             compute_bounds_method=compute_fbbt_bounds)
 
-        b = m.component("_pyomo_gdp_between_steps_reformulation")
+        b = m.component("_pyomo_gdp_partition_disjuncts_reformulation")
         self.assertIs(m.disjunction.algebraic_constraint(), b.disjunction)
 
     def add_disjunction(self, b):
@@ -639,7 +641,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
     def test_disjunction_target(self):
         m = self.make_model_with_added_disjunction_on_block()
 
-        TransformationFactory('gdp.between_steps').apply_to(
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
             compute_bounds_method=compute_fbbt_bounds,
@@ -660,7 +662,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
     def test_block_target(self):
         m = self.make_model_with_added_disjunction_on_block()
 
-        TransformationFactory('gdp.between_steps').apply_to(
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
             m,
             variable_partitions=[[m.x[1]], [m.x[2]]],
             compute_bounds_solver=SolverFactory('gurobi_direct'),
@@ -672,7 +674,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertIsNone(m.disjunction.disjuncts[0].transformation_block)
         self.assertIsNone(m.disjunction.disjuncts[1].transformation_block)
 
-        b = m.b.component("_pyomo_gdp_between_steps_reformulation")
+        b = m.b.component("_pyomo_gdp_partition_disjuncts_reformulation")
         self.assertIsInstance(b, Block)
 
         # check we declared the right things
@@ -689,9 +691,10 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertEqual(len(disj1.component_map(Constraint)), 1)
         self.assertEqual(len(disj2.component_map(Constraint)), 1)
         # each Disjunct has three variables declared on it (indexed aux vars and
-        # indicator var)
-        self.assertEqual(len(disj1.component_map(Var)), 2)
-        self.assertEqual(len(disj2.component_map(Var)), 2)
+        # indicator var), plus a Reference to the indicator_var on the original
+        # Disjunct
+        self.assertEqual(len(disj1.component_map(Var)), 3)
+        self.assertEqual(len(disj2.component_map(Var)), 3)
 
         aux_vars1 = disj1.component(
             "b.another_disjunction_disjuncts[0].constraint[1]_aux_vars")
@@ -728,7 +731,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         m.x = Reference(m.b[0].x)
         self.add_disjunction(m.b[1])
 
-        TransformationFactory('gdp.between_steps').apply_to(
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
             m,
             variable_partitions={
                 m.b[1].another_disjunction: [[m.x[1]], [m.x[2]]],
@@ -737,7 +740,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             compute_bounds_method=compute_optimal_bounds,
             targets=[m.b])
 
-        b0 = m.b[0].component("_pyomo_gdp_between_steps_reformulation")
+        b0 = m.b[0].component("_pyomo_gdp_partition_disjuncts_reformulation")
         self.assertIsInstance(b0, Block)
 
         # check we declared the right things
@@ -745,7 +748,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertEqual(len(b0.component_map(Disjunct)), 2)
         self.assertEqual(len(b0.component_map(Constraint)), 2) # global
                                                                # constraints
-        b1 = m.b[1].component("_pyomo_gdp_between_steps_reformulation")
+        b1 = m.b[1].component("_pyomo_gdp_partition_disjuncts_reformulation")
         self.assertIsInstance(b1, Block)
 
         # check we declared the right things
@@ -766,9 +769,10 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertEqual(len(disj1.component_map(Constraint)), 1)
         self.assertEqual(len(disj2.component_map(Constraint)), 1)
         # each Disjunct has two variables declared on it (indexed aux vars and
-        # indicator var)
-        self.assertEqual(len(disj1.component_map(Var)), 2)
-        self.assertEqual(len(disj2.component_map(Var)), 2)
+        # indicator var), plus a reference to the indicator_var on the original
+        # Disjunct
+        self.assertEqual(len(disj1.component_map(Var)), 3)
+        self.assertEqual(len(disj2.component_map(Var)), 3)
 
         aux_vars1 = disj1.component(
             "b[1].another_disjunction_disjuncts[0].constraint[1]_aux_vars")
@@ -808,9 +812,10 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertEqual(len(disj1.component_map(Constraint)), 1)
         self.assertEqual(len(disj2.component_map(Constraint)), 1)
         # each Disjunct has two variables declared on it (indexed aux vars and
-        # indicator var)
-        self.assertEqual(len(disj1.component_map(Var)), 2)
-        self.assertEqual(len(disj2.component_map(Var)), 2)
+        # indicator var), plus a reference to the indicator_var on the original
+        # Disjunct
+        self.assertEqual(len(disj1.component_map(Var)), 3)
+        self.assertEqual(len(disj2.component_map(Var)), 3)
 
         aux_vars1 = disj1.component(
             "b[0].disjunction_disjuncts[0].constraint[1]_aux_vars")
@@ -856,8 +861,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
                         [sum((3 - m.x[i])**2 for i in m.I) <= 1]]
         m.indexed[0] = [[(m.x[1] - 1)**2 + m.x[2]**2 <= 1], 
                         [-(m.x[1] - 2)**2 - (m.x[2] - 3)**2 >= -1]]
-        m.pprint()
-        TransformationFactory('gdp.between_steps').apply_to(
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
             m,
             variable_partitions={
                 m.indexed[0]: [[m.x[1]], [m.x[2]]],
@@ -866,7 +870,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             compute_bounds_method=compute_optimal_bounds,
             targets=[m.indexed])
 
-        b = m.component("_pyomo_gdp_between_steps_reformulation")
+        b = m.component("_pyomo_gdp_partition_disjuncts_reformulation")
         self.assertIsInstance(b, Block)
 
         # check we declared the right things
@@ -886,10 +890,10 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertEqual(len(disj1.component_map(Constraint)), 1)
         self.assertEqual(len(disj2.component_map(Constraint)), 1)
         # each Disjunct has two variables declared on it (indexed aux vars and
-        # indicator var)
-        self.assertEqual(len(disj1.component_map(Var)), 2)
-        self.assertEqual(len(disj2.component_map(Var)), 2)
-        disj1.pprint()
+        # indicator var), plus a reference to the indicator_var on the original
+        # Disjunct
+        self.assertEqual(len(disj1.component_map(Var)), 3)
+        self.assertEqual(len(disj2.component_map(Var)), 3)
         aux_vars1 = disj1.component(
             "indexed_disjuncts[2].constraint[1]_aux_vars")
         aux_vars2 = disj2.component(
@@ -928,9 +932,10 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertEqual(len(disj1.component_map(Constraint)), 1)
         self.assertEqual(len(disj2.component_map(Constraint)), 1)
         # each Disjunct has two variables declared on it (indexed aux vars and
-        # indicator var)
-        self.assertEqual(len(disj1.component_map(Var)), 2)
-        self.assertEqual(len(disj2.component_map(Var)), 2)
+        # indicator var), plus a reference to the original Disjunct's
+        # indicator_var
+        self.assertEqual(len(disj1.component_map(Var)), 3)
+        self.assertEqual(len(disj2.component_map(Var)), 3)
 
         aux_vars1 = disj1.component(
             "indexed_disjuncts[0].constraint[1]_aux_vars")
@@ -975,7 +980,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             "in the disjunction. The following variables "
             "are not assigned to any part of the "
             "partition: 'x\[3\]', 'x\[4\]'",
-            TransformationFactory('gdp.between_steps').apply_to,
+            TransformationFactory('gdp.partition_disjuncts').apply_to,
             m,
             variable_partitions=[[m.x[1]], [m.x[2]]],
             compute_bounds_method=compute_fbbt_bounds)
@@ -992,7 +997,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             "Please ensure all variables that appear in the constraint are "
             "bounded or specify compute_bounds_method=compute_optimal_bounds "
             "if the expression is bounded by the global constraints.",
-            TransformationFactory('gdp.between_steps').apply_to,
+            TransformationFactory('gdp.partition_disjuncts').apply_to,
             m,
             variable_partitions=[[m.x[1]], [m.x[2]], [m.x[3], m.x[4]]],
             compute_bounds_method=compute_fbbt_bounds)
@@ -1021,7 +1026,7 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
         return m
 
     def check_transformation_block(self, m, aux1lb, aux1ub, aux2lb, aux2ub):
-        b = m.component("_pyomo_gdp_between_steps_reformulation")
+        b = m.component("_pyomo_gdp_partition_disjuncts_reformulation")
         self.assertIsInstance(b, Block)
 
         # check we declared the right things
@@ -1038,9 +1043,9 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
         self.assertEqual(len(disj1.component_map(Constraint)), 1)
         self.assertEqual(len(disj2.component_map(Constraint)), 1)
         # each Disjunct has two variables declared on it (aux vars and indicator
-        # var)
-        self.assertEqual(len(disj1.component_map(Var)), 2)
-        self.assertEqual(len(disj2.component_map(Var)), 2)
+        # var), plus a reference to the indicator_var on the original Disjunct
+        self.assertEqual(len(disj1.component_map(Var)), 3)
+        self.assertEqual(len(disj2.component_map(Var)), 3)
 
         aux_vars1 = disj1.component(
             "disjunction_disjuncts[0].constraint[1]_aux_vars")
@@ -1223,7 +1228,7 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
     def test_transformation_block_fbbt_bounds(self):
         m = self.makeModel()
 
-        TransformationFactory('gdp.between_steps').apply_to(
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
             compute_bounds_method=compute_fbbt_bounds)
@@ -1248,7 +1253,7 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
             "variables, we assume all the "
             "expressions are additively "
             "separable.",
-            TransformationFactory('gdp.between_steps').apply_to,
+            TransformationFactory('gdp.partition_disjuncts').apply_to,
             m,
             variable_partitions=[[m.x[3], m.x[2]], [m.x[1], m.x[4]]],
             compute_bounds_method=compute_fbbt_bounds)
@@ -1263,18 +1268,19 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
         m.disjunction.disjuncts[0].another_constraint = Constraint(
             expr=m.x[1]**3 <= 0.5)
 
-        TransformationFactory('gdp.between_steps').apply_to(
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
             compute_bounds_method=compute_fbbt_bounds)
 
         # we just need to check the first Disjunct's transformation
-        b = m.component("_pyomo_gdp_between_steps_reformulation")
+        b = m.component("_pyomo_gdp_partition_disjuncts_reformulation")
         disj1 = b.disjunction.disjuncts[0]
         
         self.assertEqual(len(disj1.component_map(Constraint)), 2)
-        # has indicator_var and two sets of auxilary variables
-        self.assertEqual(len(disj1.component_map(Var)), 3)
+        # has indicator_var and two sets of auxilary variables, plus a reference
+        # to the indicator_var on the original Disjunct
+        self.assertEqual(len(disj1.component_map(Var)), 4)
         self.assertEqual(len(disj1.component_map(Constraint)), 2)
 
         aux_vars1 = disj1.component(
@@ -1346,7 +1352,7 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
             "variables, we assume all the "
             "expressions are additively "
             "separable.",
-            TransformationFactory('gdp.between_steps').apply_to,
+            TransformationFactory('gdp.partition_disjuncts').apply_to,
             m, 
             P=3)
 
@@ -1354,127 +1360,138 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
 # hull, so might as well for here too.
 class CommonModels(unittest.TestCase, CommonTests):
     def test_user_deactivated_disjuncts(self):
-        ct.check_user_deactivated_disjuncts(self, 'between_steps',
+        ct.check_user_deactivated_disjuncts(self, 'partition_disjuncts',
                                             check_trans_block=False, P=2)
 
     def test_improperly_deactivated_disjuncts(self):
-        ct.check_improperly_deactivated_disjuncts(self, 'between_steps', P=2)
+        ct.check_improperly_deactivated_disjuncts(self, 'partition_disjuncts', 
+                                                  P=2)
         
     def test_do_not_transform_userDeactivated_indexedDisjunction(self):
         ct.check_do_not_transform_userDeactivated_indexedDisjunction(
-            self, 'between_steps', P=2)
+            self, 'partition_disjuncts', P=2)
 
     def test_disjunction_deactivated(self):
-        ct.check_disjunction_deactivated(self, 'between_steps', P=2)
+        ct.check_disjunction_deactivated(self, 'partition_disjuncts', P=2)
 
     def test_disjunctDatas_deactivated(self):
-        ct.check_disjunctDatas_deactivated(self, 'between_steps', P=2)
+        ct.check_disjunctDatas_deactivated(self, 'partition_disjuncts', P=2)
 
     def test_deactivated_constraints(self):
-        ct.check_deactivated_constraints(self, 'between_steps', P=2)
+        ct.check_deactivated_constraints(self, 'partition_disjuncts', P=2)
 
     def test_deactivated_disjuncts(self):
-        ct.check_deactivated_disjuncts(self, 'between_steps', P=2)
+        ct.check_deactivated_disjuncts(self, 'partition_disjuncts', P=2)
 
     def test_deactivated_disjunctions(self):
-        ct.check_deactivated_disjunctions(self, 'between_steps', P=2)
+        ct.check_deactivated_disjunctions(self, 'partition_disjuncts', P=2)
 
     def test_constraints_deactivated_indexedDisjunction(self):
-        ct.check_constraints_deactivated_indexedDisjunction(self,
-                                                            'between_steps', P=2)
+        ct.check_constraints_deactivated_indexedDisjunction(
+            self,
+            'partition_disjuncts', P=2)
+
     # targets
 
     def test_only_targets_inactive(self):
-        ct.check_only_targets_inactive(self, 'between_steps', P=2)
+        ct.check_only_targets_inactive(self, 'partition_disjuncts', P=2)
 
     def test_target_not_a_component_error(self):
-        ct.check_target_not_a_component_error(self, 'between_steps', P=2)
+        ct.check_target_not_a_component_error(self, 'partition_disjuncts', P=2)
 
     def test_indexedDisj_targets_inactive(self):
-        ct.check_indexedDisj_targets_inactive(self, 'between_steps', P=2)
+        ct.check_indexedDisj_targets_inactive(self, 'partition_disjuncts', P=2)
 
     def test_warn_for_untransformed(self):
-        ct.check_warn_for_untransformed(self, 'between_steps', P=2)
+        ct.check_warn_for_untransformed(self, 'partition_disjuncts', P=2)
 
     def test_disjData_targets_inactive(self):
-        ct.check_disjData_targets_inactive(self, 'between_steps', P=2)
+        ct.check_disjData_targets_inactive(self, 'partition_disjuncts', P=2)
 
     def test_indexedBlock_targets_inactive(self):
-        ct.check_indexedBlock_targets_inactive(self, 'between_steps', P=2)
+        ct.check_indexedBlock_targets_inactive(self, 'partition_disjuncts', P=2)
 
     def test_blockData_targets_inactive(self):
-        ct.check_blockData_targets_inactive(self, 'between_steps', P=2)
+        ct.check_blockData_targets_inactive(self, 'partition_disjuncts', P=2)
 
     # transforming blocks
 
     def test_transformation_simple_block(self):
-        ct.check_transformation_simple_block(self, 'between_steps', P=2)
+        ct.check_transformation_simple_block(self, 'partition_disjuncts', P=2)
 
     def test_transform_block_data(self):
-        ct.check_transform_block_data(self, 'between_steps', P=2)
+        ct.check_transform_block_data(self, 'partition_disjuncts', P=2)
 
     def test_simple_block_target(self):
-        ct.check_simple_block_target(self, 'between_steps', P=2)
+        ct.check_simple_block_target(self, 'partition_disjuncts', P=2)
 
     def test_block_data_target(self):
-        ct.check_block_data_target(self, 'between_steps', P=2)
+        ct.check_block_data_target(self, 'partition_disjuncts', P=2)
 
     def test_indexed_block_target(self):
-        ct.check_indexed_block_target(self, 'between_steps', P=2)
+        ct.check_indexed_block_target(self, 'partition_disjuncts', P=2)
 
     def test_block_targets_inactive(self):
-        ct.check_block_targets_inactive(self, 'between_steps', P=2)
+        ct.check_block_targets_inactive(self, 'partition_disjuncts', P=2)
 
     # common error messages
 
     def test_transform_empty_disjunction(self):
-        ct.check_transform_empty_disjunction(self, 'between_steps', P=2)
+        ct.check_transform_empty_disjunction(self, 'partition_disjuncts', P=2)
 
     def test_deactivated_disjunct_nonzero_indicator_var(self):
-        ct.check_deactivated_disjunct_nonzero_indicator_var(self,
-                                                            'between_steps', P=2)
+        ct.check_deactivated_disjunct_nonzero_indicator_var(
+            self,
+            'partition_disjuncts', P=2)
 
     def test_deactivated_disjunct_unfixed_indicator_var(self):
-        ct.check_deactivated_disjunct_unfixed_indicator_var(self,
-                                                            'between_steps', P=2)
+        ct.check_deactivated_disjunct_unfixed_indicator_var(
+            self,
+            'partition_disjuncts', P=2)
     
     def test_silly_target(self):
-        ct.check_silly_target(self, 'between_steps', P=2)
+        ct.check_silly_target(self, 'partition_disjuncts', P=2)
 
     def test_error_for_same_disjunct_in_multiple_disjunctions(self):
         ct.check_error_for_same_disjunct_in_multiple_disjunctions(
-            self, 'between_steps', P=2)
+            self, 'partition_disjuncts', P=2)
 
     def test_cannot_call_transformation_on_disjunction(self):
-        ct.check_cannot_call_transformation_on_disjunction(self,
-                                                           'between_steps', P=2)
+        ct.check_cannot_call_transformation_on_disjunction(
+            self,
+            'partition_disjuncts', P=2)
 
     def test_disjunction_target_err(self):
-        ct.check_disjunction_target_err(self, 'between_steps', P=2)
+        ct.check_disjunction_target_err(self, 'partition_disjuncts', P=2)
 
     # nested disjunctions (only checking that everything is transformed)
 
     def test_disjuncts_inactive_nested(self):
-        ct.check_disjuncts_inactive_nested(self, 'between_steps', P=2)
+        ct.check_disjuncts_inactive_nested(self, 'partition_disjuncts', P=2)
 
     def test_deactivated_disjunct_leaves_nested_disjunct_active(self):
         ct.check_deactivated_disjunct_leaves_nested_disjunct_active(
-            self, 'between_steps', P=2)
+            self, 'partition_disjuncts', P=2)
 
     def test_disjunct_targets_inactive(self):
-        ct.check_disjunct_targets_inactive(self, 'between_steps', P=2)
+        ct.check_disjunct_targets_inactive(self, 'partition_disjuncts', P=2)
 
     def test_disjunctData_targets_inactive(self):
-        ct.check_disjunctData_targets_inactive(self, 'between_steps', P=2)
+        ct.check_disjunctData_targets_inactive(self, 'partition_disjuncts', P=2)
 
     # check handling for benign types
 
     def test_RangeSet(self):
-        ct.check_RangeSet(self, 'between_steps', P=2)
+        ct.check_RangeSet(self, 'partition_disjuncts', P=2)
 
     def test_Expression(self):
-        ct.check_Expression(self, 'between_steps', P=2)
+        ct.check_Expression(self, 'partition_disjuncts', P=2)
 
     def test_untransformed_network_raises_GDPError(self):
-        ct.check_untransformed_network_raises_GDPError(self, 'between_steps',
-                                                       P=2)
+        ct.check_untransformed_network_raises_GDPError( self,
+                                                        'partition_disjuncts',
+                                                        P=2)
+
+    def test_network_disjuncts(self):
+        ct.check_network_disjuncts(self, True, 'between_steps', P=2)
+        ct.check_network_disjuncts(self, False, 'between_steps', P=2)
