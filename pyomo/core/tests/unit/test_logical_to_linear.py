@@ -401,7 +401,7 @@ class TestLogicalToLinearBackmap(unittest.TestCase):
         TransformationFactory('core.logical_to_linear').apply_to(m)
         m.Y_asbinary[1].value = 1
         m.Y_asbinary[2].value = 0
-        m.b.Y_asbinary.value = 1
+        m.b.Y.get_associated_binary().value = 1
         update_boolean_vars_from_binary(m)
         self.assertTrue(m.Y[1].value)
         self.assertFalse(m.Y[2].value)
