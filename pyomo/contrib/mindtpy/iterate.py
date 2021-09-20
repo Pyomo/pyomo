@@ -105,17 +105,64 @@ def MindtPy_iteration_loop(solve_data, config):
         if not config.single_tree and config.strategy != 'ECP':  # if we don't use lazy callback, i.e. LP_NLP
             # Solve NLP subproblem
             # The constraint linearization happens in the handlers
-            fixed_nlp, fixed_nlp_result = solve_subproblem(solve_data, config)
-            handle_nlp_subproblem_tc(
-                fixed_nlp, fixed_nlp_result, solve_data, config)
+            if not config.solution_pool:
+                fixed_nlp, fixed_nlp_result = solve_subproblem(
+                    solve_data, config)
+                handle_nlp_subproblem_tc(
+                    fixed_nlp, fixed_nlp_result, solve_data, config)
 
-            # Call the NLP post-solve callback
-            with time_code(solve_data.timing, 'Call after subproblem solve'):
-                config.call_after_subproblem_solve(fixed_nlp, solve_data)
+                # Call the NLP post-solve callback
+                with time_code(solve_data.timing, 'Call after subproblem solve'):
+                    config.call_after_subproblem_solve(fixed_nlp, solve_data)
 
-        if algorithm_should_terminate(solve_data, config, check_cycling=False):
-            last_iter_cuts = True
-            break
+                if algorithm_should_terminate(solve_data, config, check_cycling=False):
+                    last_iter_cuts = True
+                    break
+            else:
+                solution_pool_names = main_mip_results.cpx_model.solution.pool.get_names()
+                solution_name_obj = []
+                for name in solution_pool_names:
+                    obj = main_mip_results.cpx_model.solution.pool.get_objective_value(
+                        name)
+                    solution_name_obj.append([name, obj])
+                solution_name_obj.sort(
+                    key=lambda x: x[1], reverse=solve_data.objective_sense == maximize)
+                counter = 0
+                while counter <= min(config.num_solution_iteration, len(solution_pool_names)):
+                    if counter >= 1:
+                        config.logger.info(
+                            'Solution %s in solution pool' % (counter+1))
+                        for var1, var2 in zip(solve_data.working_model.MindtPy_utils.variable_list,
+                                              solve_data.mip.MindtPy_utils.variable_list):
+                            # TODO: add rounding for integer varibales and bound checking
+                            var1.set_value(main_mip_results.cpx_model.solution.pool.get_values(
+                                solution_name_obj[counter][0], main_mip_results._pyomo_var_to_solver_var_map[var2]))
+                        solve_data.curr_int_sol = get_integer_solution(
+                            solve_data.working_model)
+                        if solve_data.curr_int_sol in set(solve_data.integer_list):
+                            config.logger.info(
+                                'The same combination has been explored and will be skipped here.')
+                            config.logger.info(
+                                'Final bound values: LB: {}  UB: {}'.
+                                format(solve_data.LB, solve_data.UB))
+                            continue
+                        else:
+                            solve_data.integer_list.append(
+                                solve_data.curr_int_sol)
+                    counter += 1
+                    fixed_nlp, fixed_nlp_result = solve_subproblem(
+                        solve_data, config)
+                    handle_nlp_subproblem_tc(
+                        fixed_nlp, fixed_nlp_result, solve_data, config)
+
+                    # Call the NLP post-solve callback
+                    with time_code(solve_data.timing, 'Call after subproblem solve'):
+                        config.call_after_subproblem_solve(
+                            fixed_nlp, solve_data)
+
+                    if algorithm_should_terminate(solve_data, config, check_cycling=False):
+                        last_iter_cuts = True
+                        break
 
         if config.strategy == 'ECP':
             add_ecp_cuts(solve_data.mip, solve_data, config)
