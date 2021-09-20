@@ -16,7 +16,7 @@ from pyomo.core.plugins.transform.logical_to_linear import \
 from pyomo.environ import ( ConcreteModel, BooleanVar, LogicalConstraint, lor,
                             TransformationFactory, RangeSet, Var, Constraint,
                             ComponentMap, value, BooleanSet, atleast, atmost,
-                            exactly)
+                            exactly, Block)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.repn import generate_standard_repn
 
@@ -353,6 +353,29 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
                 (1, 1 - m.Y[2].get_associated_binary(), 1),
             ], m.disj_disjuncts[1].logic_to_linear.transformed_constraints)
 
+    def test_transformed_components_on_parent_block(self):
+        m = ConcreteModel()
+        m.b = Block()
+        m.b.s = RangeSet(3)
+        m.b.Y = BooleanVar(m.b.s)
+        m.b.p = LogicalConstraint(expr=m.b.Y[1].implies(lor(m.b.Y[2], 
+                                                            m.b.Y[3])))
+        TransformationFactory('core.logical_to_linear').apply_to(m)
+
+        transBlock = m.b.component("logic_to_linear")
+        self.assertIsInstance(transBlock, Block)
+        notAThing = m.component("logic_to_linear")
+        self.assertIsNone(notAThing)
+
+        # check the constraints on the transBlock
+        _constrs_contained_within(
+            self, [
+                (1,
+                 m.b.Y[2].get_associated_binary() + \
+                 m.b.Y[3].get_associated_binary()
+                 + (1 - m.b.Y[1].get_associated_binary()),
+                 None)
+            ], m.b.logic_to_linear.transformed_constraints)        
 
 @unittest.skipUnless(sympy_available, "Sympy not available")
 class TestLogicalToLinearBackmap(unittest.TestCase):
