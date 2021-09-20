@@ -15,7 +15,7 @@
 PYBIND11_MODULE(appsi_cmodel, m)
 {
   m.attr("inf") = inf;
-  m.def("appsi_expr_from_pyomo_expr", &appsi_expr_from_pyomo_expr);
+  m.def("appsi_exprs_from_pyomo_exprs", &appsi_exprs_from_pyomo_exprs);
   m.def("process_lp_constraints", &process_lp_constraints);
   m.def("appsi_exp", &appsi_exp);
   m.def("appsi_log", &appsi_log);

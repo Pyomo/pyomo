@@ -46,6 +46,7 @@ class ExpOperator;
 class LogOperator;
 class ExternalOperator;
 class Repn;
+class PyomoExprTypes;
 
 
 extern double inf;
@@ -62,7 +63,6 @@ public:
   virtual bool is_operator_type() {return false;}
   virtual bool is_constant_type() {return false;}
   virtual bool is_leaf() {return false;}
-  virtual bool is_external() {return false;}
   virtual bool is_binary_operator() {return false;}
   virtual bool is_unary_operator() {return false;}
   virtual bool is_linear_operator() {return false;}
@@ -297,8 +297,9 @@ class LinearOperator: public Operator
 public:
   LinearOperator() = default;
   void identify_variables(std::set<std::shared_ptr<Node> >&) override;
-  std::shared_ptr<std::vector<std::shared_ptr<Var> > > variables;
-  std::shared_ptr<std::vector<std::shared_ptr<ExpressionBase> > > coefficients;
+  std::shared_ptr<std::vector<std::shared_ptr<Var> > > variables = std::make_shared<std::vector<std::shared_ptr<Var> > >();
+  std::shared_ptr<std::vector<std::shared_ptr<ExpressionBase> > > coefficients = std::make_shared<std::vector<std::shared_ptr<ExpressionBase> > >();
+  std::shared_ptr<ExpressionBase> constant = std::make_shared<Constant>(0);
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
   void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
@@ -355,7 +356,6 @@ public:
   void write_nl_string(std::ofstream&) override;
   void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) override;
   void identify_variables(std::set<std::shared_ptr<Node> >&) override;
-  bool is_external() override;
   std::shared_ptr<std::vector<std::shared_ptr<Node> > > operands = std::make_shared<std::vector<std::shared_ptr<Node> > >();
   std::string function_name;
   int external_function_index = -1;
@@ -561,8 +561,44 @@ public:
 };
 
 
+class PyomoExprTypes
+{
+public:
+  PyomoExprTypes() = default;
+  ~PyomoExprTypes() = default;
+  py::int_ ione = 1;
+  py::float_ fone = 1.0;
+  py::type int_ = py::type::of(ione);
+  py::type float_ = py::type::of(fone);
+  py::object ScalarParam = py::module_::import("pyomo.core.base.param").attr("ScalarParam");
+  py::object _ParamData = py::module_::import("pyomo.core.base.param").attr("_ParamData");
+  py::object ScalarVar = py::module_::import("pyomo.core.base.var").attr("ScalarVar");
+  py::object _GeneralVarData = py::module_::import("pyomo.core.base.var").attr("_GeneralVarData");
+  py::object numeric_expr = py::module_::import("pyomo.core.expr.numeric_expr");
+  py::object NegationExpression = numeric_expr.attr("NegationExpression");
+  py::object NPV_NegationExpression = numeric_expr.attr("NPV_NegationExpression");
+  py::object ExternalFunctionExpression = numeric_expr.attr("ExternalFunctionExpression");
+  py::object NPV_ExternalFunctionExpression = numeric_expr.attr("NPV_ExternalFunctionExpression");
+  py::object PowExpression = numeric_expr.attr("PowExpression");
+  py::object NPV_PowExpression = numeric_expr.attr("NPV_PowExpression");
+  py::object ProductExpression = numeric_expr.attr("ProductExpression");
+  py::object NPV_ProductExpression = numeric_expr.attr("NPV_ProductExpression");
+  py::object MonomialTermExpression = numeric_expr.attr("MonomialTermExpression");
+  py::object DivisionExpression = numeric_expr.attr("DivisionExpression");
+  py::object NPV_DivisionExpression = numeric_expr.attr("NPV_DivisionExpression");
+  py::object SumExpression = numeric_expr.attr("SumExpression");
+  py::object NPV_SumExpression = numeric_expr.attr("NPV_SumExpression");
+  py::object UnaryFunctionExpression = numeric_expr.attr("UnaryFunctionExpression");
+  py::object NPV_UnaryFunctionExpression = numeric_expr.attr("NPV_UnaryFunctionExpression");
+  py::object LinearExpression = numeric_expr.attr("LinearExpression");
+  py::object builtins = py::module_::import("builtins");
+  py::object id = builtins.attr("id");
+};
+
+
 std::vector<std::shared_ptr<Var> > create_vars(int n_vars);
 std::vector<std::shared_ptr<Param> > create_params(int n_params);
 std::vector<std::shared_ptr<Constant> > create_constants(int n_constants);
 std::vector<std::shared_ptr<Repn> > generate_repns(std::vector<std::shared_ptr<ExpressionBase> > exprs);
-std::shared_ptr<ExpressionBase> appsi_expr_from_pyomo_expr(py::handle expr, py::dict var_map, py::dict param_map);
+std::shared_ptr<ExpressionBase> appsi_expr_from_pyomo_expr(py::handle expr, py::dict var_map, py::dict param_map, PyomoExprTypes& expr_types);
+std::vector<std::shared_ptr<ExpressionBase> > appsi_exprs_from_pyomo_exprs(py::list expr_list, py::dict var_map, py::dict param_map);

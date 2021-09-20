@@ -450,12 +450,6 @@ std::shared_ptr<ExpressionBase> ExpressionBase::__rpow__(double other)
 }
 
 
-bool ExternalOperator::is_external()
-{
-  return true;
-}
-
-
 bool Leaf::is_leaf()
 {
   return true;
@@ -596,7 +590,7 @@ void AddOperator::evaluate(double* values)
 
 void LinearOperator::evaluate(double* values)
 {
-  values[index] = 0.0;
+  values[index] = constant->evaluate();
   for (unsigned int i=0; i<variables->size(); ++i)
     {
       values[index] += coefficients->at(i)->evaluate() * variables->at(i)->evaluate();
@@ -804,7 +798,7 @@ std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > Expression::id
   std::set<std::shared_ptr<Node> > external_set;
   for (unsigned int i=0; i<n_operators(); ++i)
     {
-      if (operators->at(i)->is_external())
+      if (operators->at(i)->is_external_operator())
 	{
 	  external_set.insert(operators->at(i));
 	}
@@ -1079,6 +1073,12 @@ void UnaryOperator::propagate_degree_forward(int* degrees, double* values)
     {
       degrees[index] = 3;
     }
+}
+
+
+std::shared_ptr<ExpressionBase> NegationOperator::call_unary_function(std::shared_ptr<ExpressionBase> e)
+{
+  return -(*e);
 }
 
 
@@ -1372,6 +1372,18 @@ void LinearOperator::generate_repn(std::vector<std::shared_ptr<Repn> >& repns, i
 {
   std::shared_ptr<Repn> res = std::make_shared<Repn>();
   repns.push_back(res);
+  if (!(get_unique_degree_from_array(unique_degrees)))
+    {
+      res->reset_with_constants();
+      res->constant = constant;
+      std::shared_ptr<Expression> linear_expr = std::make_shared<Expression>();
+      std::shared_ptr<LinearOperator> op = std::make_shared<LinearOperator>();
+      op->variables = variables;
+      op->coefficients = coefficients;
+      op->constant = std::make_shared<Constant>(0);
+      linear_expr->add_operator(op);
+      res->linear = linear_expr;
+    }
 }
 
 
@@ -1516,7 +1528,14 @@ void UnaryOperator::propagate_unique_degree(int* degrees, bool* unique_degrees)
 
 void LinearOperator::propagate_unique_degree(int* degrees, bool* unique_degrees)
 {
-  unique_degrees[index] = true;
+  if (constant->is_constant_type() && constant->evaluate() == 0)
+    {
+      unique_degrees[index] = true;
+    }
+  else
+    {
+      unique_degrees[index] = false;
+    }
 }
 
 
@@ -1718,8 +1737,8 @@ void AtanOperator::print(std::string* string_array)
 
 void LinearOperator::print(std::string* string_array)
 {
-  std::string res = "(" + coefficients->at(0)->__str__() + "*" + variables->at(0)->__str__();
-  for (unsigned int i=1; i<variables->size(); ++i)
+  std::string res = "(" + constant->__str__();
+  for (unsigned int i=0; i<variables->size(); ++i)
     {
       res += " + " + coefficients->at(i)->__str__() + "*" + variables->at(i)->__str__();
     }
@@ -1863,19 +1882,36 @@ void SumOperator::write_nl_string(std::ofstream& f)
 
 void LinearOperator::write_nl_string(std::ofstream& f)
 {
-  if (variables->size() == 2)
+  bool has_const = (!constant->is_constant_type()) || constant->evaluate() != 0;
+  if (has_const)
     {
-      f << "o0\n";
+      if (variables->size() == 1)
+	{
+	  f << "o0\n";
+	}
+      else
+	{
+	  f << "o54\n";
+	  f << variables->size() + 1 << "\n";
+	}
+      f << "n" << constant->evaluate() << "\n";
     }
   else
     {
-      f << "o54\n";
-      f << variables->size() << "\n";
+      if (variables->size() == 2)
+	{
+	  f << "o0\n";
+	}
+      else
+	{
+	  f << "o54\n";
+	  f << variables->size() << "\n";
+	}
     }
   for (unsigned int ndx=0; ndx<variables->size(); ++ndx)
     {
       f << "o2\n";
-      coefficients->at(ndx)->write_nl_string(f);
+      f << "n" <<  coefficients->at(ndx)->evaluate() << "\n";
       variables->at(ndx)->write_nl_string(f);
     }
 }
@@ -2104,215 +2140,227 @@ std::vector<std::shared_ptr<Constant> > create_constants(int n_constants)
 }
 
 
-std::shared_ptr<Node> appsi_operator_from_pyomo_expr(py::handle expr, py::dict var_map, py::dict param_map)
+std::shared_ptr<Node> appsi_operator_from_pyomo_expr(py::handle expr, py::dict var_map, py::dict param_map, PyomoExprTypes& expr_types)
 {
-  py::int_ ione = 1;
-  py::float_ fone = 1.0;
-  py::type int_ = py::type::of(ione);
-  py::type float_ = py::type::of(fone);
-  py::object ScalarParam = py::module_::import("pyomo.core.base.param").attr("ScalarParam");
-  py::object _ParamData = py::module_::import("pyomo.core.base.param").attr("_ParamData");
-  py::object ScalarVar = py::module_::import("pyomo.core.base.var").attr("ScalarVar");
-  py::object _GeneralVarData = py::module_::import("pyomo.core.base.var").attr("_GeneralVarData");
-  py::object numeric_expr = py::module_::import("pyomo.core.expr.numeric_expr");
-  py::object NegationExpression = numeric_expr.attr("NegationExpression");
-  py::object NPV_NegationExpression = numeric_expr.attr("NPV_NegationExpression");
-  py::object ExternalFunctionExpression = numeric_expr.attr("ExternalFunctionExpression");
-  py::object NPV_ExternalFunctionExpression = numeric_expr.attr("NPV_ExternalFunctionExpression");
-  py::object PowExpression = numeric_expr.attr("PowExpression");
-  py::object NPV_PowExpression = numeric_expr.attr("NPV_PowExpression");
-  py::object ProductExpression = numeric_expr.attr("ProductExpression");
-  py::object NPV_ProductExpression = numeric_expr.attr("NPV_ProductExpression");
-  py::object MonomialTermExpression = numeric_expr.attr("MonomialTermExpression");
-  py::object DivisionExpression = numeric_expr.attr("DivisionExpression");
-  py::object NPV_DivisionExpression = numeric_expr.attr("NPV_DivisionExpression");
-  py::object SumExpression = numeric_expr.attr("SumExpression");
-  py::object NPV_SumExpression = numeric_expr.attr("NPV_SumExpression");
-  py::object UnaryFunctionExpression = numeric_expr.attr("UnaryFunctionExpression");
-  py::object NPV_UnaryFunctionExpression = numeric_expr.attr("NPV_UnaryFunctionExpression");
-  py::object LinearExpression = numeric_expr.attr("LinearExpression");
-  py::object builtins = py::module_::import("builtins");
-  py::object id = builtins.attr("id");
-
-  
   py::type tmp_type = py::type::of(expr);
+  std::shared_ptr<Node> res;
 
-  if (tmp_type.is(int_) || tmp_type.is(float_))
+  if (tmp_type.is(expr_types.int_) || tmp_type.is(expr_types.float_))
     {
-      return std::make_shared<Constant>(expr.cast<double>());
+      res =  std::make_shared<Constant>(expr.cast<double>());
     }
-  else if (tmp_type.is(ScalarParam) || tmp_type.is(_ParamData))
+  else if (tmp_type.is(expr_types.ScalarParam) || tmp_type.is(expr_types._ParamData))
     {
-      return param_map[id(expr)].cast<std::shared_ptr<Node> >();
+      res =  param_map[expr_types.id(expr)].cast<std::shared_ptr<Node> >();
     }
-  else if (tmp_type.is(ScalarVar) || tmp_type.is(_GeneralVarData))
+  else if (tmp_type.is(expr_types.ScalarVar) || tmp_type.is(expr_types._GeneralVarData))
     {
-      return var_map[id(expr)].cast<std::shared_ptr<Node> >();
+      res =  var_map[expr_types.id(expr)].cast<std::shared_ptr<Node> >();
     }
-  else if (tmp_type.is(MonomialTermExpression))
+  else if (tmp_type.is(expr_types.MonomialTermExpression))
     {
-      return std::make_shared<MultiplyOperator>();
+      res =  std::make_shared<MultiplyOperator>();
     }
-  else if (tmp_type.is(ProductExpression) || tmp_type.is(NPV_ProductExpression))
+  else if (tmp_type.is(expr_types.ProductExpression) || tmp_type.is(expr_types.NPV_ProductExpression))
     {
-      return std::make_shared<MultiplyOperator>();
+      res =  std::make_shared<MultiplyOperator>();
     }
-  else if (tmp_type.is(SumExpression) || tmp_type.is(NPV_SumExpression))
+  else if (tmp_type.is(expr_types.SumExpression) || tmp_type.is(expr_types.NPV_SumExpression))
     {
-      return std::make_shared<SumOperator>();
+      res =  std::make_shared<SumOperator>();
     }
-  else if (tmp_type.is(NegationExpression) || tmp_type.is(NPV_NegationExpression))
+  else if (tmp_type.is(expr_types.NegationExpression) || tmp_type.is(expr_types.NPV_NegationExpression))
     {
-      return std::make_shared<NegationOperator>();
+      res =  std::make_shared<NegationOperator>();
     }
-  else if (tmp_type.is(DivisionExpression) || tmp_type.is(NPV_DivisionExpression))
+  else if (tmp_type.is(expr_types.DivisionExpression) || tmp_type.is(expr_types.NPV_DivisionExpression))
     {
-      return std::make_shared<DivideOperator>();
+      res =  std::make_shared<DivideOperator>();
     }
-  else if (tmp_type.is(LinearExpression))
+  else if (tmp_type.is(expr_types.LinearExpression))
     {
-      return std::make_shared<LinearOperator>();
+      res =  std::make_shared<LinearOperator>();
     }
-  else if (tmp_type.is(PowExpression) || tmp_type.is(NPV_PowExpression))
+  else if (tmp_type.is(expr_types.PowExpression) || tmp_type.is(expr_types.NPV_PowExpression))
     {
-      return std::make_shared<PowerOperator>();
+      res =  std::make_shared<PowerOperator>();
     }
-  else if (tmp_type.is(UnaryFunctionExpression) || tmp_type.is(NPV_UnaryFunctionExpression))
+  else if (tmp_type.is(expr_types.UnaryFunctionExpression) || tmp_type.is(expr_types.NPV_UnaryFunctionExpression))
     {
       std::string function_name = expr.attr("getname")().cast<std::string>();
       if (function_name == "exp")
 	{
-	  return std::make_shared<ExpOperator>();
+	  res =  std::make_shared<ExpOperator>();
 	}
       else if (function_name == "log")
 	{
-	  return std::make_shared<LogOperator>();
+	  res =  std::make_shared<LogOperator>();
 	}
       else if (function_name == "log10")
 	{
-	  return std::make_shared<Log10Operator>();
+	  res =  std::make_shared<Log10Operator>();
 	}
       else if (function_name == "sin")
 	{
-	  return std::make_shared<SinOperator>();
+	  res =  std::make_shared<SinOperator>();
 	}
       else if (function_name == "cos")
 	{
-	  return std::make_shared<CosOperator>();
+	  res =  std::make_shared<CosOperator>();
 	}
       else if (function_name == "tan")
 	{
-	  return std::make_shared<TanOperator>();
+	  res =  std::make_shared<TanOperator>();
 	}
       else if (function_name == "asin")
 	{
-	  return std::make_shared<AsinOperator>();
+	  res =  std::make_shared<AsinOperator>();
 	}
       else if (function_name == "acos")
 	{
-	  return std::make_shared<AcosOperator>();
+	  res =  std::make_shared<AcosOperator>();
 	}
       else if (function_name == "atan")
 	{
-	  return std::make_shared<AtanOperator>();
+	  res =  std::make_shared<AtanOperator>();
 	}
       else
 	{
 	  throw py::value_error("Unrecognized expression type");
 	}
     }
+  else if (tmp_type.is(expr_types.ExternalFunctionExpression) || tmp_type.is(expr_types.NPV_ExternalFunctionExpression))
+    {
+      res =  std::make_shared<ExternalOperator>();
+    }
   else
     {
       throw py::value_error("Unrecognized expression type");
     }
+  return res;
 }
 
 
-std::shared_ptr<ExpressionBase> appsi_expr_from_pyomo_expr(py::handle expr, py::dict var_map, py::dict param_map)
+std::shared_ptr<ExpressionBase> appsi_expr_from_pyomo_expr(py::handle expr, py::dict var_map, py::dict param_map, PyomoExprTypes& expr_types)
 {
-  py::object numeric_expr = py::module_::import("pyomo.core.expr.numeric_expr");
-  py::object NegationExpression = numeric_expr.attr("NegationExpression");
-  py::object NPV_NegationExpression = numeric_expr.attr("NPV_NegationExpression");
-  py::object ExternalFunctionExpression = numeric_expr.attr("ExternalFunctionExpression");
-  py::object NPV_ExternalFunctionExpression = numeric_expr.attr("NPV_ExternalFunctionExpression");
-  py::object PowExpression = numeric_expr.attr("PowExpression");
-  py::object NPV_PowExpression = numeric_expr.attr("NPV_PowExpression");
-  py::object ProductExpression = numeric_expr.attr("ProductExpression");
-  py::object NPV_ProductExpression = numeric_expr.attr("NPV_ProductExpression");
-  py::object MonomialTermExpression = numeric_expr.attr("MonomialTermExpression");
-  py::object DivisionExpression = numeric_expr.attr("DivisionExpression");
-  py::object NPV_DivisionExpression = numeric_expr.attr("NPV_DivisionExpression");
-  py::object SumExpression = numeric_expr.attr("SumExpression");
-  py::object NPV_SumExpression = numeric_expr.attr("NPV_SumExpression");
-  py::object UnaryFunctionExpression = numeric_expr.attr("UnaryFunctionExpression");
-  py::object NPV_UnaryFunctionExpression = numeric_expr.attr("NPV_UnaryFunctionExpression");
-  py::object LinearExpression = numeric_expr.attr("LinearExpression");
-
   std::shared_ptr<Node> node;
-  node = appsi_operator_from_pyomo_expr(expr, var_map, param_map);
+  node = appsi_operator_from_pyomo_expr(expr, var_map, param_map, expr_types);
   if (node->is_operator_type())
     {
       std::vector<std::shared_ptr<Node> > oper_stack;
       std::vector<py::handle> expr_stack;
       expr_stack.push_back(expr);
       oper_stack.push_back(node);
-
+  
       std::shared_ptr<Node> root = node;
-
-      py::type tmp_type = py::type::of(expr);
-
+  
       while (expr_stack.size() > 0)
-	{
-	  py::handle _expr = expr_stack.back();
-	  node = oper_stack.back();
-	  expr_stack.pop_back();
-	  oper_stack.pop_back();
-	  tmp_type = py::type::of(_expr);
-
-	  if (tmp_type.is(ProductExpression))
-	    {
-	      std::shared_ptr<MultiplyOperator> oper = std::dynamic_pointer_cast<MultiplyOperator>(node);
-	      py::tuple expr_args = _expr.attr("args");
-	      oper->operand1 = appsi_operator_from_pyomo_expr(expr_args[0], var_map, param_map);
-	      oper->operand2 = appsi_operator_from_pyomo_expr(expr_args[1], var_map, param_map);
-	      if (oper->operand1->is_operator_type())
-		{
-		  expr_stack.push_back(expr_args[0]);
-		  oper_stack.push_back(oper->operand1);
-		}
-	      if (oper->operand2->is_operator_type())
-		{
-		  expr_stack.push_back(expr_args[1]);
-		  oper_stack.push_back(oper->operand2);
-		}
-	    }
-	  else if (tmp_type.is(SumExpression))
-	    {
-	      std::shared_ptr<SumOperator> oper = std::dynamic_pointer_cast<SumOperator>(node);
-	      py::tuple expr_args = _expr.attr("args");
-	      std::shared_ptr<Node> _operand;
-	      for (py::handle arg : expr_args)
-		{
-		  _operand = appsi_operator_from_pyomo_expr(arg, var_map, param_map);
-		  oper->operands->push_back(_operand);
-		  if (_operand->is_operator_type())
-		    {
-		      expr_stack.push_back(arg);
-		      oper_stack.push_back(_operand);
-		    }
-		}
-	    }
-	  else
-	    {
-	      throw py::value_error("Unrecognized expression type");
-	    }
-	}
+  	{
+  	  py::handle _expr = expr_stack.back();
+  	  node = oper_stack.back();
+  	  expr_stack.pop_back();
+  	  oper_stack.pop_back();
+  
+  	  if (node->is_binary_operator())
+  	    {
+  	      std::shared_ptr<BinaryOperator> oper = std::dynamic_pointer_cast<BinaryOperator>(node);
+  	      py::tuple expr_args = _expr.attr("args");
+  	      oper->operand1 = appsi_operator_from_pyomo_expr(expr_args[0], var_map, param_map, expr_types);
+  	      oper->operand2 = appsi_operator_from_pyomo_expr(expr_args[1], var_map, param_map, expr_types);
+  	      if (oper->operand1->is_operator_type())
+  		{
+  		  expr_stack.push_back(expr_args[0]);
+  		  oper_stack.push_back(oper->operand1);
+  		}
+  	      if (oper->operand2->is_operator_type())
+  		{
+  		  expr_stack.push_back(expr_args[1]);
+  		  oper_stack.push_back(oper->operand2);
+  		}
+  	    }
+  	  else if (node->is_unary_operator())
+  	    {
+  	      std::shared_ptr<UnaryOperator> oper = std::dynamic_pointer_cast<UnaryOperator>(node);
+  	      py::tuple expr_args = _expr.attr("args");
+  	      oper->operand = appsi_operator_from_pyomo_expr(expr_args[0], var_map, param_map, expr_types);
+  	      if (oper->operand->is_operator_type())
+  		{
+  		  expr_stack.push_back(expr_args[0]);
+  		  oper_stack.push_back(oper->operand);
+  		}
+  	    }
+  	  else if (node->is_sum_operator())
+  	    {
+  	      std::shared_ptr<SumOperator> oper = std::dynamic_pointer_cast<SumOperator>(node);
+  	      py::tuple expr_args = _expr.attr("args");
+  	      std::shared_ptr<Node> _operand;
+  	      for (py::handle arg : expr_args)
+  		{
+  		  _operand = appsi_operator_from_pyomo_expr(arg, var_map, param_map, expr_types);
+  		  oper->operands->push_back(_operand);
+  		  if (_operand->is_operator_type())
+  		    {
+  		      expr_stack.push_back(arg);
+  		      oper_stack.push_back(_operand);
+  		    }
+  		}
+  	    }
+  	  else if (node->is_linear_operator())
+  	    {
+  	      std::shared_ptr<LinearOperator> oper = std::dynamic_pointer_cast<LinearOperator>(node);
+  	      oper->constant = appsi_expr_from_pyomo_expr(_expr.attr("constant"), var_map, param_map, expr_types);
+  	      py::list pyomo_vars = _expr.attr("linear_vars");
+  	      py::list pyomo_coefs = _expr.attr("linear_coefs");
+  	      for (py::handle v : pyomo_vars)
+  	  	{
+  	  	  oper->variables->push_back(var_map[expr_types.id(v)].cast<std::shared_ptr<Var> >());
+  	  	}
+  	      for (py::handle c : pyomo_coefs)
+  	  	{
+  	  	  oper->coefficients->push_back(appsi_expr_from_pyomo_expr(c, var_map, param_map, expr_types));
+  	  	}
+  	    }
+  	  else if (node->is_external_operator())
+  	    {
+  	      std::shared_ptr<ExternalOperator> oper = std::dynamic_pointer_cast<ExternalOperator>(node);
+  	      oper->function_name = _expr.attr("_fcn").attr("_function").cast<std::string>();
+  	      py::tuple expr_args = _expr.attr("args");
+  	      std::shared_ptr<Node> _operand;
+  	      for (py::handle arg : expr_args)
+  		{
+  		  _operand = appsi_operator_from_pyomo_expr(arg, var_map, param_map, expr_types);
+  		  oper->operands->push_back(_operand);
+  		  if (_operand->is_operator_type())
+  		    {
+  		      expr_stack.push_back(arg);
+  		      oper_stack.push_back(_operand);
+  		    }
+  		}	      
+  	    }
+  	  else
+  	    {
+  	      throw py::value_error("Unrecognized expression type");
+  	    }
+  	}
       return std::dynamic_pointer_cast<Operator>(root)->expression_from_operator();
     }
   else
     {
       return std::dynamic_pointer_cast<ExpressionBase>(node);
     }
+}
+
+
+std::vector<std::shared_ptr<ExpressionBase> > appsi_exprs_from_pyomo_exprs(py::list expr_list, py::dict var_map, py::dict param_map)
+{
+  std::vector<std::shared_ptr<ExpressionBase> > res;
+  PyomoExprTypes expr_types = PyomoExprTypes();
+
+  for (py::handle expr : expr_list)
+    {
+      res.push_back(appsi_expr_from_pyomo_expr(expr, var_map, param_map, expr_types));
+    }
+  return res;
 }
 
 
