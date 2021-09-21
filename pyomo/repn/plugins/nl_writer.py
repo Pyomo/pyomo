@@ -30,8 +30,6 @@ from pyomo.core.base import (
 from pyomo.core.base.expression import Expression, _GeneralExpressionData
 from pyomo.opt import WriterFactory
 
-from pyomo.common.formatting import tostr
-
 class _CONSTANT(object): pass
 class _MONOMIAL(object): pass
 class _GENERAL(object): pass
@@ -303,7 +301,6 @@ class _NLWriter_impl(object):
                 info[1]: str(var_idx) for var_idx, info in enumerate(variables)
             }
 
-
         #
         # Print Header
         #
@@ -415,10 +412,10 @@ class _NLWriter_impl(object):
         self.next_V_line_id = n_vars
         for i, _id in enumerate(self.subexpression_order):
             cache = self.subexpression_cache[_id]
-            if 0 in cache[3] or None not in cache[3]:
+            if 0 in cache[2] or None not in cache[2]:
                 self._write_v_line(_id, 0, var_map, var_id_to_nl)
             else:
-                target_expr = tuple(filter(None, cache[3]))[0]
+                target_expr = tuple(filter(None, cache[2]))[0]
                 if target_expr not in single_use_subexpressions:
                     single_use_subexpressions[target_expr] = []
                 single_use_subexpressions[target_expr].append(_id)
@@ -643,7 +640,7 @@ class _NLWriter_impl(object):
         for idx in (0, 1):
             cache = self.subexpression_cache
             for id_ in self.subexpression_order:
-                src_id = cache[id_][3][idx]
+                src_id = cache[id_][2][idx]
                 if src_id is None:
                     continue
                 # This expression is used by multiple components; ensure
@@ -662,7 +659,7 @@ class _NLWriter_impl(object):
                         # If it is, update the flag and recurse into it
                         if subid not in cache:
                             continue
-                        target = cache[subid][3]
+                        target = cache[subid][2]
                         if (target[idx] is None
                             or (target[idx] and target[idx] != src_id)):
                             target[idx] = src_id
@@ -675,7 +672,7 @@ class _NLWriter_impl(object):
         #     used by one constraint,
         #     used by one objective ]
         n_subexpressions = [0]*5
-        for info in map(itemgetter(3), self.subexpression_cache.values()):
+        for info in map(itemgetter(2), self.subexpression_cache.values()):
             if None in info:
                 if info[1] is None:
                     n_subexpressions[3 if info[0] else 1] += 1
@@ -1057,10 +1054,7 @@ def handle_expression_node(visitor, node, arg1):
             repn,
             # 1: the common subexpression
             sub_repn,
-            # 2: how this subexpression should be represented in the outer
-            # (calling) expression
-            sub_repn,
-            # 3: the (single) component that uses this subexpression (0 if
+            # 2: the (single) component that uses this subexpression (0 if
             # used by more than one)
             list(visitor.active_expression_source),
         )
@@ -1074,15 +1068,12 @@ def handle_expression_node(visitor, node, arg1):
         node,
         # 1: the common subexpression
         repn,
-        # 2: how this subexpression should be represented in the outer
-        # (calling) expression
-        repn,
-        # 3: the (single) component that uses this subexpression (0 if
+        # 2: the (single) component that uses this subexpression (0 if
         # used by more than one)
         list(visitor.active_expression_source),
     )
     visitor.subexpression_order.append(_id)
-    return (_GENERAL, visitor.subexpression_cache[_id][2])
+    return (_GENERAL, visitor.subexpression_cache[_id][1])
 
 _operator_handles = dict()
 _operator_handles[NegationExpression] = handle_negation_node
@@ -1162,8 +1153,8 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         _id = id(child)
         if _id in self.subexpression_cache:
             cache = self.subexpression_cache[_id]
-            cache[3][self.active_expression_source_idx] = 0
-            return False, (_GENERAL, cache[2])
+            cache[2][self.active_expression_source_idx] = 0
+            return False, (_GENERAL, cache[1])
 
         return True, None
 
