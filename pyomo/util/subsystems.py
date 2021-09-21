@@ -14,6 +14,66 @@ from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.backports import nullcontext
 
+from pyomo.core.base.constraint import Constraint
+from pyomo.core.base.expression import Expression
+from pyomo.core.base.external import ExternalFunction
+from pyomo.core.expr.visitor import SimpleExpressionVisitor
+from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
+
+
+class ExternalFunctionVisitor(SimpleExpressionVisitor):
+
+    def __init__(self):
+        self.seen = set()
+        self.functions = []
+
+    def visit(self, node):
+        if type(node) is ExternalFunctionExpression:
+            if id(node) not in self.seen:
+                self.seen.add(id(node))
+                self.functions.append(node)
+
+
+def add_local_external_functions(block):
+    ef_exprs = []
+    for comp in block.component_data_objects(
+            (Constraint, Expression), active=True
+            ):
+        visitor = ExternalFunctionVisitor()
+        visitor.xbfs(comp.expr)
+        ef_exprs.extend(visitor.functions)
+    unique_functions = []
+    fcn_set = set()
+    for expr in ef_exprs:
+        fcn = expr._fcn
+        data = (fcn._library, fcn._function)
+        if data not in fcn_set:
+            fcn_set.add(data)
+            unique_functions.append(data)
+    fcn_comp_map = {}
+    for lib, name in unique_functions:
+        comp_name = "_" + name
+        comp = ExternalFunction(library=lib, function=name)
+        block.add_component(comp_name, comp)
+        fcn_comp_map[lib, name] = comp
+    #
+    # TODO: It is unclear if we will need to use the new ExternalFunction
+    # objects, or just know about the libraries and names.
+    #
+    #replacement_map = {
+    #    id(expr):
+    #        fcn_comp_map[expr._fcn._library, expr._fcn._function](*expr.args)
+    #    for expr in ef_exprs
+    #}
+    #new_comp_map = ComponentMap()
+    #for comp in block.component_data_objects(
+    #        (Constraint, Expression), active=True
+    #        ):
+    #    ctype = comp.ctype
+    #    new_expr = replace_expressions(comp.expr, replacement_map)
+    #    new_comp_map[comp] = ctype(expr=new_expr)
+    #return new_comp_map
+
 
 def create_subsystem_block(constraints, variables=None, include_fixed=False):
     """ This function creates a block to serve as a subsystem with the
@@ -52,6 +112,7 @@ def create_subsystem_block(constraints, variables=None, include_fixed=False):
                 input_vars.append(var)
                 var_set.add(var)
     block.input_vars = Reference(input_vars)
+    add_local_external_functions(block)
     return block
 
 
