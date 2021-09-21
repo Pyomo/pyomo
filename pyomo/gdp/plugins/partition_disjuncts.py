@@ -36,7 +36,6 @@ from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (preprocess_targets, is_child_of, target_list,
                             _to_dict, verify_successful_solve, NORMAL,
                             clone_without_expression_components,
-                            _warn_for_active_disjunction,
                             _warn_for_active_disjunct,
                             _warn_for_active_logical_constraint)
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
@@ -46,9 +45,6 @@ from math import floor
 
 import logging
 logger = logging.getLogger('pyomo.gdp.partition_disjuncts')
-
-#DEBUG 
-from nose.tools import set_trace
 
 NAME_BUFFER = {}
 
@@ -278,10 +274,12 @@ class PartitionDisjuncts_Transformation(Transformation):
             Set:         False,
             SetOf:       False,
             RangeSet:    False,
-            Disjunction: self._warn_for_active_disjunction,
+            Disjunction: False, # this actually isn't possible in this
+                                # transformation because we transform them when
+                                # we find them
             Disjunct:    self._warn_for_active_disjunct,
             Block:       False,
-            LogicalConstraint: self._warn_for_active_logical_statement,
+            LogicalConstraint: self._warn_for_active_logical_constraint,
             ExternalFunction: False,
             Port:        False, # not Arcs, because those are deactivated after
                                 # the network.expand_arcs transformation
@@ -408,7 +406,7 @@ class PartitionDisjuncts_Transformation(Transformation):
                 '_pyomo_gdp_partition_disjuncts_reformulation'),
             transformation_block)
 
-        transformation_block.indicator_var_equalities = Constraint(
+        transformation_block.indicator_var_equalities = LogicalConstraint(
             NonNegativeIntegers)
 
         return transformation_block
@@ -428,13 +426,19 @@ class PartitionDisjuncts_Transformation(Transformation):
             self._transform_blockData(obj[i])
 
     def _transform_blockData(self, obj):
-        # Transform every (active) disjunction in the block
+        # compute the list of Disjunctions to transform *once*, then do it. Else
+        # we will pick up the Disjunctions we create!
+        to_transform = []
+        # Transform every (active) disjunction in the block. Don't descend into
+        # Disjuncts because we'll transform what's on them recursively.
         for disjunction in obj.component_data_objects(
                 Disjunction,
                 active=True,
                 sort=SortComponents.deterministic,
-                descend_into=(Block, Disjunct),
-                descent_order=TraversalStrategy.PostfixDFS):
+                descend_into=Block):
+            to_transform.append(disjunction)
+
+        for disjunction in to_transform:
             self._transform_disjunctionData(disjunction, disjunction.index())
 
     def _transform_disjunction(self, obj):
@@ -449,12 +453,10 @@ class PartitionDisjuncts_Transformation(Transformation):
 
         obj.deactivate()
 
-    def _transform_disjunctionData(self, obj, idx, transBlock=None):
+    def _transform_disjunctionData(self, obj, idx, transBlock=None,
+                                   transformed_parent_disjunct=None):
         if not obj.active:
             return
-
-        # DEBUG
-        print("Transforming %s" % obj.name)
 
         # Just because it's unlikely this is what someone meant to do...
         if len(obj.disjuncts) == 0:
@@ -463,6 +465,9 @@ class PartitionDisjuncts_Transformation(Transformation):
                             obj.getname(fully_qualified=True,
                                         name_buffer=NAME_BUFFER))
 
+        if transBlock is None and transformed_parent_disjunct is not None:
+            transBlock = self._add_transformation_block(
+                transformed_parent_disjunct)
         if transBlock is None:
             transBlock = self._add_transformation_block(obj.parent_block())
 
@@ -512,13 +517,12 @@ class PartitionDisjuncts_Transformation(Transformation):
                                                             transBlock)
             if transformed_disjunct is not None:
                 transformed_disjuncts.append(transformed_disjunct)
-                # [ESJ 9/20/21]: TODO: These should be LogicalConstraints, but
-                # I'm not sure we should do that until the writers will complain
-                # about stuff they don't understand.
+                # These require transformation, but that's okay because we are
+                # going to a GDP
                 transBlock.indicator_var_equalities[
                     len(transBlock.indicator_var_equalities)] = \
-                        disjunct.binary_indicator_var == \
-                        transformed_disjunct.binary_indicator_var
+                        disjunct.indicator_var.equivalent_to(
+                            transformed_disjunct.indicator_var)
 
         # make a new disjunction with the transformed guys
         transformed_disjunction = Disjunction(expr=[disj for disj in
@@ -570,21 +574,28 @@ class PartitionDisjuncts_Transformation(Transformation):
                     "it appears in has not. Putting the same disjunct in "
                     "multiple disjunctions is not supported." % disjunct.name)
 
-        ## DEBUG
-        print("\tTransforming %s" % disjunct.name)
-
         transformed_disjunct = Disjunct()
         disjunct._transformation_block = weakref_ref(transformed_disjunct)
         transBlock.add_component(unique_component_name(
             transBlock,
             disjunct.getname(fully_qualified=True, name_buffer=NAME_BUFFER)),
                                  transformed_disjunct)
+
+        # need to transform inner Disjunctions first (before we complain about
+        # active Disjuncts)
+        for disjunction in disjunct.component_data_objects(
+                Disjunction,
+                active=True,
+                sort=SortComponents.deterministic,
+                descend_into=Block):
+            self._transform_disjunctionData(disjunction, disjunction.index(),
+                                            None, transformed_disjunct)
     
+        # transform everything else
         for obj in disjunct.component_data_objects(
                 active=True,
                 sort=SortComponents.deterministic,
                 descend_into=Block):
-            print("\t\tfound %s\n\t\tactive: %s" % (obj.name, obj.active))
             handler = self.handlers.get(obj.ctype, None)
             if not handler:
                 if handler is None:
@@ -745,29 +756,20 @@ class PartitionDisjuncts_Transformation(Transformation):
         # deactivate the constraint since we've transformed it
         cons.deactivate()                             
 
-    def _warn_for_active_disjunction(self, disjunction, disjunct,
-                                     transformed_disjunct, transBlock,
-                                     partition):
-        _warn_for_active_disjunction(disjunction, disjunct, NAME_BUFFER)
-
-    def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct,
-                                  transformed_disjunct, transBlock,
+    def _warn_for_active_disjunct(self, disjunct, parent_disjunct,
+                                  transformed_parent_disjunct, transBlock,
                                   partition):
-        _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER)
+        _warn_for_active_disjunct(disjunct, parent_disjunct, NAME_BUFFER)
 
-    def _warn_for_active_logical_statement( self, logical_statment, disjunct,
-                                            transformed_disjunct, transBlock,
-                                            partition):
-        _warn_for_active_logical_constraint(logical_statment, disjunct,
+    def _warn_for_active_logical_constraint(self, constraint, parent_disjunct,
+                                            transformed_parent_disjunct,
+                                            transBlock, partition):
+        _warn_for_active_logical_constraint(constraint, parent_disjunct,
                                             NAME_BUFFER)
 
-# ESJ: TODO: Right now we could break logical constraints with this
-# transformation... We need to either equate the new indicator_vars with the
-# old, or we need to go through the constraints on the model and substitute
-# directly! I'm not sure which is better. The first relies on stupid stuff
-# getting cleaned up by solver presolves. The second is pretty aggressive in
-# modifying the model. Ideally, actually, the indicator_vars on the new
-# Disjuncts would be references to those of the old. Which is one more argument
-# for what I have always wanted to do, which is be able to declare the
-# indicator_var of a Disjunct... Or can we hack it by linking it to the old
-# binary?
+# ESJ: TODO: Add a test for the old indicator variables appearing in logical
+# constraints.
+
+# Also, I'm not confident of nested and targets... 
+
+# TODO: Indexed Var declared on Disjunct
