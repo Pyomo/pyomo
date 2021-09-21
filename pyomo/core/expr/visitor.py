@@ -203,6 +203,8 @@ class StreamBasedExpressionVisitor(object):
             walk, result = self.initializeWalker(expr)
             if not walk:
                 return result
+            elif result is not None:
+                expr = result
         if self.enterNode is not None:
             tmp = self.enterNode(expr)
             if tmp is None:
