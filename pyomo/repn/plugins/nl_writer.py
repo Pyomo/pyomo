@@ -9,6 +9,8 @@
 #  ___________________________________________________________________________
 
 import enum
+from collections import Counter, deque
+from operator import itemgetter
 
 from pyomo.common.config import ConfigBlock, ConfigValue, InEnum
 
@@ -16,6 +18,8 @@ from pyomo.core.expr.current import (
     NegationExpression, ProductExpression, DivisionExpression,
     PowExpression, AbsExpression, UnaryFunctionExpression,
     MonomialTermExpression, LinearExpression, SumExpressionBase,
+    EqualityExpression, InequalityExpression, RangedExpression,
+    Expr_ifExpression,
     native_types,
 )
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
@@ -55,7 +59,7 @@ class NLWriter(object):
         description='Skip writing constraints whose body is constant'
     ))
     CONFIG.declare('file_determinism', ConfigValue(
-        default=FileDeterminism.SORT_INDICES,
+        default=FileDeterminism.NONE,
         domain=InEnum(FileDeterminism),
         description='How much effort to ensure file is deterministic',
         doc="""
@@ -97,44 +101,58 @@ class NLWriter(object):
                 (model.name, "\n\t".join("%s:\n\t\t%s" % (
                     k, "\n\t\t".join(v)) for k, v in unknown.items())))
 
+        return _NLWriter_impl(ostream, config).write(model)
+
+
+class _NLWriter_impl(object):
+    RANGE_TYPE = {
+        # has_lb, has_ub, lb == ub
+        (True, True, False): 0,   # L <= c <= U
+        (False, True, False): 1,  #      c <= U
+        (True, False, False): 2,  # L <= c
+        (False, False, True): 3,  # -inf <= c <= inf
+        (True, True, True): 4,    # L == c == U
+        # complementarity: 5,
+    }
+
+    def __init__(self, ostream, config):
+        self.ostream = ostream
+        self.config = config
+        self.symbolic_solver_labels = config.symbolic_solver_labels
+        if self.symbolic_solver_labels:
+            self.template = text_nl_debug_template
+        else:
+            self.template = text_nl_template
+        self.subexpression_cache = {}
+        self.subexpression_order = []
+        self.visitor = AMPLRepnVisitor(
+            self.template, self.subexpression_cache, self.subexpression_order)
+        self.next_V_line_id = 0
+
+    def write(self, model):
         sorter = SortComponents.unsorted
-        if config.file_determinism >= FileDeterminism.SORT_INDICES:
+        if self.config.file_determinism >= FileDeterminism.SORT_INDICES:
             sorter = sorter | SortComponents.indices
-            if config.file_determinism  >= FileDeterminism.SORT_SYMBOLS:
+            if self.config.file_determinism  >= FileDeterminism.SORT_SYMBOLS:
                 sorter = sorter | SortComponents.alphabetical
 
-        symbolic_solver_labels = config.symbolic_solver_labels
-
-        generate_amplrepn = AMPLRepnVisitor(
-            text_nl_debug_template if symbolic_solver_labels else
-            text_nl_template
-        )
-
-        range_type = {
-            # has_lb, has_ub, lb == ub
-            (True, True, False): 0,   # L <= c <= U
-            (False, True, False): 1,  #      c <= U
-            (True, False, False): 2,  # L <= c     
-            (False, False, True): 3,  # -inf <= c <= inf
-            (True, True, True): 4,    # L == c == U
-            # complementarity: 5,
-        }
+        symbolic_solver_labels = self.symbolic_solver_labels
+        visitor = self.visitor
+        ostream = self.ostream
 
         var_map = {}
-        next_var_num = 0
 
-        if config.file_determinism > FileDeterminism.NONE:
+        if self.config.file_determinism > FileDeterminism.NONE:
             # We will pre-gather the variables so that their order
             # matches the file_determinism flag.
             #
-            # This is a little cumbersome, but is imlemented this wat
+            # This is a little cumbersome, but is implemented this way
             # for consistency with the original NL writer.  Note that
             # Vars that appear twice (e.g., through a Reference) will be
             # sorted with the LAST occurance.
             var_map = {id(var): (var, i) for i, var in enumerate(
                 model.component_data_objects(
                     Var, descend_into=True, sort=sorter))}
-            next_var_num = max(info[1] for info in var_map.values()) + 1
 
         #
         # Tabulate the model expressions
@@ -142,14 +160,14 @@ class NLWriter(object):
 
         objectives = [
             (obj,
-             generate_amplrepn.walk_expression(obj.expr),
+             visitor.walk_expression((obj.expr, obj, 1)),
          ) for obj in model.component_data_objects(
              Objective, active=True, descend_into=True, sort=sorter)]
 
         constraints = [(
             con,
-            generate_amplrepn.walk_expression(con.body),
-            range_type[con.has_lb(), con.has_ub(), con.lb == con.ub],
+            visitor.walk_expression((con.body, con, 0)),
+            self.RANGE_TYPE[con.has_lb(), con.has_ub(), con.lb == con.ub],
         ) for con in model.component_data_objects(
             Constraint, active=True, descend_into=True, sort=sorter
         ) if con.has_lb() or con.has_ub() ]
@@ -167,37 +185,41 @@ class NLWriter(object):
         nonlinear_cons = [con for con in constraints if con[1].nonlinear]
         linear_cons = [con for con in constraints if not con[1].nonlinear]
         constraints = nonlinear_cons + linear_cons
-                       
+
         n_ranges = sum(1 for con in constraints if con[2] == 0)
         n_equality = sum(1 for con in constraints if con[2] == 4)
 
         # nonzeros by (constraint, objective) component.  Keys are
-        # component id(), Values are sets of var id()
+        # component id(), Values are tuples with three sets:
+        # (linear_vars, nonlinear_vars, nonzeros) [where nonzeros is the
+        # union of linear andd nonlinear].  Note that variables can
+        # appear in both linear and nonlinear sets.
         nz_by_comp = {}
+
+        # We need to categorize the named subexpressions first so that
+        # we know their linear / nonlinear vars when we encounter them
+        # in constraints / objectives
+        subexpressions = map(self.subexpression_cache.__getitem__,
+                             self.subexpression_order)
+        self._categorize_vars(subexpressions, var_map, nz_by_comp)
+        n_subexpressions = self._count_subexpression_occurances()
 
         n_objs = len(objectives)
         n_nonlinear_objs = sum(1 for obj in objectives if obj[1].nonlinear)
-
-        obj_vars_linear = set()
-        obj_vars_nonlinear = set()
-        obj_nnz_by_var = {}
-        next_var_num = self._categorize_vars(
-            var_map, next_var_num, objectives, obj_vars_linear,
-            obj_vars_nonlinear, obj_nnz_by_var, nz_by_comp)
+        obj_vars_linear, obj_vars_nonlinear, obj_nnz_by_var \
+            = self._categorize_vars(objectives, var_map, nz_by_comp)
 
         n_cons = len(constraints)
         n_nonlinear_cons = len(nonlinear_cons)
+        con_vars_linear, con_vars_nonlinear, con_nnz_by_var \
+            = self._categorize_vars(constraints, var_map, nz_by_comp)
 
-        con_vars_linear = set()
-        con_vars_nonlinear = set()
-        con_nnz_by_var = {}
-        next_var_num = self._categorize_vars(
-            var_map, next_var_num, constraints, con_vars_linear,
-            con_vars_nonlinear, con_nnz_by_var, nz_by_comp)
+        n_lcons = 0 # We do not yet support logical constraints
 
         obj_vars = obj_vars_linear.union(obj_vars_nonlinear)
         con_vars = con_vars_linear.union(con_vars_nonlinear)
         all_vars = con_vars.union(obj_vars)
+        n_vars = len(all_vars)
 
         binary_vars = set(
             _id for _id in all_vars if var_map[_id][0].is_binary()
@@ -250,11 +272,11 @@ class NLWriter(object):
         variables.extend(sorted(
             linear_only_vars.intersection(integer_vars),
             key=column_order))
-        assert len(variables) == len(all_vars)
+        assert len(variables) == n_vars
         for var_idx, _id in enumerate(variables):
             v = var_map[_id][0]
             bnds = v.bounds
-            variables[var_idx] = (v, _id, range_type[
+            variables[var_idx] = (v, _id, self.RANGE_TYPE[
                 bnds[0] is not None,
                 bnds[1] is not None,
                 bnds[0] == bnds[1]])
@@ -265,7 +287,8 @@ class NLWriter(object):
         # Now that the row/column ordering is resolved, create the labels
         if symbolic_solver_labels:
             labeler = NameLabeler()
-            row_labels = [labeler(info[0]) for info in constraints]
+            row_labels = [labeler(info[0]) for info in constraints] \
+                         + [labeler(info[0]) for info in objectives]
             row_comments = ['\t#%s' % lbl for lbl in row_labels]
             col_labels = [labeler(info[0]) for info in variables]
             col_comments = ['\t#%s' % lbl for lbl in col_labels]
@@ -274,12 +297,12 @@ class NLWriter(object):
                 for var_idx, info in enumerate(variables)
             }
         else:
-            row_labels = row_comments = [''] * n_cons
+            row_labels = row_comments = [''] * (n_cons + n_objs)
             col_labels = col_comments = [''] * len(variables)
             var_id_to_nl = {
                 info[1]: str(var_idx) for var_idx, info in enumerate(variables)
             }
-            
+
 
         #
         # Print Header
@@ -293,7 +316,7 @@ class NLWriter(object):
         ostream.write(
             " %d %d %d %d %d \t"
             "# vars, constraints, objectives, ranges, eqns\n"
-            % ( len(all_vars),
+            % ( n_vars,
                 n_cons,
                 n_objs,
                 n_ranges,
@@ -364,13 +387,14 @@ class NLWriter(object):
         #
         ostream.write(
             " %d %d\t# max name lengths: constraints, variables\n"
-            % ( max(len(lbl) for lbl in row_labels),
-                max(len(lbl) for lbl in col_labels),
+            % ( max(map(len, row_labels)),
+                max(map(len, col_labels)),
             ))
         #
         # LINE 10
         #
-        ostream.write(" 0 0 0 0 0\t# common exprs: b,c,o,c1,o1\n")
+        ostream.write(" %d %d %d %d %d\t# common exprs: b,c,o,c1,o1\n"
+                      % tuple(n_subexpressions))
 
         #
         # "F" lines (external function definitions)
@@ -381,13 +405,34 @@ class NLWriter(object):
         #
 
         #
+        # "V" lines (common subexpressions)
+        #
+        # per "writing .nl files", common subexpressions appearing in
+        # more than one constraint/objective come first, then
+        # subexpressions that only appear in one place come immediately
+        # before the C/O line that references it.
+        single_use_subexpressions = {}
+        self.next_V_line_id = n_vars
+        for i, _id in enumerate(self.subexpression_order):
+            cache = self.subexpression_cache[_id]
+            if 0 in cache[3] or None not in cache[3]:
+                self._write_v_line(_id, 0, var_map, var_id_to_nl)
+            else:
+                target_expr = tuple(filter(None, cache[3]))[0]
+                if target_expr not in single_use_subexpressions:
+                    single_use_subexpressions[target_expr] = []
+                single_use_subexpressions[target_expr].append(_id)
+        #
         # "C" lines (constraints: nonlinear expression)
         #
         lbl = ''
         for row_idx, info in enumerate(constraints):
+            for _id in single_use_subexpressions.get(id(info[0]), ()):
+                self._write_v_line(_id, row_idx, var_map, var_id_to_nl)
             ostream.write('C%d%s\n' % (row_idx, row_comments[row_idx]))
             if info[1].nonlinear:
-                args = tuple(var_id_to_nl[_id] for _id in info[1].nonlinear[1])
+                args = tuple(map(var_id_to_nl.__getitem__,
+                                 info[1].nonlinear[1]))
                 ostream.write(info[1].nonlinear[0] % args)
             else:
                 ostream.write('n0\n')
@@ -397,12 +442,17 @@ class NLWriter(object):
         #
         lbl = ''
         for obj_idx, info in enumerate(objectives):
+            for _id in single_use_subexpressions.get(id(info[0]), ()):
+                self._write_v_line(
+                    _id, n_cons + n_lcons + obj_idx,
+                    var_map, var_id_to_nl)
             if symbolic_solver_labels:
                 lbl = '\t#%s' % info[0].name
             sense = 0 if info[0].sense == minimize else 1
             ostream.write('O%d %d%s\n' % (obj_idx, sense, lbl))
             if info[1].nonlinear:
-                args = tuple(var_id_to_nl[_id] for _id in info[1].nonlinear[1])
+                args = tuple(map(var_id_to_nl.__getitem__,
+                                 info[1].nonlinear[1]))
                 ostream.write(info[1].nonlinear[0] % args)
             else:
                 ostream.write('n0\n')
@@ -424,7 +474,7 @@ class NLWriter(object):
             "\t# initial guess" if symbolic_solver_labels else '',
         ))
         ostream.write(''.join(_init_lines))
-        
+
         #
         # "r" lines (constraint bounds)
         #
@@ -479,7 +529,7 @@ class NLWriter(object):
         #
         lbl = ''
         for row_idx, info in enumerate(constraints):
-            nz = nz_by_comp[id(info[0])]
+            nz = nz_by_comp[id(info[0])][2]
             ostream.write('J%d %d%s\n'
                           % (row_idx, len(nz), row_comments[row_idx]))
             linear = info[1].linear or {}
@@ -494,56 +544,189 @@ class NLWriter(object):
         for obj_idx, info in enumerate(objectives):
             if symbolic_solver_labels:
                 lbl = '\t#%s' % info[0].name
-            nz = nz_by_comp[id(info[0])]
+            nz = nz_by_comp[id(info[0])][2]
             linear = info[1].linear or {}
             ostream.write('G%d %d%s\n' % (obj_idx, len(nz), lbl))
             for entry in sorted((var_map[_id][1], linear.get(_id, 0))
                                 for _id in nz):
                 ostream.write('%d %r\n' % entry)
-        
 
-    def _categorize_vars(self, var_map, next_var_num, comp_list,
-                         comp_linear_vars, comp_nonlinear_vars,
-                         nnz_by_var, nz_by_comp):
+    def _categorize_vars(self, comp_list, var_map, nz_by_comp):
+        """Categorize compiled expression vars into linear and nonlinear
+
+        This routine takes an iterable of compiled component expression
+        infos and returns the sets of variables appearing lineary and
+        nonlinearly in those components.
+
+        This routine has a number of side effects:
+
+          - the ``var_map`` is updated with any new variables
+            encountered in the expressions.
+
+          - the ``nnz_by_var`` counter is updated with the count of
+            components that each var appears in.
+
+          - the ``nz_by_comp`` dict is updates to contain a tuple of
+            three sets, containing the id() of variables appearing
+            linearly, nonlinearly, and the union of those two sets for
+            each component in the ``comp_list``
+
+          - the expr_info (the second element in each tuple in
+            ``comp_list``) is "compiled": the ``linear`` attribute is
+            converted from a list of var, coef terms (potentially with
+            duplicate entries) into a dict that maps var id to
+            coefficients, and the nonlinear args (the second entry in
+            the ``nonlinear`` tuple) are converted from variables to
+            ids)
+
+        """
+        all_linear_vars = set()
+        all_nonlinear_vars = set()
+        nnz_by_var = Counter()
+        next_var_num = len(var_map)
+
         for comp_info in comp_list:
             expr_info = comp_info[1]
-            nz_by_comp[id(comp_info[0])] = comp_nz = set()
+            nz_by_comp[id(comp_info[0])] \
+                = linear_vars, nonlinear_vars, nz = set(), set(), set()
             if expr_info.linear:
                 coefs, vars_ = expr_info.collect_linear()
                 for _id, v in vars_:
                     if _id not in var_map:
                         var_map[_id] = (v, next_var_num)
                         next_var_num += 1
-                    expr_info.linear = coefs
-                    comp_linear_vars.add(_id)
-                    comp_nz.add(_id)
+                linear_vars.update(coefs)
+                expr_info.linear = coefs
             if expr_info.nonlinear:
                 args = expr_info.nonlinear[1]
-                ids = tuple(id(v) for v in args)
+                ids = tuple(map(id, args))
                 for v, _id in zip(args, ids):
-                    if _id not in var_map:
+                    if _id in nz:
+                       continue
+                    nz.add(_id)
+                    if _id in var_map:
+                        nonlinear_vars.add(_id)
+                    elif _id in nz_by_comp:
+                        # This is a defined variable (Expression node)
+                        #
+                        # ... as this subexpression appears in the
+                        # "nonlinear" expression tree, all variables in
+                        # it are nonlinear in the context of this
+                        # expression
+                        nonlinear_vars.update(nz_by_comp[_id][0]) # linear
+                        nonlinear_vars.update(nz_by_comp[_id][1]) # nonlinear
+                    else:
                         var_map[_id] = (v, next_var_num)
                         next_var_num += 1
-                    comp_nonlinear_vars.add(_id)
-                    comp_nz.add(_id)
+                        nonlinear_vars.add(_id)
                 expr_info.nonlinear = (expr_info.nonlinear[0], ids)
-            for _id in comp_nz:
-                if _id in nnz_by_var:
-                    nnz_by_var[_id] += 1
+            nz.clear()
+            nz.update(linear_vars)
+            nz.update(nonlinear_vars)
+            nnz_by_var.update(nz)
+            all_linear_vars.update(linear_vars)
+            all_nonlinear_vars.update(nonlinear_vars)
+        return (
+            all_linear_vars - all_nonlinear_vars,
+            all_nonlinear_vars,
+            nnz_by_var,
+        )
+
+    def _count_subexpression_occurances(self):
+        # We now need to go through the subexpression cache and update
+        # the flag for nested subexpressions used by multiple components
+        # (the walker can only update the flag in subexpressions
+        # appearing explicitly in the second component).
+        #
+        # We need to walk twice: once to sort out the use in Constraints
+        # and once to sort out the use in Objectives
+        for idx in (0, 1):
+            cache = self.subexpression_cache
+            for id_ in self.subexpression_order:
+                src_id = cache[id_][3][idx]
+                if src_id is None:
+                    continue
+                # This expression is used by multiple components; ensure
+                # that all subexpressions (recursively) used by this
+                # expression are marked as being used in multiple places
+                queue = [id_]
+                while queue:
+                    info = cache[queue.pop()]
+                    if not info[1].nonlinear:
+                        continue
+                    for subid in info[1].nonlinear[1]:
+                        # Check if this "id" (normally a var id, but
+                        # could be a subexpression id) is a
+                        # subexpression id, and that it is currently
+                        # marked as only being used in one component.
+                        # If it is, update the flag and recurse into it
+                        if subid not in cache:
+                            continue
+                        target = cache[subid][3]
+                        if (target[idx] is None
+                            or (target[idx] and target[idx] != src_id)):
+                            target[idx] = src_id
+                            queue.append(subid)
+        # Now we can reliably know where nested subexpressions are used.
+        # Group them into:
+        #   [ used in both objectives and constraints,
+        #     used by more than one constraint (but no objectives),
+        #     used by more than one objective (but no constraints),
+        #     used by one constraint,
+        #     used by one objective ]
+        n_subexpressions = [0]*5
+        for info in map(itemgetter(3), self.subexpression_cache.values()):
+            if None in info:
+                if info[1] is None:
+                    n_subexpressions[3 if info[0] else 1] += 1
                 else:
-                    nnz_by_var[_id] = 1
-        return next_var_num
+                    n_subexpressions[4 if info[1] else 2] += 1
+            else:
+                n_subexpressions[0] += 1
+        return n_subexpressions
+
+
+    def _write_v_line(self, expr_id, k, var_map, var_id_to_nl):
+        ostream = self.ostream
+        info = self.subexpression_cache[expr_id]
+        repn = info[1]
+        if self.symbolic_solver_labels and info[0].__class__ is not AMPLRepn:
+            lbl = '\t#%s' % info[0].name
+        else:
+            lbl = ''
+        var_id_to_nl[expr_id] = "%d%s" % (self.next_V_line_id, lbl)
+        linear = repn.linear or {}
+        ostream.write('V%d %d %d%s\n' %
+                      (self.next_V_line_id, len(linear), k, lbl))
+        for entry in sorted(map(
+                lambda _id: (var_map[_id][1], linear.get(_id, 0)),
+                linear)):
+            ostream.write('%d %r\n' % entry)
+        if repn.nonlinear:
+            if repn.const:
+                ostream.write(self.template.binary_sum)
+            args = tuple(map(var_id_to_nl.__getitem__,
+                             info[1].nonlinear[1]))
+            ostream.write(info[1].nonlinear[0] % args)
+            if repn.const:
+                ostream.write(self.template.const % repn.const)
+        else:
+            ostream.write(self.template.const % repn.const)
+        self.next_V_line_id += 1
 
 
 class AMPLRepn(object):
-    __slots__ = ('const', 'linear', 'nonlinear')
+    __slots__ = ('nl', 'const', 'linear', 'nonlinear')
 
     def __init__(self, linear, nonlinear):
+        self.nl = None
         self.const = 0
         self.linear = linear
         self.nonlinear = nonlinear
 
     def to_nl_node(self, visitor):
+        if self.nl is not None:
+            return self.nl
         nl = ''
         args = []
         nterms = 0
@@ -554,14 +737,14 @@ class AMPLRepn(object):
             coefs, vars_ = self.collect_linear()
             for _id, v in vars_:
                 c = coefs[_id]
-                if not c:
-                    continue
+                #if not c:
+                #    continue
                 nterms += 1
                 if c != 1:
                     nl += visitor.template.product
                     nl += visitor.template.const % c
                 nl += visitor.template.var
-            args.append(tuple(v[1] for v in vars_))
+            args.append(tuple(map(itemgetter(1), vars_)))
         if self.nonlinear:
             if self.nonlinear.__class__ is list:
                 nterms += len(self.nonlinear)
@@ -572,14 +755,24 @@ class AMPLRepn(object):
                 nterms += 1
                 nl += self.nonlinear[0]
                 args.append(self.nonlinear[1])
+        if args:
+            all_args = []
+            deque(map(all_args.extend, args), maxlen=0)
+            args = tuple(all_args)
+        #elif args:
+        #    args = args[0]
+        else:
+            args = ()
+
         if nterms > 2:
-            return (visitor.template.nary_sum % nterms) + nl, sum(args, ())
+            self.nl = (visitor.template.nary_sum % nterms) + nl, args
         elif nterms == 2:
-            return visitor.template.binary_sum + nl, sum(args, ())
+            self.nl = visitor.template.binary_sum + nl, args
         elif nterms == 1:
-            return nl, sum(args, ())
+            self.nl = nl, args
         else: # nterms == 0
-            return visitor.template.const % 0, ()
+            self.nl = visitor.template.const % 0, args
+        return self.nl
 
     def accumulate(self, other):
         self.const += other.const
@@ -606,14 +799,30 @@ class AMPLRepn(object):
     def distribute_multiplicand(self, visitor, mult):
         if mult == 1:
             return self
-        ans = AMPLRepn(None, self.nonlinear)
-        if self.nonlinear:
-            nl, args = ans.to_nl_node(visitor)
-            ans.nonlinear = (
-                (visitor.template.product + (visitor.template.const % mult)
-                 if mult != -1 else visitor.template.negation) + nl,
-                args,
+        if self.nl:
+            return AMPLRepn(
+                None,
+                ( visitor.template.product \
+                  + (visitor.template.const % mult) + self.nl[0],
+                  self.nl[1] )
             )
+        ans = AMPLRepn(None, None)
+        if self.nonlinear:
+            if type(self.nonlinear) is tuple:
+                nl, args = self.nonlinear
+            else:
+                nl, args = AMPLRepn(None, self.nonlinear).to_nl_node(visitor)
+            if mult == -1:
+                ans.nonlinear = (
+                    visitor.template.negation + nl,
+                    args
+                )
+            else:
+                ans.nonlinear = (
+                    visitor.template.product \
+                    + (visitor.template.const % mult) + nl,
+                    args,
+                )
         ans.const = mult * self.const
         if self.linear is not None:
             ans.linear = [(mult * c, v) for c, v in self.linear]
@@ -622,9 +831,12 @@ class AMPLRepn(object):
     def distribute_divisor(self, visitor, div):
         if div == 1:
             return self
-        ans = AMPLRepn(None, self.nonlinear)
+        ans = AMPLRepn(None, None)
         if self.nonlinear:
-            nl, args = ans.to_nl_node(visitor)
+            if type(self.nonlinear) is tuple:
+                nl, args = self.nonlinear
+            else:
+                nl, args = AMPLRepn(None, self.nonlinear).to_nl_node(visitor)
             ans.nonlinear = (
                 visitor.template.division + nl + (visitor.template.const % div),
                 args,
@@ -635,60 +847,82 @@ class AMPLRepn(object):
         return ans
 
 
-class text_nl_debug_template(object):
-    unary = {
-        'log':    'o43 # log\n',
-        'log10':  'o42 # log10\n',
-        'sin':    'o41 # sin\n',
-        'cos':    'o46 # cos\n',
-        'tan':    'o38 # tan\n',
-        'sinh':   'o40 # sinh\n',
-        'cosh':   'o45 # cosh\n',
-        'tanh':   'o37 # tanh\n',
-        'asin':   'o51 # asin\n',
-        'acos':   'o53 # acos\n',
-        'atan':   'o49 # atan\n',
-        'exp':    'o44 # exp\n',
-        'sqrt':   'o39 # sqrt\n',
-        'asinh':  'o50 # asinh\n',
-        'acosh':  'o52 # acosh\n',
-        'atanh':  'o47 # atanh\n',
-        'ceil':   'o13 # ceil\n',
-        'floor':  'o14 # floor\n',
+def _create_strict_inequality_map(vars_):
+    vars_['strict_inequality_map'] = {
+        True: vars_['less_than'],
+        False: vars_['less_equal'],
+        (True, True): (vars_['less_than'], vars_['less_than']),
+        (True, False): (vars_['less_than'], vars_['less_equal']),
+        (False, True): (vars_['less_equal'], vars_['less_than']),
+        (False, False): (vars_['less_equal'], vars_['less_equal']),
     }
 
-    binary_sum = 'o0 # +\n'
-    product = 'o2 # *\n'
-    division = 'o3 # /\n'
-    pow = 'o5 # pow\n'
-    abs = 'o15 # abs\n'
-    negation = 'o16 # -\n'
-    nary_sum = 'o54 # sumlist\n%d # (n)\n'
+class text_nl_debug_template(object):
+    unary = {
+        'log':    'o43\t#log\n',
+        'log10':  'o42\t#log10\n',
+        'sin':    'o41\t#sin\n',
+        'cos':    'o46\t#cos\n',
+        'tan':    'o38\t#tan\n',
+        'sinh':   'o40\t#sinh\n',
+        'cosh':   'o45\t#cosh\n',
+        'tanh':   'o37\t#tanh\n',
+        'asin':   'o51\t#asin\n',
+        'acos':   'o53\t#acos\n',
+        'atan':   'o49\t#atan\n',
+        'exp':    'o44\t#exp\n',
+        'sqrt':   'o39\t#sqrt\n',
+        'asinh':  'o50\t#asinh\n',
+        'acosh':  'o52\t#acosh\n',
+        'atanh':  'o47\t#atanh\n',
+        'ceil':   'o13\t#ceil\n',
+        'floor':  'o14\t#floor\n',
+    }
+
+    binary_sum = 'o0\t# +\n'
+    product = 'o2\t# *\n'
+    division = 'o3\t# /\n'
+    pow = 'o5\t#^\n'
+    abs = 'o15\t# abs\n'
+    negation = 'o16\t# -\n'
+    nary_sum = 'o54\t# sumlist\n%d\t# (n)\n'
+    exprif = 'o35\t# if\n'
+    and_expr = 'o21\t# and\n'
+    less_than = 'o22\t# lt\n'
+    less_equal = 'o23\t# le\n'
+    equality = 'o24\t# eq\n'
     var = 'v%s\n'
     const = 'n%r\n'
 
+    _create_strict_inequality_map(vars())
 
 # The "standard" text mode template is the debugging template with the
 # comments removed
 class text_nl_template(text_nl_debug_template):
-    unary = {k: v[:v.find(' #')]+'\n'
+    unary = {k: v[:v.find('\t#')]+'\n'
              for k, v in text_nl_debug_template.unary.items()}
     for k, v in text_nl_debug_template.__dict__.items():
-        if type(v) is str and ' #' in v:
-            vars()[k] = '\n'.join(l[:l.find(' #')] for l in v.split('\n'))+'\n'
+        if type(v) is str and '\t#' in v:
+            vars()[k] = '\n'.join(l[:l.find('\t#')] for l in v.split('\n'))
+
+    _create_strict_inequality_map(vars())
 
 
-def to_nl_node(visitor, data):
+def node_result_to_amplrepn(visitor, data):
     if data[0] is _GENERAL:
         ans = data[1]
+        if ans.nonlinear.__class__ is list:
+            ans.nonlinear = AMPLRepn(None, ans.nonlinear).to_nl_node(visitor)
     elif data[0] is _CONSTANT:
         ans = AMPLRepn(None, None)
         ans.const = data[1]
-    else: # _MONOMIAL
+    elif data[0] is _MONOMIAL:
         ans = AMPLRepn([], None)
         if data[1]:
             ans.linear.append(data[1:])
-    return ans.to_nl_node(visitor)
+    else:
+        raise DeveloperError("unknown result type")
+    return ans
 
 def handle_negation_node(visitor, node, arg1):
     if arg1[0] is _MONOMIAL:
@@ -704,14 +938,19 @@ def handle_product_node(visitor, node, arg1, arg2):
     if arg2[0] is _CONSTANT:
         arg2, arg1 = arg1, arg2
     if arg1[0] is _CONSTANT:
-        if arg2[0] is _MONOMIAL:
+        if not arg1[1]:
+            # simplify multiplication by 0 (if arg2 is zero, the
+            # simplification happens implicitly when we evaluate the
+            # constant below)
+            return arg1
+        elif arg2[0] is _MONOMIAL:
             return (_MONOMIAL, arg1[1]*arg2[1], arg2[2])
         elif arg2[0] is _GENERAL:
             return (_GENERAL, arg2[1].distribute_multiplicand(visitor, arg1[1]))
         elif arg2[0] is _CONSTANT:
             return (_CONSTANT, arg1[1]*arg2[1])
-    nl1 = to_nl_node(visitor, arg1)
-    nl2 = to_nl_node(visitor, arg2)
+    nl1 = node_result_to_amplrepn(visitor, arg1).to_nl_node(visitor)
+    nl2 = node_result_to_amplrepn(visitor, arg2).to_nl_node(visitor)
     return (_GENERAL, AMPLRepn(None, (
         visitor.template.product + nl1[0] + nl2[0], nl1[1] + nl2[1],
     )))
@@ -726,35 +965,125 @@ def handle_division_node(visitor, node, arg1, arg2):
             return (_GENERAL, arg1[1].distribute_divisor(visitor, arg2[1]))
         elif arg1[0] is _CONSTANT:
             return (_CONSTANT, arg1[1]/arg2[1])
-    nl1 = to_nl_node(visitor, arg1)
-    nl2 = to_nl_node(visitor, arg2)
+    nl1 = node_result_to_amplrepn(visitor, arg1).to_nl_node(visitor)
+    nl2 = node_result_to_amplrepn(visitor, arg2).to_nl_node(visitor)
     return (_GENERAL, AMPLRepn(None, (
         visitor.template.division + nl1[0] + nl2[0], nl1[1] + nl2[1],
     )))
 
 def handle_pow_node(visitor, node, arg1, arg2):
-    nl1 = to_nl_node(visitor, arg1)
-    nl2 = to_nl_node(visitor, arg2)
+    nl1 = node_result_to_amplrepn(visitor, arg1).to_nl_node(visitor)
+    nl2 = node_result_to_amplrepn(visitor, arg2).to_nl_node(visitor)
     return (_GENERAL, AMPLRepn(None, (
         visitor.template.pow + nl1[0] + nl2[0], nl1[1] + nl2[1],
     )))
-    
+
 def handle_abs_node(visitor, node, arg1):
-    nl1 = to_nl_node(visitor, arg1)
+    nl1 = node_result_to_amplrepn(visitor, arg1).to_nl_node(visitor)
     return (_GENERAL, AMPLRepn(None, (
         visitor.template.abs + nl1[0], nl1[1],
     )))
 
 def handle_unary_node(visitor, node, arg1):
-    nl1 = to_nl_node(visitor, arg1)
+    nl1 = node_result_to_amplrepn(visitor, arg1).to_nl_node(visitor)
     return (_GENERAL, AMPLRepn(None, (
-        visitor.template.unary[node.name] + nl1[0], nl1[1],
+        visitor.template.unary[node.name] + nl1[0],
+        nl1[1],
     )))
-    
+
+def handle_exprif_node(visitor, node, arg1, arg2, arg3):
+    nl1 = node_result_to_amplrepn(visitor, arg1).to_nl_node(visitor)
+    nl2 = node_result_to_amplrepn(visitor, arg2).to_nl_node(visitor)
+    nl3 = node_result_to_amplrepn(visitor, arg3).to_nl_node(visitor)
+    return (_GENERAL, AMPLRepn(None, (
+        visitor.template.exprif + nl1[0] + nl2[0] + nl3[0],
+        nl1[1] + nl2[1] + nl3[1],
+    )))
+
+def handle_equality_node(visitor, node, arg1, arg2):
+    nl1 = node_result_to_amplrepn(visitor, arg1).to_nl_node(visitor)
+    nl2 = node_result_to_amplrepn(visitor, arg2).to_nl_node(visitor)
+    return (_GENERAL, AMPLRepn(None, (
+        visitor.template.equality + nl1[0] + nl2[0],
+        nl1[1] + nl2[1],
+    )))
+
+def handle_inequality_node(visitor, node, arg1, arg2):
+    nl1 = node_result_to_amplrepn(visitor, arg1).to_nl_node(visitor)
+    nl2 = node_result_to_amplrepn(visitor, arg2).to_nl_node(visitor)
+    op = visitor.template.strict_inequality_map[node.strict]
+    return (_GENERAL, AMPLRepn(None, (
+        op + nl1[0] + nl2[0],
+        nl1[1] + nl2[1],
+    )))
+
+def handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
+    nl1 = node_result_to_amplrepn(visitor, arg1).to_nl_node(visitor)
+    nl2 = node_result_to_amplrepn(visitor, arg2).to_nl_node(visitor)
+    nl3 = node_result_to_amplrepn(visitor, arg3).to_nl_node(visitor)
+    op = visitor.template.strict_inequality_map[node.strict]
+    return (_GENERAL, AMPLRepn(None, (
+        visitor.template.and_expr
+        + op[0] + nl1[0] + nl2[0]
+        + op[1] + nl2[0] + nl3[0],
+        nl1[1] + nl2[1] + nl2[1] + nl3[1],
+    )))
+
 def handle_expression_node(visitor, node, arg1):
-    visitor.expression_cache[id(node)] = arg1
-    return arg1
-    
+    _id = id(node)
+    # Note that while named subexpressions ('defined variables' in the
+    # ASL NL file vernacular) look like variables, they are not allowed
+    # to appear in the 'linear' portion of a constraint / objective
+    # definition.  We will return this as a "var" template, but
+    # wrapped in the nonlinear portion of the expression tree.
+    repn = node_result_to_amplrepn(visitor, arg1)
+    # When converting this shared subexpression to a (nonlinear) node,
+    # we want to just reference this subexpression:
+    repn.nl = (visitor.template.var, (node,))
+
+    if repn.linear and repn.nonlinear:
+        # If this expession has both linear and nonlinear components, we
+        # will follow the ASL convention and break the named
+        # subexpression into two named subexpressions: one that is only
+        # the nonlinear component and one that has the const/linear
+        # component (and references the first).  This will allow us to
+        # propagate linear coefficients up from named subexpressions
+        # when appropriate.
+        subid = id(repn)
+        sub_repn = AMPLRepn(None, repn.nonlinear)
+        sub_repn.nl = (visitor.template.var, (repn,))
+        visitor.subexpression_cache[subid] = (
+            # 0: the "component" that generated this expression ID
+            repn,
+            # 1: the common subexpression
+            sub_repn,
+            # 2: how this subexpression should be represented in the outer
+            # (calling) expression
+            sub_repn,
+            # 3: the (single) component that uses this subexpression (0 if
+            # used by more than one)
+            list(visitor.active_expression_source),
+        )
+        repn.nonlinear = sub_repn.nl
+        # It is important that the NL subexpression comes before the main
+        # named expression:
+        visitor.subexpression_order.append(subid)
+
+    visitor.subexpression_cache[_id] = (
+        # 0: the "component" that generated this expression ID
+        node,
+        # 1: the common subexpression
+        repn,
+        # 2: how this subexpression should be represented in the outer
+        # (calling) expression
+        repn,
+        # 3: the (single) component that uses this subexpression (0 if
+        # used by more than one)
+        list(visitor.active_expression_source),
+    )
+    visitor.subexpression_order.append(_id)
+    return (_GENERAL, visitor.subexpression_cache[_id][2])
+
 _operator_handles = dict()
 _operator_handles[NegationExpression] = handle_negation_node
 _operator_handles[ProductExpression] = handle_product_node
@@ -762,11 +1091,14 @@ _operator_handles[DivisionExpression] = handle_division_node
 _operator_handles[PowExpression] = handle_pow_node
 _operator_handles[AbsExpression] = handle_abs_node
 _operator_handles[UnaryFunctionExpression] = handle_unary_node
+_operator_handles[Expr_ifExpression] = handle_exprif_node
+_operator_handles[EqualityExpression] = handle_equality_node
+_operator_handles[InequalityExpression] = handle_inequality_node
+_operator_handles[RangedExpression] = handle_ranged_inequality_node
 _operator_handles[_GeneralExpressionData] = handle_expression_node
 _operator_handles[Expression] = handle_expression_node
 # TODO
 #handler[ExternalFunctionExpression] = handle_external_function_expression
-#handler[Expr_ifExpression] = handle_exprif_node
 # These are handled explicitly in beforeChild():
 #handler[LinearExpression] = handle_linear_expression
 #handler[SumExpression] = handle_expression
@@ -775,16 +1107,22 @@ _operator_handles[Expression] = handle_expression_node
 
 class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
-    def __init__(self, template):
+    def __init__(self, template, subexpression_cache, subexpression_order):
         super().__init__()
         self.template = template
-        self.expression_cache = {}
+        self.subexpression_cache = subexpression_cache
+        self.subexpression_order = subexpression_order
+        self.active_expression_source = [None, None]
 
     def initializeWalker(self, expr):
+        expr, src, src_idx = expr
+        self.active_expression_source = [None, None]
+        self.active_expression_source[src_idx] = id(src)
+        self.active_expression_source_idx = src_idx
         walk, result = self.beforeChild(None, expr, 0)
         if not walk:
             return False, self.finalizeResult(result)
-        return True, None
+        return True, expr
 
     def beforeChild(self, node, child, child_idx):
         child_type = child.__class__
@@ -816,12 +1154,16 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
             # Because we are going to modify the LinearExpression in this
             # walker, we need to make a copy of the LinearExpression from
             # the original expression tree.
-            data = AMPLRepn([], [])
-            data.fromLinearExpr(child)
+            data = AMPLRepn(list(zip(child.linear_coefs, child.linear_ars)),
+                            None)
+            data.const = child.constant
             return False, (_GENERAL, data)
 
-        if id(child) in self.expression_cache:
-            return False, self.expression_cache[id(child)]
+        _id = id(child)
+        if _id in self.subexpression_cache:
+            cache = self.subexpression_cache[_id]
+            cache[3][self.active_expression_source_idx] = 0
+            return False, (_GENERAL, cache[2])
 
         return True, None
 
@@ -856,23 +1198,12 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         #
         if all(_[0] is _CONSTANT for _ in data):
             return (
-                _CONSTANT, node._apply_operation(tuple(arg[1] for arg in data))
+                _CONSTANT, node._apply_operation(tuple(map(
+                    itemgetter(1), data)))
             )
         return _operator_handles[node.__class__](self, node, *data)
 
     def finalizeResult(self, result):
-        result_type = result[0]
-        if result_type is _GENERAL:
-            ans = result[1]
-        elif result_type is _MONOMIAL:
-            ans = AMPLRepn([], None)
-            if result[1]:
-                ans.linear.append(result[1:])
-        elif result_type is _CONSTANT:
-            ans = AMPLRepn(None, None)
-            ans.const = result[1]
-        else:
-            raise DeveloperError("unknown result type")
-        if ans.nonlinear.__class__ is list:
-            ans.nonlinear = AMPLRepn(None, ans.nonlinear).to_nl_node(self)
+        ans = node_result_to_amplrepn(self, result)
+        self.active_expression_source = None
         return ans
