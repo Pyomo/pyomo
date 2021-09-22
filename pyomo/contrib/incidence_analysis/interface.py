@@ -76,7 +76,7 @@ def get_incidence_graph(variables, constraints, include_fixed=True):
     graph.add_nodes_from(range(M, M+N), bipartite=1)
     var_node_map = ComponentMap((v, M+i) for i, v in enumerate(variables))
     for i, con in enumerate(constraints):
-        for var in identify_variables(con.body, include_fixed=include_fixed):
+        for var in identify_variables(con.expr, include_fixed=include_fixed):
             if var in var_node_map:
                 graph.add_edge(i, var_node_map[var])
     return graph
@@ -117,7 +117,7 @@ def get_structural_incidence_matrix(variables, constraints, include_fixed=True):
     cols = []
     for i, con in enumerate(constraints):
         cols.extend(var_idx_map[v] for v in
-                identify_variables(con.body, include_fixed=include_fixed)
+                identify_variables(con.expr, include_fixed=include_fixed)
                 if v in var_idx_map)
         rows.extend([i]*(len(cols) - len(rows)))
     assert len(rows) == len(cols)
