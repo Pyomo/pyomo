@@ -265,7 +265,8 @@ class PartitionDisjuncts_Transformation(Transformation):
         super(PartitionDisjuncts_Transformation, self).__init__()
         self.handlers = {
             Constraint:  self._transform_constraint,
-            Var:         self._add_var_reference,
+            Var:         False, # these will be already dealt with--we add
+                                # references to them before we call handlers.
             BooleanVar:  False,
             Connector:   False,
             Expression:  False,
@@ -410,16 +411,6 @@ class PartitionDisjuncts_Transformation(Transformation):
             NonNegativeIntegers)
 
         return transformation_block
-
-    def _add_var_reference(self, var, disjunct, transformed_disjunct,
-                           transBlock, partition):
-        # When there are variables that were declared on the Disjunct we are
-        # transforming, we need to make references to them on the new Disjunct
-        # so that the writers will be able to find them.
-        transformed_disjunct.add_component(unique_component_name(
-            transformed_disjunct, var.getname(fully_qualified=True,
-                                              name_buffer=NAME_BUFFER)), 
-                                           Reference(var))
 
     def _transform_block(self, obj):
         for i in sorted(obj.keys()):
@@ -590,6 +581,15 @@ class PartitionDisjuncts_Transformation(Transformation):
                 descend_into=Block):
             self._transform_disjunctionData(disjunction, disjunction.index(),
                                             None, transformed_disjunct)
+
+        # create references to any variables declared here on the transformed
+        # Disjunct (this will include the indicator_var)
+        for var in disjunct.component_objects(Var, descend_into=Block,
+                                              active=None):
+            transformed_disjunct.add_component(unique_component_name(
+                transformed_disjunct, var.getname(fully_qualified=True,
+                                                  name_buffer=NAME_BUFFER)), 
+                                           Reference(var))
     
         # transform everything else
         for obj in disjunct.component_data_objects(
@@ -771,5 +771,3 @@ class PartitionDisjuncts_Transformation(Transformation):
 # constraints.
 
 # Also, I'm not confident of nested and targets... 
-
-# TODO: Indexed Var declared on Disjunct

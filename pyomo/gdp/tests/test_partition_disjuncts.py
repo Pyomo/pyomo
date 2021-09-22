@@ -44,6 +44,23 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
 
         return m
 
+    def makeModel_declare_var_on_disjunct(self):
+        """Exactly the same model, but declaring the Disjuncts explicilty 
+        so that I can declare the variable on one of them.
+        """
+        m = ConcreteModel()
+        m.I = RangeSet(1,4)
+        m.disj1 = Disjunct()
+        m.disj1.x = Var(m.I, bounds=(-2,6))
+        m.disj1.c = Constraint(expr=sum(m.disj1.x[i]**2 for i in m.I) <= 1)
+        m.disj2 = Disjunct()
+        m.disj2.c = Constraint(expr=sum((3 - m.disj1.x[i])**2 for i in m.I) <= 1)
+        m.disjunction = Disjunction(expr=[m.disj1, m.disj2])
+
+        m.obj = Objective(expr=m.disj1.x[2] - m.disj1.x[1], sense=maximize)
+
+        return m
+
     def check_disj_constraint(self, c1, upper, auxVar1, auxVar2):
         self.assertIsNone(c1.lower)
         self.assertEqual(value(c1.upper), upper)
@@ -113,9 +130,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertAlmostEqual(aux_vars2[1].lb, aux22lb, places=6)
         self.assertAlmostEqual(aux_vars2[1].ub, aux22ub, places=6)
 
-    def check_transformation_block_structure(self, m, aux11lb, aux11ub, aux12lb,
-                                             aux12ub, aux21lb, aux21ub, aux22lb,
-                                             aux22ub):
+    def check_transformation_block_disjuncts_and_constraints(self, m):
         b = m.component("_pyomo_gdp_partition_disjuncts_reformulation")
         self.assertIsInstance(b, Block)
 
@@ -132,6 +147,15 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         disj2 = disjunction.disjuncts[1]
         self.assertEqual(len(disj1.component_map(Constraint)), 1)
         self.assertEqual(len(disj2.component_map(Constraint)), 1)
+
+        return b, disj1, disj2
+
+    def check_transformation_block_structure(self, m, aux11lb, aux11ub, aux12lb,
+                                             aux12ub, aux21lb, aux21ub, aux22lb,
+                                             aux22ub):
+        (b, disj1, 
+         disj2) = self.check_transformation_block_disjuncts_and_constraints(m)
+
         # each Disjunct has two variables declared on it (aux vars and indicator
         # var), plus a reference to the indicator_var from the original Disjunct
         self.assertEqual(len(disj1.component_map(Var)), 3)
@@ -139,7 +163,6 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
 
         aux_vars1 = disj1.component(
             "disjunction_disjuncts[0].constraint[1]_aux_vars")
-        
         aux_vars2 = disj2.component(
             "disjunction_disjuncts[1].constraint[1]_aux_vars")
         self.check_aux_var_bounds(aux_vars1, aux_vars2, aux11lb, aux11ub,
@@ -199,6 +222,58 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             compute_bounds_method=compute_fbbt_bounds)
 
         self.check_transformation_block(m, 0, 72, 0, 72, -72, 96, -72, 96)
+
+    def test_transformation_block_indexed_var_on_disjunct(self):
+        m = self.makeModel_declare_var_on_disjunct()
+
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
+            m,
+            variable_partitions=[[m.disj1.x[1], m.disj1.x[2]], \
+                                 [m.disj1.x[3], m.disj1.x[4]]],
+            compute_bounds_method=compute_fbbt_bounds)
+        
+        (b, disj1, 
+         disj2) = self.check_transformation_block_disjuncts_and_constraints(m)
+
+        # Has it's own indicator var, a Reference to the original Disjunct's
+        # indicator var, the aux vars, and the Reference to x
+        self.assertEqual(len(disj1.component_map(Var)), 4)
+        # Same as above minus the Reference to x
+        self.assertEqual(len(disj2.component_map(Var)), 3)
+
+        aux_vars1 = disj1.component("disj1.c_aux_vars")
+        aux_vars2 = disj2.component("disj2.c_aux_vars")
+        self.check_aux_var_bounds(aux_vars1, aux_vars2, 0, 72, 0, 72, -72, 96,
+                                  -72, 96)
+
+        # check the transformed constraints on the disjuncts
+        c = disj1.component("disj1.c")
+        self.assertEqual(len(c), 1)
+        c1 = c[0]
+        self.check_disj_constraint(c1, 1, aux_vars1[0], aux_vars1[1])
+        c = disj2.component("disj2.c")
+        self.assertEqual(len(c), 1)
+        c2 = c[0]
+        self.check_disj_constraint(c2, -35, aux_vars2[0], aux_vars2[1])
+
+        # check the global constraints
+        c = b.component("disj1.c_split_constraints")
+        self.assertEqual(len(c), 2)
+        c1 = c[0]
+        self.check_global_constraint_disj1(c1, aux_vars1[0], m.disj1.x[1],
+                                           m.disj1.x[2])
+        c2 = c[1]
+        self.check_global_constraint_disj1(c2, aux_vars1[1], m.disj1.x[3],
+                                           m.disj1.x[4])
+
+        c = b.component("disj2.c_split_constraints")
+        self.assertEqual(len(c), 2)
+        c1 = c[0]
+        self.check_global_constraint_disj2(c1, aux_vars2[0], m.disj1.x[1],
+                                           m.disj1.x[2])
+        c2 = c[1]
+        self.check_global_constraint_disj2(c2, aux_vars2[1], m.disj1.x[3],
+                                           m.disj1.x[4])
 
     @unittest.skipIf('gurobi_direct' not in solvers, 
                      'Gurobi direct solver not available')
@@ -363,22 +438,9 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             compute_bounds_solver=SolverFactory('gurobi_direct'),
             compute_bounds_method=compute_optimal_bounds)
 
-        b = m.component("_pyomo_gdp_partition_disjuncts_reformulation")
-        self.assertIsInstance(b, Block)
+        (b, disj1, 
+         disj2) = self.check_transformation_block_disjuncts_and_constraints(m)
 
-        # check we declared the right things
-        self.assertEqual(len(b.component_map(Disjunction)), 1)
-        self.assertEqual(len(b.component_map(Disjunct)), 2)
-        self.assertEqual(len(b.component_map(Constraint)), 2) # global
-                                                              # constraints
-        
-        disjunction = b.disjunction
-        self.assertEqual(len(disjunction.disjuncts), 2)
-        # each Disjunct has one constraint
-        disj1 = disjunction.disjuncts[0]
-        disj2 = disjunction.disjuncts[1]
-        self.assertEqual(len(disj1.component_map(Constraint)), 1)
-        self.assertEqual(len(disj2.component_map(Constraint)), 1)
         # each Disjunct has three variables declared on it (aux vars and
         # indicator var), plus a reference to the indicator_var of the original
         # Disjunct
