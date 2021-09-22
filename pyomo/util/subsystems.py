@@ -107,7 +107,7 @@ def create_subsystem_block(constraints, variables=None, include_fixed=False):
     var_set = ComponentSet(variables)
     input_vars = []
     for con in constraints:
-        for var in identify_variables(con.body, include_fixed=include_fixed):
+        for var in identify_variables(con.expr, include_fixed=include_fixed):
             if var not in var_set:
                 input_vars.append(var)
                 var_set.add(var)
