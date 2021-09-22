@@ -878,6 +878,7 @@ class DesignOfExperiments:
 
         # iteration 0
         count = 0
+        failed_count = 0
         # how many sets of design variables will be run
         total_count = 1
         for i in range(grid_dimension):
@@ -911,7 +912,7 @@ class DesignOfExperiments:
                 store_output_name = store_name + str(count)
 
             if read_name is not None:
-                read_input_name = read_name+str(count)+'_fco2'
+                read_input_name = read_name+str(count)+'_tend'
             else:
                 read_input_name = None
 
@@ -923,8 +924,11 @@ class DesignOfExperiments:
                                                scale_constant_value = scale_constant_value,
                                                store_output=store_output_name, read_output=read_input_name,
                                                formula=formula, step=step)
-                build_time_store.append(result_iter.build_time)
-                solve_time_store.append(result_iter.solve_time)
+                if read_input_name is None:
+                    build_time_store.append(result_iter.build_time)
+                    solve_time_store.append(result_iter.solve_time)
+
+                count += 1
 
                 if (mode=='simultaneous_finite'):
                     result_iter.extract_FIM(self.m, self.design_timeset, self.square_result, self.objective_option)
@@ -939,17 +943,22 @@ class DesignOfExperiments:
                     print('This is the ', count+1, ' run out of ', total_count, 'run.')
                     print('The code has run %.04f seconds.'% (t_now-t_enumeration_begin))
                     print('Estimated remaining time: %.4f seconds' % ((t_now-t_enumeration_begin)/(count+1)*(total_count-count-1)))
-                count += 1
+
 
                 # the combined result object are organized as a dictionary, keys are a tuple of the design variable values, values are a result object
                 result_combine[tuple(design_set_iter)] = result_iter
 
             except:
                 print(':::::::::::ERROR: Cannot converge this run.::::::::::::')
+                count += 1
+                failed_count += 1
+                print('failed count:', failed_count)
                 result_combine[tuple(design_set_iter)] = None
 
         # For user's access
         self.all_fim = result_combine
+
+        #
 
         # Create figure drawing object
         figure_draw_object = Grid_Search_Result(design_ranges, design_dimension_names, design_control_time, result_combine, store_optimality_name=filename)
@@ -1028,9 +1037,10 @@ class DesignOfExperiments:
 
         # check if control time points are in the time set
         for d in range(len(self.design_name)):
-            for t in self.design_time[d]:
-                if not (t in m.t):
-                    raise ValueError('Warning: Control timepoints should be in the time list.')
+            if self.design_time[d] is not None:
+                for t in self.design_time[d]:
+                    if not (t in m.t):
+                        raise ValueError('Warning: Control timepoints should be in the time list.')
 
         ### Define variables
         # Elements in Jacobian matrix
@@ -1093,10 +1103,13 @@ class DesignOfExperiments:
             '''
             # A better way to do this: 
             # https://github.com/IDAES/idaes-pse/blob/274e58bef55f2f969f0df97cbb1fb7d99342388e/idaes/apps/uncertainty_propagation/sens.py#L296
-
-            up_C = eval('m.'+j+'['+str(scenario_all['jac-index'][p][0])+','+str(t)+']')
-            lo_C = eval('m.'+j+'['+str(scenario_all['jac-index'][p][1])+','+str(t)+']')
-
+            if self.measurement_extra_index[j] is None:
+                up_C = eval('m.'+j+'['+str(scenario_all['jac-index'][p][0])+','+str(t)+']')
+                lo_C = eval('m.'+j+'['+str(scenario_all['jac-index'][p][1])+','+str(t)+']')
+            else:
+                ind = self.measurement_extra_index[j][0]
+                up_C = eval('m.' + j + '[' + str(scenario_all['jac-index'][p][0]) + ',' + str(ind) + ',' + str(t) + ']')
+                lo_C = eval('m.' + j + '[' + str(scenario_all['jac-index'][p][1]) + ',' + str(ind) + ',' + str(t) + ']')
             return m.jac[j,p,t] == (up_C - lo_C)/scenario_all['eps-abs'][p] *self.scale_constant_value
 
         #A constraint to calculate elements in Hessian matrix
@@ -1810,9 +1823,14 @@ class FIM_result:
         solution = {}
         for d, dname in enumerate(dv_names):
             sol = []
-            for t, time in enumerate(dv_times[d]):
-                newvar = eval('m.' + dname + '[' + str(time) + ']')
+            if dv_times[d] is not None:
+                for t, time in enumerate(dv_times[d]):
+                    newvar = eval('m.' + dname + '[' + str(time) + ']')
+                    sol.append(value(newvar))
+            else:
+                newvar = eval('m.' + dname)
                 sol.append(value(newvar))
+
             solution[dname] = sol
             if self.verbose:
                 print('Solution of ', dname, ' :', solution[dname])
@@ -2124,8 +2142,15 @@ class Grid_Search_Result:
         '''
 
         # achieve the design variable ranges this figure needs
-        x_range = list(set(self.figure_result_data[self.sensitivity_dimension[0]].values.tolist()))
-        y_range = list(set(self.figure_result_data[self.sensitivity_dimension[1]].values.tolist()))
+        # create a dictionary for sensitivity dimensions
+        sensitivity_dict = {}
+        for i, nam in enumerate(self.design_names):
+            if nam in self.sensitivity_dimension:
+                sensitivity_dict[nam] = self.design_ranges[i]
+
+        x_range = sensitivity_dict[self.sensitivity_dimension[0]]
+        y_range = sensitivity_dict[self.sensitivity_dimension[1]]
+
 
         # extract the design criteria values
         A_range = self.figure_result_data['A'].values.tolist()
