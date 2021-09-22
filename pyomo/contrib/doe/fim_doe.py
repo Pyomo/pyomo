@@ -6,10 +6,9 @@ import pandas as pd
 import time
 import pickle
 from itertools import permutations, product
-#from sens import get_dsdp
 from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculation
-from idaes.apps.uncertainty_propagation.sens import get_dsdp
-#from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
+#from idaes.apps.uncertainty_propagation.sens import get_dsdp
+from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
 
 class DesignOfExperiments: 
     def __init__(self, param_init, design_variable_timepoints, measurement_variables, measurement_timeset, create_model, solver=None,
@@ -641,6 +640,7 @@ class DesignOfExperiments:
 
             # call k_aug get_dsdp function
             time0_solve = time.time()
+            square_result = self.__solve_doe(mod, fix=False)
             dsdp_re, col = get_dsdp(mod, var_name, var_dict, tee=self.tee_opt)
             time1_solve = time.time()
             time_solve = time1_solve - time0_solve
@@ -665,23 +665,23 @@ class DesignOfExperiments:
                     measure_name = mname+'[0,19,'+str(tim)+']'
                     measurement_names.append(measure_name)
                     # get right line number in kaug results
-                    #if self.discretize_model is not None:
+                    if self.discretize_model is not None:
                         # for DAE model, some variables are fixed
-                    try:
+                        try:
+                            kaug_no = col.index(measure_name)
+                            measurement_index.append(kaug_no)
+                            # get right line of dsdp
+                            dsdp_extract.append(dsdp_array[kaug_no])
+                        except:
+                            if self.verbose:
+                                print('The variable is fixed:', measure_name)
+                            # for fixed variables, the sensitivity are a zero vector
+                            dsdp_extract.append(zero_sens)
+                    else:
                         kaug_no = col.index(measure_name)
                         measurement_index.append(kaug_no)
                         # get right line of dsdp
                         dsdp_extract.append(dsdp_array[kaug_no])
-                    except:
-                        if self.verbose:
-                            print('The variable is fixed:', measure_name)
-                        # for fixed variables, the sensitivity are a zero vector
-                        dsdp_extract.append(zero_sens)
-                    #else:
-                    #    kaug_no = col.index(measure_name)
-                    #    measurement_index.append(kaug_no)
-                        # get right line of dsdp
-                    #    dsdp_extract.append(dsdp_array[kaug_no])
             print('dsdp extract is:', dsdp_extract)
             # Extract and calculate sensitivity if scaled by constants or parameters.
             # Convert sensitivity to a dictionary
@@ -1594,7 +1594,7 @@ class Scenario_data:
 
 
 class FIM_result:
-    def __init__(self, para_name, prior_FIM=None, store_FIM=None, scale_constant_value=1, max_condition_number=1.0E12,
+    def __init__(self, para_name,  prior_FIM=None, store_FIM=None, scale_constant_value=1, max_condition_number=1.0E12,
                  verbose=True):
         '''
         Analyze the FIM result for a single run
