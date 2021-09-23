@@ -1196,6 +1196,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.subexpression_order = subexpression_order
         self.external_functions = external_functions
         self.active_expression_source = None
+        self.value_cache = {}
 
     def initializeWalker(self, expr):
         expr, src, src_idx = expr
@@ -1227,7 +1228,11 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         if child_type is MonomialTermExpression:
             arg1, arg2 = child._args_
             if arg1.__class__ not in native_types:
-                arg1 = value(arg1)
+                _id = id(arg1)
+                if _id in self.value_cache:
+                    arg1 = self.value_cache[_id]
+                else:
+                    arg1 = self.value_cache[_id] = value(arg1)
             if arg2.is_fixed():
                 return False, (_CONSTANT, arg1 * arg2())
             else:
