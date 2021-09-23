@@ -322,7 +322,7 @@ class _NLWriter_impl(object):
         #
         # LINE 1
         #
-        ostream.write("g3 1 1 0\t# problem %s\n".format(model.name))
+        ostream.write("g3 1 1 0\t# problem %s\n" % (model.name,))
         #
         # LINE 2
         #
@@ -763,39 +763,31 @@ class AMPLRepn(object):
             coefs, vars_ = self.collect_linear()
             for _id, v in vars_:
                 c = coefs[_id]
-                nterms += 1
                 if c != 1:
-                    nl += visitor.template.product
-                    nl += visitor.template.const % c
+                    nl += visitor.template.product + (
+                        visitor.template.const % c)
                 nl += visitor.template.var
-            args.append(tuple(map(itemgetter(1), vars_)))
+            args = list(map(itemgetter(1), vars_))
+            nterms += len(vars_)
         if self.nonlinear:
             if self.nonlinear.__class__ is list:
                 nterms += len(self.nonlinear)
                 tmp_nl, tmp_args = zip(*self.nonlinear)
                 nl += ''.join(tmp_nl)
-                args.extend(tmp_args)
+                deque(map(args.extend, tmp_args), maxlen=0)
             else:
                 nterms += 1
                 nl += self.nonlinear[0]
-                args.append(self.nonlinear[1])
-        if args:
-            all_args = []
-            deque(map(all_args.extend, args), maxlen=0)
-            args = tuple(all_args)
-        #elif args:
-        #    args = args[0]
-        else:
-            args = ()
+                args.extend(self.nonlinear[1])
 
         if nterms > 2:
-            self.nl = (visitor.template.nary_sum % nterms) + nl, args
+            self.nl = (visitor.template.nary_sum % nterms) + nl, tuple(args)
         elif nterms == 2:
-            self.nl = visitor.template.binary_sum + nl, args
+            self.nl = visitor.template.binary_sum + nl, tuple(args)
         elif nterms == 1:
-            self.nl = nl, args
+            self.nl = nl, tuple(args)
         else: # nterms == 0
-            self.nl = visitor.template.const % 0, args
+            self.nl = visitor.template.const % 0, ()
         return self.nl
 
     def accumulate(self, other):
@@ -945,13 +937,13 @@ def node_result_to_amplrepn(visitor, data):
                     None, ans.nonlinear).to_nl_node(visitor)
             else:
                 ans.nonlinear = None
-    elif data[0] is _CONSTANT:
-        ans = AMPLRepn(None, None)
-        ans.const = data[1]
     elif data[0] is _MONOMIAL:
         ans = AMPLRepn([], None)
         if data[1]:
             ans.linear.append(data[1:])
+    elif data[0] is _CONSTANT:
+        ans = AMPLRepn(None, None)
+        ans.const = data[1]
     else:
         raise DeveloperError("unknown result type")
     return ans
