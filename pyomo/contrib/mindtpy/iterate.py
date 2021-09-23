@@ -11,7 +11,7 @@
 """Iteration loop for MindtPy."""
 from __future__ import division
 import logging
-from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution
+from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution, copy_var_list_values_from_solution_pool
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 
 from pyomo.contrib.mindtpy.mip_solve import solve_main, handle_main_optimal, handle_main_infeasible, handle_main_other_conditions, handle_regularization_main_tc
@@ -128,15 +128,15 @@ def MindtPy_iteration_loop(solve_data, config):
                 solution_name_obj.sort(
                     key=lambda x: x[1], reverse=solve_data.objective_sense == maximize)
                 counter = 0
-                while counter <= min(config.num_solution_iteration, len(solution_pool_names)):
+                for name, _ in solution_name_obj:
                     if counter >= 1:
                         config.logger.info(
                             'Solution %s in solution pool' % (counter+1))
-                        for var1, var2 in zip(solve_data.working_model.MindtPy_utils.variable_list,
-                                              solve_data.mip.MindtPy_utils.variable_list):
-                            # TODO: add rounding for integer varibales and bound checking
-                            var1.set_value(main_mip_results.cpx_model.solution.pool.get_values(
-                                solution_name_obj[counter][0], main_mip_results._pyomo_var_to_solver_var_map[var2]))
+                        copy_var_list_values_from_solution_pool(solve_data.mip.MindtPy_utils.variable_list,
+                                                                solve_data.working_model.MindtPy_utils.variable_list,
+                                                                config, cpx_model=main_mip_results.cpx_model,
+                                                                var_map=main_mip_results._pyomo_var_to_solver_var_map,
+                                                                solution_name=name)
                         solve_data.curr_int_sol = get_integer_solution(
                             solve_data.working_model)
                         if solve_data.curr_int_sol in set(solve_data.integer_list):
@@ -162,6 +162,9 @@ def MindtPy_iteration_loop(solve_data, config):
 
                     if algorithm_should_terminate(solve_data, config, check_cycling=False):
                         last_iter_cuts = True
+                        break
+
+                    if counter >= config.num_solution_iteration:
                         break
 
         if config.strategy == 'ECP':

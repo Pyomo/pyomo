@@ -22,6 +22,7 @@ from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.common.dependencies import attempt_import
 from pyomo.contrib.fbbt.fbbt import fbbt
+from math import fabs
 
 pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 numpy = attempt_import('numpy')[0]
@@ -606,3 +607,38 @@ def setup_solve_data(model, config):
                 direction=Suffix.IMPORT)
 
     return solve_data
+
+
+def copy_var_list_values_from_solution_pool(from_list, to_list, config, cpx_model, var_map, solution_name,
+                                            skip_stale=False, skip_fixed=True,
+                                            ignore_integrality=False):
+    """Copy variable values from one list to another.
+
+    Rounds to Binary/Integer if neccessary
+    Sets to zero for NonNegativeReals if neccessary
+    """
+    for v_from, v_to in zip(from_list, to_list):
+        if skip_stale and v_from.stale:
+            continue  # Skip stale variable values.
+        if skip_fixed and v_to.is_fixed():
+            continue  # Skip fixed variables.
+        try:
+            var_val = cpx_model.solution.pool.get_values(
+                solution_name, var_map[v_from])
+            v_to.set_value(var_val)
+            if skip_stale:
+                v_to.stale = False
+        except ValueError as err:
+            err_msg = getattr(err, 'message', str(err))
+            rounded_val = int(round(var_val))
+            # Check to see if this is just a tolerance issue
+            if ignore_integrality \
+                    and v_to.is_integer():  # not v_to.is_continuous()
+                v_to.value = var_val
+            elif v_to.is_integer() and (fabs(var_val - rounded_val) <= config.integer_tolerance):  # not v_to.is_continuous()
+                v_to.set_value(rounded_val)
+            elif 'is not in domain NonNegativeReals' in err_msg and (
+                    fabs(var_val) <= config.zero_tolerance):
+                v_to.set_value(0)
+            else:
+                raise
