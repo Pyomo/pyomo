@@ -752,8 +752,6 @@ class AMPLRepn(object):
             coefs, vars_ = self.collect_linear()
             for _id, v in vars_:
                 c = coefs[_id]
-                #if not c:
-                #    continue
                 nterms += 1
                 if c != 1:
                     nl += visitor.template.product
@@ -803,6 +801,8 @@ class AMPLRepn(object):
         coef = {}
         vars_ = []
         for c, v in self.linear:
+            if not c:
+                continue
             _id = id(v)
             if _id in coef:
                 coef[_id] += c
@@ -812,9 +812,11 @@ class AMPLRepn(object):
         return coef, vars_
 
     def distribute_multiplicand(self, visitor, mult):
-        if mult == 1:
-            return self
         if self.nl:
+            if not mult:
+                return AMPLRepn(None, None)
+            elif mult == 1:
+                return AMPLRepn(None, self.nl)
             return AMPLRepn(
                 None,
                 ( visitor.template.product \
@@ -844,8 +846,6 @@ class AMPLRepn(object):
         return ans
 
     def distribute_divisor(self, visitor, div):
-        if div == 1:
-            return self
         ans = AMPLRepn(None, None)
         if self.nonlinear:
             if type(self.nonlinear) is tuple:
@@ -929,7 +929,11 @@ def node_result_to_amplrepn(visitor, data):
     if data[0] is _GENERAL:
         ans = data[1]
         if ans.nonlinear.__class__ is list:
-            ans.nonlinear = AMPLRepn(None, ans.nonlinear).to_nl_node(visitor)
+            if ans.nonlinear:
+                ans.nonlinear = AMPLRepn(
+                    None, ans.nonlinear).to_nl_node(visitor)
+            else:
+                ans.nonlinear = None
     elif data[0] is _CONSTANT:
         ans = AMPLRepn(None, None)
         ans.const = data[1]
@@ -955,17 +959,20 @@ def handle_product_node(visitor, node, arg1, arg2):
     if arg2[0] is _CONSTANT:
         arg2, arg1 = arg1, arg2
     if arg1[0] is _CONSTANT:
-        if not arg1[1]:
+        mult = arg1[1]
+        if not mult:
             # simplify multiplication by 0 (if arg2 is zero, the
             # simplification happens implicitly when we evaluate the
             # constant below)
             return arg1
+        if mult == 1:
+            return arg2
         elif arg2[0] is _MONOMIAL:
-            return (_MONOMIAL, arg1[1]*arg2[1], arg2[2])
+            return (_MONOMIAL, mult*arg2[1], arg2[2])
         elif arg2[0] is _GENERAL:
-            return (_GENERAL, arg2[1].distribute_multiplicand(visitor, arg1[1]))
+            return (_GENERAL, arg2[1].distribute_multiplicand(visitor, mult))
         elif arg2[0] is _CONSTANT:
-            return (_CONSTANT, arg1[1]*arg2[1])
+            return (_CONSTANT, mult*arg2[1])
     nl1 = node_result_to_amplrepn(visitor, arg1).to_nl_node(visitor)
     nl2 = node_result_to_amplrepn(visitor, arg2).to_nl_node(visitor)
     return (_GENERAL, AMPLRepn(None, (
@@ -975,13 +982,14 @@ def handle_product_node(visitor, node, arg1, arg2):
 def handle_division_node(visitor, node, arg1, arg2):
     if arg2[0] is _CONSTANT:
         div = arg2[1]
+        if div == 1:
+            return arg1
         if arg1[0] is _MONOMIAL:
-            return (_MONOMIAL, (arg1[1]/div, arg1[2])
-            )
+            return (_MONOMIAL, arg1[1]/div, arg1[2])
         elif arg1[0] is _GENERAL:
-            return (_GENERAL, arg1[1].distribute_divisor(visitor, arg2[1]))
+            return (_GENERAL, arg1[1].distribute_divisor(visitor, div))
         elif arg1[0] is _CONSTANT:
-            return (_CONSTANT, arg1[1]/arg2[1])
+            return (_CONSTANT, arg1[1]/div)
     nl1 = node_result_to_amplrepn(visitor, arg1).to_nl_node(visitor)
     nl2 = node_result_to_amplrepn(visitor, arg2).to_nl_node(visitor)
     return (_GENERAL, AMPLRepn(None, (
