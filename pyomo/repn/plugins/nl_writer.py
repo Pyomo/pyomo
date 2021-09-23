@@ -430,8 +430,12 @@ class _NLWriter_impl(object):
         self.next_V_line_id = n_vars
         for i, _id in enumerate(self.subexpression_order):
             cache = self.subexpression_cache[_id]
-            if 0 in cache[2] or None not in cache[2]:
-                self._write_v_line(_id, 0, var_map, var_id_to_nl)
+            if cache[2][2]:
+                # substitute expression directly into expression trees
+                # and do NOT emit the V line
+                pass
+            elif 0 in cache[2] or None not in cache[2]:
+                self._write_v_line(_id, 0)
             else:
                 target_expr = tuple(filter(None, cache[2]))[0]
                 if target_expr not in single_use_subexpressions:
@@ -683,11 +687,12 @@ class _NLWriter_impl(object):
         #     used by one objective ]
         n_subexpressions = [0]*5
         for info in map(itemgetter(2), self.subexpression_cache.values()):
-            if None in info:
-                if info[1] is None:
-                    n_subexpressions[3 if info[0] else 1] += 1
-                else:
-                    n_subexpressions[4 if info[1] else 2] += 1
+            if info[2]:
+                pass
+            elif info[1] is None:
+                n_subexpressions[3 if info[0] else 1] += 1
+            elif info[0] is None:
+                n_subexpressions[4 if info[1] else 2] += 1
             else:
                 n_subexpressions[0] += 1
         return n_subexpressions
@@ -1053,39 +1058,59 @@ def handle_expression_node(visitor, node, arg1):
     # we want to just reference this subexpression:
     repn.nl = (visitor.template.var, (node,))
 
-    if repn.linear and repn.nonlinear:
-        # If this expession has both linear and nonlinear components, we
-        # will follow the ASL convention and break the named
-        # subexpression into two named subexpressions: one that is only
-        # the nonlinear component and one that has the const/linear
-        # component (and references the first).  This will allow us to
-        # propagate linear coefficients up from named subexpressions
-        # when appropriate.
-        subid = id(repn)
-        sub_repn = AMPLRepn(None, repn.nonlinear)
-        sub_repn.nl = (visitor.template.var, (repn,))
-        visitor.subexpression_cache[subid] = (
-            # 0: the "component" that generated this expression ID
-            repn,
-            # 1: the common subexpression
-            sub_repn,
-            # 2: the (single) component that uses this subexpression (0 if
-            # used by more than one)
-            list(visitor.active_expression_source),
-        )
-        repn.nonlinear = sub_repn.nl
-        # It is important that the NL subexpression comes before the main
-        # named expression:
-        visitor.subexpression_order.append(subid)
+    # A local copy of the expression source list.  This will be updated
+    # later if the same Expression node is encountered in another
+    # expression tree.
+    expression_source = list(visitor.active_expression_source)
+
+    if repn.linear:
+        if repn.nonlinear:
+            # If this expession has both linear and nonlinear
+            # components, we will follow the ASL convention and break
+            # the named subexpression into two named subexpressions: one
+            # that is only the nonlinear component and one that has the
+            # const/linear component (and references the first).  This
+            # will allow us to propagate linear coefficients up from
+            # named subexpressions when appropriate.
+            subid = id(repn)
+            sub_repn = AMPLRepn(None, repn.nonlinear)
+            sub_repn.nl = (visitor.template.var, (repn,))
+            # See below for the meaning of this tuple
+            visitor.subexpression_cache[subid] = (
+                repn, sub_repn, list(expression_source),
+            )
+            repn.nonlinear = sub_repn.nl
+            # It is important that the NL subexpression comes before the
+            # main named expression:
+            visitor.subexpression_order.append(subid)
+        elif (not repn.const and len(repn.linear) == 1
+              and repn.linear[0][0] == 1):
+            # This Expression holds only a variable (multiplied by 1).
+            # Do not emit this as a named variable and instead just
+            # inject the variable where this expression is used.
+            repn.nl = None
+            expression_source[2] = True
+    elif not repn.nonlinear:
+        # This Expression holds only a constant.  Do not emit this as a
+        # named variable and instead just inject the constant where this
+        # expression is used.
+        repn.nl = None
+        expression_source[2] = True
 
     visitor.subexpression_cache[_id] = (
         # 0: the "component" that generated this expression ID
         node,
         # 1: the common subexpression
         repn,
-        # 2: the (single) component that uses this subexpression (0 if
-        # used by more than one)
-        list(visitor.active_expression_source),
+        # 2: the (single) component that uses this subexpression.  This
+        # is a 3-tuple [con_id, obj_id, substitute_expression].  If the
+        # expression is used by 1 constraint / objective, then the id is
+        # set to 0.  If it is not used by any, then it is None.
+        # substitue_expression is a bool indicating id this named
+        # subexpression tree should be directly substituted into any
+        # expression tree that references this node (i.e., do NOT emit
+        # the V line).
+        expression_source,
     )
     visitor.subexpression_order.append(_id)
     return (_GENERAL, visitor.subexpression_cache[_id][1])
@@ -1155,7 +1180,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
     def initializeWalker(self, expr):
         expr, src, src_idx = expr
-        self.active_expression_source = [None, None]
+        self.active_expression_source = [None, None, False]
         self.active_expression_source[src_idx] = id(src)
         self.active_expression_source_idx = src_idx
         walk, result = self.beforeChild(None, expr, 0)
