@@ -288,6 +288,17 @@ class _NLWriter_impl(object):
         }
 
         # Now that the row/column ordering is resolved, create the labels
+        symbol_map = SymbolMap()
+        symbol_map.addSymbols(
+            (info[0], "v"+str(idx)) for idx, info in enumerate(variables)
+        )
+        symbol_map.addSymbols(
+            (info[0], "c"+str(idx)) for idx, info in enumerate(constraints)
+        )
+        symbol_map.addSymbols(
+            (info[0], "o"+str(idx)) for idx, info in enumerate(objectives)
+        )
+
         if symbolic_solver_labels:
             labeler = NameLabeler()
             row_labels = [labeler(info[0]) for info in constraints] \
@@ -542,6 +553,9 @@ class _NLWriter_impl(object):
             for entry in sorted((self.var_map[_id][1], linear.get(_id, 0))
                                 for _id in nz):
                 ostream.write('%d %r\n' % entry)
+
+        return symbol_map
+
 
     def _categorize_vars(self, comp_list, nz_by_comp):
         """Categorize compiled expression vars into linear and nonlinear
