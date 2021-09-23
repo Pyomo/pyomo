@@ -168,6 +168,7 @@ def readgjh(fname=None):
         H = []
         while line[0] != ';':
             """
+            When printed via ampl interface:
             ampl: display H;
             	H [*,*]
             	:       1           2           3           4           5           6         :=

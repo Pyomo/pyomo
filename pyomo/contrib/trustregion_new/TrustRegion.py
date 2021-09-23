@@ -31,7 +31,6 @@ class TrustRegionSolver(OptSolver):
     surrogate models.
 
     Adapted from Yoshio, Biegler (2020) AIChE Journal.
-
     """
 
     CONFIG = get_TRF_config()
@@ -73,13 +72,13 @@ class TrustRegionSolver(OptSolver):
 
         # first store all data we will need to change in original model as a tuple
         # [0]=Var component, [1]=external function list, [2]=config block
-        model._tmp_trf_data = (list(model.component_data_objects(Var)), eflist, self._local_config)
+        model._tmp_TRF_data = (list(model.component_data_objects(Var)), eflist, self._local_config)
         # now clone the model
         inst = model.clone()
 
         # call TRF on cloned model
-        TRF(inst, inst._tmp_trf_data[1], inst._tmp_trf_data[2])
+        TRF(inst, inst._tmp_TRF_data[1], inst._tmp_TRF_data[2])
 
         # copy potentially changed variable values back to original model and return
-        for inst_var, orig_var in zip(inst._tmp_trf_data[0], model._tmp_trf_data[0]):
+        for inst_var, orig_var in zip(inst._tmp_TRF_data[0], model._tmp_TRF_data[0]):
             orig_var.set_value(value(inst_var))
