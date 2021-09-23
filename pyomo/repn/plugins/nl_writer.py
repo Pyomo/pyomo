@@ -40,11 +40,18 @@ class FileDeterminism(enum.IntEnum):
     SORT_INDICES = 1
     SORT_SYMBOLS = 2
 
+def _activate_nl_writer_version(n):
+    """DEBUGGING TOOL to switch the "default" NL writer"""
+    doc = WriterFactory.doc('nl')
+    WriterFactory.unregister('nl')
+    WriterFactory.register('nl', doc)(WriterFactory.get_class('nl_v%s' % n))
+
 def identify_unrecognized_components(model, active=True, valid={}):
     pass
 
 
-@WriterFactory.register('new_nl', 'Generate the corresponding AMPL NL file.')
+@WriterFactory.register(
+    'nl_v2', 'Generate the corresponding AMPL NL file (version 2).')
 class NLWriter(object):
     CONFIG = ConfigBlock('nlwriter')
     CONFIG.declare('show_section_timing', ConfigValue(
