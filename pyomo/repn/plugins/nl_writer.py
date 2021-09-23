@@ -31,6 +31,8 @@ from pyomo.core.base import (
 from pyomo.core.base.expression import Expression, _GeneralExpressionData
 from pyomo.opt import WriterFactory
 
+from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
+
 class _CONSTANT(object): pass
 class _MONOMIAL(object): pass
 class _GENERAL(object): pass
@@ -90,7 +92,13 @@ class NLWriter(object):
         if filename is None:
             filename = model.name + ".nl"
         with open(filename, 'w') as FILE:
-            symbol_map = self.write(model, FILE, **io_options)
+            symbol_map, amplfuncs = self.write(model, FILE, **io_options)
+        # Historically, the NL writer communicated the external function
+        # libraries back to the ASL interface through the PYOMO_AMPLFUNC
+        # environment variable.
+        set_pyomo_amplfunc_env(amplfuncs)
+        # The ProblemWriter callable interface returns the filename that
+        # was generated and the symbol_map
         return filename, symbol_map
 
     def write(self, model, ostream, **options):
@@ -420,7 +428,9 @@ class _NLWriter_impl(object):
         #
         # "F" lines (external function definitions)
         #
+        amplfunc_libraries = set()
         for fid, fcn in sorted(self.external_functions.values()):
+            amplfunc_libraries.add(fcn._library)
             ostream.write("F%d 1 -1 %s\n" % (fid, fcn._function))
 
         #
@@ -566,7 +576,7 @@ class _NLWriter_impl(object):
                                 for _id in nz):
                 ostream.write('%d %r\n' % entry)
 
-        return symbol_map
+        return symbol_map, sorted(amplfunc_libraries)
 
 
     def _categorize_vars(self, comp_list, nz_by_comp):
