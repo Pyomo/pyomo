@@ -12,8 +12,8 @@ import logging
 
 from pyomo.opt.base import SolverFactory, OptSolver
 from pyomo.core import Var, value
-from pyomo.contrib.trustregion.TRF import TRF
-from pyomo.contrib.trustregion_new.config_options import get_TRF_config
+from pyomo.contrib.trustregion_old.TRF import TRF
+from pyomo.contrib.trustregion.config_options import get_TRF_config
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 

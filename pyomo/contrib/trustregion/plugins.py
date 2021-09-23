@@ -11,7 +11,7 @@
 import logging
 
 from pyomo.common.download import DownloadFactory
-import pyomo.contrib.trustregion_new.getGJH
+import pyomo.contrib.trustregion.getGJH
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
