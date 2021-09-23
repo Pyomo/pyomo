@@ -68,7 +68,8 @@ def get_TRF_config():
         default = 1000.0 * CONFIG.trust_radius,
         domain = PositiveFloat,
         description = 'Maximum trust radius. Default is 1000x the initial trust region radius.',
-        doc = 'This value protects the trust region radius from becoming too large. The default is 1000x the initial trust region radius.'))
+        doc = 'This value protects the trust region radius from becoming too large.'
+              'The default is 1000x the initial trust region radius.'))
 
     # Termination tolerances / parameters
     CONFIG.declare('epsilon delta', ConfigValue(
@@ -106,7 +107,8 @@ def get_TRF_config():
         default = 2.0,
         domain = PositiveFloat,
         description = 'Switching condition parameter greater than the ratio (1/(1+mu)).',
-        doc = 'Initialize switching condition parameter (gamma_s) that satisfies the condition gamma_s > (1/(1+mu)), with mu within the set (0, 1].'))
+        doc = 'Initialize switching condition parameter (gamma_s) that satisfies'
+              'the condition gamma_s > (1/(1+mu)), with mu within the set (0, 1].'))
 
     CONFIG.declare('theta min', ConfigValue(
         default = 1e-4,
@@ -159,12 +161,13 @@ def get_TRF_config():
     #     description = '',
     #     doc = ''))
 
-    # # Output level (replace with real printlevels!!!)
-    # CONFIG.declare('print variables', ConfigValue(
-    #     default = False,
-    #     domain = bool,
-    #     description = '',
-    #     doc = ''))
+    # Output level (replace with real printlevels!!!)
+    CONFIG.declare('verbosity', ConfigValue(
+        default = 1,
+        domain = PositiveInt,
+        description = 'Set a verbosity level. Default is 0.',
+        doc = 'Set the verbosity level to get more information at each iteration.'
+              'Default is 0. Low is 1. Medium is 2. High is 3.'))
 
     # # Sample Radius reset parameter
     # CONFIG.declare('sample radius adjust', ConfigValue(
