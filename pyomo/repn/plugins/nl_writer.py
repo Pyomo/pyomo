@@ -19,8 +19,8 @@ from pyomo.core.expr.current import (
     PowExpression, AbsExpression, UnaryFunctionExpression,
     MonomialTermExpression, LinearExpression, SumExpressionBase,
     EqualityExpression, InequalityExpression, RangedExpression,
-    Expr_ifExpression,
-    native_types,
+    Expr_ifExpression, ExternalFunctionExpression,
+    native_types, value,
 )
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.base import (
@@ -123,8 +123,13 @@ class _NLWriter_impl(object):
             self.template = text_nl_template
         self.subexpression_cache = {}
         self.subexpression_order = []
+        self.external_functions = {}
         self.visitor = AMPLRepnVisitor(
-            self.template, self.subexpression_cache, self.subexpression_order)
+            self.template,
+            self.subexpression_cache,
+            self.subexpression_order,
+            self.external_functions,
+        )
         self.next_V_line_id = 0
 
     def write(self, model):
@@ -356,7 +361,7 @@ class _NLWriter_impl(object):
         ostream.write(
             " 0 %d 0 1\t"
             "# linear network variables; functions; arith, flags\n"
-            % ( 0, # len(self.external_byFcn),
+            % ( len(self.external_functions),
             ))
         #
         # LINE 7
@@ -396,6 +401,8 @@ class _NLWriter_impl(object):
         #
         # "F" lines (external function definitions)
         #
+        for fid, fcn in sorted(self.external_functions.values()):
+            ostream.write("F%d 1 -1 %s\n" % (fid, fcn._function))
 
         #
         # "S" lines (suffixes)
@@ -888,8 +895,10 @@ class text_nl_debug_template(object):
     less_than = 'o22\t# lt\n'
     less_equal = 'o23\t# le\n'
     equality = 'o24\t# eq\n'
+    external_fcn = 'f%d %d\n'
     var = 'v%s\n'
     const = 'n%r\n'
+    string = 'h%d:%s\n'
 
     _create_strict_inequality_map(vars())
 
@@ -1075,35 +1084,68 @@ def handle_expression_node(visitor, node, arg1):
     visitor.subexpression_order.append(_id)
     return (_GENERAL, visitor.subexpression_cache[_id][1])
 
-_operator_handles = dict()
-_operator_handles[NegationExpression] = handle_negation_node
-_operator_handles[ProductExpression] = handle_product_node
-_operator_handles[DivisionExpression] = handle_division_node
-_operator_handles[PowExpression] = handle_pow_node
-_operator_handles[AbsExpression] = handle_abs_node
-_operator_handles[UnaryFunctionExpression] = handle_unary_node
-_operator_handles[Expr_ifExpression] = handle_exprif_node
-_operator_handles[EqualityExpression] = handle_equality_node
-_operator_handles[InequalityExpression] = handle_inequality_node
-_operator_handles[RangedExpression] = handle_ranged_inequality_node
-_operator_handles[_GeneralExpressionData] = handle_expression_node
-_operator_handles[Expression] = handle_expression_node
-# TODO
-#handler[ExternalFunctionExpression] = handle_external_function_expression
-# These are handled explicitly in beforeChild():
-#handler[LinearExpression] = handle_linear_expression
-#handler[SumExpression] = handle_expression
-#handler[MonomialTermExpression] = handle_expression
+def handle_external_function_node(visitor, node, *args):
+    func = node._fcn._function
+    if func in visitor.external_functions:
+        if node._fcn._library != visitor.external_functions[func][1]._library:
+            raise RuntimeError(
+                "The same external function name (%s) is associated "
+                "with two different libraries (%s through %s, and %s "
+                "through %s).  The ASL solver will fail to link "
+                "correctly." %
+                (func,
+                 self.external_byFcn[func]._library,
+                 self.external_byFcn[func]._library.name,
+                 node._fcn._library,
+                 node._fcn.name))
+    else:
+        visitor.external_functions[func] = (
+            len(visitor.external_functions),
+            node._fcn,
+        )
+    _amplrepn = lambda arg: \
+                node_result_to_amplrepn(visitor, arg).to_nl_node(visitor)
+    nl, arg_tuples = zip(*map(_amplrepn, args))
+    all_args = []
+    deque(map(all_args.extend, arg_tuples), maxlen=0)
+    return (_GENERAL, AMPLRepn(None, (
+        (visitor.template.external_fcn % (
+            visitor.external_functions[func][0], len(args))) + ''.join(nl),
+        tuple(all_args)
+    )))
+
+
+_operator_handles = {
+    NegationExpression: handle_negation_node,
+    ProductExpression: handle_product_node,
+    DivisionExpression: handle_division_node,
+    PowExpression: handle_pow_node,
+    AbsExpression: handle_abs_node,
+    UnaryFunctionExpression: handle_unary_node,
+    Expr_ifExpression: handle_exprif_node,
+    EqualityExpression: handle_equality_node,
+    InequalityExpression: handle_inequality_node,
+    RangedExpression: handle_ranged_inequality_node,
+    _GeneralExpressionData: handle_expression_node,
+    Expression: handle_expression_node,
+    ExternalFunctionExpression: handle_external_function_node,
+    # These are handled explicitly in beforeChild():
+    # LinearExpression: handle_linear_expression,
+    # SumExpression: handle_sum_expression,
+    # MonomialTermExpression: handle_monomial_term,
+}
 
 
 class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
-    def __init__(self, template, subexpression_cache, subexpression_order):
+    def __init__(self, template, subexpression_cache, subexpression_order,
+                 external_functions):
         super().__init__()
         self.template = template
         self.subexpression_cache = subexpression_cache
         self.subexpression_order = subexpression_order
-        self.active_expression_source = [None, None]
+        self.external_functions = external_functions
+        self.active_expression_source = None
 
     def initializeWalker(self, expr):
         expr, src, src_idx = expr
