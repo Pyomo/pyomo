@@ -10,7 +10,7 @@
 
 import enum
 from collections import Counter, deque
-from operator import itemgetter
+from operator import itemgetter, attrgetter
 
 from pyomo.common.config import ConfigBlock, ConfigValue, InEnum
 from pyomo.common.errors import DeveloperError
@@ -25,13 +25,20 @@ from pyomo.core.expr.current import (
 )
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.base import (
-    Block, Objective, Constraint, Var, Param, Expression,
+    Block, Objective, Constraint, Var, Param, Expression, ExternalFunction,
     SymbolMap, NameLabeler, SortComponents, minimize,
 )
+from pyomo.core.base.block import SortComponents
 from pyomo.core.base.expression import Expression, _GeneralExpressionData
 from pyomo.opt import WriterFactory
 
 from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
+
+### FIXME: Remove the following as soon as non-active components no
+### longer report active==True
+from pyomo.core.base import Set, RangeSet
+from pyomo.network import Port
+###
 
 class _CONSTANT(object): pass
 class _MONOMIAL(object): pass
@@ -48,9 +55,21 @@ def _activate_nl_writer_version(n):
     WriterFactory.unregister('nl')
     WriterFactory.register('nl', doc)(WriterFactory.get_class('nl_v%s' % n))
 
-def identify_unrecognized_components(model, active=True, valid={}):
-    pass
-
+def identify_unrecognized_components(model, active=True, valid=set()):
+    assert active in (True, None)
+    unrecognized = {}
+    for block in model.block_data_objects(active=active,
+                                          descend_into=True,
+                                          sort=SortComponents.unsorted):
+        local_ctypes = block.collect_ctypes(active=None, descend_into=False)
+        for ctype in local_ctypes - valid:
+            unrecognized.setdefault(ctype, []).extend(
+                block.component_data_objects(
+                    ctype=ctype,
+                    active=active,
+                    descend_into=False,
+                    sort=SortComponents.unsorted))
+    return {k:v for k,v in unrecognized.items() if v}
 
 @WriterFactory.register(
     'nl_v2', 'Generate the corresponding AMPL NL file (version 2).')
@@ -106,14 +125,18 @@ class NLWriter(object):
 
         unknown = identify_unrecognized_components(model, active=True, valid={
             Block, Objective, Constraint, Var, Param, Expression,
+            ExternalFunction,
+            # FIXME: Non-active components should not report as Active
+            Set, RangeSet, Port,
             # TODO: Suffix, Piecewise, SOSConstraint, Complementarity
         })
         if unknown:
             raise ValueError(
                 "The model (%s) contains the following active components "
-                "that the NL writer does not know how to process:\n\t" %
+                "that the NL writer does not know how to process:\n\t%s" %
                 (model.name, "\n\t".join("%s:\n\t\t%s" % (
-                    k, "\n\t\t".join(v)) for k, v in unknown.items())))
+                    k, "\n\t\t".join(map(attrgetter('name'), v)))
+                    for k, v in unknown.items())))
 
         return _NLWriter_impl(ostream, config).write(model)
 
