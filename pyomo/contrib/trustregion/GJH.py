@@ -10,28 +10,12 @@
 
 import logging
 import glob
-import os
-import stat
-import sys
-from pyomo.common.download import FileDownloader
 
-logger = logging.getLogger('pyomo.common')
+from pyomo.common.tempfiles import TempfileManager
+from pyomo.opt.base import SolverFactory
+from pyomo.solvers.plugins.solvers.ASL import ASL
 
-# These URLs were retrieved from
-#     https://ampl.com/resources/hooking-your-solver-to-ampl/
-# All 32-bit downloads are used - 64-bit is available only for Linux
-urlmap = {
-    'linux':   'https://ampl.com/netlib/ampl/student/linux/gjh.gz',
-    'windows': 'https://ampl.com/netlib/ampl/student/mswin/gjh.exe.gz',
-    'cygwin':  'https://ampl.com/netlib/ampl/student/mswin/gjh.exe.gz',
-    'darwin':  'https://ampl.com/netlib/ampl/student/macosx/x86_32/gjh.gz',
-}
-exemap = {
-    'linux':   '',
-    'windows': '.exe',
-    'cygwin':  '.exe',
-    'darwin':  '',
-}
+logger = logging.getLogger('pyomo.contrib.trustregion')
 
 def readgjh(fname=None):
     """
@@ -217,33 +201,36 @@ def readgjh(fname=None):
     return g, J, H, variableList, constraintList
 
 
-def get_gjh(downloader):
-    system, bits = downloader.get_sysinfo()
-    url = downloader.get_platform_url(urlmap)
+@SolverFactory.register('contrib.gjh', doc='Interface to the AMPL GJH "solver"')
+class GJHSolver(ASL):
+    """An interface to the AMPL GJH "solver" for evaluating a model at a
+    point."""
 
-    downloader.set_destination_filename(
-        os.path.join('bin', 'gjh'+exemap[system]))
+    def __init__(self, **kwds):
+        kwds['type'] = 'gjh'
+        kwds['symbolic_solver_labels'] = True
+        super(GJHSolver, self).__init__(**kwds)
+        self.options.solver = 'gjh'
+        self._metasolver = False
 
-    logger.info("Fetching GJH from %s and installing it to %s"
-                % (url, downloader.destination()))
+    # A hackish way to hold on to the model so that we can parse the
+    # results.
+    def _initialize_callbacks(self, model):
+        self._model = model
+        self._model._gjh_info = None
+        super(GJHSolver, self)._initialize_callbacks(model)
 
-    downloader.get_gzipped_binary_file(url)
+    def _presolve(self, *args, **kwds):
+        super(GJHSolver, self)._presolve(*args, **kwds)
+        self._gjh_file = self._soln_file[:-3]+'gjh'
+        TempfileManager.add_tempfile(self._gjh_file, exists=False)
 
-    mode = os.stat(downloader.destination()).st_mode
-    os.chmod( downloader.destination(),
-              mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH )
-
-def main(argv):
-    downloader = FileDownloader()
-    downloader.parse_args(argv)
-    get_gjh(downloader)
-
-
-if __name__ == '__main__':
-    logger.setLevel(logging.INFO)
-    try:
-        main(sys.argv[1:])
-    except Exception as e:
-        print(e.message)
-        print("Usage: %s [--insecure] [target]" % os.path.basename(sys.argv[0]))
-        sys.exit(1)
+    def _postsolve(self):
+        #
+        # TODO: We should return the information using a better data
+        # structure (ComponentMap?) so that the GJH solver does not need
+        # to be called with symbolic_solver_labels=True
+        #
+        self._model._gjh_info = readgjh(self._gjh_file)
+        self._model = None
+        return super(GJHSolver, self)._postsolve()
