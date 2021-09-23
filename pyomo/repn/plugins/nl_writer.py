@@ -13,6 +13,7 @@ from collections import Counter, deque
 from operator import itemgetter
 
 from pyomo.common.config import ConfigBlock, ConfigValue, InEnum
+from pyomo.common.errors import DeveloperError
 
 from pyomo.core.expr.current import (
     NegationExpression, ProductExpression, DivisionExpression,
@@ -706,21 +707,21 @@ class _NLWriter_impl(object):
                 n_subexpressions[0] += 1
         return n_subexpressions
 
-    def _write_nl_expression(self, repn, const=None):
-        if const is None:
-            const = repn.const
+    def _write_nl_expression(self, repn, const_=None):
+        if const_ is None:
+            const_ = repn.const
         if repn.nonlinear and repn.nonlinear[0] != 'n0\n':
             nl, args = repn.nonlinear
-            if const:
+            if const_:
                 # Add the constant to the NL expression.  AMPL adds the
                 # constant as the second argument, so we will too.
                 nl = self.template.binary_sum + nl + (
-                    self.template.const % const)
+                    self.template.const % const_)
             self.ostream.write(
                 nl % tuple(map(self.var_id_to_nl.__getitem__, args))
             )
         else:
-            self.ostream.write(self.template.const % const)
+            self.ostream.write(self.template.const % const_)
 
     def _write_v_line(self, expr_id, k):
         ostream = self.ostream
@@ -916,15 +917,17 @@ class text_nl_debug_template(object):
 
     _create_strict_inequality_map(vars())
 
+def _strip_template_comments(vars_, base_):
+    vars_['unary'] = {k: v[:v.find('\t#')]+'\n'
+             for k, v in base_.unary.items()}
+    for k, v in base_.__dict__.items():
+        if type(v) is str and '\t#' in v:
+            vars_[k] = '\n'.join(l[:l.find('\t#')] for l in v.split('\n'))
+
 # The "standard" text mode template is the debugging template with the
 # comments removed
 class text_nl_template(text_nl_debug_template):
-    unary = {k: v[:v.find('\t#')]+'\n'
-             for k, v in text_nl_debug_template.unary.items()}
-    for k, v in text_nl_debug_template.__dict__.items():
-        if type(v) is str and '\t#' in v:
-            vars()[k] = '\n'.join(l[:l.find('\t#')] for l in v.split('\n'))
-
+    _strip_template_comments(vars(), text_nl_debug_template)
     _create_strict_inequality_map(vars())
 
 
@@ -1136,8 +1139,8 @@ def handle_external_function_node(visitor, node, *args):
                 "through %s).  The ASL solver will fail to link "
                 "correctly." %
                 (func,
-                 self.external_byFcn[func]._library,
-                 self.external_byFcn[func]._library.name,
+                 visitor.external_byFcn[func]._library,
+                 visitor.external_byFcn[func]._library.name,
                  node._fcn._library,
                  node._fcn.name))
     else:
