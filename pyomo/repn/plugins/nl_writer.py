@@ -1239,7 +1239,8 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
             # Because we are going to modify the LinearExpression in this
             # walker, we need to make a copy of the LinearExpression from
             # the original expression tree.
-            data = AMPLRepn(list(zip(child.linear_coefs, child.linear_ars)),
+            data = AMPLRepn(list(zip(map(value, child.linear_coefs),
+                                     child.linear_vars)),
                             None)
             data.const = child.constant
             return False, (_GENERAL, data)
