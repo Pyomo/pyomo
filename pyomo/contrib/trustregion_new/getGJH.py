@@ -19,6 +19,7 @@ logger = logging.getLogger('pyomo.common')
 
 # These URLs were retrieved from
 #     https://ampl.com/resources/hooking-your-solver-to-ampl/
+# All 32-bit downloads are used - 64-bit is available only for Linux
 urlmap = {
     'linux':   'https://ampl.com/netlib/ampl/student/linux/gjh.gz',
     'windows': 'https://ampl.com/netlib/ampl/student/mswin/gjh.exe.gz',
@@ -70,7 +71,7 @@ def readgjh(fname=None):
 
     with open(fname, "r") as f:
         line = "dummy_str"
-        # Skip top lines until g parameter is reached
+        # Skip top lines until g value is reached
         while line != "param g :=\n":
             line = f.readline()
 
@@ -99,6 +100,7 @@ def readgjh(fname=None):
             g.append([index, value])
             line = f.readline()
 
+        # Skip lines until J value is reached 
         while line != "param J :=\n":
             line = f.readline()
 
@@ -154,9 +156,9 @@ def readgjh(fname=None):
                 row = int(''.join(filter(str.isdigit, line))) - 1
                 line = f.readline()
 
-            col = int(line.split()[0]) - 1
+            column = int(line.split()[0]) - 1
             value = float(line.split()[1])
-            J.append([row, col, value])
+            J.append([row, column, value])
             line = f.readline()
 
         while line != "param H :=\n":
@@ -198,9 +200,9 @@ def readgjh(fname=None):
                 row = int(''.join(filter(str.isdigit, line))) - 1
                 line = f.readline()
 
-            col = int(line.split()[0]) - 1
+            column = int(line.split()[0]) - 1
             value = float(line.split()[1])
-            H.append([row, col, value])
+            H.append([row, column, value])
             line = f.readline()
     
     with open(fname[:-3]+'col', 'r') as f:
