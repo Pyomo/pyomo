@@ -647,7 +647,9 @@ class _NLWriter_impl(object):
         # We now need to go through the subexpression cache and update
         # the flag for nested subexpressions used by multiple components
         # (the walker can only update the flag in subexpressions
-        # appearing explicitly in the second component).
+        # appearing explicitly in the tree, so we now need to propagate
+        # this usage info into subexpressions nested in other
+        # subexpressions).
         #
         # We need to walk twice: once to sort out the use in Constraints
         # and once to sort out the use in Objectives
@@ -657,22 +659,29 @@ class _NLWriter_impl(object):
                 src_id = cache[id_][2][idx]
                 if src_id is None:
                     continue
-                # This expression is used by multiple components; ensure
-                # that all subexpressions (recursively) used by this
-                # expression are marked as being used in multiple places
+                # This expression is used by this component type
+                # (constraint or objective); ensure that all
+                # subexpressions (recursively) used by this expression
+                # are also marked as being used by this component type
                 queue = [id_]
                 while queue:
                     info = cache[queue.pop()]
                     if not info[1].nonlinear:
+                        # Subexpressions can only appear in the
+                        # nonlinear terms.  If there are none, then we
+                        # are done.
                         continue
                     for subid in info[1].nonlinear[1]:
                         # Check if this "id" (normally a var id, but
                         # could be a subexpression id) is a
-                        # subexpression id, and that it is currently
-                        # marked as only being used in one component.
-                        # If it is, update the flag and recurse into it
+                        # subexpression id
                         if subid not in cache:
                             continue
+                        # Check if we need to update this subexpression:
+                        # either it has never been marked as being used
+                        # by this component type, or else it was used by
+                        # a different id.  If we need to update the
+                        # flag, then do so and recurse into it
                         target = cache[subid][2]
                         if (target[idx] is None
                             or (target[idx] and target[idx] != src_id)):
@@ -703,6 +712,8 @@ class _NLWriter_impl(object):
         if repn.nonlinear and repn.nonlinear[0] != 'n0\n':
             nl, args = repn.nonlinear
             if const:
+                # Add the constant to the NL expression.  AMPL adds the
+                # constant as the second argument, so we will too.
                 nl = self.template.binary_sum + nl + (
                     self.template.const % const)
             self.ostream.write(
