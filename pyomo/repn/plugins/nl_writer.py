@@ -1210,7 +1210,12 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
             else:
                 return False, (_MONOMIAL, 1, child)
         if not child.is_potentially_variable():
-            return False, (_CONSTANT, child())
+            _id = id(child)
+            if _id in self.value_cache:
+                child = self.value_cache[_id]
+            else:
+                child = self.value_cache[_id] = child()
+            return False, (_CONSTANT, child)
 
         #
         # The following are performance optimizations for common
