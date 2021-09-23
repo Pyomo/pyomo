@@ -131,6 +131,7 @@ class _NLWriter_impl(object):
             self.external_functions,
         )
         self.next_V_line_id = 0
+        self.var_map = {}
 
     def write(self, model):
         sorter = SortComponents.unsorted
@@ -143,8 +144,6 @@ class _NLWriter_impl(object):
         visitor = self.visitor
         ostream = self.ostream
 
-        var_map = {}
-
         if self.config.file_determinism > FileDeterminism.NONE:
             # We will pre-gather the variables so that their order
             # matches the file_determinism flag.
@@ -153,7 +152,7 @@ class _NLWriter_impl(object):
             # for consistency with the original NL writer.  Note that
             # Vars that appear twice (e.g., through a Reference) will be
             # sorted with the LAST occurance.
-            var_map = {id(var): (var, i) for i, var in enumerate(
+            self.var_map = {id(var): (var, i) for i, var in enumerate(
                 model.component_data_objects(
                     Var, descend_into=True, sort=sorter))}
 
@@ -204,18 +203,18 @@ class _NLWriter_impl(object):
         # in constraints / objectives
         subexpressions = map(self.subexpression_cache.__getitem__,
                              self.subexpression_order)
-        self._categorize_vars(subexpressions, var_map, nz_by_comp)
+        self._categorize_vars(subexpressions, nz_by_comp)
         n_subexpressions = self._count_subexpression_occurances()
 
         n_objs = len(objectives)
         n_nonlinear_objs = sum(1 for obj in objectives if obj[1].nonlinear)
         obj_vars_linear, obj_vars_nonlinear, obj_nnz_by_var \
-            = self._categorize_vars(objectives, var_map, nz_by_comp)
+            = self._categorize_vars(objectives, nz_by_comp)
 
         n_cons = len(constraints)
         n_nonlinear_cons = len(nonlinear_cons)
         con_vars_linear, con_vars_nonlinear, con_nnz_by_var \
-            = self._categorize_vars(constraints, var_map, nz_by_comp)
+            = self._categorize_vars(constraints, nz_by_comp)
 
         n_lcons = 0 # We do not yet support logical constraints
 
@@ -225,11 +224,11 @@ class _NLWriter_impl(object):
         n_vars = len(all_vars)
 
         binary_vars = set(
-            _id for _id in all_vars if var_map[_id][0].is_binary()
+            _id for _id in all_vars if self.var_map[_id][0].is_binary()
         )
         integer_vars = set(
             _id for _id in all_vars - binary_vars
-            if var_map[_id][0].is_integer()
+            if self.var_map[_id][0].is_integer()
         )
         discrete_vars = binary_vars.union(integer_vars)
         continuous_vars = all_vars - discrete_vars
@@ -238,7 +237,7 @@ class _NLWriter_impl(object):
         linear_only_vars = con_vars_linear.union(obj_vars_linear) \
                            - nonlinear_vars
 
-        column_order = lambda _id: var_map[_id][1]
+        column_order = lambda _id: self.var_map[_id][1]
         variables = []
         #
         both_vars_nonlinear = con_vars_nonlinear.intersection(
@@ -277,15 +276,16 @@ class _NLWriter_impl(object):
             key=column_order))
         assert len(variables) == n_vars
         for var_idx, _id in enumerate(variables):
-            v = var_map[_id][0]
+            v = self.var_map[_id][0]
             bnds = v.bounds
             variables[var_idx] = (v, _id, self.RANGE_TYPE[
                 bnds[0] is not None,
                 bnds[1] is not None,
                 bnds[0] == bnds[1]])
         # Update the variable ID to reflect the new ordering
-        var_map = {info[1]: (v, var_idx)
-                   for var_idx, info in enumerate(variables)}
+        self.var_map = {
+            info[1]: (info[0], idx) for idx, info in enumerate(variables)
+        }
 
         # Now that the row/column ordering is resolved, create the labels
         if symbolic_solver_labels:
@@ -295,14 +295,14 @@ class _NLWriter_impl(object):
             row_comments = ['\t#%s' % lbl for lbl in row_labels]
             col_labels = [labeler(info[0]) for info in variables]
             col_comments = ['\t#%s' % lbl for lbl in col_labels]
-            var_id_to_nl = {
+            self.var_id_to_nl = {
                 info[1]: '%d%s' % (var_idx, col_comments[var_idx])
                 for var_idx, info in enumerate(variables)
             }
         else:
             row_labels = row_comments = [''] * (n_cons + n_objs)
             col_labels = col_comments = [''] * len(variables)
-            var_id_to_nl = {
+            self.var_id_to_nl = {
                 info[1]: str(var_idx) for var_idx, info in enumerate(variables)
             }
 
@@ -432,14 +432,9 @@ class _NLWriter_impl(object):
         lbl = ''
         for row_idx, info in enumerate(constraints):
             for _id in single_use_subexpressions.get(id(info[0]), ()):
-                self._write_v_line(_id, row_idx, var_map, var_id_to_nl)
+                self._write_v_line(_id, row_idx)
             ostream.write('C%d%s\n' % (row_idx, row_comments[row_idx]))
-            if info[1].nonlinear:
-                args = tuple(map(var_id_to_nl.__getitem__,
-                                 info[1].nonlinear[1]))
-                ostream.write(info[1].nonlinear[0] % args)
-            else:
-                ostream.write('n0\n')
+            self._write_nl_expression(info[1], 0)
 
         #
         # "O" lines (objectives: nonlinear expression)
@@ -447,19 +442,12 @@ class _NLWriter_impl(object):
         lbl = ''
         for obj_idx, info in enumerate(objectives):
             for _id in single_use_subexpressions.get(id(info[0]), ()):
-                self._write_v_line(
-                    _id, n_cons + n_lcons + obj_idx,
-                    var_map, var_id_to_nl)
+                self._write_v_line(_id, n_cons + n_lcons + obj_idx)
             if symbolic_solver_labels:
                 lbl = '\t#%s' % info[0].name
             sense = 0 if info[0].sense == minimize else 1
             ostream.write('O%d %d%s\n' % (obj_idx, sense, lbl))
-            if info[1].nonlinear:
-                args = tuple(map(var_id_to_nl.__getitem__,
-                                 info[1].nonlinear[1]))
-                ostream.write(info[1].nonlinear[0] % args)
-            else:
-                ostream.write('n0\n')
+            self._write_nl_expression(info[1])
 
         #
         # "d" lines (dual initialization)
@@ -537,7 +525,7 @@ class _NLWriter_impl(object):
             ostream.write('J%d %d%s\n'
                           % (row_idx, len(nz), row_comments[row_idx]))
             linear = info[1].linear or {}
-            for entry in sorted((var_map[_id][1], linear.get(_id, 0))
+            for entry in sorted((self.var_map[_id][1], linear.get(_id, 0))
                                 for _id in nz):
                 ostream.write('%d %r\n' % entry)
 
@@ -551,11 +539,11 @@ class _NLWriter_impl(object):
             nz = nz_by_comp[id(info[0])][2]
             linear = info[1].linear or {}
             ostream.write('G%d %d%s\n' % (obj_idx, len(nz), lbl))
-            for entry in sorted((var_map[_id][1], linear.get(_id, 0))
+            for entry in sorted((self.var_map[_id][1], linear.get(_id, 0))
                                 for _id in nz):
                 ostream.write('%d %r\n' % entry)
 
-    def _categorize_vars(self, comp_list, var_map, nz_by_comp):
+    def _categorize_vars(self, comp_list, nz_by_comp):
         """Categorize compiled expression vars into linear and nonlinear
 
         This routine takes an iterable of compiled component expression
@@ -584,6 +572,7 @@ class _NLWriter_impl(object):
             ids)
 
         """
+        var_map = self.var_map
         all_linear_vars = set()
         all_nonlinear_vars = set()
         nnz_by_var = Counter()
@@ -689,33 +678,36 @@ class _NLWriter_impl(object):
                 n_subexpressions[0] += 1
         return n_subexpressions
 
+    def _write_nl_expression(self, repn, const=None):
+        if const is None:
+            const = repn.const
+        if repn.nonlinear and repn.nonlinear[0] != 'n0\n':
+            nl, args = repn.nonlinear
+            if const:
+                nl = self.template.binary_sum + nl + (
+                    self.template.const % const)
+            self.ostream.write(
+                nl % tuple(map(self.var_id_to_nl.__getitem__, args))
+            )
+        else:
+            self.ostream.write(self.template.const % const)
 
-    def _write_v_line(self, expr_id, k, var_map, var_id_to_nl):
+    def _write_v_line(self, expr_id, k):
         ostream = self.ostream
         info = self.subexpression_cache[expr_id]
-        repn = info[1]
         if self.symbolic_solver_labels and info[0].__class__ is not AMPLRepn:
             lbl = '\t#%s' % info[0].name
         else:
             lbl = ''
-        var_id_to_nl[expr_id] = "%d%s" % (self.next_V_line_id, lbl)
-        linear = repn.linear or {}
+        self.var_id_to_nl[expr_id] = "%d%s" % (self.next_V_line_id, lbl)
+        linear = info[1].linear or {}
         ostream.write('V%d %d %d%s\n' %
                       (self.next_V_line_id, len(linear), k, lbl))
         for entry in sorted(map(
-                lambda _id: (var_map[_id][1], linear.get(_id, 0)),
+                lambda _id: (self.var_map[_id][1], linear.get(_id, 0)),
                 linear)):
             ostream.write('%d %r\n' % entry)
-        if repn.nonlinear:
-            if repn.const:
-                ostream.write(self.template.binary_sum)
-            args = tuple(map(var_id_to_nl.__getitem__,
-                             info[1].nonlinear[1]))
-            ostream.write(info[1].nonlinear[0] % args)
-            if repn.const:
-                ostream.write(self.template.const % repn.const)
-        else:
-            ostream.write(self.template.const % repn.const)
+        self._write_nl_expression(info[1])
         self.next_V_line_id += 1
 
 
