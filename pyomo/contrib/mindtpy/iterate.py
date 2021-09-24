@@ -97,7 +97,6 @@ def MindtPy_iteration_loop(solve_data, config):
                     solve_data, config)
                 handle_nlp_subproblem_tc(
                     fixed_nlp, fixed_nlp_result, solve_data, config)
-
         if algorithm_should_terminate(solve_data, config, check_cycling=True):
             last_iter_cuts = False
             break
@@ -129,9 +128,9 @@ def MindtPy_iteration_loop(solve_data, config):
                     key=lambda x: x[1], reverse=solve_data.objective_sense == maximize)
                 counter = 0
                 for name, _ in solution_name_obj:
+                    # the optimal solution of the main problem has been added to integer_list above
+                    # so we should skip checking cycling for the first solution in the solution pool
                     if counter >= 1:
-                        config.logger.info(
-                            'Solution %s in solution pool' % (counter+1))
                         copy_var_list_values_from_solution_pool(solve_data.mip.MindtPy_utils.variable_list,
                                                                 solve_data.working_model.MindtPy_utils.variable_list,
                                                                 config, cpx_model=main_mip_results.cpx_model,
@@ -142,9 +141,6 @@ def MindtPy_iteration_loop(solve_data, config):
                         if solve_data.curr_int_sol in set(solve_data.integer_list):
                             config.logger.info(
                                 'The same combination has been explored and will be skipped here.')
-                            config.logger.info(
-                                'Final bound values: LB: {}  UB: {}'.
-                                format(solve_data.LB, solve_data.UB))
                             continue
                         else:
                             solve_data.integer_list.append(

@@ -44,3 +44,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+
+
+if __name__ == '__main__':
+    unittest.main()
