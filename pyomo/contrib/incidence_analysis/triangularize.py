@@ -84,7 +84,7 @@ def block_triangularize(matrix, matching=None):
                 # Reverse direction of edge. This corresponds to creating
                 # a block lower triangular matrix.
 
-    scc_order = list(nxd.topological_sort(dag))
+    scc_order = list(nxd.lexicographical_topological_sort(dag))
 
     scc_block_map = {c: i for i, c in enumerate(scc_order)}
     row_block_map = {n: scc_block_map[c] for n, c in node_scc_map.items()}
