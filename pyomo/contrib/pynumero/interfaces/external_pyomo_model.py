@@ -198,8 +198,36 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         self._nlp.set_primals(primals)
 
     def set_equality_constraint_multipliers(self, eq_con_multipliers):
+        eq_con_multipliers = np.array(eq_con_multipliers)
         for i, val in enumerate(eq_con_multipliers):
             self.residual_con_multipliers[i] = val
+        external_multipliers = self.calculate_external_constraint_multipliers(
+            eq_con_multipliers,
+        )
+        multipliers = np.concatenate((eq_con_multipliers, external_multipliers))
+        cons = self.residual_cons + self.external_cons
+        n_con = len(cons)
+        assert n_con == self._nlp.n_constraints()
+        duals = np.zeros(n_con)
+        indices = self._nlp.get_constraint_indices(cons)
+        for i, idx in enumerate(indices):
+            duals[idx] = multipliers[i]
+        self._nlp.set_duals(duals)
+
+    def calculate_external_constraint_multipliers(self, resid_multipliers):
+        nlp = self._nlp
+        y = self.external_vars
+        f = self.residual_cons
+        g = self.external_cons
+        jfy = nlp.extract_submatrix_jacobian(y, f)
+        jgy = nlp.extract_submatrix_jacobian(y, g)
+
+        jgy_t = jgy.transpose()
+        jfy_t = jgy.transpose()
+        dfdg = - sps.linalg.splu(jgy_t.tocsc()).solve(jfy.toarray())
+        resid_multipliers = np.array(resid_multipliers)
+        external_multipliers = dfdg.dot(resid_multipliers)
+        return external_multipliers
 
     def evaluate_equality_constraints(self):
         return self._nlp.extract_subvector_constraints(self.residual_cons)
