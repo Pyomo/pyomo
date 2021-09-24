@@ -27,8 +27,8 @@ from pyomo.core.base import Transformation, TransformationFactory, Reference
 import pyomo.core.expr.current as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import ( _warn_for_active_logical_constraint, target_list,
-                             is_child_of, get_src_disjunction,
-                             get_src_constraint, get_transformed_constraints,
+                             get_src_disjunction, get_src_constraint,
+                             get_transformed_constraints,
                              _get_constraint_transBlock, get_src_disjunct,
                              _warn_for_active_disjunction,
                              _warn_for_active_disjunct, preprocess_targets)
@@ -237,40 +237,29 @@ class BigM_Transformation(Transformation):
         self.assume_fixed_vars_permanent = config.assume_fixed_vars_permanent
 
         targets = config.targets
+        # We need to check that all the targets are in fact on instance. As we
+        # do this, we will use the set below to cache components we know to be
+        # in the tree rooted at instance.
+        knownBlocks = {}
         if targets is None:
             targets = (instance, )
         else:
             # we need to preprocess targets to make sure that if there are any
             # disjunctions in targets that their disjuncts appear before them in
             # the list.
-            targets = preprocess_targets(targets)
+            targets = preprocess_targets(targets, instance, knownBlocks)
 
-        #  We need to check that all the targets are in fact on
-        # instance. As we do this, we will use the set below to cache components
-        # we know to be in the tree rooted at instance.
-        knownBlocks = {}
         for t in targets:
-            # check that t is in fact a child of instance
-            if not is_child_of(parent=instance, child=t,
-                               knownBlocks=knownBlocks):
-                raise GDP_Error(
-                    "Target '%s' is not a component on instance '%s'!"
-                    % (t.name, instance.name))
-            elif t.ctype is Disjunction:
+            if t.ctype is Disjunction:
                 if t.is_indexed():
                     self._transform_disjunction(t, bigM)
                 else:
                     self._transform_disjunctionData( t, bigM, t.index())
-            elif t.ctype in (Block, Disjunct):
+            else:# We know t.ctype in (Block, Disjunct) after preprocessing
                 if t.is_indexed():
                     self._transform_block(t, bigM)
                 else:
                     self._transform_blockData(t, bigM)
-            else:
-                raise GDP_Error(
-                    "Target '%s' was not a Block, Disjunct, or Disjunction. "
-                    "It was of type %s and can't be transformed."
-                    % (t.name, type(t)))
 
         # issue warnings about anything that was in the bigM args dict that we
         # didn't use

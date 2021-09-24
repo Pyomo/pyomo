@@ -14,7 +14,7 @@ from pyomo.gdp.disjunct import _DisjunctData, Disjunct
 
 from pyomo.core.base.component import _ComponentBase
 
-from pyomo.core import Block, TraversalStrategy
+from pyomo.core import Block, TraversalStrategy, SortComponents
 from pyomo.opt import TerminationCondition, SolverStatus
 from weakref import ref as weakref_ref
 import logging
@@ -80,10 +80,40 @@ def clone_without_expression_components(expr, substitute=None):
                                                 remove_named_expressions=True)
     return visitor.dfs_postorder_stack(expr)
 
-def preprocess_targets(targets):
+def preprocess_targets(targets, instance, knownBlocks):
     preprocessed_targets = []
     for t in targets:
-        if t.ctype is Disjunction:
+        # first check it's not insane, that is, it is at least on the instance
+        if not is_child_of(parent=instance, child=t, knownBlocks=knownBlocks):
+            raise GDP_Error("Target '%s' is not a component on instance '%s'!"
+                            % (t.name, instance.name))
+        # If it's a block-like thing, we need to go find the
+        # Disjunctions. Otherwise a user can still mess up transformation order
+        # just by hiding everything on blocks.
+        if t.ctype in (Block, Disjunct):
+            if t.is_indexed():
+                for block in t.values():
+                    for disjunction in block.component_data_objects(
+                            Disjunction,
+                            active=True,
+                            sort=SortComponents.deterministic,
+                            descend_into=(Block, Disjunct)):
+                        # put all the Disjuncts in the targets list before the
+                        # Disjunction (in case of nested Disjunctions)
+                        for disj in disjunction.disjuncts:
+                            preprocessed_targets.append(disj)
+                        preprocessed_targets.append(disjunction)
+            else:
+                for disjunction in t.component_data_objects(
+                        Disjunction,
+                        active=True,
+                        sort=SortComponents.deterministic,
+                        descend_into=(Block, Disjunct)):
+                    for disj in disjunction.disjuncts:
+                        preprocessed_targets.append(disj)
+                    preprocessed_targets.append(disjunction)
+        elif t.ctype is Disjunction:
+            # put all its Disjuncts in the targets list before we put it
             if t.is_indexed():
                 for disjunction in t.values():
                     for disj in disjunction.disjuncts:
@@ -91,10 +121,17 @@ def preprocess_targets(targets):
             else:
                 for disj in t.disjuncts:
                     preprocessed_targets.append(disj)
-        # now we are safe to put the disjunction, and if the target was
-        # anything else, then we don't need to worry because disjuncts
-        # are declared before disjunctions they appear in
-        preprocessed_targets.append(t)
+            # now we are safe to put the disjunction, and if the target was
+            # anything else, then we don't need to worry because disjuncts
+            # are declared before disjunctions they appear in
+            preprocessed_targets.append(t)
+        else:
+            # There's nothing else we care about, so we don't know how to deal
+            # with this
+            raise GDP_Error(
+                "Target '%s' was not a Block, Disjunct, or Disjunction. "
+                "It was of type %s and can't be transformed."
+                % (t.name, type(t)) )
     return preprocessed_targets
 
 def target_list(x):

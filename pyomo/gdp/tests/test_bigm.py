@@ -2203,6 +2203,41 @@ class TransformABlock(unittest.TestCase):
     def test_indexed_block_target(self):
         ct.check_indexed_block_target(self, 'bigm')
 
+    def test_hierarchical_badly_ordered_targets(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1, 2, 3,4])
+        m.x = Var(m.I, bounds=(-2,6))
+        m.disjunction_block = Block()
+        m.disjunct_block = Block()
+        m.disj1 = Disjunct()
+        m.disjunct_block.disj2 = Disjunct()
+        m.disj1.c = Constraint(expr=sum(m.x[i]**2 for i in m.I) <= 1)
+        m.disjunct_block.disj2.c = Constraint(expr=sum((3 - m.x[i])**2 for i in
+                                                       m.I) <= 1)
+        m.disjunct_block.disj2.disjunction = Disjunction(
+            expr=[[sum(m.x[i]**2 for i in m.I) <= 1],
+                  [sum((3 - m.x[i])**2 for i in m.I) <= 1]])
+        m.disjunction_block.disjunction = Disjunction(
+            expr=[m.disj1, m.disjunct_block.disj2])
+
+        TransformationFactory('gdp.bigm').apply_to(
+            m,
+            targets=[m.disjunction_block, m.disjunct_block.disj2])
+
+    def pedantic_evil(self):
+        m = ConcreteModel()
+        # This is evil because m's decl order:
+        m.disjunction_block = Block()
+        m.disjunct_block = Block()
+
+        #...is opposite of the instantiation order:
+        m.disjunct_block.d1 = Disjunct()
+        m.disjunct_block.d1.subd = Disjunction(expr=[...])
+        m.disjunct_block.d2 = Disjunct()
+        m.disjunction_block.d = Disjunction(expr=[m.disjunct_block.d1,
+                                                  m.disjunct_block.d2])
+        #TODO: tests stuff
+
 class IndexedDisjunctions(unittest.TestCase):
     def setUp(self):
         # set seed so we can test name collisions predictably
