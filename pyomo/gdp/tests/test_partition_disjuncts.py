@@ -22,6 +22,7 @@ from pyomo.core.expr import current as EXPR
 import pyomo.gdp.tests.common_tests as ct
 from pyomo.repn import generate_standard_repn
 from pyomo.opt import check_available_solvers
+from pyomo.common.dependencies import networkx_available
 
 solvers = check_available_solvers('gurobi_direct')
 
@@ -30,6 +31,7 @@ class CommonTests:
         ct.diff_apply_to_and_create_using(self, model,
                                           'gdp.partition_disjuncts', P=P)
 
+@unittest.skipUnless(networkx_available, "networkx is not available")
 class PaperTwoCircleExample(unittest.TestCase, CommonTests):
     def makeModel(self):
         m = ConcreteModel()
@@ -54,10 +56,21 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         m.disj1.x = Var(m.I, bounds=(-2,6))
         m.disj1.c = Constraint(expr=sum(m.disj1.x[i]**2 for i in m.I) <= 1)
         m.disj2 = Disjunct()
-        m.disj2.c = Constraint(expr=sum((3 - m.disj1.x[i])**2 for i in m.I) <= 1)
+        m.disj2.c = Constraint(expr=sum((3 - m.disj1.x[i])**2 for i in m.I) <=
+                               1)
         m.disjunction = Disjunction(expr=[m.disj1, m.disj2])
 
         m.obj = Objective(expr=m.disj1.x[2] - m.disj1.x[1], sense=maximize)
+
+        return m
+
+    def makeNestedModel(self):
+        m = self.makeModel_declare_var_on_disjunct()
+        # I'm going to nest the same Disjunction because then I can recycle my
+        # tests
+        m.disj2.disjunction = Disjunction(
+            expr=[[sum(m.disj1.x[i]**2 for i in m.I) <= 1],
+                  [sum((3 - m.disj1.x[i])**2 for i in m.I) <= 1]])
 
         return m
 
@@ -130,7 +143,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertAlmostEqual(aux_vars2[1].lb, aux22lb, places=6)
         self.assertAlmostEqual(aux_vars2[1].ub, aux22ub, places=6)
 
-    def check_transformation_block_disjuncts_and_constraints(self, m):
+    def check_transformation_block_disjuncts_and_constraints(
+            self, m, disjunction_name=None):
         b = m.component("_pyomo_gdp_partition_disjuncts_reformulation")
         self.assertIsInstance(b, Block)
 
@@ -139,8 +153,10 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertEqual(len(b.component_map(Disjunct)), 2)
         self.assertEqual(len(b.component_map(Constraint)), 2) # global
                                                               # constraints
-        
-        disjunction = b.disjunction
+        if disjunction_name is None:
+            disjunction = b.disjunction
+        else:
+            disjunction = b.component(disjunction_name)
         self.assertEqual(len(disjunction.disjuncts), 2)
         # each Disjunct has one constraint
         disj1 = disjunction.disjuncts[0]
@@ -153,7 +169,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
     def check_transformation_block_structure(self, m, aux11lb, aux11ub, aux12lb,
                                              aux12ub, aux21lb, aux21ub, aux22lb,
                                              aux22ub):
-        (b, disj1, 
+        (b, disj1,
          disj2) = self.check_transformation_block_disjuncts_and_constraints(m)
 
         # each Disjunct has two variables declared on it (aux vars and indicator
@@ -183,8 +199,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
 
     def check_transformation_block(self, m, aux11lb, aux11ub, aux12lb, aux12ub,
                                    aux21lb, aux21ub, aux22lb, aux22ub):
-        (b, disj1, disj2, 
-         aux_vars1, 
+        (b, disj1, disj2,
+         aux_vars1,
          aux_vars2) = self.check_transformation_block_structure(m, aux11lb,
                                                                 aux11ub,
                                                                 aux12lb,
@@ -223,16 +239,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
 
         self.check_transformation_block(m, 0, 72, 0, 72, -72, 96, -72, 96)
 
-    def test_transformation_block_indexed_var_on_disjunct(self):
-        m = self.makeModel_declare_var_on_disjunct()
-
-        TransformationFactory('gdp.partition_disjuncts').apply_to(
-            m,
-            variable_partitions=[[m.disj1.x[1], m.disj1.x[2]], \
-                                 [m.disj1.x[3], m.disj1.x[4]]],
-            compute_bounds_method=compute_fbbt_bounds)
-        
-        (b, disj1, 
+    def check_transformation_block_indexed_var_on_disjunct(self, m):
+        (b, disj1,
          disj2) = self.check_transformation_block_disjuncts_and_constraints(m)
 
         # Has it's own indicator var, a Reference to the original Disjunct's
@@ -275,7 +283,180 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.check_global_constraint_disj2(c2, aux_vars2[1], m.disj1.x[3],
                                            m.disj1.x[4])
 
-    @unittest.skipIf('gurobi_direct' not in solvers, 
+        return b, disj1, disj2
+
+    def test_transformation_block_indexed_var_on_disjunct(self):
+        m = self.makeModel_declare_var_on_disjunct()
+
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
+            m,
+            variable_partitions=[[m.disj1.x[1], m.disj1.x[2]], \
+                                 [m.disj1.x[3], m.disj1.x[4]]],
+            compute_bounds_method=compute_fbbt_bounds)
+
+        self.check_transformation_block_indexed_var_on_disjunct(m)
+
+    def check_transformation_block_nested_disjunction(self, m, disj2):
+        (inner_b, inner_disj1,
+         inner_disj2) = self.\
+                        check_transformation_block_disjuncts_and_constraints(
+                            disj2, "disj2.disjunction")
+
+        # Has it's own indicator var, the aux vars, and the Reference to the
+        # original indicator_var
+        self.assertEqual(len(inner_disj1.component_map(Var)), 3)
+        self.assertEqual(len(inner_disj2.component_map(Var)), 3)
+
+        aux_vars1 = inner_disj1.component("disj2.disjunction_disjuncts[0]."
+                                    "constraint[1]_aux_vars")
+        aux_vars2 = inner_disj2.component("disj2.disjunction_disjuncts[1]."
+                                    "constraint[1]_aux_vars")
+        self.check_aux_var_bounds(aux_vars1, aux_vars2, 0, 72, 0, 72, -72, 96,
+                                  -72, 96)
+
+        # check the transformed constraints on the disjuncts
+        c = inner_disj1.component(
+            "disj2.disjunction_disjuncts[0].constraint[1]")
+        self.assertEqual(len(c), 1)
+        c1 = c[0]
+        self.check_disj_constraint(c1, 1, aux_vars1[0], aux_vars1[1])
+        c = inner_disj2.component(
+            "disj2.disjunction_disjuncts[1].constraint[1]")
+        self.assertEqual(len(c), 1)
+        c2 = c[0]
+        self.check_disj_constraint(c2, -35, aux_vars2[0], aux_vars2[1])
+
+        # check the global constraints
+        c = inner_b.component("disj2.disjunction_disjuncts[0].constraint[1]"
+                              "_split_constraints")
+        self.assertEqual(len(c), 2)
+        c1 = c[0]
+        self.check_global_constraint_disj1(c1, aux_vars1[0], m.disj1.x[1],
+                                           m.disj1.x[2])
+        c2 = c[1]
+        self.check_global_constraint_disj1(c2, aux_vars1[1], m.disj1.x[3],
+                                           m.disj1.x[4])
+
+        c = inner_b.component("disj2.disjunction_disjuncts[1].constraint[1]"
+                              "_split_constraints")
+        self.assertEqual(len(c), 2)
+        c1 = c[0]
+        self.check_global_constraint_disj2(c1, aux_vars2[0], m.disj1.x[1],
+                                           m.disj1.x[2])
+        c2 = c[1]
+        self.check_global_constraint_disj2(c2, aux_vars2[1], m.disj1.x[3],
+                                           m.disj1.x[4])
+
+    def test_transformation_block_nested_disjunction(self):
+        m = self.makeNestedModel()
+
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
+            m,
+            variable_partitions=[[m.disj1.x[1], m.disj1.x[2]],
+                                 [m.disj1.x[3], m.disj1.x[4]]],
+            compute_bounds_method=compute_fbbt_bounds)
+
+        # everything for the outer disjunction should look exactly the same as
+        # the test above:
+        (b, disj1,
+         disj2) = self.check_transformation_block_indexed_var_on_disjunct(m)
+
+        # AND, we should have a transformed inner disjunction on disj2:
+        self.check_transformation_block_nested_disjunction(m, disj2)
+
+    def test_transformation_block_nested_disjunction_outer_disjunction_target(
+            self):
+        """We should get identical behavior to the previous test if we
+        specify the outer disjunction as the target"""
+        m = self.makeNestedModel()
+
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
+            m,
+            targets=m.disjunction,
+            variable_partitions=[[m.disj1.x[1], m.disj1.x[2]],
+                                 [m.disj1.x[3], m.disj1.x[4]]],
+            compute_bounds_method=compute_fbbt_bounds)
+
+        # everything for the outer disjunction should look exactly the same as
+        # the test above:
+        (b, disj1,
+         disj2) = self.check_transformation_block_indexed_var_on_disjunct(m)
+
+        # AND, we should have a transformed inner disjunction on disj2:
+        self.check_transformation_block_nested_disjunction(m, disj2)
+
+    def test_transformation_block_nested_disjunction_badly_ordered_targets(
+            self):
+        """This tests that we preprocess targets correctly becuase we don't
+        want to double transform the inner disjunct, which is what would happen
+        if we did things in the order given."""
+        m = self.makeNestedModel()
+
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
+            m,
+            targets=[m.disj2, m.disjunction],
+            variable_partitions=[[m.disj1.x[1], m.disj1.x[2]],
+                                 [m.disj1.x[3], m.disj1.x[4]]],
+            compute_bounds_method=compute_fbbt_bounds)
+
+        # everything for the outer disjunction should look exactly the same as
+        # the test above:
+        (b, disj1,
+         disj2) = self.check_transformation_block_indexed_var_on_disjunct(m)
+
+        # AND, we should have a transformed inner disjunction on disj2:
+        self.check_transformation_block_nested_disjunction(m, disj2)
+
+    def test_hierarchical_nested_badly_ordered_targets(self):
+        m = ConcreteModel()
+        m.I = RangeSet(1,4)
+        m.x = Var(m.I, bounds=(-2,6))
+        m.disjunction_block = Block()
+        m.disjunct_block = Block()
+        m.disj1 = Disjunct()
+        m.disjunct_block.disj2 = Disjunct()
+        m.disj1.c = Constraint(expr=sum(m.x[i]**2 for i in m.I) <= 1)
+        m.disjunct_block.disj2.c = Constraint(expr=sum((3 - m.x[i])**2 for i in
+                                                       m.I) <= 1)
+        m.disjunct_block.disj2.disjunction = Disjunction(
+            expr=[[sum(m.x[i]**2 for i in m.I) <= 1],
+                  [sum((3 - m.x[i])**2 for i in m.I) <= 1]])
+        m.disjunction_block.disjunction = Disjunction(
+            expr=[m.disj1, m.disjunct_block.disj2])
+
+        # TODO: My intuition is that there is a way to force the Disjunct to be
+        # transformed before its Disjunction by hiding them on blocks. Then this
+        # should fail because the partition doesn't specify what to do with the
+        # auxilary variables created by the inner disjunction. And to fix this,
+        # I think we need to actually descend into Block targets when we
+        # preprocess targets, and find what is on them.
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
+            m,
+            targets=[m.disjunction_block, m.disjunct_block.disj2],
+            variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
+            compute_bounds_method=compute_fbbt_bounds)
+        # TODO: TEST STUFF
+
+    def test_transformation_block_nested_disjunction_target(self):
+        m = self.makeNestedModel()
+
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
+            m,
+            targets=m.disj2.disjunction,
+            variable_partitions=[[m.disj1.x[1], m.disj1.x[2]],
+                                 [m.disj1.x[3], m.disj1.x[4]]],
+            compute_bounds_method=compute_fbbt_bounds)
+
+        self.check_transformation_block_nested_disjunction(m, m.disj2)
+        # NOTE: If you then transformed the whole model (or the outer
+        # disjunction), you would double-transform in the sense that you would
+        # again transform the Disjunction this creates. But I think it serves
+        # you right, and this is still the correct behavior. There's nothing we
+        # can do about you manually transforming from in to out--there's no way
+        # for us to know. It is confusing though since bigm and hull need to go
+        # from the leaves up and this is opposite.
+
+    @unittest.skipIf('gurobi_direct' not in solvers,
                      'Gurobi direct solver not available')
     def test_transformation_block_optimized_bounds(self):
         m = self.makeModel()
@@ -289,10 +470,10 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
             compute_bounds_solver=SolverFactory('gurobi_direct'),
             compute_bounds_method=compute_optimal_bounds)
-        
+
         self.check_transformation_block(m, 0, 72, 0, 72, -18, 32, -18, 32)
 
-    @unittest.skipIf('gurobi_direct' not in solvers, 
+    @unittest.skipIf('gurobi_direct' not in solvers,
                      'Gurobi direct solver not available')
     def test_transformation_block_better_bounds_in_global_constraints(self):
         m = self.makeModel()
@@ -312,11 +493,11 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
 
         self.check_transformation_block(m, 0, 32, 0, 32, -18, 14, -18, 14)
 
-    @unittest.skipIf('gurobi_direct' not in solvers, 
+    @unittest.skipIf('gurobi_direct' not in solvers,
                      'Gurobi direct solver not available')
     def test_transformation_block_arbitrary_even_partition(self):
         m = self.makeModel()
-        
+
         # I'm using Gurobi because I'm assuming exact equality is going to work
         # out. And it definitely won't with ipopt. (And Gurobi direct is way
         # faster than the LP interface to Gurobi for this... I assume because
@@ -326,10 +507,10 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             P=2,
             compute_bounds_solver=SolverFactory('gurobi_direct'),
             compute_bounds_method=compute_optimal_bounds)
-        
+
         self.check_transformation_block(m, 0, 72, 0, 72, -18, 32, -18, 32)
 
-    @unittest.skipIf('gurobi_direct' not in solvers, 
+    @unittest.skipIf('gurobi_direct' not in solvers,
                      'Gurobi direct solver not available')
     def test_assume_fixed_vars_not_permanent(self):
         m = self.makeModel()
@@ -345,7 +526,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             assume_fixed_vars_permanent=False,
             compute_bounds_solver=SolverFactory('gurobi_direct'),
             compute_bounds_method=compute_optimal_bounds)
-        
+
         self.assertTrue(m.x[1].fixed)
         self.assertEqual(value(m.x[1]), 0)
 
@@ -353,7 +534,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         # should be identical to the case where x[1] was not fixed
         self.check_transformation_block(m, 0, 72, 0, 72, -18, 32, -18, 32)
 
-    @unittest.skipIf('gurobi_direct' not in solvers, 
+    @unittest.skipIf('gurobi_direct' not in solvers,
                      'Gurobi direct solver not available')
     def test_assume_fixed_vars_permanent(self):
         m = self.makeModel()
@@ -373,8 +554,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         # This actually changes the structure of the model because fixed vars
         # move to the constants. I think this is fair, and we should allow it
         # because it will allow for a tighter relaxation.
-        (b, disj1, disj2, 
-         aux_vars1, 
+        (b, disj1, disj2,
+         aux_vars1,
          aux_vars2) = self.check_transformation_block_structure(m, 0, 36, 0, 72,
                                                                 -9, 16, -18, 32)
 
@@ -423,7 +604,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         c2 = c[1]
         self.check_global_constraint_disj2(c2, aux_vars2[1], m.x[3], m.x[4])
 
-    @unittest.skipIf('gurobi_direct' not in solvers, 
+    @unittest.skipIf('gurobi_direct' not in solvers,
                      'Gurobi direct solver not available')
     def test_transformation_block_arbitrary_odd_partition(self):
         m = self.makeModel()
@@ -438,7 +619,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             compute_bounds_solver=SolverFactory('gurobi_direct'),
             compute_bounds_method=compute_optimal_bounds)
 
-        (b, disj1, 
+        (b, disj1,
          disj2) = self.check_transformation_block_disjuncts_and_constraints(m)
 
         # each Disjunct has three variables declared on it (aux vars and
@@ -481,7 +662,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertIs(repn.linear_vars[0], aux_vars1[0])
         self.assertIs(repn.linear_vars[1], aux_vars1[1])
         self.assertIs(repn.linear_vars[2], aux_vars1[2])
-        self.assertEqual(repn.linear_coefs[0], 1)        
+        self.assertEqual(repn.linear_coefs[0], 1)
         self.assertEqual(repn.linear_coefs[1], 1)
         self.assertEqual(repn.linear_coefs[2], 1)
 
@@ -497,7 +678,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertIs(repn.linear_vars[0], aux_vars2[0])
         self.assertIs(repn.linear_vars[1], aux_vars2[1])
         self.assertIs(repn.linear_vars[2], aux_vars2[2])
-        self.assertEqual(repn.linear_coefs[0], 1)        
+        self.assertEqual(repn.linear_coefs[0], 1)
         self.assertEqual(repn.linear_coefs[1], 1)
         self.assertEqual(repn.linear_coefs[2], 1)
 
@@ -603,7 +784,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
     def add_disjunction(self, b):
         m = b.model()
         b.another_disjunction = Disjunction(
-            expr=[[(m.x[1] - 1)**2 + m.x[2]**2 <= 1], 
+            expr=[[(m.x[1] - 1)**2 + m.x[2]**2 <= 1],
                   # writing this constraint backwards to test the flipping logic
                   [-(m.x[1] - 2)**2 - (m.x[2] - 3)**2 >= -1]])
 
@@ -719,7 +900,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertIsNone(
             m.b.another_disjunction.disjuncts[1].transformation_block)
 
-    @unittest.skipIf('gurobi_direct' not in solvers, 
+    @unittest.skipIf('gurobi_direct' not in solvers,
                      'Gurobi direct solver not available')
     def test_block_target(self):
         m = self.make_model_with_added_disjunction_on_block()
@@ -743,7 +924,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertEqual(len(b.component_map(Disjunction)), 1)
         self.assertEqual(len(b.component_map(Disjunct)), 2)
         self.assertEqual(len(b.component_map(Constraint)), 2)# global constraints
-        
+
         disjunction = b.component("b.another_disjunction")
         self.assertIsInstance(disjunction, Disjunction)
         self.assertEqual(len(disjunction.disjuncts), 2)
@@ -760,11 +941,11 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
 
         aux_vars1 = disj1.component(
             "b.another_disjunction_disjuncts[0].constraint[1]_aux_vars")
-        
+
         aux_vars2 = disj2.component(
             "b.another_disjunction_disjuncts[1].constraint[1]_aux_vars")
         self.check_second_disjunction_aux_vars(aux_vars1, aux_vars2)
- 
+
         # check constraints on disjuncts
         c1 = disj1.component("b.another_disjunction_disjuncts[0].constraint[1]")
         self.assertEqual(len(c1), 1)
@@ -778,13 +959,13 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         c = b.component(
             "b.another_disjunction_disjuncts[0].constraint[1]_split_constraints")
         self.check_second_disjunction_global_constraint_disj1(c, aux_vars1)
-        
+
         c = b.component(
             "b.another_disjunction_disjuncts[1].constraint[1]_split_constraints")
         self.check_second_disjunction_global_constraint_disj2(c, aux_vars2)
 
 
-    @unittest.skipIf('gurobi_direct' not in solvers, 
+    @unittest.skipIf('gurobi_direct' not in solvers,
                      'Gurobi direct solver not available')
     def test_indexed_block_target(self):
         m = ConcreteModel()
@@ -841,7 +1022,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         aux_vars2 = disj2.component(
             "b[1].another_disjunction_disjuncts[1].constraint[1]_aux_vars")
         self.check_second_disjunction_aux_vars(aux_vars1, aux_vars2)
-        
+
         # check constraints on disjuncts
         c1 = disj1.component(
             "b[1].another_disjunction_disjuncts[0].constraint[1]")
@@ -857,7 +1038,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         c = b1.component("b[1].another_disjunction_disjuncts[0]."
                         "constraint[1]_split_constraints")
         self.check_second_disjunction_global_constraint_disj1(c, aux_vars1)
-        
+
         c = b1.component("b[1].another_disjunction_disjuncts[1]."
                         "constraint[1]_split_constraints")
         self.check_second_disjunction_global_constraint_disj2(c, aux_vars2)
@@ -885,7 +1066,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             "b[0].disjunction_disjuncts[1].constraint[1]_aux_vars")
         self.check_aux_var_bounds(aux_vars1, aux_vars2, 0, 72, 0, 72, -18, 32,
                                   -18, 32)
-        
+
         # check constraints on disjuncts
         c1 = disj1.component("b[0].disjunction_disjuncts[0].constraint[1]")
         self.assertEqual(len(c1), 1)
@@ -912,16 +1093,16 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         c2 = c[1]
         self.check_global_constraint_disj2(c2, aux_vars2[1], m.x[3], m.x[4])
 
-    @unittest.skipIf('gurobi_direct' not in solvers, 
+    @unittest.skipIf('gurobi_direct' not in solvers,
                      'Gurobi direct solver not available')
     def test_indexed_disjunction_target(self):
         m = ConcreteModel()
         m.I = RangeSet(1,4)
         m.x = Var(m.I, bounds=(-2,6))
         m.indexed = Disjunction(Any)
-        m.indexed[1] = [[sum(m.x[i]**2 for i in m.I) <= 1], 
+        m.indexed[1] = [[sum(m.x[i]**2 for i in m.I) <= 1],
                         [sum((3 - m.x[i])**2 for i in m.I) <= 1]]
-        m.indexed[0] = [[(m.x[1] - 1)**2 + m.x[2]**2 <= 1], 
+        m.indexed[0] = [[(m.x[1] - 1)**2 + m.x[2]**2 <= 1],
                         [-(m.x[1] - 2)**2 - (m.x[2] - 3)**2 >= -1]]
         TransformationFactory('gdp.partition_disjuncts').apply_to(
             m,
@@ -961,7 +1142,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         aux_vars2 = disj2.component(
             "indexed_disjuncts[3].constraint[1]_aux_vars")
         self.check_second_disjunction_aux_vars(aux_vars1, aux_vars2)
-        
+
         # check constraints on disjuncts
         c1 = disj1.component(
             "indexed_disjuncts[2].constraint[1]")
@@ -977,7 +1158,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         c = b.component("indexed_disjuncts[2]."
                         "constraint[1]_split_constraints")
         self.check_second_disjunction_global_constraint_disj1(c, aux_vars1)
-        
+
         c = b.component("indexed_disjuncts[3]."
                         "constraint[1]_split_constraints")
         self.check_second_disjunction_global_constraint_disj2(c, aux_vars2)
@@ -1005,7 +1186,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             "indexed_disjuncts[1].constraint[1]_aux_vars")
         self.check_aux_var_bounds(aux_vars1, aux_vars2, 0, 72, 0, 72, -18, 32,
                                   -18, 32)
-        
+
         # check constraints on disjuncts
         c1 = disj1.component("indexed_disjuncts[0].constraint[1]")
         self.assertEqual(len(c1), 1)
@@ -1068,6 +1249,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         m = self.makeModel()
         self.diff_apply_to_and_create_using(m, P=2)
 
+@unittest.skipUnless(networkx_available, "networkx is not available")
 class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
     def makeModel(self):
         m = ConcreteModel()
@@ -1096,7 +1278,7 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
         self.assertEqual(len(b.component_map(Disjunct)), 2)
         self.assertEqual(len(b.component_map(Constraint)), 2) # global
                                                               # constraints
-        
+
         disjunction = b.disjunction
         self.assertEqual(len(disjunction.disjuncts), 2)
         # each Disjunct has one constraint
@@ -1136,7 +1318,7 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
         self.assertEqual(repn.constant, 0)
         self.assertIs(repn.linear_vars[0], aux_vars1[0])
         self.assertIs(repn.linear_vars[1], aux_vars1[1])
-        self.assertEqual(repn.linear_coefs[0], 1)        
+        self.assertEqual(repn.linear_coefs[0], 1)
         self.assertEqual(repn.linear_coefs[1], 1)
 
         c = disj2.component("disjunction_disjuncts[1].constraint[1]")
@@ -1150,7 +1332,7 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
         self.assertEqual(repn.constant, 0)
         self.assertIs(repn.linear_vars[0], aux_vars2[0])
         self.assertIs(repn.linear_vars[1], aux_vars2[1])
-        self.assertEqual(repn.linear_coefs[0], 1)        
+        self.assertEqual(repn.linear_coefs[0], 1)
         self.assertEqual(repn.linear_coefs[1], 1)
 
         # check the global constraints
@@ -1338,7 +1520,7 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
         # we just need to check the first Disjunct's transformation
         b = m.component("_pyomo_gdp_partition_disjuncts_reformulation")
         disj1 = b.disjunction.disjuncts[0]
-        
+
         self.assertEqual(len(disj1.component_map(Constraint)), 2)
         # has indicator_var and two sets of auxilary variables, plus a reference
         # to the indicator_var on the original Disjunct
@@ -1415,20 +1597,21 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
             "expressions are additively "
             "separable.",
             TransformationFactory('gdp.partition_disjuncts').apply_to,
-            m, 
+            m,
             P=3)
 
 # This is just a pile of tests that are structural that we use for bigm and
 # hull, so might as well for here too.
+@unittest.skipUnless(networkx_available, "networkx is not available")
 class CommonModels(unittest.TestCase, CommonTests):
     def test_user_deactivated_disjuncts(self):
         ct.check_user_deactivated_disjuncts(self, 'partition_disjuncts',
                                             check_trans_block=False, P=2)
 
     def test_improperly_deactivated_disjuncts(self):
-        ct.check_improperly_deactivated_disjuncts(self, 'partition_disjuncts', 
+        ct.check_improperly_deactivated_disjuncts(self, 'partition_disjuncts',
                                                   P=2)
-        
+
     def test_do_not_transform_userDeactivated_indexedDisjunction(self):
         ct.check_do_not_transform_userDeactivated_indexedDisjunction(
             self, 'partition_disjuncts', P=2)
@@ -1510,7 +1693,7 @@ class CommonModels(unittest.TestCase, CommonTests):
         ct.check_deactivated_disjunct_unfixed_indicator_var(
             self,
             'partition_disjuncts', P=2)
-    
+
     def test_silly_target(self):
         ct.check_silly_target(self, 'partition_disjuncts', P=2)
 

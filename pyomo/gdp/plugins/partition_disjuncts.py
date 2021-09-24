@@ -33,8 +33,8 @@ from pyomo.opt import SolverFactory
 from pyomo.util.vars_from_expressions import get_vars_from_constraints
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import (preprocess_targets, is_child_of, target_list,
-                            _to_dict, verify_successful_solve, NORMAL,
+from pyomo.gdp.util import (is_child_of, target_list, _to_dict,
+                            verify_successful_solve, NORMAL,
                             clone_without_expression_components,
                             _warn_for_active_disjunct,
                             _warn_for_active_logical_constraint)
@@ -42,6 +42,11 @@ from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from weakref import ref as weakref_ref
 
 from math import floor
+
+from pyomo.common.dependencies import networkx_available
+if networkx_available:
+    from networkx.classes.digraph import DiGraph
+    from networkx.algorithms.dag import topological_sort
 
 import logging
 logger = logging.getLogger('pyomo.gdp.partition_disjuncts')
@@ -222,8 +227,8 @@ class PartitionDisjuncts_Transformation(Transformation):
     CONFIG.declare('assume_fixed_vars_permanent', ConfigValue(
         default=False,
         domain=bool,
-        description="Boolean indicating whether or not to transform so that the "
-        "the transformed model will still be valid when fixed Vars are unfixed.",
+        description="Boolean indicating whether or not to transform so that the"
+        "transformed model will still be valid when fixed Vars are unfixed.",
         doc="""
         If True, the transformation will create a correct model even if fixed
         variable are later unfixed. That is, bounds will be calculated based
@@ -257,8 +262,8 @@ class PartitionDisjuncts_Transformation(Transformation):
         Configured solver object for use in the compute_bounds_method.
 
         In particular, if compute_bounds_method is 'compute_optimal_bounds', 
-        this will be used to solve the subproblems, so needs to handle non-convex
-        problems if any Disjunctions contain nonlinear constraints.
+        this will be used to solve the subproblems, so needs to handle 
+        non-convex problems if any Disjunctions contain nonlinear constraints.
         """
     ))
     def __init__(self):
@@ -287,9 +292,13 @@ class PartitionDisjuncts_Transformation(Transformation):
         }
 
     def _apply_to(self, instance, **kwds):
+        if not networkx_available:
+            raise GDP_Error("The partition_disjuncts transformation requires "
+                            "networkx, which is not available in the current "
+                            "environment!")
         if not instance.ctype in (Block, Disjunct):
-            raise GDP_Error("Transformation called on %s of type %s. 'instance' "
-                            "must be a ConcreteModel, Block, or Disjunct (in "
+            raise GDP_Error("Transformation called on %s of type %s. 'instance'"
+                            " must be a ConcreteModel, Block, or Disjunct (in "
                             "the case of nested disjunctions)." %
                             (instance.name, instance.ctype))
 
@@ -339,8 +348,8 @@ class PartitionDisjuncts_Transformation(Transformation):
 
     def _apply_to_impl(self, instance):
         self.variable_partitions = self._config.variable_partitions if \
-                                   self._config.variable_partitions is not None \
-                                   else {}
+                                   self._config.variable_partitions is not \
+                                   None else {}
         self.partitioning_method = self._config.variable_partitioning_method
 
         # create a model to store the global constraints on that we will pass to
@@ -355,9 +364,9 @@ class PartitionDisjuncts_Transformation(Transformation):
                 global_constraints, cons.getname(fully_qualified=True,
                                                  name_buffer=NAME_BUFFER)), 
                                              Reference(cons))
-        for var in instance.component_objects(Var, descend_into=(Block,
-                                                                 Disjunct),
-                                              sort=SortComponents.deterministic):
+        for var in instance.component_objects(
+                Var, descend_into=(Block, Disjunct),
+                sort=SortComponents.deterministic):
             global_constraints.add_component(unique_component_name(
                 global_constraints, var.getname(fully_qualified=True,
                                                 name_buffer=NAME_BUFFER)), 
@@ -366,43 +375,121 @@ class PartitionDisjuncts_Transformation(Transformation):
 
         # we can support targets as usual.
         targets = self._config.targets
+        knownBlocks = {}
         if targets is None:
             targets = ( instance, )
         else:
             # we need to preprocess targets to make sure that if there are any
-            # disjunctions in targets that their disjuncts appear before them in
-            # the list.
-            targets = preprocess_targets(targets)
-        knownBlocks = {}
+            # disjunctions in targets that their disjuncts don't appear at
+            # all. Also need to make sure that Disjunctions which are parent to
+            # others (in that they are nested around others) are transformed
+            # first. TODO: actually, I think we only need to transform root
+            # nodes of that forest we built... That's less work.
+            targets = self._preprocess_targets(targets, instance, knownBlocks)
         for t in targets:
-            # check that t is in fact a child of instance
-            if not is_child_of(parent=instance, child=t,
-                               knownBlocks=knownBlocks):
-                raise GDP_Error(
-                    "Target '%s' is not a component on instance '%s'!"
-                    % (t.name, instance.name))
-            elif t.ctype is Disjunction:
+            if t.ctype is Disjunction:
                 if t.is_indexed():
                     self._transform_disjunction(t)
                 else:
                     self._transform_disjunctionData(t, t.index())
-            elif t.ctype in (Block, Disjunct):
+            else: # We know t.ctype in (Block, Disjunct) after preprocessing
                 if t.is_indexed():
                     self._transform_block(t)
                 else:
                     self._transform_blockData(t)
+
+    def _parent_disjunct(self, obj):
+        parent = obj.parent_block()
+        while parent is not None:
+            if parent.ctype is Disjunct:
+                return parent
+            parent = parent.parent_block()
+
+        return None
+
+    def _gather_disjunctions(self, block, gdp_tree):
+        to_explore = ComponentSet([block])
+        while to_explore:
+            block = to_explore.pop()
+            for disjunction in block.component_data_objects(
+                    Disjunction, 
+                    active=True,
+                    sort=SortComponents.deterministic,
+                    descend_into=Block):
+                for disjunct in disjunction.disjuncts:
+                    gdp_tree.add_edge(disjunction, disjunct)
+                    to_explore.add(disjunct)
+                if block.ctype is Disjunct:
+                    gdp_tree.add_edge(block, disjunction)
+
+        return gdp_tree
+
+    # TODO: scream if we don't have networkx...
+    def _preprocess_targets(self, targets, instance, knownBlocks):
+        gdp_tree = DiGraph()
+        target_disjuncts = []
+        for t in targets:
+             # first check it's not insane, that is, it is at least on the
+             # instance
+            if not is_child_of(parent=instance, child=t,
+                               knownBlocks=knownBlocks):
+                raise GDP_Error("Target '%s' is not a component on instance "
+                                "'%s'!" % (t.name, instance.name))
+            if t.ctype in (Block, Disjunct):
+                if t.is_indexed():
+                    for block in t.values():
+                        gdp_tree = self._gather_disjunctions(block, gdp_tree)
+                        if block.ctype is Disjunct:
+                            target_disjuncts.append(t)
+                else:
+                    gdp_tree = self._gather_disjunctions(t, gdp_tree)
+                    if t.ctype is Disjunct:
+                        target_disjuncts.append(t)
+            elif t.ctype is Disjunction:
+                parent = self._parent_disjunct(t)
+                if parent is not None:
+                    gdp_tree.add_edge(parent, t)
+                if t.is_indexed():
+                    for disjunction in t.values():
+                        for disjunct in disjunction.disjuncts:
+                            gdp_tree.add_edge(t, disjunct)
+                            gdp_tree = self._gather_disjunctions(disjunct,
+                                                                 gdp_tree)
+                else:
+                    for disjunct in t.disjuncts:
+                        gdp_tree.add_edge(t, disjunct)
+                        gdp_tree = self._gather_disjunctions(disjunct, gdp_tree)
             else:
+                # There's nothing else we care about, so we don't know how to
+                # deal with this
                 raise GDP_Error(
                     "Target '%s' was not a Block, Disjunct, or Disjunction. "
                     "It was of type %s and can't be transformed."
                     % (t.name, type(t)) )
+
+        preprocessed_targets = []
+        # now do a topological sort of the tree, adding Disjunctions to the
+        # targets list as we go, and keeping track of the Disjuncts that we
+        # don't need to add
+        for node in topological_sort(gdp_tree):
+            if node.ctype is Disjunction:
+                preprocessed_targets.append(node)
+            else: # it's a Disjunct
+                if gdp_tree.in_degree(node) > 0 and node in target_disjuncts:
+                    # If it's not a root, then we know we're already
+                    # transforming it
+                    target_disjuncts.remove(node)
+        for disjunct in target_disjuncts:
+            preprocessed_targets.append(disjunct)
+
+        return preprocessed_targets
 
     def _add_transformation_block(self, block):
         # create a transformation block on which we will create the reformulated
         # GDP...
         transformation_block = Block()
         block.add_component(
-            unique_component_name( 
+            unique_component_name(
                 block,
                 '_pyomo_gdp_partition_disjuncts_reformulation'),
             transformation_block)
@@ -437,7 +524,7 @@ class PartitionDisjuncts_Transformation(Transformation):
             return
 
         transBlock = self._add_transformation_block(obj.parent_block())
-            
+
         # relax each of the disjunctionDatas
         for i in sorted(obj.keys()):
             self._transform_disjunctionData(obj[i], i, transBlock)
@@ -519,8 +606,8 @@ class PartitionDisjuncts_Transformation(Transformation):
         transformed_disjunction = Disjunction(expr=[disj for disj in
                                                     transformed_disjuncts])
         transBlock.add_component(
-            unique_component_name(transBlock, 
-                                  obj.getname(fully_qualified=True, 
+            unique_component_name(transBlock,
+                                  obj.getname(fully_qualified=True,
                                               name_buffer=NAME_BUFFER)),
             transformed_disjunction)
         obj._algebraic_constraint = weakref_ref(transformed_disjunction)
@@ -588,9 +675,9 @@ class PartitionDisjuncts_Transformation(Transformation):
                                               active=None):
             transformed_disjunct.add_component(unique_component_name(
                 transformed_disjunct, var.getname(fully_qualified=True,
-                                                  name_buffer=NAME_BUFFER)), 
+                                                  name_buffer=NAME_BUFFER)),
                                            Reference(var))
-    
+
         # transform everything else
         for obj in disjunct.component_data_objects(
                 active=True,
@@ -708,12 +795,12 @@ class PartitionDisjuncts_Transformation(Transformation):
                                             "automatically partition the "
                                             "variables, we assume all the "
                                             "expressions are additively "
-                                            "separable." % 
+                                            "separable." %
                                             nonlinear_repn[
                                                 'nonlinear_exprs'][i])
 
-                expr_lb, expr_ub = self._config.compute_bounds_method( 
-                    expr, instance, self._global_constraints, 
+                expr_lb, expr_ub = self._config.compute_bounds_method(
+                    expr, instance, self._global_constraints,
                     self._config.compute_bounds_solver)
                 if expr_lb is None or expr_ub is None:
                     raise GDP_Error("Expression %s from constraint '%s' "
@@ -723,15 +810,15 @@ class PartitionDisjuncts_Transformation(Transformation):
                                     "specify compute_bounds_method="
                                     "compute_optimal_bounds"
                                     " if the expression is bounded by the "
-                                    "global constraints." % 
+                                    "global constraints." %
                                     (expr, cons.name))
                 # if the expression was empty wrt the partition, we don't
                 # need to bother with any of this. The aux_var doesn't need
                 # to exist because it would be 0.
-                if type(expr) is not int or expr != 0: 
+                if type(expr) is not int or expr != 0:
                     aux_var = aux_vars[len(aux_vars)]
                     aux_var.setlb(expr_lb)
-                    aux_var.setub(expr_ub)  
+                    aux_var.setub(expr_ub)
                     split_aux_vars.append(aux_var)
                     split_constraints[
                         len(split_constraints)] = expr <= aux_var
@@ -747,14 +834,14 @@ class PartitionDisjuncts_Transformation(Transformation):
                                     "include all the variables that appear "
                                     "in the disjunction. The following "
                                     "variables are not assigned to any part "
-                                    "of the partition: %s" % (disjunct.name, 
+                                    "of the partition: %s" % (disjunct.name,
                                                               orphan_string))
             transformed_constraint[
                 len(transformed_constraint)] = sum(v for v in
                                                    split_aux_vars) <= \
                 rhs - repn.constant
         # deactivate the constraint since we've transformed it
-        cons.deactivate()                             
+        cons.deactivate()
 
     def _warn_for_active_disjunct(self, disjunct, parent_disjunct,
                                   transformed_parent_disjunct, transBlock,
@@ -770,4 +857,4 @@ class PartitionDisjuncts_Transformation(Transformation):
 # ESJ: TODO: Add a test for the old indicator variables appearing in logical
 # constraints.
 
-# Also, I'm not confident of nested and targets... 
+# (test the logical equivalence constraints)
