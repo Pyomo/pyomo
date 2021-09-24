@@ -569,7 +569,8 @@ class _GeneralConstraintData(_ConstraintData):
                 # Error check: ensure equality does not have infinite RHS
                 raise ValueError(
                     "Equality constraint '%s' defined with "
-                    "non-finite term." % (self.name))
+                    "non-finite term (%sHS == None)." % (
+                        self.name, 'L' if args[0] is None else 'R'))
             if args[0].__class__ in native_numeric_types or \
                not args[0].is_potentially_variable():
                 self._lower = self._upper = args[0]
