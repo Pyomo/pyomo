@@ -114,7 +114,7 @@ def get_hessian_of_constraint(constraint, wrt1=None, wrt2=None, nlp=None):
 
 class ExternalPyomoModel(ExternalGreyBoxModel):
     """
-    This is an ExternalGreyBoxModel used to create an exteral model
+    This is an ExternalGreyBoxModel used to create an external model
     from existing Pyomo components. Given a system of variables and
     equations partitioned into "input" and "external" variables and
     "residual" and "external" equations, this class computes the
