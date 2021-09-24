@@ -197,7 +197,6 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         primals = np.array([v.value for v in primal_vars])
         self._nlp.set_primals(primals)
 
-
     def set_equality_constraint_multipliers(self, eq_con_multipliers):
         for i, val in enumerate(eq_con_multipliers):
             self.residual_con_multipliers[i] = val
