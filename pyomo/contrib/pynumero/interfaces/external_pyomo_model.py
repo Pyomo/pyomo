@@ -223,11 +223,32 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         jgy = nlp.extract_submatrix_jacobian(y, g)
 
         jgy_t = jgy.transpose()
-        jfy_t = jgy.transpose()
-        dfdg = - sps.linalg.splu(jgy_t.tocsc()).solve(jfy.toarray())
+        jfy_t = jfy.transpose()
+        dfdg = - sps.linalg.splu(jgy_t.tocsc()).solve(jfy_t.toarray())
         resid_multipliers = np.array(resid_multipliers)
         external_multipliers = dfdg.dot(resid_multipliers)
         return external_multipliers
+
+    def get_hessians_of_lagrangian(self):
+        nlp = self._nlp
+        x = self.input_vars
+        y = self.external_vars
+        hlxx = nlp.extract_submatrix_hessian_lag(x, x)
+        hlxy = nlp.extract_submatrix_hessian_lag(x, y)
+        hlyy = nlp.extract_submatrix_hessian_lag(y, y)
+        return hlxx, hlxy, hlyy
+
+    def calculate_reduced_hessian_lagrangian(self, hlxx, hlxy, hlyy):
+        hlxx = hlxx.toarray()
+        hlxy = hlxy.toarray()
+        hlyy = hlyy.toarray()
+        dydx = self.evaluate_jacobian_external_variables()
+        term1 = hlxx
+        prod = hlxy.dot(dydx)
+        term2 = prod + prod.transpose()
+        term3 = hlyy.dot(dydx).transpose().dot(dydx)
+        hess_lag = term1 + term2 + term3
+        return hess_lag
 
     def evaluate_equality_constraints(self):
         return self._nlp.extract_subvector_constraints(self.residual_cons)
@@ -361,7 +382,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         d2fdx2 = term1 + term2 + term3 + term4
         return d2fdx2
 
-    def evaluate_hessian_equality_constraints(self):
+    def _evaluate_hessian_equality_constraints(self):
         """
         This method actually evaluates the sum of Hessians times
         multipliers, i.e. the term in the Hessian of the Lagrangian
@@ -375,4 +396,12 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         # is difficult to determine rigorously which coordinates
         # _could possibly_ be nonzero.
         sparse = _dense_to_full_sparse(sum_)
+        return sps.tril(sparse)
+
+    def evaluate_hessian_equality_constraints(self):
+        """
+        """
+        hlxx, hlxy, hlyy = self.get_hessians_of_lagrangian()
+        hess_lag = self.calculate_reduced_hessian_lagrangian(hlxx, hlxy, hlyy)
+        sparse = _dense_to_full_sparse(hess_lag)
         return sps.tril(sparse)
