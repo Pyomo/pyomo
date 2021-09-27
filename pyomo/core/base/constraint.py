@@ -496,7 +496,7 @@ class _GeneralConstraintData(_ConstraintData):
                     "    Inequality: (lower, expression, upper)"
                     % (self.name, len(expr)))
         #
-        # Ignore an 'empty' constraints
+        # Ignore an 'empty' constraint
         #
         elif _expr_type is type:
             del self.parent_component()[self.index()]
