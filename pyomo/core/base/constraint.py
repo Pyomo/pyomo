@@ -687,25 +687,16 @@ class Constraint(ActiveIndexedComponent):
             return super(Constraint, cls).__new__(IndexedConstraint)
 
     def __init__(self, *args, **kwargs):
-        _init = tuple( _arg for _arg in (
-            kwargs.pop('rule', None),
-            kwargs.pop('expr', None) ) if _arg is not None )
-        if len(_init) == 1:
-            _init = _init[0]
-        elif not _init:
-            _init = None
-        else:
-            raise ValueError("Duplicate initialization: Constraint() only "
-                             "accepts one of 'rule=' and 'expr='")
-
-        kwargs.setdefault('ctype', Constraint)
-        ActiveIndexedComponent.__init__(self, *args, **kwargs)
-
+        _init = self._pop_from_kwargs(
+            'Constraint', kwargs, ('rule', 'expr'), None)
         # Special case: we accept 2- and 3-tuples as constraints
         if type(_init) is tuple:
             self.rule = Initializer(_init, treat_sequences_as_mappings=False)
         else:
             self.rule = Initializer(_init)
+
+        kwargs.setdefault('ctype', Constraint)
+        ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
     def construct(self, data=None):
         """
