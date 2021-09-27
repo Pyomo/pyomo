@@ -351,10 +351,9 @@ class Expression(IndexedComponent):
             #raise KeyError(idx)
         else:
             _init = self._rule(self.parent_block(), idx)
-        obj = self._setitem_when_not_present(idx, _init)
-        #if obj is None:
-        #    raise KeyError(idx)
-        return obj
+            if _init is Expression.Skip:
+                raise KeyError(idx)
+        return self._setitem_when_not_present(idx, _init)
 
     def construct(self, data=None):
         """ Apply the rule to construct values in this set """
