@@ -1,7 +1,18 @@
+/**___________________________________________________________________________
+ *
+ *  Pyomo: Python Optimization Modeling Objects
+ * Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+ * Under the terms of Contract DE-NA0003525 with National Technology and
+ * Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+ * rights in this software.
+ * This software is distributed under the 3-clause BSD License.
+ * ___________________________________________________________________________
+**/
+
 #include "lp_writer.hpp"
 
 
-PYBIND11_MODULE(cmodel, m)
+PYBIND11_MODULE(appsi_cmodel, m)
 {
   m.attr("inf") = inf;
   m.def("process_lp_constraints", &process_lp_constraints);
@@ -10,6 +21,7 @@ PYBIND11_MODULE(cmodel, m)
   m.def("create_vars", &create_vars);
   m.def("create_params", &create_params);
   m.def("create_constants", &create_constants);
+  m.def("external_helper", &external_helper);
   py::class_<Node, std::shared_ptr<Node> >(m, "Node")
     .def("is_variable_type", &Node::is_variable_type)
     .def("is_param_type", &Node::is_param_type)

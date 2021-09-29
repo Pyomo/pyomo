@@ -649,7 +649,9 @@ arguments (which have been ignored):"""
         if self.is_constructed():
             raise RuntimeError(
                 "Cannot call Model.create_instance() on a constructed "
-                "model.")
+                "model; returning a clone of the current model instance.",
+                version='5.4')
+            return self.clone()
 
         if report_timing:
             timing.report_timing()

@@ -21,6 +21,7 @@ logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 
 def add_oa_cuts(target_model, dual_values, solve_data, config,
+                cb_opt=None,
                 linearize_active=True,
                 linearize_violated=True):
     """
@@ -64,6 +65,9 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                            for var in EXPR.identify_variables(constr.body))
                         + value(constr.body) - rhs)
                     - (slack_var if config.add_slack else 0) <= 0)
+                if config.single_tree and config.mip_solver == 'gurobi_persistent' and solve_data.mip_iter > 0 and cb_opt is not None:
+                    cb_opt.cbLazy(
+                        target_model.MindtPy_utils.cuts.oa_cuts[len(target_model.MindtPy_utils.cuts.oa_cuts)])
 
             else:  # Inequality constraint (possibly two-sided)
                 if (constr.has_ub()
@@ -80,6 +84,9 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                               - (slack_var if config.add_slack else 0)
                               <= value(constr.upper))
                     )
+                    if config.single_tree and config.mip_solver == 'gurobi_persistent' and solve_data.mip_iter > 0 and cb_opt is not None:
+                        cb_opt.cbLazy(
+                            target_model.MindtPy_utils.cuts.oa_cuts[len(target_model.MindtPy_utils.cuts.oa_cuts)])
 
                 if (constr.has_lb()
                     and (linearize_active and abs(constr.lslack()) < config.zero_tolerance)
@@ -94,6 +101,9 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                               + (slack_var if config.add_slack else 0)
                               >= value(constr.lower))
                     )
+                    if config.single_tree and config.mip_solver == 'gurobi_persistent' and solve_data.mip_iter > 0 and cb_opt is not None:
+                        cb_opt.cbLazy(
+                            target_model.MindtPy_utils.cuts.oa_cuts[len(target_model.MindtPy_utils.cuts.oa_cuts)])
 
 
 def add_ecp_cuts(target_model, solve_data, config,

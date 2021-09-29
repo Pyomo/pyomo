@@ -21,9 +21,9 @@ NAME_BUFFER = {}
 
 def target_list(x):
     deprecation_msg = ("In future releases ComponentUID targets will no "
-                      "longer be supported in the core.add_slack_variables "
-                      "transformation. Specify targets as a Constraint or "
-                      "list of Constraints.")
+                       "longer be supported in the core.add_slack_variables "
+                       "transformation. Specify targets as a Constraint or "
+                       "list of Constraints.")
     if isinstance(x, ComponentUID):
         if deprecation_msg:
             deprecation_warning(deprecation_msg, version='5.7.1')

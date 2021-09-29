@@ -331,19 +331,18 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         self.assertEqual(body.linear_coefs[1], 1)
 
         # p[1] <= 10*on.ind_var + 10*off.ind_var
+        # rewritten as: p[1] <= 10*on + 10*(1 - (on + su)) = 10 - 10*su
         cons = constraints[indices[1]]
-        self.assertEqual(cons.lower, 0)
+        self.assertEqual(value(cons.lower), -10)
         self.assertIsNone(cons.upper)
         body = generate_standard_repn(cons.body)
         self.assertEqual(body.constant, 0)
-        self.assertEqual(len(body.linear_vars), 3)
+        self.assertEqual(len(body.linear_vars), 2)
         self.assertTrue(body.is_linear())
-        self.assertIs(body.linear_vars[0], m.off.binary_indicator_var)
-        self.assertEqual(body.linear_coefs[0], 10)
-        self.assertIs(body.linear_vars[1], m.on.binary_indicator_var)
-        self.assertEqual(body.linear_coefs[1], 10)
-        self.assertIs(body.linear_vars[2], m.p[1])
-        self.assertEqual(body.linear_coefs[2], -1)
+        self.assertIs(body.linear_vars[1], m.startup.binary_indicator_var)
+        self.assertEqual(body.linear_coefs[1], -10)
+        self.assertIs(body.linear_vars[0], m.p[1])
+        self.assertEqual(body.linear_coefs[0], -1)
 
         # p[1] >= time1_disjuncts[0].ind_var
         cons = constraints[indices[2]]
@@ -521,7 +520,6 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         take hull relaxation, and then project out the disaggregated 
         variables."""
         m, disaggregatedVars = self.create_hull_model()
-        
         filtered = TransformationFactory('contrib.fourier_motzkin_elimination').\
                    create_using(m, vars_to_eliminate=disaggregatedVars)
         TransformationFactory('contrib.fourier_motzkin_elimination').apply_to(
@@ -531,15 +529,15 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
         # we of course get tremendous amounts of garbage, but we make sure that
         # what should be here is:
-        self.check_hull_projected_constraints(m, constraints, [16, 11, 57, 59,
-                                                               46, 48, 27, 1, 2,
+        self.check_hull_projected_constraints(m, constraints, [16, 12, 69, 71,
+                                                               48, 60, 29, 1, 2,
                                                                4, 5])
         # and when we filter, it's still there.
         constraints = filtered._pyomo_contrib_fme_transformation.\
                       projected_constraints
-        self.check_hull_projected_constraints(filtered, constraints, [6, 5, 16,
-                                                                      17, 12,
-                                                                      13, 8, 1,
+        self.check_hull_projected_constraints(filtered, constraints, [8, 6, 20,
+                                                                      21, 14,
+                                                                      17, 10, 1,
                                                                       2, 3, 4])
     
     @unittest.skipIf(not 'glpk' in solvers, 'glpk not available')
@@ -556,8 +554,8 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
         # They should be the same as the above, but now these are *all* the
         # constraints
-        self.check_hull_projected_constraints(m, constraints, [6, 5, 16, 17, 12,
-                                                               13, 8, 1, 2, 3,
+        self.check_hull_projected_constraints(m, constraints, [8, 6, 20, 21, 14,
+                                                               17, 10, 1, 2, 3,
                                                                4])
 
         # and check that we didn't change the model

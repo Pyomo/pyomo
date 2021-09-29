@@ -18,6 +18,7 @@
 import argparse
 import builtins
 import enum
+import importlib
 import inspect
 import io
 import logging
@@ -29,17 +30,59 @@ from textwrap import wrap
 import types
 
 from pyomo.common.deprecation import deprecated, relocated_module_attribute
+from pyomo.common.fileutils import import_file
 from pyomo.common.modeling import NoArgumentGiven
 
 logger = logging.getLogger('pyomo.common.config')
 
 relocated_module_attribute(
     'PYOMO_CONFIG_DIR', 'pyomo.common.envvar.PYOMO_CONFIG_DIR',
-    version='TBD')
+    version='6.1')
 
 USER_OPTION = 0
 ADVANCED_OPTION = 1
 DEVELOPER_OPTION = 2
+
+def Bool(val):
+    """Domain validator for bool-like objects.
+
+    This is a more strict domain than ``bool``, as it will error on
+    values that do not "look" like a Boolean value (i.e., it accepts
+    ``True``, ``False``, 0, 1, and the case insensitive strings
+    ``'true'``, ``'false'``, ``'yes'``, ``'no'``, ``'t'``, ``'f'``,
+    ``'y'``, and ``'n'``)
+
+    """
+    if type(val) is bool:
+        return val
+    if isinstance(val, str):
+        v = val.upper()
+        if v in {'TRUE', 'YES', 'T', 'Y', '1'}:
+            return True
+        if v in {'FALSE', 'NO', 'F', 'N', '0'}:
+            return False
+    elif int(val) == float(val):
+        v = int(val)
+        if v in {0, 1}:
+            return bool(v)
+    raise ValueError(
+        "Expected Boolean, but received %s" % (val,))
+
+def Integer(val):
+    """Domain validation function admitting integers
+
+    This domain will admit integers, as well as any values that are
+    "reasonably exactly" convertible to integers.  This is more strict
+    than ``int``, as it will generate errors for floating point values
+    that are not integer.
+
+    """
+    ans = int(val)
+    # We want to give an error for floating point numbers...
+    if ans != float(val):
+        raise ValueError(
+            "Expected integer, but received %s" % (val,))
+    return ans
 
 def PositiveInt(val):
     """Domain validation function admitting strictly positive integers
@@ -235,6 +278,105 @@ class InEnum(object):
             value, self._domain.__name__))
 
 
+class ListOf(object):
+    """Domain validator for lists of a specified type
+
+    Parameters
+    ----------
+    itemtype: type
+        The type for each element in the list
+
+    domain: Callable
+        A domain validator (callable that takes the incoming value,
+        validates it, and returns the appropriate domain type) for each
+        element in the list.  If not specified, defaults to the
+        `itemtype`.
+
+    """
+    def __init__(self, itemtype, domain=None):
+        self.itemtype = itemtype
+        if domain is None:
+            self.domain = self.itemtype
+        else:
+            self.domain = domain
+        self.__name__ = 'ListOf(%s)' % (
+            getattr(self.domain, '__name__', self.domain),)
+
+    def __call__(self, value):
+        if hasattr(value, '__iter__') and not isinstance(value, self.itemtype):
+            return [self.domain(v) for v in value]
+        else:
+            return [self.domain(value)]
+
+
+class Module(object):
+    """ Domain validator for modules.
+
+    Modules can be specified as module objects, by module name,
+    or by the path to the module's file. If specified by path, the
+    path string has the same path expansion features supported by
+    the :py:class:`Path` class.
+
+    Note that modules imported by file path may not be recognized as
+    part of a package, and as such they should not use relative package
+    importing (such as ``from . import foo``).
+
+    Parameters
+    ----------
+    basePath: None, str, ConfigValue
+        The base path that will be prepended to any non-absolute path
+        values provided.  If None, defaults to :py:attr:`Path.BasePath`.
+
+    expandPath: bool
+        If True, then the value will be expanded and normalized.  If
+        False, the string representation of the value will be used
+        unchanged.  If None, expandPath will defer to the (negated)
+        value of :py:attr:`Path.SuppressPathExpansion`.
+
+    The following code shows the three ways you can specify a module: by file
+    name, by module name, or by module object. Regardless of how the module is
+    specified, what is stored in the configuration is a module object.
+
+    .. doctest::
+        >>> from pyomo.common.config import (
+        ...     ConfigDict, ConfigValue, Module
+        ... )
+        >>> config = ConfigDict()
+        >>> config.declare('my_module', ConfigValue(
+        ...     domain=Module(),
+        ... ))
+        >>> # Set using file path
+        >>> config.my_module = '../../pyomo/common/tests/config_plugin.py'
+        >>> # Set using python module name, as a string
+        >>> config.my_module = 'os.path'
+        >>> # Set using an imported module object
+        >>> import os.path
+        >>> config.my_module = os.path
+    """
+    def __init__(self, basePath=None, expandPath=None):
+        self.basePath = basePath
+        self.expandPath = expandPath
+
+    def __call__(self, module_id):
+        # If it's already a module, just return it
+        if inspect.ismodule(module_id):
+            return module_id
+
+        # Try to import it as a module
+        try:
+            return importlib.import_module(str(module_id))
+        except (ModuleNotFoundError, TypeError):
+            # This wasn't a module name
+            # Ignore the exception and move on to path-based loading
+            pass
+        # Any other kind of exception will be thrown out of this method
+
+        # If we're still here, try loading by path
+        path_domain = Path(self.basePath, self.expandPath)
+        path = path_domain(str(module_id))
+        return import_file(path)
+
+
 class Path(object):
     """Domain validator for path-like options.
 
@@ -394,6 +536,7 @@ def add_docstring_list(docstring, configdict, indent_by=4):
             width=256
         ).splitlines(True))
 
+
 # Note: Enum uses a metaclass to work its magic.  To get a deprecation
 # warning when creating a subclass of ConfigEnum, we need to decorate
 # the __new__ method here (doing the normal trick of letting the class
@@ -514,6 +657,8 @@ validators for common use cases:
 
 .. autosummary::
 
+   Bool
+   Integer
    PositiveInt
    NegativeInt
    NonNegativeInt
@@ -524,6 +669,8 @@ validators for common use cases:
    NonNegativeFloat
    In
    InEnum
+   ListOf
+   Module
    Path
    PathList
 
@@ -1449,6 +1596,7 @@ ConfigBase.generate_documentation.formats = {
         'item_end': "",
     }
 }
+
 
 class ConfigValue(ConfigBase):
     """Store and manipulate a single configuration value.

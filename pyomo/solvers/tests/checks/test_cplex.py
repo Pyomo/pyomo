@@ -66,6 +66,7 @@ class CPLEXShellWritePrioritiesFile(unittest.TestCase):
     suffix_cls = Suffix
 
     def setUp(self):
+        TempfileManager.push()
         self.mock_model = self.get_mock_model()
         self.mock_cplex_shell = self.get_mock_cplex_shell(self.mock_model)
         self.mock_cplex_shell._priorities_file_name = TempfileManager.create_tempfile(

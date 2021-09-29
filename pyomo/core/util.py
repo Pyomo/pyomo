@@ -272,4 +272,3 @@ def sequence(*args):
     if len(args) == 2:
         return range(args[0],args[1]+1)
     return range(args[0],args[1]+1,args[2])
-
