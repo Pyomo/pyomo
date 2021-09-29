@@ -253,3 +253,17 @@ class TestDerivs(unittest.TestCase):
         symbolic = reverse_sd(e)
         self.assertAlmostEqual(derivs[m.p], pyo.value(symbolic[m.p]), tol)
         self.assertAlmostEqual(derivs[m.p], approx_deriv(e, m.p), tol)
+
+    def test_duplicate_expressions(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=0.23)
+        m.y = pyo.Var(initialize=0.88)
+        a = (m.x + 1)**2
+        b = 3*(a + m.y)
+        e = 2*a + 2*b + 2*b + 2*a
+        derivs = reverse_ad(e)
+        symbolic = reverse_sd(e)
+        self.assertAlmostEqual(derivs[m.x], pyo.value(symbolic[m.x]), tol+3)
+        self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
+        self.assertAlmostEqual(derivs[m.y], pyo.value(symbolic[m.y]), tol+3)
+        self.assertAlmostEqual(derivs[m.y], approx_deriv(e, m.y), tol)
