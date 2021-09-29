@@ -2224,19 +2224,28 @@ class TransformABlock(unittest.TestCase):
             m,
             targets=[m.disjunction_block, m.disjunct_block.disj2])
 
-    def pedantic_evil(self):
+    def test_decl_order_opposite_instantiation_order(self):
+        # In this test, we create the same problem as above, but we don't even
+        # need targets!
         m = ConcreteModel()
+        m.I = Set(initialize=[1, 2, 3,4])
+        m.x = Var(m.I, bounds=(-2,6))
         # This is evil because m's decl order:
         m.disjunction_block = Block()
         m.disjunct_block = Block()
 
         #...is opposite of the instantiation order:
         m.disjunct_block.d1 = Disjunct()
-        m.disjunct_block.d1.subd = Disjunction(expr=[...])
+        m.disjunct_block.d1.c = Constraint(expr=m.x[2] + m.x[3]**2 <= 5)
+        m.disjunct_block.d1.subd = Disjunction(expr=[[m.x[1] >= 1], 
+                                                     [m.x[1] + m.x[2] <= 0]])
         m.disjunct_block.d2 = Disjunct()
+        m.disjunct_block.d2.c = Constraint(expr=m.x[4]**2 + m.x[3]**2 <= 4)
         m.disjunction_block.d = Disjunction(expr=[m.disjunct_block.d1,
                                                   m.disjunct_block.d2])
-        #TODO: tests stuff
+
+        TransformationFactory('gdp.bigm').apply_to(m)
+        #TODO: test stuff
 
 class IndexedDisjunctions(unittest.TestCase):
     def setUp(self):
