@@ -23,6 +23,7 @@ from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.common.dependencies import attempt_import
 from pyomo.contrib.fbbt.fbbt import fbbt
 from math import fabs
+from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 
 pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 numpy = attempt_import('numpy')[0]
@@ -609,7 +610,7 @@ def setup_solve_data(model, config):
     return solve_data
 
 
-def copy_var_list_values_from_solution_pool(from_list, to_list, config, cpx_model, var_map, solution_name,
+def copy_var_list_values_from_solution_pool(from_list, to_list, config, solver_model, var_map, solution_name,
                                             skip_stale=False, skip_fixed=True,
                                             ignore_integrality=False):
     """Copy variable values from one list to another.
@@ -623,8 +624,17 @@ def copy_var_list_values_from_solution_pool(from_list, to_list, config, cpx_mode
         if skip_fixed and v_to.is_fixed():
             continue  # Skip fixed variables.
         try:
-            var_val = cpx_model.solution.pool.get_values(
-                solution_name, var_map[v_from])
+            if config.mip_solver == 'cplex_persistent':
+                var_val = solver_model.solution.pool.get_values(
+                    solution_name, var_map[v_from])
+            elif config.mip_solver == 'gurobi_persistent':
+                solver_model.setParam(
+                    gurobipy.GRB.Param.SolutionNumber, solution_name)
+                var_val = var_map[v_from].Xn
+            else:
+                config.logger(
+                    config.mip_solver + 'is not supported for solution pool in Mindtpy yet.')
+                raise NotImplementedError()
             v_to.set_value(var_val)
             if skip_stale:
                 v_to.stale = False

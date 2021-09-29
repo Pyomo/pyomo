@@ -23,6 +23,7 @@ from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt import SolverFactory
 from pyomo.common.dependencies import attempt_import
 from pyomo.contrib.gdpopt.util import copy_var_list_values
+from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 
 tabu_list, tabu_list_available = attempt_import(
     'pyomo.contrib.mindtpy.tabu_list')
@@ -118,11 +119,20 @@ def MindtPy_iteration_loop(solve_data, config):
                     last_iter_cuts = True
                     break
             else:
-                solution_pool_names = main_mip_results.cpx_model.solution.pool.get_names()
+                if config.mip_solver == 'cplex_persistent':
+                    solution_pool_names = main_mip_results._solver_model.solution.pool.get_names()
+                elif config.mip_solver == 'gurobi_persistent':
+                    solution_pool_names = list(
+                        range(main_mip_results._solver_model.SolCount))
                 solution_name_obj = []
                 for name in solution_pool_names:
-                    obj = main_mip_results.cpx_model.solution.pool.get_objective_value(
-                        name)
+                    if config.mip_solver == 'cplex_persistent':
+                        obj = main_mip_results._solver_model.solution.pool.get_objective_value(
+                            name)
+                    elif config.mip_solver == 'gurobi_persistent':
+                        main_mip_results._solver_model.setParam(
+                            gurobipy.GRB.Param.SolutionNumber, name)
+                        obj = main_mip_results._solver_model.PoolObjVal
                     solution_name_obj.append([name, obj])
                 solution_name_obj.sort(
                     key=lambda x: x[1], reverse=solve_data.objective_sense == maximize)
@@ -133,7 +143,7 @@ def MindtPy_iteration_loop(solve_data, config):
                     if counter >= 1:
                         copy_var_list_values_from_solution_pool(solve_data.mip.MindtPy_utils.variable_list,
                                                                 solve_data.working_model.MindtPy_utils.variable_list,
-                                                                config, cpx_model=main_mip_results.cpx_model,
+                                                                config, solver_model=main_mip_results._solver_model,
                                                                 var_map=main_mip_results._pyomo_var_to_solver_var_map,
                                                                 solution_name=name)
                         solve_data.curr_int_sol = get_integer_solution(

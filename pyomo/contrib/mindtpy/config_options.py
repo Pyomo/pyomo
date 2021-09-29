@@ -494,4 +494,5 @@ def check_config(config):
             config.logger.info(
                 'The threads parameter is corrected to 1 since incumbent callback conflicts with multi-threads mode.')
     if config.solution_pool:
-        config.mip_solver = 'cplex_persistent'
+        if config.mip_solver not in {'cplex_persistent', 'gurobi_persistent'}:
+            config.mip_solver = 'cplex_persistent'

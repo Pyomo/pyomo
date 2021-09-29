@@ -14,7 +14,7 @@ model_list = [EightProcessFlowsheet(convex=True),
               SimpleMINLP2(),
               ]
 
-required_solvers = ('ipopt', 'cplex_persistent')
+required_solvers = ('ipopt', 'cplex_persistent', 'gurobi_persistent')
 if all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = True
 else:
@@ -43,7 +43,18 @@ class TestMindtPy(unittest.TestCase):
                 self.assertIn(results.solver.termination_condition,
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
+                    value(model.objective.expr), model.optimal_value, places=2)
+
+                results = opt.solve(model, strategy='OA',
+                                    init_strategy='rNLP',
+                                    solution_pool=True,
+                                    mip_solver=required_solvers[2],
+                                    nlp_solver=required_solvers[0],
+                                    )
+                self.assertIn(results.solver.termination_condition,
+                              [TerminationCondition.optimal, TerminationCondition.feasible])
+                self.assertAlmostEqual(
+                    value(model.objective.expr), model.optimal_value, places=2)
 
 
 if __name__ == '__main__':
