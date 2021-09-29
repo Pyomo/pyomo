@@ -424,8 +424,7 @@ class PartitionDisjuncts_Transformation(Transformation):
 
         return gdp_tree
 
-    # TODO: scream if we don't have networkx...
-    def _preprocess_targets(self, targets, instance, knownBlocks):
+    def _get_gdp_tree(self, targets, instance, knownBlocks):
         gdp_tree = DiGraph()
         target_disjuncts = []
         for t in targets:
@@ -466,6 +465,13 @@ class PartitionDisjuncts_Transformation(Transformation):
                     "Target '%s' was not a Block, Disjunct, or Disjunction. "
                     "It was of type %s and can't be transformed."
                     % (t.name, type(t)) )
+
+        return gdp_tree, target_disjuncts
+
+    # TODO: scream if we don't have networkx...
+    def _preprocess_targets(self, targets, instance, knownBlocks):
+        gdp_tree, target_disjuncts = self._get_gdp_tree(targets, instance,
+                                                        knownBlocks)
 
         preprocessed_targets = []
         # now do a topological sort of the tree, adding Disjunctions to the
