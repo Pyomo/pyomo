@@ -335,7 +335,7 @@ class ExpressionBase(NumericValue):
         """
         return clone_expression(self, substitute=substitute)
 
-    def create_node_with_local_data(self, args):
+    def create_node_with_local_data(self, args, classtype=None):
         """
         Construct a node using given arguments.
 
@@ -351,17 +351,14 @@ class ExpressionBase(NumericValue):
         Args:
             args (list): A list of child nodes for the new expression
                 object
-            memo (dict): A dictionary that maps object ids to clone
-                objects generated earlier during a cloning process.
-                This argument is needed to clone objects that are
-                owned by a model, and it can be safely ignored for
-                most expression classes.
 
         Returns:
             A new expression object with the same type as the current
             class.
         """
-        return self.__class__(args)
+        if classtype is None:
+            classtype = self.__class__
+        return classtype(args)
 
     def create_potentially_variable_object(self):
         """
@@ -542,6 +539,24 @@ class ExpressionBase(NumericValue):
             "implement _apply_operation()" % ( str(self.__class__), ))
 
 
+class NPV_Mixin(object):
+    __slots__ = ()
+
+    def is_potentially_variable(self):
+        return False
+
+    def create_node_with_local_data(self, args, classtype=None):
+        assert classtype is None
+        if all( type(arg) in native_types or not arg.is_potentially_variable()
+                for arg in args ):
+            return super().create_node_with_local_data(args, None)
+        else:
+            cls = list(self.__class__.__bases__)
+            cls.pop(cls.index(NPV_Mixin))
+            assert len(cls) == 1
+            return super().create_node_with_local_data(args, cls[0])
+
+
 class NegationExpression(ExpressionBase):
     """
     Negation expressions::
@@ -580,11 +595,8 @@ class NegationExpression(ExpressionBase):
         return -result[0]
 
 
-class NPV_NegationExpression(NegationExpression):
+class NPV_NegationExpression(NPV_Mixin, NegationExpression):
     __slots__ = ()
-
-    def is_potentially_variable(self):
-        return False
 
 
 class ExternalFunctionExpression(ExpressionBase):
@@ -611,8 +623,10 @@ class ExternalFunctionExpression(ExpressionBase):
     def nargs(self):
         return len(self._args_)
 
-    def create_node_with_local_data(self, args):
-        return self.__class__(args, self._fcn)
+    def create_node_with_local_data(self, args, classtype=None):
+        if classtype is None:
+            classtype = self.__class__
+        return classtype(args, self._fcn)
 
     def __getstate__(self):
         state = super(ExternalFunctionExpression, self).__getstate__()
@@ -640,11 +654,8 @@ class ExternalFunctionExpression(ExpressionBase):
         """ Get the units of the return value for this external function """
         return self._fcn.get_units()
 
-class NPV_ExternalFunctionExpression(ExternalFunctionExpression):
+class NPV_ExternalFunctionExpression(NPV_Mixin, ExternalFunctionExpression):
     __slots__ = ()
-
-    def is_potentially_variable(self):
-        return False
 
 
 class PowExpression(ExpressionBase):
@@ -710,11 +721,8 @@ class PowExpression(ExpressionBase):
         return "{0}**{1}".format(values[0], values[1])
 
 
-class NPV_PowExpression(PowExpression):
+class NPV_PowExpression(NPV_Mixin, PowExpression):
     __slots__ = ()
-
-    def is_potentially_variable(self):
-        return False
 
 
 class ProductExpression(ExpressionBase):
@@ -771,11 +779,8 @@ class ProductExpression(ExpressionBase):
     _to_string.minus_one = {"-1", "-1.0", "(-1)", "(-1.0)"}
 
 
-class NPV_ProductExpression(ProductExpression):
+class NPV_ProductExpression(NPV_Mixin, ProductExpression):
     __slots__ = ()
-
-    def is_potentially_variable(self):
-        return False
 
 
 class MonomialTermExpression(ProductExpression):
@@ -783,6 +788,20 @@ class MonomialTermExpression(ProductExpression):
 
     def getname(self, *args, **kwds):
         return 'mon'
+
+    def create_node_with_local_data(self, args, classtype=None):
+        if classtype is None:
+            # If this doesn't look like a MonomialTermExpression, then
+            # fall back on the expression generation system to sort out
+            # what the appropriate return type is.
+            if not (args[0].__class__ in native_types
+                    or not args[0].is_potentially_variable()):
+                return args[0] * args[1]
+            elif (args[1].__class__ in native_types
+                  or not args[1].is_variable_type()):
+                return args[0] * args[1]
+        return self.__class__(args)
+
 
 class DivisionExpression(ExpressionBase):
     """
@@ -816,11 +835,8 @@ class DivisionExpression(ExpressionBase):
         return result[0] / result[1]
 
 
-class NPV_DivisionExpression(DivisionExpression):
+class NPV_DivisionExpression(NPV_Mixin, DivisionExpression):
     __slots__ = ()
-
-    def is_potentially_variable(self):
-        return False
 
 
 @deprecated("Use DivisionExpression", version='5.6.7')
@@ -862,11 +878,8 @@ class ReciprocalExpression(ExpressionBase):
         return 1 / result[0]
 
 
-class NPV_ReciprocalExpression(ReciprocalExpression):
+class NPV_ReciprocalExpression(NPV_Mixin, ReciprocalExpression):
     __slots__ = ()
-
-    def is_potentially_variable(self):
-        return False
 
 
 class _LinearOperatorExpression(ExpressionBase):
@@ -980,8 +993,8 @@ class SumExpression(SumExpressionBase):
     def _apply_operation(self, result):
         return sum(result)
 
-    def create_node_with_local_data(self, args):
-        return self.__class__(list(args))
+    def create_node_with_local_data(self, args, classtype=None):
+        return super().create_node_with_local_data(list(args), classtype)
 
     def __getstate__(self):
         state = super(SumExpression, self).__getstate__()
@@ -1154,8 +1167,11 @@ class UnaryFunctionExpression(ExpressionBase):
     __slots__ = ('_fcn', '_name')
 
     def __init__(self, args, name=None, fcn=None):
-        if not type(args) is tuple:
-            args = (args,)
+        if type(args) is not tuple:
+            if type(args) is list:
+                args = tuple(args)
+            else:
+                args = (args,)
         self._args_ = args
         self._name = name
         self._fcn = fcn
@@ -1163,8 +1179,10 @@ class UnaryFunctionExpression(ExpressionBase):
     def nargs(self):
         return 1
 
-    def create_node_with_local_data(self, args):
-        return self.__class__(args, self._name, self._fcn)
+    def create_node_with_local_data(self, args, classtype=None):
+        if classtype is None:
+            classtype = self.__class__
+        return classtype(args, self._name, self._fcn)
 
     def __getstate__(self):
         state = super(UnaryFunctionExpression, self).__getstate__()
@@ -1215,15 +1233,9 @@ class AbsExpression(UnaryFunctionExpression):
     def __init__(self, arg):
         super(AbsExpression, self).__init__(arg, 'abs', abs)
 
-    def create_node_with_local_data(self, args):
-        return self.__class__(args)
 
-
-class NPV_AbsExpression(AbsExpression):
+class NPV_AbsExpression(NPV_Mixin, AbsExpression):
     __slots__ = ()
-
-    def is_potentially_variable(self):
-        return False
 
 
 class LinearExpression(ExpressionBase):
