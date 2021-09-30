@@ -228,7 +228,7 @@ class Pyomo2Scipy_Visitor(EXPR.ExpressionReplacementVisitor):
                     _id.base.name, ','.join(str(x) for x in _id.args))
             return False, self.templatemap[_id]
 
-        return super().beforeChild(node)
+        return super().beforeChild(node, child, child_idx)
 
 
 def convert_pyomo2scipy(expr, templatemap):
