@@ -84,9 +84,6 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
                 else:
                     tmp.append(val)
 
-        if node.__class__ in EXPR.NPV_expression_types:
-            return ftoa(value(node))
-
         if node.__class__ is EXPR.PowExpression:
             # If the exponent is a positive integer, use the power() function.
             # Otherwise, use the ** operator.
@@ -119,13 +116,27 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
-        if node is None:
-            return True, None
-
         if node.__class__ in native_types:
             return True, ftoa(node)
 
         if node.is_expression_type():
+            # Special handling if NPV and semi-NPV types:
+            if not node.is_potentially_variable():
+                return True, ftoa(value(node))
+            if node.__class__ is EXPR.MonomialTermExpression:
+                const = value(node.arg(0))
+                var = node.arg(1)
+                if var.is_fixed():
+                    return True, ftoa(const * var.value)
+                label = self.smap.getSymbol(var)
+                # TODO: is it necessary to filter out -1 / +1?
+                if const == -1:
+                    return True, "- " + label
+                elif const == 1:
+                    return True, label
+                else:
+                    return True, ftoa(const) + ' * ' + label
+
             # we will descend into this, so type checking will happen later
             if node.is_component_type():
                 self.treechecker(node)
@@ -145,14 +156,11 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
                 # Vars later since they don't disappear from the expressions
                 self.treechecker(node)
 
-        if node.is_variable_type():
-            if node.fixed:
-                return True, ftoa(value(node))
-            else:
-                label = self.smap.getSymbol(node)
-                return True, label
-
-        return True, ftoa(value(node))
+        if node.is_fixed():
+            return True, ftoa(value(node))
+        else:
+            assert node.is_variable_type()
+            return True, self.smap.getSymbol(node)
 
 
 def expression_to_string(expr, treechecker, labeler=None, smap=None):
