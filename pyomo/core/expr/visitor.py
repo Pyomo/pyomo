@@ -21,6 +21,7 @@ from .symbol_map import SymbolMap
 from . import expr_common as common
 from .expr_errors import TemplateExpressionError
 from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.errors import DeveloperError
 from pyomo.core.expr.numvalue import (
     nonpyomo_leaf_types,
     native_types,
