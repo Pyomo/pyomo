@@ -235,7 +235,8 @@ class ExpressionBase(NumericValue):
         """
         return expression_to_string(self)
 
-    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
+    def to_string(self, verbose=None, labeler=None, smap=None,
+                  compute_values=False):
         """
         Return a string representation of the expression tree.
 
@@ -246,8 +247,9 @@ class ExpressionBase(NumericValue):
                 Defaults to :const:`False`.
             labeler: An object that generates string labels for
                 variables in the expression tree.  Defaults to :const:`None`.
-            smap:  If specified, this :class:`SymbolMap <pyomo.core.expr.symbol_map.SymbolMap>` is
-                used to cache labels for variables.
+            smap:  If specified, this
+                :class:`SymbolMap <pyomo.core.expr.symbol_map.SymbolMap>`
+                is used to cache labels for variables.
             compute_values (bool): If :const:`True`, then
                 parameters and fixed variables are evaluated before the
                 expression string is generated.  Default is :const:`False`.
@@ -255,7 +257,8 @@ class ExpressionBase(NumericValue):
         Returns:
             A string representation for the expression tree.
         """
-        return expression_to_string(self, verbose=verbose, labeler=labeler, smap=smap, compute_values=compute_values)
+        return expression_to_string(self, verbose=verbose, labeler=labeler,
+                                    smap=smap, compute_values=compute_values)
 
     def _precedence(self):
         return ExpressionBase.PRECEDENCE
@@ -271,7 +274,7 @@ class ExpressionBase(NumericValue):
         # Most operators in Python are left-to-right associative
         return 1
 
-    def _to_string(self, values, verbose, smap, compute_values):            #pragma: no cover
+    def _to_string(self, values, verbose, smap, compute_values):    #pragma: no cover
         """
         Construct a string representation for this node, using the string
         representations of its children.
@@ -296,7 +299,9 @@ class ExpressionBase(NumericValue):
         Returns:
             A string representation for this node.
         """
-        pass
+        raise NotImplementedError(
+            "Derived expression (%s) failed to implement _to_string()"
+            % ( str(self.__class__), ))
 
     def getname(self, *args, **kwds):                       #pragma: no cover
         """

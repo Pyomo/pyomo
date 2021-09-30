@@ -337,7 +337,9 @@ class TemplateSumExpression(ExpressionBase):
             val = val[1:-1]
         iterStrGenerator = (
             ( ', '.join(str(i) for i in iterGroup),
-              iterGroup[0]._set.to_string(verbose=verbose) )
+              ( iterGroup[0]._set.to_string(verbose=verbose)
+                if hasattr(iterGroup[0]._set, 'to_string')
+                else str(iterGroup[0]._set) ) )
             for iterGroup in self._iters
         )
         if verbose:
@@ -455,9 +457,6 @@ class IndexTemplate(NumericValue):
         if self._index is not None and self._set.dimen != 1:
             _set_name += "(%s)" % (self._index,)
         return "{"+_set_name+"}"
-
-    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
-        return self.name
 
     def set_value(self, values=_NotSpecified, lock=None):
         # It might be nice to check if the value is valid for the base
