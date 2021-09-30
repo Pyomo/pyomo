@@ -1202,13 +1202,12 @@ class _ToStringVisitor(ExpressionValueVisitor):
         if node.is_expression_type():
             return False, None
 
-        if node.is_variable_type():
-            if not node.fixed:
-                return True, node.to_string(verbose=self.verbose, smap=self.smap, compute_values=False)
-            return True, node.to_string(verbose=self.verbose, smap=self.smap, compute_values=self.compute_values)
-
         if hasattr(node, 'to_string'):
-            return True, node.to_string(verbose=self.verbose, smap=self.smap, compute_values=self.compute_values)
+            return True, node.to_string(
+                verbose=self.verbose,
+                smap=self.smap,
+                compute_values=self.compute_values
+            )
         else:
             return True, str(node)
 
