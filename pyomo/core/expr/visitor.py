@@ -596,10 +596,11 @@ class ExpressionValueVisitor(object):
             else:
                 return self.finalize(ans)
 
+
 def replace_expressions(expr,
                         substitution_map,
                         descend_into_named_expressions=True,
-                        remove_named_expressions=False):
+                        remove_named_expressions=True):
     """
 
     Parameters
