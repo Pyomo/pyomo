@@ -1352,63 +1352,19 @@ class LinearExpression(ExpressionBase):
         return self._is_fixed()
 
     def _to_string(self, values, verbose, smap, compute_values):
-        tmp = []
-        if compute_values:
-            const_ = value(self.constant)
-            if not isclose(const_,0):
-                tmp = [str(const_)]
-        elif self.constant.__class__ in native_numeric_types:
-            if not isclose(self.constant, 0):
-                tmp = [str(self.constant)]
-        else:
-            tmp = [self.constant.to_string(compute_values=False)]
+        if not values:
+            values = ['0']
         if verbose:
-            for c,v in zip(self.linear_coefs, self.linear_vars):
-                if smap:                        # TODO: coverage
-                    v_ = smap.getSymbol(v)
-                else:
-                    v_ = str(v)
-                if c.__class__ in native_numeric_types or compute_values:
-                    c_ = value(c)
-                    if isclose(c_,1):
-                        tmp.append(str(v_))
-                    elif isclose(c_,0):
-                        continue
-                    else:
-                        tmp.append("prod(%s, %s)" % (str(c_),str(v_)))
-                else:
-                    tmp.append("prod(%s, %s)" % (str(c), v_))
-            return "{0}({1})".format(self.getname(), ', '.join(tmp))
-        for c,v in zip(self.linear_coefs, self.linear_vars):
-            if smap:
-                v_ = smap.getSymbol(v)
-            else:
-                v_ = str(v)
-            if c.__class__ in native_numeric_types or compute_values:
-                c_ = value(c)
-                if isclose(c_,1):
-                   tmp.append(" + %s" % v_)
-                elif isclose(c_,0):
-                    continue
-                elif isclose(c_,-1):
-                   tmp.append(" - %s" % v_)
-                elif c_ < 0:
-                   tmp.append(" - %s*%s" % (str(math.fabs(c_)), v_))
-                else:
-                   tmp.append(" + %s*%s" % (str(c_), v_))
-            else:
-                c_str = str(c)
-                if any(_ in c_str for _ in '+-*/'):
-                    c_str = '('+c_str+')'
-                tmp.append(" + %s*%s" % (c_str, v_))
-        s = "".join(tmp)
-        if len(s) == 0:                 #pragma: no cover
-            return s
-        if s[0] == " ":
-            if s[1] == "+":
-                return s[3:]
-            return s[1:]
-        return s
+            return "%s(%s)" % (self.getname(), ', '.join(values))
+
+        tmp = [values[0]]
+        for term in values[1:]:
+            if term[0] not in '+-':
+                term = '+'+term
+            if term[1] != ' ':
+                term = term[0] + ' ' + term[1:]
+            tmp.append(term)
+        return ' '.join(tmp)
 
     def is_potentially_variable(self):
         return len(self.linear_vars) > 0
