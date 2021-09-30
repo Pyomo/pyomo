@@ -901,6 +901,8 @@ def makeHierarchicalNested_DeclOrderOppositeInstantationOrder():
     return m
 
 def makeNonQuadraticNonlinearGDP():
+    """We use this in testing between steps--Needed non-quadratic and not 
+    additively separable constraint expressions on a Disjunct."""
     m = ConcreteModel()
     m.I = RangeSet(1,4)
     m.I1 = RangeSet(1,2)
