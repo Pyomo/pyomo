@@ -41,7 +41,8 @@ class ReplaceEFVisitor(EXPR.ExpressionReplacementVisitor):
         self.trf = trf_block
         self.efSet = efSet
 
-    def visit(self, node, values):
+    def exitNode(self, node, values):
+        node = super().exitNode(node, values)
         if node.__class__ is not EXPR.ExternalFunctionExpression:
             return node
         if id(node._fcn) not in self.efSet:
