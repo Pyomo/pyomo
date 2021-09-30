@@ -85,21 +85,7 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
                 else:
                     tmp.append(val)
 
-        if node.__class__ in EXPR.NPV_expression_types:
-            return ftoa(value(node))
-
-        if node.__class__ is EXPR.LinearExpression:
-            for v in node.linear_vars:
-                self.variables.add(id(v))
-
-        if node.__class__ in {
-                EXPR.ProductExpression, EXPR.MonomialTermExpression}:
-            if tmp[0] in node._to_string.minus_one:
-                return "- {0}".format(tmp[1])
-            if tmp[0] in node._to_string.one:
-                return tmp[1]
-            return "{0} * {1}".format(tmp[0], tmp[1])
-        elif node.__class__ is EXPR.PowExpression:
+        if node.__class__ is EXPR.PowExpression:
             x,y = node.args
             if type(x) not in native_types and not x.is_fixed() and \
                type(y) not in native_types and not y.is_fixed():
@@ -110,19 +96,18 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
                 return "{0} ^ {1}".format(tmp[0], tmp[1])
         elif node.__class__ is EXPR.UnaryFunctionExpression:
             if node.name == "sqrt":
-                return "{0} ^ 0.5".format(tmp[0])
+                return "({0}) ^ 0.5".format(tmp[0])
             elif node.name == 'log10':
                 return "{0} * log({1})".format(math.log10(math.e), tmp[0])
             elif node.name in {'exp','log'}:
-                return node._to_string(tmp, None, self.smap, True)
+                pass
             else:
                 raise RuntimeError(
                     'The BARON .BAR format does not support the unary '
                     'function "%s".' % (node.name,))
         elif node.__class__ is EXPR.AbsExpression:
-            return "({0} ^ 2) ^ 0.5".format(tmp[0])
-        else:
-            return node._to_string(tmp, None, self.smap, True)
+            return "(({0}) ^ 2) ^ 0.5".format(tmp[0])
+        return node._to_string(tmp, None, self.smap, True)
 
     def visiting_potential_leaf(self, node):
         """
@@ -132,36 +117,47 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
         """
         #print("ISLEAF")
         #print(node.__class__)
-        if node is None:
-            return True, None
 
         if node.__class__ in native_types:
             return True, ftoa(node)
 
         if node.is_expression_type():
+            # Special handling if NPV and semi-NPV types:
+            if not node.is_potentially_variable():
+                return True, ftoa(value(node))
+            if node.__class__ is EXPR.MonomialTermExpression:
+                const = value(node.arg(0))
+                var = node.arg(1)
+                if var.is_fixed():
+                    return True, ftoa(const * var.value)
+                self.variables.add(id(var))
+                label = self.smap.getSymbol(var)
+                # TODO: is it necessary to filter out -1 / +1?
+                if const in node._to_string.minus_one:
+                    return True, "- " + label
+                elif const in node._to_string.one:
+                    return True, label
+                else:
+                    return True, ftoa(const) + ' * ' + label
             # we will descend into this, so type checking will happen later
             return False, None
 
         if node.is_component_type():
-            _ctype = node.ctype
-            if _ctype not in valid_expr_ctypes_minlp:
+            if node.ctype not in valid_expr_ctypes_minlp:
                 # Make sure all components in active constraints
                 # are basic ctypes we know how to deal with.
                 raise RuntimeError(
                     "Unallowable component '%s' of type %s found in an active "
                     "constraint or objective.\nThe GAMS writer cannot export "
                     "expressions with this component type."
-                    % (node.name, _ctype.__name__))
+                    % (node.name, node.ctype.__name__))
 
-        if node.is_variable_type():
-            if node.fixed:
-                return True, ftoa(value(node))
-            else:
-                self.variables.add(id(node))
-                label = self.smap.getSymbol(node)
-                return True, label
-
-        return True, ftoa(value(node))
+        if node.is_fixed():
+            return True, ftoa(value(node))
+        else:
+            assert node.is_variable_type()
+            self.variables.add(id(node))
+            return True, self.smap.getSymbol(node)
 
 
 def expression_to_string(expr, variables, labeler=None, smap=None):
