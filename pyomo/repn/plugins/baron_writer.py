@@ -133,9 +133,9 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
                 self.variables.add(id(var))
                 label = self.smap.getSymbol(var)
                 # TODO: is it necessary to filter out -1 / +1?
-                if const in node._to_string.minus_one:
+                if const == -1:
                     return True, "- " + label
-                elif const in node._to_string.one:
+                elif const == 1:
                     return True, label
                 else:
                     return True, ftoa(const) + ' * ' + label
