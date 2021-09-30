@@ -22,7 +22,6 @@ from pyomo.core.expr import current as EXPR
 import pyomo.gdp.tests.common_tests as ct
 from pyomo.repn import generate_standard_repn
 from pyomo.opt import check_available_solvers
-from pyomo.common.dependencies import networkx_available
 
 solvers = check_available_solvers('gurobi_direct')
 
@@ -31,7 +30,6 @@ class CommonTests:
         ct.diff_apply_to_and_create_using(self, model,
                                           'gdp.partition_disjuncts', P=P)
 
-@unittest.skipUnless(networkx_available, "networkx is not available")
 class PaperTwoCircleExample(unittest.TestCase, CommonTests):
     def makeModel(self):
         m = ConcreteModel()
@@ -201,14 +199,14 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
                                    aux21lb, aux21ub, aux22lb, aux22ub):
         (b, disj1, disj2,
          aux_vars1,
-         aux_vars2) = self.check_transformation_block_structure(m, aux11lb,
-                                                                aux11ub,
-                                                                aux12lb,
-                                                                aux12ub,
-                                                                aux21lb,
-                                                                aux21ub,
-                                                                aux22lb,
-                                                                aux22ub)
+         aux_vars2) = self.check_transformation_block_structure( m, aux11lb,
+                                                                 aux11ub,
+                                                                 aux12lb,
+                                                                 aux12ub,
+                                                                 aux21lb,
+                                                                 aux21ub,
+                                                                 aux22lb,
+                                                                 aux22ub)
 
         self.check_disjunct_constraints(disj1, disj2, aux_vars1, aux_vars2)
 
@@ -296,56 +294,59 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
 
         self.check_transformation_block_indexed_var_on_disjunct(m)
 
-    def check_transformation_block_nested_disjunction(self, m, disj2):
+    def check_transformation_block_nested_disjunction(self, m, disj2, x,
+                                                      disjunction_block=None):
+        if disjunction_block is None:
+            block_prefix = ""
+        else:
+            block_prefix = disjunction_block + "."
         (inner_b, inner_disj1,
          inner_disj2) = self.\
                         check_transformation_block_disjuncts_and_constraints(
-                            disj2, "disj2.disjunction")
+                            disj2, "%sdisj2.disjunction" % block_prefix)
 
         # Has it's own indicator var, the aux vars, and the Reference to the
         # original indicator_var
         self.assertEqual(len(inner_disj1.component_map(Var)), 3)
         self.assertEqual(len(inner_disj2.component_map(Var)), 3)
 
-        aux_vars1 = inner_disj1.component("disj2.disjunction_disjuncts[0]."
-                                    "constraint[1]_aux_vars")
-        aux_vars2 = inner_disj2.component("disj2.disjunction_disjuncts[1]."
-                                    "constraint[1]_aux_vars")
+        aux_vars1 = inner_disj1.component("%sdisj2.disjunction_disjuncts[0]."
+                                          "constraint[1]_aux_vars" %
+                                          block_prefix)
+        aux_vars2 = inner_disj2.component("%sdisj2.disjunction_disjuncts[1]."
+                                          "constraint[1]_aux_vars" %
+                                          block_prefix)
         self.check_aux_var_bounds(aux_vars1, aux_vars2, 0, 72, 0, 72, -72, 96,
                                   -72, 96)
 
         # check the transformed constraints on the disjuncts
         c = inner_disj1.component(
-            "disj2.disjunction_disjuncts[0].constraint[1]")
+            "%sdisj2.disjunction_disjuncts[0].constraint[1]" % block_prefix)
         self.assertEqual(len(c), 1)
         c1 = c[0]
         self.check_disj_constraint(c1, 1, aux_vars1[0], aux_vars1[1])
         c = inner_disj2.component(
-            "disj2.disjunction_disjuncts[1].constraint[1]")
+            "%sdisj2.disjunction_disjuncts[1].constraint[1]" % block_prefix)
         self.assertEqual(len(c), 1)
         c2 = c[0]
         self.check_disj_constraint(c2, -35, aux_vars2[0], aux_vars2[1])
 
         # check the global constraints
-        c = inner_b.component("disj2.disjunction_disjuncts[0].constraint[1]"
-                              "_split_constraints")
+        c = inner_b.component("%sdisj2.disjunction_disjuncts[0].constraint[1]"
+                              "_split_constraints" % block_prefix)
         self.assertEqual(len(c), 2)
         c1 = c[0]
-        self.check_global_constraint_disj1(c1, aux_vars1[0], m.disj1.x[1],
-                                           m.disj1.x[2])
+        self.check_global_constraint_disj1(c1, aux_vars1[0], x[1], x[2])
         c2 = c[1]
-        self.check_global_constraint_disj1(c2, aux_vars1[1], m.disj1.x[3],
-                                           m.disj1.x[4])
+        self.check_global_constraint_disj1(c2, aux_vars1[1], x[3], x[4])
 
-        c = inner_b.component("disj2.disjunction_disjuncts[1].constraint[1]"
-                              "_split_constraints")
+        c = inner_b.component("%sdisj2.disjunction_disjuncts[1].constraint[1]"
+                              "_split_constraints" % block_prefix)
         self.assertEqual(len(c), 2)
         c1 = c[0]
-        self.check_global_constraint_disj2(c1, aux_vars2[0], m.disj1.x[1],
-                                           m.disj1.x[2])
+        self.check_global_constraint_disj2(c1, aux_vars2[0], x[1], x[2])
         c2 = c[1]
-        self.check_global_constraint_disj2(c2, aux_vars2[1], m.disj1.x[3],
-                                           m.disj1.x[4])
+        self.check_global_constraint_disj2(c2, aux_vars2[1], x[3], x[4])
 
     def test_transformation_block_nested_disjunction(self):
         m = self.makeNestedModel()
@@ -362,7 +363,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
          disj2) = self.check_transformation_block_indexed_var_on_disjunct(m)
 
         # AND, we should have a transformed inner disjunction on disj2:
-        self.check_transformation_block_nested_disjunction(m, disj2)
+        self.check_transformation_block_nested_disjunction(m, disj2, m.disj1.x)
 
     def test_transformation_block_nested_disjunction_outer_disjunction_target(
             self):
@@ -383,7 +384,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
          disj2) = self.check_transformation_block_indexed_var_on_disjunct(m)
 
         # AND, we should have a transformed inner disjunction on disj2:
-        self.check_transformation_block_nested_disjunction(m, disj2)
+        self.check_transformation_block_nested_disjunction(m, disj2, m.disj1.x)
 
     def test_transformation_block_nested_disjunction_badly_ordered_targets(
             self):
@@ -405,7 +406,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
          disj2) = self.check_transformation_block_indexed_var_on_disjunct(m)
 
         # AND, we should have a transformed inner disjunction on disj2:
-        self.check_transformation_block_nested_disjunction(m, disj2)
+        self.check_transformation_block_nested_disjunction(m, disj2, m.disj1.x)
 
     def test_hierarchical_nested_badly_ordered_targets(self):
         m = ConcreteModel()
@@ -424,19 +425,60 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         m.disjunction_block.disjunction = Disjunction(
             expr=[m.disj1, m.disjunct_block.disj2])
 
-        # TODO: My intuition is that there is a way to force the Disjunct to be
-        # transformed before its Disjunction by hiding them on blocks. Then this
-        # should fail because the partition doesn't specify what to do with the
-        # auxilary variables created by the inner disjunction. And to fix this,
-        # I think we need to actually descend into Block targets when we
-        # preprocess targets, and find what is on them.
+        # If we don't preprocess targets by actually finding who is nested in
+        # who, this would force the Disjunct to be transformed before its
+        # Disjunction because they are hidden on blocks. Then this would fail
+        # because the partition doesn't specify what to do with the auxilary
+        # variables created by the inner disjunction. If we correctly descend
+        # into Blocks and order according to the nesting structure, all will be
+        # well.
         TransformationFactory('gdp.partition_disjuncts').apply_to(
             m,
             targets=[m.disjunction_block, m.disjunct_block.disj2],
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
             compute_bounds_method=compute_fbbt_bounds)
-        # TODO: TEST STUFF
 
+        (b, disj1, 
+         disj2) = self.check_transformation_block_disjuncts_and_constraints(
+             m.disjunction_block, "disjunction_block.disjunction")
+        # each Disjunct has two variables declared on it (aux vars and indicator
+        # var), plus a reference to the indicator_var from the original Disjunct
+        self.assertEqual(len(disj1.component_map(Var)), 3)
+        self.assertEqual(len(disj2.component_map(Var)), 3)
+
+        aux_vars1 = disj1.component("disj1.c_aux_vars")
+        aux_vars2 = disj2.component("disjunct_block.disj2.c_aux_vars")
+        self.check_aux_var_bounds(aux_vars1, aux_vars2, 0, 72, 0, 72, -72, 96,
+                                  -72, 96)
+        # check the transformed constraints on the disjuncts
+        c = disj1.component("disj1.c")
+        self.assertEqual(len(c), 1)
+        c1 = c[0]
+        self.check_disj_constraint(c1, 1, aux_vars1[0], aux_vars1[1])
+        c = disj2.component("disjunct_block.disj2.c")
+        self.assertEqual(len(c), 1)
+        c2 = c[0]
+        self.check_disj_constraint(c2, -35, aux_vars2[0], aux_vars2[1])
+
+        # check the global constraints
+        c = b.component("disj1.c_split_constraints")
+        self.assertEqual(len(c), 2)
+        c1 = c[0]
+        self.check_global_constraint_disj1(c1, aux_vars1[0], m.x[1], m.x[2])
+        c2 = c[1]
+        self.check_global_constraint_disj1(c2, aux_vars1[1], m.x[3], m.x[4])
+
+        c = b.component("disjunct_block.disj2.c_split_constraints")
+        self.assertEqual(len(c), 2)
+        c1 = c[0]
+        self.check_global_constraint_disj2(c1, aux_vars2[0], m.x[1], m.x[2])
+        c2 = c[1]
+        self.check_global_constraint_disj2(c2, aux_vars2[1], m.x[3], m.x[4])
+
+        # check the inner disjunction
+        self.check_transformation_block_nested_disjunction(m, disj2, m.x,
+                                                           "disjunct_block")
+        
     def test_transformation_block_nested_disjunction_target(self):
         m = self.makeNestedModel()
 
@@ -447,7 +489,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
                                  [m.disj1.x[3], m.disj1.x[4]]],
             compute_bounds_method=compute_fbbt_bounds)
 
-        self.check_transformation_block_nested_disjunction(m, m.disj2)
+        self.check_transformation_block_nested_disjunction(m, m.disj2,
+                                                           m.disj1.x)
         # NOTE: If you then transformed the whole model (or the outer
         # disjunction), you would double-transform in the sense that you would
         # again transform the Disjunction this creates. But I think it serves
@@ -1249,7 +1292,6 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         m = self.makeModel()
         self.diff_apply_to_and_create_using(m, P=2)
 
-@unittest.skipUnless(networkx_available, "networkx is not available")
 class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
     def makeModel(self):
         m = ConcreteModel()
@@ -1602,7 +1644,6 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
 
 # This is just a pile of tests that are structural that we use for bigm and
 # hull, so might as well for here too.
-@unittest.skipUnless(networkx_available, "networkx is not available")
 class CommonModels(unittest.TestCase, CommonTests):
     def test_user_deactivated_disjuncts(self):
         ct.check_user_deactivated_disjuncts(self, 'partition_disjuncts',

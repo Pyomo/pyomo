@@ -81,6 +81,56 @@ def clone_without_expression_components(expr, substitute=None):
                                                 remove_named_expressions=True)
     return visitor.dfs_postorder_stack(expr)
 
+class GDPTree:
+    def __init__(self):
+        self._adjacency_list = {}
+        self._in_degrees = {}
+
+    @property
+    def vertices(self):
+        return self._in_degrees.keys()
+
+    def _update_in_degree(self, v):
+        if v in self._in_degrees:
+            self._in_degrees[v] += 1
+        else:
+            self._in_degrees[v] = 1
+
+    def add_edge(self, u, v):
+        if u in self._adjacency_list:
+            self._adjacency_list[u].append(v)
+        else:
+            self._adjacency_list[u] = [v]
+        self._update_in_degree(u)
+        self._update_in_degree(v)
+
+    def _visit_vertex(self, u, leaf_to_root):
+        if u in self._adjacency_list:
+            for v in self._adjacency_list[u]:
+                if v not in leaf_to_root:
+                    self._visit_vertex(v, leaf_to_root)
+        # we're done--we've been to all its children
+        leaf_to_root.append(u)
+
+    def _topological_sort(self):
+        # this is reverse of the list we should return (but happens to be what
+        # we want for hull and bigm)
+        leaf_to_root = []
+        for u in self.vertices:
+            if u not in leaf_to_root:
+                self._visit_vertex(u, leaf_to_root)
+
+        return leaf_to_root
+
+    def topological_sort(self):
+        return reversed(self._topological_sort())
+
+    def reverse_topological_sort(self):
+        return self._topological_sort()
+
+    def in_degree(self, u):
+        return self._in_degrees[u]
+
 def preprocess_targets(targets):
     preprocessed_targets = []
     for t in targets:

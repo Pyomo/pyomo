@@ -37,16 +37,11 @@ from pyomo.gdp.util import (is_child_of, target_list, _to_dict,
                             verify_successful_solve, NORMAL,
                             clone_without_expression_components,
                             _warn_for_active_disjunct,
-                            _warn_for_active_logical_constraint)
+                            _warn_for_active_logical_constraint, GDPTree)
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from weakref import ref as weakref_ref
 
 from math import floor
-
-from pyomo.common.dependencies import networkx_available
-if networkx_available:
-    from networkx.classes.digraph import DiGraph
-    from networkx.algorithms.dag import topological_sort
 
 import logging
 logger = logging.getLogger('pyomo.gdp.partition_disjuncts')
@@ -292,10 +287,6 @@ class PartitionDisjuncts_Transformation(Transformation):
         }
 
     def _apply_to(self, instance, **kwds):
-        if not networkx_available:
-            raise GDP_Error("The partition_disjuncts transformation requires "
-                            "networkx, which is not available in the current "
-                            "environment!")
         if not instance.ctype in (Block, Disjunct):
             raise GDP_Error("Transformation called on %s of type %s. 'instance'"
                             " must be a ConcreteModel, Block, or Disjunct (in "
@@ -425,7 +416,7 @@ class PartitionDisjuncts_Transformation(Transformation):
         return gdp_tree
 
     def _get_gdp_tree(self, targets, instance, knownBlocks):
-        gdp_tree = DiGraph()
+        gdp_tree = GDPTree()
         target_disjuncts = []
         for t in targets:
              # first check it's not insane, that is, it is at least on the
@@ -468,7 +459,6 @@ class PartitionDisjuncts_Transformation(Transformation):
 
         return gdp_tree, target_disjuncts
 
-    # TODO: scream if we don't have networkx...
     def _preprocess_targets(self, targets, instance, knownBlocks):
         gdp_tree, target_disjuncts = self._get_gdp_tree(targets, instance,
                                                         knownBlocks)
@@ -477,7 +467,7 @@ class PartitionDisjuncts_Transformation(Transformation):
         # now do a topological sort of the tree, adding Disjunctions to the
         # targets list as we go, and keeping track of the Disjuncts that we
         # don't need to add
-        for node in topological_sort(gdp_tree):
+        for node in gdp_tree.topological_sort():
             if node.ctype is Disjunction:
                 preprocessed_targets.append(node)
             else: # it's a Disjunct
