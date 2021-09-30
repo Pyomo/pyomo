@@ -553,7 +553,7 @@ class NPV_Mixin(object):
             return super().create_node_with_local_data(args, None)
         else:
             cls = list(self.__class__.__bases__)
-            cls.pop(cls.index(NPV_Mixin))
+            cls.remove(NPV_Mixin)
             assert len(cls) == 1
             return super().create_node_with_local_data(args, cls[0])
 
@@ -1169,10 +1169,7 @@ class UnaryFunctionExpression(ExpressionBase):
 
     def __init__(self, args, name=None, fcn=None):
         if type(args) is not tuple:
-            if type(args) is list:
-                args = tuple(args)
-            else:
-                args = (args,)
+            args = (args,)
         self._args_ = args
         self._name = name
         self._fcn = fcn
