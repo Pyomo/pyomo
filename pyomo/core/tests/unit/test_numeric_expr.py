@@ -3526,7 +3526,7 @@ class TestSummationExpression(unittest.TestCase):
         self.assertIs(type(e), LinearExpression)
         self.assertEqual( id(self.m.a[1]), id(e.linear_vars[0]) )
         self.assertEqual( id(self.m.a[2]), id(e.linear_vars[1]) )
-        self.assertEqual(e.size(), 1)
+        self.assertEqual(e.size(), 16)
 
     def test_summation2(self):
         e = sum_product(self.m.p, self.m.a)
@@ -3534,7 +3534,7 @@ class TestSummationExpression(unittest.TestCase):
         self.assertIs(type(e), LinearExpression)
         self.assertEqual( id(self.m.a[1]), id(e.linear_vars[0]) )
         self.assertEqual( id(self.m.a[2]), id(e.linear_vars[1]) )
-        self.assertEqual(e.size(), 1)
+        self.assertEqual(e.size(), 16)
 
     def test_summation3(self):
         e = sum_product(self.m.q, self.m.a)
@@ -3542,7 +3542,7 @@ class TestSummationExpression(unittest.TestCase):
         self.assertIs(type(e), LinearExpression)
         self.assertEqual( id(self.m.a[1]), id(e.linear_vars[0]) )
         self.assertEqual( id(self.m.a[2]), id(e.linear_vars[1]) )
-        self.assertEqual(e.size(), 1)
+        self.assertEqual(e.size(), 16)
 
     def test_summation4(self):
         e = sum_product(self.m.a, self.m.b)
@@ -3562,9 +3562,9 @@ class TestSummationExpression(unittest.TestCase):
         e = sum_product(self.m.a, denom=self.m.p)
         self.assertEqual( e(), 25 )
         self.assertIs(type(e), LinearExpression)
-        #self.assertEqual( id(self.m.a[1]), id(e.arg(0).arg(0)) )
-        #self.assertEqual( id(self.m.a[2]), id(e.arg(1).arg(0)) )
-        #self.assertEqual(e.size(), 21)
+        self.assertEqual( id(self.m.a[1]), id(e.linear_vars[0]) )
+        self.assertEqual( id(self.m.a[2]), id(e.linear_vars[1]) )
+        self.assertEqual(e.size(), 26)
 
     def test_summation7(self):
         e = sum_product(self.m.p, self.m.q, index=self.m.I)
@@ -3580,7 +3580,7 @@ class TestSummationExpression(unittest.TestCase):
         self.assertEqual( e(), 75 )
         self.assertIs(type(e), SumExpression)
         self.assertEqual( e.nargs(), 2)
-        self.assertEqual(e.size(), 3)
+        self.assertEqual(e.size(), 33)
 
 
 class TestSumExpression(unittest.TestCase):
@@ -3802,7 +3802,7 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual( expr1(), 25 )
             self.assertEqual( expr2(), 25 )
             self.assertNotEqual( id(expr1),        id(expr2) )
-            self.assertEqual( id(expr1._args_), id(expr2._args_) )
+            self.assertNotEqual( id(expr1._args_), id(expr2._args_) )
             self.assertNotEqual( id(expr1.linear_vars[0]), id(expr2.linear_vars[0]) )
             self.assertNotEqual( id(expr1.linear_vars[1]), id(expr2.linear_vars[1]) )
             expr1 += self.m.b
