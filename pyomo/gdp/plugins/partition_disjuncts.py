@@ -374,8 +374,8 @@ class PartitionDisjuncts_Transformation(Transformation):
             # disjunctions in targets that their disjuncts don't appear at
             # all. Also need to make sure that Disjunctions which are parent to
             # others (in that they are nested around others) are transformed
-            # first. TODO: actually, I think we only need to transform root
-            # nodes of that forest we built... That's less work.
+            # first. We really only need to transform root nodes, actually,
+            # because they will recursively transform everything inside of them
             targets = self._preprocess_targets(targets, instance, knownBlocks)
         for t in targets:
             if t.ctype is Disjunction:
@@ -417,7 +417,6 @@ class PartitionDisjuncts_Transformation(Transformation):
 
     def _get_gdp_tree(self, targets, instance, knownBlocks):
         gdp_tree = GDPTree()
-        target_disjuncts = []
         for t in targets:
              # first check it's not insane, that is, it is at least on the
              # instance
@@ -429,12 +428,8 @@ class PartitionDisjuncts_Transformation(Transformation):
                 if t.is_indexed():
                     for block in t.values():
                         gdp_tree = self._gather_disjunctions(block, gdp_tree)
-                        if block.ctype is Disjunct:
-                            target_disjuncts.append(t)
                 else:
                     gdp_tree = self._gather_disjunctions(t, gdp_tree)
-                    if t.ctype is Disjunct:
-                        target_disjuncts.append(t)
             elif t.ctype is Disjunction:
                 parent = self._parent_disjunct(t)
                 if parent is not None:
@@ -457,26 +452,20 @@ class PartitionDisjuncts_Transformation(Transformation):
                     "It was of type %s and can't be transformed."
                     % (t.name, type(t)) )
 
-        return gdp_tree, target_disjuncts
+        return gdp_tree
 
     def _preprocess_targets(self, targets, instance, knownBlocks):
-        gdp_tree, target_disjuncts = self._get_gdp_tree(targets, instance,
-                                                        knownBlocks)
+        gdp_tree = self._get_gdp_tree(targets, instance, knownBlocks)
 
         preprocessed_targets = []
-        # now do a topological sort of the tree, adding Disjunctions to the
-        # targets list as we go, and keeping track of the Disjuncts that we
-        # don't need to add
-        for node in gdp_tree.topological_sort():
-            if node.ctype is Disjunction:
+        # We need only transform root nodes of the tree--the rest will be
+        # transformed recursively from there. (It's also possible to do a
+        # topological sort here and just make sure we don't ask for nested
+        # Disjuncts after their Disjunctions, but that's more work than is
+        # necessary.)
+        for node in gdp_tree.vertices:
+            if gdp_tree.in_degree(node) == 0:
                 preprocessed_targets.append(node)
-            else: # it's a Disjunct
-                if gdp_tree.in_degree(node) > 0 and node in target_disjuncts:
-                    # If it's not a root, then we know we're already
-                    # transforming it
-                    target_disjuncts.remove(node)
-        for disjunct in target_disjuncts:
-            preprocessed_targets.append(disjunct)
 
         return preprocessed_targets
 

@@ -18,6 +18,7 @@ from pyomo.common.collections import ComponentMap
 from pyomo.core import Block, TraversalStrategy
 from pyomo.opt import TerminationCondition, SolverStatus
 from weakref import ref as weakref_ref
+from collections import defaultdict
 import logging
 
 logger = logging.getLogger('pyomo.gdp')
@@ -84,25 +85,24 @@ def clone_without_expression_components(expr, substitute=None):
 class GDPTree:
     def __init__(self):
         self._adjacency_list = {}
-        self._in_degrees = {}
+        self._in_degrees = defaultdict(lambda: 0)
+        self._vertices = set()
 
     @property
     def vertices(self):
-        return self._in_degrees.keys()
+        return self._vertices
 
     def _update_in_degree(self, v):
-        if v in self._in_degrees:
-            self._in_degrees[v] += 1
-        else:
-            self._in_degrees[v] = 1
+        self._in_degrees[v] += 1
 
     def add_edge(self, u, v):
         if u in self._adjacency_list:
             self._adjacency_list[u].append(v)
         else:
             self._adjacency_list[u] = [v]
-        self._update_in_degree(u)
         self._update_in_degree(v)
+        self._vertices.add(u)
+        self._vertices.add(v)
 
     def _visit_vertex(self, u, leaf_to_root):
         if u in self._adjacency_list:
