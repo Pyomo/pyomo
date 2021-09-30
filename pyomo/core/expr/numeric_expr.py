@@ -12,6 +12,7 @@ from __future__ import division
 
 import math
 import logging
+from operator import attrgetter
 from itertools import islice
 
 logger = logging.getLogger('pyomo.core')
@@ -1245,54 +1246,93 @@ class LinearExpression(ExpressionBase):
     Args:
         args (tuple): Children nodes
     """
-    __slots__ = ('constant',          # The constant term
-                 'linear_coefs',      # Linear coefficients
-                 'linear_vars')       # Linear variables
+    __slots__ = (
+        'constant',          # The constant term
+        'linear_coefs',      # Linear coefficients
+        'linear_vars',       # Linear variables
+        '_args_cache_',
+    )
 
     PRECEDENCE = 6
 
     def __init__(self, args=None, constant=None, linear_coefs=None, linear_vars=None):
-        """ 
-        Build a linear expression object that stores the constant, as well as 
+        """
+        Build a linear expression object that stores the constant, as well as
         coefficients and variables to represent const + sum_i(c_i*x_i)
-        
+
         You can specify args OR (constant, linear_coefs, and linear_vars)
         If args is provided, it should be a list that contains the constant,
         followed by the coefficients, followed by the variables.
-        
+
         Alternatively, you can specify the constant, the list of linear_coeffs
         and the list of linear_vars separately. Note that these lists are NOT
         copied.
         """
         # I am not sure why LinearExpression allows omitting args, but
-        # it does.  If they are provided, they should be the constant
-        # followed by the coefficients followed by the variables.
+        # it does.  If they are provided, they should be the (non-zero)
+        # constant followed by MonomialTermExpressions.
         if args:
-            self.constant = args[0]
-            n = (len(args)-1) // 2
-            self.linear_coefs = args[1:n+1]
-            self.linear_vars = args[n+1:]
+            if any(arg is not None for arg in
+                   (constant, linear_coefs, linear_vars)):
+                raise ValueError("Cannot specify both args and any of "
+                                 "{constant, linear_coeffs, or linear_vars}")
+            self._args_ = args
         else:
             self.constant = constant if constant is not None else 0
             self.linear_coefs = linear_coefs if linear_coefs else []
             self.linear_vars = linear_vars if linear_vars else []
-            
-        self._args_ = tuple()
+            self._args_cache_ = []
 
     def nargs(self):
-        return 0
+        return len(self.linear_vars) + (
+            0 if (self.constant is None
+                  or (self.constant.__class__ in native_numeric_types
+                      and not self.constant)) else 1
+        )
+
+    @property
+    def _args_(self):
+        if len(self._args_cache_) != self.nargs():
+            self._args_cache_ = []
+            if len(self.linear_vars) != self.nargs():
+                self._args_cache_.append(self.constant)
+            self._args_cache_.extend(map(MonomialTermExpression,
+                       zip(self.linear_coefs, self.linear_vars)))
+        elif len(self.linear_vars) != self.nargs():
+            self._args_cache_[0] = self.constant
+        return self._args_cache_
+
+    @_args_.setter
+    def _args_(self, value):
+        self._args_cache_ = list(value)
+        if self._args_cache_[0].__class__ is not MonomialTermExpression:
+            self.constant = value[0]
+            first_var = 1
+        else:
+            self.constant = 0
+            first_var = 0
+        self.linear_coefs, self.linear_vars = zip(
+            *map(attrgetter('args'), value[first_var:]))
 
     def _precedence(self):
         return LinearExpression.PRECEDENCE
 
-    def __getstate__(self):
-        state = super(LinearExpression, self).__getstate__()
-        for i in LinearExpression.__slots__:
-           state[i] = getattr(self,i)
-        return state
+    # __getstate__ is not needed, as while we are defining local slots,
+    # all the data in the slot is redundant to the information already
+    # being pickled through the base class _args_ attribute.
 
-    def create_node_with_local_data(self, args):
-        return self.__class__(args)
+    def create_node_with_local_data(self, args, classtype=None):
+        if classtype is None:
+            if not args:
+                classtype = self.__class__
+            elif ( args[0].__class__ is MonomialTermExpression or
+                   (args[0].__class__ in native_types or args[0].is_constant()
+                ) and all(arg.__class__ is MonomialTermExpression
+                          for arg in args[1:])):
+                classtype = self.__class__
+            else:
+                classtype = SumExpression
+        return classtype(args)
 
     def getname(self, *args, **kwds):
         return 'sum'
@@ -1372,7 +1412,7 @@ class LinearExpression(ExpressionBase):
         return len(self.linear_vars) > 0
 
     def _apply_operation(self, result):
-        return value(self.constant) + sum(value(c)*v.value for c,v in zip(self.linear_coefs, self.linear_vars))
+        return sum(result)
 
     #@profile
     def _combine_expr(self, etype, _other):
