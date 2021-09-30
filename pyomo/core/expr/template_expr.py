@@ -527,21 +527,21 @@ def resolve_template(expr):
 
 
 class ReplaceTemplateExpression(ExpressionReplacementVisitor):
+    template_types = {GetItemExpression, IndexTemplate}
 
-    def __init__(self, substituter, *args):
-        super(ReplaceTemplateExpression, self).__init__()
+    def __init__(self, substituter, *args, **kwargs):
+        kwargs.setdefault('remove_named_expressions', True)
+        super().__init__(**kwargs)
         self.substituter = substituter
         self.substituter_args = args
 
-    def visiting_potential_leaf(self, node):
-        if type(node) is GetItemExpression or type(node) is IndexTemplate:
-            return True, self.substituter(node, *self.substituter_args)
-
-        return super(
-            ReplaceTemplateExpression, self).visiting_potential_leaf(node)
+    def beforeChild(self, node, child, child_idx):
+        if type(child) in ReplaceTemplateExpression.template_types:
+            return False, self.substituter(child, *self.substituter_args)
+        return super().beforeChild(node, child, child_idx)
 
 
-def substitute_template_expression(expr, substituter, *args):
+def substitute_template_expression(expr, substituter, *args, **kwargs):
     """Substitute IndexTemplates in an expression tree.
 
     This is a general utility function for walking the expression tree
@@ -556,7 +556,7 @@ def substitute_template_expression(expr, substituter, *args):
     Returns:
         a new expression tree with all substitutions done
     """
-    visitor = ReplaceTemplateExpression(substituter, *args)
+    visitor = ReplaceTemplateExpression(substituter, *args, **kwargs)
     return visitor.dfs_postorder_stack(expr)
 
 

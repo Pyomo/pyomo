@@ -520,7 +520,7 @@ class WalkerTests2(unittest.TestCase):
 class ReplacementWalkerTest3(ExpressionReplacementVisitor):
 
     def __init__(self, model):
-        ExpressionReplacementVisitor.__init__(self)
+        super().__init__(remove_named_expressions=False)
         self.model = model
 
     def visiting_potential_leaf(self, node):
@@ -596,8 +596,8 @@ class WalkerTests3(unittest.TestCase):
         e = M.z*M.x
         walker = ReplacementWalkerTest3(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(e.__class__ is MonomialTermExpression)
-        self.assertTrue(f.__class__ is ProductExpression)
+        self.assertIs(e.__class__, MonomialTermExpression)
+        self.assertIs(f.__class__, ProductExpression)
         self.assertTrue(f.arg(0).is_potentially_variable())
         self.assertEqual("z*x", str(e))
         self.assertEqual("2*w[1]*x", str(f))
@@ -661,14 +661,11 @@ class WalkerTests3(unittest.TestCase):
 #
 class ReplacementWalker_ReplaceInternal(ExpressionReplacementVisitor):
 
-    def __init__(self):
-        ExpressionReplacementVisitor.__init__(self)
-
-    def visit(self, node, values):
+    def exitNode(self, node, data):
         if type(node) == ProductExpression:
-            return sum(values)
+            return sum(data[1])
         else:
-            return node
+            return super().exitNode(node, data)
 
 
 class WalkerTests_ReplaceInternal(unittest.TestCase):
