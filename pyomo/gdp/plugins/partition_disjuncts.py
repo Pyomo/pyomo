@@ -37,7 +37,7 @@ from pyomo.gdp.util import (is_child_of, target_list, _to_dict,
                             verify_successful_solve, NORMAL,
                             clone_without_expression_components,
                             _warn_for_active_disjunct,
-                            _warn_for_active_logical_constraint, GDPTree)
+                            _warn_for_active_logical_constraint, get_gdp_tree)
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from weakref import ref as weakref_ref
 
@@ -389,73 +389,8 @@ class PartitionDisjuncts_Transformation(Transformation):
                 else:
                     self._transform_blockData(t)
 
-    def _parent_disjunct(self, obj):
-        parent = obj.parent_block()
-        while parent is not None:
-            if parent.ctype is Disjunct:
-                return parent
-            parent = parent.parent_block()
-
-        return None
-
-    def _gather_disjunctions(self, block, gdp_tree):
-        to_explore = ComponentSet([block])
-        while to_explore:
-            block = to_explore.pop()
-            for disjunction in block.component_data_objects(
-                    Disjunction, 
-                    active=True,
-                    sort=SortComponents.deterministic,
-                    descend_into=Block):
-                for disjunct in disjunction.disjuncts:
-                    gdp_tree.add_edge(disjunction, disjunct)
-                    to_explore.add(disjunct)
-                if block.ctype is Disjunct:
-                    gdp_tree.add_edge(block, disjunction)
-
-        return gdp_tree
-
-    def _get_gdp_tree(self, targets, instance, knownBlocks):
-        gdp_tree = GDPTree()
-        for t in targets:
-             # first check it's not insane, that is, it is at least on the
-             # instance
-            if not is_child_of(parent=instance, child=t,
-                               knownBlocks=knownBlocks):
-                raise GDP_Error("Target '%s' is not a component on instance "
-                                "'%s'!" % (t.name, instance.name))
-            if t.ctype in (Block, Disjunct):
-                if t.is_indexed():
-                    for block in t.values():
-                        gdp_tree = self._gather_disjunctions(block, gdp_tree)
-                else:
-                    gdp_tree = self._gather_disjunctions(t, gdp_tree)
-            elif t.ctype is Disjunction:
-                parent = self._parent_disjunct(t)
-                if parent is not None:
-                    gdp_tree.add_edge(parent, t)
-                if t.is_indexed():
-                    for disjunction in t.values():
-                        for disjunct in disjunction.disjuncts:
-                            gdp_tree.add_edge(t, disjunct)
-                            gdp_tree = self._gather_disjunctions(disjunct,
-                                                                 gdp_tree)
-                else:
-                    for disjunct in t.disjuncts:
-                        gdp_tree.add_edge(t, disjunct)
-                        gdp_tree = self._gather_disjunctions(disjunct, gdp_tree)
-            else:
-                # There's nothing else we care about, so we don't know how to
-                # deal with this
-                raise GDP_Error(
-                    "Target '%s' was not a Block, Disjunct, or Disjunction. "
-                    "It was of type %s and can't be transformed."
-                    % (t.name, type(t)) )
-
-        return gdp_tree
-
     def _preprocess_targets(self, targets, instance, knownBlocks):
-        gdp_tree = self._get_gdp_tree(targets, instance, knownBlocks)
+        gdp_tree = get_gdp_tree(targets, instance, knownBlocks)
 
         preprocessed_targets = []
         # We need only transform root nodes of the tree--the rest will be
