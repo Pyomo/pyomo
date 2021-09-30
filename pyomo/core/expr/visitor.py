@@ -744,7 +744,7 @@ def clone_expression(expr, substitute=None):
     clone_counter._count += 1
     memo = {'__block_scope__': {id(None): False}}
     if substitute:
-        memo.update(substitute)
+        expr = replace_expressions(expr, substitute)
     return deepcopy(expr, memo)
 
 
