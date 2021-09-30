@@ -1928,19 +1928,19 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         model.p = Param(A, initialize=2, mutable=True)
 
         expr = quicksum(i*model.a[i] for i in A)
-        self.assertEqual("sum(a[1], prod(2, a[2]), prod(3, a[3]), prod(4, a[4]))", str(expr))
+        self.assertEqual("sum(mon(1, a[1]), mon(2, a[2]), mon(3, a[3]), mon(4, a[4]))", str(expr))
 
         expr = quicksum((i-2)*model.a[i] for i in A)
-        self.assertEqual("sum(prod(-2, a[0]), prod(-1, a[1]), a[3], prod(2, a[4]))", str(expr))
+        self.assertEqual("sum(mon(-2, a[0]), mon(-1, a[1]), mon(1, a[3]), mon(2, a[4]))", str(expr))
 
         expr = quicksum(model.a[i] for i in A)
-        self.assertEqual("sum(a[0], a[1], a[2], a[3], a[4])", str(expr))
+        self.assertEqual("sum(mon(1, a[0]), mon(1, a[1]), mon(1, a[2]), mon(1, a[3]), mon(1, a[4]))", str(expr))
 
         model.p[1].value = 0
         model.p[3].value = 3
         expr = quicksum(model.p[i]*model.a[i] if i != 3 else model.p[i] for i in A)
-        self.assertEqual("sum(3, prod(2, a[0]), prod(2, a[2]), prod(2, a[4]))", expression_to_string(expr, compute_values=True))
-        self.assertEqual("sum(p[3], prod(p[0], a[0]), prod(p[1], a[1]), prod(p[2], a[2]), prod(p[4], a[4]))", expression_to_string(expr, compute_values=False))
+        self.assertEqual("sum(3, mon(2, a[0]), mon(0, a[1]), mon(2, a[2]), mon(2, a[4]))", expression_to_string(expr, compute_values=True))
+        self.assertEqual("sum(p[3], mon(p[0], a[0]), mon(p[1], a[1]), mon(p[2], a[2]), mon(p[4], a[4]))", expression_to_string(expr, compute_values=False))
 
     def test_expr(self):
         #
@@ -2115,8 +2115,8 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         self.assertEqual("a[1] + 2*a[2] + 3*a[3] + 4*a[4] + 3", expression_to_string(expr, compute_values=True))
 
         expr = quicksum((i-2)*model.a[i] for i in A) + 3
-        self.assertEqual("- 2.0*a[0] - a[1] + a[3] + 2*a[4] + 3", str(expr))
-        self.assertEqual("- 2.0*a[0] - a[1] + a[3] + 2*a[4] + 3", expression_to_string(expr, compute_values=True))
+        self.assertEqual("-2*a[0] - a[1] + a[3] + 2*a[4] + 3", str(expr))
+        self.assertEqual("-2*a[0] - a[1] + a[3] + 2*a[4] + 3", expression_to_string(expr, compute_values=True))
 
         expr = quicksum(model.a[i] for i in A) + 3
         self.assertEqual("a[0] + a[1] + a[2] + a[3] + a[4] + 3", str(expr))
@@ -2129,7 +2129,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         model.p[1].value = 0
         model.p[3].value = 3
         expr = quicksum(model.p[i]*model.a[i] if i != 3 else model.p[i] for i in A)
-        self.assertEqual("3 + 2*a[0] + 2*a[2] + 2*a[4]", expression_to_string(expr, compute_values=True))
+        self.assertEqual("3 + 2*a[0] + 0*a[1] + 2*a[2] + 2*a[4]", expression_to_string(expr, compute_values=True))
         expr = quicksum(model.p[i]*model.a[i] if i != 3 else -3 for i in A)
         self.assertEqual("-3 + p[0]*a[0] + p[1]*a[1] + p[2]*a[2] + p[4]*a[4]", expression_to_string(expr, compute_values=False))
         
@@ -2449,14 +2449,14 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         labeler = NumericLabeler('x')
         self.assertEqual(
             expression_to_string(e, labeler=labeler),
-            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (q[0]*x3 + q[1]*x4 + q[2]*x5)/x1")
+            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (x6*x3 + x7*x4 + x8*x5)/x1")
 
         from pyomo.core.expr.symbol_map import SymbolMap
         labeler = NumericLabeler('x')
         smap = SymbolMap(labeler)
         self.assertEqual(
             expression_to_string(e, smap=smap),
-            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (q[0]*x3 + q[1]*x4 + q[2]*x5)/x1")
+            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (x6*x3 + x7*x4 + x8*x5)/x1")
         self.assertEqual(
             expression_to_string(e, smap=smap, compute_values=True),
             "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (3*x3 + 3*x4 + 3*x5)/x1")
@@ -4659,7 +4659,7 @@ class TestLinearExpression(unittest.TestCase):
         with linear_expression() as e:
             e += m.v[0]
             e /= m.p
-            self.assertEqual("(1/p)*v[0]", str(e))
+            self.assertEqual("1/p*v[0]", str(e))
             self.assertIs(e.__class__, _MutableLinearExpression)
 
         with linear_expression() as e:
