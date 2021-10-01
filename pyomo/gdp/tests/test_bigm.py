@@ -136,8 +136,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertEqual(len(srcdict1), 2)
         self.assertIs(srcdict1[disjBlock[0].component(oldblock[0].c.name)],
                       oldblock[0].c)
-        self.assertIs(srcdict1[disjBlock[0].component(oldblock[0].c.name)['lb']],
-                      oldblock[0].c)
+        self.assertIs(srcdict1[disjBlock[0].component(
+            oldblock[0].c.name)['lb']], oldblock[0].c)
         srcdict2 = constraintdict2['srcConstraints']
         self.assertIsInstance(srcdict2, ComponentMap)
         self.assertEqual(len(srcdict2), 5)
@@ -1893,7 +1893,8 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.check_bigM_constraint(cons2, m.z, -5,
                                    m.disjunct[1].innerdisjunct[1].indicator_var)
 
-        cons3 = m.simpledisjunct.innerdisjunct0.transformation_block().component(
+        cons3 = m.simpledisjunct.innerdisjunct0.transformation_block().\
+                component(
             m.simpledisjunct.innerdisjunct0.c.name)['ub']
         self.assertEqual(cons3.upper, 2)
         self.assertIsNone(cons3.lower)
@@ -1901,7 +1902,8 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
             cons3, m.x, 7,
             m.simpledisjunct.innerdisjunct0.indicator_var)
 
-        cons4 = m.simpledisjunct.innerdisjunct1.transformation_block().component(
+        cons4 = m.simpledisjunct.innerdisjunct1.transformation_block().\
+                component(
             m.simpledisjunct.innerdisjunct1.c.name)['lb']
         self.assertEqual(cons4.lower, 4)
         self.assertIsNone(cons4.upper)
@@ -2026,8 +2028,8 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
                           m._pyomo_gdp_bigm_reformulation.relaxedDisjuncts)
 
         # and we check that nothing remains on original transformation block
-        self.assertEqual(len(m.d1._pyomo_gdp_bigm_reformulation.relaxedDisjuncts),
-                         0)
+        self.assertEqual(len(m.d1._pyomo_gdp_bigm_reformulation.\
+                             relaxedDisjuncts), 0)
 
     def check_first_disjunct_constraint(self, disj1c, x, ind_var):
         self.assertEqual(len(disj1c), 1)
@@ -2062,7 +2064,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         outer_xor = m.disjunction_block.disjunction.algebraic_constraint()
         ct.check_two_term_disjunction_xor(self, outer_xor, m.disj1,
                                           m.disjunct_block.disj2)
-        
+
         inner_xor = m.disjunct_block.disj2.disjunction.algebraic_constraint()
         xformed = bigm.get_transformed_constraints(inner_xor)
         self.assertEqual(len(xformed), 2)
@@ -2086,7 +2088,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         disj1c = bigm.get_transformed_constraints(m.disj1.c)
         self.check_first_disjunct_constraint(disj1c, m.x,
                                              m.disj1.binary_indicator_var)
-        
+
         disj2c = bigm.get_transformed_constraints(m.disjunct_block.disj2.c)
         self.check_second_disjunct_constraint(
             disj2c, m.x,
@@ -2113,7 +2115,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         bigm.apply_to(m, targets=[m.disjunction_block, m.disjunct_block.disj2])
 
         # the real test here is that the above doesn't scream about there being
-        # an untransformed Disjunctions inside of a Disjunct it's trying to
+        # an untransformed Disjunction inside of a Disjunct it's trying to
         # transform. So let's just check that everything is transformed
         self.check_hierarchical_nested_model(m, bigm)
 
@@ -2123,7 +2125,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         m = models.makeHierarchicalNested_DeclOrderOppositeInstantationOrder()
         bigm = TransformationFactory('gdp.bigm')
         bigm.apply_to(m)
-        
+
         # Like above, the real test is that the above doesn't scream. We can use
         # the same check to make sure everything is transformed correctly.
         self.check_hierarchical_nested_model(m, bigm)

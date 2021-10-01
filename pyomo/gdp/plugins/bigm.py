@@ -122,8 +122,9 @@ class BigM_Transformation(Transformation):
     CONFIG.declare('assume_fixed_vars_permanent', ConfigValue(
         default=False,
         domain=bool,
-        description="Boolean indicating whether or not to transform so that the "
-        "the transformed model will still be valid when fixed Vars are unfixed.",
+        description="Boolean indicating whether or not to transform so that "
+        "the transformed model will still be valid when fixed Vars are "
+        "unfixed.",
         doc="""
         This is only relevant when the transformation will be estimating values
         for M. If True, the transformation will calculate M values assuming that
@@ -216,8 +217,8 @@ class BigM_Transformation(Transformation):
 
     def _apply_to_impl(self, instance, **kwds):
         if not instance.ctype in (Block, Disjunct):
-            raise GDP_Error("Transformation called on %s of type %s. 'instance' "
-                            "must be a ConcreteModel, Block, or Disjunct (in "
+            raise GDP_Error("Transformation called on %s of type %s. 'instance'"
+                            " must be a ConcreteModel, Block, or Disjunct (in "
                             "the case of nested disjunctions)." %
                             (instance.name, instance.ctype))
 
@@ -655,8 +656,9 @@ class BigM_Transformation(Transformation):
             if (M[0] is None and c.lower is not None) or \
                (M[1] is None and c.upper is not None):
                 # first get anything parent to c but below disjunct
-                suffix_list = self._get_bigm_suffix_list(c.parent_block(),
-                                                         stopping_block=disjunct)
+                suffix_list = self._get_bigm_suffix_list(
+                    c.parent_block(),
+                    stopping_block=disjunct)
                 # prepend that to what we already collected for the disjunct.
                 suffix_list.extend(disjunct_suffix_list)
                 lower, upper = self._update_M_from_suffixes(c, suffix_list,
@@ -784,14 +786,12 @@ class BigM_Transformation(Transformation):
         for arg in arg_list:
             for block, val in arg.items():
                 (lower, upper, 
-                 need_lower, need_upper) = self._process_M_value(val, lower,
-                                                                 upper,
-                                                                 need_lower,
-                                                                 need_upper,
-                                                                 bigMargs,
-                                                                 block,
-                                                                 constraint_name,
-                                                                 from_args=True)
+                 need_lower, 
+                 need_upper) = self._process_M_value( val, lower, upper,
+                                                      need_lower, need_upper,
+                                                      bigMargs, block,
+                                                      constraint_name,
+                                                      from_args=True)
                 if not need_lower and not need_upper:
                     return lower, upper
 
@@ -824,13 +824,11 @@ class BigM_Transformation(Transformation):
             if constraint in bigm:
                 M = bigm[constraint]
                 (lower, upper, 
-                 need_lower, need_upper) = self._process_M_value(M, lower,
-                                                                 upper,
-                                                                 need_lower,
-                                                                 need_upper,
-                                                                 bigm,
-                                                                 constraint,
-                                                                 constraint_name)
+                 need_lower, 
+                 need_upper) = self._process_M_value(M, lower, upper,
+                                                     need_lower, need_upper,
+                                                     bigm, constraint,
+                                                     constraint_name)
                 if not need_lower and not need_upper:
                     return lower, upper
 
@@ -839,12 +837,11 @@ class BigM_Transformation(Transformation):
                 parent = constraint.parent_component()
                 M = bigm[parent]
                 (lower, upper, 
-                 need_lower, need_upper) = self._process_M_value(M, lower,
-                                                                 upper,
-                                                                 need_lower,
-                                                                 need_upper,
-                                                                 bigm, parent,
-                                                                 constraint_name)
+                 need_lower, 
+                 need_upper) = self._process_M_value(M, lower, upper,
+                                                     need_lower, need_upper,
+                                                     bigm, parent,
+                                                     constraint_name)
                 if not need_lower and not need_upper:
                     return lower, upper
 
@@ -955,7 +952,8 @@ class BigM_Transformation(Transformation):
         If the M value came from a Suffix, source is the BigM suffix used and 
         key is the key in that Suffix.
 
-        If the transformation calculated the value, both source and key are None.
+        If the transformation calculated the value, both source and key are 
+        None.
 
         Parameters
         ----------
@@ -969,7 +967,7 @@ class BigM_Transformation(Transformation):
 
     def get_M_value(self, constraint):
         """Returns the M values used to transform constraint. Return is a tuple:
-        (lower_M_value, upper_M_value). Either can be None if constraint does 
+        (lower_M_value, upper_M_value). Either can be None if constraint does
         not have a lower or upper bound, respectively.
 
         Parameters

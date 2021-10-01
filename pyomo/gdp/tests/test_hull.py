@@ -195,7 +195,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         ct.check_linear_coef(self, repn, m.d[1].indicator_var, -3)
         self.assertEqual(repn.constant, 0)
 
-    def check_bound_constraints_on_disjBlock(self, cons, disvar, indvar, lb, ub):
+    def check_bound_constraints_on_disjBlock(self, cons, disvar, indvar, lb, 
+                                             ub):
         self.assertIsInstance(cons, Constraint)
 
         # both lb and ub
@@ -478,8 +479,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # The point of this is that where a variable is declared has absolutely
         # nothing to do with whether or not it should be disaggregated. With the
         # only exception being that we can tell disaggregated variables and we
-        # know they are really and truly local to only one disjunct (EVER, in the
-        # whole model) because we declared them.
+        # know they are really and truly local to only one disjunct (EVER, in
+        # the whole model) because we declared them.
 
         # So here, for some perverse reason, we declare the variables on disj1,
         # but we use them in disj2. Both of them need to be disaggregated in
@@ -671,7 +672,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             else:
                 # 2*i bounds constraints and i transformed constraints
                 self.assertEqual(
-                    len(list(relaxed.component_data_objects(Constraint))), 2*i+i)
+                    len(list(relaxed.component_data_objects(Constraint))),
+                    2*i+i)
 
             self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)
 
@@ -872,14 +874,18 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         relaxedDisjuncts = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts
 
         disaggregatedVars = {
-            (1,'A'): [relaxedDisjuncts[0].disaggregatedVars.component('a[1,A]'),
-                      relaxedDisjuncts[1].disaggregatedVars.component('a[1,A]')],
-            (1,'B'): [relaxedDisjuncts[2].disaggregatedVars.component('a[1,B]'),
-                      relaxedDisjuncts[3].disaggregatedVars.component('a[1,B]')],
-            (2,'A'): [relaxedDisjuncts[4].disaggregatedVars.component('a[2,A]'),
-                      relaxedDisjuncts[5].disaggregatedVars.component('a[2,A]')],
-            (2,'B'): [relaxedDisjuncts[6].disaggregatedVars.component('a[2,B]'),
-                      relaxedDisjuncts[7].disaggregatedVars.component('a[2,B]')],
+            (1,'A'): 
+            [relaxedDisjuncts[0].disaggregatedVars.component('a[1,A]'),
+             relaxedDisjuncts[1].disaggregatedVars.component('a[1,A]')],
+            (1,'B'): 
+            [relaxedDisjuncts[2].disaggregatedVars.component('a[1,B]'),
+             relaxedDisjuncts[3].disaggregatedVars.component('a[1,B]')],
+            (2,'A'): 
+            [relaxedDisjuncts[4].disaggregatedVars.component('a[2,A]'),
+             relaxedDisjuncts[5].disaggregatedVars.component('a[2,A]')],
+            (2,'B'): 
+            [relaxedDisjuncts[6].disaggregatedVars.component('a[2,B]'),
+             relaxedDisjuncts[7].disaggregatedVars.component('a[2,B]')],
         }
 
         for i, disVars in disaggregatedVars.items():
@@ -937,8 +943,8 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         # We end up with a transformation block for every SimpleDisjunction or
         # IndexedDisjunction.
         self.assertEqual(len(transBlock1.relaxedDisjuncts), 2)
-        self.assertIsInstance(transBlock1.relaxedDisjuncts[0].disaggregatedVars.\
-                              component("x"), Var)
+        self.assertIsInstance(transBlock1.relaxedDisjuncts[0].\
+                              disaggregatedVars.component("x"), Var)
         self.assertTrue(transBlock1.relaxedDisjuncts[0].disaggregatedVars.x.\
                         is_fixed())
         self.assertEqual(value(transBlock1.relaxedDisjuncts[0].\
@@ -953,8 +959,8 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         self.assertEqual(len(transBlock1.relaxedDisjuncts[0].component(
             "x_bounds")), 2)
 
-        self.assertIsInstance(transBlock1.relaxedDisjuncts[1].disaggregatedVars.\
-                              component("x"), Var)
+        self.assertIsInstance(transBlock1.relaxedDisjuncts[1].\
+                              disaggregatedVars.component("x"), Var)
         self.assertIsInstance(transBlock1.relaxedDisjuncts[1].component(
             "secondTerm[1].cons"), Constraint)
         self.assertEqual(len(transBlock1.relaxedDisjuncts[1].component(
@@ -968,8 +974,8 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         self.assertIsInstance(transBlock2, Block)
         self.assertIsInstance(transBlock2.component("relaxedDisjuncts"), Block)
         self.assertEqual(len(transBlock2.relaxedDisjuncts), 2)
-        self.assertIsInstance(transBlock2.relaxedDisjuncts[0].disaggregatedVars.\
-                              component("x"), Var)
+        self.assertIsInstance(transBlock2.relaxedDisjuncts[0].\
+                              disaggregatedVars.component("x"), Var)
         self.assertIsInstance(transBlock2.relaxedDisjuncts[0].component(
             "firstTerm[2].cons"), Constraint)
         # we have an equality constraint
@@ -980,8 +986,8 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         self.assertEqual(len(transBlock2.relaxedDisjuncts[0].component(
             "x_bounds")), 2)
 
-        self.assertIsInstance(transBlock2.relaxedDisjuncts[1].disaggregatedVars.\
-                              component("x"), Var)
+        self.assertIsInstance(transBlock2.relaxedDisjuncts[1].\
+                              disaggregatedVars.component("x"), Var)
         self.assertIsInstance(transBlock2.relaxedDisjuncts[1].component(
             "secondTerm[2].cons"), Constraint)
         self.assertEqual(len(transBlock2.relaxedDisjuncts[1].component(
@@ -1002,12 +1008,12 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         self.assertIsInstance(transBlock, Block)
         self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
         self.assertEqual(len(transBlock.relaxedDisjuncts), 4)
-        self.assertIsInstance(transBlock.relaxedDisjuncts[0].disaggregatedVars.\
-                              component("x"), Var)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[0].\
+                              disaggregatedVars.component("x"), Var)
         self.assertTrue(transBlock.relaxedDisjuncts[0].disaggregatedVars.\
                         x.is_fixed())
-        self.assertEqual(value(transBlock.relaxedDisjuncts[0].disaggregatedVars.\
-                               x), 0)
+        self.assertEqual(value(transBlock.relaxedDisjuncts[0].\
+                               disaggregatedVars.x), 0)
         self.assertIsInstance(transBlock.relaxedDisjuncts[0].component(
             "firstTerm[1].cons"), Constraint)
         # No constraint becuase disaggregated variable fixed to 0
@@ -1074,12 +1080,12 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         self.assertIsInstance(transBlock.relaxedDisjuncts, Block)
         self.assertEqual(len(transBlock.relaxedDisjuncts), 2)
 
-        self.assertIsInstance(transBlock.relaxedDisjuncts[0].disaggregatedVars.x,
-                              Var)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[0].\
+                              disaggregatedVars.x, Var)
         self.assertTrue(transBlock.relaxedDisjuncts[0].disaggregatedVars.x.\
                         is_fixed())
-        self.assertEqual(value(transBlock.relaxedDisjuncts[0].disaggregatedVars.\
-                               x), 0)
+        self.assertEqual(value(transBlock.relaxedDisjuncts[0].\
+                               disaggregatedVars.x), 0)
         self.assertIsInstance(transBlock.relaxedDisjuncts[0].component(
             firstTerm), Constraint)
         self.assertEqual(len(transBlock.relaxedDisjuncts[0].component(
@@ -1088,8 +1094,8 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
                               Constraint)
         self.assertEqual(len(transBlock.relaxedDisjuncts[0].x_bounds), 2)
 
-        self.assertIsInstance(transBlock.relaxedDisjuncts[1].disaggregatedVars.x,
-                              Var)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[1].\
+                              disaggregatedVars.x, Var)
         self.assertFalse(transBlock.relaxedDisjuncts[1].disaggregatedVars.\
                          x.is_fixed())
         self.assertIsInstance(transBlock.relaxedDisjuncts[1].component(

@@ -78,11 +78,10 @@ class Hull_Reformulation(Transformation):
 
         'srcConstraints': ComponentMap(<transformed constraint>:
                                        <src constraint>),
-        'transformedConstraints':ComponentMap(<src constraint container>:
-                                              <transformed constraint container>,
-                                              <src constraintData>:
-                                              [<transformed constraintDatas>]
-                                             )
+        'transformedConstraints':
+            ComponentMap(<src constraint container> :
+                         <transformed constraint container>,
+                         <src constraintData> : [<transformed constraintDatas>])
 
     All transformed Disjuncts will have a pointer to the block their transformed
     constraints are on, and all transformed Disjunctions will have a
@@ -163,8 +162,9 @@ class Hull_Reformulation(Transformation):
     CONFIG.declare('assume_fixed_vars_permanent', cfg.ConfigValue(
         default=False,
         domain=bool,
-        description="Boolean indicating whether or not to transform so that the "
-        "the transformed model will still be valid when fixed Vars are unfixed.",
+        description="Boolean indicating whether or not to transform so that "
+        "the transformed model will still be valid when fixed Vars are "
+        "unfixed.",
         doc="""
         If True, the transformation will not disaggregate fixed variables.
         This means that if a fixed variable is unfixed after transformation,
@@ -205,16 +205,17 @@ class Hull_Reformulation(Transformation):
                     local_var_dict[disj].update(var_list)
 
     def _get_local_var_suffixes(self, block, local_var_dict):
-        # You can specify suffixes on any block (disjuncts included). This method
-        # starts from a Disjunct (presumably) and checks for a LocalVar suffixes
-        # going both up and down the tree, adding them into the dictionary that
-        # is the second argument.
+        # You can specify suffixes on any block (disjuncts included). This
+        # method starts from a Disjunct (presumably) and checks for a LocalVar
+        # suffixes going both up and down the tree, adding them into the
+        # dictionary that is the second argument.
 
         # first look beneath where we are (there could be Blocks on this
         # disjunct)
-        for b in block.component_data_objects(Block, descend_into=(Block),
-                                              active=True,
-                                              sort=SortComponents.deterministic):
+        for b in block.component_data_objects(
+                Block, descend_into=(Block),
+                active=True,
+                sort=SortComponents.deterministic):
             self._add_local_vars(b, local_var_dict)
         # now traverse upwards and get what's above
         while block is not None:
@@ -233,8 +234,8 @@ class Hull_Reformulation(Transformation):
 
     def _apply_to_impl(self, instance, **kwds):
         if not instance.ctype in (Block, Disjunct):
-            raise GDP_Error("Transformation called on %s of type %s. 'instance' "
-                            "must be a ConcreteModel, Block, or Disjunct (in "
+            raise GDP_Error("Transformation called on %s of type %s. 'instance'"
+                            " must be a ConcreteModel, Block, or Disjunct (in "
                             "the case of nested disjunctions)." %
                             (instance.name, instance.ctype))
 
@@ -330,9 +331,9 @@ class Hull_Reformulation(Transformation):
         orC = Constraint(disjunction.index_set())
         transBlock.add_component(
             unique_component_name(transBlock,
-                                  disjunction.getname(fully_qualified=True,
-                                                      name_buffer=NAME_BUFFER) +\
-                                  '_xor'), orC)
+                                  disjunction.getname(
+                                      fully_qualified=True,
+                                      name_buffer=NAME_BUFFER) + '_xor'), orC)
         disjunction._algebraic_constraint = weakref_ref(orC)
 
         return orC
@@ -557,8 +558,8 @@ class Hull_Reformulation(Transformation):
             # variable and the particular disjunction because there is a
             # different one for each disjunction
             if disaggregationConstraintMap.get(var) is not None:
-                disaggregationConstraintMap[var][obj] = disaggregationConstraint[
-                    (i, index)]
+                disaggregationConstraintMap[var][
+                    obj] = disaggregationConstraint[(i, index)]
             else:
                 thismap = disaggregationConstraintMap[var] = ComponentMap()
                 thismap[obj] = disaggregationConstraint[(i, index)]
@@ -1117,7 +1118,8 @@ class Hull_Reformulation(Transformation):
             if transBlock is not None:
                 break
         if transBlock is None:
-            raise GDP_Error("Disjunction '%s' has not been properly transformed:"
+            raise GDP_Error("Disjunction '%s' has not been properly "
+                            "transformed:"
                             " None of its disjuncts are transformed."
                             % disjunction.name)
 
