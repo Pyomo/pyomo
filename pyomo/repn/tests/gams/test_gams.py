@@ -266,10 +266,10 @@ class Test(unittest.TestCase):
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
         self.assertEqual(expression_to_string(
-            m.x + m.y - m.z, tc, lbl, smap=smap), ("x1 + x2 - (-3)", False))
+            m.x + m.y - m.z, tc, lbl, smap=smap), ("x1 + x2 + 3", False))
         m.z.fix(-400)
         self.assertEqual(expression_to_string(
-            m.z + m.y - m.z, tc, smap=smap), ("(-400) + x2 - (-400)", False))
+            m.z + m.y - m.z, tc, smap=smap), ("(-400) + x2 + 400", False))
         m.z.fix(8.8)
         self.assertEqual(expression_to_string(
             m.x + m.z - m.y, tc, smap=smap), ("x1 + 8.8 - x2", False))
