@@ -24,6 +24,10 @@ import pyomo.gdp.tests.common_tests as ct
 
 import random
 from io import StringIO
+import os
+from os.path import abspath, dirname, join
+currdir = dirname(abspath(__file__))
+from filecmp import cmp
 
 EPS = TransformationFactory('gdp.hull').CONFIG.EPS
 linear_solvers = ct.linear_solvers
@@ -1782,6 +1786,54 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d2)), 0)
         self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d3)), 1.2)
         self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d4)), 0)
+
+class TestHierarchicalNestedModels(unittest.TestCase):
+    def tearDown(self):
+        if os.path.exists(join(currdir, 'm.nl')):
+            os.remove(join(currdir, 'm.nl'))
+        if os.path.exists(join(currdir, 'm1.nl')):
+            os.remove(join(currdir, 'm1.nl'))
+
+    def test_hierarchical_badly_ordered_targets(self):
+        m = models.makeHierarchicalNested_DeclOrderMatchesInstantationOrder()
+        hull = TransformationFactory('gdp.hull')
+        m1 = hull.create_using(m, targets=[m.disjunction_block,
+                                           m.disjunct_block.disj2])
+
+        # the real test here is that the above doesn't scream about there being
+        # an untransformed Disjunction inside of a Disjunct it's trying to
+        # transform. This kinda too big a test for hull because the nonlinear
+        # expressions are ugly and the inner disjunction variables are
+        # disaggregated twice... So let's just make sure that this is the same
+        # as manually transforming in the correct order.
+        hull.apply_to(m, targets=m.disjunct_block.disj2.disjunction)
+        hull.apply_to(m, targets=m.disjunction_block.disjunction)
+
+        # intentionally not using symbolic_solver_labels because there's nothing
+        # to guarantee that name collisions are named the same. And there are
+        # plenty of name collisions. But these nl files should be the same.
+        m1.write(join(currdir, 'm1.nl'))
+        m.write(join(currdir, 'm.nl'))
+
+        self.assertTrue(cmp(join(currdir, 'm.nl'), join(currdir, 'm1.nl')))
+
+    def test_decl_order_opposite_instantiation_order(self):
+        # In this test, we create the same problem as above, but we don't even
+        # need targets!
+        m = models.makeHierarchicalNested_DeclOrderOppositeInstantationOrder()
+        hull = TransformationFactory('gdp.hull')
+        m1 = hull.create_using(m)
+
+        # Like above, the real test is that the above doesn't scream. We can use
+        # the same check to make sure everything looks like it would have if we
+        # manually handled the nested
+        hull.apply_to(m, targets=m.disjunct_block.disj2.disjunction)
+        hull.apply_to(m, targets=m.disjunction_block.disjunction)
+
+        m1.write(join(currdir, 'm1.nl'))
+        m.write(join(currdir, 'm.nl'))
+
+        self.assertTrue(cmp(join(currdir, 'm.nl'), join(currdir, 'm1.nl')))
 
 class TestSpecialCases(unittest.TestCase):
     def test_local_vars(self):

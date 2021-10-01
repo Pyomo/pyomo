@@ -243,36 +243,24 @@ class Hull_Reformulation(Transformation):
         self._generate_debug_messages = is_debug_set(logger)
 
         targets = self._config.targets
+        knownBlocks = {}
         if targets is None:
             targets = ( instance, )
-        else:
-            # we need to preprocess targets to make sure that if there are any
-            # disjunctions in targets that their disjuncts appear before them in
-            # the list.
-            targets = preprocess_targets(targets)
-        knownBlocks = {}
+        # we need to preprocess targets to make sure that if there are any
+        # disjunctions in targets that their disjuncts appear before them in
+        # the list.
+        targets = preprocess_targets(targets, instance, knownBlocks)
         for t in targets:
-            # check that t is in fact a child of instance
-            if not is_child_of(parent=instance, child=t,
-                               knownBlocks=knownBlocks):
-                raise GDP_Error(
-                    "Target '%s' is not a component on instance '%s'!"
-                    % (t.name, instance.name))
-            elif t.ctype is Disjunction:
+            if t.ctype is Disjunction:
                 if t.is_indexed():
                     self._transform_disjunction(t)
                 else:
                     self._transform_disjunctionData(t, t.index())
-            elif t.ctype in (Block, Disjunct):
+            else:# t.ctype in (Block, Disjunct):
                 if t.is_indexed():
                     self._transform_block(t)
                 else:
                     self._transform_blockData(t)
-            else:
-                raise GDP_Error(
-                    "Target '%s' was not a Block, Disjunct, or Disjunction. "
-                    "It was of type %s and can't be transformed."
-                    % (t.name, type(t)) )
 
     def _add_transformation_block(self, instance):
         # make a transformation block on instance where we will store
