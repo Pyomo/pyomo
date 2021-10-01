@@ -41,6 +41,15 @@ def check_linear_coef(self, repn, var, coef):
     self.assertIsNotNone(var_id)
     self.assertEqual(repn.linear_coefs[var_id], coef)
 
+def check_squared_term_coef(self, repn, var, coef):
+    var_id = None
+    for i,(v1, v2) in enumerate(repn.quadratic_vars):
+        if v1 is var and v2 is var:
+            var_id = i
+            break
+    self.assertIsNotNone(var_id)
+    self.assertEqual(repn.quadratic_coefs[var_id], coef)
+
 def diff_apply_to_and_create_using(self, model, transformation):
     # compares the pprint from the transformed model after using both apply_to
     # and create_using to make sure the two do the same thing
@@ -325,6 +334,19 @@ def check_indicator_vars(self, transformation):
     self.assertTrue(_binary1.active)
     self.assertTrue(_binary1.is_binary())
 
+def check_two_term_disjunction_xor(self, xor, disj1, disj2):
+    self.assertIsInstance(xor, Constraint)
+    self.assertEqual(len(xor), 1)
+    self.assertIs(disj1.binary_indicator_var, xor.body.arg(0))
+    self.assertIs(disj2.binary_indicator_var, xor.body.arg(1))
+    repn = generate_standard_repn(xor.body)
+    self.assertTrue(repn.is_linear())
+    self.assertEqual(repn.constant, 0)
+    check_linear_coef(self, repn, disj1.indicator_var, 1)
+    check_linear_coef(self, repn, disj2.indicator_var, 1)
+    self.assertEqual(xor.lower, 1)
+    self.assertEqual(xor.upper, 1)
+
 def check_xor_constraint(self, transformation):
     # verify xor constraint for a SimpleDisjunction
     m = models.makeTwoTermDisj()
@@ -333,17 +355,7 @@ def check_xor_constraint(self, transformation):
     # block
     rBlock = m.component("_pyomo_gdp_%s_reformulation" % transformation)
     xor = rBlock.component("disjunction_xor")
-    self.assertIsInstance(xor, Constraint)
-    self.assertEqual(len(xor), 1)
-    self.assertIs(m.d[0].binary_indicator_var, xor.body.arg(0))
-    self.assertIs(m.d[1].binary_indicator_var, xor.body.arg(1))
-    repn = generate_standard_repn(xor.body)
-    self.assertTrue(repn.is_linear())
-    self.assertEqual(repn.constant, 0)
-    check_linear_coef(self, repn, m.d[0].indicator_var, 1)
-    check_linear_coef(self, repn, m.d[1].indicator_var, 1)
-    self.assertEqual(xor.lower, 1)
-    self.assertEqual(xor.upper, 1)
+    check_two_term_disjunction_xor(self, xor, m.d[0], m.d[1])
 
 def check_indexed_xor_constraints(self, transformation):
     # verify xor constraint for an IndexedDisjunction

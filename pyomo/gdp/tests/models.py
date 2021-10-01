@@ -811,3 +811,48 @@ def makeThreeTermDisjunctionWithOneVarInOneDisjunct():
     m.disjunction = Disjunction(expr=[m.d1, m.d2, m.d3])
 
     return m
+
+##
+# Variations on the example from the Kronqvist et al. Between Steps paper
+##
+
+def instantiate_hierarchical_nested_model(m):
+    """helper function to instantiate a nested version of the model with 
+    the Disjuncts and Disjunctions on blocks"""
+    m.disj1 = Disjunct()
+    m.disjunct_block.disj2 = Disjunct()
+    m.disj1.c = Constraint(expr=sum(m.x[i]**2 for i in m.I) <= 1)
+    m.disjunct_block.disj2.c = Constraint(expr=sum((3 - m.x[i])**2 for i in
+                                                   m.I) <= 1)
+    m.disjunct_block.disj2.disjunction = Disjunction(
+        expr=[[sum(m.x[i]**2 for i in m.I) <= 1],
+              [sum((3 - m.x[i])**2 for i in m.I) <= 1]])
+    m.disjunction_block.disjunction = Disjunction(
+        expr=[m.disj1, m.disjunct_block.disj2])
+
+def makeHierarchicalNested_DeclOrderMatchesInstantationOrder():
+    """Here, we put the disjunctive components on Blocks, but we do it in the 
+    same order that we declared the blocks, that is, on each block, decl order
+    matches instantiation order."""
+    m = ConcreteModel()
+    m.I = RangeSet(1,4)
+    m.x = Var(m.I, bounds=(-2,6))
+    m.disjunct_block = Block()
+    m.disjunction_block = Block()
+    instantiate_hierarchical_nested_model(m)
+
+    return m
+
+def makeHierarchicalNested_DeclOrderOppositeInstantationOrder():
+    """Here, we declare the Blocks in the opposite order. This means that 
+    decl order will be *opposite* instantiation order, which means that we 
+    can break our targets preprocessing without even using targets if we 
+    are not correctly identifying what is nested in what!"""
+    m = ConcreteModel()
+    m.I = RangeSet(1,4)
+    m.x = Var(m.I, bounds=(-2,6))
+    m.disjunction_block = Block()
+    m.disjunct_block = Block()
+    instantiate_hierarchical_nested_model(m)
+
+    return m

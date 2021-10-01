@@ -13,10 +13,11 @@ from pyomo.gdp import GDP_Error, Disjunction
 from pyomo.gdp.disjunct import _DisjunctData, Disjunct
 
 from pyomo.core.base.component import _ComponentBase
-
+from pyomo.common.collections import ComponentSet
 from pyomo.core import Block, TraversalStrategy, SortComponents
 from pyomo.opt import TerminationCondition, SolverStatus
 from weakref import ref as weakref_ref
+from collections import defaultdict
 import logging
 
 logger = logging.getLogger('pyomo.gdp')
@@ -80,59 +81,136 @@ def clone_without_expression_components(expr, substitute=None):
                                                 remove_named_expressions=True)
     return visitor.dfs_postorder_stack(expr)
 
-def preprocess_targets(targets, instance, knownBlocks):
-    preprocessed_targets = []
+class GDPTree:
+    def __init__(self):
+        self._adjacency_list = {}
+        self._in_degrees = defaultdict(lambda: 0)
+        # This needs to be ordered so that topological sort is deterministic
+        self._vertices = []
+
+    @property
+    def vertices(self):
+        return self._vertices
+
+    def add_node(self, u):
+        if u not in self._vertices:
+            self._vertices.append(u)
+
+    def _update_in_degree(self, v):
+        self._in_degrees[v] += 1
+
+    def add_edge(self, u, v):
+        if u in self._adjacency_list:
+            self._adjacency_list[u].append(v)
+        else:
+            self._adjacency_list[u] = [v]
+        self._update_in_degree(v)
+        if u not in self._vertices:
+            self._vertices.append(u)
+        if v not in self._vertices:
+            self._vertices.append(v)
+
+    def _visit_vertex(self, u, leaf_to_root):
+        if u in self._adjacency_list:
+            for v in self._adjacency_list[u]:
+                if v not in leaf_to_root:
+                    self._visit_vertex(v, leaf_to_root)
+        # we're done--we've been to all its children
+        leaf_to_root.append(u)
+
+    def _topological_sort(self):
+        # this is reverse of the list we should return (but happens to be what
+        # we want for hull and bigm)
+        leaf_to_root = []
+        for u in self.vertices:
+            if u not in leaf_to_root:
+                self._visit_vertex(u, leaf_to_root)
+
+        return leaf_to_root
+
+    def topological_sort(self):
+        return reversed(self._topological_sort())
+
+    def reverse_topological_sort(self):
+        return self._topological_sort()
+
+    def in_degree(self, u):
+        return self._in_degrees[u]
+
+def _parent_disjunct(obj):
+    parent = obj.parent_block()
+    while parent is not None:
+        if parent.ctype is Disjunct:
+            return parent
+        parent = parent.parent_block()
+
+    return None
+
+def _gather_disjunctions(block, gdp_tree):
+    to_explore = ComponentSet([block])
+    while to_explore:
+        block = to_explore.pop()
+        if block.ctype is Disjunct:
+            gdp_tree.add_node(block)
+        for disjunction in block.component_data_objects(
+                Disjunction, 
+                active=True,
+                sort=SortComponents.deterministic,
+                descend_into=Block):
+            # add the node (because it might be an empty Disjunction and block
+            # might be a Block, in case it wouldn't get added below.)
+            gdp_tree.add_node(disjunction)
+            for disjunct in disjunction.disjuncts:
+                gdp_tree.add_edge(disjunction, disjunct)
+                to_explore.add(disjunct)
+            if block.ctype is Disjunct:
+                gdp_tree.add_edge(block, disjunction)
+
+    return gdp_tree
+
+def get_gdp_tree(targets, instance, knownBlocks):
+    gdp_tree = GDPTree()
     for t in targets:
         # first check it's not insane, that is, it is at least on the instance
-        if not is_child_of(parent=instance, child=t, knownBlocks=knownBlocks):
-            raise GDP_Error("Target '%s' is not a component on instance '%s'!"
-                            % (t.name, instance.name))
-        # If it's a block-like thing, we need to go find the
-        # Disjunctions. Otherwise a user can still mess up transformation order
-        # just by hiding everything on blocks.
+        if not is_child_of(parent=instance, child=t,
+                           knownBlocks=knownBlocks):
+            raise GDP_Error("Target '%s' is not a component on instance "
+                            "'%s'!" % (t.name, instance.name))
         if t.ctype in (Block, Disjunct):
             if t.is_indexed():
                 for block in t.values():
-                    for disjunction in block.component_data_objects(
-                            Disjunction,
-                            active=True,
-                            sort=SortComponents.deterministic,
-                            descend_into=(Block, Disjunct)):
-                        # put all the Disjuncts in the targets list before the
-                        # Disjunction (in case of nested Disjunctions)
-                        for disj in disjunction.disjuncts:
-                            preprocessed_targets.append(disj)
-                        preprocessed_targets.append(disjunction)
+                    gdp_tree = _gather_disjunctions(block, gdp_tree)
             else:
-                for disjunction in t.component_data_objects(
-                        Disjunction,
-                        active=True,
-                        sort=SortComponents.deterministic,
-                        descend_into=(Block, Disjunct)):
-                    for disj in disjunction.disjuncts:
-                        preprocessed_targets.append(disj)
-                    preprocessed_targets.append(disjunction)
+                gdp_tree = _gather_disjunctions(t, gdp_tree)
         elif t.ctype is Disjunction:
-            # put all its Disjuncts in the targets list before we put it
+            parent = _parent_disjunct(t)
+            if parent is not None:
+                gdp_tree.add_edge(parent, t)
             if t.is_indexed():
                 for disjunction in t.values():
-                    for disj in disjunction.disjuncts:
-                        preprocessed_targets.append(disj)
+                    gdp_tree.add_node(disjunction)
+                    for disjunct in disjunction.disjuncts:
+                        gdp_tree.add_edge(t, disjunct)
+                        gdp_tree = _gather_disjunctions(disjunct, gdp_tree)
             else:
-                for disj in t.disjuncts:
-                    preprocessed_targets.append(disj)
-            # now we are safe to put the disjunction, and if the target was
-            # anything else, then we don't need to worry because disjuncts
-            # are declared before disjunctions they appear in
-            preprocessed_targets.append(t)
+                gdp_tree.add_node(t)
+                for disjunct in t.disjuncts:
+                    gdp_tree.add_edge(t, disjunct)
+                    gdp_tree = _gather_disjunctions(disjunct, gdp_tree)
         else:
-            # There's nothing else we care about, so we don't know how to deal
-            # with this
+            # There's nothing else we care about, so we don't know how to
+            # deal with this
             raise GDP_Error(
                 "Target '%s' was not a Block, Disjunct, or Disjunction. "
                 "It was of type %s and can't be transformed."
                 % (t.name, type(t)) )
-    return preprocessed_targets
+    return gdp_tree
+
+def preprocess_targets(targets, instance, knownBlocks):
+    gdp_tree = get_gdp_tree(targets, instance, knownBlocks)
+    # this is for bigm and hull: We need to transform from the leaves up, so we
+    # want a reverse of a topological sort: no parent can come before its child.
+    return gdp_tree.reverse_topological_sort()
 
 def target_list(x):
     if isinstance(x, _ComponentBase):

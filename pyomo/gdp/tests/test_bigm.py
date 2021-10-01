@@ -2029,6 +2029,105 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.assertEqual(len(m.d1._pyomo_gdp_bigm_reformulation.relaxedDisjuncts),
                          0)
 
+    def check_first_disjunct_constraint(self, disj1c, x, ind_var):
+        self.assertEqual(len(disj1c), 1)
+        cons = disj1c[0]
+        self.assertIsNone(cons.lower)
+        self.assertEqual(cons.upper, 1)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_quadratic())
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertEqual(len(repn.quadratic_vars), 4)
+        ct.check_linear_coef(self, repn, ind_var, 143)
+        self.assertEqual(repn.constant, -143)
+        for i in range(1, 5):
+            ct.check_squared_term_coef(self, repn, x[i], 1)
+
+    def check_second_disjunct_constraint(self, disj2c, x, ind_var):
+        self.assertEqual(len(disj2c), 1)
+        cons = disj2c[0]
+        self.assertIsNone(cons.lower)
+        self.assertEqual(cons.upper, 1)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_quadratic())
+        self.assertEqual(len(repn.linear_vars), 5)
+        self.assertEqual(len(repn.quadratic_vars), 4)
+        self.assertEqual(repn.constant, -63) # M = 99, so this is 36 - 99
+        ct.check_linear_coef(self, repn, ind_var, 99)
+        for i in range(1, 5):
+            ct.check_squared_term_coef(self, repn, x[i], 1)
+            ct.check_linear_coef(self, repn, x[i], -6)
+
+    def check_hierarchical_nested_model(self, m, bigm):
+        outer_xor = m.disjunction_block.disjunction.algebraic_constraint()
+        ct.check_two_term_disjunction_xor(self, outer_xor, m.disj1,
+                                          m.disjunct_block.disj2)
+        
+        inner_xor = m.disjunct_block.disj2.disjunction.algebraic_constraint()
+        xformed = bigm.get_transformed_constraints(inner_xor)
+        self.assertEqual(len(xformed), 2)
+        leq = xformed[0]
+        self.assertIsNone(leq.upper)
+        self.assertEqual(leq.lower, 1)
+        repn = generate_standard_repn(leq.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 3)
+        self.assertEqual(repn.constant, 1)
+        ct.check_linear_coef(self, repn,
+                             m.disjunct_block.disj2.disjunction_disjuncts[0].\
+                             binary_indicator_var, 1)
+        ct.check_linear_coef(self, repn,
+                             m.disjunct_block.disj2.disjunction_disjuncts[1].\
+                             binary_indicator_var, 1)
+        ct.check_linear_coef(self, repn,
+                             m.disjunct_block.disj2.binary_indicator_var, -1)
+
+        # outer disjunction constraints
+        disj1c = bigm.get_transformed_constraints(m.disj1.c)
+        self.check_first_disjunct_constraint(disj1c, m.x,
+                                             m.disj1.binary_indicator_var)
+        
+        disj2c = bigm.get_transformed_constraints(m.disjunct_block.disj2.c)
+        self.check_second_disjunct_constraint(
+            disj2c, m.x,
+            m.disjunct_block.disj2.binary_indicator_var)
+
+        # inner disjunction constraints
+        innerd1c = bigm.get_transformed_constraints(
+            m.disjunct_block.disj2.disjunction_disjuncts[0].constraint[1])
+        self.check_first_disjunct_constraint(
+            innerd1c, m.x,
+            m.disjunct_block.disj2.disjunction_disjuncts[0].\
+            binary_indicator_var)
+
+        innerd2c = bigm.get_transformed_constraints(
+            m.disjunct_block.disj2.disjunction_disjuncts[1].constraint[1])
+        self.check_second_disjunct_constraint(
+            innerd2c, m.x,
+            m.disjunct_block.disj2.disjunction_disjuncts[1].\
+            binary_indicator_var)
+
+    def test_hierarchical_badly_ordered_targets(self):
+        m = models.makeHierarchicalNested_DeclOrderMatchesInstantationOrder()
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m, targets=[m.disjunction_block, m.disjunct_block.disj2])
+
+        # the real test here is that the above doesn't scream about there being
+        # an untransformed Disjunctions inside of a Disjunct it's trying to
+        # transform. So let's just check that everything is transformed
+        self.check_hierarchical_nested_model(m, bigm)
+
+    def test_decl_order_opposite_instantiation_order(self):
+        # In this test, we create the same problem as above, but we don't even
+        # need targets!
+        m = models.makeHierarchicalNested_DeclOrderOppositeInstantationOrder()
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m)
+        
+        # Like above, the real test is that the above doesn't scream. We can use
+        # the same check to make sure everything is transformed correctly.
+        self.check_hierarchical_nested_model(m, bigm)
+
 class IndexedDisjunction(unittest.TestCase):
     # this tests that if the targets are a subset of the
     # _DisjunctDatas in an IndexedDisjunction that the xor constraint
@@ -2038,7 +2137,6 @@ class IndexedDisjunction(unittest.TestCase):
 
     def test_partial_deactivate_indexed_disjunction(self):
         ct.check_partial_deactivate_indexed_disjunction(self, 'bigm')
-
 
 class BlocksOnDisjuncts(unittest.TestCase):
     # ESJ: All of these tests are specific to bigm because they check how much
@@ -2202,50 +2300,6 @@ class TransformABlock(unittest.TestCase):
 
     def test_indexed_block_target(self):
         ct.check_indexed_block_target(self, 'bigm')
-
-    def test_hierarchical_badly_ordered_targets(self):
-        m = ConcreteModel()
-        m.I = Set(initialize=[1, 2, 3,4])
-        m.x = Var(m.I, bounds=(-2,6))
-        m.disjunction_block = Block()
-        m.disjunct_block = Block()
-        m.disj1 = Disjunct()
-        m.disjunct_block.disj2 = Disjunct()
-        m.disj1.c = Constraint(expr=sum(m.x[i]**2 for i in m.I) <= 1)
-        m.disjunct_block.disj2.c = Constraint(expr=sum((3 - m.x[i])**2 for i in
-                                                       m.I) <= 1)
-        m.disjunct_block.disj2.disjunction = Disjunction(
-            expr=[[sum(m.x[i]**2 for i in m.I) <= 1],
-                  [sum((3 - m.x[i])**2 for i in m.I) <= 1]])
-        m.disjunction_block.disjunction = Disjunction(
-            expr=[m.disj1, m.disjunct_block.disj2])
-
-        TransformationFactory('gdp.bigm').apply_to(
-            m,
-            targets=[m.disjunction_block, m.disjunct_block.disj2])
-
-    def test_decl_order_opposite_instantiation_order(self):
-        # In this test, we create the same problem as above, but we don't even
-        # need targets!
-        m = ConcreteModel()
-        m.I = Set(initialize=[1, 2, 3,4])
-        m.x = Var(m.I, bounds=(-2,6))
-        # This is evil because m's decl order:
-        m.disjunction_block = Block()
-        m.disjunct_block = Block()
-
-        #...is opposite of the instantiation order:
-        m.disjunct_block.d1 = Disjunct()
-        m.disjunct_block.d1.c = Constraint(expr=m.x[2] + m.x[3]**2 <= 5)
-        m.disjunct_block.d1.subd = Disjunction(expr=[[m.x[1] >= 1], 
-                                                     [m.x[1] + m.x[2] <= 0]])
-        m.disjunct_block.d2 = Disjunct()
-        m.disjunct_block.d2.c = Constraint(expr=m.x[4]**2 + m.x[3]**2 <= 4)
-        m.disjunction_block.d = Disjunction(expr=[m.disjunct_block.d1,
-                                                  m.disjunct_block.d2])
-
-        TransformationFactory('gdp.bigm').apply_to(m)
-        #TODO: test stuff
 
 class IndexedDisjunctions(unittest.TestCase):
     def setUp(self):

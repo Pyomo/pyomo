@@ -243,11 +243,10 @@ class BigM_Transformation(Transformation):
         knownBlocks = {}
         if targets is None:
             targets = (instance, )
-        else:
-            # we need to preprocess targets to make sure that if there are any
-            # disjunctions in targets that their disjuncts appear before them in
-            # the list.
-            targets = preprocess_targets(targets, instance, knownBlocks)
+        # we need to preprocess targets to make sure that if there are any
+        # disjunctions in targets that their disjuncts appear before them in
+        # the list.
+        targets = preprocess_targets(targets, instance, knownBlocks)
 
         for t in targets:
             if t.ctype is Disjunction:
