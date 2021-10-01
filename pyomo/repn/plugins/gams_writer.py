@@ -136,7 +136,7 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
                 elif const == 1:
                     return True, label
                 else:
-                    return True, ftoa(const) + ' * ' + label
+                    return True, ftoa(const) + '*' + label
 
             # we will descend into this, so type checking will happen later
             if node.is_component_type():
