@@ -47,11 +47,12 @@ _dnlp_functions = {'ceil','floor','abs'}
 #
 class ToGamsVisitor(EXPR.ExpressionValueVisitor):
 
-    def __init__(self, smap, treechecker):
+    def __init__(self, smap, treechecker, output_fixed_variables=False):
         super(ToGamsVisitor, self).__init__()
         self.smap = smap
         self.treechecker = treechecker
         self.is_discontinuous = False
+        self.output_fixed_variables = output_fixed_variables
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
@@ -126,7 +127,7 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
             if node.__class__ is EXPR.MonomialTermExpression:
                 const = value(node.arg(0))
                 var = node.arg(1)
-                if var.is_fixed():
+                if var.is_fixed() and not self.output_fixed_variables:
                     return True, ftoa(const * var.value)
                 label = self.smap.getSymbol(var)
                 # TODO: is it necessary to filter out -1 / +1?
@@ -156,19 +157,21 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
                 # Vars later since they don't disappear from the expressions
                 self.treechecker(node)
 
-        if node.is_fixed():
+        if node.is_fixed() and not (
+                self.output_fixed_variables and node.is_potentially_variable()):
             return True, ftoa(value(node))
         else:
             assert node.is_variable_type()
             return True, self.smap.getSymbol(node)
 
 
-def expression_to_string(expr, treechecker, labeler=None, smap=None):
+def expression_to_string(expr, treechecker, labeler=None, smap=None,
+                         output_fixed_variables=False):
     if labeler is not None:
         if smap is None:
             smap = SymbolMap()
         smap.default_labeler = labeler
-    visitor = ToGamsVisitor(smap, treechecker)
+    visitor = ToGamsVisitor(smap, treechecker, output_fixed_variables)
     expr_str = visitor.dfs_postorder_stack(expr)
     return expr_str, visitor.is_discontinuous
 
@@ -323,6 +326,9 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 For model attributes, <model name> is GAMS_MODEL.
             - skip_trivial_constraints=False
                 Skip writing constraints whose body section is fixed.
+            - output_fixed_variables=False
+                If True output fixed variables as variables, otherwise
+                 output numberic value.
             - file_determinism=1
                 | How much effort do we want to put into ensuring the
                 | GAMS file is written deterministically for a Pyomo model:
@@ -373,6 +379,10 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # fixed (i.e., no variables)
         skip_trivial_constraints = \
             io_options.pop("skip_trivial_constraints", False)
+
+        # Output fixed variables as variables
+        output_fixed_variables = \
+            io_options.pop("output_fixed_variables", False)
 
         # How much effort do we want to put into ensuring the
         # GAMS file is written deterministically for a Pyomo model:
@@ -483,6 +493,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     con_labeler=con_labeler,
                     sort=sort,
                     skip_trivial_constraints=skip_trivial_constraints,
+                    output_fixed_variables=output_fixed_variables,
                     warmstart=warmstart,
                     solver=solver,
                     mtype=mtype,
@@ -510,6 +521,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                      con_labeler,
                      sort,
                      skip_trivial_constraints,
+                     output_fixed_variables,
                      warmstart,
                      solver,
                      mtype,
@@ -564,7 +576,9 @@ class ProblemWriter_gams(AbstractProblemWriter):
 
             cName = symbolMap.getSymbol(con, con_labeler)
             con_body_str, con_discontinuous = expression_to_string(
-                con_body, tc, smap=symbolMap)
+                con_body, tc, smap=symbolMap,
+                output_fixed_variables=output_fixed_variables
+            )
             dnlp |= con_discontinuous
             if con.equality:
                 constraint_names.append('%s' % cName)
@@ -601,7 +615,9 @@ class ProblemWriter_gams(AbstractProblemWriter):
             if obj.expr.polynomial_degree() not in linear_degree:
                 linear = False
         obj_expr_str, obj_discontinuous = expression_to_string(
-            obj.expr, tc, smap=symbolMap)
+            obj.expr, tc, smap=symbolMap,
+            output_fixed_variables=output_fixed_variables,
+        )
         dnlp |= obj_discontinuous
         oName = symbolMap.getSymbol(obj, con_labeler)
         constraint_names.append(oName)
