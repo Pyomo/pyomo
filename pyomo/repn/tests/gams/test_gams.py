@@ -47,7 +47,10 @@ class Test(unittest.TestCase):
     def _check_baseline(self, model, **kwds):
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
-        io_options = {"symbolic_solver_labels": True}
+        io_options = {
+            "symbolic_solver_labels": True,
+            "output_fixed_variables": True,
+        }
         io_options.update(kwds)
         model.write(test_fname,
                     format="gams",
@@ -171,7 +174,7 @@ class Test(unittest.TestCase):
         m = ConcreteModel()
         m.y = Var(domain=Binary)
         m.c = Constraint(expr=quicksum([m.y, m.y], linear=True) == 1)
-        m.y.fix(1)
+
         lbl = NumericLabeler('x')
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
@@ -179,6 +182,15 @@ class Test(unittest.TestCase):
         m.x = Var()
         m.c2 = Constraint(expr=quicksum([m.x, m.y], linear=True) == 1)
         self.assertEqual(("x2 + x1", False), expression_to_string(m.c2.body, tc, smap=smap))
+
+        m.y.fix(1)
+        lbl = NumericLabeler('x')
+        smap = SymbolMap(lbl)
+        tc = StorageTreeChecker(m)
+        self.assertEqual(("1 + 1", False), expression_to_string(m.c.body, tc, smap=smap))
+        m.x = Var()
+        m.c2 = Constraint(expr=quicksum([m.x, m.y], linear=True) == 1)
+        self.assertEqual(("x1 + 1", False), expression_to_string(m.c2.body, tc, smap=smap))
 
     def test_quicksum_integer_var_fixed(self):
         m = ConcreteModel()
