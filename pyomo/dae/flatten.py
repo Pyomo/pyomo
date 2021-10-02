@@ -35,6 +35,7 @@ def get_slice_for_set(s):
                 return (Ellipsis,)
     else:
         # Case for e.g. UnindexedComponent_set
+        # Should this be None or tuple()? RBP 202110
         return None
 
 class _NotAnIndex(object):
