@@ -186,7 +186,9 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
             # will be valid.
             try:
                 if c.is_indexed():
-                    c_slice = getattr(slice_, c.local_name)[...]
+                    slice_idx = tuple(get_slice_for_set(s) for s
+                            in new_sets)
+                    c_slice = getattr(slice_, c.local_name)[slice_idx]
                     # Make sure this slice is not empty...
                     next(iter(c_slice.duplicate()))
                 else:
