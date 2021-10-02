@@ -9,7 +9,15 @@
 #  ___________________________________________________________________________
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import ConcreteModel, Block, Var, Reference, Set, Constraint
+from pyomo.environ import (
+        ConcreteModel,
+        Block,
+        Var,
+        Reference,
+        Set,
+        Constraint,
+        ComponentUID,
+        )
 from pyomo.dae import ContinuousSet
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.base.indexed_component import (
@@ -1162,6 +1170,108 @@ class TestFlatten(TestCategorize):
                 self.assertEqual(len(ref_data), len(comps))
                 for comp in comps:
                     self.assertIn(self._hashRef(comp), ref_data)
+            else:
+                raise RuntimeError()
+
+
+class TestCUID(unittest.TestCase):
+    """
+    When returning indexed components, the flattener returns references.
+    Unless these are subsequently attached to a model (and maybe even if they
+    are), these references will not have useful names. Creating a CUID
+    from the referent attribute of these references is the preferred way
+    to generate these names, because these names will be unique if these
+    references are generated multiple times.
+
+    However, when referring to a slice, a CUID is not truly unique, as
+    "m.b[*].v" is often equivalent to "m.b[**].v".
+    Our convention is to always use constant-dimension slices ("*")
+    unless we are slicing a component with a None-dimensioned set.
+
+    These tests assert that we use the correct convention.
+
+    """
+
+    # 3 cases to cover:
+    # Components indexed by no sets we're interested in
+    # Components indexed by some sets we're interested in
+    # Components indexed by all sets we're interested in
+
+    def test_cuids_no_sets_no_subblocks(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1, 2, 3])
+        m.s2 = Set(initialize=["a", "b"])
+        m.s3 = Set(initialize=[4, 5, 6])
+        m.s4 = Set(initialize=["c", "d"])
+        m.v1 = Var(m.s3, m.s4)
+
+        pred_cuid_set = {
+            "v1[4,c]",
+            "v1[4,d]",
+            "v1[5,c]",
+            "v1[5,d]",
+            "v1[6,c]",
+            "v1[6,d]",
+        }
+
+        sets = (m.s1, m.s2)
+        ctype = Var
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 1 and sets[0] is UnindexedComponent_set:
+                self.assertEqual(len(comps), len(m.s1)*len(m.s2))
+                cuid_set = set(str(ComponentUID(comp)) for comp in comps)
+                self.assertEqual(cuid_set, pred_cuid_set)
+            else:
+                raise RuntimeError()
+
+    def test_cuids_some_sets_no_subblocks(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1, 2, 3])
+        m.s2 = Set(initialize=["a", "b"])
+        m.s3 = Set(initialize=[4, 5, 6])
+        m.s4 = Set(initialize=["c", "d"])
+        m.v1 = Var(m.s1, m.s4)
+
+        pred_cuid_set = {
+            "v1[1,*]",
+            "v1[2,*]",
+            "v1[3,*]",
+        }
+
+        sets = (m.s3, m.s4)
+        ctype = Var
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 1 and sets[0] is m.s4:
+                self.assertEqual(len(comps), len(m.s1))
+                cuid_set = set(str(ComponentUID(comp.referent))
+                        for comp in comps)
+                self.assertEqual(cuid_set, pred_cuid_set)
+            else:
+                raise RuntimeError()
+
+    def test_cuids_all_sets_no_subblocks(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1, 2, 3])
+        m.s2 = Set(initialize=["a", "b"])
+        m.s3 = Set(initialize=[4, 5, 6])
+        m.s4 = Set(initialize=["c", "d"])
+        m.v1 = Var(m.s3, m.s4)
+
+        pred_cuid_set = {
+            "v1[*,*]",
+        }
+
+        sets = (m.s3, m.s4)
+        ctype = Var
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 2 and sets[0] is m.s3 and sets[1] is m.s4:
+                self.assertEqual(len(comps), 1)
+                cuid_set = set(str(ComponentUID(comp.referent))
+                        for comp in comps)
+                self.assertEqual(cuid_set, pred_cuid_set)
             else:
                 raise RuntimeError()
 
