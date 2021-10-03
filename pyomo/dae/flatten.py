@@ -109,7 +109,7 @@ def _fill_indices_from_product(partial_index_list, product):
             # because `comp` was created with two set arguments, the first
             # of which was already a product.
 
-            yield _fill_indices(filled_index, index)
+            yield (index, _fill_indices(filled_index, index))
 
             normalize_index.flatten = False
             # Want to get the unflattened factors when we advance the
@@ -167,8 +167,8 @@ def slice_component_along_sets(component, *sets):
         # will be valid.
         try:
             if component.is_indexed():
-                # TODO: This should probably not be an ellipsis...
-                c_slice = component[...]
+                slice_idx = tuple(get_slice_for_set(s) for s in new_sets)
+                c_slice = component[slice_idx]
                 # Make sure this slice is not empty...
                 next(iter(c_slice.duplicate()))
             else:
@@ -222,7 +222,7 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
             # This implementation avoids issues about selecting an arbitrary
             # index, but requires duplicating some of the slice-iter logic below
 
-            for new_index in _fill_indices_from_product(temp_idx, cross_prod):
+            for _, new_index in _fill_indices_from_product(temp_idx, cross_prod):
                 try:
                     c_slice = getattr(slice_, c.local_name)[new_index]
                     if type(c_slice) is IndexedComponent_slice:
@@ -277,7 +277,7 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
         if other_sets and sub.is_indexed():
             cross_prod = other_sets[0].cross(*other_sets[1:])
 
-            for new_index in _fill_indices_from_product(temp_idx, cross_prod):
+            for _, new_index in _fill_indices_from_product(temp_idx, cross_prod):
                 try:
                     sub_slice = getattr(slice_, sub.local_name)[new_index]
 
