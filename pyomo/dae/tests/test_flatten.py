@@ -1275,6 +1275,95 @@ class TestCUID(unittest.TestCase):
             else:
                 raise RuntimeError()
 
+    def test_cuids_no_sets_with_subblocks(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1, 2, 3])
+        m.s2 = Set(initialize=["a", "b"])
+        m.s3 = Set(initialize=[4, 5, 6])
+        m.s4 = Set(initialize=["c", "d"])
+        def block_rule(b, i, j):
+            b.v = Var()
+        m.b = Block(m.s1, m.s2, rule=block_rule)
+
+        pred_cuid_set = {
+            "b[1,a].v",
+            "b[1,b].v",
+            "b[2,a].v",
+            "b[2,b].v",
+            "b[3,a].v",
+            "b[3,b].v",
+        }
+
+        sets = (m.s3, m.s4)
+        ctype = Var
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+        self.assertEqual(len(sets_list), 1)
+        self.assertEqual(len(comps_list), 1)
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 1 and sets[0] is UnindexedComponent_set:
+                self.assertEqual(len(comps), len(m.s1)*len(m.s2))
+                cuid_set = set(str(ComponentUID(comp)) for comp in comps)
+                self.assertEqual(cuid_set, pred_cuid_set)
+            else:
+                raise RuntimeError()
+
+    def test_cuids_some_sets_with_subblocks(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1, 2, 3])
+        m.s2 = Set(initialize=["a", "b"])
+        m.s3 = Set(initialize=[4, 5, 6])
+        m.s4 = Set(initialize=["c", "d"])
+        def block_rule(b, i, j):
+            b.v = Var()
+        m.b = Block(m.s1, m.s2, rule=block_rule)
+
+        pred_cuid_set = {
+            "b[*,a].v",
+            "b[*,b].v",
+        }
+
+        sets = (m.s1, m.s4)
+        ctype = Var
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+        self.assertEqual(len(sets_list), 1)
+        self.assertEqual(len(comps_list), 1)
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 1 and sets[0] is m.s1:
+                self.assertEqual(len(comps), len(m.s2))
+                cuid_set = set(str(ComponentUID(comp.referent))
+                        for comp in comps)
+                self.assertEqual(cuid_set, pred_cuid_set)
+            else:
+                raise RuntimeError()
+
+    def test_cuids_all_sets_with_subblocks(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1, 2, 3])
+        m.s2 = Set(initialize=["a", "b"])
+        m.s3 = Set(initialize=[4, 5, 6])
+        m.s4 = Set(initialize=["c", "d"])
+        def block_rule(b, i, j):
+            b.v = Var()
+        m.b = Block(m.s1, m.s2, rule=block_rule)
+
+        pred_cuid_set = {
+            "b[*,*].v",
+        }
+
+        sets = (m.s1, m.s2)
+        ctype = Var
+        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+        self.assertEqual(len(sets_list), 1)
+        self.assertEqual(len(comps_list), 1)
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 2 and sets[0] is m.s1 and sets[1] is m.s2:
+                self.assertEqual(len(comps), 1)
+                cuid_set = set(str(ComponentUID(comp.referent))
+                        for comp in comps)
+                self.assertEqual(cuid_set, pred_cuid_set)
+            else:
+                raise RuntimeError()
+
 
 class TestExceptional(unittest.TestCase):
     """
