@@ -186,8 +186,7 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
             # will be valid.
             try:
                 if c.is_indexed():
-                    slice_idx = tuple(get_slice_for_set(s) for s
-                            in new_sets)
+                    slice_idx = tuple(get_slice_for_set(s) for s in new_sets)
                     c_slice = getattr(slice_, c.local_name)[slice_idx]
                     # Make sure this slice is not empty...
                     next(iter(c_slice.duplicate()))
@@ -269,7 +268,8 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
             # to iterate over "other sets."
             try:
                 if sub.is_indexed():
-                    sub_slice = getattr(slice_, sub.local_name)[...]
+                    slice_index = tuple(get_slice_for_set(s) for s in new_sets)
+                    sub_slice = getattr(slice_, sub.local_name)[slice_index]
                     # We have to get the block data object.
                     descend_slice = sub[descend_index_sliced_sets]
                     data = descend_slice if type(descend_slice) is not \
