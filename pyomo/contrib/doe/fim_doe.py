@@ -191,7 +191,6 @@ class DesignOfExperiments:
             analysis_optimize.extract_FIM(m, self.design_timeset, result_doe, obj=objective_option)
             analysis_optimize.model = m
 
-
             time1 = time.time()
             if self.verbose:
                 print('Total solve time with simultaneous_finite mode (Wall clock) [s]:', time_solve1 + time_solve2)
@@ -297,7 +296,7 @@ class DesignOfExperiments:
             else:
                 prior_in_use = specified_prior
 
-            FIM_analysis = FIM_result(self.param_name, prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
+            FIM_analysis = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, self.measurement_extra_index,  prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
             # add the formed simultaneous model to the object so that users can have access
             self.m = m
@@ -325,11 +324,6 @@ class DesignOfExperiments:
             else:
                 # dict for storing model outputs
                 output_record = {}
-                # Temp: dict for fixed bed
-                output_record_fco2 = {}
-                output_record_tmid = {}
-                output_record_tend = {}
-                output_record_botht = {}
 
                 # dict for storing Jacobian
                 models = []
@@ -348,8 +342,6 @@ class DesignOfExperiments:
                     time1_build = time.time()
                     time_allbuild.append(time1_build-time0_build)
 
-                    print('Parameters: ', value(mod.fitted_transport_coefficient[0]), ',', value(mod.ua[0]))
-
                     # discretize if needed
                     if self.discretize_model is not None:
                         mod = self.discretize_model(mod)
@@ -367,40 +359,9 @@ class DesignOfExperiments:
                     models.append(mod)
 
                     # loop over measurement item and time to store model measurements
-                    output_combine_fco2 = []
-                    output_combine_tmid = []
-                    output_combine_tend = []
-                    output_combine_botht = []
-                    #
-                    for j in ['FCO2']:
-                        for t in self.measurement_timeset:
-                            C_value = eval('mod.' + j + '[0,19,' + str(t) + ']')
-                            output_combine_fco2.append(value(C_value))
-                            output_combine_tmid.append(value(C_value))
-                            output_combine_tend.append(value(C_value))
-                            output_combine_botht.append(value(C_value))
-                    output_record_fco2[no_s] = output_combine_fco2
-
-                    for j in ['temp']:
-                        for t in self.measurement_timeset:
-                            C_value = eval('mod.'+ j + '[0,10,' + str(t) + ']')
-                            output_combine_tmid.append(value(C_value))
-                            output_combine_botht.append(value(C_value))
-
-                    output_record_tmid[no_s] = output_combine_tmid
-
-                    for j in ['temp']:
-                        for t in self.measurement_timeset:
-                            C_value = eval('mod.'+ j + '[0,19,' + str(t) + ']')
-                            output_combine_tend.append(value(C_value))
-                            output_combine_botht.append(value(C_value))
-
-                    output_record_tend[no_s] = output_combine_tend
-                    output_record_botht[no_s] = output_combine_botht
-
-                    '''
+                    output_combine = []
                     for j in self.measurement_variables:
-                        if self.measurement_extra_index[j] is None:
+                        if self.measurement_extra_index is None:
                             for t in self.measurement_timeset:
                                 C_value = eval('mod.' + j + '[0,' + str(t) + ']')
                                 output_combine.append(value(C_value))
@@ -412,29 +373,14 @@ class DesignOfExperiments:
                     output_record[no_s] = output_combine
                         
                     print('Output this time: ', output_record[no_s])
-                    '''
-                if store_output is not None:
-                    #f = open(store_output, 'wb')
-                    #pickle.dump(output_record, f)
-                    #f.close()
-                    f = open(store_output+'_fco2', 'wb')
-                    pickle.dump(output_record_fco2, f)
-                    f.close()
-                    g = open(store_output+'_tmid', 'wb')
-                    pickle.dump(output_record_tmid, g)
-                    g.close()
-                    h = open(store_output+'_tend', 'wb')
-                    pickle.dump(output_record_tend, h)
-                    h.close()
-                    e = open(store_output+'_botht', 'wb')
-                    pickle.dump(output_record_botht, e)
-                    e.close()
 
-                output_record = output_record_botht.copy()
+                if store_output is not None:
+                    f = open(store_output, 'wb')
+                    pickle.dump(output_record, f)
+                    f.close()
 
                 # calculate jacobian
                 jac = self.__finite_calculation(output_record, scena_gen)
-
 
                 if self.verbose:
                     print('Build time with sequential_finite mode [s]:', sum(time_allbuild))
@@ -449,7 +395,7 @@ class DesignOfExperiments:
             else:
                 prior_in_use = specified_prior
 
-            FIM_analysis = FIM_result(self.param_name, prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
+            FIM_analysis = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, self.measurement_extra_index, prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
             # Store the Jacobian information for access by users
 
@@ -579,7 +525,7 @@ class DesignOfExperiments:
                 prior_in_use = specified_prior
 
             # Assemble and analyze results
-            FIM_analysis = FIM_result(self.param_name, prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
+            FIM_analysis = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, self.measurement_extra_index,  prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
             if self.verbose:
                 print('Build time with sequential_sipopt or kaug mode [s]:', sum(time_allbuild))
@@ -623,7 +569,7 @@ class DesignOfExperiments:
                 measurement_accurate_time.append(t_all[t_all.index(tt)])
 
             # fix model DOF
-            mod = self.__fix_design(mod, self.design_values, fix_opt=True)
+            #mod = self.__fix_design(mod, self.design_values, fix_opt=True)
 
             # set ub and lb to parameters
             for par in self.param_name:
@@ -640,7 +586,7 @@ class DesignOfExperiments:
 
             # call k_aug get_dsdp function
             time0_solve = time.time()
-            square_result = self.__solve_doe(mod, fix=False)
+            square_result = self.__solve_doe(mod, fix=True)
             dsdp_re, col = get_dsdp(mod, var_name, var_dict, tee=self.tee_opt)
             time1_solve = time.time()
             time_solve = time1_solve - time0_solve
@@ -662,7 +608,7 @@ class DesignOfExperiments:
             for mname in self.measurement_variables:
                 for tim in measurement_accurate_time:
                     # get the measurement name in the model
-                    measure_name = mname+'[0,19,'+str(tim)+']'
+                    measure_name = mname+'[0,'+str(tim)+']'
                     measurement_names.append(measure_name)
                     # get right line number in kaug results
                     if self.discretize_model is not None:
@@ -708,7 +654,8 @@ class DesignOfExperiments:
                 prior_in_use = specified_prior
 
             # Assemble and analyze results
-            FIM_analysis = FIM_result(self.param_name, prior_FIM=prior_in_use, store_FIM=FIM_store_name,
+            FIM_analysis = FIM_result(self.param_name,self.measurement_variables, self.measurement_timeset, self.measurement_extra_index,
+                                      prior_FIM=prior_in_use, store_FIM=FIM_store_name,
                                       scale_constant_value=self.scale_constant_value)
 
             self.jac = jac
@@ -1228,15 +1175,21 @@ class DesignOfExperiments:
                 for t, time in enumerate(self.design_time[d]):
                     newvar = eval('m.' + dname + '[' + str(time) + ']')
                     fix_v = design_val[dname][time]
+
+                    if fix_opt:
+                        newvar.fix(fix_v)
+                        print(newvar, 'is fixed at ', fix_v)
+                    else:
+                        newvar.unfix()
             else:
                 newvar = eval('m.' + dname)
                 fix_v = design_val[dname][0]
 
-            if fix_opt:
-                newvar.fix(fix_v)
-                print(newvar, 'is fixed at ', fix_v)
-            else:
-                newvar.unfix()
+                if fix_opt:
+                    newvar.fix(fix_v)
+                    print(newvar, 'is fixed at ', fix_v)
+                else:
+                    newvar.unfix()
         return m
 
     def __solve_with_default_ipopt(self):
@@ -1594,7 +1547,7 @@ class Scenario_data:
 
 
 class FIM_result:
-    def __init__(self, para_name,  prior_FIM=None, store_FIM=None, scale_constant_value=1, max_condition_number=1.0E12,
+    def __init__(self, para_name, measurement_variables, measurement_timeset, measurement_extra_index,  prior_FIM=None, store_FIM=None, scale_constant_value=1, max_condition_number=1.0E12,
                  verbose=True):
         '''
         Analyze the FIM result for a single run
@@ -1609,6 +1562,9 @@ class FIM_result:
         verbose: if print statements are used
         '''
         self.para_name = para_name
+        self.measurement_variables = measurement_variables
+        self.measurement_timeset = measurement_timeset
+        self.measurement_extra_index = measurement_extra_index
         self.prior_FIM = prior_FIM
         self.store_FIM = store_FIM
         self.scale_constant_value = scale_constant_value
@@ -1616,7 +1572,7 @@ class FIM_result:
         self.max_condition_number = max_condition_number
         self.verbose = verbose
 
-    def calculate_FIM(self, jaco_info, dv_values, result=None):
+    def calculate_FIM(self, jaco_information, dv_values, jaco_involved_name=None, jaco_involved_extra_index=None, result=None):
         '''
         Calculate FIM from Jacobian information. This is for grid search (combined models) results
 
@@ -1643,6 +1599,29 @@ class FIM_result:
         self.result = result
         self.doe_result = None
         # create a dict for FIM. It has the same keys as the Jacobian dict.
+
+        jaco_info =  {}
+        # split jacobian if needed
+        if jaco_involved_name is not None:
+            for par in self.para_name:
+                jaco_parameter = []
+                flatten_measure_count = -1
+                for no, name in enumerate(self.measurement_variables):
+                    if self.measurement_extra_index[no] is not None:
+                        for ind in self.measurement_extra_index[no]:
+                            for t in self.measurement_timeset[no]:
+                                flatten_measure_count += 1
+                                if name in jaco_involved_name:
+                                    if ind in jaco_involved_extra_index:
+                                        jaco_parameter.append(jaco_information[par])[flatten_measure_count]
+                    else:
+                        for t in self.measurement_timeset[no]:
+                            flatten_measure_count += 1
+                            if name in jaco_involved_name:
+                                if ind in jaco_involved_extra_index:
+                                    jaco_parameter.append(jaco_information[par])[flatten_measure_count]
+        else:
+            jaco_info = jaco_information.copy()
 
         # get number of parameters
         no_param = len(self.para_name)

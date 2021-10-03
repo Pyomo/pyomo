@@ -41,8 +41,11 @@ def create_model_overall(scena, options,controls={0: 300, 0.125: 300, 0.25: 300,
     para_list = ['A1', 'A2', 'E1', 'E2']
     
     if_dae = options[0]
+    print(if_dae)
     if_constant = options[1]
     if_kaug = options[2]
+    print(if_constant)
+    print(if_kaug)
     
     ### Add variables 
     m = ConcreteModel()
@@ -68,15 +71,14 @@ def create_model_overall(scena, options,controls={0: 300, 0.125: 300, 0.25: 300,
         m.t = Set(initialize=time_an)
     
     # Control time points
-    if if_dae:
+    if (if_dae and (not if_constant)):
         m.t_con = Set(initialize=t_control)
     else:
         m.t_con = Set(initialize=[0])
         
     m.t0 = Set(initialize=[0])
     
-    # time-independent design variable
-    m.CA0 = Var(m.t0, initialize = CA_init, bounds=(1.0,5.0), within=NonNegativeReals) # mol/L
+    
     
     # time-dependent design variable, initialized with the first control value
     def T_initial(m,t):
@@ -91,11 +93,10 @@ def create_model_overall(scena, options,controls={0: 300, 0.125: 300, 0.25: 300,
                     j+=1
             neighbour_t = t_control[j]
             return controls[neighbour_t]
-    
-    if if_dae:
-        m.T = Var(m.t, initialize =T_initial, bounds=(300, 700), within=NonNegativeReals)
-    else:
-        m.T = Var(m.t, initialize = T_initial, bounds=(300, 700), within=NonNegativeReals)
+        
+    # time-independent design variable
+    m.CA0 = Var(m.t0, initialize = CA_init, bounds=(1.0,5.0), within=NonNegativeReals) # mol/L
+    m.T = Var(m.t, initialize =T_initial, bounds=(300, 700), within=NonNegativeReals)
     
     m.R = 8.31446261815324 # J / K / mole
        
@@ -106,10 +107,10 @@ def create_model_overall(scena, options,controls={0: 300, 0.125: 300, 0.25: 300,
         m.E1 = Var(m.scena, initialize = m.scena_all['E1'])
         m.E2 = Var(m.scena, initialize = m.scena_all['E2'])
     else:
-        m.A1 = Param(m.scena, initialize=scena['A1'],mutable=True)
-        m.A2 = Param(m.scena, initialize=scena['A2'],mutable=True)
-        m.E1 = Param(m.scena, initialize=scena['E1'],mutable=True)
-        m.E2 = Param(m.scena, initialize=scena['E2'],mutable=True)
+        m.A1 = Param(m.scena, initialize=m.scena_all['A1'],mutable=True)
+        m.A2 = Param(m.scena, initialize=m.scena_all['A1'],mutable=True)
+        m.E1 = Param(m.scena, initialize=m.scena_all['A1'],mutable=True)
+        m.E2 = Param(m.scena, initialize=m.scena_all['A1'],mutable=True)
     
     # Concentration variables under perturbation
     m.CA = Var(m.scena, m.t, initialize=C_init, within=NonNegativeReals)
@@ -231,6 +232,8 @@ def create_model_overall(scena, options,controls={0: 300, 0.125: 300, 0.25: 300,
     # calculating C, Jacobian, FIM
     m.k1_pert_rule = Constraint(m.scena, m.t, rule=cal_kp1)
     m.k2_pert_rule = Constraint(m.scena, m.t, rule=cal_kp2)
+    m.T_rule = Constraint(m.t, rule=T_control)
+    
     if if_dae:
         m.dCAdt_rule = Constraint(m.scena, m.t, rule=dCAdt_control)
         m.dCBdt_rule = Constraint(m.scena, m.t, rule=dCBdt_control)
@@ -239,9 +242,6 @@ def create_model_overall(scena, options,controls={0: 300, 0.125: 300, 0.25: 300,
             m.alge_rule = Constraint(m.scena, m.t, rule=alge)
         else:
             m.dCCdt_rule = Constraint(m.scena, m.t, rule=dCCdt_control)
-            
-        if if_constant:
-            m.T_rule = Constraint(m.t, rule=T_control)
             
     else:
         m.dCAdt_rule = Constraint(m.scena, m.t, rule=CA_conc)
