@@ -209,107 +209,63 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
     else:
         context_slice = None
 
+    # Looks for components indexed by these sets immediately in our block
     for c in b.component_objects(ctype, descend_into=False):
         subsets = list(c.index_set().subsets())
         new_sets = [s for s in subsets if s in sets]
+        # Extend our "index stack"
         sliced_sets = index_stack + new_sets
 
-        # We have extended our "index stack;" now we must extend
-        # our slice.
-
+        # Extend our slice with this component
         for idx, new_slice in slice_component_along_sets(c, sets, context_slice=context_slice):
             yield sliced_sets, new_slice
 
     # We now descend into subblocks
     for sub in b.component_objects(Block, descend_into=False):
         subsets = list(sub.index_set().subsets())
-        temp_idx = [get_slice_for_set(s) if s in sets else _NotAnIndex
-                for s in subsets]
         new_sets = [s for s in subsets if s in sets]
-        other_sets = [s for s in subsets if s not in sets]
-
-        # For each set we are slicing, if the user specified an index, put it
-        # here. Otherwise, slice the set and we will call next(iter(slice_))
-        # once the full index is constructed.
-        descend_index_sliced_sets = tuple(index_map[s] if s in index_map else 
-                get_slice_for_set(s) for s in new_sets)
 
         # Extend stack with new matched indices.
         index_stack.extend(new_sets)
 
-        # I would like to run the following code:
+        # Need to construct an index to descend into for each slice-of-block
+        # we are about generate.
+        given_descend_idx = [_NotAnIndex for _ in subsets]
+        for i, s in enumerate(subsets):
+            if s in index_map:
+                # Use a user-given index if available
+                given_descend_idx[i] = index_map[s]
+            elif s in sets:
+                # Otherwise use a slice. We will advanced the slice iter
+                # to try to get a concrete component from this slice.
+                given_descend_idx[i] = get_slice_for_set(s)
 
-        if other_sets and sub.is_indexed():
-            cross_prod = other_sets[0].cross(*other_sets[1:])
-
-            for _, new_index in _fill_indices_from_product(temp_idx, cross_prod):
-                try:
-                    sub_slice = getattr(slice_, sub.local_name)[new_index]
-
-                    # Now we need to pick a block data to descend into
-                    if new_sets:
-                        # We sliced some sets, and need to fill in any
-                        # indices provided by the user
-
-                        # `new_index` could be a scalar, for compatibility with
-                        # `normalize_index.flatten==False`.
-                        tupl_new_index = (new_index,) if type(new_index) \
-                                is not tuple else new_index
-                        # Extract the indices of "other sets":
-                        incomplete_descend_index = list(
-                                idx if subset not in sets else _NotAnIndex
-                                for idx, subset in zip(tupl_new_index, subsets)
-                                )
-                        # Fill rest of the entries with specified indices for
-                        # sliced sets:
-                        descend_index = _fill_indices(incomplete_descend_index,
-                                descend_index_sliced_sets)
-                        if len(descend_index) == 1:
-                            descend_index = descend_index[0]
-
-                        descend_slice = sub[descend_index]
-                        data = descend_slice if type(descend_slice) is not \
-                            IndexedComponent_slice else next(iter(descend_slice))
-                        # If the user has supplied enough indices that we can
-                        # descend into a concrete component, we do so. Otherwise
-                        # we use the user's indices, slice the rest, and advance
-                        # the iterator.
-                    else:
-                        # All indices are specified
-                        data = sub[new_index]
-                    for st, v in generate_sliced_components(data, index_stack,
-                            sub_slice, sets, ctype, index_map):
-                        yield tuple(st), v
-                except StopIteration:
-                    # Empty slice due to "skipped" index in subblock.
-                    pass
-                #except KeyError:
-                #    # Trying to access a concrete data object for a "skipped" index.
-                #    # I have been unable to produce this behavior for blocks,
-                #    # but it may be possible somehow.
-                #    pass
-        else:
-            # Either `sub` is a simple component, or we are slicing
-            # all of its sets. What is common here is that we don't need
-            # to iterate over "other sets."
-            try:
-                if sub.is_indexed():
-                    slice_index = tuple(get_slice_for_set(s) for s in new_sets)
-                    sub_slice = getattr(slice_, sub.local_name)[slice_index]
-                    # We have to get the block data object.
-                    descend_slice = sub[descend_index_sliced_sets]
-                    data = descend_slice if type(descend_slice) is not \
-                        IndexedComponent_slice else next(iter(descend_slice))
-                else:
-                    # `sub` is a simple component
-                    sub_slice = getattr(slice_, sub.local_name)
-                    data = sub
-                for st, v in generate_sliced_components(data, index_stack,
-                        sub_slice, sets, ctype, index_map):
-                    yield tuple(st), v
-            except StopIteration:
-                # We encountered an empty slice. This should be very rare.
-                pass
+        # Generate slices from this sub-block
+        for idx, new_slice in slice_component_along_sets(
+                sub, sets, context_slice=context_slice
+                ):
+            if sub.is_indexed():
+                # fill any remaining placeholders with the "index" of our slice
+                descend_idx = _fill_indices(list(given_descend_idx), idx)
+                # create a slice-or-data object
+                descend_data = sub[descend_idx]
+                if type(descend_data) is IndexedComponent_slice:
+                    try:
+                        # Attempt to find a data object matching this slice
+                        descend_data = next(iter(descend_data))
+                    except StopIteration:
+                        # For this particular idx (and given indices), no
+                        # block data object exists to descend into.
+                        # Not sure if we should raise an error here... -RBP
+                        continue
+            else:
+                descend_data = sub
+            
+            # Recursively generate sliced components from this data object
+            for st, v in generate_sliced_components(
+                    descend_data, index_stack, new_slice, sets, ctype, index_map
+                    ):
+                yield tuple(st), v
 
         # pop the index sets of the block whose sub-components
         # we just finished iterating over.
