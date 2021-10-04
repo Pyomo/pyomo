@@ -139,11 +139,19 @@ def slice_component_along_sets(component, sets, context_slice=None):
             context_slice = context_slice.duplicate()
         base_component = getattr(context_slice, component.local_name)
 
-    if other_sets and component.is_indexed():
+    if component.is_indexed():
         # We need to iterate over sets that aren't sliced
         # `c.is_indexed()` covers the case when UnindexedComponent_set
         # is in `other_sets`.
-        cross_prod = other_sets[0].cross(*other_sets[1:])
+        if other_sets:
+            cross_prod = other_sets[0].cross(*other_sets[1:])
+        else:
+            # If we are only indexed by sets we need to slice, we
+            # should just use tuple(temp_idx) as our index. We spoof
+            # a cross_prod here so we don't have to repeat the try/except
+            # logic below in a separate branch. An empty tuple is the right
+            # singleton to work in the embedded call to _fill_indices.
+            cross_prod = [tuple()]
 
         for prod_index, new_index in _fill_indices_from_product(
                 temp_idx,
@@ -154,6 +162,9 @@ def slice_component_along_sets(component, sets, context_slice=None):
                 if type(c_slice) is IndexedComponent_slice:
                     # This is just to make sure we do not have an
                     # empty slice.
+                    #
+                    # Note that c_slice is not necessarily a slice.
+                    # We enter this loop even if no sets need slicing.
                     temp_slice = c_slice.duplicate()
                     next(iter(temp_slice))
                 # TODO: Do we need to yield the sliced sets here as well?
@@ -169,21 +180,9 @@ def slice_component_along_sets(component, sets, context_slice=None):
                 # We want to simply skip that index and move on.
                 pass
     else:
-        # `c` is indexed only by sets we would like to slice.
-        # Slice the component if it is indexed so a future getattr
-        # will be valid.
-        try:
-            if component.is_indexed():
-                slice_idx = tuple(get_slice_for_set(s) for s in sliced_sets)
-                c_slice = base_component[slice_idx]
-                # Make sure this slice is not empty...
-                next(iter(c_slice.duplicate()))
-            else:
-                # Component is a data object
-                c_slice = base_component
-            yield (), c_slice
-        except StopIteration:
-            pass
+        # Component is a data object
+        c_slice = base_component
+        yield (), c_slice
 
 
 def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
