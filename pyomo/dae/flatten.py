@@ -139,6 +139,13 @@ def slice_component_along_sets(component, sets, context_slice=None):
         If provided, instead of creating a new slice, we will extend this
         one with appropriate getattr and getitem calls.
 
+    Yields
+    ------
+    tuple
+        The first entry is the index in the product of "other sets"
+        corresponding to the slice, and the second entry is the slice
+        at that index.
+
     """
     set_set = ComponentSet(sets)
     subsets = list(component.index_set().subsets())
