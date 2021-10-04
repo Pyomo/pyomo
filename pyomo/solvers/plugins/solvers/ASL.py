@@ -98,7 +98,12 @@ class ASL(SystemCallSolver):
                                      stdout=subprocess.PIPE,
                                      stderr=subprocess.STDOUT,
                                      universal_newlines=True)
-            return _extract_version(results.stdout)
+            ver = _extract_version(results.stdout)
+            if ver is None:
+                # Some ASL solvers do not export a version number
+                if results.stdout.strip().split()[-1].startswith('ASL('):
+                    return '0.0.0'
+            return ver
         except OSError:
             pass
         except subprocess.TimeoutExpired:
