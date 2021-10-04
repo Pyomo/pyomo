@@ -123,16 +123,10 @@ def _fill_indices_from_product(partial_index_list, product):
 
 
 def slice_component_along_sets(component, sets, context_slice=None):
-    # TODO: Any optional args I need?
-    # Might be useful to pass in a slice if I'm intending to continue
-    # an existing slice.
-    # Could also just take the slices yielded by this function and
-    # "concatenate" them with the parent slice after the fact somehow.
     set_set = ComponentSet(sets)
     subsets = list(component.index_set().subsets())
     temp_idx = [get_slice_for_set(s) if s in set_set else _NotAnIndex
             for s in subsets]
-    sliced_sets = [s for s in subsets if s in set_set]
     other_sets = [s for s in subsets if s not in set_set]
 
     if context_slice is None:
