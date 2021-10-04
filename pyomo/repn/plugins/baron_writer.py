@@ -96,9 +96,12 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
                 return "{0} ^ {1}".format(tmp[0], tmp[1])
         elif node.__class__ is EXPR.UnaryFunctionExpression:
             if node.name == "sqrt":
-                return "({0}) ^ 0.5".format(tmp[0])
+                # Parens are necessary because sqrt() and "^" have
+                # different precedence levels.  Instead of parsing the
+                # arg, be safe and explicitly add parens
+                return "(({0}) ^ 0.5)".format(tmp[0])
             elif node.name == 'log10':
-                return "{0} * log({1})".format(math.log10(math.e), tmp[0])
+                return "({0} * log({1}))".format(math.log10(math.e), tmp[0])
             elif node.name in {'exp','log'}:
                 pass
             else:
@@ -106,7 +109,10 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
                     'The BARON .BAR format does not support the unary '
                     'function "%s".' % (node.name,))
         elif node.__class__ is EXPR.AbsExpression:
-            return "(({0}) ^ 2) ^ 0.5".format(tmp[0])
+            # Parens are necessary because abs() and "^" have different
+            # precedence levels.  Instead of parsing the arg, be safe
+            # and explicitly add parens
+            return "((({0}) ^ 2) ^ 0.5)".format(tmp[0])
         return node._to_string(tmp, None, self.smap, True)
 
     def visiting_potential_leaf(self, node):
