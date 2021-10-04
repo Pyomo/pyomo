@@ -211,10 +211,7 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
 
     for c in b.component_objects(ctype, descend_into=False):
         subsets = list(c.index_set().subsets())
-        temp_idx = [get_slice_for_set(s) if s in sets else _NotAnIndex
-                for s in subsets]
         new_sets = [s for s in subsets if s in sets]
-        other_sets = [s for s in subsets if s not in sets]
         sliced_sets = index_stack + new_sets
 
         # We have extended our "index stack;" now we must extend
