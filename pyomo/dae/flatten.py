@@ -222,7 +222,9 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
         sliced_sets = index_stack + new_sets
 
         # Extend our slice with this component
-        for idx, new_slice in slice_component_along_sets(c, sets, context_slice=context_slice):
+        for idx, new_slice in slice_component_along_sets(
+                c, sets, context_slice=context_slice
+                ):
             yield sliced_sets, new_slice
 
     # We now descend into subblocks
