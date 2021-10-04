@@ -2,6 +2,7 @@
 Constraints."""
 from pyomo.common.collections import ComponentMap
 from pyomo.common.modeling import unique_component_name
+from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import (TransformationFactory, BooleanVar, VarList, Binary,
                         LogicalConstraint, Block, ConstraintList, native_types,
@@ -16,9 +17,11 @@ from pyomo.core.expr.logical_expr import (AndExpression, OrExpression,
                                           RangedExpression)
 from pyomo.core.expr.numvalue import native_logical_types, value
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
+from pyomo.core.expr.current import identify_variables
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.gdp import Disjunct
-
+# ESJ TODO: Should we move this somewhere else?
+from pyomo.gdp.util import target_list
 
 @TransformationFactory.register("core.logical_to_linear", 
                                 doc="Convert logic to linear constraints")
@@ -27,50 +30,84 @@ class LogicalToLinear(IsomorphicTransformation):
     Re-encode logical constraints as linear constraints,
     converting Boolean variables to binary.
     """
+    CONFIG = ConfigBlock('core.logical_to_linear')
+    CONFIG.declare('targets', ConfigValue(
+        default=None,
+        domain=target_list,
+        description="target or list of targets that will be relaxed",
+        doc="""
+        This specifies the list of LogicalConstraints to transform, or the 
+        list of Blocks or Disjuncts on which to transform all of the 
+        LogicalConstraints. Note that if the transformation is done out
+        of place, the list of targets should be attached to the model before it
+        is cloned, and the list will specify the targets on the cloned
+        instance.
+        """
+    ))
 
     def _apply_to(self, model, **kwds):
-        for boolean_var in model.component_objects(ctype=BooleanVar,
-                                                   descend_into=(Block,
-                                                                 Disjunct)):
-            new_varlists = {}
-            for bool_vardata in boolean_var.values():
-                # we have neither the list nor an associated binary
-                parent_block = bool_vardata.parent_block()
-                new_varlist = new_varlists.get(parent_block)
-                if new_varlist is None and \
-                   bool_vardata.get_associated_binary() is None:
-                    new_var_list_name = unique_component_name(
-                        parent_block,
-                        boolean_var.local_name + '_asbinary')
-                    new_varlist = VarList(domain=Binary)
-                    setattr(parent_block, new_var_list_name, new_varlist)
-                    new_varlists[parent_block] = new_varlist
+        config = self.CONFIG(kwds.pop('options', {}))
+        config.set_value(kwds)
+        targets = config.targets
+        if targets is None:
+            targets = (model, )
 
-                if bool_vardata.get_associated_binary() is None:
-                    # we already have a list, but need to create the associated
-                    # binary
-                    new_binary_vardata = new_varlist.add()
-                    bool_vardata.associate_binary_var(new_binary_vardata)
-                    if bool_vardata.value is not None:
-                        new_binary_vardata.value = int(bool_vardata.value)
-                    if bool_vardata.fixed:
-                        new_binary_vardata.fix()
+        new_var_lists = ComponentMap()
+        for t in targets:
+            if t.ctype in [Block, Disjunct]:
+                self._transform_block(t, model, new_var_lists)
+            elif t.ctype is LogicalConstraint:
+                self._transform_constraint(t, model)
+            else:
+                raise RuntimeError("Target '%s' was not a Block, Disjunct, or"
+                                   " LogicalConstraint. It was of type %s "
+                                   "and can't be transformed." % (t.name,
+                                                                  type(t)))
+
+    def _transform_boolean_varData(self, bool_vardata, new_varlists):
+        # we have neither the list nor an associated binary
+        parent_block = bool_vardata.parent_block()
+        parent_component = bool_vardata.parent_component()
+        new_varlist = new_varlists.get(parent_component)
+        if new_varlist is None and \
+           bool_vardata.get_associated_binary() is None:
+            new_var_list_name = unique_component_name(
+                parent_block,
+                parent_component.local_name + '_asbinary')
+            new_varlist = VarList(domain=Binary)
+            setattr(parent_block, new_var_list_name, new_varlist)
+            new_varlists[parent_block] = new_varlist
+
+        if bool_vardata.get_associated_binary() is None:
+            # we already have a list, but need to create the associated
+            # binary
+            new_binary_vardata = new_varlist.add()
+            bool_vardata.associate_binary_var(new_binary_vardata)
+            if bool_vardata.value is not None:
+                new_binary_vardata.value = int(bool_vardata.value)
+            if bool_vardata.fixed:
+                new_binary_vardata.fix()
+
+    def _transform_block(self, target_block, model, new_varlists):
+        for cons in target_block.component_data_objects(
+                LogicalConstraint, descend_into=(Block, Disjunct)):
+            for bool_vardata in identify_variables(cons.expr):
+                self._transform_boolean_varData(bool_vardata, new_varlists)
 
         # Process statements in global (entire model) context
-        _process_logical_constraints_in_logical_context(model)
+        _process_logical_constraints_in_logical_context(target_block)
         # Now go do the ones on Blocks
-        for block in model.component_data_objects(Block,
-                                                  descend_into=(Block,
-                                                                Disjunct),
-                                                  active=True):
+        for block in target_block.component_data_objects(
+                Block, descend_into=(Block, Disjunct), active=True):
             _process_logical_constraints_in_logical_context(block)
         # Process statements that appear in disjuncts
-        for disjunct in model.component_data_objects(Disjunct,
-                                                     descend_into=(Block,
-                                                                   Disjunct),
-                                                     active=True):
+        for disjunct in target_block.component_data_objects(
+                Disjunct, descend_into=(Block, Disjunct), active=True):
             _process_logical_constraints_in_logical_context(disjunct)
 
+    def _transform_constraint(self, cons, model):
+        raise NotImplementedError("This would be a nice feature, but so far "
+                                  "targets can only be Blocks or Disjuncts")
 
 def update_boolean_vars_from_binary(model, integer_tolerance=1e-5):
     """Updates all Boolean variables based on the value of their linked binary
