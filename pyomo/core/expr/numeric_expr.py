@@ -553,8 +553,17 @@ class NPV_Mixin(object):
 
     def create_node_with_local_data(self, args, classtype=None):
         assert classtype is None
-        if all( type(arg) in native_types or not arg.is_potentially_variable()
-                for arg in args ):
+        try:
+            npv_args = all(
+                type(arg) in native_types or not arg.is_potentially_variable()
+                for arg in args
+            )
+        except AttributeError:
+            # We can hit this during expression replacement when the new
+            # type is not a PyomoObject type, but is not in the
+            # native_types set.  We will play it safe and clear the NPV flag
+            npv_args = False
+        if npv_args:
             return super().create_node_with_local_data(args, None)
         else:
             cls = list(self.__class__.__bases__)
@@ -800,11 +809,15 @@ class MonomialTermExpression(ProductExpression):
             # If this doesn't look like a MonomialTermExpression, then
             # fall back on the expression generation system to sort out
             # what the appropriate return type is.
-            if not (args[0].__class__ in native_types
-                    or not args[0].is_potentially_variable()):
-                return args[0] * args[1]
-            elif (args[1].__class__ in native_types
-                  or not args[1].is_variable_type()):
+            try:
+                if not (args[0].__class__ in native_types
+                        or not args[0].is_potentially_variable()):
+                    return args[0] * args[1]
+                elif (args[1].__class__ in native_types
+                      or not args[1].is_variable_type()):
+                    return args[0] * args[1]
+            except AttributeError:
+                # Fall back on general expression generation
                 return args[0] * args[1]
         return self.__class__(args)
 
