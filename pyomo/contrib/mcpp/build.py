@@ -12,7 +12,8 @@ import os
 import shutil
 import tempfile
 
-from pyomo.common.config import PYOMO_CONFIG_DIR
+import pyomo.common.envvar as envvar
+
 from pyomo.common.fileutils import this_file_dir, find_dir
 from pyomo.common.download import FileDownloader
 
@@ -24,7 +25,7 @@ def _generate_configuration():
     # Try and find MC++.  Defer to the MCPP_ROOT if it is set;
     # otherwise, look in common locations for a mcpp directory.
     pathlist=[
-        os.path.join(PYOMO_CONFIG_DIR, 'src'),
+        os.path.join(envvar.PYOMO_CONFIG_DIR, 'src'),
         this_file_dir(),
     ]
     if 'MCPP_ROOT' in os.environ:
@@ -90,7 +91,7 @@ def build_mcpp():
     package_config = _generate_configuration()
     package_config['cmdclass'] = {'build_ext': _BuildWithoutPlatformInfo}
     dist = distutils.core.Distribution(package_config)
-    install_dir = os.path.join(PYOMO_CONFIG_DIR, 'lib')
+    install_dir = os.path.join(envvar.PYOMO_CONFIG_DIR, 'lib')
     dist.get_command_obj('install_lib').install_dir = install_dir
     try:
         basedir = os.path.abspath(os.path.curdir)

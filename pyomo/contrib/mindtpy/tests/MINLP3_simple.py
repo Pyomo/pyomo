@@ -65,5 +65,6 @@ class SimpleMINLP(ConcreteModel):
         m.const4 = Constraint(expr=2*X[2] + 3*X[1] <= 10)
 
         """Cost (objective) function definition"""
-        m.cost = Objective(expr=10*X[1]**2 - X[2] + 5*(Y[1] - 1),
-                           sense=minimize)
+        m.objective = Objective(expr=10*X[1]**2 - X[2] + 5*(Y[1] - 1),
+                                sense=minimize)
+        m.optimal_value = -5.512

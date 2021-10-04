@@ -12,16 +12,19 @@ __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 
 import inspect
 import logging
+import sys
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.expr.numvalue import native_types, NumericNDArray
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
+from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common import DeveloperError
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.modeling import NOTSET
 
 from collections.abc import Sequence
 
@@ -608,6 +611,72 @@ You can silence this warning by one of three ways:
                 self._data[index]._component = None
             del self._data[index]
 
+    def _pop_from_kwargs(self, name, kwargs, namelist, notset=None):
+        args = [arg for arg in (kwargs.pop(name, notset) for name in namelist)
+                if arg is not notset]
+        if len(args) == 1:
+            return args[0]
+        elif not args:
+            return notset
+        else:
+            argnames = "%s%s '%s='" % (
+                ', '.join("'%s='" % _ for _ in namelist[:-1]),
+                ',' if len(namelist) > 2 else '',
+                namelist[-1]
+            )
+            raise ValueError(
+                "Duplicate initialization: %s() only accepts one of %s" %
+                (name, argnames))
+
+    def _construct_from_rule_using_setitem(self):
+        if self._rule is None:
+            return
+        index = None
+        rule = self._rule
+        block = self.parent_block()
+        try:
+            if rule.constant() and self.is_indexed():
+                # A constant rule could return a dict-like thing or
+                # matrix that we would then want to process with
+                # Initializer().  If the rule actually returned a
+                # constant, then this is just a little overhead.
+                self._rule = rule = Initializer(
+                    rule(block, None),
+                    treat_sequences_as_mappings=False,
+                    arg_not_specified=NOTSET
+                )
+
+            if rule.contains_indices():
+                # The index is coming in externally; we need to validate it
+                for index in rule.indices():
+                    self[index] = rule(block, index)
+            elif not self.index_set().isfinite():
+                # If the index is not finite, then we cannot iterate
+                # over it.  Since the rule doesn't provide explicit
+                # indices, then there is nothing we can do (the
+                # assumption is that the user will trigger specific
+                # indices to be created at a later time).
+                pass
+            elif rule.constant():
+                # Slight optimization: if the initializer is known to be
+                # constant, then only call the rule once.
+                val = rule(block, None)
+                for index in self.index_set():
+                    self._setitem_when_not_present(index, val)
+            else:
+                for index in self.index_set():
+                    self._setitem_when_not_present(index, rule(block, index))
+        except:
+            err = sys.exc_info()[1]
+            logger.error(
+                "Rule failed for %s '%s' with index %s:\n%s: %s"
+                % (self.ctype.__name__,
+                   self.name,
+                   str(index),
+                   type(err).__name__,
+                   err))
+            raise
+
     def _not_constructed_error(self, idx):
         # Generate an error because the component is not constructed
         if not self.is_indexed():
@@ -874,7 +943,7 @@ value() function.""" % ( self.name, i ))
             if value is not _NotSpecified:
                 obj.set_value(value)
         except:
-            del self._data[index]
+            self._data.pop(index, None)
             raise
         return obj
 
@@ -947,6 +1016,9 @@ class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
                 component_data.deactivate()
 
 
+# Ideally, this would inherit from np.lib.mixins.NDArrayOperatorsMixin,
+# but doing so overrides things like __contains__ in addition to the
+# operators that we are interested in.
 class IndexedComponent_NDArrayMixin(object):
     """Support using IndexedComponent with numpy.ndarray
 

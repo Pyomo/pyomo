@@ -42,9 +42,9 @@ def yaml_load(arg):
 from pyomo.common.config import (
     ConfigDict, ConfigValue,
     ConfigList, MarkImmutable, ImmutableConfigValue,
-    PositiveInt, NegativeInt, NonPositiveInt, NonNegativeInt,
+    Bool, Integer, PositiveInt, NegativeInt, NonPositiveInt, NonNegativeInt,
     PositiveFloat, NegativeFloat, NonPositiveFloat, NonNegativeFloat,
-    In, Path, PathList, ConfigEnum,
+    In, ListOf, Module, Path, PathList, ConfigEnum, DynamicImplicitDomain,
     _UnpickleableDomain, _picklable,
 )
 from pyomo.common.log import LoggingIntercept
@@ -62,6 +62,69 @@ class GlobalClass(object):
 
 
 class TestConfigDomains(unittest.TestCase):
+    def test_Bool(self):
+        c = ConfigDict()
+        c.declare('a', ConfigValue(True, Bool))
+        self.assertEqual(c.a, True)
+        c.a = False
+        self.assertEqual(c.a, False)
+        c.a = 1
+        self.assertEqual(c.a, True)
+        c.a = 'n'
+        self.assertEqual(c.a, False)
+        c.a = 'T'
+        self.assertEqual(c.a, True)
+        c.a = 'no'
+        self.assertEqual(c.a, False)
+        c.a = '1'
+        self.assertEqual(c.a, True)
+        c.a = 0.
+        self.assertEqual(c.a, False)
+        c.a = True
+        self.assertEqual(c.a, True)
+        c.a = 0
+        self.assertEqual(c.a, False)
+        c.a = 'y'
+        self.assertEqual(c.a, True)
+        c.a = 'F'
+        self.assertEqual(c.a, False)
+        c.a = 'yes'
+        self.assertEqual(c.a, True)
+        c.a = '0'
+        self.assertEqual(c.a, False)
+        c.a = 1.
+        self.assertEqual(c.a, True)
+
+        with self.assertRaises(ValueError):
+            c.a = 2
+        self.assertEqual(c.a, True)
+        with self.assertRaises(ValueError):
+            c.a = 'a'
+        self.assertEqual(c.a, True)
+        with self.assertRaises(ValueError):
+            c.a = 0.5
+        self.assertEqual(c.a, True)
+
+    def test_Integer(self):
+        c = ConfigDict()
+        c.declare('a', ConfigValue(5, Integer))
+        self.assertEqual(c.a, 5)
+        c.a = 4.
+        self.assertEqual(c.a, 4)
+        c.a = -6
+        self.assertEqual(c.a, -6)
+        c.a = '10'
+        self.assertEqual(c.a, 10)
+        with self.assertRaises(ValueError):
+            c.a = 2.6
+        self.assertEqual(c.a, 10)
+        with self.assertRaises(ValueError):
+            c.a = 'a'
+        self.assertEqual(c.a, 10)
+        with self.assertRaises(ValueError):
+            c.a = '1.1'
+        self.assertEqual(c.a, 10)
+
     def test_PositiveInt(self):
         c = ConfigDict()
         c.declare('a', ConfigValue(5, PositiveInt))
@@ -408,6 +471,64 @@ class TestConfigDomains(unittest.TestCase):
         self.assertEqual(len(c.a), 0)
         self.assertIs(type(c.a), list)
 
+    def test_ListOf(self):
+        c = ConfigDict()
+        c.declare('a', ConfigValue(domain=ListOf(int), default=None))
+        self.assertEqual(c.a, None)
+        c.a = 5
+        self.assertEqual(c.a, [5])
+        c.a = (5, 6.6)
+        self.assertEqual(c.a, [5, 6])
+
+        ref=(r"(?m)Failed casting a\s+to ListOf\(int\)\s+"
+             r"Error: invalid literal for int\(\) with base 10: 'a'")
+        with self.assertRaisesRegex(ValueError, ref):
+            c.a = 'a'
+
+        c.declare('b', ConfigValue(domain=ListOf(str), default=None))
+        self.assertEqual(c.b, None)
+        c.b = "Hello, World"
+        self.assertEqual(c.b, ["Hello, World"])
+        c.b = ("A", 6)
+        self.assertEqual(c.b, ["A", "6"])
+
+        c.declare('c', ConfigValue(domain=ListOf(int, PositiveInt)))
+        self.assertEqual(c.c, None)
+        c.c = 6
+        self.assertEqual(c.c, [6])
+
+        ref=(r"(?m)Failed casting %s\s+to ListOf\(PositiveInt\)\s+"
+             r"Error: Expected positive int, but received %s")
+        with self.assertRaisesRegex(ValueError, ref % (6.5, 6.5)):
+            c.c = 6.5
+        with self.assertRaisesRegex(ValueError, ref % (r"\[0\]", "0")):
+            c.c = [0]
+        c.c = [3, 6, 9]
+        self.assertEqual(c.c, [3, 6, 9])
+
+    def test_Module(self):
+        c = ConfigDict()
+
+        c.declare('a', ConfigValue(domain=Module(), default=None))
+        self.assertEqual(c.a, None)
+
+        # Set using python module name to be imported
+        c.a = 'os.path'
+        import os.path
+        self.assertIs(c.a, os.path)
+
+        # Set to python module object
+        import os
+        c.a = os
+        self.assertIs(c.a, os)
+
+        # Set using path to python file
+        this_file = __file__
+        this_folder = os.path.dirname(__file__)
+        to_import = os.path.join(this_folder, 'test_config.py')
+        c.a = to_import
+        self.assertEqual(c.a.__file__, to_import)
+
     def test_ConfigEnum(self):
         out = StringIO()
         with LoggingIntercept(out):
@@ -438,6 +559,42 @@ class TestConfigDomains(unittest.TestCase):
             cfg.enum = 3
         with self.assertRaisesRegex(ValueError, '.*invalid value'):
             cfg.enum ='ITEM_THREE'
+
+    def test_DynamicImplicitDomain(self):
+        def _rule(key, val):
+            ans = ConfigDict()
+            if 'i' in key:
+                ans.declare('option_i', ConfigValue(domain=int, default=1))
+            if 'f' in key:
+                ans.declare('option_f', ConfigValue(domain=float, default=2))
+            if 's' in key:
+                ans.declare('option_s', ConfigValue(domain=str, default=3))
+            if 'l' in key:
+                raise ValueError('invalid key: %s' % key)
+            return ans(val)
+        cfg = ConfigDict(
+            implicit=True, implicit_domain=DynamicImplicitDomain(_rule))
+        self.assertEqual(len(cfg), 0)
+        test = cfg({'hi': {'option_i': 10},
+                    'fast': {'option_f': 20}})
+        self.assertEqual(len(test), 2)
+        self.assertEqual(test.hi.value(), {'option_i': 10})
+        self.assertEqual(test.fast.value(), {'option_f': 20, 'option_s': '3'})
+
+        test2 = cfg(test)
+        self.assertIsNot(test.hi, test2.hi)
+        self.assertIsNot(test.fast, test2.fast)
+        self.assertEqual(test.value(), test2.value())
+
+        self.assertEqual(len(test2), 2)
+        fit = test2.get('fit', {})
+        self.assertEqual(len(test2), 2)
+        self.assertEqual(fit.value(), {'option_f': 2, 'option_i': 1})
+
+        with self.assertRaisesRegex(ValueError, "invalid key: fail"):
+            test = cfg({'hi': {'option_i': 10},
+                        'fast': {'option_f': 20},
+                        'fail': {'option_f': 20}})
 
 
 class TestImmutableConfigValue(unittest.TestCase):
@@ -2323,7 +2480,7 @@ c: 1.0
         # test that dir is sorted
         self.assertEqual(dir(cfg), sorted(dir(cfg)))
         # check that inconsistent name is flagged
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "Key 'b' not defined in ConfigDict ''"):
             cfg.b = cfg.declare('bb', ConfigValue(2, int))
 
@@ -2331,15 +2488,12 @@ c: 1.0
     def test_declaration_errors(self):
         cfg = ConfigDict()
         cfg.b = cfg.declare('b', ConfigValue(2, int))
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "duplicate config 'b' defined for ConfigDict ''"):
             cfg.b = cfg.declare('b', ConfigValue(2, int))
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, "config 'dd' is already assigned to ConfigDict ''"):
             cfg.declare('dd', cfg.get('b'))
-        with self.assertRaisesRegexp(
-                ValueError, "Illegal character in config 'd\[1\]'"):
-            cfg.declare('d[1]', ConfigValue(1))
 
 
     def test_declare_from(self):

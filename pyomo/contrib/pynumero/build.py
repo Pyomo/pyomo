@@ -15,7 +15,7 @@ import stat
 import sys
 import tempfile
 
-from pyomo.common import config
+import pyomo.common.envvar as envvar
 from pyomo.common.fileutils import this_file_dir, find_executable
 
 def handleReadonly(function, path, excinfo):
@@ -37,7 +37,7 @@ def build_pynumero(user_args=[], parallel=None):
 
             cmake_config = 'Debug' if self.debug else 'Release'
             cmake_args = [
-                '-DCMAKE_INSTALL_PREFIX=' + config.PYOMO_CONFIG_DIR,
+                '-DCMAKE_INSTALL_PREFIX=' + envvar.PYOMO_CONFIG_DIR,
                 '-DBUILD_AMPLMP_IF_NEEDED=ON',
                 #'-DCMAKE_BUILD_TYPE=' + cmake_config,
             ] + user_args
@@ -96,7 +96,7 @@ def build_pynumero(user_args=[], parallel=None):
         tmpdir = os.path.abspath(tempfile.mkdtemp())
         os.chdir(tmpdir)
         dist.run_command('build_ext')
-        install_dir = os.path.join(config.PYOMO_CONFIG_DIR, 'lib')
+        install_dir = os.path.join(envvar.PYOMO_CONFIG_DIR, 'lib')
     finally:
         os.chdir(basedir)
         shutil.rmtree(tmpdir, onerror=handleReadonly)
