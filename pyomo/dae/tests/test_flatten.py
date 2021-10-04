@@ -27,6 +27,7 @@ from pyomo.core.base.indexed_component import (
 from pyomo.dae.flatten import (
         flatten_dae_components,
         flatten_components_along_sets,
+        slice_component_along_sets,
         )
 
 class TestAssumedBehavior(unittest.TestCase):
@@ -1386,6 +1387,21 @@ class TestCUID(unittest.TestCase):
                 self.assertEqual(cuid_set, pred_cuid_set)
             else:
                 raise RuntimeError()
+
+
+class TestSliceComponent(unittest.TestCase):
+    
+    def test_no_sets(self):
+        pass
+
+    def test_one_set(self):
+        pass
+
+    def test_some_sets(self):
+        pass
+
+    def test_all_sets(self):
+        pass
 
 
 class TestExceptional(unittest.TestCase):
