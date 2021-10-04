@@ -60,13 +60,14 @@ class LogicalToLinear(IsomorphicTransformation):
         _process_logical_constraints_in_logical_context(model)
         # Now go do the ones on Blocks
         for block in model.component_data_objects(Block,
-                                                  descend_into=(Block, Disjunct),
+                                                  descend_into=(Block,
+                                                                Disjunct),
                                                   active=True):
             _process_logical_constraints_in_logical_context(block)
         # Process statements that appear in disjuncts
         for disjunct in model.component_data_objects(Disjunct,
                                                      descend_into=(Block,
-                                                                   Disjunct), 
+                                                                   Disjunct),
                                                      active=True):
             _process_logical_constraints_in_logical_context(disjunct)
 
@@ -85,7 +86,8 @@ def update_boolean_vars_from_binary(model, integer_tolerance=1e-5):
                 boolean_var.value = False
             else:
                 raise ValueError("Binary variable has non-{0,1} value: "
-                                 "%s = %s" % (binary_var.name, binary_var.value))
+                                 "%s = %s" % (binary_var.name,
+                                              binary_var.value))
             boolean_var.stale = binary_var.stale
 
 def _process_logical_constraints_in_logical_context(context):
@@ -95,7 +97,8 @@ def _process_logical_constraints_in_logical_context(context):
 
     new_constrlist = new_xfrm_block.transformed_constraints = ConstraintList()
     new_boolvarlist = new_xfrm_block.augmented_vars = BooleanVarList()
-    new_varlist = new_xfrm_block.augmented_vars_asbinary = VarList(domain=Binary)
+    new_varlist = new_xfrm_block.augmented_vars_asbinary = VarList(
+        domain=Binary)
 
     indicator_map = ComponentMap()
     cnf_statements = []
@@ -116,8 +119,8 @@ def _process_logical_constraints_in_logical_context(context):
         for linear_constraint in _cnf_to_linear_constraint_list(cnf_statement):
             new_constrlist.add(expr=linear_constraint)
 
-    # Add bigM associated with special atoms 
-    # Note: this ad-hoc reformulation may be revisited for tightness in the 
+    # Add bigM associated with special atoms
+    # Note: this ad-hoc reformulation may be revisited for tightness in the
     # future.
     old_varlist_length = len(new_varlist)
     for indicator_var, special_atom in indicator_map.items():
@@ -135,7 +138,7 @@ def _process_logical_constraints_in_logical_context(context):
             new_bool_vardata = new_boolvarlist.add()
             new_bool_vardata.associate_binary_var(binary_vardata)
 
-    # If added components were not used, remove them.  
+    # If added components were not used, remove them.
     # Note: it is ok to simply delete the index_set for these components,
     # because by default, a new set object is generated for each [Thing]List.
     if len(new_constrlist) == 0:
@@ -165,8 +168,8 @@ def _cnf_to_linear_constraint_list(cnf_expr, indicator_var=None,
                 "constant value False: %s"
                 % cnf_expr)
     if cnf_expr.is_expression_type():
-        return CnfToLinearVisitor(indicator_var, binary_varlist).walk_expression(
-            cnf_expr)
+        return CnfToLinearVisitor(indicator_var, binary_varlist).\
+            walk_expression(cnf_expr)
     else:
         return [cnf_expr.get_associated_binary() == 1]  # Assume that cnf_expr
                                                         # is a BooleanVar
