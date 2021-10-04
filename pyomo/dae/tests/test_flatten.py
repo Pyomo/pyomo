@@ -1217,7 +1217,7 @@ class TestCUID(unittest.TestCase):
 
         sets = (m.s1, m.s2)
         ctype = Var
-        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
         for sets, comps in zip(sets_list, comps_list):
             if len(sets) == 1 and sets[0] is UnindexedComponent_set:
                 self.assertEqual(len(comps), len(m.s1)*len(m.s2))
@@ -1242,7 +1242,7 @@ class TestCUID(unittest.TestCase):
 
         sets = (m.s3, m.s4)
         ctype = Var
-        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
         for sets, comps in zip(sets_list, comps_list):
             if len(sets) == 1 and sets[0] is m.s4:
                 self.assertEqual(len(comps), len(m.s1))
@@ -1266,7 +1266,7 @@ class TestCUID(unittest.TestCase):
 
         sets = (m.s3, m.s4)
         ctype = Var
-        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
         for sets, comps in zip(sets_list, comps_list):
             if len(sets) == 2 and sets[0] is m.s3 and sets[1] is m.s4:
                 self.assertEqual(len(comps), 1)
@@ -1287,7 +1287,7 @@ class TestCUID(unittest.TestCase):
 
         sets = (m.s1,)
         ctype = Var
-        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
         self.assertEqual(len(sets_list), 1)
         self.assertEqual(len(comps_list), 1)
         for sets, comps in zip(sets_list, comps_list):
@@ -1320,7 +1320,7 @@ class TestCUID(unittest.TestCase):
 
         sets = (m.s3, m.s4)
         ctype = Var
-        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
         self.assertEqual(len(sets_list), 1)
         self.assertEqual(len(comps_list), 1)
         for sets, comps in zip(sets_list, comps_list):
@@ -1348,7 +1348,7 @@ class TestCUID(unittest.TestCase):
 
         sets = (m.s1, m.s4)
         ctype = Var
-        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
         self.assertEqual(len(sets_list), 1)
         self.assertEqual(len(comps_list), 1)
         for sets, comps in zip(sets_list, comps_list):
@@ -1376,11 +1376,33 @@ class TestCUID(unittest.TestCase):
 
         sets = (m.s1, m.s2)
         ctype = Var
-        sets_list, comps_list = flatten_components_along_sets(m, sets, Var)
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
         self.assertEqual(len(sets_list), 1)
         self.assertEqual(len(comps_list), 1)
         for sets, comps in zip(sets_list, comps_list):
             if len(sets) == 2 and sets[0] is m.s1 and sets[1] is m.s2:
+                self.assertEqual(len(comps), 1)
+                cuid_set = set(str(ComponentUID(comp.referent))
+                        for comp in comps)
+                self.assertEqual(cuid_set, pred_cuid_set)
+            else:
+                raise RuntimeError()
+
+    def test_cuids_multiple_slices(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1, 2, 3])
+        def block_rule(b, i):
+            b.v = Var(m.s1)
+        m.b = Block(m.s1, rule=block_rule)
+
+        pred_cuid_set = {"b[*].v[*]"}
+        sets = (m.s1,)
+        ctype = Var
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
+        self.assertEqual(len(sets_list), 1)
+        self.assertEqual(len(comps_list), 1)
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 2 and sets[0] is m.s1 and sets[1] is m.s1:
                 self.assertEqual(len(comps), 1)
                 cuid_set = set(str(ComponentUID(comp.referent))
                         for comp in comps)
