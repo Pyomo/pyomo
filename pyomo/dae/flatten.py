@@ -119,7 +119,7 @@ def _fill_indices_from_product(partial_index_list, product):
         normalize_index.flatten = _normalize_index_flatten
 
 
-def slice_component_along_sets(component, *sets):
+def slice_component_along_sets(component, sets, context_slice=None):
     # TODO: Any optional args I need?
     # Might be useful to pass in a slice if I'm intending to continue
     # an existing slice.
@@ -132,6 +132,13 @@ def slice_component_along_sets(component, *sets):
     sliced_sets = [s for s in subsets if s in set_set]
     other_sets = [s for s in subsets if s not in set_set]
 
+    if context_slice is None:
+        base_component = component
+    else:
+        if type(context_slice) is IndexedComponent_slice:
+            context_slice = context_slice.duplicate()
+        base_component = getattr(context_slice, component.local_name)
+
     if other_sets and component.is_indexed():
         # We need to iterate over sets that aren't sliced
         # `c.is_indexed()` covers the case when UnindexedComponent_set
@@ -143,7 +150,7 @@ def slice_component_along_sets(component, *sets):
                 cross_prod,
                 ):
             try:
-                c_slice = component[new_index]
+                c_slice = base_component[new_index]
                 if type(c_slice) is IndexedComponent_slice:
                     # This is just to make sure we do not have an
                     # empty slice.
@@ -167,13 +174,13 @@ def slice_component_along_sets(component, *sets):
         # will be valid.
         try:
             if component.is_indexed():
-                slice_idx = tuple(get_slice_for_set(s) for s in new_sets)
-                c_slice = component[slice_idx]
+                slice_idx = tuple(get_slice_for_set(s) for s in sliced_sets)
+                c_slice = base_component[slice_idx]
                 # Make sure this slice is not empty...
                 next(iter(c_slice.duplicate()))
             else:
                 # Component is a data object
-                c_slice = component
+                c_slice = base_component
             yield (), c_slice
         except StopIteration:
             pass
@@ -211,51 +218,12 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
         # We have extended our "index stack;" now we must extend
         # our slice.
 
-        if other_sets and c.is_indexed():
-            # We need to iterate over sets that aren't sliced
-            # `c.is_indexed()` covers the case when UnindexedComponent_set
-            # is in `other_sets`.
-            cross_prod = other_sets[0].cross(*other_sets[1:])
-            # The original implementation was to pick an arbitrary index
-            # from the "flattened sets" and slice all the other indices.
-            #
-            # This implementation avoids issues about selecting an arbitrary
-            # index, but requires duplicating some of the slice-iter logic below
-
-            for _, new_index in _fill_indices_from_product(temp_idx, cross_prod):
-                try:
-                    c_slice = getattr(slice_, c.local_name)[new_index]
-                    if type(c_slice) is IndexedComponent_slice:
-                        # This is just to make sure we do not have an
-                        # empty slice.
-                        temp_slice = c_slice.duplicate()
-                        next(iter(temp_slice))
-                    yield sliced_sets, c_slice
-                except StopIteration:
-                    # We have an empty slice for some reason, e.g.
-                    # a coordinate of `new_index` from the cross
-                    # product was skipped in the original component.
-                    pass
-                except KeyError:
-                    # We are creating scalar components from a product of
-                    # sets. Components may be undefined for certain indices.
-                    # We want to simply skip that index and move on.
-                    pass
+        if type(slice_) is IndexedComponent_slice:
+            context_slice = slice_
         else:
-            # `c` is indexed only by sets we would like to slice.
-            # Slice the component if it is indexed so a future getattr
-            # will be valid.
-            try:
-                if c.is_indexed():
-                    slice_idx = tuple(get_slice_for_set(s) for s in new_sets)
-                    c_slice = getattr(slice_, c.local_name)[slice_idx]
-                    # Make sure this slice is not empty...
-                    next(iter(c_slice.duplicate()))
-                else:
-                    c_slice = getattr(slice_, c.local_name)
-                yield sliced_sets, c_slice
-            except StopIteration:
-                pass
+            context_slice = None
+        for idx, new_slice in slice_component_along_sets(c, sets, context_slice=slice_):
+            yield sliced_sets, new_slice
 
     # We now descend into subblocks
     for sub in b.component_objects(Block, descend_into=False):
