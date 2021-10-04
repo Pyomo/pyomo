@@ -122,7 +122,9 @@ def _fill_indices_from_product(partial_index_list, product):
         normalize_index.flatten = _normalize_index_flatten
 
 
-def slice_component_along_sets(component, sets, context_slice=None):
+def slice_component_along_sets(
+        component, sets, context_slice=None, denormalize=False,
+        ):
     """
     This function generates all possible slices of the provided component
     along the provided sets. That is, it will iterate over the component's
@@ -138,6 +140,10 @@ def slice_component_along_sets(component, sets, context_slice=None):
     context_slice: IndexedComponent_slice
         If provided, instead of creating a new slice, we will extend this
         one with appropriate getattr and getitem calls.
+    denormalize: Bool
+        If True, the returned index (from the product of "other sets")
+        is not normalized, regardless of the value of normalize_index.flatten.
+        This is necessary to use this index with _fill_indices.
 
     Yields
     ------
@@ -188,7 +194,8 @@ def slice_component_along_sets(component, sets, context_slice=None):
                     # We enter this loop even if no sets need slicing.
                     temp_slice = c_slice.duplicate()
                     next(iter(temp_slice))
-                # TODO: Do we need to yield the sliced sets here as well?
+                if normalize_index.flatten and not denormalize:
+                    prod_index = normalize_index(prod_index)
                 yield prod_index, c_slice
             except StopIteration:
                 # We have an empty slice for some reason, e.g.
@@ -241,7 +248,7 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
 
         # Extend our slice with this component
         for idx, new_slice in slice_component_along_sets(
-                c, sets, context_slice=context_slice
+                c, sets, context_slice=context_slice, denormalize=True
                 ):
             yield sliced_sets, new_slice
 
@@ -267,9 +274,11 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
 
         # Generate slices from this sub-block
         for idx, new_slice in slice_component_along_sets(
-                sub, sets, context_slice=context_slice
+                sub, sets, context_slice=context_slice, denormalize=True
                 ):
             if sub.is_indexed():
+                if type(idx) is not tuple:
+                    idx = (idx,)
                 # fill any remaining placeholders with the "index" of our slice
                 descend_idx = _fill_indices(list(given_descend_idx), idx)
                 # create a slice-or-data object
