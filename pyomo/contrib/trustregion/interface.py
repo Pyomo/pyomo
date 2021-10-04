@@ -214,6 +214,9 @@ class PyomoInterface(object):
         variables = self.TRF.exfn_xvars[externalNode]['vars']
         idx = self.TRF.exfn_xvars[externalNode]['index']
         if self.rmtype == RMType.linear:
+            # FIXME: This is wrong. variables[j] != index[j]
+            # Original code:
+            #    e1 = (model.plrom[i,0] + sum(model.plrom[i,j+1] * (model.xvars[ind[j]] - model.px0[ind[j]]) for j in range(0, len(ind))))
             expr = (model.rmParam[idx, 0] +
                 sum(model.rmParam[idx, j+1] * (model.xvars[variables[j]] -
                                                 model.x0[variables[j]])
@@ -222,10 +225,10 @@ class PyomoInterface(object):
             expr = (model.rmParam[idx, 0] +
             sum(model.rmParam[idx, j+1] *
                 (model.xvars[j] - model.x0[j])
-                for j in range(0, self.lengthx)))
-            i = self.lengthx + 1
-            for j1 in range(self.lengthx):
-                for j2 in range(j1, self.lengthx):
+                for j in range(0, self.len_x)))
+            i = self.len_x + 1
+            for j1 in range(self.len_x):
+                for j2 in range(j1, self.len_x):
                     expr += ((model.xvars[j2] - model.x0[j2]) *
                              (model.xvars[j1] - model.x0[j1]) * model.rmParam[idx, i])
                     i += 1
@@ -328,6 +331,13 @@ class PyomoInterface(object):
             values = self.externalNodeValues(externalNode, x)
             ans.append(externalNode._fcn(*values))
         return np.array(ans)
+
+    def evaluateObj(self, x, y, z):
+        """
+        Evaluate the objective
+        """
+        self.setVarValue(x=x, y=y, z=z)
+        return self.objective()
 
     def solveModel(self):
         """

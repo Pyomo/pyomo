@@ -16,7 +16,7 @@ from pyomo.contrib.trustregion.filter import (
     FilterElement, Filter)
 from pyomo.contrib.trustregion.utils import copyVector
 from pyomo.contrib.trustregion.Logger import Logger
-from pyomo.contrib.trustregion.PyomoInterface import (
+from pyomo.contrib.trustregion.interface import (
     PyomoInterface, RMType)
 
 def TrustRegionMethod(m, efList, config):
@@ -31,17 +31,22 @@ def TrustRegionMethod(m, efList, config):
     treated with the trust region
 
     config is the persistent set of variables defined 
-    in the ConfigBlock class object
+    in the ConfigDict class object
 
     Return: 
     model is solved, variables are at optimal solution or
     other exit condition.  model is left in reformulated form, with
-    some new variables introduced in a block named "tR" TODO: reverse
-    the transformation.
+    some new variables introduced in a block named "tR".
     """
 
     logger = Logger()
     TrustRegionFilter = Filter()
     problem = PyomoInterface(m, efList, config)
-    x, y, z = problem.getInitialValue()
+    x0, y0, z0 = problem.getInitialValue()
+    # iteration = 0
+    rmParams, y_r = problem.buildRM(x0, config.sample_radius)
+    rebuildRM = False
+    x_k, y_k, z_k = copyVector(x0, y0, z0)
+    theta_k = norm(y_r - y_k, 1)
+    obj_k = problem.evaluateObj(x0, y0, z0)
     pass
