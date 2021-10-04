@@ -26,9 +26,8 @@ from pyomo.core.base.external import ExternalFunction
 from pyomo.core.base import Transformation, TransformationFactory, Reference
 import pyomo.core.expr.current as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import ( _warn_for_active_logical_constraint, target_list,
-                             get_src_disjunction, get_src_constraint,
-                             get_transformed_constraints,
+from pyomo.gdp.util import ( target_list, get_src_disjunction,
+                             get_src_constraint, get_transformed_constraints,
                              _get_constraint_transBlock, get_src_disjunct,
                              _warn_for_active_disjunction,
                              _warn_for_active_disjunct, preprocess_targets)
@@ -160,7 +159,8 @@ class BigM_Transformation(Transformation):
             Disjunction: self._warn_for_active_disjunction,
             Disjunct:    self._warn_for_active_disjunct,
             Block:       self._transform_block_on_disjunct,
-            LogicalConstraint: self._warn_for_active_logical_statement,
+            LogicalConstraint: False, # We transform these before we call
+                                      # handlers
             ExternalFunction: False,
             Port:        False, # not Arcs, because those are deactivated after
                                 # the network.expand_arcs transformation
@@ -493,6 +493,12 @@ class BigM_Transformation(Transformation):
             self._transfer_transBlock_data(transBlock, destinationBlock)
             # we leave the transformation block because it still has the XOR
             # constraints, which we want to be on the parent disjunct.
+
+        # Transform any logical constraints here. We need to do this before we
+        # create the variable references!
+        print("DEBUG: Calling logical_to_linear on:")
+        block.pprint()
+        TransformationFactory('core.logical_to_linear').apply_to(block)
 
         # Find all the variables declared here (including the indicator_var) and
         # add a reference on the transformation block so these will be

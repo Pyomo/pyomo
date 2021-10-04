@@ -1,5 +1,6 @@
 from pyomo.core import (Block, ConcreteModel, Constraint, Objective, Param, Set,
-                        Var, inequality, RangeSet, Any, Expression, maximize, TransformationFactory)
+                        Var, inequality, RangeSet, Any, Expression, maximize,
+                        TransformationFactory, BooleanVar, LogicalConstraint)
 from pyomo.gdp import Disjunct, Disjunction
 
 import pyomo.network as ntwk
@@ -763,7 +764,8 @@ def makeNetworkDisjunction(minimize=True):
     blue_box.inlet_wkbx = ntwk.Port(initialize={"x":blue_box.x_wkbx})
     blue_box.outlet_dest = ntwk.Port(initialize={"x":blue_box.x_dest})
 
-    blue_box.multiplier_constr = Constraint(expr=blue_box.x_dest == 2*blue_box.x_wkbx)
+    blue_box.multiplier_constr = Constraint(expr=blue_box.x_dest == \
+                                            2*blue_box.x_wkbx)
 
     # orange arcs
     orange.a1 = ntwk.Arc(source=feed.outlet, destination=wkbx.inlet)
@@ -854,5 +856,35 @@ def makeHierarchicalNested_DeclOrderOppositeInstantationOrder():
     m.disjunction_block = Block()
     m.disjunct_block = Block()
     instantiate_hierarchical_nested_model(m)
+
+    return m
+
+#
+# Logical Constraints on Disjuncts
+#
+
+def makeLogicalConstraintsOnDisjuncts():
+    m = ConcreteModel()
+    m.s = RangeSet(4)
+    m.ds = RangeSet(2)
+    m.d = Disjunct(m.s)
+    m.djn = Disjunction(m.ds)
+    m.djn[1] = [m.d[1], m.d[2]]
+    m.djn[2] = [m.d[3], m.d[4]]
+    m.x = Var(bounds=(-2, 10))
+    m.Y = BooleanVar([1, 2])
+    m.d[1].c = Constraint(expr=m.x >= 2)
+    m.d[1].logical = LogicalConstraint(expr=~m.Y[1])
+    m.d[2].c = Constraint(expr=m.x >= 3)
+    m.d[3].c = Constraint(expr=m.x <= 8)
+    m.d[3].logical = LogicalConstraint(expr=m.Y[1].equivalent_to(m.Y[2]))
+    m.d[4].c = Constraint(expr=m.x == 2.5)
+    m.o = Objective(expr=m.x)
+
+    # Add the logical proposition
+    m.p = LogicalConstraint(
+        expr=m.d[1].indicator_var.implies(m.d[4].indicator_var))
+    # Use the logical stuff to make d1 and d4 infeasible:
+    m.bwahaha = LogicalConstraint(expr=m.Y[1].xor(m.Y[2]))
 
     return m

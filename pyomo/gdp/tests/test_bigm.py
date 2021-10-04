@@ -1686,7 +1686,8 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         ct.check_disjuncts_inactive_nested(self, 'bigm')
 
     def test_deactivated_disjunct_leaves_nested_disjuncts_active(self):
-        ct.check_deactivated_disjunct_leaves_nested_disjunct_active(self, 'bigm')
+        ct.check_deactivated_disjunct_leaves_nested_disjunct_active(self, 
+                                                                    'bigm')
 
     def test_transformation_block_structure(self):
         m = models.makeNestedDisjunctions()
@@ -2549,6 +2550,20 @@ class NetworkDisjuncts(unittest.TestCase, CommonTests):
     @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
     def test_solution_minimize(self):
         ct.check_network_disjucts(self, minimize=True, transformation='bigm')
+
+class LogicalConstraintsOnDisjuncts(unittest.TestCase):
+    def test_logical_constraints_transformed(self):
+        m = models.makeLogicalConstraintsOnDisjuncts()
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        y1 = m.Y[1].get_associated_binary()
+        y2 = m.Y[2].get_associated_binary()
+
+        # check the bigm transformation of the logical things on the disjuncts
+        m.pprint()
+        self.assertTrue(False)
+
+        # check that the global logical constraints were also transformed.
 
 if __name__ == '__main__':
     unittest.main()
