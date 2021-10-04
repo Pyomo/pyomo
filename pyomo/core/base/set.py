@@ -1349,7 +1349,7 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
 
 class _ScalarOrderedSetMixin(object):
     # This mixin is required because scalar ordered sets implement
-    # __getitem__() as an alias of card()
+    # __getitem__() as an alias of at()
     __slots__ = ()
 
     def values(self):
@@ -1367,9 +1367,9 @@ class _ScalarOrderedSetMixin(object):
 class _OrderedSetMixin(object):
     __slots__ = ()
 
-    def card(self, index):
+    def at(self, index):
         raise DeveloperError("Derived ordered set class (%s) failed to "
-                             "implement card" % (type(self).__name__,))
+                             "implement at" % (type(self).__name__,))
 
     def ord(self, val):
         raise DeveloperError("Derived ordered set class (%s) failed to "
@@ -1380,9 +1380,14 @@ class _OrderedSetMixin(object):
             return self
         deprecation_warning(
             "Using __getitem__ to return a set value from its (ordered) "
-            "position is deprecated.  Please use card()",
+            "position is deprecated.  Please use at()",
             version='6.1', remove_in='7.0')
-        return self.card(key)
+        return self.at(key)
+
+    @deprecated("card() was incorrectly added to the Set API.  "
+                "Please use at()", version='6.1.2', remove_in='6.2')
+    def card(self, index):
+        return self.at(index)
 
     def isordered(self):
         """Returns True if this is an ordered finite discrete (iterable) Set"""
@@ -1392,10 +1397,10 @@ class _OrderedSetMixin(object):
         return self.data()
 
     def first(self):
-        return self.card(1)
+        return self.at(1)
 
     def last(self):
-        return self.card(len(self))
+        return self.at(len(self))
 
     def next(self, item, step=1):
         """
@@ -1412,7 +1417,7 @@ class _OrderedSetMixin(object):
             raise IndexError("Cannot advance before the beginning of the Set")
         if position > len(self):
             raise IndexError("Cannot advance past the end of the Set")
-        return self.card(position)
+        return self.at(position)
 
     def nextw(self, item, step=1):
         """
@@ -1426,7 +1431,7 @@ class _OrderedSetMixin(object):
         If the search item is not in the Set an IndexError is raised.
         """
         position = self.ord(item)
-        return self.card((position+step-1) % len(self) + 1)
+        return self.at((position+step-1) % len(self) + 1)
 
     def prev(self, item, step=1):
         """Return the previous item in the set.
@@ -1556,7 +1561,7 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
         self.discard(ans)
         return ans
 
-    def card(self, index):
+    def at(self, index):
         """
         Return the specified member of the set.
 
@@ -1688,7 +1693,7 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
         super(_SortedSetData, self).clear()
         self._is_sorted = True
 
-    def card(self, index):
+    def at(self, index):
         """
         Return the specified member of the set.
 
@@ -1697,7 +1702,7 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
         """
         if not self._is_sorted:
             self._sort()
-        return super(_SortedSetData, self).card(index)
+        return super(_SortedSetData, self).at(index)
 
     def ord(self, item):
         """
@@ -1732,7 +1737,7 @@ _FINITESET_API = _SET_API + (
     '__reversed__', '__len__', 'data', 'sorted_data', 'ordered_data',
 )
 _ORDEREDSET_API = _FINITESET_API + (
-    'card', 'ord',
+    'at', 'ord',
 )
 _SETDATA_API = (
     'set_value', 'add', 'remove', 'discard', 'clear', 'update', 'pop',
@@ -2359,7 +2364,7 @@ class UnorderedSetOf(SetOf):
     pass
 
 class OrderedSetOf(_ScalarOrderedSetMixin, _OrderedSetMixin, SetOf):
-    def card(self, index):
+    def at(self, index):
         i = self._to_0_based_index(index)
         try:
             return self._ref[i]
@@ -2505,7 +2510,7 @@ class _FiniteRangeSetData( _SortedSetMixin,
         else:
             return sum(1 for _ in self)
 
-    def card(self, index):
+    def at(self, index):
         assert int(index) == index
         idx = self._to_0_based_index(index)
         if len(self._ranges) == 1:
@@ -3238,11 +3243,11 @@ class SetUnion_OrderedSet(_ScalarOrderedSetMixin, _OrderedSetMixin,
                           SetUnion_FiniteSet):
     __slots__ = tuple()
 
-    def card(self, index):
+    def at(self, index):
         idx = self._to_0_based_index(index)
         set0_len = len(self._sets[0])
         if idx < set0_len:
-            return self._sets[0].card(idx+1)
+            return self._sets[0].at(idx+1)
         else:
             idx -= set0_len - 1
             set1_iter = iter(self._sets[1])
@@ -3377,7 +3382,7 @@ class SetIntersection_OrderedSet(_ScalarOrderedSetMixin, _OrderedSetMixin,
                                  SetIntersection_FiniteSet):
     __slots__ = tuple()
 
-    def card(self, index):
+    def at(self, index):
         idx = self._to_0_based_index(index)
         _iter = iter(self)
         try:
@@ -3466,7 +3471,7 @@ class SetDifference_OrderedSet(_ScalarOrderedSetMixin, _OrderedSetMixin,
                                SetDifference_FiniteSet):
     __slots__ = tuple()
 
-    def card(self, index):
+    def at(self, index):
         idx = self._to_0_based_index(index)
         _iter = iter(self)
         try:
@@ -3574,7 +3579,7 @@ class SetSymmetricDifference_OrderedSet(_ScalarOrderedSetMixin,
                                         SetSymmetricDifference_FiniteSet):
     __slots__ = tuple()
 
-    def card(self, index):
+    def at(self, index):
         idx = self._to_0_based_index(index)
         _iter = iter(self)
         try:
@@ -3852,7 +3857,7 @@ class SetProduct_OrderedSet(_ScalarOrderedSetMixin, _OrderedSetMixin,
                             SetProduct_FiniteSet):
     __slots__ = tuple()
 
-    def card(self, index):
+    def at(self, index):
         _idx = self._to_0_based_index(index)
         _ord = list(len(_) for _ in self._sets)
         i = len(_ord)
@@ -3861,7 +3866,7 @@ class SetProduct_OrderedSet(_ScalarOrderedSetMixin, _OrderedSetMixin,
             _ord[i], _idx = _idx % _ord[i], _idx // _ord[i]
         if _idx:
             raise IndexError("%s index out of range" % (self.name,))
-        ans = tuple(s.card(i+1) for s,i in zip(self._sets, _ord))
+        ans = tuple(s.at(i+1) for s,i in zip(self._sets, _ord))
         if FLATTEN_CROSS_PRODUCT and normalize_index.flatten \
            and self.dimen != len(ans):
             return self._flatten_product(ans)

@@ -22,6 +22,7 @@ import sys
 from typing import Dict
 from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.errors import PyomoException
+import os
 
 
 logger = logging.getLogger(__name__)
@@ -395,12 +396,17 @@ class Ipopt(PersistentSolver):
         for k, v in self.ipopt_options.items():
             cmd.append(str(k) + '=' + str(v))
 
+        env = os.environ.copy()
+        if 'PYOMO_AMPLFUNC' in env:
+            env['AMPLFUNC'] = "\n".join(filter(None, (env.get('AMPLFUNC', None), env.get('PYOMO_AMPLFUNC', None))))
+
         with TeeStream(*ostreams) as t:
             timer.start('subprocess')
             cp = subprocess.run(cmd,
                                 timeout=timeout,
                                 stdout=t.STDOUT,
                                 stderr=t.STDERR,
+                                env=env,
                                 universal_newlines=True)
             timer.stop('subprocess')
 

@@ -43,6 +43,47 @@ USER_OPTION = 0
 ADVANCED_OPTION = 1
 DEVELOPER_OPTION = 2
 
+def Bool(val):
+    """Domain validator for bool-like objects.
+
+    This is a more strict domain than ``bool``, as it will error on
+    values that do not "look" like a Boolean value (i.e., it accepts
+    ``True``, ``False``, 0, 1, and the case insensitive strings
+    ``'true'``, ``'false'``, ``'yes'``, ``'no'``, ``'t'``, ``'f'``,
+    ``'y'``, and ``'n'``)
+
+    """
+    if type(val) is bool:
+        return val
+    if isinstance(val, str):
+        v = val.upper()
+        if v in {'TRUE', 'YES', 'T', 'Y', '1'}:
+            return True
+        if v in {'FALSE', 'NO', 'F', 'N', '0'}:
+            return False
+    elif int(val) == float(val):
+        v = int(val)
+        if v in {0, 1}:
+            return bool(v)
+    raise ValueError(
+        "Expected Boolean, but received %s" % (val,))
+
+def Integer(val):
+    """Domain validation function admitting integers
+
+    This domain will admit integers, as well as any values that are
+    "reasonably exactly" convertible to integers.  This is more strict
+    than ``int``, as it will generate errors for floating point values
+    that are not integer.
+
+    """
+    ans = int(val)
+    # We want to give an error for floating point numbers...
+    if ans != float(val):
+        raise ValueError(
+            "Expected integer, but received %s" % (val,))
+    return ans
+
 def PositiveInt(val):
     """Domain validation function admitting strictly positive integers
 
@@ -237,7 +278,38 @@ class InEnum(object):
             value, self._domain.__name__))
 
 
-class Module:
+class ListOf(object):
+    """Domain validator for lists of a specified type
+
+    Parameters
+    ----------
+    itemtype: type
+        The type for each element in the list
+
+    domain: Callable
+        A domain validator (callable that takes the incoming value,
+        validates it, and returns the appropriate domain type) for each
+        element in the list.  If not specified, defaults to the
+        `itemtype`.
+
+    """
+    def __init__(self, itemtype, domain=None):
+        self.itemtype = itemtype
+        if domain is None:
+            self.domain = self.itemtype
+        else:
+            self.domain = domain
+        self.__name__ = 'ListOf(%s)' % (
+            getattr(self.domain, '__name__', self.domain),)
+
+    def __call__(self, value):
+        if hasattr(value, '__iter__') and not isinstance(value, self.itemtype):
+            return [self.domain(v) for v in value]
+        else:
+            return [self.domain(value)]
+
+
+class Module(object):
     """ Domain validator for modules.
 
     Modules can be specified as module objects, by module name,
@@ -585,6 +657,8 @@ validators for common use cases:
 
 .. autosummary::
 
+   Bool
+   Integer
    PositiveInt
    NegativeInt
    NonNegativeInt
@@ -595,6 +669,8 @@ validators for common use cases:
    NonNegativeFloat
    In
    InEnum
+   ListOf
+   Module
    Path
    PathList
 

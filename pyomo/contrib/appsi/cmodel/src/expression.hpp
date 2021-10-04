@@ -42,6 +42,7 @@ class PowerOperator;
 class NegationOperator;
 class ExpOperator;
 class LogOperator;
+class ExternalOperator;
 
 
 extern double inf;
@@ -58,6 +59,7 @@ public:
   virtual bool is_operator_type() {return false;}
   virtual bool is_constant_type() {return false;}
   virtual bool is_leaf() {return false;}
+  virtual bool is_external() {return false;}
   virtual double get_value_from_array(double*) = 0;
   virtual int get_degree_from_array(int*) = 0;
   virtual std::string get_string_from_array(std::string*) = 0;
@@ -93,6 +95,7 @@ public:
 
   virtual std::string __str__() = 0;
   virtual std::shared_ptr<std::vector<std::shared_ptr<Var> > > identify_variables() = 0;
+  virtual std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > identify_external_operators() = 0;
   virtual std::shared_ptr<std::vector<std::shared_ptr<Node> > > get_prefix_notation() = 0;
 
   std::shared_ptr<ExpressionBase> shared_from_this() {return std::static_pointer_cast<ExpressionBase>(Node::shared_from_this());}
@@ -103,6 +106,7 @@ public:
 
 std::shared_ptr<ExpressionBase> appsi_exp(std::shared_ptr<ExpressionBase> n);
 std::shared_ptr<ExpressionBase> appsi_log(std::shared_ptr<ExpressionBase> n);
+std::shared_ptr<ExpressionBase> external_helper(std::string function_name, std::vector<std::shared_ptr<ExpressionBase> > operands);
 
 
 class Leaf: public ExpressionBase
@@ -130,6 +134,7 @@ public:
   std::string __str__() override;
   int get_degree_from_array(int*) override;
   std::shared_ptr<std::vector<std::shared_ptr<Var> > > identify_variables() override;
+  std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > identify_external_operators() override;
   void write_nl_string(std::ofstream&) override;
 };
 
@@ -151,6 +156,7 @@ public:
   bool is_variable_type() override;
   int get_degree_from_array(int*) override;
   std::shared_ptr<std::vector<std::shared_ptr<Var> > > identify_variables() override;
+  std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > identify_external_operators() override;
   void write_nl_string(std::ofstream&) override;
   std::shared_ptr<Var> shared_from_this() {return std::static_pointer_cast<Var>(Node::shared_from_this());}
 };
@@ -168,6 +174,7 @@ public:
   bool is_param_type() override;
   int get_degree_from_array(int*) override;
   std::shared_ptr<std::vector<std::shared_ptr<Var> > > identify_variables() override;
+  std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > identify_external_operators() override;
   void write_nl_string(std::ofstream&) override;
 };
 
@@ -184,6 +191,7 @@ public:
   double get_value_from_array(double*) override;
   int get_degree_from_array(int*) override;
   std::shared_ptr<std::vector<std::shared_ptr<Var> > > identify_variables() override;
+  std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > identify_external_operators() override;
   std::string get_string_from_array(std::string*) override;
   std::shared_ptr<std::vector<std::shared_ptr<Node> > > get_prefix_notation() override;
   void write_nl_string(std::ofstream&) override;
@@ -240,6 +248,24 @@ public:
   void print(std::string*) override;
   std::string name() override {return "MultiplyOperator";};
   void write_nl_string(std::ofstream&) override;
+};
+
+
+class ExternalOperator: public Operator
+{
+public:
+  ExternalOperator() = default;
+  void evaluate(double* values) override;
+  void propagate_degree_forward(int* degrees, double* values) override;
+  void print(std::string*) override;
+  std::string name() override {return "ExternalOperator";};
+  void write_nl_string(std::ofstream&) override;
+  void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) override;
+  void identify_variables(std::set<std::shared_ptr<Node> >&) override;
+  bool is_external() override;
+  std::shared_ptr<std::vector<std::shared_ptr<Node> > > operands = std::make_shared<std::vector<std::shared_ptr<Node> > >();
+  std::string function_name;
+  int external_function_index = -1;
 };
 
 

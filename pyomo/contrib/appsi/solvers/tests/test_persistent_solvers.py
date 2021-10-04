@@ -5,11 +5,8 @@ parameterized, param_available = attempt_import('parameterized')
 if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 parameterized = parameterized.parameterized
-try:
-    from pyomo.contrib.appsi.cmodel import cmodel
-except ImportError:
-    raise unittest.SkipTest('appsi extensions are not available')
 from pyomo.contrib.appsi.base import TerminationCondition, Results, PersistentSolver
+from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc
 from typing import Type
 from pyomo.core.expr.numeric_expr import LinearExpression
@@ -56,7 +53,7 @@ best objective bound                       x
 fixed variables
 """
 
-
+@unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestSolvers(unittest.TestCase):
     @parameterized.expand(input=all_solvers)
     def test_range_constraint(self, name: str, opt_class: Type[PersistentSolver]):
@@ -136,6 +133,42 @@ class TestSolvers(unittest.TestCase):
         for (a1, a2, b1, b2) in params_to_test:
             m.a1.value = a1
             m.a2.value = a2
+            m.b1.value = b1
+            m.b2.value = b2
+            res: Results = opt.solve(m)
+            self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+            self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
+            self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
+            self.assertAlmostEqual(res.best_feasible_objective, m.y.value)
+            self.assertTrue(res.best_objective_bound <= m.y.value)
+            duals = opt.get_duals()
+            self.assertAlmostEqual(duals[m.c1], (1 + a1 / (a2 - a1)))
+            self.assertAlmostEqual(duals[m.c2], a1 / (a2 - a1))
+
+    @parameterized.expand(input=all_solvers)
+    def test_immutable_param(self, name: str, opt_class: Type[PersistentSolver]):
+        """
+        This test is important because component_data_objects returns immutable params as floats.
+        We want to make sure we process these correctly.
+        """
+        opt: PersistentSolver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.a1 = pe.Param(mutable=True)
+        m.a2 = pe.Param(initialize=-1)
+        m.b1 = pe.Param(mutable=True)
+        m.b2 = pe.Param(mutable=True)
+        m.obj = pe.Objective(expr=m.y)
+        m.c1 = pe.Constraint(expr=(0, m.y - m.a1*m.x - m.b1, None))
+        m.c2 = pe.Constraint(expr=(None, -m.y + m.a2*m.x + m.b2, 0))
+
+        params_to_test = [(1, 2, 1), (1, 2, 1), (1, 3, 1)]
+        for (a1, b1, b2) in params_to_test:
+            a2 = m.a2.value
+            m.a1.value = a1
             m.b1.value = b1
             m.b2.value = b2
             res: Results = opt.solve(m)
@@ -561,6 +594,7 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, -0.42630274815985264)
 
 
+@unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestLegacySolverInterface(unittest.TestCase):
     @parameterized.expand(input=all_solvers)
     def test_param_updates(self, name: str, opt_class: Type[PersistentSolver]):
