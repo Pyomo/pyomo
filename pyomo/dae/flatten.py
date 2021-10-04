@@ -38,6 +38,7 @@ def get_slice_for_set(s):
         # Should this be None or tuple()? RBP 202110
         return None
 
+
 class _NotAnIndex(object):
     """ 
     `None` is a valid index, so we use a dummy class to 
@@ -45,6 +46,7 @@ class _NotAnIndex(object):
     from our product.
     """
     pass
+
 
 def _fill_indices(filled_index, index):
     """
@@ -66,6 +68,7 @@ def _fill_indices(filled_index, index):
         return filled_index[0]
     else:
         return filled_index
+
 
 def _fill_indices_from_product(partial_index_list, product):
     """ 
@@ -274,6 +277,7 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
         for _ in new_sets:
             index_stack.pop()
 
+
 def flatten_components_along_sets(m, sets, ctype, indices=None):
     """
     This function iterates over components (recursively) contained
@@ -342,6 +346,7 @@ def flatten_components_along_sets(m, sets, ctype, indices=None):
     #      )                            ^ These components are indexed by time
     #            ^ These components are indexed by time and space
     return sets_list, comps_list
+
 
 def flatten_dae_components(model, time, ctype, indices=None):
     target = ComponentSet((time,))
