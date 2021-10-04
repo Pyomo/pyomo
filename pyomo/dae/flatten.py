@@ -156,6 +156,8 @@ def slice_component_along_sets(component, sets, context_slice=None):
                 cross_prod,
                 ):
             try:
+                if normalize_index.flatten:
+                    new_index = normalize_index(new_index)
                 c_slice = base_component[new_index]
                 if type(c_slice) is IndexedComponent_slice:
                     # This is just to make sure we do not have an
