@@ -103,6 +103,7 @@ class DesignOfExperiments:
 
     def optimize_doe(self,  design_values, if_optimize=True, objective_option='det',
                      scale_nominal_param_value=False, scale_constant_value=1, if_Cholesky=False, L_LB = 1E-10, L_initial=None,
+                     jac_initial=None, fim_initial=None, trace_initial=None, det_initial=None,
                      formula='central', step=0.001, check=True):
         '''
         Optimize DOE problem with design variables being the decisions.
@@ -149,6 +150,10 @@ class DesignOfExperiments:
         self.Cholesky_option = if_Cholesky
         self.L_LB = L_LB
         self.L_initial = L_initial
+        self.jac_initial = jac_initial
+        self.fim_initial = fim_initial
+        self.trace_initial = trace_initial
+        self.det_initial = det_initial
         self.formula = formula
         self.step = step
         self.tee_opt = True
@@ -175,7 +180,7 @@ class DesignOfExperiments:
 
         time_solve1 = time1_solve-time0_solve
 
-        analysis_square = FIM_result(self.param_name, prior_FIM=self.prior_FIM, scale_constant_value=self.scale_constant_value)
+        analysis_square = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, self.measurement_extra_index,  prior_FIM=self.prior_FIM, scale_constant_value=self.scale_constant_value)
         analysis_square.extract_FIM(m, self.design_timeset, result_square, obj=objective_option)
 
 
@@ -187,7 +192,7 @@ class DesignOfExperiments:
 
             time_solve2 = time1_solve2 - time0_solve2
 
-            analysis_optimize = FIM_result(self.param_name, prior_FIM=self.prior_FIM)
+            analysis_optimize = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, self.measurement_extra_index,  prior_FIM=self.prior_FIM)
             analysis_optimize.extract_FIM(m, self.design_timeset, result_doe, obj=objective_option)
             analysis_optimize.model = m
 
@@ -199,7 +204,7 @@ class DesignOfExperiments:
             return analysis_square, analysis_optimize
 
         else:
-            analysis_optimize.model = m
+            analysis_square.model = m
 
             time1 = time.time()
             if self.verbose:
@@ -991,7 +996,19 @@ class DesignOfExperiments:
 
         ### Define variables
         # Elements in Jacobian matrix
-        m.jac = Var(m.y_set, m.para_set, m.tmea_set, initialize=1E-20)
+        if self.jac_initial is not None:
+            dict_jac = {}
+            for i, bu in enumerate(m.y_set):
+                for j, un in enumerate(m.para_set):
+                    for t, tim in enumerate(m.tmea_set):
+                        dict_jac[(bu,un,tim)] = self.jac_initial[i,j,t]
+
+            def jac_initialize(m,i,j,t):
+                return dict_jac[(bu,un,tim)]
+            m.jac = Var(m.y_set, m.para_set, m.tmea_set, initialize=jac_initialize)
+
+        else:
+            m.jac = Var(m.y_set, m.para_set, m.tmea_set, initialize=1E-20)
 
         # Initialize Hessian with an identity matrix
         def identity_matrix(m,j,d):
@@ -999,7 +1016,18 @@ class DesignOfExperiments:
                 return 1 
             else: 
                 return 0
-        m.FIM = Var(m.para_set, m.para_set, initialize=identity_matrix)
+
+        if self.fim_initial is not None:
+            dict_fim = {}
+            for i, bu in enumerate(m.para_set):
+                for j, un in enumerate(m.para_set):
+                    dict_fim[(bu, un)] = self.fim_initial[i][j]
+
+            def initialize_fim(m, j, d):
+                return dict_fim[(j,d)]
+            m.FIM = Var(m.para_set, m.para_set, initialize=initialize_fim)
+        else:
+            m.FIM = Var(m.para_set, m.para_set, initialize=identity_matrix)
 
         if self.objective_option=='trace':
             # Trace of FIM
@@ -1057,6 +1085,7 @@ class DesignOfExperiments:
                 ind = self.measurement_extra_index[j][0]
                 up_C = eval('m.' + j + '[' + str(scenario_all['jac-index'][p][0]) + ',' + str(ind) + ',' + str(t) + ']')
                 lo_C = eval('m.' + j + '[' + str(scenario_all['jac-index'][p][1]) + ',' + str(ind) + ',' + str(t) + ']')
+
             return m.jac[j,p,t] == (up_C - lo_C)/scenario_all['eps-abs'][p] *self.scale_constant_value
 
         #A constraint to calculate elements in Hessian matrix
@@ -1555,6 +1584,9 @@ class FIM_result:
         Parameters:
         -----------
         para_name: parameter names
+        measurement_variables: measurement variable names
+        measurement_timeset: measurement variable control timeset
+        measurement_extra_index: measurement indexes other than time
         prior_FIM: if there's prior FIM to be added
         store_FIM: if storing the FIM in a .csv, give the file name here as a string, '**.csv' or '**.txt'.
         scale_constant_value: the constant value used to scale the sensitivity
@@ -1580,7 +1612,9 @@ class FIM_result:
         -----------
         jaco_info: jacobian dictionary
         dv_values: design variable value dictionary
-        sq_result: solver status returned by IPOPT
+        jaco_involved_name: variables involved in calculating jacobian
+        jaco_involved_extra_index: variable extra indexes involved in calculating jacobian
+        result: solver status returned by IPOPT
 
         Return:
         ------
