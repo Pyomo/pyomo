@@ -123,6 +123,23 @@ def _fill_indices_from_product(partial_index_list, product):
 
 
 def slice_component_along_sets(component, sets, context_slice=None):
+    """
+    This function generates all possible slices of the provided component
+    along the provided sets. That is, it will iterate over the component's
+    other indexing sets and, for each index, yield a slice along the
+    sets specified in the call signature.
+
+    Arguments
+    ---------
+    component: Component
+        The component whose slices will be yielded
+    sets: ComponentSet
+        ComponentSet of Pyomo sets that will be sliced along
+    context_slice: IndexedComponent_slice
+        If provided, instead of creating a new slice, we will extend this
+        one with appropriate getattr and getitem calls.
+
+    """
     set_set = ComponentSet(sets)
     subsets = list(component.index_set().subsets())
     temp_idx = [get_slice_for_set(s) if s in set_set else _NotAnIndex
