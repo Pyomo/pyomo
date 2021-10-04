@@ -98,6 +98,9 @@ def run_writer_test():
 def run_solverfactory_test():
     skip_solvers = {
         'py',
+        'xpress',
+        '_xpress_shell',
+        '_mock_xpress',
     }
 
     with LoggingIntercept() as LOG, capture_output(capture_fd=True) as OUT:
