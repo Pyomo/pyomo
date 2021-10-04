@@ -13,13 +13,14 @@ from io import StringIO
 
 import pyomo.common.unittest as unittest
 
-from pyomo.common.formatting import tostr, tabular_writer
+from pyomo.common.formatting import tostr, tabular_writer, StreamIndenter
 
 class DerivedList(list): pass
 class DerivedTuple(tuple): pass
 class DerivedDict(dict): pass
 class DerivedStr(str): pass
 NamedTuple = namedtuple('NamedTuple', ['x', 'y'])
+
 
 class TestToStr(unittest.TestCase):
     def test_new_type_float(self):
@@ -49,6 +50,7 @@ class TestToStr(unittest.TestCase):
     def test_new_type_namedtuple(self):
         self.assertEqual(tostr(NamedTuple(1, 2)), 'NamedTuple(x=1, y=2)')
         self.assertIs(tostr.handlers[NamedTuple], tostr.handlers[None])
+
 
 class TestTabularWriter(unittest.TestCase):
     def test_unicode_table(self):
@@ -169,3 +171,32 @@ Key : i : j
 """
         self.assertEqual(ref.strip(), os.getvalue().strip())
 
+
+class TestStreamIndenter(unittest.TestCase):
+    def test_noprefix(self):
+        OUT1 = StringIO()
+        OUT2 = StreamIndenter(OUT1)
+        OUT2.write('Hello?\nHello, world!')
+        self.assertEqual('    Hello?\n    Hello, world!',
+                         OUT2.getvalue())
+
+    def test_prefix(self):
+        prefix = 'foo:'
+        OUT1 = StringIO()
+        OUT2 = StreamIndenter(OUT1, prefix)
+        OUT2.write('Hello?\nHello, world!')
+        self.assertEqual('foo:Hello?\nfoo:Hello, world!', OUT2.getvalue())
+
+    def test_blank_lines(self):
+        OUT1 = StringIO()
+        OUT2 = StreamIndenter(OUT1)
+        OUT2.write('Hello?\n\nText\n\nHello, world!')
+        self.assertEqual('    Hello?\n\n    Text\n\n    Hello, world!',
+                         OUT2.getvalue())
+
+    def test_writelines(self):
+        OUT1 = StringIO()
+        OUT2 = StreamIndenter(OUT1)
+        OUT2.writelines(['Hello?\n', '\n', 'Text\n', '\n', 'Hello, world!'])
+        self.assertEqual('    Hello?\n\n    Text\n\n    Hello, world!',
+                         OUT2.getvalue())

@@ -33,7 +33,7 @@ char* new_char_p_from_std_str(std::string str)
    //return const_cast<char*>(str.c_str());
 }
 
-void AmplInterface::initialize(const char *nlfilename)
+void AmplInterface::initialize(const char *nlfilename, const char *amplfunc)
 {
    // The includes from the Ampl Solver Library
    // have a number of macros that expand to include
@@ -49,10 +49,15 @@ void AmplInterface::initialize(const char *nlfilename)
    typedef std::vector<std::string>::iterator iter;
 
    std::string cp_nlfilename(nlfilename);
+   std::string cp_amplfunc(amplfunc);
 
    // translate options to command input
    std::vector <std::string> arguments;
    arguments.push_back("pynumero");
+   if (cp_amplfunc.length() > 0) {
+      arguments.push_back("-i");
+      arguments.push_back(cp_amplfunc);
+   }
    arguments.push_back(cp_nlfilename);
    for (iter it=options.begin(); it != options.end(); ++it) {
       arguments.push_back(*it);
@@ -447,23 +452,34 @@ FILE* AmplInterfaceStr::open_nl(ASL_pfgh *asl, char* stub)
 }
 
 extern "C" {
+   PYNUMERO_ASL_EXPORT int
+   EXTERNAL_AmplInterface_version() {
+      /** 0: original implementation
+          1: added EXTERNAL_AmplInterface_dummy
+             updated EXTERNAL_AmplInterface_eval_hes_lag arguments
+          2: added EXTERNAL_AmplInterface_version
+             added amplfunc argument to EXTERNAL_AmplInterface_new_file
+       **/
+      return 2;
+   }
+
    PYNUMERO_ASL_EXPORT AmplInterface*
-   EXTERNAL_AmplInterface_new_file(char *nlfilename) {
+   EXTERNAL_AmplInterface_new_file(char *nlfilename, char *amplfunc) {
       AmplInterface* ans = new AmplInterfaceFile();
-      ans->initialize(nlfilename);
+      ans->initialize(nlfilename, amplfunc);
       return ans;
    }
 
    PYNUMERO_ASL_EXPORT AmplInterface*
-   EXTERNAL_AmplInterface_new_str(char *nl, size_t size) {
+   EXTERNAL_AmplInterface_new_str(char *nl, size_t size, char *amplfunc) {
       AmplInterface* ans = new AmplInterfaceStr(nl, size);
-      ans->initialize("membuf.nl");
+      ans->initialize("membuf.nl", amplfunc);
       return ans;
    }
 
    PYNUMERO_ASL_EXPORT AmplInterface*
-   EXTERNAL_AmplInterface_new(char *nlfilename) {
-      return EXTERNAL_AmplInterface_new_file(nlfilename);
+   EXTERNAL_AmplInterface_new(char *nlfilename, char *amplfunc) {
+      return EXTERNAL_AmplInterface_new_file(nlfilename, amplfunc);
    }
 
    PYNUMERO_ASL_EXPORT

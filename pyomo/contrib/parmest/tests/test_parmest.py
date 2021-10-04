@@ -41,13 +41,14 @@ testdir = os.path.dirname(os.path.abspath(__file__))
 @unittest.skipIf(not parmest.parmest_available,
                  "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-class parmest_object_Tester_RB(unittest.TestCase):
+class TestRooneyBiegler(unittest.TestCase):
 
     def setUp(self):
         from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import rooney_biegler_model
 
+        # Note, the data used in this test has been corrected to use data.loc[5,'hour'] = 7 (instead of 6)
         data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
-                                  [4,16.0],[5,15.6],[6,19.8]], columns=['hour', 'y'])
+                                  [4,16.0],[5,15.6],[7,19.8]], columns=['hour', 'y'])
 
         theta_names = ['asymptote', 'rate_constant']
 
@@ -65,9 +66,9 @@ class parmest_object_Tester_RB(unittest.TestCase):
     def test_theta_est(self):
         objval, thetavals = self.pest.theta_est()
 
-        self.assertAlmostEqual(objval, 4.4675, places=2)
-        self.assertAlmostEqual(thetavals['asymptote'], 19.2189, places=2) # 19.1426 from the paper
-        self.assertAlmostEqual(thetavals['rate_constant'], 0.5312, places=2) # 0.5311 from the paper
+        self.assertAlmostEqual(objval, 4.3317112, places=2)
+        self.assertAlmostEqual(thetavals['asymptote'], 19.1426, places=2)  # 19.1426 from the paper
+        self.assertAlmostEqual(thetavals['rate_constant'], 0.5311, places=2)  # 0.5311 from the paper
 
     @unittest.skipIf(not graphics.imports_available,
                      "parmest.graphics imports are unavailable")
@@ -109,8 +110,8 @@ class parmest_object_Tester_RB(unittest.TestCase):
         LR = self.pest.likelihood_ratio_test(obj_at_theta, objval, [0.8, 0.9, 1.0])
 
         self.assertTrue(set(LR.columns) >= set([0.8, 0.9, 1.0]))
-        self.assertTrue(LR[0.8].sum() == 7)
-        self.assertTrue(LR[0.9].sum() == 11)
+        self.assertTrue(LR[0.8].sum() == 6)
+        self.assertTrue(LR[0.9].sum() == 10)
         self.assertTrue(LR[1.0].sum() == 60) # all true
 
         graphics.pairwise_plot(LR, thetavals, 0.8)
@@ -185,37 +186,6 @@ class parmest_object_Tester_RB(unittest.TestCase):
         objval, thetavals, Hessian = self.pest.theta_est(solver="k_aug")
         self.assertAlmostEqual(objval, 4.4675, places=2)
 
-
-'''
-The test cases above were developed with a transcription mistake in the dataset.
-This test works with the correct dataset.
-'''
-@unittest.skipIf(not parmest.parmest_available,
-                 "Cannot test parmest: required dependencies are missing")
-@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-class parmest_object_Tester_RB_match_paper(unittest.TestCase):
-
-    def setUp(self):
-        from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import rooney_biegler_model
-
-        data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
-                                  [4,16.0],[5,15.6],[7,19.8]], columns=['hour', 'y'])
-
-        theta_names = ['asymptote', 'rate_constant']
-
-        def SSE(model, data):
-            expr = sum((data.y[i] - model.response_function[data.hour[i]])**2 for i in data.index)
-            return expr
-
-        self.pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE)
-
-    def test_theta_est(self):
-        objval, thetavals = self.pest.theta_est(calc_cov=False)
-
-        self.assertAlmostEqual(objval, 4.3317112, places=2)
-        self.assertAlmostEqual(thetavals['asymptote'], 19.1426, places=2) # 19.1426 from the paper
-        self.assertAlmostEqual(thetavals['rate_constant'], 0.5311, places=2) # 0.5311 from the paper
-
     @unittest.skipIf(not pynumero_ASL_available, "pynumero ASL is not available")
     @unittest.skipIf(not parmest.inverse_reduced_hessian_available,
                      "Cannot test covariance matrix: required ASL dependency is missing")
@@ -244,7 +214,7 @@ class parmest_object_Tester_RB_match_paper(unittest.TestCase):
 @unittest.skipIf(not parmest.parmest_available,
                  "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-class Test_parmest_indexed_variables(unittest.TestCase):
+class TestIndexedVariables(unittest.TestCase):
 
     def make_model(self, theta_names):
 
@@ -262,7 +232,9 @@ class Test_parmest_indexed_variables(unittest.TestCase):
             model.var_names = pyo.Set(initialize=['asymptote','rate_constant'])
 
             model.theta = pyo.Var(model.var_names, initialize={'asymptote':15, 'rate_constant':0.5})
-
+            model.theta['asymptote'].fixed = True # parmest will unfix theta variables, even when they are indexed
+            model.theta['rate_constant'].fixed = True
+            
             def response_rule(m, h):
                 expr = m.theta['asymptote'] * (1 - pyo.exp(-m.theta['rate_constant'] * h))
                 return expr
@@ -279,7 +251,18 @@ class Test_parmest_indexed_variables(unittest.TestCase):
             return expr
 
         return parmest.Estimator(rooney_biegler_model_alternate, data, theta_names, SSE)
+    
+    def test_theta_est(self):
 
+        theta_names = ["theta"]
+
+        pest = self.make_model(theta_names)
+        objval, thetavals = pest.theta_est(calc_cov=False)
+
+        self.assertAlmostEqual(objval, 4.3317112, places=2)
+        self.assertAlmostEqual(thetavals["theta[asymptote]"], 19.1426, places=2) 
+        self.assertAlmostEqual(thetavals["theta[rate_constant]"], 0.5311, places=2) 
+        
     def test_theta_est_quotedIndex(self):
 
         theta_names = ["theta['asymptote']", "theta['rate_constant']"]
@@ -288,8 +271,8 @@ class Test_parmest_indexed_variables(unittest.TestCase):
         objval, thetavals = pest.theta_est(calc_cov=False)
 
         self.assertAlmostEqual(objval, 4.3317112, places=2)
-        self.assertAlmostEqual(thetavals["theta[asymptote]"], 19.1426, places=2) # 19.1426 from the paper
-        self.assertAlmostEqual(thetavals['theta[rate_constant]'], 0.5311, places=2) # 0.5311 from the paper
+        self.assertAlmostEqual(thetavals["theta[asymptote]"], 19.1426, places=2) 
+        self.assertAlmostEqual(thetavals["theta[rate_constant]"], 0.5311, places=2) 
 
     def test_theta_est_impliedStrIndex(self):
 
@@ -300,7 +283,7 @@ class Test_parmest_indexed_variables(unittest.TestCase):
 
         self.assertAlmostEqual(objval, 4.3317112, places=2)
         self.assertAlmostEqual(thetavals["theta[asymptote]"], 19.1426, places=2) # 19.1426 from the paper
-        self.assertAlmostEqual(thetavals['theta[rate_constant]'], 0.5311, places=2) # 0.5311 from the paper
+        self.assertAlmostEqual(thetavals["theta[rate_constant]"], 0.5311, places=2) # 0.5311 from the paper
 
 
     @unittest.skipIf(not pynumero_ASL_available, "pynumero ASL is not available")
@@ -308,7 +291,7 @@ class Test_parmest_indexed_variables(unittest.TestCase):
         not parmest.inverse_reduced_hessian_available,
         "Cannot test covariance matrix: required ASL dependency is missing")
     def test_theta_est_cov(self):
-        theta_names = ["theta[asymptote]", "theta[rate_constant]"]
+        theta_names = ["theta"]
 
         pest = self.make_model(theta_names)
         objval, thetavals, cov = pest.theta_est(calc_cov=True)
@@ -329,7 +312,7 @@ class Test_parmest_indexed_variables(unittest.TestCase):
                  "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not ipopt_available,
                  "The 'ipopt' solver is not available")
-class parmest_object_Tester_reactor_design(unittest.TestCase):
+class TestReactorDesign(unittest.TestCase):
 
     def setUp(self):
         from pyomo.contrib.parmest.examples.reactor_design.reactor_design import reactor_design_model
@@ -389,7 +372,7 @@ class parmest_object_Tester_reactor_design(unittest.TestCase):
 @unittest.skipIf(not graphics.imports_available,
                  "parmest.graphics imports are unavailable")
 @unittest.skipIf(is_osx, "Disabling graphics tests on OSX due to issue in Matplotlib, see Pyomo PR #1337")
-class parmest_graphics(unittest.TestCase):
+class TestGraphics(unittest.TestCase):
 
     def setUp(self):
         self.A = pd.DataFrame(np.random.randint(0,100,size=(100,4)), columns=list('ABCD'))

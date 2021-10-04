@@ -83,6 +83,8 @@ def MindtPy_iteration_loop(solve_data, config):
                     solve_data, config, regularization_problem=True)
                 handle_regularization_main_tc(
                     main_mip, main_mip_results, solve_data, config)
+
+        # TODO: add descriptions for the following code
         if config.add_regularization is not None and config.single_tree:
             solve_data.curr_int_sol = get_integer_solution(
                 solve_data.mip, string_zero=True)

@@ -24,7 +24,7 @@ from io import StringIO
 
 from pyomo.common.collections import Mapping
 from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedClass
-from pyomo.common.fileutils import StreamIndenter
+from pyomo.common.formatting import StreamIndenter
 from pyomo.common.log import is_debug_set
 from pyomo.common.sorting import sorted_robust
 from pyomo.common.timing import ConstructionTimer

@@ -141,16 +141,14 @@ class TestTeeStream(unittest.TestCase):
             capture.reset()
 
     def test_capture_output_logfile_string(self):
-        logfile = TempfileManager.create_tempfile()
-        self.assertTrue(isinstance(logfile, str))
-        try: 
+        with TempfileManager.new_context() as tempfile:
+            logfile = tempfile.create_tempfile()
+            self.assertTrue(isinstance(logfile, str))
             with tee.capture_output(logfile):
                 print('HELLO WORLD')
             with open(logfile, 'r') as f:
                 result = f.read()
             self.assertEqual('HELLO WORLD\n', result)
-        finally:
-            TempfileManager.clear_tempfiles()
 
     def test_capture_output_stack_error(self):
         OUT1 = StringIO()

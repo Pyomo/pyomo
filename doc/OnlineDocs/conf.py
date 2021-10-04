@@ -39,6 +39,7 @@ finally:
 # -- Options for intersphinx ---------------------------------------------
 
 intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
     'matplotlib': ('https://matplotlib.org/stable/', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
     'pandas': ('https://pandas.pydata.org/docs/', None),

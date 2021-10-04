@@ -14,7 +14,9 @@ import importlib
 import logging
 import sys
 
-from .deprecation import deprecated, deprecation_warning
+from .deprecation import (
+    deprecated, deprecation_warning, in_testing_environment,
+)
 from . import numeric_types
 
 class DeferredImportError(ImportError):
@@ -581,7 +583,7 @@ def _finalize_matplotlib(module, available):
     # we are in the middle of testing, we need to switch the backend to
     # 'Agg', otherwise attempts to generate plots on CI services without
     # terminal windows will fail.
-    if any(m in sys.modules for m in ('nose', 'nose2', 'sphinx', 'pytest')):
+    if in_testing_environment():
         module.use('Agg')
     import matplotlib.pyplot
 
