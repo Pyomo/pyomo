@@ -11,7 +11,7 @@ EQUATIONS c_e_FIX_ONE_VAR_CONST__, c1;
 c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;
 c1: x1 ^ 2 == 4;
 
-OBJ: minimize x2 * x1;
+OBJ: minimize x2*x1;
 
 STARTING_POINT{
 ONE_VAR_CONST__: 1;

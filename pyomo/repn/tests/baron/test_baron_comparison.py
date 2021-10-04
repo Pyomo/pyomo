@@ -72,7 +72,9 @@ class BaselineTests(Tests):
                         testCase])
 
         # Check that the pyomo BAR file matches its own baseline
-        with open(output, 'r') as f1, open(baseline, 'r') as f2:
+        with open(output, 'r') as f2, open(baseline, 'r') as f1:
+            print('baseline:', baseline)
+            print('testfile:', output)
             f1_contents = list(filter(None, f1.read().split()))
             f2_contents = list(filter(None, f2.read().split()))
             for item1, item2 in itertools.zip_longest(f1_contents, f2_contents):

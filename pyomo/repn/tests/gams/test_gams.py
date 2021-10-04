@@ -58,7 +58,9 @@ class Test(unittest.TestCase):
         try:
             self.assertTrue(cmp(test_fname, baseline_fname))
         except:
-            with open(test_fname, 'r') as f1, open(baseline_fname, 'r') as f2:
+            print('baseline:', baseline_fname)
+            print('testname:', test_fname)
+            with open(test_fname, 'r') as f2, open(baseline_fname, 'r') as f1:
                 f1_contents = list(filter(None, f1.read().split()))
                 f2_contents = list(filter(None, f2.read().split()))
                 self.assertEqual(f1_contents, f2_contents)

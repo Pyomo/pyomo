@@ -85,7 +85,9 @@ class BaselineTests(Tests):
         try:
             self.assertTrue(cmp(testFile, baseline))
         except:
-            with open(testFile, 'r') as f1, open(baseline, 'r') as f2:
+            print("baseline: ", baseline)
+            print("testFile: ", testFile)
+            with open(testFile, 'r') as f2, open(baseline, 'r') as f1:
                 f1_contents = list(filter(None, f1.read().split()))
                 f2_contents = list(filter(None, f2.read().split()))
                 self.assertEqual(f1_contents, f2_contents)
