@@ -12,8 +12,7 @@ import logging
 
 from pyomo.common.config import ( 
     ConfigDict, ConfigValue, 
-    PositiveInt, PositiveFloat, 
-    NonNegativeFloat, In)
+    PositiveInt, PositiveFloat, In)
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
@@ -33,21 +32,14 @@ def get_TRF_config():
     # ================================================
     # === Options common to all solvers
     # ================================================
-    CONFIG.declare('time_limit', ConfigValue(
-        default=None,
-        domain=NonNegativeFloat, description="Optional. Default = None. "
-                                             "Total allotted time for the execution of the solver in seconds "
-                                             "(includes time spent in sub-solvers). 'None' is no time limit."
-    ))
     CONFIG.declare('keepfiles', ConfigValue(
         default=False,
         domain=bool, description="Optional. Default = False. Whether or not to write files of sub-problems for use in debugging. "
-                                 "Must be paired with a writable directory supplied via ``subproblem_file_directory``."
-    ))
+                                 "Must be paired with a writable directory supplied via ``subproblem_file_directory``."))
+
     CONFIG.declare('tee', ConfigValue(
         default=False,
-        domain=bool, description="Optional. Default = False. Sets the ``tee`` for all sub-solvers utilized."
-    ))
+        domain=bool, description="Optional. Default = False. Sets the ``tee`` for all sub-solvers utilized."))
 
     # ================================================
     # === Optional user inputs
