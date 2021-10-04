@@ -60,30 +60,26 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
         for i,val in enumerate(values):
             arg = node._args_[i]
 
-            if arg is None:
-                tmp.append('Undefined')                 # TODO: coverage
-            else:
-                parens = False
-                if val and val[0] in '-+':
+            parens = False
+            if val[0] in '-+':
+                # Note: This is technically only necessary for i > 0
+                parens = True
+            elif arg.__class__ in native_types:
+                pass
+            elif arg.is_expression_type():
+                if node._precedence() < arg._precedence():
                     parens = True
-                elif arg.__class__ in native_numeric_types:
-                    pass
-                elif arg.__class__ in nonpyomo_leaf_types:
-                    val = "'{0}'".format(val)
-                elif arg.is_expression_type():
-                    if node._precedence() < arg._precedence():
+                elif node._precedence() == arg._precedence():
+                    if i == 0:
+                        parens = node._associativity() != 1
+                    elif i == len(node._args_)-1:
+                        parens = node._associativity() != -1
+                    else:
                         parens = True
-                    elif node._precedence() == arg._precedence():
-                        if i == 0:
-                            parens = node._associativity() != 1
-                        elif i == len(node._args_)-1:
-                            parens = node._associativity() != -1
-                        else:
-                            parens = True
-                if parens:
-                    tmp.append("({0})".format(val))
-                else:
-                    tmp.append(val)
+            if parens:
+                tmp.append("(" + val + ")")
+            else:
+                tmp.append(val)
 
         if node.__class__ is EXPR.PowExpression:
             # If the exponent is a positive integer, use the power() function.
@@ -118,7 +114,10 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
         Return True if the node is not expanded.
         """
         if node.__class__ in native_types:
-            return True, ftoa(node)
+            try:
+                return True, ftoa(node)
+            except TypeError:
+                return True, repr(node)
 
         if node.is_expression_type():
             # Special handling if NPV and semi-NPV types:
