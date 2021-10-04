@@ -135,8 +135,6 @@ def slice_component_along_sets(component, sets, context_slice=None):
     if context_slice is None:
         base_component = component
     else:
-        if type(context_slice) is IndexedComponent_slice:
-            context_slice = context_slice.duplicate()
         base_component = getattr(context_slice, component.local_name)
 
     if component.is_indexed():
@@ -206,6 +204,11 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
     `index_map` is potentially a map from each set in `sets` to a 
     "representative index" to use when descending into subblocks.
     """
+    if type(slice_) is IndexedComponent_slice:
+        context_slice = slice_.duplicate()
+    else:
+        context_slice = None
+
     for c in b.component_objects(ctype, descend_into=False):
         subsets = list(c.index_set().subsets())
         temp_idx = [get_slice_for_set(s) if s in sets else _NotAnIndex
@@ -217,11 +220,7 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
         # We have extended our "index stack;" now we must extend
         # our slice.
 
-        if type(slice_) is IndexedComponent_slice:
-            context_slice = slice_
-        else:
-            context_slice = None
-        for idx, new_slice in slice_component_along_sets(c, sets, context_slice=slice_):
+        for idx, new_slice in slice_component_along_sets(c, sets, context_slice=context_slice):
             yield sliced_sets, new_slice
 
     # We now descend into subblocks
@@ -240,6 +239,8 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
 
         # Extend stack with new matched indices.
         index_stack.extend(new_sets)
+
+        # I would like to run the following code:
 
         if other_sets and sub.is_indexed():
             cross_prod = other_sets[0].cross(*other_sets[1:])
