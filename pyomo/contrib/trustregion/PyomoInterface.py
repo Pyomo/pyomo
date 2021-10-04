@@ -63,7 +63,7 @@ class ReplaceEFVisitor(EXPR.ExpressionReplacementVisitor):
         # PythonCallbackFunction API (that restriction leads unfortunate
         # things later; i.e., accessing the private _fcn attribute
         # below).
-        for arg in list(values)[1:]:
+        for arg in values[1][1:]:
             if type(arg) in nonpyomo_leaf_types or arg.is_fixed():
                 # We currently do not allow constants or parameters for
                 # the external functions.
