@@ -21,7 +21,7 @@ from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 
 
-class ExternalFunctionVisitor(StreamBasedExpressionVisitor):
+class _ExternalFunctionVisitor(StreamBasedExpressionVisitor):
 
     def initializeWalker(self, expr):
         self._functions = []
@@ -36,13 +36,18 @@ class ExternalFunctionVisitor(StreamBasedExpressionVisitor):
         return self._functions
 
 
+def identify_external_functions(expr):
+    visitor = _ExternalFunctionVisitor()
+    for fcn in visitor.walk_expression(expr):
+        yield fcn
+
+
 def add_local_external_functions(block):
     ef_exprs = []
     for comp in block.component_data_objects(
             (Constraint, Expression), active=True
             ):
-        visitor = ExternalFunctionVisitor()
-        ef_exprs.extend(visitor.walk_expression(comp.expr))
+        ef_exprs.extend(list(identify_external_functions(comp.expr)))
     unique_functions = []
     fcn_set = set()
     for expr in ef_exprs:
