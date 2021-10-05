@@ -268,9 +268,9 @@ def create_model(scena, temp_feed=313.15, temp_bath=313.15, y=0.15, doe_model=Tr
     
     # Original bed temperature, [K]
     if m.doe_model:
-        m.temp_feed = Var(initialize=temp_feed, bounds=(100, 600))
+        m.temp_feed = Var(initialize=temp_feed, bounds=(273.15, 373.15))
         m.temp_bath = Var(initialize=temp_bath, bounds=(274, 600))
-        m.yfeed = Var(initialize=y, bounds=(0,1), within=NonNegativeReals)
+        m.yfeed = Var(initialize=y, bounds=(0,0.5), within=NonNegativeReals)
 
         m.temp_bath.fix()
 
