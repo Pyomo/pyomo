@@ -56,23 +56,6 @@ def add_local_external_functions(block):
         comp = ExternalFunction(library=lib, function=name)
         block.add_component(comp_name, comp)
         fcn_comp_map[lib, name] = comp
-    #
-    # TODO: It is unclear if we will need to use the new ExternalFunction
-    # objects, or just know about the libraries and names.
-    #
-    #replacement_map = {
-    #    id(expr):
-    #        fcn_comp_map[expr._fcn._library, expr._fcn._function](*expr.args)
-    #    for expr in ef_exprs
-    #}
-    #new_comp_map = ComponentMap()
-    #for comp in block.component_data_objects(
-    #        (Constraint, Expression), active=True
-    #        ):
-    #    ctype = comp.ctype
-    #    new_expr = replace_expressions(comp.expr, replacement_map)
-    #    new_comp_map[comp] = ctype(expr=new_expr)
-    #return new_comp_map
 
 
 def create_subsystem_block(constraints, variables=None, include_fixed=False):
