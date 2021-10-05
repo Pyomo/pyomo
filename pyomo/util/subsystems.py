@@ -17,21 +17,23 @@ from pyomo.common.backports import nullcontext
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.expression import Expression
 from pyomo.core.base.external import ExternalFunction
-from pyomo.core.expr.visitor import SimpleExpressionVisitor
+from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 
 
-class ExternalFunctionVisitor(SimpleExpressionVisitor):
+class ExternalFunctionVisitor(StreamBasedExpressionVisitor):
 
-    def __init__(self):
-        self.seen = set()
-        self.functions = []
+    def initializeWalker(self, expr):
+        self._functions = []
+        self._seen = set()
+        return True, None
 
-    def visit(self, node):
+    def exitNode(self, node, data):
         if type(node) is ExternalFunctionExpression:
-            if id(node) not in self.seen:
-                self.seen.add(id(node))
-                self.functions.append(node)
+            if id(node) not in self._seen:
+                self._seen.add(id(node))
+                self._functions.append(node)
+        return self._functions
 
 
 def add_local_external_functions(block):
@@ -40,8 +42,7 @@ def add_local_external_functions(block):
             (Constraint, Expression), active=True
             ):
         visitor = ExternalFunctionVisitor()
-        visitor.xbfs(comp.expr)
-        ef_exprs.extend(visitor.functions)
+        ef_exprs.extend(visitor.walk_expression(comp.expr))
     unique_functions = []
     fcn_set = set()
     for expr in ef_exprs:
