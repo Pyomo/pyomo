@@ -108,7 +108,7 @@ class PyomoInterface(object):
         efSet = set([id(ef) for ef in efList])
         TRF = Block()
 
-        allVariables = set(var for var in model.component_data_objects(Var))
+        allVariables = set([var for var in model.component_data_objects(Var)])
 
         model.add_component(unique_component_name(model, 'tR'), TRF)
         TRF.y = VarList()
@@ -158,6 +158,14 @@ class PyomoInterface(object):
                 seenVar.add(id(var))
                 TRF.zvars.append(var)
 
+        for externalNode in TRF.exfn_xvars.keys():
+            idx = []
+            for var in TRF.exfn_xvars[externalNode]['vars']:
+                for xvar in TRF.xvars:
+                    if (id(var) == id(xvar)):
+                        idx.append(TRF.xvars.index(xvar))
+            TRF.exfn_xvars[externalNode]['var_index'] = idx
+
         return TRF
             
     def reactivateObjects(self, model):
@@ -176,9 +184,9 @@ class PyomoInterface(object):
         y = np.ones(self.len_y, dtype=float)
         x = np.zeros(self.len_x, dtype=float)
         z = np.zeros(self.len_z, dtype=float)
-        for i in range(0, self.len_x):
+        for i in range(self.len_x):
             x[i] = value(self.TRF.xvars[i])
-        for i in range(0, self.len_z):
+        for i in range(self.len_z):
             z[i] = value(self.TRF.zvars[i])
         return x, y, z
 
@@ -211,26 +219,24 @@ class PyomoInterface(object):
         """
         Expression for use in the RM Constraint
         """
-        variables = self.TRF.exfn_xvars[externalNode]['vars']
-        idx = self.TRF.exfn_xvars[externalNode]['index']
+        nodeIndex = self.TRF.exfn_xvars[externalNode]['index']
+        varIndices = self.TRF.exfn_xvars[externalNode]['var_index']
+
         if self.rmtype == RMType.linear:
-            # FIXME: This is wrong. variables[j] != index[j]
-            # Original code:
-            #    e1 = (model.plrom[i,0] + sum(model.plrom[i,j+1] * (model.xvars[ind[j]] - model.px0[ind[j]]) for j in range(0, len(ind))))
-            expr = (model.rmParam[idx, 0] +
-                sum(model.rmParam[idx, j+1] * (model.xvars[variables[j]] -
-                                                model.x0[variables[j]])
-                    for j in range(0, len(variables))))
+            expr = (model.rmParam[nodeIndex, 0] +
+                sum(model.rmParam[nodeIndex, idx+1] * (model.xvars[varIndices[idx]]
+                                                    - model.x0[varIndices[idx]])
+                    for idx in range(len(varIndices))))
         elif self.rmtype == RMType.quadratic:
-            expr = (model.rmParam[idx, 0] +
-            sum(model.rmParam[idx, j+1] *
+            expr = (model.rmParam[nodeIndex, 0] +
+            sum(model.rmParam[nodeIndex, j+1] *
                 (model.xvars[j] - model.x0[j])
-                for j in range(0, self.len_x)))
+                for j in range(self.len_x)))
             i = self.len_x + 1
             for j1 in range(self.len_x):
                 for j2 in range(j1, self.len_x):
                     expr += ((model.xvars[j2] - model.x0[j2]) *
-                             (model.xvars[j1] - model.x0[j1]) * model.rmParam[idx, i])
+                             (model.xvars[j1] - model.x0[j1]) * model.rmParam[nodeIndex, i])
                     i += 1
         return expr
 
@@ -296,15 +302,15 @@ class PyomoInterface(object):
         """
         Set bounds for variables
         """
-        for i in range(0, self.len_x):
+        for i in range(self.len_x):
             self.TRF.xvars[i].setlb(maxIgnoreNone(x0[i] -
                                                   radius, self.TRF.xvar_lower[i]))
             self.TRF.xvars[i].setub(minIgnoreNone(x0[i] +
                                                   radius, self.TRF.xvar_upper[i]))
-        for i in range(0, self.len_y):
+        for i in range(self.len_y):
             self.TRF.y[i].setlb(y0[i] - radius)
             self.TRF.y[i].setub(y0[i] + radius)
-        for i in range(0, self.len_z):
+        for i in range(self.len_z):
             self.TRF.zvars[i].setlb(maxIgnoreNone(z0[i] -
                                                   radius, self.TRF.zvar_lower[i]))
             self.TRF.zvars[i].setub(minIgnoreNone(z0[i] +
@@ -315,9 +321,9 @@ class PyomoInterface(object):
         Return values for x based on supplied externalNode
         """
         values = []
-        variables = self.TRF.exfn_xvars[externalNode]['vars']
-        for var in variables:
-            values.append(x[variables.index(var)])
+        varIndices = self.TRF.exfn_xvars[externalNode]['var_index']
+        for idx in varIndices:
+            values.append(x[idx])
         return values
         
 
@@ -403,7 +409,7 @@ class PyomoInterface(object):
             for externalNode in externalNodes:
                 index = self.TRF.exfn_xvars[externalNode]['index']
                 values = self.externalNodeValues(externalNode, x)
-                for i in range(0, len(values)):
+                for i in range(len(values)):
                     tempValues = values
                     tempValues[i] = tempValues[i] + radius
                     y1 = externalNode._fcn(*tempValues)
@@ -424,13 +430,13 @@ class PyomoInterface(object):
             for externalNode in externalNodes:
                 index = self.TRF.exfn_xvars[externalNode]['index']
                 RMParams[externalNode] = []
-                for d in range(0, dimension):
+                for d in range(dimension):
                     RMParams[externalNode].append(coefficients[d, index])
                 for linearTerm in range(1, self.len_x + 1):
                     RMParams[externalNode][linearTerm] = \
                         RMParams[externalNode][linearTerm]/radius
                 quadTermCounter= self.len_x + 1
-                for lx1 in range(0, self.len_x):
+                for lx1 in range(self.len_x):
                     for lx2 in range(lx1, self.len_x):
                         ###################################
                         # FIXME: It is unclear if this is
