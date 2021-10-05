@@ -17,6 +17,7 @@ from pyomo.util.subsystems import (
         TemporarySubsystemManager,
         ParamSweeper,
         )
+from pyomo.common.getGSL import find_GSL
 
 
 def _make_simple_model():
@@ -326,11 +327,12 @@ class TestSubsystemBlock(unittest.TestCase):
 
     def _make_model_with_external_functions(self):
         m = pyo.ConcreteModel()
+        gsl = find_GSL()
         m.bessel = pyo.ExternalFunction(
-            library="amplgsl.dll", function="gsl_sf_bessel_J0"
+            library=gsl, function="gsl_sf_bessel_J0"
         )
         m.fermi = pyo.ExternalFunction(
-            library="amplgsl.dll", function="gsl_sf_fermi_dirac_m1"
+            library=gsl, function="gsl_sf_fermi_dirac_m1"
         )
         m.v1 = pyo.Var(initialize=1.0)
         m.v2 = pyo.Var(initialize=2.0)
@@ -348,6 +350,7 @@ class TestSubsystemBlock(unittest.TestCase):
         ipopt.solve(m)
         return m
 
+    @unittest.skipUnless(find_GSL(), "Could not find the AMPL GSL library")
     def test_with_external_function(self):
         m = self._make_model_with_external_functions()
         subsystem = ([m.con2, m.con3], [m.v2, m.v3])
