@@ -61,7 +61,7 @@ class DesignOfExperiments:
             self.solver = solver
         # if not given, use default solver
         else:
-            self.solver = self.__solve_with_default_ipopt()
+            self.solver = self.__get_default_ipopt_solver()
 
         # check if discretization is needed
         self.discretize_model = discretize_model
@@ -83,11 +83,11 @@ class DesignOfExperiments:
             raise ValueError('Error: Objective function should be chosen from "det", "zero" and "trace"')
 
         if self.formula not in ['central', 'forward', 'backward', None]:
-            raise ValueError('Error: Finite difference scheme should be chosen from "central", "forward", "backward" and "none".')
+            raise ValueError('Error: Finite difference scheme should be chosen from "central", "forward", "backward" and None.')
 
         if self.prior_FIM is not None:
-            assert (np.shape(self.prior_FIM)[0] == np.shape(self.prior_FIM)[1]), \
-                'Expect prior information matrix shape: ['+str(len(self.param_name))+','+str(len(self.param_name)) +']'
+            if not (np.shape(self.prior_FIM)[0] == np.shape(self.prior_FIM)[1]):
+                raise ValueError('Found wrong prior information matrix shape.')
 
         if self.scale_nominal_param_value:
             print('Sensitivity information is scaled by its corresponding parameter nominal value.')
@@ -97,7 +97,7 @@ class DesignOfExperiments:
 
         if check_mode:
             if self.mode not in ['simultaneous_finite', 'sequential_finite', 'sequential_sipopt', 'sequential_kaug', 'direct_kaug']:
-                print('Wrong mode. Choose from "simultaneous_finite", "sequential_finite", "0sequential_sipopt", "sequential_kaug"')
+                raise ValueError('Wrong mode. Choose from "simultaneous_finite", "sequential_finite", "0sequential_sipopt", "sequential_kaug"')
 
 
 
@@ -180,9 +180,13 @@ class DesignOfExperiments:
 
         time_solve1 = time1_solve-time0_solve
 
+        # create result object
         analysis_square = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, self.measurement_extra_index,  prior_FIM=self.prior_FIM, scale_constant_value=self.scale_constant_value)
-        analysis_square.extract_FIM(m, self.design_timeset, result_square, obj=objective_option)
+        # for simultaneous mode, FIM and Jacobian are extracted with extract_FIM()
+        analysis_square.extract_FIM(m, self.design_timeset, result_square, y_set=self.measurement_variables, t_all_set=self.time_set, obj=objective_option)
 
+        self.analysis_square = analysis_square
+        analysis_square.solve_time = time_solve1
 
         if self.optimize:
             # solve problem with DOF then
@@ -192,11 +196,16 @@ class DesignOfExperiments:
 
             time_solve2 = time1_solve2 - time0_solve2
 
+            # create result object
             analysis_optimize = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, self.measurement_extra_index,  prior_FIM=self.prior_FIM)
-            analysis_optimize.extract_FIM(m, self.design_timeset, result_doe, obj=objective_option)
+            # for simultaneous mode, FIM and Jacobian are extracted with extract_FIM()
+            analysis_optimize.extract_FIM(m, self.design_timeset, result_doe, y_set=self.measurement_variables, t_all_set=self.time_set, obj=objective_option)
             analysis_optimize.model = m
 
             time1 = time.time()
+
+            analysis_optimize.solve_time = time_solve2
+            analysis_optimize.total_time = time1-time0
             if self.verbose:
                 print('Total solve time with simultaneous_finite mode (Wall clock) [s]:', time_solve1 + time_solve2)
                 print('Total wall clock time [s]:', time1-time0)
@@ -207,6 +216,8 @@ class DesignOfExperiments:
             analysis_square.model = m
 
             time1 = time.time()
+
+            analysis_square.total_time = time1-time0
             if self.verbose:
                 print('Total solve time with simultaneous_finite mode (Wall clock) [s]:', time_solve1)
                 print('Total wall clock time [s]:', time1 - time0)
@@ -227,7 +238,7 @@ class DesignOfExperiments:
         multiple scenarios. Sensitivity info estimated by finite difference
         3. sequential_sipopt: calculate sensitivity by sIPOPT.
         4. sequential_kaug: calculate sensitivity by k_aug
-        5, direct_kaug: calculate sensitivity by k_aug with direct sensitivity. **In construction**
+        5. direct_kaug: calculate sensitivity by k_aug with direct sensitivity. **In construction**
 
         Parameters:
         -----------
@@ -400,7 +411,8 @@ class DesignOfExperiments:
             else:
                 prior_in_use = specified_prior
 
-            FIM_analysis = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, self.measurement_extra_index, prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
+            FIM_analysis = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, self.measurement_extra_index,
+                                      prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
             # Store the Jacobian information for access by users
 
@@ -970,6 +982,7 @@ class DesignOfExperiments:
         time_set=[]
         for t in m.t:
             time_set.append(value(t))
+        self.time_set = time_set
 
         # create parameter, measurement, time and measurement time set
         m.para_set = Set(initialize=self.param_name)
@@ -1221,7 +1234,7 @@ class DesignOfExperiments:
                     newvar.unfix()
         return m
 
-    def __solve_with_default_ipopt(self):
+    def __get_default_ipopt_solver(self):
         ''' Default solver
         '''
         solver = SolverFactory('ipopt')
@@ -1691,7 +1704,7 @@ class FIM_result:
         if (self.store_FIM is not None):
             self.__store_FIM()
 
-    def extract_FIM(self, m, dv_set, result, obj=None, add_fim=False):
+    def extract_FIM(self, m, dv_set, result, y_set=None, t_all_set=None, obj=None, add_fim=False):
         '''
         Extract FIM from an invasive model
 
@@ -1727,6 +1740,18 @@ class FIM_result:
         self.result = result
         self.obj = obj
         no_para = len(self.para_name)
+
+        # extract Jacobian information
+        if y_set is not None:
+            no_y = len(y_set)
+            no_t = len(t_all_set)
+            JAC = np.ones((no_y, no_para, no_t))
+            for n1, name1 in enumerate(y_set):
+                for n2, name2 in enumerate(self.para_name):
+                    for t, tim in enumerate(t_all_set):
+                        JAC[n1, n2, t] = value(m.jac[name1, name2, tim])
+        print('JAC is:', JAC)
+        self.jac_extracted = JAC
 
         # Extract FIM infomation
         FIM = np.ones((no_para, no_para))
