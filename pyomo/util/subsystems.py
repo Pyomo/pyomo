@@ -57,6 +57,7 @@ def add_local_external_functions(block):
         comp = ExternalFunction(library=lib, function=name)
         block.add_component(comp_name, comp)
         fcn_comp_map[lib, name] = comp
+    return fcn_comp_map
 
 
 def create_subsystem_block(constraints, variables=None, include_fixed=False):
