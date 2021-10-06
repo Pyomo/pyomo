@@ -58,6 +58,24 @@ class DesignOfExperiments:
         self.create_model = create_model
         self.args = args
         self.measurement_extra_index = measurement_extra_index
+        extra_measure_name = list(measurement_extra_index.keys())
+        extra_measure_value = list(measurement_extra_index.values())
+        # check if measurement variables need to be flattened
+        if self.measurement_extra_index is not None:
+            flatten_measure_name=[]
+            for j in self.measurement_variables:
+                if j in extra_measure_name:
+                    for ind in measurement_extra_index[j]:
+                        flatten_name = j + str(ind)
+                        flatten_measure_name.append(flatten_name)
+                else:
+                    flatten_measure_name.append(j)
+        else:
+            flatten_measure_name = self.measurement_variables.copy()
+
+        self.flatten_measure_name = flatten_measure_name
+        print('The flattend measurements include:', self.flatten_measure_name)
+
         # check if user-defined solver is given
         if solver is not None:
             self.solver = solver
@@ -697,9 +715,12 @@ class DesignOfExperiments:
         Returns:
 
         '''
+        # dictionary form of jacobian
         jac = {}
+        # 3-D array form of jacobian
+        #jac_3Darray = np.zeors((len(self.flatten_measure_name), len(self.param_name), len(self.measurement_timeset[0])))
         # After collecting outputs from all scenarios, calculate sensitivity
-        for para in self.param_name:
+        for no_p, para in enumerate(self.param_name):
             # extract involved scenario No. for each parameter from scenario class
             involved_s = scena_gen.scenario_para[para]
             # each parameter has two involved scenarios
@@ -714,6 +735,7 @@ class DesignOfExperiments:
                     sensi = (output_record[s1][i] - output_record[s2][i]) / scena_gen.eps_abs[
                         para] * self.scale_constant_value
                 list_jac.append(sensi)
+                #jac_3Darray[,no_p,]
             # get Jacobian dict, keys are parameter name, values are sensitivity info
             jac[para] = list_jac
 
@@ -1591,7 +1613,7 @@ class Scenario_data:
 
 
 class FIM_result:
-    def __init__(self, para_name, measurement_variables, measurement_timeset, measurement_extra_index,  prior_FIM=None, store_FIM=None, scale_constant_value=1, max_condition_number=1.0E12,
+    def __init__(self, para_name, measurement_variables, measurement_timeset,  prior_FIM=None, store_FIM=None, scale_constant_value=1, max_condition_number=1.0E12,
                  verbose=True):
         '''
         Analyze the FIM result for a single run
@@ -1611,7 +1633,7 @@ class FIM_result:
         self.para_name = para_name
         self.measurement_variables = measurement_variables
         self.measurement_timeset = measurement_timeset
-        self.measurement_extra_index = measurement_extra_index
+        #self.measurement_extra_index = measurement_extra_index
         self.prior_FIM = prior_FIM
         self.store_FIM = store_FIM
         self.scale_constant_value = scale_constant_value
