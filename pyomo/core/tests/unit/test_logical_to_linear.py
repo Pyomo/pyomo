@@ -386,7 +386,7 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
                  None)
             ], m.b.logic_to_linear.transformed_constraints)
 
-    def test_transform_constraint_target(self):
+    def test_logical_constraint_target(self):
         m = _generate_boolean_model(3)
         TransformationFactory('core.logical_to_linear').apply_to(
             m, targets=m.constraint)
@@ -396,6 +396,32 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
                  m.Y[2].get_associated_binary() + \
                  m.Y[3].get_associated_binary(), 2)
             ], m.logic_to_linear.transformed_constraints)
+
+    def test_indexed_logical_constraint_target(self):
+        m = _generate_boolean_model(3)
+        m.cons = LogicalConstraint([1,2])
+        m.cons[1] = exactly(2, m.Y)
+        m.cons[2] = m.Y[1].implies(lor(m.Y[2], m.Y[3]))
+        TransformationFactory('core.logical_to_linear').apply_to(
+            m, targets=m.cons)
+        _constrs_contained_within(
+            self, [
+                (2, m.Y[1].get_associated_binary() + \
+                 m.Y[2].get_associated_binary() + \
+                 m.Y[3].get_associated_binary(), 2)
+            ], m.logic_to_linear.transformed_constraints)
+        _constrs_contained_within(
+            self, [
+                (1,
+                 m.Y[2].get_associated_binary() + \
+                 m.Y[3].get_associated_binary()
+                 + (1 - m.Y[1].get_associated_binary()),
+                 None)
+            ], m.logic_to_linear.transformed_constraints)
+
+        # and verify only the targets were transformed
+        self.assertEqual(len(m.logic_to_linear.transformed_constraints), 2)
+        self.assertTrue(m.constraint.active)
 
 @unittest.skipUnless(sympy_available, "Sympy not available")
 class TestLogicalToLinearBackmap(unittest.TestCase):
