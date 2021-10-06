@@ -72,16 +72,17 @@ class BaselineTests(Tests):
                         testCase])
 
         # Check that the pyomo BAR file matches its own baseline
-        with open(output, 'r') as f2, open(baseline, 'r') as f1:
-            print('baseline:', baseline)
-            print('testfile:', output)
+        with open(baseline, 'r') as f1, open(output, 'r') as f2:
             f1_contents = list(filter(None, f1.read().split()))
             f2_contents = list(filter(None, f2.read().split()))
             for item1, item2 in itertools.zip_longest(f1_contents, f2_contents):
                 try:
                     self.assertAlmostEqual(float(item1), float(item2))
                 except:
-                    self.assertEqual(item1, item2)
+                    self.assertEqual(
+                        item1, item2,
+                        "\n\nbaseline: %s\ntestFile: %s\n" % (baseline, output)
+                    )
         os.remove(join(currdir, name+'.test.bar'))
 
 

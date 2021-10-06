@@ -58,12 +58,14 @@ class Test(unittest.TestCase):
         try:
             self.assertTrue(cmp(test_fname, baseline_fname))
         except:
-            print('baseline:', baseline_fname)
-            print('testname:', test_fname)
-            with open(test_fname, 'r') as f2, open(baseline_fname, 'r') as f1:
+            with open(baseline_fname, 'r') as f1, open(test_fname, 'r') as f2:
                 f1_contents = list(filter(None, f1.read().split()))
                 f2_contents = list(filter(None, f2.read().split()))
-                self.assertEqual(f1_contents, f2_contents)
+                self.assertEqual(
+                    f1_contents, f2_contents,
+                    "\n\nbaseline: %s\ntestFile: %s\n" % (
+                        baseline_fname, test_fname)
+                )
         self._cleanup(test_fname)
 
     def _gen_expression(self, terms):
