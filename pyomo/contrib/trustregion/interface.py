@@ -12,6 +12,7 @@ import logging
 
 import numpy as np
 
+from pyomo.common.collections import ComponentMap
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import (
     Block, Var, Param, VarList, ConstraintList, Constraint, Objective,
@@ -33,7 +34,7 @@ class ReplaceEFVisitor(EXPR.ExpressionReplacementVisitor):
     # I am making the assumption that after we rework this,
     # the data structures will be better.
     # Specifically:
-    #    TRF.exfn_xvars : Dict (for which the keys are TRF.external_fcns)
+    #    TRF.ef_variables : Dict (for which the keys are TRF.external_fcns)
     #    { 'externalNode': {'index': #, 'vars': [vars]}}
     # There is no need for TRF.external_fcns given this new structure
     pass
@@ -59,11 +60,9 @@ class PyomoInterface(object):
         self.model = m
         self.TRF = self.transformForTrustRegion(self.model, efList)
 
-        self.len_x = len(self.TRF.xvars)
-        # Number of "glass box" variables
-        self.len_z = len(self.TRF.zvars)
-        # Number of external functions (externalNodes)
-        self.len_y = len(self.TRF.y)
+        self.numberOfInputs = len(self.TRF.ef_inputs)
+        self.numberOfOutputs = len(self.TRF.ef_outputs)
+        self.numberOfOtherVars = len(self.TRF.other_vars)
 
         self.createParam()
         self.createRMConstraint()
@@ -111,11 +110,10 @@ class PyomoInterface(object):
         allVariables = set([var for var in model.component_data_objects(Var)])
 
         model.add_component(unique_component_name(model, 'tR'), TRF)
-        TRF.y = VarList()
-        TRF.x = VarList()
+        TRF.ef_outputs = VarList()
         TRF.constraints_ref_ef = ConstraintList()
         TRF.objective_ref_ef = ObjectiveList()
-        TRF.exfn_xvars = {}
+        TRF.ef_variables = {}
         TRF.deactivated_objects = []
 
         # Transform and add Constraints to TRF model
@@ -140,31 +138,24 @@ class PyomoInterface(object):
             objs[0].deactivate()
             TRF.deactivated_objects.append(objs[0])
 
-        # xT is an aggregated vector of variables [wT, yT, zT]
-        TRF.xvars = []
-        # Populate xvars
-        seenVar = set()
-        for externalNode in TRF.exfn_xvars.keys():
-            for var in TRF.exfn_xvars[externalNode]['vars']:
-                if id(var) not in seenVar:
-                    seenVar.add(id(var))
-                    TRF.xvars.append(var)
+        TRF.ef_inputs = []
+        seen = ComponentMap()
+        self.ef_input_idxs = ComponentMap()
+        for externalNode in TRF.ef_variables.keys():
+            self.ef_input_idxs[externalNode] = []
+            # NOTE: identify_variables is guaranteed to not return duplicates
+            for var in EXPR.identify_variables(externalNode, include_fixed=False):
+                if var not in seen:
+                    seen[v] = len(TRF.ef_inputs)
+                    TRF.ef_inputs.append(var)
+                self.ef_input_idxs[externalNode].append(seen[var])
 
-        # z is a vector of "glass box"/state/decision variables
-        TRF.zvars = []
-        # Remaining variables from allVariables are assigned to zvars
+        TRF.other_vars = []
+        # Remaining variables from allVariables are added to other_vars
         for var in allVariables:
-            if id(var) not in seenVar:
-                seenVar.add(id(var))
-                TRF.zvars.append(var)
-
-        for externalNode in TRF.exfn_xvars.keys():
-            idx = []
-            for var in TRF.exfn_xvars[externalNode]['vars']:
-                for xvar in TRF.xvars:
-                    if (id(var) == id(xvar)):
-                        idx.append(TRF.xvars.index(xvar))
-            TRF.exfn_xvars[externalNode]['var_index'] = idx
+            if id(var) not in seen:
+                seen.add(id(var))
+                TRF.other_vars.append(var)
 
         return TRF
             
@@ -180,36 +171,36 @@ class PyomoInterface(object):
         """
         Initialize values into numpy array
         """
-        # We initialize y as 1s anyway right now
-        y = np.ones(self.len_y, dtype=float)
-        x = np.zeros(self.len_x, dtype=float)
-        z = np.zeros(self.len_z, dtype=float)
-        for i in range(self.len_x):
-            x[i] = value(self.TRF.xvars[i])
-        for i in range(self.len_z):
-            z[i] = value(self.TRF.zvars[i])
-        return x, y, z
+        # We initialize outputs as 1s to start
+        outputs = np.ones(self.numberOfOutputs, dtype=float)
+        inputs = np.zeros(self.numberOfInputs, dtype=float)
+        other_vars = np.zeros(self.numberOfOtherVars, dtype=float)
+        for i in range(self.numberOfInputs):
+            inputs[i] = value(self.TRF.ef_inputs[i])
+        for i in range(self.numberOfOtherVars):
+            other_vars[i] = value(self.TRF.other_vars[i])
+        return inputs, outputs, other_vars
 
     def createParam(self):
         """
         Create relevant parameters
         """
-        ind_lx = RangeSet(0, self.len_x-1)
-        self.TRF.ind_ly = RangeSet(0, self.len_y-1)
-        ind_lz = RangeSet(0, self.len_z-1)
-        self.TRF.x0 = Param(ind_lx,
+        ind_input = RangeSet(0, self.numberOfInputs-1)
+        self.TRF.ind_output = RangeSet(0, self.numberOfOutputs-1)
+        ind_other = RangeSet(0, self.numberOfOtherVars-1)
+        self.TRF.initInput = Param(ind_input,
                             mutable=True, default=0)
-        self.TRF.y0 = Param(self.TRF.ind_ly,
+        self.TRF.initOutput = Param(self.TRF.ind_output,
                             mutable=True, default=0)
-        self.TRF.z0 = Param(ind_lz,
+        self.TRF.initOther = Param(ind_other,
                             mutable=True, default=0)
         if self.rmtype == RMType.linear:
-            self.TRF.rmParam = Param(self.TRF.ind_ly,
-                                     range(self.len_x + 1),
+            self.TRF.rmParams = Param(self.TRF.ind_output,
+                                     range(self.numberOfInputs + 1),
                                      mutable=True, default=0)
         elif self.rmtype == RMType.quadratic:
-            self.TRF.rmParam = Param(self.TRF.ind_ly,
-                                     range(quadraticExpression(self.len_x)),
+            self.TRF.rmParams = Param(self.TRF.ind_output,
+                                     range(quadraticExpression(self.numberOfInputs)),
                                      mutable=True, default=0)
         else:
             raise RuntimeError(
@@ -219,25 +210,23 @@ class PyomoInterface(object):
         """
         Expression for use in the RM Constraint
         """
-        nodeIndex = self.TRF.exfn_xvars[externalNode]['index']
-        varIndices = self.TRF.exfn_xvars[externalNode]['var_index']
-
-        if self.rmtype == RMType.linear:
-            expr = (model.rmParam[nodeIndex, 0] +
-                sum(model.rmParam[nodeIndex, idx+1] * (model.xvars[varIndices[idx]]
-                                                    - model.x0[varIndices[idx]])
-                    for idx in range(len(varIndices))))
-        elif self.rmtype == RMType.quadratic:
-            expr = (model.rmParam[nodeIndex, 0] +
-            sum(model.rmParam[nodeIndex, j+1] *
-                (model.xvars[j] - model.x0[j])
-                for j in range(self.len_x)))
-            i = self.len_x + 1
-            for j1 in range(self.len_x):
-                for j2 in range(j1, self.len_x):
-                    expr += ((model.xvars[j2] - model.x0[j2]) *
-                             (model.xvars[j1] - model.x0[j1]) * model.rmParam[nodeIndex, i])
-                    i += 1
+        nodeIndex = self.TRF.ef_variables[externalNode]['index']
+        constantTerm = model.rmParams[externalNode][idx, 0]
+        linearTerms = model.rmParams[externalNode][idx, 1:self.numberOfInputs+1]
+        quad = model.rmParams[externalNode][idx, self.numberOfInputs+1:]
+        quadraticTerms = { (i, j) : \
+                    quad[i*(2*self.numberOfInputs - 1 - i)//2 + j for i in\
+                    range(self.numberOfInputs) for j in range(i, self.numberOfInputs)] }
+        expr = (
+            constantTerm
+            + sum(linearTerms[i] * (model.ef_inputs[i] - model.init_inputs[i]) for i in range(self.numberOfInputs))
+            )
+        if (self.rmtype == RMType.quadratic):
+            quadraticTerms = model.rmParams[externalNode]['quadratic']
+            expr += sum(quadraticTerms[(i, j)] * (model.ef_inputs[i] \
+                    - model.init_inputs[i]) * (model.ef_inputs[j] - model.init_inputs[j])\
+                    for i in range(self.numberOfInputs) \
+                    for j in range(self.numberOfInputs))
         return expr
 
     def createRMConstraint(self):
@@ -245,7 +234,7 @@ class PyomoInterface(object):
         Create appropriate constraints for RM
         """
         def RMConstraintRule(model, externalNode):
-            idx = self.TRF.exfn_xvars[externalNode]['index']
+            idx = self.TRF.ef_variables[externalNode]['index']
             return model.y[idx] == self.RMConstraint(model, externalNode)
         self.TRF.RMConstraint = Constraint(self.TRF.ind_ly,
                                            rule=RMConstraintRule)
@@ -254,95 +243,95 @@ class PyomoInterface(object):
         """
         Store the upper and lower bounds for each variable
         """
-        self.TRF.xvar_lower = []
-        self.TRF.xvar_upper = []
-        self.TRF.zvar_lower = []
-        self.TRF.zvar_upper = []
-        for x in self.TRF.xvars:
-            self.TRF.xvar_lower.append(x.lb)
-            self.TRF.xvar_upper.append(x.up)
-        for z in self.TRF.zvars:
-            self.TRF.zvar_lower.append(z.lb)
-            self.TRF.zvar_upper.append(z.up)
+        self.TRF.ef_input_lower = []
+        self.TRF.ef_input_upper = []
+        self.TRF.other_lower = []
+        self.TRF.other_upper = []
+        for i in self.TRF.ef_inputs:
+            self.TRF.ef_input_lower.append(i.lb)
+            self.TRF.ef_input_upper.append(i.up)
+        for ov in self.TRF.other_vars:
+            self.TRF.other_lower.append(ov.lb)
+            self.TRF.other_upper.append(ov.up)
 
-    def setParam(self, x0=None, RMParams=None):
+    def setParam(self, inputs=None, RMParams=None):
         """
         Populate parameter values
         """
-        if x0 is not None:
-            self.TRF.x0.store_values(x0)
+        if inputs is not None:
+            self.TRF.init_inputs.store_values(inputs)
         if RMParams is not None:
-            externalNodes = self.TRF.exfn_xvars.keys()
+            externalNodes = self.TRF.ef_variables.keys()
             for externalNode in externalNodes:
-                idx = self.TRF.exfn_xvars[externalNode]['index']
+                idx = self.TRF.ef_variables[externalNode]['index']
                 for j in range(len(RMParams[externalNode])):
                     self.TRF.rmParams[idx, j] = RMParams[externalNode][j]
 
-    def setVarValue(self, x=None, y=None, z=None):
+    def setVarValue(self, inputs=None, outputs=None, other=None):
         """
         Populate variable values
         """
-        if x is not None:
-            if(len(x) != self.len_x):
+        if inputs is not None:
+            if(len(inputs) != self.numberOfInputs):
                 raise Exception(
-                    "setVarValue: The dimension of x is not consistent.\n")
-            self.TRF.xvars.set_values(x)
-        if y is not None:
-            if(len(y) != self.len_y):
+                    "setVarValue: The dimension of inputs is not consistent.\n")
+            self.TRF.ef_inputs.set_values(inputs)
+        if outputs is not None:
+            if(len(outputs) != self.numberOfOutputs):
                 raise Exception(
-                    "setVarValue: The dimension of y is not consistent.\n")
-            self.TRF.y.set_values(y)
-        if z is not None:
-            if(len(z) != self.len_z):
+                    "setVarValue: The dimension of outputs is not consistent.\n")
+            self.TRF.ef_outputs.set_values(outputs)
+        if other is not None:
+            if(len(other) != self.numberOfOtherVars):
                 raise Exception(
-                    "setVarValue: The dimension of z is not consistent.\n")
-            self.TRF.zvars.set_values(z)
+                    "setVarValue: The dimension of glass-box variables is not consistent.\n")
+            self.TRF.other_vars.set_values(other)
 
-    def setBound(self, x0, y0, z0, radius):
+    def setBound(self, inputs, outputs, other, radius):
         """
         Set bounds for variables
         """
-        for i in range(self.len_x):
-            self.TRF.xvars[i].setlb(maxIgnoreNone(x0[i] -
-                                                  radius, self.TRF.xvar_lower[i]))
-            self.TRF.xvars[i].setub(minIgnoreNone(x0[i] +
-                                                  radius, self.TRF.xvar_upper[i]))
-        for i in range(self.len_y):
-            self.TRF.y[i].setlb(y0[i] - radius)
-            self.TRF.y[i].setub(y0[i] + radius)
-        for i in range(self.len_z):
-            self.TRF.zvars[i].setlb(maxIgnoreNone(z0[i] -
-                                                  radius, self.TRF.zvar_lower[i]))
-            self.TRF.zvars[i].setub(minIgnoreNone(z0[i] +
-                                                  radius, self.TRF.zvar_upper[i]))
+        for i in range(self.numberOfInputs):
+            self.TRF.ef_inputs[i].setlb(maxIgnoreNone(inputs[i] -
+                                                  radius, self.TRF.ef_input_lower[i]))
+            self.TRF.ef_inputs[i].setub(minIgnoreNone(inputs[i] +
+                                                  radius, self.TRF.ef_input_upper[i]))
+        for i in range(self.numberOfOutputs):
+            self.TRF.ef_outputs[i].setlb(outputs[i] - radius)
+            self.TRF.ef_outputs[i].setub(outputs[i] + radius)
+        for i in range(self.numberOfOtherVars):
+            self.TRF.other_vars[i].setlb(maxIgnoreNone(other[i] -
+                                                  radius, self.TRF.other_lower[i]))
+            self.TRF.other_vars[i].setub(minIgnoreNone(other[i] +
+                                                  radius, self.TRF.other_upper[i]))
 
-    def externalNodeValues(self, externalNode, x):
+    def getEFInputValues(self):
         """
-        Return values for x based on supplied externalNode
+        Cache current EF input values
         """
-        values = []
-        varIndices = self.TRF.exfn_xvars[externalNode]['var_index']
-        for idx in varIndices:
-            values.append(x[idx])
-        return values
-        
+        return curr_vals = list(var.value for var in self.TRF.ef_inputs)
 
-    def evaluateDx(self, x):
+    def setEFInputValues(self, inputs):
+        """
+        Set new values for EF inputs
+        """
+        for var, val in zip(self.TRF.ef_inputs, inputs):
+            var.set_value(val)
+
+    def evaluateEF(self, inputs):
         """
         Evaluate values at external functions
         """
-        ans = []
-        externalNodes = self.TRF.exfn_xvars.keys()
-        for externalNode in externalNodes:
-            values = self.externalNodeValues(externalNode, x)
-            ans.append(externalNode._fcn(*values))
-        return np.array(ans)
+        externalNodes = self.TRF.ef_variables.keys()
+        self.setEFInputValues(inputs)
+        outputs = list(value(externalNode) for externalNode in externalNodes)
+        return np.array(outputs)
 
-    def evaluateObj(self, x, y, z):
+    def evaluateObj(self, inputs, outputs, other):
         """
         Evaluate the objective
         """
-        self.setVarValue(x=x, y=y, z=z)
+        self.setVarValue(inputs=inputs, outputs=outputs, other=other)
         return self.objective()
 
     def solveModel(self):
@@ -367,84 +356,85 @@ class PyomoInterface(object):
             print("Termination Condition(s): " + str(results.solver.termination_condition))
             return False, 0
 
-    def TRSPk(self, x, y, z, x0, y0, z0, RMParams, radius):
+    def TRSPk(self, inputs, outputs, other,
+              init_inputs, init_outputs, init_other,
+              RMParams, radius):
         """
         Trust region subproblem solver
 
         Used for each iteration of the trust region filter method
         """
-        if ((len(x) != self.len_x) or (len(y) != self.len_y)
-            or (len(z) != self.len_z) or (len(x0) != self.len_x)
-            or (len(y0) != self.len_y) or (len(z0) != self.len_z)):
+        if ((len(inputs) != self.numberOfInputs)
+            or (len(outputs) != self.numberOfOutputs)
+            or (len(other) != self.numberOfOtherVars)
+            or (len(init_inputs) != self.numberOfInputs)
+            or (len(init_outputs) != self.numberOfOutputs)
+            or (len(init_other) != self.numberOfOtherVars)):
             raise RuntimeError(
                 "TRSP_k: The dimension is not consistant with the initialization.\n")
 
-        self.setBound(x0, y0, z0, radius)
-        self.setVarValue(x, y, z)
+        self.setBound(init_inputs, init_outputs, init_other, radius)
+        self.setVarValue(inputs, outputs, other)
         self.TRF.RMConstraint.deactivate()
         self.objective.activate()
-        self.setParam(x0=x0, RMParams=RMParams)
+        self.setParam(inputs=init_inputs, RMParams=RMParams)
         self.TRF.RMConstraint.activate()
 
         return self.solveModel()
 
-    def initialGeometry(self, len_x):
+    def initialGeometry(self, numberOfInputs):
         """
         Generate geometry
         """
         conditionNumber, self.optimalPointSet, self.optimalMatrix = \
-                generate_geometry(len_x)
+                generate_geometry(numberOfInputs)
 
-    def buildRM(self, x, radius):
+    def regressRMParams(self, inputs, radius):
         """
-        Builds reduced model (RM) near point x based on perturbation
+        Calculate mathematical regression of RM near inputs with perturbation
         """
-        y0 = self.evaluateDx(x)
-        # RMParams has the format:
-        #    {'externalNode' : [list of coefficient values]}
+        val_cache = self.getEFInputValues()
+        outputs = self.evaluateEF(inputs)
         RMParams = {}
 
         if (self.rmtype == RMType.linear):
-            externalNodes = self.TRF.exfn_xvars.keys()
+            externalNodes = self.TRF.ef_variables.keys()
+            # Set constant coefficient for each node
             for externalNode in externalNodes:
-                index = self.TRF.exfn_xvars[externalNode]['index']
-                values = self.externalNodeValues(externalNode, x)
-                for i in range(len(values)):
-                    tempValues = values
-                    tempValues[i] = tempValues[i] + radius
-                    y1 = externalNode._fcn(*tempValues)
-                    RMParams[externalNode] = (y1 - y0[index]) / radius
-
+                index = self.TRF.ef_variables[externalNode]['index']
+                RMParams[externalNode] = [outputs[index]]
+                RMParams[externalNode]['linear'] = []
+            # Set linear coefficients for each node
+            for i in range(self.numberOfInputs):
+                tempInputs = list(inputs)
+                tempInputs[i] += radius
+                tempOutputs = self.evaluateEF(tempInputs)
+                for externalNode, value in zip(externalNodes, tempOutputs):
+                    index = self.TRF.ef_variables[externalNode]['index']
+                    scaled = (value - outputs[index]) / radius
+                    RMParams[externalNode].append(scaled)
         elif (self.rmtype == RMType.quadratic):
             if self.optimalMatrix is None:
-                self.initialGeometry(self.len_x)
-            dimension = quadraticExpression(self.len_x)
+                self.initialGeometry(self.numberOfInputs)
+            dimension = quadraticExpression(self.numberOfInputs)
+
             rhs = []
             for point in self.optimalPointSet[:-1]:
-                y = self.evaluateDx(x + radius*point)
+                y = self.evaluateEF(inputs + radius*point)
                 rhs.append(y)
-            rhs.append(y0)
+            rhs.append(outputs)
 
-            coefficients = np.linalg.solve(self.optimalMatrix, np.matrix(rhs))
-            externalNodes = self.TRF.exfn_xvars.keys()
+            coefficients = np.linalg.solve(self.optimalMatrix * radius,
+                                           np.matrix(rhs))
+            externalNodes = self.TRF.ef_variables.keys()
             for externalNode in externalNodes:
-                index = self.TRF.exfn_xvars[externalNode]['index']
                 RMParams[externalNode] = []
-                for d in range(dimension):
-                    RMParams[externalNode].append(coefficients[d, index])
-                for linearTerm in range(1, self.len_x + 1):
-                    RMParams[externalNode][linearTerm] = \
-                        RMParams[externalNode][linearTerm]/radius
-                quadTermCounter= self.len_x + 1
-                for lx1 in range(self.len_x):
-                    for lx2 in range(lx1, self.len_x):
-                        ###################################
-                        # FIXME: It is unclear if this is
-                        # the correct scaling.
-                        # We need to revisit this.
-                        # mmundt - Oct 4, 2021
-                        ###################################
-                        RMParams[externalNode][quadTermCounter] = \
-                            RMParams[externalNode][quadTermCounter]/(radius)
-                        quadTermCounter += 1
-        return RMParams, y0
+                # Set constant coefficient for each node
+                RMParams[externalNode].append(coefficients[0, externalNode])
+                # Set linear coefficients for each node
+                RMParams[externalNode].append(coefficients[1:self.numberOfInputs+1, externalNode])
+                # Set quadratic coefficients for each node
+                RMParams.append(coefficients[self.numberOfInputs+1:, externalNode])
+
+        self.setEFInputValues(val_cache)
+        return RMParams, outputs

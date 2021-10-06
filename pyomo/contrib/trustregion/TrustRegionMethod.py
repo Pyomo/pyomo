@@ -42,11 +42,86 @@ def TrustRegionMethod(m, efList, config):
     logger = Logger()
     TrustRegionFilter = Filter()
     problem = PyomoInterface(m, efList, config)
-    x0, y0, z0 = problem.getInitialValue()
-    # iteration = 0
-    rmParams, y_r = problem.buildRM(x0, config.sample_radius)
+    init_inputs, init_outputs, init_other = problem.getInitialValue()
+    iteration = 0
+    rmParams, rmEFEvaluate = problem.buildRM(init_inputs, config.sample_radius)
     rebuildRM = False
-    x_k, y_k, z_k = copyVector(x0, y0, z0)
-    theta_k = norm(y_r - y_k, 1)
-    obj_k = problem.evaluateObj(x0, y0, z0)
-    pass
+    inputs_k, outputs_k, other_k = copyVector(init_inputs, init_outputs, init_other)
+    theta = norm(rmEFEvaluate - outputs_k, 1)
+    obj = problem.evaluateObj(init_inputs, init_outputs, init_other)
+    # Initialize stepNorm_k to a bogus value to ensure termination check is correct
+    stepNorm_k = 1
+
+    while iteration < config.max_iterations:
+        if iteration > 0:
+            logger.printIteration(iteration, config.verbosity)
+
+        # Keep sample radius within Trust Region radius
+        if config.trust_radius < config.sample_radius:
+            config.sample_radius = max(
+                config.sample_radius_adjust*config.trust_radius,
+                config.delta_min)
+            rebuildRM = True
+
+        # Generate Reduced Model r_k(x)
+        # TODO: The better thing to do here is to check the coefficients for
+        # quadratic - and if they are sufficiently small, switch to linear
+        if rebuildRM:
+            if config.trust_radius < 1e-3:
+                problem.rmtype = RMType.linear
+            else:
+                problem.rmtype = config.reduced_model_type
+            rmParams, rmOutputs = problem.buildRM(init_inputs,
+                                                  config.sample_radius)
+
+        # Set starter theta for kth iteration
+        theta_k = theta
+        # Set objective for kth iteration
+        obj_k = obj
+        # Log iteration information
+        logger.newIteration(iteration, inputs_k, outputs_k, other_k,
+                            theta_k, obj_k, config.verbosity,
+                            problem.rmtype, rmParams)
+
+        # Termination check
+        if ((theta_k < config.epsilon_theta) and (stepNorm_k < config.epsilon_s)):
+            print('EXIT: Optimal solution found.')
+            break
+
+        # If trust region very small and no progress is being made,
+        # terminate. The following condition must hold for two
+        # consecutive iterations.
+        if ((config.trust_radius <= config.delta_min) and
+            (theta_k < config.epsilon_theta)):
+            if subopt_flag:
+                print('WARNING: Insufficient progress.')
+                print('EXIT: Feasible solution found.')
+                break
+            else:
+                subopt_flag = True
+        else:
+            # This condition holds for iteration 0, which will declare
+            # the boolean subopt_flag
+            subopt_flag = False
+
+        # Solve TRSP_k
+        flag, objective = problem.TRSPk(init_inputs, init_outputs, init_other,
+                                        inputs_k, outputs_k, other_k,
+                                        rmParams, config.trust_radius)
+        if not flag:
+            raise Exception('EXIT: Subproblem TRSP_k solve failed.\n')
+
+        stepNorm_k = norm(concatenate([init_inputs - inputs_k,
+                                       init_outputs - outputs_k,
+                                       init_other - other_k]), inf)
+        logger.setCurrentIteration(trustRadius=config.trust_radius,
+                                   sampleRadius=config.sample_radius,
+                                   stepNorm=stepNorm_k)
+        # Check filter acceptance
+        
+        theta_k = norm()
+        iteration += 1
+
+    if iteration > config.max_iterations:
+        print('EXIT: Maximum iterations reached: {}.'.format(config.max_iterations))
+

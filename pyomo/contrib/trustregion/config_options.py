@@ -56,6 +56,13 @@ def get_TRF_config():
         description = 'Initial sample radius (type: float). Default is half the initial trust radius.',
         doc = 'Initialize a positive float sample radius. Default is half the initial trust radius.'))
 
+    # Sample Radius reset parameter
+    CONFIG.declare('sample radius adjust', ConfigValue(
+        default = 0.5,
+        domain = PositiveFloat,
+        description = 'Sample radius reset parameter. Default is 0.5.',
+        doc = 'Initialize a positive float radius reset parameter. Default is 0.5.'))
+
     CONFIG.declare('max radius', ConfigValue(
         default = 1000.0 * CONFIG.trust_radius,
         domain = PositiveFloat,
@@ -64,11 +71,11 @@ def get_TRF_config():
               'The default is 1000x the initial trust region radius.'))
 
     # Termination tolerances / parameters
-    CONFIG.declare('epsilon delta', ConfigValue(
+    CONFIG.declare('epsilon theta', ConfigValue(
         default = 1e-5,
         domain = PositiveFloat,
-        description = 'Termination tolerance for trust region method (epsilon_delta).',
-        doc = 'Initialize a positive float termination tolerance (epsilon_delta).'))
+        description = 'Termination tolerance for trust region method (epsilon_theta).',
+        doc = 'Initialize a positive float termination tolerance (epsilon_theta).'))
 
     CONFIG.declare('epsilon s', ConfigValue(
         default = 1e-5,
@@ -80,7 +87,7 @@ def get_TRF_config():
         default = 1e-6,
         domain = PositiveFloat,
         description = 'Minimum trust region. Default is 1e-6.',
-        doc = 'Initialize a minimum trust region size. Ensure delta_min <= epsilon_delta.'))
+        doc = 'Initialize a minimum trust region size. Ensure delta_min <= epsilon_theta.'))
 
     CONFIG.declare('max iterations', ConfigValue(
         default = 20,
@@ -122,13 +129,13 @@ def get_TRF_config():
         doc = 'Initialize second trust region update parameter greater than or equal to 1.'))
 
     # Ratio test parameters (for theta steps)
-    CONFIG.declare('eta1', ConfigValue(
+    CONFIG.declare('eta_1', ConfigValue(
         default = 0.05,
         domain = PositiveFloat,
         description = 'Lower ratio test parameter.',
         doc = 'Initialize lower ratio test parameter (eta_1) subject to constraint 0 < eta_1 <= eta_2 < 1.'))
 
-    CONFIG.declare('eta2', ConfigValue(
+    CONFIG.declare('eta_2', ConfigValue(
         default = 0.2,
         domain = PositiveFloat,
         description = 'Upper ratio test parameter.',
@@ -155,22 +162,16 @@ def get_TRF_config():
 
     # Output level (replace with real printlevels!!!)
     CONFIG.declare('verbosity', ConfigValue(
-        default = 1,
+        default = 0,
         domain = PositiveInt,
-        description = 'Set a verbosity level. Default is 0.',
+        description = 'Set a verbosity level. Default is none (0).',
         doc = 'Set the verbosity level to get more information at each iteration.'
-              'Default is 0. Low is 1. Medium is 2. High is 3.'))
-
-    # # Sample Radius reset parameter
-    # CONFIG.declare('sample radius adjust', ConfigValue(
-    #     default = 0.5,
-    #     domain = PositiveFloat,
-    #     description = '',
-    #     doc = ''))
+              'Default is none (0). Low is 1. Medium is 2. High is 3.'))
 
     # Default RM type
     CONFIG.declare('reduced model type', ConfigValue(
-        default = 1,
-        domain = In([0,1]),
-        description = '0 = Linear, 1 = Quadratic',
-        doc = ''))
+        default = 0,
+        domain = In([0, 1]),
+        description = 'Choose a reduced model type. Default is Linear (0).',
+        doc = 'Set the reduced model type. Choose from Linear (0) or Quadratic (1).'
+              'Default is Linear (0).'))
