@@ -1307,13 +1307,16 @@ class LinearExpression(ExpressionBase):
 
     @property
     def _args_(self):
-        if len(self._args_cache_) != self.nargs():
-            self._args_cache_ = []
-            if len(self.linear_vars) != self.nargs():
-                self._args_cache_.append(self.constant)
-            self._args_cache_.extend(map(MonomialTermExpression,
-                       zip(self.linear_coefs, self.linear_vars)))
-        elif len(self.linear_vars) != self.nargs():
+        nargs = self.nargs()
+        if len(self._args_cache_) != nargs:
+            if len(self.linear_vars) == nargs:
+                self._args_cache_ = []
+            else:
+                self._args_cache_ = [self.constant]
+            self._args_cache_.extend(
+                map(MonomialTermExpression,
+                    zip(self.linear_coefs, self.linear_vars)))
+        elif len(self.linear_vars) != nargs:
             self._args_cache_[0] = self.constant
         return self._args_cache_
 
@@ -1370,14 +1373,13 @@ class LinearExpression(ExpressionBase):
         if verbose:
             return "%s(%s)" % (self.getname(), ', '.join(values))
 
-        tmp = [values[0]]
-        for term in values[1:]:
+        for i in range(1, len(values)):
+            term = values[i]
             if term[0] not in '+-':
-                term = '+'+term
-            if term[1] != ' ':
-                term = term[0] + ' ' + term[1:]
-            tmp.append(term)
-        return ' '.join(tmp)
+                values[i] = '+ ' + term
+            elif term[1] != ' ':
+                values[i] = term[0] + ' ' + term[1:]
+        return ' '.join(values)
 
     def is_potentially_variable(self):
         return len(self.linear_vars) > 0
