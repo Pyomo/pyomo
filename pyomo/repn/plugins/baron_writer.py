@@ -132,19 +132,9 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
             if not node.is_potentially_variable():
                 return True, ftoa(value(node))
             if node.__class__ is EXPR.MonomialTermExpression:
-                const = value(node.arg(0))
-                var = node.arg(1)
-                if var.is_fixed():
-                    return True, ftoa(const * var.value)
-                self.variables.add(id(var))
-                label = self.smap.getSymbol(var)
-                # TODO: is it necessary to filter out -1 / +1?
-                if const == -1:
-                    return True, "- " + label
-                elif const == 1:
-                    return True, label
-                else:
-                    return True, ftoa(const) + ' * ' + label
+                return True, self._monomial_to_string(node)
+            if node.__class__ is EXPR.LinearExpression:
+                return True, self._linear_to_string(node)
             # we will descend into this, so type checking will happen later
             return False, None
 
@@ -165,6 +155,22 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
             self.variables.add(id(node))
             return True, self.smap.getSymbol(node)
 
+    def _monomial_to_string(self, node):
+        const, var = node.args
+        const = value(const)
+        if var.is_fixed():
+            return ftoa(const * var.value)
+        self.variables.add(id(var))
+        return node._to_string((ftoa(const), self.smap.getSymbol(var)),
+                               False, self.smap, True)
+
+    def _linear_to_string(self, node):
+        iter_ = iter(node.args)
+        values = []
+        if node.constant:
+            values.append(ftoa(node.constant))
+        values.extend(self._monomial_to_string(n) for n in iter_)
+        return node._to_string(values, False, self.smap, True)
 
 def expression_to_string(expr, variables, labeler=None, smap=None):
     if labeler is not None:
