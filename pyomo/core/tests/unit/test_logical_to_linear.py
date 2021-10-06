@@ -9,6 +9,8 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
+from pyomo.common.log import LoggingIntercept
+import logging
 
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.core.plugins.transform.logical_to_linear import \
@@ -19,14 +21,15 @@ from pyomo.environ import ( ConcreteModel, BooleanVar, LogicalConstraint, lor,
                             exactly, Block)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.repn import generate_standard_repn
-
+from io import StringIO
 
 def _generate_boolean_model(nvars):
     m = ConcreteModel()
     m.s = RangeSet(nvars)
     m.Y = BooleanVar(m.s)
+    # make sure all the variables are used in at least one logical constraint
+    m.constraint = LogicalConstraint(expr=exactly(1, m.Y))
     return m
-
 
 def _constrs_contained_within(test_case, test_constr_tuples, constraint_list):
     """Checks to see if constraints defined by test_constr_tuples are in the
@@ -384,6 +387,27 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
 
 @unittest.skipUnless(sympy_available, "Sympy not available")
 class TestLogicalToLinearBackmap(unittest.TestCase):
+    def test_backmap_deprecated(self):
+        m = ConcreteModel()
+        m.s = RangeSet(3)
+        m.Y = BooleanVar(m.s)
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core.plugins.transform', 
+                              logging.WARNING):
+            TransformationFactory('core.logical_to_linear').apply_to(m)
+        self.assertIn("DEPRECATED: Relying on core.logical_to_linear to "
+                      "transform BooleanVars which do not appear in "
+                      "LogicalConstraints is deprecated. Please "
+                      "associated your own binaries if you have BooleanVars "
+                      "not used in logical expressions.", 
+                      output.getvalue().replace('\n', ' '))
+        m.Y_asbinary[1].value = 1
+        m.Y_asbinary[2].value = 0
+        update_boolean_vars_from_binary(m)
+        self.assertTrue(m.Y[1].value)
+        self.assertFalse(m.Y[2].value)
+        self.assertIsNone(m.Y[3].value)
+
     def test_backmap(self):
         m = _generate_boolean_model(3)
         TransformationFactory('core.logical_to_linear').apply_to(m)

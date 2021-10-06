@@ -3,6 +3,7 @@ Constraints."""
 from pyomo.common.collections import ComponentMap
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.config import ConfigBlock, ConfigValue
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import (TransformationFactory, BooleanVar, VarList, Binary,
                         LogicalConstraint, Block, ConstraintList, native_types,
@@ -76,7 +77,7 @@ class LogicalToLinear(IsomorphicTransformation):
                 parent_component.local_name + '_asbinary')
             new_varlist = VarList(domain=Binary)
             setattr(parent_block, new_var_list_name, new_varlist)
-            new_varlists[parent_block] = new_varlist
+            new_varlists[parent_component] = new_varlist
 
         if bool_vardata.get_associated_binary() is None:
             # we already have a list, but need to create the associated
@@ -92,7 +93,27 @@ class LogicalToLinear(IsomorphicTransformation):
         for cons in target_block.component_data_objects(
                 LogicalConstraint, descend_into=(Block, Disjunct)):
             for bool_vardata in identify_variables(cons.expr):
+                if bool_vardata.ctype is BooleanVar:
+                    self._transform_boolean_varData(bool_vardata, new_varlists)
+
+        # transform any other BooleanVars we missed (for backwards
+        # compatibility--I don't think we should really do this.)
+        complain_about_deprecation = False
+        for bool_vardata in target_block.component_data_objects(
+                BooleanVar, descend_into=(Block,Disjunct)):
+            if bool_vardata.get_associated_binary() is None:
+                # complaining for very VarData would be obnoxious, so make a
+                # note to complain once after this loop. (We'll still complain
+                # for every block we transform, but that should be less awful.)
+                complain_about_deprecation = True
                 self._transform_boolean_varData(bool_vardata, new_varlists)
+        if complain_about_deprecation:
+            deprecation_warning(
+                "Relying on core.logical_to_linear to transform "
+                "BooleanVars which do not appear in LogicalConstraints "
+                "is deprecated. Please associated your own binaries if "
+                "you have BooleanVars not used in logical expressions.",
+                version='6.1.3')
 
         # Process statements in global (entire model) context
         _process_logical_constraints_in_logical_context(target_block)
