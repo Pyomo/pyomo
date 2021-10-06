@@ -1713,10 +1713,9 @@ class FIM_result:
                 for n, nam in enumerate(involved_flatten_index):
                     if nam in self.flatten_all_measure:
                         n_all_measure = self.flatten_all_measure.index(nam)
-                        print(jaco_3D[n_all_measure,p,:])
-                        jaco_info[par].append(jaco_3D[n_all_measure, p, :])
-
-            print('jaco is: ', jaco_info)
+                        for d in range(len(jaco_3D[n_all_measure, p, :])):
+                            #jaco_info[par].append(list(jaco_3D[n_all_measure, p, :]))
+                            jaco_info[par].append(jaco_3D[n_all_measure, p, d])
 
 
         else:
