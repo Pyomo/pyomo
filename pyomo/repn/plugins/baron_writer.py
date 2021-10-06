@@ -161,6 +161,13 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
         if var.is_fixed():
             return ftoa(const * var.value)
         self.variables.add(id(var))
+        # Special handling: ftoa is slow, so bypass _to_string when this
+        # is a trivial term
+        if const in {-1, 1}:
+            if const < 0:
+                return '- ' + self.smap.getSymbol(var)
+            else:
+                return self.smap.getSymbol(var)
         return node._to_string((ftoa(const), self.smap.getSymbol(var)),
                                False, self.smap, True)
 
