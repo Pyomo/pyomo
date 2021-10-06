@@ -168,8 +168,9 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
         iter_ = iter(node.args)
         values = []
         if node.constant:
+            next(iter_)
             values.append(ftoa(node.constant))
-        values.extend(self._monomial_to_string(n) for n in iter_)
+        values.extend(map(self._monomial_to_string, iter_))
         return node._to_string(values, False, self.smap, True)
 
 def expression_to_string(expr, variables, labeler=None, smap=None):

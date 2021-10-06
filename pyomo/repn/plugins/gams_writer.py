@@ -124,19 +124,9 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
             if not node.is_potentially_variable():
                 return True, ftoa(value(node))
             if node.__class__ is EXPR.MonomialTermExpression:
-                const = value(node.arg(0))
-                var = node.arg(1)
-                if var.is_fixed() and not self.output_fixed_variables:
-                    return True, ftoa(const * var.value)
-                label = self.smap.getSymbol(var)
-                # TODO: is it necessary to filter out -1 / +1?
-                if const == -1:
-                    return True, "- " + label
-                elif const == 1:
-                    return True, label
-                else:
-                    return True, ftoa(const) + '*' + label
-
+                return True, self._monomial_to_string(node)
+            if node.__class__ is EXPR.LinearExpression:
+                return True, self._linear_to_string(node)
             # we will descend into this, so type checking will happen later
             if node.is_component_type():
                 self.treechecker(node)
@@ -162,6 +152,23 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
         else:
             assert node.is_variable_type()
             return True, self.smap.getSymbol(node)
+
+    def _monomial_to_string(self, node):
+        const, var = node.args
+        const = value(const)
+        if var.is_fixed() and not self.output_fixed_variables:
+            return ftoa(const * var.value)
+        return node._to_string((ftoa(const), self.smap.getSymbol(var)),
+                               False, self.smap, True)
+
+    def _linear_to_string(self, node):
+        iter_ = iter(node.args)
+        values = []
+        if node.constant:
+            next(iter_)
+            values.append(ftoa(node.constant))
+        values.extend(map(self._monomial_to_string, iter_))
+        return node._to_string(values, False, self.smap, True)
 
 
 def expression_to_string(expr, treechecker, labeler=None, smap=None,
