@@ -355,7 +355,7 @@ class DesignOfExperiments:
                 with open(read_output, 'rb') as f:
                     output_record = pickle.load(f)
                     f.close()
-                jac = self.__finite_calculation(output_record, scena_gen)
+                jac, jac_3D = self.__finite_calculation(output_record, scena_gen)
             # if measurements are not provided
             else:
                 # dict for storing model outputs
@@ -416,7 +416,7 @@ class DesignOfExperiments:
                     f.close()
 
                 # calculate jacobian
-                jac = self.__finite_calculation(output_record, scena_gen)
+                jac, jac_3D = self.__finite_calculation(output_record, scena_gen)
 
                 if self.verbose:
                     print('Build time with sequential_finite mode [s]:', sum(time_allbuild))
@@ -431,12 +431,13 @@ class DesignOfExperiments:
             else:
                 prior_in_use = specified_prior
 
-            FIM_analysis = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, self.measurement_extra_index,
+            FIM_analysis = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, flatten_all_measure=self.flatten_measure_name,
                                       prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
             # Store the Jacobian information for access by users
 
             self.jac = jac
+            self.jac_3D = jac_3D
 
             if read_output is None:
                 FIM_analysis.build_time = sum(time_allbuild)
@@ -717,8 +718,7 @@ class DesignOfExperiments:
         '''
         # dictionary form of jacobian
         jac = {}
-        # 3-D array form of jacobian
-        jac_3Darray = np.zeors((len(self.flatten_measure_name), len(self.param_name), len(self.measurement_timeset[0])))
+
         # After collecting outputs from all scenarios, calculate sensitivity
         for no_p, para in enumerate(self.param_name):
             # extract involved scenario No. for each parameter from scenario class
@@ -735,11 +735,18 @@ class DesignOfExperiments:
                     sensi = (output_record[s1][i] - output_record[s2][i]) / scena_gen.eps_abs[
                         para] * self.scale_constant_value
                 list_jac.append(sensi)
-                #jac_3Darray[,no_p,]
             # get Jacobian dict, keys are parameter name, values are sensitivity info
             jac[para] = list_jac
 
-        return jac
+        # 3-D array form of jacobian
+        jac_3Darray = np.zeros((len(self.flatten_measure_name), len(self.param_name), len(self.measurement_timeset[0])))
+        no_time = len(self.measurement_timeset[0])
+        for m in range(len(self.flatten_measure_name)):
+            for p, para in enumerate(self.param_name):
+                for t, tim in enumerate(range(no_time)):
+                    jac_3Darray[m,p,t] = jac[para][m*no_time+t]
+
+        return jac, jac_3Darray
 
     def generate_sequential_experiments(self, design_values_set, mode='sequential_finite', tee_option=False,
                        scale_nominal_param_value=False, scale_constant_value=1,
@@ -1613,7 +1620,7 @@ class Scenario_data:
 
 
 class FIM_result:
-    def __init__(self, para_name, measurement_variables, measurement_timeset,  prior_FIM=None, store_FIM=None, scale_constant_value=1, max_condition_number=1.0E12,
+    def __init__(self, para_name, measurement_variables, measurement_timeset, flatten_all_measure=None, prior_FIM=None, store_FIM=None, scale_constant_value=1, max_condition_number=1.0E12,
                  verbose=True):
         '''
         Analyze the FIM result for a single run
@@ -1633,6 +1640,7 @@ class FIM_result:
         self.para_name = para_name
         self.measurement_variables = measurement_variables
         self.measurement_timeset = measurement_timeset
+        self.flatten_all_measure = flatten_all_measure
         #self.measurement_extra_index = measurement_extra_index
         self.prior_FIM = prior_FIM
         self.store_FIM = store_FIM
@@ -1641,7 +1649,7 @@ class FIM_result:
         self.max_condition_number = max_condition_number
         self.verbose = verbose
 
-    def calculate_FIM(self, jaco_information, dv_values, jaco_involved_name=None, jaco_involved_extra_index=None, result=None):
+    def calculate_FIM(self, jaco_information, jaco_3D, dv_values, jaco_involved_name=None, jaco_involved_extra_index=None, result=None):
         '''
         Calculate FIM from Jacobian information. This is for grid search (combined models) results
 
@@ -1674,6 +1682,7 @@ class FIM_result:
         jaco_info =  {}
         # split jacobian if needed
         if jaco_involved_name is not None:
+            '''
             for par in self.para_name:
                 jaco_parameter = []
                 flatten_measure_count = -1
@@ -1691,6 +1700,25 @@ class FIM_result:
                             if name in jaco_involved_name:
                                 if ind in jaco_involved_extra_index:
                                     jaco_parameter.append(jaco_information[par])[flatten_measure_count]
+            '''
+            involved_flatten_index = []
+            for n, nam in enumerate(jaco_involved_name):
+                for ind in jaco_involved_extra_index[n]:
+                    flatten_name = nam + str(ind)
+                    involved_flatten_index.append(flatten_name)
+            print('involved flatten name:', involved_flatten_index)
+
+            for p, par in enumerate(self.para_name):
+                jaco_info[par] = []
+                for n, nam in enumerate(involved_flatten_index):
+                    if nam in self.flatten_all_measure:
+                        n_all_measure = self.flatten_all_measure.index(nam)
+                        print(jaco_3D[n_all_measure,p,:])
+                        jaco_info[par].append(jaco_3D[n_all_measure, p, :])
+
+            print('jaco is: ', jaco_info)
+
+
         else:
             jaco_info = jaco_information.copy()
 
