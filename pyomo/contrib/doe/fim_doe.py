@@ -718,7 +718,7 @@ class DesignOfExperiments:
         # dictionary form of jacobian
         jac = {}
         # 3-D array form of jacobian
-        #jac_3Darray = np.zeors((len(self.flatten_measure_name), len(self.param_name), len(self.measurement_timeset[0])))
+        jac_3Darray = np.zeors((len(self.flatten_measure_name), len(self.param_name), len(self.measurement_timeset[0])))
         # After collecting outputs from all scenarios, calculate sensitivity
         for no_p, para in enumerate(self.param_name):
             # extract involved scenario No. for each parameter from scenario class
