@@ -129,29 +129,69 @@ class LogicalToLinear(IsomorphicTransformation):
                 ctype=LogicalConstraint, active=True,
                 descend_into=(Block,Disjunct)):
             self._transform_constraint(logical_constraint, transBlocks)
-            
-        # # Now go do the ones on Blocks
-        # for block in target_block.component_data_objects(
-        #         Block, descend_into=(Block, Disjunct), active=True,
-        #         descent_order=TraversalStrategy.PostfixDFS):
-        #     self._transform_constraints_on_block(block, transBlocks)
-        # # Process statements that appear in disjuncts
-        # for disjunct in target_block.component_data_objects(
-        #         Disjunct, descend_into=(Block, Disjunct), active=True):
-        #     self._transform_constraints_on_block(disjunct, transBlocks)
-        # self._transform_constraints_on_block(target_block, transBlocks)
 
     def _transform_constraint(self, logical_constraint, transBlocks):
         parent_block = logical_constraint.parent_block()
         xfrm_block = transBlocks.get(parent_block)
         if xfrm_block is None:
-            xfrm_block = _create_transformation_block(parent_block)
+            xfrm_block = self._create_transformation_block(parent_block)
             transBlocks[parent_block] = xfrm_block
         new_constrlist = xfrm_block.transformed_constraints
         new_boolvarlist = xfrm_block.augmented_vars
         new_varlist = xfrm_block.augmented_vars_asbinary
-        _transform_logical_constraint(logical_constraint, new_constrlist,
-                                      new_boolvarlist, new_varlist)
+        
+        old_boolvarlist_length = len(new_boolvarlist)
+        old_conslist_length = len(new_constrlist)
+
+        indicator_map = ComponentMap()
+        cnf_statements = to_cnf(logical_constraint.body, new_boolvarlist,
+                                indicator_map)
+        logical_constraint.deactivate()
+
+        # Associate new Boolean vars to new binary variables
+        num_new = len(new_boolvarlist) - old_boolvarlist_length
+        list_o_vars = list(new_boolvarlist.values())
+        if num_new:
+            for bool_vardata in list_o_vars[-num_new:]:
+                new_binary_vardata = new_varlist.add()
+                bool_vardata.associate_binary_var(new_binary_vardata)
+
+        # Add constraints associated with each CNF statement
+        for cnf_statement in cnf_statements:
+            for linear_constraint in _cnf_to_linear_constraint_list(
+                    cnf_statement):
+                new_constrlist.add(expr=linear_constraint)
+
+        # Add bigM associated with special atoms
+        # Note: this ad-hoc reformulation may be revisited for tightness in the
+        # future.
+        old_varlist_length = len(new_varlist)
+        for indicator_var, special_atom in indicator_map.items():
+            for linear_constraint in _cnf_to_linear_constraint_list(
+                    special_atom,
+                    indicator_var,
+                    new_varlist):
+                new_constrlist.add(expr=linear_constraint)
+
+        # Previous step may have added auxiliary binaries. Associate augmented
+        # Booleans to them.
+        num_new = len(new_varlist) - old_varlist_length
+        list_o_vars = list(new_varlist.values())
+        if num_new:
+            for binary_vardata in list_o_vars[-num_new:]:
+                new_bool_vardata = new_boolvarlist.add()
+                new_bool_vardata.associate_binary_var(binary_vardata)
+
+    def _create_transformation_block(self, context):
+        new_xfrm_block_name = unique_component_name(context, 'logic_to_linear')
+        new_xfrm_block = Block(doc="Transformation objects for logic_to_linear")
+        setattr(context, new_xfrm_block_name, new_xfrm_block)
+
+        new_xfrm_block.transformed_constraints = ConstraintList()
+        new_xfrm_block.augmented_vars = BooleanVarList()
+        new_xfrm_block.augmented_vars_asbinary = VarList( domain=Binary)
+
+        return new_xfrm_block
 
 def update_boolean_vars_from_binary(model, integer_tolerance=1e-5):
     """Updates all Boolean variables based on the value of their linked binary
@@ -171,77 +211,6 @@ def update_boolean_vars_from_binary(model, integer_tolerance=1e-5):
                                               binary_var.value))
             boolean_var.stale = binary_var.stale
 
-def _create_transformation_block(context):
-    new_xfrm_block_name = unique_component_name(context, 'logic_to_linear')
-    new_xfrm_block = Block(doc="Transformation objects for logic_to_linear")
-    setattr(context, new_xfrm_block_name, new_xfrm_block)
-
-    new_xfrm_block.transformed_constraints = ConstraintList()
-    new_xfrm_block.augmented_vars = BooleanVarList()
-    new_xfrm_block.augmented_vars_asbinary = VarList( domain=Binary)
-
-    return new_xfrm_block
-
-def _transform_logical_constraint(logical_constraint, new_constrlist,
-                                  new_boolvarlist, new_varlist):
-    old_boolvarlist_length = len(new_boolvarlist)
-    old_conslist_length = len(new_constrlist)
-
-    indicator_map = ComponentMap()
-    cnf_statements = to_cnf(logical_constraint.body, new_boolvarlist,
-                            indicator_map)
-    logical_constraint.deactivate()
-    
-    # Associate new Boolean vars to new binary variables
-    num_new = len(new_boolvarlist) - old_boolvarlist_length
-    list_o_vars = list(new_boolvarlist.values())
-    if num_new:
-        for bool_vardata in list_o_vars[-num_new:]:
-            new_binary_vardata = new_varlist.add()
-            bool_vardata.associate_binary_var(new_binary_vardata)
-            
-    # Add constraints associated with each CNF statement
-    for cnf_statement in cnf_statements:
-        for linear_constraint in _cnf_to_linear_constraint_list(cnf_statement):
-            new_constrlist.add(expr=linear_constraint)
-
-    # Add bigM associated with special atoms
-    # Note: this ad-hoc reformulation may be revisited for tightness in the
-    # future.
-    old_varlist_length = len(new_varlist)
-    for indicator_var, special_atom in indicator_map.items():
-        for linear_constraint in _cnf_to_linear_constraint_list(special_atom,
-                                                                indicator_var,
-                                                                new_varlist):
-            new_constrlist.add(expr=linear_constraint)
-
-    # Previous step may have added auxiliary binaries. Associate augmented
-    # Booleans to them.
-    num_new = len(new_varlist) - old_varlist_length
-    list_o_vars = list(new_varlist.values())
-    if num_new:
-        for binary_vardata in list_o_vars[-num_new:]:
-            new_bool_vardata = new_boolvarlist.add()
-            new_bool_vardata.associate_binary_var(binary_vardata)
-    
-def _process_logical_constraints_in_logical_context(context, xfrm_block=None):
-    # xfrm_block = _create_transformation_block(context)
-    if xfrm_block is not None:
-        new_constrlist = xfrm_block.transformed_constraints
-        new_boolvarlist = xfrm_block.augmented_vars
-        new_varlist = xfrm_block.augmented_vars_asbinary
-
-    # Convert all logical constraints to CNF
-    for logical_constraint in context.component_data_objects(
-            ctype=LogicalConstraint, active=True, descend_into=False):
-        if xfrm_block is None:
-            xfrm_block = _create_transformation_block(context)
-            new_constrlist = xfrm_block.transformed_constraints
-            new_boolvarlist = xfrm_block.augmented_vars
-            new_varlist = xfrm_block.augmented_vars_asbinary
-        _transform_logical_constraint(logical_constraint, new_constrlist,
-                                      new_boolvarlist, new_varlist)
-
 def _cnf_to_linear_constraint_list(cnf_expr, indicator_var=None,
                                    binary_varlist=None):
     # Screen for constants
@@ -260,10 +229,8 @@ def _cnf_to_linear_constraint_list(cnf_expr, indicator_var=None,
         return [cnf_expr.get_associated_binary() == 1]  # Assume that cnf_expr
                                                         # is a BooleanVar
 
-
 _numeric_relational_types = {InequalityExpression, EqualityExpression,
                              RangedExpression}
-
 
 class CnfToLinearVisitor(StreamBasedExpressionVisitor):
     """Convert CNF logical constraint to linear constraints.

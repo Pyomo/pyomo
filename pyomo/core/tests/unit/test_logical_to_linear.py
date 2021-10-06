@@ -331,7 +331,6 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         m.p = LogicalConstraint(expr=m.Y[1].implies(lor(m.Y[3], m.Y[4])))
         m.p2 = LogicalConstraint(expr=atmost(2, *m.Y[:]))
         TransformationFactory('core.logical_to_linear').apply_to(m)
-        m.pprint()
         _constrs_contained_within( self, [ (1, m.dd[1].binary_indicator_var +
                                             m.dd[2].binary_indicator_var + 1 -
                                             m.d1.binary_indicator_var, None),
