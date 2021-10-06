@@ -54,11 +54,13 @@ class LogicalToLinear(IsomorphicTransformation):
             targets = (model, )
 
         new_var_lists = ComponentMap()
+        transBlocks = {}
         for t in targets:
             if t.ctype in [Block, Disjunct]:
-                self._transform_block(t, model, new_var_lists)
+                self._transform_block(t, model, new_var_lists, transBlocks)
             elif t.ctype is LogicalConstraint:
-                self._transform_constraint(t, model)
+                self._transform_constraint_without_block(t, new_var_lists,
+                                                         transBlocks)
             else:
                 raise RuntimeError("Target '%s' was not a Block, Disjunct, or"
                                    " LogicalConstraint. It was of type %s "
@@ -89,7 +91,15 @@ class LogicalToLinear(IsomorphicTransformation):
             if bool_vardata.fixed:
                 new_binary_vardata.fix()
 
-    def _transform_block(self, target_block, model, new_varlists):
+    def _transform_constraint_without_block(self, constraint, new_varlists,
+                                             transBlocks):
+        for i in sorted(constraint.keys()):
+            for bool_vardata in identify_variables(constraint[i].expr):
+                if bool_vardata.ctype is BooleanVar:
+                    self._transform_boolean_varData(bool_vardata, new_varlists)
+            self._transform_constraint(constraint[i], transBlocks)
+
+    def _transform_block(self, target_block, model, new_varlists, transBlocks):
         for cons in target_block.component_data_objects(
                 LogicalConstraint, descend_into=(Block, Disjunct)):
             for bool_vardata in identify_variables(cons.expr):
@@ -115,20 +125,33 @@ class LogicalToLinear(IsomorphicTransformation):
                 "you have BooleanVars not used in logical expressions.",
                 version='6.1.3')
 
-        # Process statements in global (entire model) context
-        _process_logical_constraints_in_logical_context(target_block)
-        # Now go do the ones on Blocks
-        for block in target_block.component_data_objects(
-                Block, descend_into=(Block, Disjunct), active=True):
-            _process_logical_constraints_in_logical_context(block)
-        # Process statements that appear in disjuncts
-        for disjunct in target_block.component_data_objects(
-                Disjunct, descend_into=(Block, Disjunct), active=True):
-            _process_logical_constraints_in_logical_context(disjunct)
+        for logical_constraint in target_block.component_data_objects(
+                ctype=LogicalConstraint, active=True,
+                descend_into=(Block,Disjunct)):
+            self._transform_constraint(logical_constraint, transBlocks)
+            
+        # # Now go do the ones on Blocks
+        # for block in target_block.component_data_objects(
+        #         Block, descend_into=(Block, Disjunct), active=True,
+        #         descent_order=TraversalStrategy.PostfixDFS):
+        #     self._transform_constraints_on_block(block, transBlocks)
+        # # Process statements that appear in disjuncts
+        # for disjunct in target_block.component_data_objects(
+        #         Disjunct, descend_into=(Block, Disjunct), active=True):
+        #     self._transform_constraints_on_block(disjunct, transBlocks)
+        # self._transform_constraints_on_block(target_block, transBlocks)
 
-    def _transform_constraint(self, cons, model):
-        raise NotImplementedError("This would be a nice feature, but so far "
-                                  "targets can only be Blocks or Disjuncts")
+    def _transform_constraint(self, logical_constraint, transBlocks):
+        parent_block = logical_constraint.parent_block()
+        xfrm_block = transBlocks.get(parent_block)
+        if xfrm_block is None:
+            xfrm_block = _create_transformation_block(parent_block)
+            transBlocks[parent_block] = xfrm_block
+        new_constrlist = xfrm_block.transformed_constraints
+        new_boolvarlist = xfrm_block.augmented_vars
+        new_varlist = xfrm_block.augmented_vars_asbinary
+        _transform_logical_constraint(logical_constraint, new_constrlist,
+                                      new_boolvarlist, new_varlist)
 
 def update_boolean_vars_from_binary(model, integer_tolerance=1e-5):
     """Updates all Boolean variables based on the value of their linked binary
@@ -148,30 +171,35 @@ def update_boolean_vars_from_binary(model, integer_tolerance=1e-5):
                                               binary_var.value))
             boolean_var.stale = binary_var.stale
 
-def _process_logical_constraints_in_logical_context(context):
+def _create_transformation_block(context):
     new_xfrm_block_name = unique_component_name(context, 'logic_to_linear')
     new_xfrm_block = Block(doc="Transformation objects for logic_to_linear")
     setattr(context, new_xfrm_block_name, new_xfrm_block)
 
-    new_constrlist = new_xfrm_block.transformed_constraints = ConstraintList()
-    new_boolvarlist = new_xfrm_block.augmented_vars = BooleanVarList()
-    new_varlist = new_xfrm_block.augmented_vars_asbinary = VarList(
-        domain=Binary)
+    new_xfrm_block.transformed_constraints = ConstraintList()
+    new_xfrm_block.augmented_vars = BooleanVarList()
+    new_xfrm_block.augmented_vars_asbinary = VarList( domain=Binary)
+
+    return new_xfrm_block
+
+def _transform_logical_constraint(logical_constraint, new_constrlist,
+                                  new_boolvarlist, new_varlist):
+    old_boolvarlist_length = len(new_boolvarlist)
+    old_conslist_length = len(new_constrlist)
 
     indicator_map = ComponentMap()
-    cnf_statements = []
-    # Convert all logical constraints to CNF
-    for logical_constraint in context.component_data_objects(
-            ctype=LogicalConstraint, active=True, descend_into=False):
-        cnf_statements.extend(to_cnf(logical_constraint.body, new_boolvarlist,
-                                     indicator_map))
-        logical_constraint.deactivate()
-
+    cnf_statements = to_cnf(logical_constraint.body, new_boolvarlist,
+                            indicator_map)
+    logical_constraint.deactivate()
+    
     # Associate new Boolean vars to new binary variables
-    for bool_vardata in new_boolvarlist.values():
-        new_binary_vardata = new_varlist.add()
-        bool_vardata.associate_binary_var(new_binary_vardata)
-
+    num_new = len(new_boolvarlist) - old_boolvarlist_length
+    list_o_vars = list(new_boolvarlist.values())
+    if num_new:
+        for bool_vardata in list_o_vars[-num_new:]:
+            new_binary_vardata = new_varlist.add()
+            bool_vardata.associate_binary_var(new_binary_vardata)
+            
     # Add constraints associated with each CNF statement
     for cnf_statement in cnf_statements:
         for linear_constraint in _cnf_to_linear_constraint_list(cnf_statement):
@@ -195,24 +223,24 @@ def _process_logical_constraints_in_logical_context(context):
         for binary_vardata in list_o_vars[-num_new:]:
             new_bool_vardata = new_boolvarlist.add()
             new_bool_vardata.associate_binary_var(binary_vardata)
+    
+def _process_logical_constraints_in_logical_context(context, xfrm_block=None):
+    # xfrm_block = _create_transformation_block(context)
+    if xfrm_block is not None:
+        new_constrlist = xfrm_block.transformed_constraints
+        new_boolvarlist = xfrm_block.augmented_vars
+        new_varlist = xfrm_block.augmented_vars_asbinary
 
-    # If added components were not used, remove them.
-    # Note: it is ok to simply delete the index_set for these components,
-    # because by default, a new set object is generated for each [Thing]List.
-    if len(new_constrlist) == 0:
-        new_xfrm_block.del_component(new_constrlist.index_set())
-        new_xfrm_block.del_component(new_constrlist)
-    if len(new_boolvarlist) == 0:
-        new_xfrm_block.del_component(new_boolvarlist.index_set())
-        new_xfrm_block.del_component(new_boolvarlist)
-    if len(new_varlist) == 0:
-        new_xfrm_block.del_component(new_varlist.index_set())
-        new_xfrm_block.del_component(new_varlist)
-
-    # If block was entirely unused, remove it
-    if all(len(l) == 0 for l in (new_constrlist, new_boolvarlist, new_varlist)):
-        context.del_component(new_xfrm_block)
-
+    # Convert all logical constraints to CNF
+    for logical_constraint in context.component_data_objects(
+            ctype=LogicalConstraint, active=True, descend_into=False):
+        if xfrm_block is None:
+            xfrm_block = _create_transformation_block(context)
+            new_constrlist = xfrm_block.transformed_constraints
+            new_boolvarlist = xfrm_block.augmented_vars
+            new_varlist = xfrm_block.augmented_vars_asbinary
+        _transform_logical_constraint(logical_constraint, new_constrlist,
+                                      new_boolvarlist, new_varlist)
 
 def _cnf_to_linear_constraint_list(cnf_expr, indicator_var=None,
                                    binary_varlist=None):
