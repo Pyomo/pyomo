@@ -141,7 +141,6 @@ class LogicalToLinear(IsomorphicTransformation):
         new_varlist = xfrm_block.augmented_vars_asbinary
         
         old_boolvarlist_length = len(new_boolvarlist)
-        old_conslist_length = len(new_constrlist)
 
         indicator_map = ComponentMap()
         cnf_statements = to_cnf(logical_constraint.body, new_boolvarlist,
