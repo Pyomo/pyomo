@@ -165,7 +165,7 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
         # is a trivial term
         if const in {-1, 1}:
             if const < 0:
-                return '- ' + self.smap.getSymbol(var)
+                return '-' + self.smap.getSymbol(var)
             else:
                 return self.smap.getSymbol(var)
         return node._to_string((ftoa(const), self.smap.getSymbol(var)),
