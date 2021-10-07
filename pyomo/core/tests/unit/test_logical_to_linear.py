@@ -386,6 +386,50 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
                  None)
             ], m.b.logic_to_linear.transformed_constraints)
 
+    def make_nested_block_model(self):
+        """For the next two tests: Has BooleanVar on model, but 
+        LogicalConstraints on a Block and a Block nested on that Block."""
+        m = ConcreteModel()
+        m.b = Block()
+        m.Y = BooleanVar([1,2])
+        m.b.logical = LogicalConstraint(expr=~m.Y[1])
+        m.b.b = Block()
+        m.b.b.logical = LogicalConstraint(expr=m.Y[1].xor(m.Y[2]))
+        return m
+
+    def test_transform_block(self):
+        m = self.make_nested_block_model()
+        TransformationFactory('core.logical_to_linear').apply_to(m.b)
+
+        _constrs_contained_within( self, [(1, 1 -
+                                           m.Y[1].get_associated_binary(), 1)],
+                                   m.b.logic_to_linear.transformed_constraints)
+        # ESJ: This is kinda whacky looking... Why not Y[1] + Y[2] == 1? (It's
+        # special case of an exactly(1, ...) constraint.
+        _constrs_contained_within(self, [(1, m.Y[1].get_associated_binary() +
+                                          m.Y[2].get_associated_binary(), None),
+                                         (1, 1 - m.Y[1].get_associated_binary()
+                                          + 1 - m.Y[2].get_associated_binary(),
+                                          None)],
+                                  m.b.b.logic_to_linear.transformed_constraints)
+        self.assertEqual(len(m.b.logic_to_linear.transformed_constraints), 1)
+        self.assertEqual(len(m.b.b.logic_to_linear.transformed_constraints), 2)
+
+    def test_transform_targets_on_block(self):
+        m = self.make_nested_block_model()
+        TransformationFactory('core.logical_to_linear').apply_to(m.b,
+                                                                 targets=m.b.b)
+        # didn't transform anything on m.b
+        self.assertIsNone(m.b.component("logic_to_linear"))
+        # got what we expected on m.b.b
+        _constrs_contained_within(self, [(1, m.Y[1].get_associated_binary() +
+                                          m.Y[2].get_associated_binary(), None),
+                                         (1, 1 - m.Y[1].get_associated_binary()
+                                          + 1 - m.Y[2].get_associated_binary(),
+                                          None)],
+                                  m.b.b.logic_to_linear.transformed_constraints)
+        self.assertEqual(len(m.b.b.logic_to_linear.transformed_constraints), 2)
+
     def test_logical_constraint_target(self):
         m = _generate_boolean_model(3)
         TransformationFactory('core.logical_to_linear').apply_to(
