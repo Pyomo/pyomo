@@ -44,10 +44,13 @@ def TrustRegionMethod(m, efList, config):
     problem = PyomoInterface(m, efList, config)
     init_inputs, init_outputs, init_other = problem.getInitialValue()
     iteration = 0
-    rmParams, rmEFEvaluate = problem.buildRM(init_inputs, config.sample_radius)
+    rmParams, rmOutputs = problem.buildRM(init_inputs,
+                                          config.sample_radius)
     rebuildRM = False
-    inputs_k, outputs_k, other_k = copyVector(init_inputs, init_outputs, init_other)
-    theta = norm(rmEFEvaluate - outputs_k, 1)
+    inputs_k, outputs_k, other_k = copyVector(init_inputs,
+                                              init_outputs,
+                                              init_other)
+    theta = norm(rmOutputs - outputs_k, 1)
     obj = problem.evaluateObj(init_inputs, init_outputs, init_other)
     # Initialize stepNorm_k to a bogus value to ensure termination check is correct
     stepNorm_k = 1
@@ -105,11 +108,15 @@ def TrustRegionMethod(m, efList, config):
             subopt_flag = False
 
         # Solve TRSP_k
-        flag, objective = problem.TRSPk(init_inputs, init_outputs, init_other,
-                                        inputs_k, outputs_k, other_k,
-                                        rmParams, config.trust_radius)
+        flag, obj_k = problem.TRSPk(init_inputs, init_outputs, init_other,
+                                    inputs_k, outputs_k, other_k,
+                                    rmParams, config.trust_radius)
         if not flag:
             raise Exception('EXIT: Subproblem TRSP_k solve failed.\n')
+
+        cache_inputs = problem.getEFInputValues(init_inputs)
+        efOutputs = problem.evaluateEF(init_inputs)
+        problem.setEFInputValues(cache_inputs)
 
         stepNorm_k = norm(concatenate([init_inputs - inputs_k,
                                        init_outputs - outputs_k,
@@ -118,8 +125,56 @@ def TrustRegionMethod(m, efList, config):
                                    sampleRadius=config.sample_radius,
                                    stepNorm=stepNorm_k)
         # Check filter acceptance
-        
-        theta_k = norm()
+        theta_k = norm(efOutputs - init_outputs, 1)
+        filterElement = FilterElement(obj_k, theta_k)
+
+        if not TrustRegionFilter.checkElement(filterElement, config.theta_max):
+            logger.iterlog.rejected = True
+            config.trust_radius = max(config.delta_min,
+                                      stepNorm_k*config.gamma_c)
+            rebuildRM = False
+            init_inputs, init_outputs, init_other = copyVector(inputs_k,
+                                                               outputs_k,
+                                                               other_k)
+            # Reject step
+            continue
+
+        # Switching condition and Trust region update
+        if (((obj - obj_k) >= config.kappa_theta*
+             pow(theta, config.gamma_s))
+            and (theta < config.theta_min)):
+            # Conditions met: f-type step
+            logger.iterlog.fStep = True
+            # Make the trust region bigger - no bigger than the max allowed
+            config.trust_radius = min(max(config.gamma_e*stepNorm_k),
+                                      config.max_radius)
+        else:
+            # Conditions for f-type step NOT met
+            # Theta-step
+            logger.iterlog.thetaStep = True
+            filterElement = FilterElement(obj_k - config.gamma_f*theta_k,
+                                          (1-config.gamma_theta)*theta_k)
+            TrustRegionFilter.addToFilter(filterElement)
+
+            # Calculate ratio: Equation (10) in 2020 Paper
+            rho_k = ((theta - theta_k + config.epsilon_theta) /
+                     max(theta, config.epsilon_theta))
+            # Ratio tests: Equation (8) in 2020 Paper
+            # If rho_k is between eta_1 and eta_2, trust region stays same
+            if ((rho_k < config.eta_1) or (theta > config.theta_min)):
+                config.trust_radius = max(config.delta_min,
+                                          config.gamma_c*stepNorm_k)
+            elif ((rho_k >= config.eta_2) and (theta <= config.theta_min)):
+                config.trust_radius = max(config.trust_radius,
+                                          config.max_radius,
+                                          config.gamma_e*stepNorm_k)
+        # Accept step; reset for next iteration
+        rebuildRM = True
+        inputs_k, outputs_k, other_k = copyVector(init_inputs,
+                                                  init_outputs,
+                                                  init_other)
+        theta = theta_k
+        obj = obj_k
         iteration += 1
 
     if iteration > config.max_iterations:
