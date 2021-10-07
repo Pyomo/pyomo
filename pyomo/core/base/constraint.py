@@ -496,7 +496,7 @@ class _GeneralConstraintData(_ConstraintData):
                     "    Inequality: (lower, expression, upper)"
                     % (self.name, len(expr)))
         #
-        # Ignore an 'empty' constraints
+        # Ignore an 'empty' constraint
         #
         elif _expr_type is type:
             del self.parent_component()[self.index()]
@@ -569,7 +569,8 @@ class _GeneralConstraintData(_ConstraintData):
                 # Error check: ensure equality does not have infinite RHS
                 raise ValueError(
                     "Equality constraint '%s' defined with "
-                    "non-finite term." % (self.name))
+                    "non-finite term (%sHS == None)." % (
+                        self.name, 'L' if args[0] is None else 'R'))
             if args[0].__class__ in native_numeric_types or \
                not args[0].is_potentially_variable():
                 self._lower = self._upper = args[0]
@@ -686,25 +687,16 @@ class Constraint(ActiveIndexedComponent):
             return super(Constraint, cls).__new__(IndexedConstraint)
 
     def __init__(self, *args, **kwargs):
-        _init = tuple( _arg for _arg in (
-            kwargs.pop('rule', None),
-            kwargs.pop('expr', None) ) if _arg is not None )
-        if len(_init) == 1:
-            _init = _init[0]
-        elif not _init:
-            _init = None
-        else:
-            raise ValueError("Duplicate initialization: Constraint() only "
-                             "accepts one of 'rule=' and 'expr='")
-
-        kwargs.setdefault('ctype', Constraint)
-        ActiveIndexedComponent.__init__(self, *args, **kwargs)
-
+        _init = self._pop_from_kwargs(
+            'Constraint', kwargs, ('rule', 'expr'), None)
         # Special case: we accept 2- and 3-tuples as constraints
         if type(_init) is tuple:
             self.rule = Initializer(_init, treat_sequences_as_mappings=False)
         else:
             self.rule = Initializer(_init)
+
+        kwargs.setdefault('ctype', Constraint)
+        ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
     def construct(self, data=None):
         """
