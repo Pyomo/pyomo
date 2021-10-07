@@ -1289,6 +1289,16 @@ class LinearExpression(ExpressionBase):
                    (constant, linear_coefs, linear_vars)):
                 raise ValueError("Cannot specify both args and any of "
                                  "{constant, linear_coeffs, or linear_vars}")
+            if len(args) > 1 and (args[1].__class__ in native_types
+                                  or not args[1].is_potentially_variable()):
+                deprecation_warning(
+                    "LinearExpression has been updated to expect args= to "
+                    "be a constant followed by MonomialTermExpressions.  "
+                    "The older format (`[const, coefficient_1, ..., "
+                    "variable_1, ...]`) is deprecated.", version='TBD')
+                args = args[:1] + list(map(
+                    MonomialTermExpression,
+                    zip(args[1:1+len(args)//2], args[1+len(args)//2:])))
             self._args_ = args
         else:
             self.constant = constant if constant is not None else 0
@@ -1329,6 +1339,8 @@ class LinearExpression(ExpressionBase):
             first_var = 0
         self.linear_coefs, self.linear_vars = zip(
             *map(attrgetter('args'), value[first_var:]))
+        self.linear_coefs = list(self.linear_coefs)
+        self.linear_vars = list(self.linear_vars)
 
     def _precedence(self):
         return LinearExpression.PRECEDENCE

@@ -4547,6 +4547,74 @@ class TestIsFixedIsConstant(unittest.TestCase):
 # It's probably worth confirming the final linear expression that is generated.
 class TestLinearExpression(unittest.TestCase):
 
+    def test_init(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        e = LinearExpression(
+            constant=5, linear_vars=[m.x, m.y], linear_coefs=[2,3])
+        self.assertEqual(e._args_cache_, [])
+        self.assertEqual(e.constant, 5)
+        self.assertEqual(e.linear_vars, [m.x, m.y])
+        self.assertEqual(e.linear_coefs, [2, 3])
+
+        args = [10,
+                MonomialTermExpression((4, m.y)),
+                MonomialTermExpression((5, m.x))]
+        with LoggingIntercept() as OUT:
+            e = LinearExpression(args)
+        self.assertEqual(OUT.getvalue(), "")
+        self.assertEqual(e._args_cache_, args)
+        self.assertEqual(e.constant, 10)
+        self.assertEqual(e.linear_vars, [m.y, m.x])
+        self.assertEqual(e.linear_coefs, [4, 5])
+
+        with LoggingIntercept() as OUT:
+            e = LinearExpression([20, 6, 7, m.x, m.y])
+        self.assertIn("LinearExpression has been updated to expect args= "
+                      "to be a constant followed by MonomialTermExpressions",
+                      OUT.getvalue().replace("\n", " "))
+        self.assertIsNotNone(e._args_cache_)
+        self.assertEqual(len(e._args_cache_), 3)
+        self.assertEqual(e._args_cache_[0], 20)
+        self.assertIs(e._args_cache_[1].__class__, MonomialTermExpression)
+        self.assertEqual(e._args_cache_[1].args, (6, m.x))
+        self.assertEqual(e._args_cache_[2].args, (7, m.y))
+        self.assertEqual(e.constant, 20)
+        self.assertEqual(e.linear_vars, [m.x, m.y])
+        self.assertEqual(e.linear_coefs, [6, 7])
+
+        with LoggingIntercept() as OUT:
+            e = LinearExpression([20, 6, 7, 8, m.x, m.y, m.x])
+        self.assertIn("LinearExpression has been updated to expect args= "
+                      "to be a constant followed by MonomialTermExpressions",
+                      OUT.getvalue().replace("\n", " "))
+        self.assertIsNotNone(e._args_cache_)
+        self.assertEqual(len(e._args_cache_), 4)
+        self.assertEqual(e._args_cache_[0], 20)
+        self.assertIs(e._args_cache_[1].__class__, MonomialTermExpression)
+        self.assertEqual(e._args_cache_[1].args, (6, m.x))
+        self.assertEqual(e._args_cache_[2].args, (7, m.y))
+        self.assertEqual(e._args_cache_[3].args, (8, m.x))
+        self.assertEqual(e.constant, 20)
+        self.assertEqual(e.linear_vars, [m.x, m.y, m.x])
+        self.assertEqual(e.linear_coefs, [6, 7, 8])
+
+    def test_to_string(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        e = LinearExpression()
+        self.assertEqual(e.to_string(), "0")
+        e = LinearExpression(constant=0,
+                             linear_coefs=[-1, 1, -2, 2],
+                             linear_vars=[m.x, m.y, m.x, m.y])
+        self.assertEqual(e.to_string(), "- x + y - 2*x + 2*y")
+        e = LinearExpression(constant=10,
+                             linear_coefs=[-1, 1, -2, 2],
+                             linear_vars=[m.x, m.y, m.x, m.y])
+        self.assertEqual(e.to_string(), "10 - x + y - 2*x + 2*y")
+
     def test_sum_other(self):
         m = ConcreteModel()
         m.v = Var(range(5))
