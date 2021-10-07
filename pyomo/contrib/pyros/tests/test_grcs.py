@@ -1899,8 +1899,9 @@ class RegressionTest(unittest.TestCase):
         global_subsolver = SolverFactory("baron")
 
         # Call the PyROS solver
-        with self.assertRaises(ValueError, msg="ValueError should be "
-                               "raised for general nonlinear expressions in h(x,z,q)=0 constraints.")
+        with self.assertRaises(
+                ValueError, msg="ValueError should be raised for general "
+                "nonlinear expressions in h(x,z,q)=0 constraints."):
             results = pyros_solver.solve(model=m,
                                          first_stage_variables=[m.x1],
                                          second_stage_variables=[m.x2],
