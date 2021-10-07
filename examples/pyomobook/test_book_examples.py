@@ -387,6 +387,8 @@ def compare_files(out_file, base_file, abstol, reltol,
             else:
                 extra = out_filtered
                 n = index_of_base_i_in_out
+            if n == float('inf'):
+                n = None
             extra_terms = extra[i:n]
             try:
                 assert len(extra_terms) % 3 == 0
