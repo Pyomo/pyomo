@@ -1271,17 +1271,15 @@ class LinearExpression(ExpressionBase):
     PRECEDENCE = 6
 
     def __init__(self, args=None, constant=None, linear_coefs=None, linear_vars=None):
-        """
-        Build a linear expression object that stores the constant, as well as
-        coefficients and variables to represent const + sum_i(c_i*x_i)
+        """A linear expression of the form `const + sum_i(c_i*x_i).
 
-        You can specify args OR (constant, linear_coefs, and linear_vars)
-        If args is provided, it should be a list that contains the constant,
-        followed by the coefficients, followed by the variables.
+        You can specify args OR (constant, linear_coefs, and
+        linear_vars).  If args is provided, it should be a list that
+        contains the constant, followed by a series of
+        :py:class:`MonomialTermExpression` objects. Alternatively, you
+        can specify the constant, the list of linear_coeffs and the list
+        of linear_vars separately. Note that these lists are NOT copied.
 
-        Alternatively, you can specify the constant, the list of linear_coeffs
-        and the list of linear_vars separately. Note that these lists are NOT
-        copied.
         """
         # I am not sure why LinearExpression allows omitting args, but
         # it does.  If they are provided, they should be the (non-zero)
