@@ -59,8 +59,11 @@ class LogicalToLinear(IsomorphicTransformation):
             if t.ctype in [Block, Disjunct]:
                 self._transform_block(t, model, new_var_lists, transBlocks)
             elif t.ctype is LogicalConstraint:
-                self._transform_constraint_without_block(t, new_var_lists,
-                                                         transBlocks)
+                if t.is_indexed():
+                    self._transform_constraint(t, new_var_lists, transBlocks)
+                else:
+                    self._transform_constraintData(t, new_var_lists,
+                                                   transBlocks)
             else:
                 raise RuntimeError("Target '%s' was not a Block, Disjunct, or"
                                    " LogicalConstraint. It was of type %s "
@@ -91,20 +94,17 @@ class LogicalToLinear(IsomorphicTransformation):
             if bool_vardata.fixed:
                 new_binary_vardata.fix()
 
-    def _transform_constraint_without_block(self, constraint, new_varlists,
-                                             transBlocks):
+    def _transform_constraint(self, constraint, new_varlists, transBlocks):
         for i in sorted(constraint.keys()):
-            for bool_vardata in identify_variables(constraint[i].expr):
-                if bool_vardata.ctype is BooleanVar:
-                    self._transform_boolean_varData(bool_vardata, new_varlists)
-            self._transform_constraint(constraint[i], transBlocks)
+            self._transform_constraintData(constraint[i], new_varlists,
+                                           transBlocks)
 
     def _transform_block(self, target_block, model, new_varlists, transBlocks):
-        for cons in target_block.component_data_objects(
-                LogicalConstraint, descend_into=(Block, Disjunct)):
-            for bool_vardata in identify_variables(cons.expr):
-                if bool_vardata.ctype is BooleanVar:
-                    self._transform_boolean_varData(bool_vardata, new_varlists)
+        for logical_constraint in target_block.component_data_objects(
+                ctype=LogicalConstraint, active=True,
+                descend_into=(Block,Disjunct)):
+            self._transform_constraintData(logical_constraint, new_varlists,
+                                           transBlocks)
 
         # transform any other BooleanVars we missed (for backwards
         # compatibility--I don't think we should really do this.)
@@ -125,12 +125,16 @@ class LogicalToLinear(IsomorphicTransformation):
                 "you have BooleanVars not used in logical expressions.",
                 version='6.1.3')
 
-        for logical_constraint in target_block.component_data_objects(
-                ctype=LogicalConstraint, active=True,
-                descend_into=(Block,Disjunct)):
-            self._transform_constraint(logical_constraint, transBlocks)
+    def _transform_constraintData(self, logical_constraint, new_varlists,
+                                  transBlocks):
+        # first find all the relevant BooleanVars and associate a binary (if
+        # they don't have one already)
+        for bool_vardata in identify_variables(logical_constraint.expr):
+            if bool_vardata.ctype is BooleanVar:
+                self._transform_boolean_varData(bool_vardata, new_varlists)
 
-    def _transform_constraint(self, logical_constraint, transBlocks):
+        # now create a transformation block on the constraint's parent block (if
+        # we don't have one already)
         parent_block = logical_constraint.parent_block()
         xfrm_block = transBlocks.get(parent_block)
         if xfrm_block is None:
