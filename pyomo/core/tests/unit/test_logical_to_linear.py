@@ -9,6 +9,8 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
+from pyomo.common.log import LoggingIntercept
+import logging
 
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.core.plugins.transform.logical_to_linear import \
@@ -19,14 +21,15 @@ from pyomo.environ import ( ConcreteModel, BooleanVar, LogicalConstraint, lor,
                             exactly, Block)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.repn import generate_standard_repn
-
+from io import StringIO
 
 def _generate_boolean_model(nvars):
     m = ConcreteModel()
     m.s = RangeSet(nvars)
     m.Y = BooleanVar(m.s)
+    # make sure all the variables are used in at least one logical constraint
+    m.constraint = LogicalConstraint(expr=exactly(2, m.Y))
     return m
-
 
 def _constrs_contained_within(test_case, test_constr_tuples, constraint_list):
     """Checks to see if constraints defined by test_constr_tuples are in the
@@ -321,20 +324,21 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         m.d2.c = Constraint(expr=m.x <= 10)
         m.dd[1].c = Constraint(expr=m.x >= 5)
         m.dd[2].c = Constraint(expr=m.x <= 6)
-        m.Y[1].associate_binary_var(m.d1.indicator_var)
-        m.Y[2].associate_binary_var(m.d2.indicator_var)
-        m.Y[3].associate_binary_var(m.dd[1].indicator_var)
-        m.Y[4].associate_binary_var(m.dd[2].indicator_var)
+        m.Y[1].associate_binary_var(m.d1.binary_indicator_var)
+        m.Y[2].associate_binary_var(m.d2.binary_indicator_var)
+        m.Y[3].associate_binary_var(m.dd[1].binary_indicator_var)
+        m.Y[4].associate_binary_var(m.dd[2].binary_indicator_var)
         m.p = LogicalConstraint(expr=m.Y[1].implies(lor(m.Y[3], m.Y[4])))
         m.p2 = LogicalConstraint(expr=atmost(2, *m.Y[:]))
         TransformationFactory('core.logical_to_linear').apply_to(m)
-        _constrs_contained_within(
-            self, [
-                (1, m.dd[1].indicator_var + m.dd[2].indicator_var + \
-                 1 - m.d1.indicator_var, None),
-                (None, m.d1.indicator_var + m.d2.indicator_var + \
-                 m.dd[1].indicator_var + m.dd[2].indicator_var, 2)
-            ], m.logic_to_linear.transformed_constraints)
+        _constrs_contained_within( self, [ (1, m.dd[1].binary_indicator_var +
+                                            m.dd[2].binary_indicator_var + 1 -
+                                            m.d1.binary_indicator_var, None),
+                                           (None, m.d1.binary_indicator_var +
+                                            m.d2.binary_indicator_var +
+                                            m.dd[1].binary_indicator_var +
+                                            m.dd[2].binary_indicator_var, 2) ],
+                                   m.logic_to_linear.transformed_constraints)
 
     def test_gdp_nesting(self):
         m = _generate_boolean_model(2)
@@ -380,10 +384,131 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
                  m.b.Y[3].get_associated_binary()
                  + (1 - m.b.Y[1].get_associated_binary()),
                  None)
-            ], m.b.logic_to_linear.transformed_constraints)        
+            ], m.b.logic_to_linear.transformed_constraints)
+
+    def make_nested_block_model(self):
+        """For the next two tests: Has BooleanVar on model, but 
+        LogicalConstraints on a Block and a Block nested on that Block."""
+        m = ConcreteModel()
+        m.b = Block()
+        m.Y = BooleanVar([1,2])
+        m.b.logical = LogicalConstraint(expr=~m.Y[1])
+        m.b.b = Block()
+        m.b.b.logical = LogicalConstraint(expr=m.Y[1].xor(m.Y[2]))
+        return m
+
+    def test_transform_block(self):
+        m = self.make_nested_block_model()
+        TransformationFactory('core.logical_to_linear').apply_to(m.b)
+
+        _constrs_contained_within( self, [(1, 1 -
+                                           m.Y[1].get_associated_binary(), 1)],
+                                   m.b.logic_to_linear.transformed_constraints)
+        # ESJ: This is kinda whacky looking... Why not Y[1] + Y[2] == 1? (It's
+        # special case of an exactly(1, ...) constraint.
+        _constrs_contained_within(self, [(1, m.Y[1].get_associated_binary() +
+                                          m.Y[2].get_associated_binary(), None),
+                                         (1, 1 - m.Y[1].get_associated_binary()
+                                          + 1 - m.Y[2].get_associated_binary(),
+                                          None)],
+                                  m.b.b.logic_to_linear.transformed_constraints)
+        self.assertEqual(len(m.b.logic_to_linear.transformed_constraints), 1)
+        self.assertEqual(len(m.b.b.logic_to_linear.transformed_constraints), 2)
+
+    def test_transform_targets_on_block(self):
+        m = self.make_nested_block_model()
+        TransformationFactory('core.logical_to_linear').apply_to(m.b,
+                                                                 targets=m.b.b)
+        # didn't transform anything on m.b
+        self.assertIsNone(m.b.component("logic_to_linear"))
+        # got what we expected on m.b.b
+        _constrs_contained_within(self, [(1, m.Y[1].get_associated_binary() +
+                                          m.Y[2].get_associated_binary(), None),
+                                         (1, 1 - m.Y[1].get_associated_binary()
+                                          + 1 - m.Y[2].get_associated_binary(),
+                                          None)],
+                                  m.b.b.logic_to_linear.transformed_constraints)
+        self.assertEqual(len(m.b.b.logic_to_linear.transformed_constraints), 2)
+
+    def test_logical_constraint_target(self):
+        m = _generate_boolean_model(3)
+        TransformationFactory('core.logical_to_linear').apply_to(
+            m, targets=m.constraint)
+        _constrs_contained_within(
+            self, [
+                (2, m.Y[1].get_associated_binary() + \
+                 m.Y[2].get_associated_binary() + \
+                 m.Y[3].get_associated_binary(), 2)
+            ], m.logic_to_linear.transformed_constraints)
+
+    def make_indexed_logical_constraint_model(self):
+        m = _generate_boolean_model(3)
+        m.cons = LogicalConstraint([1,2])
+        m.cons[1] = exactly(2, m.Y)
+        m.cons[2] = m.Y[1].implies(lor(m.Y[2], m.Y[3]))
+        return m
+
+    def test_indexed_logical_constraint_target(self):
+        m = self.make_indexed_logical_constraint_model()
+        TransformationFactory('core.logical_to_linear').apply_to(
+            m, targets=m.cons)
+        _constrs_contained_within(
+            self, [
+                (2, m.Y[1].get_associated_binary() + \
+                 m.Y[2].get_associated_binary() + \
+                 m.Y[3].get_associated_binary(), 2)
+            ], m.logic_to_linear.transformed_constraints)
+        _constrs_contained_within(
+            self, [
+                (1,
+                 m.Y[2].get_associated_binary() + \
+                 m.Y[3].get_associated_binary()
+                 + (1 - m.Y[1].get_associated_binary()),
+                 None)
+            ], m.logic_to_linear.transformed_constraints)
+
+        # and verify only the targets were transformed
+        self.assertEqual(len(m.logic_to_linear.transformed_constraints), 2)
+        self.assertTrue(m.constraint.active)
+
+    def test_logical_constraintData_target(self):
+        m = self.make_indexed_logical_constraint_model()
+        TransformationFactory('core.logical_to_linear').apply_to(
+            m, targets=m.cons[2])
+        _constrs_contained_within(
+            self, [
+                (1,
+                 m.Y[2].get_associated_binary() + \
+                 m.Y[3].get_associated_binary()
+                 + (1 - m.Y[1].get_associated_binary()),
+                 None)
+            ], m.logic_to_linear.transformed_constraints)
+        # only transformed the second one.
+        self.assertEqual(len(m.logic_to_linear.transformed_constraints), 1)
 
 @unittest.skipUnless(sympy_available, "Sympy not available")
 class TestLogicalToLinearBackmap(unittest.TestCase):
+    def test_backmap_deprecated(self):
+        m = ConcreteModel()
+        m.s = RangeSet(3)
+        m.Y = BooleanVar(m.s)
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core.plugins.transform',
+                              logging.WARNING):
+            TransformationFactory('core.logical_to_linear').apply_to(m)
+        self.assertIn("DEPRECATED: Relying on core.logical_to_linear to "
+                      "transform BooleanVars which do not appear in "
+                      "LogicalConstraints is deprecated. Please "
+                      "associated your own binaries if you have BooleanVars "
+                      "not used in logical expressions.",
+                      output.getvalue().replace('\n', ' '))
+        m.Y_asbinary[1].value = 1
+        m.Y_asbinary[2].value = 0
+        update_boolean_vars_from_binary(m)
+        self.assertTrue(m.Y[1].value)
+        self.assertFalse(m.Y[2].value)
+        self.assertIsNone(m.Y[3].value)
+
     def test_backmap(self):
         m = _generate_boolean_model(3)
         TransformationFactory('core.logical_to_linear').apply_to(m)
@@ -415,7 +540,7 @@ class TestLogicalToLinearBackmap(unittest.TestCase):
         update_boolean_vars_from_binary(m, integer_tolerance=0.1)
         self.assertTrue(m.Y[1].value)
         # Now try it without the tolerance set
-        with self.assertRaisesRegex(ValueError, 
+        with self.assertRaisesRegex(ValueError,
                                     r"Binary variable has non-\{0,1\} value"):
             update_boolean_vars_from_binary(m)
 

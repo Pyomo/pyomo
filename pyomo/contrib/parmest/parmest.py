@@ -273,7 +273,7 @@ class Estimator(object):
     model_function: function
         Function that generates an instance of the Pyomo model using 'data' 
         as the input argument
-    data: pandas DataFrame, list of dictionaries, or list of json file names
+    data: pd.DataFrame, list of dictionaries, or list of json file names
         Data that is used to build an instance of the Pyomo model and build 
         the objective function
     theta_names: list of strings
@@ -337,7 +337,7 @@ class Estimator(object):
                     # If the component that was found is not a variable,
                     # this will generate an exception (and the warning
                     # in the 'except')
-                    var_validate.fixed = False
+                    var_validate.unfix()
                     # We want to standardize on the CUID string
                     # representation
                     self.theta_names[i] = repr(var_cuid)
@@ -502,6 +502,8 @@ class Estimator(object):
                 cov = 2 * sse / (n - l) * inv_red_hes
                 cov = pd.DataFrame(cov, index=thetavals.keys(), columns=thetavals.keys())
             
+            thetavals = pd.Series(thetavals)
+            
             if len(return_values) > 0:
                 var_values = []
                 for exp_i in self.ef_instance.component_objects(Block, descend_into=False):
@@ -646,7 +648,7 @@ class Estimator(object):
         Parameters
         ----------
         solver: string, optional
-            "ef_ipopt" or "k_aug". Default is "ef_ipopt".
+            Currently only "ef_ipopt" is supported. Default is "ef_ipopt".
         return_values: list, optional
             List of Variable names used to return values from the model
         bootlist: list, optional
@@ -658,12 +660,10 @@ class Estimator(object):
         -------
         objectiveval: float
             The objective function value
-        thetavals: dict
-            A dictionary of all values for theta
+        thetavals: pd.Series
+            Estimated values for theta
         variable values: pd.DataFrame
             Variable values for each variable name in return_values (only for solver='ef_ipopt')
-        Hessian: dict
-            A dictionary of dictionaries for the Hessian (only for solver='k_aug')
         cov: pd.DataFrame
             Covariance matrix of the fitted parameters (only for solver='ef_ipopt')
         """
@@ -696,7 +696,7 @@ class Estimator(object):
         
         Returns
         -------
-        bootstrap_theta: DataFrame 
+        bootstrap_theta: pd.DataFrame 
             Theta values for each sample and (if return_samples = True) 
             the sample numbers used in each estimation
         """
@@ -758,7 +758,7 @@ class Estimator(object):
         
         Returns
         -------
-        lNo_theta: DataFrame 
+        lNo_theta: pd.DataFrame 
             Theta values for each sample and (if return_samples = True) 
             the sample numbers left out of each estimation
         """
@@ -887,12 +887,12 @@ class Estimator(object):
 
         Parameters
         ----------
-        theta_values: DataFrame, columns=theta_names
+        theta_values: pd.DataFrame, columns=theta_names
             Values of theta used to compute the objective
             
         Returns
         -------
-        obj_at_theta: DataFrame
+        obj_at_theta: pd.DataFrame
             Objective value for each theta (infeasible solutions are 
             omitted).
         """
@@ -927,7 +927,7 @@ class Estimator(object):
         
         Parameters
         ----------
-        obj_at_theta: DataFrame, columns = theta_names + 'obj'
+        obj_at_theta: pd.DataFrame, columns = theta_names + 'obj'
             Objective values for each theta value (returned by 
             objective_at_theta)
         obj_value: int or float
@@ -939,10 +939,10 @@ class Estimator(object):
             
         Returns
         -------
-        LR: DataFrame 
+        LR: pd.DataFrame 
             Objective values for each theta value along with True or False for 
             each alpha
-        thresholds: dictionary
+        thresholds: pd.Series
             If return_threshold = True, the thresholds are also returned.
         """
         assert isinstance(obj_at_theta, pd.DataFrame)
@@ -958,6 +958,8 @@ class Estimator(object):
             thresholds[a] = obj_value * ((chi2_val / (S - 2)) + 1)
             LR[a] = LR['obj'] < thresholds[a]
         
+        thresholds = pd.Series(thresholds)
+        
         if return_thresholds:
             return LR, thresholds
         else:
@@ -972,7 +974,7 @@ class Estimator(object):
         
         Parameters
         ----------
-        theta_values: DataFrame, columns = theta_names
+        theta_values: pd.DataFrame, columns = theta_names
             Theta values used to generate a confidence region 
             (generally returned by theta_est_bootstrap)
         distribution: string
@@ -982,25 +984,24 @@ class Estimator(object):
         alphas: list
             List of alpha values used to determine if theta values are inside 
             or outside the region.
-        test_theta_values: dictionary or DataFrame, keys/columns = theta_names, optional
+        test_theta_values: pd.Series or pd.DataFrame, keys/columns = theta_names, optional
             Additional theta values that are compared to the confidence region
             to determine if they are inside or outside.
         
         Returns
-        -------
-        training_results: DataFrame 
+        training_results: pd.DataFrame 
             Theta value used to generate the confidence region along with True 
             (inside) or False (outside) for each alpha
-        test_results: DataFrame 
+        test_results: pd.DataFrame 
             If test_theta_values is not None, returns test theta value along 
             with True (inside) or False (outside) for each alpha
         """
         assert isinstance(theta_values, pd.DataFrame)
         assert distribution in ['Rect', 'MVN', 'KDE']
         assert isinstance(alphas, list)
-        assert isinstance(test_theta_values, (type(None), dict, pd.DataFrame))
+        assert isinstance(test_theta_values, (type(None), dict, pd.Series, pd.DataFrame))
         
-        if isinstance(test_theta_values, dict):
+        if isinstance(test_theta_values, (dict, pd.Series)):
             test_theta_values = pd.Series(test_theta_values).to_frame().transpose()
             
         training_results = theta_values.copy()
