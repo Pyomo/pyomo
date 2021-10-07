@@ -6,9 +6,7 @@ import pandas as pd
 import time
 import pickle
 from itertools import permutations, product
-from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculation
-#from idaes.apps.uncertainty_propagation.sens import get_dsdp
-from pyomo.contrib.sensitivity_toolbox.sens import get_dsdp
+from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculation, get_dsdp
 
 class DesignOfExperiments: 
     def __init__(self, param_init, design_variable_timepoints, measurement_variable_timepoints, create_model, solver=None,
@@ -332,7 +330,8 @@ class DesignOfExperiments:
             else:
                 prior_in_use = specified_prior
 
-            FIM_analysis = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, self.measurement_extra_index,  prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
+            FIM_analysis = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, flatten_all_measure=self.flatten_measure_name,
+                                      prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
             # add the formed simultaneous model to the object so that users can have access
             self.m = m
@@ -355,7 +354,8 @@ class DesignOfExperiments:
                 with open(read_output, 'rb') as f:
                     output_record = pickle.load(f)
                     f.close()
-                jac, jac_3D = self.__finite_calculation(output_record, scena_gen)
+                jac = self.__finite_calculation(output_record, scena_gen)
+                jac_3D = self.__jac_reform_3D(jac)
             # if measurements are not provided
             else:
                 # dict for storing model outputs
@@ -416,7 +416,8 @@ class DesignOfExperiments:
                     f.close()
 
                 # calculate jacobian
-                jac, jac_3D = self.__finite_calculation(output_record, scena_gen)
+                jac = self.__finite_calculation(output_record, scena_gen)
+                jac_3D = self.__jac_reform_3D(jac)
 
                 if self.verbose:
                     print('Build time with sequential_finite mode [s]:', sum(time_allbuild))
@@ -515,28 +516,50 @@ class DesignOfExperiments:
 
                 # extract sipopt result
                 for j in self.measurement_variables:
-                    for t in self.measurement_variable_timepoints[j]:
-                        # fetch the measurement variable
-                        measure_var = getattr(m_sipopt,j)
-                        # check if this variable is fixed
-                        if (measure_var[0,t].fixed == True):
-                            perturb_value = value(measure_var[0,t])
-
-                        else:
-                            # if it is not fixed, record its perturbed value
-                            if self.mode =='sequential_sipopt':
-                                perturb_value = eval('m_sipopt.sens_sol_state_1[m_sipopt.' + j + '[0,' + str(t) + ']]')
+                    # fetch the measurement variable
+                    measure_var = getattr(m_sipopt,j)
+                    # check if this variable is fixed
+                    if self.measurement_extra_index[j] is None:
+                        for t in self.measurement_variable_timepoints[j]:
+                            if (measure_var[0,t].fixed == True):
+                                perturb_value = value(measure_var[0,t])
                             else:
-                                perturb_value = eval('m_sipopt.' + j + '[0,' + str(t) + ']()')
-                        perturb_mea.append(perturb_value)
+                                # if it is not fixed, record its perturbed value
+                                if self.mode =='sequential_sipopt':
+                                    perturb_value = eval('m_sipopt.sens_sol_state_1[m_sipopt.' + j + '[0,' + str(t) + ']]')
+                                else:
+                                    perturb_value = eval('m_sipopt.' + j + '[0,' + str(t) + ']()')
 
-                        # base case values
-                        if self.mode =='sequential_sipopt':
-                            base_value = eval('m_sipopt.'+j+'[0,' + str(t) + '].value')
-                        else:
-                            base_value = value(eval('mod.' + j + '[0,' + str(t) + ']'))
+                            # base case values
+                            if self.mode == 'sequential_sipopt':
+                                base_value = eval('m_sipopt.' + j + '[0,' + str(t) + '].value')
+                            else:
+                                base_value = value(eval('mod.' + j + '[0,' + str(t) + ']'))
 
-                        base_mea.append(base_value)
+                            perturb_mea.append(perturb_value)
+                            base_mea.append(base_value)
+
+                    else:
+                        for ind in self.measurement_extra_index[j]:
+                            for t in self.measurement_variable_timepoints[j]:
+                                if (measure_var[0,ind,t].fixed == True):
+                                    perturb_value = value(measure_var[0, ind, t])
+                                else:
+                                    # if it is not fixed, record its perturbed value
+                                    if self.mode == 'sequential_sipopt':
+                                        perturb_value = eval(
+                                            'm_sipopt.sens_sol_state_1[m_sipopt.' + j + '[0,'+str(ind)+',' + str(t) + ']]')
+                                    else:
+                                        perturb_value = eval('m_sipopt.' + j + '[0,' +str(ind) +',' + str(t) + ']()')
+
+                                # base case values
+                                if self.mode == 'sequential_sipopt':
+                                    base_value = eval('m_sipopt.' + j + '[0,'+str(ind)+','  + str(t) + '].value')
+                                else:
+                                    base_value = value(eval('mod.' + j + '[0,'+str(ind)+','  + str(t) + ']'))
+
+                                perturb_mea.append(perturb_value)
+                                base_mea.append(base_value)
 
                 # store extracted measurements
                 all_perturb_measure.append(perturb_mea)
@@ -556,6 +579,8 @@ class DesignOfExperiments:
                 # get Jacobian dict, keys are parameter name, values are sensitivity info
                 jac[para] = list_jac
 
+            jac_3D = self.__jac_reform_3D(jac)
+
             # check if another prior experiment FIM is provided other than the user-specified one
             if specified_prior is None:
                 prior_in_use = self.prior_FIM
@@ -563,13 +588,15 @@ class DesignOfExperiments:
                 prior_in_use = specified_prior
 
             # Assemble and analyze results
-            FIM_analysis = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, self.measurement_extra_index,  prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
+            FIM_analysis = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, flatten_all_measure=self.flatten_measure_name,
+                                      prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
             if self.verbose:
                 print('Build time with sequential_sipopt or kaug mode [s]:', sum(time_allbuild))
                 print('Solve time with sequential_sipopt or kaug mode [s]:', sum(time_allsolve))
 
             self.jac = jac
+            self.jac_3D = jac_3D
             FIM_analysis.build_time = sum(time_allbuild)
             FIM_analysis.solve_time = sum(time_allsolve)
 
@@ -681,6 +708,8 @@ class DesignOfExperiments:
                     else:
                         jac[par].append(dsdp_extract[d][p]*self.scale_constant_value)
 
+            jac_3D = self.__jac_reform_3D(jac)
+
             if self.verbose:
                 print('Build time with direct kaug mode [s]:', time_build)
                 print('Solve time with direct kaug mode [s]:', time_solve)
@@ -692,11 +721,12 @@ class DesignOfExperiments:
                 prior_in_use = specified_prior
 
             # Assemble and analyze results
-            FIM_analysis = FIM_result(self.param_name,self.measurement_variables, self.measurement_timeset, self.measurement_extra_index,
+            FIM_analysis = FIM_result(self.param_name,self.measurement_variables, self.measurement_timeset, flatten_all_measure=self.flatten_measure_name,
                                       prior_FIM=prior_in_use, store_FIM=FIM_store_name,
                                       scale_constant_value=self.scale_constant_value)
 
             self.jac = jac
+            self.jac_3D = jac
             FIM_analysis.build_time = time_build
             FIM_analysis.solve_time = time_solve
 
@@ -738,15 +768,19 @@ class DesignOfExperiments:
             # get Jacobian dict, keys are parameter name, values are sensitivity info
             jac[para] = list_jac
 
+        return jac
+
+
+    def __jac_reform_3D(self, jac_original):
         # 3-D array form of jacobian
         jac_3Darray = np.zeros((len(self.flatten_measure_name), len(self.param_name), len(self.measurement_timeset[0])))
         no_time = len(self.measurement_timeset[0])
         for m in range(len(self.flatten_measure_name)):
             for p, para in enumerate(self.param_name):
                 for t, tim in enumerate(range(no_time)):
-                    jac_3Darray[m,p,t] = jac[para][m*no_time+t]
+                    jac_3Darray[m, p, t] = jac_original[para][m * no_time + t]
 
-        return jac, jac_3Darray
+        return jac_3Darray
 
     def generate_sequential_experiments(self, design_values_set, mode='sequential_finite', tee_option=False,
                        scale_nominal_param_value=False, scale_constant_value=1,
@@ -1682,25 +1716,6 @@ class FIM_result:
         jaco_info =  {}
         # split jacobian if needed
         if jaco_involved_name is not None:
-            '''
-            for par in self.para_name:
-                jaco_parameter = []
-                flatten_measure_count = -1
-                for no, name in enumerate(self.measurement_variables):
-                    if self.measurement_extra_index[no] is not None:
-                        for ind in self.measurement_extra_index[no]:
-                            for t in self.measurement_timeset[no]:
-                                flatten_measure_count += 1
-                                if name in jaco_involved_name:
-                                    if ind in jaco_involved_extra_index:
-                                        jaco_parameter.append(jaco_information[par])[flatten_measure_count]
-                    else:
-                        for t in self.measurement_timeset[no]:
-                            flatten_measure_count += 1
-                            if name in jaco_involved_name:
-                                if ind in jaco_involved_extra_index:
-                                    jaco_parameter.append(jaco_information[par])[flatten_measure_count]
-            '''
             involved_flatten_index = []
             for n, nam in enumerate(jaco_involved_name):
                 for ind in jaco_involved_extra_index[n]:
@@ -1755,7 +1770,7 @@ class FIM_result:
         if (self.store_FIM is not None):
             self.__store_FIM()
 
-    def extract_FIM(self, m, dv_set, result, y_set=None, t_all_set=None, obj=None, add_fim=False):
+    def extract_FIM(self, m, dv_set, result, jaco_involved_name=None, jaco_involved_extra_index=None,  y_set=None, t_all_set=None, obj=None, add_fim=False):
         '''
         Extract FIM from an invasive model
 
@@ -1802,7 +1817,25 @@ class FIM_result:
                     for t, tim in enumerate(t_all_set):
                         JAC[n1, n2, t] = value(m.jac[name1, name2, tim])
         print('JAC is:', JAC)
+
+        # split jacobian if needed
+        if jaco_involved_name is not None:
+            involved_flatten_index = []
+            for n, nam in enumerate(jaco_involved_name):
+                for ind in jaco_involved_extra_index[n]:
+                    flatten_name = nam + str(ind)
+                    involved_flatten_index.append(flatten_name)
+            print('involved flatten name:', involved_flatten_index)
+
+            for p, par in enumerate(self.para_name):
+                jaco_info[par] = []
+                for n, nam in enumerate(involved_flatten_index):
+                    if nam in self.flatten_all_measure:
+                        n_all_measure = self.flatten_all_measure.index(nam)
+                        jaco_info[par].append(list(JAC[n_all_measure, p, :]))
+
         self.jac_extracted = JAC
+        self.jac_splitted = jaco_info
 
         # Extract FIM infomation
         FIM = np.ones((no_para, no_para))
