@@ -1610,3 +1610,27 @@ def check_network_disjucts(self, minimize, transformation):
         self.assertAlmostEqual(value(m.dest.x), 0.42)
     else:
         self.assertAlmostEqual(value(m.dest.x), 0.84)
+
+def check_solution_obeys_logical_constraints(self, transformation, m):
+    # m is expected to either by models.makeLogicalConstraintsOnDisjuncts or
+    # models.makeBooleanVarsOnDisjuncts
+    trans = TransformationFactory('gdp.%s' % transformation)
+
+    # no logical constraints
+    m.p.deactivate()
+    m.bwahaha.deactivate()
+    no_logic = trans.create_using(m)
+
+    results = SolverFactory(linear_solvers[0]).solve(no_logic)
+    self.assertEqual(results.solver.termination_condition,
+                     TerminationCondition.optimal)
+    self.assertAlmostEqual(value(no_logic.x), 2.5)
+
+    # with logical constraints
+    m.p.activate()
+    m.bwahaha.activate()
+    trans.apply_to(m)
+    results = SolverFactory(linear_solvers[0]).solve(m)
+    self.assertEqual(results.solver.termination_condition,
+                     TerminationCondition.optimal)
+    self.assertAlmostEqual(value(m.x), 8)

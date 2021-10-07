@@ -2554,16 +2554,82 @@ class NetworkDisjuncts(unittest.TestCase, CommonTests):
 class LogicalConstraintsOnDisjuncts(unittest.TestCase):
     def test_logical_constraints_transformed(self):
         m = models.makeLogicalConstraintsOnDisjuncts()
-        TransformationFactory('gdp.bigm').apply_to(m)
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m)
 
         y1 = m.Y[1].get_associated_binary()
         y2 = m.Y[2].get_associated_binary()
 
         # check the bigm transformation of the logical things on the disjuncts
-        m.pprint()
-        self.assertTrue(False)
+
+        # first d[1]:
+        cons = bigm.get_transformed_constraints(
+            m.d[1].logic_to_linear.transformed_constraints[1])
+        self.assertEqual(len(cons), 2)
+        leq = cons[0]
+        self.assertEqual(leq.lower, 1)
+        self.assertIsNone(leq.upper)
+        repn = generate_standard_repn(leq.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 2)
+        self.assertEqual(len(repn.linear_vars), 2)
+        ct.check_linear_coef(self, repn, y1, -1)
+        ct.check_linear_coef(self, repn, m.d[1].binary_indicator_var, -1)
+        # this is a stupid constraint
+        geq = cons[1]
+        self.assertIsNone(geq.lower)
+        self.assertEqual(geq.upper, 1)
+        repn = generate_standard_repn(geq.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 1)
+        self.assertEqual(len(repn.linear_vars), 1)
+        ct.check_linear_coef(self, repn, y1, -1)
+
+        # then d[4]:
+        # 1 <= 1 - Y[2] + Y[1]
+        cons = bigm.get_transformed_constraints(
+            m.d[4].logic_to_linear.transformed_constraints[1])
+        self.assertEqual(len(cons), 1)
+        leq = cons[0]
+        self.assertEqual(leq.lower, 1)
+        self.assertIsNone(leq.upper)
+        repn = generate_standard_repn(leq.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 2)
+        self.assertEqual(len(repn.linear_vars), 3)
+        ct.check_linear_coef(self, repn, y1, 1)
+        ct.check_linear_coef(self, repn, y2, -1)
+        ct.check_linear_coef(self, repn, m.d[4].binary_indicator_var, -1)
+        # 1 <= 1 - Y[1] + Y[2]
+        cons = bigm.get_transformed_constraints(
+            m.d[4].logic_to_linear.transformed_constraints[2])
+        self.assertEqual(len(cons), 1)
+        leq = cons[0]
+        self.assertEqual(leq.lower, 1)
+        self.assertIsNone(leq.upper)
+        repn = generate_standard_repn(leq.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 2)
+        self.assertEqual(len(repn.linear_vars), 3)
+        ct.check_linear_coef(self, repn, y2, 1)
+        ct.check_linear_coef(self, repn, y1, -1)
+        ct.check_linear_coef(self, repn, m.d[4].binary_indicator_var, -1)
 
         # check that the global logical constraints were also transformed.
+        self.assertFalse(m.p.active)
+
+    @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
+    def test_solution_obeys_logical_constraints(self):
+        m = models.makeLogicalConstraintsOnDisjuncts()
+        ct.check_solution_obeys_logical_constraints(self, 'bigm', m)
+
+    @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
+    def test_boolean_vars_on_disjunct(self):
+        # Just to make sure we do everything in the correct order, make sure
+        # that we can solve a model where some BooleanVars were declared on one
+        # of the Disjuncts
+        m = models.makeBooleanVarsOnDisjuncts()
+        ct.check_solution_obeys_logical_constraints(self, 'bigm', m)
 
 if __name__ == '__main__':
     unittest.main()

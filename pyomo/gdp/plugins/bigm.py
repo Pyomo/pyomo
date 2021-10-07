@@ -277,6 +277,10 @@ class BigM_Transformation(Transformation):
                         warning_msg += "\t%s\n" % component
                 logger.warning(warning_msg)
 
+        # at the end, transform any logical constraints that might be on
+        # instance
+        TransformationFactory('core.logical_to_linear').apply_to(instance)
+
     def _add_transformation_block(self, instance):
         # make a transformation block on instance to put transformed disjuncts
         # on
@@ -303,6 +307,8 @@ class BigM_Transformation(Transformation):
                 descend_into=(Block, Disjunct),
                 descent_order=TraversalStrategy.PostfixDFS):
             self._transform_disjunction(disjunction, bigM)
+        # transform any logical constraints
+        TransformationFactory('core.logical_to_linear').apply_to(obj)
 
     def _add_xor_constraint(self, disjunction, transBlock):
         # Put the disjunction constraint on the transformation block and
@@ -496,8 +502,6 @@ class BigM_Transformation(Transformation):
 
         # Transform any logical constraints here. We need to do this before we
         # create the variable references!
-        print("DEBUG: Calling logical_to_linear on:")
-        block.pprint()
         TransformationFactory('core.logical_to_linear').apply_to(block)
 
         # Find all the variables declared here (including the indicator_var) and
