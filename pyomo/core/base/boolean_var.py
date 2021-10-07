@@ -17,7 +17,8 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.boolean_value import BooleanValue
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
-from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
+from pyomo.core.base.indexed_component import (IndexedComponent,
+                                               UnindexedComponent_set)
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import Set, BooleanSet
 from pyomo.core.base.util import is_functor
@@ -218,7 +219,8 @@ class _GeneralBooleanVarData(_BooleanVarData):
         if len(val) == 1:
             self.value = val[0]
         elif len(val) > 1:
-            raise TypeError("fix expected at most 1 arguments, got %d" % (len(val)))
+            raise TypeError("fix expected at most 1 arguments, got %d" %
+                            (len(val)))
 
     def unfix(self):
         """Sets the fixed indicator to False."""
@@ -228,7 +230,8 @@ class _GeneralBooleanVarData(_BooleanVarData):
 
     def get_associated_binary(self):
         """Get the binary _VarData associated with this _GeneralBooleanVarData"""
-        return self._associated_binary() if self._associated_binary is not None else None
+        return self._associated_binary() if self._associated_binary \
+            is not None else None
 
     def associate_binary_var(self, binary_var):
         """Associate a binary _VarData to this _GeneralBooleanVarData"""
