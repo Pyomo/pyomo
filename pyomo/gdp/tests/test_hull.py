@@ -2415,3 +2415,79 @@ class NetworkDisjuncts(unittest.TestCase, CommonTests):
     @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
     def test_solution_minimize(self):
         ct.check_network_disjucts(self, minimize=True, transformation='hull')
+
+class LogicalConstraintsOnDisjuncts(unittest.TestCase):
+    def test_logical_constraints_transformed(self):
+        m = models.makeLogicalConstraintsOnDisjuncts()
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
+
+        y1 = m.Y[1].get_associated_binary()
+        y2 = m.Y[2].get_associated_binary()
+
+        # check the bigm transformation of the logical things on the disjuncts
+
+        # first d[1]:
+        cons = hull.get_transformed_constraints(
+            m.d[1].logic_to_linear.transformed_constraints[1])
+        self.assertEqual(len(cons), 1)
+        # this simplifies because the dissaggregated variable is *always* 0
+        c = cons[0]
+        self.assertEqual(c.lower, 0)
+        self.assertEqual(c.upper, 0)
+        repn = generate_standard_repn(c.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 1)
+        ct.check_linear_coef(self, repn, hull.get_disaggregated_var(y1, m.d[1]),
+                             -1)
+
+        # then d[4]:
+        y1d = hull.get_disaggregated_var(y1, m.d[4])
+        y2d = hull.get_disaggregated_var(y2, m.d[4])
+        # 1 <= 1 - Y[2] + Y[1]
+        cons = hull.get_transformed_constraints(
+            m.d[4].logic_to_linear.transformed_constraints[1])
+        # these also are simple because it's really an equality, and since both
+        # disaggregated variables will be 0 when the disjunct isn't selected, it
+        # doesn't even need big-Ming.
+        self.assertEqual(len(cons), 1)
+        cons = cons[0]
+        self.assertIsNone(cons.lower)
+        self.assertEqual(cons.upper, 0)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 2)
+        ct.check_linear_coef(self, repn, y2d, 1)
+        ct.check_linear_coef(self, repn, y1d, -1)
+
+        # 1 <= 1 - Y[1] + Y[2]
+        cons = hull.get_transformed_constraints(
+            m.d[4].logic_to_linear.transformed_constraints[2])
+        self.assertEqual(len(cons), 1)
+        cons = cons[0]
+        self.assertIsNone(cons.lower)
+        self.assertEqual(cons.upper, 0)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 2)
+        ct.check_linear_coef(self, repn, y2d, -1)
+        ct.check_linear_coef(self, repn, y1d, 1)
+
+        self.assertFalse(m.bwahaha.active)
+        self.assertFalse(m.p.active)
+
+    @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
+    def test_solution_obeys_logical_constraints(self):
+        m = models.makeLogicalConstraintsOnDisjuncts()
+        ct.check_solution_obeys_logical_constraints(self, 'hull', m)
+
+    @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
+    def test_boolean_vars_on_disjunct(self):
+        # Just to make sure we do everything in the correct order, make sure
+        # that we can solve a model where some BooleanVars were declared on one
+        # of the Disjuncts
+        m = models.makeBooleanVarsOnDisjuncts()
+        ct.check_solution_obeys_logical_constraints(self, 'hull', m)

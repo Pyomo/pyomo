@@ -189,7 +189,8 @@ class Hull_Reformulation(Transformation):
             Disjunction: self._warn_for_active_disjunction,
             Disjunct:    self._warn_for_active_disjunct,
             Block:       self._transform_block_on_disjunct,
-            LogicalConstraint: self._warn_for_active_logical_statement,
+            LogicalConstraint: False, # We transform these before we call
+                                      # handlers
             Port:        False,
             }
         self._generate_debug_messages = False
@@ -262,6 +263,10 @@ class Hull_Reformulation(Transformation):
                 else:
                     self._transform_blockData(t)
 
+        # at the end, transform any logical constraints that might be on
+        # instance
+        TransformationFactory('core.logical_to_linear').apply_to(instance)
+
     def _add_transformation_block(self, instance):
         # make a transformation block on instance where we will store
         # transformed components
@@ -311,6 +316,8 @@ class Hull_Reformulation(Transformation):
                 descend_into=(Block,Disjunct),
                 descent_order=TraversalStrategy.PostfixDFS):
             self._transform_disjunction(disjunction)
+        # transform any logical constraints
+        TransformationFactory('core.logical_to_linear').apply_to(obj)
 
     def _add_xor_constraint(self, disjunction, transBlock):
         # Put XOR constraint on the transformation block
@@ -708,6 +715,10 @@ class Hull_Reformulation(Transformation):
             transBlock = obj.algebraic_constraint().parent_block()
 
             self._transfer_var_references(transBlock, destinationBlock)
+
+        # Transform any logical constraints here. We need to do this before we
+        # create the variable references!
+        TransformationFactory('core.logical_to_linear').apply_to(block)
 
         # add references to all local variables on block (including the
         # indicator_var). Note that we do this after we have moved up the
