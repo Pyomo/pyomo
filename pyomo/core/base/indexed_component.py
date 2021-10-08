@@ -382,9 +382,9 @@ class IndexedComponent(Component):
         """Return an iterator of the keys in the dictionary"""
         return self.keys()
 
-    def keys(self):
+    def keys(self, ordered=False):
         """Iterate over the keys in the dictionary"""
-
+        sort_needed = ordered
         if hasattr(self._index, 'isfinite') and not self._index.isfinite():
             #
             # If the index set is virtual (e.g., Any) then return the
@@ -392,14 +392,17 @@ class IndexedComponent(Component):
             # of the underlying Set, there should be no warning if the
             # user iterates over the set when the _data dict is empty.
             #
-            return self._data.__iter__()
+            ans = self._data.__iter__()
         elif self.is_reference():
-            return self._data.__iter__()
+            ans = self._data.__iter__()
         elif len(self._data) == len(self._index):
             #
             # If the data is dense then return the index iterator.
             #
-            return self._index.__iter__()
+            ans = self._index.__iter__()
+            if ordered and self._index.isordered():
+                # As this iterator is ordered, we do not need to sort it
+                sort_needed = False
         else:
             if not self._data and self._index and PyomoOptions.paranoia_level:
                 logger.warning(
@@ -422,13 +425,14 @@ You can silence this warning by one of three ways:
        where it is empty.
 """ % (self.name,) )
 
-            if not hasattr(self._index, 'isordered') or not self._index.isordered():
+            if not hasattr(self._index, 'isordered') or \
+               not self._index.isordered():
                 #
                 # If the index set is not ordered, then return the
                 # data iterator.  This is in an arbitrary order, which is
                 # fine because the data is unordered.
                 #
-                return self._data.__iter__()
+                ans = self._data.__iter__()
             else:
                 #
                 # Test each element of a sparse data with an ordered
@@ -442,11 +446,17 @@ You can silence this warning by one of three ways:
                     for idx in self._index.__iter__():
                         if idx in self._data:
                             yield idx
-                return _sparse_iter_gen(self)
+                ans = _sparse_iter_gen(self)
+                # As the iterator is ordered, we do not need to sort it
+                sort_needed = False
+        if ordered:
+            return iter(sorted_robust(ans))
+        else:
+            return ans
 
-    def values(self):
+    def values(self, ordered=False):
         """Return an iterator of the component data objects in the dictionary"""
-        return (self[s] for s in self.keys())
+        return (self[s] for s in self.keys(ordered))
 
     def items(self):
         """Return an iterator of (index,data) tuples from the dictionary"""
