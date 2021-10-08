@@ -185,8 +185,6 @@ class TestNLWriter(unittest.TestCase):
             variable_baseline),
             msg="Files %s and %s differ" % (test_fname, baseline_fname))
 
-        self.assertIsNot(m._repn, None)
-
         m.x.fix()
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
