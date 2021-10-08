@@ -277,8 +277,6 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
                 sub, sets, context_slice=context_slice, denormalize=True
                 ):
             if sub.is_indexed():
-                if type(idx) is not tuple:
-                    idx = (idx,)
                 # fill any remaining placeholders with the "index" of our slice
                 descend_idx = _fill_indices(list(given_descend_idx), idx)
                 # create a slice-or-data object
