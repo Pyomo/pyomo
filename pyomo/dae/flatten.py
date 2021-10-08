@@ -330,7 +330,12 @@ def flatten_components_along_sets(m, sets, ctype, indices=None):
         index_map = indices
     else:
         index_map = ComponentMap(zip(sets, indices))
-
+    for s, idx in index_map.items():
+        if not idx in s:
+            raise ValueError(
+                "%s is a bad index for set %s. \nPlease provide an index "
+                "that is in the set." % (idx, s.name)
+            )
     index_stack = []
 
     set_of_sets = ComponentSet(sets)
