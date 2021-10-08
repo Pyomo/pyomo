@@ -844,6 +844,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     # are using a cached repn object, so we
                     # must check for the quadratic form.
                     if repn.is_nonlinear() and (repn.nonlinear_expr is None):
+                        # Note that this is fragile:
+                        # generate_standard_repn can leave nonlinear
+                        # terms in both quadratic and nonlinear fields.
+                        # However, when this was writen the assumption
+                        # is that generate_standard_repn is only called
+                        # with quadratic=True for QCQPs (by the LP
+                        # writer).  So, quadratic and nonlinear_expr
+                        # will both never be non-empty.  This assertion
+                        # will fail if that assumption is ever violated:
                         assert repn.is_quadratic()
                         assert len(repn.quadratic_vars) > 0
                         nonlinear_vars = {}
@@ -957,6 +966,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     # are using a cached repn object, so we
                     # must check for the quadratic form.
                     if repn.is_nonlinear() and (repn.nonlinear_expr is None):
+                        # Note that this is fragile:
+                        # generate_standard_repn can leave nonlinear
+                        # terms in both quadratic and nonlinear fields.
+                        # However, when this was writen the assumption
+                        # is that generate_standard_repn is only called
+                        # with quadratic=True for QCQPs (by the LP
+                        # writer).  So, quadratic and nonlinear_expr
+                        # will both never be non-empty.  This assertion
+                        # will fail if that assumption is ever violated:
                         assert repn.is_quadratic()
                         assert len(repn.quadratic_vars) > 0
                         nonlinear_vars = {}
