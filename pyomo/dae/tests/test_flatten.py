@@ -1564,7 +1564,7 @@ class TestExceptional(unittest.TestCase):
         subset_set = ComponentSet(m.b.index_set().subsets())
         for s in sets:
             self.assertIn(s, subset_set)
-            
+
     def test_keyerror(self):
         """
         KeyErrors occur when we a component that we don't slice
