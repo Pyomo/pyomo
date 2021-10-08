@@ -120,11 +120,12 @@ class DesignOfExperiments:
 
 
     def optimize_doe(self,  design_values, if_optimize=True, objective_option='det',
+                     jac_involved_measurement=None,
                      scale_nominal_param_value=False, scale_constant_value=1, if_Cholesky=False, L_LB = 1E-10, L_initial=None,
                      jac_initial=None, fim_initial=None, trace_initial=None, det_initial=None,
                      formula='central', step=0.001, check=True):
         '''
-        Optimize DOE problem with design variables being the decisions.
+        Optimize DOE problem with design variables being the  .
         The DOE model is formed invasively and all scenarios are computed simultaneously.
         The function will first fun a square problem with design variable being fixed at
         the given initial points, and then unfix the design variable and do the
@@ -180,14 +181,20 @@ class DesignOfExperiments:
         # FIM = Jacobian.T@Jacobian, the FIM is scaled by squared value the Jacobian is scaled
         self.fim_scale_constant_value = self.scale_constant_value **2
 
+        if jac_involved_measurement is not None:
+            jac_involved_name_ = list(jac_involved_measurement.keys())
+            jac_involved_extra_index_=list(jac_involved_measurement.values())
+
         # check if inputs are valid
         # simultaneous mode does not need to check mode and dimension of design variables
         if check:
             self.__check_inputs(check_mode=False)
 
         # build the large DOE pyomo model
-        m = self.__create_doe_model()
-
+        if jac_involved_measurement is not None:
+            m = self.__create_doe_model()
+        else:
+            m = self.__create_doe_model(jac_involved_name = jac_involved_name_, jac_involved_extra_index= jac_involved_extra_index_)
         # solve model, achieve results for square problem, and results for optimization problem
 
         # Solve square problem first
@@ -199,9 +206,13 @@ class DesignOfExperiments:
         time_solve1 = time1_solve-time0_solve
 
         # create result object
-        analysis_square = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, self.measurement_extra_index,  prior_FIM=self.prior_FIM, scale_constant_value=self.scale_constant_value)
+        analysis_square = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, flatten_all_measure=self.flatten_measure_name,
+                                     prior_FIM=self.prior_FIM, scale_constant_value=self.scale_constant_value)
         # for simultaneous mode, FIM and Jacobian are extracted with extract_FIM()
-        analysis_square.extract_FIM(m, self.design_timeset, result_square, y_set=self.measurement_variables, t_all_set=self.time_set, obj=objective_option)
+        analysis_square.extract_FIM(m, self.design_timeset, result_square,
+                                    y_set=self.measurement_variables, t_all_set=self.time_set, obj=objective_option)
+
+        analysis_square.model = m
 
         self.analysis_square = analysis_square
         analysis_square.solve_time = time_solve1
@@ -215,7 +226,8 @@ class DesignOfExperiments:
             time_solve2 = time1_solve2 - time0_solve2
 
             # create result object
-            analysis_optimize = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, self.measurement_extra_index,  prior_FIM=self.prior_FIM)
+            analysis_optimize = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset,  flatten_all_measure=self.flatten_measure_name,
+                                           prior_FIM=self.prior_FIM)
             # for simultaneous mode, FIM and Jacobian are extracted with extract_FIM()
             analysis_optimize.extract_FIM(m, self.design_timeset, result_doe, y_set=self.measurement_variables, t_all_set=self.time_set, obj=objective_option)
             analysis_optimize.model = m
@@ -1007,7 +1019,7 @@ class DesignOfExperiments:
         return figure_draw_object
 
 
-    def __create_doe_model(self):
+    def __create_doe_model(self, jac_involved_name=None, jac_involved_extra_index=None):
         '''
         Add features for DOE.
 
@@ -1055,6 +1067,17 @@ class DesignOfExperiments:
         m.y_set = Set(initialize=self.measurement_variables)
         m.t_set = Set(initialize=time_set)
         m.tmea_set = Set(initialize=self.measurement_timeset[0])
+
+        if jac_involved_name is not None:
+            flatten_jac_measure_name = []
+            for j,mname in enumerate(self.measurement_variables):
+                if mname in jac_involved_name:
+                    for ind in jac_involved_extra_index[j]:
+                        flatten_name = mname +'_'+ str(ind)
+                        flatten_jac_measure_name.append(flatten_name)
+
+            m.involved_y_set = Set(initialize=flatten_jac_measure_name)
+
 
         # we can be sure about the name of scenarios, because they are generated by our function
         m.scenario = Set(initialize=scenario_all['scena-name'])
@@ -1166,6 +1189,25 @@ class DesignOfExperiments:
 
             return m.jac[j,p,t] == (up_C - lo_C)/scenario_all['eps-abs'][p] *self.scale_constant_value
 
+        def jac_numerical_extraindex(m,j,p,t):
+            '''
+            Calculate the Jacobian
+            j: model responses, indexed
+            p: model parameters
+            t: timepoints
+            '''
+            # A better way to do this:
+            # https://github.com/IDAES/idaes-pse/blob/274e58bef55f2f969f0df97cbb1fb7d99342388e/idaes/apps/uncertainty_propagation/sens.py#L296
+
+            measure_name = j.split('_')[0]
+            measure_index = j.split('_')[1]
+
+            ind = self.measurement_extra_index[j][0]
+            up_C = eval('m.' + measure_name + '[' + str(scenario_all['jac-index'][p][0]) + ',' + measure_index + ',' + str(t) + ']')
+            lo_C = eval('m.' + measure_name + '[' + str(scenario_all['jac-index'][p][1]) + ',' + measure_index + ',' + str(t) + ']')
+
+            return m.jac[j,p,t] == (up_C - lo_C)/scenario_all['eps-abs'][p] *self.scale_constant_value
+
         #A constraint to calculate elements in Hessian matrix
         # transfer prior FIM to be Expressions
         dict_fele={}
@@ -1237,7 +1279,11 @@ class DesignOfExperiments:
 
 
         ### Constraints and Objective function
-        m.dC_value = Constraint(m.y_set, m.para_set, m.tmea_set, rule=jac_numerical)
+        if jac_involved_name is None:
+            m.dC_value = Constraint(m.y_set, m.para_set, m.tmea_set, rule=jac_numerical)
+        else:
+            m.dC_value = Constraint(m.involved_y_set, m.para_set, m.tmea_set, rule=jac_numerical_extraindex)
+
         m.ele_rule = Constraint(m.para_set, m.para_set, rule=calc_FIM)  
 
         # Only giving the objective function when there's Degree of freedom. Make OBJ=0 when it's a square problem, which helps converge.
@@ -1818,6 +1864,7 @@ class FIM_result:
                         JAC[n1, n2, t] = value(m.jac[name1, name2, tim])
         print('JAC is:', JAC)
 
+        jaco_info = {}
         # split jacobian if needed
         if jaco_involved_name is not None:
             involved_flatten_index = []
