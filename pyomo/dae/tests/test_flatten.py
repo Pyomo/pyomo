@@ -1567,7 +1567,7 @@ class TestExceptional(unittest.TestCase):
 
     def test_keyerror(self):
         """
-        KeyErrors occur when we a component that we don't slice
+        KeyErrors occur when a component that we don't slice
         doesn't have data for some members of its indexing set.
         """
         m = ConcreteModel()
