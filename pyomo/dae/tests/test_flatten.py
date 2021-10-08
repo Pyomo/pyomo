@@ -1565,6 +1565,64 @@ class TestExceptional(unittest.TestCase):
         for s in sets:
             self.assertIn(s, subset_set)
 
+    def test_descend_stop_iteration(self):
+        """
+        Even if we construct a non-empty slice, if we provide a bad
+        index to descend into, we can end up with no valid blocks
+        to descend into. Unclear whether we should raise an error here.
+        """
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1, 2, 3])
+        m.s2 = Set(initialize=['a', 'b'])
+        m.v = Var(m.s1, m.s2)
+
+        def b_rule(b, i, j):
+            b.v = Var()
+        m.b = Block(m.s1, m.s2, rule=b_rule)
+
+        # 'b' will be a bad index to descend into
+        for i in m.s1:
+            del m.b[i, 'b']
+
+        with self.assertRaises(StopIteration):
+            next(iter(m.b[:, 'b']))
+
+        sets = (m.s1, m.s2)
+        ctype = Var
+        indices = ComponentMap([(m.s2, 'b')])
+        sets_list, comps_list = flatten_components_along_sets(
+            m, sets, ctype, indices=indices,
+        )
+        for sets, comps in zip(sets_list, comps_list):
+            # Here we just check that m.b[:,:].v was not encountered,
+            # because of our poor choice of "descend index"
+            if len(sets) == 2 and sets[0] is m.s1 and sets[1] is m.s2:
+                self.assertEqual(len(comps), 1)
+                self.assertEqual(str(ComponentUID(comps[0].referent)), "v[*,*]")
+            else:
+                raise RuntimeError()
+
+    def test_bad_descend_index(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1, 2, 3])
+        m.s2 = Set(initialize=['a', 'b'])
+        m.v = Var(m.s1, m.s2)
+
+        def b_rule(b, i, j):
+            b.v = Var()
+        m.b = Block(m.s1, m.s2, rule=b_rule)
+
+        sets = (m.s1, m.s2)
+        ctype = Var
+        # Here we accidentally provide an index for the wrong set.
+        indices = ComponentMap([(m.s1, 'b')])
+        # Check that we fail gracefully instead of hitting the StopIteration
+        # checked by the above test.
+        with self.assertRaisesRegex(ValueError, "bad index"):
+            sets_list, comps_list = flatten_components_along_sets(
+                m, sets, ctype, indices=indices,
+            )
+
     def test_keyerror(self):
         """
         KeyErrors occur when a component that we don't slice
@@ -1600,4 +1658,6 @@ class TestExceptional(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    #unittest.main()
+    TestExceptional().test_descend_stop_iteration()
+    TestExceptional().test_bad_descend_index()
