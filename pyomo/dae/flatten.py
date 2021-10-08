@@ -193,6 +193,7 @@ def slice_component_along_sets(
                     # This has implications for generating CUIDs from these
                     # slices, where we would like consistency in the string
                     # representation.
+                    # TODO: Should CUID normalize (slice(None),)?
                     new_index = normalize_index(new_index)
                 c_slice = base_component[new_index]
                 if type(c_slice) is IndexedComponent_slice:
