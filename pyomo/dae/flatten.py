@@ -123,7 +123,7 @@ def _fill_indices_from_product(partial_index_list, product):
 
 
 def slice_component_along_sets(
-        component, sets, context_slice=None, denormalize=False,
+        component, sets, context_slice=None, normalize=None,
         ):
     """
     This function generates all possible slices of the provided component
@@ -140,8 +140,8 @@ def slice_component_along_sets(
     context_slice: IndexedComponent_slice
         If provided, instead of creating a new slice, we will extend this
         one with appropriate getattr and getitem calls.
-    denormalize: Bool
-        If True, the returned index (from the product of "other sets")
+    normalize: Bool
+        If False, the returned index (from the product of "other sets")
         is not normalized, regardless of the value of normalize_index.flatten.
         This is necessary to use this index with _fill_indices.
 
@@ -184,6 +184,15 @@ def slice_component_along_sets(
                 ):
             try:
                 if normalize_index.flatten:
+                    # This index is always normalized if normalize_index.flatten
+                    # is True. I have not encountered a situation where
+                    # "denormalization" makes sense here.
+                    # As normalization is also done in the IndexedComponent,
+                    # normalizing here primarily just affects what the resulting
+                    # slice "looks like." E.g. slice(None) vs (slice(None),).
+                    # This has implications for generating CUIDs from these
+                    # slices, where we would like consistency in the string
+                    # representation.
                     new_index = normalize_index(new_index)
                 c_slice = base_component[new_index]
                 if type(c_slice) is IndexedComponent_slice:
@@ -194,7 +203,17 @@ def slice_component_along_sets(
                     # We enter this loop even if no sets need slicing.
                     temp_slice = c_slice.duplicate()
                     next(iter(temp_slice))
-                if normalize_index.flatten and not denormalize:
+                if ((normalize is None and normalize_index.flatten)
+                        or normalize):
+                    # Most users probably want this index to be normalized,
+                    # so they can more conveniently use it as a key in a
+                    # mapping. (E.g. they will get "a" as opposed to ("a",).)
+                    # However, to use it in the calling routine
+                    # generate_sliced_components, we need this index to not
+                    # have been normalized, so that indices are tuples, 
+                    # partitioned according to their "factor sets."
+                    # This is why we allow the argument normalize=False to
+                    # override normalize_index.flatten.
                     prod_index = normalize_index(prod_index)
                 yield prod_index, c_slice
             except StopIteration:
@@ -248,7 +267,7 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
 
         # Extend our slice with this component
         for idx, new_slice in slice_component_along_sets(
-                c, sets, context_slice=context_slice, denormalize=True
+                c, sets, context_slice=context_slice, normalize=False
                 ):
             yield sliced_sets, new_slice
 
@@ -274,7 +293,7 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
 
         # Generate slices from this sub-block
         for idx, new_slice in slice_component_along_sets(
-                sub, sets, context_slice=context_slice, denormalize=True
+                sub, sets, context_slice=context_slice, normalize=False
                 ):
             if sub.is_indexed():
                 # fill any remaining placeholders with the "index" of our slice
