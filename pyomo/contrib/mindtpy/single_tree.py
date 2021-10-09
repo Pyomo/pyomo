@@ -17,7 +17,6 @@ from pyomo.opt.results import ProblemSense
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 import logging
 from pyomo.repn import generate_standard_repn
-from math import fabs
 from pyomo.core.expr import current as EXPR
 import pyomo.environ as pyo
 from math import copysign
@@ -72,7 +71,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                 # ... or the nearest integer
                 elif v_to.is_integer():
                     rounded_val = int(round(v_val))
-                    if (ignore_integrality or fabs(v_val - rounded_val) <= config.integer_tolerance) \
+                    if (ignore_integrality or abs(v_val - rounded_val) <= config.integer_tolerance) \
                             and rounded_val in v_to.domain:
                         v_to.set_value(rounded_val)
                 else:

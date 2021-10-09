@@ -22,7 +22,6 @@ from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.common.dependencies import attempt_import
 from pyomo.contrib.fbbt.fbbt import fbbt
-from math import fabs
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 
 pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
@@ -645,10 +644,10 @@ def copy_var_list_values_from_solution_pool(from_list, to_list, config, solver_m
             if ignore_integrality \
                     and v_to.is_integer():  # not v_to.is_continuous()
                 v_to.value = var_val
-            elif v_to.is_integer() and (fabs(var_val - rounded_val) <= config.integer_tolerance):  # not v_to.is_continuous()
+            elif v_to.is_integer() and (abs(var_val - rounded_val) <= config.integer_tolerance):  # not v_to.is_continuous()
                 v_to.set_value(rounded_val)
             elif 'is not in domain NonNegativeReals' in err_msg and (
-                    fabs(var_val) <= config.zero_tolerance):
+                    abs(var_val) <= config.zero_tolerance):
                 v_to.set_value(0)
             else:
                 raise

@@ -1,4 +1,4 @@
-"""Tests for the MindtPy solver."""
+"""Tests for solution pool in the MindtPy solver."""
 from pyomo.core.expr.calculus.diff_with_sympy import differentiate_available
 import pyomo.common.unittest as unittest
 from pyomo.contrib.mindtpy.tests.eight_process_problem import \
@@ -14,22 +14,26 @@ model_list = [EightProcessFlowsheet(convex=True),
               SimpleMINLP2(),
               ]
 
+
+try:
+    import cplex
+    cplexpy_available = True
+except ImportError:
+    cplexpy_available = False
+
 required_solvers = ('ipopt', 'cplex_persistent', 'gurobi_persistent')
-if all(SolverFactory(s).available() for s in required_solvers):
-    subsolvers_available = True
-else:
-    subsolvers_available = False
+ipopt_available = SolverFactory('ipopt').available()
+cplex_persistent_available = SolverFactory('cplex_persistent').available()
+gurobi_persistent_available = SolverFactory('gurobi_persistent').available()
 
 
-@unittest.skipIf(not subsolvers_available,
-                 'Required subsolvers %s are not available'
-                 % (required_solvers,))
 @unittest.skipIf(not differentiate_available,
                  'Symbolic differentiation is not available')
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
-
-    def test_OA_solution_pool(self):
+    @unittest.skipIf(not(ipopt_available and cplex_persistent_available and cplexpy_available),
+                     'Required subsolvers are not available')
+    def test_OA_solution_pool_cplex(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             print('\n Solving 8PP problem with Outer Approximation')
@@ -45,6 +49,13 @@ class TestMindtPy(unittest.TestCase):
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=2)
 
+    @unittest.skipIf(not(ipopt_available and gurobi_persistent_available),
+                     'Required subsolvers are not available')
+    def test_OA_solution_pool_gurobi(self):
+        """Test the outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            print('\n Solving 8PP problem with Outer Approximation')
+            for model in model_list:
                 results = opt.solve(model, strategy='OA',
                                     init_strategy='rNLP',
                                     solution_pool=True,

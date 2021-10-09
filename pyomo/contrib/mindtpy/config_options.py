@@ -129,7 +129,7 @@ def _get_MindtPy_config():
     ))
     CONFIG.declare('num_solution_iteration', ConfigValue(
         default=5,
-        description='The number of MIP solutions(from solution pool) used to generate fixed NLP subproblem per iteration.',
+        description='The number of MIP solutions (from the solution pool) used to generate the fixed NLP subproblem in each iteration.',
         domain=PositiveInt
     ))
     CONFIG.declare('add_slack', ConfigValue(
