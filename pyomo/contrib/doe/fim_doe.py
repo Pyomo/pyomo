@@ -22,8 +22,6 @@ class DesignOfExperiments:
         design_variable_timepoints: a dictionary, keys are design variable names, values are its control time points.
                 if this design var is independent of time (constant), set the time to [0]
         measurement_variable_timepoints: a dictionary, keys are measurement variable names, value are its measuring time points
-        measurement_variables: the variable name of the model output, for e.g., ['CA', 'CB', 'CC'].
-        measurement_timeset: a list of measurement time points. can be different from control time points
         create_model: a function that returns the model, where:
                       - parameter and design variables are defined as variables
                       - define every state variables dependent on parameters with a scenario index
@@ -55,9 +53,12 @@ class DesignOfExperiments:
         # create_model()
         self.create_model = create_model
         self.args = args
+        # measurement extra indexes
         self.measurement_extra_index = measurement_extra_index
+        # which measurement has extra indexes
         extra_measure_name = list(measurement_extra_index.keys())
-        extra_measure_value = list(measurement_extra_index.values())
+        # the extra indexes values
+        extra_measure_index_value = list(measurement_extra_index.values())
         # check if measurement variables need to be flattened
         if self.measurement_extra_index is not None:
             flatten_measure_name=[]
@@ -122,7 +123,7 @@ class DesignOfExperiments:
     def optimize_doe(self,  design_values, if_optimize=True, objective_option='det',
                      jac_involved_measurement=None,
                      scale_nominal_param_value=False, scale_constant_value=1, if_Cholesky=False, L_LB = 1E-10, L_initial=None,
-                     jac_initial=None, fim_initial=None, trace_initial=None, det_initial=None,
+                     jac_initial=None, fim_initial=None,
                      formula='central', step=0.001, check=True):
         '''
         Optimize DOE problem with design variables being the  .
@@ -136,11 +137,14 @@ class DesignOfExperiments:
         design_values: initial point for optimization, a dict whose keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
         if_optimize: if true, continue to do optimization. else, just run square problem with given design variable values
         objective_option: supporting maximizing the 'det' determinant or the 'trace' trace of the FIM
+        jac_involved_measurement: a dictionary of measurement names and extra indexes. It should be subsets of the measurement sets given to this class.
         scale_nominal_param_value: if scale Jacobian by the corresponding parameter nominal value
         scale_constant_value: how many order of magnitudes the Jacobian value is scaled by. Use when the Jac or FIM value is too small
         if_Cholesky: if true, cholesky decomposition is used for Objective function (to optimize determinant).
             L_LB: if FIM is P.D., the diagonal element should be positive, so we can set a LB like 1E-10
             L_initial: initialize the L
+        jac_initial: a matrix used to initialize jacobian matrix
+        fim_initial: a matrix used to initialize FIM matrix
         formula: Finite difference formula, choose from 'central', 'forward', 'backward', None
         step: Finite difference sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
         check: if True check input toggles consistency to be checked multiple times.
@@ -181,6 +185,7 @@ class DesignOfExperiments:
         # FIM = Jacobian.T@Jacobian, the FIM is scaled by squared value the Jacobian is scaled
         self.fim_scale_constant_value = self.scale_constant_value **2
 
+        # identify measurements involved in calculation
         if jac_involved_measurement is not None:
             jac_involved_name_ = list(jac_involved_measurement.keys())
             jac_involved_extra_index_=list(jac_involved_measurement.values())
@@ -222,7 +227,6 @@ class DesignOfExperiments:
             time0_solve2 = time.time()
             result_doe = self.__solve_doe(m, fix=False)
             time1_solve2 = time.time()
-
             time_solve2 = time1_solve2 - time0_solve2
 
             # create result object
@@ -233,7 +237,7 @@ class DesignOfExperiments:
             analysis_optimize.model = m
 
             time1 = time.time()
-
+            # record optimization time
             analysis_optimize.solve_time = time_solve2
             analysis_optimize.total_time = time1-time0
             if self.verbose:
@@ -246,7 +250,7 @@ class DesignOfExperiments:
             analysis_square.model = m
 
             time1 = time.time()
-
+            # record square problem time
             analysis_square.total_time = time1-time0
             if self.verbose:
                 print('Total solve time with simultaneous_finite mode (Wall clock) [s]:', time_solve1)
@@ -429,6 +433,7 @@ class DesignOfExperiments:
 
                 # calculate jacobian
                 jac = self.__finite_calculation(output_record, scena_gen)
+                # reform jacobian into a 3D array, [Measurement, parameter, time]
                 jac_3D = self.__jac_reform_3D(jac)
 
                 if self.verbose:
@@ -492,8 +497,6 @@ class DesignOfExperiments:
                 # For sIPOPT, fix model DOF
                 if self.mode =='sequential_sipopt':
                     mod = self.__fix_design(mod, self.design_values, fix_opt=True)
-
-                #mod.obj = Objective(rule=0.0, sense=minimize)
 
                 # extract (discretized) time
                 time_set = []
@@ -591,6 +594,7 @@ class DesignOfExperiments:
                 # get Jacobian dict, keys are parameter name, values are sensitivity info
                 jac[para] = list_jac
 
+            # reform jacobian into a 3D array, [Measurement, parameter, time]
             jac_3D = self.__jac_reform_3D(jac)
 
             # check if another prior experiment FIM is provided other than the user-specified one
@@ -720,6 +724,7 @@ class DesignOfExperiments:
                     else:
                         jac[par].append(dsdp_extract[d][p]*self.scale_constant_value)
 
+            # reform jacobian into a 3D array, [Measurement, parameter, time]
             jac_3D = self.__jac_reform_3D(jac)
 
             if self.verbose:
@@ -749,14 +754,17 @@ class DesignOfExperiments:
             raise ValueError('This is not a valid mode. Choose from "sequential_finite", "simultaneous_finite", "sequential_sipopt", "sequential_kaug"')
 
     def __finite_calculation(self, output_record, scena_gen):
-        '''Calculate Jacobian for sequential_finite mode
+        '''
+        Calculate Jacobian for sequential_finite mode
 
-        Args:
-            output_record: output record
-            scena_gen: scena_gen generated
+        Parameters
+        ----------
+        output_record: output record
+        scena_gen: scena_gen generated
 
-        Returns:
-
+        Returns
+        --------
+        jac: Jacobian matrix, a dictionary, keys are parameter names, values are a list of jacobian values with respect to this parameter
         '''
         # dictionary form of jacobian
         jac = {}
@@ -784,9 +792,13 @@ class DesignOfExperiments:
 
 
     def __jac_reform_3D(self, jac_original):
+        '''
+        Reform the Jacobian returned by __finite_calculation() to be a 3D numpy array, [measurements, parameters, time]
+        '''
         # 3-D array form of jacobian
         jac_3Darray = np.zeros((len(self.flatten_measure_name), len(self.param_name), len(self.measurement_timeset[0])))
         no_time = len(self.measurement_timeset[0])
+        # reorganize the matrix
         for m in range(len(self.flatten_measure_name)):
             for p, para in enumerate(self.param_name):
                 for t, tim in enumerate(range(no_time)):
@@ -1025,6 +1037,8 @@ class DesignOfExperiments:
 
         Parameters:
         -----------
+        jac_involved_name: a list of measurement names involved in calculation of FIM
+        jac_involved_extra_index: a list of measurement extra index involved in calculation of FIM. If there is no extra index for this variable, use None.
         self.measurement_variables: the variable name of the model output, for e.g., ['CA', 'CB', 'CC'].
         self.measurement_timeset: a list of measurement time points. can be different from control time points
         self.design_values: a dict of dictionaries, keys are the name of design variables, values are a dict where keys are the time points, values are the design variable value at that time point
@@ -1068,6 +1082,7 @@ class DesignOfExperiments:
         m.t_set = Set(initialize=time_set)
         m.tmea_set = Set(initialize=self.measurement_timeset[0])
 
+        # reorganize measurement names with
         if jac_involved_name is not None:
             flatten_jac_measure_name = []
             for j,mname in enumerate(self.measurement_variables):
@@ -1076,6 +1091,7 @@ class DesignOfExperiments:
                         flatten_name = mname +'_'+ str(ind)
                         flatten_jac_measure_name.append(flatten_name)
 
+            # a set of flattened measurements
             m.involved_y_set = Set(initialize=flatten_jac_measure_name)
 
 
@@ -1118,6 +1134,7 @@ class DesignOfExperiments:
             else: 
                 return 0
 
+        # initialize FIM
         if self.fim_initial is not None:
             dict_fim = {}
             for i, bu in enumerate(m.para_set):
@@ -1179,20 +1196,15 @@ class DesignOfExperiments:
             '''
             # A better way to do this: 
             # https://github.com/IDAES/idaes-pse/blob/274e58bef55f2f969f0df97cbb1fb7d99342388e/idaes/apps/uncertainty_propagation/sens.py#L296
-            if self.measurement_extra_index[j] is None:
-                up_C = eval('m.'+j+'['+str(scenario_all['jac-index'][p][0])+','+str(t)+']')
-                lo_C = eval('m.'+j+'['+str(scenario_all['jac-index'][p][1])+','+str(t)+']')
-            else:
-                ind = self.measurement_extra_index[j][0]
-                up_C = eval('m.' + j + '[' + str(scenario_all['jac-index'][p][0]) + ',' + str(ind) + ',' + str(t) + ']')
-                lo_C = eval('m.' + j + '[' + str(scenario_all['jac-index'][p][1]) + ',' + str(ind) + ',' + str(t) + ']')
+            up_C = eval('m.'+j+'['+str(scenario_all['jac-index'][p][0])+','+str(t)+']')
+            lo_C = eval('m.'+j+'['+str(scenario_all['jac-index'][p][1])+','+str(t)+']')
 
             return m.jac[j,p,t] == (up_C - lo_C)/scenario_all['eps-abs'][p] *self.scale_constant_value
 
         def jac_numerical_extraindex(m,j,p,t):
             '''
-            Calculate the Jacobian
-            j: model responses, indexed
+            Calculate the Jacobian with the flattened model responses
+            j: model responses, flattened with extra indexes
             p: model parameters
             t: timepoints
             '''
@@ -1710,7 +1722,7 @@ class FIM_result:
         para_name: parameter names
         measurement_variables: measurement variable names
         measurement_timeset: measurement variable control timeset
-        measurement_extra_index: measurement indexes other than time
+        flatten_all_measure: flattened measurement variables
         prior_FIM: if there's prior FIM to be added
         store_FIM: if storing the FIM in a .csv, give the file name here as a string, '**.csv' or '**.txt'.
         scale_constant_value: the constant value used to scale the sensitivity
@@ -1721,7 +1733,6 @@ class FIM_result:
         self.measurement_variables = measurement_variables
         self.measurement_timeset = measurement_timeset
         self.flatten_all_measure = flatten_all_measure
-        #self.measurement_extra_index = measurement_extra_index
         self.prior_FIM = prior_FIM
         self.store_FIM = store_FIM
         self.scale_constant_value = scale_constant_value
@@ -1736,6 +1747,7 @@ class FIM_result:
         Parameters:
         -----------
         jaco_info: jacobian dictionary
+        jaco_3D: 3D jacobian dictionary
         dv_values: design variable value dictionary
         jaco_involved_name: variables involved in calculating jacobian
         jaco_involved_extra_index: variable extra indexes involved in calculating jacobian
@@ -1760,7 +1772,8 @@ class FIM_result:
         # create a dict for FIM. It has the same keys as the Jacobian dict.
 
         jaco_info =  {}
-        # split jacobian if needed
+        ## split jacobian if needed
+        # flatten measurement variables needed for this calculation
         if jaco_involved_name is not None:
             involved_flatten_index = []
             for n, nam in enumerate(jaco_involved_name):
@@ -1769,13 +1782,16 @@ class FIM_result:
                     involved_flatten_index.append(flatten_name)
             print('involved flatten name:', involved_flatten_index)
 
+            # reorganize the jacobian subset with the same form of the jacobian
+            # loop over parameters
             for p, par in enumerate(self.para_name):
                 jaco_info[par] = []
+                # loop over flatten measurements
                 for n, nam in enumerate(involved_flatten_index):
                     if nam in self.flatten_all_measure:
                         n_all_measure = self.flatten_all_measure.index(nam)
+                        # loop over time
                         for d in range(len(jaco_3D[n_all_measure, p, :])):
-                            #jaco_info[par].append(list(jaco_3D[n_all_measure, p, :]))
                             jaco_info[par].append(jaco_3D[n_all_measure, p, d])
 
 
@@ -1791,7 +1807,6 @@ class FIM_result:
             for col, para_m in enumerate(self.para_name):
                 jaco_n = np.asarray(jaco_info[para_n])
                 jaco_m = np.asarray(jaco_info[para_m])
-                #fim[row][col] = jaco_info[para_n].T@jaco_info[para_m]
                 fim[row][col] = jaco_n.T@jaco_m
 
         # add prior information
@@ -1825,6 +1840,8 @@ class FIM_result:
         m: model
         dv_set: design variable value dictionary
         result: problem solver status by IPOPT
+        jaco_involved_name: measurements involved in jacobian calculation
+        jaco_involved_extra_index: measurement extra indexes involved in jacobian calculation
         obj: chosen from 'det' and 'trace'
         add_fim: if the given FIM needs to be added. Do not add for optimize_doe().
 
@@ -1866,6 +1883,7 @@ class FIM_result:
 
         jaco_info = {}
         # split jacobian if needed
+        # get involved flattened measurements
         if jaco_involved_name is not None:
             involved_flatten_index = []
             for n, nam in enumerate(jaco_involved_name):
@@ -1873,12 +1891,15 @@ class FIM_result:
                     flatten_name = nam + str(ind)
                     involved_flatten_index.append(flatten_name)
             print('involved flatten name:', involved_flatten_index)
-
+            # reorganize the jacobian
+            # loop over parameters
             for p, par in enumerate(self.para_name):
                 jaco_info[par] = []
+                # loop over measurements
                 for n, nam in enumerate(involved_flatten_index):
                     if nam in self.flatten_all_measure:
                         n_all_measure = self.flatten_all_measure.index(nam)
+                        # get time index
                         jaco_info[par].append(list(JAC[n_all_measure, p, :]))
 
         self.jac_extracted = JAC
