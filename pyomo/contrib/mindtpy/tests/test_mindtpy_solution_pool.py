@@ -23,8 +23,10 @@ except ImportError:
 
 required_solvers = ('ipopt', 'cplex_persistent', 'gurobi_persistent')
 ipopt_available = SolverFactory('ipopt').available()
-cplex_persistent_available = SolverFactory('cplex_persistent').available()
-gurobi_persistent_available = SolverFactory('gurobi_persistent').available()
+cplex_persistent_available = SolverFactory(
+    'cplex_persistent').available(exception_flag=False)
+gurobi_persistent_available = SolverFactory(
+    'gurobi_persistent').available(exception_flag=False)
 
 
 @unittest.skipIf(not differentiate_available,
