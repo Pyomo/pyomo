@@ -12,7 +12,7 @@ import logging
 
 from pyomo.opt.base import SolverFactory, OptSolver
 from pyomo.core import Var, value
-from pyomo.contrib.trustregion_old.TRF import TRF
+from pyomo.contrib.trustregion.TrustRegionMethod import TrustRegionMethod
 from pyomo.contrib.trustregion.config_options import get_TRF_config
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
@@ -77,7 +77,7 @@ class TrustRegionSolver(OptSolver):
         inst = model.clone()
 
         # call TRF on cloned model
-        TRF(inst, inst._tmp_TRF_data[1], inst._tmp_TRF_data[2])
+        TrustRegionMethod(inst, inst._tmp_TRF_data[1], inst._tmp_TRF_data[2])
 
         # copy potentially changed variable values back to original model and return
         for inst_var, orig_var in zip(inst._tmp_TRF_data[0], model._tmp_TRF_data[0]):
