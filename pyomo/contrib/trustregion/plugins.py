@@ -11,10 +11,15 @@
 import logging
 
 from pyomo.common.download import DownloadFactory
-import pyomo.contrib.trustregion.getGJH
+from pyomo.opt.base import SolverFactory
+from pyomo.contrib.trustregion.getGJH import get_gjh
+from pyomo.contrib.trustregion.TrustRegionSolver import TrustRegionSolver
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
 def load():
-    DownloadFactory.register('gjh')(pyomo.contrib.trustregion.getGJH.get_gjh)
-
+    DownloadFactory.register('gjh')(get_gjh)
+    SolverFactory.register(
+        name='trustregion',
+        doc='Trust region filter method for black box/glass box optimization.'
+    )(TrustRegionSolver)

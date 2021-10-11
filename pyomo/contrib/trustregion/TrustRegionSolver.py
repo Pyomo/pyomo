@@ -10,7 +10,7 @@
 
 import logging
 
-from pyomo.opt.base import SolverFactory, OptSolver
+from pyomo.opt.base import OptSolver
 from pyomo.core import Var, value
 from pyomo.contrib.trustregion.TrustRegionMethod import TrustRegionMethod
 from pyomo.contrib.trustregion.config_options import get_TRF_config
@@ -19,10 +19,7 @@ logger = logging.getLogger('pyomo.contrib.trustregion')
 
 __version__ = (0, 2, 0)
 
-@SolverFactory.register(
-        'trustregion',
-        doc='Trust region filter method for black box/glass box optimization.'
-    )
+
 class TrustRegionSolver(OptSolver):
     """
     A trust region filter method for black box / glass box optimization
@@ -34,16 +31,6 @@ class TrustRegionSolver(OptSolver):
     """
 
     CONFIG = get_TRF_config()
-
-    def __init__(self, **kwds):
-        # set persistent config options
-        tmp_kwds = {'type':kwds.pop('type', 'trustregion')}
-        self.config = self.CONFIG(kwds, preserve_implicit=True)
-        #
-        # Call base class constructor
-        #
-        tmp_kwds['solver'] = self.config.solver
-        OptSolver.__init__(self, **tmp_kwds)
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -68,11 +55,11 @@ class TrustRegionSolver(OptSolver):
 
     def solve(self, model, eflist, **kwds):
         # set customized config parameters
-        self._local_config = self.config(kwds, preserve_implicit=True)
+        config = self.CONFIG(kwds.pop('options', {}))
 
         # first store all data we will need to change in original model as a tuple
         # [0]=Var component, [1]=external function list, [2]=config block
-        model._tmp_TRF_data = (list(model.component_data_objects(Var)), eflist, self._local_config)
+        model._tmp_TRF_data = (list(model.component_data_objects(Var)), eflist, config)
         # now clone the model
         inst = model.clone()
 

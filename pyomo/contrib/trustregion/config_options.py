@@ -12,7 +12,8 @@ import logging
 
 from pyomo.common.config import ( 
     ConfigDict, ConfigValue, 
-    PositiveInt, PositiveFloat, In)
+    PositiveInt, PositiveFloat, In,
+    NonNegativeInt)
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
@@ -163,7 +164,7 @@ def get_TRF_config():
     # Output level (replace with real printlevels!!!)
     CONFIG.declare('verbosity', ConfigValue(
         default = 0,
-        domain = PositiveInt,
+        domain = NonNegativeInt,
         description = 'Set a verbosity level. Default is none (0).',
         doc = 'Set the verbosity level to get more information at each iteration.'
               'Default is none (0). Low is 1. Medium is 2. High is 3.'))
