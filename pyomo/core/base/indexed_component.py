@@ -25,6 +25,7 @@ from pyomo.common import DeveloperError
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.modeling import NOTSET
+from pyomo.common.sorting import sorted_robust
 
 from collections.abc import Sequence
 
@@ -442,11 +443,7 @@ You can silence this warning by one of three ways:
                 # small number of indices.  However, this provides a
                 # consistent ordering that the user expects.
                 #
-                def _sparse_iter_gen(self):
-                    for idx in self._index.__iter__():
-                        if idx in self._data:
-                            yield idx
-                ans = _sparse_iter_gen(self)
+                ans = filter(self._data.__contains__, self._index)
                 # As the iterator is ordered, we do not need to sort it
                 sort_needed = False
         if sort_needed:
