@@ -380,11 +380,26 @@ class IndexedComponent(Component):
     # keys/values/items continue to work for components that implement
     # other definitions for __iter__ (e.g., Set)
     def __iter__(self):
-        """Return an iterator of the keys in the dictionary"""
+        """Return an iterator of the component data keys"""
         return self.keys()
 
     def keys(self, ordered=False):
-        """Iterate over the keys in the dictionary"""
+        """Return an iterator over the component data keys
+
+        This method sets the ordering of component data objects within
+        this IndexedComponent container.  For consistency,
+        :py:meth:`__init__()`, :py:meth:`values`, and :py:meth:`items`
+        all leverage this method to ensure consistent ordering.
+
+        Parameters
+        ----------
+        ordered: bool
+            If True, then the keys are returned in a deterministic
+            order.  If the underlying indexing set is ordered then that
+            ordering is used.  Otherwise, the keys are sorted using
+            :py:func:`sorted_robust`.
+
+        """
         sort_needed = ordered
         if hasattr(self._index, 'isfinite') and not self._index.isfinite():
             #
@@ -452,12 +467,31 @@ You can silence this warning by one of three ways:
             return ans
 
     def values(self, ordered=False):
-        """Return an iterator of the component data objects in the dictionary"""
-        return (self[s] for s in self.keys(ordered))
+        """Return an iterator of the component data objects
 
-    def items(self):
-        """Return an iterator of (index,data) tuples from the dictionary"""
-        return((s, self[s]) for s in self.keys())
+        Parameters
+        ----------
+        ordered: bool
+            If True, then the values are returned in a deterministic
+            order.  If the underlying indexing set is ordered then that
+            ordering is used.  Otherwise, the component keys are sorted
+            using :py:func:`sorted_robust` and the values are returned
+            in that order.
+        """
+        return map(self.__getitem__, self.keys(ordered))
+
+    def items(self, ordered=False):
+        """Return an iterator of (index,data) component data tuples
+
+        Parameters
+        ----------
+        ordered: bool
+            If True, then the items are returned in a deterministic
+            order.  If the underlying indexing set is ordered then that
+            ordering is used.  Otherwise, the items are sorted using
+            :py:func:`sorted_robust`.
+        """
+        return((s, self[s]) for s in self.keys(ordered))
 
     @deprecated('The iterkeys method is deprecated. Use dict.keys().',
                 version='6.0')
