@@ -306,14 +306,10 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             return idx in self._data
         return idx in self._index
 
-    def keys(self):
-        """
-        Iterate over the keys in the dictionary.  If the default value is
-        specified, then iterate over all keys in the component index.
-        """
-        if self._default_val is Param.NoValue:
-            return self._data.__iter__()
-        return self._index.__iter__()
+    # We do not need to override keys(), as the __len__ override will
+    # cause the base class keys() to correctly correctly handle default
+    # values
+    #def keys(self, ordered=False):
 
     @property
     def mutable(self):

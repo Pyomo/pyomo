@@ -395,7 +395,7 @@ class IndexedComponent(Component):
             ans = self._data.__iter__()
         elif self.is_reference():
             ans = self._data.__iter__()
-        elif len(self._data) == len(self._index):
+        elif len(self) == len(self._index):
             #
             # If the data is dense then return the index iterator.
             #
@@ -449,7 +449,7 @@ You can silence this warning by one of three ways:
                 ans = _sparse_iter_gen(self)
                 # As the iterator is ordered, we do not need to sort it
                 sort_needed = False
-        if ordered:
+        if sort_needed:
             return iter(sorted_robust(ans))
         else:
             return ans
