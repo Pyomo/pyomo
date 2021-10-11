@@ -137,6 +137,7 @@ def TrustRegionMethod(m, efList, config):
                                                                outputs_k,
                                                                other_k)
             # Reject step
+            iteration += 1
             continue
 
         # Switching condition and Trust region update

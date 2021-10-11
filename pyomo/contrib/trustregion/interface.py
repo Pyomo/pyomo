@@ -20,7 +20,8 @@ from pyomo.core import (
 )
 from pyomo.core.expr import current as EXPR
 from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
-from pyomo.contrib.trustregion.geometry import generate_geometry, quadraticExpression
+from pyomo.contrib.trustregion.geometry import (generate_geometry,
+                                                quadraticExpression)
 from pyomo.contrib.trustregion.utils import maxIgnoreNone, minIgnoreNone
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
@@ -31,13 +32,32 @@ class RMType:
 
 
 class ReplaceEFVisitor(EXPR.ExpressionReplacementVisitor):
-    # I am making the assumption that after we rework this,
-    # the data structures will be better.
-    # Specifically:
-    #    TRF.ef_variables : Dict (for which the keys are TRF.external_fcns)
-    #    { 'externalNode': {'index': #, 'vars': [vars]}}
-    # There is no need for TRF.external_fcns given this new structure
-    pass
+    def __init__(self, trf_block, efSet):
+        super().__init__(
+            descend_into_named_expressions=True,
+            remove_named_expressions=False
+            )
+        self.trf = trf_block
+        self.efSet = efSet
+        self.efIndex = 0
+
+    def exitNode(self, node, values):
+        node = super().exitNode(node, values)
+        if node.__class__ is not EXPR.ExternalFunctionExpression:
+            return node
+        if id(node._fcn) not in self.efSet:
+            return node
+        new_args = []
+        for arg in values[1][1:]:
+            _input = self.trf.ef_inputs.add()
+            _input.set_value(value(arg))
+            self.trf.objective_ref_ef.add(_input == arg)
+            new_args.append(_input)
+        _output = self.trf.ef_outputs.add()
+        self.trf.ef_variables[node]['vars'] = new_args
+        self.trf.ef_variables[node]['index'] = self.efIndex
+        self.efIndex += 1
+        return _output
 
 
 class PyomoInterface(object):
@@ -144,9 +164,10 @@ class PyomoInterface(object):
         for externalNode in TRF.ef_variables.keys():
             self.ef_input_idxs[externalNode] = []
             # NOTE: identify_variables is guaranteed to not return duplicates
-            for var in EXPR.identify_variables(externalNode, include_fixed=False):
+            for var in EXPR.identify_variables(externalNode,
+                                               include_fixed=False):
                 if var not in seen:
-                    seen[v] = len(TRF.ef_inputs)
+                    seen[var] = len(TRF.ef_inputs)
                     TRF.ef_inputs.append(var)
                 self.ef_input_idxs[externalNode].append(seen[var])
 
@@ -211,21 +232,24 @@ class PyomoInterface(object):
         Expression for use in the RM Constraint
         """
         nodeIndex = self.TRF.ef_variables[externalNode]['index']
-        constantTerm = model.rmParams[externalNode][idx, 0]
-        linearTerms = model.rmParams[externalNode][idx, 1:self.numberOfInputs+1]
-        quad = model.rmParams[externalNode][idx, self.numberOfInputs+1:]
-        quadraticTerms = { (i, j) : \
-                    quad[i*(2*self.numberOfInputs - 1 - i)//2 + j for i in\
-                    range(self.numberOfInputs) for j in range(i, self.numberOfInputs)] }
+        constantTerm = model.rmParams[externalNode][nodeIndex, 0]
+        linearTerms = model.rmParams[externalNode][nodeIndex, 1:self.numberOfInputs+1]
+        quad = model.rmParams[externalNode][nodeIndex, self.numberOfInputs+1:]
+        quadraticTerms = { (i, j) : quad[(i*(2*self.numberOfInputs - 1 - i)//2 + j)]
+                          for i in range(self.numberOfInputs)
+                          for j in range(i, self.numberOfInputs)}
         expr = (
             constantTerm
-            + sum(linearTerms[i] * (model.ef_inputs[i] - model.init_inputs[i]) for i in range(self.numberOfInputs))
+            + sum(linearTerms[i] * (model.ef_inputs[i]
+                                    - model.init_inputs[i])
+                  for i in range(self.numberOfInputs))
             )
         if (self.rmtype == RMType.quadratic):
             quadraticTerms = model.rmParams[externalNode]['quadratic']
-            expr += sum(quadraticTerms[(i, j)] * (model.ef_inputs[i] \
-                    - model.init_inputs[i]) * (model.ef_inputs[j] - model.init_inputs[j])\
-                    for i in range(self.numberOfInputs) \
+            expr += sum(quadraticTerms[(i, j)] * (model.ef_inputs[i]
+                    - model.init_inputs[i]) * (model.ef_inputs[j]
+                                               - model.init_inputs[j])
+                    for i in range(self.numberOfInputs)
                     for j in range(self.numberOfInputs))
         return expr
 
@@ -309,7 +333,8 @@ class PyomoInterface(object):
         """
         Cache current EF input values
         """
-        return curr_vals = list(var.value for var in self.TRF.ef_inputs)
+        curr_vals = list(var.value for var in self.TRF.ef_inputs)
+        return curr_vals
 
     def setEFInputValues(self, inputs):
         """
@@ -409,9 +434,9 @@ class PyomoInterface(object):
                 tempInputs = list(inputs)
                 tempInputs[i] += radius
                 tempOutputs = self.evaluateEF(tempInputs)
-                for externalNode, value in zip(externalNodes, tempOutputs):
+                for externalNode, val in zip(externalNodes, tempOutputs):
                     index = self.TRF.ef_variables[externalNode]['index']
-                    scaled = (value - outputs[index]) / radius
+                    scaled = (val - outputs[index]) / radius
                     RMParams[externalNode].append(scaled)
         elif (self.rmtype == RMType.quadratic):
             if self.optimalMatrix is None:
@@ -432,9 +457,11 @@ class PyomoInterface(object):
                 # Set constant coefficient for each node
                 RMParams[externalNode].append(coefficients[0, externalNode])
                 # Set linear coefficients for each node
-                RMParams[externalNode].append(coefficients[1:self.numberOfInputs+1, externalNode])
+                RMParams[externalNode].append(coefficients[1:self.numberOfInputs+1,
+                                                           externalNode])
                 # Set quadratic coefficients for each node
-                RMParams.append(coefficients[self.numberOfInputs+1:, externalNode])
+                RMParams[externalNode].append(coefficients[self.numberOfInputs+1:dimension,
+                                                           externalNode])
 
         self.setEFInputValues(val_cache)
         return RMParams, outputs
