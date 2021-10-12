@@ -102,7 +102,7 @@ def block_triangularize(matrix, matching=None):
 def get_blocks_from_maps(row_block_map, col_block_map):
     """
     Gets the row and column coordinates of each diagonal block in a
-    block triangularization from maps of row/column coordiates to
+    block triangularization from maps of row/column coordinates to
     block indices.
 
     Arguments
