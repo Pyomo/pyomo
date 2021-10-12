@@ -1658,6 +1658,4 @@ class TestExceptional(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    #unittest.main()
-    TestExceptional().test_descend_stop_iteration()
-    TestExceptional().test_bad_descend_index()
+    unittest.main()
