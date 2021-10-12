@@ -213,6 +213,18 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         self._nlp.set_primals(primals)
 
     def set_equality_constraint_multipliers(self, eq_con_multipliers):
+        """
+        Sets multipliers for residual equality constraints seen by the
+        outer solver. This also sets multipliers for the external
+        constraints, which are necessary for Hessian-of-Lagrangian
+        calculation.
+
+        """
+        # NOTE: For correctness, I think this needs to be called after
+        # set_input_values. Do I need to update external multipliers
+        # after input values are set?
+        # I think I just need to defer external multiplier calculation
+        # until the Hessian-of-Lagrangian term is asked for.
         eq_con_multipliers = np.array(eq_con_multipliers)
         for i, val in enumerate(eq_con_multipliers):
             self.residual_con_multipliers[i] = val
@@ -225,11 +237,16 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         assert n_con == self._nlp.n_constraints()
         duals = np.zeros(n_con)
         indices = self._nlp.get_constraint_indices(cons)
-        for i, idx in enumerate(indices):
-            duals[idx] = multipliers[i]
+        duals[indices] = multipliers
         self._nlp.set_duals(duals)
 
     def calculate_external_constraint_multipliers(self, resid_multipliers):
+        """
+        Calculates the multipliers of the external constraints from the
+        multipliers of the residual constraints (which are provided by
+        the "outer" solver).
+
+        """
         nlp = self._nlp
         y = self.external_vars
         f = self.residual_cons
@@ -245,6 +262,14 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         return external_multipliers
 
     def get_hessians_of_lagrangian(self):
+        """
+        Calculates terms of Hessian of full-space Lagrangian due to
+        external and residual constraints. Note that multipliers are
+        set by set_equality_constraint_multipliers. These matrices
+        are used to calculate the Hessian of the reduced-space
+        Lagrangian.
+
+        """
         nlp = self._nlp
         x = self.input_vars
         y = self.external_vars
@@ -254,6 +279,12 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         return hlxx, hlxy, hlyy
 
     def calculate_reduced_hessian_lagrangian(self, hlxx, hlxy, hlyy):
+        """
+        Performs the matrix multiplications necessary to get the
+        reduced space Hessian-of-Lagrangian term from the full-space
+        terms.
+
+        """
         hlxx = hlxx.toarray()
         hlxy = hlxy.toarray()
         hlyy = hlyy.toarray()
@@ -415,8 +446,19 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
 
     def evaluate_hessian_equality_constraints(self):
         """
+        This method actually evaluates the sum of Hessians times
+        multipliers, i.e. the term in the Hessian of the Lagrangian
+        due to these equality constraints.
+
         """
+        # TODO: I should calculate external multipliers here to make
+        # sure they are up-to-date.
+
+        # These are full-space Hessian-of-Lagrangian terms
         hlxx, hlxy, hlyy = self.get_hessians_of_lagrangian()
+
+        # These terms can be used to calculate the corresponding
+        # Hessian-of-Lagrangian term in the full space.
         hess_lag = self.calculate_reduced_hessian_lagrangian(hlxx, hlxy, hlyy)
         sparse = _dense_to_full_sparse(hess_lag)
         return sps.tril(sparse)
