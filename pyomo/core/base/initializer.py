@@ -115,6 +115,8 @@ def Initializer(init,
             return ScalarCallInitializer(init)
         else:
             return IndexedCallInitializer(init)
+    if isinstance(init, InitializerBase):
+        return init
     if isinstance(init, PyomoObject):
         # We re-check for PyomoObject here, as that picks up / caches
         # non-components like component data objects and expressions
