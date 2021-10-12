@@ -15,14 +15,18 @@ from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentSet
+from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.util.subsystems import (
-        create_subsystem_block,
-        TemporarySubsystemManager,
-        )
+    create_subsystem_block,
+    TemporarySubsystemManager,
+)
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.interfaces.external_grey_box import (
-        ExternalGreyBoxModel,
-        )
+    ExternalGreyBoxModel,
+)
+from pyomo.contrib.incidence_analysis.util import (
+    generate_strongly_connected_components,
+)
 import numpy as np
 import scipy.sparse as sps
 
@@ -151,6 +155,10 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         self._block._obj = Objective(expr=0.0)
         self._nlp = PyomoNLP(self._block)
 
+        self._scc_list = list(generate_strongly_connected_components(
+            external_cons, variables=external_vars
+        ))
+
         assert len(external_vars) == len(external_cons)
 
         self.input_vars = input_vars
@@ -181,14 +189,20 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         for var, val in zip(input_vars, input_values):
             var.set_value(val)
 
-        _temp = create_subsystem_block(external_cons, variables=external_vars)
-        possible_input_vars = ComponentSet(input_vars)
+        #_temp = create_subsystem_block(external_cons, variables=external_vars)
+        #possible_input_vars = ComponentSet(input_vars)
         #for var in _temp.input_vars.values():
         #    # TODO: Is this check necessary?
         #    assert var in possible_input_vars
 
-        with TemporarySubsystemManager(to_fix=list(_temp.input_vars.values())):
-            solver.solve(_temp)
+        for block, inputs in self._scc_list:
+            if len(block.vars) == 1:
+                calculate_variable_from_constraint(
+                    block.vars[0], block.cons[0]
+                )
+            else:
+                with TemporarySubsystemManager(to_fix=inputs):
+                    solver.solve(block)
 
         # Send updated variable values to NLP for dervative evaluation
         primals = self._nlp.get_primals()
@@ -197,7 +211,6 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         values = np.array([var.value for var in to_update])
         primals[indices] = values
         self._nlp.set_primals(primals)
-
 
     def set_equality_constraint_multipliers(self, eq_con_multipliers):
         for i, val in enumerate(eq_con_multipliers):
