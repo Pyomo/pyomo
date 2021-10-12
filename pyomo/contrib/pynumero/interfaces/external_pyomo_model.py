@@ -14,7 +14,7 @@ from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.expr.visitor import identify_variables
-from pyomo.common.collections import ComponentSet, ComponentMap
+from pyomo.common.collections import ComponentSet
 from pyomo.util.subsystems import (
         create_subsystem_block,
         TemporarySubsystemManager,
