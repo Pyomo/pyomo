@@ -207,6 +207,31 @@ class ItemInitializer(InitializerBase):
             return range(len(self._dict))
 
 
+class DataFrameInitializer(InitializerBase):
+    """Initializer for dict-like values supporting __getitem__()"""
+    __slots__ = ('_df', '_column',)
+
+    def __init__(self, dataframe, column=None):
+        self._df = dataframe
+        if column is not None:
+            self._column = column
+        elif len(dataframe.columns) == 1:
+            self._column = dataframe.columns[0]
+        else:
+            raise ValueError(
+                "Cannot construct DataFrameInitializer for DataFrame with "
+                "multiple columns without also specifying the data column")
+
+    def __call__(self, parent, idx):
+        return self._df.at[idx, self._column]
+
+    def contains_indices(self):
+        return True
+
+    def indices(self):
+        return self._df.index
+
+
 class IndexedCallInitializer(InitializerBase):
     """Initializer for functions and callable objects"""
     __slots__ = ('_fcn',)

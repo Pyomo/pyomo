@@ -11,11 +11,13 @@
 import pickle
 
 import pyomo.common.unittest as unittest
+from pyomo.common.dependencies import pandas as pd, pandas_available
 
 from pyomo.core.base.util import flatten_tuple
 from pyomo.core.base.initializer import (
     Initializer, ConstantInitializer, ItemInitializer, ScalarCallInitializer,
     IndexedCallInitializer, CountedCallInitializer, CountedCallGenerator,
+    DataFrameInitializer,
 )
 from pyomo.environ import (
     ConcreteModel, Var,
@@ -425,6 +427,47 @@ class Test_Initializer(unittest.TestCase):
         self.assertFalse(a.verified)
         self.assertEqual(list(a(None, 1)), [0,3])
 
+    @unittest.skipUnless(pandas_available, "Pandas is not installed")
+    def test_dataframe(self):
+        d = {'col1': [1, 2, 4]}
+        df = pd.DataFrame(data=d)
+        a = Initializer(df)
+        self.assertIs(type(a), DataFrameInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertTrue(a.contains_indices())
+        self.assertEqual(list(a.indices()), [0,1,2])
+        self.assertEqual(a(None, 0), 1)
+        self.assertEqual(a(None, 1), 2)
+        self.assertEqual(a(None, 2), 4)
+
+        d = {'col1': [1, 2, 4], 'col2': [10, 20, 40]}
+        df = pd.DataFrame(data=d)
+        with self.assertRaisesRegex(
+                ValueError,
+                'DataFrameInitializer for DataFrame with multiple columns'):
+            a = Initializer(df)
+        a = DataFrameInitializer(df, 'col2')
+        self.assertIs(type(a), DataFrameInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertTrue(a.contains_indices())
+        self.assertEqual(list(a.indices()), [0,1,2])
+        self.assertEqual(a(None, 0), 10)
+        self.assertEqual(a(None, 1), 20)
+        self.assertEqual(a(None, 2), 40)
+
+        df = pd.DataFrame([10, 20, 30, 40], index=[[0,0,1,1],[0,1,0,1]])
+        a = Initializer(df)
+        self.assertIs(type(a), DataFrameInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertTrue(a.contains_indices())
+        self.assertEqual(list(a.indices()), [(0, 0), (0, 1), (1, 0), (1, 1)])
+        self.assertEqual(a(None, (0, 0)), 10)
+        self.assertEqual(a(None, (0, 1)), 20)
+        self.assertEqual(a(None, (1, 0)), 30)
+        self.assertEqual(a(None, (1, 1)), 40)
 
     def test_pickle(self):
         m = ConcreteModel()
