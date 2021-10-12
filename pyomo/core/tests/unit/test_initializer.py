@@ -460,6 +460,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(a(None, (1, 0)), 30)
         self.assertEqual(a(None, (1, 1)), 40)
 
+    @unittest.skipUnless(pandas_available, "Pandas is not installed")
     def test_initializer_initializer(self):
         d = {'col1': [1, 2, 4], 'col2': [10, 20, 40]}
         df = pd.DataFrame(data=d)
