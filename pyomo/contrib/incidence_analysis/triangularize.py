@@ -84,7 +84,7 @@ def block_triangularize(matrix, matching=None):
                 # Reverse direction of edge. This corresponds to creating
                 # a block lower triangular matrix.
 
-    scc_order = list(nxd.topological_sort(dag))
+    scc_order = list(nxd.lexicographical_topological_sort(dag))
 
     scc_block_map = {c: i for i, c in enumerate(scc_order)}
     row_block_map = {n: scc_block_map[c] for n, c in node_scc_map.items()}
@@ -97,3 +97,70 @@ def block_triangularize(matrix, matching=None):
     col_block_map = {c: row_block_map[col_row_map[c]] for c in range(N)}
 
     return row_block_map, col_block_map
+
+
+def get_blocks_from_maps(row_block_map, col_block_map):
+    """
+    Gets the row and column coordinates of each diagonal block in a
+    block triangularization from maps of row/column coordinates to
+    block indices.
+
+    Arguments
+    ---------
+    row_block_map: dict
+        Dict mapping each row coordinate to the coordinate of the 
+        block it belongs to
+
+    col_block_map: dict
+        Dict mapping each column coordinate to the coordinate of the
+        block it belongs to
+
+    Returns
+    -------
+    tuple of lists
+        The first list is a list-of-lists of row indices that partitions
+        the indices into diagonal blocks. The second list is a
+        list-of-lists of column indices that partitions the indices into
+        diagonal blocks.
+
+    """
+    blocks = set(row_block_map.values())
+    assert blocks == set(col_block_map.values())
+    n_blocks = len(blocks)
+    block_rows = [[] for _ in range(n_blocks)]
+    block_cols = [[] for _ in range(n_blocks)]
+    for r, b in row_block_map.items():
+        block_rows[b].append(r)
+    for c, b in col_block_map.items():
+        block_cols[b].append(c)
+    return block_rows, block_cols
+
+
+def get_diagonal_blocks(matrix, matching=None):
+    """
+    Gets the diagonal blocks of a block triangularization of the provided
+    matrix.
+
+    Arguments
+    ---------
+    coo_matrix
+        Matrix to get the diagonal blocks of
+
+    matching
+        Dict mapping row indices to column indices in the perfect matching
+        to be used by the block triangularization.
+
+    Returns
+    -------
+    tuple of lists
+        The first list is a list-of-lists of row indices that partitions
+        the indices into diagonal blocks. The second list is a
+        list-of-lists of column indices that partitions the indices into
+        diagonal blocks.
+
+    """
+    row_block_map, col_block_map = block_triangularize(
+        matrix, matching=matching
+    )
+    block_rows, block_cols = get_blocks_from_maps(row_block_map, col_block_map)
+    return block_rows, block_cols
