@@ -54,7 +54,6 @@ class Test_Initializer(unittest.TestCase):
             a.indices()
         self.assertEqual(a(None, 1), 5)
 
-
     def test_dict(self):
         m = ConcreteModel()
         a = Initializer({1:5})
@@ -64,7 +63,6 @@ class Test_Initializer(unittest.TestCase):
         self.assertTrue(a.contains_indices())
         self.assertEqual(list(a.indices()), [1])
         self.assertEqual(a(None, 1), 5)
-
 
     def test_sequence(self):
         m = ConcreteModel()
@@ -82,7 +80,6 @@ class Test_Initializer(unittest.TestCase):
         self.assertFalse(a.verified)
         self.assertFalse(a.contains_indices())
         self.assertEqual(a(None, 1), [0,5])
-
 
     def test_function(self):
         m = ConcreteModel()
@@ -136,7 +133,6 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(next(c), 2)
         self.assertEqual(next(c), 3)
         self.assertEqual(next(c), 4)
-
 
     def test_method(self):
         class Init(object):
@@ -197,7 +193,6 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(next(c), 2)
         self.assertEqual(next(c), 3)
         self.assertEqual(next(c), 4)
-
 
     def test_classmethod(self):
         class Init(object):
@@ -261,7 +256,6 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(next(c), 3)
         self.assertEqual(next(c), 4)
 
-
     def test_staticmethod(self):
         class Init(object):
             @staticmethod
@@ -324,7 +318,6 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(next(c), 3)
         self.assertEqual(next(c), 4)
 
-
     def test_generator_fcn(self):
         m = ConcreteModel()
         def a_init(m):
@@ -359,7 +352,6 @@ class Test_Initializer(unittest.TestCase):
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
         self.assertEqual(list(a(None, (1, 4))), [4,2])
-
 
     def test_generator_method(self):
         class Init(object):
@@ -400,7 +392,6 @@ class Test_Initializer(unittest.TestCase):
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
         self.assertEqual(list(a(None, (1, 4))), [4,2])
-
 
     def test_generators(self):
         m = ConcreteModel()
