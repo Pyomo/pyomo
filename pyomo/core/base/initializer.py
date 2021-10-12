@@ -83,7 +83,7 @@ def Initializer(init,
                 sequence_types.add(init.__class__)
         elif any(c.__name__ == 'Series' for c in init.__class__.__mro__):
             if pandas_available and isinstance(init, pandas.Series):
-                initializer_map[init.__class__] = ItemInitializer
+                sequence_types.add(init.__class__)
         elif any(c.__name__ == 'DataFrame' for c in init.__class__.__mro__):
             if pandas_available and isinstance(init, pandas.DataFrams):
                 initializer_map[init.__class__] = DataFrameInitializer
