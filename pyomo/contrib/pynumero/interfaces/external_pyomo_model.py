@@ -14,7 +14,7 @@ from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.expr.visitor import identify_variables
-from pyomo.common.collections import ComponentSet
+from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.util.subsystems import (
         create_subsystem_block,
         TemporarySubsystemManager,
@@ -190,10 +190,14 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         with TemporarySubsystemManager(to_fix=list(_temp.input_vars.values())):
             solver.solve(_temp)
 
-        # Should we create the NLP from the original block or the temp block?
-        # Need to create it from the original block because temp block won't
-        # have residual constraints, whose derivatives are necessary.
-        self._nlp = PyomoNLP(self._block)
+        # Send updated variable values to NLP for dervative evaluation
+        primals = self._nlp.get_primals()
+        to_update = input_vars + external_vars
+        indices = self._nlp.get_primal_indices(to_update)
+        values = np.array([var.value for var in to_update])
+        primals[indices] = values
+        self._nlp.set_primals(primals)
+
 
     def set_equality_constraint_multipliers(self, eq_con_multipliers):
         for i, val in enumerate(eq_con_multipliers):
