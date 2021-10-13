@@ -351,6 +351,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
         include_all_variable_bounds = \
             io_options.pop("include_all_variable_bounds", False)
 
+        # List of variables that don't appear in constraints to force into the
+        # nl-file
+        force_in_nonlinear_constraint_vars = \
+            io_options.pop("force_in_nonlinear_constraint_vars", False)
+
         if len(io_options):
             raise ValueError(
                 "ProblemWriter_nl passed unrecognized io_options:\n\t" +
@@ -399,7 +404,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     show_section_timing=show_section_timing,
                     skip_trivial_constraints=skip_trivial_constraints,
                     file_determinism=file_determinism,
-                    include_all_variable_bounds=include_all_variable_bounds)
+                    include_all_variable_bounds=include_all_variable_bounds,
+                    force_in_nonlinear_constraint_vars=force_in_nonlinear_constraint_vars)
 
         self._symbolic_solver_labels = False
         self._output_fixed_variable_bounds = False
@@ -700,7 +706,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         show_section_timing=False,
                         skip_trivial_constraints=False,
                         file_determinism=1,
-                        include_all_variable_bounds=False):
+                        include_all_variable_bounds=False,
+                        force_in_nonlinear_constraint_vars=False):
 
         output_fixed_variable_bounds = self._output_fixed_variable_bounds
         symbolic_solver_labels = self._symbolic_solver_labels
@@ -817,13 +824,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
         ObjNonlinearVarsInt = set()
         for block in all_blocks_list:
 
-            gen_obj_repn = getattr(block, "_gen_obj_repn", None)
-            if gen_obj_repn is not None:
-                gen_obj_repn = bool(gen_obj_repn)
-                # Get/Create the ComponentMap for the repn
-                if not hasattr(block,'_repn'):
-                    block._repn = ComponentMap()
-                block_repn = block._repn
+            gen_obj_repn = \
+                getattr(block, "_gen_obj_repn", True)
+
+            # Get/Create the ComponentMap for the repn
+            if not hasattr(block,'_repn'):
+                block._repn = ComponentMap()
+            block_repn = block._repn
 
             for active_objective in block.component_data_objects(Objective,
                                                                  active=True,
@@ -834,7 +841,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     if len(objname) > max_rowname_len:
                         max_rowname_len = len(objname)
 
-                if gen_obj_repn == False:
+                if gen_obj_repn:
+                    repn = generate_standard_repn(active_objective.expr,
+                                                  quadratic=False)
+                    block_repn[active_objective] = repn
+                    linear_vars = repn.linear_vars
+                    nonlinear_vars = repn.nonlinear_vars
+                else:
                     repn = block_repn[active_objective]
                     linear_vars = repn.linear_vars
                     # By default, the NL writer generates
@@ -844,15 +857,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     # are using a cached repn object, so we
                     # must check for the quadratic form.
                     if repn.is_nonlinear() and (repn.nonlinear_expr is None):
-                        # Note that this is fragile:
-                        # generate_standard_repn can leave nonlinear
-                        # terms in both quadratic and nonlinear fields.
-                        # However, when this was writen the assumption
-                        # is that generate_standard_repn is only called
-                        # with quadratic=True for QCQPs (by the LP
-                        # writer).  So, quadratic and nonlinear_expr
-                        # will both never be non-empty.  This assertion
-                        # will fail if that assumption is ever violated:
                         assert repn.is_quadratic()
                         assert len(repn.quadratic_vars) > 0
                         nonlinear_vars = {}
@@ -862,13 +866,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         nonlinear_vars = nonlinear_vars.values()
                     else:
                         nonlinear_vars = repn.nonlinear_vars
-                else:
-                    repn = generate_standard_repn(active_objective.expr,
-                                                  quadratic=False)
-                    linear_vars = repn.linear_vars
-                    nonlinear_vars = repn.nonlinear_vars
-                    if gen_obj_repn:
-                        block_repn[active_objective] = repn
+
                 try:
                     wrapped_repn = RepnWrapper(
                         repn,
@@ -932,13 +930,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
         for block in all_blocks_list:
             all_repns = list()
 
-            gen_con_repn = getattr(block, "_gen_con_repn", None)
-            if gen_con_repn is not None:
-                gen_con_repn = bool(gen_con_repn)
-                # Get/Create the ComponentMap for the repn
-                if not hasattr(block,'_repn'):
-                    block._repn = ComponentMap()
-                block_repn = block._repn
+            gen_con_repn = \
+                getattr(block, "_gen_con_repn", True)
+
+            # Get/Create the ComponentMap for the repn
+            if not hasattr(block,'_repn'):
+                block._repn = ComponentMap()
+            block_repn = block._repn
 
             # Initializing the constraint dictionary
             for constraint_data in block.component_data_objects(Constraint,
@@ -956,46 +954,36 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     if len(conname) > max_rowname_len:
                         max_rowname_len = len(conname)
 
-                if gen_con_repn == False:
-                    repn = block_repn[constraint_data]
+                if constraint_data._linear_canonical_form:
+                    repn = constraint_data.canonical_form()
                     linear_vars = repn.linear_vars
-                    # By default, the NL writer generates
-                    # StandardRepn objects without the more
-                    # expense quadratic processing, but
-                    # there is no guarantee of this if we
-                    # are using a cached repn object, so we
-                    # must check for the quadratic form.
-                    if repn.is_nonlinear() and (repn.nonlinear_expr is None):
-                        # Note that this is fragile:
-                        # generate_standard_repn can leave nonlinear
-                        # terms in both quadratic and nonlinear fields.
-                        # However, when this was writen the assumption
-                        # is that generate_standard_repn is only called
-                        # with quadratic=True for QCQPs (by the LP
-                        # writer).  So, quadratic and nonlinear_expr
-                        # will both never be non-empty.  This assertion
-                        # will fail if that assumption is ever violated:
-                        assert repn.is_quadratic()
-                        assert len(repn.quadratic_vars) > 0
-                        nonlinear_vars = {}
-                        for v1, v2 in repn.quadratic_vars:
-                            nonlinear_vars[id(v1)] = v1
-                            nonlinear_vars[id(v2)] = v2
-                        nonlinear_vars = nonlinear_vars.values()
-                    else:
-                        nonlinear_vars = repn.nonlinear_vars
+                    nonlinear_vars = repn.nonlinear_vars
                 else:
-                    if constraint_data._linear_canonical_form:
-                        repn = constraint_data.canonical_form()
-                        linear_vars = repn.linear_vars
-                        nonlinear_vars = repn.nonlinear_vars
-                    else:
+                    if gen_con_repn:
                         repn = generate_standard_repn(constraint_data.body,
                                                       quadratic=False)
+                        block_repn[constraint_data] = repn
                         linear_vars = repn.linear_vars
                         nonlinear_vars = repn.nonlinear_vars
-                    if gen_con_repn:
-                        block_repn[constraint_data] = repn
+                    else:
+                        repn = block_repn[constraint_data]
+                        linear_vars = repn.linear_vars
+                        # By default, the NL writer generates
+                        # StandardRepn objects without the more
+                        # expense quadratic processing, but
+                        # there is no guarantee of this if we
+                        # are using a cached repn object, so we
+                        # must check for the quadratic form.
+                        if repn.is_nonlinear() and (repn.nonlinear_expr is None):
+                            assert repn.is_quadratic()
+                            assert len(repn.quadratic_vars) > 0
+                            nonlinear_vars = {}
+                            for v1, v2 in repn.quadratic_vars:
+                                nonlinear_vars[id(v1)] = v1
+                                nonlinear_vars[id(v2)] = v2
+                            nonlinear_vars = nonlinear_vars.values()
+                        else:
+                            nonlinear_vars = repn.nonlinear_vars
 
                 ### GAH: Even if this is fixed, it is still useful to
                 ###      write out these types of constraints
@@ -1135,6 +1123,12 @@ class ProblemWriter_nl(AbstractProblemWriter):
                           for vardata in Vars_dict.values())
             UnusedVars = AllVars.difference(UsedVars)
             LinearVars.update(UnusedVars)
+
+        if force_in_nonlinear_constraint_vars:
+            for v in force_in_nonlinear_constraint_vars:
+                if self_varID_map[id(v)] not in UsedVars:
+                    Vars_dict[id(v)] = v
+                    ConNonlinearVars.update([self_varID_map[id(v)]])
 
         ### There used to be an if statement here for the following code block
         ### checking model.statistics.num_binary_vars was greater than zero.
