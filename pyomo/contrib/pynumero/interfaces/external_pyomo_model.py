@@ -189,12 +189,6 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         for var, val in zip(input_vars, input_values):
             var.set_value(val)
 
-        #_temp = create_subsystem_block(external_cons, variables=external_vars)
-        #possible_input_vars = ComponentSet(input_vars)
-        #for var in _temp.input_vars.values():
-        #    # TODO: Is this check necessary?
-        #    assert var in possible_input_vars
-
         for block, inputs in self._scc_list:
             if len(block.vars) == 1:
                 calculate_variable_from_constraint(
