@@ -58,6 +58,7 @@ solver_dependencies =   {
     'test_dae_ch_run_path_constraint_tester': ['ipopt'],
 
     # gdp_ch
+    'test_gdp_ch_pyomo_gdp_uc_sh': ['glpk'],
     'test_gdp_ch_pyomo_scont': ['glpk'],
     'test_gdp_ch_pyomo_scont2': ['glpk'],
     'test_gdp_ch_scont_script': ['glpk'],
@@ -386,6 +387,8 @@ def compare_files(out_file, base_file, abstol, reltol,
             else:
                 extra = out_filtered
                 n = index_of_base_i_in_out
+            if n == float('inf'):
+                n = None
             extra_terms = extra[i:n]
             try:
                 assert len(extra_terms) % 3 == 0
