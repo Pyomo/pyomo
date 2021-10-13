@@ -556,7 +556,7 @@ def substitute_template_expression(expr, substituter, *args, **kwargs):
         a new expression tree with all substitutions done
     """
     visitor = ReplaceTemplateExpression(substituter, *args, **kwargs)
-    return visitor.dfs_postorder_stack(expr)
+    return visitor.walk_expression(expr)
 
 
 class _GetItemIndexer(object):
