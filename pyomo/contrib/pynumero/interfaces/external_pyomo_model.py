@@ -285,6 +285,8 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         terms.
 
         """
+        # Converting to dense is faster for the distillation
+        # example. Does this make sense?
         hlxx = hlxx.toarray()
         hlxy = hlxy.toarray()
         hlyy = hlyy.toarray()
