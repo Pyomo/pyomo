@@ -475,12 +475,13 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         onames = []
         for block in all_blocks:
 
-            gen_obj_repn = getattr(block, "_gen_obj_repn", True)
-
-            # Get/Create the ComponentMap for the repn
-            if not hasattr(block,'_repn'):
-                block._repn = ComponentMap()
-            block_repn = block._repn
+            gen_obj_repn = getattr(block, "_gen_obj_repn", None)
+            if gen_obj_repn is not None:
+                gen_obj_repn = bool(gen_obj_repn)
+                # Get/Create the ComponentMap for the repn
+                if not hasattr(block,'_repn'):
+                    block._repn = ComponentMap()
+                block_repn = block._repn
 
             for objective_data in block.component_data_objects(
                     Objective,
@@ -506,11 +507,12 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 else:
                     output.append("max \n")
 
-                if gen_obj_repn:
-                    repn = generate_standard_repn(objective_data.expr)
-                    block_repn[objective_data] = repn
-                else:
+                if gen_obj_repn == False:
                     repn = block_repn[objective_data]
+                else:
+                    repn = generate_standard_repn(objective_data.expr)
+                    if gen_obj_repn:
+                        block_repn[objective_data] = repn
 
                 degree = repn.polynomial_degree()
 
@@ -567,12 +569,13 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         def constraint_generator():
             for block in all_blocks:
 
-                gen_con_repn = getattr(block, "_gen_con_repn", True)
-
-                # Get/Create the ComponentMap for the repn
-                if not hasattr(block,'_repn'):
-                    block._repn = ComponentMap()
-                block_repn = block._repn
+                gen_con_repn = getattr(block, "_gen_con_repn", None)
+                if gen_con_repn is not None:
+                    gen_con_repn = bool(gen_con_repn)
+                    # Get/Create the ComponentMap for the repn
+                    if not hasattr(block,'_repn'):
+                        block._repn = ComponentMap()
+                    block_repn = block._repn
 
                 for constraint_data in block.component_data_objects(
                         Constraint,
@@ -585,13 +588,15 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         assert not constraint_data.equality
                         continue # non-binding, so skip
 
-                    if constraint_data._linear_canonical_form:
-                        repn = constraint_data.canonical_form()
-                    elif gen_con_repn:
-                        repn = generate_standard_repn(constraint_data.body)
-                        block_repn[constraint_data] = repn
-                    else:
+                    if gen_con_repn == False:
                         repn = block_repn[constraint_data]
+                    else:
+                        if constraint_data._linear_canonical_form:
+                            repn = constraint_data.canonical_form()
+                        else:
+                            repn = generate_standard_repn(constraint_data.body)
+                        if gen_con_repn:
+                            block_repn[constraint_data] = repn
 
                     yield constraint_data, repn
 
