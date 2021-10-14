@@ -85,10 +85,13 @@ class BaselineTests(Tests):
         try:
             self.assertTrue(cmp(testFile, baseline))
         except:
-            with open(testFile, 'r') as f1, open(baseline, 'r') as f2:
+            with open(baseline, 'r') as f1, open(testFile, 'r') as f2:
                 f1_contents = list(filter(None, f1.read().split()))
                 f2_contents = list(filter(None, f2.read().split()))
-                self.assertEqual(f1_contents, f2_contents)
+                self.assertEqual(
+                    f1_contents, f2_contents,
+                    "\n\nbaseline: %s\ntestFile: %s\n" % (baseline, testFile)
+                )
 
 
     @parameterized.parameterized.expand(input=invalidlist)
