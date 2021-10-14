@@ -771,5 +771,40 @@ class TestExternalPyomoModel(unittest.TestCase):
             np.testing.assert_allclose(hess_lag, expected_hess_lag, rtol=1e-8)
 
 
+class TestUpdatedHessianCalculationMethods(unittest.TestCase):
+    """
+    These tests exercise the methods for fast Hessian-of-Lagrangian
+    computation.
+    They use Model2by2 because it has constraints that are nonlinear
+    in both x and y.
+
+    """
+
+    def test_external_multipliers_from_residual_multipliers(self):
+        model = Model2by2()
+        m = model.make_model()
+        m.x[0].set_value(1.0)
+        m.x[1].set_value(2.0)
+        m.y[0].set_value(3.0)
+        m.y[1].set_value(4.0)
+        x0_init_list = [-5.0, -3.0, 0.5, 1.0, 2.5]
+        x1_init_list = [0.5, 1.0, 1.5, 2.5, 4.1]
+        x_init_list = list(itertools.product(x0_init_list, x1_init_list))
+        external_model = ExternalPyomoModel(
+                list(m.x.values()),
+                list(m.y.values()),
+                list(m.residual_eqn.values()),
+                list(m.external_eqn.values()),
+                )
+
+        for x in x_init_list:
+            external_model.set_input_values(x)
+            hess = external_model.evaluate_hessian_external_variables()
+            expected_hess = model.evaluate_external_hessian(x)
+            for matrix1, matrix2 in zip(hess, expected_hess):
+                matrix2 = np.matrix(matrix2)
+                np.testing.assert_allclose(matrix1, matrix2, rtol=1e-8)
+
+
 if __name__ == '__main__':
     unittest.main()
