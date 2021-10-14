@@ -222,6 +222,10 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         eq_con_multipliers = np.array(eq_con_multipliers)
         for i, val in enumerate(eq_con_multipliers):
             self.residual_con_multipliers[i] = val
+        self.set_external_constraint_multipliers(eq_con_multipliers)
+
+    def set_external_constraint_multipliers(self, eq_con_multipliers):
+        eq_con_multipliers = np.array(eq_con_multipliers)
         external_multipliers = self.calculate_external_constraint_multipliers(
             eq_con_multipliers,
         )
