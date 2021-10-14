@@ -245,6 +245,12 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         the "outer" solver).
 
         """
+        # NOTE: This method implicitly relies on the value of inputs stored
+        # in the nlp. Should we also rely on the multiplier that are in
+        # the nlp?
+        # We would then need to call nlp.set_duals twice. Once with the
+        # residual multipliers and once with the full multipliers.
+        # I like the current approach better for now.
         nlp = self._nlp
         y = self.external_vars
         f = self.residual_cons
@@ -259,7 +265,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         external_multipliers = dfdg.dot(resid_multipliers)
         return external_multipliers
 
-    def get_hessians_of_lagrangian(self):
+    def get_full_space_lagrangian_hessians(self):
         """
         Calculates terms of Hessian of full-space Lagrangian due to
         external and residual constraints. Note that multipliers are
@@ -452,10 +458,11 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
 
         """
         # TODO: I should calculate external multipliers here to make
-        # sure they are up-to-date.
+        # sure they are up-to-date. The multipliers just need to
+        # be calculated after inputs are set.
 
         # These are full-space Hessian-of-Lagrangian terms
-        hlxx, hlxy, hlyy = self.get_hessians_of_lagrangian()
+        hlxx, hlxy, hlyy = self.get_full_space_lagrangian_hessians()
 
         # These terms can be used to calculate the corresponding
         # Hessian-of-Lagrangian term in the full space.
