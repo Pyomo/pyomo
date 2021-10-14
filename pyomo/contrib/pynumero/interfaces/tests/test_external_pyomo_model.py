@@ -261,6 +261,46 @@ class Model2by2(object):
             ])
         return [d2y0dxdx, d2y1dxdx]
 
+    def calculate_external_multipliers(self, lam, x):
+        r"""
+        Calculates the multipliers of the external constraints
+        from the multipliers of the residual constraints,
+        assuming zero dual infeasibility in the coordinates of
+        the external variables.
+        This is calculated analytically from:
+
+        \nabla_y f^T \lambda_f + \nabla_y g^T \lambda_g = 0
+
+        """
+        y = self.evaluate_external_variables(x)
+        lg0 = -2*y[1]*lam[0]/(x[0]**2 * x[1]**0.5 * y[0])
+        lg1 = -(2*y[0]*lam[0] + x[0]**2*x[1]**0.5*y[1]*lg0)/(x[0]*x[1])
+        return [lg0, lg1]
+
+    def calculate_full_space_lagrangian_hessians(self, lam, x):
+        y = self.evaluate_external_variables(x)
+        lam_g = self.calculate_external_multipliers(lam, x)
+        d2fdx0dx0 = 2.0
+        d2fdx1dx1 = 2.0
+        d2fdy0dy0 = 2.0
+        d2fdy1dy1 = 2.0
+        hfxx = np.array([[d2fdx0dx0, 0], [0, d2fdx1dx1]])
+        hfxy = np.array([[0, 0], [0, 0]])
+        hfyy = np.array([[d2fdy0dy0, 0], [0, d2fdy1dy1]])
+
+        dg0dx0dx0 = 2*y[0]*x[1]**0.5*y[1]
+        dg0dx0dx1 = x[0]*y[0]*y[1]/x[1]**0.5
+        dg0dx1dx1 = -1/4*x[0]**2*y[0]*y[1]/x[1]**(3/2)
+        hg0xx = np.array([[dg0dx0dx0, dg0dx0dx1], [dg0dx0dx1, dg0dx1dx1]])
+
+        dg1dx0dx1 = y[0]
+        hg1xx = np.array([[0, dg1dx0dx1], [dg1dx0dx1, 0]])
+
+        hlxx = lam[0]*hfxx + lam_g[0]*hg0xx + lam_g[1]*hg1xx
+        hlxy = np.zeros((2, 2))
+        hlyy = np.zeros((2, 2))
+        return hlxx, hlxy, hlyy
+
 
 class TestGetHessianOfConstraint(unittest.TestCase):
 
@@ -789,7 +829,10 @@ class TestUpdatedHessianCalculationMethods(unittest.TestCase):
         m.y[1].set_value(4.0)
         x0_init_list = [-5.0, -3.0, 0.5, 1.0, 2.5]
         x1_init_list = [0.5, 1.0, 1.5, 2.5, 4.1]
-        x_init_list = list(itertools.product(x0_init_list, x1_init_list))
+        lam_init_list = [-2.5, -0.5, 0.0, 1.0, 2.0]
+        init_list = list(
+            itertools.product(x0_init_list, x1_init_list, lam_init_list)
+        )
         external_model = ExternalPyomoModel(
                 list(m.x.values()),
                 list(m.y.values()),
@@ -797,13 +840,50 @@ class TestUpdatedHessianCalculationMethods(unittest.TestCase):
                 list(m.external_eqn.values()),
                 )
 
-        for x in x_init_list:
+        for x0, x1, lam in init_list:
+            x = [x0, x1]
+            lam = [lam]
             external_model.set_input_values(x)
-            hess = external_model.evaluate_hessian_external_variables()
-            expected_hess = model.evaluate_external_hessian(x)
-            for matrix1, matrix2 in zip(hess, expected_hess):
-                matrix2 = np.matrix(matrix2)
-                np.testing.assert_allclose(matrix1, matrix2, rtol=1e-8)
+            lam_g = external_model.calculate_external_constraint_multipliers(lam)
+            pred_lam_g = model.calculate_external_multipliers(lam, x)
+            np.testing.assert_allclose(lam_g, pred_lam_g, rtol=1e-8)
+
+    def test_full_space_lagrangian_hessians(self):
+        model = Model2by2()
+        m = model.make_model()
+        m.x[0].set_value(1.0)
+        m.x[1].set_value(2.0)
+        m.y[0].set_value(3.0)
+        m.y[1].set_value(4.0)
+        x0_init_list = [-5.0, -3.0, 0.5, 1.0, 2.5]
+        x1_init_list = [0.5, 1.0, 1.5, 2.5, 4.1]
+        lam_init_list = [-2.5, -0.5, 0.0, 1.0, 2.0]
+        init_list = list(
+            itertools.product(x0_init_list, x1_init_list, lam_init_list)
+        )
+        external_model = ExternalPyomoModel(
+                list(m.x.values()),
+                list(m.y.values()),
+                list(m.residual_eqn.values()),
+                list(m.external_eqn.values()),
+                )
+
+        for x0, x1, lam in init_list:
+            x = [x0, x1]
+            lam = [lam]
+            external_model.set_input_values(x)
+            external_model.set_external_constraint_multipliers(lam)
+            hlxx, hlxy, hlyy = \
+                external_model.get_full_space_lagrangian_hessians()
+            pred_hlxx, pred_hlxy, pred_hlyy = \
+                model.calculate_full_space_lagrangian_hessians(lam, x)
+
+            # TODO: Is comparing the array representation sufficient here?
+            # Should I make sure I get the sparse representation I expect?
+            np.testing.assert_allclose(hlxx.toarray(), pred_hlxx, rtol=1e-8)
+            np.testing.assert_allclose(hlxy.toarray(), pred_hlxy, rtol=1e-8)
+            np.testing.assert_allclose(hlyy.toarray(), pred_hlyy, rtol=1e-8)
+            
 
 
 if __name__ == '__main__':
