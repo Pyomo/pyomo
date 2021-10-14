@@ -1351,6 +1351,10 @@ external
         self._pint_registry = pint_registry
         self._pint_dimensionless = self._pint_registry.dimensionless
 
+    @property
+    def pint_registry(self):
+        return self._pint_registry
+
 
 class _DeferredUnitsSingleton(PyomoUnitsContainer):
     """A class supporting deferred interrogation of pint_available.

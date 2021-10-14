@@ -621,7 +621,7 @@ class TestPyomoUnit(unittest.TestCase):
         with LoggingIntercept() as LOG:
             um.set_pint_registry(pint_reg)
         self.assertEqual(LOG.getvalue(), "")
-        self.assertIs(um._pint_registry, pint_reg)
+        self.assertIs(um.pint_registry, pint_reg)
         # Test that a no-op set is silent
         with LoggingIntercept() as LOG:
             um.set_pint_registry(pint_reg)
