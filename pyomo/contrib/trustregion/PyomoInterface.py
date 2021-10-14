@@ -41,7 +41,8 @@ class ReplaceEFVisitor(EXPR.ExpressionReplacementVisitor):
         self.trf = trf_block
         self.efSet = efSet
 
-    def visit(self, node, values):
+    def exitNode(self, node, values):
+        node = super().exitNode(node, values)
         if node.__class__ is not EXPR.ExternalFunctionExpression:
             return node
         if id(node._fcn) not in self.efSet:
@@ -62,7 +63,7 @@ class ReplaceEFVisitor(EXPR.ExpressionReplacementVisitor):
         # PythonCallbackFunction API (that restriction leads unfortunate
         # things later; i.e., accessing the private _fcn attribute
         # below).
-        for arg in list(values)[1:]:
+        for arg in values[1][1:]:
             if type(arg) in nonpyomo_leaf_types or arg.is_fixed():
                 # We currently do not allow constants or parameters for
                 # the external functions.
