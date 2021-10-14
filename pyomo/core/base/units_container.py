@@ -994,8 +994,9 @@ class PyomoUnitsContainer(object):
 
             # get a local units object (to avoid duplicate registration
             # with the example in load_definitions_from_strings)
+            >>> import pint
             >>> import pyomo.core.base.units_container as _units
-            >>> u = _units.PyomoUnitsContainer()
+            >>> u = _units.PyomoUnitsContainer(pint.UnitRegistry())
             >>> with open('my_additional_units.txt', 'w') as FILE:
             ...     tmp = FILE.write("USD = [currency]\\n")
 
@@ -1005,6 +1006,13 @@ class PyomoUnitsContainer(object):
             >>> u.load_definitions_from_file('my_additional_units.txt')
             >>> print(u.USD)
             USD
+
+        .. doctest::
+            :skipif: not pint_available
+            :hide:
+
+            >>> import os
+            >>> os.remove('my_additional_units.txt')
 
         """
         self._pint_registry.load_definitions(definition_file)
@@ -1027,8 +1035,9 @@ class PyomoUnitsContainer(object):
 
             # get a local units object (to avoid duplicate registration
             # with the example in load_definitions_from_strings)
+            >>> import pint
             >>> import pyomo.core.base.units_container as _units
-            >>> u = _units.PyomoUnitsContainer()
+            >>> u = _units.PyomoUnitsContainer(pint.UnitRegistry())
 
         .. doctest::
             :skipif: not pint_available
