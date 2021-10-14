@@ -353,8 +353,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
         # List of variables that don't appear in constraints to force into the
         # nl-file
-        force_in_nonlinear_constraint_vars = \
-            io_options.pop("force_in_nonlinear_constraint_vars", False)
+        export_nonlinear_variables = \
+            io_options.pop("export_nonlinear_variables", False)
 
         if len(io_options):
             raise ValueError(
@@ -405,7 +405,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     skip_trivial_constraints=skip_trivial_constraints,
                     file_determinism=file_determinism,
                     include_all_variable_bounds=include_all_variable_bounds,
-                    force_in_nonlinear_constraint_vars=force_in_nonlinear_constraint_vars)
+                    export_nonlinear_variables=export_nonlinear_variables)
 
         self._symbolic_solver_labels = False
         self._output_fixed_variable_bounds = False
@@ -707,7 +707,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         skip_trivial_constraints=False,
                         file_determinism=1,
                         include_all_variable_bounds=False,
-                        force_in_nonlinear_constraint_vars=False):
+                        export_nonlinear_variables=False):
 
         output_fixed_variable_bounds = self._output_fixed_variable_bounds
         symbolic_solver_labels = self._symbolic_solver_labels
@@ -1143,8 +1143,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
             UnusedVars = AllVars.difference(UsedVars)
             LinearVars.update(UnusedVars)
 
-        if force_in_nonlinear_constraint_vars:
-            for v in force_in_nonlinear_constraint_vars:
+        if export_nonlinear_variables:
+            for v in export_nonlinear_variables:
                 if self_varID_map[id(v)] not in UsedVars:
                     Vars_dict[id(v)] = v
                     ConNonlinearVars.update([self_varID_map[id(v)]])
