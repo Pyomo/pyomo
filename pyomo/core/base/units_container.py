@@ -500,51 +500,6 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         # checks were OK, return the first one in the list
         return pint_unit_0
 
-    def _get_unit_for_linear_expression(self, node, child_units):
-        """
-        Return (and test) the units corresponding to a :py:class:`LinearExpression` node
-        in the expression tree.
-
-        This is a special node since it does not use "args" the way
-        other expression types do. Because of this, the StreamBasedExpressionVisitor
-        does not pick up on the "children", and child_units is empty.
-        Therefore, we implement the recursion into coeffs and vars ourselves.
-
-        Parameters
-        ----------
-        node : Pyomo expression node
-            The parent node of the children
-
-        child_units : list
-           This is a list of pint units (one for each of the children)
-
-        Returns
-        -------
-        : pint unit
-        """
-        # StreamBasedExpressionVisitor does not handle the children of this node
-        assert not child_units
-
-        # TODO: This may be expensive for long summations and, in the
-        # case of reporting only, we may want to skip the checks
-        term_unit_list = []
-        if node.constant not in { 0. }:
-            # we have a non-zero constant term, get its units
-            term_unit_list.append(
-                self._pyomo_units_container._get_pint_units(node.constant))
-
-        # go through the coefficients and variables
-        assert len(node.linear_coefs) == len(node.linear_vars)
-        for k,v in enumerate(node.linear_vars):
-            c = node.linear_coefs[k]
-            v_units = self._pyomo_units_container._get_pint_units(v)
-            c_units = self._pyomo_units_container._get_pint_units(c)
-            term_unit_list.append(c_units*v_units)
-
-        assert term_unit_list
-
-        return self._get_unit_for_equivalent_children(node, term_unit_list)
-
     def _get_unit_for_product(self, node, child_units):
         """
         Return (and test) the units corresponding to a product expression node
@@ -928,7 +883,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         EXPR.GetItemExpression: _get_dimensionless_with_dimensionless_children,
         EXPR.ExternalFunctionExpression: _get_units_ExternalFunction,
         EXPR.NPV_ExternalFunctionExpression: _get_units_ExternalFunction,
-        EXPR.LinearExpression: _get_unit_for_linear_expression
+        EXPR.LinearExpression: _get_unit_for_equivalent_children,
     }
 
     unary_function_method_map = {
