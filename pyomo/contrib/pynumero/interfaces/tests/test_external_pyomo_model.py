@@ -894,7 +894,6 @@ class TestUpdatedHessianCalculationMethods(unittest.TestCase):
             np.testing.assert_allclose(hlxx.toarray(), pred_hlxx, rtol=1e-8)
             np.testing.assert_allclose(hlxy.toarray(), pred_hlxy, rtol=1e-8)
             np.testing.assert_allclose(hlyy.toarray(), pred_hlyy, rtol=1e-8)
-            
 
 
 if __name__ == '__main__':
