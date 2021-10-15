@@ -312,6 +312,15 @@ class Model2by2(object):
         hlyy = lam[0]*hfyy + lam_g[0]*hg0yy + lam_g[1]*hg1yy
         return hlxx, hlxy, hlyy
 
+    def calculate_reduced_lagrangian_hessian(self, lam, x):
+        dydx = self.evaluate_external_jacobian(x)
+        hlxx, hlxy, hlyy = self.calculate_full_space_lagrangian_hessians(lam, x)
+        return (
+            hlxx
+            + (hlxy.dot(dydx)).transpose() + hlxy.dot(dydx)
+            + dydx.transpose().dot(hlyy).dot(dydx)
+        )
+
 
 class TestGetHessianOfConstraint(unittest.TestCase):
 
@@ -883,6 +892,10 @@ class TestUpdatedHessianCalculationMethods(unittest.TestCase):
             x = [x0, x1]
             lam = [lam]
             external_model.set_input_values(x)
+            # Note that these multiplier calculations are dependent on x,
+            # so if we switch their order, we will get "wrong" answers.
+            # (This is wrong in the sense that the residual and external
+            # multipliers won't necessarily correspond).
             external_model.set_external_constraint_multipliers(lam)
             hlxx, hlxy, hlyy = \
                 external_model.get_full_space_lagrangian_hessians()
@@ -894,6 +907,48 @@ class TestUpdatedHessianCalculationMethods(unittest.TestCase):
             np.testing.assert_allclose(hlxx.toarray(), pred_hlxx, rtol=1e-8)
             np.testing.assert_allclose(hlxy.toarray(), pred_hlxy, rtol=1e-8)
             np.testing.assert_allclose(hlyy.toarray(), pred_hlyy, rtol=1e-8)
+
+    def test_reduced_hessian_lagrangian(self):
+        model = Model2by2()
+        m = model.make_model()
+        m.x[0].set_value(1.0)
+        m.x[1].set_value(2.0)
+        m.y[0].set_value(3.0)
+        m.y[1].set_value(4.0)
+        x0_init_list = [-5.0, -3.0, 0.5, 1.0, 2.5]
+        x1_init_list = [0.5, 1.0, 1.5, 2.5, 4.1]
+        lam_init_list = [-2.5, -0.5, 0.0, 1.0, 2.0]
+        init_list = list(
+            itertools.product(x0_init_list, x1_init_list, lam_init_list)
+        )
+        external_model = ExternalPyomoModel(
+                list(m.x.values()),
+                list(m.y.values()),
+                list(m.residual_eqn.values()),
+                list(m.external_eqn.values()),
+                )
+
+        for x0, x1, lam in init_list:
+            x = [x0, x1]
+            lam = [lam]
+            external_model.set_input_values(x)
+            # Same comment as previous test regarding calculation order
+            external_model.set_external_constraint_multipliers(lam)
+            hlxx, hlxy, hlyy = \
+                external_model.get_full_space_lagrangian_hessians()
+            hess = external_model.calculate_reduced_hessian_lagrangian(
+                hlxx, hlxy, hlyy
+            )
+            pred_hess = model.calculate_reduced_lagrangian_hessian(lam, x)
+            # This test asserts that we are doing the block reduction properly.
+            np.testing.assert_allclose(np.array(hess), pred_hess, rtol=1e-8)
+
+            from_individual = external_model.evaluate_hessians_of_residuals()
+            hl_from_individual = sum(l*h for l, h in zip(lam, from_individual))
+            # This test asserts that the block reduction is correct.
+            np.testing.assert_allclose(
+                np.array(hess), hl_from_individual, rtol=1e-8
+            )
 
 
 if __name__ == '__main__':
