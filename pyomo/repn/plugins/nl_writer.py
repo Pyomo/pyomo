@@ -29,6 +29,7 @@ from pyomo.core.base import (
     SymbolMap, NameLabeler, SortComponents, minimize,
 )
 from pyomo.core.base.block import SortComponents
+from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
 from pyomo.opt import WriterFactory
 
@@ -63,6 +64,10 @@ def identify_unrecognized_components(model, active=True, valid=set()):
                                           sort=SortComponents.unsorted):
         local_ctypes = block.collect_ctypes(active=None, descend_into=False)
         for ctype in local_ctypes - valid:
+            # TODO: we should rethink the definition of "active" for
+            # Components that are not subclasses of ActiveComponent
+            if not issubclass(ctype, ActiveComponent):
+                continue
             unrecognized.setdefault(ctype, []).extend(
                 block.component_data_objects(
                     ctype=ctype,
