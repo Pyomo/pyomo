@@ -29,7 +29,7 @@ from pyomo.core.base import (
     SymbolMap, NameLabeler, SortComponents, minimize,
 )
 from pyomo.core.base.block import SortComponents
-from pyomo.core.base.expression import Expression, _GeneralExpressionData
+from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
 from pyomo.opt import WriterFactory
 
 from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
@@ -1212,7 +1212,7 @@ _operator_handles = {
     InequalityExpression: handle_inequality_node,
     RangedExpression: handle_ranged_inequality_node,
     _GeneralExpressionData: handle_expression_node,
-    Expression: handle_expression_node,
+    ScalarExpression: handle_expression_node,
     ExternalFunctionExpression: handle_external_function_node,
     # These are handled explicitly in beforeChild():
     # LinearExpression: handle_linear_expression,
