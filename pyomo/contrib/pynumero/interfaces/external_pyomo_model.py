@@ -209,20 +209,11 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
     def set_equality_constraint_multipliers(self, eq_con_multipliers):
         """
         Sets multipliers for residual equality constraints seen by the
-        outer solver. This also sets multipliers for the external
-        constraints, which are necessary for Hessian-of-Lagrangian
-        calculation.
+        outer solver.
 
         """
-        # NOTE: For correctness, I think this needs to be called after
-        # set_input_values. Do I need to update external multipliers
-        # after input values are set?
-        # I think I just need to defer external multiplier calculation
-        # until the Hessian-of-Lagrangian term is asked for.
-        eq_con_multipliers = np.array(eq_con_multipliers)
         for i, val in enumerate(eq_con_multipliers):
             self.residual_con_multipliers[i] = val
-        self.set_external_constraint_multipliers(eq_con_multipliers)
 
     def set_external_constraint_multipliers(self, eq_con_multipliers):
         eq_con_multipliers = np.array(eq_con_multipliers)
@@ -457,9 +448,13 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         due to these equality constraints.
 
         """
-        # TODO: I should calculate external multipliers here to make
-        # sure they are up-to-date. The multipliers just need to
-        # be calculated after inputs are set.
+        # External multipliers must be calculated after both primals and duals
+        # are set, and are only necessary for this Hessian calculation.
+        # We know this Hessian calculation wants to use the most recently
+        # set primals and duals, so we can safely calculate external
+        # multipliers here.
+        eq_con_multipliers = self.residual_con_multipliers
+        self.set_external_constraint_multipliers(eq_con_multipliers)
 
         # These are full-space Hessian-of-Lagrangian terms
         hlxx, hlxy, hlyy = self.get_full_space_lagrangian_hessians()
