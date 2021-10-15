@@ -425,22 +425,6 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         d2fdx2 = term1 + term2 + term3 + term4
         return d2fdx2
 
-    def _evaluate_hessian_equality_constraints(self):
-        """
-        This method actually evaluates the sum of Hessians times
-        multipliers, i.e. the term in the Hessian of the Lagrangian
-        due to these equality constraints.
-        """
-        d2fdx2 = self.evaluate_hessians_of_residuals()
-        multipliers = self.residual_con_multipliers
-
-        sum_ = sum(mult*matrix for mult, matrix in zip(multipliers, d2fdx2))
-        # Return a sparse matrix with every entry accounted for because it
-        # is difficult to determine rigorously which coordinates
-        # _could possibly_ be nonzero.
-        sparse = _dense_to_full_sparse(sum_)
-        return sps.tril(sparse)
-
     def evaluate_hessian_equality_constraints(self):
         """
         This method actually evaluates the sum of Hessians times
