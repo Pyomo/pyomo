@@ -285,7 +285,6 @@ class RepnWrapper(object):
         self.nonlinear_vars = nonlinear
 
 
-@WriterFactory.register('nl', 'Generate the corresponding AMPL NL file.')
 @WriterFactory.register(
     'nl_v1', 'Generate the corresponding AMPL NL file (version 1).')
 class ProblemWriter_nl(AbstractProblemWriter):
