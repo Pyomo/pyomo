@@ -16,4 +16,6 @@ def load():
     import pyomo.repn.plugins.gams_writer
     import pyomo.repn.plugins.nl_writer
 
-    WriterFactory.register('nl', doc)(WriterFactory.get_class('nl_v1'))
+    from pyomo.opt import WriterFactory
+    WriterFactory.register('nl', WriterFactory.doc('nl_v1'))(
+        WriterFactory.get_class('nl_v1'))
