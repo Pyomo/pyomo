@@ -126,7 +126,7 @@ class DesignOfExperiments:
                      jac_initial=None, fim_initial=None,
                      formula='central', step=0.001, check=True):
         '''
-        Optimize DOE problem with design variables being the  .
+        Optimize DOE problem with design variables being the decisions.
         The DOE model is formed invasively and all scenarios are computed simultaneously.
         The function will first fun a square problem with design variable being fixed at
         the given initial points, and then unfix the design variable and do the
@@ -1369,7 +1369,7 @@ class DesignOfExperiments:
 
                     if fix_opt:
                         newvar.fix(fix_v)
-                        print(newvar, 'is fixed at ', fix_v)
+                        #print(newvar, 'is fixed at ', fix_v)
                     else:
                         newvar.unfix()
             else:
@@ -1378,7 +1378,7 @@ class DesignOfExperiments:
 
                 if fix_opt:
                     newvar.fix(fix_v)
-                    print(newvar, 'is fixed at ', fix_v)
+                    #print(newvar, 'is fixed at ', fix_v)
                 else:
                     newvar.unfix()
         return m
@@ -1389,6 +1389,7 @@ class DesignOfExperiments:
         solver = SolverFactory('ipopt')
         solver.options['linear_solver'] = 'ma57'
         solver.options['halt_on_ampl_error'] = 'yes'
+        solver.options['max_iter'] = 0
         return solver
 
     def __solve_doe(self, m, fix=False):

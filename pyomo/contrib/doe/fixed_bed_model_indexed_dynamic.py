@@ -270,7 +270,7 @@ def create_model(scena, temp_feed=313.15, temp_bath=313.15, y=0.15, doe_model=Tr
     if m.doe_model:
         m.temp_feed = Var(initialize=temp_feed, bounds=(273.15, 373.15))
         m.temp_bath = Var(initialize=temp_bath, bounds=(274, 600))
-        m.yfeed = Var(initialize=y, bounds=(0,0.5), within=NonNegativeReals)
+        m.yfeed = Var(initialize=y, bounds=(0,0.4), within=NonNegativeReals)
 
         m.temp_bath.fix()
 
@@ -586,6 +586,9 @@ def add_variables(m,tf=3200, timesteps=None, start=0):
         # temperature is initialized to be the T_inlet. As this is the gas temperature, it should be started to be the inlet gas temperature.
         m.temp = Var(m.scena, m.zgrid, m.t, initialize=m.temp_bath, bounds=(273.15,500.15), within=NonNegativeReals)
         m.dTdt = DerivativeVar(m.temp, wrt=m.t)
+        
+        # add external heat
+        m.Q = Var(m.t, initialize=1, within=Reals)
 
         # W/m3/K, value 0.2839 from [Dowling, 2012]
         # Estimated value 1.4E7 W/m3/K (DOE run2)
@@ -900,7 +903,7 @@ def energy_balance(m, j, z, t):
     
     # LHS: K/s
     # RHS: (kg/m3 * kJ/kg/s * 1000J/1kJ - J/m3/s - J/s/m3/K *K)/ (J/m3/K) = K/s
-    return m.dTdt[j,z,t] == (den_b*sum_hdn*1000 - duhdz - exp(m.ua[j])*(m.temp[j,z,t]-m.temp_bath))/dividant
+    return m.dTdt[j,z,t] == (den_b*sum_hdn*1000 - duhdz - exp(m.ua[j])*(m.temp[j,z,t]-m.temp_bath)+m.Q[t])/dividant
     
 def dalton(m, j, z, t):
     '''
