@@ -8,7 +8,47 @@ import pickle
 from itertools import permutations, product
 from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculation, get_dsdp
 
-class DesignOfExperiments: 
+class Measurement_flatten:
+    def __init__(self, measurement_timeset, measurement_extra_index):
+        self.measurement_name = list(measurement_timeset.keys())
+        self.measurement_timeset = measurement_timeset
+        self.measurement_extra_index = measurement_extra_index
+        # which measurement has extra indexes
+        self.extra_measure_name = list(measurement_extra_index.keys())
+
+    def flatten_measurement(self):
+
+        if self.measurement_extra_index is not None:
+            # check if measurement variables need to be flattened
+            flatten_measure_name = []
+            flatten_measure_timeset = {}
+            for j in self.measurement_name:
+                if j in self.extra_measure_name:
+                    for ind in self.measurement_extra_index[j]:
+                        flatten_name = j +'_index_'+ str(ind)
+                        flatten_measure_name.append(flatten_name)
+                        flatten_measure_timeset[flatten_name] = self.measurement_timeset[j]
+                else:
+                    flatten_measure_name.append(j)
+                    flatten_measure_timeset[j] = self.measurement_timeset[j]
+        else:
+            flatten_measure_name = self.measurement_name.copy()
+            flatten_measure_timeset = self.measurement_timeset.copy()
+        return flatten_measure_name, flatten_measure_timeset
+
+    def optimize_doe_flatten_measurement(self, jac_involved):
+        jac_involved_name = []
+        for j in list(jac_involved.keys()):
+            if jac_involved[j] is not None: # if it has extra index
+                for ind in jac_involved[j]:
+                    flatten_name = j + '_index_' + str(ind)
+                    jac_involved_name.append(flatten_name)
+            else:
+                jac_involved_name.append(j)
+
+        return jac_involved_name
+
+class DesignOfExperiments:
     def __init__(self, param_init, design_variable_timepoints, measurement_variable_timepoints, create_model, solver=None,
                  prior_FIM=None, discretize_model=None, verbose=True, args=None, measurement_extra_index=None):
         '''
@@ -45,35 +85,14 @@ class DesignOfExperiments:
         self.design_name = list(self.design_timeset.keys())
         # the control time point for each design variable
         self.design_time = list(self.design_timeset.values())
-        # model output (measurement) name
-        self.measurement_variable_timepoints = measurement_variable_timepoints
-        self.measurement_variables = list(measurement_variable_timepoints.keys())
-        # model measurement time
-        self.measurement_timeset = list(measurement_variable_timepoints.values())
         # create_model()
         self.create_model = create_model
         self.args = args
-        # measurement extra indexes
-        self.measurement_extra_index = measurement_extra_index
-        if self.measurement_extra_index is not None:
-            # which measurement has extra indexes
-            extra_measure_name = list(measurement_extra_index.keys())
-            # the extra indexes values
-            #extra_measure_index_value = list(measurement_extra_index.values())
-            # check if measurement variables need to be flattened
-            flatten_measure_name=[]
-            for j in self.measurement_variables:
-                if j in extra_measure_name:
-                    for ind in measurement_extra_index[j]:
-                        flatten_name = j + str(ind)
-                        flatten_measure_name.append(flatten_name)
-                else:
-                    flatten_measure_name.append(j)
-        else:
-            flatten_measure_name = self.measurement_variables.copy()
 
-        self.flatten_measure_name = flatten_measure_name
+        self.measure = Measurement_flatten(measurement_variable_timepoints, measurement_extra_index)
+        self.flatten_measure_name, self.flatten_measure_timeset = self.measure.flatten_measurement()
         print('The flattend measurements include:', self.flatten_measure_name)
+        #print('The flattened measurement time:', self.flatten_measure_timeset)
 
         # check if user-defined solver is given
         if solver is not None:
@@ -185,8 +204,10 @@ class DesignOfExperiments:
 
         # identify measurements involved in calculation
         if jac_involved_measurement is not None:
-            jac_involved_name_ = list(jac_involved_measurement.keys())
-            jac_involved_extra_index_=list(jac_involved_measurement.values())
+            self.jac_involved_name = self.measure.optimize_doe_flatten_measurement(jac_involved_measurement)
+
+        else:
+            self.jac_involved_name = self.flatten_measure_name.copy()
 
         # check if inputs are valid
         # simultaneous mode does not need to check mode and dimension of design variables
@@ -194,10 +215,8 @@ class DesignOfExperiments:
             self.__check_inputs(check_mode=False)
 
         # build the large DOE pyomo model
-        if jac_involved_measurement is None:
-            m = self.__create_doe_model()
-        else:
-            m = self.__create_doe_model(jac_involved_name = jac_involved_name_, jac_involved_extra_index= jac_involved_extra_index_)
+        m = self.__create_doe_model()
+
         # solve model, achieve results for square problem, and results for optimization problem
 
         # Solve square problem first
@@ -1029,7 +1048,7 @@ class DesignOfExperiments:
         return figure_draw_object
 
 
-    def __create_doe_model(self, jac_involved_name=None, jac_involved_extra_index=None):
+    def __create_doe_model(self):
         '''
         Add features for DOE.
 
@@ -1076,32 +1095,25 @@ class DesignOfExperiments:
         # create parameter, measurement, time and measurement time set
         m.para_set = Set(initialize=self.param_name)
         param_name = self.param_name
-        m.y_set = Set(initialize=self.measurement_variables)
+        m.y_set = Set(initialize=self.jac_involved_name)
         m.t_set = Set(initialize=time_set)
-        m.tmea_set = Set(initialize=self.measurement_timeset[0])
 
-        # reorganize measurement names with
-        if jac_involved_name is not None:
-            flatten_jac_measure_name = []
-            for j,mname in enumerate(self.measurement_variables):
-                if mname in jac_involved_name:
-                    for ind in jac_involved_extra_index[j]:
-                        flatten_name = mname +'_'+ str(ind)
-                        flatten_jac_measure_name.append(flatten_name)
-
-            print('Flattened measurements:', flatten_jac_measure_name)
-            # a set of flattened measurements
-            m.involved_y_set = Set(initialize=flatten_jac_measure_name)
-
+        def flatten_time(m, j):
+            return self.flatten_measure_timeset[j]
+        #m.tmea_set = Param(m.y_set, initialize=flatten_time, within=Reals)
+        # TODO: expand this to any y set
+        flatten_timepoint = list(self.flatten_measure_timeset.values())
+        m.tmea_set = Set(initialize=flatten_timepoint[0])
 
         # we can be sure about the name of scenarios, because they are generated by our function
         m.scenario = Set(initialize=scenario_all['scena-name'])
         m.optimize = self.optimize
 
         # check if measurement time points are in the time set
-        for t in m.tmea_set:
-            if not (t in m.t):
-                raise ValueError('Warning: Measure timepoints should be in the time list.')
+        for j in m.y_set:
+            for t in m.tmea_set:
+                if not (t in m.t):
+                    raise ValueError('Warning: Measure timepoints should be in the time list.')
 
         # check if control time points are in the time set
         for d in range(len(self.design_name)):
@@ -1114,30 +1126,18 @@ class DesignOfExperiments:
         # Elements in Jacobian matrix
         if self.jac_initial is not None:
             dict_jac = {}
-            if jac_involved_name is not None:
-                for i, bu in enumerate(m.involved_y_set):
-                    for j, un in enumerate(m.para_set):
-                        for t, tim in enumerate(m.tmea_set):
-                            dict_jac[(bu, un, tim)] = self.jac_initial[i, j, t]
-            else:
-                for i, bu in enumerate(m.y_set):
-                    for j, un in enumerate(m.para_set):
-                        for t, tim in enumerate(m.tmea_set):
-                            dict_jac[(bu,un,tim)] = self.jac_initial[i,j,t]
+            for i, bu in enumerate(m.y_set):
+                for j, un in enumerate(m.para_set):
+                    for t, tim in enumerate(m.tmea_set):
+                        dict_jac[(bu,un,tim)] = self.jac_initial[i,j,t]
 
             def jac_initialize(m,i,j,t):
                 return dict_jac[(bu,un,tim)]
 
-            if jac_involved_name is not None:
-                m.jac = Var(m.involved_y_set, m.para_set, m.tmea_set, initialize=jac_initialize)
-            else:
-                m.jac = Var(m.y_set, m.para_set, m.tmea_set, initialize=jac_initialize)
+            m.jac = Var(m.y_set, m.para_set, m.tmea_set, initialize=jac_initialize)
 
         else:
-            if jac_involved_name is not None:
-                m.jac = Var(m.involved_y_set, m.para_set, m.tmea_set, initialize=1E-20)
-            else:
-                m.jac = Var(m.y_set, m.para_set, m.tmea_set, initialize=1E-20)
+            m.jac = Var(m.y_set, m.para_set, m.tmea_set, initialize=1E-20)
 
         # Initialize Hessian with an identity matrix
         def identity_matrix(m,j,d):
@@ -1208,29 +1208,21 @@ class DesignOfExperiments:
             '''
             # A better way to do this: 
             # https://github.com/IDAES/idaes-pse/blob/274e58bef55f2f969f0df97cbb1fb7d99342388e/idaes/apps/uncertainty_propagation/sens.py#L296
-            up_C = eval('m.'+j+'['+str(scenario_all['jac-index'][p][0])+','+str(t)+']')
-            lo_C = eval('m.'+j+'['+str(scenario_all['jac-index'][p][1])+','+str(t)+']')
+            # check if j is a measurement with extra index by checking if there is '_index_' in its name
+            if '_index_' in j:
+                measure_name = j.split('_index_')[0]
+                measure_index = j.split('_index_')[1]
 
-            return m.jac[j,p,t] == (up_C - lo_C)/scenario_all['eps-abs'][p] *self.scale_constant_value
+                up_C = eval('m.' + measure_name + '[' + str(scenario_all['jac-index'][p][0]) + ',' + measure_index + ',' + str(t) + ']')
+                lo_C = eval('m.' + measure_name + '[' + str(scenario_all['jac-index'][p][1]) + ',' + measure_index + ',' + str(t) + ']')
 
-        def jac_numerical_extraindex(m,j,p,t):
-            '''
-            Calculate the Jacobian with the flattened model responses
-            j: model responses, flattened with extra indexes
-            p: model parameters
-            t: timepoints
-            '''
-            # A better way to do this:
-            # https://github.com/IDAES/idaes-pse/blob/274e58bef55f2f969f0df97cbb1fb7d99342388e/idaes/apps/uncertainty_propagation/sens.py#L296
+                return m.jac[j, p, t] == (up_C - lo_C) / scenario_all['eps-abs'][p] * self.scale_constant_value
 
-            measure_name = j.split('_')[0]
-            measure_index = j.split('_')[1]
+            else:
+                up_C = eval('m.'+j+'['+str(scenario_all['jac-index'][p][0])+','+str(t)+']')
+                lo_C = eval('m.'+j+'['+str(scenario_all['jac-index'][p][1])+','+str(t)+']')
 
-            #ind = self.measurement_extra_index[measure_name][0]
-            up_C = eval('m.' + measure_name + '[' + str(scenario_all['jac-index'][p][0]) + ',' + measure_index + ',' + str(t) + ']')
-            lo_C = eval('m.' + measure_name + '[' + str(scenario_all['jac-index'][p][1]) + ',' + measure_index + ',' + str(t) + ']')
-
-            return m.jac[j,p,t] == (up_C - lo_C)/scenario_all['eps-abs'][p] *self.scale_constant_value
+                return m.jac[j,p,t] == (up_C - lo_C)/scenario_all['eps-abs'][p] *self.scale_constant_value
 
         #A constraint to calculate elements in Hessian matrix
         # transfer prior FIM to be Expressions
@@ -1252,17 +1244,6 @@ class DesignOfExperiments:
                 return m.FIM[j,d] == sum(sum(m.jac[z,j,i]*self.param_init[j]*self.param_init[d]*m.jac[z,d,i] for z in m.y_set) for i in m.tmea_set) + m.refele[j, d]*self.fim_scale_constant_value
             else:
                 return m.FIM[j,d] == sum(sum(m.jac[z,j,i]*m.jac[z,d,i] for z in m.y_set) for i in m.tmea_set) + m.refele[j, d]*self.fim_scale_constant_value
-
-        def calc_FIM_extraindex(m,j,d):
-            '''
-            Calculate FIM elements
-            '''
-            # check if scale
-            if self.scale_nominal_param_value:
-                return m.FIM[j,d] == sum(sum(m.jac[z,j,i]*self.param_init[j]*self.param_init[d]*m.jac[z,d,i] for z in m.involved_y_set) for i in m.tmea_set) + m.refele[j, d]*self.fim_scale_constant_value
-            else:
-                return m.FIM[j,d] == sum(sum(m.jac[z,j,i]*m.jac[z,d,i] for z in m.involved_y_set) for i in m.tmea_set) + m.refele[j, d]*self.fim_scale_constant_value
-
 
         def trace_calc(m):
             '''
@@ -1314,15 +1295,8 @@ class DesignOfExperiments:
 
 
         ### Constraints and Objective function
-        if jac_involved_name is None:
-            m.dC_value = Constraint(m.y_set, m.para_set, m.tmea_set, rule=jac_numerical)
-        else:
-            m.dC_value = Constraint(m.involved_y_set, m.para_set, m.tmea_set, rule=jac_numerical_extraindex)
-
-        if jac_involved_name is None:
-            m.ele_rule = Constraint(m.para_set, m.para_set, rule=calc_FIM)
-        else:
-            m.ele_rule = Constraint(m.para_set, m.para_set, rule=calc_FIM_extraindex)
+        m.dC_value = Constraint(m.y_set, m.para_set, m.tmea_set, rule=jac_numerical)
+        m.ele_rule = Constraint(m.para_set, m.para_set, rule=calc_FIM)
 
             # Only giving the objective function when there's Degree of freedom. Make OBJ=0 when it's a square problem, which helps converge.
         if self.optimize:
@@ -1389,7 +1363,7 @@ class DesignOfExperiments:
         solver = SolverFactory('ipopt')
         solver.options['linear_solver'] = 'ma57'
         solver.options['halt_on_ampl_error'] = 'yes'
-        solver.options['max_iter'] = 0
+        solver.options['max_iter'] = 3000
         return solver
 
     def __solve_doe(self, m, fix=False):
