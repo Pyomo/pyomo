@@ -34,9 +34,12 @@ class Measurement_flatten:
         else:
             flatten_measure_name = self.measurement_name.copy()
             flatten_measure_timeset = self.measurement_timeset.copy()
+
+        self.flatten_measure_name = flatten_measure_name
+        self.flatten_measure_timeset = flatten_measure_timeset
         return flatten_measure_name, flatten_measure_timeset
 
-    def optimize_doe_flatten_measurement(self, jac_involved):
+    def partly_flatten_measurement(self, jac_involved):
         jac_involved_name = []
         for j in list(jac_involved.keys()):
             if jac_involved[j] is not None: # if it has extra index
@@ -204,7 +207,7 @@ class DesignOfExperiments:
 
         # identify measurements involved in calculation
         if jac_involved_measurement is not None:
-            self.jac_involved_name = self.measure.optimize_doe_flatten_measurement(jac_involved_measurement)
+            self.jac_involved_name = self.measure.partly_flatten_measurement(jac_involved_measurement)
 
         else:
             self.jac_involved_name = self.flatten_measure_name.copy()
@@ -228,7 +231,7 @@ class DesignOfExperiments:
         time_solve1 = time1_solve-time0_solve
 
         # create result object
-        analysis_square = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, flatten_all_measure=self.flatten_measure_name,
+        analysis_square = FIM_result(self.param_name, self.measure,
                                      prior_FIM=self.prior_FIM, scale_constant_value=self.scale_constant_value)
         # for simultaneous mode, FIM and Jacobian are extracted with extract_FIM()
         #analysis_square.extract_FIM(m, self.design_timeset, result_square,
@@ -247,7 +250,7 @@ class DesignOfExperiments:
             time_solve2 = time1_solve2 - time0_solve2
 
             # create result object
-            analysis_optimize = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset,  flatten_all_measure=self.flatten_measure_name,
+            analysis_optimize = FIM_result(self.param_name, self.measure,
                                            prior_FIM=self.prior_FIM)
             # for simultaneous mode, FIM and Jacobian are extracted with extract_FIM()
             analysis_optimize.extract_FIM(m, self.design_timeset, result_doe, y_set=self.measurement_variables, t_all_set=self.time_set, obj=objective_option)
@@ -363,7 +366,7 @@ class DesignOfExperiments:
             else:
                 prior_in_use = specified_prior
 
-            FIM_analysis = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, flatten_all_measure=self.flatten_measure_name,
+            FIM_analysis = FIM_result(self.param_name, self.measure,
                                       prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
             # add the formed simultaneous model to the object so that users can have access
@@ -466,7 +469,7 @@ class DesignOfExperiments:
             else:
                 prior_in_use = specified_prior
 
-            FIM_analysis = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, flatten_all_measure=self.flatten_measure_name,
+            FIM_analysis = FIM_result(self.param_name, self.measure,
                                       prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
             # Store the Jacobian information for access by users
@@ -621,7 +624,7 @@ class DesignOfExperiments:
                 prior_in_use = specified_prior
 
             # Assemble and analyze results
-            FIM_analysis = FIM_result(self.param_name, self.measurement_variables, self.measurement_timeset, flatten_all_measure=self.flatten_measure_name,
+            FIM_analysis = FIM_result(self.param_name, self.measure,
                                       prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
             if self.verbose:
@@ -755,7 +758,7 @@ class DesignOfExperiments:
                 prior_in_use = specified_prior
 
             # Assemble and analyze results
-            FIM_analysis = FIM_result(self.param_name,self.measurement_variables, self.measurement_timeset, flatten_all_measure=self.flatten_measure_name,
+            FIM_analysis = FIM_result(self.param_name,self.measure,
                                       prior_FIM=prior_in_use, store_FIM=FIM_store_name,
                                       scale_constant_value=self.scale_constant_value)
 
@@ -1713,7 +1716,7 @@ class Scenario_data:
 
 
 class FIM_result:
-    def __init__(self, para_name, measurement_variables, measurement_timeset, flatten_all_measure=None, prior_FIM=None, store_FIM=None, scale_constant_value=1, max_condition_number=1.0E12,
+    def __init__(self, para_name, measure_object, prior_FIM=None, store_FIM=None, scale_constant_value=1, max_condition_number=1.0E12,
                  verbose=True):
         '''
         Analyze the FIM result for a single run
@@ -1731,9 +1734,10 @@ class FIM_result:
         verbose: if print statements are used
         '''
         self.para_name = para_name
-        self.measurement_variables = measurement_variables
-        self.measurement_timeset = measurement_timeset
-        self.flatten_all_measure = flatten_all_measure
+        self.measure_object = measure_object
+        self.measurement_variables = measure_object.measurement_name
+        self.measurement_timeset = measure_object.flatten_measure_timeset
+        self.flatten_all_measure = measure_object.flatten_measure_name
         self.prior_FIM = prior_FIM
         self.store_FIM = store_FIM
         self.scale_constant_value = scale_constant_value
@@ -1741,7 +1745,7 @@ class FIM_result:
         self.max_condition_number = max_condition_number
         self.verbose = verbose
 
-    def calculate_FIM(self, jaco_information, jaco_3D, dv_values, jaco_involved_name=None, jaco_involved_extra_index=None, result=None):
+    def calculate_FIM(self, jaco_information, jaco_3D, dv_values, jaco_involved=None, result=None):
         '''
         Calculate FIM from Jacobian information. This is for grid search (combined models) results
 
@@ -1775,12 +1779,8 @@ class FIM_result:
         jaco_info =  {}
         ## split jacobian if needed
         # flatten measurement variables needed for this calculation
-        if jaco_involved_name is not None:
-            involved_flatten_index = []
-            for n, nam in enumerate(jaco_involved_name):
-                for ind in jaco_involved_extra_index[n]:
-                    flatten_name = nam + str(ind)
-                    involved_flatten_index.append(flatten_name)
+        if jaco_involved is not None:
+            involved_flatten_index = self.measure_object.partly_flatten_measurement(jaco_involved)
             print('involved flatten name:', involved_flatten_index)
 
             # reorganize the jacobian subset with the same form of the jacobian
@@ -1794,7 +1794,6 @@ class FIM_result:
                         # loop over time
                         for d in range(len(jaco_3D[n_all_measure, p, :])):
                             jaco_info[par].append(jaco_3D[n_all_measure, p, d])
-
 
         else:
             jaco_info = jaco_information.copy()
@@ -1832,7 +1831,7 @@ class FIM_result:
         if (self.store_FIM is not None):
             self.__store_FIM()
 
-    def extract_FIM(self, m, dv_set, result, jaco_involved_name=None, jaco_involved_extra_index=None,  y_set=None, t_all_set=None, obj=None, add_fim=False):
+    def extract_FIM(self, m, dv_set, result, jaco_involved=None,  y_set=None, t_all_set=None, obj=None, add_fim=False):
         '''
         Extract FIM from an invasive model
 
@@ -1885,13 +1884,8 @@ class FIM_result:
         jaco_info = {}
         # split jacobian if needed
         # get involved flattened measurements
-        if jaco_involved_name is not None:
-            involved_flatten_index = []
-            for n, nam in enumerate(jaco_involved_name):
-                for ind in jaco_involved_extra_index[n]:
-                    flatten_name = nam + str(ind)
-                    involved_flatten_index.append(flatten_name)
-            print('involved flatten name:', involved_flatten_index)
+        if jaco_involved is not None:
+            involved_flatten_index = self.measure_object.partly_flatten_measurement(jaco_involved)
             # reorganize the jacobian
             # loop over parameters
             for p, par in enumerate(self.para_name):
