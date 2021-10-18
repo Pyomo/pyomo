@@ -340,8 +340,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
             - skip_trivial_constraints=False
                 Skip writing constraints whose body section is fixed.
             - output_fixed_variables=False
-                If True output fixed variables as variables, otherwise
-                 output numberic value.
+                If True, output fixed variables as variables; otherwise,
+                output numeric value.
             - file_determinism=1
                 | How much effort do we want to put into ensuring the
                 | GAMS file is written deterministically for a Pyomo model:
