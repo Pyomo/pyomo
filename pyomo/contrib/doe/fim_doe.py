@@ -10,6 +10,13 @@ from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculati
 
 class Measurement_flatten:
     def __init__(self, measurement_timeset, measurement_extra_index):
+        '''
+        This class stores measurements' information
+        Parameters:
+        ----------
+        measurement_timeset: a dictionary, keys are measurement names in the model, values are a list of time they are measured
+        measurement_extra_index: A dictionary, keys are the measurement names, values are a list of indexes. If no extra indexes, values are None.
+        '''
         self.measurement_name = list(measurement_timeset.keys())
         self.measurement_timeset = measurement_timeset
         self.measurement_extra_index = measurement_extra_index
@@ -17,11 +24,23 @@ class Measurement_flatten:
         self.extra_measure_name = list(measurement_extra_index.keys())
 
     def flatten_measurement(self):
+        '''Flatten measurements and their extra index (if any)
+        Flattened names consist of their original names in the model and their extra index value, connected with a '_index_'
+        For e.g., FCO2 with an extra index 19 is 'FCO2_index_19', FCO2 without extra index is still 'FCO2'
+        This function converts all measurements passed for the DOE object
 
+        Returns
+        ------
+        flatten_measure_name: a list of flattened measurement name.
+        flatten_measure_timeset: a dictionary, keys are flattened measurement name, values are lists of measurement timepoints
+        '''
+        # check if measurement variables need to be flattened
         if self.measurement_extra_index is not None:
-            # check if measurement variables need to be flattened
+            # store flattened name
             flatten_measure_name = []
+            # store flattened measurement time point
             flatten_measure_timeset = {}
+            # loop over name
             for j in self.measurement_name:
                 if j in self.extra_measure_name:
                     for ind in self.measurement_extra_index[j]:
@@ -31,6 +50,7 @@ class Measurement_flatten:
                 else:
                     flatten_measure_name.append(j)
                     flatten_measure_timeset[j] = self.measurement_timeset[j]
+        # if there is no extra index, the flattened measurements will not be changed
         else:
             flatten_measure_name = self.measurement_name.copy()
             flatten_measure_timeset = self.measurement_timeset.copy()
@@ -40,6 +60,18 @@ class Measurement_flatten:
         return flatten_measure_name, flatten_measure_timeset
 
     def partly_flatten_measurement(self, jac_involved):
+        '''Flatten part of the measurements according to user's requirement
+        While flatten_measurement() converts all measurements,
+        this function converts part of the measurements, so that users can include different measurements in the calculation of Jacobian
+
+        Parameters
+        ----------
+        jac_involved: a dictionary, keys are measurement names, values are lists of extra indexes
+
+        Returns
+        ------
+        jac_involved_name: a list of flattened measurement names
+        '''
         jac_involved_name = []
         for j in list(jac_involved.keys()):
             if jac_involved[j] is not None: # if it has extra index
@@ -92,6 +124,7 @@ class DesignOfExperiments:
         self.create_model = create_model
         self.args = args
 
+        # create the measurement information object
         self.measure = Measurement_flatten(measurement_variable_timepoints, measurement_extra_index)
         self.flatten_measure_name, self.flatten_measure_timeset = self.measure.flatten_measurement()
         print('The flattend measurements include:', self.flatten_measure_name)
@@ -391,7 +424,7 @@ class DesignOfExperiments:
                     output_record = pickle.load(f)
                     f.close()
                 jac = self.__finite_calculation(output_record, scena_gen)
-                jac_3D = self.__jac_reform_3D(jac)
+
             # if measurements are not provided
             else:
                 # dict for storing model outputs
@@ -453,8 +486,6 @@ class DesignOfExperiments:
 
                 # calculate jacobian
                 jac = self.__finite_calculation(output_record, scena_gen)
-                # reform jacobian into a 3D array, [Measurement, parameter, time]
-                jac_3D = self.__jac_reform_3D(jac)
 
                 if self.verbose:
                     print('Build time with sequential_finite mode [s]:', sum(time_allbuild))
@@ -475,7 +506,6 @@ class DesignOfExperiments:
             # Store the Jacobian information for access by users
 
             self.jac = jac
-            self.jac_3D = jac_3D
 
             if read_output is None:
                 FIM_analysis.build_time = sum(time_allbuild)
@@ -614,9 +644,6 @@ class DesignOfExperiments:
                 # get Jacobian dict, keys are parameter name, values are sensitivity info
                 jac[para] = list_jac
 
-            # reform jacobian into a 3D array, [Measurement, parameter, time]
-            jac_3D = self.__jac_reform_3D(jac)
-
             # check if another prior experiment FIM is provided other than the user-specified one
             if specified_prior is None:
                 prior_in_use = self.prior_FIM
@@ -632,7 +659,6 @@ class DesignOfExperiments:
                 print('Solve time with sequential_sipopt or kaug mode [s]:', sum(time_allsolve))
 
             self.jac = jac
-            self.jac_3D = jac_3D
             FIM_analysis.build_time = sum(time_allbuild)
             FIM_analysis.solve_time = sum(time_allsolve)
 
@@ -744,9 +770,6 @@ class DesignOfExperiments:
                     else:
                         jac[par].append(dsdp_extract[d][p]*self.scale_constant_value)
 
-            # reform jacobian into a 3D array, [Measurement, parameter, time]
-            jac_3D = self.__jac_reform_3D(jac)
-
             if self.verbose:
                 print('Build time with direct kaug mode [s]:', time_build)
                 print('Solve time with direct kaug mode [s]:', time_solve)
@@ -763,7 +786,6 @@ class DesignOfExperiments:
                                       scale_constant_value=self.scale_constant_value)
 
             self.jac = jac
-            self.jac_3D = jac
             FIM_analysis.build_time = time_build
             FIM_analysis.solve_time = time_solve
 
@@ -799,11 +821,9 @@ class DesignOfExperiments:
             list_jac = []
             for i in range(len(output_record[s1])):
                 if self.scale_nominal_param_value:
-                    sensi = (output_record[s1][i] - output_record[s2][i]) / scena_gen.eps_abs[para] * self.param_init[
-                        para] * self.scale_constant_value
+                    sensi = (output_record[s1][i] - output_record[s2][i]) / scena_gen.eps_abs[para] * self.param_init[para] * self.scale_constant_value
                 else:
-                    sensi = (output_record[s1][i] - output_record[s2][i]) / scena_gen.eps_abs[
-                        para] * self.scale_constant_value
+                    sensi = (output_record[s1][i] - output_record[s2][i]) / scena_gen.eps_abs[para] * self.scale_constant_value
                 list_jac.append(sensi)
             # get Jacobian dict, keys are parameter name, values are sensitivity info
             jac[para] = list_jac
@@ -811,20 +831,6 @@ class DesignOfExperiments:
         return jac
 
 
-    def __jac_reform_3D(self, jac_original):
-        '''
-        Reform the Jacobian returned by __finite_calculation() to be a 3D numpy array, [measurements, parameters, time]
-        '''
-        # 3-D array form of jacobian
-        jac_3Darray = np.zeros((len(self.flatten_measure_name), len(self.param_name), len(self.measurement_timeset[0])))
-        no_time = len(self.measurement_timeset[0])
-        # reorganize the matrix
-        for m in range(len(self.flatten_measure_name)):
-            for p, para in enumerate(self.param_name):
-                for t, tim in enumerate(range(no_time)):
-                    jac_3Darray[m, p, t] = jac_original[para][m * no_time + t]
-
-        return jac_3Darray
 
     def generate_sequential_experiments(self, design_values_set, mode='sequential_finite', tee_option=False,
                        scale_nominal_param_value=False, scale_constant_value=1,
@@ -1724,9 +1730,7 @@ class FIM_result:
         Parameters:
         -----------
         para_name: parameter names
-        measurement_variables: measurement variable names
-        measurement_timeset: measurement variable control timeset
-        flatten_all_measure: flattened measurement variables
+        measure_object: measurement information object
         prior_FIM: if there's prior FIM to be added
         store_FIM: if storing the FIM in a .csv, give the file name here as a string, '**.csv' or '**.txt'.
         scale_constant_value: the constant value used to scale the sensitivity
@@ -1745,17 +1749,15 @@ class FIM_result:
         self.max_condition_number = max_condition_number
         self.verbose = verbose
 
-    def calculate_FIM(self, jaco_information, jaco_3D, dv_values, jaco_involved=None, result=None):
+    def calculate_FIM(self, jaco_information, dv_values, jaco_involved=None, result=None):
         '''
         Calculate FIM from Jacobian information. This is for grid search (combined models) results
 
         Parameters:
         -----------
         jaco_info: jacobian dictionary
-        jaco_3D: 3D jacobian dictionary
         dv_values: design variable value dictionary
-        jaco_involved_name: variables involved in calculating jacobian
-        jaco_involved_extra_index: variable extra indexes involved in calculating jacobian
+        jaco_involved: a dictionary of measurement involved and their extra indexes
         result: solver status returned by IPOPT
 
         Return:
@@ -1780,6 +1782,8 @@ class FIM_result:
         ## split jacobian if needed
         # flatten measurement variables needed for this calculation
         if jaco_involved is not None:
+            # convert the form of jacobian for split
+            jaco_3D = self.__jac_reform_3D(jaco_information)
             involved_flatten_index = self.measure_object.partly_flatten_measurement(jaco_involved)
             print('involved flatten name:', involved_flatten_index)
 
@@ -1840,8 +1844,9 @@ class FIM_result:
         m: model
         dv_set: design variable value dictionary
         result: problem solver status by IPOPT
-        jaco_involved_name: measurements involved in jacobian calculation
-        jaco_involved_extra_index: measurement extra indexes involved in jacobian calculation
+        jaco_involved：measurement name and index involved in jacobian calculation
+        y_set: measurement name set
+        t_all_set: time set for measurement
         obj: chosen from 'det' and 'trace'
         add_fim: if the given FIM needs to be added. Do not add for optimize_doe().
 
@@ -1925,6 +1930,23 @@ class FIM_result:
         # if given store file name, store the FIM
         if (self.store_FIM is not None):
             self.__store_FIM()
+
+
+    def __jac_reform_3D(self, jac_original):
+        '''
+        Reform the Jacobian returned by __finite_calculation() to be a 3D numpy array, [measurements, parameters, time]
+        '''
+        # 3-D array form of jacobian [measurements, parameters, time]
+        self.measure_timeset = list(self.measurement_timeset.values())[0]
+        jac_3Darray = np.zeros((len(self.flatten_all_measure), len(self.para_name), len(self.measure_timeset)))
+        no_time = len(self.measurement_timeset)
+        # reorganize the matrix
+        for m in range(len(self.flatten_all_measure)):
+            for p, para in enumerate(self.para_name):
+                for t, tim in enumerate(range(no_time)):
+                    jac_3Darray[m, p, t] = jac_original[para][m * no_time + t]
+
+        return jac_3Darray
 
     def __print_FIM_info(self, FIM, dv_set=None):
         '''
