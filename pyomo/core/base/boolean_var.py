@@ -297,7 +297,8 @@ class BooleanVar(IndexedComponent):
         self._value_init_value = None
         self._value_init_rule = None
 
-        if is_functor(initialize) and (not isinstance(initialize, BooleanValue)):
+        if is_functor(initialize) and (not isinstance(initialize, 
+                                                      BooleanValue)):
             self._value_init_rule = initialize
         else:
             self._value_init_value = initialize
