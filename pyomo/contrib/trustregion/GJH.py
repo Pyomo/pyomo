@@ -49,9 +49,9 @@ def readgjh(fname=None):
         files = list(glob.glob("*.gjh"))
         fname = files.pop(0)
         if len(files) > 1:
-            print("**** WARNING **** More than one gjh file in current directory")
+            print("WARNING: More than one gjh file in current directory")
             print("  Processing: %s\nIgnoring: %s" % (
-                fname, '\n         '.join(files)))
+                fname, '\n\t\t'.join(files)))
 
     with open(fname, "r") as f:
         line = "dummy_str"
@@ -201,15 +201,17 @@ def readgjh(fname=None):
     return g, J, H, variableList, constraintList
 
 
-@SolverFactory.register('contrib.gjh', doc='Interface to the AMPL GJH "solver"')
+@SolverFactory.register('contrib.gjh',
+                        doc='Interface to the AMPL GJH "solver"')
 class GJHSolver(ASL):
-    """An interface to the AMPL GJH "solver" for evaluating a model at a
-    point."""
-
+    """
+    An interface to the AMPL GJH "solver" for evaluating a model at a
+    point.
+    """
     def __init__(self, **kwds):
         kwds['type'] = 'gjh'
         kwds['symbolic_solver_labels'] = True
-        super(GJHSolver, self).__init__(**kwds)
+        super().__init__(**kwds)
         self.options.solver = 'gjh'
         self._metasolver = False
 
@@ -218,10 +220,10 @@ class GJHSolver(ASL):
     def _initialize_callbacks(self, model):
         self._model = model
         self._model._gjh_info = None
-        super(GJHSolver, self)._initialize_callbacks(model)
+        super()._initialize_callbacks(model)
 
     def _presolve(self, *args, **kwds):
-        super(GJHSolver, self)._presolve(*args, **kwds)
+        super()._presolve(*args, **kwds)
         self._gjh_file = self._soln_file[:-3]+'gjh'
         TempfileManager.add_tempfile(self._gjh_file, exists=False)
 
@@ -233,4 +235,4 @@ class GJHSolver(ASL):
         #
         self._model._gjh_info = readgjh(self._gjh_file)
         self._model = None
-        return super(GJHSolver, self)._postsolve()
+        return super()._postsolve()
