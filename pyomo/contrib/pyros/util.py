@@ -279,6 +279,40 @@ def transform_to_standard_form(model):
     return
 
 
+def replace_uncertain_bounds_with_constraints(model, uncertain_params):
+    """
+    For variables of which the bounds are dependent on the parameters
+    in the list `uncertain_params`, remove the bounds and add
+    explicit variable bound inequality constraints.
+    """
+
+    for v in model.component_data_objects(Var):
+        # get mutable parameters in variable bounds expressions
+        # TODO: replace _ub and _lb with more secure getter when available
+        mutable_params_ub = ComponentSet(identify_mutable_parameters(v._ub))
+        mutable_params_lb = ComponentSet(identify_mutable_parameters(v._lb))
+
+        uncertain_param_names = [p.name for p in uncertain_params]
+
+        # determine which mutable parameters are uncertain
+        mutable_params_ub = [p for p in list(mutable_params_ub) if p.name in
+                             uncertain_param_names]
+        mutable_params_lb = [p for p in list(mutable_params_lb) if p.name in
+                             uncertain_param_names]
+
+        # add explicit inequality constraint(s), remove variable bound(s)
+        if mutable_params_ub:
+            constr = Constraint(expr=v - v._ub <= 0)
+            model.add_component(v.name + '_uncertain_upper_bound_con', constr)
+            v.setub(None)
+        if mutable_params_lb:
+            constr = Constraint(expr=v._lb - v <= 0)
+            model.add_component(v.name + '_uncertain_lower_bound_con', constr)
+            v.setlb(None)
+
+    return
+
+
 def validate_kwarg_inputs(model, config):
     '''
     Confirm kwarg inputs satisfy PyROS requirements.
