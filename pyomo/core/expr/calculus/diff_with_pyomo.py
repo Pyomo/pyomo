@@ -63,16 +63,6 @@ def _diff_SumExpression(node, val_dict, der_dict):
         der_dict[arg] += der
 
 
-def _diff_LinearExpression(node, val_dict, der_dict):
-    der = der_dict[node]
-    for ndx, v in enumerate(node.linear_vars):
-        coef = node.linear_coefs[ndx]
-        der_dict[v] += der * val_dict[coef]
-        der_dict[coef] += der * val_dict[v]
-
-    der_dict[node.constant] += der
-
-
 def _diff_PowExpression(node, val_dict, der_dict):
     """
 
@@ -358,7 +348,7 @@ _diff_map[_expr.MonomialTermExpression] = _diff_ProductExpression
 _diff_map[_expr.NegationExpression] = _diff_NegationExpression
 _diff_map[_expr.UnaryFunctionExpression] = _diff_UnaryFunctionExpression
 _diff_map[_expr.ExternalFunctionExpression] = _diff_ExternalFunctionExpression
-_diff_map[_expr.LinearExpression] = _diff_LinearExpression
+_diff_map[_expr.LinearExpression] = _diff_SumExpression
 
 _diff_map[_expr.NPV_ProductExpression] = _diff_ProductExpression
 _diff_map[_expr.NPV_DivisionExpression] = _diff_DivisionExpression
@@ -422,17 +412,6 @@ class _LeafToRootVisitor(ExpressionValueVisitor):
             val = self.value_func(node)
             self.val_dict[node] = val
             self.der_dict[node] = 0
-            return True, val
-
-        if node.__class__ is _expr.LinearExpression:
-            for v in node.linear_vars + node.linear_coefs + [node.constant]:
-                val = self.value_func(v)
-                self.val_dict[v] = val
-                self.der_dict[v] = 0
-            val = self.value_func(node)
-            self.val_dict[node] = val
-            self.der_dict[node] = 0
-            self.expr_list.append(node)
             return True, val
 
         return False, None
