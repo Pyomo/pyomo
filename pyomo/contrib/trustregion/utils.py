@@ -12,9 +12,12 @@
 Common utilities for Trust Region Framework
 """
 
-import numpy as np
-from numpy.linalg import norm
-from numpy import array
+from pyomo.contrib.pynumero.dependencies import (
+    numpy as np, numpy_available
+)
+if numpy_available:
+    from numpy.linalg import norm
+    from numpy import array
 
 def copyVector(x, y, z):
     """

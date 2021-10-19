@@ -11,7 +11,10 @@
 import pyomo.common.unittest as unittest
 from pyomo.contrib.trustregion.utils import (
     copyVector, minIgnoreNone, maxIgnoreNone,
-    IterationLog, Logger)
+    IterationLog, Logger, numpy_available)
+
+if not (numpy_available):
+    raise unittest.SkipTest("Trust Region utilities require numpy.")
 
 class TestUtils(unittest.TestCase):
     def setUp(self):
