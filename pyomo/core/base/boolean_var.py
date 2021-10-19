@@ -14,14 +14,17 @@ from weakref import ref as weakref_ref
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
+from pyomo.common.modeling import unique_component_name
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.core.expr.boolean_value import BooleanValue
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.indexed_component import (IndexedComponent,
                                                UnindexedComponent_set)
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.set import Set, BooleanSet
+from pyomo.core.base.set import Set, BooleanSet, Binary
 from pyomo.core.base.util import is_functor
+from pyomo.core.base.var import Var
 
 
 logger = logging.getLogger('pyomo.core')
@@ -163,7 +166,8 @@ class _GeneralBooleanVarData(_BooleanVarData):
     these attributes in certain cases.
     """
 
-    __slots__ = ('_value', 'fixed', 'stale', '_associated_binary')
+    __slots__ = ('_value', 'fixed', 'stale', '_associated_binary', 
+                 '_seen_by_logical_to_linear')
 
     def __init__(self, component=None):
         #
@@ -179,6 +183,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
         self.stale = True
 
         self._associated_binary = None
+        self._seen_by_logical_to_linear = False
 
     def __getstate__(self):
         state = super().__getstate__()
@@ -241,9 +246,29 @@ class _GeneralBooleanVarData(_BooleanVarData):
     free = unfix
 
     def get_associated_binary(self):
-        """Get the binary _VarData associated with this _GeneralBooleanVarData"""
-        return self._associated_binary() if self._associated_binary \
-            is not None else None
+        """Get the binary _VarData associated with this 
+        _GeneralBooleanVarData"""
+        if self._associated_binary is not None:
+            return self._associated_binary()
+        elif self._seen_by_logical_to_linear:
+            # it has been "transformed" by logical_to_linear, so for backwards
+            # compatability we need to pretend we associated a binary
+            deprecation_warning(
+                "Relying on core.logical_to_linear to transform "
+                "BooleanVars which do not appear in LogicalConstraints "
+                "is deprecated. Please associated your own binaries if "
+                "you have BooleanVars not used in logical expressions.",
+                version='6.1.3')
+
+            parent_block = self.parent_block()
+            new_var = Var(domain=Binary)
+            parent_block.add_component(
+                unique_component_name(parent_block, 
+                                      self.local_name + "_asbinary"), new_var)
+            self.associate_binary_var(new_var)
+            return new_var
+        else:
+            return None
 
     def associate_binary_var(self, binary_var):
         """Associate a binary _VarData to this _GeneralBooleanVarData"""
