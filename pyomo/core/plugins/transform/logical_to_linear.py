@@ -55,7 +55,7 @@ class LogicalToLinear(IsomorphicTransformation):
         new_var_lists = ComponentMap()
         transBlocks = {}
         for t in targets:
-            if t.ctype in [Block, Disjunct]:
+            if issubclass(t.ctype, Block):
                 self._transform_block(t, model, new_var_lists, transBlocks)
             elif t.ctype is LogicalConstraint:
                 if t.is_indexed():
@@ -70,12 +70,19 @@ class LogicalToLinear(IsomorphicTransformation):
                                                                   type(t)))
 
     def _transform_boolean_varData(self, bool_vardata, new_varlists):
-        # we have neither the list nor an associated binary
-        parent_block = bool_vardata.parent_block()
+        # This transformation tries to group the binaries it creates for indexed
+        # BooleanVars onto the same VarList. This won't work across separate
+        # calls to the transformation, but within one call it's fine. So we have
+        # two cases: 1) either we have created a VarList for this
+        # BooleanVarData's parent_component, but have yet to add its binary to
+        # said list, or 2) we have neither the binary nor the VarList
+
         parent_component = bool_vardata.parent_component()
         new_varlist = new_varlists.get(parent_component)
         if new_varlist is None and \
            bool_vardata.get_associated_binary() is None:
+            # Case 2) we have neither the VarList nor an associated binary
+            parent_block = bool_vardata.parent_block()
             new_var_list_name = unique_component_name(
                 parent_block,
                 parent_component.local_name + '_asbinary')
@@ -84,8 +91,8 @@ class LogicalToLinear(IsomorphicTransformation):
             new_varlists[parent_component] = new_varlist
 
         if bool_vardata.get_associated_binary() is None:
-            # we already have a list, but need to create the associated
-            # binary
+            # Case 1) we already have a VarList, but need to create the
+            # associated binary
             new_binary_vardata = new_varlist.add()
             bool_vardata.associate_binary_var(new_binary_vardata)
             if bool_vardata.value is not None:
@@ -94,7 +101,7 @@ class LogicalToLinear(IsomorphicTransformation):
                 new_binary_vardata.fix()
 
     def _transform_constraint(self, constraint, new_varlists, transBlocks):
-        for i in sorted(constraint.keys()):
+        for i in constraint.keys(ordered=True):
             self._transform_constraintData(constraint[i], new_varlists,
                                            transBlocks)
 
