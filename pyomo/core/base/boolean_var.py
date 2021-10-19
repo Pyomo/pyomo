@@ -130,18 +130,6 @@ class _BooleanVarData(ComponentData, BooleanValue):
 
     free=unfix
 
-    def to_string(self, verbose=None, labeler=None, smap=None,
-                  compute_values=False):
-        """Return the component name"""
-        if self.fixed and compute_values:
-            try:
-                return str(self())
-            except:
-                pass
-        if smap:
-            return smap.getSymbol(self, labeler)
-        return self.name
-
 
 class _GeneralBooleanVarData(_BooleanVarData):
     """
