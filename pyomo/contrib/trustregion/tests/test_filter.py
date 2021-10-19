@@ -33,10 +33,10 @@ class TestFilter(unittest.TestCase):
 
     def test_isAcceptable(self):
         fe = FilterElement(0.5, 0.25)
-        # A sufficiently "small enough" element to pass the filter
+        # A sufficiently feasible element
         self.assertTrue(self.tmpFilter.isAcceptable(fe,
                                                     self.theta_max))
         fe = FilterElement(1.0, 15.0)
-        # A sufficiently "large enough" element to fail the filter
+        # A sufficiently infeasible element
         self.assertFalse(self.tmpFilter.isAcceptable(fe,
                                                     self.theta_max))

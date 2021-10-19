@@ -53,4 +53,3 @@ class Filter:
             if (element.compare(filterElement) == -1):
                 return False
         return True
-

@@ -12,12 +12,14 @@
 Common utilities for Trust Region Framework
 """
 
+import logging
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np, numpy_available
 )
 if numpy_available:
-    from numpy.linalg import norm
     from numpy import array
+
+logger = logging.getLogger('pyomo.contrib.trustregion')
 
 def copyVector(x, y, z):
     """
@@ -44,9 +46,9 @@ def maxIgnoreNone(a, b):
     return a
 
 
-class IterationLog:
+class IterationRecord:
     """
-    Log relevant information at each individual iteration
+    Record relevant information at each individual iteration
     """
 
     def __init__(self, iteration, inputs, outputs, other, verbosity, rmtype, params):
@@ -89,56 +91,47 @@ class IterationLog:
             High (3): Print all available information
         """
         if verbosity >= 1:
-            print("\n**************************************")
-            print("Iteration %d:" % self.iteration)
-            print(np.concatenate([self.inputs, self.outputs, self.other]))
+            logger.info("Iteration %d:" % self.iteration)
+            logger.info(np.concatenate([self.inputs, self.outputs, self.other]))
         if verbosity >= 2:
-            print("Reduced Model Type: %s" % self.rmtype)
-            print("thetak = %s" % self.thetak)
-            print("objk = %s" % self.objk)
+            logger.info("Reduced Model Type: %s" % self.rmtype)
+            logger.info("thetak = %s" % self.thetak)
+            logger.info("objk = %s" % self.objk)
         if verbosity >= 3:
-            print("Reduced model parameters: %s" %self.rmParams)
-            print("trustRadius = %s" % self.trustRadius)
-            print("sampleRadius = %s" % self.sampleRadius)
-            print("stepNorm = %s" % self.stepNorm)
+            logger.info("Reduced model parameters: %s" %self.rmParams)
+            logger.info("trustRadius = %s" % self.trustRadius)
+            logger.info("sampleRadius = %s" % self.sampleRadius)
+            logger.info("stepNorm = %s" % self.stepNorm)
             if self.fStep:
-                print("INFO: f-type step")
+                logger.info("INFO: f-type step")
             if self.thetaStep:
-                print("INFO: theta-type step")
+                logger.info("INFO: theta-type step")
             if self.rejected:
-                print("INFO: step rejected")
-        if verbosity != 0:
-            print("**************************************\n")
+                logger.info("INFO: step rejected")
 
 
-class Logger:
-
-    iterations = []
+class IterationLogger:
+    """
+    Log (and print) information for all iterations
+    """
+    def __init__(self):
+        self.iterations = []
 
     def newIteration(self, iteration, inputs, outputs, other,
                      thetak, objk, verbosity, rmtype, params):
-        self.iterlog = IterationLog(iteration, inputs, outputs,
-                                    other, verbosity, rmtype)
-        self.iterlog.setRelatedValue(thetak=thetak, objk=objk)
-        self.iterations.append(self.iterlog)
+        self.iterrecord = IterationRecord(iteration, inputs, outputs,
+                                       other, verbosity, rmtype,
+                                       params)
+        self.iterrecord.setRelatedValue(thetak=thetak, objk=objk)
+        self.iterations.append(self.iterrecord)
 
     def setCurrentIteration(self, trustRadius=None,
                             sampleRadius=None,
                             stepNorm=None):
-        self.iterlog.setRelatedValue(trustRadius=trustRadius,
+        self.iterrecord.setRelatedValue(trustRadius=trustRadius,
                                      sampleRadius=sampleRadius,
                                      stepNorm=stepNorm)
 
     def printIteration(self, iteration, verbosity):
-        if(iteration < len(self.iterations)):
+        if (iteration < len(self.iterations)):
             self.iterations[iteration].fprint(verbosity)
-
-    def printVectors(self):
-        for iteration in self.iterations:
-            dis = norm(np.concatenate([iteration.inputs - self.iterlog.inputs,
-                                       iteration.outputs - self.iterlog.outputs,
-                                       iteration.other - self.iterlog.other]),
-                       np.inf)
-            print(iteration.iteration, iteration.thetak, iteration.objk,
-                  iteration.trustRadius, iteration.sampleRadius,
-                  iteration.stepNorm, dis, sep='\t')

@@ -11,10 +11,9 @@
 import pyomo.common.unittest as unittest
 from pyomo.contrib.trustregion.utils import (
     copyVector, minIgnoreNone, maxIgnoreNone,
-    IterationLog, Logger, numpy_available)
-
-if not (numpy_available):
-    raise unittest.SkipTest("Trust Region utilities require numpy.")
+    IterationLogger, numpy_available)
+from pyomo.common.log import LoggingIntercept
+from io import StringIO
 
 class TestUtils(unittest.TestCase):
     def setUp(self):
@@ -23,6 +22,7 @@ class TestUtils(unittest.TestCase):
     def tearDown(self):
         pass
 
+    @unittest.skipUnless(numpy_available, "numpy is not available")
     def test_copyVector(self):
         x = [1, 2, 3]
         y = [2, 7, 9]
@@ -58,3 +58,35 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(maxIgnoreNone(a, b), a)
         a = None
         self.assertEqual(maxIgnoreNone(a, b), None)
+
+class TestLogger(unittest.TestCase):
+    def setUp(self):
+        self.iterLogger = IterationLogger()
+        self.iteration = 0
+        self.inputs = ['x1', 'x2']
+        self.outputs = ['x3']
+        self.other = []
+        self.thetak = 10.0
+        self.objk = 5.0
+        self.params = [3, 5]
+        self.verbosity = 1
+
+    def tearDown(self):
+        pass
+
+    def test_newIteration(self):
+        self.iterLogger.newIteration(self.iteration, self.inputs,
+                                 self.outputs, self.other,
+                                 self.thetak, self.objk,
+                                 self.verbosity, 0, self.params)
+        self.assertEqual(len(self.iterLogger.iterations), 1)
+
+    # def test_printIteration(self):
+    #     self.iterLogger.newIteration(self.iteration, self.inputs,
+    #                              self.outputs, self.other,
+    #                              self.thetak, self.objk,
+    #                              self.verbosity, 0, self.params)
+    #     OUTPUT = StringIO()
+    #     with LoggingIntercept(OUTPUT, 'pyomo.contrib.trustregion'):
+    #         self.iterLogger.printIteration(self.iteration, self.verbosity)
+    #     self.assertIn('Iteration 0:', OUTPUT.getvalue())
