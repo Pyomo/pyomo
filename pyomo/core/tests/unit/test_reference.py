@@ -1013,5 +1013,22 @@ class TestReference(unittest.TestCase):
 3 Declarations: v ref_index ref
 """.strip())
 
+    def test_pprint_nested(self):
+        m = ConcreteModel()
+        @m.Block([1,2])
+        def b(b,i):
+            b.x = Var([3,4], bounds=(i,None))
+        m.r = Reference(m.b[:].x[:])
+        buf = StringIO()
+        m.r.pprint(ostream=buf)
+        self.assertEqual(buf.getvalue().strip(), """
+r : Size=4, Index=r_index, ReferenceTo=b[:].x[:]
+    Key    : Lower : Value : Upper : Fixed : Stale : Domain
+    (1, 3) :     1 :  None :  None : False :  True :  Reals
+    (1, 4) :     1 :  None :  None : False :  True :  Reals
+    (2, 3) :     2 :  None :  None : False :  True :  Reals
+    (2, 4) :     2 :  None :  None : False :  True :  Reals
+""".strip())
+
 if __name__ == "__main__":
     unittest.main()

@@ -10,7 +10,9 @@
 
 import copy
 import itertools
+
 from pyomo.common import DeveloperError
+from pyomo.common.collections import Sequence
 
 
 class IndexedComponent_slice(object):
@@ -266,7 +268,11 @@ class IndexedComponent_slice(object):
                     tmp[level[1][3]] = Ellipsis
                 ans += self._getitem_args_to_str([tmp[i] for i in sorted(tmp)])
             elif level[0] & IndexedComponent_slice.ITEM_MASK:
-                ans += self._getitem_args_to_str(list(level[1]))
+                if isinstance(level[1], Sequence):
+                    tmp = list(level[1])
+                else:
+                    tmp = [level[1]]
+                ans += self._getitem_args_to_str(tmp)
             elif level[0] & IndexedComponent_slice.ATTR_MASK:
                 ans += '.' + level[1]
             elif level[0] & IndexedComponent_slice.CALL_MASK:
