@@ -446,6 +446,28 @@ class TestReference(unittest.TestCase):
         with self.assertRaises(KeyError):
             m.t[3]
 
+    def test_reference_var_pprint(self):
+        m = ConcreteModel()
+        m.x = Var([1,2], initialize={1:4,2:8})
+        m.r = Reference(m.x)
+        buf = StringIO()
+        m.r.pprint(ostream=buf)
+        self.assertEqual(buf.getvalue(),
+"""r : Size=2, Index=x_index, ReferenceTo=x
+    Key : Lower : Value : Upper : Fixed : Stale : Domain
+      1 :  None :     4 :  None : False : False :  Reals
+      2 :  None :     8 :  None : False : False :  Reals
+""")
+        m.s = Reference(m.x[:,...])
+        buf = StringIO()
+        m.s.pprint(ostream=buf)
+        self.assertEqual(buf.getvalue(),
+"""s : Size=2, Index=x_index, ReferenceTo=x[:, ...]
+    Key : Lower : Value : Upper : Fixed : Stale : Domain
+      1 :  None :     4 :  None : False : False :  Reals
+      2 :  None :     8 :  None : False : False :  Reals
+""")
+
     def test_reference_indexedcomponent_pprint(self):
         m = ConcreteModel()
         m.x = Var([1,2], initialize={1:4,2:8})
@@ -453,7 +475,16 @@ class TestReference(unittest.TestCase):
         buf = StringIO()
         m.r.pprint(ostream=buf)
         self.assertEqual(buf.getvalue(),
-"""r : Size=2, Index=x_index
+"""r : Size=2, Index=x_index, ReferenceTo=x
+    Key : Object
+      1 : <class 'pyomo.core.base.var._GeneralVarData'>
+      2 : <class 'pyomo.core.base.var._GeneralVarData'>
+""")
+        m.s = Reference(m.x[:,...], ctype=IndexedComponent)
+        buf = StringIO()
+        m.s.pprint(ostream=buf)
+        self.assertEqual(buf.getvalue(),
+"""s : Size=2, Index=x_index, ReferenceTo=x[:, ...]
     Key : Object
       1 : <class 'pyomo.core.base.var._GeneralVarData'>
       2 : <class 'pyomo.core.base.var._GeneralVarData'>
@@ -841,7 +872,7 @@ class TestReference(unittest.TestCase):
         varlist = [m.v2[1, 'a'], m.v2[1, 'b']]
 
         vardict = {
-                0: m.v0, 
+                0: m.v0,
                 1: m.v2[1, 'a'],
                 2: m.v2[2, 'a'],
                 3: m.v2[3, 'a'],
