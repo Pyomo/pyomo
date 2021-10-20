@@ -8,12 +8,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from io import StringIO
+import logging
+
 import pyomo.common.unittest as unittest
 from pyomo.contrib.trustregion.utils import (
     copyVector, minIgnoreNone, maxIgnoreNone,
     IterationLogger, numpy_available)
 from pyomo.common.log import LoggingIntercept
-from io import StringIO
 
 class TestUtils(unittest.TestCase):
     def setUp(self):
@@ -69,7 +71,6 @@ class TestLogger(unittest.TestCase):
         self.thetak = 10.0
         self.objk = 5.0
         self.params = [3, 5]
-        self.verbosity = 1
 
     def tearDown(self):
         pass
@@ -78,15 +79,17 @@ class TestLogger(unittest.TestCase):
         self.iterLogger.newIteration(self.iteration, self.inputs,
                                  self.outputs, self.other,
                                  self.thetak, self.objk,
-                                 self.verbosity, 0, self.params)
+                                 0, self.params)
         self.assertEqual(len(self.iterLogger.iterations), 1)
 
-    # def test_printIteration(self):
-    #     self.iterLogger.newIteration(self.iteration, self.inputs,
-    #                              self.outputs, self.other,
-    #                              self.thetak, self.objk,
-    #                              self.verbosity, 0, self.params)
-    #     OUTPUT = StringIO()
-    #     with LoggingIntercept(OUTPUT, 'pyomo.contrib.trustregion'):
-    #         self.iterLogger.printIteration(self.iteration, self.verbosity)
-    #     self.assertIn('Iteration 0:', OUTPUT.getvalue())
+    def test_printIteration(self):
+        self.iterLogger.newIteration(self.iteration, self.inputs,
+                                  self.outputs, self.other,
+                                  self.thetak, self.objk,
+                                  0, self.params)
+        OUTPUT = StringIO()
+        with LoggingIntercept(OUTPUT, 'pyomo.contrib.trustregion', logging.INFO):
+            self.iterLogger.printIteration(self.iteration)
+        self.assertIn('Iteration 0', OUTPUT.getvalue())
+        self.assertIn('thetak =', OUTPUT.getvalue())
+        self.assertIn('stepNorm =', OUTPUT.getvalue())

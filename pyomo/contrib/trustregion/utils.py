@@ -12,6 +12,7 @@
 Common utilities for Trust Region Framework
 """
 
+import sys
 import logging
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np, numpy_available
@@ -20,6 +21,11 @@ if numpy_available:
     from numpy import array
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
+logger.setLevel(logging.DEBUG)
+stream = logging.StreamHandler(sys.stdout)
+stream.setLevel(logging.DEBUG)
+stream.setFormatter(logging.Formatter("      %(message)s"))
+logger.addHandler(stream)
 
 def copyVector(x, y, z):
     """
@@ -28,6 +34,9 @@ def copyVector(x, y, z):
     return array(x), array(y), array(z)
 
 def minIgnoreNone(a, b):
+    """
+    Return minimum between two values, ignoring None unless both are None
+    """
     if a is None:
         return b
     if b is None:
@@ -37,6 +46,9 @@ def minIgnoreNone(a, b):
     return b
 
 def maxIgnoreNone(a, b):
+    """
+    Return maximum between two values, ignoring None unless both are None
+    """
     if a is None:
         return b
     if b is None:
@@ -51,12 +63,11 @@ class IterationRecord:
     Record relevant information at each individual iteration
     """
 
-    def __init__(self, iteration, inputs, outputs, other, verbosity, rmtype, params):
+    def __init__(self, iteration, inputs, outputs, other, rmtype, params):
         self.iteration = iteration
         self.inputs = inputs
         self.outputs = outputs
         self.other = other
-        self.verbosity = verbosity
         self.rmtype = rmtype
         self.rmParams = params
         self.thetak = None
@@ -80,34 +91,25 @@ class IterationRecord:
         if stepNorm is not None:
             self.stepNorm = stepNorm
 
-    def fprint(self, verbosity):
+    def fprint(self):
         """
-        Print information about the iteration.
-        
-        verbosity parameter:
-            None (0): No verbosity / print nothing
-            Low (1): Print iteration and variables
-            Medium (2): Print iteration, variables, and param values
-            High (3): Print all available information
+        Print information about the iteration to the log.
         """
-        if verbosity >= 1:
-            logger.info("Iteration %d:" % self.iteration)
-            logger.info(np.concatenate([self.inputs, self.outputs, self.other]))
-        if verbosity >= 2:
-            logger.info("Reduced Model Type: %s" % self.rmtype)
-            logger.info("thetak = %s" % self.thetak)
-            logger.info("objk = %s" % self.objk)
-        if verbosity >= 3:
-            logger.info("Reduced model parameters: %s" %self.rmParams)
-            logger.info("trustRadius = %s" % self.trustRadius)
-            logger.info("sampleRadius = %s" % self.sampleRadius)
-            logger.info("stepNorm = %s" % self.stepNorm)
-            if self.fStep:
-                logger.info("INFO: f-type step")
-            if self.thetaStep:
-                logger.info("INFO: theta-type step")
-            if self.rejected:
-                logger.info("INFO: step rejected")
+        logger.info("**** Iteration %d ****" % self.iteration)
+        logger.info(np.concatenate([self.inputs, self.outputs, self.other]))
+        logger.info("Reduced Model Type: %s" % self.rmtype)
+        logger.info("thetak = %s" % self.thetak)
+        logger.info("objk = %s" % self.objk)
+        logger.info("Reduced model parameters: %s" %self.rmParams)
+        logger.info("trustRadius = %s" % self.trustRadius)
+        logger.info("sampleRadius = %s" % self.sampleRadius)
+        logger.info("stepNorm = %s" % self.stepNorm)
+        if self.fStep:
+            logger.info("INFO: f-type step")
+        if self.thetaStep:
+            logger.info("INFO: theta-type step")
+        if self.rejected:
+            logger.info("INFO: step rejected")
 
 
 class IterationLogger:
@@ -118,9 +120,9 @@ class IterationLogger:
         self.iterations = []
 
     def newIteration(self, iteration, inputs, outputs, other,
-                     thetak, objk, verbosity, rmtype, params):
+                     thetak, objk, rmtype, params):
         self.iterrecord = IterationRecord(iteration, inputs, outputs,
-                                       other, verbosity, rmtype,
+                                       other, rmtype,
                                        params)
         self.iterrecord.setRelatedValue(thetak=thetak, objk=objk)
         self.iterations.append(self.iterrecord)
@@ -132,6 +134,6 @@ class IterationLogger:
                                      sampleRadius=sampleRadius,
                                      stepNorm=stepNorm)
 
-    def printIteration(self, iteration, verbosity):
+    def printIteration(self, iteration):
         if (iteration < len(self.iterations)):
-            self.iterations[iteration].fprint(verbosity)
+            self.iterations[iteration].fprint()
