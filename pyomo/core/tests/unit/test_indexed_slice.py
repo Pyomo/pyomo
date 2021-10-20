@@ -624,6 +624,18 @@ class TestComponentSlices(unittest.TestCase):
         finally:
             normalize_index.flatten = _old_flatten
 
+    def test_UnknownSetDimen(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,2,3])
+        m.J = Set()
+        m.x = Var(m.I, m.J)
+
+        with self.assertRaisesRegex(
+                IndexError,
+                'Slicing components relies on knowing the underlying '
+                'set dimensionality'):
+            ref = list(m.x[:,:])
+
     def test_flatten_false(self):
         from pyomo.core.base.set import normalize_index
         _old_flatten = normalize_index.flatten
