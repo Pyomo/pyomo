@@ -12,7 +12,6 @@ import logging
 import glob
 
 from pyomo.common.tempfiles import TempfileManager
-from pyomo.opt.base import SolverFactory
 from pyomo.solvers.plugins.solvers.ASL import ASL
 
 logger = logging.getLogger('pyomo.contrib.gjh')
@@ -201,8 +200,6 @@ def readgjh(fname=None):
     return g, J, H, variableList, constraintList
 
 
-@SolverFactory.register('contrib.gjh',
-                        doc='Interface to the AMPL GJH "solver"')
 class GJHSolver(ASL):
     """
     An interface to the AMPL GJH "solver" for evaluating a model at a

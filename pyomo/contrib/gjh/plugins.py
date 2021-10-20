@@ -8,12 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import logging
-
 from pyomo.common.download import DownloadFactory
 from pyomo.contrib.gjh.getGJH import get_gjh
-
-logger = logging.getLogger('pyomo.contrib.gjh')
+from pyomo.contrib.gjh.GJH import GJHSolver
+from pyomo.opt.base import SolverFactory
 
 def load():
     DownloadFactory.register('gjh')(get_gjh)
+    SolverFactory.register('contrib.gjh',
+                           doc='Interface to the AMPL GJH "solver"')(GJHSolver)
