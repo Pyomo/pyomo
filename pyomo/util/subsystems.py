@@ -19,6 +19,7 @@ from pyomo.core.base.expression import Expression
 from pyomo.core.base.external import ExternalFunction
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
+from pyomo.core.expr.numvalue import native_types
 
 
 class _ExternalFunctionVisitor(StreamBasedExpressionVisitor):
@@ -33,13 +34,24 @@ class _ExternalFunctionVisitor(StreamBasedExpressionVisitor):
             if id(node) not in self._seen:
                 self._seen.add(id(node))
                 self._functions.append(node)
+
+    def finalizeResult(self, result):
         return self._functions
+
+    def enterNode(self, node):
+        pass
+
+    def acceptChildResult(self, node, data, child_result, child_idx):
+        pass
+
+    def acceptChildResult(self, node, data, child_result, child_idx):
+        if child_result.__class__ in native_types:
+            return False, None
+        return child_result.is_expression_type(), None
 
 
 def identify_external_functions(expr):
-    visitor = _ExternalFunctionVisitor()
-    for fcn in visitor.walk_expression(expr):
-        yield fcn
+    yield from _ExternalFunctionVisitor().walk_expression(expr)
 
 
 def add_local_external_functions(block):
