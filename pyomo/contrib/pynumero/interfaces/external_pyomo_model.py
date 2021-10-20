@@ -202,7 +202,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         primals = self._nlp.get_primals()
         to_update = input_vars + external_vars
         indices = self._nlp.get_primal_indices(to_update)
-        values = np.array([var.value for var in to_update])
+        values = np.fromiter((var.value for var in to_update), float)
         primals[indices] = values
         self._nlp.set_primals(primals)
 
