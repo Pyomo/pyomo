@@ -120,6 +120,8 @@ class PyomoNLP(AslNLP):
             # delete the nl file
             TempfileManager.pop()
 
+        self._name_buffer = {}
+
 
     def pyomo_model(self):
         """
@@ -180,7 +182,10 @@ class PyomoNLP(AslNLP):
         names in the order corresponding to the primals
         """
         pyomo_variables = self.get_pyomo_variables()
-        return [v.getname(fully_qualified=True) for v in pyomo_variables]
+        return [
+            v.getname(fully_qualified=True, name_buffer=self._name_buffer)
+            for v in pyomo_variables
+        ]
 
     def constraint_names(self):
         """
@@ -188,7 +193,10 @@ class PyomoNLP(AslNLP):
         names in the order corresponding to internal constraint order
         """
         pyomo_constraints = self.get_pyomo_constraints()
-        return [v.getname(fully_qualified=True) for v in pyomo_constraints]
+        return [
+            v.getname(fully_qualified=True, name_buffer=self._name_buffer)
+            for v in pyomo_constraints
+        ]
 
     def equality_constraint_names(self):
         """
@@ -196,7 +204,10 @@ class PyomoNLP(AslNLP):
         the order corresponding to the equality constraints.
         """
         equality_constraints = self.get_pyomo_equality_constraints()
-        return [v.getname(fully_qualified=True) for v in equality_constraints]
+        return [
+            v.getname(fully_qualified=True, name_buffer=self._name_buffer)
+            for v in equality_constraints
+        ]
 
     def inequality_constraint_names(self):
         """
@@ -204,7 +215,10 @@ class PyomoNLP(AslNLP):
         the order corresponding to the inequality constraints.
         """
         inequality_constraints = self.get_pyomo_inequality_constraints()
-        return [v.getname(fully_qualified=True) for v in inequality_constraints]
+        return [
+            v.getname(fully_qualified=True, name_buffer=self._name_buffer)
+            for v in inequality_constraints
+        ]
 
     def get_primal_indices(self, pyomo_variables):
         """
