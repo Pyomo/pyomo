@@ -39,7 +39,7 @@ from pyomo.core.base.set import (
     Integers, PositiveIntegers, NegativeIntegers,
     NonNegativeIntegers,
     Set,
-    SetOf, OrderedSetOf, UnorderedSetOf,
+    SetOf, OrderedSetOf, FiniteSetOf, InfiniteSetOf,
     RangeSet, _FiniteRangeSetData, _InfiniteRangeSetData,
     FiniteScalarRangeSet, InfiniteScalarRangeSet,
     AbstractFiniteScalarRangeSet,
@@ -829,9 +829,15 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(i, j)
 
         i = SetOf({1,2,3})
-        self.assertIs(type(i), UnorderedSetOf)
-        j = UnorderedSetOf([1,2,3])
-        self.assertIs(type(i), UnorderedSetOf)
+        self.assertIs(type(i), FiniteSetOf)
+        j = FiniteSetOf([1,2,3])
+        self.assertIs(type(i), FiniteSetOf)
+        self.assertEqual(i, j)
+
+        i = SetOf(NonNegativeReals)
+        self.assertIs(type(i), InfiniteSetOf)
+        j = InfiniteSetOf(NonNegativeReals)
+        self.assertIs(type(i), InfiniteSetOf)
         self.assertEqual(i, j)
 
         i = RangeSet(3)

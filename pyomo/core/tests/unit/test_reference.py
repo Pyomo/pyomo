@@ -23,7 +23,7 @@ from pyomo.environ import (
 )
 from pyomo.common.collections import ComponentSet
 from pyomo.core.base.var import IndexedVar
-from pyomo.core.base.set import SetProduct, UnorderedSetOf
+from pyomo.core.base.set import SetProduct, FiniteSetOf
 from pyomo.core.base.indexed_component import (
     UnindexedComponent_set, IndexedComponent
 )
@@ -409,7 +409,7 @@ class TestReference(unittest.TestCase):
         self.assertIs(m.r.ctype, Var)
         self.assertIsNot(m.r.index_set(), m.x.index_set())
         self.assertIs(m.x.index_set(), UnindexedComponent_set)
-        self.assertIs(type(m.r.index_set()), UnorderedSetOf)
+        self.assertIs(type(m.r.index_set()), FiniteSetOf)
         self.assertEqual(len(m.r), 1)
         self.assertTrue(m.r.is_indexed())
         self.assertIn(None, m.r)
@@ -423,7 +423,7 @@ class TestReference(unittest.TestCase):
         self.assertIs(m.s.ctype, Var)
         self.assertIsNot(m.s.index_set(), m.x.index_set())
         self.assertIs(m.x.index_set(), UnindexedComponent_set)
-        self.assertIs(type(m.s.index_set()), UnorderedSetOf)
+        self.assertIs(type(m.s.index_set()), FiniteSetOf)
         self.assertEqual(len(m.s), 1)
         self.assertTrue(m.s.is_indexed())
         self.assertIn(None, m.s)
@@ -539,7 +539,7 @@ class TestReference(unittest.TestCase):
         m.r = Reference(m.b[:].x[3,:])
 
         self.assertIs(m.r.ctype, Var)
-        self.assertIs(type(m.r.index_set()), UnorderedSetOf)
+        self.assertIs(type(m.r.index_set()), FiniteSetOf)
         self.assertEqual(len(m.r), 2*1)
         self.assertEqual(m.r[1,3].lb, 1)
         self.assertEqual(m.r[2,3].lb, 2)
@@ -562,7 +562,7 @@ class TestReference(unittest.TestCase):
         m.r = Reference(m.b[:].x[:])
 
         self.assertIs(m.r.ctype, Var)
-        self.assertIs(type(m.r.index_set()), UnorderedSetOf)
+        self.assertIs(type(m.r.index_set()), FiniteSetOf)
         self.assertEqual(len(m.r), 2*2)
         self.assertEqual(m.r[1,3].lb, 1)
         self.assertEqual(m.r[2,4].lb, 2)
@@ -585,7 +585,7 @@ class TestReference(unittest.TestCase):
         m.r = Reference(m.b[:].x[:])
 
         self.assertIs(m.r.ctype, Var)
-        self.assertIs(type(m.r.index_set()), UnorderedSetOf)
+        self.assertIs(type(m.r.index_set()), FiniteSetOf)
         self.assertEqual(len(m.r), 2*2)
         self.assertEqual(m.r[1,3].lb, 1)
         self.assertEqual(m.r[2,4].lb, 2)
@@ -608,7 +608,7 @@ class TestReference(unittest.TestCase):
         m.r = Reference(m.b[:].x[:,:])
 
         self.assertIs(m.r.ctype, Var)
-        self.assertIs(type(m.r.index_set()), UnorderedSetOf)
+        self.assertIs(type(m.r.index_set()), FiniteSetOf)
         self.assertEqual(len(m.r), 2*2*2)
         self.assertEqual(m.r[1,3,3].lb, 1)
         self.assertEqual(m.r[2,4,3].lb, 2)
@@ -630,8 +630,8 @@ class TestReference(unittest.TestCase):
         self.assertEqual(m.r.index_set().dimen, 2)
         base_sets = list(m.r.index_set().subsets())
         self.assertEqual(len(base_sets), 2)
-        self.assertIs(type(base_sets[0]), UnorderedSetOf)
-        self.assertIs(type(base_sets[1]), UnorderedSetOf)
+        self.assertIs(type(base_sets[0]), FiniteSetOf)
+        self.assertIs(type(base_sets[1]), FiniteSetOf)
 
     def test_ctype_detection(self):
         m = ConcreteModel()
