@@ -284,6 +284,11 @@ def replace_uncertain_bounds_with_constraints(model, uncertain_params):
     For variables of which the bounds are dependent on the parameters
     in the list `uncertain_params`, remove the bounds and add
     explicit variable bound inequality constraints.
+
+    :param model: Model in which to make the bounds/constraint replacements
+    :type model: class:`pyomo.core.base.PyomoModel.ConcreteModel`
+    :param uncertain_params: List of uncertain model parameters
+    :type uncertain_params: list
     """
 
     for v in model.component_data_objects(Var):
