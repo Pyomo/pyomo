@@ -404,6 +404,9 @@ class _ReferenceSet(collections_Set):
             iter_over_index=True
         )
 
+    def __str__(self):
+        return "ReferenceSet(%s)" % (self._slice,)
+
 
 def _identify_wildcard_sets(iter_stack, index):
     # Note that we can only _identify_wildcard_sets for a Reference if

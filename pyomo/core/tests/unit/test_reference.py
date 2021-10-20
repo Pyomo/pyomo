@@ -282,6 +282,17 @@ class TestReferenceDict(unittest.TestCase):
         self.assertEqual(len(list(x.value for x in rd.values())), 2-1)
 
 class TestReferenceSet(unittest.TestCase):
+    def test_str(self):
+        m = ConcreteModel()
+        @m.Block([1,2], [4,5])
+        def b(b,i,j):
+            b.x = Var([7,8],[10,11], initialize=0)
+            b.y = Var([7,8], initialize=0)
+            b.z = Var()
+
+        rs = _ReferenceSet(m.b[:,5].z)
+        self.assertEqual(str(rs), 'ReferenceSet(b[:, 5].z)')
+
     def test_lookup_and_iter_dense_data(self):
         m = ConcreteModel()
         @m.Block([1,2], [4,5])
