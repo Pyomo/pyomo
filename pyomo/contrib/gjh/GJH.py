@@ -15,7 +15,7 @@ from pyomo.common.tempfiles import TempfileManager
 from pyomo.opt.base import SolverFactory
 from pyomo.solvers.plugins.solvers.ASL import ASL
 
-logger = logging.getLogger('pyomo.contrib.trustregion')
+logger = logging.getLogger('pyomo.contrib.gjh')
 
 def readgjh(fname=None):
     """
