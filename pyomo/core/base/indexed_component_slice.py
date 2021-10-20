@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import copy
+import itertools
 from pyomo.common import DeveloperError
 
 
@@ -239,6 +240,48 @@ class IndexedComponent_slice(object):
             # Note: simply calling "list(self)" results in infinite
             # recursion in python2.6
             return list( i for i in ans )
+
+    @classmethod
+    def _getitem_args_to_str(cls, args):
+        for i, v in enumerate(args):
+            if v is Ellipsis:
+                args[i] = '...'
+            elif type(v) is slice:
+                args[i] = (
+                    (repr(v.start) if v.start is not None else '') + ':' +
+                    (repr(v.stop) if v.stop is not None else '') +
+                    (':%r' % v.step if v.step is not None else ''))
+            else:
+                args[i] = repr(v)
+        return '[' + ', '.join(args) + ']'
+
+    def __str__(self):
+        ans = ''
+        for level in self._call_stack:
+            if level[0] == IndexedComponent_slice.slice_info:
+                ans += level[1][0].name
+                tmp = dict(level[1][1])
+                tmp.update(level[1][2])
+                if level[1][3] is not None:
+                    tmp[level[1][3]] = Ellipsis
+                ans += self._getitem_args_to_str([tmp[i] for i in sorted(tmp)])
+            elif level[0] & IndexedComponent_slice.ITEM_MASK:
+                ans += self._getitem_args_to_str(list(level[1]))
+            elif level[0] & IndexedComponent_slice.ATTR_MASK:
+                ans += '.' + level[1]
+            elif level[0] & IndexedComponent_slice.CALL_MASK:
+                ans += (
+                    '(' + ', '.join(
+                        itertools.chain(
+                            (repr(_) for _ in level[1]),
+                            ('%s=%r' % kv for kv in level[2].items()))
+                    ) + ')'
+                )
+            if level[0] & IndexedComponent_slice.SET_MASK:
+                ans += ' = %r' % (level[2],)
+            elif level[0] & IndexedComponent_slice.DEL_MASK:
+                ans = 'del ' + ans
+        return ans
 
     def __hash__(self):
         return hash(tuple(_freeze(x) for x in self._call_stack[:self._len]))

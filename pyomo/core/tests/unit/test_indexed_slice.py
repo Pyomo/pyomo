@@ -692,6 +692,27 @@ class TestComponentSlices(unittest.TestCase):
         self.assertEqual(m.b[0,:].v[:], m.b[0,:].v[:])
         self.assertNotEqual(m.b[0,:].v[:], m.b[0,:].v['a'])
 
+    def test_str(self):
+        m = ConcreteModel()
+        m.b = Block()
+        # Note that we are testing the string representation of a slice,
+        # not if the slice is valid
+        s = m.b[...].x[:, 1:2, 1:5:2, ::1, 5, 'a'].component('foo', kwarg=1)
+        self.assertEqual(
+            str(s),
+            "b[...].x[:, 1:2, 1:5:2, ::1, 5, 'a'].component('foo', kwarg=1)")
+
+        # To test set / del, we want to form the IndexedComponent_slice
+        # without evaluating it
+        s = m.b[...]
+        self.assertEqual(
+            str(IndexedComponent_slice(
+                s, (IndexedComponent_slice.del_attribute, 'bogus'))),
+            'del b[...].bogus')
+        self.assertEqual(
+            str(IndexedComponent_slice(
+                s, (IndexedComponent_slice.set_attribute, 'bogus', 10))),
+            'b[...].bogus = 10')
 
 if __name__ == "__main__":
     unittest.main()
