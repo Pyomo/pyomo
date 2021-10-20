@@ -12,12 +12,12 @@ from io import StringIO
 import logging
 
 import pyomo.common.unittest as unittest
-from pyomo.contrib.trustregion.utils import (
+from pyomo.contrib.trustregion.util import (
     copyVector, minIgnoreNone, maxIgnoreNone,
     IterationLogger, numpy_available)
 from pyomo.common.log import LoggingIntercept
 
-class TestUtils(unittest.TestCase):
+class TestUtil(unittest.TestCase):
     def setUp(self):
         pass
 
