@@ -47,7 +47,7 @@ def add_local_external_functions(block):
     for comp in block.component_data_objects(
             (Constraint, Expression), active=True
             ):
-        ef_exprs.extend(list(identify_external_functions(comp.expr)))
+        ef_exprs.extend(identify_external_functions(comp.expr))
     unique_functions = []
     fcn_set = set()
     for expr in ef_exprs:
