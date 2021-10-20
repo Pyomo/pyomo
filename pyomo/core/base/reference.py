@@ -16,7 +16,7 @@ from pyomo.common.collections import (
 from pyomo.core.base.set import SetOf, OrderedSetOf, _SetDataBase
 from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.indexed_component import (
-    IndexedComponent, UnindexedComponent_set
+    IndexedComponent, UnindexedComponent_set, normalize_index
 )
 from pyomo.core.base.indexed_component_slice import (
     IndexedComponent_slice, _IndexedComponent_slice_iter
@@ -199,8 +199,16 @@ class _ReferenceDict(MutableMapping):
                 if _iter.get_last_index_wildcards() == key:
                     return True
             return False
-        except (StopIteration, LookupError):
+        except StopIteration:
             return False
+        except LookupError as e:
+            if normalize_index.flatten:
+                return False
+            try:
+                next(self._get_iter(self._slice, (key,)))
+                return True
+            except LookupError:
+                return False
 
     def __getitem__(self, key):
         try:
@@ -339,10 +347,12 @@ class _ReferenceDict(MutableMapping):
         # This is how this object does lookups.
         if key.__class__ not in (tuple, list):
             key = (key,)
+        if normalize_index.flatten:
+            key = flatten_tuple(key)
         return _IndexedComponent_slice_iter(
             _slice,
-            _fill_in_known_wildcards(flatten_tuple(key),
-                                     get_if_not_present=get_if_not_present)
+            _fill_in_known_wildcards(
+                key, get_if_not_present=get_if_not_present)
         )
 
 
@@ -398,9 +408,11 @@ class _ReferenceSet(collections_Set):
     def _get_iter(self, _slice, key):
         if key.__class__ not in (tuple, list):
             key = (key,)
+        if normalize_index.flatten:
+            key = flatten_tuple(key)
         return _IndexedComponent_slice_iter(
             _slice,
-            _fill_in_known_wildcards(flatten_tuple(key), look_in_index=True),
+            _fill_in_known_wildcards(key, look_in_index=True),
             iter_over_index=True
         )
 

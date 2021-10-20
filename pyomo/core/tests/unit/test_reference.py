@@ -23,7 +23,9 @@ from pyomo.environ import (
 )
 from pyomo.common.collections import ComponentSet
 from pyomo.core.base.var import IndexedVar
-from pyomo.core.base.set import SetProduct, FiniteSetOf, UnknownSetDimen
+from pyomo.core.base.set import (
+    SetProduct, FiniteSetOf, UnknownSetDimen, normalize_index,
+)
 from pyomo.core.base.indexed_component import (
     UnindexedComponent_set, IndexedComponent
 )
@@ -910,6 +912,20 @@ class TestReference(unittest.TestCase):
                 'Slicing components relies on knowing the underlying '
                 'set dimensionality'):
             Reference(m.v)
+
+    def test_issue_1800(self):
+        _old_flatten = normalize_index.flatten
+        try:
+            normalize_index.flatten = False
+            m = ConcreteModel()
+            m.d1 = Set(initialize=[1,2])
+            m.d2 = Set(initialize=[('a', 1), ('b', 2)])
+            m.v = Var(m.d2, m.d1)
+            m.ref = Reference(m.v[:,1])
+            self.assertIn(('a', 1), m.ref)
+            self.assertNotIn(('a', 10), m.ref)
+        finally:
+            normalize_index.flatten = _old_flatten
 
 
 if __name__ == "__main__":
