@@ -7,6 +7,8 @@ from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import (TransformationFactory, BooleanVar, VarList, Binary,
                         LogicalConstraint, Block, ConstraintList, native_types,
                         BooleanVarList)
+from pyomo.core.base.boolean_var import (
+    _DeprecatedImplicitAssociatedBinaryVariable)
 from pyomo.core.expr.cnf_walker import to_cnf
 from pyomo.core.expr.logical_expr import (AndExpression, OrExpression,
                                           NotExpression, AtLeastExpression,
@@ -118,7 +120,9 @@ class LogicalToLinear(IsomorphicTransformation):
         # and complain.
         for bool_vardata in target_block.component_data_objects(
                 BooleanVar, descend_into=(Block,Disjunct)):
-            bool_vardata._seen_by_logical_to_linear = True
+            if bool_vardata._associated_binary is None:
+                bool_vardata._associated_binary = \
+                        _DeprecatedImplicitAssociatedBinaryVariable(bool_vardata)
 
     def _transform_constraintData(self, logical_constraint, new_varlists,
                                   transBlocks):
