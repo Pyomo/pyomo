@@ -12,7 +12,6 @@
 Common utilities for Trust Region Framework
 """
 
-import sys
 import logging
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np, numpy_available
@@ -21,11 +20,6 @@ if numpy_available:
     from numpy import array
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
-logger.setLevel(logging.DEBUG)
-stream = logging.StreamHandler(sys.stdout)
-stream.setLevel(logging.DEBUG)
-stream.setFormatter(logging.Formatter("      %(message)s"))
-logger.addHandler(stream)
 
 def copyVector(x, y, z):
     """
