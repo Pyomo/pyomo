@@ -1145,15 +1145,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
         if export_nonlinear_variables:
             for v in export_nonlinear_variables:
-                if v.is_indexed():
-                    for vi in v.values():
-                        if self_varID_map[id(vi)] not in UsedVars:
-                            Vars_dict[id(vi)] = vi
-                            ConNonlinearVars.update([self_varID_map[id(vi)]])
-                else:
-                    if self_varID_map[id(v)] not in UsedVars:
-                        Vars_dict[id(v)] = v
-                        ConNonlinearVars.update([self_varID_map[id(v)]])
+                for vi in v.values():
+                    if self_varID_map[id(vi)] not in UsedVars:
+                        Vars_dict[id(vi)] = vi
+                        ConNonlinearVars.update([self_varID_map[id(vi)]])
+
 
         ### There used to be an if statement here for the following code block
         ### checking model.statistics.num_binary_vars was greater than zero.
