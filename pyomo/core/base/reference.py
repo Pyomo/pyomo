@@ -572,7 +572,7 @@ def Reference(reference, ctype=_NotSpecified):
         ...
         >>> m.r1 = Reference(m.b[:,:].x)
         >>> m.r1.pprint()
-        r1 : Size=4, Index=r1_index
+        r1 : Size=4, Index=r1_index, ReferenceTo=b[:, :].x
             Key    : Lower : Value : Upper : Fixed : Stale : Domain
             (1, 3) :     1 :  None :     3 : False :  True :  Reals
             (1, 4) :     1 :  None :     4 : False :  True :  Reals
@@ -585,7 +585,7 @@ def Reference(reference, ctype=_NotSpecified):
 
         >>> m.r2 = Reference(m.b[:,3].x)
         >>> m.r2.pprint()
-        r2 : Size=2, Index=b_index_0
+        r2 : Size=2, Index=b_index_0, ReferenceTo=b[:, 3].x
             Key : Lower : Value : Upper : Fixed : Stale : Domain
               1 :     1 :  None :     3 : False :  True :  Reals
               2 :     2 :  None :     3 : False :  True :  Reals
@@ -595,7 +595,6 @@ def Reference(reference, ctype=_NotSpecified):
 
     .. doctest::
 
-        >>> from pyomo.environ import *
         >>> m = ConcreteModel()
         >>> @m.Block([1,2])
         ... def b(b,i):
@@ -603,7 +602,7 @@ def Reference(reference, ctype=_NotSpecified):
         ...
         >>> m.r3 = Reference(m.b[:].x[:])
         >>> m.r3.pprint()
-        r3 : Size=4, Index=r3_index
+        r3 : Size=4, Index=r3_index, ReferenceTo=b[:].x[:]
             Key    : Lower : Value : Upper : Fixed : Stale : Domain
             (1, 3) :     1 :  None :  None : False :  True :  Reals
             (1, 4) :     1 :  None :  None : False :  True :  Reals
