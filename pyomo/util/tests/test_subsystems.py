@@ -380,7 +380,10 @@ class TestSubsystemBlock(unittest.TestCase):
         return m
 
     @unittest.skipUnless(find_GSL(), "Could not find the AMPL GSL library")
-    @unittest.skipUnless(ipopt.available(), "ipopt is not available")
+    @unittest.skipUnless(
+        pyo.SolverFactory("ipopt").available(),
+        "ipopt is not available"
+    )
     def test_with_external_function(self):
         m = self._make_model_with_external_functions()
         subsystem = ([m.con2, m.con3], [m.v2, m.v3])
