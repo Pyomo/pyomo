@@ -205,7 +205,7 @@ class IndexedComponent_slice(object):
             pass
         return None
 
-    def __call__(self, *idx, **kwds):
+    def __call__(self, *args, **kwds):
         """Special handling of the "()" operator for component slices.
 
         Creating a slice of a component returns a IndexedComponent_slice
@@ -231,7 +231,7 @@ class IndexedComponent_slice(object):
             self._len -= 1
 
         ans = IndexedComponent_slice(self, (
-            IndexedComponent_slice.call, idx, kwds ) )
+            IndexedComponent_slice.call, args, kwds ) )
         # Because we just duplicated the slice and added a new entry, we
         # know that the _len == len(_call_stack)
         if ans._call_stack[-2][1] == 'component':

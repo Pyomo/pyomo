@@ -785,7 +785,7 @@ You can silence this warning by one of three ways:
         There are three basic ways to get here:
           1) the index contains one or more slices or ellipsis
           2) the index contains an unhashable type (e.g., a Pyomo
-             (Simple)Component
+             (Scalar)Component
           3) the index contains an IndexTemplate
         """
         from pyomo.core.expr import current as EXPR

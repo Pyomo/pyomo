@@ -18,6 +18,7 @@ import pyomo.common.unittest as unittest
 from pyomo.environ import Var, Block, ConcreteModel, RangeSet, Set
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
+from pyomo.core.base.set import normalize_index
 
 def _x_init(m, k):
     return k
@@ -601,7 +602,6 @@ class TestComponentSlices(unittest.TestCase):
         self.assertEqual(len(ref), 1)
         self.assertIs(ref[0], m.x[2,3])
 
-        from pyomo.core.base.set import normalize_index
         _old_flatten = normalize_index.flatten
         try:
             normalize_index.flatten = False
@@ -637,7 +637,6 @@ class TestComponentSlices(unittest.TestCase):
             ref = list(m.x[:,:])
 
     def test_flatten_false(self):
-        from pyomo.core.base.set import normalize_index
         _old_flatten = normalize_index.flatten
         try:
             normalize_index.flatten = False
