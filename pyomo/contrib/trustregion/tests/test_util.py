@@ -82,6 +82,7 @@ class TestLogger(unittest.TestCase):
                                  0, self.params)
         self.assertEqual(len(self.iterLogger.iterations), 1)
 
+    @unittest.skipUnless(numpy_available, "numpy is not available")
     def test_printIteration(self):
         self.iterLogger.newIteration(self.iteration, self.inputs,
                                   self.outputs, self.other,
