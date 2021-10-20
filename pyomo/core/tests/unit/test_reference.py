@@ -20,6 +20,7 @@ from io import StringIO
 
 from pyomo.environ import (
     ConcreteModel, Block, Var, Set, RangeSet, Param, value,
+    NonNegativeIntegers,
 )
 from pyomo.common.collections import ComponentSet
 from pyomo.core.base.var import IndexedVar
@@ -913,7 +914,8 @@ class TestReference(unittest.TestCase):
                 'set dimensionality'):
             Reference(m.v)
 
-    def test_issue_1800(self):
+    def test_contains_with_nonflattened(self):
+        # test issue #1800
         _old_flatten = normalize_index.flatten
         try:
             normalize_index.flatten = False
@@ -927,6 +929,55 @@ class TestReference(unittest.TestCase):
         finally:
             normalize_index.flatten = _old_flatten
 
+    def test_pprint_nonfinite_sets(self):
+        # test issue #2039
+        self.maxDiff = None
+        m = ConcreteModel()
+        m.v = Var(NonNegativeIntegers, dense=False)
+        m.ref = Reference(m.v)
+        buf = StringIO()
+        m.pprint(ostream=buf)
+        self.assertEqual(buf.getvalue().strip(), """
+1 Var Declarations
+    v : Size=0, Index=NonNegativeIntegers
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+
+1 IndexedComponent Declarations
+    ref : Size=0, Index=ref_index, ReferenceTo=v
+        Key : Object
+
+1 SetOf Declarations
+    ref_index : Dimen=0, Size=0, Bounds=(None, None)
+        Key  : Ordered : Members
+        None :   False : ReferenceSet(v[...])
+
+3 Declarations: v ref_index ref
+""".strip())
+
+        m.v[3]
+        m.ref[5]
+        buf = StringIO()
+        m.pprint(ostream=buf)
+        self.assertEqual(buf.getvalue().strip(), """
+1 Var Declarations
+    v : Size=2, Index=NonNegativeIntegers
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          3 :  None :  None :  None : False :  True :  Reals
+          5 :  None :  None :  None : False :  True :  Reals
+
+1 IndexedComponent Declarations
+    ref : Size=2, Index=ref_index, ReferenceTo=v
+        Key : Object
+          3 : <class 'pyomo.core.base.var._GeneralVarData'>
+          5 : <class 'pyomo.core.base.var._GeneralVarData'>
+
+1 SetOf Declarations
+    ref_index : Dimen=1, Size=2, Bounds=(3, 5)
+        Key  : Ordered : Members
+        None :   False : ReferenceSet(v[...])
+
+3 Declarations: v ref_index ref
+""".strip())
 
 if __name__ == "__main__":
     unittest.main()

@@ -366,7 +366,7 @@ class _slice_generator(object):
             or len(self.component._implicit_subsets) == 1 )
 
         self.explicit_index_count = len(fixed) + len(sliced)
-        if iter_over_index:
+        if iter_over_index and component.index_set().isfinite():
             # This should be used to iterate over all the potential
             # indices of a sparse IndexedComponent.
             self.component_iter = component.index_set().__iter__()
