@@ -433,7 +433,8 @@ def _identify_wildcard_sets(iter_stack, index):
             wildcard_sets = {}
             # `wildcard_sets` maps position in the current level's
             # "subsets list" to its set if that set is a wildcard.
-            for j, s in enumerate(level.component.index_set().subsets()):
+            for j, s in enumerate(level.component.index_set().subsets(
+                    expand_all_set_operators=False)):
                 # Iterate over the sets that could possibly be wildcards
                 if s is UnindexedComponent_set:
                     wildcard_sets[j] = s

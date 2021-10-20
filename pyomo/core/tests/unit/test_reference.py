@@ -23,7 +23,7 @@ from pyomo.environ import (
 )
 from pyomo.common.collections import ComponentSet
 from pyomo.core.base.var import IndexedVar
-from pyomo.core.base.set import SetProduct, FiniteSetOf
+from pyomo.core.base.set import SetProduct, FiniteSetOf, UnknownSetDimen
 from pyomo.core.base.indexed_component import (
     UnindexedComponent_set, IndexedComponent
 )
@@ -897,6 +897,20 @@ class TestReference(unittest.TestCase):
 
         dict_ref = Reference(vardict)
         self.assertIs(dict_ref.referent, vardict)
+
+    def test_UnknownSetDimen(self):
+        # Replicate the bug reported in #1928
+        m = ConcreteModel()
+        m.thinga = Set(initialize=['e1', 'e2', 'e3'])
+        m.thingb = Set(initialize=[])
+        m.v = Var(m.thinga | m.thingb)
+        self.assertIs(m.v.dim(), UnknownSetDimen)
+        with self.assertRaisesRegex(
+                IndexError,
+                'Slicing components relies on knowing the underlying '
+                'set dimensionality'):
+            Reference(m.v)
+
 
 if __name__ == "__main__":
     unittest.main()
