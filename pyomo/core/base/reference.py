@@ -636,6 +636,29 @@ def Reference(reference, ctype=_NotSpecified):
         _iter = iter(reference)
         slice_idx = []
         index = None
+    elif isinstance(reference, ComponentData):
+        # Create a dummy IndexedComponent container with a "normal"
+        # Scalar interface.  This relies on the assumption that the
+        # Component uses a standard storage model.
+        _idx = next(iter(UnindexedComponent_set))
+        _parent = reference.parent_component()
+        comp = _parent.__class__(SetOf(UnindexedComponent_set))
+        comp.construct()
+        comp._data[_idx] = reference
+        #
+        # HACK: Set the _parent to match the ComponentData's container's
+        # parent so that block.clone() infers the correct block scope
+        # for this "hidden" component
+        #
+        # TODO: When Block supports proper "hidden" / "anonymous"
+        # components, switch this HACK over to that API
+        comp._parent = _parent._parent
+        #
+        reference = comp[...]
+        _data = _ReferenceDict(reference)
+        _iter = iter(reference)
+        slice_idx = []
+        index = None
     elif isinstance(reference, Mapping):
         _data = _ReferenceDict_mapping(dict(reference))
         _iter = _data.values()

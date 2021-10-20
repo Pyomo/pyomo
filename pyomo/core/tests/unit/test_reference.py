@@ -449,6 +449,40 @@ class TestReference(unittest.TestCase):
         with self.assertRaises(KeyError):
             m.t[3]
 
+    def test_component_data_reference(self):
+        m = ConcreteModel()
+        m.y = Var([1,2])
+        m.r = Reference(m.y[2])
+
+        self.assertIs(m.r.ctype, Var)
+        self.assertIsNot(m.r.index_set(), m.y.index_set())
+        self.assertIs(m.y.index_set(), m.y_index)
+        self.assertIs(type(m.r.index_set()), FiniteSetOf)
+        self.assertEqual(len(m.r), 1)
+        self.assertTrue(m.r.is_indexed())
+        self.assertIn(None, m.r)
+        self.assertNotIn(1, m.r)
+        self.assertIs(m.r[None], m.y[2])
+        with self.assertRaises(KeyError):
+            m.r[2]
+
+    def test_component_data_reference_clone(self):
+        m = ConcreteModel()
+        m.b = Block()
+        m.b.x = Var([1,2])
+        m.c = Block()
+        m.c.r = Reference(m.b.x[2])
+
+        self.assertIs(m.c.r[None], m.b.x[2])
+        m.d = m.c.clone()
+        self.assertIs(m.d.r[None], m.b.x[2])
+
+        i = m.clone()
+        self.assertIs(i.c.r[None], i.b.x[2])
+        self.assertIsNot(i.c.r[None], m.b.x[2])
+        self.assertIs(i.d.r[None], i.b.x[2])
+
+
     def test_reference_var_pprint(self):
         m = ConcreteModel()
         m.x = Var([1,2], initialize={1:4,2:8})
