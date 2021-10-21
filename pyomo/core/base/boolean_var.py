@@ -9,8 +9,7 @@
 #  ___________________________________________________________________________
 
 import logging
-from weakref import ref as weakref_ref
-from weakref import ReferenceType
+from weakref import ref as weakref_ref, ReferenceType
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
@@ -321,8 +320,8 @@ class BooleanVar(IndexedComponent):
         self._value_init_value = None
         self._value_init_rule = None
 
-        if is_functor(initialize) and (not isinstance(initialize, 
-                                                      BooleanValue)):
+        if is_functor(initialize) and (
+                not isinstance(initialize, BooleanValue)):
             self._value_init_rule = initialize
         else:
             self._value_init_value = initialize
