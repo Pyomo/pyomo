@@ -17,5 +17,5 @@ def load():
     import pyomo.repn.plugins.nl_writer
 
     from pyomo.opt import WriterFactory
-    WriterFactory.register('nl', WriterFactory.doc('nl_v1'))(
+    WriterFactory.register('nl', 'Generate the corresponding AMPL NL file.')(
         WriterFactory.get_class('nl_v1'))
