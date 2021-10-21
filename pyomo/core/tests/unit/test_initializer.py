@@ -11,11 +11,13 @@
 import pickle
 
 import pyomo.common.unittest as unittest
+from pyomo.common.dependencies import pandas as pd, pandas_available
 
 from pyomo.core.base.util import flatten_tuple
 from pyomo.core.base.initializer import (
     Initializer, ConstantInitializer, ItemInitializer, ScalarCallInitializer,
     IndexedCallInitializer, CountedCallInitializer, CountedCallGenerator,
+    DataFrameInitializer,
 )
 from pyomo.environ import (
     ConcreteModel, Var,
@@ -52,7 +54,6 @@ class Test_Initializer(unittest.TestCase):
             a.indices()
         self.assertEqual(a(None, 1), 5)
 
-
     def test_dict(self):
         m = ConcreteModel()
         a = Initializer({1:5})
@@ -62,7 +63,6 @@ class Test_Initializer(unittest.TestCase):
         self.assertTrue(a.contains_indices())
         self.assertEqual(list(a.indices()), [1])
         self.assertEqual(a(None, 1), 5)
-
 
     def test_sequence(self):
         m = ConcreteModel()
@@ -80,7 +80,6 @@ class Test_Initializer(unittest.TestCase):
         self.assertFalse(a.verified)
         self.assertFalse(a.contains_indices())
         self.assertEqual(a(None, 1), [0,5])
-
 
     def test_function(self):
         m = ConcreteModel()
@@ -134,7 +133,6 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(next(c), 2)
         self.assertEqual(next(c), 3)
         self.assertEqual(next(c), 4)
-
 
     def test_method(self):
         class Init(object):
@@ -195,7 +193,6 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(next(c), 2)
         self.assertEqual(next(c), 3)
         self.assertEqual(next(c), 4)
-
 
     def test_classmethod(self):
         class Init(object):
@@ -259,7 +256,6 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(next(c), 3)
         self.assertEqual(next(c), 4)
 
-
     def test_staticmethod(self):
         class Init(object):
             @staticmethod
@@ -322,7 +318,6 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(next(c), 3)
         self.assertEqual(next(c), 4)
 
-
     def test_generator_fcn(self):
         m = ConcreteModel()
         def a_init(m):
@@ -357,7 +352,6 @@ class Test_Initializer(unittest.TestCase):
         self.assertFalse(a.constant())
         self.assertFalse(a.verified)
         self.assertEqual(list(a(None, (1, 4))), [4,2])
-
 
     def test_generator_method(self):
         class Init(object):
@@ -399,7 +393,6 @@ class Test_Initializer(unittest.TestCase):
         self.assertFalse(a.verified)
         self.assertEqual(list(a(None, (1, 4))), [4,2])
 
-
     def test_generators(self):
         m = ConcreteModel()
         with self.assertRaisesRegex(
@@ -425,6 +418,61 @@ class Test_Initializer(unittest.TestCase):
         self.assertFalse(a.verified)
         self.assertEqual(list(a(None, 1)), [0,3])
 
+    @unittest.skipUnless(pandas_available, "Pandas is not installed")
+    def test_dataframe(self):
+        d = {'col1': [1, 2, 4]}
+        df = pd.DataFrame(data=d)
+        a = Initializer(df)
+        self.assertIs(type(a), DataFrameInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertTrue(a.contains_indices())
+        self.assertEqual(list(a.indices()), [0,1,2])
+        self.assertEqual(a(None, 0), 1)
+        self.assertEqual(a(None, 1), 2)
+        self.assertEqual(a(None, 2), 4)
+
+        d = {'col1': [1, 2, 4], 'col2': [10, 20, 40]}
+        df = pd.DataFrame(data=d)
+        with self.assertRaisesRegex(
+                ValueError,
+                'DataFrameInitializer for DataFrame with multiple columns'):
+            a = Initializer(df)
+        a = DataFrameInitializer(df, 'col2')
+        self.assertIs(type(a), DataFrameInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertTrue(a.contains_indices())
+        self.assertEqual(list(a.indices()), [0,1,2])
+        self.assertEqual(a(None, 0), 10)
+        self.assertEqual(a(None, 1), 20)
+        self.assertEqual(a(None, 2), 40)
+
+        df = pd.DataFrame([10, 20, 30, 40], index=[[0,0,1,1],[0,1,0,1]])
+        a = Initializer(df)
+        self.assertIs(type(a), DataFrameInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertTrue(a.contains_indices())
+        self.assertEqual(list(a.indices()), [(0, 0), (0, 1), (1, 0), (1, 1)])
+        self.assertEqual(a(None, (0, 0)), 10)
+        self.assertEqual(a(None, (0, 1)), 20)
+        self.assertEqual(a(None, (1, 0)), 30)
+        self.assertEqual(a(None, (1, 1)), 40)
+
+    @unittest.skipUnless(pandas_available, "Pandas is not installed")
+    def test_initializer_initializer(self):
+        d = {'col1': [1, 2, 4], 'col2': [10, 20, 40]}
+        df = pd.DataFrame(data=d)
+        a = Initializer(DataFrameInitializer(df, 'col2'))
+        self.assertIs(type(a), DataFrameInitializer)
+        self.assertFalse(a.constant())
+        self.assertFalse(a.verified)
+        self.assertTrue(a.contains_indices())
+        self.assertEqual(list(a.indices()), [0,1,2])
+        self.assertEqual(a(None, 0), 10)
+        self.assertEqual(a(None, 1), 20)
+        self.assertEqual(a(None, 2), 40)
 
     def test_pickle(self):
         m = ConcreteModel()
