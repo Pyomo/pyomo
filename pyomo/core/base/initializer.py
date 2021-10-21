@@ -85,7 +85,7 @@ def Initializer(init,
             if pandas_available and isinstance(init, pandas.Series):
                 initializer_map[init.__class__] = ItemInitializer
         elif any(c.__name__ == 'DataFrame' for c in init.__class__.__mro__):
-            if pandas_available and isinstance(init, pandas.DataFrams):
+            if pandas_available and isinstance(init, pandas.DataFrame):
                 initializer_map[init.__class__] = DataFrameInitializer
         else:
             # Note: this picks up (among other things) all string instances
@@ -115,6 +115,8 @@ def Initializer(init,
             return ScalarCallInitializer(init)
         else:
             return IndexedCallInitializer(init)
+    if isinstance(init, InitializerBase):
+        return init
     if isinstance(init, PyomoObject):
         # We re-check for PyomoObject here, as that picks up / caches
         # non-components like component data objects and expressions
@@ -205,6 +207,31 @@ class ItemInitializer(InitializerBase):
             return self._dict.keys()
         except AttributeError:
             return range(len(self._dict))
+
+
+class DataFrameInitializer(InitializerBase):
+    """Initializer for dict-like values supporting __getitem__()"""
+    __slots__ = ('_df', '_column',)
+
+    def __init__(self, dataframe, column=None):
+        self._df = dataframe
+        if column is not None:
+            self._column = column
+        elif len(dataframe.columns) == 1:
+            self._column = dataframe.columns[0]
+        else:
+            raise ValueError(
+                "Cannot construct DataFrameInitializer for DataFrame with "
+                "multiple columns without also specifying the data column")
+
+    def __call__(self, parent, idx):
+        return self._df.at[idx, self._column]
+
+    def contains_indices(self):
+        return True
+
+    def indices(self):
+        return self._df.index
 
 
 class IndexedCallInitializer(InitializerBase):
