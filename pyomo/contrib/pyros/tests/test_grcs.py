@@ -13,6 +13,7 @@ from pyomo.core.expr.current import identify_variables, identify_mutable_paramet
 from pyomo.contrib.pyros.util import selective_clone, add_decision_rule_variables, add_decision_rule_constraints, \
     model_is_valid, turn_bounds_to_constraints, transform_to_standard_form, ObjectiveType, pyrosTerminationCondition, \
     coefficient_matching
+from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.uncertainty_sets import *
 from pyomo.contrib.pyros.master_problem_methods import add_scenario_to_master, initial_construct_master, solve_master, \
     minimize_dr_vars
@@ -270,6 +271,57 @@ class testTurnBoundsToConstraints(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 4,
                          msg="Inequality constraints were not "
                              "written correctly for a variable with both lower and upper bound.")
+
+    def test_uncertain_bounds_to_constraints(self):
+        # test model
+        m = ConcreteModel()
+
+        # parameters
+        m.p = Param(initialize=8, mutable=True)
+        m.r = Param(initialize=-5, mutable=True)
+        m.q = Param(initialize=1, mutable=False)
+        m.s = Param(initialize=1, mutable=True)
+
+        # variables, with bounds contingent on params
+        m.w = Var(initialize=1, bounds=(None, None))
+        m.x = Var(initialize=1, bounds=(0, exp(-1*m.p / 8) * m.q * m.s))
+        m.y = Var(initialize=1, bounds=(m.r * m.p, 0))
+        m.z = Var(initialize=1, bounds=(0, m.s))
+        m.v = Var(initialize=1, bounds=(m.r, m.p))
+
+        # objective
+        m.obj = Objective(sense=maximize, expr=m.x**2 - m.y + m.z**2 + m.v)
+
+        # uncertain params
+        uncertain_params = [m.p, m.r]
+
+        # clone model
+        mod = m.clone()
+
+        # manually replace uncertain parameter bounds with explicit constraints
+        x_upper_bd_con = Constraint(expr=m.x - m.x._ub <= 0)
+        y_lower_bd_con = Constraint(expr=m.y._lb - m.y <= 0)
+        v_upper_bd_con = Constraint(expr=m.v - m.v._ub <= 0)
+        v_lower_bd_con = Constraint(expr=m.v._lb - m.v <= 0)
+        m.add_component('x_uncertain_upper_bound_con', x_upper_bd_con)
+        m.add_component('y_uncertain_lower_bound_con', y_lower_bd_con)
+        m.add_component('v_uncertain_upper_bound_con', v_upper_bd_con)
+        m.add_component('v_uncertain_lower_bound_con', v_lower_bd_con)
+
+        # remove corresponding variable bounds
+        m.x.setub(None)
+        m.y.setlb(None)
+        m.v.setlb(None)
+        m.v.setub(None)
+
+        # replace uncertain parameter bounds with util function
+        replace_uncertain_bounds_with_constraints(mod, uncertain_params)
+
+        # check constraints match
+        self.assertEqual(len(list(m.component_data_objects(Constraint))),
+                         len(list(mod.component_data_objects(Constraint))),
+                         msg='Number of uncertain bounds turned to constraints'
+                             'manually and automatically do not match.')
 
 class testTransformToStandardForm(unittest.TestCase):
 
