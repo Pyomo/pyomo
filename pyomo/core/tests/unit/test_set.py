@@ -840,6 +840,20 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertIs(type(i), InfiniteSetOf)
         self.assertEqual(i, j)
 
+        i = SetOf(Binary)
+        self.assertIs(type(i), OrderedSetOf)
+        j = OrderedSetOf(Binary)
+        self.assertIs(type(i), OrderedSetOf)
+        self.assertEqual(i, j)
+
+        I = Set(initialize={1,3,2}, ordered=False)
+        I.construct()
+        i = SetOf(I)
+        self.assertIs(type(i), FiniteSetOf)
+        j = FiniteSetOf(I)
+        self.assertIs(type(i), FiniteSetOf)
+        self.assertEqual(i, j)
+
         i = RangeSet(3)
         self.assertTrue(i.is_constructed())
         self.assertEqual(len(i), 3)
@@ -1621,6 +1635,13 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(SetOf([1,2,3]).dimen, 1)
         self.assertEqual(SetOf([(1,2),(2,3),(4,5)]).dimen, 2)
         self.assertEqual(SetOf([1,(2,3)]).dimen, None)
+
+        self.assertEqual(SetOf(Integers).dimen, 1)
+        self.assertEqual(SetOf(Binary).dimen, 1)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[(1,2), (3,4)])
+        self.assertEqual(SetOf(m.I).dimen, 2)
 
         a = [1,2,3,'abc']
         SetOf_a = SetOf(a)
@@ -3536,10 +3557,21 @@ class TestSet(unittest.TestCase):
 
         m = ConcreteModel()
         m.I = Set(initialize=(1,3,2,4))
+        self.assertTrue(m.I._init_values.constant())
         self.assertEqual(list(m.I), [1,3,2,4])
         self.assertEqual(list(reversed(m.I)), [4,2,3,1])
         self.assertEqual(m.I.data(), (1,3,2,4))
         self.assertEqual(m.I.dimen, 1)
+
+        m = ConcreteModel()
+        with self.assertRaisesRegexp(
+                ValueError, 'Set rule or initializer returned None'):
+            m.I = Set(initialize=lambda m: None, dimen=2)
+        self.assertTrue(m.I._init_values.constant())
+        self.assertEqual(list(m.I), [])
+        self.assertEqual(list(reversed(m.I)), [])
+        self.assertEqual(m.I.data(), ())
+        self.assertIs(m.I.dimen, 2)
 
         def I_init(m):
             yield 1
@@ -3618,6 +3650,13 @@ class TestSet(unittest.TestCase):
             ref = ("Initializer for Set I returned non-iterable object "
                    "of type int.")
             self.assertIn(ref, output.getvalue())
+
+    def test_scalar_indexed_api(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=range(3))
+        self.assertEqual(list(m.I.keys()), [None])
+        self.assertEqual(list(m.I.values()), [m.I])
+        self.assertEqual(list(m.I.items()), [(None, m.I)])
 
     def test_insertion_deletion(self):
         def _verify(_s, _l):
