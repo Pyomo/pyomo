@@ -205,7 +205,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
         state = super().__getstate__()
         for i in _GeneralBooleanVarData.__slots__:
             state[i] = getattr(self, i)
-        if isinstance(r, ReferenceType):
+        if isinstance(self._associated_binary, ReferenceType):
             state['_associated_binary'] = self._associated_binary()
         return state
 
