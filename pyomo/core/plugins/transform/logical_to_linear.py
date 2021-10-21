@@ -3,11 +3,12 @@ Constraints."""
 from pyomo.common.collections import ComponentMap
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.config import ConfigBlock, ConfigValue
-from pyomo.common.deprecation import deprecation_warning
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import (TransformationFactory, BooleanVar, VarList, Binary,
                         LogicalConstraint, Block, ConstraintList, native_types,
                         BooleanVarList)
+from pyomo.core.base.boolean_var import (
+    _DeprecatedImplicitAssociatedBinaryVariable)
 from pyomo.core.expr.cnf_walker import to_cnf
 from pyomo.core.expr.logical_expr import (AndExpression, OrExpression,
                                           NotExpression, AtLeastExpression,
@@ -56,7 +57,7 @@ class LogicalToLinear(IsomorphicTransformation):
         new_var_lists = ComponentMap()
         transBlocks = {}
         for t in targets:
-            if t.ctype in [Block, Disjunct]:
+            if issubclass(t.ctype, Block):
                 self._transform_block(t, model, new_var_lists, transBlocks)
             elif t.ctype is LogicalConstraint:
                 if t.is_indexed():
@@ -71,12 +72,19 @@ class LogicalToLinear(IsomorphicTransformation):
                                                                   type(t)))
 
     def _transform_boolean_varData(self, bool_vardata, new_varlists):
-        # we have neither the list nor an associated binary
-        parent_block = bool_vardata.parent_block()
+        # This transformation tries to group the binaries it creates for indexed
+        # BooleanVars onto the same VarList. This won't work across separate
+        # calls to the transformation, but within one call it's fine. So we have
+        # two cases: 1) either we have created a VarList for this
+        # BooleanVarData's parent_component, but have yet to add its binary to
+        # said list, or 2) we have neither the binary nor the VarList
+
         parent_component = bool_vardata.parent_component()
         new_varlist = new_varlists.get(parent_component)
         if new_varlist is None and \
            bool_vardata.get_associated_binary() is None:
+            # Case 2) we have neither the VarList nor an associated binary
+            parent_block = bool_vardata.parent_block()
             new_var_list_name = unique_component_name(
                 parent_block,
                 parent_component.local_name + '_asbinary')
@@ -85,8 +93,8 @@ class LogicalToLinear(IsomorphicTransformation):
             new_varlists[parent_component] = new_varlist
 
         if bool_vardata.get_associated_binary() is None:
-            # we already have a list, but need to create the associated
-            # binary
+            # Case 1) we already have a VarList, but need to create the
+            # associated binary
             new_binary_vardata = new_varlist.add()
             bool_vardata.associate_binary_var(new_binary_vardata)
             if bool_vardata.value is not None:
@@ -95,7 +103,7 @@ class LogicalToLinear(IsomorphicTransformation):
                 new_binary_vardata.fix()
 
     def _transform_constraint(self, constraint, new_varlists, transBlocks):
-        for i in sorted(constraint.keys()):
+        for i in constraint.keys(ordered=True):
             self._transform_constraintData(constraint[i], new_varlists,
                                            transBlocks)
 
@@ -106,24 +114,15 @@ class LogicalToLinear(IsomorphicTransformation):
             self._transform_constraintData(logical_constraint, new_varlists,
                                            transBlocks)
 
-        # transform any other BooleanVars we missed (for backwards
-        # compatibility--I don't think we should really do this.)
-        complain_about_deprecation = False
+        # This can go away when we deprecate this transformation transforming
+        # BooleanVars. This just marks the BooleanVars as "seen" so that if
+        # someone asks for their binary var later, we can create it on the fly
+        # and complain.
         for bool_vardata in target_block.component_data_objects(
                 BooleanVar, descend_into=(Block,Disjunct)):
-            if bool_vardata.get_associated_binary() is None:
-                # complaining for very VarData would be obnoxious, so make a
-                # note to complain once after this loop. (We'll still complain
-                # for every block we transform, but that should be less awful.)
-                complain_about_deprecation = True
-                self._transform_boolean_varData(bool_vardata, new_varlists)
-        if complain_about_deprecation:
-            deprecation_warning(
-                "Relying on core.logical_to_linear to transform "
-                "BooleanVars which do not appear in LogicalConstraints "
-                "is deprecated. Please associated your own binaries if "
-                "you have BooleanVars not used in logical expressions.",
-                version='6.1.3')
+            if bool_vardata._associated_binary is None:
+                bool_vardata._associated_binary = \
+                        _DeprecatedImplicitAssociatedBinaryVariable(bool_vardata)
 
     def _transform_constraintData(self, logical_constraint, new_varlists,
                                   transBlocks):

@@ -492,18 +492,29 @@ class TestLogicalToLinearBackmap(unittest.TestCase):
         m = ConcreteModel()
         m.s = RangeSet(3)
         m.Y = BooleanVar(m.s)
+        TransformationFactory('core.logical_to_linear').apply_to(m)
         output = StringIO()
-        with LoggingIntercept(output, 'pyomo.core.plugins.transform',
+        with LoggingIntercept(output, 'pyomo.core.base',
                               logging.WARNING):
-            TransformationFactory('core.logical_to_linear').apply_to(m)
+            y1 = m.Y[1].get_associated_binary()
         self.assertIn("DEPRECATED: Relying on core.logical_to_linear to "
                       "transform BooleanVars which do not appear in "
                       "LogicalConstraints is deprecated. Please "
                       "associated your own binaries if you have BooleanVars "
                       "not used in logical expressions.",
                       output.getvalue().replace('\n', ' '))
-        m.Y_asbinary[1].value = 1
-        m.Y_asbinary[2].value = 0
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core.base',
+                              logging.WARNING):
+            y2 = m.Y[2].get_associated_binary()
+        self.assertIn("DEPRECATED: Relying on core.logical_to_linear to "
+                      "transform BooleanVars which do not appear in "
+                      "LogicalConstraints is deprecated. Please "
+                      "associated your own binaries if you have BooleanVars "
+                      "not used in logical expressions.",
+                      output.getvalue().replace('\n', ' '))
+        y1.value = 1
+        y2.value = 0
         update_boolean_vars_from_binary(m)
         self.assertTrue(m.Y[1].value)
         self.assertFalse(m.Y[2].value)
@@ -523,6 +534,7 @@ class TestLogicalToLinearBackmap(unittest.TestCase):
         m = _generate_boolean_model(3)
         m.b = Block()
         m.b.Y = BooleanVar()
+        m.b.lc = LogicalConstraint(expr=m.Y[1].lor(m.b.Y))
         TransformationFactory('core.logical_to_linear').apply_to(m)
         m.Y_asbinary[1].value = 1
         m.Y_asbinary[2].value = 0
