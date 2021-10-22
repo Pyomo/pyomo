@@ -18,7 +18,7 @@ from pyomo.core.plugins.transform.logical_to_linear import \
 from pyomo.environ import ( ConcreteModel, BooleanVar, LogicalConstraint, lor,
                             TransformationFactory, RangeSet, Var, Constraint,
                             ComponentMap, value, BooleanSet, atleast, atmost,
-                            exactly, Block)
+                            exactly, Block, Binary)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.repn import generate_standard_repn
 from io import StringIO
@@ -519,6 +519,20 @@ class TestLogicalToLinearBackmap(unittest.TestCase):
         self.assertTrue(m.Y[1].value)
         self.assertFalse(m.Y[2].value)
         self.assertIsNone(m.Y[3].value)
+
+    def test_can_associate_unused_boolean_after_transformation(self):
+        m = ConcreteModel()
+        m.Y = BooleanVar()
+        TransformationFactory('core.logical_to_linear').apply_to(m)
+        m.y = Var(domain=Binary)
+        m.Y.associate_binary_var(m.y)
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.core.base',
+                              logging.WARNING):
+            y = m.Y.get_associated_binary()
+        self.assertIs(y, m.y)
+        # we didn't whine about this
+        self.assertEqual(output.getvalue(), '')
 
     def test_backmap(self):
         m = _generate_boolean_model(3)

@@ -270,7 +270,9 @@ class _GeneralBooleanVarData(_BooleanVarData):
 
     def associate_binary_var(self, binary_var):
         """Associate a binary _VarData to this _GeneralBooleanVarData"""
-        if self._associated_binary is not None:
+        if self._associated_binary is not None and \
+           type(self._associated_binary) is not \
+           _DeprecatedImplicitAssociatedBinaryVariable:
             raise RuntimeError(
                 "Reassociating BooleanVar '%s' (currently associated "
                 "with '%s') with '%s' is not allowed" % (
