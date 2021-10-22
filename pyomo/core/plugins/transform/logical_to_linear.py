@@ -22,8 +22,7 @@ from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.gdp import Disjunct
-# ESJ TODO: Should we move this somewhere else?
-from pyomo.gdp.util import target_list
+from pyomo.core.util import target_list
 
 @TransformationFactory.register("core.logical_to_linear", 
                                 doc="Convert logic to linear constraints")
