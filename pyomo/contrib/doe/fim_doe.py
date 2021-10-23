@@ -483,16 +483,20 @@ class DesignOfExperiments:
 
                     # loop over measurement item and time to store model measurements
                     output_combine = []
-                    for j in self.measure.measurement_name:
-                        if self.measurement_extra_index is None:
-                            for t in self.measurement_variable_timepoints[j]:
+                    for j in self.flatten_measure_name:
+                        if '_index_' in j:
+                            measure_name = j.split('_index_')[0]
+                            measure_index = j.split('_index_')[1]
+                            print('measurename:', measure_name)
+                            print('measureindex:', measure_index)
+                            for t in self.flatten_measure_timeset[j]:
+                                C_value = eval('mod.' + str(measure_name) + '[0,' + str((measure_index)) + ',' + str(t) + ']')
+                                output_combine.append(value(C_value))
+
+                        else:
+                            for t in self.flatten_measure_timeset[j]:
                                 C_value = eval('mod.' + j + '[0,' + str(t) + ']')
                                 output_combine.append(value(C_value))
-                        else:
-                            for ind in self.measurement_extra_index[j]:
-                                for t in self.measurement_variable_timepoints[j]:
-                                    C_value = eval('mod.' + j + '[0,' + str(ind) +',' + str(t) + ']')
-                                    output_combine.append(value(C_value))
                     output_record[no_s] = output_combine
                         
                     print('Output this time: ', output_record[no_s])
