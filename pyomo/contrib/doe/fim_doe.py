@@ -489,8 +489,10 @@ class DesignOfExperiments:
                             measure_index = j.split('_index_')[1]
                             print('measurename:', measure_name)
                             print('measureindex:', measure_index)
+                            if type(measure_index) is str:
+                                measure_index_doublequotes = '"' + measure_index + '"'
                             for t in self.flatten_measure_timeset[j]:
-                                C_value = eval('mod.' + str(measure_name) + '[0,' + str((measure_index)) + ',' + str(t) + ']')
+                                C_value = eval('mod.' + str(measure_name) + '[0,' + str((measure_index_doublequotes)) + ',' + str(t) + ']')
                                 output_combine.append(value(C_value))
 
                         else:
@@ -602,51 +604,56 @@ class DesignOfExperiments:
                 time_allsolve.append(time1_solve - time0_solve)
 
                 # extract sipopt result
-                for j in self.measurement_variables:
-                    # fetch the measurement variable
-                    measure_var = getattr(m_sipopt,j)
+                for j in self.flatten_measure_name:
+
                     # check if this variable is fixed
-                    if self.measurement_extra_index[j] is None:
-                        for t in self.measurement_variable_timepoints[j]:
-                            if (measure_var[0,t].fixed == True):
-                                perturb_value = value(measure_var[0,t])
+                    if '_index_' in j:
+                        measure_name = j.split('_index_')[0]
+                        measure_index = j.split('_index_')[1]
+                        if type(measure_index) is str:
+                            measure_index_doublequotes = '"' + measure_index + '"'
+                        for t in self.flatten_measure_timeset[j]:
+                            measure_var = getattr(m_sipopt, measure_name)
+                            if (measure_var[0,measure_index,t].fixed == True):
+                                perturb_value = value(measure_var[0,measure_index,t])
                             else:
+
                                 # if it is not fixed, record its perturbed value
                                 if self.mode =='sequential_sipopt':
+                                    perturb_value = eval('m_sipopt.sens_sol_state_1[m_sipopt.' + measure_name + '[0,'+str(measure_index_doublequotes)+',' + str(t) + ']]')
+                                else:
+                                    perturb_value = eval('m_sipopt.' + measure_name + '[0,' +str(measure_index_doublequotes)+',' + str(t) + ']()')
+
+                            # base case values
+                            if self.mode == 'sequential_sipopt':
+                                base_value = eval('m_sipopt.' + measure_name + '[0,'+str(measure_index_doublequotes)+',' + str(t) + '].value')
+                            else:
+                                base_value = value(eval('mod.' + measure_name + '[0,' +str(measure_index_doublequotes)+','+ str(t) + ']'))
+
+                            perturb_mea.append(perturb_value)
+                            base_mea.append(base_value)
+
+                    else:
+                        # fetch the measurement variable
+                        measure_var = getattr(m_sipopt, j)
+                        for t in self.flatten_measure_timeset[j]:
+                            if (measure_var[0,t].fixed == True):
+                                perturb_value = value(measure_var[0, t])
+                            else:
+                                # if it is not fixed, record its perturbed value
+                                if self.mode == 'sequential_sipopt':
                                     perturb_value = eval('m_sipopt.sens_sol_state_1[m_sipopt.' + j + '[0,' + str(t) + ']]')
                                 else:
                                     perturb_value = eval('m_sipopt.' + j + '[0,' + str(t) + ']()')
 
                             # base case values
                             if self.mode == 'sequential_sipopt':
-                                base_value = eval('m_sipopt.' + j + '[0,' + str(t) + '].value')
+                                base_value = eval('m_sipopt.' + j + '[0,'+ str(t) + '].value')
                             else:
-                                base_value = value(eval('mod.' + j + '[0,' + str(t) + ']'))
+                                base_value = value(eval('mod.' + j + '[0,'+ str(t) + ']'))
 
                             perturb_mea.append(perturb_value)
                             base_mea.append(base_value)
-
-                    else:
-                        for ind in self.measurement_extra_index[j]:
-                            for t in self.measurement_variable_timepoints[j]:
-                                if (measure_var[0,ind,t].fixed == True):
-                                    perturb_value = value(measure_var[0, ind, t])
-                                else:
-                                    # if it is not fixed, record its perturbed value
-                                    if self.mode == 'sequential_sipopt':
-                                        perturb_value = eval(
-                                            'm_sipopt.sens_sol_state_1[m_sipopt.' + j + '[0,'+str(ind)+',' + str(t) + ']]')
-                                    else:
-                                        perturb_value = eval('m_sipopt.' + j + '[0,' +str(ind) +',' + str(t) + ']()')
-
-                                # base case values
-                                if self.mode == 'sequential_sipopt':
-                                    base_value = eval('m_sipopt.' + j + '[0,'+str(ind)+','  + str(t) + '].value')
-                                else:
-                                    base_value = value(eval('mod.' + j + '[0,'+str(ind)+','  + str(t) + ']'))
-
-                                perturb_mea.append(perturb_value)
-                                base_mea.append(base_value)
 
                 # store extracted measurements
                 all_perturb_measure.append(perturb_mea)
