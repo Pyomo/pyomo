@@ -1145,7 +1145,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
         if export_nonlinear_variables:
             for v in export_nonlinear_variables:
-                for vi in v.values():
+                v_iter = v.values() if v.is_indexed() else iter((v,))
+                for vi in v_iter:
                     if self_varID_map[id(vi)] not in UsedVars:
                         Vars_dict[id(vi)] = vi
                         ConNonlinearVars.update([self_varID_map[id(vi)]])

@@ -100,6 +100,25 @@ class TestNLWriter(unittest.TestCase):
 
         self._cleanup(test_fname)
 
+        model.write(
+            test_fname,
+            format='nl',
+            io_options={
+                'symbolic_solver_labels':True,
+                'export_nonlinear_variables':[model.z, model.w[2]]
+            }
+        )
+        with open(test_fname + '.col') as f:
+            names = list(map(str.strip, f.readlines()))
+        assert "z" in names
+        assert "y" not in names
+        assert "x" in names
+        assert "w[1]" not in names
+        assert "w[2]" in names
+        assert "w[3]" not in names
+
+        self._cleanup(test_fname)
+
     def test_var_on_other_model(self):
         other = ConcreteModel()
         other.a = Var()
