@@ -8,20 +8,33 @@ import pickle
 from itertools import permutations, product
 from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculation, get_dsdp
 
-class Measurement_flatten:
-    def __init__(self, measurement_timeset, measurement_extra_index):
+class Measurements:
+    def __init__(self, measurement_index_time):
         '''
         This class stores measurements' information
         Parameters:
         ----------
-        measurement_timeset: a dictionary, keys are measurement names in the model, values are a list of time they are measured
-        measurement_extra_index: A dictionary, keys are the measurement names, values are a list of indexes. If no extra indexes, values are None.
+        measurement_index_time: a dictionary, keys are measurement variable names,
+                values are a dictionary, keys are its extra index, values are its measuring time points
+                values are a list of measuring time point if there is no extra index for this measurement
+                For e.g., for the kinetics illustrative example, it should be {'C':{'CA':[0,1,..], 'CB':[0,2,...]}, 'k':[0,4,..]},
+                so the measurements are C[scenario, 'CA', 0]..., k[scenario, 0]....
         '''
-        self.measurement_name = list(measurement_timeset.keys())
-        self.measurement_timeset = measurement_timeset
-        self.measurement_extra_index = measurement_extra_index
+        self.measurement_all_info = measurement_index_time
+        self.measurement_name = list(measurement_index_time.keys())
+        self.measurement_extra_index = []
+        self.extra_measure_name = []
+        for i in self.measurement_name:
+            if type(measurement_index_time[i]) is dict:
+                index_list = list(measurement_index_time[i].keys())
+                self.extra_measure_name.append(i)
+                self.measurement_extra_index.append(index_list)
+            elif type(measurement_index_time[i]) is list:
+                self.measurement_extra_index.append(None)
+        #self.measurement_timeset = measurement_timeset
+        #self.measurement_extra_index = measurement_extra_index
         # which measurement has extra indexes
-        self.extra_measure_name = list(measurement_extra_index.keys())
+        #self.extra_measure_name = list(measurement_extra_index.keys())
 
     def flatten_measurement(self):
         '''Flatten measurements and their extra index (if any)
@@ -35,25 +48,25 @@ class Measurement_flatten:
         flatten_measure_timeset: a dictionary, keys are flattened measurement name, values are lists of measurement timepoints
         '''
         # check if measurement variables need to be flattened
-        if self.measurement_extra_index is not None:
+        if self.extra_measure_name is not None:
             # store flattened name
             flatten_measure_name = []
             # store flattened measurement time point
             flatten_measure_timeset = {}
             # loop over name
-            for j in self.measurement_name:
+            for no_j, j in enumerate(self.measurement_name):
                 if j in self.extra_measure_name:
-                    for ind in self.measurement_extra_index[j]:
+                    for ind in self.measurement_extra_index[no_j]:
                         flatten_name = j +'_index_'+ str(ind)
                         flatten_measure_name.append(flatten_name)
-                        flatten_measure_timeset[flatten_name] = self.measurement_timeset[j]
+                        flatten_measure_timeset[flatten_name] = self.measurement_all_info[j][ind]
                 else:
                     flatten_measure_name.append(j)
-                    flatten_measure_timeset[j] = self.measurement_timeset[j]
+                    flatten_measure_timeset[j] = self.measurement_all_info[j]
         # if there is no extra index, the flattened measurements will not be changed
         else:
             flatten_measure_name = self.measurement_name.copy()
-            flatten_measure_timeset = self.measurement_timeset.copy()
+            flatten_measure_timeset = self.measurement_all_info.copy()
 
         self.flatten_measure_name = flatten_measure_name
         self.flatten_measure_timeset = flatten_measure_timeset
@@ -84,8 +97,8 @@ class Measurement_flatten:
         return jac_involved_name
 
 class DesignOfExperiments:
-    def __init__(self, param_init, design_variable_timepoints, measurement_variable_timepoints, create_model, solver=None,
-                 prior_FIM=None, discretize_model=None, verbose=True, args=None, measurement_extra_index=None):
+    def __init__(self, param_init, design_variable_timepoints, measurement_index_and_time, create_model, solver=None,
+                 prior_FIM=None, discretize_model=None, verbose=True, args=None):
         '''
         This package enables model-based design of experiments analysis with Pyomo. Both direct optimization and enumeration modes are supported.
         NLP sensitivity tools, e.g.,  sipopt and k_aug, are supported to accelerate analysis via enumeration.
@@ -96,7 +109,11 @@ class DesignOfExperiments:
         param_init: a dictionary of parameter names and values. If they are an indexed variable, put the variable name and index, such as 'theta["A1"]'. Note: if sIPOPT is used, parameter shouldn't be indexed. 
         design_variable_timepoints: a dictionary, keys are design variable names, values are its control time points.
                 if this design var is independent of time (constant), set the time to [0]
-        measurement_variable_timepoints: a dictionary, keys are measurement variable names, value are its measuring time points
+        measurement_index_and_time: a dictionary, keys are measurement variable names,
+                values are a dictionary, keys are its extra index, values are its measuring time points
+                values are a list of measuring time point if there is no extra index for this measurement
+                For e.g., for the kinetics illustrative example, it should be {'C':{'CA':[0,1,..], 'CB':[0,2,...]}, 'k':[0,4,..]},
+                so the measurements are C[scenario, 'CA', 0]..., k[scenario, 0]....
         create_model: a function that returns the model, where:
                       - parameter and design variables are defined as variables
                       - define every state variables dependent on parameters with a scenario index
@@ -108,7 +125,6 @@ class DesignOfExperiments:
         discretize_model: A user-specified function that deiscretizes the model. Only use with Pyomo.DAE, default=None
         verbose: if print statements are made
         args: Other arguments of the create_model function, in a list
-        measurement_extra_index: if measurement variables have extra index between scenario and time indexes. A dictionary, keys are the measurement names, values are a list of indexes.
         '''  
         
         # parameters
@@ -125,10 +141,12 @@ class DesignOfExperiments:
         self.args = args
 
         # create the measurement information object
-        self.measure = Measurement_flatten(measurement_variable_timepoints, measurement_extra_index)
+        self.measure = Measurements(measurement_index_and_time)
         self.flatten_measure_name, self.flatten_measure_timeset = self.measure.flatten_measurement()
+        print('The extra index:', self.measure.measurement_extra_index)
+        print('The extra index name:', self.measure.extra_measure_name)
         print('The flattend measurements include:', self.flatten_measure_name)
-        #print('The flattened measurement time:', self.flatten_measure_timeset)
+        print('The flattened measurement time:', self.flatten_measure_timeset)
 
         # check if user-defined solver is given
         if solver is not None:
@@ -465,7 +483,7 @@ class DesignOfExperiments:
 
                     # loop over measurement item and time to store model measurements
                     output_combine = []
-                    for j in self.measurement_variables:
+                    for j in self.measure.measurement_name:
                         if self.measurement_extra_index is None:
                             for t in self.measurement_variable_timepoints[j]:
                                 C_value = eval('mod.' + j + '[0,' + str(t) + ']')
