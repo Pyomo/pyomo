@@ -78,7 +78,7 @@ def clone_without_expression_components(expr, substitute=None):
     #
     visitor = EXPR.ExpressionReplacementVisitor(substitute=substitute,
                                                 remove_named_expressions=True)
-    return visitor.dfs_postorder_stack(expr)
+    return visitor.walk_expression(expr)
 
 def preprocess_targets(targets):
     preprocessed_targets = []

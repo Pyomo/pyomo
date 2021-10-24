@@ -47,7 +47,10 @@ class Test(unittest.TestCase):
     def _check_baseline(self, model, **kwds):
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
-        io_options = {"symbolic_solver_labels": True}
+        io_options = {
+            "symbolic_solver_labels": True,
+            "output_fixed_variables": True,
+        }
         io_options.update(kwds)
         model.write(test_fname,
                     format="gams",
@@ -55,10 +58,14 @@ class Test(unittest.TestCase):
         try:
             self.assertTrue(cmp(test_fname, baseline_fname))
         except:
-            with open(test_fname, 'r') as f1, open(baseline_fname, 'r') as f2:
+            with open(baseline_fname, 'r') as f1, open(test_fname, 'r') as f2:
                 f1_contents = list(filter(None, f1.read().split()))
                 f2_contents = list(filter(None, f2.read().split()))
-                self.assertEqual(f1_contents, f2_contents)
+                self.assertEqual(
+                    f1_contents, f2_contents,
+                    "\n\nbaseline: %s\ntestFile: %s\n" % (
+                        baseline_fname, test_fname)
+                )
         self._cleanup(test_fname)
 
     def _gen_expression(self, terms):
@@ -171,7 +178,7 @@ class Test(unittest.TestCase):
         m = ConcreteModel()
         m.y = Var(domain=Binary)
         m.c = Constraint(expr=quicksum([m.y, m.y], linear=True) == 1)
-        m.y.fix(1)
+
         lbl = NumericLabeler('x')
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
@@ -179,6 +186,15 @@ class Test(unittest.TestCase):
         m.x = Var()
         m.c2 = Constraint(expr=quicksum([m.x, m.y], linear=True) == 1)
         self.assertEqual(("x2 + x1", False), expression_to_string(m.c2.body, tc, smap=smap))
+
+        m.y.fix(1)
+        lbl = NumericLabeler('x')
+        smap = SymbolMap(lbl)
+        tc = StorageTreeChecker(m)
+        self.assertEqual(("1 + 1", False), expression_to_string(m.c.body, tc, smap=smap))
+        m.x = Var()
+        m.c2 = Constraint(expr=quicksum([m.x, m.y], linear=True) == 1)
+        self.assertEqual(("x1 + 1", False), expression_to_string(m.c2.body, tc, smap=smap))
 
     def test_quicksum_integer_var_fixed(self):
         m = ConcreteModel()
@@ -254,10 +270,10 @@ class Test(unittest.TestCase):
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
         self.assertEqual(expression_to_string(
-            m.x + m.y - m.z, tc, lbl, smap=smap), ("x1 + x2 - (-3)", False))
+            m.x + m.y - m.z, tc, lbl, smap=smap), ("x1 + x2 + 3", False))
         m.z.fix(-400)
         self.assertEqual(expression_to_string(
-            m.z + m.y - m.z, tc, smap=smap), ("(-400) + x2 - (-400)", False))
+            m.z + m.y - m.z, tc, smap=smap), ("(-400) + x2 + 400", False))
         m.z.fix(8.8)
         self.assertEqual(expression_to_string(
             m.x + m.z - m.y, tc, smap=smap), ("x1 + 8.8 - x2", False))

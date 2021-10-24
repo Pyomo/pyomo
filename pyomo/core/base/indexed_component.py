@@ -12,16 +12,20 @@ __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 
 import inspect
 import logging
+import sys
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.expr.numvalue import native_types, NumericNDArray
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
+from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common import DeveloperError
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.modeling import NOTSET
+from pyomo.common.sorting import sorted_robust
 
 from collections.abc import Sequence
 
@@ -376,12 +380,27 @@ class IndexedComponent(Component):
     # keys/values/items continue to work for components that implement
     # other definitions for __iter__ (e.g., Set)
     def __iter__(self):
-        """Return an iterator of the keys in the dictionary"""
+        """Return an iterator of the component data keys"""
         return self.keys()
 
-    def keys(self):
-        """Iterate over the keys in the dictionary"""
+    def keys(self, ordered=False):
+        """Return an iterator over the component data keys
 
+        This method sets the ordering of component data objects within
+        this IndexedComponent container.  For consistency,
+        :py:meth:`__init__()`, :py:meth:`values`, and :py:meth:`items`
+        all leverage this method to ensure consistent ordering.
+
+        Parameters
+        ----------
+        ordered: bool
+            If True, then the keys are returned in a deterministic
+            order.  If the underlying indexing set is ordered then that
+            ordering is used.  Otherwise, the keys are sorted using
+            :py:func:`sorted_robust`.
+
+        """
+        sort_needed = ordered
         if hasattr(self._index, 'isfinite') and not self._index.isfinite():
             #
             # If the index set is virtual (e.g., Any) then return the
@@ -389,14 +408,17 @@ class IndexedComponent(Component):
             # of the underlying Set, there should be no warning if the
             # user iterates over the set when the _data dict is empty.
             #
-            return self._data.__iter__()
+            ans = self._data.__iter__()
         elif self.is_reference():
-            return self._data.__iter__()
-        elif len(self._data) == len(self._index):
+            ans = self._data.__iter__()
+        elif len(self) == len(self._index):
             #
             # If the data is dense then return the index iterator.
             #
-            return self._index.__iter__()
+            ans = self._index.__iter__()
+            if ordered and self._index.isordered():
+                # As this iterator is ordered, we do not need to sort it
+                sort_needed = False
         else:
             if not self._data and self._index and PyomoOptions.paranoia_level:
                 logger.warning(
@@ -419,13 +441,14 @@ You can silence this warning by one of three ways:
        where it is empty.
 """ % (self.name,) )
 
-            if not hasattr(self._index, 'isordered') or not self._index.isordered():
+            if not hasattr(self._index, 'isordered') or \
+               not self._index.isordered():
                 #
                 # If the index set is not ordered, then return the
                 # data iterator.  This is in an arbitrary order, which is
                 # fine because the data is unordered.
                 #
-                return self._data.__iter__()
+                ans = self._data.__iter__()
             else:
                 #
                 # Test each element of a sparse data with an ordered
@@ -435,19 +458,40 @@ You can silence this warning by one of three ways:
                 # small number of indices.  However, this provides a
                 # consistent ordering that the user expects.
                 #
-                def _sparse_iter_gen(self):
-                    for idx in self._index.__iter__():
-                        if idx in self._data:
-                            yield idx
-                return _sparse_iter_gen(self)
+                ans = filter(self._data.__contains__, self._index)
+                # As the iterator is ordered, we do not need to sort it
+                sort_needed = False
+        if sort_needed:
+            return iter(sorted_robust(ans))
+        else:
+            return ans
 
-    def values(self):
-        """Return an iterator of the component data objects in the dictionary"""
-        return (self[s] for s in self.keys())
+    def values(self, ordered=False):
+        """Return an iterator of the component data objects
 
-    def items(self):
-        """Return an iterator of (index,data) tuples from the dictionary"""
-        return((s, self[s]) for s in self.keys())
+        Parameters
+        ----------
+        ordered: bool
+            If True, then the values are returned in a deterministic
+            order.  If the underlying indexing set is ordered then that
+            ordering is used.  Otherwise, the component keys are sorted
+            using :py:func:`sorted_robust` and the values are returned
+            in that order.
+        """
+        return map(self.__getitem__, self.keys(ordered))
+
+    def items(self, ordered=False):
+        """Return an iterator of (index,data) component data tuples
+
+        Parameters
+        ----------
+        ordered: bool
+            If True, then the items are returned in a deterministic
+            order.  If the underlying indexing set is ordered then that
+            ordering is used.  Otherwise, the items are sorted using
+            :py:func:`sorted_robust`.
+        """
+        return((s, self[s]) for s in self.keys(ordered))
 
     @deprecated('The iterkeys method is deprecated. Use dict.keys().',
                 version='6.0')
@@ -607,6 +651,72 @@ You can silence this warning by one of three ways:
                 # Remove reference to this object
                 self._data[index]._component = None
             del self._data[index]
+
+    def _pop_from_kwargs(self, name, kwargs, namelist, notset=None):
+        args = [arg for arg in (kwargs.pop(name, notset) for name in namelist)
+                if arg is not notset]
+        if len(args) == 1:
+            return args[0]
+        elif not args:
+            return notset
+        else:
+            argnames = "%s%s '%s='" % (
+                ', '.join("'%s='" % _ for _ in namelist[:-1]),
+                ',' if len(namelist) > 2 else '',
+                namelist[-1]
+            )
+            raise ValueError(
+                "Duplicate initialization: %s() only accepts one of %s" %
+                (name, argnames))
+
+    def _construct_from_rule_using_setitem(self):
+        if self._rule is None:
+            return
+        index = None
+        rule = self._rule
+        block = self.parent_block()
+        try:
+            if rule.constant() and self.is_indexed():
+                # A constant rule could return a dict-like thing or
+                # matrix that we would then want to process with
+                # Initializer().  If the rule actually returned a
+                # constant, then this is just a little overhead.
+                self._rule = rule = Initializer(
+                    rule(block, None),
+                    treat_sequences_as_mappings=False,
+                    arg_not_specified=NOTSET
+                )
+
+            if rule.contains_indices():
+                # The index is coming in externally; we need to validate it
+                for index in rule.indices():
+                    self[index] = rule(block, index)
+            elif not self.index_set().isfinite():
+                # If the index is not finite, then we cannot iterate
+                # over it.  Since the rule doesn't provide explicit
+                # indices, then there is nothing we can do (the
+                # assumption is that the user will trigger specific
+                # indices to be created at a later time).
+                pass
+            elif rule.constant():
+                # Slight optimization: if the initializer is known to be
+                # constant, then only call the rule once.
+                val = rule(block, None)
+                for index in self.index_set():
+                    self._setitem_when_not_present(index, val)
+            else:
+                for index in self.index_set():
+                    self._setitem_when_not_present(index, rule(block, index))
+        except:
+            err = sys.exc_info()[1]
+            logger.error(
+                "Rule failed for %s '%s' with index %s:\n%s: %s"
+                % (self.ctype.__name__,
+                   self.name,
+                   str(index),
+                   type(err).__name__,
+                   err))
+            raise
 
     def _not_constructed_error(self, idx):
         # Generate an error because the component is not constructed
@@ -874,7 +984,7 @@ value() function.""" % ( self.name, i ))
             if value is not _NotSpecified:
                 obj.set_value(value)
         except:
-            del self._data[index]
+            self._data.pop(index, None)
             raise
         return obj
 
@@ -947,6 +1057,9 @@ class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
                 component_data.deactivate()
 
 
+# Ideally, this would inherit from np.lib.mixins.NDArrayOperatorsMixin,
+# but doing so overrides things like __contains__ in addition to the
+# operators that we are interested in.
 class IndexedComponent_NDArrayMixin(object):
     """Support using IndexedComponent with numpy.ndarray
 

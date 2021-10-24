@@ -23,6 +23,7 @@ from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.common.dependencies import attempt_import
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
+from pyomo.solvers.plugins.solvers.gurobi_persistent import GurobiPersistent
 
 pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 numpy = attempt_import('numpy')[0]
@@ -651,3 +652,12 @@ def copy_var_list_values_from_solution_pool(from_list, to_list, config, solver_m
                 v_to.set_value(0)
             else:
                 raise
+
+
+class GurobiPersistent4MindtPy(GurobiPersistent):
+
+    def _intermediate_callback(self):
+        def f(gurobi_model, where):
+            self._callback_func(self._pyomo_model, self,
+                                where, self.solve_data, self.config)
+        return f

@@ -39,6 +39,46 @@ from pyomo.core.kernel.variable import IVariable
 
 logger = logging.getLogger('pyomo.core')
 
+
+def set_pyomo_amplfunc_env(external_libs):
+    # The ASL AMPLFUNC environment variable is nominally a
+    # whitespace-separated string of library names.  Beginning
+    # sometime between 2010 and 2012, the ASL added support for
+    # simple quoted strings: the first non-whitespace character
+    # can be either " or '.  When that is detected, the ASL
+    # parser will continue to the next occurance of that
+    # character (i.e., no escaping is allowed).  We will use
+    # that same logic here to quote any strings with spaces
+    # ... bearing in mind that this will only work with solvers
+    # compiled against versions of the ASL more recent than
+    # ~2012.
+    #
+    # We are (arbitrarily) chosing to use newline as the field
+    # separator.
+    env_str = ''
+    for _lib in external_libs:
+        _lib = _lib.strip()
+        if ( ' ' not in _lib
+             or ( _lib[0]=='"' and _lib[-1]=='"'
+                  and '"' not in _lib[1:-1] )
+             or ( _lib[0]=="'" and _lib[-1]=="'"
+                  and "'" not in _lib[1:-1] ) ):
+            pass
+        elif '"' not in _lib:
+            _lib = '"' + _lib + '"'
+        elif "'" not in _lib:
+            _lib = "'" + _lib + "'"
+        else:
+            raise RuntimeError(
+                "Cannot pass the AMPL external function library\n\t%s\n"
+                "to the ASL because the string contains spaces, "
+                "single quote and\ndouble quote characters." % (_lib,))
+        if env_str:
+            env_str += "\n"
+        env_str += _lib
+    os.environ["PYOMO_AMPLFUNC"] = env_str
+
+
 _intrinsic_function_operators = {
     'log':    'o43',
     'log10':  'o42',
@@ -738,42 +778,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     (fcn, len(self.external_byFcn))
             external_Libs.add(fcn._library)
         if external_Libs:
-            # The ASL AMPLFUNC environment variable is nominally a
-            # whitespace-separated string of library names.  Beginning
-            # sometime between 2010 and 2012, the ASL added support for
-            # simple quoted strings: the first non-whitespace character
-            # can be either " or '.  When that is detected, the ASL
-            # parser will continue to the next occurance of that
-            # character (i.e., no escaping is allowed).  We will use
-            # that same logic here to quote any strings with spaces
-            # ... bearing in mind that this will only work with solvers
-            # compiled against versions of the ASL more recent than
-            # ~2012.
-            #
-            # We are (arbitrarily) chosing to use newline as the field
-            # separator.
-            env_str = ''
-            for _lib in external_Libs:
-                _lib = _lib.strip()
-                if ( ' ' not in _lib
-                     or ( _lib[0]=='"' and _lib[-1]=='"'
-                          and '"' not in _lib[1:-1] )
-                     or ( _lib[0]=="'" and _lib[-1]=="'"
-                          and "'" not in _lib[1:-1] ) ):
-                    pass
-                elif '"' not in _lib:
-                    _lib = '"' + _lib + '"'
-                elif "'" not in _lib:
-                    _lib = "'" + _lib + "'"
-                else:
-                    raise RuntimeError(
-                        "Cannot pass the AMPL external function library\n\t%s\n"
-                        "to the ASL because the string contains spaces, "
-                        "single quote and\ndouble quote characters." % (_lib,))
-                if env_str:
-                    env_str += "\n"
-                env_str += _lib
-            os.environ["PYOMO_AMPLFUNC"] = env_str
+            set_pyomo_amplfunc_env(external_Libs)
         elif "PYOMO_AMPLFUNC" in os.environ:
             del os.environ["PYOMO_AMPLFUNC"]
 
@@ -812,13 +817,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
         ObjNonlinearVarsInt = set()
         for block in all_blocks_list:
 
-            gen_obj_repn = \
-                getattr(block, "_gen_obj_repn", True)
-
-            # Get/Create the ComponentMap for the repn
-            if not hasattr(block,'_repn'):
-                block._repn = ComponentMap()
-            block_repn = block._repn
+            gen_obj_repn = getattr(block, "_gen_obj_repn", None)
+            if gen_obj_repn is not None:
+                gen_obj_repn = bool(gen_obj_repn)
+                # Get/Create the ComponentMap for the repn
+                if not hasattr(block,'_repn'):
+                    block._repn = ComponentMap()
+                block_repn = block._repn
 
             for active_objective in block.component_data_objects(Objective,
                                                                  active=True,
@@ -829,13 +834,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     if len(objname) > max_rowname_len:
                         max_rowname_len = len(objname)
 
-                if gen_obj_repn:
-                    repn = generate_standard_repn(active_objective.expr,
-                                                  quadratic=False)
-                    block_repn[active_objective] = repn
-                    linear_vars = repn.linear_vars
-                    nonlinear_vars = repn.nonlinear_vars
-                else:
+                if gen_obj_repn == False:
                     repn = block_repn[active_objective]
                     linear_vars = repn.linear_vars
                     # By default, the NL writer generates
@@ -845,6 +844,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     # are using a cached repn object, so we
                     # must check for the quadratic form.
                     if repn.is_nonlinear() and (repn.nonlinear_expr is None):
+                        # Note that this is fragile:
+                        # generate_standard_repn can leave nonlinear
+                        # terms in both quadratic and nonlinear fields.
+                        # However, when this was writen the assumption
+                        # is that generate_standard_repn is only called
+                        # with quadratic=True for QCQPs (by the LP
+                        # writer).  So, quadratic and nonlinear_expr
+                        # will both never be non-empty.  This assertion
+                        # will fail if that assumption is ever violated:
                         assert repn.is_quadratic()
                         assert len(repn.quadratic_vars) > 0
                         nonlinear_vars = {}
@@ -854,7 +862,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         nonlinear_vars = nonlinear_vars.values()
                     else:
                         nonlinear_vars = repn.nonlinear_vars
-
+                else:
+                    repn = generate_standard_repn(active_objective.expr,
+                                                  quadratic=False)
+                    linear_vars = repn.linear_vars
+                    nonlinear_vars = repn.nonlinear_vars
+                    if gen_obj_repn:
+                        block_repn[active_objective] = repn
                 try:
                     wrapped_repn = RepnWrapper(
                         repn,
@@ -918,13 +932,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
         for block in all_blocks_list:
             all_repns = list()
 
-            gen_con_repn = \
-                getattr(block, "_gen_con_repn", True)
-
-            # Get/Create the ComponentMap for the repn
-            if not hasattr(block,'_repn'):
-                block._repn = ComponentMap()
-            block_repn = block._repn
+            gen_con_repn = getattr(block, "_gen_con_repn", None)
+            if gen_con_repn is not None:
+                gen_con_repn = bool(gen_con_repn)
+                # Get/Create the ComponentMap for the repn
+                if not hasattr(block,'_repn'):
+                    block._repn = ComponentMap()
+                block_repn = block._repn
 
             # Initializing the constraint dictionary
             for constraint_data in block.component_data_objects(Constraint,
@@ -942,36 +956,46 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     if len(conname) > max_rowname_len:
                         max_rowname_len = len(conname)
 
-                if constraint_data._linear_canonical_form:
-                    repn = constraint_data.canonical_form()
+                if gen_con_repn == False:
+                    repn = block_repn[constraint_data]
                     linear_vars = repn.linear_vars
-                    nonlinear_vars = repn.nonlinear_vars
+                    # By default, the NL writer generates
+                    # StandardRepn objects without the more
+                    # expense quadratic processing, but
+                    # there is no guarantee of this if we
+                    # are using a cached repn object, so we
+                    # must check for the quadratic form.
+                    if repn.is_nonlinear() and (repn.nonlinear_expr is None):
+                        # Note that this is fragile:
+                        # generate_standard_repn can leave nonlinear
+                        # terms in both quadratic and nonlinear fields.
+                        # However, when this was writen the assumption
+                        # is that generate_standard_repn is only called
+                        # with quadratic=True for QCQPs (by the LP
+                        # writer).  So, quadratic and nonlinear_expr
+                        # will both never be non-empty.  This assertion
+                        # will fail if that assumption is ever violated:
+                        assert repn.is_quadratic()
+                        assert len(repn.quadratic_vars) > 0
+                        nonlinear_vars = {}
+                        for v1, v2 in repn.quadratic_vars:
+                            nonlinear_vars[id(v1)] = v1
+                            nonlinear_vars[id(v2)] = v2
+                        nonlinear_vars = nonlinear_vars.values()
+                    else:
+                        nonlinear_vars = repn.nonlinear_vars
                 else:
-                    if gen_con_repn:
-                        repn = generate_standard_repn(constraint_data.body,
-                                                      quadratic=False)
-                        block_repn[constraint_data] = repn
+                    if constraint_data._linear_canonical_form:
+                        repn = constraint_data.canonical_form()
                         linear_vars = repn.linear_vars
                         nonlinear_vars = repn.nonlinear_vars
                     else:
-                        repn = block_repn[constraint_data]
+                        repn = generate_standard_repn(constraint_data.body,
+                                                      quadratic=False)
                         linear_vars = repn.linear_vars
-                        # By default, the NL writer generates
-                        # StandardRepn objects without the more
-                        # expense quadratic processing, but
-                        # there is no guarantee of this if we
-                        # are using a cached repn object, so we
-                        # must check for the quadratic form.
-                        if repn.is_nonlinear() and (repn.nonlinear_expr is None):
-                            assert repn.is_quadratic()
-                            assert len(repn.quadratic_vars) > 0
-                            nonlinear_vars = {}
-                            for v1, v2 in repn.quadratic_vars:
-                                nonlinear_vars[id(v1)] = v1
-                                nonlinear_vars[id(v2)] = v2
-                            nonlinear_vars = nonlinear_vars.values()
-                        else:
-                            nonlinear_vars = repn.nonlinear_vars
+                        nonlinear_vars = repn.nonlinear_vars
+                    if gen_con_repn:
+                        block_repn[constraint_data] = repn
 
                 ### GAH: Even if this is fixed, it is still useful to
                 ###      write out these types of constraints

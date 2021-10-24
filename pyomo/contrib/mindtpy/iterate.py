@@ -213,7 +213,7 @@ def MindtPy_iteration_loop(solve_data, config):
 
     # if add_no_good_cuts is True, the bound obtained in the last iteration is no reliable.
     # we correct it after the iteration.
-    if (config.add_no_good_cuts or config.use_tabu_list) and config.strategy is not 'FP' and not solve_data.should_terminate and config.add_regularization is None:
+    if (config.add_no_good_cuts or config.use_tabu_list) and config.strategy != 'FP' and not solve_data.should_terminate and config.add_regularization is None:
         bound_fix(solve_data, config, last_iter_cuts)
 
 

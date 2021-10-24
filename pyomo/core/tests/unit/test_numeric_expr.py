@@ -1928,19 +1928,19 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         model.p = Param(A, initialize=2, mutable=True)
 
         expr = quicksum(i*model.a[i] for i in A)
-        self.assertEqual("sum(a[1], prod(2, a[2]), prod(3, a[3]), prod(4, a[4]))", str(expr))
+        self.assertEqual("sum(mon(1, a[1]), mon(2, a[2]), mon(3, a[3]), mon(4, a[4]))", str(expr))
 
         expr = quicksum((i-2)*model.a[i] for i in A)
-        self.assertEqual("sum(prod(-2, a[0]), prod(-1, a[1]), a[3], prod(2, a[4]))", str(expr))
+        self.assertEqual("sum(mon(-2, a[0]), mon(-1, a[1]), mon(1, a[3]), mon(2, a[4]))", str(expr))
 
         expr = quicksum(model.a[i] for i in A)
-        self.assertEqual("sum(a[0], a[1], a[2], a[3], a[4])", str(expr))
+        self.assertEqual("sum(mon(1, a[0]), mon(1, a[1]), mon(1, a[2]), mon(1, a[3]), mon(1, a[4]))", str(expr))
 
         model.p[1].value = 0
         model.p[3].value = 3
         expr = quicksum(model.p[i]*model.a[i] if i != 3 else model.p[i] for i in A)
-        self.assertEqual("sum(3, prod(2, a[0]), prod(2, a[2]), prod(2, a[4]))", expression_to_string(expr, compute_values=True))
-        self.assertEqual("sum(p[3], prod(p[0], a[0]), prod(p[1], a[1]), prod(p[2], a[2]), prod(p[4], a[4]))", expression_to_string(expr, compute_values=False))
+        self.assertEqual("sum(3, mon(2, a[0]), mon(0, a[1]), mon(2, a[2]), mon(2, a[4]))", expression_to_string(expr, compute_values=True))
+        self.assertEqual("sum(p[3], mon(p[0], a[0]), mon(p[1], a[1]), mon(p[2], a[2]), mon(p[4], a[4]))", expression_to_string(expr, compute_values=False))
 
     def test_expr(self):
         #
@@ -1989,19 +1989,19 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         model.a = Var()
 
         expr = 5 < model.a
-        self.assertEqual( "5.0  <  a", str(expr) )
+        self.assertEqual( "5  <  a", str(expr) )
 
         expr = model.a >= 5
-        self.assertEqual( "5.0  <=  a", str(expr) )
+        self.assertEqual( "5  <=  a", str(expr) )
 
         expr = expr < 10
-        self.assertEqual( "5.0  <=  a  <  10.0", str(expr) )
+        self.assertEqual( "5  <=  a  <  10", str(expr) )
 
         expr = 5 <= model.a + 5
-        self.assertEqual( "5.0  <=  sum(a, 5)", str(expr) )
+        self.assertEqual( "5  <=  sum(a, 5)", str(expr) )
 
         expr = expr < 10
-        self.assertEqual( "5.0  <=  sum(a, 5)  <  10.0", str(expr) )
+        self.assertEqual( "5  <=  sum(a, 5)  <  10", str(expr) )
 
     def test_equality(self):
         #
@@ -2020,16 +2020,16 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         # NB: since there is no "reverse equality" operator, explicit
         # constants will always show up second.
         expr = 5 == model.a
-        self.assertEqual( "a  ==  5.0", str(expr) )
+        self.assertEqual( "a  ==  5", str(expr) )
 
         expr = model.a == 10
-        self.assertEqual( "a  ==  10.0", str(expr) )
+        self.assertEqual( "a  ==  10", str(expr) )
 
         expr = 5 == model.a + 5
-        self.assertEqual( "sum(a, 5)  ==  5.0", str(expr) )
+        self.assertEqual( "sum(a, 5)  ==  5", str(expr) )
 
         expr = model.a + 5 == 5
-        self.assertEqual( "sum(a, 5)  ==  5.0", str(expr) )
+        self.assertEqual( "sum(a, 5)  ==  5", str(expr) )
 
     def test_getitem(self):
         m = ConcreteModel()
@@ -2115,8 +2115,8 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         self.assertEqual("a[1] + 2*a[2] + 3*a[3] + 4*a[4] + 3", expression_to_string(expr, compute_values=True))
 
         expr = quicksum((i-2)*model.a[i] for i in A) + 3
-        self.assertEqual("- 2.0*a[0] - a[1] + a[3] + 2*a[4] + 3", str(expr))
-        self.assertEqual("- 2.0*a[0] - a[1] + a[3] + 2*a[4] + 3", expression_to_string(expr, compute_values=True))
+        self.assertEqual("-2*a[0] - a[1] + a[3] + 2*a[4] + 3", str(expr))
+        self.assertEqual("-2*a[0] - a[1] + a[3] + 2*a[4] + 3", expression_to_string(expr, compute_values=True))
 
         expr = quicksum(model.a[i] for i in A) + 3
         self.assertEqual("a[0] + a[1] + a[2] + a[3] + a[4] + 3", str(expr))
@@ -2129,7 +2129,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         model.p[1].value = 0
         model.p[3].value = 3
         expr = quicksum(model.p[i]*model.a[i] if i != 3 else model.p[i] for i in A)
-        self.assertEqual("3 + 2*a[0] + 2*a[2] + 2*a[4]", expression_to_string(expr, compute_values=True))
+        self.assertEqual("3 + 2*a[0] + 0*a[1] + 2*a[2] + 2*a[4]", expression_to_string(expr, compute_values=True))
         expr = quicksum(model.p[i]*model.a[i] if i != 3 else -3 for i in A)
         self.assertEqual("-3 + p[0]*a[0] + p[1]*a[1] + p[2]*a[2] + p[4]*a[4]", expression_to_string(expr, compute_values=False))
         
@@ -2192,19 +2192,19 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         model.a = Var()
 
         expr = 5 < model.a
-        self.assertEqual( "5.0  <  a", str(expr) )
+        self.assertEqual( "5  <  a", str(expr) )
 
         expr = model.a >= 5
-        self.assertEqual( "5.0  <=  a", str(expr) )
+        self.assertEqual( "5  <=  a", str(expr) )
 
         expr = expr < 10
-        self.assertEqual( "5.0  <=  a  <  10.0", str(expr) )
+        self.assertEqual( "5  <=  a  <  10", str(expr) )
 
         expr = 5 <= model.a + 5
-        self.assertEqual( "5.0  <=  a + 5", str(expr) )
+        self.assertEqual( "5  <=  a + 5", str(expr) )
 
         expr = expr < 10
-        self.assertEqual( "5.0  <=  a + 5  <  10.0", str(expr) )
+        self.assertEqual( "5  <=  a + 5  <  10", str(expr) )
 
     def test_equality(self):
         #
@@ -2223,16 +2223,16 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         # NB: since there is no "reverse equality" operator, explicit
         # constants will always show up second.
         expr = 5 == model.a
-        self.assertEqual( "a  ==  5.0", str(expr) )
+        self.assertEqual( "a  ==  5", str(expr) )
 
         expr = model.a == 10
-        self.assertEqual( "a  ==  10.0", str(expr) )
+        self.assertEqual( "a  ==  10", str(expr) )
 
         expr = 5 == model.a + 5
-        self.assertEqual( "a + 5  ==  5.0", str(expr) )
+        self.assertEqual( "a + 5  ==  5", str(expr) )
 
         expr = model.a + 5 == 5
-        self.assertEqual( "a + 5  ==  5.0", str(expr) )
+        self.assertEqual( "a + 5  ==  5", str(expr) )
 
 
     def test_linear(self):
@@ -2264,9 +2264,9 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         m.a = Var()
         m.b = Var()
         expr = Expr_if(IF=m.a + m.b < 20, THEN=m.a, ELSE=m.b)
-        self.assertEqual("Expr_if( ( a + b  <  20.0 ), then=( a ), else=( b ) )", str(expr))
+        self.assertEqual("Expr_if( ( a + b  <  20 ), then=( a ), else=( b ) )", str(expr))
         expr = Expr_if(IF=m.a + m.b < 20, THEN=1, ELSE=m.b)
-        self.assertEqual("Expr_if( ( a + b  <  20.0 ), then=( 1 ), else=( b ) )", str(expr))
+        self.assertEqual("Expr_if( ( a + b  <  20 ), then=( 1 ), else=( b ) )", str(expr))
 
     def test_getitem(self):
         m = ConcreteModel()
@@ -2449,14 +2449,14 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         labeler = NumericLabeler('x')
         self.assertEqual(
             expression_to_string(e, labeler=labeler),
-            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (q[0]*x3 + q[1]*x4 + q[2]*x5)/x1")
+            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (x6*x3 + x7*x4 + x8*x5)/x1")
 
         from pyomo.core.expr.symbol_map import SymbolMap
         labeler = NumericLabeler('x')
         smap = SymbolMap(labeler)
         self.assertEqual(
             expression_to_string(e, smap=smap),
-            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (q[0]*x3 + q[1]*x4 + q[2]*x5)/x1")
+            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (x6*x3 + x7*x4 + x8*x5)/x1")
         self.assertEqual(
             expression_to_string(e, smap=smap, compute_values=True),
             "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (3*x3 + 3*x4 + 3*x5)/x1")
@@ -3526,7 +3526,7 @@ class TestSummationExpression(unittest.TestCase):
         self.assertIs(type(e), LinearExpression)
         self.assertEqual( id(self.m.a[1]), id(e.linear_vars[0]) )
         self.assertEqual( id(self.m.a[2]), id(e.linear_vars[1]) )
-        self.assertEqual(e.size(), 1)
+        self.assertEqual(e.size(), 16)
 
     def test_summation2(self):
         e = sum_product(self.m.p, self.m.a)
@@ -3534,7 +3534,7 @@ class TestSummationExpression(unittest.TestCase):
         self.assertIs(type(e), LinearExpression)
         self.assertEqual( id(self.m.a[1]), id(e.linear_vars[0]) )
         self.assertEqual( id(self.m.a[2]), id(e.linear_vars[1]) )
-        self.assertEqual(e.size(), 1)
+        self.assertEqual(e.size(), 16)
 
     def test_summation3(self):
         e = sum_product(self.m.q, self.m.a)
@@ -3542,7 +3542,7 @@ class TestSummationExpression(unittest.TestCase):
         self.assertIs(type(e), LinearExpression)
         self.assertEqual( id(self.m.a[1]), id(e.linear_vars[0]) )
         self.assertEqual( id(self.m.a[2]), id(e.linear_vars[1]) )
-        self.assertEqual(e.size(), 1)
+        self.assertEqual(e.size(), 16)
 
     def test_summation4(self):
         e = sum_product(self.m.a, self.m.b)
@@ -3562,9 +3562,9 @@ class TestSummationExpression(unittest.TestCase):
         e = sum_product(self.m.a, denom=self.m.p)
         self.assertEqual( e(), 25 )
         self.assertIs(type(e), LinearExpression)
-        #self.assertEqual( id(self.m.a[1]), id(e.arg(0).arg(0)) )
-        #self.assertEqual( id(self.m.a[2]), id(e.arg(1).arg(0)) )
-        #self.assertEqual(e.size(), 21)
+        self.assertEqual( id(self.m.a[1]), id(e.linear_vars[0]) )
+        self.assertEqual( id(self.m.a[2]), id(e.linear_vars[1]) )
+        self.assertEqual(e.size(), 26)
 
     def test_summation7(self):
         e = sum_product(self.m.p, self.m.q, index=self.m.I)
@@ -3580,7 +3580,7 @@ class TestSummationExpression(unittest.TestCase):
         self.assertEqual( e(), 75 )
         self.assertIs(type(e), SumExpression)
         self.assertEqual( e.nargs(), 2)
-        self.assertEqual(e.size(), 3)
+        self.assertEqual(e.size(), 33)
 
 
 class TestSumExpression(unittest.TestCase):
@@ -3802,7 +3802,7 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual( expr1(), 25 )
             self.assertEqual( expr2(), 25 )
             self.assertNotEqual( id(expr1),        id(expr2) )
-            self.assertEqual( id(expr1._args_), id(expr2._args_) )
+            self.assertNotEqual( id(expr1._args_), id(expr2._args_) )
             self.assertNotEqual( id(expr1.linear_vars[0]), id(expr2.linear_vars[0]) )
             self.assertNotEqual( id(expr1.linear_vars[1]), id(expr2.linear_vars[1]) )
             expr1 += self.m.b
@@ -4547,6 +4547,74 @@ class TestIsFixedIsConstant(unittest.TestCase):
 # It's probably worth confirming the final linear expression that is generated.
 class TestLinearExpression(unittest.TestCase):
 
+    def test_init(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        e = LinearExpression(
+            constant=5, linear_vars=[m.x, m.y], linear_coefs=[2,3])
+        self.assertEqual(e._args_cache_, [])
+        self.assertEqual(e.constant, 5)
+        self.assertEqual(e.linear_vars, [m.x, m.y])
+        self.assertEqual(e.linear_coefs, [2, 3])
+
+        args = [10,
+                MonomialTermExpression((4, m.y)),
+                MonomialTermExpression((5, m.x))]
+        with LoggingIntercept() as OUT:
+            e = LinearExpression(args)
+        self.assertEqual(OUT.getvalue(), "")
+        self.assertEqual(e._args_cache_, args)
+        self.assertEqual(e.constant, 10)
+        self.assertEqual(e.linear_vars, [m.y, m.x])
+        self.assertEqual(e.linear_coefs, [4, 5])
+
+        with LoggingIntercept() as OUT:
+            e = LinearExpression([20, 6, 7, m.x, m.y])
+        self.assertIn("LinearExpression has been updated to expect args= "
+                      "to be a constant followed by MonomialTermExpressions",
+                      OUT.getvalue().replace("\n", " "))
+        self.assertIsNotNone(e._args_cache_)
+        self.assertEqual(len(e._args_cache_), 3)
+        self.assertEqual(e._args_cache_[0], 20)
+        self.assertIs(e._args_cache_[1].__class__, MonomialTermExpression)
+        self.assertEqual(e._args_cache_[1].args, (6, m.x))
+        self.assertEqual(e._args_cache_[2].args, (7, m.y))
+        self.assertEqual(e.constant, 20)
+        self.assertEqual(e.linear_vars, [m.x, m.y])
+        self.assertEqual(e.linear_coefs, [6, 7])
+
+        with LoggingIntercept() as OUT:
+            e = LinearExpression([20, 6, 7, 8, m.x, m.y, m.x])
+        self.assertIn("LinearExpression has been updated to expect args= "
+                      "to be a constant followed by MonomialTermExpressions",
+                      OUT.getvalue().replace("\n", " "))
+        self.assertIsNotNone(e._args_cache_)
+        self.assertEqual(len(e._args_cache_), 4)
+        self.assertEqual(e._args_cache_[0], 20)
+        self.assertIs(e._args_cache_[1].__class__, MonomialTermExpression)
+        self.assertEqual(e._args_cache_[1].args, (6, m.x))
+        self.assertEqual(e._args_cache_[2].args, (7, m.y))
+        self.assertEqual(e._args_cache_[3].args, (8, m.x))
+        self.assertEqual(e.constant, 20)
+        self.assertEqual(e.linear_vars, [m.x, m.y, m.x])
+        self.assertEqual(e.linear_coefs, [6, 7, 8])
+
+    def test_to_string(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        e = LinearExpression()
+        self.assertEqual(e.to_string(), "0")
+        e = LinearExpression(constant=0,
+                             linear_coefs=[-1, 1, -2, 2],
+                             linear_vars=[m.x, m.y, m.x, m.y])
+        self.assertEqual(e.to_string(), "- x + y - 2*x + 2*y")
+        e = LinearExpression(constant=10,
+                             linear_coefs=[-1, 1, -2, 2],
+                             linear_vars=[m.x, m.y, m.x, m.y])
+        self.assertEqual(e.to_string(), "10 - x + y - 2*x + 2*y")
+
     def test_sum_other(self):
         m = ConcreteModel()
         m.v = Var(range(5))
@@ -4659,7 +4727,7 @@ class TestLinearExpression(unittest.TestCase):
         with linear_expression() as e:
             e += m.v[0]
             e /= m.p
-            self.assertEqual("(1/p)*v[0]", str(e))
+            self.assertEqual("1/p*v[0]", str(e))
             self.assertIs(e.__class__, _MutableLinearExpression)
 
         with linear_expression() as e:

@@ -19,15 +19,15 @@
 
 1 Block Declarations
     cc : Size=1, Index=None, Active=True
-        Key  : Arg0            : Arg1                      : Active
-        None : 0.0  <=  y + x1 : 1.0  <=  x1 + 2*x2 + 3*x3 :   True
+        Key  : Arg0          : Arg1                    : Active
+        None : 0  <=  y + x1 : 1  <=  x1 + 2*x2 + 3*x3 :   True
         2 Var Declarations
             bv : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
                 None :  None :  None :  None : False :  True :  Reals
             v : Size=1, Index=None
                 Key  : Lower : Value : Upper : Fixed : Stale : Domain
-                None :   1.0 :  None :  None : False :  True :  Reals
+                None :     1 :  None :  None : False :  True :  Reals
 
         3 Constraint Declarations
             bc : Size=1, Index=None, Active=True

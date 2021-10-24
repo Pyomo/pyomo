@@ -281,21 +281,26 @@ class VariableAggregator(IsomorphicTransformation):
         # Do the substitution
         substitution_map = {id(var): z_var
                             for var, z_var in var_to_z.items()}
+        visitor = ExpressionReplacementVisitor(
+            substitute=substitution_map,
+            descend_into_named_expressions=True,
+            remove_named_expressions=False,
+        )
         for constr in model.component_data_objects(
             ctype=Constraint, active=True
         ):
-            new_body = ExpressionReplacementVisitor(
-                substitute=substitution_map
-            ).dfs_postorder_stack(constr.body)
-            constr.set_value((constr.lower, new_body, constr.upper))
+            orig_body = constr.body
+            new_body = visitor.walk_expression(constr.body)
+            if orig_body is not new_body:
+                constr.set_value((constr.lower, new_body, constr.upper))
 
         for objective in model.component_data_objects(
             ctype=Objective, active=True
         ):
-            new_expr = ExpressionReplacementVisitor(
-                substitute=substitution_map
-            ).dfs_postorder_stack(objective.expr)
-            objective.set_value(new_expr)
+            orig_expr = objective.expr
+            new_expr = visitor.walk_expression(objective.expr)
+            if orig_expr is not new_expr:
+                objective.set_value(new_expr)
 
     def update_variables(self, model):
         """Update the values of the variables that were replaced by aggregates.

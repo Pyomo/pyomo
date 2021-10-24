@@ -11,7 +11,8 @@ from pyomo.core.base.set_types import NonNegativeIntegers
 from pyomo.environ import *
 from pyomo.core.expr.current import identify_variables, identify_mutable_parameters
 from pyomo.contrib.pyros.util import selective_clone, add_decision_rule_variables, add_decision_rule_constraints, \
-    model_is_valid, turn_bounds_to_constraints, transform_to_standard_form, ObjectiveType, grcsTerminationCondition
+    model_is_valid, turn_bounds_to_constraints, transform_to_standard_form, ObjectiveType, pyrosTerminationCondition, \
+    coefficient_matching
 from pyomo.contrib.pyros.uncertainty_sets import *
 from pyomo.contrib.pyros.master_problem_methods import add_scenario_to_master, initial_construct_master, solve_master, \
     minimize_dr_vars
@@ -1362,9 +1363,89 @@ class testSolveMaster(unittest.TestCase):
                          msg="Could not solve simple master problem with solve_master function.")
 
 # === regression test for the solver
+class coefficientMatchingTests(unittest.TestCase):
+
+    def test_coefficient_matching_correct_num_constraints_added(self):
+        # Write the deterministic Pyomo model
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.u = Param(initialize=1.125, mutable=True)
+
+        m.con = Constraint(expr=m.u ** (0.5) * m.x1 - m.u * m.x2 <= 2)
+        m.eq_con = Constraint(expr =  m.u**2 * (m.x2- 1) + m.u * (m.x1**3 + 0.5) - 5 * m.u * m.x1 * m.x2 + m.u * (m.x1 + 2) == 0)
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+        config = Block()
+        config.uncertainty_set = Block()
+        config.uncertainty_set.parameter_bounds = [(0.25, 2)]
+
+        m.util = Block()
+        m.util.first_stage_variables = [m.x1, m.x2]
+        m.util.second_stage_variables = []
+        m.util.uncertain_params = [m.u]
+
+        config.decision_rule_order = 0
+
+        m.util.h_x_q_constraints = ComponentSet()
+
+        coeff_matching_success, robust_infeasible = coefficient_matching(m, m.eq_con, [m.u], config)
+
+        self.assertEqual(coeff_matching_success, True, msg="Coefficient matching was unsuccessful.")
+        self.assertEqual(robust_infeasible, False, msg="Coefficient matching detected a robust infeasible constraint (1 == 0).")
+        self.assertEqual(len(m.coefficient_matching_constraints), 2,
+                         msg="Coefficient matching produced incorrect number of h(x,q)=0 constraints.")
+
+        config.decision_rule_order = 1
+        model_data = Block()
+        model_data.working_model = m
+
+        m.util.first_stage_variables = [m.x1]
+        m.util.second_stage_variables = [m.x2]
+
+        add_decision_rule_variables(model_data=model_data, config=config)
+        add_decision_rule_constraints(model_data=model_data, config=config)
+
+        coeff_matching_success, robust_infeasible = coefficient_matching(m, m.eq_con, [m.u], config)
+        self.assertEqual(coeff_matching_success, False, msg="Coefficient matching should have been "
+                                                            "unsuccessful for higher order polynomial expressions.")
+        self.assertEqual(robust_infeasible, False, msg="Coefficient matching is not successful, "
+                                                       "but should not be proven robust infeasible.")
+
+    def test_coefficient_matching_robust_infeasible_proof(self):
+        # Write the deterministic Pyomo model
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.u = Param(initialize=1.125, mutable=True)
+
+        m.con = Constraint(expr=m.u ** (0.5) * m.x1 - m.u * m.x2 <= 2)
+        m.eq_con = Constraint(expr =  m.u * (m.x1**3 + 0.5) - 5 * m.u * m.x1 * m.x2 + m.u * (m.x1 + 2) + m.u**2 == 0)
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+        config = Block()
+        config.uncertainty_set = Block()
+        config.uncertainty_set.parameter_bounds = [(0.25, 2)]
+
+        m.util = Block()
+        m.util.first_stage_variables = [m.x1, m.x2]
+        m.util.second_stage_variables = []
+        m.util.uncertain_params = [m.u]
+
+        config.decision_rule_order = 0
+
+        m.util.h_x_q_constraints = ComponentSet()
+
+        coeff_matching_success, robust_infeasible = coefficient_matching(m, m.eq_con, [m.u], config)
+
+        self.assertEqual(coeff_matching_success, False, msg="Coefficient matching should have been "
+                                                            "unsuccessful.")
+        self.assertEqual(robust_infeasible, True, msg="Coefficient matching should be proven robust infeasible.")
+
+# === regression test for the solver
+@unittest.skipUnless(SolverFactory('baron').available(exception_flag=False), "Global NLP solver is not available.")
 class RegressionTest(unittest.TestCase):
 
-    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False), "Global NLP solver is not available.")
     def regression_test_constant_drs(self):
         model = m = ConcreteModel()
         m.name = "s381"
@@ -1396,11 +1477,9 @@ class RegressionTest(unittest.TestCase):
                               local_solver=solver,
                               global_solver=solver,
                               options={"objective_focus":ObjectiveType.nominal})
-        self.assertTrue(results.grcs_termination_condition,
-                         grcsTerminationCondition.robust_feasible)
+        self.assertTrue(results.pyros_termination_condition,
+                         pyrosTerminationCondition.robust_feasible)
 
-    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False),
-                         "Global NLP solver is not available.")
     def regression_test_affine_drs(self):
         model = m = ConcreteModel()
         m.name = "s381"
@@ -1433,11 +1512,9 @@ class RegressionTest(unittest.TestCase):
                               global_solver=solver,
                               options={"objective_focus": ObjectiveType.nominal,
                                        "decision_rule_order":1})
-        self.assertTrue(results.grcs_termination_condition,
-                        grcsTerminationCondition.robust_feasible)
+        self.assertTrue(results.pyros_termination_condition,
+                        pyrosTerminationCondition.robust_feasible)
 
-    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False),
-                         "Global NLP solver is not available.")
     def regression_test_quad_drs(self):
         model = m = ConcreteModel()
         m.name = "s381"
@@ -1470,10 +1547,10 @@ class RegressionTest(unittest.TestCase):
                               global_solver=solver,
                               options={"objective_focus": ObjectiveType.nominal,
                                        "decision_rule_order": 2})
-        self.assertTrue(results.grcs_termination_condition,
-                        grcsTerminationCondition.robust_feasible)
+        self.assertTrue(results.pyros_termination_condition,
+                        pyrosTerminationCondition.robust_feasible)
 
-    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
                          "Global NLP solver is not available and licensed.")
     def test_minimize_dr_norm(self):
         m = ConcreteModel()
@@ -1518,9 +1595,8 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(results.solver.termination_condition, TerminationCondition.optimal,
                          msg="Minimize dr norm did not solve to optimality.")
 
-    @unittest.skipUnless(
-        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
     def test_identifying_violating_param_realization(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -1556,14 +1632,13 @@ class RegressionTest(unittest.TestCase):
                                          "solve_master_globally": True
                                      })
 
-        self.assertEqual(results.grcs_termination_condition, grcsTerminationCondition.robust_optimal,
+        self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.robust_optimal,
                          msg="Did not identify robust optimal solution to problem instance.")
         self.assertGreater(results.iterations, 0,
                          msg="Robust infeasible model terminated in 0 iterations (nominal case).")
 
-    @unittest.skipUnless(
-        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
     def test_terminate_with_max_iter(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -1588,8 +1663,8 @@ class RegressionTest(unittest.TestCase):
 
         # Call the PyROS solver
         results = pyros_solver.solve(model=m,
-                                     first_stage_variables=[m.x1, m.x2],
-                                     second_stage_variables=[],
+                                     first_stage_variables=[m.x1],
+                                     second_stage_variables=[m.x2],
                                      uncertain_params=[m.u],
                                      uncertainty_set=interval,
                                      local_solver=local_subsolver,
@@ -1597,15 +1672,15 @@ class RegressionTest(unittest.TestCase):
                                      options={
                                          "objective_focus": ObjectiveType.worst_case,
                                          "solve_master_globally": True,
-                                         "max_iter":1
+                                         "max_iter":1,
+                                         "decision_rule_order":2
                                      })
 
-        self.assertEqual(results.grcs_termination_condition, grcsTerminationCondition.max_iter,
+        self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.max_iter,
                          msg="Returned termination condition is not return max_iter.")
 
-    @unittest.skipUnless(
-        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
     def test_terminate_with_time_limit(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -1642,12 +1717,11 @@ class RegressionTest(unittest.TestCase):
                                          "time_limit": 0.001
                                      })
 
-        self.assertEqual(results.grcs_termination_condition, grcsTerminationCondition.time_out,
+        self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.time_out,
                          msg="Returned termination condition is not return time_out.")
 
-    @unittest.skipUnless(
-        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
     def test_discrete_separation(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -1683,12 +1757,11 @@ class RegressionTest(unittest.TestCase):
                                          "solve_master_globally": True
                                      })
 
-        self.assertEqual(results.grcs_termination_condition, grcsTerminationCondition.robust_optimal,
+        self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.robust_optimal,
                          msg="Returned termination condition is not return robust_optimal.")
 
-    @unittest.skipUnless(
-        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
     def test_higher_order_decision_rules(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -1725,8 +1798,123 @@ class RegressionTest(unittest.TestCase):
                                          "decision_rule_order":2
                                      })
 
-        self.assertEqual(results.grcs_termination_condition, grcsTerminationCondition.robust_optimal,
+        self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.robust_optimal,
                          msg="Returned termination condition is not return robust_optimal.")
+
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
+    def test_coefficient_matching_solve(self):
+
+        # Write the deterministic Pyomo model
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.u = Param(initialize=1.125, mutable=True)
+
+        m.con = Constraint(expr=m.u ** (0.5) * m.x1 - m.u * m.x2 <= 2)
+        m.eq_con = Constraint(expr =  m.u**2 * (m.x2- 1) + m.u * (m.x1**3 + 0.5) - 5 * m.u * m.x1 * m.x2 + m.u * (m.x1 + 2) == 0)
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+        interval = BoxSet(bounds=[(0.25, 2)])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('baron')
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(model=m,
+                                     first_stage_variables=[m.x1, m.x2],
+                                     second_stage_variables=[],
+                                     uncertain_params=[m.u],
+                                     uncertainty_set=interval,
+                                     local_solver=local_subsolver,
+                                     global_solver=global_subsolver,
+                                     options={
+                                         "objective_focus": ObjectiveType.worst_case,
+                                         "solve_master_globally": True
+                                     })
+
+        self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.robust_optimal,
+                         msg="Non-optimal termination condition from robust feasible coefficient matching problem.")
+        self.assertAlmostEqual(results.final_objective_value, 6.0394, 2, msg="Incorrect objective function value.")
+
+    def test_coefficient_matching_robust_infeasible_proof_in_pyros(self):
+        # Write the deterministic Pyomo model
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.u = Param(initialize=1.125, mutable=True)
+
+        m.con = Constraint(expr=m.u ** (0.5) * m.x1 - m.u * m.x2 <= 2)
+        m.eq_con = Constraint(expr =  m.u * (m.x1**3 + 0.5) - 5 * m.u * m.x1 * m.x2 + m.u * (m.x1 + 2) + m.u**2 == 0)
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+        interval = BoxSet(bounds=[(0.25, 2)])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('baron')
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+
+        results = pyros_solver.solve(model=m,
+                                     first_stage_variables=[m.x1, m.x2],
+                                     second_stage_variables=[],
+                                     uncertain_params=[m.u],
+                                     uncertainty_set=interval,
+                                     local_solver=local_subsolver,
+                                     global_solver=global_subsolver,
+                                     options={
+                                         "objective_focus": ObjectiveType.worst_case,
+                                         "solve_master_globally": True
+                                     })
+
+        self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.robust_infeasible,
+                         msg="Robust infeasible problem not identified via coefficient matching.")
+
+    def test_coefficient_matching_nonlinear_expr(self):
+        # Write the deterministic Pyomo model
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.u = Param(initialize=1.125, mutable=True)
+
+        m.con = Constraint(expr=m.u ** (0.5) * m.x1 - m.u * m.x2 <= 2)
+        m.eq_con = Constraint(expr =  m.u**2 * (m.x2- 1) + m.u * (m.x1**3 + 0.5) - 5 * m.u * m.x1 * m.x2 + m.u * (m.x1 + 2) == 0)
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+        interval = BoxSet(bounds=[(0.25, 2)])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('baron')
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        with self.assertRaises(
+                ValueError, msg="ValueError should be raised for general "
+                "nonlinear expressions in h(x,z,q)=0 constraints."):
+            results = pyros_solver.solve(model=m,
+                                         first_stage_variables=[m.x1],
+                                         second_stage_variables=[m.x2],
+                                         uncertain_params=[m.u],
+                                         uncertainty_set=interval,
+                                         local_solver=local_subsolver,
+                                         global_solver=global_subsolver,
+                                         options={
+                                             "objective_focus": ObjectiveType.worst_case,
+                                             "solve_master_globally": True,
+                                             "decision_rule_order":1
+                                         })
+
 
 
 

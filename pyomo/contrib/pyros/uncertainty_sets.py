@@ -14,11 +14,7 @@ Supports the following classes of uncertainty sets:
 - Cardinality/Gamma
 - Discrete
 - FactorModel
-
-Every uncertainty set must have:
-function set_as_constraint(): a method returning a Constraint representation of the uncertainty set.
-function point_in_set(): a method which takes a point and determines if it is in the uncertainty set.
-
+- IntersectedSet
 """
 
 import abc
@@ -26,7 +22,7 @@ import functools
 import math
 from enum import Enum
 from pyomo.common.dependencies import numpy as np, scipy as sp
-from pyomo.core.base import ConcreteModel, Objective
+from pyomo.core.base import ConcreteModel, Objective, maximize, minimize, Block
 from pyomo.core.base.constraint import ConstraintList
 from pyomo.core.base.var import Var, _VarData, IndexedVar
 from pyomo.core.base.param import Param, _ParamData, IndexedParam
@@ -94,6 +90,52 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         Bounds on the realizations of the uncertain parameters, as inferred from the uncertainty set.
         """
         raise NotImplementedError
+
+    def is_bounded(self, config):
+        """
+        Return True if the uncertainty set is bounded, else False.
+        """
+        # === Determine bounds on all uncertain params
+        bounding_model = ConcreteModel()
+        bounding_model.util = Block() # So that boundedness checks work for Cardinality and FactorModel sets
+        bounding_model.uncertain_param_vars = IndexedVar(range(len(config.uncertain_params)), initialize=1)
+        for idx, param in enumerate(config.uncertain_params):
+            bounding_model.uncertain_param_vars[idx].value = param.value
+
+        bounding_model.add_component("uncertainty_set_constraint",
+                                     config.uncertainty_set.set_as_constraint(
+                                         uncertain_params=bounding_model.uncertain_param_vars,
+                                         model=bounding_model,
+                                         config=config
+                                     ))
+
+        for idx, param in enumerate(list(bounding_model.uncertain_param_vars.values())):
+            bounding_model.add_component("lb_obj_" + str(idx), Objective(expr=param, sense=minimize))
+            bounding_model.add_component("ub_obj_" + str(idx), Objective(expr=param, sense=maximize))
+
+        for o in bounding_model.component_data_objects(Objective):
+            o.deactivate()
+
+        for i in range(len(bounding_model.uncertain_param_vars)):
+            for limit in ("lb", "ub"):
+                getattr(bounding_model, limit + "_obj_" + str(i)).activate()
+                res = config.global_solver.solve(bounding_model, tee=False)
+                getattr(bounding_model, limit + "_obj_" + str(i)).deactivate()
+                if not check_optimal_termination(res):
+                    return False
+        return True
+
+    def is_nonempty(self, config):
+        """
+        Return True if the uncertainty set is nonempty, else False.
+        """
+        return self.is_bounded(config)
+
+    def is_valid(self, config):
+        """
+        Return True if the uncertainty set is bounded and non-empty, else False.
+        """
+        return self.is_nonempty(config=config) and self.is_bounded(config=config)
 
     @abc.abstractmethod
     def set_as_constraint(self, **kwargs):
@@ -477,6 +519,16 @@ class BudgetSet(PolyhedralSet):
             raise AttributeError("RHS vector entries must be >= 0.")
         # === Non-emptiness is implied by the set
 
+        # === Add constraints such that uncertain params are >= 0
+        # === This adds >=0 bound on all parameters in the set
+        cols = mat.shape[1]
+        identity = np.identity(cols) * -1
+        for row in identity:
+            budget_membership_mat.append(row.tolist())
+
+        for i in range(identity.shape[0]):
+            rhs_vec.append(0)
+
         self.coefficients_mat = budget_membership_mat
         self.rhs_vec = rhs_vec
 
@@ -645,6 +697,7 @@ class FactorModelSet(UncertaintySet):
         conlist.add(sum(model.util.cassi[i] for i in n) >= -self.beta * self.number_of_factors)
         return conlist
 
+
     def point_in_set(self, point):
         """
         Calculates if supplied ``point`` is contained in the uncertainty set. Returns True or False.
@@ -752,7 +805,8 @@ class EllipsoidalSet(UncertaintySet):
 
         Args:
             center: Vector (``list``) of uncertain parameter values around which deviations are restrained.
-            shape_matrix: Positive semidefinite matrix.
+            shape_matrix: Positive semi-definite matrix, effectively a covariance matrix for
+            constraint and bounds determination.
             scale: Right-hand side value for the ellipsoid.
         """
 
@@ -792,7 +846,7 @@ class EllipsoidalSet(UncertaintySet):
         # === Ensure matrix is not degenerate, for determining inferred bounds
         try:
             for i in range(len(shape_matrix)):
-                np.power(1.0 / shape_matrix[i][i], 0.5)
+                np.power(shape_matrix[i][i], 0.5)
         except:
             raise AttributeError("Shape matrix must be non-degenerate.")
 
@@ -820,8 +874,8 @@ class EllipsoidalSet(UncertaintySet):
         scale = self.scale
         nom_value = self.center
         P = self.shape_matrix
-        parameter_bounds = [(nom_value[i] - np.power(1.0 / P[i][i], 0.5) * scale,
-                             nom_value[i] + np.power(1.0 / P[i][i], 0.5) * scale) for i in range(self.dim)]
+        parameter_bounds = [(nom_value[i] - np.power(P[i][i], 0.5) * scale,
+                             nom_value[i] + np.power(P[i][i], 0.5) * scale) for i in range(self.dim)]
         return parameter_bounds
 
     def set_as_constraint(self, uncertain_params, **kwargs):
@@ -880,7 +934,8 @@ class DiscreteScenarioSet(UncertaintySet):
         if not all(len(d)==dim for d in scenarios):
                raise AttributeError("All points in list of scenarios must be same dimension.")
 
-        self.scenarios = scenarios  # set of discrete points which are distinct realizations of uncertain params
+        # Standardize to list of tuples
+        self.scenarios = list(tuple(s) for s in scenarios)  # set of discrete points which are distinct realizations of uncertain params
         self.type = "discrete"
 
     @property
@@ -902,6 +957,14 @@ class DiscreteScenarioSet(UncertaintySet):
         parameter_bounds = [(min(s[i] for s in self.scenarios),
                              max(s[i] for s in self.scenarios)) for i in range(self.dim)]
         return parameter_bounds
+
+    def is_bounded(self, config):
+        '''
+        DiscreteScenarios is bounded by default due to finiteness of the set.
+        :param config:
+        :return: True
+        '''
+        return True
 
     def set_as_constraint(self, uncertain_params, **kwargs):
         """

@@ -13,6 +13,7 @@ import filecmp
 import glob
 import os
 import os.path
+import re
 import subprocess
 import sys
 from itertools import zip_longest
@@ -57,6 +58,7 @@ solver_dependencies =   {
     'test_dae_ch_run_path_constraint_tester': ['ipopt'],
 
     # gdp_ch
+    'test_gdp_ch_pyomo_gdp_uc_sh': ['glpk'],
     'test_gdp_ch_pyomo_scont': ['glpk'],
     'test_gdp_ch_pyomo_scont2': ['glpk'],
     'test_gdp_ch_scont_script': ['glpk'],
@@ -228,7 +230,17 @@ def filter(line):
 
 def filter_file_contents(lines):
     filtered = []
+    deprecated = None
     for line in lines:
+        # Ignore all deprecation warnings
+        if line.startswith('WARNING: DEPRECATED:'):
+            deprecated = ''
+        if deprecated is not None:
+            deprecated += line
+            if re.search(r'\(called\s+from[^)]+\)', deprecated):
+                deprecated = None
+            continue
+
         if not line or filter(line):
             continue
 
@@ -375,6 +387,8 @@ def compare_files(out_file, base_file, abstol, reltol,
             else:
                 extra = out_filtered
                 n = index_of_base_i_in_out
+            if n == float('inf'):
+                n = None
             extra_terms = extra[i:n]
             try:
                 assert len(extra_terms) % 3 == 0

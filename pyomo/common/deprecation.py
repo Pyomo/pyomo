@@ -123,6 +123,7 @@ def _wrap_func(func, msg, logger, version, remove_in):
     wrapper.__doc__ += _deprecation_docstring(func, msg, version, remove_in)
     return wrapper
 
+
 def _find_calling_frame(module_offset):
     g = [globals()]
     calling_frame = inspect.currentframe().f_back
@@ -134,6 +135,19 @@ def _find_calling_frame(module_offset):
         else:
             break
     return calling_frame
+
+
+def in_testing_environment():
+    """Return True if we are currently running in a "testing" environment
+
+    This currently includes if nose, nose2, pytest, or Sphinx are
+    running (imported).
+
+    """
+
+    return any(mod in sys.modules for mod in (
+        'nose', 'nose2', 'pytest', 'sphinx'))
+
 
 def deprecation_warning(msg, logger=None, version=None,
                         remove_in=None, calling_frame=None):
@@ -168,7 +182,7 @@ def deprecation_warning(msg, logger=None, version=None,
             # function/method that called deprecation_warning
             cf = _find_calling_frame(1)
         if cf is not None:
-            logger = cf.f_globals['__package__']
+            logger = cf.f_globals.get('__package__', None)
             if logger is not None and not logger.startswith('pyomo'):
                 logger = None
         if logger is None:
@@ -189,8 +203,17 @@ def deprecation_warning(msg, logger=None, version=None,
     if calling_frame is not None:
         info = inspect.getframeinfo(calling_frame)
         msg += "\n(called from %s:%s)" % (info.filename.strip(), info.lineno)
+        if deprecation_warning.emitted_warnings is not None:
+            if msg in deprecation_warning.emitted_warnings:
+                return
+            deprecation_warning.emitted_warnings.add(msg)
 
     logging.getLogger(logger).warning(msg)
+
+if in_testing_environment():
+    deprecation_warning.emitted_warnings = None
+else:
+    deprecation_warning.emitted_warnings = set()
 
 
 def deprecated(msg=None, logger=None, version=None, remove_in=None):
@@ -229,10 +252,17 @@ def deprecated(msg=None, logger=None, version=None, remove_in=None):
 def _import_object(name, target, version, remove_in):
     from importlib import import_module
     modname, targetname = target.rsplit('.',1)
+    _object = getattr(import_module(modname), targetname)
+    if inspect.isclass(_object):
+        _type = 'class'
+    elif inspect.isfunction(_object):
+        _type = 'function'
+    else:
+        _type = 'attribute'
     deprecation_warning(
-        "the '%s' class has been moved to '%s'.  Please update your import."
-        % (name, target), version=version, remove_in=remove_in)
-    return getattr(import_module(modname), targetname)
+        "the '%s' %s has been moved to '%s'.  Please update your import."
+        % (name, _type, target), version=version, remove_in=remove_in)
+    return _object
 
 class _ModuleGetattrBackport_27(object):
     """Backport for support of module.__getattr__
@@ -369,14 +399,14 @@ class RenamedClass(type):
         >>> class DerivedOldClass(OldClass):
         ...     pass
         WARNING: DEPRECATED: Declaring class 'DerivedOldClass' derived from
-            'OldClass'. The class 'OldClass' has been renamed to 'NewClass'
+            'OldClass'. The class 'OldClass' has been renamed to 'NewClass'.
             (deprecated in 6.0) ...
 
         As does instantiating the old class:
 
         >>> old = OldClass()
         WARNING: DEPRECATED: Instantiating class 'OldClass'.  The class
-            'OldClass' has been renamed to 'NewClass'  (deprecated in 6.0) ...
+            'OldClass' has been renamed to 'NewClass'.  (deprecated in 6.0) ...
 
         Finally, isinstance and issubclass still work, for example:
 
@@ -387,7 +417,7 @@ class RenamedClass(type):
         >>> new = NewSubclass()
         >>> isinstance(new, OldClass)
         WARNING: DEPRECATED: Checking type relative to 'OldClass'.  The class
-            'OldClass' has been renamed to 'NewClass'  (deprecated in 6.0) ...
+            'OldClass' has been renamed to 'NewClass'.  (deprecated in 6.0) ...
         True
 
     """

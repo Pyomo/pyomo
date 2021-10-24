@@ -8,19 +8,11 @@
 # This software is distributed under the 3-clause BSD License
 # ______________________________________________________________________________
 from pyomo.environ import (
-        Param,
-        Var,
-        Block,
-        ComponentMap,
-        Objective,
-        Constraint,
-        ConstraintList,
-        Suffix,
-        value,
-        ComponentUID,
-        )
+    Param, Var, Block, ComponentMap, Objective, Constraint,
+    ConstraintList, Suffix, value, ComponentUID,
+)
 
-from pyomo.core.base.misc import sorted_robust
+from pyomo.common.sorting import sorted_robust
 from pyomo.core.expr.current import ExpressionReplacementVisitor
 
 from pyomo.common.modeling import unique_component_name
@@ -42,7 +34,7 @@ logger = logging.getLogger('pyomo.contrib.sensitivity_toolbox')
 @deprecated("The sipopt function has been deprecated. Use the sensitivity_calculation() "
             "function with method='sipopt' to access this functionality.",
             logger='pyomo.contrib.sensitivity_toolbox',
-            version='TBD')
+            version='6.1')
 def sipopt(instance, paramSubList, perturbList,
            cloneModel=True, tee=False, keepfiles=False,
            streamSoln=False):
@@ -54,7 +46,7 @@ def sipopt(instance, paramSubList, perturbList,
 @deprecated("The kaug function has been deprecated. Use the sensitivity_calculation() "
             "function with method='k_aug' to access this functionality.", 
             logger='pyomo.contrib.sensitivity_toolbox',
-            version='TBD')
+            version='6.1')
 def kaug(instance, paramSubList, perturbList,
          cloneModel=True, tee=False, keepfiles=False, solver_options=None,
          streamSoln=False):
@@ -608,7 +600,7 @@ class SensitivityInterface(object):
                                                 active=True,
                                                 descend_into=True)):
             tempName = unique_component_name(block, obj.local_name)
-            new_expr = param_replacer.dfs_postorder_stack(obj.expr)
+            new_expr = param_replacer.walk_expression(obj.expr)
             block.add_component(tempName, Objective(expr=new_expr))
             new_old_comp_map[block.component(tempName)] = obj
             obj.deactivate()
@@ -623,16 +615,16 @@ class SensitivityInterface(object):
         last_idx = 0
         for con in old_con_list:
             if (con.equality or con.lower is None or con.upper is None):
-                new_expr = param_replacer.dfs_postorder_stack(con.expr)
+                new_expr = param_replacer.walk_expression(con.expr)
                 block.constList.add(expr=new_expr)
                 last_idx += 1
                 new_old_comp_map[block.constList[last_idx]] = con
             else:
                 # Constraint must be a ranged inequality, break into
                 # separate constraints
-                new_body = param_replacer.dfs_postorder_stack(con.body)
-                new_lower = param_replacer.dfs_postorder_stack(con.lower)
-                new_upper = param_replacer.dfs_postorder_stack(con.upper)
+                new_body = param_replacer.walk_expression(con.body)
+                new_lower = param_replacer.walk_expression(con.lower)
+                new_upper = param_replacer.walk_expression(con.upper)
 
                 # Add constraint for lower bound
                 block.constList.add(expr=(new_lower <= new_body))
