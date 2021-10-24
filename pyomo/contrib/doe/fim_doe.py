@@ -718,11 +718,15 @@ class DesignOfExperiments:
             # Check if measurement time points are in this time set
             # Also correct the measurement time points
             # For e.g. if a measurement time point is 0.0 in the model but is given as 0, it is corrected here
-            measurement_accurate_time = []
-            for tt in self.measurement_variable_timepoints[j]:
-                if tt not in t_all:
-                    print('A measurement time point not measured by this model: ', tt)
-                measurement_accurate_time.append(t_all[t_all.index(tt)])
+            measurement_accurate_time = self.flatten_measure_timeset.copy()
+            for j in self.flatten_measure_name:
+                for no_t, tt in enumerate(self.flatten_measure_timeset[j]):
+                    if tt not in t_all:
+                        print('A measurement time point not measured by this model: ', tt)
+                    else:
+                        measurement_accurate_time[j][no_t] = t_all[t_all.index(tt)]
+
+            print('After practice:', measurement_accurate_time)
 
             # fix model DOF
             #mod = self.__fix_design(mod, self.design_values, fix_opt=True)
@@ -751,8 +755,11 @@ class DesignOfExperiments:
             dsdp_array = dsdp_re.toarray().T
             # here for construction. Remove after finishing.
             dd = pd.DataFrame(dsdp_array)
+            print(dd)
+            dd.to_csv('test_kaug.csv')
             # here for fixed bed
             self.dsdp = dsdp_array
+            self.dsdp = col
             # store dsdp returned
             dsdp_extract = []
             # get right lines from results
@@ -761,29 +768,56 @@ class DesignOfExperiments:
             # produce the sensitivity for fixed variables
             zero_sens = np.zeros(len(self.param_name))
             # loop over measurement variables and their time points
-            for mname in self.measurement_variables:
-                for tim in measurement_accurate_time:
-                    # get the measurement name in the model
-                    measure_name = mname+'[0,'+str(tim)+']'
-                    measurement_names.append(measure_name)
-                    # get right line number in kaug results
-                    if self.discretize_model is not None:
-                        # for DAE model, some variables are fixed
-                        try:
+            for mname in self.flatten_measure_name:
+                if '_index_' in mname:
+                    measure_name = mname.split('_index_')[0]
+                    measure_index = mname.split('_index_')[1]
+                    for tim in measurement_accurate_time[mname]:
+                        # get the measurement name in the model
+                        measurement_name = measure_name+'[0,'+measure_index+','+str(tim)+']'
+                        measurement_names.append(measurement_name)
+                        # get right line number in kaug results
+                        if self.discretize_model is not None:
+                            # for DAE model, some variables are fixed
+                            try:
+                                #meausrement_name = "C[0,'CA',0.0]"
+                                kaug_no = col.index(measurement_name)
+                                measurement_index.append(kaug_no)
+                                # get right line of dsdp
+                                dsdp_extract.append(dsdp_array[kaug_no])
+                            except:
+                                if self.verbose:
+                                    print('The variable is fixed:', measurement_name)
+                                # for fixed variables, the sensitivity are a zero vector
+                                dsdp_extract.append(zero_sens)
+                        else:
                             kaug_no = col.index(measure_name)
                             measurement_index.append(kaug_no)
                             # get right line of dsdp
                             dsdp_extract.append(dsdp_array[kaug_no])
-                        except:
-                            if self.verbose:
-                                print('The variable is fixed:', measure_name)
-                            # for fixed variables, the sensitivity are a zero vector
-                            dsdp_extract.append(zero_sens)
-                    else:
-                        kaug_no = col.index(measure_name)
-                        measurement_index.append(kaug_no)
-                        # get right line of dsdp
-                        dsdp_extract.append(dsdp_array[kaug_no])
+                else:
+                    for tim in self.flatten_measure_timeset[mname]:
+                        # get the measurement name in the model
+                        measure_name = mname+'[0,'+str(tim)+']'
+                        measurement_names.append(measure_name)
+                        # get right line number in kaug results
+                        if self.discretize_model is not None:
+                            # for DAE model, some variables are fixed
+                            try:
+                                kaug_no = col.index(measure_name)
+                                measurement_index.append(kaug_no)
+                                # get right line of dsdp
+                                dsdp_extract.append(dsdp_array[kaug_no])
+                            except:
+                                if self.verbose:
+                                    print('The variable is fixed:', measure_name)
+                                # for fixed variables, the sensitivity are a zero vector
+                                dsdp_extract.append(zero_sens)
+                        else:
+                            kaug_no = col.index(measure_name)
+                            measurement_index.append(kaug_no)
+                            # get right line of dsdp
+                            dsdp_extract.append(dsdp_array[kaug_no])
             print('dsdp extract is:', dsdp_extract)
             # Extract and calculate sensitivity if scaled by constants or parameters.
             # Convert sensitivity to a dictionary
