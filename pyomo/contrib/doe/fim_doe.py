@@ -21,9 +21,13 @@ class Measurements:
                 so the measurements are C[scenario, 'CA', 0]..., k[scenario, 0]....
         '''
         self.measurement_all_info = measurement_index_time
+        # a list of measurement names
         self.measurement_name = list(measurement_index_time.keys())
+        # a list of measurement extra indexes
         self.measurement_extra_index = []
+        # a list of measurement names with extra indexes
         self.extra_measure_name = []
+        # check if the measurement has extra indexes
         for i in self.measurement_name:
             if type(measurement_index_time[i]) is dict:
                 index_list = list(measurement_index_time[i].keys())
@@ -31,15 +35,15 @@ class Measurements:
                 self.measurement_extra_index.append(index_list)
             elif type(measurement_index_time[i]) is list:
                 self.measurement_extra_index.append(None)
-        #self.measurement_timeset = measurement_timeset
-        #self.measurement_extra_index = measurement_extra_index
-        # which measurement has extra indexes
-        #self.extra_measure_name = list(measurement_extra_index.keys())
+        # a dictionary, keys are measurement names, values are a list of extra indexes
+        self.name_and_index = {}
+        for i, iname in enumerate(self.measurement_name):
+            self.name_and_index[iname] = self.measurement_extra_index[i]
 
     def flatten_measurement(self):
         '''Flatten measurements and their extra index (if any)
         Flattened names consist of their original names in the model and their extra index value, connected with a '_index_'
-        For e.g., FCO2 with an extra index 19 is 'FCO2_index_19', FCO2 without extra index is still 'FCO2'
+        For e.g., for the kinetics example, it should be 'C_index_CA', 'C_index_CB', 'C_index_CC'
         This function converts all measurements passed for the DOE object
 
         Returns
@@ -48,53 +52,42 @@ class Measurements:
         flatten_measure_timeset: a dictionary, keys are flattened measurement name, values are lists of measurement timepoints
         '''
         # check if measurement variables need to be flattened
-        if self.extra_measure_name is not None:
-            # store flattened name
-            flatten_measure_name = []
-            # store flattened measurement time point
-            flatten_measure_timeset = {}
-            # loop over name
-            for no_j, j in enumerate(self.measurement_name):
-                if j in self.extra_measure_name:
-                    for ind in self.measurement_extra_index[no_j]:
-                        flatten_name = j +'_index_'+ str(ind)
-                        flatten_measure_name.append(flatten_name)
-                        flatten_measure_timeset[flatten_name] = self.measurement_all_info[j][ind]
-                else:
-                    flatten_measure_name.append(j)
-                    flatten_measure_timeset[j] = self.measurement_all_info[j]
-        # if there is no extra index, the flattened measurements will not be changed
-        else:
-            flatten_measure_name = self.measurement_name.copy()
-            flatten_measure_timeset = self.measurement_all_info.copy()
+        flatten_measure_name = self.partly_flatten_measurement(self.name_and_index)
+
+        flatten_measure_timeset = {}
+        for i in flatten_measure_name:
+            # split the flattened name if needed
+            if '_index_' in i:
+                measure_name = i.split('_index_')[0]
+                measure_index= i.split('_index_')[1]
+                flatten_measure_timeset[i] = self.measurement_all_info[measure_name][measure_index]
+            else:
+                flatten_measure_timeset[i] = self.measurement_all_info[measure_name]
 
         self.flatten_measure_name = flatten_measure_name
         self.flatten_measure_timeset = flatten_measure_timeset
         return flatten_measure_name, flatten_measure_timeset
 
-    def partly_flatten_measurement(self, jac_involved):
+    def partly_flatten_measurement(self, measure_name_and_index):
         '''Flatten part of the measurements according to user's requirement
-        While flatten_measurement() converts all measurements,
-        this function converts part of the measurements, so that users can include different measurements in the calculation of Jacobian
-
         Parameters
         ----------
-        jac_involved: a dictionary, keys are measurement names, values are lists of extra indexes
+        measure_name_and_index: a dictionary, keys are measurement names, values are lists of extra indexes
 
         Returns
         ------
         jac_involved_name: a list of flattened measurement names
         '''
-        jac_involved_name = []
-        for j in list(jac_involved.keys()):
-            if jac_involved[j] is not None: # if it has extra index
-                for ind in jac_involved[j]:
+        flatten_names = []
+        for j in list(measure_name_and_index.keys()):
+            if measure_name_and_index[j] is not None: # if it has extra index
+                for ind in measure_name_and_index[j]:
                     flatten_name = j + '_index_' + str(ind)
-                    jac_involved_name.append(flatten_name)
+                    flatten_names.append(flatten_name)
             else:
-                jac_involved_name.append(j)
+                flatten_names.append(j)
 
-        return jac_involved_name
+        return flatten_names
 
 class DesignOfExperiments:
     def __init__(self, param_init, design_variable_timepoints, measurement_index_and_time, create_model, solver=None,
@@ -484,11 +477,11 @@ class DesignOfExperiments:
                     # loop over measurement item and time to store model measurements
                     output_combine = []
                     for j in self.flatten_measure_name:
+                        # split flattened name if needed
                         if '_index_' in j:
                             measure_name = j.split('_index_')[0]
                             measure_index = j.split('_index_')[1]
-                            print('measurename:', measure_name)
-                            print('measureindex:', measure_index)
+                            # this is needed for using eval(). if the extra index is 'CA', it converts to "'CA'". only for the extra index as a string
                             if type(measure_index) is str:
                                 measure_index_doublequotes = '"' + measure_index + '"'
                             for t in self.flatten_measure_timeset[j]:
@@ -605,19 +598,19 @@ class DesignOfExperiments:
 
                 # extract sipopt result
                 for j in self.flatten_measure_name:
-
-                    # check if this variable is fixed
+                    # check if this variable needs split name
                     if '_index_' in j:
                         measure_name = j.split('_index_')[0]
                         measure_index = j.split('_index_')[1]
+                        # this is needed for using eval(). if the extra index is 'CA', it converts to "'CA'". only for the extra index as a string
                         if type(measure_index) is str:
                             measure_index_doublequotes = '"' + measure_index + '"'
                         for t in self.flatten_measure_timeset[j]:
                             measure_var = getattr(m_sipopt, measure_name)
+                            # check if this variable is fixed
                             if (measure_var[0,measure_index,t].fixed == True):
                                 perturb_value = value(measure_var[0,measure_index,t])
                             else:
-
                                 # if it is not fixed, record its perturbed value
                                 if self.mode =='sequential_sipopt':
                                     perturb_value = eval('m_sipopt.sens_sol_state_1[m_sipopt.' + measure_name + '[0,'+str(measure_index_doublequotes)+',' + str(t) + ']]')
@@ -780,7 +773,6 @@ class DesignOfExperiments:
                         if self.discretize_model is not None:
                             # for DAE model, some variables are fixed
                             try:
-                                #meausrement_name = "C[0,'CA',0.0]"
                                 kaug_no = col.index(measurement_name)
                                 measurement_index.append(kaug_no)
                                 # get right line of dsdp
@@ -1295,8 +1287,8 @@ class DesignOfExperiments:
                     measure_index_doublequotes = '"' + measure_index + '"'
                     up_C = eval('m.' + measure_name + '[' + str(scenario_all['jac-index'][p][0]) + ',' + measure_index_doublequotes + ',' + str(t) + ']')
                     lo_C = eval('m.' + measure_name + '[' + str(scenario_all['jac-index'][p][1]) + ',' + measure_index_doublequotes + ',' + str(t) + ']')
-
                     return m.jac[j, p, t] == (up_C - lo_C) / scenario_all['eps-abs'][p] * self.scale_constant_value
+                # if t is not measured, let the value be 0
                 else:
                     return m.jac[j, p, t] == 0
 
