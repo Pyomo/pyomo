@@ -243,6 +243,19 @@ class TestGDPopt(unittest.TestCase):
             tee=False)
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
+    @unittest.skipUnless(sympy_available, "Sympy not available")
+    def test_LOA_8PP_logical_default_init(self):
+        """Test logic-based outer approximation with 8PP."""
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_logical.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+        SolverFactory('gdpopt').solve(
+            eight_process, strategy='LOA',
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver,
+            tee=False)
+        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+
     @unittest.skipUnless(SolverFactory('gams').available(exception_flag=False),
                          'GAMS solver not available')
     def test_LOA_8PP_gams_solver(self):
@@ -325,6 +338,19 @@ class TestGDPopt(unittest.TestCase):
         """Test logic-based OA with max_binary initialization."""
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+        SolverFactory('gdpopt').solve(
+            eight_process, strategy='LOA', init_strategy='max_binary',
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver)
+
+        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+
+    @unittest.skipUnless(sympy_available, "Sympy not available")
+    def test_LOA_8PP_logical_maxBinary(self):
+        """Test logic-based OA with max_binary initialization."""
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_logical.py'))
         eight_process = exfile.build_eight_process_flowsheet()
         SolverFactory('gdpopt').solve(
             eight_process, strategy='LOA', init_strategy='max_binary',
@@ -489,6 +515,19 @@ class TestGDPoptRIC(unittest.TestCase):
         """Test logic-based outer approximation with 8PP."""
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+        SolverFactory('gdpopt').solve(
+            eight_process, strategy='RIC',
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver,
+            tee=False)
+        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+
+    @unittest.skipUnless(sympy_available, "Sympy not available")
+    def test_RIC_8PP_logical_default_init(self):
+        """Test logic-based outer approximation with 8PP."""
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_logical.py'))
         eight_process = exfile.build_eight_process_flowsheet()
         SolverFactory('gdpopt').solve(
             eight_process, strategy='RIC',
@@ -739,6 +778,22 @@ class TestGLOA(unittest.TestCase):
         """Test the global logic-based outer approximation algorithm."""
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+        SolverFactory('gdpopt').solve(
+            eight_process, strategy='GLOA', tee=False,
+            mip_solver=mip_solver,
+            nlp_solver=global_nlp_solver,
+            nlp_solver_args=global_nlp_solver_args
+        )
+        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+
+    @unittest.skipUnless(license_available and sympy_available, 
+                         "Global NLP solver license not available or sympy "
+                         "not available.")
+    def test_GLOA_8PP_logical(self):
+        """Test the global logic-based outer approximation algorithm."""
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_logical.py'))
         eight_process = exfile.build_eight_process_flowsheet()
         SolverFactory('gdpopt').solve(
             eight_process, strategy='GLOA', tee=False,
