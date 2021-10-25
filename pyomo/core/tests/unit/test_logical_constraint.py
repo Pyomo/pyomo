@@ -1,5 +1,6 @@
 import pyomo.common.unittest as unittest
 
+from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.environ import (AbstractModel, BooleanVar, ConcreteModel,
                            LogicalConstraint, TransformationFactory, Constraint)
 from pyomo.repn import generate_standard_repn
@@ -41,6 +42,7 @@ class TestLogicalConstraintCreation(unittest.TestCase):
         self.assertEqual(repn.linear_coefs[0], 1)
         self.assertEqual(repn.linear_coefs[1], 1)
 
+    @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_statement_in_Disjunct(self):
         model = self.create_model()
         model.disj = Disjunction(expr=[

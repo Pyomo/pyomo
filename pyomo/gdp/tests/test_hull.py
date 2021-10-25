@@ -16,6 +16,7 @@ from pyomo.environ import (TransformationFactory, Block, Set, Constraint, Var,
                            RealSet, ComponentMap, value, log, ConcreteModel,
                            Any, Suffix, SolverFactory, RangeSet, Param,
                            Objective, TerminationCondition, Reference)
+from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.repn import generate_standard_repn
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
@@ -2416,6 +2417,7 @@ class NetworkDisjuncts(unittest.TestCase, CommonTests):
     def test_solution_minimize(self):
         ct.check_network_disjucts(self, minimize=True, transformation='hull')
 
+@unittest.skipUnless(sympy_available, "Sympy not available")
 class LogicalConstraintsOnDisjuncts(unittest.TestCase):
     def test_logical_constraints_transformed(self):
         m = models.makeLogicalConstraintsOnDisjuncts()
