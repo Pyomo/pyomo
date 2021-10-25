@@ -23,6 +23,7 @@ from io import StringIO
 import random
 
 import pyomo.opt
+
 linear_solvers = pyomo.opt.check_available_solvers(
     'glpk','cbc','gurobi','cplex')
 

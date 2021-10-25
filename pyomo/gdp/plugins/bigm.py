@@ -18,10 +18,12 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
-from pyomo.core import (
-    Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
-    Expression, SortComponents, TraversalStrategy, value,
-    RangeSet, NonNegativeIntegers, LogicalConstraint, )
+from pyomo.core import ( Block, BooleanVar, Connector, Constraint, Param, Set,
+                         SetOf, Suffix, Var, Expression, SortComponents,
+                         TraversalStrategy, value, RangeSet,
+                         NonNegativeIntegers, LogicalConstraint, Binary, )
+from pyomo.core.base.boolean_var import (
+    _DeprecatedImplicitAssociatedBinaryVariable)
 from pyomo.core.base.external import ExternalFunction
 from pyomo.core.base import Transformation, TransformationFactory, Reference
 import pyomo.core.expr.current as EXPR
@@ -35,7 +37,7 @@ from pyomo.core.util import target_list
 from pyomo.network import Port
 from pyomo.repn import generate_standard_repn
 from functools import wraps
-from weakref import ref as weakref_ref
+from weakref import ref as weakref_ref, ReferenceType
 
 logger = logging.getLogger('pyomo.gdp.bigm')
 
@@ -504,6 +506,25 @@ class BigM_Transformation(Transformation):
         # Transform any logical constraints here. We need to do this before we
         # create the variable references!
         TransformationFactory('core.logical_to_linear').apply_to(block)
+
+        # We don't know where all the BooleanVars are used, so if there are any
+        # that the above transformation didn't transform, we need to do it now,
+        # so that the Reference gets moved up. This won't be necessary when the
+        # writers are willing to find Vars not in the active subtree.
+        print("hi")
+        for boolean in block.component_data_objects(BooleanVar,
+                                                    descend_into=Block,
+                                                    active=None):
+            if isinstance(boolean._associated_binary,
+                          _DeprecatedImplicitAssociatedBinaryVariable):
+                print("Adding binary for %s" % boolean.name)
+                parent_block = boolean.parent_block()
+                new_var = Var(domain=Binary)
+                parent_block.add_component(
+                    unique_component_name(parent_block,
+                                          boolean.local_name + "_asbinary"),
+                    new_var)
+                boolean.associate_binary_var(new_var)
 
         # Find all the variables declared here (including the indicator_var) and
         # add a reference on the transformation block so these will be
