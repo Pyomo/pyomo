@@ -26,11 +26,12 @@ from pyomo.core.base.external import ExternalFunction
 from pyomo.core.base import Transformation, TransformationFactory, Reference
 import pyomo.core.expr.current as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import ( target_list, get_src_disjunction,
+from pyomo.gdp.util import ( is_child_of, get_src_disjunction,
                              get_src_constraint, get_transformed_constraints,
                              _get_constraint_transBlock, get_src_disjunct,
                              _warn_for_active_disjunction,
                              _warn_for_active_disjunct, preprocess_targets)
+from pyomo.core.util import target_list
 from pyomo.network import Port
 from pyomo.repn import generate_standard_repn
 from functools import wraps

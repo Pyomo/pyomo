@@ -12,14 +12,14 @@
 # Utility functions
 #
 
-__all__ = ['sum_product', 'summation', 'dot_product', 'sequence', 'prod', 'quicksum']
+__all__ = ['sum_product', 'summation', 'dot_product', 'sequence', 'prod', 'quicksum', 'target_list']
 
 from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.expr.numeric_expr import decompose_term
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.var import Var
 from pyomo.core.base.expression import Expression
-
+from pyomo.core.base.component import _ComponentBase
 
 def prod(terms):
     """
@@ -282,3 +282,21 @@ def xsequence(*args):
         remove_in='6.0')
     return sequence(*args)
 
+
+def target_list(x):
+    if isinstance(x, _ComponentBase):
+        return [ x ]
+    elif hasattr(x, '__iter__'):
+        ans = []
+        for i in x:
+            if isinstance(i, _ComponentBase):
+                ans.append(i)
+            else:
+                raise ValueError(
+                    "Expected Component or list of Components."
+                    "\n\tReceived %s" % (type(i),))
+        return ans
+    else:
+        raise ValueError(
+            "Expected Component or list of Components."
+            "\n\tReceived %s" % (type(x),))
