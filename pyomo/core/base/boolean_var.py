@@ -277,7 +277,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
                 "Reassociating BooleanVar '%s' (currently associated "
                 "with '%s') with '%s' is not allowed" % (
                     self.name,
-                    self._associated_binary.name
+                    self._associated_binary().name
                     if self._associated_binary is not None else None,
                     binary_var.name if binary_var is not None else None))
         if binary_var is not None:

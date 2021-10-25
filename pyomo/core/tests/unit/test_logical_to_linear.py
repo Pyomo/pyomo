@@ -534,6 +534,19 @@ class TestLogicalToLinearBackmap(unittest.TestCase):
         # we didn't whine about this
         self.assertEqual(output.getvalue(), '')
 
+    def test_cannot_reassociate_boolean_error(self):
+        m = _generate_boolean_model(2)
+        TransformationFactory('core.logical_to_linear').apply_to(m)
+        # both of the variable have been associated with binaries, we're not
+        # allowed to change now.
+        m.y = Var(domain=Binary)
+        self.assertRaisesRegex(RuntimeError,
+                               r"Reassociating BooleanVar 'Y\[1\]' "
+                               "\(currently associated with 'Y_asbinary\[1\]'\)"
+                               " with 'y' is not allowed",
+                               m.Y[1].associate_binary_var,
+                               m.y)
+
     def test_backmap(self):
         m = _generate_boolean_model(3)
         TransformationFactory('core.logical_to_linear').apply_to(m)
