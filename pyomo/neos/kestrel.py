@@ -126,8 +126,8 @@ class kestrelAMPL(object):
                 http.client.BadStatusLine):
             e = sys.exc_info()[1]
             self.neos = None
-            logger.info("Fail.")
-            logger.warning("NEOS is temporarily unavailable.\n")
+            logger.info("Fail: %s" % (e,))
+            logger.warning("NEOS is temporarily unavailable:\n\t(%s)" % (e,))
 
     def tempfile(self):
         return os.path.join(tempfile.gettempdir(),'at%s.jobs' % os.getenv('ampl_id'))
