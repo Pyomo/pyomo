@@ -366,7 +366,7 @@ class _PyomoUnit(NumericValue):
         # delta temperatures).  So that things work cleanly in Python 2
         # and 3, we will generate the string as unicode, then explicitly
         # encode it to UTF-8 in Python 2
-        retstr = u'{:!~C}'.format(self._pint_unit)
+        retstr = u'{:~C}'.format(self._pint_unit)
         if retstr == '':
             retstr = 'dimensionless'
         return retstr
@@ -426,9 +426,9 @@ class _PyomoUnit(NumericValue):
         ostream.write(str(self))
         # There is also a long form, but the verbose flag is not really the correct indicator
         # if verbose:
-        #     ostream.write('{:!s}'.format(self._pint_unit))
+        #     ostream.write('{:s}'.format(self._pint_unit))
         # else:
-        #     ostream.write('{:!~s}'.format(self._pint_unit))
+        #     ostream.write('{:~s}'.format(self._pint_unit))
 
 
 class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
