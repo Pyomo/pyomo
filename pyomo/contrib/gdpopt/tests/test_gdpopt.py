@@ -27,6 +27,7 @@ from pyomo.environ import ( ConcreteModel, Objective, SolverFactory, Var, value,
                             Integers, Block, Constraint, maximize,
                             LogicalConstraint)
 from pyomo.gdp import Disjunct, Disjunction
+from pyomo.gdp.tests import models
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
 from pyomo.opt import TerminationCondition
 from pyomo.core.expr.sympy_tools import sympy_available
@@ -178,7 +179,6 @@ class TestGDPoptUnit(unittest.TestCase):
                                     "Found active disjunct"):
             is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA')))
 
-
 @unittest.skipIf(not LOA_solvers_available,
                  "Required subsolvers %s are not available"
                  % (LOA_solvers,))
@@ -231,6 +231,20 @@ class TestGDPopt(unittest.TestCase):
         )
         self.assertAlmostEqual(value(m.o), 0)
 
+    @unittest.skipUnless(sympy_available, "Sympy not available")
+    def test_logical_constraints_on_disjuncts(self):
+        m = models.makeLogicalConstraintsOnDisjuncts()
+        SolverFactory('gdpopt').solve(m, strategy='LOA', mip_solver=mip_solver,
+                                      nlp_solver=nlp_solver)
+        self.assertAlmostEqual(value(m.x), 8)
+
+    @unittest.skipUnless(sympy_available, "Sympy not available")
+    def test_boolean_vars_on_disjuncts(self):
+        m = models.makeBooleanVarsOnDisjuncts()
+        SolverFactory('gdpopt').solve(m, strategy='LOA', mip_solver=mip_solver,
+                                      nlp_solver=nlp_solver)
+        self.assertAlmostEqual(value(m.x), 8)
+        
     def test_LOA_8PP_default_init(self):
         """Test logic-based outer approximation with 8PP."""
         exfile = import_file(
