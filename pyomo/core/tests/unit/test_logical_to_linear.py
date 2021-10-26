@@ -486,6 +486,17 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         # only transformed the second one.
         self.assertEqual(len(m.logic_to_linear.transformed_constraints), 1)
 
+    def test_target_with_unrecognized_type(self):
+        m = _generate_boolean_model(2)
+        with self.assertRaisesRegex(ValueError,
+                                    r"invalid value for configuration "
+                                    r"'targets':\n\tFailed casting 1\n\tto "
+                                    r"target_list\n\tError: "
+                                    r"Expected Component or list of Components."
+                                    r"\n\tReceived <class 'int'>"):
+            TransformationFactory('core.logical_to_linear').apply_to(
+                m, targets=1)
+
 @unittest.skipUnless(sympy_available, "Sympy not available")
 class TestLogicalToLinearBackmap(unittest.TestCase):
     def test_backmap_deprecated(self):
