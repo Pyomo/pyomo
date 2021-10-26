@@ -12,7 +12,69 @@ from pyomo.core.base.block import Block
 from pyomo.core.base.reference import Reference
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentSet, ComponentMap
-from pyomo.common.backports import nullcontext
+from pyomo.common.modeling import unique_component_name
+
+from pyomo.core.base.constraint import Constraint
+from pyomo.core.base.expression import Expression
+from pyomo.core.base.external import ExternalFunction
+from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
+from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
+from pyomo.core.expr.numvalue import native_types
+
+
+class _ExternalFunctionVisitor(StreamBasedExpressionVisitor):
+
+    def initializeWalker(self, expr):
+        self._functions = []
+        self._seen = set()
+        return True, None
+
+    def exitNode(self, node, data):
+        if type(node) is ExternalFunctionExpression:
+            if id(node) not in self._seen:
+                self._seen.add(id(node))
+                self._functions.append(node)
+
+    def finalizeResult(self, result):
+        return self._functions
+
+    def enterNode(self, node):
+        pass
+
+    def acceptChildResult(self, node, data, child_result, child_idx):
+        pass
+
+    def acceptChildResult(self, node, data, child_result, child_idx):
+        if child_result.__class__ in native_types:
+            return False, None
+        return child_result.is_expression_type(), None
+
+
+def identify_external_functions(expr):
+    yield from _ExternalFunctionVisitor().walk_expression(expr)
+
+
+def add_local_external_functions(block):
+    ef_exprs = []
+    for comp in block.component_data_objects(
+            (Constraint, Expression), active=True
+            ):
+        ef_exprs.extend(identify_external_functions(comp.expr))
+    unique_functions = []
+    fcn_set = set()
+    for expr in ef_exprs:
+        fcn = expr._fcn
+        data = (fcn._library, fcn._function)
+        if data not in fcn_set:
+            fcn_set.add(data)
+            unique_functions.append(data)
+    fcn_comp_map = {}
+    for lib, name in unique_functions:
+        comp_name = unique_component_name(block, "_" + name)
+        comp = ExternalFunction(library=lib, function=name)
+        block.add_component(comp_name, comp)
+        fcn_comp_map[lib, name] = comp
+    return fcn_comp_map
 
 
 def create_subsystem_block(constraints, variables=None, include_fixed=False):
@@ -47,11 +109,12 @@ def create_subsystem_block(constraints, variables=None, include_fixed=False):
     var_set = ComponentSet(variables)
     input_vars = []
     for con in constraints:
-        for var in identify_variables(con.body, include_fixed=include_fixed):
+        for var in identify_variables(con.expr, include_fixed=include_fixed):
             if var not in var_set:
                 input_vars.append(var)
                 var_set.add(var)
     block.input_vars = Reference(input_vars)
+    add_local_external_functions(block)
     return block
 
 
