@@ -2274,40 +2274,30 @@ class AbstractSortedSimpleSet(metaclass=RenamedClass):
 
 ############################################################################
 
-class SetOf(_FiniteSetMixin, _SetData, Component):
+class SetOf(_SetData, Component):
     """"""
     def __new__(cls, *args, **kwds):
         if cls is not SetOf:
             return super(SetOf, cls).__new__(cls)
         reference, = args
-        if isinstance(reference, (tuple, list)):
+        if isinstance(reference, _SetData):
+            if reference.isfinite():
+                if reference.isordered():
+                    return super(SetOf, cls).__new__(OrderedSetOf)
+                else:
+                    return super(SetOf, cls).__new__(FiniteSetOf)
+            else:
+                return super(SetOf, cls).__new__(InfiniteSetOf)
+        if isinstance(reference, Sequence):
             return super(SetOf, cls).__new__(OrderedSetOf)
         else:
-            return super(SetOf, cls).__new__(UnorderedSetOf)
+            return super(SetOf, cls).__new__(FiniteSetOf)
 
     def __init__(self, reference, **kwds):
         _SetData.__init__(self, component=self)
         kwds.setdefault('ctype', SetOf)
         Component.__init__(self, **kwds)
         self._ref = reference
-
-    def get(self, value, default=None):
-        # Note that the efficiency of this depends on the reference object
-        #
-        # The bulk of single-value set members were stored as scalars.
-        # Check that first.
-        if value.__class__ is tuple and len(value) == 1:
-            if value[0] in self._ref:
-                return value[0]
-        if value in self._ref:
-            return value
-        return default
-
-    def __len__(self):
-        return len(self._ref)
-
-    def _iter_impl(self):
-        return iter(self._ref)
 
     def __str__(self):
         if self.parent_block() is not None:
@@ -2326,6 +2316,8 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
 
     @property
     def dimen(self):
+        if isinstance(self._ref, _SetData):
+            return self._ref.dimen
         _iter = iter(self)
         try:
             x = next(_iter)
@@ -2360,10 +2352,39 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
                 str(v._ref),
             ])
 
-class UnorderedSetOf(SetOf):
-    pass
 
-class OrderedSetOf(_ScalarOrderedSetMixin, _OrderedSetMixin, SetOf):
+class InfiniteSetOf(SetOf):
+    def ranges(self):
+        # InfiniteSetOf references are assumed to implement the Set API
+        return self._ref.ranges()
+
+
+class FiniteSetOf(_FiniteSetMixin, SetOf):
+    def get(self, value, default=None):
+        # Note that the efficiency of this depends on the reference object
+        #
+        # The bulk of single-value set members were stored as scalars.
+        # Check that first.
+        if value.__class__ is tuple and len(value) == 1:
+            if value[0] in self._ref:
+                return value[0]
+        if value in self._ref:
+            return value
+        return default
+
+    def __len__(self):
+        return len(self._ref)
+
+    def _iter_impl(self):
+        return iter(self._ref)
+
+
+class UnorderedSetOf(metaclass=RenamedClass):
+    __renamed__new_class__ = FiniteSetOf
+    __renamed__version__ = 'TBD'
+
+
+class OrderedSetOf(_ScalarOrderedSetMixin, _OrderedSetMixin, FiniteSetOf):
     def at(self, index):
         i = self._to_0_based_index(index)
         try:

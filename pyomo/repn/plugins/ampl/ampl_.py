@@ -351,6 +351,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
         include_all_variable_bounds = \
             io_options.pop("include_all_variable_bounds", False)
 
+        # List of variables that don't appear in constraints to force into the
+        # nl-file
+        export_nonlinear_variables = \
+            io_options.pop("export_nonlinear_variables", False)
+
         if len(io_options):
             raise ValueError(
                 "ProblemWriter_nl passed unrecognized io_options:\n\t" +
@@ -399,7 +404,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     show_section_timing=show_section_timing,
                     skip_trivial_constraints=skip_trivial_constraints,
                     file_determinism=file_determinism,
-                    include_all_variable_bounds=include_all_variable_bounds)
+                    include_all_variable_bounds=include_all_variable_bounds,
+                    export_nonlinear_variables=export_nonlinear_variables)
 
         self._symbolic_solver_labels = False
         self._output_fixed_variable_bounds = False
@@ -700,7 +706,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         show_section_timing=False,
                         skip_trivial_constraints=False,
                         file_determinism=1,
-                        include_all_variable_bounds=False):
+                        include_all_variable_bounds=False,
+                        export_nonlinear_variables=False):
 
         output_fixed_variable_bounds = self._output_fixed_variable_bounds
         symbolic_solver_labels = self._symbolic_solver_labels
@@ -1135,6 +1142,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
                           for vardata in Vars_dict.values())
             UnusedVars = AllVars.difference(UsedVars)
             LinearVars.update(UnusedVars)
+
+        if export_nonlinear_variables:
+            for v in export_nonlinear_variables:
+                v_iter = v.values() if v.is_indexed() else iter((v,))
+                for vi in v_iter:
+                    if self_varID_map[id(vi)] not in UsedVars:
+                        Vars_dict[id(vi)] = vi
+                        ConNonlinearVars.update([self_varID_map[id(vi)]])
+
 
         ### There used to be an if statement here for the following code block
         ### checking model.statistics.num_binary_vars was greater than zero.
