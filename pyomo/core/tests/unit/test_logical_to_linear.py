@@ -525,10 +525,10 @@ class TestLogicalToLinearBackmap(unittest.TestCase):
         m.Y = BooleanVar()
         TransformationFactory('core.logical_to_linear').apply_to(m)
         m.y = Var(domain=Binary)
-        m.Y.associate_binary_var(m.y)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.core.base',
                               logging.WARNING):
+            m.Y.associate_binary_var(m.y)
             y = m.Y.get_associated_binary()
         self.assertIs(y, m.y)
         # we didn't whine about this
@@ -540,12 +540,12 @@ class TestLogicalToLinearBackmap(unittest.TestCase):
         # both of the variable have been associated with binaries, we're not
         # allowed to change now.
         m.y = Var(domain=Binary)
-        self.assertRaisesRegex(RuntimeError,
-                               r"Reassociating BooleanVar 'Y\[1\]' "
-                               "\(currently associated with 'Y_asbinary\[1\]'\)"
-                               " with 'y' is not allowed",
-                               m.Y[1].associate_binary_var,
-                               m.y)
+        with self.assertRaisesRegex(
+                RuntimeError,
+                r"Reassociating BooleanVar 'Y\[1\]' "
+                r"\(currently associated with 'Y_asbinary\[1\]'\)"
+                r" with 'y' is not allowed"):
+            m.Y[1].associate_binary_var(m.y)
 
     def test_backmap(self):
         m = _generate_boolean_model(3)
