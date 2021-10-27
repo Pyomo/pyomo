@@ -1,6 +1,8 @@
 from pyomo.core import (Block, ConcreteModel, Constraint, Objective, Param, Set,
                         Var, inequality, RangeSet, Any, Expression, maximize,
-                        TransformationFactory, BooleanVar, LogicalConstraint)
+                        TransformationFactory, BooleanVar, LogicalConstraint,
+                        exactly)
+from pyomo.core.expr.current import sqrt
 from pyomo.gdp import Disjunct, Disjunction
 
 import pyomo.network as ntwk
@@ -814,6 +816,28 @@ def makeThreeTermDisjunctionWithOneVarInOneDisjunct():
 
     return m
 
+def makeNestedNonlinearModel():
+    """This is actually a disjunction between two points, but it's written 
+    as a nested disjunction over four circles! :P"""
+
+    m = ConcreteModel()
+    m.x = Var(bounds=(-10, 10))
+    m.y = Var(bounds=(-10, 10))
+    m.d1 = Disjunct()
+    m.d1.lower_circle = Constraint(expr=m.x**2 + m.y**2 <= 1)
+    m.inner = Disjunction(expr=[[m.x == 10], [(sqrt(2) - m.x)**2 + (sqrt(2) -
+                                                                    m.y)**2 <=
+                                              1]])
+    m.d2 = Disjunct()
+    m.d2.upper_circle = Constraint(expr=(3 - m.x)**2 + (3 - m.y)**2 <= 1)
+    m.d2.inner = Disjunction(expr=[[m.y == 10], [(sqrt(2) - m.x)**2 + (sqrt(2) -
+                                                                       m.y)**2
+                                                 <= 1]])
+    m.outer = Disjunction(expr=[m.d1, m.d2])
+    m.obj = Objective(expr=m.x + m.y)
+
+    return m
+
 ##
 # Variations on the example from the Kronqvist et al. Between Steps paper
 ##
@@ -889,9 +913,36 @@ def makeLogicalConstraintsOnDisjuncts():
 
     return m
 
+def makeLogicalConstraintsOnDisjuncts_NonlinearConvex():
+    # same game as the previous model, but include some nonlinear
+    # constraints. This is to test gdpopt because it needs to handle the logical
+    # things even when they are on the same Disjunct as a nonlinear thing
+    m = ConcreteModel()
+    m.s = RangeSet(4)
+    m.ds = RangeSet(2)
+    m.d = Disjunct(m.s)
+    m.djn = Disjunction(m.ds)
+    m.djn[1] = [m.d[1], m.d[2]]
+    m.djn[2] = [m.d[3], m.d[4]]
+    m.x = Var(bounds=(-5, 10))
+    m.y = Var(bounds=(-5, 10))
+    m.Y = BooleanVar([1, 2])
+    m.d[1].c = Constraint(expr=m.x**2 + m.y**2 <= 2)
+    m.d[1].logical = LogicalConstraint(expr=~m.Y[1])
+    m.d[2].c1 = Constraint(expr=m.x >= -3)
+    m.d[2].c2 = Constraint(expr=m.x**2 <= 16)
+    m.d[2].logical = LogicalConstraint(expr=m.Y[1].land(m.Y[2]))
+    m.d[3].c = Constraint(expr=m.x >= 4)
+    m.d[4].logical = LogicalConstraint(expr=exactly(1, m.Y[1]))
+    m.d[4].logical2 = LogicalConstraint(expr=~m.Y[2])
+    m.d[4].c = Constraint(expr=m.x == 3)
+    m.o = Objective(expr=m.x)
+
+    return m
+
 def makeBooleanVarsOnDisjuncts():
-    # same model as above, but declare the BooleanVar on one of the Disjuncts,
-    # just to make sure we make references and stuff correctly. 
+    # same as linear model above, but declare the BooleanVar on one of the
+    # Disjuncts, just to make sure we make references and stuff correctly.
     m = ConcreteModel()
     m.s = RangeSet(4)
     m.ds = RangeSet(2)
