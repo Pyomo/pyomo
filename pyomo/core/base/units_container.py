@@ -111,7 +111,11 @@ import logging
 import sys
 
 from pyomo.common.dependencies import attempt_import
-from pyomo.core.expr.numvalue import NumericValue, nonpyomo_leaf_types, value, native_types, native_numeric_types, pyomo_constant_types
+from pyomo.common.modeling import NOTSET
+from pyomo.core.expr.numvalue import (
+    NumericValue, nonpyomo_leaf_types, value, native_types,
+    native_numeric_types, pyomo_constant_types,
+)
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr import current as EXPR
 
@@ -965,8 +969,10 @@ class PyomoUnitsContainer(object):
         on the class until they are requested.
 
     """
-    def __init__(self, pint_registry):
+    def __init__(self, pint_registry=NOTSET):
         """Create a PyomoUnitsContainer instance."""
+        if pint_registry is NOTSET:
+            pint_registry = pint_module.UnitRegistry()
         self._pint_registry = pint_registry
         if pint_registry is None:
             self._pint_dimensionless = None
@@ -992,11 +998,10 @@ class PyomoUnitsContainer(object):
             :skipif: not pint_available
             :hide:
 
-            # get a local units object (to avoid duplicate registration
+            # Get a local units object (to avoid duplicate registration
             # with the example in load_definitions_from_strings)
-            >>> import pint
             >>> import pyomo.core.base.units_container as _units
-            >>> u = _units.PyomoUnitsContainer(pint.UnitRegistry())
+            >>> u = _units.PyomoUnitsContainer()
             >>> with open('my_additional_units.txt', 'w') as FILE:
             ...     tmp = FILE.write("USD = [currency]\\n")
 
@@ -1011,6 +1016,7 @@ class PyomoUnitsContainer(object):
             :skipif: not pint_available
             :hide:
 
+            # Clean up the file we just created
             >>> import os
             >>> os.remove('my_additional_units.txt')
 
@@ -1037,7 +1043,7 @@ class PyomoUnitsContainer(object):
             # with the example in load_definitions_from_strings)
             >>> import pint
             >>> import pyomo.core.base.units_container as _units
-            >>> u = _units.PyomoUnitsContainer(pint.UnitRegistry())
+            >>> u = _units.PyomoUnitsContainer()
 
         .. doctest::
             :skipif: not pint_available
