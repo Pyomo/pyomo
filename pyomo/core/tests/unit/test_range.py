@@ -580,6 +580,10 @@ class TestNumericRange(unittest.TestCase):
             [NR(None,-5,0,'[)')],
         )
         self.assertEqual(
+            NR(None,0,0).range_difference([NR(-5,0,0,'[)')]),
+            [NR(None,-5,0,'[)'), NR(0,0,0)],
+        )
+        self.assertEqual(
             NR(0,10,0).range_difference([NR(None,5,0,'[)')]),
             [NR(5,10,0,'[]')],
         )
@@ -622,7 +626,17 @@ class TestNumericRange(unittest.TestCase):
         a = NR(0.25, None, 1)
         self.assertEqual(a.range_difference([NR(0.5, None, 1)]), [a])
 
-        # And the onee thing we don't support:
+        # open/closed infinite ranges
+        a = NR(None, None, 0)
+        self.assertEqual(
+            a.range_difference([NR(None, None, 0, "()")]),
+            [NR(-_inf, -_inf, 0), NR(_inf, _inf, 0)])
+        self.assertEqual(
+            a.range_difference([NR(None, None, 0, "()"),
+                                NR(None, None, 0, "[)")]),
+            [NR(_inf, _inf, 0)])
+
+        # And the one thing we don't support:
         with self.assertRaisesRegex(
                 RangeDifferenceError, 'We do not support subtracting an '
                 r'infinite discrete range \[0:inf\] from an infinite '
