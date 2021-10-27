@@ -12,6 +12,7 @@ from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.set_types import Reals
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr import value
+from pyomo.core.expr import current as EXPR
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.expr.visitor import identify_variables, identify_mutable_parameters, replace_expressions
 from pyomo.core.expr.sympy_tools import sympyify_expression, sympy2pyomo_expression
@@ -279,6 +280,16 @@ def transform_to_standard_form(model):
     return
 
 
+def get_vars_from_constraints(block):
+    """Determine all variables used in constraint expressions in
+    a Block.
+    """
+    for constraint in block.component_data_objects(Constraint,
+                                                   descend_into=Block):
+        for var in EXPR.identify_variables(constraint.expr):
+            yield var
+
+
 def replace_uncertain_bounds_with_constraints(model, uncertain_params):
     """
     For variables of which the bounds are dependent on the parameters
@@ -290,29 +301,26 @@ def replace_uncertain_bounds_with_constraints(model, uncertain_params):
     :param uncertain_params: List of uncertain model parameters
     :type uncertain_params: list
     """
+    uncertain_param_set = ComponentSet(uncertain_params)
 
-    for v in model.component_data_objects(Var):
+    # component for explicit inequality constraints
+    uncertain_var_bound_constrs = ConstraintList()
+    model.add_component(unique_component_name(model,
+                                              'uncertain_var_bound_cons'),
+                        uncertain_var_bound_constrs)
+
+    for v in get_vars_from_constraints(model):
         # get mutable parameters in variable bounds expressions
         # TODO: replace _ub and _lb with more secure getter when available
         mutable_params_ub = ComponentSet(identify_mutable_parameters(v._ub))
         mutable_params_lb = ComponentSet(identify_mutable_parameters(v._lb))
 
-        uncertain_param_names = [p.name for p in uncertain_params]
-
-        # determine which mutable parameters are uncertain
-        mutable_params_ub = [p for p in list(mutable_params_ub) if p.name in
-                             uncertain_param_names]
-        mutable_params_lb = [p for p in list(mutable_params_lb) if p.name in
-                             uncertain_param_names]
-
         # add explicit inequality constraint(s), remove variable bound(s)
-        if mutable_params_ub:
-            constr = Constraint(expr=v - v._ub <= 0)
-            model.add_component(v.name + '_uncertain_upper_bound_con', constr)
+        if mutable_params_ub & uncertain_param_set:
+            uncertain_var_bound_constrs.add(v - v._ub <= 0)
             v.setub(None)
-        if mutable_params_lb:
-            constr = Constraint(expr=v._lb - v <= 0)
-            model.add_component(v.name + '_uncertain_lower_bound_con', constr)
+        if mutable_params_lb & uncertain_param_set:
+            uncertain_var_bound_constrs.add(v._lb - v <= 0)
             v.setlb(None)
 
     return

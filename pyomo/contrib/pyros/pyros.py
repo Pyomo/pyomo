@@ -378,7 +378,7 @@ class PyROS(object):
             # === Replace variable bounds depending on uncertain params with
             #     explicit inequality constraints
             replace_uncertain_bounds_with_constraints(model_data.working_model,
-                                                      uncertain_params)
+                                                      model_data.working_model.util.uncertain_params)
 
             # === Add decision rule information
             add_decision_rule_variables(model_data, config)
