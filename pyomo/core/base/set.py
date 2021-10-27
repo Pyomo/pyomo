@@ -3656,8 +3656,8 @@ class SetProduct(SetOperator):
         ))
 
     def bounds(self):
-        return ( tuple(_.bounds()[0] for _ in self.subsets(False)),
-                 tuple(_.bounds()[1] for _ in self.subsets(False)) )
+        lb, ub = zip(*map(lambda x: x.bounds(), self.subsets(False)))
+        return lb, ub
 
     @property
     def dimen(self):
