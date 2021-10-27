@@ -576,7 +576,7 @@ class TestNumericRange(unittest.TestCase):
             [NR(None,-5,0,'[)')],
         )
         self.assertEqual(
-            NR(None,0,0).range_difference([NR(-5,0,0,'[)')]),
+            NR(None,0,0).range_difference([NR(-5,0,0,'[]')]),
             [NR(None,-5,0,'[)')],
         )
         self.assertEqual(
@@ -903,13 +903,14 @@ class TestRangeProduct(unittest.TestCase):
     def test_range_difference(self):
         a = NNR('a')
         b = NR(0,5,0)
+        b1 = NR(0,5,0,'[)') # Note: b & c overlap, so [b,c]-c != b
         c = NR(5,10,1)
         x = RP([[a],[b,c]])
         y = RP([[a],[c]])
         z = RP([[a],[b],[c]])
         w = RP([list(Any.ranges()), [b]])
         self.assertEqual(x.range_difference([x]), [])
-        self.assertEqual(x.range_difference([y]), [RP([[a],[b]])])
+        self.assertEqual(x.range_difference([y]), [RP([[a],[b1]])])
         self.assertEqual(x.range_difference([z]), [x])
         self.assertEqual(x.range_difference(Any.ranges()), [])
         self.assertEqual(x.range_difference([w]), [RP([[a],[NR(6,10,1)]])])
