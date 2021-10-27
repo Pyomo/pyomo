@@ -20,21 +20,23 @@ from pyomo.core.base.set import (
     Any
 )
 
+_inf = float('inf')
+
 class TestNumericRange(unittest.TestCase):
     def test_init(self):
         a = NR(None, None, 0)
-        self.assertIsNone(a.start)
-        self.assertIsNone(a.end)
+        self.assertEqual(a.start, -_inf)
+        self.assertEqual(a.end, _inf)
         self.assertEqual(a.step, 0)
 
-        a = NR(-float('inf'), float('inf'), 0)
-        self.assertIsNone(a.start)
-        self.assertIsNone(a.end)
+        a = NR(-_inf, _inf, 0)
+        self.assertEqual(a.start, -_inf)
+        self.assertEqual(a.end, _inf)
         self.assertEqual(a.step, 0)
 
         a = NR(0, None, 0)
         self.assertEqual(a.start, 0)
-        self.assertIsNone(a.end)
+        self.assertEqual(a.end, _inf)
         self.assertEqual(a.step, 0)
 
         a = NR(0, 0, 0)
@@ -70,8 +72,13 @@ class TestNumericRange(unittest.TestCase):
 
         a = NR(0, None, 1)
         self.assertEqual(a.start, 0)
-        self.assertEqual(a.end, None)
+        self.assertEqual(a.end, _inf)
         self.assertEqual(a.step, 1)
+
+        a = NR(0, None, -1)
+        self.assertEqual(a.start, 0)
+        self.assertEqual(a.end, -_inf)
+        self.assertEqual(a.step, -1)
 
         a = NR(0, 5, 1)
         self.assertEqual(a.start, 0)
@@ -618,8 +625,8 @@ class TestNumericRange(unittest.TestCase):
         # And the onee thing we don't support:
         with self.assertRaisesRegex(
                 RangeDifferenceError, 'We do not support subtracting an '
-                r'infinite discrete range \[0:None\] from an infinite '
-                r'continuous range \[None..None\]'):
+                r'infinite discrete range \[0:inf\] from an infinite '
+                r'continuous range \[-inf..inf\]'):
             NR(None,None,0).range_difference([NR(0,None,1)])
 
     def test_range_intersection(self):
