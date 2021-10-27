@@ -25,7 +25,7 @@ from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
 from pyomo.contrib.gdpopt.util import is_feasible, time_code
 from pyomo.environ import ( ConcreteModel, Objective, SolverFactory, Var, value,
                             Integers, Block, Constraint, maximize,
-                            LogicalConstraint)
+                            LogicalConstraint, sqrt)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.tests import models
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
@@ -237,6 +237,38 @@ class TestGDPopt(unittest.TestCase):
         SolverFactory('gdpopt').solve(m, strategy='LOA', mip_solver=mip_solver,
                                       nlp_solver=nlp_solver)
         self.assertAlmostEqual(value(m.x), 8)
+
+    @unittest.skipUnless(sympy_available, "Sympy not available")
+    def test_logical_constraints_on_disjuncts_nonlinear_convex(self):
+        m = models.makeLogicalConstraintsOnDisjuncts_NonlinearConvex()
+        SolverFactory('gdpopt').solve(m, strategy='LOA', mip_solver=mip_solver,
+                                      nlp_solver=nlp_solver)
+        self.assertAlmostEqual(value(m.x), 4)
+
+    # [ESJ 10/27/21] This should work, but it won't until #2171 is resolved
+    # def test_nested_disjunctions_set_covering(self):
+    #     m = models.makeNestedNonlinearModel()
+    #     SolverFactory('gdpopt').solve(m, strategy='LOA', mip_solver=mip_solver,
+    #                                   nlp_solver=nlp_solver,
+    #                                   init_strategy='set_covering')
+    #     self.assertAlmostEqual(value(m.x), sqrt(2)/2)
+    #     self.assertAlmostEqual(value(m.y), sqrt(2)/2)
+
+    def test_nested_disjunctions_no_init(self):
+        m = models.makeNestedNonlinearModel()
+        SolverFactory('gdpopt').solve(m, strategy='LOA', mip_solver=mip_solver,
+                                      nlp_solver=nlp_solver,
+                                      init_strategy='no_init')
+        self.assertAlmostEqual(value(m.x), sqrt(2)/2)
+        self.assertAlmostEqual(value(m.y), sqrt(2)/2)
+
+    def test_nested_disjunctions_max_binary(self):
+        m = models.makeNestedNonlinearModel()
+        SolverFactory('gdpopt').solve(m, strategy='LOA', mip_solver=mip_solver,
+                                      nlp_solver=nlp_solver,
+                                      init_strategy='max_binary')
+        self.assertAlmostEqual(value(m.x), sqrt(2)/2)
+        self.assertAlmostEqual(value(m.y), sqrt(2)/2)
 
     @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_boolean_vars_on_disjuncts(self):
