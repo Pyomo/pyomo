@@ -63,6 +63,10 @@ def _finalize_xpress_import(xpress, avail):
         XpressDirect.XpressException = RuntimeError
     else:
         XpressDirect.XpressException = xpress.ModelError
+    # In (pypi) versions prior to 8.13.0, the 'xpress.rng' keyword was
+    # 'xpress.range'
+    if not hasattr(xpress, 'rng'):
+        xpress.rng = xpress.range
 
 class _xpress_importer_class(object):
     # We want to be able to *update* the message that the deferred
@@ -357,7 +361,7 @@ class XpressDirect(DirectSolver):
                                            name=conname)
         elif con.has_lb() and con.has_ub():
             xpress_con = xpress.constraint(body=xpress_expr,
-                                           sense=xpress.range,
+                                           sense=xpress.rng,
                                            lb=value(con.lower),
                                            ub=value(con.upper),
                                            name=conname)
