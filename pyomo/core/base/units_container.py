@@ -1383,7 +1383,16 @@ class _DeferredUnitsSingleton(PyomoUnitsContainer):
         pass
 
     def __getattribute__(self, attr):
+        # Note that this methos will only be called ONCE: either pint is
+        # present, at which point this instance __class__ will fall back
+        # to PyomoUnitsContainer (where this method is not declared, OR
+        # pint is not available and an ImportError will be raised.
         if pint_available:
+            # If the first thing that is being called is
+            # "units.set_pint_registry(...)", then we will call __init__
+            # with None so that the subsequent call to set_pint_registry
+            # will work cleanly.  In all other cases, we will initialize
+            # PyomoUnitsContainer with a new (default) pint registry.
             if attr == 'set_pint_registry':
                 pint_registry = None
             else:
