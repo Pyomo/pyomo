@@ -38,7 +38,7 @@ from pyomo.core.expr.numeric_expr import (
     NPV_PowExpression, NPV_DivisionExpression,
     decompose_term, clone_counter, nonlinear_expression,
     _MutableLinearExpression, _MutableSumExpression, _decompose_linear_terms,
-    LinearDecompositionError,
+    LinearDecompositionError, MaxExpression, MinExpression,
 )
 import pyomo.core.expr.logical_expr as logical_expr
 from pyomo.common.errors import PyomoException
@@ -4790,6 +4790,43 @@ class TestNonlinearExpression(unittest.TestCase):
             e += e_
             self.assertIs(e.__class__, _MutableSumExpression)
             self.assertEqual(e.nargs(), 2)
+
+class TestMinMaxExpression(unittest.TestCase):
+    def test_max_expression(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=5)
+        m.y = Param(initialize=3)
+        e = MaxExpression((4, m.x, m.y))
+        self.assertTrue(e.is_potentially_variable())
+        self.assertEqual(e.nargs(), 3)
+        self.assertEqual(value(e), 5)
+        self.assertEqual(e.to_string(), "max(4, x, y)")
+        self.assertEqual(e.polynomial_degree(), None)
+
+        e = MaxExpression((MaxExpression((10, 20)), MaxExpression((m.x, m.y))))
+        self.assertTrue(e.is_potentially_variable())
+        self.assertEqual(e.nargs(), 2)
+        self.assertEqual(value(e), 20)
+        self.assertEqual(e.to_string(), "max(max(10, 20), max(x, y))")
+        self.assertEqual(e.polynomial_degree(), None)
+
+    def test_min_expression(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=5)
+        m.y = Param(initialize=3)
+        e = MinExpression((4, m.x, m.y))
+        self.assertTrue(e.is_potentially_variable())
+        self.assertEqual(e.nargs(), 3)
+        self.assertEqual(value(e), 3)
+        self.assertEqual(e.to_string(), "min(4, x, y)")
+        self.assertEqual(e.polynomial_degree(), None)
+
+        e = MinExpression((MinExpression((10, 20)), MinExpression((m.x, m.y))))
+        self.assertTrue(e.is_potentially_variable())
+        self.assertEqual(e.nargs(), 2)
+        self.assertEqual(value(e), 3)
+        self.assertEqual(e.to_string(), "min(min(10, 20), min(x, y))")
+        self.assertEqual(e.polynomial_degree(), None)
 
 
 #
