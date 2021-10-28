@@ -18,16 +18,16 @@ from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base.numvalue import (
-    NumericValue, value, is_fixed, native_numeric_types,
+from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
+from pyomo.core.expr.numvalue import (
+    NumericValue, value, is_potentially_variable, native_numeric_types,
 )
-from pyomo.core.base.set_types import Reals, Binary
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, IndexedComponent_NDArrayMixin
 )
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.set import Set, _SetDataBase
+from pyomo.core.base.set import Reals, Binary, Set, _SetDataBase
 from pyomo.core.base.units_container import units
 from pyomo.core.base.util import is_functor
 
@@ -99,7 +99,9 @@ class _VarData(ComponentData, NumericValue):
         return (self.lb, self.ub)
     @bounds.setter
     def bounds(self, val):
-        raise AttributeError("Assignment not allowed. Use the setub and setlb methods")
+        lb, ub = val
+        self.setlb(lb)
+        self.setub(ub)
 
     def is_integer(self):
         """Returns True when the domain is a contiguous integer range."""
@@ -245,12 +247,12 @@ class _VarData(ComponentData, NumericValue):
 
     @property
     def lb(self):
-        """Return the lower bound for this variable."""
+        """Return the current value of the variable lower bound."""
         raise NotImplementedError
 
     @property
     def ub(self):
-        """Return the upper bound for this variable."""
+        """Return the current value of the variable upper bound."""
         raise NotImplementedError
 
     @property
@@ -413,29 +415,49 @@ class _GeneralVarData(_VarData):
 
     @property
     def lb(self):
-        """Return the lower bound for this variable."""
+        """Return the varible numeric lower bound."""
+        return value(self.lower)
+    @lb.setter
+    def lb(self, val):
+        return self.setlb(val)
+
+    @property
+    def ub(self):
+        """Return the variable numeric upper bound."""
+        return value(self.upper)
+    @ub.setter
+    def ub(self, val):
+        return self.setub(val)
+
+    @property
+    def lower(self):
+        """Return the expression for the vaiable lower bound."""
         dlb, _ = self.domain.bounds()
         if self._lb is None:
             return dlb
         elif dlb is None:
-            return value(self._lb)
-        return max(value(self._lb), dlb)
-    @lb.setter
-    def lb(self, val):
-        raise AttributeError("Assignment not allowed. Use the setlb method")
+            return self._lb
+        # This is guaranteed by _process_bound():
+        # assert not is_potentially_variable(self._lb)
+        return NPV_MaxExpression((self._lb, dlb))
+    @lower.setter
+    def lower(self, val):
+        return self.setlb(val)
 
     @property
-    def ub(self):
-        """Return the upper bound for this variable."""
+    def upper(self):
+        """Return the expression for the vaiable lower bound."""
         _, dub = self.domain.bounds()
         if self._ub is None:
             return dub
         elif dub is None:
-            return value(self._ub)
-        return min(value(self._ub), dub)
-    @ub.setter
-    def ub(self, val):
-        raise AttributeError("Assignment not allowed. Use the setub method")
+            return self._ub
+        # This is guaranteed by _process_bound():
+        # assert not is_potentially_variable(self._lb)
+        return NPV_MinExpression((self._ub, dub))
+    @upper.setter
+    def upper(self, val):
+        return self.setub(val)
 
     def get_units(self):
         """Return the units for this variable entry."""
@@ -893,7 +915,7 @@ class ScalarVar(_GeneralVarData, Var):
             % (self.name))
     @lb.setter
     def lb(self, lb):
-        raise AttributeError("Assignment not allowed. Use the setlb method")
+        self.setlb(lb)
 
     @property
     def ub(self):
@@ -907,7 +929,7 @@ class ScalarVar(_GeneralVarData, Var):
             % (self.name))
     @ub.setter
     def ub(self, ub):
-        raise AttributeError("Assignment not allowed. Use the setub method")
+        self.setub(ub)
 
     def setlb(self, val):
         """
