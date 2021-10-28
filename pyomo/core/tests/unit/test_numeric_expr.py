@@ -25,11 +25,19 @@ import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from io import StringIO
 
-from pyomo.environ import ConcreteModel, AbstractModel, RangeSet, Var, Param, Set, Constraint, ConstraintList, Expression, Objective, Reals, ExternalFunction, PositiveReals, log10, exp, floor, ceil, log, cos, sin, tan, acos, asin, atan, sinh, cosh, tanh, acosh, asinh, atanh, sqrt, value, quicksum, sum_product, is_fixed, is_constant
+from pyomo.environ import (
+    ConcreteModel, AbstractModel, RangeSet, Var, Param, Set, Constraint,
+    ConstraintList, Expression, Objective, Reals, ExternalFunction,
+    PositiveReals, log10, exp, floor, ceil, log, cos, sin, tan, acos,
+    asin, atan, sinh, cosh, tanh, acosh, asinh, atanh, sqrt, value,
+    quicksum, sum_product, is_fixed, is_constant
+)
 from pyomo.kernel import variable, expression, objective
-from pyomo.core.expr.numvalue import (NumericConstant, as_numeric,
-                                      native_numeric_types,
-                                      is_potentially_variable, polynomial_degree)
+
+from pyomo.core.expr.numvalue import (
+    NumericConstant, as_numeric, native_numeric_types,
+    is_potentially_variable, polynomial_degree
+)
 from pyomo.core.expr.numeric_expr import (
     ExpressionBase, UnaryFunctionExpression, SumExpression, PowExpression,
     ProductExpression, NegationExpression, linear_expression,
