@@ -2884,7 +2884,7 @@ A : Size=1, Index=None, Ordered=True
         ref="""
 J : Size=1, Index=None, Ordered=False
     Key  : Dimen : Domain  : Size : Members
-    None :     2 : Reals*I :  Inf : <[None..None], ([1], [2], [3])>
+    None :     2 : Reals*I :  Inf : <[-inf..inf], ([1], [2], [3])>
 """.strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
@@ -4275,7 +4275,7 @@ class TestSet(unittest.TestCase):
         None :     2 :    Any :    2 : {(3, 4), (1, 2)}
     M : Size=1, Index=None, Ordered=False
         Key  : Dimen : Domain            : Size : Members
-        None :     1 : Reals - M_index_1 :  Inf : ([None..0) | (0..None])
+        None :     1 : Reals - M_index_1 :  Inf : ([-inf..0) | (0..inf])
     N : Size=1, Index=None, Ordered=False
         Key  : Dimen : Domain           : Size : Members
         None :     1 : Integers - Reals :  Inf :      []
