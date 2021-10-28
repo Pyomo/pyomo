@@ -456,24 +456,17 @@ class TestAutoVars(unittest.TestCase):
 
         out = StringIO()
         with LoggingIntercept(out):
-            with self.assertRaisesRegex(
-                    AttributeError, "Assignment not allowed. Use the setlb"):
-                m.iv.lb = 1
+            m.iv.lb = 1
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
         with LoggingIntercept(out):
-            with self.assertRaisesRegex(
-                    AttributeError, "Assignment not allowed. Use the setub"):
-                m.iv.ub = 1
+            m.iv.ub = 1
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
         with LoggingIntercept(out):
-            with self.assertRaisesRegex(
-                    AttributeError, "Assignment not allowed. Use the "
-                    "setub and setlb"):
-                m.iv.bounds = (1,1)
+            m.iv.bounds = (1,1)
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
