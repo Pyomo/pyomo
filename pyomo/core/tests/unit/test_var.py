@@ -23,12 +23,80 @@ from io import StringIO
 import pyomo.common.unittest as unittest
 
 from pyomo.core.base import IntegerSet
+from pyomo.core.expr.numeric_expr import (
+    NPV_ProductExpression, NPV_MaxExpression, NPV_MinExpression,
+)
 from pyomo.environ import (
     AbstractModel, ConcreteModel, Set, Param, Var, VarList, RangeSet,
     Suffix, Expression, NonPositiveReals, PositiveReals, Reals, RealSet,
     NonNegativeReals, Integers, Binary, value
 )
 from pyomo.core.base.units_container import units, pint_available, UnitsError
+
+
+class TestVarData(unittest.TestCase):
+    def test_lower_bound(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.p = Param(mutable=True, initialize=2)
+        self.assertIsNone(m.x.lower)
+        m.x.domain = NonNegativeReals
+        self.assertIs(type(m.x.lower), int)
+        self.assertEqual(value(m.x.lower), 0)
+        m.x.domain = Reals
+        m.x.setlb(5*m.p)
+        self.assertIs(type(m.x.lower), NPV_ProductExpression)
+        self.assertEqual(value(m.x.lower), 10)
+        m.x.domain = NonNegativeReals
+        self.assertIs(type(m.x.lower), NPV_MaxExpression)
+        self.assertEqual(value(m.x.lower), 10)
+        with self.assertRaisesRegex(
+                ValueError, "Potentially variable input of type 'ScalarVar' "
+                "supplied as lower bound for variable 'x'"):
+            m.x.setlb(m.x)
+
+    def test_lower_bound_setter(self):
+        m = ConcreteModel()
+        m.x = Var()
+        self.assertIsNone(m.x.lb)
+        m.x.lb = 1
+        self.assertEqual(m.x.lb, 1)
+        m.x.lower = 2
+        self.assertEqual(m.x.lb, 2)
+        m.x.setlb(3)
+        self.assertEqual(m.x.lb, 3)
+
+    def test_upper_bound(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.p = Param(mutable=True, initialize=2)
+        self.assertIsNone(m.x.upper)
+        m.x.domain = NonPositiveReals
+        self.assertIs(type(m.x.upper), int)
+        self.assertEqual(value(m.x.upper), 0)
+        m.x.domain = Reals
+        m.x.setub(-5*m.p)
+        self.assertIs(type(m.x.upper), NPV_ProductExpression)
+        self.assertEqual(value(m.x.upper), -10)
+        m.x.domain = NonPositiveReals
+        self.assertIs(type(m.x.upper), NPV_MinExpression)
+        self.assertEqual(value(m.x.upper), -10)
+        with self.assertRaisesRegex(
+                ValueError, "Potentially variable input of type 'ScalarVar' "
+                "supplied as upper bound for variable 'x'"):
+            m.x.setub(m.x)
+
+    def test_upper_bound_setter(self):
+        m = ConcreteModel()
+        m.x = Var()
+        self.assertIsNone(m.x.ub)
+        m.x.ub = 1
+        self.assertEqual(m.x.ub, 1)
+        m.x.upper = 2
+        self.assertEqual(m.x.ub, 2)
+        m.x.setub(3)
+        self.assertEqual(m.x.ub, 3)
+
 
 class PyomoModel(unittest.TestCase):
 
@@ -45,6 +113,7 @@ class PyomoModel(unittest.TestCase):
             self.instance = self.model.create_instance(filename)
         else:
             self.instance = self.model.create_instance()
+
 
 class TestSimpleVar(PyomoModel):
 
