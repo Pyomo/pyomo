@@ -21,6 +21,7 @@ except ImportError:
         return ans
 
 _inf = float('inf')
+_infinite = {_inf, -_inf}
 
 class RangeDifferenceError(ValueError): pass
 
@@ -40,9 +41,9 @@ class NumericRange(object):
 
     Parameters
     ----------
-        start : int
+        start : float
             The starting value for this NumericRange
-        end : int
+        end : float
             The last value for this NumericRange
         step : int
             The interval between values in the range.  0 indicates a
@@ -64,35 +65,35 @@ class NumericRange(object):
             raise ValueError(
                 "NumericRange step must be int (got %s)" % (step,))
         step = int(step)
-        if start == -_inf:
-            start = None
-        if end == _inf:
-            end = None
         if start is None:
+            start = -_inf
+        if end is None:
+            end = math.copysign(_inf, step)
+
+        if start == -_inf:
             if step:
-                raise ValueError("NumericRange: start must not be None "
+                raise ValueError("NumericRange: start must not be None/-inf "
                                  "for non-continuous steps")
-        elif end is not None:
-            if step == 0 and end < start:
-                raise ValueError(
-                    "NumericRange: start must be <= end for "
-                    "continuous ranges (got %s..%s)" % (start,end)
-                )
-            elif (end-start)*step < 0:
-                raise ValueError(
-                    "NumericRange: start, end ordering incompatible "
-                    "with step direction (got [%s:%s:%s])" % (start,end,step)
-                )
-            if step:
-                n = int( (end - start) // step )
-                new_end = start + n*step
-                assert abs(end - new_end) < abs(step)
-                end = new_end
-                # It is important (for iterating) that all finite
-                # discrete ranges have positive steps
-                if step < 0:
-                    start, end = end, start
-                    step *= -1
+        if step == 0 and end < start:
+            raise ValueError(
+                "NumericRange: start must be <= end for "
+                "continuous ranges (got %s..%s)" % (start,end)
+            )
+        elif (end-start)*step < 0:
+            raise ValueError(
+                "NumericRange: start, end ordering incompatible "
+                "with step direction (got [%s:%s:%s])" % (start,end,step)
+            )
+        if step and end not in _infinite:
+            n = int( (end - start) // step )
+            new_end = start + n*step
+            assert abs(end - new_end) < abs(step)
+            end = new_end
+            # It is important (for iterating) that all finite
+            # discrete ranges have positive steps
+            if step < 0:
+                start, end = end, start
+                step *= -1
         if start == end:
             # If this is a scalar, we will force the step to be 0 (so that
             # things like [1:5:10] == [1:50:100] are easier to validate)
@@ -188,19 +189,14 @@ class NumericRange(object):
             _dir = math.copysign(1, self.step)
             return (
                 (value - self.start) * math.copysign(1, self.step) >= 0
-                and (self.end is None or
-                     _dir*(self.end - self.start) >= _dir*(value - self.start))
+                and _dir*(self.end - self.start) >= _dir*(value - self.start)
                 and abs(remainder(value - self.start, self.step)) <= self._EPS
             )
         else:
             return (
-                self.start is None
-                or ( value >= self.start if self.closed[0] else
-                     value > self.start )
+                value >= self.start if self.closed[0] else value > self.start
             ) and (
-                self.end is None
-                or ( value <= self.end if self.closed[1] else
-                     value < self.end )
+                value <= self.end if self.closed[1] else value < self.end
             )
 
     @staticmethod
@@ -209,11 +205,9 @@ class NumericRange(object):
         # beginning of isdisjoint()
         d_lb = disc.start if disc.step > 0 else disc.end
         d_ub = disc.end if disc.step > 0 else disc.start
-        if cont.start is None or (
-                d_lb is not None and cont.start <= d_lb):
+        if cont.start <= d_lb:
             return False
-        if cont.end is None or (
-                d_ub is not None and cont.end >= d_ub):
+        if cont.end >= d_ub:
             return False
 
         EPS = NumericRange._EPS
@@ -234,28 +228,12 @@ class NumericRange(object):
             and (rStart - rEnd > 0 or not any(cont.closed))
         )
 
-
-    @staticmethod
-    def _firstNonNull(minimize, *args):
-        ans = None
-        for x in args:
-            if ans is None:
-                ans = x
-            elif minimize:
-                if x is not None and x < ans:
-                    ans = x
-            else:
-                if x is not None and x > ans:
-                    ans = x
-        return ans
-
     def isdiscrete(self):
-        return self.step != 0 or \
-            (self.start == self.end and self.start is not None)
+        return self.step != 0 or self.start == self.end
 
     def isfinite(self):
-        return self.start is not None and self.end is not None \
-            and self.isdiscrete()
+        return self.isdiscrete() and (
+            self.end not in _infinite or self.end == self.start)
 
     def isdisjoint(self, other):
         if not isinstance(other, NumericRange):
@@ -301,7 +279,7 @@ class NumericRange(object):
         # Personally, anyone making a discrete set with a non-integer
         # step is asking for trouble.  Maybe the better solution is to
         # require that the step be integer (which is what we do).
-        elif self.end is None and other.end is None \
+        elif self.end in _infinite and other.end in _infinite \
                 and self.step*other.step > 0:
             gcd = NumericRange._gcd(self.step, other.step)
             return abs(remainder(other.start-self.start, gcd)) \
@@ -309,12 +287,10 @@ class NumericRange(object):
         # OK - at this point, there are a finite number of set members
         # that can overlap.  Just check all the members of one set
         # against the other
-        end = NumericRange._firstNonNull(
-            self.step > 0,
-            self.end,
-            NumericRange._firstNonNull(
-                self.step < 0, other.start, other.end)
-        )
+        if self.step > 0:
+            end = min(self.end, max(other.start, other.end))
+        else:
+            end = max(self.end, min(other.start, other.end))
         i = 0
         item = self.start
         while (self.step>0 and item <= end) or (self.step<0 and item >= end):
@@ -338,18 +314,14 @@ class NumericRange(object):
         s2, e2, c2 = other._normalize_bounds()
         # Checks for unbounded ranges and to make sure self's endpoints are
         # within other's endpoints.
-        if s1 is None:
-            if s2 is not None:
-                return False
-        elif s2 is not None:
-            if s1 < s2 or ( s1 == s2 and c1[0] and not c2[0] ):
-                return False
-        if e1 is None:
-            if e2 is not None:
-                return False
-        elif e2 is not None:
-            if e1 > e2 or ( e1 == e2 and c1[1] and not c2[1] ):
-                return False
+        if s1 < s2:
+            return False
+        if s1 == s2 and c1[0] and not c2[0]:
+            return False
+        if e1 > e2:
+            return False
+        if e1 == e2 and c1[1] and not c2[1]:
+            return False
         # If other is continuous (even a single point), then by
         # definition, self is a subset (regardless of step)
         if other.step == 0:
@@ -367,7 +339,7 @@ class NumericRange(object):
         if abs(remainder(self.step, other.step)) > EPS:
             return False
         # ...and they must shart a point in common
-        return abs(remainder(other.start-self.start, other.step)) <= EPS
+        return abs(remainder(other.start - self.start, other.step)) <= EPS
 
     def _normalize_bounds(self):
         """Normalizes this NumericRange.
@@ -389,75 +361,14 @@ class NumericRange(object):
     def _nooverlap(self, other):
         """Return True if the ranges for self and other are strictly separate
 
-        Note: a(None) == +inf and b(None) == -inf
-
         """
         s1, e1, c1 = self._normalize_bounds()
         s2, e2, c2 = other._normalize_bounds()
-        if e1 is not None and s2 is not None:
-            if e1 < s2 or ( e1 == s2 and not ( c1[1] and c2[0] )):
-                return True
-        if e2 is not None and s1 is not None:
-            if e2 < s1 or ( e2 == s1 and not ( c2[1] and c1[0] )):
-                return True
-
-    @staticmethod
-    def _lt(a,b):
-        "Return True if a is strictly less than b, with None == -inf"
-        if a is None:
-            return b is not None
-        if b is None:
-            return False
-        return a < b
-
-    @staticmethod
-    def _gt(a,b):
-        "Return True if a is strictly greater than b, with None == +inf"
-        if a is None:
-            return b is not None
-        if b is None:
-            return False
-        return a > b
-
-    @staticmethod
-    def _min(*args):
-        """Modified implementation of min() with special None handling
-
-        In NumericRange objects, None can represent {positive,
-        negative} infintiy.  In the context that this method is used,
-        None will always be positive infinity, so None is greater than any
-        non-None value.
-
-        """
-        a = args[0]
-        for b in args[1:]:
-            if a is None:
-                a = b
-            elif b is None:
-                pass
-            else:
-                a = min(a, b)
-        return a
-
-    @staticmethod
-    def _max(*args):
-        """Modified implementation of max() with special None handling
-
-        In NumericRange objects, None can represent {positive,
-        negative} infintiy.  In the context that this method is used,
-        None will always be negative infinity, so None is less than
-        any non-None value.
-
-        """
-        a = args[0]
-        for b in args[1:]:
-            if a is None:
-                a = b
-            elif b is None:
-                pass
-            else:
-                a = max(a, b)
-        return a
+        if e1 < s2 or ( e1 == s2 and not ( c1[1] and c2[0] )):
+            return True
+        if e2 < s1 or ( e2 == s1 and not ( c2[1] and c1[0] )):
+            return True
+        return False
 
     @staticmethod
     def _split_ranges(cnr, new_step):
@@ -484,8 +395,7 @@ class NumericRange(object):
         _dir = math.copysign(1, cnr.step)
         _subranges = []
         for i in range(int(abs(new_step // cnr.step))):
-            if ( cnr.end is not None
-                 and _dir*(cnr.start + i*cnr.step) > _dir*cnr.end ):
+            if _dir*(cnr.start + i*cnr.step) > _dir*cnr.end:
                 # Once we walk past the end of the range, we are done
                 # (all remaining offsets will be farther past the end)
                 break
@@ -532,7 +442,7 @@ class NumericRange(object):
         return abs(a)
 
     def _push_to_discrete_element(self, val, push_to_next_larger_value):
-        if val is None or not self.step:
+        if not self.step or val in _infinite:
             return val
         else:
             # self is discrete and val is a numeric value.  Move val to
@@ -608,21 +518,20 @@ class NumericRange(object):
                 if s.isdiscrete() and not t.isdiscrete():
                     #
                     # This handles the special case of continuous-discrete
-                    if ((s_min is None and t.start is None) or
-                        (s_max is None and t.end is None)):
+                    if ((s_min == -_inf and t.start == -_inf) or
+                        (s_max == _inf and t.end == _inf)):
                         raise RangeDifferenceError(
                             "We do not support subtracting an infinite "
                             "discrete range %s from an infinite continuous "
                             "range %s" % (s,t))
 
-                    # At least one of s_min amd t.start must be non-None
-                    start = NumericRange._max(
+                    # At least one of s_min amd t.start must be non-inf
+                    start = max(
                         s_min, s._push_to_discrete_element(t.start, True))
-                    # At least one of s_max amd t.end must be non-None
-                    end = NumericRange._min(
-                        s_max, s._push_to_discrete_element(t.end, False))
+                    # At least one of s_max amd t.end must be non-inf
+                    end = min(s_max, s._push_to_discrete_element(t.end, False))
 
-                    if NumericRange._lt(t.start, start):
+                    if t.start < start:
                         _new_subranges.append(NumericRange(
                             t.start, start, 0, (t.closed[0], False)
                         ))
@@ -631,7 +540,7 @@ class NumericRange(object):
                             _new_subranges.append(NumericRange(
                                 i*s.step, (i+1)*s.step, 0, '()'
                             ))
-                    if NumericRange._gt(t.end, end):
+                    if t.end > end:
                         _new_subranges.append(NumericRange(
                             end, t.end, 0, (False,t.closed[1])
                         ))
@@ -640,37 +549,40 @@ class NumericRange(object):
                     # This handles discrete-discrete,
                     # continuous-continuous, and discrete-continuous
                     #
-                    if NumericRange._lt(t_min, s_min):
-                        # Note that s_min will never be None due to the
-                        # _lt test
+                    if t_min < s_min:
+                        # Note s_min will never be -inf due to the < test
                         if t.step:
                             s_min -= lcm
                             closed1 = True
-                        _min = NumericRange._min(t_max, s_min)
+                        _min = min(t_max, s_min)
                         if not t.step:
                             closed1 = not s_c[0] if _min is s_min else t_c[1]
                         _closed = ( t_c[0], closed1 )
                         _step = abs(t.step)
                         _rng = t_min, _min
-                        if t_min is None and t.step:
+                        if t_min == -_inf and t.step:
                             _step = -_step
                             _rng = _rng[1], _rng[0]
                             _closed = _closed[1], _closed[0]
 
                         _new_subranges.append(NumericRange(
                             _rng[0], _rng[1], _step, _closed))
+                    elif t_min == s_min and t_c[0] and not s_c[0]:
+                        _new_subranges.append(NumericRange(t_min, t_min, 0))
 
-                    if NumericRange._gt(t_max, s_max):
-                        # Note that s_max will never be None due to the _gt test
+                    if t_max > s_max:
+                        # Note s_max will never be inf due to the > test
                         if t.step:
                             s_max += lcm
                             closed0 = True
-                        _max = NumericRange._max(t_min, s_max)
+                        _max = max(t_min, s_max)
                         if not t.step:
                             closed0 = not s_c[1] if _max is s_max else t_c[0]
                         _new_subranges.append(NumericRange(
                             _max, t_max, abs(t.step), (closed0, t_c[1])
                         ))
+                    elif t_max == s_max and t_c[1] and not s_c[1]:
+                        _new_subranges.append(NumericRange(t_max, t_max, 0))
                 _this = _new_subranges
         return _this
 
@@ -729,12 +641,12 @@ class NumericRange(object):
                 s_min, s_max, s_c = s._normalize_bounds()
                 step = abs(t.step if t.step else s.step)
 
-                intersect_start = NumericRange._max(
+                intersect_start = max(
                     t._push_to_discrete_element(s_min, True),
                     s._push_to_discrete_element(t_min, True),
                 )
 
-                intersect_end = NumericRange._min(
+                intersect_end = min(
                     t._push_to_discrete_element(s_max, False),
                     s._push_to_discrete_element(t_max, False),
                 )
@@ -747,7 +659,7 @@ class NumericRange(object):
                     c[1] &= t_c[1]
                 if intersect_end == s_max:
                     c[1] &= s_c[1]
-                if step and intersect_start is None:
+                if step and intersect_start == -_inf:
                     ans.append(NumericRange(
                         intersect_end, intersect_start, -step, (c[1], c[0])
                     ))
