@@ -288,7 +288,8 @@ class _VarData(ComponentData, NumericValue):
         """Sets the fixed indicator to False."""
         raise NotImplementedError
 
-    free=unfix
+    def free(self):
+        return self.unfix()
 
 
 class _GeneralVarData(_VarData):
@@ -472,8 +473,6 @@ class _GeneralVarData(_VarData):
     def unfix(self):
         """Sets the fixed indicator to False."""
         self.fixed = False
-
-    free = unfix
 
     def _process_bound(self, val, bound_type):
         # Note: is_fixed(None) returns True
@@ -959,8 +958,6 @@ class ScalarVar(_GeneralVarData, Var):
             "is currently nothing to set)."
             % (self.name))
 
-    free=unfix
-
 
 class SimpleVar(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarVar
@@ -997,6 +994,9 @@ class IndexedVar(Var):
         for vardata in self.values():
             vardata.unfix()
 
+    def free(self):
+        return self.unfix()
+
     @property
     def domain(self):
         raise AttributeError(
@@ -1008,8 +1008,6 @@ class IndexedVar(Var):
         """Sets the domain for all variables in this container."""
         for vardata in self.values():
             vardata.domain = domain
-
-    free=unfix
 
 
 @ModelComponentFactory.register("List of decision variables.")
