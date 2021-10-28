@@ -33,6 +33,8 @@ from pyomo.core.base.util import is_functor
 
 logger = logging.getLogger('pyomo.core')
 
+_no_lower_bound = {None, -float('inf')}
+_no_upper_bound = {None, float('inf')}
 
 class _VarData(ComponentData, NumericValue):
     """
@@ -82,16 +84,28 @@ class _VarData(ComponentData, NumericValue):
     def has_lb(self):
         """Returns :const:`False` when the lower bound is
         :const:`None` or negative infinity"""
-        lb = self.lb
-        return (lb is not None) and \
-            (value(lb) != float('-inf'))
+        return self.lb not in _no_lower_bound
 
     def has_ub(self):
         """Returns :const:`False` when the upper bound is
         :const:`None` or positive infinity"""
-        ub = self.ub
-        return (ub is not None) and \
-            (value(ub) != float('inf'))
+        return self.ub not in _no_upper_bound
+
+    # TODO: deprecate this?  Properties are generally preferred over "set*()"
+    def setlb(self, val):
+        """
+        Set the lower bound for this variable after validating that
+        the value is fixed (or None).
+        """
+        self.lower = val
+
+    # TODO: deprecate this?  Properties are generally preferred over "set*()"
+    def setub(self, val):
+        """
+        Set the upper bound for this variable after validating that
+        the value is fixed (or None).
+        """
+        self.upper = val
 
     @property
     def bounds(self):
@@ -99,15 +113,29 @@ class _VarData(ComponentData, NumericValue):
 
         This returns the current (numeric) values of the lower and upper
         bounds as a tuple.  If there is no bound, returns None (and not
-        +/- inf)
+        +/-inf)
 
         """
         return (self.lb, self.ub)
     @bounds.setter
     def bounds(self, val):
-        lb, ub = val
-        self.setlb(lb)
-        self.setub(ub)
+        self.lower, self.upper = val
+
+    @property
+    def lb(self):
+        """Return the numeric value of the variable lower bound."""
+        return value(self.lower)
+    @lb.setter
+    def lb(self, val):
+        self.lower = val
+
+    @property
+    def ub(self):
+        """Return the numeric value of the variable upper bound."""
+        return value(self.upper)
+    @ub.setter
+    def ub(self, val):
+        self.upper = val
 
     def is_integer(self):
         """Returns True when the domain is a contiguous integer range."""
@@ -252,13 +280,13 @@ class _VarData(ComponentData, NumericValue):
         raise NotImplementedError
 
     @property
-    def lb(self):
-        """Return the numeric value of the variable lower bound."""
+    def lower(self):
+        """Return an expression for the vaiable lower bound."""
         raise NotImplementedError
 
     @property
-    def ub(self):
-        """Return the numeric value of the variable upper bound."""
+    def upper(self):
+        """Return an expression for the variable upper bound."""
         raise NotImplementedError
 
     @property
@@ -269,20 +297,6 @@ class _VarData(ComponentData, NumericValue):
     @property
     def stale(self):
         """Return the stale indicator for this variable."""
-        raise NotImplementedError
-
-    def setlb(self, val):
-        """
-        Set the lower bound for this variable after validating that
-        the value is fixed (or None).
-        """
-        raise NotImplementedError
-
-    def setub(self, val):
-        """
-        Set the upper bound for this variable after validating that
-        the value is fixed (or None).
-        """
         raise NotImplementedError
 
     def fix(self, value=NoArgumentGiven):
@@ -420,24 +434,8 @@ class _GeneralVarData(_VarData):
                 "Integers, Binary" % (domain,))
 
     @property
-    def lb(self):
-        """Return the numeric value of the variable lower bound."""
-        return value(self.lower)
-    @lb.setter
-    def lb(self, val):
-        return self.setlb(val)
-
-    @property
-    def ub(self):
-        """Return the numeric value of the variable upper bound."""
-        return value(self.upper)
-    @ub.setter
-    def ub(self, val):
-        return self.setub(val)
-
-    @property
     def lower(self):
-        """Return an expression for the vaiable lower bound.
+        """Return an expression for the variable lower bound.
 
         This returns a (non-potentially variable) expression for the
         variable lower bound.  This represents the tighter of the
@@ -457,7 +455,7 @@ class _GeneralVarData(_VarData):
         return NPV_MaxExpression((self._lb, dlb))
     @lower.setter
     def lower(self, val):
-        return self.setlb(val)
+        self._lb = self._process_bound(val, 'lower')
 
     @property
     def upper(self):
@@ -481,7 +479,7 @@ class _GeneralVarData(_VarData):
         return NPV_MinExpression((self._ub, dub))
     @upper.setter
     def upper(self, val):
-        return self.setub(val)
+        self._ub = self._process_bound(val, 'upper')
 
     def get_units(self):
         """Return the units for this variable entry."""
@@ -492,20 +490,6 @@ class _GeneralVarData(_VarData):
     # fixed is an attribute
 
     # stale is an attribute
-
-    def setlb(self, val):
-        """
-        Set the lower bound for this variable after validating that
-        the value is fixed (or None).
-        """
-        self._lb = self._process_bound(val, 'lower')
-
-    def setub(self, val):
-        """
-        Set the upper bound for this variable after validating that
-        the value is fixed (or None).
-        """
-        self._ub = self._process_bound(val, 'upper')
 
     def fix(self, value=NoArgumentGiven):
         """
