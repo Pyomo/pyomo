@@ -95,7 +95,13 @@ class _VarData(ComponentData, NumericValue):
 
     @property
     def bounds(self):
-        """Returns the tuple (lower bound, upper bound)."""
+        """Returns the tuple (lower bound, upper bound).
+
+        This returns the current (numeric) values of the lower and upper
+        bounds as a tuple.  If there is no bound, returns None (and not
+        +/- inf)
+
+        """
         return (self.lb, self.ub)
     @bounds.setter
     def bounds(self, val):
@@ -247,12 +253,12 @@ class _VarData(ComponentData, NumericValue):
 
     @property
     def lb(self):
-        """Return the current value of the variable lower bound."""
+        """Return the numeric value of the variable lower bound."""
         raise NotImplementedError
 
     @property
     def ub(self):
-        """Return the current value of the variable upper bound."""
+        """Return the numeric value of the variable upper bound."""
         raise NotImplementedError
 
     @property
@@ -415,7 +421,7 @@ class _GeneralVarData(_VarData):
 
     @property
     def lb(self):
-        """Return the varible numeric lower bound."""
+        """Return the numeric value of the variable lower bound."""
         return value(self.lower)
     @lb.setter
     def lb(self, val):
@@ -423,7 +429,7 @@ class _GeneralVarData(_VarData):
 
     @property
     def ub(self):
-        """Return the variable numeric upper bound."""
+        """Return the numeric value of the variable upper bound."""
         return value(self.upper)
     @ub.setter
     def ub(self, val):
@@ -431,7 +437,16 @@ class _GeneralVarData(_VarData):
 
     @property
     def lower(self):
-        """Return the expression for the vaiable lower bound."""
+        """Return an expression for the vaiable lower bound.
+
+        This returns a (non-potentially variable) expression for the
+        variable lower bound.  This represents the tighter of the
+        current domain and the constant or expression provided to
+        setlb().  Note that the expression will NOT automatically
+        reflect changes to either the domain or the bound expression
+        (e.g., because of a call to setlb()).
+
+        """
         dlb, _ = self.domain.bounds()
         if self._lb is None:
             return dlb
@@ -446,7 +461,16 @@ class _GeneralVarData(_VarData):
 
     @property
     def upper(self):
-        """Return the expression for the vaiable lower bound."""
+        """Return an expression for the variable upper bound.
+
+        This returns a (non-potentially variable) expression for the
+        variable upper bound.  This represents the tighter of the
+        current domain and the constant or expression provided to
+        setub().  Note that the expression will NOT automatically
+        reflect changes to either the domain or the bound expression
+        (e.g., because of a call to setub()).
+
+        """
         _, dub = self.domain.bounds()
         if self._ub is None:
             return dub
@@ -906,7 +930,7 @@ class ScalarVar(_GeneralVarData, Var):
 
     @property
     def lb(self):
-        """Return the lower bound for this variable."""
+        """Return the numeric value of the variable lower bound."""
         if self._constructed:
             return _GeneralVarData.lb.fget(self)
         raise ValueError(
@@ -920,7 +944,7 @@ class ScalarVar(_GeneralVarData, Var):
 
     @property
     def ub(self):
-        """Return the upper bound for this variable."""
+        """Return the numeric value of the variable upper bound."""
         if self._constructed:
             return _GeneralVarData.ub.fget(self)
         raise ValueError(
