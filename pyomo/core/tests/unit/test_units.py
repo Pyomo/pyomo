@@ -20,11 +20,14 @@ from pyomo.environ import (
     tanh, asinh, acosh, atanh, ceil, floor,
 )
 from pyomo.common.log import LoggingIntercept
-from pyomo.util.check_units import assert_units_consistent, check_units_equivalent
+from pyomo.util.check_units import (
+    assert_units_consistent, check_units_equivalent,
+)
 from pyomo.core.expr import inequality
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base.units_container import (
-    pint_available, InconsistentUnitsError, UnitsError, PyomoUnitsContainer,
+    pint_available, pint_module, _DeferredUnitsSingleton,
+    InconsistentUnitsError, UnitsError, PyomoUnitsContainer,
 )
 from io import StringIO
 
@@ -33,6 +36,33 @@ def python_callback_function(arg1, arg2):
 
 @unittest.skipIf(not pint_available, 'Testing units requires pint')
 class TestPyomoUnit(unittest.TestCase):
+
+    def test_container_constructor(self):
+        # Custom pint registry:
+        um0 = PyomoUnitsContainer(None)
+        self.assertIsNone(um0.pint_registry)
+        self.assertIsNone(um0._pint_dimensionless)
+        um1 = PyomoUnitsContainer()
+        self.assertIsNotNone(um1.pint_registry)
+        self.assertIsNotNone(um1._pint_dimensionless)
+        with self.assertRaisesRegex(
+                ValueError,
+                'Cannot operate with Unit and Unit of different registries'):
+            self.assertEqual(um1._pint_dimensionless, units._pint_dimensionless)
+        self.assertIsNot(um1.pint_registry, units.pint_registry)
+        um2 = PyomoUnitsContainer(pint_module.UnitRegistry())
+        self.assertIsNotNone(um2.pint_registry)
+        self.assertIsNotNone(um2._pint_dimensionless)
+        with self.assertRaisesRegex(
+                ValueError,
+                'Cannot operate with Unit and Unit of different registries'):
+            self.assertEqual(um2._pint_dimensionless, units._pint_dimensionless)
+        self.assertIsNot(um2.pint_registry, units.pint_registry)
+        self.assertIsNot(um2.pint_registry, um1.pint_registry)
+
+        um3 = PyomoUnitsContainer(units.pint_registry)
+        self.assertIs(um3.pint_registry, units.pint_registry)
+        self.assertEqual(um3._pint_dimensionless, units._pint_dimensionless)
 
     def test_PyomoUnit_NumericValueMethods(self):
         m = ConcreteModel()
@@ -584,7 +614,7 @@ class TestPyomoUnit(unittest.TestCase):
         self.assertEqual(base.getvalue(), test.getvalue())
 
         # Test pickling a custom units manager
-        um = PyomoUnitsContainer()
+        um = PyomoUnitsContainer(pint_module.UnitRegistry())
         m = ConcreteModel()
         m.x = Var(units=um.kg)
         m.c = Constraint(expr=m.x**2 <= 10*um.kg**2)
@@ -609,6 +639,29 @@ class TestPyomoUnit(unittest.TestCase):
         test = StringIO()
         i.pprint(test)
         self.assertEqual(base.getvalue(), test.getvalue())
+
+    def test_set_pint_registry(self):
+        um = _DeferredUnitsSingleton()
+        pint_reg = pint_module.UnitRegistry()
+        # Test we can (silently) set the registry if it is the first
+        # thing we do
+        with LoggingIntercept() as LOG:
+            um.set_pint_registry(pint_reg)
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertIs(um.pint_registry, pint_reg)
+        # Test that a no-op set is silent
+        with LoggingIntercept() as LOG:
+            um.set_pint_registry(pint_reg)
+        self.assertEqual(LOG.getvalue(), "")
+        # Test that changing the registry generates a warning
+        with LoggingIntercept() as LOG:
+            um.set_pint_registry(pint_module.UnitRegistry())
+        self.assertIn(
+            "Changing the pint registry used by the Pyomo Units "
+            "system after the PyomoUnitsContainer was constructed",
+            LOG.getvalue()
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
