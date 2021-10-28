@@ -832,14 +832,18 @@ class TestGLOA(unittest.TestCase):
         self.assertEqual(res.solver.termination_condition,
                          TerminationCondition.infeasible)
 
-    @unittest.skipUnless(sympy_available, "Sympy not available")
+    @unittest.skipUnless(license_available and sympy_available, 
+                         "Global NLP solver license not available or sympy "
+                         "not available.")
     def test_logical_constraints_on_disjuncts(self):
         m = models.makeLogicalConstraintsOnDisjuncts()
         SolverFactory('gdpopt').solve(m, strategy='GLOA', mip_solver=mip_solver,
                                       nlp_solver=nlp_solver)
         self.assertAlmostEqual(value(m.x), 8)
 
-    @unittest.skipUnless(sympy_available, "Sympy not available")
+    @unittest.skipUnless(license_available and sympy_available, 
+                         "Global NLP solver license not available or sympy "
+                         "not available.")
     def test_boolean_vars_on_disjuncts(self):
         m = models.makeBooleanVarsOnDisjuncts()
         SolverFactory('gdpopt').solve(m, strategy='GLOA', mip_solver=mip_solver,
