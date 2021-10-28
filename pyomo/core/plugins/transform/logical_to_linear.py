@@ -60,7 +60,7 @@ class LogicalToLinear(IsomorphicTransformation):
             # with it. Note, however, that they can only use targets for
             # this--when we go searching for stuff to transform we will only
             # look on Blocks and Disjuncts.
-            if issubclass(t.ctype, Block):
+            if t.ctype is Block or isinstance(t, Block):
                 self._transform_block(t, model, new_var_lists, transBlocks)
             elif t.ctype is LogicalConstraint:
                 if t.is_indexed():
@@ -125,7 +125,8 @@ class LogicalToLinear(IsomorphicTransformation):
                 BooleanVar, descend_into=(Block,Disjunct)):
             if bool_vardata._associated_binary is None:
                 bool_vardata._associated_binary = \
-                        _DeprecatedImplicitAssociatedBinaryVariable(bool_vardata)
+                        _DeprecatedImplicitAssociatedBinaryVariable(
+                            bool_vardata)
 
     def _transform_constraintData(self, logical_constraint, new_varlists,
                                   transBlocks):
