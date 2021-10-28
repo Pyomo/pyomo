@@ -497,12 +497,13 @@ class _GeneralVarData(_VarData):
         self.fixed = False
 
     def _process_bound(self, val, bound_type):
-        # Note: is_fixed(None) returns True
-        if not is_fixed(val):
+        # Note: is_potentially_variable(None) returns False
+        if is_potentially_variable(val):
             raise ValueError(
-                "Non-fixed input of type '%s' supplied as variable %s "
-                "bound - legal types must be constants or fixed expressions."
-                % (type(val), bound_type))
+                "Potentially variable input of type '%s' supplied as "
+                "%s bound for variable '%s' - legal types must be constants "
+                "or non-potentially variable expressions."
+                % (type(val).__name__, bound_type, self.name))
         if type(val) in native_numeric_types or val is None:
             # TODO: warn/error: check if this Var has units: assigning
             # a dimensionless value to a united variable should be an error
