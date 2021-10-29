@@ -246,22 +246,9 @@ class _VarData(ComponentData, NumericValue):
     def clear(self):
         self.value = None
 
-    def __nonzero__(self):
-        """
-        Return True if the value is defined and non-zero.
-        """
-        if self.value:
-            return True
-        if self.value is None:
-            raise ValueError("Var value is undefined")
-        return False
-
     def __call__(self, exception=True):
         """Compute the value of this variable."""
         return self.value
-
-    __bool__ = __nonzero__
-
 
     #
     # Abstract Interface
