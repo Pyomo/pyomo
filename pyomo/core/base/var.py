@@ -126,7 +126,7 @@ class _VarData(ComponentData, NumericValue):
         +/-inf)
 
         """
-        return (self.lb, self.ub)
+        return self.lb, self.ub
     @bounds.setter
     def bounds(self, val):
         self.lower, self.upper = val
