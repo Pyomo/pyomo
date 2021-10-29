@@ -122,6 +122,8 @@ def slice_component_along_sets(comp, sets, context=None):
             # Process arg to replace desired indices with slices.
             location_set_map = get_location_set_map(arg, index_set)
             arg = replace_indices(arg, location_set_map, sets)
+            if normalize_index.flatten:
+                arg = normalize_index(arg)
             sliced_comp = sliced_comp[arg]
 
     return sliced_comp
