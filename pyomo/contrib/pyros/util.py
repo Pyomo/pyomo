@@ -284,10 +284,14 @@ def get_vars_from_constraints(block):
     """Determine all variables used in constraint expressions in
     a Block.
     """
+    seen = set()
     for constraint in block.component_data_objects(Constraint,
-                                                   descend_into=Block):
+                                                   descend_into=Block,
+                                                   active=True):
         for var in EXPR.identify_variables(constraint.expr):
-            yield var
+            if id(var) not in seen:
+                seen.add(id(var))
+                yield var
 
 
 def replace_uncertain_bounds_with_constraints(model, uncertain_params):
