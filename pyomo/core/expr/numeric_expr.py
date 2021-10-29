@@ -191,18 +191,6 @@ class ExpressionBase(NumericValue):
            state[i] = getattr(self,i)
         return state
 
-    def __nonzero__(self):      #pragma: no cover
-        """
-        Compute the value of the expression and convert it to
-        a boolean.
-
-        Returns:
-            A boolean value.
-        """
-        return bool(self())
-
-    __bool__ = __nonzero__
-
     def __call__(self, exception=True):
         """
         Evaluate the value of the expression tree.

@@ -2684,11 +2684,11 @@ class TestExprConditionalContext(unittest.TestCase):
         try:
             if expr:
                 if expectedValue != True:
-                    self.fail("__nonzero__ returned the wrong condition value"
+                    self.fail("__bool__ returned the wrong condition value"
                               " (expected %s)" % expectedValue)
             else:
                 if expectedValue != False:
-                    self.fail("__nonzero__ returned the wrong condition value"
+                    self.fail("__bool__ returned the wrong condition value"
                               " (expected %s)" % expectedValue)
             if expectedValue is None:
                 self.fail("Expected ValueError because component was undefined")
@@ -2703,7 +2703,8 @@ class TestExprConditionalContext(unittest.TestCase):
         # constructed
         with self.assertRaisesRegex(
                 PyomoException,
-                r"Cannot convert non-constant expression to bool."):
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  p\) to bool."):
             self.checkCondition(model.p > 0, True)
         #self.checkCondition(model.p >= 0, True)
         #self.checkCondition(model.p < 1, True)
@@ -2716,7 +2717,8 @@ class TestExprConditionalContext(unittest.TestCase):
         #
         with self.assertRaisesRegex(
                 PyomoException,
-                r"Cannot convert non-constant expression to bool."):
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  p\) to bool."):
             self.checkCondition(model.p > 0, True)
         #self.checkCondition(model.p >= 0, True)
         #self.checkCondition(model.p < 1, True)
@@ -2742,23 +2744,28 @@ class TestExprConditionalContext(unittest.TestCase):
         # constructed
         with self.assertRaisesRegex(
                 PyomoException,
-                r"Cannot convert non-constant expression to bool."):
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  p\) to bool."):
             self.checkCondition(0 < model.p, True)
         with self.assertRaisesRegex(
                 PyomoException,
-                r"Cannot convert non-constant expression to bool."):
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <=  p\) to bool."):
             self.checkCondition(0 <= model.p, True)
         with self.assertRaisesRegex(
                 PyomoException,
-                r"Cannot convert non-constant expression to bool."):
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(p  <  1\) to bool."):
             self.checkCondition(1 > model.p, True)
         with self.assertRaisesRegex(
                 PyomoException,
-                r"Cannot convert non-constant expression to bool."):
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(p  <=  1\) to bool."):
             self.checkCondition(1 >= model.p, True)
         with self.assertRaisesRegex(
                 PyomoException,
-                r"Cannot convert non-constant expression to bool."):
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  ==  p\) to bool."):
             self.checkCondition(0 == model.p, None)
         self.checkCondition(0 < model.p, True, use_value=True)
         self.checkCondition(0 <= model.p, True, use_value=True)
@@ -2791,7 +2798,8 @@ class TestExprConditionalContext(unittest.TestCase):
         # constructed
         with self.assertRaisesRegex(
                 PyomoException,
-                r"Cannot convert non-constant expression to bool."):
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  p\) to bool."):
             self.checkCondition(0 < model.p, True)
         #self.checkCondition(0 <= model.p, True)
         #self.checkCondition(1 > model.p, True)
@@ -2819,7 +2827,8 @@ class TestExprConditionalContext(unittest.TestCase):
         #
         with self.assertRaisesRegex(
                 PyomoException,
-                r"Cannot convert non-constant expression to bool."):
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  p\) to bool."):
             self.checkCondition(model.p > 0, True)
         #self.checkCondition(model.p >= 0, True)
         #self.checkCondition(model.p < 1, True)
@@ -2864,7 +2873,8 @@ class TestExprConditionalContext(unittest.TestCase):
         #
         with self.assertRaisesRegex(
                 PyomoException,
-                r"Cannot convert non-constant expression to bool."):
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  p\) to bool."):
             self.checkCondition(0 < model.p, True)
         #self.checkCondition(0 <= model.p, True)
         #self.checkCondition(1 > model.p, True)
@@ -2909,7 +2919,8 @@ class TestExprConditionalContext(unittest.TestCase):
         #
         with self.assertRaisesRegex(
                 PyomoException,
-                r"Cannot convert non-constant expression to bool."):
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  v\) to bool."):
             self.checkCondition(model.v > 0, True)
         #self.checkCondition(model.v >= 0, True)
         #self.checkCondition(model.v < 1, True)
@@ -2956,8 +2967,8 @@ class TestExprConditionalContext(unittest.TestCase):
         model.v = Var(initialize=1.0)
         #
         with self.assertRaisesRegex(
-                PyomoException,
-                r"Cannot convert non-constant expression to bool."):
+                PyomoException, r"Cannot convert non-constant Pyomo "
+                r"expression \(0  <  v\) to bool."):
             self.checkCondition(0 < model.v, True)
         #self.checkCondition(0 <= model.v, True)
         #self.checkCondition(1 > model.v, True)
