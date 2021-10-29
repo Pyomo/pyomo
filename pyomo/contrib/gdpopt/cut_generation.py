@@ -183,10 +183,10 @@ def add_affine_cuts(nlp_result, solve_data, config):
             cvSlope = mc_eqn.subcv()
             ccStart = mc_eqn.concave()
             cvStart = mc_eqn.convex()
-            ub_int = min(constr.upper, mc_eqn.upper()) if constr.has_ub() else
-            mc_eqn.upper()
-            lb_int = max(constr.lower, mc_eqn.lower()) if constr.has_lb() else
-            mc_eqn.lower()
+            ub_int = min(constr.upper, mc_eqn.upper()) if constr.has_ub() \
+                     else mc_eqn.upper()
+            lb_int = max(constr.lower, mc_eqn.lower()) if constr.has_lb() \
+                     else mc_eqn.lower()
 
             parent_block = constr.parent_block()
             # Create a block on which to put outer approximation cuts.
