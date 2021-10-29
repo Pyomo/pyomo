@@ -7,6 +7,7 @@ from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import (TransformationFactory, BooleanVar, VarList, Binary,
                         LogicalConstraint, Block, ConstraintList, native_types,
                         BooleanVarList)
+from pyomo.core.base.block import _BlockData
 from pyomo.core.base.boolean_var import (
     _DeprecatedImplicitAssociatedBinaryVariable)
 from pyomo.core.expr.cnf_walker import to_cnf
@@ -60,7 +61,7 @@ class LogicalToLinear(IsomorphicTransformation):
             # with it. Note, however, that they can only use targets for
             # this--when we go searching for stuff to transform we will only
             # look on Blocks and Disjuncts.
-            if t.ctype is Block or isinstance(t, Block):
+            if t.ctype is Block or isinstance(t, _BlockData):
                 self._transform_block(t, model, new_var_lists, transBlocks)
             elif t.ctype is LogicalConstraint:
                 if t.is_indexed():

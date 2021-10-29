@@ -486,6 +486,50 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         # only transformed the second one.
         self.assertEqual(len(m.logic_to_linear.transformed_constraints), 1)
 
+    def test_blockData_target(self):
+        m = ConcreteModel()
+        m.b = Block([1,2])
+        m.b[1].transfer_attributes_from(
+            self.make_indexed_logical_constraint_model())
+        TransformationFactory('core.logical_to_linear').apply_to(m,
+                                                                 targets=m.b[1])
+        _constrs_contained_within(
+            self, [
+                (2, m.b[1].Y[1].get_associated_binary() + \
+                 m.b[1].Y[2].get_associated_binary() + \
+                 m.b[1].Y[3].get_associated_binary(), 2)
+            ], m.b[1].logic_to_linear.transformed_constraints)
+        _constrs_contained_within(
+            self, [
+                (1,
+                 m.b[1].Y[2].get_associated_binary() + \
+                 m.b[1].Y[3].get_associated_binary()
+                 + (1 - m.b[1].Y[1].get_associated_binary()),
+                 None)
+            ], m.b[1].logic_to_linear.transformed_constraints)
+
+    def test_disjunctData_target(self):
+        m = ConcreteModel()
+        m.d = Disjunct([1,2])
+        m.d[1].transfer_attributes_from(
+            self.make_indexed_logical_constraint_model())
+        TransformationFactory('core.logical_to_linear').apply_to(m,
+                                                                 targets=m.d[1])
+        _constrs_contained_within(
+            self, [
+                (2, m.d[1].Y[1].get_associated_binary() + \
+                 m.d[1].Y[2].get_associated_binary() + \
+                 m.d[1].Y[3].get_associated_binary(), 2)
+            ], m.d[1].logic_to_linear.transformed_constraints)
+        _constrs_contained_within(
+            self, [
+                (1,
+                 m.d[1].Y[2].get_associated_binary() + \
+                 m.d[1].Y[3].get_associated_binary()
+                 + (1 - m.d[1].Y[1].get_associated_binary()),
+                 None)
+            ], m.d[1].logic_to_linear.transformed_constraints)
+
     def test_target_with_unrecognized_type(self):
         m = _generate_boolean_model(2)
         with self.assertRaisesRegex(ValueError,
