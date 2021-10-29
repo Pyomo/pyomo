@@ -26,7 +26,8 @@ from .numvalue import (
     native_numeric_types,
     as_numeric,
     native_logical_types,
-    value
+    value,
+    is_potentially_variable,
 )
 
 from .boolean_value import (
@@ -141,10 +142,7 @@ would both cause this exception.""".strip() % (self,))
                    for arg in self._args_)
 
     def is_potentially_variable(self):
-        return any(arg is not None
-                   and arg.__class__ not in native_numeric_types
-                   and arg.is_potentially_variable()
-                   for arg in self._args_)
+        return any(map(is_potentially_variable, self._args_))
 
     @property
     def strict(self):
@@ -223,10 +221,7 @@ would both cause this exception.""".strip() % (self,))
                    for arg in self._args_)
 
     def is_potentially_variable(self):
-        return any(arg is not None
-                   and arg.__class__ not in native_numeric_types
-                   and arg.is_potentially_variable()
-                   for arg in self._args_)
+        return any(map(is_potentially_variable, self._args_))
 
     @property
     def strict(self):
@@ -332,7 +327,7 @@ would both cause this exception.""".strip() % (self,))
         return self._args_[0].is_constant() and self._args_[1].is_constant()
 
     def is_potentially_variable(self):
-        return self._args_[0].is_potentially_variable() or self._args_[1].is_potentially_variable()
+        return any(map(is_potentially_variable, self._args_))
 
 
 def _generate_relational_expression(etype, lhs, rhs):

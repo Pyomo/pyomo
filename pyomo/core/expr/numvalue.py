@@ -601,7 +601,7 @@ Cannot convert non-constant Pyomo numeric value (%s) to bool.
 This error is usually caused by using a Var, unit, or mutable Param in a
 Boolean context such as an "if" statement. For example,
     >>> m.x = Var()
-    >>> if m.x:
+    >>> if not m.x:
     ...     pass
 would cause this exception.""".strip() % (self,))
 
