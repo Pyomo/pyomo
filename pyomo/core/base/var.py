@@ -168,18 +168,6 @@ class _VarData(ComponentData, NumericValue):
             return True
         return self.domain.get_interval() == (0,1,1)
 
-# TODO?
-#    def is_semicontinuous(self):
-#        """
-#        Returns True when the domain class is SemiContinuous.
-#        """
-#        return self.domain.__class__ is SemiContinuousSet
-#    def is_semiinteger(self):
-#        """
-#        Returns True when the domain class is SemiInteger.
-#        """
-#        return self.domain.__class__ is SemiIntegerSet
-
     def is_continuous(self):
         """Returns True when the domain is a continuous real range"""
         # optimization: Reals and Binary are the most common cases, so
@@ -403,8 +391,6 @@ class _GeneralVarData(_VarData):
     #
     # Abstract Interface
     #
-
-    # value is an attribute
 
     @property
     def value(self):
@@ -859,14 +845,13 @@ class ScalarVar(_GeneralVarData, Var):
         _GeneralVarData.__init__(self, domain=None, component=self)
         Var.__init__(self, *args, **kwd)
 
-    #
     # Since this class derives from Component and Component.__getstate__
     # just packs up the entire __dict__ into the state dict, we do not
     # need to define the __getstate__ or __setstate__ methods.
     # We just defer to the super() get/set state.  Since all of our
     # get/set state methods rely on super() to traverse the MRO, this
     # will automatically pick up both the Component and Data base classes.
-    #
+
 
 @disable_methods(_VARDATA_API)
 class AbstractScalarVar(ScalarVar):
