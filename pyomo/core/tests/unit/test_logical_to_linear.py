@@ -346,7 +346,9 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
             [m.Y[1].implies(m.Y[2])],
             [m.Y[2].equivalent_to(False)]
         ])
-        TransformationFactory('core.logical_to_linear').apply_to(m)
+        TransformationFactory('core.logical_to_linear').apply_to(
+            m,
+            targets=[m.disj.disjuncts[0], m.disj.disjuncts[1]])
         _constrs_contained_within(
             self, [
                 (1, 1 - m.Y[1].get_associated_binary() + \
