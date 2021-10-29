@@ -555,9 +555,9 @@ class TestLogicalToLinearBackmap(unittest.TestCase):
                               logging.WARNING):
             y1 = m.Y[1].get_associated_binary()
         self.assertIn("DEPRECATED: Relying on core.logical_to_linear to "
-                      "transform BooleanVars which do not appear in "
+                      "transform BooleanVars that do not appear in "
                       "LogicalConstraints is deprecated. Please "
-                      "associated your own binaries if you have BooleanVars "
+                      "associate your own binaries if you have BooleanVars "
                       "not used in logical expressions.",
                       output.getvalue().replace('\n', ' '))
         output = StringIO()
@@ -565,9 +565,9 @@ class TestLogicalToLinearBackmap(unittest.TestCase):
                               logging.WARNING):
             y2 = m.Y[2].get_associated_binary()
         self.assertIn("DEPRECATED: Relying on core.logical_to_linear to "
-                      "transform BooleanVars which do not appear in "
+                      "transform BooleanVars that do not appear in "
                       "LogicalConstraints is deprecated. Please "
-                      "associated your own binaries if you have BooleanVars "
+                      "associate your own binaries if you have BooleanVars "
                       "not used in logical expressions.",
                       output.getvalue().replace('\n', ' '))
         y1.value = 1
