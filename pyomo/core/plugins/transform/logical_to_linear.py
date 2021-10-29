@@ -7,6 +7,7 @@ from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import (TransformationFactory, BooleanVar, VarList, Binary,
                         LogicalConstraint, Block, ConstraintList, native_types,
                         BooleanVarList)
+from pyomo.core.base.block import _BlockData
 from pyomo.core.base.boolean_var import (
     _DeprecatedImplicitAssociatedBinaryVariable)
 from pyomo.core.expr.cnf_walker import to_cnf
@@ -21,7 +22,6 @@ from pyomo.core.expr.numvalue import native_logical_types, value
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.gdp import Disjunct
 from pyomo.core.util import target_list
 
 @TransformationFactory.register("core.logical_to_linear", 
@@ -59,8 +59,16 @@ class LogicalToLinear(IsomorphicTransformation):
             # If the user promises that the target is Block-like, we will go
             # with it. Note, however, that they can only use targets for
             # this--when we go searching for stuff to transform we will only
-            # look on Blocks and Disjuncts.
-            if t.ctype is Block or isinstance(t, Block):
+            # look on Blocks. And yes, this means we are ignoring Disjuncts. We
+            # are in fact ignoring all GDP components because this
+            # transformation is a promise only to transform LogicalConstraints
+            # and the relevant BooleanVars, not to create an algebraic
+            # model. (We are making this decision largely because having this
+            # transformation do anything to GDP stuff is an assumption on how
+            # the GDP will be solved, and it would be wrong to assume that a GDP
+            # will *necessarily* be solved as an algebraic model. The star
+            # example of not doing so being GDPopt.)
+            if t.ctype is Block or isinstance(t, _BlockData):
                 self._transform_block(t, model, new_var_lists, transBlocks)
             elif t.ctype is LogicalConstraint:
                 if t.is_indexed():
@@ -113,7 +121,7 @@ class LogicalToLinear(IsomorphicTransformation):
     def _transform_block(self, target_block, model, new_varlists, transBlocks):
         for logical_constraint in target_block.component_data_objects(
                 ctype=LogicalConstraint, active=True,
-                descend_into=(Block,Disjunct)):
+                descend_into=Block):
             self._transform_constraintData(logical_constraint, new_varlists,
                                            transBlocks)
 
@@ -122,7 +130,7 @@ class LogicalToLinear(IsomorphicTransformation):
         # someone asks for their binary var later, we can create it on the fly
         # and complain.
         for bool_vardata in target_block.component_data_objects(
-                BooleanVar, descend_into=(Block,Disjunct)):
+                BooleanVar, descend_into=Block):
             if bool_vardata._associated_binary is None:
                 bool_vardata._associated_binary = \
                         _DeprecatedImplicitAssociatedBinaryVariable(
@@ -203,8 +211,7 @@ def update_boolean_vars_from_binary(model, integer_tolerance=1e-5):
     """Updates all Boolean variables based on the value of their linked binary
     variables."""
     for boolean_var in model.component_data_objects(BooleanVar,
-                                                    descend_into=(Block,
-                                                                  Disjunct)):
+                                                    descend_into=Block):
         binary_var = boolean_var.get_associated_binary()
         if binary_var is not None and binary_var.value is not None:
             if abs(binary_var.value - 1) <= integer_tolerance:
