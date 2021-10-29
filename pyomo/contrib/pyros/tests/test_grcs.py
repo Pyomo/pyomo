@@ -14,6 +14,7 @@ from pyomo.contrib.pyros.util import selective_clone, add_decision_rule_variable
     model_is_valid, turn_bounds_to_constraints, transform_to_standard_form, ObjectiveType, pyrosTerminationCondition, \
     coefficient_matching
 from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
+from pyomo.contrib.pyros.util import get_vars_from_constraints
 from pyomo.contrib.pyros.uncertainty_sets import *
 from pyomo.contrib.pyros.master_problem_methods import add_scenario_to_master, initial_construct_master, solve_master, \
     minimize_dr_vars
@@ -275,7 +276,6 @@ class testTurnBoundsToConstraints(unittest.TestCase):
     def test_uncertain_bounds_to_constraints(self):
         # test model
         m = ConcreteModel()
-
         # parameters
         m.p = Param(initialize=8, mutable=True)
         m.r = Param(initialize=-5, mutable=True)
@@ -283,45 +283,72 @@ class testTurnBoundsToConstraints(unittest.TestCase):
         m.s = Param(initialize=1, mutable=True)
 
         # variables, with bounds contingent on params
+        m.u = Var(initialize=0, bounds=(0, m.p))
+        m.v = Var(initialize=1, bounds=(m.r, m.p))
         m.w = Var(initialize=1, bounds=(None, None))
         m.x = Var(initialize=1, bounds=(0, exp(-1*m.p / 8) * m.q * m.s))
-        m.y = Var(initialize=1, bounds=(m.r * m.p, 0))
+        m.y = Var(initialize=-1, bounds=(m.r * m.p, 0))
         m.z = Var(initialize=1, bounds=(0, m.s))
-        m.v = Var(initialize=1, bounds=(m.r, m.p))
 
         # objective
         m.obj = Objective(sense=maximize, expr=m.x**2 - m.y + m.z**2 + m.v)
 
-        # uncertain params
-        uncertain_params = [m.p, m.r]
-
         # clone model
         mod = m.clone()
+        uncertain_params = [mod.p, mod.r]
+
+        # check variable replacement without performance constraints
+        replace_uncertain_bounds_with_constraints(mod, uncertain_params)
+        self.assertTrue(hasattr(mod, 'uncertain_var_bound_cons'),
+                        msg='Uncertain variable bounds erroneously added. '
+                            'Check only variables participating in active '
+                            'constraints are added.')
+        self.assertTrue(not mod.uncertain_var_bound_cons)
+
+        # constraints to add
+        constraints_m = ConstraintList()
+        m.add_component('perf_constraints', constraints_m)
+        constraints_m.add(m.w == 2 * m.x + m.y)
+        constraints_m.add(m.v + m.x + m.y >= 0)
+        constraints_m.add(m.y ** 2 + m.z >= 0)
+        constraints_m.add(m.x ** 2 + m.u <= 1)
+        constraints_m[4].deactivate()
+
+        # clone model with constraints added
+        mod_2 = m.clone()
 
         # manually replace uncertain parameter bounds with explicit constraints
-        x_upper_bd_con = Constraint(expr=m.x - m.x._ub <= 0)
-        y_lower_bd_con = Constraint(expr=m.y._lb - m.y <= 0)
-        v_upper_bd_con = Constraint(expr=m.v - m.v._ub <= 0)
-        v_lower_bd_con = Constraint(expr=m.v._lb - m.v <= 0)
-        m.add_component('x_uncertain_upper_bound_con', x_upper_bd_con)
-        m.add_component('y_uncertain_lower_bound_con', y_lower_bd_con)
-        m.add_component('v_uncertain_upper_bound_con', v_upper_bd_con)
-        m.add_component('v_uncertain_lower_bound_con', v_lower_bd_con)
-
+        uncertain_cons = ConstraintList()
+        m.add_component('uncertain_var_bound_cons', uncertain_cons)
+        uncertain_cons.add(m.x - m.x._ub <= 0)
+        uncertain_cons.add(m.y._lb - m.y <= 0)
+        uncertain_cons.add(m.v - m.v._ub <= 0)
+        uncertain_cons.add(m.v._lb - m.v <= 0)
         # remove corresponding variable bounds
         m.x.setub(None)
         m.y.setlb(None)
         m.v.setlb(None)
         m.v.setub(None)
 
-        # replace uncertain parameter bounds with util function
-        replace_uncertain_bounds_with_constraints(mod, uncertain_params)
+        # replace bounds in model with performance constraints
+        uncertain_params = [mod_2.p, mod_2.r]
+        replace_uncertain_bounds_with_constraints(mod_2, uncertain_params)
 
-        # check constraints match
+        # check that vars participating in
+        # activated constraints correctly determined
+        svars = ComponentSet([v for v in get_vars_from_constraints(mod_2)])
+        vars_in_active_constraints = ComponentSet([mod_2.z, mod_2.w, mod_2.y,
+                                                   mod_2.x, mod_2.v])
+        self.assertEqual(svars, vars_in_active_constraints,
+                         msg='Mismatch in variables participating in '
+                             'activated constraints.')
+        # check that same number of constraints added to model
         self.assertEqual(len(list(m.component_data_objects(Constraint))),
-                         len(list(mod.component_data_objects(Constraint))),
-                         msg='Number of uncertain bounds turned to constraints'
-                             'manually and automatically do not match.')
+                         len(list(mod_2.component_data_objects(Constraint))),
+                         msg='Mismatch between number of explicit variable '
+                             'bound inequality constraints added automatically '
+                             'and added manually.')
+
 
 class testTransformToStandardForm(unittest.TestCase):
 
