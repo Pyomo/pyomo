@@ -77,8 +77,9 @@ def _perform_branch_and_bound(solve_data):
                 unfixed_disjuncts = []
                 disjuncts_fixed_True[0].indicator_var.fix(True)
         elif disjuncts_fixed_True and disjunction.xor:
-            assert len(disjuncts_fixed_True) == 1, "XOR (only one True) "
-            "violated: %s" % disjunction.name
+            assert len(disjuncts_fixed_True) == 1, ("XOR (only one True) "
+                                                    "violated: %s" %
+                                                    disjunction.name)
             disjuncts_fixed_False.extend(unfixed_disjuncts)
             unfixed_disjuncts = []
 
@@ -235,7 +236,7 @@ def _branch_on_node(node_data, node_model, solve_data):
         if not child_disjunction_to_branch.xor:
             raise NotImplementedError("We still need to add support for "
                                       "non-XOR disjunctions.")
-            # This requires adding all combinations of activation status among
+        # This requires adding all combinations of activation status among
         # unfixed_disjuncts Reactivate nonlinear constraints in the newly-fixed
         # child disjunct
         fixed_True_disjunct = child_unfixed_disjuncts[
@@ -256,8 +257,8 @@ def _branch_on_node(node_data, node_model, solve_data):
         child_node_data = node_data._replace(
             is_screened=False,
             is_evaluated=False,
-            num_unbranched_disjunctions=node_data.num_unbranched_disjunctions -
-            1,
+            num_unbranched_disjunctions=node_data.\
+            num_unbranched_disjunctions - 1,
             node_count=node_count + newly_created_nodes,
             unbranched_disjunction_indices=node_data.\
             unbranched_disjunction_indices[1:],
