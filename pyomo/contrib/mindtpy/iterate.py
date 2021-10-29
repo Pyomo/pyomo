@@ -24,6 +24,7 @@ from pyomo.opt import SolverFactory
 from pyomo.common.dependencies import attempt_import
 from pyomo.contrib.gdpopt.util import copy_var_list_values
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
+from operator import itemgetter
 
 tabu_list, tabu_list_available = attempt_import(
     'pyomo.contrib.mindtpy.tabu_list')
@@ -135,7 +136,7 @@ def MindtPy_iteration_loop(solve_data, config):
                         obj = main_mip_results._solver_model.PoolObjVal
                     solution_name_obj.append([name, obj])
                 solution_name_obj.sort(
-                    key=lambda x: x[1], reverse=solve_data.objective_sense == maximize)
+                    key=itemgetter(1), reverse=solve_data.objective_sense == maximize)
                 counter = 0
                 for name, _ in solution_name_obj:
                     # the optimal solution of the main problem has been added to integer_list above
