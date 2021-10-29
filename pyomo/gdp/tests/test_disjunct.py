@@ -483,7 +483,6 @@ class TestAutoVars(unittest.TestCase):
             m.biv.setub(1)
         self.assertIn(deprecation_msg, out.getvalue())
 
-
         out = StringIO()
         with LoggingIntercept(out):
             self.assertIs(abs(m.iv).args[0], m.biv)

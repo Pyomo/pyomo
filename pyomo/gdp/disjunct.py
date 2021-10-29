@@ -231,8 +231,6 @@ class AutoLinkedBooleanVar(ScalarBooleanVar):
 
     def __abs__(self):
         return self.as_binary().__abs__()
-    def __bool__(self):
-        return self.as_binary().__bool__()
     def __float__(self):
         return self.as_binary().__float__()
     def __int__(self):
