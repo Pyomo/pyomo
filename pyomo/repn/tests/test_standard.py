@@ -2318,7 +2318,7 @@ class Test(unittest.TestCase):
 
 
     def test_quadratic2(self):
-        m = AbstractModel()
+        m = ConcreteModel()
         m.a = Var()
         m.b = Var()
         m.c = Var()
@@ -3511,7 +3511,7 @@ class Test(unittest.TestCase):
         #       ExprIf
         #      /  |   \
         #   True  a    b
-        m = AbstractModel()
+        m = ConcreteModel()
         m.a = Var()
         m.b = Var()
         m.c = Var()
