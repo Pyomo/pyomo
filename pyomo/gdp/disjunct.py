@@ -237,8 +237,8 @@ class AutoLinkedBooleanVar(ScalarBooleanVar):
         return self.as_binary().__int__()
     def __neg__(self):
         return self.as_binary().__neg__()
-    def __nonzero__(self):
-        return self.as_binary().__nonzero__()
+    def __bool__(self):
+        return self.as_binary().__bool__()
     def __pos__(self):
         return self.as_binary().__pos__()
     def get_units(self):

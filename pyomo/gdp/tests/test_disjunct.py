@@ -12,6 +12,7 @@ from io import StringIO
 
 import pyomo.common.unittest as unittest
 
+from pyomo.common.errors import PyomoException
 from pyomo.common.log import LoggingIntercept
 from pyomo.core import ConcreteModel, Var, Constraint
 from pyomo.gdp import Disjunction, Disjunct
@@ -490,22 +491,25 @@ class TestAutoVars(unittest.TestCase):
 
         out = StringIO()
         with LoggingIntercept(out):
-            self.assertIs(bool(m.iv), True)
+            with self.assertRaisesRegex(
+                    PyomoException, r"Cannot convert non-constant Pyomo "
+                    r"numeric value \(biv\) to bool"):
+                bool(m.iv)
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
         with LoggingIntercept(out):
             with self.assertRaisesRegex(
-                    TypeError, "Implicit conversion of Pyomo NumericValue "
-                    "type `biv' to a float"):
+                    TypeError, r"Implicit conversion of Pyomo numeric "
+                    r"value \(biv\) to float"):
                 float(m.iv)
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
         with LoggingIntercept(out):
             with self.assertRaisesRegex(
-                    TypeError, "Implicit conversion of Pyomo NumericValue "
-                    "type `biv' to an integer"):
+                    TypeError, r"Implicit conversion of Pyomo numeric "
+                    r"value \(biv\) to int"):
                 int(m.iv)
         self.assertIn(deprecation_msg, out.getvalue())
 
