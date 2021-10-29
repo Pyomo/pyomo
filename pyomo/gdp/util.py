@@ -14,6 +14,7 @@ from pyomo.gdp.disjunct import _DisjunctData, Disjunct
 
 from pyomo.common.collections import ComponentSet
 from pyomo.core import Block, TraversalStrategy, SortComponents
+from pyomo.core.base.block import _BlockData
 from pyomo.opt import TerminationCondition, SolverStatus
 from weakref import ref as weakref_ref
 from collections import defaultdict
@@ -175,7 +176,7 @@ def get_gdp_tree(targets, instance, knownBlocks):
                            knownBlocks=knownBlocks):
             raise GDP_Error("Target '%s' is not a component on instance "
                             "'%s'!" % (t.name, instance.name))
-        if t.ctype in (Block, Disjunct):
+        if t.ctype is Block or isinstance(t, _BlockData):
             if t.is_indexed():
                 for block in t.values():
                     gdp_tree = _gather_disjunctions(block, gdp_tree)
