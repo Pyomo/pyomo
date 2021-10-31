@@ -125,6 +125,7 @@ def MindtPy_iteration_loop(solve_data, config):
                 elif config.mip_solver == 'gurobi_persistent':
                     solution_pool_names = list(
                         range(main_mip_results._solver_model.SolCount))
+                # list to store the name and objective value of the solutions in the solution pool
                 solution_name_obj = []
                 for name in solution_pool_names:
                     if config.mip_solver == 'cplex_persistent':

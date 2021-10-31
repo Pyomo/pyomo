@@ -555,6 +555,14 @@ def get_integer_solution(model, string_zero=False):
 
 
 def setup_solve_data(model, config):
+    """ define and initialize solve_data for MindtPy
+
+    Args:
+        model: Pyomo model
+            the model to extract value of integer variables
+        config: MindtPy configurations
+            contains the specific configurations for the algorithm
+    """
     solve_data = MindtPySolveData()
     solve_data.results = SolverResults()
     solve_data.timing = Bunch()
@@ -611,18 +619,27 @@ def setup_solve_data(model, config):
 
 
 def copy_var_list_values_from_solution_pool(from_list, to_list, config, solver_model, var_map, solution_name,
-                                            skip_stale=False, skip_fixed=True,
                                             ignore_integrality=False):
     """Copy variable values from one list to another.
 
     Rounds to Binary/Integer if neccessary
     Sets to zero for NonNegativeReals if neccessary
+
+    Args:
+        from_list: variable list
+            contains variables and their values
+        to_list: variable list
+            contains the variables that need to set value
+        config: ConfigBlock
+            contains the specific configurations for the algorithm
+        solver_model: solver model
+            the solver model
+        var_map: dict
+            the map of pyomo variables to solver variables
+        solution_name: int or str
+            the name of the solution in the solution pool
     """
     for v_from, v_to in zip(from_list, to_list):
-        if skip_stale and v_from.stale:
-            continue  # Skip stale variable values.
-        if skip_fixed and v_to.is_fixed():
-            continue  # Skip fixed variables.
         try:
             if config.mip_solver == 'cplex_persistent':
                 var_val = solver_model.solution.pool.get_values(
@@ -631,27 +648,21 @@ def copy_var_list_values_from_solution_pool(from_list, to_list, config, solver_m
                 solver_model.setParam(
                     gurobipy.GRB.Param.SolutionNumber, solution_name)
                 var_val = var_map[v_from].Xn
-            else:
-                config.logger(
-                    config.mip_solver + 'is not supported for solution pool in Mindtpy yet.')
-                raise NotImplementedError()
             v_to.set_value(var_val)
-            if skip_stale:
-                v_to.stale = False
         except ValueError as err:
             err_msg = getattr(err, 'message', str(err))
             rounded_val = int(round(var_val))
             # Check to see if this is just a tolerance issue
             if ignore_integrality \
-                    and v_to.is_integer():  # not v_to.is_continuous()
+                    and v_to.is_integer():
                 v_to.value = var_val
-            elif v_to.is_integer() and (abs(var_val - rounded_val) <= config.integer_tolerance):  # not v_to.is_continuous()
+            elif v_to.is_integer() and (abs(var_val - rounded_val) <= config.integer_tolerance):
                 v_to.set_value(rounded_val)
             elif 'is not in domain NonNegativeReals' in err_msg and (
                     abs(var_val) <= config.zero_tolerance):
                 v_to.set_value(0)
             else:
-                raise
+                raise ValueError
 
 
 class GurobiPersistent4MindtPy(GurobiPersistent):
