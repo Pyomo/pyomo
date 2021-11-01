@@ -5,7 +5,8 @@ from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
                                                  add_outer_approximation_cuts,
                                                  add_affine_cuts)
 from pyomo.contrib.gdpopt.mip_solve import solve_LOA_master
-from pyomo.contrib.gdpopt.nlp_solve import (solve_global_subproblem, solve_local_subproblem)
+from pyomo.contrib.gdpopt.nlp_solve import (solve_global_subproblem,
+                                            solve_local_subproblem)
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.gdpopt.util import time_code, get_main_elapsed_time
 
@@ -38,19 +39,23 @@ def GDPopt_iteration_loop(solve_data, config):
         # Solve NLP subproblem
         if solve_data.active_strategy == 'LOA':
             with time_code(solve_data.timing, 'nlp'):
-                nlp_result = solve_local_subproblem(mip_result, solve_data, config)
+                nlp_result = solve_local_subproblem(mip_result, solve_data,
+                                                    config)
             if nlp_result.feasible:
                 add_outer_approximation_cuts(nlp_result, solve_data, config)
         elif solve_data.active_strategy == 'GLOA':
             with time_code(solve_data.timing, 'nlp'):
-                nlp_result = solve_global_subproblem(mip_result, solve_data, config)
+                nlp_result = solve_global_subproblem(mip_result, solve_data,
+                                                     config)
             if nlp_result.feasible:
                 add_affine_cuts(nlp_result, solve_data, config)
         elif solve_data.active_strategy == 'RIC':
             with time_code(solve_data.timing, 'nlp'):
-                nlp_result = solve_local_subproblem(mip_result, solve_data, config)
+                nlp_result = solve_local_subproblem(mip_result, solve_data,
+                                                    config)
         else:
-            raise ValueError('Unrecognized strategy: ' + solve_data.active_strategy)
+            raise ValueError('Unrecognized strategy: ' +
+                             solve_data.active_strategy)
 
         # Add integer cut
         add_integer_cut(
