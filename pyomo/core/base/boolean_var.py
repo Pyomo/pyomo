@@ -38,8 +38,8 @@ class _DeprecatedImplicitAssociatedBinaryVariable(object):
     def __call__(self):
         deprecation_warning(
                 "Relying on core.logical_to_linear to transform "
-                "BooleanVars which do not appear in LogicalConstraints "
-                "is deprecated. Please associated your own binaries if "
+                "BooleanVars that do not appear in LogicalConstraints "
+                "is deprecated. Please associate your own binaries if "
                 "you have BooleanVars not used in logical expressions.",
                 version='TBD')
 

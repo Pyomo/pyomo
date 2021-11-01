@@ -71,11 +71,11 @@ class TestGDPoptUnit(unittest.TestCase):
             solver_data = GDPoptSolveData()
             solver_data.timing = Bunch()
             with time_code(solver_data.timing, 'main', is_main_timer=True):
-                solve_linear_GDP(m, solver_data, GDPoptSolver.CONFIG(
-                    dict(mip_solver=mip_solver, strategy='LOA')))
-            self.assertIn("Linear GDP was unbounded. Resolving with "
-                          "arbitrary bound values",
-                          output.getvalue().strip())
+                solve_linear_GDP(m, solver_data,
+                                 GDPoptSolver.CONFIG(dict(mip_solver=mip_solver,
+                                                          strategy='LOA')))
+            self.assertIn("Linear GDP was unbounded. Resolving with arbitrary "
+                          "bound values", output.getvalue().strip())
 
     @unittest.skipUnless(SolverFactory(mip_solver).available(), 
                          "MIP solver not available")
@@ -132,45 +132,44 @@ class TestGDPoptUnit(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
             SolverFactory('gdpopt').solve(m, nlp_solver=nlp_solver,
                                           strategy='LOA')
-            self.assertIn(
-                "Model has no active objectives. Adding dummy objective.",
-                output.getvalue().strip())
+            self.assertIn("Model has no active objectives. Adding dummy "
+                          "objective.", output.getvalue().strip())
 
     def test_multiple_objectives(self):
         m = ConcreteModel()
         m.x = Var()
         m.o = Objective(expr=m.x)
         m.o2 = Objective(expr=m.x + 1)
-        with self.assertRaisesRegex(ValueError, 
-                                    "Model has multiple active objectives"):
+        with self.assertRaisesRegex(ValueError, "Model has multiple active "
+                                    "objectives"):
             SolverFactory('gdpopt').solve(m, strategy='LOA')
 
     def test_is_feasible_function(self):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 3), initialize=2)
         m.c = Constraint(expr=m.x == 2)
-        self.assertTrue(is_feasible(m,
-                                    GDPoptSolver.CONFIG(dict(strategy='LOA'))))
+        self.assertTrue(
+            is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA'))))
 
         m.c2 = Constraint(expr=m.x <= 1)
-        self.assertFalse(is_feasible(m,
-                                     GDPoptSolver.CONFIG(dict(strategy='LOA'))))
+        self.assertFalse(
+            is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA'))))
 
         m = ConcreteModel()
         m.x = Var(bounds=(0, 3), initialize=2)
         m.c = Constraint(expr=m.x >= 5)
-        self.assertFalse(is_feasible(m,
-                                     GDPoptSolver.CONFIG(dict(strategy='LOA'))))
+        self.assertFalse(
+            is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA'))))
 
         m = ConcreteModel()
         m.x = Var(bounds=(3, 3), initialize=2)
-        self.assertFalse(is_feasible(m,
-                                     GDPoptSolver.CONFIG(dict(strategy='LOA'))))
+        self.assertFalse(
+            is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA'))))
 
         m = ConcreteModel()
         m.x = Var(bounds=(0, 1), initialize=2)
-        self.assertFalse(is_feasible(m,
-                                     GDPoptSolver.CONFIG(dict(strategy='LOA'))))
+        self.assertFalse(
+            is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA'))))
 
         m = ConcreteModel()
         m.x = Var(bounds=(0, 1), initialize=2)
