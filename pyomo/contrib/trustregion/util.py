@@ -51,6 +51,12 @@ def maxIgnoreNone(a, b):
         return b
     return a
 
+def getVarDict(m, dict_keys=None):
+    """
+    Returns a dictionary of variables
+    """
+    return {name: m.find_component(name) for name in dict_keys}
+
 
 class IterationRecord:
     """

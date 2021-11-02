@@ -52,7 +52,6 @@ def trf_config():
                     "Whether or not to load the final solution of "
                     "Trust Region into the model object."
     ))
-
     ### Trust Region specific options
     CONFIG.declare('trust radius', ConfigValue(
         default=1.0,
@@ -167,7 +166,7 @@ def trf_config():
 
 @SolverFactory.register(
     'trustregion',
-    doc='Trust region "solver" for black box/glass box optimization')
+    doc='Trust region algorithm "solver" for black box/glass box optimization')
 class TrustRegionSolver(object):
     """
     The Trust Region Solver is a 'solver' based on the 2016/2018/2020 AiChE
@@ -199,6 +198,10 @@ class TrustRegionSolver(object):
     def __exit(self, et, ev, tb):
         pass
 
-    def solve(self, model, **kwds):
+    def solve(self, model, ext_fcn_surrogate_map_rule, **kwds):
         config = self.CONFIG(kwds.pop('options', {}))
+        if ext_fcn_surrogate_map_rule is None:
+            # If the user does not pass us a "basis" function,
+            # we default to 0.
+            ext_fcn_surrogate_map_rule = lambda comp,ef: 0
         pass
