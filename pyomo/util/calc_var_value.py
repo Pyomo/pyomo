@@ -28,6 +28,12 @@ def calculate_variable_from_constraint(variable, constraint,
     residual, it falls back on Newton's method using exact (symbolic)
     derivatives.
 
+    Notes
+    -----
+    This is an unconstrained solver and is NOT guaranteed to respect the
+    variable bounds or domain.  The solver may leave the variable value
+    in an infeasible state (outside the declared bounds or domain bounds).
+
     Parameters:
     -----------
     variable: :py:class:`_VarData`
@@ -52,9 +58,6 @@ def calculate_variable_from_constraint(variable, constraint,
     Returns:
     --------
     None
-
-    Note: this is an unconstrained solver and is NOT guaranteed to
-    respect the variable bounds.
 
     """
     # Leverage all the Constraint logic to process the incoming tuple/expression
