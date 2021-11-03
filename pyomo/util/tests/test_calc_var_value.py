@@ -253,6 +253,8 @@ class Test_calc_var(unittest.TestCase):
         calculate_variable_from_constraint(m.v1, m.c3)
         self.assertEqual(value(m.v1), -0.1)
 
+    @unittest.skipUnless(differentiate_available, "this test requires sympy")
+    def test_nonlinear_bound_violation(self):
         # Test nonlinear solution falling outside bounds
         m.c4 = Constraint(expr=m.v1**3 == -8)
         m.v1.set_value(1)
