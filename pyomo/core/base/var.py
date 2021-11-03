@@ -433,6 +433,15 @@ class _GeneralVarData(_VarData):
                 "instance of a Pyomo Set.  Examples: NonNegativeReals, "
                 "Integers, Binary" % (domain,))
 
+    @_VarData.lb.getter
+    def lb(self):
+        dlb, _ = self.domain.bounds()
+        if self._lb is None:
+            return dlb
+        elif dlb is None:
+            return value(self._lb)
+        return max(value(self._lb), dlb)
+
     @property
     def lower(self):
         """Return an expression for the variable lower bound.
@@ -456,6 +465,15 @@ class _GeneralVarData(_VarData):
     @lower.setter
     def lower(self, val):
         self._lb = self._process_bound(val, 'lower')
+
+    @_VarData.ub.getter
+    def ub(self):
+        _, dub = self.domain.bounds()
+        if self._ub is None:
+            return dub
+        elif dub is None:
+            return value(self._ub)
+        return min(value(self._ub), dub)
 
     @property
     def upper(self):
