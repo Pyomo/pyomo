@@ -901,7 +901,11 @@ class _BlockData(ActiveComponentData):
         """
         Return a block component given a name.
         """
-        return ComponentUID(label_or_component).find_component_on(self)
+        if type(label_or_component) is ComponentUID:
+            cuid = label_or_component
+        else:
+            cuid = ComponentUID(label_or_component)
+        return cuid.find_component_on(self)
 
     def add_component(self, name, val):
         """
