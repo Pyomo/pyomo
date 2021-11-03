@@ -66,6 +66,15 @@ class TestVarData(unittest.TestCase):
         m.x.setlb(3)
         self.assertEqual(m.x.lb, 3)
 
+        m.y = Var([1])
+        self.assertIsNone(m.y[1].lb)
+        m.y[1].lb = 1
+        self.assertEqual(m.y[1].lb, 1)
+        m.y[1].lower = 2
+        self.assertEqual(m.y[1].lb, 2)
+        m.y[1].setlb(3)
+        self.assertEqual(m.y[1].lb, 3)
+
     def test_upper_bound(self):
         m = ConcreteModel()
         m.x = Var()
@@ -96,6 +105,15 @@ class TestVarData(unittest.TestCase):
         self.assertEqual(m.x.ub, 2)
         m.x.setub(3)
         self.assertEqual(m.x.ub, 3)
+
+        m.y = Var([1])
+        self.assertIsNone(m.y[1].ub)
+        m.y[1].ub = 1
+        self.assertEqual(m.y[1].ub, 1)
+        m.y[1].upper = 2
+        self.assertEqual(m.y[1].ub, 2)
+        m.y[1].setub(3)
+        self.assertEqual(m.y[1].ub, 3)
 
 
 class PyomoModel(unittest.TestCase):
