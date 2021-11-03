@@ -281,7 +281,7 @@ class _VarData(ComponentData, NumericValue):
 
     @property
     def lower(self):
-        """Return an expression for the vaiable lower bound."""
+        """Return an expression for the variable lower bound."""
         raise NotImplementedError
 
     @property
@@ -459,8 +459,7 @@ class _GeneralVarData(_VarData):
             return dlb
         elif dlb is None:
             return self._lb
-        # This is guaranteed by _process_bound():
-        # assert not is_potentially_variable(self._lb)
+        # _process_bound() guarantees _lb is not potentially variable
         return NPV_MaxExpression((self._lb, dlb))
     @lower.setter
     def lower(self, val):
@@ -492,8 +491,7 @@ class _GeneralVarData(_VarData):
             return dub
         elif dub is None:
             return self._ub
-        # This is guaranteed by _process_bound():
-        # assert not is_potentially_variable(self._lb)
+        # _process_bound() guarantees _lb is not potentially variable
         return NPV_MinExpression((self._ub, dub))
     @upper.setter
     def upper(self, val):
