@@ -14,7 +14,9 @@ from io import StringIO
 import pyomo.common.unittest as unittest
 
 from pyomo.common.log import LoggingIntercept
-from pyomo.environ import ConcreteModel, Var, Constraint, Param, value, exp
+from pyomo.environ import (
+    ConcreteModel, Var, Constraint, Param, value, exp, NonNegativeReals
+)
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.core.expr.calculus.diff_with_sympy import differentiate_available
 
@@ -227,3 +229,32 @@ class Test_calc_var(unittest.TestCase):
                 "remaining residual = {function evaluation error}"):
             calculate_variable_from_constraint(m.x, m.c, linesearch=True,
                                                alpha_min=.5)
+
+    def test_bound_violation(self):
+        # Test Issue #2176: solving a constraint where the intermediate
+        # value can step outside the bounds
+        m = ConcreteModel()
+        m.v1 = Var(initialize=1, domain=NonNegativeReals)
+        m.c1 = Constraint(expr=m.v1 == 0)
+
+        # Calculate value of v1 using constraint c1
+        calculate_variable_from_constraint(m.v1, m.c1)
+        self.assertEqual(value(m.v1), 0)
+
+        # Calculate value of v1 using a scaled constraint c2
+        m.c2 = Constraint(expr=m.v1*10 == 0)
+        m.v1.set_value(1)
+        calculate_variable_from_constraint(m.v1, m.c2)
+        self.assertEqual(value(m.v1), 0)
+
+        # Test linear solution falling outside bounds
+        m.c3 = Constraint(expr=m.v1*10 == -1)
+        m.v1.set_value(1)
+        calculate_variable_from_constraint(m.v1, m.c3)
+        self.assertEqual(value(m.v1), -0.1)
+
+        # Test nonlinear solution falling outside bounds
+        m.c4 = Constraint(expr=m.v1**3 == -8)
+        m.v1.set_value(1)
+        calculate_variable_from_constraint(m.v1, m.c4)
+        self.assertEqual(value(m.v1), -2)
