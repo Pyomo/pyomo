@@ -255,6 +255,10 @@ class Test_calc_var(unittest.TestCase):
 
     @unittest.skipUnless(differentiate_available, "this test requires sympy")
     def test_nonlinear_bound_violation(self):
+        m = ConcreteModel()
+        m.v1 = Var(initialize=1, domain=NonNegativeReals)
+        m.c1 = Constraint(expr=m.v1 == 0)
+
         # Test nonlinear solution falling outside bounds
         m.c4 = Constraint(expr=m.v1**3 == -8)
         m.v1.set_value(1)
