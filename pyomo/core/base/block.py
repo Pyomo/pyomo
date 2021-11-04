@@ -899,7 +899,20 @@ class _BlockData(ActiveComponentData):
 
     def find_component(self, label_or_component):
         """
-        Return a block component given a name.
+        Returns a component in the block given a name.
+
+        Parameters
+        ----------
+        label_or_component : str, Component, or ComponentUID
+            The name of the component to find in this block. String or
+            Component arguments are first converted to ComponentUID.
+
+        Returns
+        -------
+        Component
+            Component on the block identified by the ComponentUID. If
+            a matching component is not found, None is returned.
+
         """
         if type(label_or_component) is ComponentUID:
             cuid = label_or_component
