@@ -401,11 +401,10 @@ class _GeneralVarData(_VarData):
 
     @property
     def domain(self):
-        """Return the domain for this variable."""
+        """Return (or set) the domain for this variable."""
         return self._domain
     @domain.setter
     def domain(self, domain):
-        """Set the domain for this variable."""
         # TODO: this should be migrated over to using a SetInitializer
         # to handle the checking / conversion of the argument to a
         # proper Pyomo Set and not use isinstance() of a private class.
@@ -459,14 +458,14 @@ class _GeneralVarData(_VarData):
 
     @property
     def lower(self):
-        """Return an expression for the variable lower bound.
+        """Return (or set) an expression for the variable lower bound.
 
-        This returns a (non-potentially variable) expression for the
+        This returns a (not potentially variable) expression for the
         variable lower bound.  This represents the tighter of the
-        current domain and the constant or expression provided to
-        setlb().  Note that the expression will NOT automatically
+        current domain and the constant or expression assigned to
+        ``.lower``.  Note that the expression will NOT automatically
         reflect changes to either the domain or the bound expression
-        (e.g., because of a call to setlb()).
+        (e.g., because of assignment to either ``.lower`` or ``.domain``).
 
         """
         dlb, _ = self.domain.bounds()
@@ -482,14 +481,14 @@ class _GeneralVarData(_VarData):
 
     @property
     def upper(self):
-        """Return an expression for the variable upper bound.
+        """Return (or set) an expression for the variable upper bound.
 
-        This returns a (non-potentially variable) expression for the
+        This returns a (not potentially variable) expression for the
         variable upper bound.  This represents the tighter of the
-        current domain and the constant or expression provided to
-        setub().  Note that the expression will NOT automatically
+        current domain and the constant or expression assigned to
+        ``.upper``.  Note that the expression will NOT automatically
         reflect changes to either the domain or the bound expression
-        (e.g., because of a call to setub()).
+        (e.g., because of assignment to either ``.upper`` or ``.domain``).
 
         """
         _, dub = self.domain.bounds()
