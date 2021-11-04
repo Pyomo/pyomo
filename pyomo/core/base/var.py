@@ -40,9 +40,9 @@ _VARDATA_API = (
     # including 'domain' runs afoul of logic in Block._add_implicit_sets()
     # 'domain',
     'bounds', 'lower', 'upper', 'lb', 'ub', 'has_lb', 'has_ub',
-    'setlb', 'setub',
-    'is_integer', 'is_binary', 'is_continuous',
-    'is_fixed', 'fix', 'unfix', 'free', 'set_value', 'value',
+    'setlb', 'setub', 'get_units',
+    'is_integer', 'is_binary', 'is_continuous', 'is_fixed',
+    'fix', 'unfix', 'free', 'set_value', 'value',
     # Note: we can't disable fixed / stale as they are public attributes
 )
 
