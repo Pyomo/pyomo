@@ -7,7 +7,8 @@ from copy import deepcopy
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.data_class import MasterProblemResult
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time
+from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning, _DoNothing,
+                                       get_main_elapsed_time)
 from pyomo.core import (Block, Expression, Objective, TransformationFactory,
                         Var, minimize, value, Constraint)
 from pyomo.gdp import Disjunct
@@ -111,13 +112,15 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
         results, terminate_cond = distinguish_mip_infeasible_or_unbounded(
             m, config)
     if terminate_cond is tc.unbounded:
-        # Solution is unbounded. Add an arbitrary bound to the objective and resolve.
-        # This occurs when the objective is nonlinear. The nonlinear objective is moved
-        # to the constraints, and deactivated for the linear master problem.
+        # Solution is unbounded. Add an arbitrary bound to the objective and
+        # resolve.  This occurs when the objective is nonlinear. The nonlinear
+        # objective is moved to the constraints, and deactivated for the linear
+        # master problem.
         obj_bound = 1E15
         config.logger.warning(
             'Linear GDP was unbounded. '
-            'Resolving with arbitrary bound values of (-{0:.10g}, {0:.10g}) on the objective. '
+            'Resolving with arbitrary bound values of (-{0:.10g}, {0:.10g}) '
+            'on the objective. '
             'Check your initialization routine.'.format(obj_bound))
         main_objective = next(m.component_data_objects(Objective, active=True))
         GDPopt.objective_bound = Constraint(
@@ -229,7 +232,8 @@ def solve_LOA_master(solve_data, config):
             mip_result.var_values
         )
         config.logger.info(
-            'ITER {:d}.{:d}.{:d}-MIP: OBJ: {:.10g}  LB: {:.10g}  UB: {:.10g}'.format(
+            'ITER {:d}.{:d}.{:d}-MIP: OBJ: {:.10g}  LB: {:.10g}  UB: {:.10g}'.\
+            format(
                 solve_data.master_iteration,
                 solve_data.mip_iteration,
                 solve_data.nlp_iteration,

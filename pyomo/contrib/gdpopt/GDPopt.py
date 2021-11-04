@@ -57,7 +57,8 @@ __version__ = (20, 2, 28)  # Note: date-based version number
     doc='The GDPopt decomposition-based '
     'Generalized Disjunctive Programming (GDP) solver')
 class GDPoptSolver(object):
-    """Decomposition solver for Generalized Disjunctive Programming (GDP) problems.
+    """Decomposition solver for Generalized Disjunctive Programming (GDP)
+    problems.
 
     The GDPopt (Generalized Disjunctive Programming optimizer) solver applies a
     variety of decomposition-based approaches to solve Generalized Disjunctive
@@ -71,8 +72,8 @@ class GDPoptSolver(object):
     - Partial surrogate cuts [pending]
     - Generalized Bender decomposition [pending]
 
-    This solver implementation was developed by Carnegie Mellon University in the
-    research group of Ignacio Grossmann.
+    This solver implementation was developed by Carnegie Mellon University in
+    the research group of Ignacio Grossmann.
 
     For nonconvex problems, LOA may not report rigorous lower/upper bounds.
 
@@ -179,14 +180,22 @@ class GDPoptSolver(object):
         config.nlp_solver_args.display(ostream=nlp_args_output)
         config.minlp_solver_args.display(ostream=minlp_args_output)
         config.local_minlp_solver_args.display(ostream=lminlp_args_output)
-        mip_args_text = indent(mip_args_output.getvalue().rstrip(), prefix=" " * 2 + " - ")
-        nlp_args_text = indent(nlp_args_output.getvalue().rstrip(), prefix=" " * 2 + " - ")
-        minlp_args_text = indent(minlp_args_output.getvalue().rstrip(), prefix=" " * 2 + " - ")
-        lminlp_args_text = indent(lminlp_args_output.getvalue().rstrip(), prefix=" " * 2 + " - ")
-        mip_args_text = "" if len(mip_args_text.strip()) == 0 else "\n" + mip_args_text
-        nlp_args_text = "" if len(nlp_args_text.strip()) == 0 else "\n" + nlp_args_text
-        minlp_args_text = "" if len(minlp_args_text.strip()) == 0 else "\n" + minlp_args_text
-        lminlp_args_text = "" if len(lminlp_args_text.strip()) == 0 else "\n" + lminlp_args_text
+        mip_args_text = indent(mip_args_output.getvalue().rstrip(), prefix=" " *
+                               2 + " - ")
+        nlp_args_text = indent(nlp_args_output.getvalue().rstrip(), prefix=" " *
+                               2 + " - ")
+        minlp_args_text = indent(minlp_args_output.getvalue().rstrip(),
+                                 prefix=" " * 2 + " - ")
+        lminlp_args_text = indent(lminlp_args_output.getvalue().rstrip(),
+                                  prefix=" " * 2 + " - ")
+        mip_args_text = "" if len(mip_args_text.strip()) == 0 else \
+                        "\n" + mip_args_text
+        nlp_args_text = "" if len(nlp_args_text.strip()) == 0 else \
+                        "\n" + nlp_args_text
+        minlp_args_text = "" if len(minlp_args_text.strip()) == 0 else \
+                          "\n" + minlp_args_text
+        lminlp_args_text = "" if len(lminlp_args_text.strip()) == 0 else \
+                           "\n" + lminlp_args_text
         config.logger.info(
             """
 Subsolvers:
@@ -209,7 +218,7 @@ Subsolvers:
 If you use this software, you may cite the following:
 - Implementation:
 Chen, Q; Johnson, ES; Siirola, JD; Grossmann, IE.
-Pyomo.GDP: Disjunctive Models in Python. 
+Pyomo.GDP: Disjunctive Models in Python.
 Proc. of the 13th Intl. Symposium on Process Systems Eng.
 San Diego, 2018.
         """.strip()
@@ -227,7 +236,8 @@ DOI: 10.1016/0098-1354(95)00219-7.
             to_cite_text += """
 - GLOA algorithm:
 Lee, S; Grossmann, IE.
-A Global Optimization Algorithm for Nonconvex Generalized Disjunctive Programming and Applications to Process Systems.
+A Global Optimization Algorithm for Nonconvex Generalized Disjunctive
+Programming and Applications to Process Systems.
 Comp. and Chem. Eng. 2001, 25, 1675-1697.
 DOI: 10.1016/S0098-1354(01)00732-3.
             """.strip()
