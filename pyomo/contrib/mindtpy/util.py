@@ -658,11 +658,12 @@ def copy_var_list_values_from_solution_pool(from_list, to_list, config, solver_m
                 v_to.value = var_val
             elif v_to.is_integer() and (abs(var_val - rounded_val) <= config.integer_tolerance):
                 v_to.set_value(rounded_val)
-            elif 'is not in domain NonNegativeReals' in err_msg and (
-                    abs(var_val) <= config.zero_tolerance):
+            elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
                 v_to.set_value(0)
             else:
-                raise ValueError
+                config.logger.error(
+                    'Unknown validation domain error setting variable %s', (v_to.name,))
+                raise
 
 
 class GurobiPersistent4MindtPy(GurobiPersistent):
