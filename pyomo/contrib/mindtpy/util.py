@@ -622,8 +622,8 @@ def copy_var_list_values_from_solution_pool(from_list, to_list, config, solver_m
                                             ignore_integrality=False):
     """Copy variable values from one list to another.
 
-    Rounds to Binary/Integer if neccessary
-    Sets to zero for NonNegativeReals if neccessary
+    Rounds to Binary/Integer if necessary
+    Sets to zero for NonNegativeReals if necessary
 
     Args:
         from_list: variable list

@@ -37,8 +37,8 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                                   skip_stale=False, skip_fixed=True,
                                   ignore_integrality=False):
         """This function copies variable values from one list to another.
-        Rounds to Binary/Integer if neccessary
-        Sets to zero for NonNegativeReals if neccessary
+        Rounds to Binary/Integer if necessary
+        Sets to zero for NonNegativeReals if necessary
 
         Parameters
         ----------
