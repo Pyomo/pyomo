@@ -37,8 +37,10 @@ from pyomo.core.base.util import is_functor
 
 logger = logging.getLogger('pyomo.core')
 
-_no_lower_bound = {None, -float('inf')}
-_no_upper_bound = {None, float('inf')}
+_inf = float('inf')
+_ninf = -_inf
+_no_lower_bound = {None, _ninf}
+_no_upper_bound = {None, _inf}
 _known_global_real_domains = dict(
     [(_, True) for _ in real_global_set_ids] +
     [(_, False) for _ in integer_global_set_ids]
@@ -142,7 +144,8 @@ class _VarData(ComponentData, NumericValue):
     @property
     def lb(self):
         """Return the numeric value of the variable lower bound."""
-        return value(self.lower)
+        lb = value(self.lower)
+        return None if lb == _ninf else lb
     @lb.setter
     def lb(self, val):
         self.lower = val
@@ -150,7 +153,8 @@ class _VarData(ComponentData, NumericValue):
     @property
     def ub(self):
         """Return the numeric value of the variable upper bound."""
-        return value(self.upper)
+        ub = value(self.upper)
+        return None if ub == _inf else ub
     @ub.setter
     def ub(self, val):
         self.upper = val
@@ -428,11 +432,12 @@ class _GeneralVarData(_VarData):
         else:
             lb = max(value(self._lb), domain_bounds[0])
         if self._ub is None:
-            return lb, domain_bounds[1]
+            ub = domain_bounds[1]
         elif domain_bounds[1] is None:
-            return lb, value(self._ub)
+            ub = value(self._ub)
         else:
-            return lb, min(value(self._ub), domain_bounds[1])
+            ub = min(value(self._ub), domain_bounds[1])
+        return None if lb == _ninf else lb, None if ub == _inf else ub
 
     @_VarData.lb.getter
     def lb(self):
@@ -440,10 +445,12 @@ class _GeneralVarData(_VarData):
         # expression generation
         dlb, _ = self.domain.bounds()
         if self._lb is None:
-            return dlb
+            lb = dlb
         elif dlb is None:
-            return value(self._lb)
-        return max(value(self._lb), dlb)
+            lb = value(self._lb)
+        else:
+            lb = max(value(self._lb), dlb)
+        return None if lb == _ninf else lb
 
     @_VarData.ub.getter
     def ub(self):
@@ -451,10 +458,12 @@ class _GeneralVarData(_VarData):
         # expression generation
         _, dub = self.domain.bounds()
         if self._ub is None:
-            return dub
+            ub = dub
         elif dub is None:
-            return value(self._ub)
-        return min(value(self._ub), dub)
+            ub = value(self._ub)
+        else:
+            ub = min(value(self._ub), dub)
+        return None if ub == _inf else ub
 
     @property
     def lower(self):
