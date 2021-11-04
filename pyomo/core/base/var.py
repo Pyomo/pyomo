@@ -830,25 +830,25 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
             if self.is_indexed():
                 for key in init_set:
                     vardata = self._data[key]
-                    (lb, ub) = apply_indexed_rule(self,
-                                                  self._bounds_init_rule,
-                                                  self._parent(),
-                                                  key)
-                    vardata.setlb(lb)
-                    vardata.setub(ub)
+                    lb, ub = apply_indexed_rule(self,
+                                                self._bounds_init_rule,
+                                                self._parent(),
+                                                key)
+                    vardata.lower = lb
+                    vardata.upper = ub
             else:
-                (lb, ub) = self._bounds_init_rule(self._parent())
-                self.setlb(lb)
-                self.setub(ub)
+                lb, ub = self._bounds_init_rule(self._parent())
+                self.lower = lb
+                self.upper = ub
         elif self._bounds_init_value is not None:
             #
             # Initialize bounds with a value
             #
-            (lb, ub) = self._bounds_init_value
+            lb, ub = self._bounds_init_value
             for key in init_set:
                 vardata = self._data[key]
-                vardata.setlb(lb)
-                vardata.setub(ub)
+                vardata.lower = lb
+                vardata.upper = ub
 
     def _pprint(self):
         """Print component information."""
@@ -904,14 +904,14 @@ class IndexedVar(Var):
         Set the lower bound for this variable.
         """
         for vardata in self.values():
-            vardata.setlb(val)
+            vardata.lower = val
 
     def setub(self, val):
         """
         Set the upper bound for this variable.
         """
         for vardata in self.values():
-            vardata.setub(val)
+            vardata.upper = val
 
     def fix(self, value=NoArgumentGiven):
         """
