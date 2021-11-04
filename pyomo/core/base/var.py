@@ -266,7 +266,7 @@ class _VarData(ComponentData, NumericValue):
 
     @property
     def lower(self):
-        """Return an expression for the vaiable lower bound."""
+        """Return an expression for the variable lower bound."""
         raise NotImplementedError
 
     @property
@@ -416,6 +416,15 @@ class _GeneralVarData(_VarData):
                 "instance of a Pyomo Set.  Examples: NonNegativeReals, "
                 "Integers, Binary" % (domain,))
 
+    @_VarData.lb.getter
+    def lb(self):
+        dlb, _ = self.domain.bounds()
+        if self._lb is None:
+            return dlb
+        elif dlb is None:
+            return value(self._lb)
+        return max(value(self._lb), dlb)
+
     @property
     def lower(self):
         """Return an expression for the variable lower bound.
@@ -433,12 +442,20 @@ class _GeneralVarData(_VarData):
             return dlb
         elif dlb is None:
             return self._lb
-        # This is guaranteed by _process_bound():
-        # assert not is_potentially_variable(self._lb)
+        # _process_bound() guarantees _lb is not potentially variable
         return NPV_MaxExpression((self._lb, dlb))
     @lower.setter
     def lower(self, val):
         self._lb = self._process_bound(val, 'lower')
+
+    @_VarData.ub.getter
+    def ub(self):
+        _, dub = self.domain.bounds()
+        if self._ub is None:
+            return dub
+        elif dub is None:
+            return value(self._ub)
+        return min(value(self._ub), dub)
 
     @property
     def upper(self):
@@ -457,8 +474,7 @@ class _GeneralVarData(_VarData):
             return dub
         elif dub is None:
             return self._ub
-        # This is guaranteed by _process_bound():
-        # assert not is_potentially_variable(self._lb)
+        # _process_bound() guarantees _lb is not potentially variable
         return NPV_MinExpression((self._ub, dub))
     @upper.setter
     def upper(self, val):
