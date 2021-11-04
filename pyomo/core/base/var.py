@@ -535,24 +535,23 @@ class _GeneralVarData(_VarData):
         self.fixed = False
 
     def _process_bound(self, val, bound_type):
-        # Note: is_potentially_variable(None) returns False
-        if is_potentially_variable(val):
+        if type(val) in native_numeric_types or val is None:
+            # TODO: warn/error: check if this Var has units: assigning
+            # a dimensionless value to a united variable should be an error
+            pass
+        elif is_potentially_variable(val):
             raise ValueError(
                 "Potentially variable input of type '%s' supplied as "
                 "%s bound for variable '%s' - legal types must be constants "
                 "or non-potentially variable expressions."
                 % (type(val).__name__, bound_type, self.name))
-        if type(val) in native_numeric_types or val is None:
-            # TODO: warn/error: check if this Var has units: assigning
-            # a dimensionless value to a united variable should be an error
-            pass
         else:
             # We want to create an expression and not just convert the
             # current value so that things like mutable Params behave as
             # expected.
-            if self.parent_component()._units is not None:
-                val = units.convert(
-                    val, to_units=self.parent_component()._units)
+            _units = self.parent_component()._units
+            if _units is not None:
+                val = units.convert(val, to_units=_units)
         return val
 
 
