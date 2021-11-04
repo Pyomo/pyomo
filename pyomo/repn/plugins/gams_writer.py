@@ -212,12 +212,11 @@ class Categorizer(object):
             elif v.is_binary():
                 self.binary.append(var)
             elif v.is_integer():
-                if (v.has_lb() and (value(v.lb) >= 0)) and \
-                   (v.has_ub() and (value(v.ub) <= 1)):
+                if all(bnd in {0, 1} for bnd in v.bounds):
                     self.binary.append(var)
                 else:
                     self.ints.append(var)
-            elif value(v.lb) == 0:
+            elif v.lb == 0:
                 self.positive.append(var)
             else:
                 self.reals.append(var)
@@ -681,21 +680,21 @@ class ProblemWriter_gams(AbstractProblemWriter):
         for category, var_name in categorized_vars:
             var = symbolMap.getObject(var_name)
             tc(var)
+            lb, ub = var.bounds
             if category == 'positive':
-                if var.has_ub():
+                if ub is not None:
                     output_file.write("%s.up = %s;\n" %
-                                      (var_name, ftoa(var.ub)))
+                                      (var_name, ftoa(ub)))
             elif category == 'ints':
-                if not var.has_lb():
+                if lb is None:
                     warn_int_bounds = True
                     # GAMS doesn't allow -INF lower bound for ints
                     logger.warning("Lower bound for integer variable %s set "
                                    "to -1.0E+100." % var.name)
                     output_file.write("%s.lo = -1.0E+100;\n" % (var_name))
-                elif value(var.lb) != 0:
-                    output_file.write("%s.lo = %s;\n" %
-                                      (var_name, ftoa(var.lb)))
-                if not var.has_ub():
+                elif lb != 0:
+                    output_file.write("%s.lo = %s;\n" % (var_name, ftoa(lb)))
+                if ub is None:
                     warn_int_bounds = True
                     # GAMS has an option value called IntVarUp that is the
                     # default upper integer bound, which it applies if the
@@ -705,22 +704,17 @@ class ProblemWriter_gams(AbstractProblemWriter):
                                    "to +1.0E+100." % var.name)
                     output_file.write("%s.up = +1.0E+100;\n" % (var_name))
                 else:
-                    output_file.write("%s.up = %s;\n" %
-                                      (var_name, ftoa(var.ub)))
+                    output_file.write("%s.up = %s;\n" % (var_name, ftoa(ub)))
             elif category == 'binary':
-                if var.has_lb() and value(var.lb) != 0:
-                    output_file.write("%s.lo = %s;\n" %
-                                      (var_name, ftoa(var.lb)))
-                if var.has_ub() and value(var.ub) != 1:
-                    output_file.write("%s.up = %s;\n" %
-                                      (var_name, ftoa(var.ub)))
+                if lb != 0:
+                    output_file.write("%s.lo = %s;\n" % (var_name, ftoa(lb)))
+                if ub != 1:
+                    output_file.write("%s.up = %s;\n" % (var_name, ftoa(ub)))
             elif category == 'reals':
-                if var.has_lb():
-                    output_file.write("%s.lo = %s;\n" %
-                                      (var_name, ftoa(var.lb)))
-                if var.has_ub():
-                    output_file.write("%s.up = %s;\n" %
-                                      (var_name, ftoa(var.ub)))
+                if lb is not None:
+                    output_file.write("%s.lo = %s;\n" % (var_name, ftoa(lb)))
+                if ub is not None:
+                    output_file.write("%s.up = %s;\n" % (var_name, ftoa(ub)))
             else:
                 raise KeyError('Category %s not supported' % category)
             if warmstart and var.value is not None:
