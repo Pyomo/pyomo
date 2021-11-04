@@ -28,7 +28,10 @@ from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, IndexedComponent_NDArrayMixin
 )
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.set import Reals, Binary, Set, _SetDataBase
+from pyomo.core.base.set import (
+    Reals, Binary, Set, _SetDataBase,
+    real_global_set_ids, integer_global_set_ids,
+)
 from pyomo.core.base.units_container import units
 from pyomo.core.base.util import is_functor
 
@@ -36,6 +39,10 @@ logger = logging.getLogger('pyomo.core')
 
 _no_lower_bound = {None, -float('inf')}
 _no_upper_bound = {None, float('inf')}
+_known_global_real_domains = dict(
+    [(_, True) for _ in real_global_set_ids] +
+    [(_, False) for _ in integer_global_set_ids]
+)
 _VARDATA_API = (
     # including 'domain' runs afoul of logic in Block._add_implicit_sets()
     # 'domain',
@@ -45,6 +52,7 @@ _VARDATA_API = (
     'fix', 'unfix', 'free', 'set_value', 'value',
     # Note: we can't disable fixed / stale as they are public attributes
 )
+
 
 class _VarData(ComponentData, NumericValue):
     """
@@ -149,33 +157,26 @@ class _VarData(ComponentData, NumericValue):
 
     def is_integer(self):
         """Returns True when the domain is a contiguous integer range."""
-        # optimization: Reals and Binary are the most common cases, so
-        # we will explicitly test that before generating the interval
-        if self.domain is Reals:
-            return False
-        elif self.domain is Binary:
-            return True
+        _id = id(self.domain)
+        if _id in _known_global_real_domains:
+            return not _known_global_real_domains[_id]
         _interval = self.domain.get_interval()
         return _interval is not None and _interval[2] == 1
 
     def is_binary(self):
         """Returns True when the domain is restricted to Binary values."""
-        # optimization: Reals and Binary are the most common cases, so
-        # we will explicitly test that before generating the interval
-        if self.domain is Reals:
-            return False
-        elif self.domain is Binary:
+        domain = self.domain
+        if domain is Binary:
             return True
-        return self.domain.get_interval() == (0,1,1)
+        if id(domain) in _known_global_real_domains:
+            return False
+        return domain.get_interval() == (0, 1, 1)
 
     def is_continuous(self):
         """Returns True when the domain is a continuous real range"""
-        # optimization: Reals and Binary are the most common cases, so
-        # we will explicitly test that before generating the interval
-        if self.domain is Reals:
-            return True
-        elif self.domain is Binary:
-            return False
+        _id = id(self.domain)
+        if _id in _known_global_real_domains:
+            return _known_global_real_domains[_id]
         _interval = self.domain.get_interval()
         return _interval is not None and _interval[2] == 0
 

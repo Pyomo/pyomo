@@ -4238,6 +4238,15 @@ DeclareGlobalSet(RangeSet(
 # ), globals())
 
 
+real_global_set_ids = set(id(_) for _ in (
+    Reals, NonNegativeReals, NonPositiveReals, NegativeReals, PositiveReals,
+    PercentFraction, UnitInterval,
+))
+integer_global_set_ids = set(id(_) for _ in (
+    Integers, NonNegativeIntegers, NonPositiveIntegers, NegativeIntegers,
+    PositiveIntegers, Binary,
+))
+
 RealSet = Reals.__class__
 IntegerSet = Integers.__class__
 BinarySet = Binary.__class__
