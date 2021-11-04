@@ -416,14 +416,45 @@ class _GeneralVarData(_VarData):
                 "instance of a Pyomo Set.  Examples: NonNegativeReals, "
                 "Integers, Binary" % (domain,))
 
+    @_VarData.bounds.getter
+    def bounds(self):
+        # Custom implementation of _VarData.bounds to avoid unnecessary
+        # expression generation and duplicate calls to domain.bounds()
+        domain_bounds = self.domain.bounds()
+        if self._lb is None:
+            lb = domain_bounds[0]
+        elif domain_bounds[0] is None:
+            lb = value(self._lb)
+        else:
+            lb = max(value(self._lb), domain_bounds[0])
+        if self._ub is None:
+            return lb, domain_bounds[1]
+        elif domain_bounds[1] is None:
+            return lb, value(self._ub)
+        else:
+            return lb, min(value(self._ub), domain_bounds[1])
+
     @_VarData.lb.getter
     def lb(self):
+        # Custom implementation of _VarData.lb to avoid unnecessary
+        # expression generation
         dlb, _ = self.domain.bounds()
         if self._lb is None:
             return dlb
         elif dlb is None:
             return value(self._lb)
         return max(value(self._lb), dlb)
+
+    @_VarData.ub.getter
+    def ub(self):
+        # Custom implementation of _VarData.ub to avoid unnecessary
+        # expression generation
+        _, dub = self.domain.bounds()
+        if self._ub is None:
+            return dub
+        elif dub is None:
+            return value(self._ub)
+        return min(value(self._ub), dub)
 
     @property
     def lower(self):
@@ -447,15 +478,6 @@ class _GeneralVarData(_VarData):
     @lower.setter
     def lower(self, val):
         self._lb = self._process_bound(val, 'lower')
-
-    @_VarData.ub.getter
-    def ub(self):
-        _, dub = self.domain.bounds()
-        if self._ub is None:
-            return dub
-        elif dub is None:
-            return value(self._ub)
-        return min(value(self._ub), dub)
 
     @property
     def upper(self):
