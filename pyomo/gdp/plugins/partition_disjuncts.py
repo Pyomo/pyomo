@@ -33,11 +33,10 @@ from pyomo.opt import SolverFactory
 from pyomo.util.vars_from_expressions import get_vars_from_constraints
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import (is_child_of, target_list, _to_dict,
-                            verify_successful_solve, NORMAL,
-                            clone_without_expression_components,
-                            _warn_for_active_disjunct,
-                            _warn_for_active_logical_constraint, get_gdp_tree)
+from pyomo.gdp.util import (is_child_of, _to_dict, verify_successful_solve,
+                            NORMAL, clone_without_expression_components,
+                            _warn_for_active_disjunct, get_gdp_tree)
+from pyomo.core.util import target_list
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from weakref import ref as weakref_ref
 
@@ -280,7 +279,7 @@ class PartitionDisjuncts_Transformation(Transformation):
                                 # we find them
             Disjunct:    self._warn_for_active_disjunct,
             Block:       False,
-            LogicalConstraint: self._warn_for_active_logical_constraint,
+            LogicalConstraint: False,# TODO
             ExternalFunction: False,
             Port:        False, # not Arcs, because those are deactivated after
                                 # the network.expand_arcs transformation
@@ -767,12 +766,6 @@ class PartitionDisjuncts_Transformation(Transformation):
                                   transformed_parent_disjunct, transBlock,
                                   partition):
         _warn_for_active_disjunct(disjunct, parent_disjunct, NAME_BUFFER)
-
-    def _warn_for_active_logical_constraint(self, constraint, parent_disjunct,
-                                            transformed_parent_disjunct,
-                                            transBlock, partition):
-        _warn_for_active_logical_constraint(constraint, parent_disjunct,
-                                            NAME_BUFFER)
 
 # ESJ: TODO: Add a test for the old indicator variables appearing in logical
 # constraints.

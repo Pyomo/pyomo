@@ -45,7 +45,7 @@ from pyomo.core.base.global_set import (
 )
 
 from collections.abc import Sequence
-
+from operator import itemgetter
 
 logger = logging.getLogger('pyomo.core')
 
@@ -564,28 +564,16 @@ class _SetData(_SetDataBase):
         if not _bnds:
             return None, None
 
-        lb, ub = _bnds.pop()
-        for _lb, _ub in _bnds:
-            if lb is not None:
-                if _lb is None:
-                    lb = None
-                    if ub is None:
-                        break
-                else:
-                    lb = min(lb, _lb)
-            if ub is not None:
-                if _ub is None:
-                    ub = None
-                    if lb is None:
-                        break
-                else:
-                    ub = max(ub, _ub)
-        if lb is not None:
-            if int(lb) == lb:
-                lb = int(lb)
-        if ub is not None:
-            if int(ub) == ub:
-                ub = int(ub)
+        lb = min(map(itemgetter(0), _bnds))
+        if lb == -_inf:
+            lb = None
+        elif int(lb) == lb:
+            lb = int(lb)
+        ub = max(map(itemgetter(1), _bnds))
+        if ub == _inf:
+            ub = None
+        elif int(ub) == ub:
+            ub = int(ub)
         return lb, ub
 
     def get_interval(self):
@@ -609,7 +597,7 @@ class _SetData(_SetDataBase):
     def _get_discrete_interval(self):
         #
         # Note: I'd like to use set() for ranges, since we will be
-        # randomly removing elelments from the list; however, since we
+        # randomly removing elements from the list; however, since we
         # do it by enumerating over ranges, using set() would make this
         # routine nondeterministic.  Not a huge issue for the result,
         # but problemmatic for code coverage.
@@ -661,38 +649,34 @@ class _SetData(_SetDataBase):
                 else:
                     rend, rstart = r.start, r.end
                 if not r.step or abs(r.step) == step:
-                    if ( start is None or rend is None or
-                         start <= rend+step ) and (
-                             end is None or rstart is None or
-                             rstart <= end+step ):
+                    if start <= rend+step and rstart <= end+step:
                         ranges[i] = None
-                        if rstart is None:
-                            start = None
-                        elif start is not None and start > rstart:
+                        if start > rstart:
                             start = rstart
-                        if rend is None:
-                            end = None
-                        elif end is not None and end < rend:
+                        if end < rend:
                             end = rend
                 else:
                     # The range has a step bigger than the base
                     # interval we are building.  For us to absorb
                     # it, it has to be contained within the current
                     # interval +/- step.
-                    if (start is None or ( rstart is not None and
-                                           start <= rstart + step ))\
-                        and (end is None or ( rend is not None and
-                                              end >= rend - step )):
+                    if start <= rstart + step and end >= rend - step:
                         ranges[i] = None
-                        if start is not None and start > rstart:
+                        if start > rstart:
                             start = rstart
-                        if end is not None and end < rend:
+                        if end < rend:
                             end = rend
 
             ranges = list(_ for _ in ranges if _ is not None)
             _rlen = len(ranges)
         if ranges:
             return self.bounds() + (None,)
+        # Note: while unbounded NumericRanges are -inf..inf, Pyomo
+        # Sets are None..None
+        if start == -_inf:
+            start = None
+        if end == _inf:
+            end = None
         return (start, end, step)
 
 
@@ -752,19 +736,16 @@ class _SetData(_SetDataBase):
                     continue
                 # r and interval overlap: merge r into interval
                 ranges[i] = None
-                if r.start is None:
-                    interval.start = None
-                    interval.closed = (True, interval.closed[1])
-                elif interval.start is not None \
-                     and r.start < interval.start:
+                if r.start < interval.start:
                     interval.start = r.start
                     interval.closed = (r.closed[0], interval.closed[1])
+                elif not interval.closed[0] and r.start == interval.start:
+                    interval.closed = (r.closed[0], interval.closed[1])
 
-                if r.end is None:
-                    interval.end = None
-                    interval.closed = (interval.closed[0], True)
-                elif interval.end is not None and r.end > interval.end:
+                if r.end > interval.end:
                     interval.end = r.end
+                    interval.closed = (interval.closed[0], r.closed[1])
+                elif not interval.closed[1] and r.end == interval.end:
                     interval.closed = (interval.closed[0], r.closed[1])
 
             ranges = list(_ for _ in ranges if _ is not None)
@@ -777,7 +758,13 @@ class _SetData(_SetDataBase):
                 # The discrete range extends outside the continuous
                 # interval
                 return self.bounds() + (None,)
-        return (interval.start, interval.end, interval.step)
+        start = interval.start
+        if start == -_inf:
+            start = None
+        end = interval.end
+        if end == _inf:
+            end = None
+        return (start, end, interval.step)
 
     @property
     @deprecated("The 'virtual' attribute is no longer supported", version='5.7')
@@ -2274,40 +2261,30 @@ class AbstractSortedSimpleSet(metaclass=RenamedClass):
 
 ############################################################################
 
-class SetOf(_FiniteSetMixin, _SetData, Component):
+class SetOf(_SetData, Component):
     """"""
     def __new__(cls, *args, **kwds):
         if cls is not SetOf:
             return super(SetOf, cls).__new__(cls)
         reference, = args
-        if isinstance(reference, (tuple, list)):
+        if isinstance(reference, _SetData):
+            if reference.isfinite():
+                if reference.isordered():
+                    return super(SetOf, cls).__new__(OrderedSetOf)
+                else:
+                    return super(SetOf, cls).__new__(FiniteSetOf)
+            else:
+                return super(SetOf, cls).__new__(InfiniteSetOf)
+        if isinstance(reference, Sequence):
             return super(SetOf, cls).__new__(OrderedSetOf)
         else:
-            return super(SetOf, cls).__new__(UnorderedSetOf)
+            return super(SetOf, cls).__new__(FiniteSetOf)
 
     def __init__(self, reference, **kwds):
         _SetData.__init__(self, component=self)
         kwds.setdefault('ctype', SetOf)
         Component.__init__(self, **kwds)
         self._ref = reference
-
-    def get(self, value, default=None):
-        # Note that the efficiency of this depends on the reference object
-        #
-        # The bulk of single-value set members were stored as scalars.
-        # Check that first.
-        if value.__class__ is tuple and len(value) == 1:
-            if value[0] in self._ref:
-                return value[0]
-        if value in self._ref:
-            return value
-        return default
-
-    def __len__(self):
-        return len(self._ref)
-
-    def _iter_impl(self):
-        return iter(self._ref)
 
     def __str__(self):
         if self.parent_block() is not None:
@@ -2326,6 +2303,8 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
 
     @property
     def dimen(self):
+        if isinstance(self._ref, _SetData):
+            return self._ref.dimen
         _iter = iter(self)
         try:
             x = next(_iter)
@@ -2360,10 +2339,39 @@ class SetOf(_FiniteSetMixin, _SetData, Component):
                 str(v._ref),
             ])
 
-class UnorderedSetOf(SetOf):
-    pass
 
-class OrderedSetOf(_ScalarOrderedSetMixin, _OrderedSetMixin, SetOf):
+class InfiniteSetOf(SetOf):
+    def ranges(self):
+        # InfiniteSetOf references are assumed to implement the Set API
+        return self._ref.ranges()
+
+
+class FiniteSetOf(_FiniteSetMixin, SetOf):
+    def get(self, value, default=None):
+        # Note that the efficiency of this depends on the reference object
+        #
+        # The bulk of single-value set members were stored as scalars.
+        # Check that first.
+        if value.__class__ is tuple and len(value) == 1:
+            if value[0] in self._ref:
+                return value[0]
+        if value in self._ref:
+            return value
+        return default
+
+    def __len__(self):
+        return len(self._ref)
+
+    def _iter_impl(self):
+        return iter(self._ref)
+
+
+class UnorderedSetOf(metaclass=RenamedClass):
+    __renamed__new_class__ = FiniteSetOf
+    __renamed__version__ = 'TBD'
+
+
+class OrderedSetOf(_ScalarOrderedSetMixin, _OrderedSetMixin, FiniteSetOf):
     def at(self, index):
         i = self._to_0_based_index(index)
         try:

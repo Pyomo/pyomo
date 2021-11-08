@@ -54,7 +54,7 @@ def generate_strongly_connected_components(
         variables = []
         for con in constraints:
             for var in identify_variables(
-                    con.body,
+                    con.expr,
                     include_fixed=include_fixed,
                     ):
                 if var not in var_set:
@@ -117,7 +117,7 @@ def solve_strongly_connected_components(block, solver=None, solve_kwds=None):
     var_set = ComponentSet()
     variables = []
     for con in constraints:
-        for var in identify_variables(con.body, include_fixed=False):
+        for var in identify_variables(con.expr, include_fixed=False):
             # Because we are solving, we do not want to include fixed variables
             if var not in var_set:
                 variables.append(var)

@@ -269,27 +269,19 @@ class Expression(IndexedComponent):
             return IndexedExpression.__new__(IndexedExpression)
 
     def __init__(self, *args, **kwds):
-        _init = tuple(
-            arg for arg in
-            (kwds.pop(_arg, None) for _arg in ('rule', 'expr', 'initialize'))
-            if arg is not None
-        )
-        if len(_init) == 1:
-            _init = _init[0]
-        elif not _init:
-            _init = None
-        else:
-            raise ValueError(
-                "Duplicate initialization: Expression() only "
-                "accepts one of 'rule=', 'expr=', and 'initialize='")
-
-        kwds.setdefault('ctype', Expression)
-        IndexedComponent.__init__(self, *args, **kwds)
-
+        _init = self._pop_from_kwargs(
+            'Expression', kwds, ('rule', 'expr', 'initialize'), None)
         # Historically, Expression objects were dense (but None):
         # setting arg_not_specified causes Initializer to recognize
         # _init==None as a constant initializer returning None
+        #
+        # To initialize a completely empty Expression, pass either
+        # initialize={} (to require explicit setitem before a getitem),
+        # or initialize=NOTSET (to allow getitem before setitem)
         self._rule = Initializer(_init, arg_not_specified=NOTSET)
+
+        kwds.setdefault('ctype', Expression)
+        IndexedComponent.__init__(self, *args, **kwds)
 
     def _pprint(self):
         return (
@@ -359,10 +351,9 @@ class Expression(IndexedComponent):
             #raise KeyError(idx)
         else:
             _init = self._rule(self.parent_block(), idx)
-        obj = self._setitem_when_not_present(idx, _init)
-        #if obj is None:
-        #    raise KeyError(idx)
-        return obj
+            if _init is Expression.Skip:
+                raise KeyError(idx)
+        return self._setitem_when_not_present(idx, _init)
 
     def construct(self, data=None):
         """ Apply the rule to construct values in this set """

@@ -18,18 +18,19 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numvalue import ZeroConstant
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base import Transformation, TransformationFactory, Reference
-from pyomo.core import (
-    Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
-    Expression, SortComponents, TraversalStrategy,
-    Any, RangeSet, Reals, value, NonNegativeIntegers, LogicalConstraint,
-)
+from pyomo.core import ( Block, BooleanVar, Connector, Constraint, Param, Set,
+                         SetOf, Suffix, Var, Expression, SortComponents,
+                         TraversalStrategy, Any, RangeSet, Reals, value,
+                         NonNegativeIntegers, LogicalConstraint, Binary )
+from pyomo.core.base.boolean_var import (
+    _DeprecatedImplicitAssociatedBinaryVariable)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import ( _warn_for_active_logical_constraint,
-                             clone_without_expression_components, target_list,
-                             is_child_of, get_src_disjunction,
-                             get_src_constraint, get_transformed_constraints,
-                             get_src_disjunct, _warn_for_active_disjunction,
+from pyomo.gdp.util import ( clone_without_expression_components, is_child_of,
+                             get_src_disjunction, get_src_constraint,
+                             get_transformed_constraints, get_src_disjunct,
+                             _warn_for_active_disjunction,
                              _warn_for_active_disjunct, preprocess_targets)
+from pyomo.core.util import target_list
 from pyomo.network import Port
 from functools import wraps
 from weakref import ref as weakref_ref
@@ -78,11 +79,10 @@ class Hull_Reformulation(Transformation):
 
         'srcConstraints': ComponentMap(<transformed constraint>:
                                        <src constraint>),
-        'transformedConstraints':ComponentMap(<src constraint container>:
-                                              <transformed constraint container>,
-                                              <src constraintData>:
-                                              [<transformed constraintDatas>]
-                                             )
+        'transformedConstraints':
+            ComponentMap(<src constraint container> :
+                         <transformed constraint container>,
+                         <src constraintData> : [<transformed constraintDatas>])
 
     All transformed Disjuncts will have a pointer to the block their transformed
     constraints are on, and all transformed Disjunctions will have a
@@ -163,8 +163,9 @@ class Hull_Reformulation(Transformation):
     CONFIG.declare('assume_fixed_vars_permanent', cfg.ConfigValue(
         default=False,
         domain=bool,
-        description="Boolean indicating whether or not to transform so that the "
-        "the transformed model will still be valid when fixed Vars are unfixed.",
+        description="Boolean indicating whether or not to transform so that "
+        "the transformed model will still be valid when fixed Vars are "
+        "unfixed.",
         doc="""
         If True, the transformation will not disaggregate fixed variables.
         This means that if a fixed variable is unfixed after transformation,
@@ -190,7 +191,8 @@ class Hull_Reformulation(Transformation):
             Disjunction: self._warn_for_active_disjunction,
             Disjunct:    self._warn_for_active_disjunct,
             Block:       self._transform_block_on_disjunct,
-            LogicalConstraint: self._warn_for_active_logical_statement,
+            LogicalConstraint: False, # We transform these before we call
+                                      # handlers
             Port:        False,
             }
         self._generate_debug_messages = False
@@ -205,16 +207,17 @@ class Hull_Reformulation(Transformation):
                     local_var_dict[disj].update(var_list)
 
     def _get_local_var_suffixes(self, block, local_var_dict):
-        # You can specify suffixes on any block (disjuncts included). This method
-        # starts from a Disjunct (presumably) and checks for a LocalVar suffixes
-        # going both up and down the tree, adding them into the dictionary that
-        # is the second argument.
+        # You can specify suffixes on any block (disjuncts included). This
+        # method starts from a Disjunct (presumably) and checks for a LocalVar
+        # suffixes going both up and down the tree, adding them into the
+        # dictionary that is the second argument.
 
         # first look beneath where we are (there could be Blocks on this
         # disjunct)
-        for b in block.component_data_objects(Block, descend_into=(Block),
-                                              active=True,
-                                              sort=SortComponents.deterministic):
+        for b in block.component_data_objects(
+                Block, descend_into=(Block),
+                active=True,
+                sort=SortComponents.deterministic):
             self._add_local_vars(b, local_var_dict)
         # now traverse upwards and get what's above
         while block is not None:
@@ -233,8 +236,8 @@ class Hull_Reformulation(Transformation):
 
     def _apply_to_impl(self, instance, **kwds):
         if not instance.ctype in (Block, Disjunct):
-            raise GDP_Error("Transformation called on %s of type %s. 'instance' "
-                            "must be a ConcreteModel, Block, or Disjunct (in "
+            raise GDP_Error("Transformation called on %s of type %s. 'instance'"
+                            " must be a ConcreteModel, Block, or Disjunct (in "
                             "the case of nested disjunctions)." %
                             (instance.name, instance.ctype))
 
@@ -243,36 +246,28 @@ class Hull_Reformulation(Transformation):
         self._generate_debug_messages = is_debug_set(logger)
 
         targets = self._config.targets
+        knownBlocks = {}
         if targets is None:
             targets = ( instance, )
-        else:
-            # we need to preprocess targets to make sure that if there are any
-            # disjunctions in targets that their disjuncts appear before them in
-            # the list.
-            targets = preprocess_targets(targets)
-        knownBlocks = {}
+        # we need to preprocess targets to make sure that if there are any
+        # disjunctions in targets that their disjuncts appear before them in
+        # the list.
+        targets = preprocess_targets(targets, instance, knownBlocks)
         for t in targets:
-            # check that t is in fact a child of instance
-            if not is_child_of(parent=instance, child=t,
-                               knownBlocks=knownBlocks):
-                raise GDP_Error(
-                    "Target '%s' is not a component on instance '%s'!"
-                    % (t.name, instance.name))
-            elif t.ctype is Disjunction:
+            if t.ctype is Disjunction:
                 if t.is_indexed():
                     self._transform_disjunction(t)
                 else:
                     self._transform_disjunctionData(t, t.index())
-            elif t.ctype in (Block, Disjunct):
+            else:# t.ctype in (Block, Disjunct):
                 if t.is_indexed():
                     self._transform_block(t)
                 else:
                     self._transform_blockData(t)
-            else:
-                raise GDP_Error(
-                    "Target '%s' was not a Block, Disjunct, or Disjunction. "
-                    "It was of type %s and can't be transformed."
-                    % (t.name, type(t)) )
+
+        # at the end, transform any logical constraints that might be on
+        # instance
+        TransformationFactory('core.logical_to_linear').apply_to(instance)
 
     def _add_transformation_block(self, instance):
         # make a transformation block on instance where we will store
@@ -323,6 +318,8 @@ class Hull_Reformulation(Transformation):
                 descend_into=(Block,Disjunct),
                 descent_order=TraversalStrategy.PostfixDFS):
             self._transform_disjunction(disjunction)
+        # transform any logical constraints
+        TransformationFactory('core.logical_to_linear').apply_to(obj)
 
     def _add_xor_constraint(self, disjunction, transBlock):
         # Put XOR constraint on the transformation block
@@ -342,9 +339,9 @@ class Hull_Reformulation(Transformation):
         orC = Constraint(disjunction.index_set())
         transBlock.add_component(
             unique_component_name(transBlock,
-                                  disjunction.getname(fully_qualified=True,
-                                                      name_buffer=NAME_BUFFER) +\
-                                  '_xor'), orC)
+                                  disjunction.getname(
+                                      fully_qualified=True,
+                                      name_buffer=NAME_BUFFER) + '_xor'), orC)
         disjunction._algebraic_constraint = weakref_ref(orC)
 
         return orC
@@ -569,8 +566,8 @@ class Hull_Reformulation(Transformation):
             # variable and the particular disjunction because there is a
             # different one for each disjunction
             if disaggregationConstraintMap.get(var) is not None:
-                disaggregationConstraintMap[var][obj] = disaggregationConstraint[
-                    (i, index)]
+                disaggregationConstraintMap[var][
+                    obj] = disaggregationConstraint[(i, index)]
             else:
                 thismap = disaggregationConstraintMap[var] = ComponentMap()
                 thismap[obj] = disaggregationConstraint[(i, index)]
@@ -720,6 +717,27 @@ class Hull_Reformulation(Transformation):
             transBlock = obj.algebraic_constraint().parent_block()
 
             self._transfer_var_references(transBlock, destinationBlock)
+
+        # Transform any logical constraints here. We need to do this before we
+        # create the variable references!
+        TransformationFactory('core.logical_to_linear').apply_to(block)
+
+        # We don't know where all the BooleanVars are used, so if there are any
+        # that the above transformation didn't transform, we need to do it now,
+        # so that the Reference gets moved up. This won't be necessary when the
+        # writers are willing to find Vars not in the active subtree.
+        for boolean in block.component_data_objects(BooleanVar,
+                                                    descend_into=Block,
+                                                    active=None):
+            if isinstance(boolean._associated_binary,
+                          _DeprecatedImplicitAssociatedBinaryVariable):
+                parent_block = boolean.parent_block()
+                new_var = Var(domain=Binary)
+                parent_block.add_component(
+                    unique_component_name(parent_block,
+                                          boolean.local_name + "_asbinary"),
+                    new_var)
+                boolean.associate_binary_var(new_var)
 
         # add references to all local variables on block (including the
         # indicator_var). Note that we do this after we have moved up the
@@ -1129,7 +1147,8 @@ class Hull_Reformulation(Transformation):
             if transBlock is not None:
                 break
         if transBlock is None:
-            raise GDP_Error("Disjunction '%s' has not been properly transformed:"
+            raise GDP_Error("Disjunction '%s' has not been properly "
+                            "transformed:"
                             " None of its disjuncts are transformed."
                             % disjunction.name)
 
