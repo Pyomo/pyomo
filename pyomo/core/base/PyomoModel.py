@@ -647,10 +647,6 @@ arguments (which have been ignored):"""
             logger.error(msg)
 
         if self.is_constructed():
-            raise deprecation_warning(
-                "Cannot call Model.create_instance() on a constructed "
-                "model; returning a clone of the current model instance.",
-                version='5.4')
             return self.clone()
 
         if report_timing:

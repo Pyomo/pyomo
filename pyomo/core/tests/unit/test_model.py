@@ -879,12 +879,6 @@ class Test(unittest.TestCase):
                           ['y','I','x','c'] )
         self.assertEqual( len(list(EXPR.identify_variables(instance.c.body))), 3 )
 
-    def test_error1(self):
-        model = ConcreteModel()
-        model.x = Var()
-        with self.assertRaises(RuntimeError):
-            instance = model.create_instance()
-
     def test_error_creating_model_baseclass(self):
         with self.assertRaises(TypeError):
             m = Model()
