@@ -153,7 +153,7 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
         print('EXIT: Maximum iterations reached: {}.'.format(max_its))
 
 
-def trf_config():
+def _trf_config():
     CONFIG = ConfigDict('TrustRegion')
 
     ### Solver options
@@ -302,7 +302,7 @@ class TrustRegionSolver(object):
     The Trust Region Solver is a 'solver' based on the 2016/2018/2020 AiChE
     papers by Eason (2016/2018), Yoshio (2020), and Biegler.
     """
-    CONFIG = trf_config()
+    CONFIG = _trf_config()
 
     def available(self, exception_flag=False):
         """
@@ -330,6 +330,7 @@ class TrustRegionSolver(object):
 
     def solve(self, model, ext_fcn_surrogate_map_rule, **kwds):
         config = self.CONFIG(kwds.pop('options', {}))
+        config.set_value(kwds)
         if ext_fcn_surrogate_map_rule is None:
             # If the user does not pass us a "basis" function,
             # we default to 0.

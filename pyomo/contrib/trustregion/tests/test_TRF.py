@@ -49,7 +49,7 @@ class TestTrustRegionConfig(unittest.TestCase):
         try:
             self.TRF.solve(self.m, [self.bb], **kwds)
         except Exception as e:
-            print('error calling optTRF.solve: %s' % str(e))
+            print('error calling TRF.solve: %s' % str(e))
             status = False
         return status
 
