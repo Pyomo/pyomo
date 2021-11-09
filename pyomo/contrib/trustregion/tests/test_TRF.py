@@ -16,9 +16,8 @@ from pyomo.environ import (
     Var, ConcreteModel, Reals, ExternalFunction,
     Objective, Constraint, sqrt, sin, SolverFactory
     )
-from pyomo.contrib.trustregion.TRF import (
-    trust_region_method, TrustRegionSolver
-    )
+
+logger = logging.getLogger('pyomo.contrib.trustregion')
 
 @unittest.skipIf(not SolverFactory('ipopt').available(False), "The IPOPT solver is not available")
 @unittest.skipIf(not SolverFactory('gjh').available(False), "The GJH solver is not available")

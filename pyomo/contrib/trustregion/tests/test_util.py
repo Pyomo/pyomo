@@ -93,7 +93,7 @@ class TestLogger(unittest.TestCase):
         self.iterLogger.newIteration(self.iteration, self.inputs,
                                  self.outputs, self.other,
                                  self.thetak, self.objk,
-                                 0, self.params)
+                                 self.params)
         self.assertEqual(len(self.iterLogger.iterations), 1)
 
     @unittest.skipUnless(numpy_available, "numpy is not available")
@@ -101,7 +101,7 @@ class TestLogger(unittest.TestCase):
         self.iterLogger.newIteration(self.iteration, self.inputs,
                                   self.outputs, self.other,
                                   self.thetak, self.objk,
-                                  0, self.params)
+                                  self.params)
         OUTPUT = StringIO()
         with LoggingIntercept(OUTPUT, 'pyomo.contrib.trustregion', logging.INFO):
             self.iterLogger.printIteration(self.iteration)

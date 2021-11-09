@@ -9,7 +9,10 @@
 #  ___________________________________________________________________________
 
 import logging
-from numpy.linalg import norm
+
+from pyomo.common.dependencies import numpy, numpy_available
+if numpy_available:
+    from numpy.linalg import norm
 
 from pyomo.core.base.range import NumericRange
 from pyomo.common.config import (ConfigDict, ConfigValue,
