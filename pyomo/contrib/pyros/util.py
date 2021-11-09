@@ -280,8 +280,21 @@ def transform_to_standard_form(model):
     return
 
 
+def get_vars_from_objective(block):
+    """Determine all variables used in active objective expressions in
+    a Block.
+    """
+    seen = set()
+    for obj in block.component_data_objects(Objective,
+                                            active=True):
+        for var in EXPR.identify_variables(obj.expr):
+            if id(var) not in seen:
+                seen.add(id(var))
+                yield var
+
+
 def get_vars_from_constraints(block):
-    """Determine all variables used in constraint expressions in
+    """Determine all variables used in active constraint expressions in
     a Block.
     """
     seen = set()
@@ -313,7 +326,11 @@ def replace_uncertain_bounds_with_constraints(model, uncertain_params):
                                               'uncertain_var_bound_cons'),
                         uncertain_var_bound_constrs)
 
-    for v in get_vars_from_constraints(model):
+    # get all variables in active objective and constraint expression(s)
+    vars_in_cons = ComponentSet(get_vars_from_constraints(model))
+    vars_in_obj = ComponentSet(get_vars_from_objective(model))
+
+    for v in vars_in_cons | vars_in_obj:
         # get mutable parameters in variable bounds expressions
         # TODO: replace _ub and _lb with more secure getter when available
         mutable_params_ub = ComponentSet(identify_mutable_parameters(v._ub))
@@ -326,8 +343,6 @@ def replace_uncertain_bounds_with_constraints(model, uncertain_params):
         if mutable_params_lb & uncertain_param_set:
             uncertain_var_bound_constrs.add(v._lb - v <= 0)
             v.setlb(None)
-
-    return
 
 
 def validate_kwarg_inputs(model, config):

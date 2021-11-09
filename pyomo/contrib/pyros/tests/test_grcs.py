@@ -15,6 +15,7 @@ from pyomo.contrib.pyros.util import selective_clone, add_decision_rule_variable
     coefficient_matching
 from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.util import get_vars_from_constraints
+from pyomo.contrib.pyros.util import get_vars_from_objective
 from pyomo.contrib.pyros.uncertainty_sets import *
 from pyomo.contrib.pyros.master_problem_methods import add_scenario_to_master, initial_construct_master, solve_master, \
     minimize_dr_vars
@@ -289,23 +290,27 @@ class testTurnBoundsToConstraints(unittest.TestCase):
         m.x = Var(initialize=1, bounds=(0, exp(-1*m.p / 8) * m.q * m.s))
         m.y = Var(initialize=-1, bounds=(m.r * m.p, 0))
         m.z = Var(initialize=1, bounds=(0, m.s))
+        m.t = Var(initialize=1, bounds=(0, m.p ** 2))
 
         # objective
-        m.obj = Objective(sense=maximize, expr=m.x**2 - m.y + m.z**2 + m.v)
+        m.obj = Objective(sense=maximize, expr=m.x**2 - m.y + m.t**2 + m.v)
 
         # clone model
         mod = m.clone()
         uncertain_params = [mod.p, mod.r]
 
-        # check variable replacement without performance constraints
+        # check variable replacement without any active objective
+        # or active performance constraints
+        mod.obj.deactivate()
         replace_uncertain_bounds_with_constraints(mod, uncertain_params)
         self.assertTrue(hasattr(mod, 'uncertain_var_bound_cons'),
                         msg='Uncertain variable bounds erroneously added. '
                             'Check only variables participating in active '
-                            'constraints are added.')
-        self.assertTrue(not mod.uncertain_var_bound_cons)
+                            'objective and constraints are added.')
+        self.assertFalse(mod.uncertain_var_bound_cons)
+        mod.obj.activate()
 
-        # constraints to add
+        # add performance constraints
         constraints_m = ConstraintList()
         m.add_component('perf_constraints', constraints_m)
         constraints_m.add(m.w == 2 * m.x + m.y)
@@ -324,24 +329,33 @@ class testTurnBoundsToConstraints(unittest.TestCase):
         uncertain_cons.add(m.y._lb - m.y <= 0)
         uncertain_cons.add(m.v - m.v._ub <= 0)
         uncertain_cons.add(m.v._lb - m.v <= 0)
+        uncertain_cons.add(m.t - m.t._ub <= 0)
+
         # remove corresponding variable bounds
         m.x.setub(None)
         m.y.setlb(None)
         m.v.setlb(None)
         m.v.setub(None)
+        m.t.setub(None)
+
+        # check that vars participating in
+        # active objective and activated constraints correctly determined
+        svars_con = ComponentSet(get_vars_from_constraints(mod_2))
+        svars_obj = ComponentSet(get_vars_from_objective(mod_2))
+        vars_in_active_constraints = ComponentSet([mod_2.z, mod_2.w, mod_2.y,
+                                                   mod_2.x, mod_2.v])
+        vars_in_active_obj = ComponentSet([mod_2.x, mod_2.y, mod_2.t, mod_2.v])
+        self.assertEqual(svars_con, vars_in_active_constraints,
+                         msg='Mismatch of variables participating in '
+                             'activated constraints.')
+        self.assertEqual(svars_obj, vars_in_active_obj,
+                         msg='Mismatch of variables participating in '
+                             'activated objectives.')
 
         # replace bounds in model with performance constraints
         uncertain_params = [mod_2.p, mod_2.r]
         replace_uncertain_bounds_with_constraints(mod_2, uncertain_params)
 
-        # check that vars participating in
-        # activated constraints correctly determined
-        svars = ComponentSet([v for v in get_vars_from_constraints(mod_2)])
-        vars_in_active_constraints = ComponentSet([mod_2.z, mod_2.w, mod_2.y,
-                                                   mod_2.x, mod_2.v])
-        self.assertEqual(svars, vars_in_active_constraints,
-                         msg='Mismatch in variables participating in '
-                             'activated constraints.')
         # check that same number of constraints added to model
         self.assertEqual(len(list(m.component_data_objects(Constraint))),
                          len(list(mod_2.component_data_objects(Constraint))),
