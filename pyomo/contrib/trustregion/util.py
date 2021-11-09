@@ -13,9 +13,7 @@ Common utilities for Trust Region Framework
 """
 
 import logging
-from pyomo.contrib.pynumero.dependencies import (
-    numpy as np, numpy_available
-)
+from pyomo.common.dependencies import (numpy as np, numpy_available)
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
