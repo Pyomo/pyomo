@@ -22,21 +22,21 @@ class TestFilter(unittest.TestCase):
         pass
 
     def test_FilterElement(self):
-        fe = FilterElement(self.objective, self.infeasible)
+        fe = FilterElement(self.infeasible, self.objective)
         self.assertEqual(fe.objective, self.objective)
         self.assertEqual(fe.infeasible, self.infeasible)
 
     def test_addToFilter(self):
-        fe = FilterElement(self.objective, self.infeasible)
+        fe = FilterElement(self.infeasible, self.objective)
         self.tmpFilter.addToFilter(fe)
         self.assertIn(fe, self.tmpFilter.TrustRegionFilter)
 
     def test_isAcceptable(self):
-        fe = FilterElement(0.5, 0.25)
+        fe = FilterElement(0.25, 0.5)
         # A sufficiently feasible element
         self.assertTrue(self.tmpFilter.isAcceptable(fe,
                                                     self.theta_max))
-        fe = FilterElement(1.0, 15.0)
+        fe = FilterElement(15.0, 1.0)
         # A sufficiently infeasible element
         self.assertFalse(self.tmpFilter.isAcceptable(fe,
                                                     self.theta_max))
