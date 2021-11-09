@@ -16,8 +16,6 @@ import logging
 from pyomo.contrib.pynumero.dependencies import (
     numpy as np, numpy_available
 )
-if numpy_available:
-    from numpy import array
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
@@ -25,7 +23,7 @@ def copyVector(x, y, z):
     """
     This function is to create a hard copy of vector x, y, z.
     """
-    return array(x), array(y), array(z)
+    return np.array(x), np.array(y), np.array(z)
 
 def minIgnoreNone(a, b):
     """

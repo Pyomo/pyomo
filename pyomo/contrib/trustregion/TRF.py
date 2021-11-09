@@ -10,9 +10,7 @@
 
 import logging
 
-# from pyomo.common.dependencies import numpy, numpy_available
-# if numpy_available:
-#     from numpy.linalg import norm
+from pyomo.common.dependencies import (numpy as np, numpy_available)
 
 from pyomo.core.base.range import NumericRange
 from pyomo.common.config import (ConfigDict, ConfigValue,
@@ -23,7 +21,7 @@ from pyomo.contrib.trustregion.interface import TRFInterface
 from pyomo.contrib.trustregion.util import (
     copyVector, minIgnoreNone, maxIgnoreNone, IterationLogger
     )
-from pyomo.opt.base import SolverFactory
+from pyomo.opt import SolverFactory
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
@@ -101,9 +99,9 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
         if not success:
             raise Exception('EXIT: Subproblem TRSP_k solve failed.\n')
 
-        step_norm_k = norm() # Difference between init and new input/outputs
+        step_norm_k = np.norm() # Difference between init and new input/outputs
         # Check filter acceptance
-        feasibility_k = norm() # feasibility(x) = norm(y - d(w))_1
+        feasibility_k = np.norm() # feasibility(x) = norm(y - d(w))_1
         filterElement = FilterElement(feasibility_k, obj_k)
         if not TRFilter.isAcceptable(filterElement, max_feasibility):
             # Reject the step
@@ -304,7 +302,7 @@ class TrustRegionSolver(object):
     """
     CONFIG = _trf_config()
 
-    def available(self, exception_flag=False):
+    def available(self, exception_flag=True):
         """
         Check if solver is available.
         """
@@ -323,9 +321,9 @@ class TrustRegionSolver(object):
         return True
 
     def __enter__(self):
-        pass
+        return self
 
-    def __exit(self, et, ev, tb):
+    def __exit__(self, et, ev, tb):
         pass
 
     def solve(self, model, ext_fcn_surrogate_map_rule, **kwds):
