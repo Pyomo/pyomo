@@ -322,6 +322,10 @@ class _ComponentBase(PyomoObject):
             # The first line should be a hanging indent (i.e., not indented)
             ostream.newline = False
 
+        if self.is_reference():
+            _attr = list(_attr) if _attr else []
+            _attr.append(('ReferenceTo', self.referent))
+
         if _name:
             ostream.write(_name+" : ")
         if _doc:
@@ -542,15 +546,6 @@ class Component(_ComponentBase):
 
     def __str__(self):
         """Return the component name"""
-        return self.name
-
-    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
-        """Return the component name"""
-        if compute_values:
-            try:
-                return str(self())
-            except:
-                pass
         return self.name
 
     def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
@@ -853,23 +848,6 @@ class ComponentData(_ComponentBase):
     def __str__(self):
         """Return a string with the component name and index"""
         return self.name
-
-    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
-        """
-        Return a string representation of this component,
-        applying the labeler if passed one.
-        """
-        if compute_values:
-            try:
-                return str(self())
-            except:
-                pass
-        if smap:
-            return smap.getSymbol(self, labeler)
-        if labeler is not None:
-            return labeler(self)
-        else:
-            return self.__str__()
 
     def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
         """Return a string with the component name and index"""

@@ -175,7 +175,7 @@ class BooleanValue(PyomoObject):
         Returns:
             A string representation for the expression tree.
         """
-        if compute_values:
+        if compute_values and self.is_fixed():
             try:
                 return str(self())
             except:
@@ -185,7 +185,7 @@ class BooleanValue(PyomoObject):
                 return smap.getSymbol(self, labeler)
             elif labeler is not None:
                 return labeler(self)
-        return self.__str__()
+        return str(self)
 
 
 class BooleanConstant(BooleanValue):

@@ -19,7 +19,7 @@ import math
 from pyomo.common import timing
 from pyomo.common.collections import Bunch
 from pyomo.common.dependencies import pympler, pympler_available
-from pyomo.common.deprecation import deprecated
+from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import is_debug_set
 from pyomo.core.expr.symbol_map import SymbolMap
@@ -647,7 +647,7 @@ arguments (which have been ignored):"""
             logger.error(msg)
 
         if self.is_constructed():
-            raise RuntimeError(
+            raise deprecation_warning(
                 "Cannot call Model.create_instance() on a constructed "
                 "model; returning a clone of the current model instance.",
                 version='5.4')

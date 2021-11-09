@@ -12,8 +12,6 @@ import pyomo.core.expr.current as EXPR
 from pyomo.gdp import GDP_Error, Disjunction
 from pyomo.gdp.disjunct import _DisjunctData, Disjunct
 
-from pyomo.core.base.component import _ComponentBase
-
 from pyomo.core import Block, TraversalStrategy
 from pyomo.opt import TerminationCondition, SolverStatus
 from weakref import ref as weakref_ref
@@ -78,7 +76,7 @@ def clone_without_expression_components(expr, substitute=None):
     #
     visitor = EXPR.ExpressionReplacementVisitor(substitute=substitute,
                                                 remove_named_expressions=True)
-    return visitor.dfs_postorder_stack(expr)
+    return visitor.walk_expression(expr)
 
 def preprocess_targets(targets):
     preprocessed_targets = []
@@ -96,24 +94,6 @@ def preprocess_targets(targets):
         # are declared before disjunctions they appear in
         preprocessed_targets.append(t)
     return preprocessed_targets
-
-def target_list(x):
-    if isinstance(x, _ComponentBase):
-        return [ x ]
-    elif hasattr(x, '__iter__'):
-        ans = []
-        for i in x:
-            if isinstance(i, _ComponentBase):
-                ans.append(i)
-            else:
-                raise ValueError(
-                    "Expected Component or list of Components."
-                    "\n\tReceived %s" % (type(i),))
-        return ans
-    else:
-        raise ValueError(
-            "Expected Component or list of Components."
-            "\n\tReceived %s" % (type(x),))
 
 # [ESJ 07/09/2019 Should this be a more general utility function elsewhere?  I'm
 #  putting it here for now so that all the gdp transformations can use it.

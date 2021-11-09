@@ -23,7 +23,8 @@ from pyomo.contrib.gdpopt.GDPopt import GDPoptSolver
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
 from pyomo.contrib.gdpopt.util import is_feasible, time_code
-from pyomo.environ import ConcreteModel, Objective, SolverFactory, Var, value, Integers, Block, Constraint, maximize
+from pyomo.environ import ( ConcreteModel, Objective, SolverFactory, Var, value,
+                            Integers, Block, Constraint, maximize)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
 from pyomo.opt import TerminationCondition
@@ -40,13 +41,15 @@ LOA_solvers = (mip_solver, nlp_solver)
 GLOA_solvers = (mip_solver, global_nlp_solver, minlp_solver)
 LOA_solvers_available = all(SolverFactory(s).available() for s in LOA_solvers)
 GLOA_solvers_available = all(SolverFactory(s).available() for s in GLOA_solvers)
-license_available = SolverFactory(global_nlp_solver).license_is_valid() if GLOA_solvers_available else False
+license_available = SolverFactory(global_nlp_solver).license_is_valid() if \
+                    GLOA_solvers_available else False
 
 
 class TestGDPoptUnit(unittest.TestCase):
     """Real unit tests for GDPopt"""
 
-    @unittest.skipUnless(SolverFactory(mip_solver).available(), "MIP solver not available")
+    @unittest.skipUnless(SolverFactory(mip_solver).available(), 
+                         "MIP solver not available")
     def test_solve_linear_GDP_unbounded(self):
         m = ConcreteModel()
         m.GDPopt_utils = Block()
@@ -58,17 +61,21 @@ class TestGDPoptUnit(unittest.TestCase):
         ])
         m.o = Objective(expr=m.z)
         m.GDPopt_utils.variable_list = [m.x, m.y, m.z]
-        m.GDPopt_utils.disjunct_list = [m.d._autodisjuncts[0], m.d._autodisjuncts[1]]
+        m.GDPopt_utils.disjunct_list = [m.d._autodisjuncts[0],
+                                        m.d._autodisjuncts[1]]
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
             solver_data = GDPoptSolveData()
             solver_data.timing = Bunch()
             with time_code(solver_data.timing, 'main', is_main_timer=True):
-                solve_linear_GDP(m, solver_data, GDPoptSolver.CONFIG(dict(mip_solver=mip_solver, strategy='LOA')))
-            self.assertIn("Linear GDP was unbounded. Resolving with arbitrary bound values",
-                          output.getvalue().strip())
+                solve_linear_GDP(m, solver_data,
+                                 GDPoptSolver.CONFIG(dict(mip_solver=mip_solver,
+                                                          strategy='LOA')))
+            self.assertIn("Linear GDP was unbounded. Resolving with arbitrary "
+                          "bound values", output.getvalue().strip())
 
-    @unittest.skipUnless(SolverFactory(mip_solver).available(), "MIP solver not available")
+    @unittest.skipUnless(SolverFactory(mip_solver).available(), 
+                         "MIP solver not available")
     def test_solve_lp(self):
         m = ConcreteModel()
         m.x = Var(bounds=(-5, 5))
@@ -76,12 +83,14 @@ class TestGDPoptUnit(unittest.TestCase):
         m.o = Objective(expr=m.x)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
-            SolverFactory('gdpopt').solve(m, mip_solver=mip_solver, strategy='LOA')
+            SolverFactory('gdpopt').solve(m, mip_solver=mip_solver,
+                                          strategy='LOA')
             self.assertIn("Your model is an LP (linear program).",
                           output.getvalue().strip())
             self.assertAlmostEqual(value(m.o.expr), 1)
 
-    @unittest.skipUnless(SolverFactory(nlp_solver).available(), 'NLP solver not available')
+    @unittest.skipUnless(SolverFactory(nlp_solver).available(), 
+                         'NLP solver not available')
     def test_solve_nlp(self):
         m = ConcreteModel()
         m.x = Var(bounds=(-5, 5))
@@ -89,12 +98,14 @@ class TestGDPoptUnit(unittest.TestCase):
         m.o = Objective(expr=m.x ** 2)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
-            SolverFactory('gdpopt').solve(m, nlp_solver=nlp_solver, strategy='LOA')
+            SolverFactory('gdpopt').solve(m, nlp_solver=nlp_solver,
+                                          strategy='LOA')
             self.assertIn("Your model is an NLP (nonlinear program).",
                           output.getvalue().strip())
             self.assertAlmostEqual(value(m.o.expr), 1)
 
-    @unittest.skipUnless(SolverFactory(mip_solver).available(), "MIP solver not available")
+    @unittest.skipUnless(SolverFactory(mip_solver).available(), 
+                         "MIP solver not available")
     def test_solve_constant_obj(self):
         m = ConcreteModel()
         m.x = Var(bounds=(-5, 5))
@@ -102,56 +113,66 @@ class TestGDPoptUnit(unittest.TestCase):
         m.o = Objective(expr=1)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
-            SolverFactory('gdpopt').solve(m, mip_solver=mip_solver, strategy='LOA')
+            SolverFactory('gdpopt').solve(m, mip_solver=mip_solver,
+                                          strategy='LOA')
             self.assertIn("Your model is an LP (linear program).",
                           output.getvalue().strip())
             self.assertAlmostEqual(value(m.o.expr), 1)
 
-    @unittest.skipUnless(SolverFactory(nlp_solver).available(), 'NLP solver not available')
+    @unittest.skipUnless(SolverFactory(nlp_solver).available(), 
+                         'NLP solver not available')
     def test_no_objective(self):
         m = ConcreteModel()
         m.x = Var(bounds=(-5, 5))
         m.c = Constraint(expr=m.x ** 2 >= 1)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
-            SolverFactory('gdpopt').solve(m, nlp_solver=nlp_solver, strategy='LOA')
-            self.assertIn("Model has no active objectives. Adding dummy objective.",
-                          output.getvalue().strip())
+            SolverFactory('gdpopt').solve(m, nlp_solver=nlp_solver,
+                                          strategy='LOA')
+            self.assertIn("Model has no active objectives. Adding dummy "
+                          "objective.", output.getvalue().strip())
 
     def test_multiple_objectives(self):
         m = ConcreteModel()
         m.x = Var()
         m.o = Objective(expr=m.x)
         m.o2 = Objective(expr=m.x + 1)
-        with self.assertRaisesRegex(ValueError, "Model has multiple active objectives"):
+        with self.assertRaisesRegex(ValueError, "Model has multiple active "
+                                    "objectives"):
             SolverFactory('gdpopt').solve(m, strategy='LOA')
 
     def test_is_feasible_function(self):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 3), initialize=2)
         m.c = Constraint(expr=m.x == 2)
-        self.assertTrue(is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA'))))
+        self.assertTrue(
+            is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA'))))
 
         m.c2 = Constraint(expr=m.x <= 1)
-        self.assertFalse(is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA'))))
+        self.assertFalse(
+            is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA'))))
 
         m = ConcreteModel()
         m.x = Var(bounds=(0, 3), initialize=2)
         m.c = Constraint(expr=m.x >= 5)
-        self.assertFalse(is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA'))))
+        self.assertFalse(
+            is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA'))))
 
         m = ConcreteModel()
         m.x = Var(bounds=(3, 3), initialize=2)
-        self.assertFalse(is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA'))))
+        self.assertFalse(
+            is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA'))))
 
         m = ConcreteModel()
         m.x = Var(bounds=(0, 1), initialize=2)
-        self.assertFalse(is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA'))))
+        self.assertFalse(
+            is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA'))))
 
         m = ConcreteModel()
         m.x = Var(bounds=(0, 1), initialize=2)
         m.d = Disjunct()
-        with self.assertRaisesRegex(NotImplementedError, "Found active disjunct"):
+        with self.assertRaisesRegex(NotImplementedError, 
+                                    "Found active disjunct"):
             is_feasible(m, GDPoptSolver.CONFIG(dict(strategy='LOA')))
 
 
@@ -219,7 +240,8 @@ class TestGDPopt(unittest.TestCase):
             tee=False)
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
-    @unittest.skipUnless(SolverFactory('gams').available(exception_flag=False), 'GAMS solver not available')
+    @unittest.skipUnless(SolverFactory('gams').available(exception_flag=False),
+                         'GAMS solver not available')
     def test_LOA_8PP_gams_solver(self):
         # Make sure that the duals are still correct
         exfile = import_file(
@@ -430,7 +452,8 @@ class TestGDPoptRIC(unittest.TestCase):
             tee=False)
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
-    @unittest.skipUnless(SolverFactory('gams').available(exception_flag=False), 'GAMS solver not available')
+    @unittest.skipUnless(SolverFactory('gams').available(exception_flag=False),
+                         'GAMS solver not available')
     def test_RIC_8PP_gams_solver(self):
         # Make sure that the duals are still correct
         exfile = import_file(
@@ -620,9 +643,11 @@ class TestGLOA(unittest.TestCase):
             nlp_solver=nlp_solver,
             minlp_solver=minlp_solver
         )
-        self.assertEqual(res.solver.termination_condition, TerminationCondition.infeasible)
+        self.assertEqual(res.solver.termination_condition,
+                         TerminationCondition.infeasible)
 
-    @unittest.skipUnless(license_available, "Global NLP solver license not available.")
+    @unittest.skipUnless(license_available, 
+                         "Global NLP solver license not available.")
     def test_GLOA_8PP(self):
         """Test the global logic-based outer approximation algorithm."""
         exfile = import_file(
@@ -636,7 +661,8 @@ class TestGLOA(unittest.TestCase):
         )
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
-    @unittest.skipUnless(license_available, "Global NLP solver license not available.")
+    @unittest.skipUnless(license_available, 
+                         "Global NLP solver license not available.")
     def test_GLOA_8PP_force_NLP(self):
         """Test the global logic-based outer approximation algorithm."""
         exfile = import_file(
@@ -651,7 +677,8 @@ class TestGLOA(unittest.TestCase):
         )
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
-    @unittest.skipUnless(license_available, "Global NLP solver license not available.")
+    @unittest.skipUnless(license_available, 
+                         "Global NLP solver license not available.")
     def test_GLOA_strip_pack_default_init(self):
         """Test logic-based outer approximation with strip packing."""
         exfile = import_file(
@@ -665,7 +692,8 @@ class TestGLOA(unittest.TestCase):
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
-    @unittest.skipUnless(license_available, "Global NLP solver license not available.")
+    @unittest.skipUnless(license_available, 
+                         "Global NLP solver license not available.")
     @unittest.category('expensive')
     def test_GLOA_constrained_layout_default_init(self):
         """Test LOA with constrained layout."""
