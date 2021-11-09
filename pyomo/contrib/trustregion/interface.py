@@ -11,11 +11,14 @@
 import logging
 
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.core import (Block, Var, Param, ExternalFunction,
-                        VarList, ConstraintList, Constraint,
-                        Objective, ObjectiveList, value, unique_component_name)
+from pyomo.core import (
+    Block, Var, Param, ExternalFunction,
+    VarList, ConstraintList, Constraint,
+    Objective, ObjectiveList, value, unique_component_name
+    )
 import pyomo.core.expr as EXPR
 from pyomo.core.expr.visitor import identify_variables
+from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
 
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
@@ -110,36 +113,72 @@ class TRFInterface(object):
         self._remove_ef_from_expr(objs[0], efSet)
 
         for v in self.data.ef_outputs:
-            self.data.ef_inputs[v] = list(identify_variables(self.data.truth_models[v],
-                                                             include_fixed=False))
-
-        data_name = self.data.name
+            self.data.ef_inputs[v] = \
+                list(identify_variables(self.data.truth_models[v],
+                                        include_fixed=False))
 
         # Process Model Problem (3) from Yoshio/Biegler (2020)
         self.pmp = self.model.clone()
-        pmp_data = self.pmp.find_component(data_name)
+        # Trust Region Subproblem (TRSP) (4) from Yoshio/Biegler (2020)
+        self.trsp = self.model.clone()
 
+    def solveModel(self, m, input_vars, output_vars):
+        """
+        Call the specified solver to solve the problem
+        """
+        solver = SolverFactory(self.config.solver)
+        results = solver.solve(m, keepfiles=self.config.keepfiles,
+                               tee=self.config.tee,
+                               load_solution=self.config.load_solution)
+
+        if ((results.solver.status == SolverStatus.ok)
+            and (results.solver.termination_condition ==
+                 TerminationCondition.optimal)):
+            m.solutions.load_from(results)
+            # TODO: Add results back to model here
+            for obj in m.component_data_objects(Objective, active=True):
+                return True, obj()
+        else:
+            print("Warning: Solver Status: %s" 
+                  % str(results.solver.status))
+            print("Termination Conditions: %s" 
+                  % str(results.solver.termination_condition))
+            return False, 0
+
+    def createComponents(self):
+        """
+        Create required components for the model(s)
+        """
+        
+
+    def setInitialValues(self):
+        """
+        Set initial values for first iteration
+        """
+        # We want to set x0 and d(w0) here
+        # x0 : solution to the process model problem (3)
+        # d(w0) : solution of high-fidelity model at initial inputs
+
+    def createConstraints(self):
+        """
+        Create constraints
+        """
+        data_name = self.data.name
+
+        pmp_data = self.pmp.find_component(data_name)
         # This implements: y = b(w) from Yoshio/Biegler (2020)
         @pmp_data.Constraint(pmp_data.ef_outputs.index_set())
         def basis_constraints(b, i):
             ef_output_var = b.ef_outputs[i]
             return ef_output_var == b.basis_expressions[ef_output_var]
 
-        # Trust Region Subproblem (TRSP) (4) from Yoshio/Biegler (2020)
-        self.trsp = self.model.clone()
         trsp_data = self.trsp.find_component(data_name)
-
         # This implements: y = r_k(w)
         @trsp_data.Constraint(trsp_data.ef_outputs.index_set())
-        def sm_constraints(b, i):
+        def sm_constraint_basis(b, i):
             ef_output_var = b.ef_outputs[i]
             return ef_output_var == b.basis_expressions[ef_output_var] # + \
                 # Other junk from Eq 5
-
-
-
-
-
 
 
 

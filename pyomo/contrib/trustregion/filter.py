@@ -14,7 +14,7 @@ class FilterElement:
     Filter element for comparison of feasibility
     """
 
-    def __init__(self, objective, infeasible):
+    def __init__(self, infeasible, objective):
         self.objective = objective
         self.infeasible = infeasible
 

@@ -12,10 +12,13 @@ from io import StringIO
 import logging
 
 import pyomo.common.unittest as unittest
+
 from pyomo.contrib.trustregion.util import (
     copyVector, minIgnoreNone, maxIgnoreNone,
-    IterationLogger, numpy_available)
+    IterationLogger, numpy_available, getVarDict
+    )
 from pyomo.common.log import LoggingIntercept
+from pyomo.environ import (Var, ConcreteModel)
 
 class TestUtil(unittest.TestCase):
     def setUp(self):
@@ -60,6 +63,17 @@ class TestUtil(unittest.TestCase):
         self.assertEqual(maxIgnoreNone(a, b), a)
         a = None
         self.assertEqual(maxIgnoreNone(a, b), None)
+
+    def test_getVarDict(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        keys = {'x': 1, 'y': 2}.keys()
+        vardict = getVarDict(m, keys)
+        self.assertEqual(vardict.keys(), keys)
+        self.assertEqual(m.x, vardict['x'])
+        self.assertEqual(m.y, vardict['y'])
+
 
 class TestLogger(unittest.TestCase):
     def setUp(self):

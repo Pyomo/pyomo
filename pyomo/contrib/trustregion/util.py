@@ -63,41 +63,35 @@ class IterationRecord:
     Record relevant information at each individual iteration
     """
 
-    def __init__(self, iteration, inputs, outputs, other, rmtype, params):
+    def __init__(self, iteration, inputs, outputs, other, params):
         self.iteration = iteration
         self.inputs = inputs
         self.outputs = outputs
         self.other = other
-        self.rmtype = rmtype
         self.rmParams = params
         self.thetak = None
         self.objk = None
         self.trustRadius = None
-        self.sampleRadius = None
         self.stepNorm = None
         self.fStep, self.thetaStep, self.rejected = [False]*3
 
     def setRelatedValue(self, thetak=None, objk=None,
-                        trustRadius=None,
-                        sampleRadius=None, stepNorm=None):
+                        trustRadius=None, stepNorm=None):
         if thetak is not None:
             self.thetak = thetak
         if objk is not None:
             self.objk = objk
         if trustRadius is not None:
             self.trustRadius = trustRadius
-        if sampleRadius is not None:
-            self.sampleRadius = sampleRadius
         if stepNorm is not None:
             self.stepNorm = stepNorm
 
-    def fprint(self):
+    def detailLogger(self):
         """
         Print information about the iteration to the log.
         """
         logger.info("**** Iteration %d ****" % self.iteration)
         logger.info(np.concatenate([self.inputs, self.outputs, self.other]))
-        logger.info("Reduced Model Type: %s" % self.rmtype)
         logger.info("thetak = %s" % self.thetak)
         logger.info("objk = %s" % self.objk)
         logger.info("Reduced model parameters: %s" %self.rmParams)
@@ -120,20 +114,16 @@ class IterationLogger:
         self.iterations = []
 
     def newIteration(self, iteration, inputs, outputs, other,
-                     thetak, objk, rmtype, params):
+                     thetak, objk, params):
         self.iterrecord = IterationRecord(iteration, inputs, outputs,
-                                       other, rmtype,
-                                       params)
+                                       other, params)
         self.iterrecord.setRelatedValue(thetak=thetak, objk=objk)
         self.iterations.append(self.iterrecord)
 
     def setCurrentIteration(self, trustRadius=None,
-                            sampleRadius=None,
                             stepNorm=None):
         self.iterrecord.setRelatedValue(trustRadius=trustRadius,
-                                     sampleRadius=sampleRadius,
-                                     stepNorm=stepNorm)
+                                        stepNorm=stepNorm)
 
-    def printIteration(self, iteration):
-        if (iteration < len(self.iterations)):
-            self.iterations[iteration].fprint()
+    def logIteration(self):
+        self.iterrecord.detailLogger()
