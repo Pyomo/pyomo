@@ -11,20 +11,23 @@
 import logging
 
 from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.modeling import unique_component_name
 from pyomo.core import (
     Block, Var, Param, ExternalFunction,
     VarList, ConstraintList, Constraint,
-    Objective, ObjectiveList, value, unique_component_name
+    Objective, ObjectiveList, value
     )
 import pyomo.core.expr as EXPR
-from pyomo.core.expr.visitor import identify_variables
+from pyomo.core.expr.visitor import (identify_variables,
+                                     ExpressionReplacementVisitor)
+from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
 
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
 
-class EFReplacement(EXPR.ExpressionReplacementVisitor):
+class EFReplacement(ExpressionReplacementVisitor):
     def __init__(self, trfData, efSet):
         super().__init__(descend_into_named_expressions=True,
                          remove_named_expressions=False)
@@ -34,7 +37,7 @@ class EFReplacement(EXPR.ExpressionReplacementVisitor):
     def exitNode(self, node, data):
         # This is where the replacement happens
         new_node = super().exitNode(node, data)
-        if new_node.__class__ is not EXPR.ExternalFunctionExpression:
+        if new_node.__class__ is not ExternalFunctionExpression:
             return new_node
         if id(new_node._fcn) not in self.efSet:
             return new_node
@@ -149,7 +152,7 @@ class TRFInterface(object):
         """
         Create required components for the model(s)
         """
-        
+        pass
 
     def setInitialValues(self):
         """
@@ -158,6 +161,7 @@ class TRFInterface(object):
         # We want to set x0 and d(w0) here
         # x0 : solution to the process model problem (3)
         # d(w0) : solution of high-fidelity model at initial inputs
+        pass
 
     def createConstraints(self):
         """
@@ -180,7 +184,32 @@ class TRFInterface(object):
             return ef_output_var == b.basis_expressions[ef_output_var] # + \
                 # Other junk from Eq 5
 
+    def initializeProblem(self):
+        """
+        Initializes appropriate constraints, values, etc. for TRF problem
 
+        Returns
+        -------
+            obj : Initial objective
+            feasibility : Initial feasibility measure
+            SM : Initial surrogate model
+        """
+        pass
 
+    def buildSM(self):
+        """
+        Build a surrogate model
+        """
+        pass
 
+    def TRSP(self):
+        """
+        Solve Trust Region Subproblem
+        """
+        pass
 
+    def reset(self):
+        """
+        Reset problem for next iteration
+        """
+        pass

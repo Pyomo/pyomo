@@ -187,13 +187,13 @@ def trf_config():
                     "Default = 1.0."
     ))
     CONFIG.declare('minimum radius', ConfigValue(
-        default=CONFIG.trust_region / 2.0,
+        default=CONFIG.trust_radius / 2.0,
         domain=PositiveFloat,
         description="Minimum allowed trust region radius (delta_min). "
                     "Default = trust_radius / 2."
     ))
     CONFIG.declare('maximum radius', ConfigValue(
-        default=CONFIG.trust_region * 1000,
+        default=CONFIG.trust_radius * 1000,
         domain=PositiveFloat,
         description="Maximum allowed trust region radius. If trust region "
                     "radius reaches maximum allowed, solver will exit. "
