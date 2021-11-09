@@ -34,19 +34,18 @@ _packages = [
     'pyomo.scripting',
     'pyomo.network',
     'pyomo.contrib.appsi',
+    'pyomo.contrib.community_detection',
     'pyomo.contrib.example',
     'pyomo.contrib.fme',
+    'pyomo.contrib.gdp_bounds',
     'pyomo.contrib.gdpbb',
     'pyomo.contrib.gdpopt',
-    'pyomo.contrib.gdp_bounds',
     'pyomo.contrib.mcpp',
     'pyomo.contrib.mindtpy',
     'pyomo.contrib.multistart',
-    'pyomo.contrib.petsc',
     'pyomo.contrib.preprocessing',
     'pyomo.contrib.pynumero',
     'pyomo.contrib.trustregion',
-    'pyomo.contrib.community_detection',
 ]
 
 
