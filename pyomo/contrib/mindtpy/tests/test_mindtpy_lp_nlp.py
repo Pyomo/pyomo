@@ -102,8 +102,10 @@ class TestMindtPy(unittest.TestCase):
                 for mip_solver in available_mip_solvers:
                     if mip_solver == 'gurobi_persistent':
                         if SolverFactory(mip_solver).version()[:3] == (9,5,0) \
-                           and model == 'DuranEx3' \
+                           and model.name == 'DuranEx3' \
                            and sys.platform.startswith('win'):
+                            sys.stderr.write(
+                                "Skipping test due to known solver issue\n")
                             continue
                     sys.stderr.write(
                         f'Solving {model} with {mip_solver} '
