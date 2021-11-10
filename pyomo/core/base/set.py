@@ -36,7 +36,7 @@ from pyomo.core.base.range import (
     RangeDifferenceError,
 )
 from pyomo.core.base.component import (
-    Component, ComponentData, ModelComponentFactory,
+    _ComponentBase, Component, ComponentData, ModelComponentFactory,
 )
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, normalize_index,
@@ -110,17 +110,18 @@ implemented) through Mixin classes.
 def process_setarg(arg):
     if isinstance(arg, _SetDataBase):
         return arg
-    elif isinstance(arg, IndexedComponent) and arg.is_indexed():
-        raise TypeError("Cannot apply a Set operator to an "
-                        "indexed %s component (%s)"
-                        % (arg.ctype.__name__, arg.name,))
-    elif isinstance(arg, Component):
-        raise TypeError("Cannot apply a Set operator to a non-Set "
-                        "%s component (%s)"
-                        % (arg.__class__.__name__, arg.name,))
-    elif isinstance(arg, ComponentData):
-        raise TypeError("Cannot apply a Set operator to a non-Set "
-                        "component data (%s)" % (arg.name,))
+    elif isinstance(arg, _ComponentBase):
+        if isinstance(arg, IndexedComponent) and arg.is_indexed():
+            raise TypeError("Cannot apply a Set operator to an "
+                            "indexed %s component (%s)"
+                            % (arg.ctype.__name__, arg.name,))
+        if isinstance(arg, Component):
+            raise TypeError("Cannot apply a Set operator to a non-Set "
+                            "%s component (%s)"
+                            % (arg.__class__.__name__, arg.name,))
+        if isinstance(arg, ComponentData):
+            raise TypeError("Cannot apply a Set operator to a non-Set "
+                            "component data (%s)" % (arg.name,))
 
     # DEPRECATED: This functionality has never been documented,
     # and I don't know of a use of it in the wild.
