@@ -100,6 +100,11 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
+                    if mip_solver == 'gurobi_persistent':
+                        if SolverFactory(mip_solver).version()[:3] == (9,5,0) \
+                           and model == 'DuranEx3' \
+                           and sys.platform.startswith('win'):
+                            continue
                     sys.stderr.write(f'Solving {model} with {mip_solver}\n')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
