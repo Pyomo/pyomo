@@ -43,7 +43,8 @@ def known_solver_failure(mip_solver, model):
          and sys.platform.startswith('win')
          and SolverFactory(mip_solver).version()[:3] == (9,5,0) ):
         sys.stderr.write(
-            "Skipping test due to known failure in Gurobi 9.5.0 on Windows\n"
+            f"Skipping sub-test {model.name} with {mip_solver} due to known "
+            f"failure when running Gurobi 9.5.0 on Windows\n"
         )
         return True
     return False
@@ -60,7 +61,6 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                sys.stderr.write(f'Solving {model}\n')
                 results = opt.solve(model, strategy='OA',
                                     mip_solver='cplex_persistent',
                                     nlp_solver=required_nlp_solvers,
@@ -77,7 +77,6 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                sys.stderr.write(f'Solving {model}\n')
                 results = opt.solve(model, strategy='OA',
                                     mip_solver='gurobi_persistent',
                                     nlp_solver=required_nlp_solvers,
@@ -93,7 +92,6 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
-                    sys.stderr.write(f'Solving {model} with {mip_solver}\n')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -112,10 +110,6 @@ class TestMindtPy(unittest.TestCase):
                 for mip_solver in available_mip_solvers:
                     if known_solver_failure(mip_solver, model):
                         continue
-                    sys.stderr.write(
-                        f'Solving {model} with {mip_solver} '
-                        f'{SolverFactory(mip_solver).version()[:3]}'
-                        f' on {sys.platform}\n')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -132,7 +126,6 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
-                    sys.stderr.write(f'Solving {model} with {mip_solver}\n')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -149,7 +142,6 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
-                    sys.stderr.write(f'Solving {model} with {mip_solver}\n')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -168,7 +160,6 @@ class TestMindtPy(unittest.TestCase):
                 for mip_solver in available_mip_solvers:
                     if known_solver_failure(mip_solver, model):
                         continue
-                    sys.stderr.write(f'Solving {model} with {mip_solver}\n')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -187,7 +178,6 @@ class TestMindtPy(unittest.TestCase):
                 for mip_solver in available_mip_solvers:
                     if known_solver_failure(mip_solver, model):
                         continue
-                    sys.stderr.write(f'Solving {model} with {mip_solver}\n')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -206,7 +196,6 @@ class TestMindtPy(unittest.TestCase):
                 for mip_solver in available_mip_solvers:
                     if known_solver_failure(mip_solver, model):
                         continue
-                    sys.stderr.write(f'Solving {model} with {mip_solver}\n')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
