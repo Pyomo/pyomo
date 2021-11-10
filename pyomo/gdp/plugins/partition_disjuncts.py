@@ -298,7 +298,7 @@ class PartitionDisjuncts_Transformation(Transformation):
             assert not NAME_BUFFER
             self._config = self.CONFIG(kwds.pop('options', {}))
             self._config.set_value(kwds)
-            self.transformation_blocks = {}
+            self._transformation_blocks = {}
 
             if not self._config.assume_fixed_vars_permanent:
                 fixed_vars = ComponentMap()
@@ -332,7 +332,7 @@ class PartitionDisjuncts_Transformation(Transformation):
                     disjunct.transformation_block().indicator_var.fix(val)
 
             del self._config
-            del self.transformation_blocks
+            del self._transformation_blocks
             # clear the global name buffer
             NAME_BUFFER.clear()
             # restore logging level
@@ -401,12 +401,12 @@ class PartitionDisjuncts_Transformation(Transformation):
         return preprocessed_targets
 
     def _get_transformation_block(self, block):
-        if self.transformation_blocks.get(block) is not None:
-            return self.transformation_blocks[block]
+        if self._transformation_blocks.get(block) is not None:
+            return self._transformation_blocks[block]
         
         # create a transformation block on which we will create the reformulated
         # GDP...
-        self.transformation_blocks[block] = transformation_block = Block()
+        self._transformation_blocks[block] = transformation_block = Block()
         block.add_component(
             unique_component_name(
                 block,
