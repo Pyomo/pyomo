@@ -135,11 +135,6 @@ class AslNLP(ExtendedNLP):
             print(np.where(bounds_difference < 0))
             raise RuntimeError("Some variables have lower bounds that are larger than the upper bounds.")
 
-        inconsistent_bounds = np.any(bounds_difference < 0.0)
-        if inconsistent_bounds:
-            # TODO: improve error message
-            raise RuntimeError("Variables found with upper bounds set below the lower bounds.")
-
         # Build the maps for converting from the full constraint
         # vector (which includes all equality and inequality constraints)
         # to separate vectors of equality and inequality constraints.
