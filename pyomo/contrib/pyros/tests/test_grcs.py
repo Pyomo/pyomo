@@ -16,6 +16,7 @@ from pyomo.contrib.pyros.util import selective_clone, add_decision_rule_variable
 from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.util import get_vars_from_constraints
 from pyomo.contrib.pyros.util import get_vars_from_objective
+from pyomo.core.expr import current as EXPR
 from pyomo.contrib.pyros.uncertainty_sets import *
 from pyomo.contrib.pyros.master_problem_methods import add_scenario_to_master, initial_construct_master, solve_master, \
     minimize_dr_vars
@@ -282,6 +283,7 @@ class testTurnBoundsToConstraints(unittest.TestCase):
         m.r = Param(initialize=-5, mutable=True)
         m.q = Param(initialize=1, mutable=False)
         m.s = Param(initialize=1, mutable=True)
+        m.n = Param(initialize=1, mutable=True)
 
         # variables, with bounds contingent on params
         m.u = Var(initialize=0, bounds=(0, m.p))
@@ -297,7 +299,7 @@ class testTurnBoundsToConstraints(unittest.TestCase):
 
         # clone model
         mod = m.clone()
-        uncertain_params = [mod.p, mod.r]
+        uncertain_params = [mod.n, mod.p, mod.r]
 
         # check variable replacement without any active objective
         # or active performance constraints
@@ -342,10 +344,10 @@ class testTurnBoundsToConstraints(unittest.TestCase):
         # active objective and activated constraints correctly determined
         svars_con = ComponentSet(get_vars_from_constraints(mod_2))
         svars_obj = ComponentSet(get_vars_from_objective(mod_2))
-        vars_in_active_constraints = ComponentSet([mod_2.z, mod_2.w, mod_2.y,
-                                                   mod_2.x, mod_2.v])
+        vars_in_active_cons = ComponentSet([mod_2.z, mod_2.w, mod_2.y,
+                                            mod_2.x, mod_2.v])
         vars_in_active_obj = ComponentSet([mod_2.x, mod_2.y, mod_2.t, mod_2.v])
-        self.assertEqual(svars_con, vars_in_active_constraints,
+        self.assertEqual(svars_con, vars_in_active_cons,
                          msg='Mismatch of variables participating in '
                              'activated constraints.')
         self.assertEqual(svars_obj, vars_in_active_obj,
@@ -360,8 +362,33 @@ class testTurnBoundsToConstraints(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))),
                          len(list(mod_2.component_data_objects(Constraint))),
                          msg='Mismatch between number of explicit variable '
-                             'bound inequality constraints added automatically '
-                             'and added manually.')
+                             'bound inequality constraints added '
+                             'automatically and added manually.')
+
+        # check that explicit constraints contain correct vars and params
+        vars_in_cons = ComponentSet()
+        params_in_cons = ComponentSet()
+
+        # get variables, mutable params in the explicit constraints
+        cons = mod_2.uncertain_var_bound_cons
+        for idx in cons:
+            for p in EXPR.identify_mutable_parameters(cons[idx].expr):
+                params_in_cons.add(p)
+            for v in EXPR.identify_variables(cons[idx].expr):
+                vars_in_cons.add(v)
+        # reduce only to uncertain mutable params found
+        params_in_cons = params_in_cons & uncertain_params
+
+        # expected participating variables
+        vars_with_bounds_removed = ComponentSet([mod_2.x, mod_2.y, mod_2.v,
+                                                 mod_2.t])
+        # complete the check
+        self.assertEqual(params_in_cons, ComponentSet([mod_2.p, mod_2.r]),
+                         msg='Mismatch of parameters added to explicit '
+                             'inequality constraints.')
+        self.assertEqual(vars_in_cons, vars_with_bounds_removed,
+                         msg='Mismatch of variables added to explicit '
+                             'inequality constraints.')
 
 
 class testTransformToStandardForm(unittest.TestCase):
