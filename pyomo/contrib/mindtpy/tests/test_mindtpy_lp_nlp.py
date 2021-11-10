@@ -46,6 +46,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                print(f'Solving {model}')
                 results = opt.solve(model, strategy='OA',
                                     mip_solver='cplex_persistent',
                                     nlp_solver=required_nlp_solvers,
@@ -62,6 +63,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
+                print(f'Solving {model}')
                 results = opt.solve(model, strategy='OA',
                                     mip_solver='gurobi_persistent',
                                     nlp_solver=required_nlp_solvers,
@@ -77,6 +79,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
+                    print(f'Solving {model} with {mip_solver}')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -93,6 +96,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
+                    print(f'Solving {model} with {mip_solver}')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -109,6 +113,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
+                    print(f'Solving {model} with {mip_solver}')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -125,6 +130,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
+                    print(f'Solving {model} with {mip_solver}')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -141,6 +147,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
+                    print(f'Solving {model} with {mip_solver}')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -157,6 +164,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
+                    print(f'Solving {model} with {mip_solver}')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -173,6 +181,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
+                    print(f'Solving {model} with {mip_solver}')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
