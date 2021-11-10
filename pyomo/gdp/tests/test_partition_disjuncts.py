@@ -11,7 +11,8 @@
 import pyomo.common.unittest as unittest
 from pyomo.environ import (TransformationFactory, Constraint, ConcreteModel,
                            Var, RangeSet, Objective, maximize, SolverFactory,
-                           Any, Reference)
+                           Any, Reference, LogicalConstraint)
+from pyomo.core.expr.logical_expr import EquivalenceExpression
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.util import GDP_Error
 from pyomo.gdp.plugins.partition_disjuncts import (arbitrary_partition,
@@ -102,15 +103,18 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertAlmostEqual(aux_vars2[1].ub, aux22ub, places=6)
 
     def check_transformation_block_disjuncts_and_constraints(
-            self, m, disjunction_name=None):
+            self, m, original_disjunction, disjunction_name=None):
         b = m.component("_pyomo_gdp_partition_disjuncts_reformulation")
         self.assertIsInstance(b, Block)
 
         # check we declared the right things
         self.assertEqual(len(b.component_map(Disjunction)), 1)
         self.assertEqual(len(b.component_map(Disjunct)), 2)
-        self.assertEqual(len(b.component_map(Constraint)), 2) # global
-                                                              # constraints
+        # global constraints:
+        self.assertEqual(len(b.component_map(Constraint)), 2)
+        # equivalence constraints between old and new Disjunct indicator_vars
+        self.assertEqual(len(b.component_map(LogicalConstraint)), 1)
+
         if disjunction_name is None:
             disjunction = b.disjunction
         else:
@@ -122,13 +126,29 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertEqual(len(disj1.component_map(Constraint)), 1)
         self.assertEqual(len(disj2.component_map(Constraint)), 1)
 
+        # check the logical equivalence constraints
+        equivalence = b.component("indicator_var_equalities")
+        self.assertIsInstance(equivalence, LogicalConstraint)
+        self.assertEqual(len(equivalence), 2)
+        for i, variables in enumerate(
+                [(original_disjunction.disjuncts[0].indicator_var, 
+                  disj1.indicator_var), 
+                 (original_disjunction.disjuncts[1].indicator_var, 
+                  disj2.indicator_var)]):
+            cons = equivalence[i]
+            self.assertIsInstance(cons.body, EquivalenceExpression)
+            self.assertIs(cons.body.args[0], variables[0])
+            self.assertIs(cons.body.args[1], variables[1])
+
         return b, disj1, disj2
 
     def check_transformation_block_structure(self, m, aux11lb, aux11ub, aux12lb,
                                              aux12ub, aux21lb, aux21ub, aux22lb,
                                              aux22ub):
         (b, disj1,
-         disj2) = self.check_transformation_block_disjuncts_and_constraints(m)
+         disj2) = self.check_transformation_block_disjuncts_and_constraints(
+             m,
+             m.disjunction)
 
         # each Disjunct has two variables declared on it (aux vars and indicator
         # var), plus a reference to the indicator_var from the original Disjunct
@@ -197,9 +217,11 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
 
         self.check_transformation_block(m, 0, 72, 0, 72, -72, 96, -72, 96)
 
-    def check_transformation_block_indexed_var_on_disjunct(self, m):
+    def check_transformation_block_indexed_var_on_disjunct(
+            self, m, original_disjunction):
         (b, disj1,
-         disj2) = self.check_transformation_block_disjuncts_and_constraints(m)
+         disj2) = self.check_transformation_block_disjuncts_and_constraints(
+             m, original_disjunction)
 
         # Has it's own indicator var, a Reference to the original Disjunct's
         # indicator var, the aux vars, and the Reference to x
@@ -252,18 +274,22 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
                                  [m.disj1.x[3], m.disj1.x[4]]],
             compute_bounds_method=compute_fbbt_bounds)
 
-        self.check_transformation_block_indexed_var_on_disjunct(m)
+        self.check_transformation_block_indexed_var_on_disjunct(m,
+                                                                m.disjunction)
 
     def check_transformation_block_nested_disjunction(self, m, disj2, x,
                                                       disjunction_block=None):
         if disjunction_block is None:
             block_prefix = ""
+            disjunction_parent = m
         else:
             block_prefix = disjunction_block + "."
+            disjunction_parent = m.component(disjunction_block)
         (inner_b, inner_disj1,
          inner_disj2) = self.\
                         check_transformation_block_disjuncts_and_constraints(
-                            disj2, "%sdisj2.disjunction" % block_prefix)
+                            disj2, disjunction_parent.disj2.disjunction, 
+                            "%sdisj2.disjunction" % block_prefix)
 
         # Has it's own indicator var, the aux vars, and the Reference to the
         # original indicator_var
@@ -320,7 +346,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         # everything for the outer disjunction should look exactly the same as
         # the test above:
         (b, disj1,
-         disj2) = self.check_transformation_block_indexed_var_on_disjunct(m)
+         disj2) = self.check_transformation_block_indexed_var_on_disjunct(
+             m, m.disjunction)
 
         # AND, we should have a transformed inner disjunction on disj2:
         self.check_transformation_block_nested_disjunction(m, disj2, m.disj1.x)
@@ -341,7 +368,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         # everything for the outer disjunction should look exactly the same as
         # the test above:
         (b, disj1,
-         disj2) = self.check_transformation_block_indexed_var_on_disjunct(m)
+         disj2) = self.check_transformation_block_indexed_var_on_disjunct(
+             m, m.disjunction)
 
         # AND, we should have a transformed inner disjunction on disj2:
         self.check_transformation_block_nested_disjunction(m, disj2, m.disj1.x)
@@ -363,7 +391,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         # everything for the outer disjunction should look exactly the same as
         # the test above:
         (b, disj1,
-         disj2) = self.check_transformation_block_indexed_var_on_disjunct(m)
+         disj2) = self.check_transformation_block_indexed_var_on_disjunct(
+             m, m.disjunction)
 
         # AND, we should have a transformed inner disjunction on disj2:
         self.check_transformation_block_nested_disjunction(m, disj2, m.disj1.x)
@@ -371,7 +400,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
     def check_hierarchical_nested_model(self, m):
         (b, disj1, 
          disj2) = self.check_transformation_block_disjuncts_and_constraints(
-             m.disjunction_block, "disjunction_block.disjunction")
+             m.disjunction_block, m.disjunction_block.disjunction, 
+             "disjunction_block.disjunction")
         # each Disjunct has two variables declared on it (aux vars and indicator
         # var), plus a reference to the indicator_var from the original Disjunct
         self.assertEqual(len(disj1.component_map(Var)), 3)
@@ -621,7 +651,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             compute_bounds_method=compute_optimal_bounds)
 
         (b, disj1,
-         disj2) = self.check_transformation_block_disjuncts_and_constraints(m)
+         disj2) = self.check_transformation_block_disjuncts_and_constraints(
+             m, m.disjunction)
 
         # each Disjunct has three variables declared on it (aux vars and
         # indicator var), plus a reference to the indicator_var of the original
@@ -1261,8 +1292,11 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
         # check we declared the right things
         self.assertEqual(len(b.component_map(Disjunction)), 1)
         self.assertEqual(len(b.component_map(Disjunct)), 2)
-        self.assertEqual(len(b.component_map(Constraint)), 2) # global
-                                                              # constraints
+        # global constraints:
+        self.assertEqual(len(b.component_map(Constraint)), 2)
+        # logical constraints linking old Disjuncts' indicator variables to
+        # transformed Disjuncts' indicator variables
+        self.assertEqual(len(b.component_map(LogicalConstraint)), 1)
 
         disjunction = b.disjunction
         self.assertEqual(len(disjunction.disjuncts), 2)
@@ -1275,6 +1309,18 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
         # var), plus a reference to the indicator_var on the original Disjunct
         self.assertEqual(len(disj1.component_map(Var)), 3)
         self.assertEqual(len(disj2.component_map(Var)), 3)
+
+        equivalence = b.component("indicator_var_equalities")
+        self.assertIsInstance(equivalence, LogicalConstraint)
+        self.assertEqual(len(equivalence), 2)
+        for i, variables in enumerate(
+                [(m.disjunction.disjuncts[0].indicator_var, 
+                  disj1.indicator_var), 
+                 (m.disjunction.disjuncts[1].indicator_var, 
+                  disj2.indicator_var)]):
+            cons = equivalence[i]
+            self.assertIsInstance(cons.body, EquivalenceExpression)
+            self.assertEqual(cons.body.args, variables)
 
         aux_vars1 = disj1.component(
             "disjunction_disjuncts[0].constraint[1]_aux_vars")
@@ -1587,7 +1633,7 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
             P=3)
 
 # This is just a pile of tests that are structural that we use for bigm and
-# hull, so might as well for here too.
+# hull, so might as well for this too.
 class CommonModels(unittest.TestCase, CommonTests):
     def test_user_deactivated_disjuncts(self):
         ct.check_user_deactivated_disjuncts(self, 'partition_disjuncts',
