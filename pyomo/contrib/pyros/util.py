@@ -280,28 +280,26 @@ def transform_to_standard_form(model):
     return
 
 
-def get_vars_from_objective(block):
-    """Determine all variables used in active objective expressions in
-    a Block.
-    """
-    seen = set()
-    for obj in block.component_data_objects(Objective,
-                                            active=True):
-        for var in EXPR.identify_variables(obj.expr):
-            if id(var) not in seen:
-                seen.add(id(var))
-                yield var
+def get_vars_from_component(block, ctype):
+    """Determine all variables used in active components within a block.
 
+    Parameters
+    ----------
+    block: Block
+        The block to search for components.  This is a recursive
+        generator and will descend into any active sub-Blocks as well.
+    ctype:  class
+        The component type (typically either :py:class:`Constraint` or
+        :py:class:`Objective` to search for).
 
-def get_vars_from_constraints(block):
-    """Determine all variables used in active constraint expressions in
-    a Block.
     """
+
     seen = set()
-    for constraint in block.component_data_objects(Constraint,
-                                                   descend_into=Block,
-                                                   active=True):
-        for var in EXPR.identify_variables(constraint.expr):
+    for compdata in block.component_data_objects(
+            ctype,
+            descend_into=True,
+            active=True):
+        for var in EXPR.identify_variables(compdata.expr):
             if id(var) not in seen:
                 seen.add(id(var))
                 yield var
@@ -327,8 +325,8 @@ def replace_uncertain_bounds_with_constraints(model, uncertain_params):
                         uncertain_var_bound_constrs)
 
     # get all variables in active objective and constraint expression(s)
-    vars_in_cons = ComponentSet(get_vars_from_constraints(model))
-    vars_in_obj = ComponentSet(get_vars_from_objective(model))
+    vars_in_cons = ComponentSet(get_vars_from_component(model, Constraint))
+    vars_in_obj = ComponentSet(get_vars_from_component(model, Objective))
 
     for v in vars_in_cons | vars_in_obj:
         # get mutable parameters in variable bounds expressions

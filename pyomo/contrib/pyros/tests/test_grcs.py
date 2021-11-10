@@ -14,8 +14,7 @@ from pyomo.contrib.pyros.util import selective_clone, add_decision_rule_variable
     model_is_valid, turn_bounds_to_constraints, transform_to_standard_form, ObjectiveType, pyrosTerminationCondition, \
     coefficient_matching
 from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
-from pyomo.contrib.pyros.util import get_vars_from_constraints
-from pyomo.contrib.pyros.util import get_vars_from_objective
+from pyomo.contrib.pyros.util import get_vars_from_component
 from pyomo.core.expr import current as EXPR
 from pyomo.contrib.pyros.uncertainty_sets import *
 from pyomo.contrib.pyros.master_problem_methods import add_scenario_to_master, initial_construct_master, solve_master, \
@@ -342,8 +341,8 @@ class testTurnBoundsToConstraints(unittest.TestCase):
 
         # check that vars participating in
         # active objective and activated constraints correctly determined
-        svars_con = ComponentSet(get_vars_from_constraints(mod_2))
-        svars_obj = ComponentSet(get_vars_from_objective(mod_2))
+        svars_con = ComponentSet(get_vars_from_component(mod_2, Constraint))
+        svars_obj = ComponentSet(get_vars_from_component(mod_2, Objective))
         vars_in_active_cons = ComponentSet([mod_2.z, mod_2.w, mod_2.y,
                                             mod_2.x, mod_2.v])
         vars_in_active_obj = ComponentSet([mod_2.x, mod_2.y, mod_2.t, mod_2.v])
