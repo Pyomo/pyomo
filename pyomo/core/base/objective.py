@@ -343,15 +343,14 @@ class Objective(ActiveIndexedComponent):
     def _getitem_when_not_present(self, index):
         if self.rule is None:
             raise KeyError(index)
+
+        block = self.parent_block()
         obj = self._setitem_when_not_present(
-            index, self.rule(self.parent_block(), index))
+            index, self.rule(block, index))
         if obj is None:
             raise KeyError(index)
-        else:
-            # !! THIS SEEMS LIKE A BUG!! - mrmundt
-            # My IDE is yelling about `block` not being defined.
-            # Is it supposed to be Block?
-            obj.set_sense(self._init_sense(block, index))
+        obj.set_sense(self._init_sense(block, index))
+
         return obj
 
     def _pprint(self):

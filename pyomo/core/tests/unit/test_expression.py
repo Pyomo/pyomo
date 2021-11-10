@@ -513,7 +513,7 @@ E : Size=2
         model.E[1] = None
         expr = model.E[1]
         self.assertIs(type(expr), _GeneralExpressionData)
-        self.assertIs(expr, model.E[1])
+        self.assertIs(expr.expr, None)
         model.E[1] = 5
         self.assertIs(expr, model.E[1])
         self.assertEqual(model.E.extract_values(), {1:5})
