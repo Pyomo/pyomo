@@ -9,11 +9,15 @@
 #  ___________________________________________________________________________
 
 """Tests for the MindtPy solver."""
+import sys
 import pyomo.common.unittest as unittest
-from pyomo.contrib.mindtpy.tests.eight_process_problem import \
-    EightProcessFlowsheet
+from pyomo.contrib.mindtpy.tests.eight_process_problem import (
+    EightProcessFlowsheet,
+)
 from pyomo.contrib.mindtpy.tests.MINLP_simple import SimpleMINLP as SimpleMINLP
-from pyomo.contrib.mindtpy.tests.constraint_qualification_example import ConstraintQualificationExample
+from pyomo.contrib.mindtpy.tests.constraint_qualification_example import (
+    ConstraintQualificationExample,
+)
 from pyomo.environ import SolverFactory, value
 from pyomo.opt import TerminationCondition
 
@@ -46,7 +50,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                print(f'Solving {model}')
+                sys.stderr.write(f'Solving {model}\n')
                 results = opt.solve(model, strategy='OA',
                                     mip_solver='cplex_persistent',
                                     nlp_solver=required_nlp_solvers,
@@ -63,7 +67,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                print(f'Solving {model}')
+                sys.stderr.write(f'Solving {model}\n')
                 results = opt.solve(model, strategy='OA',
                                     mip_solver='gurobi_persistent',
                                     nlp_solver=required_nlp_solvers,
@@ -79,7 +83,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
-                    print(f'Solving {model} with {mip_solver}')
+                    sys.stderr.write(f'Solving {model} with {mip_solver}\n')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -96,7 +100,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
-                    print(f'Solving {model} with {mip_solver}')
+                    sys.stderr.write(f'Solving {model} with {mip_solver}\n')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -113,7 +117,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
-                    print(f'Solving {model} with {mip_solver}')
+                    sys.stderr.write(f'Solving {model} with {mip_solver}\n')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -130,7 +134,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
-                    print(f'Solving {model} with {mip_solver}')
+                    sys.stderr.write(f'Solving {model} with {mip_solver}\n')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -147,7 +151,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
-                    print(f'Solving {model} with {mip_solver}')
+                    sys.stderr.write(f'Solving {model} with {mip_solver}\n')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -164,7 +168,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
-                    print(f'Solving {model} with {mip_solver}')
+                    sys.stderr.write(f'Solving {model} with {mip_solver}\n')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -181,7 +185,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
-                    print(f'Solving {model} with {mip_solver}')
+                    sys.stderr.write(f'Solving {model} with {mip_solver}\n')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
