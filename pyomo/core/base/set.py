@@ -358,7 +358,7 @@ class BoundsInitializer(InitializerBase):
                 val = (1, val[0], self.default_step)
             elif len(val) == 0:
                 val = (None, None, self.default_step)
-        ans = RangeSet(*tuple(val))
+        ans = RangeSet(*val)
         # We don't need to construct here, as the RangeSet will
         # automatically construct itself if it can
         #ans.construct()
