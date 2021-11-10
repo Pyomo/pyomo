@@ -75,6 +75,12 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
     """
 
     def __init__(self, **kwds):
+        logger.warning(
+                "The shell interface for Xpress is broken for recent versions "\
+                "of Xpress. Please use xpress_direct or xpress_persistent, "\
+                "which require the Xpress Python API. Python bindings "\
+                "for recent versions of Xpress can be installed via `pip`: "\
+                "<https://pypi.org/project/xpress/>.")
         #
         # Call base class constructor
         #

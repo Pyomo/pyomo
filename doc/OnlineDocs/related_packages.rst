@@ -44,14 +44,14 @@ Domain-Specific Applications
 +==========================+=========================================================+=============================================+
 |  Chama                   | https://github.com/sandialabs/chama                     |  Sensor placement optimization              |
 +--------------------------+---------------------------------------------------------+---------------------------------------------+
-|  Egret                   | https://github.com/grid-parity-exchange/egret           |  Formulation and solution of Unit Commitment|
+|  Egret                   | https://github.com/grid-parity-exchange/egret           |  Formulation and solution of unit commitment|
 |                          |                                                         |  and optimal power flow problems            |
 +--------------------------+---------------------------------------------------------+---------------------------------------------+
 |  IDAES                   | https://github.com/idaes/idaes-pse                      |  Institute for the Design of Advanced       |
 |                          |                                                         |  Energy Systems                             |
 +--------------------------+---------------------------------------------------------+---------------------------------------------+
-|  Prescient               | https://github.com/grid-parity-exchange/prescient       |  Parallel solution of structured            |
-|                          |                                                         |  NLPs.                                      |
+|  Prescient               | https://github.com/grid-parity-exchange/prescient       |  Production Cost Model for power systems    |
+|                          |                                                         |  simulation and analysis                    |
 +--------------------------+---------------------------------------------------------+---------------------------------------------+
 |  PyPSA                   | https://github.com/pypsa/pypsa                          |  Python for Power system Analysis           |
 +--------------------------+---------------------------------------------------------+---------------------------------------------+

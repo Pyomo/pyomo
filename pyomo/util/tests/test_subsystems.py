@@ -16,7 +16,10 @@ from pyomo.util.subsystems import (
         generate_subsystem_blocks,
         TemporarySubsystemManager,
         ParamSweeper,
+        identify_external_functions,
+        add_local_external_functions,
         )
+from pyomo.common.getGSL import find_GSL
 
 
 def _make_simple_model():
@@ -323,6 +326,101 @@ class TestSubsystemBlock(unittest.TestCase):
         self.assertFalse(m.v2.fixed)
         self.assertFalse(m.v3.fixed)
         self.assertTrue(m.v4.fixed)
+
+    def _make_model_with_external_functions(self):
+        m = pyo.ConcreteModel()
+        gsl = find_GSL()
+        m.bessel = pyo.ExternalFunction(
+            library=gsl, function="gsl_sf_bessel_J0"
+        )
+        m.fermi = pyo.ExternalFunction(
+            library=gsl, function="gsl_sf_fermi_dirac_m1"
+        )
+        m.v1 = pyo.Var(initialize=1.0)
+        m.v2 = pyo.Var(initialize=2.0)
+        m.v3 = pyo.Var(initialize=3.0)
+        m.con1 = pyo.Constraint(expr=m.v1 == 0.5)
+        m.con2 = pyo.Constraint(expr=2*m.fermi(m.v1) + m.v2**2 - m.v3 == 1.0)
+        m.con3 = pyo.Constraint(
+            expr=m.bessel(m.v1) - m.bessel(m.v2) + m.v3**2 == 2.0
+        )
+        return m
+
+    @unittest.skipUnless(find_GSL(), "Could not find the AMPL GSL library")
+    def test_identify_external_functions(self):
+        m = self._make_model_with_external_functions()
+        m._con = pyo.Constraint(expr=2*m.fermi(m.bessel(m.v1**2) + 0.1) == 1.0)
+
+        gsl = find_GSL()
+
+        fcns = list(identify_external_functions(m.con2.expr))
+        self.assertEqual(len(fcns), 1)
+        self.assertEqual(fcns[0]._fcn._library, gsl)
+        self.assertEqual(fcns[0]._fcn._function, "gsl_sf_fermi_dirac_m1")
+
+        fcns = list(identify_external_functions(m.con3.expr))
+        fcn_data = set((fcn._fcn._library, fcn._fcn._function) for fcn in fcns)
+        self.assertEqual(len(fcns), 2)
+        pred_fcn_data = {(gsl, "gsl_sf_bessel_J0")}
+        self.assertEqual(fcn_data, pred_fcn_data)
+
+        fcns = list(identify_external_functions(m._con.expr))
+        fcn_data = set((fcn._fcn._library, fcn._fcn._function) for fcn in fcns)
+        self.assertEqual(len(fcns), 2)
+        pred_fcn_data = {
+            (gsl, "gsl_sf_bessel_J0"),
+            (gsl, "gsl_sf_fermi_dirac_m1"),
+        }
+        self.assertEqual(fcn_data, pred_fcn_data)
+
+    def _solve_ef_model_with_ipopt(self):
+        m = self._make_model_with_external_functions()
+        ipopt = pyo.SolverFactory("ipopt")
+        ipopt.solve(m)
+        return m
+
+    @unittest.skipUnless(find_GSL(), "Could not find the AMPL GSL library")
+    @unittest.skipUnless(
+        pyo.SolverFactory("ipopt").available(),
+        "ipopt is not available"
+    )
+    def test_with_external_function(self):
+        m = self._make_model_with_external_functions()
+        subsystem = ([m.con2, m.con3], [m.v2, m.v3])
+
+        m.v1.set_value(0.5)
+        block = create_subsystem_block(*subsystem)
+        ipopt = pyo.SolverFactory("ipopt")
+        with TemporarySubsystemManager(to_fix=list(block.input_vars.values())):
+            ipopt.solve(block)
+
+        # Correct values obtained by solving with Ipopt directly
+        # in another script.
+        self.assertEqual(m.v1.value, 0.5)
+        self.assertFalse(m.v1.fixed)
+        self.assertAlmostEqual(m.v2.value, 1.04816, delta=1e-5)
+        self.assertAlmostEqual(m.v3.value, 1.34356, delta=1e-5)
+
+        # Result obtained by solving the full system
+        m_full = self._solve_ef_model_with_ipopt()
+        self.assertAlmostEqual(m.v1.value, m_full.v1.value)
+        self.assertAlmostEqual(m.v2.value, m_full.v2.value)
+        self.assertAlmostEqual(m.v3.value, m_full.v3.value)
+
+    @unittest.skipUnless(find_GSL(), "Could not find the AMPL GSL library")
+    def test_external_function_with_potential_name_collision(self):
+        m = self._make_model_with_external_functions()
+        m.b = pyo.Block()
+        m.b._gsl_sf_bessel_J0 = pyo.Var()
+        m.b.con = pyo.Constraint(
+            expr=m.b._gsl_sf_bessel_J0 == m.bessel(m.v1)
+        )
+        add_local_external_functions(m.b)
+        self.assertTrue(isinstance(m.b._gsl_sf_bessel_J0, pyo.Var))
+        ex_fcns = list(m.b.component_objects(pyo.ExternalFunction))
+        self.assertEqual(len(ex_fcns), 1)
+        fcn = ex_fcns[0]
+        self.assertEqual(fcn._function, "gsl_sf_bessel_J0")
 
 
 class TestTemporarySubsystemManager(unittest.TestCase):

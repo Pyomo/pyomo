@@ -775,7 +775,7 @@ class ArrayParam6(unittest.TestCase):
         model.C = Set(dimen=1, initialize=[9,8,7,6,5])
         model.x = Param(model.A, model.B, model.C, initialize=-1)
         #model.y = Param(model.B, initialize=(1,1))
-        model.y = Param(model.B, initialize=((1,1,7),2))
+        model.y = Param(model.B, initialize=1)
         instance=model.create_instance()
         self.assertEqual( instance.x.dim(), 6)
         self.assertEqual( instance.y.dim(), 3)
