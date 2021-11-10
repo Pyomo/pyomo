@@ -15,7 +15,9 @@ import math
 import sys
 import weakref
 
-from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedClass
+from pyomo.common.deprecation import (
+    deprecated, deprecation_warning, RenamedClass,
+)
 from pyomo.common.errors import DeveloperError, PyomoException
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
