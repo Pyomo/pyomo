@@ -10,7 +10,7 @@
 
 import pyomo.common.unittest as unittest
 
-from pyomo.core import ConcreteModel, Var, Expression, Block
+from pyomo.core import ConcreteModel, Var, Expression, Block, RangeSet, Any
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base.expression import _ExpressionData
 from pyomo.gdp.util import (clone_without_expression_components, is_child_of,
@@ -114,6 +114,104 @@ class TestGDPUtils(unittest.TestCase):
                      m.block.d1.b.dd2.disjunction,
                      m.block.d1.b.dd2.disjunction.disjuncts[1],
                      m.block.d1.b.dd2.disjunction.disjuncts[0], m.block.d1.dd1]
+        sort = tree.topological_sort()
+        for i, node in enumerate(sort):
+            self.assertIs(node, topo_sort[i])
+
+    def add_indexed_disjunction(self, parent, m):
+        parent.indexed = Disjunction(Any)
+        parent.indexed[1] = [[sum(m.x[i]**2 for i in m.I) <= 1],
+                        [sum((3 - m.x[i])**2 for i in m.I) <= 1]]
+        parent.indexed[0] = [[(m.x[1] - 1)**2 + m.x[2]**2 <= 1],
+                        [-(m.x[1] - 2)**2 - (m.x[2] - 3)**2 >= -1]]        
+
+    def test_gdp_tree_indexed_disjunction(self):
+        # This is to check that indexed components never actually appear as
+        # nodes in the tree. We should only have DisjunctionDatas and
+        # DisjunctDatas.
+        m = ConcreteModel()
+        m.I = RangeSet(1,4)
+        m.x = Var(m.I, bounds=(-2,6))
+        self.add_indexed_disjunction(m, m)
+
+        targets = (m.indexed,)
+        knownBlocks = {}
+        tree = get_gdp_tree(targets, m, knownBlocks)
+
+        vertices = tree.vertices
+        self.assertEqual(len(vertices), 6)
+        in_degrees = {m.indexed[0] : 0,
+                      m.indexed[1] : 0,
+                      m.indexed[0].disjuncts[0] : 1,
+                      m.indexed[0].disjuncts[1] : 1,
+                      m.indexed[1].disjuncts[0] : 1,
+                      m.indexed[1].disjuncts[1] : 1}
+        for key, val in in_degrees.items():
+            self.assertEqual(tree.in_degree(key), val)
+
+        topo_sort = [m.indexed[0], m.indexed[0].disjuncts[1],
+                     m.indexed[0].disjuncts[0], m.indexed[1],
+                     m.indexed[1].disjuncts[1], m.indexed[1].disjuncts[0]]
+        sort = tree.topological_sort()
+        for i, node in enumerate(sort):
+            self.assertIs(node, topo_sort[i])
+
+    def test_gdp_tree_nested_indexed_disjunction(self):
+        m = ConcreteModel()
+        m.I = RangeSet(1,4)
+        m.x = Var(m.I, bounds=(-2,6))
+        m.disj1 = Disjunct()
+        self.add_indexed_disjunction(m.disj1, m)
+        m.disj2 = Disjunct()
+        m.another_disjunction = Disjunction(expr=[m.disj1, m.disj2])
+
+        # First, we still just give the indexed disjunction as a target, and
+        # make sure that we don't pick up the parent Disjunct in the tree, since
+        # it is not in targets.
+        targets = (m.disj1.indexed,)
+        knownBlocks = {}
+        tree = get_gdp_tree(targets, m, knownBlocks)
+
+        vertices = tree.vertices
+        self.assertEqual(len(vertices), 6)
+        in_degrees = {m.disj1.indexed[0] : 0,
+                      m.disj1.indexed[1] : 0,
+                      m.disj1.indexed[0].disjuncts[0] : 1,
+                      m.disj1.indexed[0].disjuncts[1] : 1,
+                      m.disj1.indexed[1].disjuncts[0] : 1,
+                      m.disj1.indexed[1].disjuncts[1] : 1}
+        for key, val in in_degrees.items():
+            self.assertEqual(tree.in_degree(key), val)
+
+        topo_sort = [m.disj1.indexed[0], m.disj1.indexed[0].disjuncts[1],
+                     m.disj1.indexed[0].disjuncts[0], m.disj1.indexed[1],
+                     m.disj1.indexed[1].disjuncts[1],
+                     m.disj1.indexed[1].disjuncts[0]]
+        sort = tree.topological_sort()
+        for i, node in enumerate(sort):
+            self.assertIs(node, topo_sort[i])
+
+        # Now, let targets be everything and make sure that we get the correct
+        # tree.
+        targets = (m,)
+        tree = get_gdp_tree(targets, m, knownBlocks)
+        vertices = tree.vertices
+        self.assertEqual(len(vertices), 9)
+        # update that now the disjunctions have a parent
+        in_degrees[m.disj1.indexed[0]] = 1
+        in_degrees[m.disj1.indexed[1]] = 1
+        # and add new nodes
+        in_degrees[m.disj1] = 1
+        in_degrees[m.disj2] = 1
+        in_degrees[m.another_disjunction] = 0
+        for key, val in in_degrees.items():
+            self.assertEqual(tree.in_degree(key), val)
+
+        topo_sort = [m.another_disjunction, m.disj2, m.disj1,
+                     m.disj1.indexed[1], m.disj1.indexed[1].disjuncts[1],
+                     m.disj1.indexed[1].disjuncts[0], m.disj1.indexed[0],
+                     m.disj1.indexed[0].disjuncts[1],
+                     m.disj1.indexed[0].disjuncts[0]]
         sort = tree.topological_sort()
         for i, node in enumerate(sort):
             self.assertIs(node, topo_sort[i])

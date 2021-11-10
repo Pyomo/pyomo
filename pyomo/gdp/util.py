@@ -186,13 +186,13 @@ def get_gdp_tree(targets, instance, knownBlocks):
                 gdp_tree = _gather_disjunctions(t, gdp_tree)
         elif t.ctype is Disjunction:
             parent = _parent_disjunct(t)
-            if parent is not None:
+            if parent is not None and parent in targets:
                 gdp_tree.add_edge(parent, t)
             if t.is_indexed():
                 for disjunction in t.values():
                     gdp_tree.add_node(disjunction)
                     for disjunct in disjunction.disjuncts:
-                        gdp_tree.add_edge(t, disjunct)
+                        gdp_tree.add_edge(disjunction, disjunct)
                         gdp_tree = _gather_disjunctions(disjunct, gdp_tree)
             else:
                 gdp_tree.add_node(t)
