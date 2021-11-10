@@ -279,7 +279,7 @@ class PartitionDisjuncts_Transformation(Transformation):
                                 # we find them
             Disjunct:    self._warn_for_active_disjunct,
             Block:       False,
-            LogicalConstraint: False,# TODO
+            LogicalConstraint: False,
             ExternalFunction: False,
             Port:        False, # not Arcs, because those are deactivated after
                                 # the network.expand_arcs transformation
@@ -298,6 +298,7 @@ class PartitionDisjuncts_Transformation(Transformation):
             assert not NAME_BUFFER
             self._config = self.CONFIG(kwds.pop('options', {}))
             self._config.set_value(kwds)
+            self.transformation_blocks = {}
 
             if not self._config.assume_fixed_vars_permanent:
                 fixed_vars = ComponentMap()
@@ -331,6 +332,7 @@ class PartitionDisjuncts_Transformation(Transformation):
                     disjunct.transformation_block().indicator_var.fix(val)
 
             del self._config
+            del self.transformation_blocks
             # clear the global name buffer
             NAME_BUFFER.clear()
             # restore logging level
@@ -368,20 +370,15 @@ class PartitionDisjuncts_Transformation(Transformation):
         knownBlocks = {}
         if targets is None:
             targets = ( instance, )
-        else:
-            # we need to preprocess targets to make sure that if there are any
-            # disjunctions in targets that their disjuncts don't appear at
-            # all. Also need to make sure that Disjunctions which are parent to
-            # others (in that they are nested around others) are transformed
-            # first. We really only need to transform root nodes, actually,
-            # because they will recursively transform everything inside of them
-            targets = self._preprocess_targets(targets, instance, knownBlocks)
+        # Disjunctions in targets will transform their Disjuncts which will in
+        # turn transform all the GDP components declared on themselves. So we
+        # only need to list root nodes of the GDP tree as targets, and
+        # everything will be transformed (and in the correct order)
+        targets = self._preprocess_targets(targets, instance, knownBlocks)
         for t in targets:
             if t.ctype is Disjunction:
-                if t.is_indexed():
-                    self._transform_disjunction(t)
-                else:
-                    self._transform_disjunctionData(t, t.index())
+                # After preprocessing, we know that this is not indexed.
+                self._transform_disjunctionData(t, t.index())
             else: # We know t.ctype in (Block, Disjunct) after preprocessing
                 if t.is_indexed():
                     self._transform_block(t)
@@ -403,10 +400,13 @@ class PartitionDisjuncts_Transformation(Transformation):
 
         return preprocessed_targets
 
-    def _add_transformation_block(self, block):
+    def _get_transformation_block(self, block):
+        if self.transformation_blocks.get(block) is not None:
+            return self.transformation_blocks[block]
+        
         # create a transformation block on which we will create the reformulated
         # GDP...
-        transformation_block = Block()
+        self.transformation_blocks[block] = transformation_block = Block()
         block.add_component(
             unique_component_name(
                 block,
@@ -419,8 +419,8 @@ class PartitionDisjuncts_Transformation(Transformation):
         return transformation_block
 
     def _transform_block(self, obj):
-        for i in sorted(obj.keys()):
-            self._transform_blockData(obj[i])
+        for block in obj.values(ordered=True):
+            self._transform_blockData(block)
 
     def _transform_blockData(self, obj):
         # compute the list of Disjunctions to transform *once*, then do it. Else
@@ -438,18 +438,6 @@ class PartitionDisjuncts_Transformation(Transformation):
         for disjunction in to_transform:
             self._transform_disjunctionData(disjunction, disjunction.index())
 
-    def _transform_disjunction(self, obj):
-        if not obj.active:
-            return
-
-        transBlock = self._add_transformation_block(obj.parent_block())
-
-        # relax each of the disjunctionDatas
-        for i in sorted(obj.keys()):
-            self._transform_disjunctionData(obj[i], i, transBlock)
-
-        obj.deactivate()
-
     def _transform_disjunctionData(self, obj, idx, transBlock=None,
                                    transformed_parent_disjunct=None):
         if not obj.active:
@@ -463,24 +451,24 @@ class PartitionDisjuncts_Transformation(Transformation):
                                         name_buffer=NAME_BUFFER))
 
         if transBlock is None and transformed_parent_disjunct is not None:
-            transBlock = self._add_transformation_block(
+            transBlock = self._get_transformation_block(
                 transformed_parent_disjunct)
         if transBlock is None:
-            transBlock = self._add_transformation_block(obj.parent_block())
+            transBlock = self._get_transformation_block(obj.parent_block())
 
         variable_partitions = self.variable_partitions
         partition_method = self.partitioning_method
 
-        # was it specified for the disjunct?
+        # was the partition specified for the disjunct?
         partition = variable_partitions.get(obj)
         if partition is None:
-            # was there a default
+            # was there a default partition?
             partition = variable_partitions.get(None)
             if partition is None:
                 # If not, see what method to use to calculate one
                 method = partition_method.get(obj)
-                # was there a default method?
                 if method is None:
+                    # was there a default method?
                     method = partition_method.get(None)
                 # if all else fails, set it to our default
                 method = method if method is not None else arbitrary_partition
