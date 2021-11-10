@@ -161,6 +161,13 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
+                    if mip_solver == 'gurobi_persistent' \
+                       and SolverFactory(mip_solver).version()[:3] == (9,5,0) \
+                       and model.name in {'DuranEx3', 'SimpleMINLP'} \
+                       and sys.platform.startswith('win'):
+                        sys.stderr.write(
+                            "Skipping test due to known solver issue\n")
+                        continue
                     sys.stderr.write(f'Solving {model} with {mip_solver}\n')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
@@ -178,13 +185,6 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
-                    if mip_solver == 'gurobi_persistent' \
-                       and SolverFactory(mip_solver).version()[:3] == (9,5,0) \
-                       and model.name in {'DuranEx3', 'SimpleMINLP'} \
-                       and sys.platform.startswith('win'):
-                        sys.stderr.write(
-                            "Skipping test due to known solver issue\n")
-                        continue
                     sys.stderr.write(f'Solving {model} with {mip_solver}\n')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
