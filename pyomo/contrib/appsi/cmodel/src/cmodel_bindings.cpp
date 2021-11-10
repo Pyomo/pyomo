@@ -10,27 +10,22 @@
 **/
 
 #include "lp_writer.hpp"
+//#include "profiler.h"
 
 
 PYBIND11_MODULE(appsi_cmodel, m)
 {
   m.attr("inf") = inf;
-  m.def("appsi_exprs_from_pyomo_exprs", &appsi_exprs_from_pyomo_exprs);
+  //m.def("ProfilerStart", &ProfilerStart);
+  //m.def("ProfilerStop", &ProfilerStop);
   m.def("process_lp_constraints", &process_lp_constraints);
-  m.def("appsi_exp", &appsi_exp);
-  m.def("appsi_log", &appsi_log);
-  m.def("appsi_sum", &appsi_sum);
   m.def("create_vars", &create_vars);
   m.def("create_params", &create_params);
   m.def("create_constants", &create_constants);
-  m.def("generate_repns", &generate_repns);
-  m.def("external_helper", &external_helper);
-  py::class_<Repn, std::shared_ptr<Repn> >(m, "Repn")
-    .def_readwrite("constant", &Repn::constant)
-    .def_readwrite("linear", &Repn::linear)
-    .def_readwrite("quadratic", &Repn::quadratic)
-    .def_readwrite("nonlinear", &Repn::nonlinear)
-    .def("__str__", &Repn::__str__);
+  m.def("appsi_exprs_from_pyomo_exprs", &appsi_exprs_from_pyomo_exprs);
+  m.def("appsi_expr_from_pyomo_expr", &appsi_expr_from_pyomo_expr);
+  py::class_<PyomoExprTypes>(m, "PyomoExprTypes")
+    .def(py::init<>());
   py::class_<Node, std::shared_ptr<Node> >(m, "Node")
     .def("is_variable_type", &Node::is_variable_type)
     .def("is_param_type", &Node::is_param_type)
@@ -39,28 +34,8 @@ PYBIND11_MODULE(appsi_cmodel, m)
     .def("is_constant_type", &Node::is_constant_type)
     .def("is_leaf", &Node::is_leaf);
   py::class_<ExpressionBase, Node, std::shared_ptr<ExpressionBase> >(m, "ExpressionBase")
-    .def("__mul__", [](ExpressionBase &a, ExpressionBase &b){return a*b;}, py::is_operator())
-    .def("__add__", [](ExpressionBase &a, ExpressionBase &b){return a+b;}, py::is_operator())
-    .def("__sub__", [](ExpressionBase &a, ExpressionBase &b){return a-b;}, py::is_operator())
-    .def("__div__", [](ExpressionBase &a, ExpressionBase &b){return a/b;}, py::is_operator())
-    .def("__truediv__", [](ExpressionBase &a, ExpressionBase &b){return a/b;}, py::is_operator())
-    .def("__pow__", [](ExpressionBase &a, ExpressionBase &b){return a.__pow__(b);}, py::is_operator())
-    .def("__neg__", [](ExpressionBase &a){return -a;}, py::is_operator())
-    .def("__mul__", [](ExpressionBase &a, double b){return a*b;}, py::is_operator())
-    .def("__add__", [](ExpressionBase &a, double b){return a+b;}, py::is_operator())
-    .def("__sub__", [](ExpressionBase &a, double b){return a-b;}, py::is_operator())
-    .def("__div__", [](ExpressionBase &a, double b){return a/b;}, py::is_operator())
-    .def("__truediv__", [](ExpressionBase &a, double b){return a/b;}, py::is_operator())
-    .def("__pow__", [](ExpressionBase &a, double b){return a.__pow__(b);}, py::is_operator())
-    .def("__rmul__", [](ExpressionBase &a, double b){return a.__rmul__(b);}, py::is_operator())
-    .def("__radd__", [](ExpressionBase &a, double b){return a.__radd__(b);}, py::is_operator())
-    .def("__rsub__", [](ExpressionBase &a, double b){return a.__rsub__(b);}, py::is_operator())
-    .def("__rdiv__", [](ExpressionBase &a, double b){return a.__rdiv__(b);}, py::is_operator())
-    .def("__rtruediv__", [](ExpressionBase &a, double b){return a.__rtruediv__(b);}, py::is_operator())
-    .def("__rpow__", [](ExpressionBase &a, double b){return a.__rpow__(b);}, py::is_operator())
     .def("__str__", &ExpressionBase::__str__)
-    .def("evaluate", &ExpressionBase::evaluate)
-    .def("generate_repn", &ExpressionBase::generate_repn);
+    .def("evaluate", &ExpressionBase::evaluate);
   py::class_<Var, ExpressionBase, std::shared_ptr<Var> >(m, "Var")
     .def(py::init<>())
     .def(py::init<double>())
@@ -83,10 +58,9 @@ PYBIND11_MODULE(appsi_cmodel, m)
     .def(py::init<>())
     .def(py::init<double>())
     .def_readwrite("value", &Constant::value);
-  py::class_<Operator, Node, std::shared_ptr<Operator> >(m, "Operator")
-    .def("expression_from_operator", &Operator::expression_from_operator);
+  py::class_<Operator, Node, std::shared_ptr<Operator> >(m, "Operator");
   py::class_<Expression, ExpressionBase, std::shared_ptr<Expression> >(m, "Expression")
-    .def(py::init<>())
+    .def(py::init<int>())
     .def("get_operators", &Expression::get_operators);
   py::class_<NLBase, std::shared_ptr<NLBase> >(m, "NLBase");
   py::class_<NLConstraint, NLBase, std::shared_ptr<NLConstraint> >(m, "NLConstraint")

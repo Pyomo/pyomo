@@ -37,7 +37,6 @@ class UnaryOperator;
 class LinearOperator;
 class SumOperator;
 class MultiplyOperator;
-class AddOperator;
 class SubtractOperator;
 class DivideOperator;
 class PowerOperator;
@@ -45,7 +44,6 @@ class NegationOperator;
 class ExpOperator;
 class LogOperator;
 class ExternalOperator;
-class Repn;
 class PyomoExprTypes;
 
 
@@ -68,7 +66,6 @@ public:
   virtual bool is_linear_operator() {return false;}
   virtual bool is_sum_operator() {return false;}
   virtual bool is_multiply_operator() {return false;}
-  virtual bool is_add_operator() {return false;}
   virtual bool is_subtract_operator() {return false;}
   virtual bool is_divide_operator() {return false;}
   virtual bool is_power_operator() {return false;}
@@ -78,11 +75,10 @@ public:
   virtual bool is_external_operator() {return false;}
   virtual double get_value_from_array(double*) = 0;
   virtual int get_degree_from_array(int*) = 0;
-  virtual bool get_unique_degree_from_array(bool*) = 0;
-  virtual std::shared_ptr<Repn> get_repn_from_vector(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) = 0;
   virtual std::string get_string_from_array(std::string*) = 0;
   virtual void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) = 0;
   virtual void write_nl_string(std::ofstream&) = 0;
+  virtual void fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx) = 0;
 };
 
 
@@ -91,50 +87,13 @@ class ExpressionBase: public Node
 public:
   ExpressionBase() = default;
   virtual double evaluate() = 0;
-  virtual std::shared_ptr<Repn> generate_repn() = 0;
-  std::shared_ptr<ExpressionBase> operator+(ExpressionBase&);
-  std::shared_ptr<ExpressionBase> operator*(ExpressionBase&);
-  std::shared_ptr<ExpressionBase> operator-(ExpressionBase&);
-  std::shared_ptr<ExpressionBase> operator/(ExpressionBase&);
-  std::shared_ptr<ExpressionBase> __pow__(ExpressionBase&);
-  std::shared_ptr<ExpressionBase> operator-();
-
-  std::shared_ptr<ExpressionBase> operator+(double);
-  std::shared_ptr<ExpressionBase> operator*(double);
-  std::shared_ptr<ExpressionBase> operator-(double);
-  std::shared_ptr<ExpressionBase> operator/(double);
-  std::shared_ptr<ExpressionBase> __pow__(double);
-
-  std::shared_ptr<ExpressionBase> __radd__(double);
-  std::shared_ptr<ExpressionBase> __rmul__(double);
-  std::shared_ptr<ExpressionBase> __rsub__(double);
-  std::shared_ptr<ExpressionBase> __rdiv__(double);
-  std::shared_ptr<ExpressionBase> __rtruediv__(double);
-  std::shared_ptr<ExpressionBase> __rpow__(double);
-
   virtual std::string __str__() = 0;
   virtual std::shared_ptr<std::vector<std::shared_ptr<Var> > > identify_variables() = 0;
   virtual std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > identify_external_operators() = 0;
   virtual std::shared_ptr<std::vector<std::shared_ptr<Node> > > get_prefix_notation() = 0;
-
   std::shared_ptr<ExpressionBase> shared_from_this() {return std::static_pointer_cast<ExpressionBase>(Node::shared_from_this());}
-
   void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) override {;}
-  std::shared_ptr<Repn> get_repn_from_vector(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
 };
-
-
-std::shared_ptr<ExpressionBase> appsi_exp(std::shared_ptr<ExpressionBase> n);
-std::shared_ptr<ExpressionBase> appsi_log(std::shared_ptr<ExpressionBase> n);
-std::shared_ptr<ExpressionBase> appsi_log10(std::shared_ptr<ExpressionBase> n);
-std::shared_ptr<ExpressionBase> appsi_sin(std::shared_ptr<ExpressionBase> n);
-std::shared_ptr<ExpressionBase> appsi_cos(std::shared_ptr<ExpressionBase> n);
-std::shared_ptr<ExpressionBase> appsi_tan(std::shared_ptr<ExpressionBase> n);
-std::shared_ptr<ExpressionBase> appsi_asin(std::shared_ptr<ExpressionBase> n);
-std::shared_ptr<ExpressionBase> appsi_acos(std::shared_ptr<ExpressionBase> n);
-std::shared_ptr<ExpressionBase> appsi_atan(std::shared_ptr<ExpressionBase> n);
-std::shared_ptr<ExpressionBase> appsi_sum(std::vector<std::shared_ptr<ExpressionBase> >& exprs_to_sum);
-std::shared_ptr<ExpressionBase> external_helper(std::string function_name, std::vector<std::shared_ptr<ExpressionBase> > operands);
 
 
 class Leaf: public ExpressionBase
@@ -147,9 +106,9 @@ public:
   bool is_leaf() override;
   double evaluate() override;
   double get_value_from_array(double*) override;
-  bool get_unique_degree_from_array(bool*) override;
   std::string get_string_from_array(std::string*) override;
   std::shared_ptr<std::vector<std::shared_ptr<Node> > > get_prefix_notation() override;
+  void fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx) override;
 };
 
 
@@ -164,7 +123,6 @@ public:
   std::shared_ptr<std::vector<std::shared_ptr<Var> > > identify_variables() override;
   std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > identify_external_operators() override;
   void write_nl_string(std::ofstream&) override;
-  std::shared_ptr<Repn> generate_repn() override;
 };
 
 
@@ -188,7 +146,6 @@ public:
   std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > identify_external_operators() override;
   void write_nl_string(std::ofstream&) override;
   std::shared_ptr<Var> shared_from_this() {return std::static_pointer_cast<Var>(Node::shared_from_this());}
-  std::shared_ptr<Repn> generate_repn() override;
 };
 
 
@@ -206,36 +163,35 @@ public:
   std::shared_ptr<std::vector<std::shared_ptr<Var> > > identify_variables() override;
   std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > identify_external_operators() override;
   void write_nl_string(std::ofstream&) override;
-  std::shared_ptr<Repn> generate_repn() override;
 };
 
 
 class Expression: public ExpressionBase
 {
 public:
-  Expression() = default;
+  Expression(int _n_operators) : ExpressionBase()
+  {
+    operators = new std::shared_ptr<Operator>[_n_operators];
+    n_operators = _n_operators;
+  }
+  ~Expression()
+  {
+    delete[] operators;
+  }
   std::string __str__() override;
   bool is_expression_type() override;
   double evaluate() override;
   double get_value_from_array(double*) override;
   int get_degree_from_array(int*) override;
-  bool get_unique_degree_from_array(bool*) override;
   std::shared_ptr<std::vector<std::shared_ptr<Var> > > identify_variables() override;
   std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > identify_external_operators() override;
   std::string get_string_from_array(std::string*) override;
   std::shared_ptr<std::vector<std::shared_ptr<Node> > > get_prefix_notation() override;
   void write_nl_string(std::ofstream&) override;
-  std::shared_ptr<Repn> generate_repn() override;
-  std::shared_ptr<Repn> get_repn_from_vector(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   std::vector<std::shared_ptr<Operator> > get_operators();
-  unsigned int n_operators() {return _n_operators;}
-  std::shared_ptr<Expression> copy_expr();
-  std::shared_ptr<Operator> last_operator();
-  void add_operator(std::shared_ptr<Operator>);
-  void extend_operators(std::shared_ptr<Expression>);
-private:
-  std::shared_ptr<std::vector<std::shared_ptr<Operator> > > operators = std::make_shared<std::vector<std::shared_ptr<Operator> > >();
-  unsigned int _n_operators = 0;
+  std::shared_ptr<Operator>* operators;
+  unsigned int n_operators;
+  void fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx) override;
 };
 
 
@@ -251,14 +207,9 @@ public:
   bool is_operator_type() override;
   double get_value_from_array(double*) override;
   int get_degree_from_array(int*) override;
-  bool get_unique_degree_from_array(bool*) override;
   std::string get_string_from_array(std::string*) override;
   virtual void print(std::string*) = 0;
   virtual std::string name() = 0;
-  virtual void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) = 0;
-  virtual void propagate_unique_degree(int* degrees, bool* unique_degrees) = 0;
-  std::shared_ptr<Repn> get_repn_from_vector(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
-  std::shared_ptr<ExpressionBase> expression_from_operator();
 };
 
 
@@ -272,7 +223,7 @@ public:
   std::shared_ptr<Node> operand2;
   void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) override;
   bool is_binary_operator() override;
-  void propagate_unique_degree(int* degrees, bool* unique_degrees) override;
+  void fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx) override;
 };
 
 
@@ -286,47 +237,63 @@ public:
   void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) override;
   bool is_unary_operator() override;
   void propagate_degree_forward(int* degrees, double* values) override;
-  void propagate_unique_degree(int* degrees, bool* unique_degrees) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
-  virtual std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) = 0;
+  void fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx) override;
 };
 
 
 class LinearOperator: public Operator
 {
 public:
-  LinearOperator() = default;
+  LinearOperator(int _nterms)
+  {
+    variables = new std::shared_ptr<Var>[_nterms];
+    coefficients = new std::shared_ptr<ExpressionBase>[_nterms];
+    nterms = _nterms;
+  }
+  ~LinearOperator()
+  {
+    delete[] variables;
+    delete[] coefficients;
+  }
   void identify_variables(std::set<std::shared_ptr<Node> >&) override;
-  std::shared_ptr<std::vector<std::shared_ptr<Var> > > variables = std::make_shared<std::vector<std::shared_ptr<Var> > >();
-  std::shared_ptr<std::vector<std::shared_ptr<ExpressionBase> > > coefficients = std::make_shared<std::vector<std::shared_ptr<ExpressionBase> > >();
+  std::shared_ptr<Var>* variables;
+  std::shared_ptr<ExpressionBase>* coefficients;
   std::shared_ptr<ExpressionBase> constant = std::make_shared<Constant>(0);
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "LinearOperator";};
   void write_nl_string(std::ofstream&) override;
   void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) override;
   bool is_linear_operator() override;
-  void propagate_unique_degree(int* degrees, bool* unique_degrees) override;
+  unsigned int nterms;
+  void fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx) override;
 };
 
 
 class SumOperator: public Operator
 {
 public:
-  SumOperator() = default;
+  SumOperator(int _nargs)
+  {
+    operands = new std::shared_ptr<Node>[_nargs];
+    nargs = _nargs;
+  }
+  ~SumOperator()
+  {
+    delete[] operands;
+  }
   void identify_variables(std::set<std::shared_ptr<Node> >&) override;
-  std::shared_ptr<std::vector<std::shared_ptr<Node> > > operands = std::make_shared<std::vector<std::shared_ptr<Node> > >();
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "SumOperator";};
   void write_nl_string(std::ofstream&) override;
   void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) override;
   bool is_sum_operator() override;
-  void propagate_unique_degree(int* degrees, bool* unique_degrees) override;
+  std::shared_ptr<Node>* operands;
+  unsigned int nargs;
+  void fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx) override;
 };
 
 
@@ -336,7 +303,6 @@ public:
   MultiplyOperator() = default;
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "MultiplyOperator";};
   void write_nl_string(std::ofstream&) override;
@@ -347,35 +313,28 @@ public:
 class ExternalOperator: public Operator
 {
 public:
-  ExternalOperator() = default;
+  ExternalOperator(int _nargs)
+  {
+    operands = new std::shared_ptr<Node>[_nargs];
+    nargs = _nargs;
+  }
+  ~ExternalOperator()
+  {
+    delete[] operands;
+  }
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "ExternalOperator";};
   void write_nl_string(std::ofstream&) override;
   void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) override;
   void identify_variables(std::set<std::shared_ptr<Node> >&) override;
-  std::shared_ptr<std::vector<std::shared_ptr<Node> > > operands = std::make_shared<std::vector<std::shared_ptr<Node> > >();
+  bool is_external_operator() override;
   std::string function_name;
   int external_function_index = -1;
-  bool is_external_operator() override;
-  void propagate_unique_degree(int* degrees, bool* unique_degrees) override;
-};
-
-
-class AddOperator: public BinaryOperator
-{
-public:
-  AddOperator() = default;
-  void evaluate(double* values) override;
-  void propagate_degree_forward(int* degrees, double* values) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
-  void print(std::string*) override;
-  std::string name() override {return "AddOperator";};
-  void write_nl_string(std::ofstream&) override;
-  bool is_add_operator() override;
-  void propagate_unique_degree(int* degrees, bool* unique_degrees) override;
+  std::shared_ptr<Node>* operands;
+  unsigned int nargs;
+  void fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx) override;
 };
 
 
@@ -385,12 +344,10 @@ public:
   SubtractOperator() = default;
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "SubtractOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_subtract_operator() override;
-  void propagate_unique_degree(int* degrees, bool* unique_degrees) override;
 };
 
 
@@ -400,7 +357,6 @@ public:
   DivideOperator() = default;
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "DivideOperator";};
   void write_nl_string(std::ofstream&) override;
@@ -414,7 +370,6 @@ public:
   PowerOperator() = default;
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "PowerOperator";};
   void write_nl_string(std::ofstream&) override;
@@ -428,12 +383,10 @@ public:
   NegationOperator() = default;
   void evaluate(double* values) override;
   void propagate_degree_forward(int* degrees, double* values) override;
-  void generate_repn(std::vector<std::shared_ptr<Repn> >& repns, int* degrees, bool* unique_degrees) override;
   void print(std::string*) override;
   std::string name() override {return "NegationOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_negation_operator() override;
-  std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) override;
 };
 
 
@@ -446,7 +399,6 @@ public:
   std::string name() override {return "ExpOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_exp_operator() override;
-  std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) override;
 };
 
 
@@ -459,7 +411,6 @@ public:
   std::string name() override {return "LogOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_log_operator() override;
-  std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) override;
 };
 
 
@@ -471,7 +422,6 @@ public:
   void print(std::string*) override;
   std::string name() override {return "Log10Operator";};
   void write_nl_string(std::ofstream&) override;
-  std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) override;
 };
 
 
@@ -483,7 +433,6 @@ public:
   void print(std::string*) override;
   std::string name() override {return "SinOperator";};
   void write_nl_string(std::ofstream&) override;
-  std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) override;
 };
 
 
@@ -495,7 +444,6 @@ public:
   void print(std::string*) override;
   std::string name() override {return "CosOperator";};
   void write_nl_string(std::ofstream&) override;
-  std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) override;
 };
 
 
@@ -507,7 +455,6 @@ public:
   void print(std::string*) override;
   std::string name() override {return "TanOperator";};
   void write_nl_string(std::ofstream&) override;
-  std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) override;
 };
 
 
@@ -519,7 +466,6 @@ public:
   void print(std::string*) override;
   std::string name() override {return "AsinOperator";};
   void write_nl_string(std::ofstream&) override;
-  std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) override;
 };
 
 
@@ -531,7 +477,6 @@ public:
   void print(std::string*) override;
   std::string name() override {return "AcosOperator";};
   void write_nl_string(std::ofstream&) override;
-  std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) override;
 };
 
 
@@ -543,28 +488,39 @@ public:
   void print(std::string*) override;
   std::string name() override {return "AtanOperator";};
   void write_nl_string(std::ofstream&) override;
-  std::shared_ptr<ExpressionBase> call_unary_function(std::shared_ptr<ExpressionBase> e) override;
-};
-
-
-class Repn
-{
-public:
-  Repn() = default;
-  ~Repn() = default;
-  std::shared_ptr<ExpressionBase> constant;
-  std::shared_ptr<ExpressionBase> linear;
-  std::shared_ptr<ExpressionBase> quadratic;
-  std::shared_ptr<ExpressionBase> nonlinear;
-  void reset_with_constants();
-  std::string __str__();
 };
 
 
 class PyomoExprTypes
 {
 public:
-  PyomoExprTypes() = default;
+  PyomoExprTypes() {
+    expr_type_map[int_] = 0;
+    expr_type_map[float_] = 0;
+    expr_type_map[ScalarVar] = 1;
+    expr_type_map[_GeneralVarData] = 1;
+    expr_type_map[ScalarParam] = 2;
+    expr_type_map[_ParamData] = 2;
+    expr_type_map[MonomialTermExpression] = 3;
+    expr_type_map[ProductExpression] = 3;
+    expr_type_map[NPV_ProductExpression] = 3;
+    expr_type_map[SumExpression] = 4;
+    expr_type_map[NPV_SumExpression] = 4;
+    expr_type_map[NegationExpression] = 5;
+    expr_type_map[NPV_NegationExpression] = 5;
+    expr_type_map[ExternalFunctionExpression] = 6;
+    expr_type_map[NPV_ExternalFunctionExpression] = 6;
+    expr_type_map[PowExpression] = 7;
+    expr_type_map[NPV_PowExpression] = 7;
+    expr_type_map[DivisionExpression] = 8;
+    expr_type_map[NPV_DivisionExpression] = 8;
+    expr_type_map[UnaryFunctionExpression] = 9;
+    expr_type_map[NPV_UnaryFunctionExpression] = 9;
+    expr_type_map[LinearExpression] = 10;
+    expr_type_map[_GeneralExpressionData] = 11;
+    expr_type_map[ScalarExpression] = 11;
+    expr_type_map[NumericConstant] = 12;
+  }
   ~PyomoExprTypes() = default;
   py::int_ ione = 1;
   py::float_ fone = 1.0;
@@ -591,14 +547,19 @@ public:
   py::object UnaryFunctionExpression = numeric_expr.attr("UnaryFunctionExpression");
   py::object NPV_UnaryFunctionExpression = numeric_expr.attr("NPV_UnaryFunctionExpression");
   py::object LinearExpression = numeric_expr.attr("LinearExpression");
+  py::object NumericConstant = py::module_::import("pyomo.core.expr.numvalue").attr("NumericConstant");
+  py::object expr_module = py::module_::import("pyomo.core.base.expression");
+  py::object _GeneralExpressionData = expr_module.attr("_GeneralExpressionData");
+  py::object ScalarExpression = expr_module.attr("ScalarExpression");
   py::object builtins = py::module_::import("builtins");
   py::object id = builtins.attr("id");
+  py::object len = builtins.attr("len");
+  py::dict expr_type_map;
 };
 
 
 std::vector<std::shared_ptr<Var> > create_vars(int n_vars);
 std::vector<std::shared_ptr<Param> > create_params(int n_params);
 std::vector<std::shared_ptr<Constant> > create_constants(int n_constants);
-std::vector<std::shared_ptr<Repn> > generate_repns(std::vector<std::shared_ptr<ExpressionBase> > exprs);
 std::shared_ptr<ExpressionBase> appsi_expr_from_pyomo_expr(py::handle expr, py::dict var_map, py::dict param_map, PyomoExprTypes& expr_types);
 std::vector<std::shared_ptr<ExpressionBase> > appsi_exprs_from_pyomo_exprs(py::list expr_list, py::dict var_map, py::dict param_map);

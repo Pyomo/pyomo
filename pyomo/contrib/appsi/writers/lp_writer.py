@@ -12,10 +12,7 @@ from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.kernel.objective import minimize, maximize
 from .config import WriterConfig
-from .cmodel_converter import PyomoToCModelWalker
 from ..cmodel import cmodel, cmodel_available
-
-id = id
 
 
 class LPWriter(PersistentBase):
@@ -33,7 +30,6 @@ class LPWriter(PersistentBase):
         self._solver_var_to_pyomo_var_map = dict()
         self._solver_con_to_pyomo_con_map = dict()
         self._pyomo_param_to_solver_param_map = dict()
-        self._walker = PyomoToCModelWalker(self._pyomo_var_to_solver_var_map, self._pyomo_param_to_solver_param_map)
 
     @property
     def config(self):
@@ -174,11 +170,21 @@ class LPWriter(PersistentBase):
             quad_vars_2 = list()
             sense = 0
         else:
+            pyomo_expr_types = cmodel.PyomoExprTypes()
             repn = generate_standard_repn(obj.expr, compute_values=False, quadratic=True)
-            const = self._walker.dfs_postorder_stack(repn.constant)
-            lin_coef = [self._walker.dfs_postorder_stack(i) for i in repn.linear_coefs]
+            const = cmodel.appsi_expr_from_pyomo_expr(repn.constant,
+                                                      self._pyomo_var_to_solver_var_map,
+                                                      self._pyomo_param_to_solver_param_map,
+                                                      pyomo_expr_types)
+            lin_coef = [cmodel.appsi_expr_from_pyomo_expr(i,
+                                                          self._pyomo_var_to_solver_var_map,
+                                                          self._pyomo_param_to_solver_param_map,
+                                                          pyomo_expr_types) for i in repn.linear_coefs]
             lin_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in repn.linear_vars]
-            quad_coef = [self._walker.dfs_postorder_stack(i) for i in repn.quadratic_coefs]
+            quad_coef = [cmodel.appsi_expr_from_pyomo_expr(i,
+                                                           self._pyomo_var_to_solver_var_map,
+                                                           self._pyomo_param_to_solver_param_map,
+                                                           pyomo_expr_types) for i in repn.quadratic_coefs]
             quad_vars_1 = [self._pyomo_var_to_solver_var_map[id(i[0])] for i in repn.quadratic_vars]
             quad_vars_2 = [self._pyomo_var_to_solver_var_map[id(i[1])] for i in repn.quadratic_vars]
             if obj.sense is minimize:

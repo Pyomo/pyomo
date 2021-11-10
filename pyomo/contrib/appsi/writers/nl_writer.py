@@ -12,7 +12,6 @@ from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.core.kernel.objective import minimize
 from .config import WriterConfig
-from .cmodel_converter import PyomoToCModelWalker
 from pyomo.common.collections import OrderedSet
 import os
 from ..cmodel import cmodel, cmodel_available
@@ -33,7 +32,6 @@ class NLWriter(PersistentBase):
         self._solver_var_to_pyomo_var_map = dict()
         self._solver_con_to_pyomo_con_map = dict()
         self._pyomo_param_to_solver_param_map = dict()
-        self._walker = PyomoToCModelWalker(self._pyomo_var_to_solver_var_map, self._pyomo_param_to_solver_param_map)
 
     @property
     def config(self):
@@ -100,23 +98,42 @@ class NLWriter(PersistentBase):
             self._pyomo_param_to_solver_param_map[id(p)] = cp
 
     def _add_constraints(self, cons: List[_GeneralConstraintData]):
+        pyomo_expr_types = cmodel.PyomoExprTypes()
         for c in cons:
             cname = self._symbol_map.getSymbol(c, self._con_labeler)
             repn = generate_standard_repn(c.body, compute_values=False, quadratic=False)
-            const = self._walker.dfs_postorder_stack(repn.constant)
+            const = cmodel.appsi_expr_from_pyomo_expr(repn.constant,
+                                                      self._pyomo_var_to_solver_var_map,
+                                                      self._pyomo_param_to_solver_param_map,
+                                                      pyomo_expr_types)
             lin_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in repn.linear_vars]
-            lin_coef = [self._walker.dfs_postorder_stack(i) for i in repn.linear_coefs]
+            lin_coef = [cmodel.appsi_expr_from_pyomo_expr(i,
+                                                          self._pyomo_var_to_solver_var_map,
+                                                          self._pyomo_param_to_solver_param_map,
+                                                          pyomo_expr_types) for i in repn.linear_coefs]
             if repn.nonlinear_expr is None:
-                nonlin = self._walker.dfs_postorder_stack(0)
+                nonlin = cmodel.appsi_expr_from_pyomo_expr(0,
+                                                           self._pyomo_var_to_solver_var_map,
+                                                           self._pyomo_param_to_solver_param_map,
+                                                           pyomo_expr_types)
             else:
-                nonlin = self._walker.dfs_postorder_stack(repn.nonlinear_expr)
+                nonlin = cmodel.appsi_expr_from_pyomo_expr(repn.nonlinear_expr,
+                                                           self._pyomo_var_to_solver_var_map,
+                                                           self._pyomo_param_to_solver_param_map,
+                                                           pyomo_expr_types)
             cc = cmodel.NLConstraint(const, lin_coef, lin_vars, nonlin)
             lb = c.lower
             ub = c.upper
             if lb is not None:
-                cc.lb = self._walker.dfs_postorder_stack(lb)
+                cc.lb = cmodel.appsi_expr_from_pyomo_expr(lb,
+                                                          self._pyomo_var_to_solver_var_map,
+                                                          self._pyomo_param_to_solver_param_map,
+                                                          pyomo_expr_types)
             if ub is not None:
-                cc.ub = self._walker.dfs_postorder_stack(ub)
+                cc.ub = cmodel.appsi_expr_from_pyomo_expr(ub,
+                                                          self._pyomo_var_to_solver_var_map,
+                                                          self._pyomo_param_to_solver_param_map,
+                                                          pyomo_expr_types)
             self._writer.add_constraint(cc)
             self._pyomo_con_to_solver_con_map[c] = cc
             self._solver_con_to_pyomo_con_map[cc] = c
@@ -185,14 +202,27 @@ class NLWriter(PersistentBase):
             nonlin = cmodel.Constant(0)
             sense = 0
         else:
+            pyomo_expr_types = cmodel.PyomoExprTypes()
             repn = generate_standard_repn(obj.expr, compute_values=False, quadratic=False)
-            const = self._walker.dfs_postorder_stack(repn.constant)
+            const = cmodel.appsi_expr_from_pyomo_expr(repn.constant,
+                                                      self._pyomo_var_to_solver_var_map,
+                                                      self._pyomo_param_to_solver_param_map,
+                                                      pyomo_expr_types)
             lin_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in repn.linear_vars]
-            lin_coef = [self._walker.dfs_postorder_stack(i) for i in repn.linear_coefs]
+            lin_coef = [cmodel.appsi_expr_from_pyomo_expr(i,
+                                                          self._pyomo_var_to_solver_var_map,
+                                                          self._pyomo_param_to_solver_param_map,
+                                                          pyomo_expr_types) for i in repn.linear_coefs]
             if repn.nonlinear_expr is None:
-                nonlin = cmodel.Constant(0)
+                nonlin = cmodel.appsi_expr_from_pyomo_expr(0,
+                                                           self._pyomo_var_to_solver_var_map,
+                                                           self._pyomo_param_to_solver_param_map,
+                                                           pyomo_expr_types)
             else:
-                nonlin = self._walker.dfs_postorder_stack(repn.nonlinear_expr)
+                nonlin = cmodel.appsi_expr_from_pyomo_expr(repn.nonlinear_expr,
+                                                           self._pyomo_var_to_solver_var_map,
+                                                           self._pyomo_param_to_solver_param_map,
+                                                           pyomo_expr_types)
             if obj.sense is minimize:
                 sense = 0
             else:

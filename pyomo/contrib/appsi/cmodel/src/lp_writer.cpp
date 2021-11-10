@@ -361,7 +361,7 @@ std::vector<std::shared_ptr<LPConstraint> > LPWriter::get_solve_cons()
 void process_lp_constraints(py::list cons, py::object writer)
 {
   py::object generate_standard_repn = py::module_::import("pyomo.repn.standard_repn").attr("generate_standard_repn");
-  py::object id = py::module_::import("pyomo.contrib.appsi.writers.lp_writer").attr("id");
+  py::object id = py::module_::import("builtins").attr("id");
   py::object ScalarParam = py::module_::import("pyomo.core.base.param").attr("ScalarParam");
   py::object _ParamData = py::module_::import("pyomo.core.base.param").attr("_ParamData");
   py::object NumericConstant = py::module_::import("pyomo.core.expr.numvalue").attr("NumericConstant");
@@ -369,7 +369,6 @@ void process_lp_constraints(py::list cons, py::object writer)
   py::object repn;
   py::object getSymbol = writer.attr("_symbol_map").attr("getSymbol");
   py::object labeler = writer.attr("_con_labeler");
-  py::object dfs_postorder_stack = writer.attr("_walker").attr("dfs_postorder_stack");
   LPWriter* c_writer = writer.attr("_writer").cast<LPWriter*>();
   py::dict var_map = writer.attr("_pyomo_var_to_solver_var_map");
   py::dict param_map = writer.attr("_pyomo_param_to_solver_param_map");
@@ -398,6 +397,7 @@ void process_lp_constraints(py::list cons, py::object writer)
   py::tuple lower_body_upper;
   py::dict active_constraints = writer.attr("_active_constraints");
   py::object nonlinear_expr;
+  PyomoExprTypes expr_types = PyomoExprTypes();
   for (py::handle c : cons)
     {
       lower_body_upper = active_constraints[c];
@@ -420,7 +420,7 @@ void process_lp_constraints(py::list cons, py::object writer)
         }
       else
         {
-          _const = dfs_postorder_stack(repn_constant).cast<std::shared_ptr<ExpressionBase> >();
+          _const = appsi_expr_from_pyomo_expr(repn_constant, var_map, param_map, expr_types);
         }
       lin_coef.clear();
       repn_linear_coefs = repn.attr("linear_coefs");
@@ -437,7 +437,7 @@ void process_lp_constraints(py::list cons, py::object writer)
             }
           else
             {
-              lin_coef.push_back(dfs_postorder_stack(coef).cast<std::shared_ptr<ExpressionBase> >());
+              lin_coef.push_back(appsi_expr_from_pyomo_expr(coef, var_map, param_map, expr_types));
             }
         }
       lin_vars.clear();
@@ -461,7 +461,7 @@ void process_lp_constraints(py::list cons, py::object writer)
             }
           else
             {
-              quad_coef.push_back(dfs_postorder_stack(coef).cast<std::shared_ptr<ExpressionBase> >());
+              quad_coef.push_back(appsi_expr_from_pyomo_expr(coef, var_map, param_map, expr_types));
             }
         }
       quad_vars_1.clear();
@@ -496,7 +496,7 @@ void process_lp_constraints(py::list cons, py::object writer)
             }
           else
             {
-              lp_con->lb = dfs_postorder_stack(lb).cast<std::shared_ptr<ExpressionBase> >();
+              lp_con->lb = appsi_expr_from_pyomo_expr(lb, var_map, param_map, expr_types);
             }
         }
       if (!ub.is(py::none()))
@@ -516,7 +516,7 @@ void process_lp_constraints(py::list cons, py::object writer)
             }
           else
             {
-              lp_con->ub = dfs_postorder_stack(ub).cast<std::shared_ptr<ExpressionBase> >();
+              lp_con->ub = appsi_expr_from_pyomo_expr(ub, var_map, param_map, expr_types);
             }
         }
       c_writer->add_constraint(lp_con);
