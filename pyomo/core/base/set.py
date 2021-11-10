@@ -168,6 +168,15 @@ def process_setarg(arg):
     elif inspect.isfunction(arg):
         _ordered = True
         _defer_construct = True
+    elif not hasattr(arg, '__contains__'):
+        raise TypeError(
+            "Cannot create a Set from data that does not support "
+            "__contains__.  Expected set-like object supporting "
+            "collections.abc.Collection interface, but recieved '%s'."
+            % (type(arg).__name__,))
+    elif arg.__class__ is type:
+        # This catches the (deprecated) RealSet API.
+        return process_setarg(arg())
     else:
         arg = SetOf(arg)
         _ordered = arg.isordered()
