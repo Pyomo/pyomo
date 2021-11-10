@@ -105,7 +105,10 @@ class TestMindtPy(unittest.TestCase):
                            and model == 'DuranEx3' \
                            and sys.platform.startswith('win'):
                             continue
-                    sys.stderr.write(f'Solving {model} with {mip_solver}\n')
+                    sys.stderr.write(
+                        f'Solving {model} with {mip_solver} '
+                        '{SolverFactory(mip_solver).version()[:3]}'
+                        ' on {sys.platform}\n')
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
