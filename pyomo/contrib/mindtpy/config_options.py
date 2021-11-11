@@ -127,6 +127,11 @@ def _get_MindtPy_config():
         description='Use solution pool in solving the MILP main problem.',
         domain=bool
     ))
+    CONFIG.declare('num_solution_iteration', ConfigValue(
+        default=5,
+        description='The number of MIP solutions (from the solution pool) used to generate the fixed NLP subproblem in each iteration.',
+        domain=PositiveInt
+    ))
     CONFIG.declare('add_slack', ConfigValue(
         default=False,
         description='whether add slack variable here.'
@@ -488,3 +493,6 @@ def check_config(config):
             config.threads = 1
             config.logger.info(
                 'The threads parameter is corrected to 1 since incumbent callback conflicts with multi-threads mode.')
+    if config.solution_pool:
+        if config.mip_solver not in {'cplex_persistent', 'gurobi_persistent'}:
+            config.mip_solver = 'cplex_persistent'
