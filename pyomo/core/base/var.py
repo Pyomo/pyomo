@@ -44,26 +44,22 @@ class _VarData(ComponentData, NumericValue):
         component   The Var object that owns this data.
 
     Public Class Attributes:
-        domain      The domain of this variable.
-        bounds      A tuple (lower,upper) that defines the variable bounds.
-        fixed       If True, then this variable is treated as a
-                        fixed constant in the model.
-        lb          A lower bound for this variable.  The lower bound can be
-                        either numeric constants, parameter values, expressions
-                        or any object that can be called with no arguments.
-        ub          A upper bound for this variable.  The upper bound can be either
-                        numeric constants, parameter values, expressions or any
-                        object that can be called with no arguments.
-        stale       A Boolean indicating whether the value of this variable is
-                        legitimiate.  This value is true if the value should
-                        be considered legitimate for purposes of reporting or
-                        other interrogation.
-        value       The numeric value of this variable.
+        domain   The domain of this variable.
+        bounds   A tuple (lower,upper) that defines the variable bounds.
+        fixed    If True, then this variable is treated as a
+                     fixed constant in the model.
+        lb       A lower bound for this variable.  The lower bound can be
+                     either numeric constants, parameter values, expressions
+                     or any object that can be called with no arguments.
+        ub       A upper bound for this variable.  The upper bound can be either
+                     numeric constants, parameter values, expressions or any
+                     object that can be called with no arguments.
+        stale    A Boolean indicating whether the value of this variable is
+                     legitimiate.  This value is true if the value should
+                     be considered legitimate for purposes of reporting or
+                     other interrogation.
+        value    The numeric value of this variable.
 
-    The domain, lb, and ub attributes are properties because they
-    are too widely accessed directly to enforce explicit getter/setter
-    methods and we need to deter directly modifying or accessing
-    these attributes in certain cases.
     """
 
     __slots__ = ()
@@ -109,7 +105,7 @@ class _VarData(ComponentData, NumericValue):
 
     @property
     def bounds(self):
-        """Returns the tuple (lower bound, upper bound).
+        """Returns (or set) the tuple (lower bound, upper bound).
 
         This returns the current (numeric) values of the lower and upper
         bounds as a tuple.  If there is no bound, returns None (and not
@@ -123,7 +119,7 @@ class _VarData(ComponentData, NumericValue):
 
     @property
     def lb(self):
-        """Return the numeric value of the variable lower bound."""
+        """Return (or set) the numeric value of the variable lower bound."""
         return value(self.lower)
     @lb.setter
     def lb(self, val):
@@ -131,7 +127,7 @@ class _VarData(ComponentData, NumericValue):
 
     @property
     def ub(self):
-        """Return the numeric value of the variable upper bound."""
+        """Return (or set) the numeric value of the variable upper bound."""
         return value(self.upper)
     @ub.setter
     def ub(self, val):
@@ -271,22 +267,22 @@ class _VarData(ComponentData, NumericValue):
 
     @property
     def value(self):
-        """Return the value for this variable."""
+        """Return (or set) the value for this variable."""
         raise NotImplementedError
 
     @property
     def domain(self):
-        """Return the domain for this variable."""
+        """Return (or set) the domain for this variable."""
         raise NotImplementedError
 
     @property
     def lower(self):
-        """Return an expression for the variable lower bound."""
+        """Return (or set) an expression for the variable lower bound."""
         raise NotImplementedError
 
     @property
     def upper(self):
-        """Return an expression for the variable upper bound."""
+        """Return (or set) an expression for the variable upper bound."""
         raise NotImplementedError
 
     @property
@@ -398,11 +394,10 @@ class _GeneralVarData(_VarData):
 
     @property
     def value(self):
-        """Return the value for this variable."""
+        """Return (or set) the value for this variable."""
         return self._value
     @value.setter
     def value(self, val):
-        """Set the value for this variable."""
         if type(val) in native_numeric_types:
             # TODO: warn/error: check if this Var has units: assigning
             # a dimensionless value to a united variable should be an error
@@ -417,11 +412,10 @@ class _GeneralVarData(_VarData):
 
     @property
     def domain(self):
-        """Return the domain for this variable."""
+        """Return (or set) the domain for this variable."""
         return self._domain
     @domain.setter
     def domain(self, domain):
-        """Set the domain for this variable."""
         # TODO: this should be migrated over to using a SetInitializer
         # to handle the checking / conversion of the argument to a
         # proper Pyomo Set and not use isinstance() of a private class.
@@ -444,7 +438,7 @@ class _GeneralVarData(_VarData):
 
     @property
     def lower(self):
-        """Return an expression for the variable lower bound.
+        """Return (or set) an expression for the variable lower bound.
 
         This returns a (non-potentially variable) expression for the
         variable lower bound.  This represents the tighter of the
@@ -476,7 +470,7 @@ class _GeneralVarData(_VarData):
 
     @property
     def upper(self):
-        """Return an expression for the variable upper bound.
+        """Return (or set) an expression for the variable upper bound.
 
         This returns a (non-potentially variable) expression for the
         variable upper bound.  This represents the tighter of the
