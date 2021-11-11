@@ -29,7 +29,7 @@ from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, IndexedComponent_NDArrayMixin
 )
-from pyomo.core.base.initializer import Initializer
+from pyomo.core.base.initializer import Initializer, DefaultInitializer
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import (
     Reals, Binary, Set, SetInitializer,
@@ -693,7 +693,6 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         # assignment' in the error message generated in the 'except:'
         # block below.
         index = None
-        rule = self._rule_init
         try:
             # We do not (currently) accept data for constructing Variables
             assert data is None
@@ -710,26 +709,23 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                     "'dense=False'")
                 self._dense = False
 
-            if rule is not None and rule.contains_indices():
+            if ( self._rule_init is not None and
+                 self._rule_init.contains_indices() ):
+                # Historically we have allowed Vars to be initialized by
+                # a sparse map (i.e., a dict containing only some of the
+                # keys).  We will wrap the incoming initializer to map
+                # KeyErrors to None
+                self._rule_init = DefaultInitializer(
+                    self._rule_init, None, KeyError)
                 # The index is coming in externally; we need to validate it
-                for index in rule.indices():
+                for index in self._rule_init.indices():
                     self[index]
                 # If this is a dense object, we need to ensure that it
-                # has been filled in.  If the rule was missing any
-                # indices, it will (likely) raise a KeyError.
-                # Historically, we allowed this behavior (leaving the
-                # _VarData with a None value).  We can maintain that by
-                # catching the KeyError here: since we know that
-                # _getitem_when_not_present handles the value *last*, we
-                # won't have to worry about the component being
-                # "partially constructed".
+                # has been filled in.
                 if self._dense:
                     for index in self.index_set():
                         if index not in self._data:
-                            try:
-                                self._getitem_when_not_present(index)
-                            except KeyError:
-                                pass
+                            self._getitem_when_not_present(index)
             elif not self.is_indexed():
                 # As there is only a single VarData to populate, just do
                 # so and bypass all special-case testing below
