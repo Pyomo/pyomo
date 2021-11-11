@@ -9,11 +9,15 @@
 #  ___________________________________________________________________________
 
 """Tests for the MindtPy solver."""
+import sys
 import pyomo.common.unittest as unittest
-from pyomo.contrib.mindtpy.tests.eight_process_problem import \
-    EightProcessFlowsheet
+from pyomo.contrib.mindtpy.tests.eight_process_problem import (
+    EightProcessFlowsheet,
+)
 from pyomo.contrib.mindtpy.tests.MINLP_simple import SimpleMINLP as SimpleMINLP
-from pyomo.contrib.mindtpy.tests.constraint_qualification_example import ConstraintQualificationExample
+from pyomo.contrib.mindtpy.tests.constraint_qualification_example import (
+    ConstraintQualificationExample,
+)
 from pyomo.environ import SolverFactory, value
 from pyomo.opt import TerminationCondition
 
@@ -33,6 +37,17 @@ model_list = [EightProcessFlowsheet(convex=True),
               SimpleMINLP()
               ]
 
+def known_solver_failure(mip_solver, model):
+    if ( mip_solver == 'gurobi_persistent'
+         and model.name in {'DuranEx3', 'SimpleMINLP'}
+         and sys.platform.startswith('win')
+         and SolverFactory(mip_solver).version()[:3] == (9,5,0) ):
+        sys.stderr.write(
+            f"Skipping sub-test {model.name} with {mip_solver} due to known "
+            f"failure when running Gurobi 9.5.0 on Windows\n"
+        )
+        return True
+    return False
 
 @unittest.skipIf(not subsolvers_available,
                  'Required subsolvers %s are not available'
@@ -93,6 +108,8 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
+                    if known_solver_failure(mip_solver, model):
+                        continue
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -141,6 +158,8 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
+                    if known_solver_failure(mip_solver, model):
+                        continue
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -157,6 +176,8 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
+                    if known_solver_failure(mip_solver, model):
+                        continue
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -173,6 +194,8 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
+                    if known_solver_failure(mip_solver, model):
+                        continue
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
