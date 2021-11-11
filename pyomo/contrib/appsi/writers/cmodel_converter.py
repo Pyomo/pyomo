@@ -75,11 +75,6 @@ def _pyomo_to_cmodel_DivisionExpression(node, values, walker: PyomoToCModelWalke
     return values[0] / values[1]
 
 
-def _pyomo_to_cmodel_ReciprocalExpression(node, values, walker: PyomoToCModelWalker):
-    assert len(values) == 1
-    return 1 / values[0]
-
-
 def _pyomo_to_cmodel_NegationExpression(node, values, walker: PyomoToCModelWalker):
     assert len(values) == 1
     return -values[0]
@@ -164,7 +159,6 @@ _pyomo_to_cmodel_map = dict()
 _pyomo_to_cmodel_map[_expr.ProductExpression] = _pyomo_to_cmodel_ProductExpression
 _pyomo_to_cmodel_map[_expr.ExternalFunctionExpression] = _pyomo_to_cmodel_ExternalFunctionExpression
 _pyomo_to_cmodel_map[_expr.DivisionExpression] = _pyomo_to_cmodel_DivisionExpression
-_pyomo_to_cmodel_map[_expr.ReciprocalExpression] = _pyomo_to_cmodel_ReciprocalExpression
 _pyomo_to_cmodel_map[_expr.PowExpression] = _pyomo_to_cmodel_PowExpression
 _pyomo_to_cmodel_map[_expr.SumExpression] = _pyomo_to_cmodel_SumExpression
 _pyomo_to_cmodel_map[_expr.MonomialTermExpression] = _pyomo_to_cmodel_ProductExpression
@@ -174,7 +168,6 @@ _pyomo_to_cmodel_map[_expr.LinearExpression] = _pyomo_to_cmodel_LinearExpression
 
 _pyomo_to_cmodel_map[_expr.NPV_ProductExpression] = _pyomo_to_cmodel_ProductExpression
 _pyomo_to_cmodel_map[_expr.NPV_DivisionExpression] = _pyomo_to_cmodel_DivisionExpression
-_pyomo_to_cmodel_map[_expr.NPV_ReciprocalExpression] = _pyomo_to_cmodel_ReciprocalExpression
 _pyomo_to_cmodel_map[_expr.NPV_PowExpression] = _pyomo_to_cmodel_PowExpression
 _pyomo_to_cmodel_map[_expr.NPV_SumExpression] = _pyomo_to_cmodel_SumExpression
 _pyomo_to_cmodel_map[_expr.NPV_NegationExpression] = _pyomo_to_cmodel_NegationExpression

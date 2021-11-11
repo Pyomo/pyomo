@@ -36,7 +36,6 @@ _packages = [
     'pyomo.gdp',
     'pyomo.mpec',
     'pyomo.dae',
-    'pyomo.bilevel',
     'pyomo.scripting',
     'pyomo.network',
 ]

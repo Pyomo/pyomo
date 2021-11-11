@@ -17,7 +17,6 @@ import sys
 import logging
 
 from pyomo.common.dependencies import numpy as np, numpy_available
-from pyomo.common.deprecation import deprecated
 from pyomo.common.errors import PyomoException
 from pyomo.core.expr.expr_common import (
     _add, _sub, _mul, _div, _pow,
@@ -524,11 +523,6 @@ class NumericValue(PyomoObject):
     @property
     def local_name(self):
         return self.getname(fully_qualified=False)
-
-    @deprecated("The cname() method has been renamed to getname().",
-                version='5.0')
-    def cname(self, *args, **kwds):
-        return self.getname(*args, **kwds)
 
     def is_numeric_type(self):
         """Return True if this class is a Pyomo numeric object"""

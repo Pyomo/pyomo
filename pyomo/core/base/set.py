@@ -47,7 +47,7 @@ from pyomo.core.base.global_set import (
 )
 
 from collections.abc import Sequence
-from operator import attrgetter, itemgetter
+from operator import itemgetter
 
 logger = logging.getLogger('pyomo.core')
 

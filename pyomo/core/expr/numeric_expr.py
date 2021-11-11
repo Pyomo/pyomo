@@ -18,7 +18,7 @@ from itertools import islice
 logger = logging.getLogger('pyomo.core')
 
 from math import isclose
-from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.deprecation import deprecation_warning
 
 from .expr_common import (
     _add, _sub, _mul, _div,
@@ -908,49 +908,6 @@ class NPV_DivisionExpression(NPV_Mixin, DivisionExpression):
     __slots__ = ()
 
 
-@deprecated("Use DivisionExpression", version='5.6.7')
-class ReciprocalExpression(ExpressionBase):
-    """
-    Reciprocal expressions::
-
-        1/x
-    """
-    __slots__ = ()
-    PRECEDENCE = 4
-
-    def __init__(self, args):
-        super(ReciprocalExpression, self).__init__(args)
-
-    def nargs(self):
-        return 1
-
-    def _precedence(self):
-        return ReciprocalExpression.PRECEDENCE
-
-    def _associativity(self):
-        return 0
-
-    def _compute_polynomial_degree(self, result):
-        if result[0] == 0:
-            return 0
-        return None
-
-    def getname(self, *args, **kwds):
-        return 'recip'
-
-    def _to_string(self, values, verbose, smap, compute_values):
-        if verbose:
-            return "{0}({1})".format(self.getname(), values[0])
-        return "1/{0}".format(values[0])
-
-    def _apply_operation(self, result):
-        return 1 / result[0]
-
-
-class NPV_ReciprocalExpression(NPV_Mixin, ReciprocalExpression):
-    __slots__ = ()
-
-
 class _LinearOperatorExpression(ExpressionBase):
     """
     An 'abstract' class that defines the polynomial degree for a simple
@@ -1626,11 +1583,6 @@ def _decompose_linear_terms(expr, multiplier=1):
             yield from _decompose_linear_terms(expr._args_[0], multiplier/expr._args_[1])
         else:
             raise LinearDecompositionError("Unexpected nonlinear term (division)")
-    elif expr.__class__ is ReciprocalExpression:
-        # The argument is potentially variable, so this represents a nonlinear term
-        #
-        # NOTE: We're ignoring possible simplifications
-        raise LinearDecompositionError("Unexpected nonlinear term")
     elif expr.__class__ is SumExpression or expr.__class__ is _MutableSumExpression:
         for arg in expr.args:
             yield from _decompose_linear_terms(arg, multiplier)
@@ -2052,7 +2004,6 @@ NPV_expression_types = set(
     NPV_PowExpression,
     NPV_ProductExpression,
     NPV_DivisionExpression,
-    NPV_ReciprocalExpression,
     NPV_SumExpression,
     NPV_UnaryFunctionExpression,
     NPV_AbsExpression])

@@ -99,21 +99,6 @@ def _diff_DivisionExpression(node, val_dict, der_dict):
     der_dict[den] -= der * val_dict[num] / val_dict[den]**2
 
 
-def _diff_ReciprocalExpression(node, val_dict, der_dict):
-    """
-
-    Parameters
-    ----------
-    node: pyomo.core.expr.numeric_expr.ReciprocalExpression
-    val_dict: ComponentMap
-    der_dict: ComponentMap
-    """
-    assert len(node.args) == 1
-    arg = node.args[0]
-    der = der_dict[node]
-    der_dict[arg] -= der / val_dict[arg]**2
-
-
 def _diff_NegationExpression(node, val_dict, der_dict):
     """
 
@@ -341,7 +326,6 @@ def _diff_ExternalFunctionExpression(node, val_dict, der_dict):
 _diff_map = dict()
 _diff_map[_expr.ProductExpression] = _diff_ProductExpression
 _diff_map[_expr.DivisionExpression] = _diff_DivisionExpression
-_diff_map[_expr.ReciprocalExpression] = _diff_ReciprocalExpression
 _diff_map[_expr.PowExpression] = _diff_PowExpression
 _diff_map[_expr.SumExpression] = _diff_SumExpression
 _diff_map[_expr.MonomialTermExpression] = _diff_ProductExpression
@@ -352,7 +336,6 @@ _diff_map[_expr.LinearExpression] = _diff_SumExpression
 
 _diff_map[_expr.NPV_ProductExpression] = _diff_ProductExpression
 _diff_map[_expr.NPV_DivisionExpression] = _diff_DivisionExpression
-_diff_map[_expr.NPV_ReciprocalExpression] = _diff_ReciprocalExpression
 _diff_map[_expr.NPV_PowExpression] = _diff_PowExpression
 _diff_map[_expr.NPV_SumExpression] = _diff_SumExpression
 _diff_map[_expr.NPV_NegationExpression] = _diff_NegationExpression
