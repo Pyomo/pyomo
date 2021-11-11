@@ -56,7 +56,7 @@ Other Public Classes
     :undoc-members:
     :private-members:
 
-.. autoclass:: pyomo.core.expr.current.ReciprocalExpression
+.. autoclass:: pyomo.core.expr.current.DivisionExpression
     :members:
     :show-inheritance:
     :undoc-members:

@@ -115,8 +115,6 @@ def _build_op_template():
     _op_comment[EXPR.ProductExpression] = prod_comment
     _op_template[EXPR.DivisionExpression] = div_template
     _op_comment[EXPR.DivisionExpression] = div_comment
-    _op_template[EXPR.ReciprocalExpression] = div_template
-    _op_comment[EXPR.ReciprocalExpression] = div_comment
 
     _op_template[EXPR.ExternalFunctionExpression] = ("f%d %d{C}\n", #function
                                                       "h%d:%s{C}\n") #string arg
@@ -564,13 +562,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 OUTPUT.write(div_str)
                 self._print_nonlinear_terms_NL(exp.arg(0))
                 self._print_nonlinear_terms_NL(exp.arg(1))
-
-            elif exp_type is EXPR.ReciprocalExpression:
-                assert exp.nargs() == 1
-                div_str = self._op_string[EXPR.ReciprocalExpression]
-                OUTPUT.write(div_str)
-                self._print_nonlinear_terms_NL(1.0)
-                self._print_nonlinear_terms_NL(exp.arg(0))
 
             elif exp_type is EXPR.NegationExpression:
                 assert exp.nargs() == 1
