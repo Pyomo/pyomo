@@ -389,11 +389,10 @@ class _GeneralVarData(_VarData):
         if not valid:
             if val not in self.domain:
                 # logger.warning(
-                #     "Setting Var '%s' to a numeric value `%s` "
-                #     "outside the domain %s." % (self.name, val, self.domain))
                 raise ValueError("Numeric value `%s` (%s) is not in "
                                  "domain %s for Var %s" %
-                                 (val, type(val), self.domain, self.name))
+                                 (val, type(val).__name__,
+                                  self.domain, self.name))
             elif (self._lb is not None and val < value(self._lb)) or (
                     self._ub is not None and val > value(self._ub)):
                 pass
