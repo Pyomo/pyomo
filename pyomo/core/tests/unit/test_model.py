@@ -880,7 +880,8 @@ class Test(unittest.TestCase):
         self.assertEqual( len(list(EXPR.identify_variables(instance.c.body))), 3 )
 
     def test_error_creating_model_baseclass(self):
-        with self.assertRaises(TypeError):
+        with self.assertRaisesRegex(
+                TypeError, "Directly creating the 'Model' class is not allowed.  Please use the AbstractModel or ConcreteModel class instead."):
             m = Model()
 
 if __name__ == "__main__":
