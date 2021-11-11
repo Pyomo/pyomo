@@ -172,7 +172,7 @@ def process_setarg(arg):
         raise TypeError(
             "Cannot create a Set from data that does not support "
             "__contains__.  Expected set-like object supporting "
-            "collections.abc.Collection interface, but recieved '%s'."
+            "collections.abc.Collection interface, but received '%s'."
             % (type(arg).__name__,))
     elif arg.__class__ is type:
         # This catches the (deprecated) RealSet API.
