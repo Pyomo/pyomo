@@ -2699,7 +2699,7 @@ class TestExprConditionalContext(unittest.TestCase):
     def test_immutable_paramConditional(self):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=False)
-        # Immutable Params appear mutable (nonconstant) before they are
+        # Immutable Params appear mutable (non-constant) before they are
         # constructed
         with self.assertRaisesRegex(
                 PyomoException,
@@ -2740,7 +2740,7 @@ class TestExprConditionalContext(unittest.TestCase):
     def test_immutable_paramConditional_reversed(self):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=False)
-        # Immutable Params appear mutable (nonconstant) before they are
+        # Immutable Params appear mutable (non-constant) before they are
         # constructed
         with self.assertRaisesRegex(
                 PyomoException,
@@ -2794,7 +2794,7 @@ class TestExprConditionalContext(unittest.TestCase):
     def test_immutable_paramConditional_reversed(self):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=False)
-        # Immutable Params appear mutable (nonconstant) before they are
+        # Immutable Params appear mutable (non-constant) before they are
         # constructed
         with self.assertRaisesRegex(
                 PyomoException,
@@ -3461,7 +3461,7 @@ class TestPolynomialDegree(unittest.TestCase):
         expr = Expr_if(m.e,1,0)
         self.assertEqual(expr.polynomial_degree(), 0)
         #
-        # A nonconstant expression has degree if both arguments have the
+        # A non-constant expression has degree if both arguments have the
         # same degree, as long as the IF is fixed (even if it is not
         # defined)
         #
@@ -3470,7 +3470,7 @@ class TestPolynomialDegree(unittest.TestCase):
         expr = Expr_if(m.e,5*m.b,1+m.b)
         self.assertEqual(expr.polynomial_degree(), 1)
         #
-        # A nonconstant expression has degree None because
+        # A non-constant expression has degree None because
         # m.e is an uninitialized parameter
         #
         expr = Expr_if(m.e,m.b,0)
