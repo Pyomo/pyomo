@@ -99,6 +99,7 @@ class TestLogger(unittest.TestCase):
         self.assertEqual(len(self.iterLogger.iterations), 1)
         self.assertEqual(self.iterLogger.iterations[0].objk, 5.0)
 
+    @unittest.skipUnless(numpy_available, "numpy is not available")
     def test_logIteration(self):
         self.iterLogger.newIteration(self.iteration, self.inputs,
                                  self.outputs, self.other,
