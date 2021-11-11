@@ -376,7 +376,14 @@ class TestAutoVars(unittest.TestCase):
         self.assertEqual(m.iv.value, True)
         self.assertEqual(m.biv.value, 1)
 
-        m.biv.fix(0.5)
+        with self.assertRaisesRegex(
+                ValueError, r"Numeric value `0.5` \(float\) is not in "
+                r"domain Binary for Var biv"):
+            m.biv.fix(0.5)
+        self.assertEqual(m.iv.value, True)
+        self.assertEqual(m.biv.value, 1)
+
+        m.biv.fix(0.5, True)
         self.assertEqual(m.iv.value, None)
         self.assertEqual(m.biv.value, 0.5)
 
@@ -387,7 +394,14 @@ class TestAutoVars(unittest.TestCase):
         eps = AutoLinkedBinaryVar.INTEGER_TOLERANCE / 10
 
         # Note that fixing to a near-True value will toggle the iv
-        m.biv.fix(1-eps)
+        with self.assertRaisesRegex(
+                ValueError, r"Numeric value `0.9+` \(float\) is not in "
+                r"domain Binary for Var biv"):
+            m.biv.fix(1-eps)
+        self.assertEqual(m.iv.value, False)
+        self.assertEqual(m.biv.value, 0)
+
+        m.biv.fix(1-eps, True)
         self.assertEqual(m.iv.value, True)
         self.assertEqual(m.biv.value, 1-eps)
 
