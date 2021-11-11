@@ -15,15 +15,15 @@
           1 :  None :     0 :  None : False : False :  Reals
     x1 : Size=2, Index=t
         Key : Lower : Value : Upper : Fixed : Stale : Domain
-          0 :  None :     0 :  None :  True :  True :  Reals
+          0 :  None :     0 :  None :  True : False :  Reals
           1 :  None :  None :  None : False :  True :  Reals
     x2 : Size=2, Index=t
         Key : Lower : Value : Upper : Fixed : Stale : Domain
-          0 :  None :    -1 :  None :  True :  True :  Reals
+          0 :  None :    -1 :  None :  True : False :  Reals
           1 :  None :  None :  None : False :  True :  Reals
     x3 : Size=2, Index=t
         Key : Lower : Value : Upper : Fixed : Stale : Domain
-          0 :  None :     0 :  None :  True :  True :  Reals
+          0 :  None :     0 :  None :  True : False :  Reals
           1 :  None :  None :  None : False :  True :  Reals
 
 1 Objective Declarations
