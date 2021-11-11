@@ -1771,3 +1771,17 @@ class CommonModels(unittest.TestCase, CommonTests):
     def test_network_disjuncts(self):
         ct.check_network_disjuncts(self, True, 'between_steps', P=2)
         ct.check_network_disjuncts(self, False, 'between_steps', P=2)
+
+class LogicalConstraintsOnDisjuncts(unittest.TestCase, CommonTests):
+    def test_error_for_active_logical_constraint(self):
+        m = models.makeLogicalConstraintsOnDisjuncts_NonlinearConvex()
+        with self.assertRaisesRegex(
+                GDP_Error, 
+                "Found active LogicalConstraint 'd\[1\].logical' on Disjunct "
+                "'d\[1\]'! "
+                "Please transform LogicalConstraints on Disjuncts "
+                "prior to calling partition_disjuncts."):
+            TransformationFactory('gdp.partition_disjuncts').apply_to(
+                m,
+                variable_partitions=[[m.x], [m.y, m.Y]],
+                compute_bounds_method=compute_fbbt_bounds)

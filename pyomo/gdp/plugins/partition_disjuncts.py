@@ -279,7 +279,7 @@ class PartitionDisjuncts_Transformation(Transformation):
                                 # we find them
             Disjunct:    self._warn_for_active_disjunct,
             Block:       False,
-            LogicalConstraint: False,
+            LogicalConstraint: self._warn_for_active_logical_constraint,
             ExternalFunction: False,
             Port:        False, # not Arcs, because those are deactivated after
                                 # the network.expand_arcs transformation
@@ -346,8 +346,7 @@ class PartitionDisjuncts_Transformation(Transformation):
 
         # create a model to store the global constraints on that we will pass to
         # the compute_bounds_method, for if it wants them. We're making it a
-        # separate model because we don't need it again and because I was
-        # hitting #2130 by making it a block and attaching it to the instance.
+        # separate model because we don't need it again
         global_constraints = ConcreteModel()
         for cons in instance.component_objects( 
                 Constraint, active=True, descend_into=Block,
@@ -577,7 +576,10 @@ class PartitionDisjuncts_Transformation(Transformation):
                                             None, transformed_disjunct)
 
         # create references to any variables declared here on the transformed
-        # Disjunct (this will include the indicator_var)
+        # Disjunct (this will include the indicator_var) NOTE that we will not
+        # have to do this when #1032 is implemented for the writers. But right
+        # now, we are going to deactivate this and hide it from the active
+        # subtree, so we need to be safe.
         for var in disjunct.component_objects(Var, descend_into=Block,
                                               active=None):
             transformed_disjunct.add_component(unique_component_name(
@@ -755,7 +757,12 @@ class PartitionDisjuncts_Transformation(Transformation):
                                   partition):
         _warn_for_active_disjunct(disjunct, parent_disjunct, NAME_BUFFER)
 
+    def _warn_for_active_logical_constraint(self, cons, disjunct,
+                                            transformed_disjunct, transBlock,
+                                            partition):
+        raise GDP_Error("Found active LogicalConstraint '%s' on Disjunct '%s'! "
+                        "Please transform LogicalConstraints on Disjuncts "
+                        "prior to calling partition_disjuncts." % 
+                        (cons.name, disjunct.name))
 # ESJ: TODO: Add a test for the old indicator variables appearing in logical
 # constraints.
-
-# (test the logical equivalence constraints)
