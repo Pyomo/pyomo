@@ -8,8 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.expr.numvalue import native_numeric_types, value
+from pyomo.core.expr.numvalue import native_numeric_types, value, is_fixed
 from pyomo.core.expr.calculus.derivatives import differentiate
+from pyomo.core.base.constraint import Constraint, _ConstraintData
 
 import logging
 logger = logging.getLogger(__name__)
@@ -29,10 +30,13 @@ def calculate_variable_from_constraint(variable, constraint,
 
     Parameters:
     -----------
-    variable: `pyomo.core.base.var._VarData`
+    variable: :py:class:`_VarData`
         The variable to solve for
-    constraint: `pyomo.core.base.constraint._ConstraintData`
-        The equality constraint to use to solve for the variable value
+    constraint: :py:class:`_ConstraintData` or relational expression or `tuple`
+        The equality constraint to use to solve for the variable value.
+        May be a `ConstraintData` object or any valid argument for
+        ``Constraint(expr=<>)`` (i.e., a relational expression or 2- or
+        3-tuple)
     eps: `float`
         The tolerance to use to determine equality [default=1e-8].
     iterlim: `int`
@@ -53,8 +57,16 @@ def calculate_variable_from_constraint(variable, constraint,
     respect the variable bounds.
 
     """
-    upper = value(constraint.upper)
-    if value(constraint.lower) != upper:
+    # Leverage all the Constraint logic to process the incoming tuple/expression
+    if not isinstance(constraint, _ConstraintData):
+        constraint = Constraint(expr=constraint, name=type(constraint).__name__)
+        constraint.construct()
+
+    body = constraint.body
+    lower = constraint.lb
+    upper = constraint.ub
+
+    if lower != upper:
         raise ValueError("Constraint must be an equality constraint")
 
     if variable.value is None:
@@ -86,12 +98,12 @@ def calculate_variable_from_constraint(variable, constraint,
     # solve the common case where variable is linear with coefficient of 1.0
     x1 = value(variable)
     # Note: both the direct (linear) calculation and Newton's method
-    # below rely on a numerically feasible initial starting point.
+    # below rely on a numerically valid initial starting point.
     # While we have strategies for dealing with hitting numerically
     # invalid (e.g., sqrt(-1)) conditions below, if the initial point is
     # not valid, we will allow that exception to propagate up
     try:
-        residual_1 = value(constraint.body)
+        residual_1 = value(body)
     except:
         logger.error(
             "Encountered an error evaluating the expression at the "
@@ -99,7 +111,7 @@ def calculate_variable_from_constraint(variable, constraint,
         raise
 
     variable.set_value(x1 - (residual_1-upper))
-    residual_2 = value(constraint.body, exception=False)
+    residual_2 = value(body, exception=False)
 
     # If we encounter an error while evaluating the expression at the
     # linear intercept calculated assuming the derivative was 1.  This
@@ -120,14 +132,15 @@ def calculate_variable_from_constraint(variable, constraint,
         intercept = (residual_1-upper) - slope*x1
         if slope:
             variable.set_value(-intercept/slope)
-            body_val = value(constraint.body, exception=False)
+            body_val = value(body, exception=False)
             if body_val is not None and abs(body_val-upper) < eps:
                 return
 
     # Variable appears nonlinearly; solve using Newton's method
     variable.set_value(orig_initial_value) # restore initial value
-    expr = constraint.body - constraint.upper
-    expr_deriv = differentiate(expr, wrt=variable, mode=differentiate.Modes.sympy)
+    expr = body - upper
+    expr_deriv = differentiate(expr, wrt=variable,
+                               mode=differentiate.Modes.sympy)
 
     if type(expr_deriv) in native_numeric_types and expr_deriv == 0:
         raise ValueError("Variable derivative == 0, cannot solve for variable")

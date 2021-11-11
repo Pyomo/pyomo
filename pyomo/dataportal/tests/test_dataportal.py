@@ -699,7 +699,7 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
     def test_store_set1(self):
         # Write 1-D set
         model = ConcreteModel()
-        model.A = Set(initialize=set([1,3,5]))
+        model.A = Set(initialize=[1,3,5])
         data = DataPortal()
         data.store(data=model.A, **self.create_write_options('set1'))
         self.compare_data('set1', self.suffix)
@@ -707,7 +707,7 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
     def test_store_set1a(self):
         # Write 1-D set
         model = ConcreteModel()
-        model.A = Set(initialize=set([1,3,5]))
+        model.A = Set(initialize=[1,3,5])
         data = DataPortal()
         data.store(data="A", model=model, **self.create_write_options('set1'))
         self.compare_data('set1', self.suffix)
@@ -715,7 +715,7 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
     def test_store_set2(self):
         # Write 2-D set
         model = ConcreteModel()
-        model.A = Set(initialize=set([(1,2),(3,4),(5,6)]), dimen=2)
+        model.A = Set(initialize=[(1,2),(3,4),(5,6)], dimen=2)
         data = DataPortal()
         data.store(data=model.A, **self.create_write_options('set2'))
         self.compare_data('set2', self.suffix)
@@ -731,7 +731,7 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
     def test_store_param2(self):
         # Write 1-D param
         model = ConcreteModel()
-        model.A = Set(initialize=set([1,2,3]))
+        model.A = Set(initialize=[1,2,3])
         model.p = Param(model.A, initialize={1:10, 2:20, 3:30})
         data = DataPortal()
         data.store(data=model.p, **self.create_write_options('param2'))
@@ -740,7 +740,7 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
     def test_store_param3(self):
         # Write 2-D params
         model = ConcreteModel()
-        model.A = Set(initialize=set([(1,2),(2,3),(3,4)]), dimen=2)
+        model.A = Set(initialize=[(1,2),(2,3),(3,4)], dimen=2)
         model.p = Param(model.A, initialize={(1,2):10, (2,3):20, (3,4):30})
         model.q = Param(model.A, initialize={(1,2):11, (2,3):21, (3,4):31})
         data = DataPortal()
@@ -750,7 +750,7 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
     def test_store_param4(self):
         # Write 2-D params
         model = ConcreteModel()
-        model.A = Set(initialize=set([(1,2),(2,3),(3,4)]), dimen=2)
+        model.A = Set(initialize=[(1,2),(2,3),(3,4)], dimen=2)
         model.p = Param(model.A, initialize={(1,2):10, (2,3):20, (3,4):30})
         model.q = Param(model.A, initialize={(1,2):11, (2,3):21, (3,4):31})
         data = DataPortal()
@@ -988,7 +988,7 @@ class TestTextPortal(unittest.TestCase):
         # Write 1-D set
         self.check_skiplist('store_set1')
         model = ConcreteModel()
-        model.A = Set(initialize=set([1,3,5]))
+        model.A = Set(initialize=[1,3,5])
         data = DataPortal()
         data.store(set=model.A, **self.create_write_options('set1'))
         self.compare_data('set1', self.suffix)
@@ -997,7 +997,7 @@ class TestTextPortal(unittest.TestCase):
         # Write 2-D set
         self.check_skiplist('store_set2')
         model = ConcreteModel()
-        model.A = Set(initialize=set([(1,2),(3,4),(5,6)]), dimen=2)
+        model.A = Set(initialize=[(1,2),(3,4),(5,6)], dimen=2)
         data = DataPortal()
         data.store(set=model.A, **self.create_write_options('set2'))
         self.compare_data('set2', self.suffix)
@@ -1015,7 +1015,7 @@ class TestTextPortal(unittest.TestCase):
         # Write 1-D param
         self.check_skiplist('store_param2')
         model = ConcreteModel()
-        model.A = Set(initialize=set([1,2,3]))
+        model.A = Set(initialize=[1,2,3])
         model.p = Param(model.A, initialize={1:10, 2:20, 3:30})
         data = DataPortal()
         data.store(param=model.p, **self.create_write_options('param2'))
@@ -1025,7 +1025,7 @@ class TestTextPortal(unittest.TestCase):
         # Write 2-D params
         self.check_skiplist('store_param3')
         model = ConcreteModel()
-        model.A = Set(initialize=set([(1,2),(2,3),(3,4)]), dimen=2)
+        model.A = Set(initialize=[(1,2),(2,3),(3,4)], dimen=2)
         model.p = Param(model.A, initialize={(1,2):10, (2,3):20, (3,4):30})
         model.q = Param(model.A, initialize={(1,2):11, (2,3):21, (3,4):31})
         data = DataPortal()
@@ -1036,7 +1036,7 @@ class TestTextPortal(unittest.TestCase):
         # Write 2-D params
         self.check_skiplist('store_param4')
         model = ConcreteModel()
-        model.A = Set(initialize=set([(1,2),(2,3),(3,4)]), dimen=2)
+        model.A = Set(initialize=[(1,2),(2,3),(3,4)], dimen=2)
         model.p = Param(model.A, initialize={(1,2):10, (2,3):20, (3,4):30})
         model.q = Param(model.A, initialize={(1,2):11, (2,3):21, (3,4):31})
         data = DataPortal()

@@ -29,7 +29,7 @@ from pyomo.environ import (AbstractModel, ConcreteModel, Var, Set,
                            Objective, Expression, SOSConstraint,
                            SortComponents, NonNegativeIntegers,
                            TraversalStrategy, RangeSet, SolverFactory,
-                           value, sum_product)
+                           value, sum_product, ComponentUID)
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base.block import ScalarBlock, SubclassOf, _BlockData, declare_custom_block
@@ -2614,6 +2614,41 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(value(m.b[1].p), 5)
         self.assertEqual(value(m.b[2].p), 10)
         self.assertEqual(value(m.b[3].p), 0)
+
+    def test_find_component_name(self):
+        b = Block(concrete=True)
+        b.v1 = Var()
+        b.v2 = Var([1, 2])
+        self.assertIs(b.find_component("v1"), b.v1)
+        self.assertIs(b.find_component("v2[2]"), b.v2[2])
+
+    def test_find_component_cuid(self):
+        b = Block(concrete=True)
+        b.v1 = Var()
+        b.v2 = Var([1, 2])
+        cuid1 = ComponentUID("v1")
+        cuid2 = ComponentUID("v2[2]")
+        self.assertIs(b.find_component(cuid1), b.v1)
+        self.assertIs(b.find_component(cuid2), b.v2[2])
+
+    def test_find_component_hierarchical(self):
+        b1 = Block(concrete=True)
+        b1.b2 = Block()
+        b1.b2.v1 = Var()
+        b1.b2.v2 = Var([1, 2])
+        self.assertIs(b1.find_component("b2.v1"), b1.b2.v1)
+        self.assertIs(b1.find_component("b2.v2[2]"), b1.b2.v2[2])
+
+    def test_find_component_hierarchical_cuid(self):
+        b1 = Block(concrete=True)
+        b1.b2 = Block()
+        b1.b2.v1 = Var()
+        b1.b2.v2 = Var([1, 2])
+        cuid1 = ComponentUID("b2.v1")
+        cuid2 = ComponentUID("b2.v2[2]")
+        self.assertIs(b1.find_component(cuid1), b1.b2.v1)
+        self.assertIs(b1.find_component(cuid2), b1.b2.v2[2])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1443,9 +1443,9 @@ class coefficientMatchingTests(unittest.TestCase):
         self.assertEqual(robust_infeasible, True, msg="Coefficient matching should be proven robust infeasible.")
 
 # === regression test for the solver
+@unittest.skipUnless(SolverFactory('baron').available(exception_flag=False), "Global NLP solver is not available.")
 class RegressionTest(unittest.TestCase):
 
-    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False), "Global NLP solver is not available.")
     def regression_test_constant_drs(self):
         model = m = ConcreteModel()
         m.name = "s381"
@@ -1480,8 +1480,6 @@ class RegressionTest(unittest.TestCase):
         self.assertTrue(results.pyros_termination_condition,
                          pyrosTerminationCondition.robust_feasible)
 
-    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False),
-                         "Global NLP solver is not available.")
     def regression_test_affine_drs(self):
         model = m = ConcreteModel()
         m.name = "s381"
@@ -1517,8 +1515,6 @@ class RegressionTest(unittest.TestCase):
         self.assertTrue(results.pyros_termination_condition,
                         pyrosTerminationCondition.robust_feasible)
 
-    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False),
-                         "Global NLP solver is not available.")
     def regression_test_quad_drs(self):
         model = m = ConcreteModel()
         m.name = "s381"
@@ -1554,7 +1550,7 @@ class RegressionTest(unittest.TestCase):
         self.assertTrue(results.pyros_termination_condition,
                         pyrosTerminationCondition.robust_feasible)
 
-    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
                          "Global NLP solver is not available and licensed.")
     def test_minimize_dr_norm(self):
         m = ConcreteModel()
@@ -1599,9 +1595,8 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(results.solver.termination_condition, TerminationCondition.optimal,
                          msg="Minimize dr norm did not solve to optimality.")
 
-    @unittest.skipUnless(
-        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
     def test_identifying_violating_param_realization(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -1642,9 +1637,8 @@ class RegressionTest(unittest.TestCase):
         self.assertGreater(results.iterations, 0,
                          msg="Robust infeasible model terminated in 0 iterations (nominal case).")
 
-    @unittest.skipUnless(
-        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
     def test_terminate_with_max_iter(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -1685,9 +1679,8 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.max_iter,
                          msg="Returned termination condition is not return max_iter.")
 
-    @unittest.skipUnless(
-        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
     def test_terminate_with_time_limit(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -1727,9 +1720,8 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.time_out,
                          msg="Returned termination condition is not return time_out.")
 
-    @unittest.skipUnless(
-        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
     def test_discrete_separation(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -1768,9 +1760,8 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.robust_optimal,
                          msg="Returned termination condition is not return robust_optimal.")
 
-    @unittest.skipUnless(
-        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
     def test_higher_order_decision_rules(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -1810,9 +1801,8 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.robust_optimal,
                          msg="Returned termination condition is not return robust_optimal.")
 
-    @unittest.skipUnless(
-        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
     def test_coefficient_matching_solve(self):
 
         # Write the deterministic Pyomo model
@@ -1909,7 +1899,9 @@ class RegressionTest(unittest.TestCase):
         global_subsolver = SolverFactory("baron")
 
         # Call the PyROS solver
-        try:
+        with self.assertRaises(
+                ValueError, msg="ValueError should be raised for general "
+                "nonlinear expressions in h(x,z,q)=0 constraints."):
             results = pyros_solver.solve(model=m,
                                          first_stage_variables=[m.x1],
                                          second_stage_variables=[m.x2],
@@ -1922,9 +1914,6 @@ class RegressionTest(unittest.TestCase):
                                              "solve_master_globally": True,
                                              "decision_rule_order":1
                                          })
-        except:
-            self.assertRaises(ValueError, msg="ValueError should be "
-                                              "raised for general nonlinear expressions in h(x,z,q)=0 constraints.")
 
 
 
