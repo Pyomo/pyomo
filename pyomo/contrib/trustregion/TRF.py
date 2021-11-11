@@ -65,15 +65,13 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
     while iteration < max_its:
         iteration += 1
 
-        # Log relevant information
-        TRFLogger.logIteration()
-
         # Generate suggorate model r_k(w)
         if rebuildSM:
             interface.buildSM() # TODO
 
         feasibility_k = feasibility
         obj_k = obj
+
         # Check termination conditions
         if (feasibility_k <= feasibility_term) and (step_norm_k <= step_size_term):
             print('EXIT: Optimal solution found.')
@@ -102,10 +100,14 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
         step_norm_k = np.norm() # Difference between init and new input/outputs
         # Check filter acceptance
         feasibility_k = np.norm() # feasibility(x) = norm(y - d(w))_1
+
+        TRFLogger.newIteration(iteration, inputs, outputs, other, params,
+                               feasibility_k, obj_k, trust_radius, step_norm_k)
+
         filterElement = FilterElement(feasibility_k, obj_k)
         if not TRFilter.isAcceptable(filterElement, max_feasibility):
             # Reject the step
-            TRFLogger.IterationRecord.rejected = True
+            TRFLogger.iterrecord.rejected = True
             trust_radius = max(min_radius,
                                step_norm_k*trf_update_param_gamma_c)
             rebuildSM = False
@@ -117,13 +119,13 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
              switch_cond_kappa_theta*pow(feasibility, switch_cond_gamma_s))
             and (feasibility <= min_feasibility)):
             # f-type step
-            TRFLogger.IterationRecord.fStep = True
+            TRFLogger.iterrecord.fStep = True
             trust_radius = min(max(step_norm_k*trf_update_param_gamma_e,
                                    trust_radius),
                                max_radius)
         else:
             # theta-type step
-            TRFLogger.IterationRecord.thetaStep = True
+            TRFLogger.iterrecord.thetaStep = True
             filterElement = FilterElement(obj_k - filter_param_gamma_f*feasibility_k,
                                           (1 - filter_param_gamma_theta)*feasibility_k)
             TRFilter.addToFilter(filterElement)
@@ -141,6 +143,10 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
                 trust_radius = max(trust_radius,
                                    max_radius,
                                    trf_update_param_gamma_e*step_norm_k)
+
+        # Log iteration information
+        TRFLogger.logIteration()
+
         # Accept step and reset for next iteration
         rebuildSM = True
         interface.reset() # TODO

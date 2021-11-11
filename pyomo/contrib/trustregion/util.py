@@ -59,20 +59,14 @@ class IterationRecord:
     Record relevant information at each individual iteration
     """
 
-    def __init__(self, iteration, inputs, outputs, other, params):
+    def __init__(self, iteration, inputs, outputs, other, params,
+                 thetak=None, objk=None, trustRadius=None, stepNorm=None):
         self.iteration = iteration
         self.inputs = inputs
         self.outputs = outputs
         self.other = other
         self.rmParams = params
-        self.thetak = None
-        self.objk = None
-        self.trustRadius = None
-        self.stepNorm = None
         self.fStep, self.thetaStep, self.rejected = [False]*3
-
-    def setRelatedValue(self, thetak=None, objk=None,
-                        trustRadius=None, stepNorm=None):
         if thetak is not None:
             self.thetak = thetak
         if objk is not None:
@@ -92,7 +86,6 @@ class IterationRecord:
         logger.info("objk = %s" % self.objk)
         logger.info("Reduced model parameters: %s" %self.rmParams)
         logger.info("trustRadius = %s" % self.trustRadius)
-        logger.info("sampleRadius = %s" % self.sampleRadius)
         logger.info("stepNorm = %s" % self.stepNorm)
         if self.fStep:
             logger.info("INFO: f-type step")
@@ -110,16 +103,19 @@ class IterationLogger:
         self.iterations = []
 
     def newIteration(self, iteration, inputs, outputs, other,
-                     thetak, objk, params):
+                     params, thetak, objk, trustRadius, stepNorm):
+        """
+        Add a new iteration to the list of iterations
+        """
         self.iterrecord = IterationRecord(iteration, inputs, outputs,
-                                       other, params)
-        self.iterrecord.setRelatedValue(thetak=thetak, objk=objk)
+                                       other, params,
+                                       thetak=thetak, objk=objk,
+                                       trustRadius=trustRadius,
+                                       stepNorm=stepNorm)
         self.iterations.append(self.iterrecord)
 
-    def setCurrentIteration(self, trustRadius=None,
-                            stepNorm=None):
-        self.iterrecord.setRelatedValue(trustRadius=trustRadius,
-                                        stepNorm=stepNorm)
-
     def logIteration(self):
+        """
+        Log detailed information about the iteration to the log
+        """
         self.iterrecord.detailLogger()

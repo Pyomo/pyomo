@@ -85,26 +85,28 @@ class TestLogger(unittest.TestCase):
         self.thetak = 10.0
         self.objk = 5.0
         self.params = [3, 5]
+        self.radius = 1.0
+        self.stepNorm = 0.25
 
     def tearDown(self):
         pass
 
-    def test_newIteration(self):
+    def test_IterationRecord(self):
         self.iterLogger.newIteration(self.iteration, self.inputs,
                                  self.outputs, self.other,
-                                 self.thetak, self.objk,
-                                 self.params)
+                                 self.params, self.thetak, self.objk,
+                                 self.radius, self.stepNorm)
         self.assertEqual(len(self.iterLogger.iterations), 1)
+        self.assertEqual(self.iterLogger.iterations[0].objk, 5.0)
 
-    @unittest.skipUnless(numpy_available, "numpy is not available")
-    def test_printIteration(self):
+    def test_logIteration(self):
         self.iterLogger.newIteration(self.iteration, self.inputs,
-                                  self.outputs, self.other,
-                                  self.thetak, self.objk,
-                                  self.params)
+                                 self.outputs, self.other,
+                                 self.params, self.thetak, self.objk,
+                                 self.radius, self.stepNorm)
         OUTPUT = StringIO()
         with LoggingIntercept(OUTPUT, 'pyomo.contrib.trustregion', logging.INFO):
-            self.iterLogger.printIteration(self.iteration)
+            self.iterLogger.logIteration()
         self.assertIn('Iteration 0', OUTPUT.getvalue())
         self.assertIn('thetak =', OUTPUT.getvalue())
         self.assertIn('stepNorm =', OUTPUT.getvalue())
