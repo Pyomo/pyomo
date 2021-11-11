@@ -332,11 +332,11 @@ class TrustRegionSolver(object):
     def __exit__(self, et, ev, tb):
         pass
 
-    def solve(self, model, ext_fcn_surrogate_map_rule, **kwds):
-        config = self.CONFIG(kwds.pop('options', {}))
-        config.set_value(kwds)
+    def solve(self, model, efList, ext_fcn_surrogate_map_rule=None, **kwds):
+        self.config = self.CONFIG(kwds.pop('options', {}))
+        self.config.set_value(kwds)
         if ext_fcn_surrogate_map_rule is None:
             # If the user does not pass us a "basis" function,
             # we default to 0.
             ext_fcn_surrogate_map_rule = lambda comp,ef: 0
-        trust_region_method(config, model, ext_fcn_surrogate_map_rule)
+        trust_region_method(self.config, model, ext_fcn_surrogate_map_rule)

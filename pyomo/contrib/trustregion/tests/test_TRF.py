@@ -35,6 +35,9 @@ class TestTrustRegionConfig(unittest.TestCase):
             return sin(a-b)
         self.bb = ExternalFunction(blackbox)
 
+        def maprule(a,b):
+            return sin(a-b)
+
         m.obj = Objective(
             expr=(m.z[0]-1.0)**2 + (m.z[0]-m.z[1])**2 + (m.z[2]-1.0)**2 \
                 + (m.x[0]-1.0)**4 + (m.x[1]-1.0)**6 # + m.bb(m.x[0],m.x[1])
@@ -61,64 +64,48 @@ class TestTrustRegionConfig(unittest.TestCase):
         solve_status = self.try_solve()
         self.assertTrue(solve_status)
         self.assertEqual(self.TRF.config.trust_radius, 1.0)
-        self.assertEqual(self.TRF._local_config.trust_radius, 1.0)
 
     def test_solve_with_new_kwdval(self):
         # Initialized with 1.0
         self.TRF = SolverFactory('trustregion')
         self.assertEqual(self.TRF.config.trust_radius, 1.0)
 
-        # Set local to 2.0; persistent should still be 1.0
         solve_status = self.try_solve(trust_radius=2.0)
         self.assertTrue(solve_status)
         self.assertEqual(self.TRF.config.trust_radius, 1.0)
-        self.assertEqual(self.TRF._local_config.trust_radius, 2.0)
 
     def test_update_kwdval(self):
         # Initialized with 1.0
         self.TRF = SolverFactory('trustregion')
         self.assertEqual(self.TRF.config.trust_radius, 1.0)
 
-        # Set persistent value to 4.0; local value should also be set to 4.0
         self.TRF.config.trust_radius = 4.0
         solve_status = self.try_solve()
         self.assertTrue(solve_status)
         self.assertEqual(self.TRF.config.trust_radius, 4.0)
-        self.assertEqual(self.TRF._local_config.trust_radius, 4.0)
 
     def test_update_kwdval_solve_with_new_kwdval(self):
         # Initialized with 1.0
         self.TRF = SolverFactory('trustregion')
         self.assertEqual(self.TRF.config.trust_radius, 1.0)
 
-        # Set persistent value to 4.0;
         self.TRF.config.trust_radius = 4.0
         self.assertEqual(self.TRF.config.trust_radius, 4.0)
-
-        # Set local to 2.0; persistent should still be 4.0
-        solve_status = self.try_solve(trust_radius=2.0)
-        self.assertTrue(solve_status)
-        self.assertEqual(self.TRF.config.trust_radius, 4.0)
-        self.assertEqual(self.TRF._local_config.trust_radius, 2.0)
 
     def test_initialize_with_kwdval(self):
         # Initialized with 3.0
         self.TRF = SolverFactory('trustregion', trust_radius=3.0)
         self.assertEqual(self.TRF.config.trust_radius, 3.0)
 
-        # Both persistent and local values should be set to 3.0
         solve_status = self.try_solve()
         self.assertTrue(solve_status)
         self.assertEqual(self.TRF.config.trust_radius, 3.0)
-        self.assertEqual(self.TRF._local_config.trust_radius, 3.0)
 
     def test_initialize_with_kwdval_solve_with_new_kwdval(self):
         # Initialized with 3.0
         self.TRF = SolverFactory('trustregion', trust_radius=3.0)
         self.assertEqual(self.TRF.config.trust_radius, 3.0)
 
-        # Persistent should be 3.0, local should be 2.0
         solve_status = self.try_solve(trust_radius=2.0)
         self.assertTrue(solve_status)
         self.assertEqual(self.TRF.config.trust_radius, 3.0)
-        self.assertEqual(self.TRF._local_config.trust_radius, 2.0)
