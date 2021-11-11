@@ -736,8 +736,6 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                 try:
                     ref = self._getitem_when_not_present(
                         next(iter(self.index_set())))
-                    # state = ref.__getstate__()
-                    # state['_component'] = weakref_ref(self)
                 except StopIteration:
                     # Empty index!
                     return
