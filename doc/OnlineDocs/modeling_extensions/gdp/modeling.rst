@@ -254,7 +254,7 @@ Here, we demonstrate this capability with a toy example:
 
     >>> # Before solve, Boolean vars have no value
     >>> Reference(m.d[:].indicator_var).display()
-    IndexedBooleanVar : Size=4, Index=s
+    IndexedBooleanVar : Size=4, Index=s, ReferenceTo=d[:].indicator_var
         Key : Value : Fixed : Stale
           1 :  None : False :  True
           2 :  None : False :  True
@@ -265,7 +265,7 @@ Here, we demonstrate this capability with a toy example:
     >>> # based on the algebraic model results
     >>> run_data = SolverFactory('glpk').solve(m)
     >>> Reference(m.d[:].indicator_var).display()
-    IndexedBooleanVar : Size=4, Index=s
+    IndexedBooleanVar : Size=4, Index=s, ReferenceTo=d[:].indicator_var
         Key : Value : Fixed : Stale
           1 :  True : False : False
           2 : False : False : False

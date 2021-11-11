@@ -322,6 +322,10 @@ class _ComponentBase(PyomoObject):
             # The first line should be a hanging indent (i.e., not indented)
             ostream.newline = False
 
+        if self.is_reference():
+            _attr = list(_attr) if _attr else []
+            _attr.append(('ReferenceTo', self.referent))
+
         if _name:
             ostream.write(_name+" : ")
         if _doc:
