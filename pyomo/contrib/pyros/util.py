@@ -13,6 +13,7 @@ from pyomo.core.base.set_types import Reals
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr import value
 from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.expr.visitor import identify_variables, identify_mutable_parameters, replace_expressions
 from pyomo.core.expr.sympy_tools import sympyify_expression, sympy2pyomo_expression
@@ -330,16 +331,27 @@ def replace_uncertain_bounds_with_constraints(model, uncertain_params):
 
     for v in vars_in_cons | vars_in_obj:
         # get mutable parameters in variable bounds expressions
-        # TODO: replace _ub and _lb with more secure getter when available
-        mutable_params_ub = ComponentSet(identify_mutable_parameters(v._ub))
-        mutable_params_lb = ComponentSet(identify_mutable_parameters(v._lb))
+        ub = v.upper
+        mutable_params_ub = ComponentSet(identify_mutable_parameters(ub))
+        lb = v.lower
+        mutable_params_lb = ComponentSet(identify_mutable_parameters(lb))
 
         # add explicit inequality constraint(s), remove variable bound(s)
         if mutable_params_ub & uncertain_param_set:
-            uncertain_var_bound_constrs.add(v - v._ub <= 0)
+            if type(ub) is NPV_MinExpression:
+                upper_bounds = ub.args
+            else:
+                upper_bounds = (ub,)
+            for u_bnd in upper_bounds:
+                uncertain_var_bound_constrs.add(v - u_bnd <= 0)
             v.setub(None)
         if mutable_params_lb & uncertain_param_set:
-            uncertain_var_bound_constrs.add(v._lb - v <= 0)
+            if type(ub) is NPV_MaxExpression:
+                lower_bounds = lb.args
+            else:
+                lower_bounds = (lb,)
+            for l_bnd in lower_bounds:
+                uncertain_var_bound_constrs.add(l_bnd - v <= 0)
             v.setlb(None)
 
 

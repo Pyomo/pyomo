@@ -326,11 +326,11 @@ class testTurnBoundsToConstraints(unittest.TestCase):
         # manually replace uncertain parameter bounds with explicit constraints
         uncertain_cons = ConstraintList()
         m.add_component('uncertain_var_bound_cons', uncertain_cons)
-        uncertain_cons.add(m.x - m.x._ub <= 0)
-        uncertain_cons.add(m.y._lb - m.y <= 0)
+        uncertain_cons.add(m.x - m.x.upper <= 0)
+        uncertain_cons.add(m.y.lower - m.y <= 0)
         uncertain_cons.add(m.v - m.v._ub <= 0)
-        uncertain_cons.add(m.v._lb - m.v <= 0)
-        uncertain_cons.add(m.t - m.t._ub <= 0)
+        uncertain_cons.add(m.v.lower - m.v <= 0)
+        uncertain_cons.add(m.t - m.t.upper <= 0)
 
         # remove corresponding variable bounds
         m.x.setub(None)
