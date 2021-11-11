@@ -210,8 +210,8 @@ def copy_var_list_values(from_list, to_list, config,
                          ignore_integrality=False):
     """Copy variable values from one list to another.
 
-    Rounds to Binary/Integer if neccessary
-    Sets to zero for NonNegativeReals if neccessary
+    Rounds to Binary/Integer if necessary
+    Sets to zero for NonNegativeReals if necessary
     """
     for v_from, v_to in zip(from_list, to_list):
         if skip_stale and v_from.stale:
@@ -233,10 +233,11 @@ def copy_var_list_values(from_list, to_list, config,
             elif v_to.is_integer() and (fabs(var_val - rounded_val) <=
                                         config.integer_tolerance): # not v_to.is_continuous()
                 v_to.set_value(rounded_val)
-            elif 'is not in domain NonNegativeReals' in err_msg and (
-                    fabs(var_val) <= config.zero_tolerance):
+            elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
                 v_to.set_value(0)
             else:
+                config.logger.error(
+                    'Unknown validation domain error setting variable %s', (v_to.name,))
                 raise
 
 
@@ -307,19 +308,16 @@ def build_ordered_component_lists(model, solve_data):
             model.component_data_objects(
                 ctype=Constraint, active=True,
                 descend_into=(Block, Disjunct))))
-    # print(util_blk.constraint_list)
     setattr(
         util_blk, 'linear_constraint_list', list(
             c for c in model.component_data_objects(
             ctype=Constraint, active=True, descend_into=(Block, Disjunct))
             if c.body.polynomial_degree() in (0, 1)))
-    # print(util_blk.linear_constraint_list)
     setattr(
         util_blk, 'nonlinear_constraint_list', list(
             c for c in model.component_data_objects(
             ctype=Constraint, active=True, descend_into=(Block, Disjunct))
             if c.body.polynomial_degree() not in (0, 1)))
-    # print(util_blk.nonlinear_constraint_list)
     setattr(
         util_blk, 'disjunct_list', list(
             model.component_data_objects(
