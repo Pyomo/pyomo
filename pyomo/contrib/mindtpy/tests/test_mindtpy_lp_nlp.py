@@ -9,17 +9,15 @@
 #  ___________________________________________________________________________
 
 """Tests for the MindtPy solver."""
-import pyomo.core.base.symbolic
+import sys
 import pyomo.common.unittest as unittest
-from pyomo.contrib.mindtpy.tests.eight_process_problem import \
-    EightProcessFlowsheet
+from pyomo.contrib.mindtpy.tests.eight_process_problem import (
+    EightProcessFlowsheet,
+)
 from pyomo.contrib.mindtpy.tests.MINLP_simple import SimpleMINLP as SimpleMINLP
-from pyomo.contrib.mindtpy.tests.MINLP2_simple import SimpleMINLP as SimpleMINLP2
-from pyomo.contrib.mindtpy.tests.MINLP3_simple import SimpleMINLP as SimpleMINLP3
-from pyomo.contrib.mindtpy.tests.MINLP5_simple import SimpleMINLP5
-from pyomo.contrib.mindtpy.tests.from_proposal import ProposalModel
-from pyomo.contrib.mindtpy.tests.constraint_qualification_example import ConstraintQualificationExample
-from pyomo.contrib.mindtpy.tests.online_doc_example import OnlineDocExample
+from pyomo.contrib.mindtpy.tests.constraint_qualification_example import (
+    ConstraintQualificationExample,
+)
 from pyomo.environ import SolverFactory, value
 from pyomo.opt import TerminationCondition
 
@@ -39,12 +37,21 @@ model_list = [EightProcessFlowsheet(convex=True),
               SimpleMINLP()
               ]
 
+def known_solver_failure(mip_solver, model):
+    if ( mip_solver == 'gurobi_persistent'
+         and model.name in {'DuranEx3', 'SimpleMINLP'}
+         and sys.platform.startswith('win')
+         and SolverFactory(mip_solver).version()[:3] == (9,5,0) ):
+        sys.stderr.write(
+            f"Skipping sub-test {model.name} with {mip_solver} due to known "
+            f"failure when running Gurobi 9.5.0 on Windows\n"
+        )
+        return True
+    return False
 
 @unittest.skipIf(not subsolvers_available,
                  'Required subsolvers %s are not available'
                  % ([required_nlp_solvers] + required_mip_solvers))
-@unittest.skipIf(not pyomo.core.base.symbolic.differentiate_available,
-                 'Symbolic differentiation is not available')
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 
@@ -101,6 +108,8 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
+                    if known_solver_failure(mip_solver, model):
+                        continue
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -149,6 +158,8 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
+                    if known_solver_failure(mip_solver, model):
+                        continue
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -165,6 +176,8 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
+                    if known_solver_failure(mip_solver, model):
+                        continue
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
@@ -181,6 +194,8 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
+                    if known_solver_failure(mip_solver, model):
+                        continue
                     results = opt.solve(model, strategy='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
