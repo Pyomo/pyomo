@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 """Tests for the MindtPy solver."""
-import pyomo.core.base.symbolic
+from pyomo.core.expr.calculus.diff_with_sympy import differentiate_available
 import pyomo.common.unittest as unittest
 from pyomo.contrib.mindtpy.tests.eight_process_problem import \
     EightProcessFlowsheet
@@ -40,12 +40,6 @@ full_model_list = [EightProcessFlowsheet(convex=True),
 model_list = [EightProcessFlowsheet(convex=True),
               ConstraintQualificationExample(),
               SimpleMINLP2(),
-              #   SimpleMINLP(),
-              #   SimpleMINLP3(),
-              #   SimpleMINLP4(),
-              #   SimpleMINLP5(),
-              #   ProposalModel(),
-              #   OnlineDocExample()
               ]
 nonconvex_model_list = [EightProcessFlowsheet(convex=False)]
 
@@ -57,7 +51,6 @@ QCP_model._generate_model()
 extreme_model_list = [LP_model.model, QCP_model.model]
 
 required_solvers = ('ipopt', 'glpk')
-# required_solvers = ('gams', 'gams')
 if all(SolverFactory(s).available() for s in required_solvers):
     subsolvers_available = True
 else:
@@ -67,7 +60,7 @@ else:
 @unittest.skipIf(not subsolvers_available,
                  'Required subsolvers %s are not available'
                  % (required_solvers,))
-@unittest.skipIf(not pyomo.core.base.symbolic.differentiate_available,
+@unittest.skipIf(not differentiate_available,
                  'Symbolic differentiation is not available')
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
