@@ -58,7 +58,7 @@ solver_dependencies =   {
     'test_dae_ch_run_path_constraint_tester': ['ipopt'],
 
     # gdp_ch
-    'test_gdp_ch_pyomo_gdp_uc_sh': ['glpk'],
+    'test_gdp_ch_pyomo_gdp_uc': ['glpk'],
     'test_gdp_ch_pyomo_scont': ['glpk'],
     'test_gdp_ch_pyomo_scont2': ['glpk'],
     'test_gdp_ch_scont_script': ['glpk'],
