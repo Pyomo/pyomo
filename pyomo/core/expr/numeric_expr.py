@@ -493,7 +493,7 @@ class ExpressionBase(NumericValue):
         """
         return polynomial_degree(self)
 
-    def _compute_polynomial_degree(self, values):                          #pragma: no cover
+    def _compute_polynomial_degree(self, values):
         """
         Compute the polynomial degree of this expression given
         the degree values of its children.
@@ -737,6 +737,66 @@ class PowExpression(ExpressionBase):
 
 
 class NPV_PowExpression(NPV_Mixin, PowExpression):
+    __slots__ = ()
+
+
+class MaxExpression(ExpressionBase):
+    """
+    Maximum expressions::
+
+        max(x, y, ...)
+    """
+
+    __slots__ = ()
+
+    def nargs(self):
+        return len(self._args_)
+
+    def _apply_operation(self, result):
+        return max(result)
+
+    def getname(self, *args, **kwds):
+        return 'max'
+
+    def _to_string(self, values, verbose, smap, compute_values):
+        return "%s(%s)" % (self.getname(), ', '.join(
+            arg[1:-1]
+            if (arg and arg[0] == '(' and arg[-1] == ')'
+                and _balanced_parens(arg[1:-1]))
+            else arg for arg in values))
+
+
+class NPV_MaxExpression(NPV_Mixin, MaxExpression):
+    __slots__ = ()
+
+
+class MinExpression(ExpressionBase):
+    """
+    Minimum expressions::
+
+        min(x, y, ...)
+    """
+
+    __slots__ = ()
+
+    def nargs(self):
+        return len(self._args_)
+
+    def _apply_operation(self, result):
+        return min(result)
+
+    def getname(self, *args, **kwds):
+        return 'min'
+
+    def _to_string(self, values, verbose, smap, compute_values):
+        return "%s(%s)" % (self.getname(), ', '.join(
+            arg[1:-1]
+            if (arg and arg[0] == '(' and arg[-1] == ')'
+                and _balanced_parens(arg[1:-1]))
+            else arg for arg in values))
+
+
+class NPV_MinExpression(NPV_Mixin, MinExpression):
     __slots__ = ()
 
 

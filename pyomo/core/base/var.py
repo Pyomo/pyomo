@@ -18,21 +18,23 @@ from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base.numvalue import (
-    NumericValue, value, is_fixed, native_numeric_types,
+from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
+from pyomo.core.expr.numvalue import (
+    NumericValue, value, is_potentially_variable, native_numeric_types,
 )
-from pyomo.core.base.set_types import Reals, Binary
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, IndexedComponent_NDArrayMixin
 )
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.set import Set, _SetDataBase
+from pyomo.core.base.set import Reals, Binary, Set, _SetDataBase
 from pyomo.core.base.units_container import units
 from pyomo.core.base.util import is_functor
 
 logger = logging.getLogger('pyomo.core')
 
+_no_lower_bound = {None, -float('inf')}
+_no_upper_bound = {None, float('inf')}
 
 class _VarData(ComponentData, NumericValue):
     """
@@ -42,26 +44,22 @@ class _VarData(ComponentData, NumericValue):
         component   The Var object that owns this data.
 
     Public Class Attributes:
-        domain      The domain of this variable.
-        bounds      A tuple (lower,upper) that defines the variable bounds.
-        fixed       If True, then this variable is treated as a
-                        fixed constant in the model.
-        lb          A lower bound for this variable.  The lower bound can be
-                        either numeric constants, parameter values, expressions
-                        or any object that can be called with no arguments.
-        ub          A upper bound for this variable.  The upper bound can be either
-                        numeric constants, parameter values, expressions or any
-                        object that can be called with no arguments.
-        stale       A Boolean indicating whether the value of this variable is
-                        legitimiate.  This value is true if the value should
-                        be considered legitimate for purposes of reporting or
-                        other interrogation.
-        value       The numeric value of this variable.
+        domain   The domain of this variable.
+        bounds   A tuple (lower,upper) that defines the variable bounds.
+        fixed    If True, then this variable is treated as a
+                     fixed constant in the model.
+        lb       A lower bound for this variable.  The lower bound can be
+                     either numeric constants, parameter values, expressions
+                     or any object that can be called with no arguments.
+        ub       A upper bound for this variable.  The upper bound can be either
+                     numeric constants, parameter values, expressions or any
+                     object that can be called with no arguments.
+        stale    A Boolean indicating whether the value of this variable is
+                     legitimiate.  This value is true if the value should
+                     be considered legitimate for purposes of reporting or
+                     other interrogation.
+        value    The numeric value of this variable.
 
-    The domain, lb, and ub attributes are properties because they
-    are too widely accessed directly to enforce explicit getter/setter
-    methods and we need to deter directly modifying or accessing
-    these attributes in certain cases.
     """
 
     __slots__ = ()
@@ -82,24 +80,58 @@ class _VarData(ComponentData, NumericValue):
     def has_lb(self):
         """Returns :const:`False` when the lower bound is
         :const:`None` or negative infinity"""
-        lb = self.lb
-        return (lb is not None) and \
-            (value(lb) != float('-inf'))
+        return self.lb not in _no_lower_bound
 
     def has_ub(self):
         """Returns :const:`False` when the upper bound is
         :const:`None` or positive infinity"""
-        ub = self.ub
-        return (ub is not None) and \
-            (value(ub) != float('inf'))
+        return self.ub not in _no_upper_bound
+
+    # TODO: deprecate this?  Properties are generally preferred over "set*()"
+    def setlb(self, val):
+        """
+        Set the lower bound for this variable after validating that
+        the value is fixed (or None).
+        """
+        self.lower = val
+
+    # TODO: deprecate this?  Properties are generally preferred over "set*()"
+    def setub(self, val):
+        """
+        Set the upper bound for this variable after validating that
+        the value is fixed (or None).
+        """
+        self.upper = val
 
     @property
     def bounds(self):
-        """Returns the tuple (lower bound, upper bound)."""
+        """Returns (or set) the tuple (lower bound, upper bound).
+
+        This returns the current (numeric) values of the lower and upper
+        bounds as a tuple.  If there is no bound, returns None (and not
+        +/-inf)
+
+        """
         return (self.lb, self.ub)
     @bounds.setter
     def bounds(self, val):
-        raise AttributeError("Assignment not allowed. Use the setub and setlb methods")
+        self.lower, self.upper = val
+
+    @property
+    def lb(self):
+        """Return (or set) the numeric value of the variable lower bound."""
+        return value(self.lower)
+    @lb.setter
+    def lb(self, val):
+        self.lower = val
+
+    @property
+    def ub(self):
+        """Return (or set) the numeric value of the variable upper bound."""
+        return value(self.upper)
+    @ub.setter
+    def ub(self, val):
+        self.upper = val
 
     def is_integer(self):
         """Returns True when the domain is a contiguous integer range."""
@@ -235,22 +267,22 @@ class _VarData(ComponentData, NumericValue):
 
     @property
     def value(self):
-        """Return the value for this variable."""
+        """Return (or set) the value for this variable."""
         raise NotImplementedError
 
     @property
     def domain(self):
-        """Return the domain for this variable."""
+        """Return (or set) the domain for this variable."""
         raise NotImplementedError
 
     @property
-    def lb(self):
-        """Return the lower bound for this variable."""
+    def lower(self):
+        """Return (or set) an expression for the variable lower bound."""
         raise NotImplementedError
 
     @property
-    def ub(self):
-        """Return the upper bound for this variable."""
+    def upper(self):
+        """Return (or set) an expression for the variable upper bound."""
         raise NotImplementedError
 
     @property
@@ -261,20 +293,6 @@ class _VarData(ComponentData, NumericValue):
     @property
     def stale(self):
         """Return the stale indicator for this variable."""
-        raise NotImplementedError
-
-    def setlb(self, val):
-        """
-        Set the lower bound for this variable after validating that
-        the value is fixed (or None).
-        """
-        raise NotImplementedError
-
-    def setub(self, val):
-        """
-        Set the upper bound for this variable after validating that
-        the value is fixed (or None).
-        """
         raise NotImplementedError
 
     def fix(self, value=NoArgumentGiven):
@@ -288,7 +306,8 @@ class _VarData(ComponentData, NumericValue):
         """Sets the fixed indicator to False."""
         raise NotImplementedError
 
-    free=unfix
+    def free(self):
+        return self.unfix()
 
 
 class _GeneralVarData(_VarData):
@@ -375,11 +394,10 @@ class _GeneralVarData(_VarData):
 
     @property
     def value(self):
-        """Return the value for this variable."""
+        """Return (or set) the value for this variable."""
         return self._value
     @value.setter
     def value(self, val):
-        """Set the value for this variable."""
         if type(val) in native_numeric_types:
             # TODO: warn/error: check if this Var has units: assigning
             # a dimensionless value to a united variable should be an error
@@ -394,11 +412,10 @@ class _GeneralVarData(_VarData):
 
     @property
     def domain(self):
-        """Return the domain for this variable."""
+        """Return (or set) the domain for this variable."""
         return self._domain
     @domain.setter
     def domain(self, domain):
-        """Set the domain for this variable."""
         # TODO: this should be migrated over to using a SetInitializer
         # to handle the checking / conversion of the argument to a
         # proper Pyomo Set and not use isinstance() of a private class.
@@ -410,31 +427,69 @@ class _GeneralVarData(_VarData):
                 "instance of a Pyomo Set.  Examples: NonNegativeReals, "
                 "Integers, Binary" % (domain,))
 
-    @property
+    @_VarData.lb.getter
     def lb(self):
-        """Return the lower bound for this variable."""
         dlb, _ = self.domain.bounds()
         if self._lb is None:
             return dlb
         elif dlb is None:
             return value(self._lb)
         return max(value(self._lb), dlb)
-    @lb.setter
-    def lb(self, val):
-        raise AttributeError("Assignment not allowed. Use the setlb method")
 
     @property
+    def lower(self):
+        """Return (or set) an expression for the variable lower bound.
+
+        This returns a (non-potentially variable) expression for the
+        variable lower bound.  This represents the tighter of the
+        current domain and the constant or expression provided to
+        setlb().  Note that the expression will NOT automatically
+        reflect changes to either the domain or the bound expression
+        (e.g., because of a call to setlb()).
+
+        """
+        dlb, _ = self.domain.bounds()
+        if self._lb is None:
+            return dlb
+        elif dlb is None:
+            return self._lb
+        # _process_bound() guarantees _lb is not potentially variable
+        return NPV_MaxExpression((self._lb, dlb))
+    @lower.setter
+    def lower(self, val):
+        self._lb = self._process_bound(val, 'lower')
+
+    @_VarData.ub.getter
     def ub(self):
-        """Return the upper bound for this variable."""
         _, dub = self.domain.bounds()
         if self._ub is None:
             return dub
         elif dub is None:
             return value(self._ub)
         return min(value(self._ub), dub)
-    @ub.setter
-    def ub(self, val):
-        raise AttributeError("Assignment not allowed. Use the setub method")
+
+    @property
+    def upper(self):
+        """Return (or set) an expression for the variable upper bound.
+
+        This returns a (non-potentially variable) expression for the
+        variable upper bound.  This represents the tighter of the
+        current domain and the constant or expression provided to
+        setub().  Note that the expression will NOT automatically
+        reflect changes to either the domain or the bound expression
+        (e.g., because of a call to setub()).
+
+        """
+        _, dub = self.domain.bounds()
+        if self._ub is None:
+            return dub
+        elif dub is None:
+            return self._ub
+        # _process_bound() guarantees _lb is not potentially variable
+        return NPV_MinExpression((self._ub, dub))
+    @upper.setter
+    def upper(self, val):
+        self._ub = self._process_bound(val, 'upper')
 
     def get_units(self):
         """Return the units for this variable entry."""
@@ -445,20 +500,6 @@ class _GeneralVarData(_VarData):
     # fixed is an attribute
 
     # stale is an attribute
-
-    def setlb(self, val):
-        """
-        Set the lower bound for this variable after validating that
-        the value is fixed (or None).
-        """
-        self._lb = self._process_bound(val, 'lower')
-
-    def setub(self, val):
-        """
-        Set the upper bound for this variable after validating that
-        the value is fixed (or None).
-        """
-        self._ub = self._process_bound(val, 'upper')
 
     def fix(self, value=NoArgumentGiven):
         """
@@ -473,15 +514,14 @@ class _GeneralVarData(_VarData):
         """Sets the fixed indicator to False."""
         self.fixed = False
 
-    free = unfix
-
     def _process_bound(self, val, bound_type):
-        # Note: is_fixed(None) returns True
-        if not is_fixed(val):
+        # Note: is_potentially_variable(None) returns False
+        if is_potentially_variable(val):
             raise ValueError(
-                "Non-fixed input of type '%s' supplied as variable %s "
-                "bound - legal types must be constants or fixed expressions."
-                % (type(val), bound_type))
+                "Potentially variable input of type '%s' supplied as "
+                "%s bound for variable '%s' - legal types must be constants "
+                "or non-potentially variable expressions."
+                % (type(val).__name__, bound_type, self.name))
         if type(val) in native_numeric_types or val is None:
             # TODO: warn/error: check if this Var has units: assigning
             # a dimensionless value to a united variable should be an error
@@ -884,7 +924,7 @@ class ScalarVar(_GeneralVarData, Var):
 
     @property
     def lb(self):
-        """Return the lower bound for this variable."""
+        """Return the numeric value of the variable lower bound."""
         if self._constructed:
             return _GeneralVarData.lb.fget(self)
         raise ValueError(
@@ -894,11 +934,11 @@ class ScalarVar(_GeneralVarData, Var):
             % (self.name))
     @lb.setter
     def lb(self, lb):
-        raise AttributeError("Assignment not allowed. Use the setlb method")
+        self.setlb(lb)
 
     @property
     def ub(self):
-        """Return the upper bound for this variable."""
+        """Return the numeric value of the variable upper bound."""
         if self._constructed:
             return _GeneralVarData.ub.fget(self)
         raise ValueError(
@@ -908,7 +948,7 @@ class ScalarVar(_GeneralVarData, Var):
             % (self.name))
     @ub.setter
     def ub(self, ub):
-        raise AttributeError("Assignment not allowed. Use the setub method")
+        self.setub(ub)
 
     def setlb(self, val):
         """
@@ -959,8 +999,6 @@ class ScalarVar(_GeneralVarData, Var):
             "is currently nothing to set)."
             % (self.name))
 
-    free=unfix
-
 
 class SimpleVar(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarVar
@@ -997,6 +1035,9 @@ class IndexedVar(Var):
         for vardata in self.values():
             vardata.unfix()
 
+    def free(self):
+        return self.unfix()
+
     @property
     def domain(self):
         raise AttributeError(
@@ -1008,8 +1049,6 @@ class IndexedVar(Var):
         """Sets the domain for all variables in this container."""
         for vardata in self.values():
             vardata.domain = domain
-
-    free=unfix
 
 
 @ModelComponentFactory.register("List of decision variables.")
