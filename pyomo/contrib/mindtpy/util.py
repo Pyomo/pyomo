@@ -541,16 +541,15 @@ def get_integer_solution(model, string_zero=False):
             whether to store zero as string
     """
     temp = []
-    for var in model.component_data_objects(ctype=Var):
-        if var.is_integer():
-            if string_zero:
-                if var.value == 0:
+    for var in model.MindtPy_utils.discrete_variable_list:
+        if string_zero:
+            if var.value == 0:
                     # In cplex, negative zero is different from zero, so we use string to denote this(Only in singletree)
-                    temp.append(str(var.value))
-                else:
-                    temp.append(int(round(var.value)))
+                temp.append(str(var.value))
             else:
                 temp.append(int(round(var.value)))
+        else:
+            temp.append(int(round(var.value)))
     return tuple(temp)
 
 
