@@ -29,7 +29,7 @@ Operation  Python Syntax Pyomo Class
 sum        ``x + y``     :class:`SumExpression <pyomo.core.expr.current.SumExpression>`
 product    ``x * y``     :class:`ProductExpression <pyomo.core.expr.current.ProductExpression>`
 negation   ``- x``       :class:`NegationExpression <pyomo.core.expr.current.NegationExpression>`
-reciprocal ``1 / x``     :class:`ReciprocalExpression <pyomo.core.expr.current.ReciprocalExpression>`
+division   ``x / y``     :class:`DivisionExpression <pyomo.core.expr.current.DivisionExpression>`
 power      ``x ** y``    :class:`PowExpression <pyomo.core.expr.current.PowExpression>`
 inequality ``x <= y``    :class:`InequalityExpression <pyomo.core.expr.current.InequalityExpression>`
 equality   ``x == y``    :class:`EqualityExpression <pyomo.core.expr.current.EqualityExpression>`

@@ -22,7 +22,7 @@ from pyomo.common.modeling import NOTSET
 from pyomo.common.sorting import sorted_robust
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import (
-    native_types, native_numeric_types, as_numeric, value,
+    native_types, native_numeric_types, as_numeric, value, is_constant,
 )
 from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.base.initializer import (
@@ -2723,9 +2723,15 @@ class RangeSet(Component):
         # NOTE: We will need to revisit this if we ever allow passing
         # data into the construct method (which would override the
         # hard-coded values here).
+        #
+        # NOTE: We will NOT automatically construct RangeSet objects
+        # that reference mutable data so that we can generate a more
+        # meaningful warning message about a RangeSet defined by mutable
+        # data.
         try:
             if all( type(_) in native_types
-                    or _.parent_component().is_constructed()
+                    or (_.parent_component().is_constructed()
+                        and is_constant(_))
                     for _ in args ):
                 self.construct()
         except AttributeError:
@@ -2767,7 +2773,16 @@ class RangeSet(Component):
         self._constructed = True
 
         args, ranges = self._init_data
-        args = tuple(value(_) for _ in args)
+        if any(not is_constant(arg) for arg in args):
+            logger.warning(
+                "Constructing RangeSet '%s' from non-constant data (e.g., "
+                "Var or mutable Param).  The linkage between this RangeSet "
+                "and the original source data will be broken, so updating "
+                "the data value in the future will not be reflected in this "
+                "RangeSet.  To suppress this warning, explicitly convert "
+                "the source data to a constant type (e.g., float, int, or "
+                "immutable Param)" % (self.name,))
+        args = tuple(value(arg) for arg in args)
         if type(ranges) is not tuple:
             ranges = tuple(ranges)
         if len(args) == 1:
@@ -3660,8 +3675,8 @@ class SetProduct(SetOperator):
         ))
 
     def bounds(self):
-        return ( tuple(_.bounds()[0] for _ in self.subsets(False)),
-                 tuple(_.bounds()[1] for _ in self.subsets(False)) )
+        lb, ub = zip(*map(lambda x: x.bounds(), self.subsets(False)))
+        return lb, ub
 
     @property
     def dimen(self):

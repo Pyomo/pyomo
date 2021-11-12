@@ -99,8 +99,6 @@ def _check_productexpression(expr, i):
         elif curr.__class__ is EXPR.DivisionExpression:
             stack.append((curr.arg(0), e_))
             stack.append((curr.arg(1), - e_))
-        elif curr.__class__ is EXPR.ReciprocalExpression:
-            stack.append((curr.arg(0), - e_))
         elif type(curr) is EXPR.GetItemExpression and \
              type(curr.arg(0)) is DerivativeVar:
             dv = (curr, e_)
@@ -532,14 +530,12 @@ class Simulator:
                 # Case 3: m.p*m.dxdt[t] = RHS
                 if args is None:
                     if type(tempexp.arg(0)) is EXPR.ProductExpression or \
-                       type(tempexp.arg(0)) is EXPR.ReciprocalExpression or \
                        type(tempexp.arg(0)) is EXPR.DivisionExpression:
                         args = _check_productexpression(tempexp, 0)
 
                 # Case 4: RHS =  m.p*m.dxdt[t]
                 if args is None:
                     if type(tempexp.arg(1)) is EXPR.ProductExpression or \
-                       type(tempexp.arg(1)) is EXPR.ReciprocalExpression or \
                        type(tempexp.arg(1)) is EXPR.DivisionExpression:
                         args = _check_productexpression(tempexp, 1)
 
