@@ -20,7 +20,7 @@ model.S = Param(within=PositiveIntegers)
 model.SCEN = RangeSet(1,model.S)
 
 # links
-model.LINK = Set()
+model.LINK = Set(dimen=1)
 model.lstartloc = Param(model.LINK)
 model.lendloc = Param(model.LINK)
 model.ldiam = Param(model.LINK,within=PositiveReals,mutable=True)
