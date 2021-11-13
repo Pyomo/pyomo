@@ -21,11 +21,11 @@ model.SCEN = RangeSet(1,model.S)
 
 # links
 model.LINK = Set(dimen=1)
-model.lstartloc = Param(model.LINK)
-model.lendloc = Param(model.LINK)
+model.lstartloc = Param(model.LINK, within=Any)
+model.lendloc = Param(model.LINK, within=Any)
 model.ldiam = Param(model.LINK,within=PositiveReals,mutable=True)
 model.llength = Param(model.LINK,within=PositiveReals,mutable=True)
-model.ltype = Param(model.LINK)
+model.ltype = Param(model.LINK, within=Any)
 
 def link_a_init_rule(m):
     return (l for l in m.LINK if m.ltype[l] == "a")
@@ -42,14 +42,14 @@ model.pmax = Param(model.NODE,within=PositiveReals,mutable=True)
 
 # supply
 model.SUP = Set()
-model.sloc = Param(model.SUP)
+model.sloc = Param(model.SUP, within=Any)
 model.smin = Param(model.SUP,within=NonNegativeReals,mutable=True)
 model.smax = Param(model.SUP,within=NonNegativeReals,mutable=True)
 model.scost = Param(model.SUP,within=NonNegativeReals)
 
 # demand
 model.DEM = Set()
-model.dloc = Param(model.DEM)
+model.dloc = Param(model.DEM, within=Any)
 model.d = Param(model.DEM, within=PositiveReals,mutable=True)
 
 # physical data
