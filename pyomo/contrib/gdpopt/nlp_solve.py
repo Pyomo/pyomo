@@ -475,6 +475,13 @@ def solve_local_subproblem(mip_result, solve_data, config):
         except InfeasibleConstraintException:
             return get_infeasible_result_object(
                 subprob, "Preprocessing determined problem to be infeasible.")
+        except ValueError as e:
+            if str(e).startswith('Trivial constraint'):
+                return get_infeasible_result_object(
+                    subprob,
+                    "Preprocessing determined problem to be infeasible.")
+            else: # This is a mystery ValueError, just raise it.
+                raise
 
     if not any(constr.body.polynomial_degree() not in (1, 0) for constr in
                subprob.component_data_objects(Constraint, active=True)):

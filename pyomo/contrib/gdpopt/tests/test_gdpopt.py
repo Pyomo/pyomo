@@ -24,8 +24,9 @@ from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
 from pyomo.contrib.gdpopt.util import is_feasible, time_code
 from pyomo.environ import ( ConcreteModel, Objective, SolverFactory, Var, value,
-                            Integers, Block, Constraint, maximize)
+                            Integers, Block, Constraint, maximize, sqrt)
 from pyomo.gdp import Disjunct, Disjunction
+from pyomo.gdp.tests import models
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
 from pyomo.opt import TerminationCondition
 
@@ -227,6 +228,18 @@ class TestGDPopt(unittest.TestCase):
             nlp_solver=nlp_solver
         )
         self.assertAlmostEqual(value(m.o), 0)
+
+    def test_nested_disjunctions_set_covering(self):
+        m = models.makeNestedNonlinearModel()
+        SolverFactory('gdpopt').solve(m, strategy='LOA', mip_solver=mip_solver,
+                                      nlp_solver=nlp_solver,
+                                      init_strategy='set_covering')
+        self.assertAlmostEqual(value(m.x), sqrt(2)/2)
+        self.assertAlmostEqual(value(m.y), sqrt(2)/2)
+        self.assertTrue(value(m.disj.disjuncts[1].indicator_var))
+        self.assertFalse(value(m.disj.disjuncts[0].indicator_var))
+        self.assertTrue(value(m.d1.indicator_var))
+        self.assertFalse(value(m.d2.indicator_var))
 
     def test_LOA_8PP_default_init(self):
         """Test logic-based outer approximation with 8PP."""
