@@ -423,7 +423,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
         config.logger.info('NLP subproblem was locally infeasible.')
         solve_data.nlp_infeasible_counter += 1
         if config.calculate_dual:
-            for c in fixed_nlp.component_data_objects(ctype=Constraint):
+            for c in fixed_nlp.MindtPy_utils.constraint_list:
                 rhs = ((0 if c.upper is None else c.upper)
                        + (0 if c.lower is None else c.lower))
                 sign_adjust = 1 if c.upper is None else -1

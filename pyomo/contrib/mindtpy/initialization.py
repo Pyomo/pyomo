@@ -209,7 +209,7 @@ def init_max_binaries(solve_data, config):
         c.deactivate()
     objective = next(m.component_data_objects(Objective, active=True))
     objective.deactivate()
-    binary_vars = (v for v in m.component_data_objects(ctype=Var)
+    binary_vars = (v for v in m.MindtPy_utils.discrete_variable_list
                    if v.is_binary() and not v.fixed)
     MindtPy.MindtPy_max_binary_obj = Objective(
         expr=sum(v for v in binary_vars), sense=maximize)
