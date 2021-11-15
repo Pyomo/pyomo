@@ -40,7 +40,7 @@ _legal_unary_functions = {
 }
 _arc_functions = {'acos','asin','atan'}
 _dnlp_functions = {'ceil','floor','abs'}
-
+_zero_one = {0, 1}
 #
 # A visitor pattern that creates a string for an expression
 # that is compatible with the GAMS syntax.
@@ -209,17 +209,20 @@ class Categorizer(object):
             v = symbol_map.getObject(var)
             if v.is_fixed():
                 self.fixed.append(var)
-            elif v.is_binary():
-                self.binary.append(var)
+            elif v.is_continuous():
+                if v.lb == 0:
+                    self.positive.append(var)
+                else:
+                    self.reals.append(var)
             elif v.is_integer():
-                if all(bnd in {0, 1} for bnd in v.bounds):
+                if all(bnd in _zero_one for bnd in v.bounds):
                     self.binary.append(var)
                 else:
                     self.ints.append(var)
-            elif v.lb == 0:
-                self.positive.append(var)
             else:
-                self.reals.append(var)
+                raise RuntimeError(
+                    "Cannot output variable to GAMS: effective variable "
+                    "domain is not in {Reals, Integers, Binary}")
 
     def __iter__(self):
         """Iterate over all variables.
