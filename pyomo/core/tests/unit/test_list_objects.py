@@ -366,10 +366,13 @@ class _TestActiveComponentListBase(_TestComponentListBase):
         model.c.insert(0, self._cdatatype(self._arg()))
         self.assertEqual(model.c.active, True)
 
+
 class TestVarList(_TestComponentListBase,
                   unittest.TestCase):
+    # Note: the updated _GeneralVarData class only takes an optional
+    # parent argument (you no longer pass the domain in)
     _ctype = XVarList
-    _cdatatype = _GeneralVarData
+    _cdatatype = lambda self, arg: _GeneralVarData()
     def setUp(self):
         _TestComponentListBase.setUp(self)
         self._arg = lambda: Reals
