@@ -266,19 +266,26 @@ def add_bounds_for_uncertain_parameters(model, config):
 
 
 def transform_to_standard_form(model):
-    '''
-    Make all inequality constraints of the form g(x) <= 0
-    :param model: the optimization model
-    :return: void
-    '''
-    for constraint in model.component_data_objects(Constraint, descend_into=True, active=True):
-        if not constraint.equality:
-            if constraint.lower is not None:
-                temp = constraint
-                model.del_component(constraint)
-                model.add_component(temp.name, Constraint(expr= - (temp.body) + (temp.lower) <= 0 ))
+    """Recast all model inequality constraints of the form a <= g(x) (<= b)
+    to the form a - g(x) <= 0 (and g(x) - b <= 0).
+    """
+    for con in model.component_data_objects(Constraint,
+                                            descend_into=True,
+                                            active=True):
+        # TODO: what if not con.equality and con.lower is
+        # numerically equal to con.upper? (e.g. 1.000 == 1?)
+        if not con.equality and con.lower is not None:
+            tmp = con
+            model.del_component(con)
+            lb_con_name = tmp.name
 
-    return
+            if con.upper is not None:
+                model.add_component(tmp.name + '_ub',
+                                    Constraint(expr=tmp.body-tmp.upper <= 0))
+                lb_con_name += '_lb'
+
+            model.add_component(lb_con_name,
+                                Constraint(expr=tmp.lower-tmp.body <= 0))
 
 
 def get_vars_from_component(block, ctype):
