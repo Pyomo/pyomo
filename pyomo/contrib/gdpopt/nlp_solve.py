@@ -472,11 +472,9 @@ def solve_local_subproblem(mip_result, solve_data, config):
     if config.subproblem_presolve:
         try:
             preprocess_subproblem(subprob, config)
-        except InfeasibleConstraintException:
-            return get_infeasible_result_object(
-                subprob, "Preprocessing determined problem to be infeasible.")
-        except ValueError as e:
-            if str(e).startswith('Trivial constraint'):
+        except (InfeasibleConstraintException, ValueError) as e:
+            if type(e) is InfeasibleConstraintException or \
+               str(e).startswith('Trivial constraint'):
                 return get_infeasible_result_object(
                     subprob,
                     "Preprocessing determined problem to be infeasible.")
