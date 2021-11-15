@@ -427,7 +427,7 @@ class ModelSolutions(object):
         for vdata in instance.component_data_objects(Var):
             id_ = id(vdata)
             if vdata.fixed:
-                tmp[id_] = (weakref_ref(vdata), {'Value':value(vdata)})
+                tmp[id_] = (weakref_ref(vdata), {'Value': vdata.value})
             elif (default_variable_value is not None) and \
                  (smap_id is not None) and \
                  (id_ in smap.byObject) and \
