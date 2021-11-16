@@ -242,15 +242,22 @@ class TestGDPopt(unittest.TestCase):
         self.assertFalse(value(m.d2.indicator_var))
 
     def test_equality_propogation_infeasibility_set_covering(self):
-        m = models.makeNonConvexNestedNonlinearModel()
-        SolverFactory('gdpopt').solve(m, strategy='GLOA', mip_solver=mip_solver,
+        m = ConcreteModel()
+        m.x = Var(bounds=(-10, 10))
+        m.y = Var(bounds=(-10, 10))
+        m.disj = Disjunction(expr=[[m.x == m.y, m.y == 2], 
+                                   [m.y == 8],
+                                   [m.x + m.y >= 4, m.y == m.x + 1]])
+        m.cons = Constraint(expr=m.x == 3)
+        m.obj = Objective(expr=m.x + m.y)
+        SolverFactory('gdpopt').solve(m, strategy='LOA', mip_solver=mip_solver,
                                       nlp_solver=global_nlp_solver,
-                                      init_strategy='set_covering',
-                                      set_cover_iterlim=15)
-        self.assertAlmostEqual(value(m.x), sqrt(2)/2)
-        self.assertAlmostEqual(value(m.y), sqrt(2)/2)
-        self.assertTrue(value(m.disj.disjuncts[0].indicator_var))
+                                      init_strategy='set_covering')
+        self.assertAlmostEqual(value(m.x), 3)
+        self.assertAlmostEqual(value(m.y), 4)
+        self.assertFalse(value(m.disj.disjuncts[0].indicator_var))
         self.assertFalse(value(m.disj.disjuncts[1].indicator_var))
+        self.assertTrue(value(m.disj.disjuncts[2].indicator_var))
 
     def test_LOA_8PP_default_init(self):
         """Test logic-based outer approximation with 8PP."""
