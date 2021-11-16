@@ -8,8 +8,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import numpy as np
-from numpy.linalg import norm
+from pyomo.common.dependencies import numpy_available
+if numpy_available:
+    import numpy as np
+    from numpy.linalg import norm
+
 from pyomo.contrib.trustregion.helper import packXYZ
 
 class IterLog:
