@@ -192,7 +192,13 @@ class TRFInterface(object):
         -------
             obj : Initial objective
             feasibility : Initial feasibility measure
-            SM : Initial surrogate model
+
+        STEPS:
+            1. Create and solve PMP (eq. 3) and set equal to "x_0"
+            2. Evaluate d(w_0)
+            3. Evaluate initial feasibility measure (theta(x_0))
+            4. Create initial SM (difference btw. low + high fidelity models)
+
         """
         pass
 
