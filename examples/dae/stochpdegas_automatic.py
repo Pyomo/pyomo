@@ -157,7 +157,9 @@ model.stochd = Param(model.SCEN,model.DEM,model.TIME,within=PositiveReals,mutabl
 # define temporal variables
 def p_bounds_rule(m,k,j,t):
     return (value(m.pmin[j]),value(m.pmax[j]))
-model.p = Var(model.SCEN, model.NODE, model.TIME, bounds=p_bounds_rule, initialize=50.0)
+def p_init(m,k,j,t):
+    return (value(m.pmax[j]) + value(m.pmin[j])) / 2
+model.p = Var(model.SCEN, model.NODE, model.TIME, bounds=p_bounds_rule, initialize=p_init)
 model.dp = Var(model.SCEN,model.LINK_A,model.TIME,bounds=(0.0,100.0), initialize=10.0)
 model.fin = Var(model.SCEN,model.LINK,model.TIME,bounds=(1.0,500.0),initialize=100.0)
 model.fout = Var(model.SCEN,model.LINK,model.TIME,bounds=(1.0,500.0),initialize=100.0)
