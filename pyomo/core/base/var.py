@@ -221,7 +221,7 @@ class _VarData(ComponentData, NumericValue):
     # Abstract Interface
     #
 
-    def set_value(self, val, valid=False):
+    def set_value(self, val, skip_validation=False):
         """Set the current variable value."""
         raise NotImplementedError
 
@@ -350,7 +350,7 @@ class _GeneralVarData(_VarData):
     # Abstract Interface
     #
 
-    def set_value(self, val, valid=False):
+    def set_value(self, val, skip_validation=False):
         """Set the current variable value.
 
         Set the value of this variable.  The incoming value is converted
@@ -382,7 +382,7 @@ class _GeneralVarData(_VarData):
             else:
                 val = value(val)
 
-        if not valid:
+        if not skip_validation:
             if val not in self.domain:
                 # logger.warning(
                 raise ValueError("Numeric value `%s` (%s) is not in "
@@ -524,7 +524,7 @@ class _GeneralVarData(_VarData):
 
     # stale is an attribute
 
-    def fix(self, value=NoArgumentGiven, valid=False):
+    def fix(self, value=NoArgumentGiven, skip_validation=False):
         """Fix the value of this variable (treat as nonvariable)
 
         This sets the `fixed` indicator to True.  If ``value`` is
@@ -534,7 +534,7 @@ class _GeneralVarData(_VarData):
         """
         self.fixed = True
         if value is not NoArgumentGiven:
-            self.set_value(value, valid)
+            self.set_value(value, skip_validation)
 
     def unfix(self):
         """Sets the fixed indicator to False."""
@@ -653,7 +653,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
 
     extract_values = get_values
 
-    def set_values(self, new_values, valid=False):
+    def set_values(self, new_values, skip_validation=False):
         """
         Set the values of a dictionary.
 
@@ -661,7 +661,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         dictionary.
         """
         for index, new_value in new_values.items():
-            self[index].set_value(new_value, valid)
+            self[index].set_value(new_value, skip_validation)
 
     def get_units(self):
         """Return the units expression for this Var."""
