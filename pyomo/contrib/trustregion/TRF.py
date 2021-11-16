@@ -9,8 +9,14 @@
 #  ___________________________________________________________________________
 
 from math import pow
-from numpy import inf
-from numpy.linalg import norm
+
+from pyomo.common.dependencies import numpy_available
+
+if numpy_available:
+    from numpy import inf
+    from numpy.linalg import norm
+
+
 from pyomo.contrib.trustregion.filterMethod import (
     FilterElement, Filter)
 from pyomo.contrib.trustregion.helper import (cloneXYZ, packXYZ)
