@@ -15,14 +15,16 @@ import math
 import sys
 import weakref
 
-from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedClass
+from pyomo.common.deprecation import (
+    deprecated, deprecation_warning, RenamedClass,
+)
 from pyomo.common.errors import DeveloperError, PyomoException
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.sorting import sorted_robust
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import (
-    native_types, native_numeric_types, as_numeric, value,
+    native_types, native_numeric_types, as_numeric, value, is_constant,
 )
 from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.base.initializer import (
@@ -34,7 +36,7 @@ from pyomo.core.base.range import (
     RangeDifferenceError,
 )
 from pyomo.core.base.component import (
-    Component, ComponentData, ModelComponentFactory,
+    _ComponentBase, Component, ComponentData, ModelComponentFactory,
 )
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, normalize_index,
@@ -108,17 +110,18 @@ implemented) through Mixin classes.
 def process_setarg(arg):
     if isinstance(arg, _SetDataBase):
         return arg
-    elif isinstance(arg, IndexedComponent) and arg.is_indexed():
-        raise TypeError("Cannot apply a Set operator to an "
-                        "indexed %s component (%s)"
-                        % (arg.ctype.__name__, arg.name,))
-    elif isinstance(arg, Component):
-        raise TypeError("Cannot apply a Set operator to a non-Set "
-                        "%s component (%s)"
-                        % (arg.__class__.__name__, arg.name,))
-    elif isinstance(arg, ComponentData):
-        raise TypeError("Cannot apply a Set operator to a non-Set "
-                        "component data (%s)" % (arg.name,))
+    elif isinstance(arg, _ComponentBase):
+        if isinstance(arg, IndexedComponent) and arg.is_indexed():
+            raise TypeError("Cannot apply a Set operator to an "
+                            "indexed %s component (%s)"
+                            % (arg.ctype.__name__, arg.name,))
+        if isinstance(arg, Component):
+            raise TypeError("Cannot apply a Set operator to a non-Set "
+                            "%s component (%s)"
+                            % (arg.__class__.__name__, arg.name,))
+        if isinstance(arg, ComponentData):
+            raise TypeError("Cannot apply a Set operator to a non-Set "
+                            "component data (%s)" % (arg.name,))
 
     # DEPRECATED: This functionality has never been documented,
     # and I don't know of a use of it in the wild.
@@ -165,6 +168,15 @@ def process_setarg(arg):
     elif inspect.isfunction(arg):
         _ordered = True
         _defer_construct = True
+    elif not hasattr(arg, '__contains__'):
+        raise TypeError(
+            "Cannot create a Set from data that does not support "
+            "__contains__.  Expected set-like object supporting "
+            "collections.abc.Collection interface, but received '%s'."
+            % (type(arg).__name__,))
+    elif arg.__class__ is type:
+        # This catches the (deprecated) RealSet API.
+        return process_setarg(arg())
     else:
         arg = SetOf(arg)
         _ordered = arg.isordered()
@@ -346,7 +358,7 @@ class BoundsInitializer(InitializerBase):
                 val = (1, val[0], self.default_step)
             elif len(val) == 0:
                 val = (None, None, self.default_step)
-        ans = RangeSet(*tuple(val))
+        ans = RangeSet(*val)
         # We don't need to construct here, as the RangeSet will
         # automatically construct itself if it can
         #ans.construct()
@@ -2723,9 +2735,15 @@ class RangeSet(Component):
         # NOTE: We will need to revisit this if we ever allow passing
         # data into the construct method (which would override the
         # hard-coded values here).
+        #
+        # NOTE: We will NOT automatically construct RangeSet objects
+        # that reference mutable data so that we can generate a more
+        # meaningful warning message about a RangeSet defined by mutable
+        # data.
         try:
             if all( type(_) in native_types
-                    or _.parent_component().is_constructed()
+                    or (_.parent_component().is_constructed()
+                        and is_constant(_))
                     for _ in args ):
                 self.construct()
         except AttributeError:
@@ -2767,7 +2785,16 @@ class RangeSet(Component):
         self._constructed = True
 
         args, ranges = self._init_data
-        args = tuple(value(_) for _ in args)
+        if any(not is_constant(arg) for arg in args):
+            logger.warning(
+                "Constructing RangeSet '%s' from non-constant data (e.g., "
+                "Var or mutable Param).  The linkage between this RangeSet "
+                "and the original source data will be broken, so updating "
+                "the data value in the future will not be reflected in this "
+                "RangeSet.  To suppress this warning, explicitly convert "
+                "the source data to a constant type (e.g., float, int, or "
+                "immutable Param)" % (self.name,))
+        args = tuple(value(arg) for arg in args)
         if type(ranges) is not tuple:
             ranges = tuple(ranges)
         if len(args) == 1:
@@ -3660,8 +3687,8 @@ class SetProduct(SetOperator):
         ))
 
     def bounds(self):
-        return ( tuple(_.bounds()[0] for _ in self.subsets(False)),
-                 tuple(_.bounds()[1] for _ in self.subsets(False)) )
+        lb, ub = zip(*map(lambda x: x.bounds(), self.subsets(False)))
+        return lb, ub
 
     @property
     def dimen(self):
@@ -4222,6 +4249,15 @@ DeclareGlobalSet(RangeSet(
 #     doc='A global Pyomo Set for unindexed (scalar) IndexedComponent objects',
 # ), globals())
 
+
+real_global_set_ids = set(id(_) for _ in (
+    Reals, NonNegativeReals, NonPositiveReals, NegativeReals, PositiveReals,
+    PercentFraction, UnitInterval,
+))
+integer_global_set_ids = set(id(_) for _ in (
+    Integers, NonNegativeIntegers, NonPositiveIntegers, NegativeIntegers,
+    PositiveIntegers, Binary,
+))
 
 RealSet = Reals.__class__
 IntegerSet = Integers.__class__

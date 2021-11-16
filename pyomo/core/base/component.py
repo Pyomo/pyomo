@@ -29,6 +29,7 @@ relocated_module_attribute(
     'ComponentUID', 'pyomo.core.base.componentuid.ComponentUID',
     version='5.7.2')
 
+_ref_types = {type(None), weakref_ref}
 
 class ModelComponentFactoryClass(Factory):
 
@@ -440,8 +441,7 @@ class Component(_ComponentBase):
         This method must be defined to support pickling because this class
         owns weakrefs for '_parent'.
         """
-        if state['_parent'] is not None and \
-                type(state['_parent']) is not weakref_ref:
+        if state['_parent'].__class__ not in _ref_types:
             state['_parent'] = weakref_ref(state['_parent'])
         #
         # Note: our model for setstate is for derived classes to modify
@@ -761,8 +761,7 @@ class ComponentData(_ComponentBase):
         # we don't the model cloning appears to fail (in the Benders
         # example)
         #
-        if state['_component'] is not None and \
-                type(state['_component']) is not weakref_ref:
+        if state['_component'].__class__ not in _ref_types:
             state['_component'] = weakref_ref(state['_component'])
         #
         # Note: our model for setstate is for derived classes to modify

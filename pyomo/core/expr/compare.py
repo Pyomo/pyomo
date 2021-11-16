@@ -11,12 +11,12 @@ from .visitor import StreamBasedExpressionVisitor
 from .numvalue import nonpyomo_leaf_types
 from .numeric_expr import (
     LinearExpression, MonomialTermExpression, SumExpression, ExpressionBase,
-    ProductExpression, DivisionExpression, ReciprocalExpression, PowExpression,
+    ProductExpression, DivisionExpression, PowExpression,
     NegationExpression, UnaryFunctionExpression, ExternalFunctionExpression,
-    NPV_ProductExpression, NPV_DivisionExpression, NPV_ReciprocalExpression,
-    NPV_PowExpression, NPV_SumExpression, NPV_NegationExpression,
-    NPV_UnaryFunctionExpression, NPV_ExternalFunctionExpression,
-    Expr_ifExpression, AbsExpression, NPV_AbsExpression, NumericValue)
+    NPV_ProductExpression, NPV_DivisionExpression, NPV_PowExpression,
+    NPV_SumExpression, NPV_NegationExpression, NPV_UnaryFunctionExpression,
+    NPV_ExternalFunctionExpression, Expr_ifExpression, AbsExpression,
+    NPV_AbsExpression, NumericValue)
 from pyomo.core.expr.logical_expr import (
     RangedExpression, InequalityExpression, EqualityExpression
 )
@@ -53,12 +53,10 @@ handler[SumExpression] = handle_expression
 handler[MonomialTermExpression] = handle_expression
 handler[ProductExpression] = handle_expression
 handler[DivisionExpression] = handle_expression
-handler[ReciprocalExpression] = handle_expression
 handler[PowExpression] = handle_expression
 handler[NegationExpression] = handle_expression
 handler[NPV_ProductExpression] = handle_expression
 handler[NPV_DivisionExpression] = handle_expression
-handler[NPV_ReciprocalExpression] = handle_expression
 handler[NPV_PowExpression] = handle_expression
 handler[NPV_SumExpression] = handle_expression
 handler[NPV_NegationExpression] = handle_expression
