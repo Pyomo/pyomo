@@ -10,7 +10,10 @@
 
 import logging
 
-import numpy as np
+from pyomo.common.dependencies import numpy_available
+if numpy_available:
+    import numpy as np
+
 from math import inf
 from pyomo.common.collections import ComponentSet
 from pyomo.common.modeling import unique_component_name
