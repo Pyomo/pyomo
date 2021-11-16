@@ -190,8 +190,6 @@ class Hull_Reformulation(Transformation):
             Disjunction: self._warn_for_active_disjunction,
             Disjunct:    self._warn_for_active_disjunct,
             Block:       self._transform_block_on_disjunct,
-            LogicalConstraint: False, # We transform these before we call
-                                      # handlers
             Port:        False,
             }
         self._generate_debug_messages = False
