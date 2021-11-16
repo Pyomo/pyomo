@@ -3579,7 +3579,7 @@ class TestSet(unittest.TestCase):
         self.assertEqual(m.I.dimen, 1)
 
         m = ConcreteModel()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, 'Set rule or initializer returned None'):
             m.I = Set(initialize=lambda m: None, dimen=2)
         self.assertTrue(m.I._init_values.constant())

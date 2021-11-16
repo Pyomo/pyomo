@@ -384,17 +384,14 @@ class _GeneralVarData(_VarData):
 
         if not skip_validation:
             if val not in self.domain:
-                # logger.warning(
-                raise ValueError("Numeric value `%s` (%s) is not in "
-                                 "domain %s for Var %s" %
-                                 (val, type(val).__name__,
-                                  self.domain, self.name))
+                logger.warning(
+                    "Setting Var '%s' to a value `%s` (%s) not in domain %s." %
+                    (self.name, val, type(val).__name__, self.domain))
             elif (self._lb is not None and val < value(self._lb)) or (
                     self._ub is not None and val > value(self._ub)):
-                pass
-                # logger.warning(
-                #     "Setting Var '%s' to a numeric value `%s` "
-                #     "outside the bounds %s." % (self.name, val, self.bounds))
+                logger.warning(
+                    "Setting Var '%s' to a numeric value `%s` "
+                    "outside the bounds %s." % (self.name, val, self.bounds))
 
         self._value = val
         self.stale = False

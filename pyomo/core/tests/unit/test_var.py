@@ -21,6 +21,7 @@ currdir = dirname(abspath(__file__))+os.sep
 from io import StringIO
 
 import pyomo.common.unittest as unittest
+from pyomo.common.log import LoggingIntercept
 
 from pyomo.core.base import IntegerSet
 from pyomo.core.expr.numeric_expr import (
@@ -1234,48 +1235,66 @@ class MiscVarTests(unittest.TestCase):
     def test_set_get(self):
         model=AbstractModel()
         model.a = Set(initialize=[1,2,3])
-        model.b = Var(model.a,initialize=1.1,within=PositiveReals)
-        model.c = Var(initialize=2.1, within=PositiveReals,dense=True)
-        try:
+        model.b = Var(model.a, initialize=1.1, within=PositiveReals)
+        model.c = Var(initialize=2.1, within=PositiveReals, bounds=(1, 10))
+        with self.assertRaisesRegex(
+                ValueError, "Cannot set the value for the indexed "
+                "component 'b' without specifying an index value"):
             model.b = 2.2
-            self.fail("can't set the value of an array variable")
-        except ValueError:
-            pass
-        instance = model.create_instance()
-        try:
-            instance.c[1]=2.2
-            self.fail("can't use an index to set a scalar variable")
-        except KeyError:
-            pass
-        instance.b[1]=2.2
-        try:
-            instance.b[4]=2.2
-            self.fail("can't set an array variable with a bad index")
-        except KeyError:
-            pass
-        try:
-            instance.b[3] = -2.2
-            #print "HERE",type(instance)
-            #print "HERE",type(instance.b[3])
-            self.fail("can't set an array variable with a bad value")
-        except ValueError:
-            pass
-        try:
-            tmp = instance.c[3]
-            self.fail("can't index a scalar variable")
-        except KeyError:
-            pass
 
-        try:
-            instance.c.set_value('a')
-            self.fail("can't set a bad value for variable c")
-        except ValueError:
-            pass
-        try:
-            instance.c.set_value(-1.0)
-            self.fail("can't set a bad value for variable c")
-        except ValueError:
-            pass
+        instance = model.create_instance()
+        with self.assertRaisesRegex(
+                KeyError, "Cannot treat the scalar component 'c' "
+                "as an indexed component"):
+            instance.c[1]=2.2
+
+        instance.b[1]=2.2
+        with self.assertRaisesRegex(
+                KeyError, "Index '4' is not valid for indexed component 'b'"):
+            instance.b[4]=2.2
+
+        with LoggingIntercept() as LOG:
+            instance.b[3] = -2.2
+        self.assertEqual(
+            LOG.getvalue().strip(),
+            "Setting Var 'b[3]' to a value `-2.2` (float) "
+            "not in domain PositiveReals.",
+        )
+
+        with self.assertRaisesRegex(
+                KeyError, "Cannot treat the scalar component 'c' "
+                "as an indexed component"):
+            tmp = instance.c[3]
+        with LoggingIntercept() as LOG:
+            instance.c = 'a'
+        self.assertEqual(
+            LOG.getvalue().strip(),
+            "Setting Var 'c' to a value `a` (str) "
+            "not in domain PositiveReals.",
+        )
+        with LoggingIntercept() as LOG:
+            instance.c = -2.2
+        self.assertEqual(
+            LOG.getvalue().strip(),
+            "Setting Var 'c' to a value `-2.2` (float) "
+            "not in domain PositiveReals.",
+        )
+        with LoggingIntercept() as LOG:
+            instance.c = 11
+        self.assertEqual(
+            LOG.getvalue().strip(),
+            "Setting Var 'c' to a numeric value `11` "
+            "outside the bounds (1, 10).",
+        )
+
+        with LoggingIntercept() as LOG:
+            instance.c.set_value('a', skip_validation=True)
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(instance.c.value, 'a')
+        with LoggingIntercept() as LOG:
+            instance.c.set_value(-1, skip_validation=True)
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(instance.c.value, -1)
 
         #try:
             #instance.c.ub = 'a'
