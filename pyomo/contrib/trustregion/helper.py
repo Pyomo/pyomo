@@ -1,4 +1,7 @@
-from numpy import array, concatenate
+from pyomo.common.dependencies import numpy_available
+
+if numpy_available:
+    from numpy import array, concatenate
 
 def cloneXYZ(x, y, z):
     """
