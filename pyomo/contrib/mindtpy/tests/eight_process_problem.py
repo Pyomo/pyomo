@@ -155,4 +155,4 @@ class EightProcessFlowsheet(ConcreteModel):
                  20: 10, 21: 2, 22: 10, 25: 3}  # add bounds for variables in nonlinear constraints
         for i, x_ub in x_ubs.items():
             X[i].setub(x_ub)
-        m.optimal_value = 68
+        m.optimal_value = 68.0097

@@ -557,19 +557,23 @@ class _SetData(_SetDataBase):
 
     def bounds(self):
         try:
-            _bnds = list((r.start, r.end) if r.step >= 0 else (r.end, r.start)
-                         for r in self.ranges())
+            _bnds = [(r.start, r.end) if r.step >= 0 else (r.end, r.start)
+                     for r in self.ranges()]
         except AttributeError:
             return None, None
-        if not _bnds:
-            return None, None
 
-        lb = min(map(itemgetter(0), _bnds))
+        if len(_bnds) == 1:
+            lb, ub = _bnds[0]
+        elif not _bnds:
+            return None, None
+        else:
+            lb = min(_bnds, key=itemgetter(0))[0]
+            ub = max(_bnds, key=itemgetter(1))[1]
+
         if lb == -_inf:
             lb = None
         elif int(lb) == lb:
             lb = int(lb)
-        ub = max(map(itemgetter(1), _bnds))
         if ub == _inf:
             ub = None
         elif int(ub) == ub:
@@ -602,6 +606,14 @@ class _SetData(_SetDataBase):
         # routine nondeterministic.  Not a huge issue for the result,
         # but problemmatic for code coverage.
         ranges = list(self.ranges())
+        if len(ranges) == 1:
+            start, end, c = ranges[0].normalize_bounds()
+            return (
+                None if start == -_inf else start,
+                None if end == _inf else end,
+                abs(ranges[0].step),
+            )
+
         try:
             step = min(abs(r.step) for r in ranges if r.step != 0)
         except ValueError:
@@ -673,11 +685,11 @@ class _SetData(_SetDataBase):
             return self.bounds() + (None,)
         # Note: while unbounded NumericRanges are -inf..inf, Pyomo
         # Sets are None..None
-        if start == -_inf:
-            start = None
-        if end == _inf:
-            end = None
-        return (start, end, step)
+        return (
+            None if start == -_inf else start,
+            None if end == _inf else end,
+            step,
+        )
 
 
     def _get_continuous_interval(self):
@@ -705,6 +717,14 @@ class _SetData(_SetDataBase):
             else:
                 ranges.append(
                     NumericRange(r.start, r.end, r.step, r.closed))
+
+        if len(ranges) == 1 and not discrete:
+            r = ranges[0]
+            return (
+                None if r.start == -_inf else r.start,
+                None if r.end == _inf else r.end,
+                abs(r.step),
+            )
 
         # There is a particular edge case where we could get 2 disjoint
         # continuous ranges that are joined by a discrete range...  When
@@ -1126,13 +1146,10 @@ class _FiniteSetMixin(object):
 
     def bounds(self):
         try:
-            lb = min(self)
+            lb = min(self, default=None)
+            ub = max(self, default=None)
         except:
-            lb = None
-        try:
-            ub = max(self)
-        except:
-            ub = None
+            lb = ub = None
         # Python2/3 consistency: We will follow the Python3 convention
         # and not assume numeric/nonnumeric types are comparable.  If a
         # set is mixed non-numeric type, then we will report the bounds
