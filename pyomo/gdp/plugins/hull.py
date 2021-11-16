@@ -18,18 +18,17 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numvalue import ZeroConstant
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base import Transformation, TransformationFactory, Reference
-from pyomo.core import ( Block, BooleanVar, Connector, Constraint, Param, Set,
-                         SetOf, Suffix, Var, Expression, SortComponents,
-                         TraversalStrategy, Any, RangeSet, Reals, value,
-                         NonNegativeIntegers, LogicalConstraint, Binary )
+from pyomo.core import (
+    Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var, 
+    Expression, SortComponents, TraversalStrategy, Any, RangeSet, Reals, value,
+    NonNegativeIntegers, LogicalConstraint, Binary )
 from pyomo.core.base.boolean_var import (
     _DeprecatedImplicitAssociatedBinaryVariable)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.util import ( clone_without_expression_components, is_child_of,
-                             get_src_disjunction, get_src_constraint,
-                             get_transformed_constraints, get_src_disjunct,
-                             _warn_for_active_disjunction,
-                             _warn_for_active_disjunct, preprocess_targets)
+from pyomo.gdp.util import (
+    clone_without_expression_components, is_child_of, get_src_disjunction, 
+    get_src_constraint, get_transformed_constraints, get_src_disjunct,
+    _warn_for_active_disjunction, _warn_for_active_disjunct, preprocess_targets)
 from pyomo.core.util import target_list
 from pyomo.network import Port
 from functools import wraps
@@ -63,7 +62,7 @@ class Hull_Reformulation(Transformation):
         list of blocks and Disjunctions [default: the instance]
 
     The transformation will create a new Block with a unique
-    name beginning "_pyomo_gdp_hull_reformulation".  
+    name beginning "_pyomo_gdp_hull_reformulation".
     The block will have a dictionary "_disaggregatedVarMap:
         'srcVar': ComponentMap(<src var>:<disaggregated var>),
         'disaggregatedVar': ComponentMap(<disaggregated var>:<src var>)
@@ -72,8 +71,8 @@ class Hull_Reformulation(Transformation):
 
         <disaggregated var>:<bounds constraint>
 
-    Last, it will contain an indexed Block named "relaxedDisjuncts", 
-    which will hold the relaxed disjuncts.  This block is indexed by 
+    Last, it will contain an indexed Block named "relaxedDisjuncts",
+    which will hold the relaxed disjuncts.  This block is indexed by
     an integer indicating the order in which the disjuncts were relaxed.
     Each block has a dictionary "_constraintMap":
 
@@ -653,7 +652,7 @@ class Hull_Reformulation(Transformation):
             relaxationBlock.add_component(
                 disaggregatedVarName + "_bounds", bigmConstraint)
 
-            self._declare_disaggregated_var_bounds( 
+            self._declare_disaggregated_var_bounds(
                 var, disaggregatedVar, obj,
                 bigmConstraint, 'lb', 'ub',
                 obj.indicator_var.get_associated_binary(), transBlock)
@@ -671,7 +670,7 @@ class Hull_Reformulation(Transformation):
                 "_bounds")
             bigmConstraint = Constraint(transBlock.lbub)
             relaxationBlock.add_component(conName, bigmConstraint)
-        
+
             self._declare_disaggregated_var_bounds(
                 var, var, obj,
                 bigmConstraint, 'lb', 'ub',
@@ -748,7 +747,7 @@ class Hull_Reformulation(Transformation):
             if len(v) > 0:
                 varRefBlock.add_component(unique_component_name(
                     varRefBlock, v.getname(fully_qualified=True,
-                                           name_buffer=NAME_BUFFER)), 
+                                           name_buffer=NAME_BUFFER)),
                                           Reference(v))
 
         # Look through the component map of block and transform everything we
@@ -787,7 +786,7 @@ class Hull_Reformulation(Transformation):
 
         disaggregatedVar.setlb(min(0, lb))
         disaggregatedVar.setub(max(0, ub))
-        
+
         if lb:
             bigmConstraint.add(
                 lb_idx, var_free_indicator*lb <= disaggregatedVar)
@@ -1048,9 +1047,9 @@ class Hull_Reformulation(Transformation):
             if localSuffix.ctype is Suffix:
                 return
             raise GDP_Error("A component called 'LocalVars' is declared on "
-                            "Disjunct %s, but it is of type %s, not Suffix."  
+                            "Disjunct %s, but it is of type %s, not Suffix."
                             % (disjunct.getname(fully_qualified=True,
-                                                name_buffer=NAME_BUFFER), 
+                                                name_buffer=NAME_BUFFER),
                                localSuffix.ctype))
 
     # These are all functions to retrieve transformed components from
@@ -1127,7 +1126,7 @@ class Hull_Reformulation(Transformation):
         except:
             logger.error(msg)
             raise
-    
+
     # retrieves the disaggregation constraint for original_var resulting from
     # transforming disjunction
     def get_disaggregation_constraint(self, original_var, disjunction):
