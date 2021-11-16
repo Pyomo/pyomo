@@ -29,6 +29,8 @@ from pyomo.core.base.var import Var
 
 logger = logging.getLogger('pyomo.core')
 
+_logical_var_types = {bool, type(None)}
+
 class _DeprecatedImplicitAssociatedBinaryVariable(object):
     __slots__ = ('_boolvar',)
 
@@ -96,27 +98,22 @@ class _BooleanVarData(ComponentData, BooleanValue):
         """Returns True because this is a variable."""
         return True
 
-    def set_value(self, val, valid=False):
+    def set_value(self, val, skip_validation=False):
         """
         Set the value of this numeric object, after
         validating its value. If the 'valid' flag is True,
         then the validation step is skipped.
         """
-        if valid or self._valid_value(val):
-            self.value = val
-            self.stale = False
-
-    def _valid_value(self, val, use_exception=True):
-        """
-        Validate the value.  If use_exception is True, then raise an
-        exception.
-        """
-        ans = val is None or val in (True, False)
-        if not ans and use_exception:
-            raise ValueError(
-                "Logical value `%s` (%s) is not True, False, or None"
-                % (val, type(val)))
-        return ans
+        # Note that it is basically as fast to check the type as it is
+        # to check the skip_validation flag.  Considering that we expect
+        # the flag to always be False, we will just ignore it in the
+        # name of efficiency.
+        if val.__class__ not in _logical_var_types:
+            logger.warning("implicitly casting '%s' value %s to bool"
+                           % (self.name, val))
+            val = bool(val)
+        self._value = bool(val)
+        self.stale = False
 
     def clear(self):
         self.value = None
@@ -228,16 +225,12 @@ class _GeneralBooleanVarData(_BooleanVarData):
 
     @property
     def value(self):
-        """Return the value for this variable."""
+        """Return (or set) the value for this variable."""
         return self._value
     @value.setter
     def value(self, val):
-        """Set the value for this variable."""
-        if type(val) not in {bool, type(None)}:
-            logger.warning("implicitly casting '%s' value %s to bool"
-                           % (self.name, val))
-            val = bool(val)
-        self._value = val
+        # TODO: this should be changed to use valid=False
+        self.set_value(val, True)
 
     @property
     def domain(self):
@@ -352,7 +345,7 @@ class BooleanVar(IndexedComponent):
 
     extract_values = get_values
 
-    def set_values(self, new_values, valid=False):
+    def set_values(self, new_values, skip_validation=False):
         """
         Set data values from a dictionary.
 
@@ -360,7 +353,7 @@ class BooleanVar(IndexedComponent):
         dictionary.
         """
         for index, new_value in new_values.items():
-            self[index].set_value(new_value, valid)
+            self[index].set_value(new_value, skip_validation)
 
 
     def construct(self, data=None):
