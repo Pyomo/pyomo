@@ -68,15 +68,8 @@ class AutoLinkedBinaryVar(ScalarVar):
     def get_associated_boolean(self):
         return self._associated_boolean()
 
-    @property
-    def value(self):
-        return self._value
-
-    @value.setter
-    def value(self, val):
-        # super() does not work as expected for properties; we will call
-        # the property setter explicitly.
-        ScalarVar.value.fset(self, val)
+    def set_value(self, val, valid=False):
+        super().set_value(val, valid)
         bool_var = self.get_associated_boolean()
         # Only update the associated Boolean value if it is needed
         # to match the current (potentially fractional) binary value.
@@ -231,16 +224,14 @@ class AutoLinkedBooleanVar(ScalarBooleanVar):
 
     def __abs__(self):
         return self.as_binary().__abs__()
-    def __bool__(self):
-        return self.as_binary().__bool__()
     def __float__(self):
         return self.as_binary().__float__()
     def __int__(self):
         return self.as_binary().__int__()
     def __neg__(self):
         return self.as_binary().__neg__()
-    def __nonzero__(self):
-        return self.as_binary().__nonzero__()
+    def __bool__(self):
+        return self.as_binary().__bool__()
     def __pos__(self):
         return self.as_binary().__pos__()
     def get_units(self):

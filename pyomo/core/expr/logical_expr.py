@@ -26,7 +26,8 @@ from .numvalue import (
     native_numeric_types,
     as_numeric,
     native_logical_types,
-    value
+    value,
+    is_potentially_variable,
 )
 
 from .boolean_value import (
@@ -97,16 +98,21 @@ class RangedExpression(_LinearOperatorExpression):
         return state
 
     def __bool__(self):
-        if not self.is_constant():
-            raise PyomoException('Cannot convert non-constant expression '
-                                 'to bool. This error is usually caused by '
-                                 'using an expression in a boolean context '
-                                 'such as an if statement. For example, \n'
-                                 '    m.x = Var()\n'
-                                 '    if m.x <= 0:\n'
-                                 '        ...\n'
-                                 'would cause this exception.')
-        return bool(self())
+        if self.is_constant():
+            return bool(self())
+        raise PyomoException("""
+Cannot convert non-constant Pyomo expression (%s) to bool.
+This error is usually caused by using a Var, unit, or mutable Param in a
+Boolean context such as an "if" statement, or when checking container
+membership or equality. For example,
+    >>> m.x = Var()
+    >>> if m.x >= 1:
+    ...     pass
+and
+    >>> m.y = Var()
+    >>> if m.y in [m.x, m.y]:
+    ...     pass
+would both cause this exception.""".strip() % (self,))
 
     def is_relational(self):
         return True
@@ -136,10 +142,7 @@ class RangedExpression(_LinearOperatorExpression):
                    for arg in self._args_)
 
     def is_potentially_variable(self):
-        return any(arg is not None
-                   and arg.__class__ not in native_numeric_types
-                   and arg.is_potentially_variable()
-                   for arg in self._args_)
+        return any(map(is_potentially_variable, self._args_))
 
     @property
     def strict(self):
@@ -179,16 +182,21 @@ class InequalityExpression(_LinearOperatorExpression):
         return state
 
     def __bool__(self):
-        if not self.is_constant():
-            raise PyomoException('Cannot convert non-constant expression '
-                                 'to bool. This error is usually caused by '
-                                 'using an expression in a boolean context '
-                                 'such as an if statement. For example, \n'
-                                 '    m.x = Var()\n'
-                                 '    if m.x <= 0:\n'
-                                 '        ...\n'
-                                 'would cause this exception.')
-        return bool(self())
+        if self.is_constant():
+            return bool(self())
+        raise PyomoException("""
+Cannot convert non-constant Pyomo expression (%s) to bool.
+This error is usually caused by using a Var, unit, or mutable Param in a
+Boolean context such as an "if" statement, or when checking container
+membership or equality. For example,
+    >>> m.x = Var()
+    >>> if m.x >= 1:
+    ...     pass
+and
+    >>> m.y = Var()
+    >>> if m.y in [m.x, m.y]:
+    ...     pass
+would both cause this exception.""".strip() % (self,))
 
     def is_relational(self):
         return True
@@ -213,10 +221,7 @@ class InequalityExpression(_LinearOperatorExpression):
                    for arg in self._args_)
 
     def is_potentially_variable(self):
-        return any(arg is not None
-                   and arg.__class__ not in native_numeric_types
-                   and arg.is_potentially_variable()
-                   for arg in self._args_)
+        return any(map(is_potentially_variable, self._args_))
 
     @property
     def strict(self):
@@ -289,16 +294,21 @@ class EqualityExpression(_LinearOperatorExpression):
         lhs, rhs = self.args
         if lhs is rhs:
             return True
-        if not self.is_constant():
-            raise PyomoException('Cannot convert non-constant expression '
-                                 'to bool. This error is usually caused by '
-                                 'using an expression in a boolean context '
-                                 'such as an if statement. For example, \n'
-                                 '    m.x = Var()\n'
-                                 '    if m.x <= 0:\n'
-                                 '        ...\n'
-                                 'would cause this exception.')
-        return bool(self())
+        if self.is_constant():
+            return bool(self())
+        raise PyomoException("""
+Cannot convert non-constant Pyomo expression (%s) to bool.
+This error is usually caused by using a Var, unit, or mutable Param in a
+Boolean context such as an "if" statement, or when checking container
+membership or equality. For example,
+    >>> m.x = Var()
+    >>> if m.x >= 1:
+    ...     pass
+and
+    >>> m.y = Var()
+    >>> if m.y in [m.x, m.y]:
+    ...     pass
+would both cause this exception.""".strip() % (self,))
 
     def is_relational(self):
         return True
@@ -317,7 +327,7 @@ class EqualityExpression(_LinearOperatorExpression):
         return self._args_[0].is_constant() and self._args_[1].is_constant()
 
     def is_potentially_variable(self):
-        return self._args_[0].is_potentially_variable() or self._args_[1].is_potentially_variable()
+        return any(map(is_potentially_variable, self._args_))
 
 
 def _generate_relational_expression(etype, lhs, rhs):
