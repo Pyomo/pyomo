@@ -133,7 +133,7 @@ class AslNLP(ExtendedNLP):
         bounds_difference = self._primals_ub - self._primals_lb
         if np.any(bounds_difference < 0):
             print(np.where(bounds_difference < 0))
-            raise RuntimeError("Some variables have lower bounds that are larger than the upper bounds.")
+            raise RuntimeError("Some variables have lower bounds that are greater than the upper bounds.")
 
         # Build the maps for converting from the full constraint
         # vector (which includes all equality and inequality constraints)

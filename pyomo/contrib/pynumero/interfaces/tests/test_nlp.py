@@ -625,6 +625,19 @@ class TestPyomoNLP(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             nlp = PyomoNLP(m)
 
+    def test_invalid_bounds(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3], domain=pyo.NonNegativeReals)
+        for i in m.x:
+            m.x[i].ub = i-2
+            m.x[i].value = i
+        m.i3 = pyo.Constraint(expr=m.x[2] + m.x[3] + m.x[1] >= -500.0)
+        m.obj = pyo.Objective(expr=m.x[2]**2)
+        with self.assertRaisesRegex(
+                RuntimeError, "Some variables have lower bounds that "
+                "are greater than the upper bounds"):
+            nlp = PyomoNLP(m)
+
 class TestUtils(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
