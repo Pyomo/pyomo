@@ -10,12 +10,7 @@
 
 from math import pow
 
-from pyomo.common.dependencies import numpy_available
-
-if numpy_available:
-    from numpy import inf
-    from numpy.linalg import norm
-
+from pyomo.common.dependencies import numpy as np
 
 from pyomo.contrib.trustregion.filterMethod import (
     FilterElement, Filter)
@@ -56,7 +51,7 @@ def TRF(m, eflist, config):
     rebuildROM = False
     xk, yk, zk = cloneXYZ(x, y, z)
     chik = 1e8
-    thetak = norm(yr - yk,1)
+    thetak = np.linalg.norm(yr - yk,1)
 
     objk = problem.evaluateObj(x, y, z)
 
@@ -161,12 +156,12 @@ def TRF(m, eflist, config):
             raise Exception("Compatibility check fails!\n")
 
 
-        theNorm = norm(x - xk, 2)**2 + norm(z - zk, 2)**2
+        theNorm = np.linalg.norm(x - xk, 2)**2 + np.linalg.norm(z - zk, 2)**2
         if (obj - config.compatibility_penalty*theNorm >
             config.ep_compatibility):
             # Restoration stepNorm
             yr = problem.evaluateDx(x)
-            theta = norm(yr - y, 1)
+            theta = np.linalg.norm(yr - y, 1)
 
             logger.iterlog.restoration = True
 
@@ -185,7 +180,7 @@ def TRF(m, eflist, config):
 
             obj = problem.evaluateObj(x, y, z)
 
-            stepNorm = norm(packXYZ(x-xk, y-yk, z-zk), inf)
+            stepNorm = np.linalg.norm(packXYZ(x-xk, y-yk, z-zk), np.inf)
             logger.setCurIter(stepNorm=stepNorm)
 
         else:
@@ -199,10 +194,10 @@ def TRF(m, eflist, config):
             # Filter
             yr = problem.evaluateDx(x)
 
-            stepNorm = norm(packXYZ(x-xk, y-yk, z-zk), inf)
+            stepNorm = np.linalg.norm(packXYZ(x-xk, y-yk, z-zk), np.inf)
             logger.setCurIter(stepNorm=stepNorm)
 
-            theta = norm(yr - y, 1)
+            theta = np.linalg.norm(yr - y, 1)
             fe = FilterElement(obj, theta)
 
             if not filteR.checkAcceptable(fe, config.theta_max) and iteration > 0:
