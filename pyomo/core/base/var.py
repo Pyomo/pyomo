@@ -18,7 +18,7 @@ from weakref import ref as weakref_ref
 from pyomo.common.collections import Sequence
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
-from pyomo.common.modeling import NoArgumentGiven
+from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.core.expr.numvalue import (
@@ -255,7 +255,7 @@ class _VarData(ComponentData, NumericValue):
         """Return the stale indicator for this variable."""
         raise NotImplementedError
 
-    def fix(self, value=NoArgumentGiven, valid=False):
+    def fix(self, value=NOTSET, valid=False):
         """
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
@@ -521,7 +521,7 @@ class _GeneralVarData(_VarData):
 
     # stale is an attribute
 
-    def fix(self, value=NoArgumentGiven, skip_validation=False):
+    def fix(self, value=NOTSET, skip_validation=False):
         """Fix the value of this variable (treat as nonvariable)
 
         This sets the `fixed` indicator to True.  If ``value`` is
@@ -530,7 +530,7 @@ class _GeneralVarData(_VarData):
 
         """
         self.fixed = True
-        if value is not NoArgumentGiven:
+        if value is not NOTSET:
             self.set_value(value, skip_validation)
 
     def unfix(self):
@@ -864,13 +864,13 @@ class IndexedVar(Var):
         for vardata in self.values():
             vardata.upper = val
 
-    def fix(self, value=NoArgumentGiven):
+    def fix(self, value=NOTSET, skip_validation=False):
         """
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
         """
         for vardata in self.values():
-            vardata.fix(value=value)
+            vardata.fix(value, skip_validation)
 
     def unfix(self):
         """Sets the fixed indicator to False."""

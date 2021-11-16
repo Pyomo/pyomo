@@ -14,7 +14,7 @@ from weakref import ref as weakref_ref, ReferenceType
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
-from pyomo.common.modeling import unique_component_name
+from pyomo.common.modeling import unique_component_name, NOTSET
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.core.expr.boolean_value import BooleanValue
 from pyomo.core.expr.numvalue import value
@@ -112,7 +112,7 @@ class _BooleanVarData(ComponentData, BooleanValue):
             logger.warning("implicitly casting '%s' value %s to bool"
                            % (self.name, val))
             val = bool(val)
-        self._value = bool(val)
+        self._value = val
         self.stale = False
 
     def clear(self):
@@ -143,7 +143,7 @@ class _BooleanVarData(ComponentData, BooleanValue):
         """Return the stale indicator for this variable."""
         raise NotImplementedError
 
-    def fix(self, *val):
+    def fix(self, val=NOTSET, skip_validation=False):
         """
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
@@ -237,17 +237,14 @@ class _GeneralBooleanVarData(_BooleanVarData):
         """Return the domain for this variable."""
         return BooleanSet
 
-    def fix(self, *val):
+    def fix(self, val=NOTSET, skip_validation=False):
         """
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
         """
         self.fixed = True
-        if len(val) == 1:
-            self.value = val[0]
-        elif len(val) > 1:
-            raise TypeError("fix expected at most 1 arguments, got %d" %
-                            (len(val)))
+        if val is not NOTSET:
+            self.set_value(val, skip_validation)
 
     def unfix(self):
         """Sets the fixed indicator to False."""
@@ -530,13 +527,13 @@ class ScalarBooleanVar(_GeneralBooleanVarData, BooleanVar):
     def domain(self):
         return _GeneralBooleanVarData.domain.fget(self)
 
-    def fix(self, *val):
+    def fix(self, val=NOTSET, skip_validation=False):
         """
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
         """
         if self._constructed:
-            return _GeneralBooleanVarData.fix(self, *val)
+            return _GeneralBooleanVarData.fix(self, val, skip_validation)
         raise ValueError(
             "Fixing variable '%s' "
             "before the Var has been constructed (there "
@@ -564,13 +561,13 @@ class SimpleBooleanVar(metaclass=RenamedClass):
 class IndexedBooleanVar(BooleanVar):
     """An array of variables."""
 
-    def fix(self, *val):
+    def fix(self, val=NOTSET, skip_validation=False):
         """
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
         """
         for boolean_vardata in self.values():
-            boolean_vardata.fix(*val)
+            boolean_vardata.fix(val, skip_validation)
 
     def unfix(self):
         """Sets the fixed indicator to False."""

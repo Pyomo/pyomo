@@ -18,7 +18,7 @@ from weakref import ref as weakref_ref
 from pyomo.common.deprecation import RenamedClass,  deprecation_warning
 from pyomo.common.errors import PyomoException
 from pyomo.common.log import is_debug_set
-from pyomo.common.modeling import unique_component_name
+from pyomo.common.modeling import unique_component_name, NOTSET
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import (
     ModelComponentFactory, Binary, Block, ConstraintList, Any,
@@ -83,11 +83,11 @@ class AutoLinkedBinaryVar(ScalarVar):
         if bool_val != bool_var.value:
             bool_var.set_value(bool_val)
 
-    def fix(self, *val):
-        super().fix(*val)
+    def fix(self, val=NOTSET, skip_validation=False):
+        super().fix(val, skip_validation)
         bool_var = self.get_associated_boolean()
         if not bool_var.is_fixed():
-            bool_var.fix()
+            bool_var.fix(skip_validation=skip_validation)
 
     def unfix(self):
         super().unfix()
@@ -169,18 +169,11 @@ class AutoLinkedBooleanVar(ScalarBooleanVar):
                 val = int(val)
             bin_var.set_value(val)
 
-    def fix(self, *val):
-        super().fix(*val)
+    def fix(self, val=NOTSET, skip_validation=False):
+        super().fix(val, skip_validation)
         bin_var = self.get_associated_binary()
-
-        val = self.value
-        if val is not None:
-            val = int(val)
-        if not bin_var.is_fixed() or bin_var.value != val:
-            # Note: if someone fixes the Boolean to True/False then we
-            # need to snap the binary to 1/0 (and not leave it at the
-            # potentially fractional value)
-            bin_var.fix(val)
+        if not bin_var.is_fixed():
+            bin_var.fix(skip_validation=skip_validation)
 
     def unfix(self):
         super().unfix()
