@@ -268,24 +268,30 @@ def add_bounds_for_uncertain_parameters(model, config):
 def transform_to_standard_form(model):
     """Recast all model inequality constraints of the form a <= g(x) (<= b)
     to the form a - g(x) <= 0 (and g(x) - b <= 0).
+    If a == b and the constraint is not classified as an equality,
+    then the constraint is recast as the equality g(x) - a == 0.
     """
     for con in model.component_data_objects(Constraint,
                                             descend_into=True,
                                             active=True):
-        # TODO: what if not con.equality and con.lower is
-        # numerically equal to con.upper? (e.g. 1.000 == 1?)
         if not con.equality and con.lower is not None:
+            # initialize temporary variables
             tmp = con
             model.del_component(con)
             lb_con_name = tmp.name
 
-            if con.upper is not None:
-                model.add_component(tmp.name + '_ub',
-                                    Constraint(expr=tmp.body-tmp.upper <= 0))
-                lb_con_name += '_lb'
+            if con.lower is con.upper:
+                model.add_component(tmp.name + '_eq',
+                                    Constraint(expr=tmp.body-tmp.lower == 0))
+            else:
+                if con.upper is not None:
+                    model.add_component(tmp.name + '_ub',
+                                        Constraint(expr=tmp.body-tmp.upper
+                                                   <= 0))
+                    lb_con_name += '_lb'
 
-            model.add_component(lb_con_name,
-                                Constraint(expr=tmp.lower-tmp.body <= 0))
+                model.add_component(lb_con_name,
+                                    Constraint(expr=tmp.lower-tmp.body <= 0))
 
 
 def get_vars_from_component(block, ctype):
