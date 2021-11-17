@@ -18,6 +18,9 @@ Pyomo 6.2    17 Nov 2021
   - Remove code deprecated in Pyomo version 5.6 or older (#1992)
   - Add Linux aarch64 wheel build support (#2076)
   - Update wheel creation GitHub Actions version (#2192)
+  - Remove optional_packages from pyomo.environ (#2195)
+  - Ignore bounds/domain when updating variable value in 
+    calculate_variable_from_constraint() (#2177)
 - Core
   - Fix Expression.getitem when initialized with Skip (#2136)
   - Update logical_to_linear transformation to support hierarchical models (#2135)
@@ -51,6 +54,7 @@ Pyomo 6.2    17 Nov 2021
   - Fix errors and deprecation warnings in some DAE examples (#2189)
   - Fix bug allowing numpy.float64 types to end up in a ContinuousSet (#2193)
 - GDP Updates
+  - Update GDP transformations to handle logical constraints (#2175)
 - Contributed Packages
   - APPSI: Add support for external functions in NL writer (#2111)
   - APPSI: Improved handling of immutable parameters (#2112)
