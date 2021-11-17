@@ -16,6 +16,7 @@ from pyomo.environ import (TransformationFactory, Block, Set, Constraint,
                            Any, value)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.core.base import constraint, _ConstraintData
+from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.repn import generate_standard_repn
 from pyomo.common.log import LoggingIntercept
 import logging
@@ -136,8 +137,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertEqual(len(srcdict1), 2)
         self.assertIs(srcdict1[disjBlock[0].component(oldblock[0].c.name)],
                       oldblock[0].c)
-        self.assertIs(srcdict1[disjBlock[0].component(oldblock[0].c.name)['lb']],
-                      oldblock[0].c)
+        self.assertIs(srcdict1[disjBlock[0].component(
+            oldblock[0].c.name)['lb']], oldblock[0].c)
         srcdict2 = constraintdict2['srcConstraints']
         self.assertIsInstance(srcdict2, ComponentMap)
         self.assertEqual(len(srcdict2), 5)
@@ -1686,7 +1687,8 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         ct.check_disjuncts_inactive_nested(self, 'bigm')
 
     def test_deactivated_disjunct_leaves_nested_disjuncts_active(self):
-        ct.check_deactivated_disjunct_leaves_nested_disjunct_active(self, 'bigm')
+        ct.check_deactivated_disjunct_leaves_nested_disjunct_active(self, 
+                                                                    'bigm')
 
     def test_transformation_block_structure(self):
         m = models.makeNestedDisjunctions()
@@ -1893,7 +1895,8 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.check_bigM_constraint(cons2, m.z, -5,
                                    m.disjunct[1].innerdisjunct[1].indicator_var)
 
-        cons3 = m.simpledisjunct.innerdisjunct0.transformation_block().component(
+        cons3 = m.simpledisjunct.innerdisjunct0.transformation_block().\
+                component(
             m.simpledisjunct.innerdisjunct0.c.name)['ub']
         self.assertEqual(cons3.upper, 2)
         self.assertIsNone(cons3.lower)
@@ -1901,7 +1904,8 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
             cons3, m.x, 7,
             m.simpledisjunct.innerdisjunct0.indicator_var)
 
-        cons4 = m.simpledisjunct.innerdisjunct1.transformation_block().component(
+        cons4 = m.simpledisjunct.innerdisjunct1.transformation_block().\
+                component(
             m.simpledisjunct.innerdisjunct1.c.name)['lb']
         self.assertEqual(cons4.lower, 4)
         self.assertIsNone(cons4.upper)
@@ -2026,8 +2030,107 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
                           m._pyomo_gdp_bigm_reformulation.relaxedDisjuncts)
 
         # and we check that nothing remains on original transformation block
-        self.assertEqual(len(m.d1._pyomo_gdp_bigm_reformulation.relaxedDisjuncts),
-                         0)
+        self.assertEqual(len(m.d1._pyomo_gdp_bigm_reformulation.\
+                             relaxedDisjuncts), 0)
+
+    def check_first_disjunct_constraint(self, disj1c, x, ind_var):
+        self.assertEqual(len(disj1c), 1)
+        cons = disj1c[0]
+        self.assertIsNone(cons.lower)
+        self.assertEqual(cons.upper, 1)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_quadratic())
+        self.assertEqual(len(repn.linear_vars), 1)
+        self.assertEqual(len(repn.quadratic_vars), 4)
+        ct.check_linear_coef(self, repn, ind_var, 143)
+        self.assertEqual(repn.constant, -143)
+        for i in range(1, 5):
+            ct.check_squared_term_coef(self, repn, x[i], 1)
+
+    def check_second_disjunct_constraint(self, disj2c, x, ind_var):
+        self.assertEqual(len(disj2c), 1)
+        cons = disj2c[0]
+        self.assertIsNone(cons.lower)
+        self.assertEqual(cons.upper, 1)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_quadratic())
+        self.assertEqual(len(repn.linear_vars), 5)
+        self.assertEqual(len(repn.quadratic_vars), 4)
+        self.assertEqual(repn.constant, -63) # M = 99, so this is 36 - 99
+        ct.check_linear_coef(self, repn, ind_var, 99)
+        for i in range(1, 5):
+            ct.check_squared_term_coef(self, repn, x[i], 1)
+            ct.check_linear_coef(self, repn, x[i], -6)
+
+    def check_hierarchical_nested_model(self, m, bigm):
+        outer_xor = m.disjunction_block.disjunction.algebraic_constraint()
+        ct.check_two_term_disjunction_xor(self, outer_xor, m.disj1,
+                                          m.disjunct_block.disj2)
+
+        inner_xor = m.disjunct_block.disj2.disjunction.algebraic_constraint()
+        xformed = bigm.get_transformed_constraints(inner_xor)
+        self.assertEqual(len(xformed), 2)
+        leq = xformed[0]
+        self.assertIsNone(leq.upper)
+        self.assertEqual(leq.lower, 1)
+        repn = generate_standard_repn(leq.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), 3)
+        self.assertEqual(repn.constant, 1)
+        ct.check_linear_coef(self, repn,
+                             m.disjunct_block.disj2.disjunction_disjuncts[0].\
+                             binary_indicator_var, 1)
+        ct.check_linear_coef(self, repn,
+                             m.disjunct_block.disj2.disjunction_disjuncts[1].\
+                             binary_indicator_var, 1)
+        ct.check_linear_coef(self, repn,
+                             m.disjunct_block.disj2.binary_indicator_var, -1)
+
+        # outer disjunction constraints
+        disj1c = bigm.get_transformed_constraints(m.disj1.c)
+        self.check_first_disjunct_constraint(disj1c, m.x,
+                                             m.disj1.binary_indicator_var)
+
+        disj2c = bigm.get_transformed_constraints(m.disjunct_block.disj2.c)
+        self.check_second_disjunct_constraint(
+            disj2c, m.x,
+            m.disjunct_block.disj2.binary_indicator_var)
+
+        # inner disjunction constraints
+        innerd1c = bigm.get_transformed_constraints(
+            m.disjunct_block.disj2.disjunction_disjuncts[0].constraint[1])
+        self.check_first_disjunct_constraint(
+            innerd1c, m.x,
+            m.disjunct_block.disj2.disjunction_disjuncts[0].\
+            binary_indicator_var)
+
+        innerd2c = bigm.get_transformed_constraints(
+            m.disjunct_block.disj2.disjunction_disjuncts[1].constraint[1])
+        self.check_second_disjunct_constraint(
+            innerd2c, m.x,
+            m.disjunct_block.disj2.disjunction_disjuncts[1].\
+            binary_indicator_var)
+
+    def test_hierarchical_badly_ordered_targets(self):
+        m = models.makeHierarchicalNested_DeclOrderMatchesInstantationOrder()
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m, targets=[m.disjunction_block, m.disjunct_block.disj2])
+
+        # the real test here is that the above doesn't scream about there being
+        # an untransformed Disjunction inside of a Disjunct it's trying to
+        # transform. So let's just check that everything is transformed
+        self.check_hierarchical_nested_model(m, bigm)
+
+    def test_decl_order_opposite_instantiation_order(self):
+        # In this test, we create the same problem as above, but we don't even
+        # need targets!
+        m = models.makeHierarchicalNested_DeclOrderOppositeInstantationOrder()
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m)
+
+        # Like above, the real test is that the above doesn't scream. We can use
+        # the same check to make sure everything is transformed correctly.
+        self.check_hierarchical_nested_model(m, bigm)
 
 class IndexedDisjunction(unittest.TestCase):
     # this tests that if the targets are a subset of the
@@ -2038,7 +2141,6 @@ class IndexedDisjunction(unittest.TestCase):
 
     def test_partial_deactivate_indexed_disjunction(self):
         ct.check_partial_deactivate_indexed_disjunction(self, 'bigm')
-
 
 class BlocksOnDisjuncts(unittest.TestCase):
     # ESJ: All of these tests are specific to bigm because they check how much
@@ -2449,6 +2551,87 @@ class NetworkDisjuncts(unittest.TestCase, CommonTests):
     @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
     def test_solution_minimize(self):
         ct.check_network_disjucts(self, minimize=True, transformation='bigm')
+
+@unittest.skipUnless(sympy_available, "Sympy not available")
+class LogicalConstraintsOnDisjuncts(unittest.TestCase):
+    def test_logical_constraints_transformed(self):
+        m = models.makeLogicalConstraintsOnDisjuncts()
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m)
+
+        y1 = m.Y[1].get_associated_binary()
+        y2 = m.Y[2].get_associated_binary()
+
+        # check the bigm transformation of the logical things on the disjuncts
+
+        # first d[1]:
+        cons = bigm.get_transformed_constraints(
+            m.d[1].logic_to_linear.transformed_constraints[1])
+        self.assertEqual(len(cons), 2)
+        leq = cons[0]
+        self.assertEqual(leq.lower, 1)
+        self.assertIsNone(leq.upper)
+        repn = generate_standard_repn(leq.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 2)
+        self.assertEqual(len(repn.linear_vars), 2)
+        ct.check_linear_coef(self, repn, y1, -1)
+        ct.check_linear_coef(self, repn, m.d[1].binary_indicator_var, -1)
+        # this is a stupid constraint
+        geq = cons[1]
+        self.assertIsNone(geq.lower)
+        self.assertEqual(geq.upper, 1)
+        repn = generate_standard_repn(geq.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 1)
+        self.assertEqual(len(repn.linear_vars), 1)
+        ct.check_linear_coef(self, repn, y1, -1)
+
+        # then d[4]:
+        # 1 <= 1 - Y[2] + Y[1]
+        cons = bigm.get_transformed_constraints(
+            m.d[4].logic_to_linear.transformed_constraints[1])
+        self.assertEqual(len(cons), 1)
+        leq = cons[0]
+        self.assertEqual(leq.lower, 1)
+        self.assertIsNone(leq.upper)
+        repn = generate_standard_repn(leq.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 2)
+        self.assertEqual(len(repn.linear_vars), 3)
+        ct.check_linear_coef(self, repn, y1, 1)
+        ct.check_linear_coef(self, repn, y2, -1)
+        ct.check_linear_coef(self, repn, m.d[4].binary_indicator_var, -1)
+        # 1 <= 1 - Y[1] + Y[2]
+        cons = bigm.get_transformed_constraints(
+            m.d[4].logic_to_linear.transformed_constraints[2])
+        self.assertEqual(len(cons), 1)
+        leq = cons[0]
+        self.assertEqual(leq.lower, 1)
+        self.assertIsNone(leq.upper)
+        repn = generate_standard_repn(leq.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 2)
+        self.assertEqual(len(repn.linear_vars), 3)
+        ct.check_linear_coef(self, repn, y2, 1)
+        ct.check_linear_coef(self, repn, y1, -1)
+        ct.check_linear_coef(self, repn, m.d[4].binary_indicator_var, -1)
+
+        # check that the global logical constraints were also transformed.
+        self.assertFalse(m.p.active)
+
+    @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
+    def test_solution_obeys_logical_constraints(self):
+        m = models.makeLogicalConstraintsOnDisjuncts()
+        ct.check_solution_obeys_logical_constraints(self, 'bigm', m)
+
+    @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
+    def test_boolean_vars_on_disjunct(self):
+        # Just to make sure we do everything in the correct order, make sure
+        # that we can solve a model where some BooleanVars were declared on one
+        # of the Disjuncts
+        m = models.makeBooleanVarsOnDisjuncts()
+        ct.check_solution_obeys_logical_constraints(self, 'bigm', m)
 
 if __name__ == '__main__':
     unittest.main()
