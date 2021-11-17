@@ -23,7 +23,7 @@ Pyomo 6.2    17 Nov 2021
     calculate_variable_from_constraint() (#2177)
 - Core
   - Fix Expression.getitem when initialized with Skip (#2136)
-  - Update logical_to_linear transformation to support hierarchical models (#2135)
+  - Support hierarchical models in logical_to_linear transformation (#2135)
   - Add ordered=True API for iterating over IndexedComponents (#2149)
   - Fix bug in differentiate module related to reused subexpressions (#2148)
   - Rework expression replacement and LinearExpression object (#2143)
@@ -48,9 +48,9 @@ Pyomo 6.2    17 Nov 2021
   - Improve GAMS writer performance (#2191)
 - Testing
   - Resolve test failures when no solvers are available (#2146)
-  - Fix type in booktest skip declaration (#2186)
+  - Fix typo in booktest skip declaration (#2186)
 - DAE Updates
-  - Add utility function to slice individual components in flatten module (#2141)
+  - Utility function to slice individual components in flatten module (#2141)
   - Fix errors and deprecation warnings in some DAE examples (#2189)
   - Fix bug allowing numpy.float64 types to end up in a ContinuousSet (#2193)
 - GDP Updates
@@ -69,8 +69,7 @@ Pyomo 6.2    17 Nov 2021
   - MindtPy: Add support for MIP solver solution pools (#2164)
   - MindtPy: Skip specific tests due to failure with Gurobi 9.5.0 on 
     Windows (#2183)
-  - MindtPy: Fix bug in feasibility pump (#2185)
-  - MindtPy: Fix bug related to using the round method for NoneType (#2187)
+  - MindtPy: Fix feasibility pump and fixed variable detection (#2185, #2187)
   - PyROS: Add uncertain variable bounds detection (#2159)
 
 -------------------------------------------------------------------------------
