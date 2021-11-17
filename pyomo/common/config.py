@@ -29,6 +29,7 @@ import sys
 from textwrap import wrap
 import types
 
+from pyomo.common.collections import Sequence, Mapping
 from pyomo.common.deprecation import deprecated, relocated_module_attribute
 from pyomo.common.fileutils import import_file
 from pyomo.common.modeling import NoArgumentGiven
@@ -1158,10 +1159,11 @@ class ConfigBase(object):
         # can allocate the state dictionary.  If it is not, then we call
         # the super-class's __getstate__ (since that class is NOT
         # 'object').
-        if self.__class__.__mro__[-2] is ConfigBase:
-            state = {}
+        _base = super(ConfigBase, self)
+        if hasattr(_base, '__getstate__'):
+            state = _base.__getstate__()
         else:
-            state = super(ConfigBase, self).__getstate__()
+            state = {}
         state.update((key, getattr(self, key)) for key in ConfigBase.__slots__)
         state['_domain'] = _picklable(state['_domain'], self)
         state['_parent'] = None
@@ -1721,7 +1723,7 @@ class MarkImmutable(object):
         self.release_lock()
 
 
-class ConfigList(ConfigBase):
+class ConfigList(ConfigBase, Sequence):
     """Store and manipulate a list of configuration values.
 
     Parameters
@@ -1896,7 +1898,7 @@ class ConfigList(ConfigBase):
                 yield v
 
 
-class ConfigDict(ConfigBase):
+class ConfigDict(ConfigBase, Mapping):
     """Store and manipulate a dictionary of configuration values.
 
     Parameters
