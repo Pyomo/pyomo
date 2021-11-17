@@ -122,11 +122,12 @@ def _adjust_var_value_if_not_feasible(var):
     # within its implied bounds, as the constraint we are
     # deactivating is not an invalid constraint, but rather we
     # are moving its implied bound directly onto the variable.
+    var_value = var.value
     if var.has_lb():
-        var_value = max(var.value, var.lb)
+        var_value = max(var_value, var.lb)
     if var.has_ub():
-        var_value = min(var.value, var.ub)
-    if var.is_integer() or var.is_binary():
+        var_value = min(var_value, var.ub)
+    if var.is_integer():
         var.set_value(int(var_value))
     else:
         var.set_value(var_value)
