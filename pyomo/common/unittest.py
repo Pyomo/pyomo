@@ -561,6 +561,10 @@ def buildParser():
         action='store_true',
         dest='dryrun',
         help='Dry run: collect but do not execute the tests')
+    parser.add_argument('--show-log',
+        action='store_true',
+        dest='showlog',
+        help='Turn off log capture and allow warnings/deprecations to show.')
     return parser
 
 
@@ -602,10 +606,12 @@ def runtests(options):
         cmd.append('-x')
     if options.dryrun:
         cmd.append('--collect-only')
-
     if options.xunit:
         cmd.append('--with-xunit')
         cmd.append('--xunit-file=TEST-pyomo.xml')
+    if options.showlog:
+        cmd.append('--nologcapture')
+        cmd.append('--nocapture')
 
     attr = []
     _with_performance = False
