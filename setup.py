@@ -177,7 +177,7 @@ setup_kwargs = dict(
         'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Software Development :: Libraries :: Python Modules' ],
-    python_requires = '>=3.6',
+    python_requires = '>=3.6, <3.10',
     install_requires = [
         'ply',
     ],

@@ -1299,7 +1299,7 @@ class LinearExpression(ExpressionBase):
                     "LinearExpression has been updated to expect args= to "
                     "be a constant followed by MonomialTermExpressions.  "
                     "The older format (`[const, coefficient_1, ..., "
-                    "variable_1, ...]`) is deprecated.", version='TBD')
+                    "variable_1, ...]`) is deprecated.", version='6.2')
                 args = args[:1] + list(map(
                     MonomialTermExpression,
                     zip(args[1:1+len(args)//2], args[1+len(args)//2:])))
