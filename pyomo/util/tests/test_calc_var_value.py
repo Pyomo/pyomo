@@ -90,7 +90,7 @@ class Test_calc_var(unittest.TestCase):
                 ValueError, "Constraint 'tuple' is a Ranged Inequality "
                 "with a variable upper bound."):
             calculate_variable_from_constraint(m.x, (15, 5*m.x, m.x))
-            
+
 
     @unittest.skipIf(not differentiate_available, "this test requires sympy")
     def test_nonlinear(self):
@@ -266,12 +266,11 @@ class Test_calc_var(unittest.TestCase):
         calculate_variable_from_constraint(m.v1, m.c4)
         self.assertEqual(value(m.v1), -2)
 
-    def test_warn_final_value(self):
+    def test_warn_final_value_linear(self):
         m = ConcreteModel()
         m.x = Var(bounds=(0,1))
         m.c1 = Constraint(expr=m.x == 10)
         m.c2 = Constraint(expr=5*m.x == 10)
-        m.c3 = Constraint(expr=(m.x - 3.5)**2 == 0)
 
         with LoggingIntercept() as LOG:
             calculate_variable_from_constraint(m.x, m.c1)
@@ -288,6 +287,12 @@ class Test_calc_var(unittest.TestCase):
             "Setting Var 'x' to a numeric value `2.0` outside the "
             "bounds (0, 1).")
         self.assertEqual(value(m.x), 2)
+
+    @unittest.skipUnless(differentiate_available, "this test requires sympy")
+    def test_warn_final_value_nonlinear(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0,1))
+        m.c3 = Constraint(expr=(m.x - 3.5)**2 == 0)
 
         with LoggingIntercept() as LOG:
             calculate_variable_from_constraint(m.x, m.c3)
