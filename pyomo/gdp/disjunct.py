@@ -83,8 +83,8 @@ class AutoLinkedBinaryVar(ScalarVar):
         self.get_associated_boolean().set_value(
             bool_val, skip_validation, _propagate_value=False)
 
-    def fix(self, val=NOTSET, skip_validation=False):
-        super().fix(val, skip_validation)
+    def fix(self, value=NOTSET, skip_validation=False):
+        super().fix(value, skip_validation)
         bool_var = self.get_associated_boolean()
         if not bool_var.is_fixed():
             bool_var.fix()
@@ -162,8 +162,8 @@ class AutoLinkedBooleanVar(ScalarBooleanVar):
         self.get_associated_binary().set_value(
             val, skip_validation, _propagate_value=False)
 
-    def fix(self, val=NOTSET, skip_validation=False):
-        super().fix(val, skip_validation)
+    def fix(self, value=NOTSET, skip_validation=False):
+        super().fix(value, skip_validation)
         bin_var = self.get_associated_binary()
         if not bin_var.is_fixed():
             bin_var.fix()

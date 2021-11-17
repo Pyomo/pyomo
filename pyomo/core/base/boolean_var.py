@@ -143,7 +143,7 @@ class _BooleanVarData(ComponentData, BooleanValue):
         """Return the stale indicator for this variable."""
         raise NotImplementedError
 
-    def fix(self, val=NOTSET, skip_validation=False):
+    def fix(self, value=NOTSET, skip_validation=False):
         """
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
@@ -237,14 +237,14 @@ class _GeneralBooleanVarData(_BooleanVarData):
         """Return the domain for this variable."""
         return BooleanSet
 
-    def fix(self, val=NOTSET, skip_validation=False):
+    def fix(self, value=NOTSET, skip_validation=False):
         """
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
         """
         self.fixed = True
-        if val is not NOTSET:
-            self.set_value(val, skip_validation)
+        if value is not NOTSET:
+            self.set_value(value, skip_validation)
 
     def unfix(self):
         """Sets the fixed indicator to False."""
@@ -527,13 +527,13 @@ class ScalarBooleanVar(_GeneralBooleanVarData, BooleanVar):
     def domain(self):
         return _GeneralBooleanVarData.domain.fget(self)
 
-    def fix(self, val=NOTSET, skip_validation=False):
+    def fix(self, value=NOTSET, skip_validation=False):
         """
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
         """
         if self._constructed:
-            return _GeneralBooleanVarData.fix(self, val, skip_validation)
+            return _GeneralBooleanVarData.fix(self, value, skip_validation)
         raise ValueError(
             "Fixing variable '%s' "
             "before the Var has been constructed (there "
@@ -561,13 +561,13 @@ class SimpleBooleanVar(metaclass=RenamedClass):
 class IndexedBooleanVar(BooleanVar):
     """An array of variables."""
 
-    def fix(self, val=NOTSET, skip_validation=False):
+    def fix(self, value=NOTSET, skip_validation=False):
         """
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
         """
         for boolean_vardata in self.values():
-            boolean_vardata.fix(val, skip_validation)
+            boolean_vardata.fix(value, skip_validation)
 
     def unfix(self):
         """Sets the fixed indicator to False."""
