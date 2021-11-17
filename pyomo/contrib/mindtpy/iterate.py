@@ -11,7 +11,7 @@
 """Iteration loop for MindtPy."""
 from __future__ import division
 import logging
-from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution
+from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution, update_gap
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 
 from pyomo.contrib.mindtpy.mip_solve import solve_main, handle_main_optimal, handle_main_infeasible, handle_main_other_conditions, handle_regularization_main_tc
@@ -46,10 +46,6 @@ def MindtPy_iteration_loop(solve_data, config):
     """
     last_iter_cuts = False
     while solve_data.mip_iter < config.iteration_limit:
-
-        config.logger.info(
-            '---MindtPy main Iteration %s---'
-            % (solve_data.mip_iter+1))
 
         solve_data.mip_subiter = 0
         # solve MILP main problem
@@ -159,6 +155,8 @@ def MindtPy_iteration_loop(solve_data, config):
     # we correct it after the iteration.
     if (config.add_no_good_cuts or config.use_tabu_list) and config.strategy != 'FP' and not solve_data.should_terminate and config.add_regularization is None:
         bound_fix(solve_data, config, last_iter_cuts)
+    config.logger.info(
+        ' =============================================================================================')
 
 
 def algorithm_should_terminate(solve_data, config, check_cycling):
@@ -197,7 +195,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         return True
 
     # Check bound convergence
-    if solve_data.LB + config.bound_tolerance >= solve_data.UB:
+    if solve_data.abs_gap <= config.bound_tolerance:
         config.logger.info(
             'MindtPy exiting on bound convergence. '
             'LB: {} + (tol {}) >= UB: {}\n'.format(
@@ -206,7 +204,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         return True
     # Check relative bound convergence
     if solve_data.best_solution_found is not None:
-        if solve_data.UB - solve_data.LB <= config.relative_bound_tolerance * (abs(solve_data.UB if solve_data.objective_sense == minimize else solve_data.LB) + 1E-10):
+        if solve_data.rel_gap <= config.relative_bound_tolerance:
             config.logger.info(
                 'MindtPy exiting on bound convergence. '
                 '(UB: {} - LB: {})/ (1e-10+|bestinteger|:{}) <= relative tolerance: {}'.format(solve_data.UB, solve_data.LB, abs(solve_data.UB if solve_data.objective_sense == minimize else solve_data.LB), config.relative_bound_tolerance))
@@ -274,7 +272,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
                     lower_slack = -10
                     # Use not fixed numbers in this case. Try some factor of ecp_tolerance
                 if lower_slack < -config.ecp_tolerance:
-                    config.logger.info(
+                    config.logger.debug(
                         'MindtPy-ECP continuing as {} has not met the '
                         'nonlinear constraints satisfaction.'
                         '\n'.format(nlc))
@@ -285,7 +283,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
                 except (ValueError, OverflowError):
                     upper_slack = -10
                 if upper_slack < -config.ecp_tolerance:
-                    config.logger.info(
+                    config.logger.debug(
                         'MindtPy-ECP continuing as {} has not met the '
                         'nonlinear constraints satisfaction.'
                         '\n'.format(nlc))
@@ -309,7 +307,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
             solve_data.curr_int_sol = get_integer_solution(solve_data.mip)
             if config.cycling_check and solve_data.mip_iter >= 1:
                 if solve_data.curr_int_sol in set(solve_data.integer_list):
-                    config.logger.info(
+                    config.logger.warning(
                         'Cycling happens after {} main iterations. '
                         'The same combination is obtained in iteration {} '
                         'This issue happens when the NLP subproblem violates constraint qualification. '
@@ -414,6 +412,8 @@ def bound_fix(solve_data, config, last_iter_cuts):
                     [main_mip_results.problem.upper_bound] + solve_data.UB_progress[:-1])
                 solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
                 solve_data.UB_progress.append(solve_data.UB)
+            if solve_data.bound_improved:
+                update_gap(solve_data)
             config.logger.info(
                 'Fixed bound values: LB: {}  UB: {}'.
                 format(solve_data.LB, solve_data.UB))

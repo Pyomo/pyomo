@@ -119,7 +119,6 @@ class TestMindtPy(unittest.TestCase):
             # test handle_main_other_conditions
             main_mip, main_mip_results = solve_main(solve_data, config)
             main_mip_results.solver.termination_condition = tc.infeasible
-            print(solve_data.results.solver.termination_condition)
             handle_main_other_conditions(
                 solve_data.mip, main_mip_results, solve_data, config)
             self.assertIs(

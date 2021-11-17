@@ -11,7 +11,7 @@
 from pyomo.core import (minimize, Constraint, TransformationFactory, value)
 from pyomo.core.base.constraint import ConstraintList
 from pyomo.opt import SolverFactory, SolutionStatus, SolverResults, SolverStatus
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, copy_var_list_values, time_code
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, copy_var_list_values, time_code, get_main_elapsed_time
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, handle_subproblem_optimal
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.util import generate_norm2sq_objective_function, set_solver_options
@@ -53,8 +53,6 @@ def solve_fp_subproblem(solve_data, config):
 
     fp_nlp = solve_data.working_model.clone()
     MindtPy = fp_nlp.MindtPy_utils
-    config.logger.info('FP-NLP %s: Solve feasibility pump NLP subproblem.'
-                       % (solve_data.fp_iter,))
 
     # Set up NLP
     fp_nlp.MindtPy_utils.objective_list[-1].deactivate()
@@ -140,10 +138,6 @@ def fp_loop(solve_data, config):
     """
     while solve_data.fp_iter < config.fp_iteration_limit:
 
-        config.logger.info(
-            '---Feasibility Pump Iteration %s---'
-            % solve_data.fp_iter)
-
         solve_data.mip_subiter = 0
         # solve MILP main problem
         feas_main, feas_main_results = solve_main(
@@ -159,8 +153,11 @@ def fp_loop(solve_data, config):
             solve_data, config)
 
         if fp_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
-            config.logger.info('FP-NLP %s: Distance-OBJ: %s'
-                               % (solve_data.fp_iter, value(fp_nlp.MindtPy_utils.fp_nlp_obj)))
+            config.logger.info(solve_data.log_formatter.format(
+                solve_data.fp_iter, 'FP-NLP', value(
+                    fp_nlp.MindtPy_utils.fp_nlp_obj),
+                solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                get_main_elapsed_time(solve_data.timing)))
             handle_fp_subproblem_optimal(fp_nlp, solve_data, config)
         elif fp_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
             config.logger.error('Feasibility pump NLP subproblem infeasible')
@@ -245,9 +242,10 @@ def generate_norm_constraint(fp_nlp, solve_data, config):
 
 def handle_feas_main_tc(feas_main_results, solve_data, config):
     if feas_main_results.solver.termination_condition is tc.optimal:
-        config.logger.info(
-            'FP-MIP %s: Distance-OBJ: %s'
-            % (solve_data.fp_iter, value(solve_data.mip.MindtPy_utils.fp_mip_obj)))
+        config.logger.info(solve_data.log_formatter.format(
+            solve_data.fp_iter, 'FP-MIP', value(
+                solve_data.mip.MindtPy_utils.fp_mip_obj),
+            solve_data.LB, solve_data.UB, solve_data.rel_gap, get_main_elapsed_time(solve_data.timing)))
         return False
     elif feas_main_results.solver.termination_condition is tc.maxTimeLimit:
         config.logger.warning('FP-MIP reaches max TimeLimit')

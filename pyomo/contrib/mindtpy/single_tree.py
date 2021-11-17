@@ -21,7 +21,7 @@ from math import fabs
 from pyomo.core.expr import current as EXPR
 import pyomo.environ as pyo
 from math import copysign
-from pyomo.contrib.mindtpy.util import get_integer_solution
+from pyomo.contrib.mindtpy.util import get_integer_solution, update_gap
 from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables, get_main_elapsed_time, time_code
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, solve_feasibility_subproblem, handle_nlp_subproblem_tc
 from pyomo.opt import TerminationCondition as tc
@@ -104,7 +104,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
             linearized constraint has been violated
         """
 
-        config.logger.info('Adding OA cuts')
+        config.logger.debug('Adding OA cuts')
         with time_code(solve_data.timing, 'OA cut generation'):
             for index, constr in enumerate(target_model.MindtPy_utils.constraint_list):
                 if constr.body.polynomial_degree() in {0, 1}:
@@ -170,7 +170,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
         """
         with time_code(solve_data.timing, 'Affine cut generation'):
             m = solve_data.mip
-            config.logger.info('Adding affine cuts')
+            config.logger.debug('Adding affine cuts')
             counter = 0
 
             for constr in m.MindtPy_utils.nonlinear_constraint_list:
@@ -332,11 +332,10 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                 self.get_best_objective_value(), solve_data.UB)
             solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
             solve_data.UB_progress.append(solve_data.UB)
-        config.logger.info(
-            'MIP %s: OBJ (at current node): %s  Bound: %s  LB: %s  UB: %s  TIME: %s'
-            % (solve_data.mip_iter, self.get_objective_value(), self.get_best_objective_value(),
-                solve_data.LB, solve_data.UB, round(get_main_elapsed_time(
-                    solve_data.timing), 2)))
+        if solve_data.bound_improved:
+            update_gap(solve_data)
+        config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'LP', self.get_objective_value(),
+                                                           solve_data.LB, solve_data.UB, solve_data.rel_gap, get_main_elapsed_time(solve_data.timing)))
 
     def handle_lazy_subproblem_optimal(self, fixed_nlp, solve_data, config, opt):
         """
@@ -371,12 +370,8 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
             solve_data.LB = max(value(main_objective.expr), solve_data.LB)
             solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
             solve_data.LB_progress.append(solve_data.LB)
-
-        config.logger.info(
-            'Fixed-NLP {}: OBJ: {}  LB: {}  UB: {}  TIME: {}'
-            .format(solve_data.nlp_iter, value(main_objective.expr), solve_data.LB, solve_data.UB, round(get_main_elapsed_time(solve_data.timing), 2)))
-
         if solve_data.solution_improved:
+            update_gap(solve_data)
             solve_data.best_solution_found = fixed_nlp.clone()
             solve_data.best_solution_found_time = get_main_elapsed_time(
                 solve_data.timing)
@@ -387,6 +382,12 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                 else:
                     solve_data.stored_bound.update(
                         {solve_data.LB: solve_data.UB})
+        config.logger.info(
+            solve_data.fixed_nlp_log_formatter.format('*' if solve_data.solution_improved else ' ',
+                                                      solve_data.nlp_iter, 'Fixed NLP', value(
+                                                          main_objective.expr),
+                                                      solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                                                      get_main_elapsed_time(solve_data.timing)))
 
         # In OA algorithm, OA cuts are generated based on the solution of the subproblem
         # We need to first copy the value of variables from the subproblem and then add cuts
@@ -486,7 +487,8 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
             handle_main_optimal(
                 main_mip, solve_data, config, update_bound=False)
         elif main_mip_results.solver.termination_condition in {tc.infeasible, tc.infeasibleOrUnbounded}:
-            config.logger.info('regularization problem infeasible.')
+            config.logger.info(solve_data.log_note_formatter.format(
+                solve_data.mip_iter, 'Reg '+solve_data.regularization_mip_type, 'infeasible'))
             if config.reduce_level_coef:
                 config.level_coef = config.level_coef / 2
                 main_mip, main_mip_results = solve_main(
@@ -522,7 +524,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                         'of %s. Solver message: %s' %
                         (main_mip_results.solver.termination_condition, main_mip_results.solver.message))
             elif config.use_bb_tree_incumbent:
-                config.logger.info(
+                config.logger.debug(
                     'Fixed subproblem will be generated based on the incumbent solution of the main problem.')
         elif main_mip_results.solver.termination_condition is tc.maxTimeLimit:
             config.logger.info(
@@ -575,8 +577,8 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
         if config.add_regularization is not None and solve_data.best_solution_found is not None:
             # the main problem might be unbounded, regularization is activated only when a valid bound is provided.
             if not solve_data.bound_improved and not solve_data.solution_improved:
-                config.logger.info('the bound and the best found solution have neither been improved.'
-                                   'We will skip solving the regularization problem and the Fixed-NLP subproblem')
+                config.logger.debug('the bound and the best found solution have neither been improved.'
+                                    'We will skip solving the regularization problem and the Fixed-NLP subproblem')
                 solve_data.solution_improved = False
                 return
             if ((solve_data.objective_sense == minimize and solve_data.LB != float('-inf'))
@@ -600,8 +602,8 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
             solve_data.working_model, string_zero=True)
 
         if solve_data.curr_int_sol in set(solve_data.integer_list):
-            config.logger.info('This integer combination has been explored. '
-                               'We will skip solving the Fixed-NLP subproblem.')
+            config.logger.debug('This integer combination has been explored. '
+                                'We will skip solving the Fixed-NLP subproblem.')
             solve_data.solution_improved = False
             if config.strategy == 'GOA':
                 if config.add_no_good_cuts:
@@ -674,8 +676,8 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
         if config.add_regularization is not None and solve_data.best_solution_found is not None:
             # the main problem might be unbounded, regularization is activated only when a valid bound is provided.
             if not solve_data.bound_improved and not solve_data.solution_improved:
-                config.logger.info('the bound and the best found solution have neither been improved.'
-                                   'We will skip solving the regularization problem and the Fixed-NLP subproblem')
+                config.logger.debug('the bound and the best found solution have neither been improved.'
+                                    'We will skip solving the regularization problem and the Fixed-NLP subproblem')
                 solve_data.solution_improved = False
                 return
             if ((solve_data.objective_sense == minimize and solve_data.LB != float('-inf'))
@@ -699,8 +701,8 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
             solve_data.working_model, string_zero=True)
 
         if solve_data.curr_int_sol in set(solve_data.integer_list):
-            config.logger.info('This integer combination has been explored. '
-                               'We will skip solving the Fixed-NLP subproblem.')
+            config.logger.debug('This integer combination has been explored. '
+                                'We will skip solving the Fixed-NLP subproblem.')
             solve_data.solution_improved = False
             if config.strategy == 'GOA':
                 if config.add_no_good_cuts:
@@ -753,8 +755,8 @@ def handle_lazy_main_feasible_solution_gurobi(cb_m, cb_opt, solve_data, config):
             cb_opt.cbGet(gurobipy.GRB.Callback.MIPSOL_OBJBND), solve_data.UB)
         solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
         solve_data.UB_progress.append(solve_data.UB)
-    config.logger.info(
-        'MIP %s: OBJ (at current node): %s  Bound: %s  LB: %s  UB: %s  TIME: %s'
-        % (solve_data.mip_iter, cb_opt.cbGet(gurobipy.GRB.Callback.MIPSOL_OBJ), cb_opt.cbGet(gurobipy.GRB.Callback.MIPSOL_OBJBND),
-            solve_data.LB, solve_data.UB, round(get_main_elapsed_time(
-                solve_data.timing), 2)))
+    if solve_data.bound_improved:
+        update_gap(solve_data)
+    config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'LP', cb_opt.cbGet(gurobipy.GRB.Callback.MIPSOL_OBJ),
+                                                       solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                                                       get_main_elapsed_time(solve_data.timing)))

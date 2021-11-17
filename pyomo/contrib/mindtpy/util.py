@@ -588,6 +588,17 @@ def setup_solve_data(model, config):
     solve_data.UB = float('inf')
     solve_data.LB_progress = [solve_data.LB]
     solve_data.UB_progress = [solve_data.UB]
+    solve_data.abs_gap = float('inf')
+    solve_data.rel_gap = float('inf')
+    solve_data.log_formatter = ' {:>9}   {:>15}   {:>15g}   {:>11g}   {:>11g}   {:>7.2%}   {:>7.2f}'
+    solve_data.fixed_nlp_log_formatter = '{:1}{:>9}   {:>15}   {:>15g}   {:>11g}   {:>11g}   {:>7.2%}   {:>7.2f}'
+    solve_data.log_note_formatter = ' {:>9}   {:>15}   {:>15}'
+    if config.add_regularization is not None:
+        if config.add_regularization in {'level_L1', 'level_L_infinity', 'grad_lag'}:
+            solve_data.regularization_mip_type = 'MILP'
+        elif config.add_regularization in {'level_L2', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
+            solve_data.regularization_mip_type = 'MIQP'
+
     if config.single_tree and (config.add_no_good_cuts or config.use_tabu_list):
         solve_data.stored_bound = {}
     if config.strategy == 'GOA' and (config.add_no_good_cuts or config.use_tabu_list):
@@ -616,3 +627,17 @@ class GurobiPersistent4MindtPy(GurobiPersistent):
             self._callback_func(self._pyomo_model, self,
                                 where, self.solve_data, self.config)
         return f
+
+
+def update_gap(solve_data):
+    ''' 
+    Update the relative gap and the absolute gap
+
+    Parameters
+    ----------
+    solve_data: MindtPy Data Container
+        data container that holds solve-instance data
+    '''
+    solve_data.abs_gap = solve_data.UB - solve_data.LB
+    solve_data.rel_gap = (solve_data.UB - solve_data.LB)/(abs(
+        solve_data.UB if solve_data.objective_sense == minimize else solve_data.LB) + 1E-10)

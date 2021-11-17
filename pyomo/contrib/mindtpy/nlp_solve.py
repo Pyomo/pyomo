@@ -14,7 +14,7 @@ import logging
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
                                                   add_no_good_cuts, add_affine_cuts)
-from pyomo.contrib.mindtpy.util import add_feas_slacks, set_solver_options
+from pyomo.contrib.mindtpy.util import add_feas_slacks, set_solver_options, update_gap
 from pyomo.contrib.gdpopt.util import copy_var_list_values, get_main_elapsed_time, time_code
 from pyomo.core import (Constraint, Objective,
                         TransformationFactory, minimize, value)
@@ -50,8 +50,6 @@ def solve_subproblem(solve_data, config):
     fixed_nlp = solve_data.working_model.clone()
     MindtPy = fixed_nlp.MindtPy_utils
     solve_data.nlp_iter += 1
-    config.logger.info('Fixed-NLP %s: Solve subproblem for fixed integers.'
-                       % (solve_data.nlp_iter,))
 
     # Set up NLP
     TransformationFactory('core.fix_integer_vars').apply_to(fixed_nlp)
@@ -192,12 +190,8 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
         solve_data.LB = max(value(main_objective.expr), solve_data.LB)
         solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
         solve_data.LB_progress.append(solve_data.LB)
-    config.logger.info(
-        'Fixed-NLP {}: OBJ: {}  LB: {}  UB: {}  TIME: {}s'
-        .format(solve_data.nlp_iter if not fp else solve_data.fp_iter, value(main_objective.expr),
-                solve_data.LB, solve_data.UB, round(get_main_elapsed_time(solve_data.timing), 2)))
-
     if solve_data.solution_improved:
+        update_gap(solve_data)
         solve_data.best_solution_found = fixed_nlp.clone()
         solve_data.best_solution_found_time = get_main_elapsed_time(
             solve_data.timing)
@@ -243,6 +237,16 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
         add_no_good_cuts(var_values, solve_data, config, feasible=True)
 
     config.call_after_subproblem_feasible(fixed_nlp, solve_data)
+
+    config.logger.info(solve_data.fixed_nlp_log_formatter.format('*' if solve_data.solution_improved else ' ',
+                                                                 solve_data.nlp_iter if not fp else solve_data.fp_iter,
+                                                                 'Fixed NLP',
+                                                                 value(
+                                                                     main_objective.expr),
+                                                                 solve_data.LB,
+                                                                 solve_data.UB,
+                                                                 solve_data.rel_gap,
+                                                                 get_main_elapsed_time(solve_data.timing)))
 
 
 def handle_subproblem_infeasible(fixed_nlp, solve_data, config, cb_opt=None):

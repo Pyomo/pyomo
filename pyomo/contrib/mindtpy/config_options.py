@@ -417,9 +417,9 @@ def _add_loa_configs(CONFIG):
 
 def check_config(config):
     # configuration confirmation
-    if config.add_regularization in {'grad_lag', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
-        config.calculate_dual = True
     if config.add_regularization is not None:
+        if config.add_regularization in {'grad_lag', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
+            config.calculate_dual = True
         if config.regularization_mip_threads == 0 and config.threads > 0:
             config.regularization_mip_threads = config.threads
             config.logger.info(
@@ -432,7 +432,7 @@ def check_config(config):
         if config.mip_regularization_solver is None:
             config.mip_regularization_solver = config.mip_solver
     if config.single_tree:
-        config.logger.info('Single tree implementation is activated.')
+        config.logger.info('Single-tree implementation is activated.')
         config.iteration_limit = 1
         config.add_slack = False
         if config.mip_solver not in {'cplex_persistent', 'gurobi_persistent'}:

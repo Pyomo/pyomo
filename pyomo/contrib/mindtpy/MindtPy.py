@@ -42,7 +42,7 @@ from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
-
+logging.basicConfig(format='%(message)s')
 __version__ = (0, 1, 0)
 
 
@@ -89,7 +89,11 @@ class MindtPySolver(object):
         with time_code(solve_data.timing, 'total', is_main_timer=True), \
                 lower_logger_level_to(config.logger, new_logging_level), \
                 create_utility_block(solve_data.working_model, 'MindtPy_utils', solve_data):
-            config.logger.info('---Starting MindtPy---')
+            config.logger.info(
+                '---------------------------------------------------------------------------------------------\n'
+                '              Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo (MindtPy)               \n'
+                '---------------------------------------------------------------------------------------------\n'
+                'For more information, please visit https://pyomo.readthedocs.io/en/stable/contributed_packages/mindtpy.html')
 
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
