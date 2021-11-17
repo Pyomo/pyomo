@@ -130,17 +130,23 @@ def calculate_variable_from_constraint(variable, constraint,
     if residual_2 is not None and type(residual_2) is not complex:
         # if the variable appears linearly with a coefficient of 1, then we
         # are done
-        if abs(residual_2-upper) < eps:
+        if abs(residual_2 - upper) < eps:
+            # Re-set the variable value to trigger any warnings WRT the
+            # final variable state
+            variable.set_value(variable.value)
             return
 
         # Assume the variable appears linearly and calculate the coefficient
         x2 = value(variable)
         slope = float(residual_1 - residual_2) / (x1 - x2)
-        intercept = (residual_1-upper) - slope*x1
+        intercept = (residual_1 - upper) - slope*x1
         if slope:
             variable.set_value(-intercept/slope, skip_validation=True)
             body_val = value(body, exception=False)
-            if body_val is not None and abs(body_val-upper) < eps:
+            if body_val is not None and abs(body_val - upper) < eps:
+                # Re-set the variable value to trigger any warnings WRT
+                # the final variable state
+                variable.set_value(variable.value)
                 return
 
     # Variable appears nonlinearly; solve using Newton's method
@@ -223,3 +229,7 @@ def calculate_variable_from_constraint(variable, constraint,
                 raise RuntimeError(
                     "Linesearch iteration limit reached; remaining "
                     "residual = %s." % (residual,))
+    #
+    # Re-set the variable value to trigger any warnings WRT the final
+    # variable state
+    variable.set_value(variable.value)
