@@ -2397,7 +2397,7 @@ class FiniteSetOf(_FiniteSetMixin, SetOf):
 
 class UnorderedSetOf(metaclass=RenamedClass):
     __renamed__new_class__ = FiniteSetOf
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.2'
 
 
 class OrderedSetOf(_ScalarOrderedSetMixin, _OrderedSetMixin, FiniteSetOf):
