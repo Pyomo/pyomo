@@ -1151,7 +1151,7 @@ class ConfigBase(object):
         #    state[i] = getattr(self,i)
         # return state
         #
-        # Hoewever, in this case, the (nominal) parent class is
+        # However, in this case, the (nominal) parent class is
         # 'object', and object does not implement __getstate__.  Since
         # super() doesn't actually return a class, we are going to check
         # the *derived class*'s MRO and see if this is the second to
@@ -1159,7 +1159,7 @@ class ConfigBase(object):
         # can allocate the state dictionary.  If it is not, then we call
         # the super-class's __getstate__ (since that class is NOT
         # 'object').
-        _base = super(ConfigBase, self)
+        _base = super()
         if hasattr(_base, '__getstate__'):
             state = _base.__getstate__()
         else:
