@@ -230,6 +230,9 @@ class TestPyomoUnittest(unittest.TestCase):
         arguments = parser.parse_args(cmd_opts)
         self.assertTrue(arguments.verbose)
         self.assertTrue(arguments.xunit)
+        cmd_opts.extend(['--show-log'])
+        arguments = parser.parse_args(cmd_opts)
+        self.assertTrue(arguments.showlog)
 
 
 if __name__ == '__main__':
