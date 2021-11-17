@@ -16,6 +16,7 @@ from pyomo.environ import (TransformationFactory, Block, Set, Constraint, Var,
                            RealSet, ComponentMap, value, log, ConcreteModel,
                            Any, Suffix, SolverFactory, RangeSet, Param,
                            Objective, TerminationCondition, Reference)
+from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.repn import generate_standard_repn
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
@@ -24,6 +25,10 @@ import pyomo.gdp.tests.common_tests as ct
 
 import random
 from io import StringIO
+import os
+from os.path import abspath, dirname, join
+currdir = dirname(abspath(__file__))
+from filecmp import cmp
 
 EPS = TransformationFactory('gdp.hull').CONFIG.EPS
 linear_solvers = ct.linear_solvers
@@ -191,7 +196,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         ct.check_linear_coef(self, repn, m.d[1].indicator_var, -3)
         self.assertEqual(repn.constant, 0)
 
-    def check_bound_constraints_on_disjBlock(self, cons, disvar, indvar, lb, ub):
+    def check_bound_constraints_on_disjBlock(self, cons, disvar, indvar, lb, 
+                                             ub):
         self.assertIsInstance(cons, Constraint)
 
         # both lb and ub
@@ -474,8 +480,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # The point of this is that where a variable is declared has absolutely
         # nothing to do with whether or not it should be disaggregated. With the
         # only exception being that we can tell disaggregated variables and we
-        # know they are really and truly local to only one disjunct (EVER, in the
-        # whole model) because we declared them.
+        # know they are really and truly local to only one disjunct (EVER, in
+        # the whole model) because we declared them.
 
         # So here, for some perverse reason, we declare the variables on disj1,
         # but we use them in disj2. Both of them need to be disaggregated in
@@ -667,7 +673,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             else:
                 # 2*i bounds constraints and i transformed constraints
                 self.assertEqual(
-                    len(list(relaxed.component_data_objects(Constraint))), 2*i+i)
+                    len(list(relaxed.component_data_objects(Constraint))),
+                    2*i+i)
 
             self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)
 
@@ -868,14 +875,18 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         relaxedDisjuncts = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts
 
         disaggregatedVars = {
-            (1,'A'): [relaxedDisjuncts[0].disaggregatedVars.component('a[1,A]'),
-                      relaxedDisjuncts[1].disaggregatedVars.component('a[1,A]')],
-            (1,'B'): [relaxedDisjuncts[2].disaggregatedVars.component('a[1,B]'),
-                      relaxedDisjuncts[3].disaggregatedVars.component('a[1,B]')],
-            (2,'A'): [relaxedDisjuncts[4].disaggregatedVars.component('a[2,A]'),
-                      relaxedDisjuncts[5].disaggregatedVars.component('a[2,A]')],
-            (2,'B'): [relaxedDisjuncts[6].disaggregatedVars.component('a[2,B]'),
-                      relaxedDisjuncts[7].disaggregatedVars.component('a[2,B]')],
+            (1,'A'): 
+            [relaxedDisjuncts[0].disaggregatedVars.component('a[1,A]'),
+             relaxedDisjuncts[1].disaggregatedVars.component('a[1,A]')],
+            (1,'B'): 
+            [relaxedDisjuncts[2].disaggregatedVars.component('a[1,B]'),
+             relaxedDisjuncts[3].disaggregatedVars.component('a[1,B]')],
+            (2,'A'): 
+            [relaxedDisjuncts[4].disaggregatedVars.component('a[2,A]'),
+             relaxedDisjuncts[5].disaggregatedVars.component('a[2,A]')],
+            (2,'B'): 
+            [relaxedDisjuncts[6].disaggregatedVars.component('a[2,B]'),
+             relaxedDisjuncts[7].disaggregatedVars.component('a[2,B]')],
         }
 
         for i, disVars in disaggregatedVars.items():
@@ -933,8 +944,8 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         # We end up with a transformation block for every SimpleDisjunction or
         # IndexedDisjunction.
         self.assertEqual(len(transBlock1.relaxedDisjuncts), 2)
-        self.assertIsInstance(transBlock1.relaxedDisjuncts[0].disaggregatedVars.\
-                              component("x"), Var)
+        self.assertIsInstance(transBlock1.relaxedDisjuncts[0].\
+                              disaggregatedVars.component("x"), Var)
         self.assertTrue(transBlock1.relaxedDisjuncts[0].disaggregatedVars.x.\
                         is_fixed())
         self.assertEqual(value(transBlock1.relaxedDisjuncts[0].\
@@ -949,8 +960,8 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         self.assertEqual(len(transBlock1.relaxedDisjuncts[0].component(
             "x_bounds")), 2)
 
-        self.assertIsInstance(transBlock1.relaxedDisjuncts[1].disaggregatedVars.\
-                              component("x"), Var)
+        self.assertIsInstance(transBlock1.relaxedDisjuncts[1].\
+                              disaggregatedVars.component("x"), Var)
         self.assertIsInstance(transBlock1.relaxedDisjuncts[1].component(
             "secondTerm[1].cons"), Constraint)
         self.assertEqual(len(transBlock1.relaxedDisjuncts[1].component(
@@ -964,8 +975,8 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         self.assertIsInstance(transBlock2, Block)
         self.assertIsInstance(transBlock2.component("relaxedDisjuncts"), Block)
         self.assertEqual(len(transBlock2.relaxedDisjuncts), 2)
-        self.assertIsInstance(transBlock2.relaxedDisjuncts[0].disaggregatedVars.\
-                              component("x"), Var)
+        self.assertIsInstance(transBlock2.relaxedDisjuncts[0].\
+                              disaggregatedVars.component("x"), Var)
         self.assertIsInstance(transBlock2.relaxedDisjuncts[0].component(
             "firstTerm[2].cons"), Constraint)
         # we have an equality constraint
@@ -976,8 +987,8 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         self.assertEqual(len(transBlock2.relaxedDisjuncts[0].component(
             "x_bounds")), 2)
 
-        self.assertIsInstance(transBlock2.relaxedDisjuncts[1].disaggregatedVars.\
-                              component("x"), Var)
+        self.assertIsInstance(transBlock2.relaxedDisjuncts[1].\
+                              disaggregatedVars.component("x"), Var)
         self.assertIsInstance(transBlock2.relaxedDisjuncts[1].component(
             "secondTerm[2].cons"), Constraint)
         self.assertEqual(len(transBlock2.relaxedDisjuncts[1].component(
@@ -998,12 +1009,12 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         self.assertIsInstance(transBlock, Block)
         self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
         self.assertEqual(len(transBlock.relaxedDisjuncts), 4)
-        self.assertIsInstance(transBlock.relaxedDisjuncts[0].disaggregatedVars.\
-                              component("x"), Var)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[0].\
+                              disaggregatedVars.component("x"), Var)
         self.assertTrue(transBlock.relaxedDisjuncts[0].disaggregatedVars.\
                         x.is_fixed())
-        self.assertEqual(value(transBlock.relaxedDisjuncts[0].disaggregatedVars.\
-                               x), 0)
+        self.assertEqual(value(transBlock.relaxedDisjuncts[0].\
+                               disaggregatedVars.x), 0)
         self.assertIsInstance(transBlock.relaxedDisjuncts[0].component(
             "firstTerm[1].cons"), Constraint)
         # No constraint becuase disaggregated variable fixed to 0
@@ -1070,12 +1081,12 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         self.assertIsInstance(transBlock.relaxedDisjuncts, Block)
         self.assertEqual(len(transBlock.relaxedDisjuncts), 2)
 
-        self.assertIsInstance(transBlock.relaxedDisjuncts[0].disaggregatedVars.x,
-                              Var)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[0].\
+                              disaggregatedVars.x, Var)
         self.assertTrue(transBlock.relaxedDisjuncts[0].disaggregatedVars.x.\
                         is_fixed())
-        self.assertEqual(value(transBlock.relaxedDisjuncts[0].disaggregatedVars.\
-                               x), 0)
+        self.assertEqual(value(transBlock.relaxedDisjuncts[0].\
+                               disaggregatedVars.x), 0)
         self.assertIsInstance(transBlock.relaxedDisjuncts[0].component(
             firstTerm), Constraint)
         self.assertEqual(len(transBlock.relaxedDisjuncts[0].component(
@@ -1084,8 +1095,8 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
                               Constraint)
         self.assertEqual(len(transBlock.relaxedDisjuncts[0].x_bounds), 2)
 
-        self.assertIsInstance(transBlock.relaxedDisjuncts[1].disaggregatedVars.x,
-                              Var)
+        self.assertIsInstance(transBlock.relaxedDisjuncts[1].\
+                              disaggregatedVars.x, Var)
         self.assertFalse(transBlock.relaxedDisjuncts[1].disaggregatedVars.\
                          x.is_fixed())
         self.assertIsInstance(transBlock.relaxedDisjuncts[1].component(
@@ -1783,6 +1794,54 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d3)), 1.2)
         self.assertEqual(value(hull.get_disaggregated_var(m.x, m.d4)), 0)
 
+class TestHierarchicalNestedModels(unittest.TestCase):
+    def tearDown(self):
+        if os.path.exists(join(currdir, 'm.nl')):
+            os.remove(join(currdir, 'm.nl'))
+        if os.path.exists(join(currdir, 'm1.nl')):
+            os.remove(join(currdir, 'm1.nl'))
+
+    def test_hierarchical_badly_ordered_targets(self):
+        m = models.makeHierarchicalNested_DeclOrderMatchesInstantationOrder()
+        hull = TransformationFactory('gdp.hull')
+        m1 = hull.create_using(m, targets=[m.disjunction_block,
+                                           m.disjunct_block.disj2])
+
+        # the real test here is that the above doesn't scream about there being
+        # an untransformed Disjunction inside of a Disjunct it's trying to
+        # transform. This kinda too big a test for hull because the nonlinear
+        # expressions are ugly and the inner disjunction variables are
+        # disaggregated twice... So let's just make sure that this is the same
+        # as manually transforming in the correct order.
+        hull.apply_to(m, targets=m.disjunct_block.disj2.disjunction)
+        hull.apply_to(m, targets=m.disjunction_block.disjunction)
+
+        # intentionally not using symbolic_solver_labels because there's nothing
+        # to guarantee that name collisions are named the same. And there are
+        # plenty of name collisions. But these nl files should be the same.
+        m1.write(join(currdir, 'm1.nl'))
+        m.write(join(currdir, 'm.nl'))
+
+        self.assertTrue(cmp(join(currdir, 'm.nl'), join(currdir, 'm1.nl')))
+
+    def test_decl_order_opposite_instantiation_order(self):
+        # In this test, we create the same problem as above, but we don't even
+        # need targets!
+        m = models.makeHierarchicalNested_DeclOrderOppositeInstantationOrder()
+        hull = TransformationFactory('gdp.hull')
+        m1 = hull.create_using(m)
+
+        # Like above, the real test is that the above doesn't scream. We can use
+        # the same check to make sure everything looks like it would have if we
+        # manually handled the nested
+        hull.apply_to(m, targets=m.disjunct_block.disj2.disjunction)
+        hull.apply_to(m, targets=m.disjunction_block.disjunction)
+
+        m1.write(join(currdir, 'm1.nl'))
+        m.write(join(currdir, 'm.nl'))
+
+        self.assertTrue(cmp(join(currdir, 'm.nl'), join(currdir, 'm1.nl')))
+
 class TestSpecialCases(unittest.TestCase):
     def test_local_vars(self):
         """ checks that if nothing is marked as local, we assume it is all
@@ -2357,3 +2416,80 @@ class NetworkDisjuncts(unittest.TestCase, CommonTests):
     @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
     def test_solution_minimize(self):
         ct.check_network_disjucts(self, minimize=True, transformation='hull')
+
+@unittest.skipUnless(sympy_available, "Sympy not available")
+class LogicalConstraintsOnDisjuncts(unittest.TestCase):
+    def test_logical_constraints_transformed(self):
+        m = models.makeLogicalConstraintsOnDisjuncts()
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
+
+        y1 = m.Y[1].get_associated_binary()
+        y2 = m.Y[2].get_associated_binary()
+
+        # check the bigm transformation of the logical things on the disjuncts
+
+        # first d[1]:
+        cons = hull.get_transformed_constraints(
+            m.d[1].logic_to_linear.transformed_constraints[1])
+        self.assertEqual(len(cons), 1)
+        # this simplifies because the dissaggregated variable is *always* 0
+        c = cons[0]
+        self.assertEqual(c.lower, 0)
+        self.assertEqual(c.upper, 0)
+        repn = generate_standard_repn(c.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 1)
+        ct.check_linear_coef(self, repn, hull.get_disaggregated_var(y1, m.d[1]),
+                             -1)
+
+        # then d[4]:
+        y1d = hull.get_disaggregated_var(y1, m.d[4])
+        y2d = hull.get_disaggregated_var(y2, m.d[4])
+        # 1 <= 1 - Y[2] + Y[1]
+        cons = hull.get_transformed_constraints(
+            m.d[4].logic_to_linear.transformed_constraints[1])
+        # these also are simple because it's really an equality, and since both
+        # disaggregated variables will be 0 when the disjunct isn't selected, it
+        # doesn't even need big-Ming.
+        self.assertEqual(len(cons), 1)
+        cons = cons[0]
+        self.assertIsNone(cons.lower)
+        self.assertEqual(cons.upper, 0)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 2)
+        ct.check_linear_coef(self, repn, y2d, 1)
+        ct.check_linear_coef(self, repn, y1d, -1)
+
+        # 1 <= 1 - Y[1] + Y[2]
+        cons = hull.get_transformed_constraints(
+            m.d[4].logic_to_linear.transformed_constraints[2])
+        self.assertEqual(len(cons), 1)
+        cons = cons[0]
+        self.assertIsNone(cons.lower)
+        self.assertEqual(cons.upper, 0)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 2)
+        ct.check_linear_coef(self, repn, y2d, -1)
+        ct.check_linear_coef(self, repn, y1d, 1)
+
+        self.assertFalse(m.bwahaha.active)
+        self.assertFalse(m.p.active)
+
+    @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
+    def test_solution_obeys_logical_constraints(self):
+        m = models.makeLogicalConstraintsOnDisjuncts()
+        ct.check_solution_obeys_logical_constraints(self, 'hull', m)
+
+    @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
+    def test_boolean_vars_on_disjunct(self):
+        # Just to make sure we do everything in the correct order, make sure
+        # that we can solve a model where some BooleanVars were declared on one
+        # of the Disjuncts
+        m = models.makeBooleanVarsOnDisjuncts()
+        ct.check_solution_obeys_logical_constraints(self, 'hull', m)
