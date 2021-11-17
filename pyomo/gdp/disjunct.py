@@ -72,23 +72,22 @@ class AutoLinkedBinaryVar(ScalarVar):
         super().set_value(val, skip_validation)
         if not _propagate_value:
             return
-        bool_var = self.get_associated_boolean()
-        # Only update the associated Boolean value if it is needed
-        # to match the current (potentially fractional) binary value.
-        # (This prevents infinite recursion.)
+        # Map the incoming (numeric) value to bool/None
         if val is None:
             bool_val = None
         elif fabs(val - 0.5) < 0.5 - AutoLinkedBinaryVar.INTEGER_TOLERANCE:
             bool_val = None
         else:
             bool_val = bool(int(val + 0.5))
-        bool_var.set_value(bool_val, skip_validation, _propagate_value=False)
+        # (Setting _propagate_value prevents infinite recursion.)
+        self.get_associated_boolean().set_value(
+            bool_val, skip_validation, _propagate_value=False)
 
     def fix(self, val=NOTSET, skip_validation=False):
         super().fix(val, skip_validation)
         bool_var = self.get_associated_boolean()
         if not bool_var.is_fixed():
-            bool_var.fix(skip_validation=skip_validation)
+            bool_var.fix()
 
     def unfix(self):
         super().unfix()
@@ -154,19 +153,20 @@ class AutoLinkedBooleanVar(ScalarBooleanVar):
         super().set_value(val, skip_validation)
         if not _propagate_value:
             return
-        bin_var = self.get_associated_binary()
-        # Fetch the current value (so that it is cast to None/bool)
+        # Fetch the current value (so we know it has already been cast
+        # to None/bool)
         val = self.value
-        # (Settring _propagate_value prevents infinite recursion.)
         if val is not None:
             val = int(val)
-        bin_var.set_value(val, skip_validation, _propagate_value=False)
+        # (Setting _propagate_value prevents infinite recursion.)
+        self.get_associated_binary().set_value(
+            val, skip_validation, _propagate_value=False)
 
     def fix(self, val=NOTSET, skip_validation=False):
         super().fix(val, skip_validation)
         bin_var = self.get_associated_binary()
         if not bin_var.is_fixed():
-            bin_var.fix(skip_validation=skip_validation)
+            bin_var.fix()
 
     def unfix(self):
         super().unfix()
