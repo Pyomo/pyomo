@@ -144,17 +144,28 @@ class _BooleanVarData(ComponentData, BooleanValue):
         raise NotImplementedError
 
     def fix(self, value=NOTSET, skip_validation=False):
+        """Fix the value of this variable (treat as nonvariable)
+
+        This sets the `fixed` indicator to True.  If ``value`` is
+        provided, the value (and the ``skip_validation`` flag) are first
+        passed to :py:meth:`set_value()`.
+
         """
-        Set the fixed indicator to True. Value argument is optional,
-        indicating the variable should be fixed at its current value.
-        """
-        raise NotImplementedError
+        self.fixed = True
+        if value is not NOTSET:
+            self.set_value(value, skip_validation)
 
     def unfix(self):
-        """Sets the fixed indicator to False."""
-        raise NotImplementedError
+        """Unfix this varaible (treat as variable)
 
-    free=unfix
+        This sets the `fixed` indicator to False.
+
+        """
+        self.fixed = False
+
+    def free(self):
+        """Alias for :py:meth:`unfix`"""
+        return self.unfix()
 
 
 class _GeneralBooleanVarData(_BooleanVarData):
@@ -236,21 +247,6 @@ class _GeneralBooleanVarData(_BooleanVarData):
     def domain(self):
         """Return the domain for this variable."""
         return BooleanSet
-
-    def fix(self, value=NOTSET, skip_validation=False):
-        """
-        Set the fixed indicator to True. Value argument is optional,
-        indicating the variable should be fixed at its current value.
-        """
-        self.fixed = True
-        if value is not NOTSET:
-            self.set_value(value, skip_validation)
-
-    def unfix(self):
-        """Sets the fixed indicator to False."""
-        self.fixed = False
-
-    free = unfix
 
     def get_associated_binary(self):
         """Get the binary _VarData associated with this 
@@ -550,8 +546,6 @@ class ScalarBooleanVar(_GeneralBooleanVarData, BooleanVar):
             "is currently nothing to set)."
             % (self.name))
 
-    free=unfix
-
 
 class SimpleBooleanVar(metaclass=RenamedClass):
     __renamed__new_class__ = ScalarBooleanVar
@@ -562,23 +556,34 @@ class IndexedBooleanVar(BooleanVar):
     """An array of variables."""
 
     def fix(self, value=NOTSET, skip_validation=False):
-        """
-        Set the fixed indicator to True. Value argument is optional,
-        indicating the variable should be fixed at its current value.
+        """Fix all variables in this IndexedBooleanVar (treat as nonvariable)
+
+        This sets the `fixed` indicator to True for every variable in
+        this IndexedBooleanVar.  If ``value`` is provided, the value
+        (and the ``skip_validation`` flag) are first passed to
+        :py:meth:`set_value()`.
+
         """
         for boolean_vardata in self.values():
             boolean_vardata.fix(value, skip_validation)
 
     def unfix(self):
-        """Sets the fixed indicator to False."""
+        """Unfix all varaibles in this IndexedBooleanVar (treat as variable)
+
+        This sets the `fixed` indicator to False for every variable in
+        this IndexedBooleanVar.
+
+        """
         for boolean_vardata in self.values():
             boolean_vardata.unfix()
+
+    def free(self):
+        """Alias for :py:meth:`unfix`"""
+        return self.unfix()
 
     @property
     def domain(self):
         return BooleanSet
-
-    free=unfix
     
 
 @ModelComponentFactory.register("List of logical decision variables.")

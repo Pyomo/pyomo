@@ -255,18 +255,28 @@ class _VarData(ComponentData, NumericValue):
         """Return the stale indicator for this variable."""
         raise NotImplementedError
 
-    def fix(self, value=NOTSET, valid=False):
+    def fix(self, value=NOTSET, skip_validation=False):
+        """Fix the value of this variable (treat as nonvariable)
+
+        This sets the `fixed` indicator to True.  If ``value`` is
+        provided, the value (and the ``skip_validation`` flag) are first
+        passed to :py:meth:`set_value()`.
+
         """
-        Set the fixed indicator to True. Value argument is optional,
-        indicating the variable should be fixed at its current value.
-        """
-        raise NotImplementedError
+        self.fixed = True
+        if value is not NOTSET:
+            self.set_value(value, skip_validation)
 
     def unfix(self):
-        """Sets the fixed indicator to False."""
-        raise NotImplementedError
+        """Unfix this varaible (treat as variable)
+
+        This sets the `fixed` indicator to False.
+
+        """
+        self.fixed = False
 
     def free(self):
+        """Alias for :py:meth:`unfix`"""
         return self.unfix()
 
 
@@ -520,22 +530,6 @@ class _GeneralVarData(_VarData):
     # fixed is an attribute
 
     # stale is an attribute
-
-    def fix(self, value=NOTSET, skip_validation=False):
-        """Fix the value of this variable (treat as nonvariable)
-
-        This sets the `fixed` indicator to True.  If ``value`` is
-        provided, the value (and the ``valid`` flag) are first passed to
-        :py:meth:`set_value()`.
-
-        """
-        self.fixed = True
-        if value is not NOTSET:
-            self.set_value(value, skip_validation)
-
-    def unfix(self):
-        """Sets the fixed indicator to False."""
-        self.fixed = False
 
     def _process_bound(self, val, bound_type):
         if type(val) in native_numeric_types or val is None:
@@ -865,19 +859,29 @@ class IndexedVar(Var):
             vardata.upper = val
 
     def fix(self, value=NOTSET, skip_validation=False):
-        """
-        Set the fixed indicator to True. Value argument is optional,
-        indicating the variable should be fixed at its current value.
+        """Fix all variables in this IndexedVar (treat as nonvariable)
+
+        This sets the `fixed` indicator to True for every variable in
+        this IndexedVar.  If ``value`` is provided, the value (and the
+        ``skip_validation`` flag) are first passed to
+        :py:meth:`set_value()`.
+
         """
         for vardata in self.values():
             vardata.fix(value, skip_validation)
 
     def unfix(self):
-        """Sets the fixed indicator to False."""
+        """Unfix all varaibles in this IndexedVar (treat as variable)
+
+        This sets the `fixed` indicator to False for every variable in
+        this IndexedVar.
+
+        """
         for vardata in self.values():
             vardata.unfix()
 
     def free(self):
+        """Alias for :py:meth:`unfix`"""
         return self.unfix()
 
     @property
