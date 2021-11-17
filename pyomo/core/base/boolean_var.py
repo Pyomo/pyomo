@@ -41,7 +41,7 @@ class _DeprecatedImplicitAssociatedBinaryVariable(object):
                 "BooleanVars that do not appear in LogicalConstraints "
                 "is deprecated. Please associate your own binaries if "
                 "you have BooleanVars not used in logical expressions.",
-                version='TBD')
+                version='6.2')
 
         parent_block = self._boolvar().parent_block()
         new_var = Var(domain=Binary)
