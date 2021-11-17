@@ -68,8 +68,10 @@ class AutoLinkedBinaryVar(ScalarVar):
     def get_associated_boolean(self):
         return self._associated_boolean()
 
-    def set_value(self, val, skip_validation=False):
+    def set_value(self, val, skip_validation=False, _propagate_value=True):
         super().set_value(val, skip_validation)
+        if not _propagate_value:
+            return
         bool_var = self.get_associated_boolean()
         # Only update the associated Boolean value if it is needed
         # to match the current (potentially fractional) binary value.
@@ -80,8 +82,7 @@ class AutoLinkedBinaryVar(ScalarVar):
             bool_val = None
         else:
             bool_val = bool(int(val + 0.5))
-        if bool_val != bool_var.value:
-            bool_var.set_value(bool_val)
+        bool_var.set_value(bool_val, skip_validation, _propagate_value=False)
 
     def fix(self, val=NOTSET, skip_validation=False):
         super().fix(val, skip_validation)
@@ -147,27 +148,19 @@ class AutoLinkedBooleanVar(ScalarBooleanVar):
             % (self.name,), version='6.0')
         return self.get_associated_binary()
 
-    def set_value(self, val, skip_validation=False):
+    def set_value(self, val, skip_validation=False, _propagate_value=True):
         # super() does not work as expected for properties; we will call
         # the property setter explicitly.
         super().set_value(val, skip_validation)
+        if not _propagate_value:
+            return
         bin_var = self.get_associated_binary()
-        bin_val = bin_var.value
-        if bin_val is None:
-            bool_val = None
-        elif fabs(bin_val - 0.5) < 0.5 - AutoLinkedBinaryVar.INTEGER_TOLERANCE:
-            bool_val = None
-        else:
-            bool_val = bool(int(bin_val + 0.5))
         # Fetch the current value (so that it is cast to None/bool)
         val = self.value
-        # Only update the associated (potentially fractional) binary
-        # value if it is needed to match the current Boolean value.
-        # (This prevents infinite recursion.)
-        if val != bool_val:
-            if val is not None:
-                val = int(val)
-            bin_var.set_value(val)
+        # (Settring _propagate_value prevents infinite recursion.)
+        if val is not None:
+            val = int(val)
+        bin_var.set_value(val, skip_validation, _propagate_value=False)
 
     def fix(self, val=NOTSET, skip_validation=False):
         super().fix(val, skip_validation)
