@@ -2318,7 +2318,7 @@ class Test(unittest.TestCase):
 
 
     def test_quadratic2(self):
-        m = AbstractModel()
+        m = ConcreteModel()
         m.a = Var()
         m.b = Var()
         m.c = Var()
@@ -3511,7 +3511,7 @@ class Test(unittest.TestCase):
         #       ExprIf
         #      /  |   \
         #   True  a    b
-        m = AbstractModel()
+        m = ConcreteModel()
         m.a = Var()
         m.b = Var()
         m.c = Var()
@@ -4015,17 +4015,19 @@ class Test(unittest.TestCase):
         rep = generate_standard_repn(e, compute_values=True)
         self.assertEqual(str(rep.to_expression()), "w")
 
-        e = Expr_if(not m.p, 1, 0)
+        e = Expr_if(m.p == 0, 1, 0)
         rep = generate_standard_repn(e, compute_values=True)
         self.assertEqual(str(rep.to_expression()), "0")
         rep = generate_standard_repn(e, compute_values=False)
-        self.assertEqual(str(rep.to_expression()), "Expr_if( ( 0.0 ), then=( 1 ), else=( 0 ) )")
+        self.assertEqual(str(rep.to_expression()),
+                         "Expr_if( ( p  ==  0 ), then=( 1 ), else=( 0 ) )")
 
-        e = Expr_if(not m.p, 1, m.v)
+        e = Expr_if(m.p == 0, 1, m.v)
         rep = generate_standard_repn(e, compute_values=True)
         self.assertEqual(str(rep.to_expression()), "0")
         rep = generate_standard_repn(e, compute_values=False)
-        self.assertEqual(str(rep.to_expression()), "Expr_if( ( 0.0 ), then=( 1 ), else=( v ) )")
+        self.assertEqual(str(rep.to_expression()),
+                         "Expr_if( ( p  ==  0 ), then=( 1 ), else=( v ) )")
 
         e = Expr_if(m.v, 1, 0)
         rep = generate_standard_repn(e, compute_values=True)

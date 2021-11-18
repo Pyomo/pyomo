@@ -212,12 +212,6 @@ class _ParamData(ComponentData, NumericValue):
         """
         return 0
 
-    def __nonzero__(self):
-        """Return True if the value is defined and non-zero."""
-        return bool(self())
-
-    __bool__ = __nonzero__
-
 
 @ModelComponentFactory.register("Parameter data that is used to define a model instance.")
 class Param(IndexedComponent, IndexedComponent_NDArrayMixin):

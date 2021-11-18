@@ -24,10 +24,9 @@ from pyomo.core.expr.numvalue import nonpyomo_leaf_types
 from pyomo.core.expr.numeric_expr import (
     AbsExpression, LinearExpression, NegationExpression, NPV_AbsExpression,
     NPV_ExternalFunctionExpression, NPV_NegationExpression, NPV_PowExpression,
-    NPV_ProductExpression, NPV_ReciprocalExpression, NPV_SumExpression,
-    NPV_UnaryFunctionExpression, PowExpression, ProductExpression,
-    ReciprocalExpression, SumExpression, UnaryFunctionExpression,
-    NPV_DivisionExpression, DivisionExpression,
+    NPV_ProductExpression, NPV_SumExpression, NPV_UnaryFunctionExpression,
+    PowExpression, ProductExpression, SumExpression,
+    UnaryFunctionExpression, NPV_DivisionExpression, DivisionExpression,
 )
 from pyomo.core.expr.visitor import (
     StreamBasedExpressionVisitor, identify_variables,
@@ -49,7 +48,7 @@ def mcpp_available():
 NPV_expressions = (
     NPV_AbsExpression, NPV_ExternalFunctionExpression,
     NPV_NegationExpression, NPV_PowExpression,
-    NPV_ProductExpression, NPV_ReciprocalExpression, NPV_SumExpression,
+    NPV_ProductExpression, NPV_SumExpression,
     NPV_UnaryFunctionExpression, NPV_DivisionExpression,
 )
 
@@ -116,10 +115,6 @@ def _MCPP_lib():
     # sqrt function
     mcpp.mc_sqrt.argtypes = [ctypes.c_void_p]
     mcpp.mc_sqrt.restype = ctypes.c_void_p
-
-    # 1 / MC Variable
-    mcpp.reciprocal.argtypes = [ctypes.c_void_p]
-    mcpp.reciprocal.restype = ctypes.c_void_p
 
     # - MC Variable
     mcpp.negation.argtypes = [ctypes.c_void_p]
@@ -249,9 +244,6 @@ class MCPP_visitor(StreamBasedExpressionVisitor):
                 ans = self.mcpp.try_binary_fcn(self.mcpp.powerf, data[0], data[1])
             else:
                 ans = self.mcpp.try_binary_fcn(self.mcpp.powerx, data[0], data[1])
-        elif isinstance(node, ReciprocalExpression):
-            # Note: unreachable after ReciprocalExpression was removed
-            ans = self.mcpp.try_unary_fcn(self.mcpp.reciprocal, data[0])
         elif isinstance(node, DivisionExpression):
             ans = self.mcpp.try_binary_fcn(self.mcpp.divide, data[0], data[1])
         elif isinstance(node, NegationExpression):

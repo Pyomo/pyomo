@@ -159,7 +159,7 @@ def calc_cp(alpha, beta, k):
             poly = [sum(pair) for pair in zip(poly, prod)]
 
     cp = numpy.roots(poly)
-    return cp
+    return numpy.sort(cp).tolist()
 
 # BLN: This is a legacy function that was used to calculate the collocation
 # constants for an alternative form of the collocation equations described
@@ -229,7 +229,7 @@ def calc_afinal(cp):
         p = [1]
         for j in range(len(cp) - 1):
             p = conv(p, ptmp[j])
-        afinal.append(numpy.polyval(p, 1.0))
+        afinal.append(float(numpy.polyval(p, 1.0)))
     return afinal
 
 
@@ -301,7 +301,7 @@ class Collocation_Discretization_Transformation(Transformation):
             alpha = 1
             beta = 0
             k = self._ncp[currentds] - 1
-            cp = sorted(list(calc_cp(alpha, beta, k)))
+            cp = calc_cp(alpha, beta, k)
             cp.insert(0, 0.0)
             cp.append(1.0)
             adot = calc_adot(cp, 1)
@@ -336,7 +336,7 @@ class Collocation_Discretization_Transformation(Transformation):
             alpha = 0
             beta = 0
             k = self._ncp[currentds]
-            cp = sorted(list(calc_cp(alpha, beta, k)))
+            cp = calc_cp(alpha, beta, k)
             cp.insert(0, 0.0)
             adot = calc_adot(cp, 1)
             adotdot = calc_adot(cp, 2)

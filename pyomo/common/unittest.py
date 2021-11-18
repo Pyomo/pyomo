@@ -40,11 +40,27 @@ from unittest import mock
 def _defaultFormatter(msg, default):
     return msg or default
 
+def _floatOrCall(val):
+    """Cast the value to float, if that fails call it and then cast.
+
+    This is an "augmented" version of float() to better support
+    integration with Pyomo NumericValue objects: if the initial cast to
+    float fails by throwing a TypeError (as non-constant NumericValue
+    objects will), then it falls back on calling the object and
+    returning that value cast to float.
+
+    """
+    try:
+        return float(val)
+    except TypeError:
+        return float(val())
+
 def assertStructuredAlmostEqual(first, second,
                                 places=None, msg=None, delta=None,
                                 reltol=None, abstol=None,
                                 allow_second_superset=False,
-                                item_callback=float, exception=ValueError,
+                                item_callback=_floatOrCall,
+                                exception=ValueError,
                                 formatter=_defaultFormatter):
     """Test that first and second are equal up to a tolerance
 
@@ -157,6 +173,7 @@ def _assertStructuredAlmostEqual(first, second,
     """Recursive implementation of assertStructuredAlmostEqual"""
 
     args = (first, second)
+    f, s = args
     if all(isinstance(_, Mapping) for _ in args):
         if exact and len(first) != len(second):
             raise exception(
@@ -226,11 +243,17 @@ def _assertStructuredAlmostEqual(first, second,
         except:
             pass
 
-    raise exception(
-        "%s !~= %s" % (
-            _unittest.case.safe_repr(first),
-            _unittest.case.safe_repr(second),
-        ))
+    msg = "%s !~= %s" % (
+        _unittest.case.safe_repr(first),
+        _unittest.case.safe_repr(second),
+    )
+    if f is not first or s is not second:
+        msg = "%s !~= %s (%s)" % (
+            _unittest.case.safe_repr(f),
+            _unittest.case.safe_repr(s),
+            msg,
+        )
+    raise exception(msg)
 
 
 def _category_to_tuple(_cat):
@@ -509,7 +532,7 @@ class TestCase(_unittest.TestCase):
                                     places=None, msg=None, delta=None,
                                     reltol=None, abstol=None,
                                     allow_second_superset=False,
-                                    item_callback=float):
+                                    item_callback=_floatOrCall):
         assertStructuredAlmostEqual(
             first=first,
             second=second,

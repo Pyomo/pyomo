@@ -21,7 +21,7 @@ import logging
 from weakref import ref as weakref_ref
 
 from pyomo.common.log import is_debug_set
-from pyomo.common.deprecation import deprecated, RenamedClass
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import value
@@ -30,11 +30,9 @@ from pyomo.core.base.component import (
 )
 from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent, UnindexedComponent_set, rule_wrapper,
-    _get_indexed_component_data_name,
 )
 from pyomo.core.base.expression import (_ExpressionData,
                                         _GeneralExpressionDataImpl)
-from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import Set
 from pyomo.core.base.initializer import (
     Initializer, IndexedCallInitializer, CountedCallInitializer,
@@ -345,12 +343,14 @@ class Objective(ActiveIndexedComponent):
     def _getitem_when_not_present(self, index):
         if self.rule is None:
             raise KeyError(index)
+
+        block = self.parent_block()
         obj = self._setitem_when_not_present(
-            index, self.rule(self.parent_block(), index))
+            index, self.rule(block, index))
         if obj is None:
             raise KeyError(index)
-        else:
-            obj.set_sense(self._init_sense(block, index))
+        obj.set_sense(self._init_sense(block, index))
+
         return obj
 
     def _pprint(self):
@@ -435,19 +435,6 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
     @expr.setter
     def expr(self, expr):
         """Set the expression of this objective."""
-        self.set_value(expr)
-
-    # for backwards compatibility reasons
-    @property
-    @deprecated("The .value property getter on ScalarObjective is deprecated. "
-                "Use the .expr property getter instead", version='4.3.11323')
-    def value(self):
-        return self.expr
-
-    @value.setter
-    @deprecated("The .value property setter on ScalarObjective is deprecated. "
-                "Use the set_value(expr) method instead", version='4.3.11323')
-    def value(self, expr):
         self.set_value(expr)
 
     @property

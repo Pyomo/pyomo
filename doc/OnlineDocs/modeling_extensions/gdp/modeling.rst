@@ -169,6 +169,8 @@ Usage:
         Key  : Body                                 : Active
         None : atleast(3: [Y[1], Y[2], Y[3], Y[4]]) :  False
 
+We elaborate on the ``logical_to_linear`` transformation :ref:`on the next page <gdp-reformulations>`.
+
 Indexed logical constraints
 ---------------------------
 
@@ -247,9 +249,8 @@ Here, we demonstrate this capability with a toy example:
     ...    expr=m.d[1].indicator_var.implies(m.d[4].indicator_var))
     >>> # Note: the implicit XOR enforced by m.djn[1] and m.djn[2] still apply
 
-    >>> # Convert logical propositions to linear algebraic constraints
-    >>> # and apply the Big-M reformulation.
-    >>> TransformationFactory('core.logical_to_linear').apply_to(m)
+    >>> # Apply the Big-M reformulation: It will convert the logical
+    >>> # propositions to algebraic expressions.
     >>> TransformationFactory('gdp.bigm').apply_to(m)
 
     >>> # Before solve, Boolean vars have no value
@@ -261,8 +262,7 @@ Here, we demonstrate this capability with a toy example:
           3 :  None : False :  True
           4 :  None : False :  True
 
-    >>> # Solve the reformulated model and update the Boolean variables
-    >>> # based on the algebraic model results
+    >>> # Solve the reformulated model
     >>> run_data = SolverFactory('glpk').solve(m)
     >>> Reference(m.d[:].indicator_var).display()
     IndexedBooleanVar : Size=4, Index=s, ReferenceTo=d[:].indicator_var
@@ -271,8 +271,6 @@ Here, we demonstrate this capability with a toy example:
           2 : False : False : False
           3 : False : False : False
           4 :  True : False : False
-
-We elaborate on the ``logical_to_linear`` transformation :ref:`on the next page <gdp-reformulations>`.
 
 .. _gdp-advanced-examples:
 
