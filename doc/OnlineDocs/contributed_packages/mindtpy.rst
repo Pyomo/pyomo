@@ -22,6 +22,32 @@ Usage and implementation details for MindtPy can be found in the PSE 2018 paper 
 .. _Duran & Grossmann, 1986: https://dx.doi.org/10.1007/BF02592064
 .. _Westerlund & Petterson, 1995: http://dx.doi.org/10.1016/0098-1354(95)87027-X
 
+MINLP Formulation
+=================
+
+The general formulation of the mixed integer nonlinear programming (MINLP) models is as follows.
+
+.. math::
+    :nowrap:
+
+    \begin{equation}
+    \label{eq:MINLP}
+    \tag{MINLP}
+    \begin{aligned}
+      &\min_{\mathbf{x,y}} &&f(\mathbf{x,y})\\
+    & \text{s.t.} \ &&g_j(\mathbf{x,y}) \leq 0 \quad \ \forall j=1,\dots l,\\
+    & &&\mathbf{A}\mathbf{x} +\mathbf{B}\mathbf{y} \leq \mathbf{b}, \\
+    & &&\mathbf{x}\in {\mathbb R}^n,\ \mathbf{y} \in {\mathbb Z}^m.
+    \end{aligned}
+    \end{equation}
+
+where 
+
+- :math:`\mathbf{x}\in {\mathbb R}^n` are continuous variables,
+- :math:`\mathbf{y} \in {\mathbb Z}^m` are discrete variables, 
+- :math:`f, g_1, \dots, g_l` are non-linear functions, 
+- :math:`\mathbf{A}\mathbf{x} +\mathbf{B}\mathbf{y} \leq \mathbf{b}`` are linear constraints.
+
 Solve convex MINLPs
 ===================
 
@@ -69,7 +95,7 @@ The solution may then be displayed by using the commands
 
   >>> SolverFactory('mindtpy').solve(model, mip_solver='glpk', nlp_solver='ipopt', tee=True)
 
-MindtPy also supports setting options for mip solver and nlp solver. 
+MindtPy also supports setting options for mip solvers and nlp solvers. 
 
 .. code::
 
@@ -81,7 +107,7 @@ MindtPy also supports setting options for mip solver and nlp solver.
                                      nlp_solver='ipopt',
                                      tee=True)
 
-There are three initialization strategies in MindtPy: rNLP, initial_binary, max_binary. In OA and GOA strategies, the default initialization strategy is rNLP. In ECP strategy, the default initialization strategy is max_binary.
+There are three initialization strategies in MindtPy: ``rNLP``, ``initial_binary``, ``max_binary``. In OA and GOA strategies, the default initialization strategy is ``rNLP``. In ECP strategy, the default initialization strategy is ``max_binary``.
 
 LP/NLP based branch and bound algorithm(Single-tree implementation)
 -------------------------------------------------------------------
@@ -229,8 +255,8 @@ Convergence
 
 MindtPy provides two ways to guarantee the finite convergence of the algorithm. 
 
-- No-good cuts. No-good cuts(integer cuts) are added to the MILP master problem in each iteration. 
-- Tabu list. Tabu list is supported only if the ``mip_solver`` is ``cplex_persistent`` (``gurobi_persistent`` pending). In each iteration, the explored integer combinations will added to the tabu_list. When solving the next MILP problem, the MIP solver will reject the previously explored solutions in the branch and bound process through IncumbentCallback.
+- **No-good cuts**. No-good cuts(integer cuts) are added to the MILP master problem in each iteration. 
+- **Tabu list**. Tabu list is supported only if the ``mip_solver`` is ``cplex_persistent`` (``gurobi_persistent`` pending). In each iteration, the explored integer combinations will added to the tabu_list. When solving the next MILP problem, the MIP solver will reject the previously explored solutions in the branch and bound process through IncumbentCallback.
 
 
 Bound calculation
