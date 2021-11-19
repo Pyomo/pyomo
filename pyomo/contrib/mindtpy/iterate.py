@@ -239,6 +239,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         return True
 
     # Check if algorithm is stalling
+    # BUG TODO: here only applies to minimization problems.
     if len(solve_data.LB_progress) >= config.stalling_limit:
         if abs(solve_data.LB_progress[-1] - solve_data.LB_progress[-config.stalling_limit]) <= config.zero_tolerance:
             config.logger.info(
