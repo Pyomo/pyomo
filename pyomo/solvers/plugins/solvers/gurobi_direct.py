@@ -205,8 +205,11 @@ class GurobiDirect(DirectSolver):
 
         self._solver_model.optimize(self._callback)
         self._needs_updated = False
-
-        self._solver_model.setParam('LogFile', 'default')
+        
+        if self._keepfiles:
+            # Change LogFile to make Gurobi close the original log file.
+            # May not work for all Gurobi versions, like ver. 9.5.0.
+            self._solver_model.setParam('LogFile', 'default')
 
         # FIXME: can we get a return code indicating if Gurobi had a significant failure?
         return Bunch(rc=None, log=None)
