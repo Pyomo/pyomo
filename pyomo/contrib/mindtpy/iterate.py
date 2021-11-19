@@ -307,7 +307,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
             solve_data.curr_int_sol = get_integer_solution(solve_data.mip)
             if config.cycling_check and solve_data.mip_iter >= 1:
                 if solve_data.curr_int_sol in set(solve_data.integer_list):
-                    config.logger.warning(
+                    config.logger.info(
                         'Cycling happens after {} main iterations. '
                         'The same combination is obtained in iteration {} '
                         'This issue happens when the NLP subproblem violates constraint qualification. '

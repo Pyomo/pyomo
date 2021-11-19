@@ -18,7 +18,7 @@ from pyomo.contrib.gdpopt.util import copy_var_list_values, SuppressInfeasibleWa
 from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.common.dependencies import attempt_import
-from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function, set_solver_options, GurobiPersistent4MindtPy, update_gap
+from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function, set_solver_options, GurobiPersistent4MindtPy, update_dual_bound, update_dual_bound_use_bound
 
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
@@ -82,18 +82,7 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
         return None, None
     if main_mip_results.solver.termination_condition is tc.optimal:
         if config.single_tree and not config.add_no_good_cuts and not regularization_problem:
-            if solve_data.objective_sense == minimize:
-                solve_data.LB = max(
-                    main_mip_results.problem.lower_bound, solve_data.LB)
-                solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
-                solve_data.LB_progress.append(solve_data.LB)
-            else:
-                solve_data.UB = min(
-                    main_mip_results.problem.upper_bound, solve_data.UB)
-                solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
-                solve_data.UB_progress.append(solve_data.UB)
-            if solve_data.bound_improved:
-                update_gap(solve_data)
+            update_dual_bound_use_bound(solve_data, main_mip_results)
         if regularization_problem:
             config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'Reg '+solve_data.regularization_mip_type,
                                                                value(
@@ -206,18 +195,7 @@ def handle_main_optimal(main_mip, solve_data, config, update_bound=True):
         config)
 
     if update_bound:
-        if solve_data.objective_sense == minimize:
-            solve_data.LB = max(
-                value(MindtPy.mip_obj.expr), solve_data.LB)
-            solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
-            solve_data.LB_progress.append(solve_data.LB)
-        else:
-            solve_data.UB = min(
-                value(MindtPy.mip_obj.expr), solve_data.UB)
-            solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
-            solve_data.UB_progress.append(solve_data.UB)
-        if solve_data.bound_improved:
-            update_gap(solve_data)
+        update_dual_bound(solve_data, value(MindtPy.mip_obj.expr))
         config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'MILP', value(MindtPy.mip_obj.expr),
                                                            solve_data.LB, solve_data.UB, solve_data.rel_gap,
                                                            get_main_elapsed_time(solve_data.timing)))
@@ -263,18 +241,7 @@ def handle_main_other_conditions(main_mip, main_mip_results, solve_data, config)
             main_mip.MindtPy_utils.variable_list,
             solve_data.working_model.MindtPy_utils.variable_list,
             config)
-        if solve_data.objective_sense == minimize:
-            solve_data.LB = max(
-                main_mip_results.problem.lower_bound, solve_data.LB)
-            solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
-            solve_data.LB_progress.append(solve_data.LB)
-        else:
-            solve_data.UB = min(
-                main_mip_results.problem.upper_bound, solve_data.UB)
-            solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
-            solve_data.UB_progress.append(solve_data.UB)
-        if solve_data.bound_improved:
-            update_gap(solve_data)
+        update_dual_bound_use_bound(solve_data, main_mip_results)
         # TODO: replace this log
         config.logger.info(
             'MIP %s: OBJ: %s  LB: %s  UB: %s'
@@ -347,18 +314,8 @@ def handle_main_max_timelimit(main_mip, main_mip_results, solve_data, config):
         main_mip.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,
         config)
-    if solve_data.objective_sense == minimize:
-        solve_data.LB = max(
-            main_mip_results.problem.lower_bound, solve_data.LB)
-        solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
-        solve_data.LB_progress.append(solve_data.LB)
-    else:
-        solve_data.UB = min(
-            main_mip_results.problem.upper_bound, solve_data.UB)
-        solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
-        solve_data.UB_progress.append(solve_data.UB)
-    if solve_data.bound_improved:
-        update_gap(solve_data)
+    update_dual_bound_use_bound(solve_data, main_mip_results)
+    # TODO: replace this log
     config.logger.info(
         'MIP %s: OBJ: %s  LB: %s  UB: %s'
         % (solve_data.mip_iter, value(MindtPy.mip_obj.expr),

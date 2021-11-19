@@ -21,7 +21,7 @@ from math import fabs
 from pyomo.core.expr import current as EXPR
 import pyomo.environ as pyo
 from math import copysign
-from pyomo.contrib.mindtpy.util import get_integer_solution, update_gap
+from pyomo.contrib.mindtpy.util import get_integer_solution, update_dual_bound, update_primal_bound
 from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables, get_main_elapsed_time, time_code
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, solve_feasibility_subproblem, handle_nlp_subproblem_tc
 from pyomo.opt import TerminationCondition as tc
@@ -322,18 +322,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                                        main_mip.MindtPy_utils.variable_list,
                                        solve_data.working_model.MindtPy_utils.variable_list,
                                        config)
-        if solve_data.objective_sense == minimize:
-            solve_data.LB = max(
-                self.get_best_objective_value(), solve_data.LB)
-            solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
-            solve_data.LB_progress.append(solve_data.LB)
-        else:
-            solve_data.UB = min(
-                self.get_best_objective_value(), solve_data.UB)
-            solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
-            solve_data.UB_progress.append(solve_data.UB)
-        if solve_data.bound_improved:
-            update_gap(solve_data)
+        update_dual_bound(solve_data, self.get_best_objective_value())
         config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'LP', self.get_objective_value(),
                                                            solve_data.LB, solve_data.UB, solve_data.rel_gap, get_main_elapsed_time(solve_data.timing)))
 
@@ -362,16 +351,8 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
         else:
             dual_values = None
         main_objective = fixed_nlp.MindtPy_utils.objective_list[-1]
-        if solve_data.objective_sense == minimize:
-            solve_data.UB = min(value(main_objective.expr), solve_data.UB)
-            solve_data.solution_improved = solve_data.UB < solve_data.UB_progress[-1]
-            solve_data.UB_progress.append(solve_data.UB)
-        else:
-            solve_data.LB = max(value(main_objective.expr), solve_data.LB)
-            solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
-            solve_data.LB_progress.append(solve_data.LB)
+        update_primal_bound(solve_data, value(main_objective.expr))
         if solve_data.solution_improved:
-            update_gap(solve_data)
             solve_data.best_solution_found = fixed_nlp.clone()
             solve_data.best_solution_found_time = get_main_elapsed_time(
                 solve_data.timing)
@@ -745,18 +726,8 @@ def handle_lazy_main_feasible_solution_gurobi(cb_m, cb_opt, solve_data, config):
     copy_var_list_values(cb_m.MindtPy_utils.variable_list,
                          solve_data.working_model.MindtPy_utils.variable_list,
                          config)
-    if solve_data.objective_sense == minimize:
-        solve_data.LB = max(
-            cb_opt.cbGet(gurobipy.GRB.Callback.MIPSOL_OBJBND), solve_data.LB)
-        solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
-        solve_data.LB_progress.append(solve_data.LB)
-    else:
-        solve_data.UB = min(
-            cb_opt.cbGet(gurobipy.GRB.Callback.MIPSOL_OBJBND), solve_data.UB)
-        solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
-        solve_data.UB_progress.append(solve_data.UB)
-    if solve_data.bound_improved:
-        update_gap(solve_data)
+    update_dual_bound(solve_data, cb_opt.cbGet(
+        gurobipy.GRB.Callback.MIPSOL_OBJBND))
     config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'LP', cb_opt.cbGet(gurobipy.GRB.Callback.MIPSOL_OBJ),
                                                        solve_data.LB, solve_data.UB, solve_data.rel_gap,
                                                        get_main_elapsed_time(solve_data.timing)))

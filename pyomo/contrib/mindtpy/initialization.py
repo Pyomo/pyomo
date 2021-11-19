@@ -14,14 +14,13 @@ from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning, _DoNothing,
                                        copy_var_list_values, get_main_elapsed_time)
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_affine_cuts
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem
-from pyomo.contrib.mindtpy.util import calc_jacobians, set_solver_options, var_bound_add, get_integer_solution
+from pyomo.contrib.mindtpy.util import calc_jacobians, set_solver_options, update_dual_bound, var_bound_add, get_integer_solution, update_dual_bound_use_bound
 from pyomo.core import (ConstraintList, Objective,
                         TransformationFactory, maximize, minimize,
                         value, Var)
 from pyomo.opt import SolverFactory, TerminationCondition as tc
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, handle_nlp_subproblem_tc
-import math
 from pyomo.contrib.mindtpy.feasibility_pump import fp_loop
 import logging
 
@@ -133,28 +132,19 @@ def init_rNLP(solve_data, config):
         results = nlpopt.solve(m, tee=config.nlp_solver_tee, **nlp_args)
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond in {tc.optimal, tc.feasible, tc.locallyOptimal}:
-        if subprob_terminate_cond in {tc.feasible, tc.locallyOptimal}:
+        main_objective = MindtPy.objective_list[-1]
+        if subprob_terminate_cond == tc.optimal:
+            update_dual_bound(solve_data, value(main_objective.expr))
+        else:
             config.logger.info(
                 'relaxed NLP is not solved to optimality.')
+            update_dual_bound_use_bound(solve_data, results)
         dual_values = list(
             m.dual[c] for c in MindtPy.constraint_list) if config.calculate_dual else None
-        # Add OA cut
-        # This covers the case when the Lower bound does not exist.
-        # TODO: should we use the bound of the rNLP here?
-        # TODO: ipopt will not provide the LB or UB, replce lower_bound and upper_bound with value(obj)
-        if solve_data.objective_sense == minimize:
-            if not math.isnan(results.problem.lower_bound):
-                solve_data.LB = results.problem.lower_bound
-                solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
-                solve_data.LB_progress.append(results.problem.lower_bound)
-        elif not math.isnan(results.problem.upper_bound):
-            solve_data.UB = results.problem.upper_bound
-            solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
-            solve_data.UB_progress.append(results.problem.upper_bound)
-        main_objective = MindtPy.objective_list[-1]
         config.logger.info(solve_data.log_formatter.format('-', 'Relaxed NLP', value(main_objective.expr),
                                                            solve_data.LB, solve_data.UB, solve_data.rel_gap,
                                                            get_main_elapsed_time(solve_data.timing)))
+        # Add OA cut
         if config.strategy in {'OA', 'GOA', 'FP'}:
             copy_var_list_values(m.MindtPy_utils.variable_list,
                                  solve_data.mip.MindtPy_utils.variable_list,

@@ -23,6 +23,7 @@ from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.common.dependencies import attempt_import
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.solvers.plugins.solvers.gurobi_persistent import GurobiPersistent
+import math
 
 pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 numpy = attempt_import('numpy')[0]
@@ -641,3 +642,49 @@ def update_gap(solve_data):
     solve_data.abs_gap = solve_data.UB - solve_data.LB
     solve_data.rel_gap = (solve_data.UB - solve_data.LB)/(abs(
         solve_data.UB if solve_data.objective_sense == minimize else solve_data.LB) + 1E-10)
+
+
+def update_dual_bound(solve_data, bound_value):
+    '''
+    Call after solve relaxed problem, including relaxed NLP and MIP master problem.
+    Use the optimal primal bound of the relaxed problem to update the dual bound.
+    '''
+    if math.isnan(bound_value):
+        return
+    if solve_data.objective_sense == minimize:
+        solve_data.LB = max(bound_value, solve_data.LB)
+        solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
+        solve_data.LB_progress.append(solve_data.LB)
+    else:
+        solve_data.UB = min(bound_value, solve_data.UB)
+        solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
+        solve_data.UB_progress.append(solve_data.UB)
+    if solve_data.bound_improved:
+        update_gap(solve_data)
+
+
+def update_dual_bound_use_bound(solve_data, results):
+    '''
+    If the relaxed problem is not solved to optimality, the dual bound is updated according to
+    the dual bound of relaxed problem.
+    '''
+    if solve_data.objective_sense == minimize:
+        bound_value = results.problem.lower_bound
+    else:
+        bound_value = results.problem.upper_bound
+    update_dual_bound(solve_data, bound_value)
+
+
+def update_primal_bound(solve_data, bound_value):
+    if math.isnan(bound_value):
+        return
+    if solve_data.objective_sense == minimize:
+        solve_data.UB = min(bound_value, solve_data.UB)
+        solve_data.solution_improved = solve_data.UB < solve_data.UB_progress[-1]
+        solve_data.UB_progress.append(solve_data.UB)
+    else:
+        solve_data.LB = max(bound_value, solve_data.LB)
+        solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
+        solve_data.LB_progress.append(solve_data.LB)
+    if solve_data.solution_improved:
+        update_gap(solve_data)
