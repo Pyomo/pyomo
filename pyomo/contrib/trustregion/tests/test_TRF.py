@@ -20,7 +20,6 @@ from pyomo.environ import (
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
 @unittest.skipIf(not SolverFactory('ipopt').available(False), "The IPOPT solver is not available")
-@unittest.skipIf(not SolverFactory('gjh').available(False), "The GJH solver is not available")
 @unittest.skipIf(not numpy_available, "Cannot test the trustregion solver without numpy")
 class TestTrustRegionConfig(unittest.TestCase):
 
@@ -35,9 +34,6 @@ class TestTrustRegionConfig(unittest.TestCase):
             return sin(a-b)
         self.bb = ExternalFunction(blackbox)
 
-        def maprule(a,b):
-            return sin(a-b)
-
         m.obj = Objective(
             expr=(m.z[0]-1.0)**2 + (m.z[0]-m.z[1])**2 + (m.z[2]-1.0)**2 \
                 + (m.x[0]-1.0)**4 + (m.x[1]-1.0)**6 # + m.bb(m.x[0],m.x[1])
@@ -47,10 +43,13 @@ class TestTrustRegionConfig(unittest.TestCase):
 
         self.m = m.clone()
 
-    def try_solve(self):
+    def maprule(self, a, b):
+        return a**2 + b**2
+
+    def try_solve(self, **kwds):
         status = True
         try:
-            self.TRF.solve(self.m, [self.bb], **kwds)
+            self.TRF.solve(self.m, **kwds)
         except Exception as e:
             print('error calling TRF.solve: %s' % str(e))
             status = False
@@ -58,7 +57,7 @@ class TestTrustRegionConfig(unittest.TestCase):
 
     def test_config_vars(self):
         self.TRF = SolverFactory('trustregion')
-        self.assertEqual(self.TRF.config.trust_radius, 1.0)
+        self.assertEqual(self.TRF._CONFIG.trust_radius, 1.0)
 
         # Both persistent and local values should be 1.0
         solve_status = self.try_solve()
@@ -68,18 +67,18 @@ class TestTrustRegionConfig(unittest.TestCase):
     def test_solve_with_new_kwdval(self):
         # Initialized with 1.0
         self.TRF = SolverFactory('trustregion')
-        self.assertEqual(self.TRF.config.trust_radius, 1.0)
+        self.assertEqual(self.TRF._CONFIG.trust_radius, 1.0)
 
         solve_status = self.try_solve(trust_radius=2.0)
         self.assertTrue(solve_status)
-        self.assertEqual(self.TRF.config.trust_radius, 1.0)
+        self.assertEqual(self.TRF.config.trust_radius, 2.0)
 
     def test_update_kwdval(self):
         # Initialized with 1.0
         self.TRF = SolverFactory('trustregion')
-        self.assertEqual(self.TRF.config.trust_radius, 1.0)
+        self.assertEqual(self.TRF._CONFIG.trust_radius, 1.0)
 
-        self.TRF.config.trust_radius = 4.0
+        self.TRF._CONFIG.trust_radius = 4.0
         solve_status = self.try_solve()
         self.assertTrue(solve_status)
         self.assertEqual(self.TRF.config.trust_radius, 4.0)
@@ -87,15 +86,15 @@ class TestTrustRegionConfig(unittest.TestCase):
     def test_update_kwdval_solve_with_new_kwdval(self):
         # Initialized with 1.0
         self.TRF = SolverFactory('trustregion')
-        self.assertEqual(self.TRF.config.trust_radius, 1.0)
+        self.assertEqual(self.TRF._CONFIG.trust_radius, 1.0)
 
-        self.TRF.config.trust_radius = 4.0
-        self.assertEqual(self.TRF.config.trust_radius, 4.0)
+        self.TRF._CONFIG.trust_radius = 4.0
+        self.assertEqual(self.TRF._CONFIG.trust_radius, 4.0)
 
     def test_initialize_with_kwdval(self):
         # Initialized with 3.0
         self.TRF = SolverFactory('trustregion', trust_radius=3.0)
-        self.assertEqual(self.TRF.config.trust_radius, 3.0)
+        self.assertEqual(self.TRF._CONFIG.trust_radius, 3.0)
 
         solve_status = self.try_solve()
         self.assertTrue(solve_status)
@@ -104,8 +103,9 @@ class TestTrustRegionConfig(unittest.TestCase):
     def test_initialize_with_kwdval_solve_with_new_kwdval(self):
         # Initialized with 3.0
         self.TRF = SolverFactory('trustregion', trust_radius=3.0)
-        self.assertEqual(self.TRF.config.trust_radius, 3.0)
+        self.assertEqual(self.TRF._CONFIG.trust_radius, 3.0)
 
         solve_status = self.try_solve(trust_radius=2.0)
         self.assertTrue(solve_status)
-        self.assertEqual(self.TRF.config.trust_radius, 3.0)
+        self.assertEqual(self.TRF._CONFIG.trust_radius, 3.0)
+        self.assertEqual(self.TRF.config.trust_radius, 2.0)

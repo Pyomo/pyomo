@@ -306,7 +306,10 @@ class TrustRegionSolver(object):
     The Trust Region Solver is a 'solver' based on the 2016/2018/2020 AiChE
     papers by Eason (2016/2018), Yoshio (2020), and Biegler.
     """
-    CONFIG = _trf_config()
+
+    def __init__(self, **kwds):
+        self._CONFIG = _trf_config()
+        self._CONFIG.set_value(kwds)
 
     def available(self, exception_flag=True):
         """
@@ -332,11 +335,11 @@ class TrustRegionSolver(object):
     def __exit__(self, et, ev, tb):
         pass
 
-    def solve(self, model, efList, ext_fcn_surrogate_map_rule=None, **kwds):
-        self.config = self.CONFIG(kwds.pop('options', {}))
+    def solve(self, model, ext_fcn_surrogate_map_rule=None, **kwds):
+        self.config = self._CONFIG(kwds.pop('options', {}))
         self.config.set_value(kwds)
         if ext_fcn_surrogate_map_rule is None:
             # If the user does not pass us a "basis" function,
             # we default to 0.
             ext_fcn_surrogate_map_rule = lambda comp,ef: 0
-        trust_region_method(self.config, model, ext_fcn_surrogate_map_rule)
+        #trust_region_method(_local_config, model, ext_fcn_surrogate_map_rule)
