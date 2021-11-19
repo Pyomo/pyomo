@@ -14,7 +14,7 @@ import logging
 from pyomo.common.collections import ComponentMap
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
                                                   add_no_good_cuts, add_affine_cuts)
-from pyomo.contrib.mindtpy.util import add_feas_slacks, set_solver_options, update_gap
+from pyomo.contrib.mindtpy.util import add_feas_slacks, set_solver_options, update_primal_bound
 from pyomo.contrib.gdpopt.util import copy_var_list_values, get_main_elapsed_time, time_code
 from pyomo.core import (Constraint, Objective,
                         TransformationFactory, minimize, value)
@@ -182,16 +182,8 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
     else:
         dual_values = None
     main_objective = fixed_nlp.MindtPy_utils.objective_list[-1]
-    if solve_data.objective_sense == minimize:
-        solve_data.UB = min(value(main_objective.expr), solve_data.UB)
-        solve_data.solution_improved = solve_data.UB < solve_data.UB_progress[-1]
-        solve_data.UB_progress.append(solve_data.UB)
-    else:
-        solve_data.LB = max(value(main_objective.expr), solve_data.LB)
-        solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
-        solve_data.LB_progress.append(solve_data.LB)
+    update_primal_bound(solve_data, value(main_objective.expr))
     if solve_data.solution_improved:
-        update_gap(solve_data)
         solve_data.best_solution_found = fixed_nlp.clone()
         solve_data.best_solution_found_time = get_main_elapsed_time(
             solve_data.timing)

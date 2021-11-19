@@ -11,7 +11,7 @@
 """Iteration loop for MindtPy."""
 from __future__ import division
 import logging
-from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution, update_gap
+from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution, update_dual_bound_use_bound
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 
 from pyomo.contrib.mindtpy.mip_solve import solve_main, handle_main_optimal, handle_main_infeasible, handle_main_other_conditions, handle_regularization_main_tc
@@ -403,18 +403,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
             config.logger.info(
                 'Bound fix failed. The bound fix problem is infeasible')
         else:
-            if solve_data.objective_sense == minimize:
-                solve_data.LB = max(
-                    [main_mip_results.problem.lower_bound] + solve_data.LB_progress[:-1])
-                solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
-                solve_data.LB_progress.append(solve_data.LB)
-            else:
-                solve_data.UB = min(
-                    [main_mip_results.problem.upper_bound] + solve_data.UB_progress[:-1])
-                solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
-                solve_data.UB_progress.append(solve_data.UB)
-            if solve_data.bound_improved:
-                update_gap(solve_data)
+            update_dual_bound_use_bound(solve_data, main_mip_results)
             config.logger.info(
                 'Fixed bound values: LB: {}  UB: {}'.
                 format(solve_data.LB, solve_data.UB))
