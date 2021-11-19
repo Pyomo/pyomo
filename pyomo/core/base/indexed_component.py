@@ -24,7 +24,7 @@ from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common import DeveloperError
 from pyomo.common.dependencies import numpy as np, numpy_available
-from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.deprecation import deprecated
 from pyomo.common.modeling import NOTSET
 from pyomo.common.sorting import sorted_robust
 
@@ -807,16 +807,11 @@ You can silence this warning by one of three ways:
 
         for i,val in enumerate(idx):
             if type(val) is slice:
-                if val.start is not None or val.stop is not None:
+                if val.start is not None or val.stop is not None \
+                   or val.step is not None:
                     raise IndexError(
                         "Indexed components can only be indexed with simple "
                         "slices: start and stop values are not allowed.")
-                if val.step is not None:
-                    deprecation_warning(
-                        "The special wildcard slice (::0) is deprecated.  "
-                        "Please use an ellipsis (...) to indicate "
-                        "'0 or more' indices", version='4.4')
-                    val = Ellipsis
                 else:
                     if ellipsis is None:
                         sliced[i] = val

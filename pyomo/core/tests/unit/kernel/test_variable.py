@@ -284,10 +284,12 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(v.is_discrete(), False)
         self.assertEqual(v.is_binary(), False)
         self.assertEqual(v.is_integer(), False)
-        self.assertIs(v.lb, lb)
-        self.assertIs(v.ub, ub)
-        self.assertIs(v.bounds[0], lb)
-        self.assertIs(v.bounds[1], ub)
+        self.assertIs(v.lower, lb)
+        self.assertIs(v.upper, ub)
+        with self.assertRaisesRegex(
+                ValueError,
+                'No value for uninitialized NumericValue object None'):
+            v.bounds
 
         lb = lb**2
         ub = ub**2
@@ -295,14 +297,12 @@ class Test_variable(unittest.TestCase):
         v.ub = ub
         lb_param.value = 2.0
         ub_param.value = 3.0
-        self.assertIs(v.lb, lb)
-        self.assertEqual(v.lb(), 4.0)
-        self.assertIs(v.ub, ub)
-        self.assertEqual(v.ub(), 9.0)
-        self.assertIs(v.bounds[0], lb)
-        self.assertEqual(v.bounds[0](), 4.0)
-        self.assertIs(v.bounds[1], ub)
-        self.assertEqual(v.bounds[1](), 9.0)
+        self.assertIs(v.lower, lb)
+        self.assertEqual(v.lb, 4.0)
+        self.assertIs(v.upper, ub)
+        self.assertEqual(v.ub, 9.0)
+        self.assertEqual(v.bounds[0], 4.0)
+        self.assertEqual(v.bounds[1], 9.0)
 
         # if the domain has a finite bound
         # then you can not use the same bound
@@ -600,10 +600,10 @@ class Test_variable(unittest.TestCase):
         with self.assertRaises(ValueError):
             v.is_binary()
         self.assertEqual(v.is_integer(), True)
-        self.assertIs(v.lb, pL)
+        self.assertIs(v.lower, pL)
         with self.assertRaises(ValueError):
             v.has_lb()
-        self.assertIs(v.ub, pU)
+        self.assertIs(v.upper, pU)
         with self.assertRaises(ValueError):
             v.has_ub()
 
@@ -614,8 +614,8 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(v.is_discrete(), True)
         self.assertEqual(v.is_binary(), True)
         self.assertEqual(v.is_integer(), True)
-        self.assertEqual(v.lb(), 0)
-        self.assertEqual(v.ub(), 1)
+        self.assertEqual(v.lb, 0)
+        self.assertEqual(v.ub, 1)
         self.assertEqual(v.has_lb(), True)
         self.assertEqual(v.has_ub(), True)
 
@@ -626,8 +626,8 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(v.is_discrete(), True)
         self.assertEqual(v.is_binary(), True)
         self.assertEqual(v.is_integer(), True)
-        self.assertEqual(v.lb(), 0)
-        self.assertEqual(v.ub(), 0)
+        self.assertEqual(v.lb, 0)
+        self.assertEqual(v.ub, 0)
 
         pL.value = 1
         pU.value = 1
@@ -636,8 +636,8 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(v.is_discrete(), True)
         self.assertEqual(v.is_binary(), True)
         self.assertEqual(v.is_integer(), True)
-        self.assertEqual(v.lb(), 1)
-        self.assertEqual(v.ub(), 1)
+        self.assertEqual(v.lb, 1)
+        self.assertEqual(v.ub, 1)
 
         v.domain = Binary
         pU.value = 2
@@ -648,7 +648,7 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(v.is_binary(), False)
         self.assertEqual(v.is_integer(), True)
         self.assertEqual(v.lb, 0)
-        self.assertEqual(v.ub(), 2)
+        self.assertEqual(v.ub, 2)
 
         pL.value = -1
         v.lb = pL
@@ -657,8 +657,8 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(v.is_discrete(), True)
         self.assertEqual(v.is_binary(), False)
         self.assertEqual(v.is_integer(), True)
-        self.assertEqual(v.lb(), -1)
-        self.assertEqual(v.ub(), 2)
+        self.assertEqual(v.lb, -1)
+        self.assertEqual(v.ub, 2)
 
         pL.value = float('-inf')
         pU.value = float('inf')
@@ -667,8 +667,8 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(v.is_discrete(), True)
         self.assertEqual(v.is_binary(), False)
         self.assertEqual(v.is_integer(), True)
-        self.assertEqual(v.lb(), float('-inf'))
-        self.assertEqual(v.ub(), float('inf'))
+        self.assertEqual(v.lb, float('-inf'))
+        self.assertEqual(v.ub, float('inf'))
         self.assertEqual(v.has_lb(), False)
         self.assertEqual(v.has_ub(), False)
 

@@ -8,8 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import numpy as np
-from numpy.linalg import norm
+from pyomo.common.dependencies import numpy as np
+
 from pyomo.contrib.trustregion.helper import packXYZ
 
 class IterLog:
@@ -92,5 +92,5 @@ class Logger:
             self.iters[iteration].fprint()
     def printVectors(self):
         for x in self.iters:
-            dis = norm(packXYZ(x.xk-self.iterlog.xk,x.yk-self.iterlog.yk,x.zk-self.iterlog.zk),np.inf)
+            dis = np.linalg.norm(packXYZ(x.xk-self.iterlog.xk,x.yk-self.iterlog.yk,x.zk-self.iterlog.zk),np.inf)
             print(str(x.iteration)+"\t"+str(x.thetak)+"\t"+str(x.objk)+"\t"+str(x.chik)+"\t"+str(x.trustRadius)+"\t"+str(x.sampleRadius)+"\t"+str(x.stepNorm)+"\t"+str(dis))

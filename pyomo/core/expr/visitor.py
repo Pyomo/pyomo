@@ -648,7 +648,7 @@ class ExpressionReplacementVisitor(StreamBasedExpressionVisitor):
                 "to derive from StreamBasedExpressionVisitor.  "
                 "visiting_potential_leaf() has been replaced by beforeChild()"
                 "(note to implementers: the sense of the bool return value "
-                "has been inverted).", version='TBD')
+                "has been inverted).", version='6.2')
             def beforeChild(node, child, child_idx):
                 is_leaf, ans = self.visiting_potential_leaf(child)
                 return not is_leaf, ans
@@ -706,7 +706,7 @@ class ExpressionReplacementVisitor(StreamBasedExpressionVisitor):
         "ExpressionReplacementVisitor: this walker has been ported "
         "to derive from StreamBasedExpressionVisitor.  "
         "dfs_postorder_stack() has been replaced with walk_expression()",
-        version='TBD')
+        version='6.2')
     def dfs_postorder_stack(self, expr):
         return self.walk_expression(expr)
 

@@ -80,6 +80,9 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
                                       "No-good cuts are added and GOA algorithm doesn't converge within the time limit. "
                                       'No integer solution is found, so the cplex solver will report an error status. ')
         return None, None
+    if config.solution_pool:
+        main_mip_results._solver_model = mainopt._solver_model
+        main_mip_results._pyomo_var_to_solver_var_map = mainopt._pyomo_var_to_solver_var_map
     if main_mip_results.solver.termination_condition is tc.optimal:
         if config.single_tree and not config.add_no_good_cuts and not regularization_problem:
             update_dual_bound_use_bound(solve_data, main_mip_results)

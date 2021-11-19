@@ -129,21 +129,11 @@ class AslNLP(ExtendedNLP):
         self._asl.get_g_lower_bounds(self._con_full_lb)
         self._asl.get_g_upper_bounds(self._con_full_ub)
 
-        # check to make sure there are no fixed variables or crossed bounds
-        # TODO: this tolerance should somehow be linked to the algorithm tolerance?
-        # TODO: is the "fixed" check necessary?
-        tolerance_fixed_bounds = 1e-8
+        # check to make sure there are no crossed bounds
         bounds_difference = self._primals_ub - self._primals_lb
-        abs_bounds_difference = np.absolute(bounds_difference)
-        fixed_vars = np.any(abs_bounds_difference < tolerance_fixed_bounds)
-        if fixed_vars:
-            print(np.where(abs_bounds_difference<tolerance_fixed_bounds))
-            raise RuntimeError("Variables fixed using bounds is not currently supported.")
-
-        inconsistent_bounds = np.any(bounds_difference < 0.0)
-        if inconsistent_bounds:
-            # TODO: improve error message
-            raise RuntimeError("Variables found with upper bounds set below the lower bounds.")
+        if np.any(bounds_difference < 0):
+            print(np.where(bounds_difference < 0))
+            raise RuntimeError("Some variables have lower bounds that are greater than the upper bounds.")
 
         # Build the maps for converting from the full constraint
         # vector (which includes all equality and inequality constraints)
