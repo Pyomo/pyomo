@@ -692,7 +692,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                     "with 'dense=True'.  Reverting to 'dense=False' as "
                     "it is not possible to make this variable dense.  "
                     "This warning can be suppressed by specifying "
-                    "'dense=False'")
+                    "'dense=False'" % (self.name,))
                 self._dense = False
 
             if ( self._rule_init is not None and
