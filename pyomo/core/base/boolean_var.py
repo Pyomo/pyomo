@@ -109,8 +109,9 @@ class _BooleanVarData(ComponentData, BooleanValue):
         # the flag to always be False, we will just ignore it in the
         # name of efficiency.
         if val.__class__ not in _logical_var_types:
-            logger.warning("implicitly casting '%s' value %s to bool"
-                           % (self.name, val))
+            if not skip_validation:
+                logger.warning("implicitly casting '%s' value %s to bool"
+                               % (self.name, val))
             val = bool(val)
         self._value = val
         self.stale = False
