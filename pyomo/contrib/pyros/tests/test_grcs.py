@@ -474,9 +474,10 @@ class testTransformToStandardForm(unittest.TestCase):
         """
         Check that if model does not contain any constraints
         for which both the `lower` and `upper` attributes are
-        distinct and not None, then number of constraints remains the same.
+        distinct and not None, then number of constraints remains the same
+        after constraint standardization.
         Standard form for the purpose of PyROS is all inequality constraints
-        as g(.)<=0.
+        as `g(.)<=0`.
         """
         m = ConcreteModel()
         m.x = Var(initialize=1, bounds=(0, 1))
