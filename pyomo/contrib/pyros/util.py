@@ -267,19 +267,21 @@ def add_bounds_for_uncertain_parameters(model, config):
 
 def transform_to_standard_form(model):
     """
-    Recast all model inequality constraints of the form a <= g(v) (<= b)
-    to the form a - g(v) <= 0 (and g(v) - b <= 0).
+    Recast all model inequality constraints of the form `a <= g(v)` (`<= b`)
+    to the 'standard' form `a - g(v) <= 0` (and `g(v) - b <= 0`),
+    in which `v` denotes all model variables.
 
     Parameters
     ----------
     model : ConcreteModel
-        The model to search for components.  This is a recursive
-        generator and will descend into any active Blocks/sub-Blocks as well.
+        The model to search for constraints. This will descend into all
+        active Blocks and sub-Blocks.
 
     Note
     ----
-    If a == b and the constraint is not classified as an equality,
-    then the constraint is recast as the equality g(x) - a == 0.
+    If `a` and `b` are identical and the constraint is not classified as an
+    equality (i.e. the `equality` attribute of the constraint object
+    is `False`), then the constraint is recast to the equality `g(v) == a`.
     """
     cons = [con for con in model.component_data_objects(Constraint,
                                                         descend_into=True,
@@ -293,7 +295,7 @@ def transform_to_standard_form(model):
                 if con.lower is con.upper:
                     con.set_value(con.lower == con.body)
                 else:
-                    uniq_name = unique_component_name(model, con.name + '_ub')
+                    uniq_name = unique_component_name(model, con.name + '_lb')
                     model.add_component(uniq_name,
                                         Constraint(expr=con.lower-con.body
                                                    <= 0))
