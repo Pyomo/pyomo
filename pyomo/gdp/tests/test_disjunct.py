@@ -12,6 +12,7 @@ from io import StringIO
 
 import pyomo.common.unittest as unittest
 
+from pyomo.common.errors import PyomoException
 from pyomo.common.log import LoggingIntercept
 from pyomo.core import ConcreteModel, Var, Constraint
 from pyomo.gdp import Disjunction, Disjunct
@@ -375,7 +376,14 @@ class TestAutoVars(unittest.TestCase):
         self.assertEqual(m.iv.value, True)
         self.assertEqual(m.biv.value, 1)
 
-        m.biv.fix(0.5)
+        with self.assertRaisesRegex(
+                ValueError, r"Numeric value `0.5` \(float\) is not in "
+                r"domain Binary for Var biv"):
+            m.biv.fix(0.5)
+        self.assertEqual(m.iv.value, True)
+        self.assertEqual(m.biv.value, 1)
+
+        m.biv.fix(0.5, True)
         self.assertEqual(m.iv.value, None)
         self.assertEqual(m.biv.value, 0.5)
 
@@ -386,7 +394,14 @@ class TestAutoVars(unittest.TestCase):
         eps = AutoLinkedBinaryVar.INTEGER_TOLERANCE / 10
 
         # Note that fixing to a near-True value will toggle the iv
-        m.biv.fix(1-eps)
+        with self.assertRaisesRegex(
+                ValueError, r"Numeric value `0.9+` \(float\) is not in "
+                r"domain Binary for Var biv"):
+            m.biv.fix(1-eps)
+        self.assertEqual(m.iv.value, False)
+        self.assertEqual(m.biv.value, 0)
+
+        m.biv.fix(1-eps, True)
         self.assertEqual(m.iv.value, True)
         self.assertEqual(m.biv.value, 1-eps)
 
@@ -483,7 +498,6 @@ class TestAutoVars(unittest.TestCase):
             m.biv.setub(1)
         self.assertIn(deprecation_msg, out.getvalue())
 
-
         out = StringIO()
         with LoggingIntercept(out):
             self.assertIs(abs(m.iv).args[0], m.biv)
@@ -491,22 +505,25 @@ class TestAutoVars(unittest.TestCase):
 
         out = StringIO()
         with LoggingIntercept(out):
-            self.assertIs(bool(m.iv), True)
+            with self.assertRaisesRegex(
+                    PyomoException, r"Cannot convert non-constant Pyomo "
+                    r"numeric value \(biv\) to bool"):
+                bool(m.iv)
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
         with LoggingIntercept(out):
             with self.assertRaisesRegex(
-                    TypeError, "Implicit conversion of Pyomo NumericValue "
-                    "type `biv' to a float"):
+                    TypeError, r"Implicit conversion of Pyomo numeric "
+                    r"value \(biv\) to float"):
                 float(m.iv)
         self.assertIn(deprecation_msg, out.getvalue())
 
         out = StringIO()
         with LoggingIntercept(out):
             with self.assertRaisesRegex(
-                    TypeError, "Implicit conversion of Pyomo NumericValue "
-                    "type `biv' to an integer"):
+                    TypeError, r"Implicit conversion of Pyomo numeric "
+                    r"value \(biv\) to int"):
                 int(m.iv)
         self.assertIn(deprecation_msg, out.getvalue())
 

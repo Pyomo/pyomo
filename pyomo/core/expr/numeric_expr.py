@@ -32,6 +32,8 @@ from .numvalue import (
     native_numeric_types,
     as_numeric,
     value,
+    is_potentially_variable,
+    is_constant,
 )
 
 from .visitor import (
@@ -190,18 +192,6 @@ class ExpressionBase(NumericValue):
         for i in ExpressionBase.__slots__:
            state[i] = getattr(self,i)
         return state
-
-    def __nonzero__(self):      #pragma: no cover
-        """
-        Compute the value of the expression and convert it to
-        a boolean.
-
-        Returns:
-            A boolean value.
-        """
-        return bool(self())
-
-    __bool__ = __nonzero__
 
     def __call__(self, exception=True):
         """
@@ -1157,19 +1147,16 @@ class Expr_ifExpression(ExpressionBase):
             return False
 
     def is_constant(self):
-        if self._if.__class__ in native_numeric_types or self._if.is_constant():
+        if is_constant(self._if):
             if value(self._if):
-                return (self._then.__class__ in native_numeric_types or self._then.is_constant())
+                return is_constant(self._then)
             else:
-                return (self._else.__class__ in native_numeric_types or self._else.is_constant())
+                return is_constant(self._else)
         else:
-            return (self._then.__class__ in native_numeric_types or self._then.is_constant()) and \
-                (self._else.__class__ in native_numeric_types or self._else.is_constant())
+            return False
 
     def is_potentially_variable(self):
-        return ((not self._if.__class__ in native_numeric_types) and self._if.is_potentially_variable()) or \
-            ((not self._then.__class__ in native_numeric_types) and self._then.is_potentially_variable()) or \
-            ((not self._else.__class__ in native_numeric_types) and self._else.is_potentially_variable())
+        return any(map(is_potentially_variable, self._args_))
 
     def _compute_polynomial_degree(self, result):
         _if, _then, _else = result
@@ -1312,7 +1299,7 @@ class LinearExpression(ExpressionBase):
                     "LinearExpression has been updated to expect args= to "
                     "be a constant followed by MonomialTermExpressions.  "
                     "The older format (`[const, coefficient_1, ..., "
-                    "variable_1, ...]`) is deprecated.", version='TBD')
+                    "variable_1, ...]`) is deprecated.", version='6.2')
                 args = args[:1] + list(map(
                     MonomialTermExpression,
                     zip(args[1:1+len(args)//2], args[1+len(args)//2:])))

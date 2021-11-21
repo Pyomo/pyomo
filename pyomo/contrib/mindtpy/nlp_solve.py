@@ -69,8 +69,7 @@ def solve_subproblem(solve_data, config):
         # | g(x) >= b  | +1    | g(x1) >= b   | 0                    |
         # | g(x) >= b  | +1    | g(x1) < b    | b - g(x1)            |
         evaluation_error = False
-        for c in fixed_nlp.component_data_objects(ctype=Constraint, active=True,
-                                                  descend_into=True):
+        for c in fixed_nlp.MindtPy_utils.constraint_list:
             # We prefer to include the upper bound as the right hand side since we are
             # considering c by default a (hopefully) convex function, which would make
             # c >= lb a nonconvex inequality which we wouldn't like to add linearizations
@@ -268,7 +267,7 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config, cb_opt=None):
     config.logger.info('NLP subproblem was locally infeasible.')
     solve_data.nlp_infeasible_counter += 1
     if config.calculate_dual:
-        for c in fixed_nlp.component_data_objects(ctype=Constraint):
+        for c in fixed_nlp.MindtPy_utils.constraint_list:
             rhs = value(c.upper) if c. has_ub() else value(c.lower)
             c_geq = -1 if c.has_ub() else 1
             fixed_nlp.dual[c] = (c_geq

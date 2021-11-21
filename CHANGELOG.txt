@@ -3,6 +3,78 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.2    17 Nov 2021
+-------------------------------------------------------------------------------
+
+- General
+  - Add ListOf domain validator for ConfigValue (#2103)
+  - Remove deprecated calls to warnings.warning (#2106)
+  - Add Bool and Integer domain validators (#2110)
+  - Overhaul of Pyomo TempfileManager (#2109)
+  - Allow passing tuples and expressions to 
+    calculate_variable_from_constraint() (#2133)
+  - Add external functions to block in create_subsystem_block (#2142)
+  - Track changes in pint 0.18 and Xpress 8.13.0 (#2168)
+  - Remove code deprecated in Pyomo version 5.6 or older (#1992)
+  - Add Linux aarch64 wheel build support (#2076)
+  - Update wheel creation GitHub Actions version (#2192)
+  - Remove optional_packages from pyomo.environ (#2195)
+  - Ignore bounds/domain when updating variable value in 
+    calculate_variable_from_constraint() (#2177)
+- Core
+  - Fix Expression.getitem when initialized with Skip (#2136)
+  - Support hierarchical models in logical_to_linear transformation (#2135)
+  - Add ordered=True API for iterating over IndexedComponents (#2149)
+  - Fix bug in differentiate module related to reused subexpressions (#2148)
+  - Rework expression replacement and LinearExpression object (#2143)
+  - Add support for custom pint registries (#2153)
+  - Add support for solving blocks and targets in logical_to_linear 
+    transformation (#2147)
+  - Add support for finding components with a ComponentUID (#2178)
+  - Fix bugs with open NumericRanges (#2170, #2179)
+  - Fix bugs with References (#2158)
+  - Fix Initializer by treating pandas.Series as sequences (#2151)
+  - Fix Initializer support for ConfigList/ConfigDict (#2200)
+  - Add a DataFrameInitializer (#2150)
+  - Add a public API for retrieving variable bound expressions (#2172)
+  - Rework Var component to leverage Initializer (#2184)
+- Documentation
+  - Expand documentation of pyomo.common (#2104)
+  - Minor documentation fixes (#2117)
+- Solver Interfaces
+  - Issue warning when using the Xpress LP/MPS interface (#2125)
+  - Disable implicit repn cache for LP and NL writers (#2144)
+  - Add option to force variables into an NL file (#2152)
+  - Add the exception to the NEOS connection failure warning message (#2166)
+  - Improve GAMS writer performance (#2191)
+- Testing
+  - Resolve test failures when no solvers are available (#2146)
+  - Resolve NumericValue support in assertStructuredAlmostEqual (#2200)
+  - Fix typo in booktest skip declaration (#2186)
+- DAE Updates
+  - Utility function to slice individual components in flatten module (#2141)
+  - Fix errors and deprecation warnings in some DAE examples (#2189)
+  - Fix bug allowing numpy.float64 types to end up in a ContinuousSet (#2193)
+- GDP Updates
+  - Update GDP transformations to handle logical constraints (#2175)
+- Contributed Packages
+  - APPSI: Add support for external functions in NL writer (#2111)
+  - APPSI: Improved handling of immutable parameters (#2112)
+  - PyNumero: Pass AMPLFUNC directly to pynumero_ASL and not through 
+    environment (#2114, #2129)
+  - PyNumero: ExternalPyomoModel performance improvements (#2155)
+  - PyNumero: Remove exception when variable bounds are equal (#2121)
+  - Parmest: Add support for indexed variables (#2108)
+  - incidence_analysis: Simplify extraction of diagonal blocks from a block 
+    triangularization (#2128)
+  - GDPopt: Make line endings PEP8 compliant (#2173)
+  - MindtPy: Add support for MIP solver solution pools (#2164)
+  - MindtPy: Skip specific tests due to failure with Gurobi 9.5.0 on 
+    Windows (#2183)
+  - MindtPy: Fix feasibility pump and fixed variable detection (#2185, #2187)
+  - PyROS: Add uncertain variable bounds detection (#2159)
+
+-------------------------------------------------------------------------------
 Pyomo 6.1.2  20 Aug 2021
 -------------------------------------------------------------------------------
 
