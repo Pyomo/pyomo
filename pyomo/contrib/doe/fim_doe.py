@@ -23,22 +23,31 @@ class Measurements:
         self.measurement_all_info = measurement_index_time
         # a list of measurement names
         self.measurement_name = list(measurement_index_time.keys())
+
+
+    def name_and_index_generator(self, all_info):
+        '''
+        Generate a dictionary, keys are the variable names, values are the indexes of this variable.
+        For e.g., name_and_index = {'C': ['CA', 'CB', 'CC']}
+        '''
+        measurement_name = list(all_info.keys())
         # a list of measurement extra indexes
-        self.measurement_extra_index = []
+        measurement_extra_index = []
         # a list of measurement names with extra indexes
-        self.extra_measure_name = []
+        extra_measure_name = []
         # check if the measurement has extra indexes
-        for i in self.measurement_name:
-            if type(measurement_index_time[i]) is dict:
-                index_list = list(measurement_index_time[i].keys())
-                self.extra_measure_name.append(i)
-                self.measurement_extra_index.append(index_list)
-            elif type(measurement_index_time[i]) is list:
-                self.measurement_extra_index.append(None)
+        for i in measurement_name:
+            if type(all_info[i]) is dict:
+                index_list = list(all_info[i].keys())
+                extra_measure_name.append(i)
+                measurement_extra_index.append(index_list)
+            elif type(all_info[i]) is list:
+                measurement_extra_index.append(None)
         # a dictionary, keys are measurement names, values are a list of extra indexes
-        self.name_and_index = {}
-        for i, iname in enumerate(self.measurement_name):
-            self.name_and_index[iname] = self.measurement_extra_index[i]
+        name_and_index = {}
+        for i, iname in enumerate(measurement_name):
+            name_and_index[iname] = measurement_extra_index[i]
+        return name_and_index
 
     def flatten_measurement(self):
         '''Flatten measurements and their extra index (if any)
@@ -48,27 +57,17 @@ class Measurements:
 
         Returns
         ------
+        flatten_name_and_index: a dictionary, keys are the variable names, values are the indexes of this variable.
         flatten_measure_name: a list of flattened measurement name.
         flatten_measure_timeset: a dictionary, keys are flattened measurement name, values are lists of measurement timepoints
         '''
         # check if measurement variables need to be flattened
-        flatten_measure_name = self.generate_flatten_name(self.name_and_index)
-
-        flatten_measure_timeset = {}
-        for i in flatten_measure_name:
-            # split the flattened name if needed
-            if '_index_' in i:
-                measure_name = i.split('_index_')[0]
-                measure_index= i.split('_index_')[1]
-                if type(self.name_and_index[measure_name][0]) is int:
-                    measure_index = int(measure_index)
-                flatten_measure_timeset[i] = self.measurement_all_info[measure_name][measure_index]
-            else:
-                flatten_measure_timeset[i] = self.measurement_all_info[i]
-
-        self.flatten_measure_name = flatten_measure_name
-        self.flatten_measure_timeset = flatten_measure_timeset
-        return flatten_measure_name, flatten_measure_timeset
+        self.name_and_index = self.name_and_index_generator(self.measurement_all_info)
+        self.flatten_measure_name = self.generate_flatten_name(self.name_and_index)
+        self.flatten_measure_timeset = self.generate_flatten_timeset(self.measurement_all_info,self.flatten_measure_name, self.name_and_index)
+        print('All measurements are flattened.')
+        print('Flatten measurement name:', self.flatten_measure_name)
+        print('Flatten measurement timeset:', self.flatten_measure_timeset)
 
     def generate_flatten_name(self, measure_name_and_index):
         '''Generate measurement flattened names
@@ -91,16 +90,40 @@ class Measurements:
 
         return flatten_names
 
+    def generate_flatten_timeset(self, all_info, flatten_measure_name,name_and_index):
+        '''
+        Generate flatten variables timeset. Return a dict where keys are the flattened variable names,
+        values are a list of measurement time.
+        '''
+        flatten_measure_timeset = {}
+        for i in flatten_measure_name:
+            # split the flattened name if needed
+            if '_index_' in i:
+                measure_name = i.split('_index_')[0]
+                measure_index = i.split('_index_')[1]
+                if type(name_and_index[measure_name][0]) is int:
+                    measure_index = int(measure_index)
+                flatten_measure_timeset[i] = all_info[measure_name][measure_index]
+            else:
+                flatten_measure_timeset[i] = all_info[i]
+        return flatten_measure_timeset
+
     def check_subset(self,subset):
         '''
-        Check if the subset is correctly defined
+        Check if the subset is correctly defined with right name, index and time.
 
         subset: measurement name and index involved in jacobian calculation
         '''
         flatten_subset = self.generate_flatten_name(subset)
+        flatten_name_index = self.name_and_index_generator(subset)
+        flatten_timeset = self.generate_flatten_timeset(subset, flatten_subset, flatten_name_index)
         for i in flatten_subset:
             if i not in self.flatten_measure_name:
                 raise ValueError('This is not a legal subset of the measurement overall set!')
+            else:
+                for t in flatten_timeset[i]:
+                    if t not in self.flatten_measure_timeset[i]:
+                        raise ValueError('The time of ', t, ' is not included as measurements before.')
 
 
 class DesignOfExperiments:
