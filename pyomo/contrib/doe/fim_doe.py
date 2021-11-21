@@ -52,7 +52,7 @@ class Measurements:
         flatten_measure_timeset: a dictionary, keys are flattened measurement name, values are lists of measurement timepoints
         '''
         # check if measurement variables need to be flattened
-        flatten_measure_name = self.partly_flatten_measurement(self.name_and_index)
+        flatten_measure_name = self.generate_flatten_name(self.name_and_index)
 
         flatten_measure_timeset = {}
         for i in flatten_measure_name:
@@ -60,16 +60,18 @@ class Measurements:
             if '_index_' in i:
                 measure_name = i.split('_index_')[0]
                 measure_index= i.split('_index_')[1]
+                if type(self.name_and_index[measure_name][0]) is int:
+                    measure_index = int(measure_index)
                 flatten_measure_timeset[i] = self.measurement_all_info[measure_name][measure_index]
             else:
-                flatten_measure_timeset[i] = self.measurement_all_info[measure_name]
+                flatten_measure_timeset[i] = self.measurement_all_info[i]
 
         self.flatten_measure_name = flatten_measure_name
         self.flatten_measure_timeset = flatten_measure_timeset
         return flatten_measure_name, flatten_measure_timeset
 
-    def partly_flatten_measurement(self, measure_name_and_index):
-        '''Flatten part of the measurements according to user's requirement
+    def generate_flatten_name(self, measure_name_and_index):
+        '''Generate measurement flattened names
         Parameters
         ----------
         measure_name_and_index: a dictionary, keys are measurement names, values are lists of extra indexes
@@ -89,8 +91,20 @@ class Measurements:
 
         return flatten_names
 
+    def check_subset(self,subset):
+        '''
+        Check if the subset is correctly defined
+
+        subset: measurement name and index involved in jacobian calculation
+        '''
+        flatten_subset = self.generate_flatten_name(subset)
+        for i in flatten_subset:
+            if i not in self.flatten_measure_name:
+                raise ValueError('This is not a legal subset of the measurement overall set!')
+
+
 class DesignOfExperiments:
-    def __init__(self, param_init, design_variable_timepoints, measurement_index_and_time, create_model, solver=None,
+    def __init__(self, param_init, design_variable_timepoints, measurement_object, create_model, solver=None,
                  prior_FIM=None, discretize_model=None, verbose=True, args=None):
         '''
         This package enables model-based design of experiments analysis with Pyomo. Both direct optimization and enumeration modes are supported.
@@ -102,11 +116,7 @@ class DesignOfExperiments:
         param_init: a dictionary of parameter names and values. If they are an indexed variable, put the variable name and index, such as 'theta["A1"]'. Note: if sIPOPT is used, parameter shouldn't be indexed. 
         design_variable_timepoints: a dictionary, keys are design variable names, values are its control time points.
                 if this design var is independent of time (constant), set the time to [0]
-        measurement_index_and_time: a dictionary, keys are measurement variable names,
-                values are a dictionary, keys are its extra index, values are its measuring time points
-                values are a list of measuring time point if there is no extra index for this measurement
-                For e.g., for the kinetics illustrative example, it should be {'C':{'CA':[0,1,..], 'CB':[0,2,...]}, 'k':[0,4,..]},
-                so the measurements are C[scenario, 'CA', 0]..., k[scenario, 0]....
+        measurement_index_and_time: the measurement object
         create_model: a function that returns the model, where:
                       - parameter and design variables are defined as variables
                       - define every state variables dependent on parameters with a scenario index
@@ -134,12 +144,10 @@ class DesignOfExperiments:
         self.args = args
 
         # create the measurement information object
-        self.measure = Measurements(measurement_index_and_time)
+        self.measure = measurement_object
         self.flatten_measure_name, self.flatten_measure_timeset = self.measure.flatten_measurement()
-        print('The extra index:', self.measure.measurement_extra_index)
-        print('The extra index name:', self.measure.extra_measure_name)
-        print('The flattend measurements include:', self.flatten_measure_name)
-        print('The flattened measurement time:', self.flatten_measure_timeset)
+        #print('The extra index:', self.measure.measurement_extra_index)
+        #print('The extra index name:', self.measure.extra_measure_name)
 
         # check if user-defined solver is given
         if solver is not None:
@@ -251,7 +259,7 @@ class DesignOfExperiments:
 
         # identify measurements involved in calculation
         if jac_involved_measurement is not None:
-            self.jac_involved_name = self.measure.partly_flatten_measurement(jac_involved_measurement)
+            self.jac_involved_name = self.measure.generate_flatten_name(jac_involved_measurement)
 
         else:
             self.jac_involved_name = self.flatten_measure_name.copy()
@@ -325,8 +333,8 @@ class DesignOfExperiments:
 
     def compute_FIM(self, design_values, mode='sequential_finite', FIM_store_name=None, specified_prior=None,
                     tee_opt=True, scale_nominal_param_value=False, scale_constant_value=1,
-                    store_output = None, read_output=None,
-                    formula='central', step=0.01,
+                    store_output = None, read_output=None, extract_single_model=None,
+                    formula='central', step=0.001,
                     if_Cholesky=False, L_LB=1E-10, L_initial=None):
         '''
         This function solves a square Pyomo model with fixed design variables to compute the FIM.
@@ -474,6 +482,11 @@ class DesignOfExperiments:
                     time_allsolve.append(time1_solve-time0_solve)
                     models.append(mod)
 
+                    if extract_single_model is not None:
+                        mod_name = store_output + str(no_s) + '.csv'
+                        dataframe = extract_single_model(mod, square_result)
+                        dataframe.to_csv(mod_name)
+
                     # loop over measurement item and time to store model measurements
                     output_combine = []
                     for j in self.flatten_measure_name:
@@ -482,10 +495,10 @@ class DesignOfExperiments:
                             measure_name = j.split('_index_')[0]
                             measure_index = j.split('_index_')[1]
                             # this is needed for using eval(). if the extra index is 'CA', it converts to "'CA'". only for the extra index as a string
-                            if type(measure_index) is str:
-                                measure_index_doublequotes = '"' + measure_index + '"'
+                            if type(self.measure.name_and_index[measure_name][0]) is str:
+                                measure_index = '"' + measure_index + '"'
                             for t in self.flatten_measure_timeset[j]:
-                                C_value = eval('mod.' + str(measure_name) + '[0,' + str((measure_index_doublequotes)) + ',' + str(t) + ']')
+                                C_value = eval('mod.' + str(measure_name) + '[0,' + str((measure_index)) + ',' + str(t) + ']')
                                 output_combine.append(value(C_value))
 
                         else:
@@ -496,6 +509,7 @@ class DesignOfExperiments:
                         
                     print('Output this time: ', output_record[no_s])
 
+                output_record['design'] = design_values
                 if store_output is not None:
                     f = open(store_output, 'wb')
                     pickle.dump(output_record, f)
@@ -870,6 +884,7 @@ class DesignOfExperiments:
         for no_p, para in enumerate(self.param_name):
             # extract involved scenario No. for each parameter from scenario class
             involved_s = scena_gen.scenario_para[para]
+
             # each parameter has two involved scenarios
             s1 = involved_s[0]
             s2 = involved_s[1]
@@ -1057,6 +1072,7 @@ class DesignOfExperiments:
                                                scale_nominal_param_value=scale_nominal_param_value,
                                                scale_constant_value = scale_constant_value,
                                                store_output=store_output_name, read_output=read_input_name,
+                                               #extract_single_model=extract3_v2,
                                                formula=formula, step=step)
                 if read_input_name is None:
                     build_time_store.append(result_iter.build_time)
@@ -1145,7 +1161,7 @@ class DesignOfExperiments:
         scenario_all = scena_gen.simultaneous_scenario()
         
         # create model
-        m = self.create_model(scenario_all)
+        m = self.create_model(scenario_all, self.args)
         # discretize if discretization function is provided
         if self.discretize_model is not None:
             m = self.discretize_model(m)
@@ -1171,7 +1187,7 @@ class DesignOfExperiments:
         for i in flatten_timepoint:
             overall_time += i
             timepoint_overall_set = list(set(overall_time))
-        print('overall time point:', timepoint_overall_set)
+        #print('overall time point:', timepoint_overall_set)
 
         m.tmea_set = Set(initialize=timepoint_overall_set)
 
@@ -1282,16 +1298,15 @@ class DesignOfExperiments:
             if '_index_' in j:
                 measure_name = j.split('_index_')[0]
                 measure_index = j.split('_index_')[1]
-
+                if type(self.measure.name_and_index[measure_name][0]) is str:
+                    measure_index = '"' + measure_index + '"'
                 if t in self.flatten_measure_timeset[j]:
-                    measure_index_doublequotes = '"' + measure_index + '"'
-                    up_C = eval('m.' + measure_name + '[' + str(scenario_all['jac-index'][p][0]) + ',' + measure_index_doublequotes + ',' + str(t) + ']')
-                    lo_C = eval('m.' + measure_name + '[' + str(scenario_all['jac-index'][p][1]) + ',' + measure_index_doublequotes + ',' + str(t) + ']')
+                    up_C = eval('m.' + measure_name + '[' + str(scenario_all['jac-index'][p][0]) + ',' + measure_index + ',' + str(t) + ']')
+                    lo_C = eval('m.' + measure_name + '[' + str(scenario_all['jac-index'][p][1]) + ',' + measure_index + ',' + str(t) + ']')
                     return m.jac[j, p, t] == (up_C - lo_C) / scenario_all['eps-abs'][p] * self.scale_constant_value
                 # if t is not measured, let the value be 0
                 else:
                     return m.jac[j, p, t] == 0
-
             else:
                 up_C = eval('m.'+j+'['+str(scenario_all['jac-index'][p][0])+','+str(t)+']')
                 lo_C = eval('m.'+j+'['+str(scenario_all['jac-index'][p][1])+','+str(t)+']')
@@ -1371,7 +1386,7 @@ class DesignOfExperiments:
         ### Constraints and Objective function
         m.dC_value = Constraint(m.y_set, m.para_set, m.tmea_set, rule=jac_numerical)
         m.ele_rule = Constraint(m.para_set, m.para_set, rule=calc_FIM)
-        m.obj.deactivate()
+        #m.obj.deactivate()
 
             # Only giving the objective function when there's Degree of freedom. Make OBJ=0 when it's a square problem, which helps converge.
         if self.optimize:
@@ -1850,7 +1865,10 @@ class FIM_result:
         if jaco_involved is not None:
             # convert the form of jacobian for split
             jaco_3D = self.__jac_reform_3D(jaco_information)
-            involved_flatten_index = self.measure_object.partly_flatten_measurement(jaco_involved)
+
+            # check if the subset is legal
+            self.measure_object.check_subset(jaco_involved)
+            involved_flatten_index = self.measure_object.generate_flatten_name(jaco_involved)
             print('involved flatten name:', involved_flatten_index)
 
             # reorganize the jacobian subset with the same form of the jacobian
@@ -1864,6 +1882,7 @@ class FIM_result:
                         # loop over time
                         for d in range(len(jaco_3D[n_all_measure, p, :])):
                             jaco_info[par].append(jaco_3D[n_all_measure, p, d])
+            #print('jaco now:', jaco_info)
 
         else:
             jaco_info = jaco_information.copy()
@@ -1957,7 +1976,7 @@ class FIM_result:
         # split jacobian if needed
         # get involved flattened measurements
         if jaco_involved is not None:
-            involved_flatten_index = self.measure_object.partly_flatten_measurement(jaco_involved)
+            involved_flatten_index = self.measure_object.generate_flatten_name(jaco_involved)
             # reorganize the jacobian
             # loop over parameters
             for p, par in enumerate(self.para_name):
@@ -2005,12 +2024,12 @@ class FIM_result:
         '''
         # 3-D array form of jacobian [measurements, parameters, time]
         self.measure_timeset = list(self.measurement_timeset.values())[0]
-        jac_3Darray = np.zeros((len(self.flatten_all_measure), len(self.para_name), len(self.measure_timeset)))
-        no_time = len(self.measurement_timeset)
+        no_time = len(self.measure_timeset)
+        jac_3Darray = np.zeros((len(self.flatten_all_measure), len(self.para_name), no_time))
         # reorganize the matrix
-        for m in range(len(self.flatten_all_measure)):
+        for m, mname in enumerate(self.flatten_all_measure):
             for p, para in enumerate(self.para_name):
-                for t, tim in enumerate(range(no_time)):
+                for t, tim in enumerate(self.measure_timeset):
                     jac_3Darray[m, p, t] = jac_original[para][m * no_time + t]
 
         return jac_3Darray
