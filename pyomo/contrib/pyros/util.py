@@ -266,32 +266,43 @@ def add_bounds_for_uncertain_parameters(model, config):
 
 
 def transform_to_standard_form(model):
-    """Recast all model inequality constraints of the form a <= g(x) (<= b)
-    to the form a - g(x) <= 0 (and g(x) - b <= 0).
+    """
+    Recast all model inequality constraints of the form a <= g(v) (<= b)
+    to the form a - g(v) <= 0 (and g(v) - b <= 0).
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        The model to search for components.  This is a recursive
+        generator and will descend into any active Blocks/sub-Blocks as well.
+
+    Note
+    ----
     If a == b and the constraint is not classified as an equality,
     then the constraint is recast as the equality g(x) - a == 0.
     """
-    for con in model.component_data_objects(Constraint,
-                                            descend_into=True,
-                                            active=True):
-        if not con.equality and con.lower is not None:
-            # initialize temporary variables
-            tmp = con
-            model.del_component(con)
-            lb_con_name = tmp.name
+    cons = [con for con in model.component_data_objects(Constraint,
+                                                        descend_into=True,
+                                                        active=True)].copy()
+    for con in cons:
+        if not con.equality:
+            has_lb = con.lower is not None
+            has_ub = con.upper is not None
 
-            if con.lower is con.upper:
-                model.add_component(tmp.name + '_eq',
-                                    Constraint(expr=tmp.body-tmp.lower == 0))
-            else:
-                if con.upper is not None:
-                    model.add_component(tmp.name + '_ub',
-                                        Constraint(expr=tmp.body-tmp.upper
+            if has_lb and has_ub:
+                if con.lower is con.upper:
+                    con.set_value(con.lower == con.body)
+                else:
+                    uniq_name = unique_component_name(model, con.name + '_ub')
+                    model.add_component(uniq_name,
+                                        Constraint(expr=con.lower-con.body
                                                    <= 0))
-                    lb_con_name += '_lb'
-
-                model.add_component(lb_con_name,
-                                    Constraint(expr=tmp.lower-tmp.body <= 0))
+                    con.set_value(con.body - con.upper <= 0)
+            elif has_lb and not has_ub:
+                con.set_value(con.lower-con.body <= 0)
+            else:
+                # already standardized, or no upper/lower bounds
+                pass
 
 
 def get_vars_from_component(block, ctype):
