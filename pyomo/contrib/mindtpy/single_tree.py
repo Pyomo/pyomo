@@ -322,7 +322,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                                        solve_data.working_model.MindtPy_utils.variable_list,
                                        config)
         update_dual_bound(solve_data, self.get_best_objective_value())
-        config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'LP', self.get_objective_value(),
+        config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'restrLP', self.get_objective_value(),
                                                            solve_data.LB, solve_data.UB, solve_data.rel_gap, get_main_elapsed_time(solve_data.timing)))
 
     def handle_lazy_subproblem_optimal(self, fixed_nlp, solve_data, config, opt):
@@ -727,6 +727,6 @@ def handle_lazy_main_feasible_solution_gurobi(cb_m, cb_opt, solve_data, config):
                          config)
     update_dual_bound(solve_data, cb_opt.cbGet(
         gurobipy.GRB.Callback.MIPSOL_OBJBND))
-    config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'LP', cb_opt.cbGet(gurobipy.GRB.Callback.MIPSOL_OBJ),
+    config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'restrLP', cb_opt.cbGet(gurobipy.GRB.Callback.MIPSOL_OBJ),
                                                        solve_data.LB, solve_data.UB, solve_data.rel_gap,
                                                        get_main_elapsed_time(solve_data.timing)))
