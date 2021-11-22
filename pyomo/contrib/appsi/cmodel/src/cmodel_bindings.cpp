@@ -24,6 +24,7 @@ PYBIND11_MODULE(appsi_cmodel, m)
   m.def("create_constants", &create_constants);
   m.def("appsi_exprs_from_pyomo_exprs", &appsi_exprs_from_pyomo_exprs);
   m.def("appsi_expr_from_pyomo_expr", &appsi_expr_from_pyomo_expr);
+  m.def("prep_for_repn", &prep_for_repn);
   py::class_<PyomoExprTypes>(m, "PyomoExprTypes")
     .def(py::init<>());
   py::class_<Node, std::shared_ptr<Node> >(m, "Node")

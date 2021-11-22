@@ -100,7 +100,6 @@ class NLWriter(PersistentBase):
     def _add_constraints(self, cons: List[_GeneralConstraintData]):
         pyomo_expr_types = cmodel.PyomoExprTypes()
         for c in cons:
-            cname = self._symbol_map.getSymbol(c, self._con_labeler)
             repn = generate_standard_repn(c.body, compute_values=False, quadratic=False)
             const = cmodel.appsi_expr_from_pyomo_expr(repn.constant,
                                                       self._pyomo_var_to_solver_var_map,
@@ -146,7 +145,6 @@ class NLWriter(PersistentBase):
         for c in cons:
             cc = self._pyomo_con_to_solver_con_map.pop(c)
             self._writer.remove_constraint(cc)
-            self._symbol_map.removeSymbol(c)
             self._con_labeler.remove_obj(c)
             del self._solver_con_to_pyomo_con_map[cc]
 

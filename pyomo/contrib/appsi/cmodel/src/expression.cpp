@@ -1073,7 +1073,7 @@ std::vector<std::shared_ptr<Constant> > create_constants(int n_constants)
 }
 
 
-std::shared_ptr<Node> appsi_operator_from_pyomo_expr(py::handle expr, py::dict var_map, py::dict param_map, PyomoExprTypes& expr_types)
+std::shared_ptr<Node> appsi_operator_from_pyomo_expr(py::handle expr, py::handle var_map, py::handle param_map, PyomoExprTypes& expr_types)
 {
   std::shared_ptr<Node> res;
   int tmp_type = expr_types.expr_type_map[py::type::of(expr)].cast<int>();
@@ -1197,7 +1197,147 @@ std::shared_ptr<Node> appsi_operator_from_pyomo_expr(py::handle expr, py::dict v
 }
 
 
-int build_expression_tree(py::handle pyomo_expr, std::shared_ptr<Node> appsi_expr, py::dict var_map, py::dict param_map, PyomoExprTypes& expr_types)
+void prep_for_repn_helper(py::handle expr, py::handle named_exprs, py::handle variables, py::handle fixed_vars, py::handle external_funcs, PyomoExprTypes& expr_types)
+{
+  int tmp_type = expr_types.expr_type_map[py::type::of(expr)].cast<int>();
+  
+  switch (tmp_type)
+    {
+    case 0 :
+      {
+	break;
+      }
+    case 1 :
+      {
+	variables[expr_types.id(expr)] = expr;
+	if (expr.attr("fixed").cast<bool>())
+	  {
+	    fixed_vars[expr_types.id(expr)] = expr;
+	  }
+	break;
+      }
+    case 2 :
+      {
+	break;
+      }
+    case 3 :
+      {
+	py::tuple args = expr.attr("args");
+	for (py::handle arg : args)
+	  {
+	    prep_for_repn_helper(arg, named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	  }
+	break;
+      }
+    case 4 :
+      {
+	py::tuple args = expr.attr("args");
+	for (py::handle arg : args)
+	  {
+	    prep_for_repn_helper(arg, named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	  }
+	break;
+      }
+    case 5 :
+      {
+	py::tuple args = expr.attr("args");
+	for (py::handle arg : args)
+	  {
+	    prep_for_repn_helper(arg, named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	  }
+	break;
+      }
+    case 6 :
+      {
+	external_funcs[expr_types.id(expr)] = expr;
+	py::tuple args = expr.attr("args");
+	for (py::handle arg : args)
+	  {
+	    prep_for_repn_helper(arg, named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	  }
+	break;
+      }
+    case 7 :
+      {
+	py::tuple args = expr.attr("args");
+	for (py::handle arg : args)
+	  {
+	    prep_for_repn_helper(arg, named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	  }
+	break;
+      }
+    case 8 :
+      {
+	py::tuple args = expr.attr("args");
+	for (py::handle arg : args)
+	  {
+	    prep_for_repn_helper(arg, named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	  }
+	break;
+      }
+    case 9 :
+      {
+	py::tuple args = expr.attr("args");
+	for (py::handle arg : args)
+	  {
+	    prep_for_repn_helper(arg, named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	  }
+	break;
+      }
+    case 10 :
+      {
+	py::list linear_vars = expr.attr("linear_vars");
+	py::list linear_coefs = expr.attr("linear_coefs");
+	for (py::handle arg : linear_vars)
+	  {
+	    prep_for_repn_helper(arg, named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	  }
+	for (py::handle arg : linear_coefs)
+	  {
+	    prep_for_repn_helper(arg, named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	  }
+	prep_for_repn_helper(expr.attr("constant"), named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	break;
+      }
+    case 11 :
+      {
+	named_exprs[expr_types.id(expr)] = expr;
+	prep_for_repn_helper(expr.attr("expr"), named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	break;
+      }
+    case 12 :
+      {
+	break;
+      }
+    default :
+      {
+        throw py::value_error("Unrecognized expression type");
+	break;
+      }
+    }
+}
+
+
+py::tuple prep_for_repn(py::handle expr, PyomoExprTypes& expr_types)
+{
+  py::dict named_exprs;
+  py::dict variables;
+  py::dict fixed_vars;
+  py::dict external_funcs;
+
+  prep_for_repn_helper(expr, named_exprs, variables, fixed_vars, external_funcs, expr_types);
+
+  py::list named_expr_list = named_exprs.attr("values")();
+  py::list variable_list = variables.attr("values")();
+  py::list fixed_var_list = fixed_vars.attr("values")();
+  py::list external_func_list = external_funcs.attr("values")();
+
+  py::tuple res = py::make_tuple(named_expr_list, variable_list, fixed_var_list, external_func_list);
+  return res;
+}
+
+
+int build_expression_tree(py::handle pyomo_expr, std::shared_ptr<Node> appsi_expr, py::handle var_map, py::handle param_map, PyomoExprTypes& expr_types)
 {
   int num_nodes = 0;
 
@@ -1266,7 +1406,7 @@ int build_expression_tree(py::handle pyomo_expr, std::shared_ptr<Node> appsi_exp
 }
 
 
-std::shared_ptr<ExpressionBase> appsi_expr_from_pyomo_expr(py::handle expr, py::dict var_map, py::dict param_map, PyomoExprTypes& expr_types)
+std::shared_ptr<ExpressionBase> appsi_expr_from_pyomo_expr(py::handle expr, py::handle var_map, py::handle param_map, PyomoExprTypes& expr_types)
 {
   std::shared_ptr<Node> node = appsi_operator_from_pyomo_expr(expr, var_map, param_map, expr_types);
   int num_nodes = build_expression_tree(expr, node, var_map, param_map, expr_types);

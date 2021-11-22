@@ -519,6 +519,8 @@ public:
     expr_type_map[LinearExpression] = 10;
     expr_type_map[_GeneralExpressionData] = 11;
     expr_type_map[ScalarExpression] = 11;
+    expr_type_map[Integral] = 11;
+    expr_type_map[ScalarIntegral] = 11;
     expr_type_map[NumericConstant] = 12;
   }
   ~PyomoExprTypes() = default;
@@ -551,6 +553,8 @@ public:
   py::object expr_module = py::module_::import("pyomo.core.base.expression");
   py::object _GeneralExpressionData = expr_module.attr("_GeneralExpressionData");
   py::object ScalarExpression = expr_module.attr("ScalarExpression");
+  py::object ScalarIntegral = py::module_::import("pyomo.dae.integral").attr("ScalarIntegral");
+  py::object Integral = py::module_::import("pyomo.dae.integral").attr("Integral");
   py::object builtins = py::module_::import("builtins");
   py::object id = builtins.attr("id");
   py::object len = builtins.attr("len");
@@ -561,5 +565,6 @@ public:
 std::vector<std::shared_ptr<Var> > create_vars(int n_vars);
 std::vector<std::shared_ptr<Param> > create_params(int n_params);
 std::vector<std::shared_ptr<Constant> > create_constants(int n_constants);
-std::shared_ptr<ExpressionBase> appsi_expr_from_pyomo_expr(py::handle expr, py::dict var_map, py::dict param_map, PyomoExprTypes& expr_types);
+std::shared_ptr<ExpressionBase> appsi_expr_from_pyomo_expr(py::handle expr, py::handle var_map, py::handle param_map, PyomoExprTypes& expr_types);
 std::vector<std::shared_ptr<ExpressionBase> > appsi_exprs_from_pyomo_exprs(py::list expr_list, py::dict var_map, py::dict param_map);
+py::tuple prep_for_repn(py::handle expr, PyomoExprTypes& expr_types);

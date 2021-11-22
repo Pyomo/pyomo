@@ -25,6 +25,7 @@ from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base import SymbolMap
 import weakref
 from io import StringIO
+from .cmodel import cmodel, cmodel_available
 
 
 class TerminationCondition(enum.Enum):
@@ -714,11 +715,12 @@ class PersistentBase(abc.ABC):
 
     def add_constraints(self, cons: List[_GeneralConstraintData]):
         all_fixed_vars = dict()
+        expr_types = cmodel.PyomoExprTypes()
         for con in cons:
             if con in self._named_expressions:
                 raise ValueError('constraint {name} has already been added'.format(name=con.name))
             self._active_constraints[con] = (con.lower, con.body, con.upper)
-            named_exprs, variables, fixed_vars, external_functions = identify_named_expressions(con.body)
+            named_exprs, variables, fixed_vars, external_functions = cmodel.prep_for_repn(con.body, expr_types)
             self._named_expressions[con] = [(e, e.expr) for e in named_exprs]
             if len(external_functions) > 0:
                 self._external_functions[con] = external_functions
@@ -761,7 +763,8 @@ class PersistentBase(abc.ABC):
             self._objective = obj
             self._objective_expr = obj.expr
             self._objective_sense = obj.sense
-            named_exprs, variables, fixed_vars, external_functions = identify_named_expressions(obj.expr)
+            expr_types = cmodel.PyomoExprTypes()
+            named_exprs, variables, fixed_vars, external_functions = cmodel.prep_for_repn(obj.expr, expr_types)
             self._obj_named_expressions = [(i, i.expr) for i in named_exprs]
             if len(external_functions) > 0:
                 self._external_functions[obj] = external_functions
