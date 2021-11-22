@@ -245,11 +245,9 @@ def handle_main_other_conditions(main_mip, main_mip_results, solve_data, config)
             solve_data.working_model.MindtPy_utils.variable_list,
             config)
         uptade_suboptimal_dual_bound(solve_data, main_mip_results)
-        # TODO: replace this log
-        config.logger.info(
-            'MIP %s: OBJ: %s  LB: %s  UB: %s'
-            % (solve_data.mip_iter, value(MindtPy.mip_obj.expr),
-               solve_data.LB, solve_data.UB))
+        config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'MILP', value(MindtPy.mip_obj.expr),
+                                                           solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                                                           get_main_elapsed_time(solve_data.timing)))
     else:
         raise ValueError(
             'MindtPy unable to handle MILP main termination condition '
@@ -318,11 +316,9 @@ def handle_main_max_timelimit(main_mip, main_mip_results, solve_data, config):
         solve_data.working_model.MindtPy_utils.variable_list,
         config)
     uptade_suboptimal_dual_bound(solve_data, main_mip_results)
-    # TODO: replace this log
-    config.logger.info(
-        'MIP %s: OBJ: %s  LB: %s  UB: %s'
-        % (solve_data.mip_iter, value(MindtPy.mip_obj.expr),
-           solve_data.LB, solve_data.UB))
+    config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'MILP', value(MindtPy.mip_obj.expr),
+                                                       solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                                                       get_main_elapsed_time(solve_data.timing)))
 
 
 def handle_main_unbounded(main_mip, solve_data, config):
