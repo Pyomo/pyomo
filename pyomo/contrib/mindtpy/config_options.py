@@ -5,6 +5,11 @@ from pyomo.contrib.gdpopt.util import _DoNothing, a_logger
 
 
 def _get_MindtPy_config():
+    """Set up the configurations for MindtPy.
+
+    Returns:
+        config (ConfigBlock): the specific configurations for MindtPy.
+    """
     CONFIG = ConfigBlock('MindtPy')
 
     CONFIG.declare('iteration_limit', ConfigValue(
@@ -199,6 +204,11 @@ def _get_MindtPy_config():
 
 
 def _add_subsolver_configs(CONFIG):
+    """Adds the subsolver-related configurations.
+
+    Args:
+        CONFIG (ConfigBlock): the specific configurations for MindtPy.
+    """
     CONFIG.declare('nlp_solver', ConfigValue(
         default='ipopt',
         domain=In(['ipopt', 'gams', 'baron']),
@@ -268,6 +278,11 @@ def _add_subsolver_configs(CONFIG):
 
 
 def _add_tolerance_configs(CONFIG):
+    """Adds the tolerance-related configurations.
+
+    Args:
+        CONFIG (ConfigBlock): the specific configurations for MindtPy.
+    """
     CONFIG.declare('bound_tolerance', ConfigValue(
         default=1E-4,
         domain=PositiveFloat,
@@ -314,6 +329,11 @@ def _add_tolerance_configs(CONFIG):
 
 
 def _add_bound_configs(CONFIG):
+    """Adds the bound related configurations.
+
+    Args:
+        CONFIG (ConfigBlock): the specific configurations for MindtPy.
+    """
     CONFIG.declare('obj_bound', ConfigValue(
         default=1E15,
         domain=PositiveFloat,
@@ -332,6 +352,11 @@ def _add_bound_configs(CONFIG):
 
 
 def _add_fp_configs(CONFIG):
+    """Adds the feasibility pump-related configurations.
+
+    Args:
+        CONFIG (ConfigBlock): the specific configurations for MindtPy.
+    """
     CONFIG.declare('fp_cutoffdecr', ConfigValue(
         default=1E-1,
         domain=PositiveFloat,
@@ -387,6 +412,11 @@ def _add_fp_configs(CONFIG):
 
 
 def _add_loa_configs(CONFIG):
+    """Adds the LOA-related configurations.
+
+    Args:
+        CONFIG (ConfigBlock): the specific configurations for MindtPy.
+    """
     CONFIG.declare('level_coef', ConfigValue(
         default=0.5,
         domain=PositiveFloat,
@@ -421,6 +451,11 @@ def _add_loa_configs(CONFIG):
 
 
 def check_config(config):
+    """Checks if the configuration options make sense.
+
+    Args:
+        config (ConfigBlock): the specific configurations for MindtPy.
+    """
     # configuration confirmation
     if config.add_regularization is not None:
         if config.add_regularization in {'grad_lag', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:

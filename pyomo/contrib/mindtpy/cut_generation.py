@@ -24,25 +24,20 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
                 cb_opt=None,
                 linearize_active=True,
                 linearize_violated=True):
-    """
-    Linearizes nonlinear constraints; modifies the model to include the OA cuts
-    For nonconvex problems, turn on 'config.add_slack'. Slack variables will
-    always be used for nonlinear equality constraints.
-    Parameters
-    ----------
-    target_model:
-        this is the MIP/MILP model for the OA algorithm; we want to add the OA cuts to 'target_model'
-    dual_values:
-        contains the value of the duals for each constraint
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
-    linearize_active: bool, optional
-        this parameter acts as a Boolean flag that signals whether the linearized constraint is active
-    linearize_violated: bool, optional
-        this parameter acts as a Boolean flag that signals whether the nonlinear constraint represented by the
-        linearized constraint has been violated
+    """Adds OA cuts.
+
+    Generates and adds OA cuts (linearizes nonlinear constraints).
+    For nonconvex problems, turn on 'config.add_slack'. 
+    Slack variables will always be used for nonlinear equality constraints.
+
+    Args:
+        target_model (Pyomo model): the relaxed problem.
+        dual_values (list): contains the value of the duals for each constraint.
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
+        cb_opt (SolverFactory, optional): gurobi_persistent. Defaults to None.
+        linearize_active (bool, optional): whether linearize the active nonlinear constraints. Defaults to True.
+        linearize_violated (bool, optional): whether linearize the violated nonlinear constraints. Defaults to True.
     """
     with time_code(solve_data.timing, 'OA cut generation'):
         for index, constr in enumerate(target_model.MindtPy_utils.constraint_list):
@@ -109,25 +104,14 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
 def add_ecp_cuts(target_model, solve_data, config,
                  linearize_active=True,
                  linearize_violated=True):
-    """
-    Linearizes nonlinear constraints. Adds the cuts for the ECP method.
+    """Linearizes nonlinear constraints. Adds the cuts for the ECP method.
 
-    For nonconvex problems, turn on 'config.add_slack'. Slack variables will
-    always be used for nonlinear equality constraints.
-
-    Parameters
-    ----------
-    target_model:
-        this is the MIP/MILP model for the OA algorithm; we want to add the OA cuts to 'target_model'
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
-    linearize_active: bool, optional
-        this parameter acts as a Boolean flag that signals whether the linearized constraint is active
-    linearize_violated: bool, optional
-        this parameter acts as a Boolean flag that signals whether the nonlinear constraint represented by the
-        linearized constraint has been violated
+    Args:
+        target_model (Pyomo model): the relaxed linear model.
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
+        linearize_active (bool, optional): whether linearize the active nonlinear constraints. Defaults to True.
+        linearize_violated (bool, optional): whether linearize the violated nonlinear constraints. Defaults to True.
     """
     with time_code(solve_data.timing, 'ECP cut generation'):
         for constr in target_model.MindtPy_utils.nonlinear_constraint_list:
@@ -188,22 +172,19 @@ def add_ecp_cuts(target_model, solve_data, config,
                     )
 
 
-def add_no_good_cuts(var_values, solve_data, config, feasible=False):
-    """
-    Adds no-good cuts; modifies the model to include no-good cuts
+def add_no_good_cuts(var_values, solve_data, config):
+    """Adds no-good cuts.
+
     This adds an no-good cuts to the no_good_cuts ConstraintList, which is not activated by default.
     However, it may be activated as needed in certain situations or for certain values of option flags.
 
-    Parameters
-    ----------
-    var_values: list
-        values of the current variables, used to generate the cut
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
-    feasible: bool, optional
-        boolean indicating if integer combination yields a feasible or infeasible NLP
+    Args:
+        var_values (list): variable values of the current solution, used to generate the cut.
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
+
+    Raises:
+        ValueError: binary variable is not 0 or 1.
     """
     if not config.add_no_good_cuts:
         return
@@ -241,15 +222,11 @@ def add_no_good_cuts(var_values, solve_data, config, feasible=False):
 
 
 def add_affine_cuts(solve_data, config):
-    """
-    Adds affine cuts using MCPP; modifies the model to include affine cuts
+    """Adds affine cuts using MCPP.
 
-    Parameters
-    ----------
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    Args:
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
     """
     with time_code(solve_data.timing, 'Affine cut generation'):
         m = solve_data.mip

@@ -31,33 +31,24 @@ tabu_list, tabu_list_available = attempt_import(
 
 
 def solve_main(solve_data, config, fp=False, regularization_problem=False):
-    """
-    This function solves the MIP main problem
+    """This function solves the MIP main problem.
 
-    Parameters
-    ----------
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    Args:
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
+        fp (bool, optional): whether it is in the loop of feasibility pump. Defaults to False.
+        regularization_problem (bool, optional): whether it is solving a regularization problem. Defaults to False.
 
-    Returns
-    -------
-    solve_data.mip: Pyomo model
-        the MIP stored in solve_data
-    main_mip_results: Pyomo results object
-        result from solving the main MIP
-    fp: Bool
-        generate the feasibility pump regularization main problem
-    regularization_problem: Bool
-        generate the ROA regularization main problem
+    Returns:
+        solve_data.mip (Pyomo model): the MIP stored in solve_data.
+        main_mip_results (SolverResults): results from solving the main MIP.
     """
     if not fp and not regularization_problem:
         solve_data.mip_iter += 1
 
     # setup main problem
     setup_main(solve_data, config, fp, regularization_problem)
-    mainopt = setup_mip_solver(solve_data, config, regularization_problem)
+    mainopt = set_up_mip_solver(solve_data, config, regularization_problem)
 
     mip_args = dict(config.mip_solver_args)
     if config.mip_solver in {'cplex', 'cplex_persistent', 'gurobi', 'gurobi_persistent'}:
@@ -114,7 +105,17 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
     return solve_data.mip, main_mip_results
 
 
-def setup_mip_solver(solve_data, config, regularization_problem):
+def set_up_mip_solver(solve_data, config, regularization_problem):
+    """Set up the MIP solver.
+
+    Args:
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
+        regularization_problem (bool): whether it is solving a regularization problem.
+
+    Returns:
+        mainopt (SolverFactory): the customized MIP solver.
+    """
     # Deactivate extraneous IMPORT/EXPORT suffixes
     if config.nlp_solver == 'ipopt':
         getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
@@ -167,21 +168,14 @@ def setup_mip_solver(solve_data, config, regularization_problem):
 
 
 def handle_main_optimal(main_mip, solve_data, config, update_bound=True):
-    """
-    This function copies the result from 'solve_main' to the working model and updates the upper/lower bound. This
+    """This function copies the results from 'solve_main' to the working model and updates the upper/lower bound. This
     function is called after an optimal solution is found for the main problem.
 
-    Parameters
-    ----------
-    main_mip: Pyomo model
-        the MIP main problem
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
-    update_bound: Bool
-        whether update the bound
-        bound will not be updated when handle regularization problem
+    Args:
+        main_mip (Pyomo model): the MIP main problem.
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
+        update_bound (bool, optional): whether update the bound. Bound will not be updated when handle regularization problem. Defaults to True.
     """
     # proceed. Just need integer values
     MindtPy = main_mip.MindtPy_utils
@@ -205,20 +199,17 @@ def handle_main_optimal(main_mip, solve_data, config, update_bound=True):
 
 
 def handle_main_other_conditions(main_mip, main_mip_results, solve_data, config):
-    """
-    This function handles the result of the latest iteration of solving the MIP problem (given any of a few
+    """This function handles the result of the latest iteration of solving the MIP problem (given any of a few
     edge conditions, such as if the solution is neither infeasible nor optimal).
 
-    Parameters
-    ----------
-    main_mip: Pyomo model
-        the MIP main problem
-    main_mip_results: Pyomo results object
-        result from solving the MIP problem
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    Args:
+        main_mip (Pyomo model): the MIP main problem.
+        main_mip_results (SolverResults): results from solving the MIP problem.
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
+
+    Raises:
+        ValueError: MindtPy unable to handle MILP main termination condition.
     """
     if main_mip_results.solver.termination_condition is tc.infeasible:
         handle_main_infeasible(main_mip, solve_data, config)
@@ -256,17 +247,12 @@ def handle_main_other_conditions(main_mip, main_mip_results, solve_data, config)
 
 
 def handle_main_infeasible(main_mip, solve_data, config):
-    """
-    This function handles the result of the latest iteration of solving the MIP problem given an infeasible solution.
+    """This function handles the result of the latest iteration of solving the MIP problem given an infeasible solution.
 
-    Parameters
-    ----------
-    main_mip: Pyomo model
-        the MIP main problem
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    Args:
+        main_mip (Pyomo model): the MIP main problem.
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
     """
     config.logger.info(
         'MILP main problem is infeasible. '
@@ -292,18 +278,14 @@ def handle_main_infeasible(main_mip, solve_data, config):
 
 
 def handle_main_max_timelimit(main_mip, main_mip_results, solve_data, config):
-    """
-    This function handles the result of the latest iteration of solving the MIP problem given that solving the
+    """This function handles the result of the latest iteration of solving the MIP problem given that solving the
     MIP takes too long.
 
-    Parameters
-    ----------
-    main_mip: Pyomo model
-        the MIP main problem
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    Args:
+        main_mip (Pyomo model): the MIP main problem.
+        main_mip_results (SolverResults): results from solving the MIP main subproblem.
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
     """
     # TODO check that status is actually ok and everything is feasible
     MindtPy = main_mip.MindtPy_utils
@@ -322,18 +304,16 @@ def handle_main_max_timelimit(main_mip, main_mip_results, solve_data, config):
 
 
 def handle_main_unbounded(main_mip, solve_data, config):
-    """
-    This function handles the result of the latest iteration of solving the MIP problem given an unbounded solution
-    due to the relaxation.
+    """This function handles the result of the latest iteration of solving the MIP 
+    problem given an unbounded solution due to the relaxation.
 
-    Parameters
-    ----------
-    main_mip: Pyomo model
-        the MIP main problem
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    Args:
+        main_mip (Pyomo model): the MIP main problem.
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
+
+    Returns:
+        main_mip_results (SolverResults): the results of the bounded main problem.
     """
     # Solution is unbounded. Add an arbitrary bound to the objective and resolve.
     # This occurs when the objective is nonlinear. The nonlinear objective is moved
@@ -356,6 +336,17 @@ def handle_main_unbounded(main_mip, solve_data, config):
 
 
 def handle_regularization_main_tc(main_mip, main_mip_results, solve_data, config):
+    """Handles the result of the latest FP iteration of solving the regularization main problem.
+
+    Args:
+        main_mip (Pyomo model): the MIP main problem.
+        main_mip_results (SolverResults): results from solving the regularization main subproblem.
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
+
+    Raises:
+        ValueError: MindtPy unable to handle the regularization problem termination condition.
+    """
     if main_mip_results is None:
         config.logger.info(
             'Failed to solve the regularization problem.'
@@ -394,19 +385,13 @@ def handle_regularization_main_tc(main_mip, main_mip_results, solve_data, config
 
 
 def setup_main(solve_data, config, fp, regularization_problem):
-    """
-    Set up main problem/main regularization problem for OA, ECP, Feasibility Pump and ROA methods.
+    """Set up main problem/main regularization problem for OA, ECP, Feasibility Pump and ROA methods.
 
-    Parameters
-    ----------
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
-    fp: Bool
-        generate the feasibility pump regularization main problem
-    regularization_problem: Bool
-        generate the ROA regularization main problem
+    Args:
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
+        fp (bool): whether it is in the loop of feasibility pump.
+        regularization_problem (bool): whether it is solving a regularization problem.
     """
     MindtPy = solve_data.mip.MindtPy_utils
 

@@ -30,25 +30,18 @@ def fp_converged(solve_data, config, discrete_only=True):
 
 
 def solve_fp_subproblem(solve_data, config):
-    """
-    Solves the feasibility pump NLP
+    """Solves the feasibility pump NLP subproblem.
 
     This function sets up the 'fp_nlp' by relax integer variables.
     precomputes dual values, deactivates trivial constraints, and then solves NLP model.
 
-    Parameters
-    ----------
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    Args:
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
 
-    Returns
-    -------
-    fp_nlp: Pyomo model
-        Fixed-NLP from the model
-    results: Pyomo results object
-        result from solving the Fixed-NLP
+    Returns:
+        fp_nlp (Pyomo model): Fixed-NLP from the model.
+        results (SolverResults): results from solving the fixed-NLP subproblem.
     """
 
     fp_nlp = solve_data.working_model.clone()
@@ -95,9 +88,13 @@ def solve_fp_subproblem(solve_data, config):
 
 
 def handle_fp_subproblem_optimal(fp_nlp, solve_data, config):
-    """Copies result to working model, updates bound, adds OA cut, no_good cut
-    and increasing objective cut and stores best solution if new one is best
-    Also calculates the duals
+    """Copies the solution to the working model, updates bound, adds OA cuts/no-good cuts/increasing objective cut, 
+    calculates the duals and stores incumbent solution if it has been improved.
+
+    Args:
+        fp_nlp (Pyomo model): the feasibility pump NLP subproblem.
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
     """
     copy_var_list_values(
         fp_nlp.MindtPy_utils.variable_list,
@@ -123,18 +120,17 @@ def handle_fp_subproblem_optimal(fp_nlp, solve_data, config):
 
 
 def fp_loop(solve_data, config):
-    """
-    Feasibility pump loop 
+    """Feasibility pump loop.
 
-    This is the outermost function for the algorithms in this package; this function controls the progression of
-    solving the model.
+    This is the outermost function for the algorithms in this package; this function
+    controls the progression of solving the model.
 
-    Parameters
-    ----------
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    Args:
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
+
+    Raises:
+        ValueError: MindtPy unable to handle the termination condition of the FP-NLP subproblem.
     """
     while solve_data.fp_iter < config.fp_iteration_limit:
 
@@ -142,7 +138,7 @@ def fp_loop(solve_data, config):
         # solve MILP main problem
         feas_main, feas_main_results = solve_main(
             solve_data, config, fp=True)
-        fp_should_terminate = handle_feas_main_tc(
+        fp_should_terminate = handle_fp_main_tc(
             feas_main_results, solve_data, config)
         if fp_should_terminate:
             break
@@ -199,17 +195,13 @@ def fp_loop(solve_data, config):
 
 
 def add_orthogonality_cuts(solve_data, config):
-    """
-    Add orthogonality cuts
+    """Add orthogonality cuts.
 
     This function adds orthogonality cuts to avoid cycling when the independence constraint qualification is not satisfied.
 
-    Parameters
-    ----------
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    Args:
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
     """
     mip_integer_vars = solve_data.mip.MindtPy_utils.discrete_variable_list
     nlp_integer_vars = solve_data.working_model.MindtPy_utils.discrete_variable_list
@@ -225,6 +217,13 @@ def add_orthogonality_cuts(solve_data, config):
 
 
 def generate_norm_constraint(fp_nlp, solve_data, config):
+    """Generate the norm constraint for the FP-NLP subproblem.
+
+    Args:
+        fp_nlp (Pyomo model): the feasibility pump NLP subproblem.
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
+    """
     if config.fp_main_norm == 'L1':
         # TODO: check if we can access the block defined in FP-main problem
         generate_norm1_norm_constraint(
@@ -240,7 +239,17 @@ def generate_norm_constraint(fp_nlp, solve_data, config):
             fp_nlp.norm_constraint.add(nlp_var - mip_var.value <= rhs)
 
 
-def handle_feas_main_tc(feas_main_results, solve_data, config):
+def handle_fp_main_tc(feas_main_results, solve_data, config):
+    """Handle the termination condition of the feasibility pump main problem.
+
+    Args:
+        feas_main_results (SolverResults): the results from solving the FP main problem.
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
+
+    Returns:
+        Bool: True if FP loop should terminate else False.
+    """
     if feas_main_results.solver.termination_condition is tc.optimal:
         config.logger.info(solve_data.log_formatter.format(
             solve_data.fp_iter, 'FP-MIP', value(

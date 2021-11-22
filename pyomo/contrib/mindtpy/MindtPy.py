@@ -35,7 +35,7 @@ from pyomo.contrib.gdpopt.util import (copy_var_list_values, create_utility_bloc
                                        time_code, setup_results_object, process_objective, lower_logger_level_to)
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
-from pyomo.contrib.mindtpy.util import model_is_valid, setup_solve_data
+from pyomo.contrib.mindtpy.util import model_is_valid, set_up_solve_data
 from pyomo.core import (Block, ConstraintList, NonNegativeReals,
                         Set, Suffix, Var, VarList, TransformationFactory, Objective, RangeSet)
 from pyomo.opt import SolverFactory
@@ -73,13 +73,13 @@ class MindtPySolver(object):
         change. Undocumented keyword arguments definitely subject to change.
 
         Args:
-            model (Block): a Pyomo model or block to be solved
+            model (Block): a Pyomo model or block to be solved.
         """
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
         check_config(config)
 
-        solve_data = setup_solve_data(model, config)
+        solve_data = set_up_solve_data(model, config)
 
         if config.integer_to_binary:
             TransformationFactory('contrib.integer_to_binary'). \

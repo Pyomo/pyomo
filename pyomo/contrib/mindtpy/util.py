@@ -33,30 +33,19 @@ logger = logging.getLogger('pyomo.contrib')
 
 class MindtPySolveData(object):
     """Data container to hold solve-instance data.
-    Key attributes:
-        - original_model: the original model that the user gave us to solve
-        - working_model: the original model after preprocessing
     """
     pass
 
 
 def model_is_valid(solve_data, config):
-    """
-    Determines whether the model is solveable by MindtPy.
+    """Determines whether the model is solveable by MindtPy.
 
-    This function returns True if the given model is solveable by MindtPy (and performs some preprocessing such
-    as moving the objective to the constraints).
+    Args:
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
 
-    Parameters
-    ----------
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: MindtPy configurations
-        contains the specific configurations for the algorithm
-
-    Returns
-    -------
-    Boolean value (True if model is solveable in MindtPy else False)
+    Returns:
+        Bool: True if model is solveable in MindtPy else False.
     """
     m = solve_data.working_model
     MindtPy = m.MindtPy_utils
@@ -98,18 +87,14 @@ def model_is_valid(solve_data, config):
 
 
 def calc_jacobians(solve_data, config):
-    """
-    Generates a map of jacobians for the variables in the model
+    """Generates a map of jacobians for the variables in the model.
 
-    This function generates a map of jacobians corresponding to the variables in the model and adds this
-    ComponentMap to solve_data
+    This function generates a map of jacobians corresponding to the variables in the
+    model and adds this ComponentMap to solve_data.
 
-    Parameters
-    ----------
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: MindtPy configurations
-        contains the specific configurations for the algorithm
+    Args:
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
     """
     # Map nonlinear_constraint --> Map(
     #     variable --> jacobian of constraint wrt. variable)
@@ -128,15 +113,11 @@ def calc_jacobians(solve_data, config):
 
 
 def add_feas_slacks(m, config):
-    """
-    Adds feasibility slack variables according to config.feasibility_norm (given an infeasible problem)
+    """Adds feasibility slack variables according to config.feasibility_norm (given an infeasible problem).
 
-    Parameters
-    ----------
-    m: model
-        Pyomo model
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    Args:
+        m (Pyomo model): the feasbility NLP subproblem.
+        config (ConfigBlock): the specific configurations for MindtPy.
     """
     MindtPy = m.MindtPy_utils
     # generate new constraints
@@ -161,19 +142,15 @@ def add_feas_slacks(m, config):
                     >= -MindtPy.feas_opt.slack_var)
 
 
-def var_bound_add(solve_data, config):
-    """
-    This function will add bounds for variables in nonlinear constraints if they are not bounded. (This is to avoid
-    an unbounded main problem in the LP/NLP algorithm.) Thus, the model will be updated to include bounds for the
-    unbounded variables in nonlinear constraints.
+def add_var_bound(solve_data, config):
+    """This function will add bounds for variables in nonlinear constraints if they are not bounded.
 
-    Parameters
-    ----------
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    This is to avoid an unbounded main problem in the LP/NLP algorithm. Thus, the model will be 
+    updated to include bounds for the unbounded variables in nonlinear constraints.
 
+    Args:
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
     """
     m = solve_data.working_model
     MindtPy = m.MindtPy_utils
@@ -194,18 +171,17 @@ def var_bound_add(solve_data, config):
 
 
 def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=False):
-    """
-    This function generates objective (FP-NLP subproblem) for minimum euclidean distance to setpoint_model
-    L2 distance of (x,y) = \sqrt{\sum_i (x_i - y_i)^2}
+    """This function generates objective (FP-NLP subproblem) for minimum euclidean distance to setpoint_model.
 
-    Parameters
-    ----------
-    model: Pyomo model
-        the model that needs new objective function
-    setpoint_model: Pyomo model
-        the model that provides the base point for us to calculate the distance
-    discrete_only: Bool
-        only optimize on distance between the discrete variables
+    L2 distance of (x,y) = \sqrt{\sum_i (x_i - y_i)^2}.
+
+    Args:
+        model (Pyomo model): the model that needs new objective function.
+        setpoint_model (Pyomo model): the model that provides the base point for us to calculate the distance.
+        discrete_only (bool, optional): whether only optimize on distance between the discrete variables. Defaults to False.
+
+    Returns:
+        Objective: the norm2 square objective function
     """
     # skip objective_value variable and slack_var variables
     var_filter = (lambda v: v[1].is_integer()) if discrete_only \
@@ -225,18 +201,17 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
 
 
 def generate_norm1_objective_function(model, setpoint_model, discrete_only=False):
-    """
-    This function generates objective (PF-OA main problem) for minimum Norm1 distance to setpoint_model
-    Norm1 distance of (x,y) = \sum_i |x_i - y_i|
+    """This function generates objective (PF-OA main problem) for minimum Norm1 distance to setpoint_model.
 
-    Parameters
-    ----------
-    model: Pyomo model
-        the model that needs new objective function
-    setpoint_model: Pyomo model
-        the model that provides the base point for us to calculate the distance
-    discrete_only: Bool
-        only optimize on distance between the discrete variables
+    Norm1 distance of (x,y) = \sum_i |x_i - y_i|.
+
+    Args:
+        model (Pyomo model): the model that needs new objective function.
+        setpoint_model (Pyomo model): the model that provides the base point for us to calculate the distance.
+        discrete_only (bool, optional): whether only optimize on distance between the discrete variables. Defaults to False.
+
+    Returns:
+        Objective: the norm1 objective function
     """
     # skip objective_value variable and slack_var variables
     var_filter = (lambda v: v.is_integer()) if discrete_only \
@@ -264,18 +239,17 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
 
 
 def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=False):
-    """
-    This function generates objective (PF-OA main problem) for minimum Norm Infinity distance to setpoint_model
-    Norm-Infinity distance of (x,y) = \max_i |x_i - y_i|
+    """This function generates objective (PF-OA main problem) for minimum Norm Infinity distance to setpoint_model.
 
-    Parameters
-    ----------
-    model: Pyomo model
-        the model that needs new objective function
-    setpoint_model: Pyomo model
-        the model that provides the base point for us to calculate the distance
-    discrete_only: Bool
-        only optimize on distance between the discrete variables
+    Norm-Infinity distance of (x,y) = \max_i |x_i - y_i|.
+
+    Args:
+        model (Pyomo model): the model that needs new objective function.
+        setpoint_model (Pyomo model): the model that provides the base point for us to calculate the distance.
+        discrete_only (bool, optional): whether only optimize on distance between the discrete variables. Defaults to False.
+
+    Returns:
+        Objective: the norm infinity objective function
     """
     # skip objective_value variable and slack_var variables
     var_filter = (lambda v: v.is_integer()) if discrete_only \
@@ -304,9 +278,14 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
     """The function generate taylor extension of the Lagrangean function.
 
     Args:
-        model ([type]): [description]
-        setpoint_model ([type]): [description]
-        discrete_only (bool, optional): [description]. Defaults to False.
+        model (Pyomo model): the model that needs new objective function.
+        setpoint_model (Pyomo model): the model that provides the base point for us to calculate the distance.
+        config (ConfigBlock): the specific configurations for MindtPy.
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        discrete_only (bool, optional): whether only optimize on distance between the discrete variables. Defaults to False.
+
+    Returns:
+        Objective: the taylor extension(1st order or 2nd order) of the Lagrangean function. 
     """
     temp_model = setpoint_model.clone()
     for var in temp_model.MindtPy_utils.variable_list:
@@ -375,22 +354,18 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
 
 
 def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=True):
-    """
-    This function generates constraint (PF-OA main problem) for minimum Norm1 distance to setpoint_model
+    """This function generates constraint (PF-OA main problem) for minimum Norm1 distance to setpoint_model.
+
     Norm constraint is used to guarantees the monotonicity of the norm objective value sequence of all iterations
-    Norm1 distance of (x,y) = \sum_i |x_i - y_i|
-    Ref: Paper 'A storm of feasibility pumps for nonconvex MINLP' Eq. (16)
+    Norm1 distance of (x,y) = \sum_i |x_i - y_i|.
+    Ref: Paper 'A storm of feasibility pumps for nonconvex MINLP' Eq. (16).
 
-    Parameters
-    ----------
-    model: Pyomo model
-        the model that needs new objective function
-    setpoint_model: Pyomo model
-        the model that provides the base point for us to calculate the distance
-    discrete_only: Bool
-        only optimize on distance between the discrete variables
+    Args:
+        model (Pyomo model): the model that needs the norm constraint.
+        setpoint_model (Pyomo model): the model that provides the base point for us to calculate the distance.
+        config (ConfigBlock): the specific configurations for MindtPy.
+        discrete_only (bool, optional): whether only optimize on distance between the discrete variables. Defaults to True.
     """
-
     var_filter = (lambda v: v.is_integer()) if discrete_only \
         else (lambda v: True)
     model_vars = list(filter(var_filter, model.MindtPy_utils.variable_list))
@@ -417,19 +392,14 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
 
 
 def set_solver_options(opt, solve_data, config, solver_type, regularization=False):
-    """ set options for MIP/NLP solvers
+    """set options for MIP/NLP solvers.
 
     Args:
-        opt : SolverFactory
-            the solver
-        solve_data: MindtPy Data Container
-            data container that holds solve-instance data
-        config: ConfigBlock
-            contains the specific configurations for the algorithm
-        solver_type: String
-            The type of the solver, i.e. mip or nlp
-        regularization (bool, optional): Boolean.
-            Defaults to False.
+        opt (SolverFactory): the MIP/NLP solver.
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        config (ConfigBlock): the specific configurations for MindtPy.
+        solver_type (String): The type of the solver, i.e. mip or nlp.
+        regularization (bool, optional): whether the solver is used to solve the regularization problem. Defaults to False.
     """
     # TODO: integrate nlp_args here
     # nlp_args = dict(config.nlp_solver_args)
@@ -533,13 +503,14 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
 
 
 def get_integer_solution(model, string_zero=False):
-    """ obtain the value of integer variables from the provided model.
+    """Extract the value of integer variables from the provided model.
 
     Args:
-        model: Pyomo model
-            the model to extract value of integer variables
-        string_zero: Boolean
-            whether to store zero as string
+        model (Pyomo model):  the model to extract value of integer variables.
+        string_zero (bool, optional): whether to store zero as string. Defaults to False.
+
+    Returns:
+        Tuple: the tuple of integer variable values.
     """
     temp = []
     for var in model.MindtPy_utils.discrete_variable_list:
@@ -554,14 +525,15 @@ def get_integer_solution(model, string_zero=False):
     return tuple(temp)
 
 
-def setup_solve_data(model, config):
-    """ define and initialize solve_data for MindtPy
+def set_up_solve_data(model, config):
+    """Set up the solve data.
 
     Args:
-        model: Pyomo model
-            the model to extract value of integer variables
-        config: MindtPy configurations
-            contains the specific configurations for the algorithm
+        model (Pyomo model): the original model to be solved in MindtPy.
+        config (ConfigBlock): the specific configurations for MindtPy.
+
+    Returns:
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
     """
     solve_data = MindtPySolveData()
     solve_data.results = SolverResults()
@@ -631,24 +603,16 @@ def setup_solve_data(model, config):
 
 def copy_var_list_values_from_solution_pool(from_list, to_list, config, solver_model, var_map, solution_name,
                                             ignore_integrality=False):
-    """Copy variable values from one list to another.
-
-    Rounds to Binary/Integer if necessary
-    Sets to zero for NonNegativeReals if necessary
+    """Copy variable values from the solution pool to another list.
 
     Args:
-        from_list: variable list
-            contains variables and their values
-        to_list: variable list
-            contains the variables that need to set value
-        config: ConfigBlock
-            contains the specific configurations for the algorithm
-        solver_model: solver model
-            the solver model
-        var_map: dict
-            the map of pyomo variables to solver variables
-        solution_name: int or str
-            the name of the solution in the solution pool
+        from_list (list): contains variables and their values.
+        to_list (list): contains the variables that need to set value.
+        config (ConfigBlock): the specific configurations for MindtPy.
+        solver_model (solver model): the solver model derive from pyomo model.
+        var_map (dict): the map of pyomo variables to solver variables.
+        solution_name (int or str): the name of the solution in the solution pool.
+        ignore_integrality (bool, optional): whether ignore the integrality of integer variables. Defaults to False.
     """
     for v_from, v_to in zip(from_list, to_list):
         try:
@@ -678,33 +642,46 @@ def copy_var_list_values_from_solution_pool(from_list, to_list, config, solver_m
 
 
 class GurobiPersistent4MindtPy(GurobiPersistent):
+    """ A new persistent interface to Gurobi.
+
+    Args:
+        GurobiPersistent (PersistentSolver): A class that provides a persistent interface to Gurobi.
+    """
 
     def _intermediate_callback(self):
         def f(gurobi_model, where):
+            """Callback function for Gurobi.
+
+            Args:
+                gurobi_model (gurobi model): the gurobi model derived from pyomo model.
+                where (int): an enum member of gurobipy.GRB.Callback.
+            """
             self._callback_func(self._pyomo_model, self,
                                 where, self.solve_data, self.config)
         return f
 
 
 def update_gap(solve_data):
-    ''' 
-    Update the relative gap and the absolute gap
+    """Update the relative gap and the absolute gap
 
-    Parameters
-    ----------
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    '''
+    Args:
+        solve_data (MindtPySolveData): data container that holds solve-instance data
+    """
     solve_data.abs_gap = solve_data.UB - solve_data.LB
     solve_data.rel_gap = (solve_data.UB - solve_data.LB)/(abs(
         solve_data.UB if solve_data.objective_sense == minimize else solve_data.LB) + 1E-10)
 
 
 def update_dual_bound(solve_data, bound_value):
-    '''
+    """Update the dual bound.
+
     Call after solve relaxed problem, including relaxed NLP and MIP master problem.
     Use the optimal primal bound of the relaxed problem to update the dual bound.
-    '''
+
+    Args:
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        bound_value (float): the input value used to update the dual bound.
+    """
     if math.isnan(bound_value):
         return
     if solve_data.objective_sense == minimize:
@@ -720,10 +697,14 @@ def update_dual_bound(solve_data, bound_value):
 
 
 def uptade_suboptimal_dual_bound(solve_data, results):
-    '''
-    If the relaxed problem is not solved to optimality, the dual bound is updated according to
+    """If the relaxed problem is not solved to optimality, the dual bound is updated according to
     the dual bound of relaxed problem.
-    '''
+
+    Args:
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        results (SolverResults): results from solving the relaxed problem.
+                                        the dual bound of the relaxed problem can only be obtained from the result object.
+    """
     if solve_data.objective_sense == minimize:
         bound_value = results.problem.lower_bound
     else:
@@ -732,6 +713,15 @@ def uptade_suboptimal_dual_bound(solve_data, results):
 
 
 def update_primal_bound(solve_data, bound_value):
+    """Update the primal bound.
+
+    Call after solve fixed NLP subproblem.
+    Use the optimal primal bound of the relaxed problem to update the dual bound.
+
+    Args:
+        solve_data (MindtPySolveData): data container that holds solve-instance data.
+        bound_value (float): the input value used to update the primal bound.
+    """
     if math.isnan(bound_value):
         return
     if solve_data.objective_sense == minimize:
