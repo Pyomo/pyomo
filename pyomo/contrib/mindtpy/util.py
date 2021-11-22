@@ -719,7 +719,7 @@ def update_dual_bound(solve_data, bound_value):
         update_gap(solve_data)
 
 
-def update_dual_bound_use_bound(solve_data, results):
+def uptade_suboptimal_dual_bound(solve_data, results):
     '''
     If the relaxed problem is not solved to optimality, the dual bound is updated according to
     the dual bound of relaxed problem.
