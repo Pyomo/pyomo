@@ -34,6 +34,7 @@ Pyomo 6.2    17 Nov 2021
   - Fix bugs with open NumericRanges (#2170, #2179)
   - Fix bugs with References (#2158)
   - Fix Initializer by treating pandas.Series as sequences (#2151)
+  - Fix Initializer support for ConfigList/ConfigDict (#2200)
   - Add a DataFrameInitializer (#2150)
   - Add a public API for retrieving variable bound expressions (#2172)
   - Rework Var component to leverage Initializer (#2184)
@@ -48,6 +49,7 @@ Pyomo 6.2    17 Nov 2021
   - Improve GAMS writer performance (#2191)
 - Testing
   - Resolve test failures when no solvers are available (#2146)
+  - Resolve NumericValue support in assertStructuredAlmostEqual (#2200)
   - Fix typo in booktest skip declaration (#2186)
 - DAE Updates
   - Utility function to slice individual components in flatten module (#2141)

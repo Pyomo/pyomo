@@ -54,6 +54,7 @@ jobs:
         path: dist
 
   manylinuxaarch64:
+    if: ${{ false }}
     name: ${{ matrix.TARGET }}/wheel_creation
     runs-on: ${{ matrix.os }}
     strategy:
