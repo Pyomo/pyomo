@@ -3965,7 +3965,7 @@ class _AnySet(_SetData, Set):
         Set.__init__(self, **kwds)
 
     def get(self, val, default=None):
-        return val
+        return val if val is not Ellipsis else default
 
     def ranges(self):
         yield AnyRange()
