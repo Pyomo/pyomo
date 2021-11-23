@@ -10,7 +10,6 @@
 
 """Iteration loop for MindtPy."""
 from __future__ import division
-import logging
 from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution, uptade_suboptimal_dual_bound, copy_var_list_values_from_solution_pool
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 
@@ -28,8 +27,6 @@ from operator import itemgetter
 
 tabu_list, tabu_list_available = attempt_import(
     'pyomo.contrib.mindtpy.tabu_list')
-
-logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 
 def MindtPy_iteration_loop(solve_data, config):

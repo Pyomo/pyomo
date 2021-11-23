@@ -22,9 +22,6 @@ from pyomo.opt import SolverFactory, TerminationCondition as tc
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, handle_nlp_subproblem_tc
 from pyomo.contrib.mindtpy.feasibility_pump import fp_loop
-import logging
-
-logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 
 def MindtPy_initialize_main(solve_data, config):

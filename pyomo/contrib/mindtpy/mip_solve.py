@@ -21,9 +21,6 @@ from pyomo.common.dependencies import attempt_import
 from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function, set_solver_options, GurobiPersistent4MindtPy, update_dual_bound, uptade_suboptimal_dual_bound
 
 
-logger = logging.getLogger('pyomo.contrib.mindtpy')
-
-
 single_tree, single_tree_available = attempt_import(
     'pyomo.contrib.mindtpy.single_tree')
 tabu_list, tabu_list_available = attempt_import(

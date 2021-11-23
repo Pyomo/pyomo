@@ -27,8 +27,6 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.core import Constraint, minimize, value, maximize
 cplex, cplex_available = attempt_import('cplex')
 
-logger = logging.getLogger('pyomo.contrib.mindtpy')
-
 
 class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_available else object):
     """Inherent class in Cplex to call Lazy callback."""

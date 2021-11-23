@@ -734,3 +734,19 @@ def update_primal_bound(solve_data, bound_value):
         solve_data.LB_progress.append(solve_data.LB)
     if solve_data.solution_improved:
         update_gap(solve_data)
+
+
+def set_up_logger(config):
+    """Set up the formatter and handler for logger.
+
+    Args:
+        config (ConfigBlock): the specific configurations for MindtPy.
+    """
+    config.logger.propagate = False
+    ch = logging.StreamHandler()
+    ch.setLevel(config.logging_level)
+    # create formatter and add it to the handlers
+    formatter = logging.Formatter('%(message)s')
+    ch.setFormatter(formatter)
+    # add the handlers to logger
+    config.logger.addHandler(ch)

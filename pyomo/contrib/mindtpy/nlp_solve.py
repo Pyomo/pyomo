@@ -22,8 +22,6 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory, SolverResults, SolverStatus
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
 
-logger = logging.getLogger('pyomo.contrib.mindtpy')
-
 
 def solve_subproblem(solve_data, config):
     """Solves the Fixed-NLP (with fixed integers).

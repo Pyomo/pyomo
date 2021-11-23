@@ -35,14 +35,12 @@ from pyomo.contrib.gdpopt.util import (copy_var_list_values, create_utility_bloc
                                        time_code, setup_results_object, process_objective, lower_logger_level_to)
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
-from pyomo.contrib.mindtpy.util import model_is_valid, set_up_solve_data
+from pyomo.contrib.mindtpy.util import model_is_valid, set_up_solve_data, set_up_logger
 from pyomo.core import (Block, ConstraintList, NonNegativeReals,
                         Set, Suffix, Var, VarList, TransformationFactory, Objective, RangeSet)
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
 
-logger = logging.getLogger('pyomo.contrib.mindtpy')
-logging.basicConfig(format='%(message)s')
 __version__ = (0, 1, 0)
 
 
@@ -77,6 +75,7 @@ class MindtPySolver(object):
         """
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)
+        set_up_logger(config)
         check_config(config)
 
         solve_data = set_up_solve_data(model, config)

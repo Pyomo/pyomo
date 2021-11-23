@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from pyomo.common.config import (
     ConfigBlock, ConfigValue, In, PositiveFloat, PositiveInt, NonNegativeInt)
-from pyomo.contrib.gdpopt.util import _DoNothing, a_logger
+from pyomo.contrib.gdpopt.util import _DoNothing, a_logger, logging
 
 
 def _get_MindtPy_config():
@@ -100,6 +100,12 @@ def _get_MindtPy_config():
         default='pyomo.contrib.mindtpy',
         description='The logger object or name to use for reporting.',
         domain=a_logger
+    ))
+    CONFIG.declare('logging_level', ConfigValue(
+        default=logging.INFO,
+        domain=In([logging.NOTSET, logging.DEBUG, logging.INFO,
+                   logging.WARNING, logging.ERROR, logging.CRITICAL]),
+        description='The logging level for MindtPy',
     ))
     CONFIG.declare('integer_to_binary', ConfigValue(
         default=False,

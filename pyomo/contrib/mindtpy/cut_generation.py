@@ -10,14 +10,11 @@
 
 """Cut generation."""
 from __future__ import division
-import logging
 from math import copysign
 from pyomo.core import minimize, value
 from pyomo.core.expr import current as EXPR
 from pyomo.contrib.gdpopt.util import identify_variables, time_code
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
-
-logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 
 def add_oa_cuts(target_model, dual_values, solve_data, config,
