@@ -10,6 +10,7 @@
 
 import datetime
 import multiprocessing
+import os
 from io import StringIO
 import time
 
@@ -245,6 +246,33 @@ class TestPyomoUnittest(unittest.TestCase):
         arguments = parser.parse_args(cmd_opts)
         self.assertTrue(arguments.verbose)
         self.assertTrue(arguments.xunit)
+        cmd_opts.extend(['--show-log'])
+        arguments = parser.parse_args(cmd_opts)
+        self.assertTrue(arguments.showlog)
+
+    def test_build_cmd(self):
+        cmd_opts = 'bogus target names'.split()
+        parser = unittest.buildParser()
+        options, unknown = parser.parse_known_args(cmd_opts)
+        self.assertEqual(unknown, [])
+        env = os.environ.copy()
+        cmd = unittest.build_cmd(options, unknown, env)
+        self.assertIn('--eval-attr=smoke and (not fragile)', cmd)
+        self.assertIn('bogus', cmd)
+        cmd_opts.extend(['--nocapture'])
+        parser = unittest.buildParser()
+        options, unknown = parser.parse_known_args(cmd_opts)
+        self.assertEqual(unknown, ['--nocapture'])
+        env = os.environ.copy()
+        cmd = unittest.build_cmd(options, unknown, env)
+        self.assertIn('--nocapture', cmd)
+        cmd_opts.extend('--cat not-real --cat whatever'.split(' '))
+        parser = unittest.buildParser()
+        options, unknown = parser.parse_known_args(cmd_opts)
+        env = os.environ.copy()
+        cmd = unittest.build_cmd(options, unknown, env)
+        self.assertIn('--eval-attr=whatever and (not fragile)', cmd)
+
 
 
 if __name__ == '__main__':

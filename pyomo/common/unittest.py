@@ -584,16 +584,14 @@ def buildParser():
         action='store_true',
         dest='dryrun',
         help='Dry run: collect but do not execute the tests')
+    parser.add_argument('--show-log',
+        action='store_true',
+        dest='showlog',
+        help='Turn off log capture and allow warnings/deprecations to show.')
     return parser
 
-
-def runtests(options):
-
-    from pyomo.common.fileutils import PYOMO_ROOT_DIR as basedir, Executable
-    env = os.environ.copy()
-    os.chdir(basedir)
-
-    print("Running tests in directory %s" % (basedir,))
+def build_cmd(options, unknown, env):
+    from pyomo.common.fileutils import Executable
 
     if sys.platform.startswith('win'):
         binDir = os.path.join(sys.exec_prefix, 'Scripts')
@@ -625,10 +623,14 @@ def runtests(options):
         cmd.append('-x')
     if options.dryrun:
         cmd.append('--collect-only')
-
     if options.xunit:
         cmd.append('--with-xunit')
         cmd.append('--xunit-file=TEST-pyomo.xml')
+    if options.showlog:
+        cmd.append('--nologcapture')
+        cmd.append('--nocapture')
+    if unknown:
+        cmd.extend(unknown)
 
     attr = []
     _with_performance = False
@@ -681,6 +683,19 @@ def runtests(options):
         env['NOSE_WITH_FORCED_GC'] = '1'
 
     cmd.extend(options.targets)
+
+    return cmd
+
+def runtests(parser):
+
+    from pyomo.common.fileutils import PYOMO_ROOT_DIR as basedir
+    env = os.environ.copy()
+    os.chdir(basedir)
+
+    options, unknown = parser.parse_known_args()
+
+    print("Running tests in directory %s" % (basedir,))
+    cmd = build_cmd(options, unknown, env)
     print(cmd)
     print("Running...\n    %s\n" % (
             ' '.join( (x if ' ' not in x else '"'+x+'"') for x in cmd ), ))
@@ -692,5 +707,4 @@ def runtests(options):
 
 if __name__ == '__main__':
     parser = buildParser()
-    options = parser.parse_args()
-    sys.exit(runtests(options))
+    sys.exit(runtests(parser))
