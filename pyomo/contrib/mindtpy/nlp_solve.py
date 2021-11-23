@@ -12,6 +12,7 @@
 from __future__ import division
 import logging
 from pyomo.common.collections import ComponentMap
+from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
                                                   add_no_good_cuts, add_affine_cuts)
 from pyomo.contrib.mindtpy.util import add_feas_slacks, set_solver_options
@@ -95,7 +96,7 @@ def solve_subproblem(solve_data, config):
     try:
         TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
             fixed_nlp, tmp=True, ignore_infeasible=False, tolerance=config.constraint_tolerance)
-    except ValueError:
+    except InfeasibleConstraintException:
         config.logger.warning(
             'infeasibility detected in deactivate_trivial_constraints')
         results = SolverResults()
