@@ -1246,11 +1246,8 @@ class UnaryFunctionExpression(ExpressionBase):
         return self._fcn(result[0])
 
 
-class NPV_UnaryFunctionExpression(UnaryFunctionExpression):
+class NPV_UnaryFunctionExpression(NPV_Mixin, UnaryFunctionExpression):
     __slots__ = ()
-
-    def is_potentially_variable(self):
-        return False
 
 
 # NOTE: This should be a special class, since the expression generation relies
@@ -1266,6 +1263,11 @@ class AbsExpression(UnaryFunctionExpression):
 
     def __init__(self, arg):
         super(AbsExpression, self).__init__(arg, 'abs', abs)
+
+    def create_node_with_local_data(self, args, classtype=None):
+        if classtype is None:
+            classtype = self.__class__
+        return classtype(args)
 
 
 class NPV_AbsExpression(NPV_Mixin, AbsExpression):
