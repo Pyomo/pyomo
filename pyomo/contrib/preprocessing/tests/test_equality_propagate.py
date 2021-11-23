@@ -186,7 +186,7 @@ class TestEqualityPropagate(unittest.TestCase):
                                     "Variable v2 has a lower bound 4 > the "
                                     "upper bound 3 of variable v1, but they "
                                     "are linked by equality constraints"):
-            TransformationFactory('contrib.propagate_eq_var_bounds').apply_to(m)
+            xfrm.apply_to(m)
 
     def test_var_bound_propagate_revert(self):
         """Test to make sure bound propagation revert works."""
