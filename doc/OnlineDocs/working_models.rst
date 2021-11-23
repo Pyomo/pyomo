@@ -297,11 +297,11 @@ this document on ``Var`` access :ref:`VarAccess`.
 
 Note that
 
-   >>> instance.x.fix(2)
+   >>> instance.x.fix(1)
 
 is equivalent to
 
-   >>> instance.x.value = 2
+   >>> instance.x.value = 1
    >>> instance.x.fixed = True
 
 and

@@ -221,7 +221,7 @@ class _VarData(ComponentData, NumericValue):
     # Abstract Interface
     #
 
-    def set_value(self, val, valid=False):
+    def set_value(self, val, skip_validation=False):
         """Set the current variable value."""
         raise NotImplementedError
 
@@ -255,18 +255,28 @@ class _VarData(ComponentData, NumericValue):
         """Return the stale indicator for this variable."""
         raise NotImplementedError
 
-    def fix(self, value=NoArgumentGiven, valid=False):
+    def fix(self, value=NOTSET, skip_validation=False):
+        """Fix the value of this variable (treat as nonvariable)
+
+        This sets the `fixed` indicator to True.  If ``value`` is
+        provided, the value (and the ``skip_validation`` flag) are first
+        passed to :py:meth:`set_value()`.
+
         """
-        Set the fixed indicator to True. Value argument is optional,
-        indicating the variable should be fixed at its current value.
-        """
-        raise NotImplementedError
+        self.fixed = True
+        if value is not NOTSET:
+            self.set_value(value, skip_validation)
 
     def unfix(self):
-        """Sets the fixed indicator to False."""
-        raise NotImplementedError
+        """Unfix this varaible (treat as variable)
+
+        This sets the `fixed` indicator to False.
+
+        """
+        self.fixed = False
 
     def free(self):
+        """Alias for :py:meth:`unfix`"""
         return self.unfix()
 
 
@@ -350,7 +360,7 @@ class _GeneralVarData(_VarData):
     # Abstract Interface
     #
 
-    def set_value(self, val, valid=False):
+    def set_value(self, val, skip_validation=False):
         """Set the current variable value.
 
         Set the value of this variable.  The incoming value is converted
@@ -382,19 +392,16 @@ class _GeneralVarData(_VarData):
             else:
                 val = value(val)
 
-        if not valid:
+        if not skip_validation:
             if val not in self.domain:
-                # logger.warning(
-                raise ValueError("Numeric value `%s` (%s) is not in "
-                                 "domain %s for Var %s" %
-                                 (val, type(val).__name__,
-                                  self.domain, self.name))
+                logger.warning(
+                    "Setting Var '%s' to a value `%s` (%s) not in domain %s." %
+                    (self.name, val, type(val).__name__, self.domain))
             elif (self._lb is not None and val < value(self._lb)) or (
                     self._ub is not None and val > value(self._ub)):
-                pass
-                # logger.warning(
-                #     "Setting Var '%s' to a numeric value `%s` "
-                #     "outside the bounds %s." % (self.name, val, self.bounds))
+                logger.warning(
+                    "Setting Var '%s' to a numeric value `%s` "
+                    "outside the bounds %s." % (self.name, val, self.bounds))
 
         self._value = val
         self.stale = False
@@ -524,22 +531,6 @@ class _GeneralVarData(_VarData):
 
     # stale is an attribute
 
-    def fix(self, value=NoArgumentGiven, valid=False):
-        """Fix the value of this variable (treat as nonvariable)
-
-        This sets the `fixed` indicator to True.  If ``value`` is
-        provided, the value (and the ``valid`` flag) are first passed to
-        :py:meth:`set_value()`.
-
-        """
-        self.fixed = True
-        if value is not NoArgumentGiven:
-            self.set_value(value, valid)
-
-    def unfix(self):
-        """Sets the fixed indicator to False."""
-        self.fixed = False
-
     def _process_bound(self, val, bound_type):
         if type(val) in native_numeric_types or val is None:
             # TODO: warn/error: check if this Var has units: assigning
@@ -653,7 +644,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
 
     extract_values = get_values
 
-    def set_values(self, new_values, valid=False):
+    def set_values(self, new_values, skip_validation=False):
         """
         Set the values of a dictionary.
 
@@ -661,7 +652,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         dictionary.
         """
         for index, new_value in new_values.items():
-            self[index].set_value(new_value, valid)
+            self[index].set_value(new_value, skip_validation)
 
     def get_units(self):
         """Return the units expression for this Var."""
@@ -701,7 +692,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                     "with 'dense=True'.  Reverting to 'dense=False' as "
                     "it is not possible to make this variable dense.  "
                     "This warning can be suppressed by specifying "
-                    "'dense=False'")
+                    "'dense=False'" % (self.name,))
                 self._dense = False
 
             if ( self._rule_init is not None and
@@ -883,20 +874,30 @@ class IndexedVar(Var):
         for vardata in self.values():
             vardata.upper = val
 
-    def fix(self, value=NoArgumentGiven):
-        """
-        Set the fixed indicator to True. Value argument is optional,
-        indicating the variable should be fixed at its current value.
+    def fix(self, value=NOTSET, skip_validation=False):
+        """Fix all variables in this IndexedVar (treat as nonvariable)
+
+        This sets the `fixed` indicator to True for every variable in
+        this IndexedVar.  If ``value`` is provided, the value (and the
+        ``skip_validation`` flag) are first passed to
+        :py:meth:`set_value()`.
+
         """
         for vardata in self.values():
-            vardata.fix(value=value)
+            vardata.fix(value, skip_validation)
 
     def unfix(self):
-        """Sets the fixed indicator to False."""
+        """Unfix all varaibles in this IndexedVar (treat as variable)
+
+        This sets the `fixed` indicator to False for every variable in
+        this IndexedVar.
+
+        """
         for vardata in self.values():
             vardata.unfix()
 
     def free(self):
+        """Alias for :py:meth:`unfix`"""
         return self.unfix()
 
     @property
