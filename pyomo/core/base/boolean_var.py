@@ -241,8 +241,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
         return self._value
     @value.setter
     def value(self, val):
-        # TODO: this should be changed to use valid=False
-        self.set_value(val, True)
+        self.set_value(val)
 
     @property
     def domain(self):
