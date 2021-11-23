@@ -43,8 +43,8 @@ def _build_equality_set(m):
             # only take the variables with nonzero coefficients
             vars_ = [v for i, v in enumerate(repn.linear_vars)
                      if repn.linear_coefs[i]]
-            if (len(vars_) == 2 and
-                    sorted(l for l in repn.linear_coefs if l) == [-1, 1]):
+            if (len(vars_) == 2 and repn.constant == 0 and
+                sorted(l for l in repn.linear_coefs if l) == [-1, 1]):
                 # this is an a == b constraint.
                 v1 = vars_[0]
                 v2 = vars_[1]
@@ -201,7 +201,7 @@ class VarBoundPropagator(IsomorphicTransformation):
                 v2 = next(v for v in var_equality_set if v.ub == min_ub)
                 raise InfeasibleConstraintException(
                     'Variable {} has a lower bound {} '
-                    ' > the upper bound {} of variable {}, '
+                    '> the upper bound {} of variable {}, '
                     'but they are linked by equality constraints.'
                     .format(v1.name, value(v1.lb), value(v2.ub), v2.name))
 
