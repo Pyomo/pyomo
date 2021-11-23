@@ -111,7 +111,7 @@ def make_separation_problem(model_data, config):
     #Separation problem initialized to nominal uncertain parameter values
     for idx, var in enumerate(list(param_vars.values())):
         param = uncertain_params[idx]
-        var.value = param.value
+        var.set_value(param.value, skip_validation=True)
         substitution_map[id(param)] = var
 
     separation_model.util.new_constraints = constraints = ConstraintList()
@@ -384,12 +384,13 @@ def initialize_separation(model_data, config):
     """
     if config.uncertainty_set.geometry != Geometry.DISCRETE_SCENARIOS:
         for idx, p in list(model_data.separation_model.util.uncertain_param_vars.items()):
-            p.value = config.nominal_uncertain_param_vals[idx]
+            p.set_value(config.nominal_uncertain_param_vals[idx],
+                        skip_validation=True)
     for idx, v in enumerate(model_data.separation_model.util.first_stage_variables):
         v.fix(model_data.opt_fsv_vals[idx])
 
     for idx, c in enumerate(model_data.separation_model.util.second_stage_variables):
-        c.value = model_data.opt_ssv_vals[idx]
+        c.set_value(model_data.opt_ssv_vals[idx], skip_validation=True)
 
     for c in model_data.separation_model.util.second_stage_variables:
         if config.decision_rule_order != 0:

@@ -88,7 +88,7 @@ def solve_subproblem(solve_data, config):
                     MindtPy.variable_list,
                     solve_data.initial_var_values):
                 if not nlp_var.fixed and not nlp_var.is_binary():
-                    nlp_var.value = orig_val
+                    nlp_var.set_value(orig_val, skip_validation=True)
             # fixed_nlp.tmp_duals[c] = c_leq * max(
             #     0, c_leq*(value(c.body) - rhs))
             # TODO: change logic to c_leq based on benchmarking
@@ -396,7 +396,7 @@ def solve_feasibility_subproblem(solve_data, config):
                     MindtPy.variable_list,
                     solve_data.initial_var_values):
                 if not nlp_var.fixed and not nlp_var.is_binary():
-                    nlp_var.value = orig_val
+                    nlp_var.set_value(orig_val, skip_validation=True)
             with time_code(solve_data.timing, 'feasibility subproblem'):
                 feas_soln = nlpopt.solve(
                     feas_subproblem, tee=config.nlp_solver_tee, **nlp_args)

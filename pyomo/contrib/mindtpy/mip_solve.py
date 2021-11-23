@@ -197,8 +197,9 @@ def handle_main_optimal(main_mip, solve_data, config, update_bound=True):
     for var in MindtPy.discrete_variable_list:
         if var.value is None:
             config.logger.warning(
-                "Integer variable {} not initialized. It is set to it's lower bound".format(var.name))
-            var.value = var.lb  # nlp_var.bounds[0]
+                f"Integer variable {var.name} not initialized.  "
+                "Setting it to its lower bound")
+            var.set_value(var.lb, skip_validation=True)  # nlp_var.bounds[0]
     # warm start for the nlp subproblem
     copy_var_list_values(
         main_mip.MindtPy_utils.variable_list,
