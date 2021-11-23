@@ -472,7 +472,10 @@ def solve_local_subproblem(mip_result, solve_data, config):
     if config.subproblem_presolve:
         try:
             preprocess_subproblem(subprob, config)
-        except InfeasibleConstraintException:
+        except InfeasibleConstraintException as e:
+            config.logger.info("NLP subproblem determined to be infeasible "
+                               "during preprocessing.")
+            config.logger.debug("Message from preprocessing: %s" % e)
             return get_infeasible_result_object(
                 subprob,
                 "Preprocessing determined problem to be infeasible.")
