@@ -14,6 +14,7 @@ import logging
 import math
 import sys
 import weakref
+from typing import overload
 
 from pyomo.common.deprecation import (
     deprecated, deprecation_warning, RenamedClass,
@@ -1909,6 +1910,13 @@ class Set(IndexedComponent):
                 newObj._ComponentDataClass = _FiniteSetData
             return newObj
 
+    @overload
+    def __init__(self, *indexes, name=..., doc=..., initialize=..., dimen=..., ordered=...,
+                 within=..., domain=..., bounds=..., filter=..., validate=...,): ...
+
+    @overload
+    def __init__(self, *args, **kwds): ...
+
     def __init__(self, *args, **kwds):
         kwds.setdefault('ctype', Set)
 
@@ -2709,6 +2717,20 @@ class RangeSet(Component):
         else:
             return super(RangeSet, cls).__new__(AbstractInfiniteScalarRangeSet)
 
+    if sys.version_info>=(3,8):
+        # positional-only params are not supported before python 3.8.
+        @overload
+        def __init__(self, end, /, *, finite=..., ranges=...,
+                     bounds=..., filter=..., validate=...): ...
+        @overload
+        def __init__(self, start, end, step=1, /, *, finite=..., ranges=...,
+                     bounds=..., filter=..., validate=...): ...
+    else:
+        @overload
+        def __init__(self, *args, finite=..., ranges=...,
+                    bounds=..., filter=..., validate=...): ...
+    @overload
+    def __init__(self, *args, **kwds): ...   
 
     def __init__(self, *args, **kwds):
         # Finite was processed by __new__

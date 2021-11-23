@@ -13,6 +13,7 @@ __all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar',
 
 import logging
 import sys
+from typing import overload
 from weakref import ref as weakref_ref
 
 from pyomo.common.collections import Sequence
@@ -594,6 +595,13 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         else:
             return super(Var, cls).__new__(IndexedVar)
 
+    @overload
+    def __init__(self, *indexes, domain=..., within=..., bounds=...,
+                 initialize=..., rule=..., dense=..., units=...): ...
+
+    @overload
+    def __init__(self, *args, **kwargs): ...
+    
     def __init__(self, *args, **kwargs):
         #
         # Default keyword values

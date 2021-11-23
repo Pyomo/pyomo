@@ -19,6 +19,7 @@ __all__ = ('Objective',
 import sys
 import logging
 from weakref import ref as weakref_ref
+from typing import overload
 
 from pyomo.common.log import is_debug_set
 from pyomo.common.deprecation import RenamedClass
@@ -258,6 +259,12 @@ class Objective(ActiveIndexedComponent):
             return ScalarObjective.__new__(ScalarObjective)
         else:
             return IndexedObjective.__new__(IndexedObjective)
+
+    @overload
+    def __init__(self, expr=..., rule=..., sense=..., doc=..., name=...): ...
+
+    @overload
+    def __init__(self, *args, **kwargs): ...
 
     def __init__(self, *args, **kwargs):
         _sense = kwargs.pop('sense', minimize)

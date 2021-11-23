@@ -16,6 +16,7 @@ import sys
 import logging
 import math
 from weakref import ref as weakref_ref
+from typing import overload
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.errors import DeveloperError
@@ -685,6 +686,12 @@ class Constraint(ActiveIndexedComponent):
             return super(Constraint, cls).__new__(AbstractScalarConstraint)
         else:
             return super(Constraint, cls).__new__(IndexedConstraint)
+    
+    @overload
+    def __init__(self, *indexes, expr=..., rule=..., doc=..., name=...): ...
+    
+    @overload
+    def __init__(self, *args, **kwargs):...
 
     def __init__(self, *args, **kwargs):
         _init = self._pop_from_kwargs(
