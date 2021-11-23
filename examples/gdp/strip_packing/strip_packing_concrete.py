@@ -20,7 +20,7 @@ def build_rect_strip_packing_model():
     model = ConcreteModel(name="Rectangles strip packing")
     model.rectangles = Set(ordered=True, initialize=[0, 1, 2, 3])
 
-    # Width and Lenght of each rectangle
+    # Width and Length of each rectangle
     model.rect_width = Param(
         model.rectangles, initialize={0: 6, 1: 3, 2: 4, 3: 2})
     model.rect_length = Param(
@@ -69,10 +69,10 @@ def build_rect_strip_packing_model():
         "either the x or y dimensions.")
     def no_overlap(m, i, j):
         return [
-            m.x[i] + m.rect_length[i] <= m.x[j],
-            m.x[j] + m.rect_length[j] <= m.x[i],
-            m.y[i] + m.rect_width[i] <= m.y[j],
-            m.y[j] + m.rect_width[j] <= m.y[i],
+            m.x[i] + m.rect_length[i] <= m.x[j],# i left of j
+            m.x[j] + m.rect_length[j] <= m.x[i],# i right of j
+            m.y[i] + m.rect_width[i] <= m.y[j],# i below j
+            m.y[j] + m.rect_width[j] <= m.y[i],#i above j
         ]
 
     return model

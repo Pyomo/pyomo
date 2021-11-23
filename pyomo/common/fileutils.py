@@ -44,7 +44,7 @@ from . import envvar
 from .deprecation import deprecated, relocated_module_attribute
 
 relocated_module_attribute(
-    'StreamIndenter', 'pyomo.common.formatting', version='TBD')
+    'StreamIndenter', 'pyomo.common.formatting', version='6.2')
 
 def this_file(stack_offset=1):
     """Returns the file name for the module that calls this function.

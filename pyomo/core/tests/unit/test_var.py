@@ -1324,7 +1324,7 @@ class MiscVarTests(unittest.TestCase):
 
     def test_simple_bad_nondefault_domain_value(self):
         model = ConcreteModel()
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             model.x = Var(domain=25)
 
     def test_simple_nondefault_domain_rule(self):
@@ -1334,7 +1334,7 @@ class MiscVarTests(unittest.TestCase):
 
     def test_simple_bad_nondefault_domain_rule(self):
         model = ConcreteModel()
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             model.x = Var(domain=lambda m: 25)
 
     def test_indexed_default_domain(self):
@@ -1352,7 +1352,7 @@ class MiscVarTests(unittest.TestCase):
     def test_indexed_bad_nondefault_domain_value(self):
         model = ConcreteModel()
         model.s = Set(initialize=[1])
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             model.x = Var(model.s, domain=25)
 
     def test_indexed_nondefault_domain_rule(self):
@@ -1364,7 +1364,7 @@ class MiscVarTests(unittest.TestCase):
     def test_indexed_bad_nondefault_domain_rule(self):
         model = ConcreteModel()
         model.s = Set(initialize=[1])
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             model.x = Var(model.s, domain=lambda m, i: 25)
 
     def test_list_default_domain(self):
@@ -1382,7 +1382,7 @@ class MiscVarTests(unittest.TestCase):
     def test_list_bad_nondefault_domain_value(self):
         model = ConcreteModel()
         model.x = VarList(domain=25)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             model.x.add()
 
     def test_list_nondefault_domain_rule(self):
@@ -1394,7 +1394,7 @@ class MiscVarTests(unittest.TestCase):
     def test_list_bad_nondefault_domain_rule(self):
         model = ConcreteModel()
         model.x = VarList(domain=lambda m, i: 25)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             model.x.add()
 
     def test_setdata_index(self):
