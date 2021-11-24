@@ -14,6 +14,7 @@ import sys
 import types
 import logging
 from weakref import ref as weakref_ref
+from typing import overload
 
 from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from pyomo.common.log import is_debug_set
@@ -258,6 +259,11 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             return super(Param, cls).__new__(ScalarParam)
         else:
             return super(Param, cls).__new__(IndexedParam)
+
+    @overload
+    def __init__(self, *indexes, rule=..., initialize=...,
+                 domain=..., within=..., validate=..., mutable=...,
+                 default=..., initialize_as_dense=..., units=..., name=...): ...
 
     def __init__(self, *args, **kwd):
         _init = self._pop_from_kwargs(
