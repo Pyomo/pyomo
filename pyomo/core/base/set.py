@@ -2716,7 +2716,7 @@ class RangeSet(Component):
 
     # `start, `end`, `step` in `*args` are positional-only that cannot be filled with keywords. 
     # But positional-only params syntax are not supported before python 3.8.
-    # To emphasize they are positional-only, a underscope is added before their name. 
+    # To emphasize they are positional-only, an underscore is added before their name. 
     @overload
     def __init__(self, _end, *, finite=..., ranges=...,
                  bounds=..., filter=..., validate=...): ...
