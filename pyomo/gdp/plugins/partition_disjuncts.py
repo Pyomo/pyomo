@@ -279,7 +279,6 @@ class PartitionDisjuncts_Transformation(Transformation):
                                 # we find them
             Disjunct:    self._warn_for_active_disjunct,
             Block:       False,
-            LogicalConstraint: self._warn_for_active_logical_constraint,
             ExternalFunction: False,
             Port:        False, # not Arcs, because those are deactivated after
                                 # the network.expand_arcs transformation
@@ -587,6 +586,24 @@ class PartitionDisjuncts_Transformation(Transformation):
                                                   name_buffer=NAME_BUFFER)),
                                            Reference(var))
 
+        # Since this transformation is GDP -> GDP and it is based on
+        # partitioning algebraic expressions, we will copy over
+        # LogicalConstraints that may be on the Disjuncts, without transforming
+        # them. This is consistent with our handling of nested Disjunctions,
+        # which also remain nested, though their algebraic constraints may be
+        # transformed.
+        for cons in disjunct.component_objects(LogicalConstraint,
+                                               descend_into=Block, active=None):
+            if len(cons) > 0:
+                # If it's not empty, add a reference to it on the new Disjunct
+                transformed_disjunct.add_component(unique_component_name(
+                    transformed_disjunct, 
+                    cons.getname(fully_qualified=True, 
+                                 name_buffer=NAME_BUFFER)), Reference(cons))
+            # deactivate to mark as transformed (so we don't hit it in the loop
+            # below)
+            cons.deactivate()
+
         # transform everything else
         for obj in disjunct.component_data_objects(
                 active=True,
@@ -756,13 +773,7 @@ class PartitionDisjuncts_Transformation(Transformation):
                                   transformed_parent_disjunct, transBlock,
                                   partition):
         _warn_for_active_disjunct(disjunct, parent_disjunct, NAME_BUFFER)
+        
 
-    def _warn_for_active_logical_constraint(self, cons, disjunct,
-                                            transformed_disjunct, transBlock,
-                                            partition):
-        raise GDP_Error("Found active LogicalConstraint '%s' on Disjunct '%s'! "
-                        "Please transform LogicalConstraints on Disjuncts "
-                        "prior to calling partition_disjuncts." % 
-                        (cons.name, disjunct.name))
 # ESJ: TODO: Add a test for the old indicator variables appearing in logical
 # constraints.

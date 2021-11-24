@@ -9,21 +9,23 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.environ import (TransformationFactory, Constraint, ConcreteModel,
-                           Var, RangeSet, Objective, maximize, SolverFactory,
-                           Any, Reference, LogicalConstraint)
-from pyomo.core.expr.logical_expr import EquivalenceExpression
+from pyomo.environ import (
+    TransformationFactory, Constraint, ConcreteModel, Var, RangeSet, Objective, 
+    maximize, SolverFactory, Any, Reference, LogicalConstraint)
+from pyomo.core.expr.logical_expr import (
+    EquivalenceExpression, NotExpression, AndExpression, ExactlyExpression)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.util import GDP_Error
-from pyomo.gdp.plugins.partition_disjuncts import (arbitrary_partition,
-                                                   compute_optimal_bounds,
-                                                   compute_fbbt_bounds)
+from pyomo.gdp.plugins.partition_disjuncts import (
+    arbitrary_partition, compute_optimal_bounds, compute_fbbt_bounds)
 from pyomo.core import Block, value
 from pyomo.core.expr import current as EXPR
 import pyomo.gdp.tests.common_tests as ct
 import pyomo.gdp.tests.models as models
 from pyomo.repn import generate_standard_repn
 from pyomo.opt import check_available_solvers
+
+from nose.tools import set_trace
 
 solvers = check_available_solvers('gurobi_direct')
 
@@ -1772,16 +1774,74 @@ class CommonModels(unittest.TestCase, CommonTests):
         ct.check_network_disjuncts(self, True, 'between_steps', P=2)
         ct.check_network_disjuncts(self, False, 'between_steps', P=2)
 
-class LogicalConstraintsOnDisjuncts(unittest.TestCase, CommonTests):
-    def test_error_for_active_logical_constraint(self):
+class LogicalExpressions(unittest.TestCase, CommonTests):
+    def test_logical_constraints_on_disjunct_copied(self):
         m = models.makeLogicalConstraintsOnDisjuncts_NonlinearConvex()
-        with self.assertRaisesRegex(
-                GDP_Error, 
-                "Found active LogicalConstraint 'd\[1\].logical' on Disjunct "
-                "'d\[1\]'! "
-                "Please transform LogicalConstraints on Disjuncts "
-                "prior to calling partition_disjuncts."):
-            TransformationFactory('gdp.partition_disjuncts').apply_to(
-                m,
-                variable_partitions=[[m.x], [m.y, m.Y]],
-                compute_bounds_method=compute_fbbt_bounds)
+        TransformationFactory('gdp.partition_disjuncts').apply_to(
+            m,
+            variable_partitions=[[m.x], [m.y]],
+            compute_bounds_method=compute_fbbt_bounds)
+        d1 = m.d[1].transformation_block()
+        self.assertEqual(len(d1.component_map(LogicalConstraint)), 1)
+        c = d1.component("d[1].logical")
+        self.assertIsInstance(c, LogicalConstraint)
+        self.assertEqual(len(c), 1)
+        self.assertIsInstance(c[None].expr, NotExpression)
+        self.assertIs(c[None].expr.args[0], m.Y[1])
+
+        d2 = m.d[2].transformation_block()
+        self.assertEqual(len(d2.component_map(LogicalConstraint)), 1)
+        c = d2.component("d[2].logical")
+        self.assertIsInstance(c, LogicalConstraint)
+        self.assertEqual(len(c), 1)
+        self.assertIsInstance(c[None].expr, AndExpression)
+        self.assertEqual(len(c[None].expr.args), 2)
+        self.assertIs(c[None].expr.args[0], m.Y[1])
+        self.assertIs(c[None].expr.args[1], m.Y[2])
+
+        d3 = m.d[3].transformation_block()
+        self.assertEqual(len(d3.component_map(LogicalConstraint)), 0)
+
+        d4 = m.d[4].transformation_block()
+        self.assertEqual(len(d4.component_map(LogicalConstraint)), 2)
+        c = d4.component("d[4].logical")
+        self.assertIsInstance(c, LogicalConstraint)
+        self.assertEqual(len(c), 1)
+        self.assertIsInstance(c[None].expr, ExactlyExpression)
+        self.assertEqual(len(c[None].expr.args), 2)
+        self.assertEqual(c[None].expr.args[0], 1)
+        self.assertIs(c[None].expr.args[1], m.Y[1])
+        c = d4.component("d[4].logical2")
+        self.assertIsInstance(c, LogicalConstraint)
+        self.assertEqual(len(c), 1)
+        self.assertIsInstance(c[None].expr, NotExpression)
+        self.assertIs(c[None].expr.args[0], m.Y[2])
+
+    @unittest.skipIf('gurobi_direct' not in solvers,
+                     'Gurobi direct solver not available')
+    def test_solve_model_with_boolean_vars_on_disjuncts(self):
+        # Make sure that we are making references to everything we need to so
+        # that transformed models are solveable.
+        m = models.makeBooleanVarsOnDisjuncts()
+        # This is actually useless because there is only one variable, but
+        # that's fine--we just want to make sure the transformed model is
+        # solveable.
+        TransformationFactory('gdp.between_steps').apply_to(
+            m, variable_partitions=[[m.x]], 
+            compute_bounds_method=compute_fbbt_bounds)
+
+        # ESJ: TODO: Argh, so the reason that this doesn't work is because I
+        # just created References to the old BooleanVars on the new Disjunct,
+        # but when I call logical_to_linear, it obviously doesn't notice, and so
+        # it creates the binary variables on the old Disjunct and then the
+        # writer can't find them.
+        SolverFactory('gurobi').solve(m)
+        self.assertAlmostEqual(value(m.x), 8)
+        self.assertFalse(value(m.d[1].indicator_var))
+        self.assertTrue(value(m.d[2].indicator_var))
+        self.assertTrue(value(m.d[3].indicator_var))
+        self.assertFalse(value(m.d[4].indicator_var))
+
+    def test_solve_model_with_indicator_vars_in_logical_constraints(self):
+        # TODO
+        pass
