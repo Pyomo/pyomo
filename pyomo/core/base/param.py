@@ -222,9 +222,6 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     Constructor Arguments:
         name        
             The name of this parameter
-        index       
-            The index set that defines the distinct parameters. By default, 
-            this is None, indicating that there is a single parameter.
         domain      
             A set that defines the type of values that each parameter must be.
         within      
