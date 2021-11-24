@@ -29,7 +29,7 @@ Usage and early implementation details for MindtPy can be found in the PSE 2018 
 .. _Bernal & Vigerske, 2019: https://www.tandfonline.com/doi/abs/10.1080/10556788.2019.1641498
 
 MINLP Formulation
-=================
+-----------------
 
 The general formulation of the mixed integer nonlinear programming (MINLP) models is as follows.
 
@@ -55,7 +55,7 @@ where
 - :math:`\mathbf{A}\mathbf{x} +\mathbf{B}\mathbf{y} \leq \mathbf{b}`` are linear constraints.
 
 Solve Convex MINLPs
-===================
+-------------------
 
 Usage of MindtPy to solve a convex MINLP Pyomo model involves:
 
@@ -116,7 +116,7 @@ MindtPy also supports setting options for mip solvers and nlp solvers.
 There are three initialization strategies in MindtPy: ``rNLP``, ``initial_binary``, ``max_binary``. In OA and GOA strategies, the default initialization strategy is ``rNLP``. In ECP strategy, the default initialization strategy is ``max_binary``.
 
 LP/NLP Based Branch-and-Bound
--------------------------------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 MindtPy also supports single-tree implementation of Outer-Approximation (OA) algorithm, which is known as LP/NLP based branch-and-bound algorithm originally described in [`Quesada & Grossmann, 1992`_].
 The LP/NLP based branch-and-bound algorithm in MindtPy is implemeted based on the LazyConstraintCallback function in commercial solvers.
@@ -146,7 +146,7 @@ A usage example for LP/NLP based branch-and-bound algorithm is as follows:
 
 
 Regularized Outer-Approximation 
--------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 As a new implementation in MindtPy, we provide a flexible regularization technique implementation. In this technique, an extra mixed-integer problem is solved in each decomposition iteration or incumbent solution of the single-tree solution methods. The extra mixed-integer program is constructed to provide a point where the NLP problem is solved closer to the feasible region described by the non-linear constraint. This approach has been proposed in [`Kronqvist et al., 2020`_], and it has shown to be efficient for highly non-linear convex MINLP problems. In [`Kronqvist et al., 2020`_], two different regularization approaches are proposed, using a squared Euclidean norm which was proved to make the procedure equivalent to adding a trust-region constraint to Outer-approximation, and a second-order approximation of the Lagrangian of the problem, which showed better performance. We implement these methods, using PyomoNLP as the interface to compute the second-order approximation of the Lagrangian, and extend them to consider linear norm objectives and first-order approximations of the Lagrangian. Finally, we implemented an approximated second-order expansion of the Lagrangian, drawing inspiration from the Sequential Quadratic Programming (SQP) literature. The details of this implementation are included in [`Bernal et al., 2021`_].
 
@@ -170,7 +170,7 @@ A usage example for regularized OA is as follows:
 
 
 Solution Pool Implementation
-----------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 MindtPy supports solution pool of the MILP solver, CPLEX and GUROBI. With the help of the solution, MindtPy can explore several integer combinations in one iteration. 
 
@@ -189,7 +189,7 @@ A usage example for OA with solution pool is as follows:
   >>> model.objective.display()
 
 Feasibility Pump
-----------------
+^^^^^^^^^^^^^^^^
 
 For some MINLP problems, the Outer Approximation method might have difficulty in finding a feasible solution. MindtPy provides the Feasibility Pump implementation to find feasible solutions for convex MINLPs quickly. The main idea of the Feasibility Pump is to decompose the original mixed-integer problem into two parts: integer feasibility and constraint feasibility. For convex MINLPs, a MIP is solved to obtain a solution, which satisfies the integrality constraints on `y`, but may violate some of the nonlinear constraints; next, by solving an NLP, a solution is computed that satisfies the nonlinear constraints but might again violate the integrality constraints on `y`. By minimizing the distance between these two types of solutions iteratively, a constraint and integer feasible solution can be expected. In MindtPy, the Feasibility Pump can be used both as an initialization strategy and a decomposition strategy. For details of this implementation are included in [`Bernal et al., 2017`_].
 
@@ -223,11 +223,11 @@ A usage example for Feasibility Pump as the decomposition strategy is as follows
 
 
 Solve Nonconvex MINLPs
-======================
+----------------------
 
 
 Equality Relaxation
--------------------
+^^^^^^^^^^^^^^^^^^^
 
 To add
 
@@ -242,13 +242,13 @@ To add
 .. | g(x) >= b  | +1    | g(x1) < b    | b - g(x1)            |
 
 Augmented Penalty
------------------
+^^^^^^^^^^^^^^^^^
 
 Augmented Penalty refers to the introduction of (non-negative) slack variables on the right hand sides of the just described inequality constraints and the modification of the objective function when assumptions concerning convexity do not hold. (From DICOPT)
 
 
 Global Outer-Approximation
---------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Apart from the decomposition methods for convex MINLP problems [`Kronqvist et al., 2019`_], MindtPy provides an implementation of Global Outer Approximation (GOA) as described in [`Kesavan et al., 2004`_], to provide optimality guaranteed for nonconvex MINLP problems. Here, the validity of the Mixed-integer Linear Programming relaxation of the original problem is guaranteed via the usage of Generalized McCormick envelopes, computed using the package `MC++`_. The NLP subproblems, in this case, need to be solved to global optimality, which can be achieved through global NLP solvers such as `BARON`_ or `SCIP`_.
 
@@ -257,7 +257,7 @@ Apart from the decomposition methods for convex MINLP problems [`Kronqvist et al
 
 
 Convergence
-^^^^^^^^^^^
+"""""""""""
 
 MindtPy provides two ways to guarantee the finite convergence of the algorithm. 
 
@@ -266,7 +266,7 @@ MindtPy provides two ways to guarantee the finite convergence of the algorithm.
 
 
 Bound Calculation
-^^^^^^^^^^^^^^^^^
+"""""""""""""""""
 
 Since no-good cuts or tabu list is applied in the Global Outer-Approximation (GOA) method, the MILP master problem cannot provide a valid bound for the original problem. After the GOA method has converged, MindtPy will remove the no-good cuts or the tabu integer combinations added when and after the optimal solution has been found. Solving this problem will give us a valid bound for the original problem.
 
@@ -302,6 +302,7 @@ MindtPy Implementation and Optional Arguments
 
 Get Help
 --------
+
 Ways to get help: https://github.com/Pyomo/pyomo#getting-help
 
 Report a Bug
