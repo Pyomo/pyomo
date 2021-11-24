@@ -65,7 +65,7 @@ class MindtPySolver(object):
     - Regularized LP/NLP based branch-and-bound (RLP/NLP)
     - Feasibility pump (FP)
 
-    This solver implementation was developed by Carnegie Mellon University in the research group of Ignacio Grossmann.
+    This solver implementation has been developed by David Bernal (@bernalde) and Zedong Peng (@ZedongPeng) as part of research efforts at the Grossmann Research Group (http://egon.cheme.cmu.edu/) at the Department of Chemical Engineering at Carnegie Mellon University.
     """
     CONFIG = _get_MindtPy_config()
 
@@ -90,8 +90,7 @@ class MindtPySolver(object):
         Args:
             model (Block): a Pyomo model or block to be solved
         """
-        config = self.CONFIG(kwds.pop('options', {
-        }), preserve_implicit=True)  # TODO: do we need to set preserve_implicit=True?
+        config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)  # TODO: do we need to set preserve_implicit=True?
         config.set_value(kwds)
         check_config(config)
 
