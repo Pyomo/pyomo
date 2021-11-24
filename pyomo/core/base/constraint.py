@@ -690,9 +690,6 @@ class Constraint(ActiveIndexedComponent):
     @overload
     def __init__(self, *indexes, expr=..., rule=..., doc=..., name=...): ...
     
-    @overload
-    def __init__(self, *args, **kwargs):...
-
     def __init__(self, *args, **kwargs):
         _init = self._pop_from_kwargs(
             'Constraint', kwargs, ('rule', 'expr'), None)

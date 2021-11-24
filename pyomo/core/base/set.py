@@ -1914,9 +1914,6 @@ class Set(IndexedComponent):
     def __init__(self, *indexes, name=..., doc=..., initialize=..., dimen=..., ordered=...,
                  within=..., domain=..., bounds=..., filter=..., validate=...,): ...
 
-    @overload
-    def __init__(self, *args, **kwds): ...
-
     def __init__(self, *args, **kwds):
         kwds.setdefault('ctype', Set)
 
@@ -2717,20 +2714,16 @@ class RangeSet(Component):
         else:
             return super(RangeSet, cls).__new__(AbstractInfiniteScalarRangeSet)
 
-    if sys.version_info>=(3,8):
-        # positional-only params are not supported before python 3.8.
-        @overload
-        def __init__(self, end, /, *, finite=..., ranges=...,
-                     bounds=..., filter=..., validate=...): ...
-        @overload
-        def __init__(self, start, end, step=1, /, *, finite=..., ranges=...,
-                     bounds=..., filter=..., validate=...): ...
-    else:
-        @overload
-        def __init__(self, *args, finite=..., ranges=...,
-                    bounds=..., filter=..., validate=...): ...
+    # `start, `end`, `step` in `*args` are positional-only that cannot be filled with keywords. 
+    # But positional-only params syntax are not supported before python 3.8.
+    # To emphasize they are positional-only, a underscope is added before their name. 
     @overload
-    def __init__(self, *args, **kwds): ...   
+    def __init__(self, _end, *, finite=..., ranges=...,
+                 bounds=..., filter=..., validate=...): ...
+
+    @overload
+    def __init__(self, _start, _end, _step=1, *, finite=..., ranges=...,
+                 bounds=..., filter=..., validate=...): ...
 
     def __init__(self, *args, **kwds):
         # Finite was processed by __new__

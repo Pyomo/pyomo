@@ -597,10 +597,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
 
     @overload
     def __init__(self, *indexes, domain=..., within=..., bounds=...,
-                 initialize=..., rule=..., dense=..., units=...): ...
-
-    @overload
-    def __init__(self, *args, **kwargs): ...
+                 initialize=..., rule=..., dense=..., units=...): ...    
     
     def __init__(self, *args, **kwargs):
         #
