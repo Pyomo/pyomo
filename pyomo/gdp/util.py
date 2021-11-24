@@ -13,6 +13,7 @@ from pyomo.gdp.disjunct import _DisjunctData, Disjunct
 
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base.component import _ComponentBase
+from pyomo.core import Block, TraversalStrategy, SortComponents
 from pyomo.core.base.block import _BlockData
 from pyomo.core import Block, TraversalStrategy, SortComponents
 from pyomo.common.collections import ComponentMap, ComponentSet
@@ -149,13 +150,13 @@ def _parent_disjunct(obj):
     return None
 
 def _gather_disjunctions(block, gdp_tree):
-    to_explore = ComponentSet([block])
+    to_explore = [block]
     while to_explore:
         block = to_explore.pop()
         if block.ctype is Disjunct:
             gdp_tree.add_node(block)
         for disjunction in block.component_data_objects(
-                Disjunction, 
+                Disjunction,
                 active=True,
                 sort=SortComponents.deterministic,
                 descend_into=Block):
@@ -164,7 +165,7 @@ def _gather_disjunctions(block, gdp_tree):
             gdp_tree.add_node(disjunction)
             for disjunct in disjunction.disjuncts:
                 gdp_tree.add_edge(disjunction, disjunct)
-                to_explore.add(disjunct)
+                to_explore.append(disjunct)
             if block.ctype is Disjunct:
                 gdp_tree.add_edge(block, disjunction)
 

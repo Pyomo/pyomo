@@ -11,12 +11,12 @@ from .visitor import StreamBasedExpressionVisitor
 from .numvalue import nonpyomo_leaf_types
 from .numeric_expr import (
     LinearExpression, MonomialTermExpression, SumExpression, ExpressionBase,
-    ProductExpression, DivisionExpression, ReciprocalExpression, PowExpression,
+    ProductExpression, DivisionExpression, PowExpression,
     NegationExpression, UnaryFunctionExpression, ExternalFunctionExpression,
-    NPV_ProductExpression, NPV_DivisionExpression, NPV_ReciprocalExpression,
-    NPV_PowExpression, NPV_SumExpression, NPV_NegationExpression,
-    NPV_UnaryFunctionExpression, NPV_ExternalFunctionExpression,
-    Expr_ifExpression, AbsExpression, NPV_AbsExpression, NumericValue)
+    NPV_ProductExpression, NPV_DivisionExpression, NPV_PowExpression,
+    NPV_SumExpression, NPV_NegationExpression, NPV_UnaryFunctionExpression,
+    NPV_ExternalFunctionExpression, Expr_ifExpression, AbsExpression,
+    NPV_AbsExpression, NumericValue)
 from pyomo.core.expr.logical_expr import (
     RangedExpression, InequalityExpression, EqualityExpression
 )
@@ -25,7 +25,7 @@ from pyomo.common.errors import PyomoException
 
 
 def handle_linear_expression(node: LinearExpression, pn: List):
-    pn.append((LinearExpression, 2*len(node.linear_vars) + 1))
+    pn.append((type(node), 2*len(node.linear_vars) + 1))
     pn.append(node.constant)
     pn.extend(node.linear_coefs)
     pn.extend(node.linear_vars)
@@ -37,13 +37,19 @@ def handle_expression(node: ExpressionBase, pn: List):
     return node.args
 
 
+def handle_named_expression(node, pn: List, include_named_exprs=True):
+    if include_named_exprs:
+        pn.append((type(node), 1))
+    return (node.expr, )
+
+
 def handle_unary_expression(node: UnaryFunctionExpression, pn: List):
-    pn.append((UnaryFunctionExpression, 1, node.getname()))
+    pn.append((type(node), 1, node.getname()))
     return node.args
 
 
 def handle_external_function_expression(node: ExternalFunctionExpression, pn: List):
-    pn.append((ExternalFunctionExpression, node.nargs(), node._fcn))
+    pn.append((type(node), node.nargs(), node._fcn))
     return node.args
 
 
@@ -53,12 +59,10 @@ handler[SumExpression] = handle_expression
 handler[MonomialTermExpression] = handle_expression
 handler[ProductExpression] = handle_expression
 handler[DivisionExpression] = handle_expression
-handler[ReciprocalExpression] = handle_expression
 handler[PowExpression] = handle_expression
 handler[NegationExpression] = handle_expression
 handler[NPV_ProductExpression] = handle_expression
 handler[NPV_DivisionExpression] = handle_expression
-handler[NPV_ReciprocalExpression] = handle_expression
 handler[NPV_PowExpression] = handle_expression
 handler[NPV_SumExpression] = handle_expression
 handler[NPV_NegationExpression] = handle_expression
@@ -75,9 +79,10 @@ handler[EqualityExpression] = handle_expression
 
 
 class PrefixVisitor(StreamBasedExpressionVisitor):
-    def __init__(self):
+    def __init__(self, include_named_exprs=True):
         super().__init__()
         self._result = None
+        self._include_named_exprs = include_named_exprs
 
     def initializeWalker(self, expr):
         self._result = []
@@ -90,7 +95,10 @@ class PrefixVisitor(StreamBasedExpressionVisitor):
             return tuple(), None
 
         if node.is_expression_type():
-            return handler[ntype](node, self._result), None
+            if node.is_named_expression_type():
+                return handle_named_expression(node, self._result, self._include_named_exprs), None
+            else:
+                return handler[ntype](node, self._result), None
         else:
             self._result.append(node)
             return tuple(), None
@@ -101,7 +109,7 @@ class PrefixVisitor(StreamBasedExpressionVisitor):
         return ans
 
 
-def convert_expression_to_prefix_notation(expr):
+def convert_expression_to_prefix_notation(expr, include_named_exprs=True):
     """
     This function converts pyomo expressions to a list that looks very
     much like prefix notation.  The result can be used in equality
@@ -144,11 +152,11 @@ def convert_expression_to_prefix_notation(expr):
         The expression in prefix notation
 
     """
-    visitor = PrefixVisitor()
+    visitor = PrefixVisitor(include_named_exprs=include_named_exprs)
     return visitor.walk_expression(expr)
 
 
-def compare_expressions(expr1, expr2):
+def compare_expressions(expr1, expr2, include_named_exprs=True):
     """
     Returns True if 2 expression trees are identical. Returns False
     otherwise.
@@ -158,7 +166,11 @@ def compare_expressions(expr1, expr2):
     expr1: NumericValue
         A Pyomo Var, Param, or expression
     expr2: NumericValue
-        A PYomo Var, Param, or expression
+        A Pyomo Var, Param, or expression
+    include_named_exprs: bool
+        If False, then named expressions will be ignored. In other words, this function
+        will return True if one expression has a named expression and the other does not
+        as long as the rest of the expression trees are identical.
 
     Returns
     -------
@@ -166,8 +178,8 @@ def compare_expressions(expr1, expr2):
         A bool indicating whether or not the expressions are identical.
 
     """
-    pn1 = convert_expression_to_prefix_notation(expr1)
-    pn2 = convert_expression_to_prefix_notation(expr2)
+    pn1 = convert_expression_to_prefix_notation(expr1, include_named_exprs=include_named_exprs)
+    pn2 = convert_expression_to_prefix_notation(expr2, include_named_exprs=include_named_exprs)
     try:
         res = pn1 == pn2
     except PyomoException:

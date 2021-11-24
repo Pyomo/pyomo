@@ -17,7 +17,6 @@ from pyomo.opt.results import ProblemSense
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 import logging
 from pyomo.repn import generate_standard_repn
-from math import fabs
 from pyomo.core.expr import current as EXPR
 import pyomo.environ as pyo
 from math import copysign
@@ -38,8 +37,8 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                                   skip_stale=False, skip_fixed=True,
                                   ignore_integrality=False):
         """This function copies variable values from one list to another.
-        Rounds to Binary/Integer if neccessary
-        Sets to zero for NonNegativeReals if neccessary
+        Rounds to Binary/Integer if necessary
+        Sets to zero for NonNegativeReals if necessary
 
         Parameters
         ----------
@@ -72,7 +71,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                 # ... or the nearest integer
                 elif v_to.is_integer():
                     rounded_val = int(round(v_val))
-                    if (ignore_integrality or fabs(v_val - rounded_val) <= config.integer_tolerance) \
+                    if (ignore_integrality or abs(v_val - rounded_val) <= config.integer_tolerance) \
                             and rounded_val in v_to.domain:
                         v_to.set_value(rounded_val)
                 else:
@@ -424,7 +423,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
         config.logger.info('NLP subproblem was locally infeasible.')
         solve_data.nlp_infeasible_counter += 1
         if config.calculate_dual:
-            for c in fixed_nlp.component_data_objects(ctype=Constraint):
+            for c in fixed_nlp.MindtPy_utils.constraint_list:
                 rhs = ((0 if c.upper is None else c.upper)
                        + (0 if c.lower is None else c.lower))
                 sign_adjust = 1 if c.upper is None else -1

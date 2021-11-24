@@ -300,37 +300,9 @@ class _PyomoUnit(NumericValue):
         # as outside the model scope and DO NOT duplicate them.
         return self
 
-    def __float__(self):
-        """
-        Coerce the value to a floating point
-
-        Raises:
-            TypeError
-        """
-        raise TypeError(
-            "Implicit conversion of Pyomo Unit `%s' to a float is "
-            "disabled. This error is often the result of treating a unit "
-            "as though it were a number (e.g., passing a unit to a built-in "
-            "math function). Avoid this error by using Pyomo-provided math "
-            "functions."
-            % self.name)
-
-    def __int__(self):
-        """
-        Coerce the value to an integer
-
-        Raises:
-            TypeError
-        """
-        raise TypeError(
-            "Implicit conversion of Pyomo Unit `%s' to an int is "
-            "disabled. This error is often the result of treating a unit "
-            "as though it were a number (e.g., passing a unit to a built-in "
-            "math function). Avoid this error by using Pyomo-provided math "
-            "math function). Avoid this error by using Pyomo-provided math "
-            "functions."
-            % self.name)
-
+    # __bool__ uses NumericValue base class implementation
+    # __float__ uses NumericValue base class implementation
+    # __int__ uses NumericValue base class implementation
     # __lt__ uses NumericValue base class implementation
     # __gt__ uses NumericValue base class implementation
     # __le__ uses NumericValue base class implementation
@@ -392,25 +364,6 @@ class _PyomoUnit(NumericValue):
             return "("+str(self)+")"
         else:
             return str(self)
-
-    def __nonzero__(self):
-        """Unit is treated as a constant value of 1.0. Therefore, it is always nonzero
-        Returns
-        -------
-        : bool
-           Returns whether on not the object is non-zero
-        """
-        return self.__bool__()
-
-    def __bool__(self):
-        """Unit is treated as a constant value of 1.0. Therefore, it is always "True"
-
-        Returns
-        -------
-        : bool
-           Returns whether or not the object is "empty"
-        """
-        return True
 
     def __call__(self, exception=True):
         """Unit is treated as a constant value, and this method always returns 1.0
@@ -551,28 +504,6 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
 
         # this operation can create a quantity, but we want a pint unit object
         return child_units[0] / child_units[1]
-
-    def _get_unit_for_reciprocal(self, node, child_units):
-        """
-        Return (and test) the units corresponding to a reciprocal expression node
-        in the expression tree.
-
-        Parameters
-        ----------
-        node : Pyomo expression node
-            The parent node of the children
-
-        child_units : list
-           This is a list of pint units (one for each of the children)
-
-        Returns
-        -------
-        : pint unit
-        """
-        assert len(child_units) == 1
-
-        # this operation can create a quantity, but we want a pint unit object
-        return (1.0 / child_units).units
 
     def _get_unit_for_pow(self, node, child_units):
         """
@@ -872,8 +803,6 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         EXPR.NPV_ProductExpression: _get_unit_for_product,
         EXPR.DivisionExpression: _get_unit_for_division,
         EXPR.NPV_DivisionExpression: _get_unit_for_division,
-        EXPR.ReciprocalExpression: _get_unit_for_reciprocal,
-        EXPR.NPV_ReciprocalExpression: _get_unit_for_reciprocal,
         EXPR.PowExpression: _get_unit_for_pow,
         EXPR.NPV_PowExpression: _get_unit_for_pow,
         EXPR.NegationExpression: _get_unit_for_single_child,
