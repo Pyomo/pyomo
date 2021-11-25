@@ -2725,6 +2725,10 @@ class RangeSet(Component):
     def __init__(self, _start, _end, _step=1, *, finite=..., ranges=...,
                  bounds=..., filter=..., validate=...): ...
 
+    @overload
+    def __init__(self, *, finite=..., ranges=...,
+                 bounds=..., filter=..., validate=...): ...
+
     def __init__(self, *args, **kwds):
         # Finite was processed by __new__
         kwds.setdefault('ctype', RangeSet)
