@@ -958,7 +958,7 @@ class SumExpressionBase(_LinearOperatorExpression):
         return 'sum'
 
 
-class NPV_SumExpression(SumExpressionBase):
+class NPV_SumExpression(NPV_Mixin, SumExpressionBase):
     __slots__ = ()
 
     def create_potentially_variable_object(self):
@@ -975,8 +975,22 @@ class NPV_SumExpression(SumExpressionBase):
             return "{0} {1}".format(values[0],values[1])
         return "{0} + {1}".format(values[0],values[1])
 
-    def is_potentially_variable(self):
-        return False
+    def create_node_with_local_data(self, args, classtype=None):
+        assert classtype is None
+        try:
+            npv_args = all(
+                type(arg) in native_types or not arg.is_potentially_variable()
+                for arg in args
+            )
+        except AttributeError:
+            # We can hit this during expression replacement when the new
+            # type is not a PyomoObject type, but is not in the
+            # native_types set.  We will play it safe and clear the NPV flag
+            npv_args = False
+        if npv_args:
+            return NPV_SumExpression(args)
+        else:
+            return SumExpression(args)
 
 
 class SumExpression(SumExpressionBase):
@@ -1232,11 +1246,8 @@ class UnaryFunctionExpression(ExpressionBase):
         return self._fcn(result[0])
 
 
-class NPV_UnaryFunctionExpression(UnaryFunctionExpression):
+class NPV_UnaryFunctionExpression(NPV_Mixin, UnaryFunctionExpression):
     __slots__ = ()
-
-    def is_potentially_variable(self):
-        return False
 
 
 # NOTE: This should be a special class, since the expression generation relies
@@ -1252,6 +1263,11 @@ class AbsExpression(UnaryFunctionExpression):
 
     def __init__(self, arg):
         super(AbsExpression, self).__init__(arg, 'abs', abs)
+
+    def create_node_with_local_data(self, args, classtype=None):
+        if classtype is None:
+            classtype = self.__class__
+        return classtype(args)
 
 
 class NPV_AbsExpression(NPV_Mixin, AbsExpression):

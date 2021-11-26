@@ -18,7 +18,7 @@ from weakref import ref as weakref_ref
 from pyomo.common.collections import Sequence
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
-from pyomo.common.modeling import NOTSET
+from pyomo.common.modeling import NoArgumentGiven, NOTSET
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.core.expr.numvalue import (
@@ -792,6 +792,22 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
             obj.lower, obj.upper = self._rule_bounds(parent, index)
         if self._rule_init is not None:
             obj.set_value(self._rule_init(parent, index))
+        return obj
+
+    #
+    # Because we need to do more initialization than simply calling
+    # set_value(), we need to override _setitem_when_not_present
+    #
+    def _setitem_when_not_present(self, index, value=NOTSET):
+        if value is self.Skip:
+            return None
+        try:
+            obj = self._getitem_when_not_present(index)
+            if value is not NOTSET:
+                obj.set_value(value)
+        except:
+            self._data.pop(index, None)
+            raise
         return obj
 
     def _pprint(self):

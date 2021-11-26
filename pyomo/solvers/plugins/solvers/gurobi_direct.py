@@ -160,9 +160,9 @@ class GurobiDirect(DirectSolver):
         else:
             self._solver_model.setParam('OutputFlag', 0)
 
-        self._solver_model.setParam('LogFile', self._log_file)
-
         if self._keepfiles:
+            # Only save log file when the user wants to keep it.
+            self._solver_model.setParam('LogFile', self._log_file)
             print("Solver log file: "+self._log_file)
 
         # Options accepted by gurobi (case insensitive):
@@ -205,8 +205,11 @@ class GurobiDirect(DirectSolver):
 
         self._solver_model.optimize(self._callback)
         self._needs_updated = False
-
-        self._solver_model.setParam('LogFile', 'default')
+        
+        if self._keepfiles:
+            # Change LogFile to make Gurobi close the original log file.
+            # May not work for all Gurobi versions, like ver. 9.5.0.
+            self._solver_model.setParam('LogFile', 'default')
 
         # FIXME: can we get a return code indicating if Gurobi had a significant failure?
         return Bunch(rc=None, log=None)

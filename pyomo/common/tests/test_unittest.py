@@ -10,11 +10,13 @@
 
 import datetime
 import multiprocessing
+import os
 from io import StringIO
 import time
 
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
+from pyomo.environ import ConcreteModel, Var, Param
 
 @unittest.timeout(10)
 def short_sleep():
@@ -150,6 +152,20 @@ class TestPyomoUnittest(unittest.TestCase):
                                     '3 !~= 2.999'):
             self.assertStructuredAlmostEqual(a, b)
 
+    def test_assertStructuredAlmostEqual_numericvalue(self):
+        m = ConcreteModel()
+        m.v = Var(initialize=2.)
+        m.p = Param(initialize=2.)
+        a = {1.1: [1,m.p,3], 'a': 'hi', 3: {1:2, 3:4}}
+        b = {1.1: [1,m.v,3], 'a': 'hi', 3: {1:2, 3:4}}
+        self.assertStructuredAlmostEqual(a, b)
+        m.v.set_value(m.v.value - 1.999e-7)
+        self.assertStructuredAlmostEqual(a, b)
+        m.v.set_value(m.v.value - 1.999e-7)
+        with self.assertRaisesRegex(self.failureException,
+                                    '2.0 !~= 1.999'):
+            self.assertStructuredAlmostEqual(a, b)
+
     def test_timeout_fcn_call(self):
         self.assertEqual(short_sleep(), 42)
         with self.assertRaisesRegex(
@@ -230,6 +246,33 @@ class TestPyomoUnittest(unittest.TestCase):
         arguments = parser.parse_args(cmd_opts)
         self.assertTrue(arguments.verbose)
         self.assertTrue(arguments.xunit)
+        cmd_opts.extend(['--show-log'])
+        arguments = parser.parse_args(cmd_opts)
+        self.assertTrue(arguments.showlog)
+
+    def test_build_cmd(self):
+        cmd_opts = 'bogus target names'.split()
+        parser = unittest.buildParser()
+        options, unknown = parser.parse_known_args(cmd_opts)
+        self.assertEqual(unknown, [])
+        env = os.environ.copy()
+        cmd = unittest.build_cmd(options, unknown, env)
+        self.assertIn('--eval-attr=smoke and (not fragile)', cmd)
+        self.assertIn('bogus', cmd)
+        cmd_opts.extend(['--nocapture'])
+        parser = unittest.buildParser()
+        options, unknown = parser.parse_known_args(cmd_opts)
+        self.assertEqual(unknown, ['--nocapture'])
+        env = os.environ.copy()
+        cmd = unittest.build_cmd(options, unknown, env)
+        self.assertIn('--nocapture', cmd)
+        cmd_opts.extend('--cat not-real --cat whatever'.split(' '))
+        parser = unittest.buildParser()
+        options, unknown = parser.parse_known_args(cmd_opts)
+        env = os.environ.copy()
+        cmd = unittest.build_cmd(options, unknown, env)
+        self.assertIn('--eval-attr=whatever and (not fragile)', cmd)
+
 
 
 if __name__ == '__main__':
