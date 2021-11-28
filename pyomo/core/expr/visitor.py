@@ -20,9 +20,11 @@ logger = logging.getLogger('pyomo.core')
 from .symbol_map import SymbolMap
 from . import expr_common as common
 from .expr_errors import TemplateExpressionError
-from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.errors import DeveloperError
 from pyomo.core.expr.numvalue import (
     nonpyomo_leaf_types,
+    native_types,
     native_numeric_types,
     value,)
 
@@ -595,10 +597,11 @@ class ExpressionValueVisitor(object):
             else:
                 return self.finalize(ans)
 
+
 def replace_expressions(expr,
                         substitution_map,
                         descend_into_named_expressions=True,
-                        remove_named_expressions=False):
+                        remove_named_expressions=True):
     """
 
     Parameters
@@ -618,250 +621,96 @@ def replace_expressions(expr,
     -------
        Pyomo expression : returns the new expression object
     """
-    new_expr = ExpressionReplacementVisitor(
-            substitute=substitution_map,
-            descend_into_named_expressions=descend_into_named_expressions,
-            remove_named_expressions=remove_named_expressions
-            ).dfs_postorder_stack(expr)
-    return new_expr
+    return ExpressionReplacementVisitor(
+        substitute=substitution_map,
+        descend_into_named_expressions=descend_into_named_expressions,
+        remove_named_expressions=remove_named_expressions,
+    ).walk_expression(expr)
 
 
-class ExpressionReplacementVisitor(object):
-    """
-    Note:
-        This class is a customization of the PyUtilib :class:`ValueVisitor
-        <pyutilib.misc.visitor.ValueVisitor>` class that is tailored
-        to support replacement of sub-trees in a Pyomo expression
-        tree.  However, this class is not a subclass of the PyUtilib
-        :class:`ValueVisitor <pyutilib.misc.visitor.ValueVisitor>`
-        class because all key methods are reimplemented.
-    """
-
+class ExpressionReplacementVisitor(StreamBasedExpressionVisitor):
     def __init__(self,
                  substitute=None,
                  descend_into_named_expressions=True,
-                 remove_named_expressions=False):
-        """
-        Contruct a visitor that is tailored to support the
-        replacement of sub-trees in a pyomo expression tree.
-
-        Args:
-            memo (dict): A dictionary mapping object ids to
-                objects.  This dictionary has the same semantics as
-                the memo object used with ``copy.deepcopy``.  Defaults
-                to None, which indicates that no user-defined
-                dictionary is used.
-        """
+                 remove_named_expressions=True):
+        if substitute is None:
+            substitute = {}
+        # Note: preserving the attribute names from the previous
+        # implementation of the expression walker.
+        self.substitute = substitute
         self.enter_named_expr = descend_into_named_expressions
         self.rm_named_expr = remove_named_expressions
-        if substitute is None:
-            self.substitute = {}
-        else:
-            self.substitute = substitute
 
-    def visit(self, node, values):
-        """
-        Visit and clone nodes that have been expanded.
+        kwds = {}
+        if hasattr(self, 'visiting_potential_leaf'):
+            deprecation_warning(
+                "ExpressionReplacementVisitor: this walker has been ported "
+                "to derive from StreamBasedExpressionVisitor.  "
+                "visiting_potential_leaf() has been replaced by beforeChild()"
+                "(note to implementers: the sense of the bool return value "
+                "has been inverted).", version='6.2')
+            def beforeChild(node, child, child_idx):
+                is_leaf, ans = self.visiting_potential_leaf(child)
+                return not is_leaf, ans
+            kwds['beforeChild'] = beforeChild
 
-        Note:
-            This method normally does not need to be re-defined
-            by a user.
+        if hasattr(self, 'visit'):
+            raise DeveloperError(
+                "ExpressionReplacementVisitor: this walker has been ported "
+                "to derive from StreamBasedExpressionVisitor.  "
+                "overriding visit() has no effect (and is likely to generate "
+                "invalid expression trees)")
+        super().__init__(**kwds)
 
-        Args:
-            node: The node that will be cloned.
-            values (list): The list of child nodes that have been
-                cloned.  These values are used to define the
-                cloned node.
+    def initializeWalker(self, expr):
+        walk, result = self.beforeChild(None, expr, 0)
+        if not walk:
+            return False, result
+        return True, expr
 
-        Returns:
-            The cloned node.  Default is to simply return the node.
-        """
+    def beforeChild(self, node, child, child_idx):
+        if id(child) in self.substitute:
+            return False, self.substitute[id(child)]
+        elif type(child) in native_types:
+            return False, child
+        elif not child.is_expression_type():
+            return False, child
+        elif child.is_named_expression_type():
+            if not self.enter_named_expr:
+                return False, child
+        return True, None
+
+    def enterNode(self, node):
+        args = list(node.args)
+        return args, [False, args]
+
+    def acceptChildResult(self, node, data, child_result, child_idx):
+        if data[1][child_idx] is not child_result:
+            data[1][child_idx] = child_result
+            data[0] = True
+        return data
+
+    def exitNode(self, node, data):
+        if node.is_named_expression_type():
+            assert len(data[1]) == 1
+            if self.rm_named_expr:
+                return data[1][0]
+            elif data[0]:
+                node.set_value(data[1][0])
+                return node
+        elif data[0]:
+            return node.create_node_with_local_data(tuple(data[1]))
         return node
 
-    def visiting_potential_leaf(self, node):    #pragma: no cover
-        """
-        Visit a node and return a cloned node if it is a leaf.
+    @deprecated(
+        "ExpressionReplacementVisitor: this walker has been ported "
+        "to derive from StreamBasedExpressionVisitor.  "
+        "dfs_postorder_stack() has been replaced with walk_expression()",
+        version='6.2')
+    def dfs_postorder_stack(self, expr):
+        return self.walk_expression(expr)
 
-        Note:
-            This method needs to be over-written for a specific
-            visitor application.
 
-        Args:
-            node: a node in a tree
-
-        Returns:
-            A tuple: ``(flag, value)``.   If ``flag`` is False,
-            then the node is not a leaf and ``value`` is :const:`None`.
-            Otherwise, ``value`` is a cloned node.
-        """
-        _id = id(node)
-        if _id in self.substitute:
-            return True, self.substitute[_id]
-        elif type(node) in nonpyomo_leaf_types or not node.is_expression_type():
-            return True, node
-        elif not self.enter_named_expr and node.is_named_expression_type():
-            return True, node
-        else:
-            return False, None
-
-    def finalize(self, ans):
-        """
-        This method defines the return value for the search methods
-        in this class.
-
-        The default implementation returns the value of the
-        initial node (aka the root node), because
-        this visitor pattern computes and returns value for each
-        node to enable the computation of this value.
-
-        Args:
-            ans: The final value computed by the search method.
-
-        Returns:
-            The final value after the search. Defaults to simply
-            returning :attr:`ans`.
-        """
-        return ans
-
-    def construct_node(self, node, values):
-        """
-        Call the expression create_node_with_local_data() method.
-        """
-        return node.create_node_with_local_data( tuple(values) )
-
-    def dfs_postorder_stack(self, node):
-        """
-        Perform a depth-first search in postorder using a stack
-        implementation.
-
-        This method replaces subtrees.  This method detects if the
-        :func:`visit` method returns a different object.  If so, then
-        the node has been replaced and search process is adapted
-        to replace all subsequent parent nodes in the tree.
-
-        Note:
-            This method has the same functionality as the
-            PyUtilib :class:`ValueVisitor.dfs_postorder_stack <pyutilib.misc.visitor.ValueVisitor.dfs_postorder_stack>`
-            method that is tailored to support the
-            replacement of sub-trees in a Pyomo expression tree.
-
-        Args:
-            node: The root node of the expression tree
-                that is searched.
-
-        Returns:
-            The return value is determined by the :func:`finalize` function,
-            which may be defined by the user.
-        """
-        if node.__class__ is LinearExpression:
-            _argList = [node.constant] + node.linear_coefs + node.linear_vars
-            _len = len(_argList)
-            _stack = [ (node, _argList, 0, _len, [False])]
-        else:
-            flag, value = self.visiting_potential_leaf(node)
-            if flag:
-                return value
-            _stack = [ (node, node._args_, 0, node.nargs(), [False])]
-        #
-        # Iterate until the stack is empty
-        #
-        # Note: 1 is faster than True for Python 2.x
-        #
-        while 1:
-            #
-            # Get the top of the stack
-            #   _obj        Current expression object
-            #   _argList    The arguments for this expression objet
-            #   _idx        The current argument being considered
-            #   _len        The number of arguments
-            #   _result     The 'dirty' flag followed by return values
-            #
-            _obj, _argList, _idx, _len, _result = _stack.pop()
-            #
-            # Iterate through the arguments, entering each one
-            #
-            while _idx < _len:
-                _sub = _argList[_idx]
-                _idx += 1
-                flag, value = self.visiting_potential_leaf(_sub)
-                if flag:
-                    if id(value) != id(_sub):
-                        _result[0] = True
-                    _result.append( value )
-                else:
-                    #
-                    # Push an expression onto the stack
-                    #
-                    _stack.append( (_obj, _argList, _idx, _len, _result) )
-                    _obj = _sub
-                    _idx = 0
-                    _result = [False]
-                    if _sub.__class__ is LinearExpression:
-                        _argList = [_sub.constant] + _sub.linear_coefs \
-                                   + _sub.linear_vars
-                        _len = len(_argList)
-                    else:
-                        _argList = _sub._args_
-                        _len = _sub.nargs()
-            #
-            # Finalize (exit) the current node
-            #
-            # If the user has defined a visit() function in a
-            # subclass, then call that function.  But if the user
-            # hasn't created a new class and we need to, then
-            # call the ExpressionReplacementVisitor.visit() function.
-            #
-            ans = self.visit(_obj, _result[1:])
-            if ans.is_named_expression_type():
-                if self.rm_named_expr:
-                    ans = _result[1]
-                    _result[0] = True
-                else:
-                    _result[0] = False
-                    assert(len(_result) == 2)
-                    ans.expr = _result[1]
-            elif _result[0]:
-                if ans.__class__ is LinearExpression:
-                    ans = _result[1]
-                    nterms = (len(_result)-2)//2
-                    for i in range(nterms):
-                        ans += _result[2+i]*_result[2+i+nterms]
-                if id(ans) == id(_obj):
-                    ans = self.construct_node(_obj, _result[1:])
-                if ans.__class__ is MonomialTermExpression:
-                    # CDL This code wass trying to determine if we needed to change the MonomialTermExpression
-                    # to a ProductExpression, but it fails for the case of a MonomialExpression
-                    # that has its rhs Var replaced with another MonomialExpression (and might
-                    # fail for other cases as well.
-                    # Rather than trying to update the logic to catch all cases, I am choosing
-                    # to execute the actual product operator code instead to ensure things are
-                    # consistent
-                    # See WalkerTests.test_replace_expressions_with_monomial_term  in test_expr_pyomo5.py
-                    # to see the behavior
-                    # if ( ( ans._args_[0].__class__ not in native_numeric_types
-                    #        and ans._args_[0].is_potentially_variable )
-                    #      or
-                    #      ( ans._args_[1].__class__ in native_numeric_types
-                    #        or not ans._args_[1].is_potentially_variable() ) ):
-                    #     ans.__class__ = ProductExpression
-                    ans = ans._args_[0] * ans._args_[1]
-                elif ans.__class__ in NPV_expression_types:
-                    # For simplicity, not-potentially-variable expressions are
-                    # replaced with their potentially variable counterparts.
-                    ans = ans.create_potentially_variable_object()
-            elif id(ans) != id(_obj):
-                _result[0] = True
-
-            if _stack:
-                if _result[0]:
-                    _stack[-1][-1][0] = True
-                #
-                # "return" the recursion by putting the return value on
-                # the end of the results stack
-                #
-                _stack[-1][-1].append( ans )
-            else:
-                return self.finalize(ans)
 
 
 #-------------------------------------------------------
@@ -896,7 +745,7 @@ def clone_expression(expr, substitute=None):
     clone_counter._count += 1
     memo = {'__block_scope__': {id(None): False}}
     if substitute:
-        memo.update(substitute)
+        expr = replace_expressions(expr, substitute)
     return deepcopy(expr, memo)
 
 
@@ -955,8 +804,6 @@ class _EvaluationVisitor(ExpressionValueVisitor):
             return True, value(node, exception=self.exception)
         else:
             return True, node
-
-
 
 
 class FixedExpressionError(Exception):
@@ -1355,13 +1202,12 @@ class _ToStringVisitor(ExpressionValueVisitor):
         if node.is_expression_type():
             return False, None
 
-        if node.is_variable_type():
-            if not node.fixed:
-                return True, node.to_string(verbose=self.verbose, smap=self.smap, compute_values=False)
-            return True, node.to_string(verbose=self.verbose, smap=self.smap, compute_values=self.compute_values)
-
         if hasattr(node, 'to_string'):
-            return True, node.to_string(verbose=self.verbose, smap=self.smap, compute_values=self.compute_values)
+            return True, node.to_string(
+                verbose=self.verbose,
+                smap=self.smap,
+                compute_values=self.compute_values
+            )
         else:
             return True, str(node)
 

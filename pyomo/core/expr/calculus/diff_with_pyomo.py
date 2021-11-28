@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.collections import ComponentMap
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.core.expr import current as _expr
 from pyomo.core.expr.visitor import ExpressionValueVisitor, nonpyomo_leaf_types
 from pyomo.core.expr.numvalue import value
@@ -63,15 +63,6 @@ def _diff_SumExpression(node, val_dict, der_dict):
         der_dict[arg] += der
 
 
-def _diff_LinearExpression(node, val_dict, der_dict):
-    der = der_dict[node]
-    for ndx, v in enumerate(node.linear_vars):
-        coef = node.linear_coefs[ndx]
-        der_dict[v] += der * val_dict[coef]
-        der_dict[coef] += der * val_dict[v]
-
-    der_dict[node.constant] += der
-
 def _diff_PowExpression(node, val_dict, der_dict):
     """
 
@@ -106,21 +97,6 @@ def _diff_DivisionExpression(node, val_dict, der_dict):
     der = der_dict[node]
     der_dict[num] += der * (1/val_dict[den])
     der_dict[den] -= der * val_dict[num] / val_dict[den]**2
-
-
-def _diff_ReciprocalExpression(node, val_dict, der_dict):
-    """
-
-    Parameters
-    ----------
-    node: pyomo.core.expr.numeric_expr.ReciprocalExpression
-    val_dict: ComponentMap
-    der_dict: ComponentMap
-    """
-    assert len(node.args) == 1
-    arg = node.args[0]
-    der = der_dict[node]
-    der_dict[arg] -= der / val_dict[arg]**2
 
 
 def _diff_NegationExpression(node, val_dict, der_dict):
@@ -318,6 +294,19 @@ def _diff_UnaryFunctionExpression(node, val_dict, der_dict):
         raise DifferentiationException('Unsupported expression type for differentiation: {0}'.format(type(node)))
 
 
+def _diff_GeneralExpression(node, val_dict, der_dict):
+    """
+    Reverse automatic differentiation for named expressions.
+
+    Parameters
+    ----------
+    node: The named expression
+    val_dict: ComponentMap
+    der_dict: ComponentMap
+    """
+    der_dict[node.expr] += der_dict[node]
+
+
 def _diff_ExternalFunctionExpression(node, val_dict, der_dict):
     """
 
@@ -337,18 +326,16 @@ def _diff_ExternalFunctionExpression(node, val_dict, der_dict):
 _diff_map = dict()
 _diff_map[_expr.ProductExpression] = _diff_ProductExpression
 _diff_map[_expr.DivisionExpression] = _diff_DivisionExpression
-_diff_map[_expr.ReciprocalExpression] = _diff_ReciprocalExpression
 _diff_map[_expr.PowExpression] = _diff_PowExpression
 _diff_map[_expr.SumExpression] = _diff_SumExpression
 _diff_map[_expr.MonomialTermExpression] = _diff_ProductExpression
 _diff_map[_expr.NegationExpression] = _diff_NegationExpression
 _diff_map[_expr.UnaryFunctionExpression] = _diff_UnaryFunctionExpression
 _diff_map[_expr.ExternalFunctionExpression] = _diff_ExternalFunctionExpression
-_diff_map[_expr.LinearExpression] = _diff_LinearExpression
+_diff_map[_expr.LinearExpression] = _diff_SumExpression
 
 _diff_map[_expr.NPV_ProductExpression] = _diff_ProductExpression
 _diff_map[_expr.NPV_DivisionExpression] = _diff_DivisionExpression
-_diff_map[_expr.NPV_ReciprocalExpression] = _diff_ReciprocalExpression
 _diff_map[_expr.NPV_PowExpression] = _diff_PowExpression
 _diff_map[_expr.NPV_SumExpression] = _diff_SumExpression
 _diff_map[_expr.NPV_NegationExpression] = _diff_NegationExpression
@@ -356,51 +343,20 @@ _diff_map[_expr.NPV_UnaryFunctionExpression] = _diff_UnaryFunctionExpression
 _diff_map[_expr.NPV_ExternalFunctionExpression] = _diff_ExternalFunctionExpression
 
 
-class _NamedExpressionCollector(ExpressionValueVisitor):
-    def __init__(self):
-        self.named_expressions = list()
-
-    def visit(self, node, values):
-        return None
-
-    def visiting_potential_leaf(self, node):
-        if node.__class__ in nonpyomo_leaf_types:
-            return True, None
-
-        if not node.is_expression_type():
-            return True, None
-
-        if node.is_named_expression_type():
-            self.named_expressions.append(node)
-            return False, None
-
-        return False, None
+def _symbolic_value(x):
+    return x
 
 
-def _collect_ordered_named_expressions(expr):
-    """
-    The purpose of this function is to collect named expressions in a
-    particular order. The order is very important. In the resulting
-    list each named expression can only appear once, and any named
-    expressions that are used in other named expressions have to come
-    after the named expression that use them.
-    """    
-    visitor = _NamedExpressionCollector()
-    visitor.dfs_postorder_stack(expr)
-    named_expressions = visitor.named_expressions
-    seen = set()
-    res = list()
-    for e in reversed(named_expressions):
-        if id(e) in seen:
-            continue
-        seen.add(id(e))
-        res.append(e)
-    res = list(reversed(res))
-    return res
+def _numeric_apply_operation(node, values):
+    return node._apply_operation(values)
 
 
-class _ReverseADVisitorLeafToRoot(ExpressionValueVisitor):
-    def __init__(self, val_dict, der_dict):
+def _symbolic_apply_operation(node, values):
+    return node
+
+
+class _LeafToRootVisitor(ExpressionValueVisitor):
+    def __init__(self, val_dict, der_dict, expr_list, numeric=True):
         """
         Parameters
         ----------
@@ -409,75 +365,64 @@ class _ReverseADVisitorLeafToRoot(ExpressionValueVisitor):
         """
         self.val_dict = val_dict
         self.der_dict = der_dict
+        self.expr_list = expr_list
+        assert len(self.expr_list) == 0
+        assert len(self.val_dict) == 0
+        assert len(self.der_dict) == 0
+        if numeric:
+            self.value_func = value
+            self.operation_func = _numeric_apply_operation
+        else:
+            self.value_func = _symbolic_value
+            self.operation_func = _symbolic_apply_operation
 
     def visit(self, node, values):
-        self.val_dict[node] = node._apply_operation(values)
+        self.val_dict[node] = self.operation_func(node, values)
         self.der_dict[node] = 0
+        self.expr_list.append(node)
         return self.val_dict[node]
 
     def visiting_potential_leaf(self, node):
+        if node in self.val_dict:
+            return True, self.val_dict[node]
+
         if node.__class__ in nonpyomo_leaf_types:
             self.val_dict[node] = node
-            if node not in self.der_dict:
-                self.der_dict[node] = 0
+            self.der_dict[node] = 0
             return True, node
 
-        if node.__class__ is _expr.LinearExpression:
-            for v in node.linear_vars + node.linear_coefs + [node.constant]:
-                val = value(v)
-                self.val_dict[v] = val
-                if v not in self.der_dict:
-                    self.der_dict[v] = 0
-            val = value(node)
-            self.val_dict[node] = val
-            if node not in self.der_dict:
-                self.der_dict[node] = 0
-            return True, val
-
         if not node.is_expression_type():
-            val = value(node)
+            val = self.value_func(node)
             self.val_dict[node] = val
-            if node not in self.der_dict:
-                self.der_dict[node] = 0
+            self.der_dict[node] = 0
             return True, val
 
         return False, None
 
 
-class _ReverseADVisitorRootToLeaf(ExpressionValueVisitor):
-    def __init__(self, val_dict, der_dict):
-        """
-        Parameters
-        ----------
-        val_dict: ComponentMap
-        der_dict: ComponentMap
-        """
-        self.val_dict = val_dict
-        self.der_dict = der_dict
+def _reverse_diff_helper(expr, numeric=True):
+    val_dict = ComponentMap()
+    der_dict = ComponentMap()
+    expr_list = list()
 
-    def visit(self, node, values):
-        pass
+    visitorA = _LeafToRootVisitor(val_dict, der_dict, expr_list, numeric=numeric)
+    visitorA.dfs_postorder_stack(expr)
 
-    def visiting_potential_leaf(self, node):
-        if node.__class__ in nonpyomo_leaf_types:
-            return True, None
-
-        if not node.is_expression_type():
-            return True, None
-
-        if node.is_named_expression_type():
-            return True, None
-
-        if node.__class__ in _diff_map:
-            _diff_map[node.__class__](node, self.val_dict, self.der_dict)
-            return False, None
+    der_dict[expr] = 1
+    for e in reversed(expr_list):
+        if e.__class__ in _diff_map:
+            _diff_map[e.__class__](e, val_dict, der_dict)
+        elif e.is_named_expression_type():
+            _diff_GeneralExpression(e, val_dict, der_dict)
         else:
-            raise DifferentiationException('Unsupported expression type for differentiation: {0}'.format(type(node)))
+            raise DifferentiationException('Unsupported expression type for differentiation: {0}'.format(type(e)))
+
+    return der_dict
 
 
 def reverse_ad(expr):
     """
-    First order reverse ad
+    First order reverse automatic differentiation
 
     Parameters
     ----------
@@ -490,101 +435,12 @@ def reverse_ad(expr):
         component_map mapping variables to derivatives with respect
         to the corresponding variable
     """
-    val_dict = ComponentMap()
-    der_dict = ComponentMap()
-
-    visitorA = _ReverseADVisitorLeafToRoot(val_dict, der_dict)
-    visitorA.dfs_postorder_stack(expr)
-    named_expressions = _collect_ordered_named_expressions(expr)
-    der_dict[expr] = 1
-    visitorB = _ReverseADVisitorRootToLeaf(val_dict, der_dict)
-    visitorB.dfs_postorder_stack(expr)
-    for named_expr in named_expressions:
-        der_dict[named_expr.expr] = der_dict[named_expr]
-        visitorB.dfs_postorder_stack(named_expr.expr)
-
-    return der_dict
-
-
-class _ReverseSDVisitorLeafToRoot(ExpressionValueVisitor):
-    def __init__(self, val_dict, der_dict):
-        """
-        Parameters
-        ----------
-        val_dict: ComponentMap
-        der_dict: ComponentMap
-        """
-        self.val_dict = val_dict
-        self.der_dict = der_dict
-
-    def visit(self, node, values):
-        self.val_dict[node] = node.create_node_with_local_data(tuple(values))
-        self.der_dict[node] = 0
-        return self.val_dict[node]
-
-    def visiting_potential_leaf(self, node):
-        if node.__class__ in nonpyomo_leaf_types:
-            self.val_dict[node] = node
-            if node not in self.der_dict:
-                self.der_dict[node] = 0
-            return True, node
-
-        if node.__class__ is _expr.LinearExpression:
-            for v in node.linear_vars + node.linear_coefs + [node.constant]:
-                val = v
-                self.val_dict[v] = val
-                if v not in self.der_dict:
-                    self.der_dict[v] = 0
-            val = node
-            self.val_dict[node] = val
-            if node not in self.der_dict:
-                self.der_dict[node] = 0
-            return True, val
-
-        if not node.is_expression_type():
-            val = node
-            self.val_dict[node] = val
-            if node not in self.der_dict:
-                self.der_dict[node] = 0
-            return True, val
-
-        return False, None
-
-
-class _ReverseSDVisitorRootToLeaf(ExpressionValueVisitor):
-    def __init__(self, val_dict, der_dict):
-        """
-        Parameters
-        ----------
-        val_dict: ComponentMap
-        der_dict: ComponentMap
-        """
-        self.val_dict = val_dict
-        self.der_dict = der_dict
-
-    def visit(self, node, values):
-        pass
-
-    def visiting_potential_leaf(self, node):
-        if node.__class__ in nonpyomo_leaf_types:
-            return True, None
-
-        if not node.is_expression_type():
-            return True, None
-
-        if node.is_named_expression_type():
-            return True, None
-
-        if node.__class__ in _diff_map:
-            _diff_map[node.__class__](node, self.val_dict, self.der_dict)
-            return False, None
-        else:
-            raise DifferentiationException('Unsupported expression type for differentiation: {0}'.format(type(node)))
+    return _reverse_diff_helper(expr, True)
 
 
 def reverse_sd(expr):
     """
-    First order reverse ad
+    First order reverse symbolic differentiation
 
     Parameters
     ----------
@@ -597,17 +453,4 @@ def reverse_sd(expr):
         component_map mapping variables to derivatives with respect
         to the corresponding variable
     """
-    val_dict = ComponentMap()
-    der_dict = ComponentMap()
-
-    visitorA = _ReverseSDVisitorLeafToRoot(val_dict, der_dict)
-    visitorA.dfs_postorder_stack(expr)
-    named_expressions = _collect_ordered_named_expressions(expr)
-    der_dict[expr] = 1
-    visitorB = _ReverseSDVisitorRootToLeaf(val_dict, der_dict)
-    visitorB.dfs_postorder_stack(expr)
-    for named_expr in named_expressions:
-        der_dict[named_expr.expr] = der_dict[named_expr]
-        visitorB.dfs_postorder_stack(named_expr.expr)
-
-    return der_dict
+    return _reverse_diff_helper(expr, False)

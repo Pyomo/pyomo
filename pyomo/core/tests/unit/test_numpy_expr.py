@@ -155,6 +155,25 @@ class TestNumPy(unittest.TestCase):
         #model.Constraint1a = Constraint(model.I, rule=model.P1 <= model.V)
         #model.Constraint2a = Constraint(model.I, rule=model.P2 <= model.V)
 
+    @unittest.skipUnless(pandas_available, "pandas is not available")
+    def test_param_from_pandas_series_index(self):
+        m = ConcreteModel()
+        s = pd.Series([1, 3, 5], index=['T1', 'T2', 'T3'])
+
+        # Params treat Series as maps (so the Series index matters)
+        m.I = Set(initialize=s.index)
+        m.p1 = Param(m.I, initialize=s)
+        self.assertEqual(m.p1.extract_values(), {'T1':1, 'T2':3, 'T3':5})
+        m.p2 = Param(s.index, initialize=s)
+        self.assertEqual(m.p2.extract_values(), {'T1':1, 'T2':3, 'T3':5})
+        with self.assertRaisesRegex(
+                KeyError, "Index 'T1' is not valid for indexed component 'p3'"):
+            m.p3 = Param([0,1,2], initialize=s)
+
+        # Sets treat Series as lists
+        m.J = Set(initialize=s)
+        self.assertEqual(set(m.J), {1, 3, 5})
+
     def test_numpy_float(self):
         # Test issue #31
         m = ConcreteModel()

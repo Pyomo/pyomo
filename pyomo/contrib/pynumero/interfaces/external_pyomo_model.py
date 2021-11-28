@@ -15,14 +15,18 @@ from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.common.collections import ComponentSet
+from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.util.subsystems import (
-        create_subsystem_block,
-        TemporarySubsystemManager,
-        )
+    create_subsystem_block,
+    TemporarySubsystemManager,
+)
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.interfaces.external_grey_box import (
-        ExternalGreyBoxModel,
-        )
+    ExternalGreyBoxModel,
+)
+from pyomo.contrib.incidence_analysis.util import (
+    generate_strongly_connected_components,
+)
 import numpy as np
 import scipy.sparse as sps
 
@@ -114,7 +118,7 @@ def get_hessian_of_constraint(constraint, wrt1=None, wrt2=None, nlp=None):
 
 class ExternalPyomoModel(ExternalGreyBoxModel):
     """
-    This is an ExternalGreyBoxModel used to create an exteral model
+    This is an ExternalGreyBoxModel used to create an external model
     from existing Pyomo components. Given a system of variables and
     equations partitioned into "input" and "external" variables and
     "residual" and "external" equations, this class computes the
@@ -151,6 +155,10 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         self._block._obj = Objective(expr=0.0)
         self._nlp = PyomoNLP(self._block)
 
+        self._scc_list = list(generate_strongly_connected_components(
+            external_cons, variables=external_vars
+        ))
+
         assert len(external_vars) == len(external_cons)
 
         self.input_vars = input_vars
@@ -181,23 +189,109 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         for var, val in zip(input_vars, input_values):
             var.set_value(val)
 
-        _temp = create_subsystem_block(external_cons, variables=external_vars)
-        possible_input_vars = ComponentSet(input_vars)
-        #for var in _temp.input_vars.values():
-        #    # TODO: Is this check necessary?
-        #    assert var in possible_input_vars
+        for block, inputs in self._scc_list:
+            if len(block.vars) == 1:
+                calculate_variable_from_constraint(
+                    block.vars[0], block.cons[0]
+                )
+            else:
+                with TemporarySubsystemManager(to_fix=inputs):
+                    solver.solve(block)
 
-        with TemporarySubsystemManager(to_fix=list(_temp.input_vars.values())):
-            solver.solve(_temp)
-
-        # Should we create the NLP from the original block or the temp block?
-        # Need to create it from the original block because temp block won't
-        # have residual constraints, whose derivatives are necessary.
-        self._nlp = PyomoNLP(self._block)
+        # Send updated variable values to NLP for dervative evaluation
+        primals = self._nlp.get_primals()
+        to_update = input_vars + external_vars
+        indices = self._nlp.get_primal_indices(to_update)
+        values = np.fromiter((var.value for var in to_update), float)
+        primals[indices] = values
+        self._nlp.set_primals(primals)
 
     def set_equality_constraint_multipliers(self, eq_con_multipliers):
+        """
+        Sets multipliers for residual equality constraints seen by the
+        outer solver.
+
+        """
         for i, val in enumerate(eq_con_multipliers):
             self.residual_con_multipliers[i] = val
+
+    def set_external_constraint_multipliers(self, eq_con_multipliers):
+        eq_con_multipliers = np.array(eq_con_multipliers)
+        external_multipliers = self.calculate_external_constraint_multipliers(
+            eq_con_multipliers,
+        )
+        multipliers = np.concatenate((eq_con_multipliers, external_multipliers))
+        cons = self.residual_cons + self.external_cons
+        n_con = len(cons)
+        assert n_con == self._nlp.n_constraints()
+        duals = np.zeros(n_con)
+        indices = self._nlp.get_constraint_indices(cons)
+        duals[indices] = multipliers
+        self._nlp.set_duals(duals)
+
+    def calculate_external_constraint_multipliers(self, resid_multipliers):
+        """
+        Calculates the multipliers of the external constraints from the
+        multipliers of the residual constraints (which are provided by
+        the "outer" solver).
+
+        """
+        # NOTE: This method implicitly relies on the value of inputs stored
+        # in the nlp. Should we also rely on the multiplier that are in
+        # the nlp?
+        # We would then need to call nlp.set_duals twice. Once with the
+        # residual multipliers and once with the full multipliers.
+        # I like the current approach better for now.
+        nlp = self._nlp
+        y = self.external_vars
+        f = self.residual_cons
+        g = self.external_cons
+        jfy = nlp.extract_submatrix_jacobian(y, f)
+        jgy = nlp.extract_submatrix_jacobian(y, g)
+
+        jgy_t = jgy.transpose()
+        jfy_t = jfy.transpose()
+        dfdg = - sps.linalg.splu(jgy_t.tocsc()).solve(jfy_t.toarray())
+        resid_multipliers = np.array(resid_multipliers)
+        external_multipliers = dfdg.dot(resid_multipliers)
+        return external_multipliers
+
+    def get_full_space_lagrangian_hessians(self):
+        """
+        Calculates terms of Hessian of full-space Lagrangian due to
+        external and residual constraints. Note that multipliers are
+        set by set_equality_constraint_multipliers. These matrices
+        are used to calculate the Hessian of the reduced-space
+        Lagrangian.
+
+        """
+        nlp = self._nlp
+        x = self.input_vars
+        y = self.external_vars
+        hlxx = nlp.extract_submatrix_hessian_lag(x, x)
+        hlxy = nlp.extract_submatrix_hessian_lag(x, y)
+        hlyy = nlp.extract_submatrix_hessian_lag(y, y)
+        return hlxx, hlxy, hlyy
+
+    def calculate_reduced_hessian_lagrangian(self, hlxx, hlxy, hlyy):
+        """
+        Performs the matrix multiplications necessary to get the
+        reduced space Hessian-of-Lagrangian term from the full-space
+        terms.
+
+        """
+        # Converting to dense is faster for the distillation
+        # example. Does this make sense?
+        hlxx = hlxx.toarray()
+        hlxy = hlxy.toarray()
+        hlyy = hlyy.toarray()
+        dydx = self.evaluate_jacobian_external_variables()
+        term1 = hlxx
+        prod = hlxy.dot(dydx)
+        term2 = prod + prod.transpose()
+        term3 = hlyy.dot(dydx).transpose().dot(dydx)
+        hess_lag = term1 + term2 + term3
+        return hess_lag
 
     def evaluate_equality_constraints(self):
         return self._nlp.extract_subvector_constraints(self.residual_cons)
@@ -336,13 +430,21 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         This method actually evaluates the sum of Hessians times
         multipliers, i.e. the term in the Hessian of the Lagrangian
         due to these equality constraints.
-        """
-        d2fdx2 = self.evaluate_hessians_of_residuals()
-        multipliers = self.residual_con_multipliers
 
-        sum_ = sum(mult*matrix for mult, matrix in zip(multipliers, d2fdx2))
-        # Return a sparse matrix with every entry accounted for because it
-        # is difficult to determine rigorously which coordinates
-        # _could possibly_ be nonzero.
-        sparse = _dense_to_full_sparse(sum_)
+        """
+        # External multipliers must be calculated after both primals and duals
+        # are set, and are only necessary for this Hessian calculation.
+        # We know this Hessian calculation wants to use the most recently
+        # set primals and duals, so we can safely calculate external
+        # multipliers here.
+        eq_con_multipliers = self.residual_con_multipliers
+        self.set_external_constraint_multipliers(eq_con_multipliers)
+
+        # These are full-space Hessian-of-Lagrangian terms
+        hlxx, hlxy, hlyy = self.get_full_space_lagrangian_hessians()
+
+        # These terms can be used to calculate the corresponding
+        # Hessian-of-Lagrangian term in the full space.
+        hess_lag = self.calculate_reduced_hessian_lagrangian(hlxx, hlxy, hlyy)
+        sparse = _dense_to_full_sparse(hess_lag)
         return sps.tril(sparse)

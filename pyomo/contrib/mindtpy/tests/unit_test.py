@@ -8,23 +8,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-"""Tests for the MindtPy solver."""
-import pyomo.core.base.symbolic
+"""Unit tests for the MindtPy solver."""
 import pyomo.common.unittest as unittest
 from pyomo.contrib.mindtpy.tests.eight_process_problem import \
     EightProcessFlowsheet
 from pyomo.contrib.mindtpy.tests.MINLP_simple import SimpleMINLP as SimpleMINLP
-from pyomo.contrib.mindtpy.tests.MINLP2_simple import SimpleMINLP as SimpleMINLP2
-from pyomo.contrib.mindtpy.tests.MINLP3_simple import SimpleMINLP as SimpleMINLP3
-from pyomo.contrib.mindtpy.tests.MINLP4_simple import SimpleMINLP4
-from pyomo.contrib.mindtpy.tests.MINLP5_simple import SimpleMINLP5
-from pyomo.contrib.mindtpy.tests.from_proposal import ProposalModel
-from pyomo.contrib.mindtpy.tests.constraint_qualification_example import ConstraintQualificationExample
-from pyomo.contrib.mindtpy.tests.online_doc_example import OnlineDocExample
-from pyomo.environ import SolverFactory, value, maximize
+from pyomo.environ import SolverFactory, maximize
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
 from pyomo.solvers.tests.models.QCP_simple import QCP_simple
-from pyomo.opt import TerminationCondition
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
 from pyomo.contrib.mindtpy.util import setup_solve_data, add_feas_slacks, set_solver_options
 from pyomo.contrib.mindtpy.nlp_solve import handle_subproblem_other_termination, handle_feasibility_subproblem_tc, solve_subproblem, handle_nlp_subproblem_tc
@@ -34,10 +25,10 @@ from pyomo.contrib.gdpopt.util import create_utility_block, time_code, process_o
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main, init_rNLP
 from pyomo.contrib.mindtpy.feasibility_pump import generate_norm_constraint, handle_feas_main_tc
 from pyomo.core import Block, ConstraintList
-from pyomo.contrib.mindtpy.mip_solve import solve_main, handle_main_optimal, handle_main_infeasible, handle_main_other_conditions, handle_regularization_main_tc
+from pyomo.contrib.mindtpy.mip_solve import solve_main, handle_main_other_conditions
 from pyomo.opt import SolutionStatus, SolverStatus
 from pyomo.core import (Constraint, Objective,
-                        TransformationFactory, minimize, value, Var, RangeSet, NonNegativeReals)
+                        TransformationFactory, minimize, Var, RangeSet, NonNegativeReals)
 from pyomo.contrib.mindtpy.iterate import algorithm_should_terminate
 
 nonconvex_model_list = [EightProcessFlowsheet(convex=False)]
@@ -60,8 +51,6 @@ else:
 @unittest.skipIf(not subsolvers_available,
                  'Required subsolvers %s are not available'
                  % (required_solvers,))
-@unittest.skipIf(not pyomo.core.base.symbolic.differentiate_available,
-                 'Symbolic differentiation is not available')
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 

@@ -31,6 +31,7 @@ from pyomo.environ import (Set, RangeSet, Param, ConcreteModel,
                            value, set_options, sin, cos, tan, log, log10,
                            exp, sqrt, ceil, floor, asin, acos, atan, sinh,
                            cosh, tanh, asinh, acosh, atanh)
+from pyomo.common.errors import PyomoException
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base.param import _ParamData 
@@ -775,7 +776,7 @@ class ArrayParam6(unittest.TestCase):
         model.C = Set(dimen=1, initialize=[9,8,7,6,5])
         model.x = Param(model.A, model.B, model.C, initialize=-1)
         #model.y = Param(model.B, initialize=(1,1))
-        model.y = Param(model.B, initialize=((1,1,7),2))
+        model.y = Param(model.B, initialize=1)
         instance=model.create_instance()
         self.assertEqual( instance.x.dim(), 6)
         self.assertEqual( instance.y.dim(), 3)
@@ -1128,28 +1129,26 @@ class TestParamConditional(unittest.TestCase):
     def tearDown(self):
         self.model = None
 
-    def test1(self):
+    def test_if_const_param_1value(self):
         self.model.p = Param(initialize=1.0)
-        try:
+        with self.assertRaisesRegex(
+                PyomoException, r"Cannot convert non-constant Pyomo "
+                r"numeric value \(p\) to bool"):
             if self.model.p:
                 pass
-            self.fail("Expected ValueError because parameter was undefined")
-        except ValueError:
-            pass
         instance = self.model.create_instance()
         if instance.p:
             pass
         else:
             self.fail("Wrong condition value")
 
-    def test2(self):
+    def test_if_const_param_0value(self):
         self.model.p = Param(initialize=0.0)
-        try:
+        with self.assertRaisesRegex(
+                PyomoException, r"Cannot convert non-constant Pyomo "
+                r"numeric value \(p\) to bool"):
             if self.model.p:
                 pass
-            self.fail("Expected ValueError because parameter was undefined")
-        except ValueError:
-            pass
         instance = self.model.create_instance()
         if instance.p:
             self.fail("Wrong condition value")

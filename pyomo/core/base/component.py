@@ -29,6 +29,7 @@ relocated_module_attribute(
     'ComponentUID', 'pyomo.core.base.componentuid.ComponentUID',
     version='5.7.2')
 
+_ref_types = {type(None), weakref_ref}
 
 class ModelComponentFactoryClass(Factory):
 
@@ -322,6 +323,10 @@ class _ComponentBase(PyomoObject):
             # The first line should be a hanging indent (i.e., not indented)
             ostream.newline = False
 
+        if self.is_reference():
+            _attr = list(_attr) if _attr else []
+            _attr.append(('ReferenceTo', self.referent))
+
         if _name:
             ostream.write(_name+" : ")
         if _doc:
@@ -436,8 +441,7 @@ class Component(_ComponentBase):
         This method must be defined to support pickling because this class
         owns weakrefs for '_parent'.
         """
-        if state['_parent'] is not None and \
-                type(state['_parent']) is not weakref_ref:
+        if state['_parent'].__class__ not in _ref_types:
             state['_parent'] = weakref_ref(state['_parent'])
         #
         # Note: our model for setstate is for derived classes to modify
@@ -542,15 +546,6 @@ class Component(_ComponentBase):
 
     def __str__(self):
         """Return the component name"""
-        return self.name
-
-    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
-        """Return the component name"""
-        if compute_values:
-            try:
-                return str(self())
-            except:
-                pass
         return self.name
 
     def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
@@ -766,8 +761,7 @@ class ComponentData(_ComponentBase):
         # we don't the model cloning appears to fail (in the Benders
         # example)
         #
-        if state['_component'] is not None and \
-                type(state['_component']) is not weakref_ref:
+        if state['_component'].__class__ not in _ref_types:
             state['_component'] = weakref_ref(state['_component'])
         #
         # Note: our model for setstate is for derived classes to modify
@@ -853,23 +847,6 @@ class ComponentData(_ComponentBase):
     def __str__(self):
         """Return a string with the component name and index"""
         return self.name
-
-    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
-        """
-        Return a string representation of this component,
-        applying the labeler if passed one.
-        """
-        if compute_values:
-            try:
-                return str(self())
-            except:
-                pass
-        if smap:
-            return smap.getSymbol(self, labeler)
-        if labeler is not None:
-            return labeler(self)
-        else:
-            return self.__str__()
 
     def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
         """Return a string with the component name and index"""

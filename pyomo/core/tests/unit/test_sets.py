@@ -2978,8 +2978,8 @@ class TestSetErrors(PyomoModel):
         b=Set(a)
         with self.assertRaisesRegex(
                 #TypeError, "Cannot apply a Set operator to an indexed"):
-                ValueError, "Error retrieving component IndexedSet\[None\]: "
-                "The component has not been constructed."):
+                ValueError, r"Error retrieving component IndexedSet\[None\]: "
+                r"The component has not been constructed."):
             c=Set(within=b, dimen=2)
             c.construct()
 
@@ -3292,8 +3292,8 @@ class TestSetErrors(PyomoModel):
         self.assertNotIn(1, X)
         with self.assertRaisesRegex(
                 RangeDifferenceError, r"We do not support subtracting an "
-                r"infinite discrete range \[0:None\] from an infinite "
-                r"continuous range \[None..None\]"):
+                r"infinite discrete range \[0:inf\] from an infinite "
+                r"continuous range \[-inf..inf\]"):
             X < Reals
         # In the set rewrite, the following now works!
         # try:
@@ -3325,8 +3325,8 @@ class TestSetErrors(PyomoModel):
         self.assertNotIn(1, X)
         with self.assertRaisesRegex(
                 RangeDifferenceError, r"We do not support subtracting an "
-                r"infinite discrete range \[0:None\] from an infinite "
-                r"continuous range \[None..None\]"):
+                r"infinite discrete range \[0:inf\] from an infinite "
+                r"continuous range \[-inf..inf\]"):
             X < Reals
         # In the set rewrite, the following now works!
         # try:

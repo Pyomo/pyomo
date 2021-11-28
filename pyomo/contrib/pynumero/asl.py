@@ -223,7 +223,7 @@ class AmplInterface(object):
         # the ASL.  This should prevent it from potentially caching an
         # AMPLFUNC from the initial load and letting it bleed into
         # (potentially unrelated) subsequent instances
-        b_amplfunc = os.environ.pop('AMPLFUNC', '').encode('utf-8')
+        amplfunc = os.environ.pop('AMPLFUNC', '')
 
         if AmplInterface.ASLib is None:
             AmplInterface.ASLib, AmplInterface.interface_version \
@@ -235,8 +235,15 @@ class AmplInterface(object):
 
             b_data = filename.encode('utf-8')
             if self.interface_version >= 2:
-                args = (b_data, b_amplfunc)
+                args = (b_data, amplfunc.encode('utf-8'))
             else:
+                # Old ASL interface library.
+                if amplfunc:
+                    # we need to put AMPLFUNC back into the environment,
+                    # as old versions of the library rely on ONLY the
+                    # environment variable for passing the library(ies)
+                    # locations to the ASL
+                    os.environ['AMPLFUNC'] = amplfunc
                 args = (b_data,)
             self._obj = self.ASLib.EXTERNAL_AmplInterface_new_file(*args)
         elif nl_buffer is not None:
