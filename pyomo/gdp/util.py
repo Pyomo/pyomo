@@ -13,9 +13,9 @@ from pyomo.gdp.disjunct import _DisjunctData, Disjunct
 
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base.component import _ComponentBase
-from pyomo.core import Block, TraversalStrategy, SortComponents
+from pyomo.core import (
+    Block, TraversalStrategy, SortComponents, LogicalConstraint)
 from pyomo.core.base.block import _BlockData
-from pyomo.core import Block, TraversalStrategy, SortComponents
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.opt import TerminationCondition, SolverStatus
 
@@ -467,6 +467,16 @@ def check_model_algebraic(instance):
                                'transformed or deactivated before solving the '
                                'model.' % (disjunct.name,))
                 return False
+
+    for cons in instance.component_data_objects(LogicalConstraint,
+                                                descend_into=Block, 
+                                                active=True):
+        if cons.active:
+            logger.warning('LogicalConstraint "%s" is currently active. It '
+                           'must be transformed or deactivated before solving '
+                           'the model.' % cons.name)
+            return False
+
     # We didn't find anything bad.
     return True
 
