@@ -794,7 +794,3 @@ class PartitionDisjuncts_Transformation(Transformation):
                                   transformed_parent_disjunct, transBlock,
                                   partition):
         _warn_for_active_disjunct(disjunct, parent_disjunct, NAME_BUFFER)
-        
-
-# ESJ: TODO: Add a test for the old indicator variables appearing in logical
-# constraints.
