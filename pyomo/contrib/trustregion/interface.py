@@ -10,14 +10,15 @@
 
 import logging
 
+from pyomo.common.dependencies import numpy as np
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import (
     Block, Var, Param, ExternalFunction,
     VarList, ConstraintList, Constraint,
-    Objective, ObjectiveList, value
+    Objective, ObjectiveList, value, Set
     )
-import pyomo.core.expr as EXPR
+from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.expr.visitor import (identify_variables,
                                      ExpressionReplacementVisitor)
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
@@ -39,9 +40,10 @@ class EFReplacement(ExpressionReplacementVisitor):
         new_node = super().exitNode(node, data)
         if new_node.__class__ is not ExternalFunctionExpression:
             return new_node
-        if id(new_node._fcn) not in self.efSet:
+        if self.efSet is not None and new_node._fcn not in self.efSet:
+            # SKIP: efSet is provided and this node is not in it.
             return new_node
-        
+
         _output = self.trfData.ef_outputs.add()
         # Preserve the new node as a truth model
         # self.TRF.truth_models is a ComponentMap
@@ -54,7 +56,7 @@ class TRFInterface(object):
     Pyomo interface for Trust Region algorithm.
     """
 
-    def __init__(self, model, config, ext_fcn_surrogate_map_rule):
+    def __init__(self, model, ext_fcn_surrogate_map_rule, config):
         self.original_model = model
         self.config = config
         self.model = self.original_model.clone()
@@ -62,50 +64,53 @@ class TRFInterface(object):
         self.model.add_component(unique_component_name(model, 'trf_data'),
                                  self.data)
         self.basis_expression_rule = ext_fcn_surrogate_map_rule
+        self.efSet = None
+        self.solver = SolverFactory(self.config.solver)
+        # TODO: Provide an API for users to set this only to substitute
+        # a subset of identified external functions.
+        # Also rename to "efFilterSet" or something similar.
 
     def __exit__(self):
         pass
 
-    def replaceEF(self, expr, TRF, efSet):
+    def replaceEF(self, expr):
         """
         Replace an External Function.
 
         Arguments:
             expr  : a Pyomo expression. We will search this expression tree
-            TRF   : a Pyomo Block. We will add replacement vars on this Block
-            efSet : the (Pyomo) set of external functions for which we
-                    will use TRF method
 
         This function returns an expression after removing any
         ExternalFunction in the set efSet from the expression tree
-        `expr`. New variables are declared on the `TRF` block and replace
-        the external function.
-        """
-        return EFReplacement(TRF, efSet).walk_expression(expr)
+        `expr` and replacing them with variables.
+        New variables are declared on the `TRF` block.
 
-    def _remove_ef_from_expr(self, component, efSet):
+        TODO: Future work - investigate direct substitution of basis or
+        surrogate models using Expression objects instead of new variables.
+        """
+        return EFReplacement(self.data, self.efSet).walk_expression(expr)
+
+    def _remove_ef_from_expr(self, component):
         expr = component.expr
-        new_expr = self.replaceEF(expr, self.data, efSet)
+        next_ef_id = len(self.data.ef_outputs)
+        new_expr = self.replaceEF(expr)
         if new_expr is not expr:
             component.set_value(new_expr)
-            new_output_vars = [self.data.ef_outputs[i] for i in
-                               range(len(self.data.basis_expressions)+1,
-                                     len(self.data.ef_outputs)+1)]
+            new_output_vars = self.data.ef_outputs[next_ef_id:]
             for v in new_output_vars:
                 self.data.basis_expressions[v] = \
                     self.basis_expression_rule(
                         component, self.data.truth_models[v])
 
-    def transformForTrustRegion(self):
-        efSet = set(self.model.component_data_objects(ExternalFunction))
+    def replaceExternalFunctionsWithVariables(self):
         self.data.truth_models = ComponentMap()
-        self.data.basis_expressions = ComponentMap() # Maybe
+        self.data.basis_expressions = ComponentMap()
         self.data.ef_inputs = ComponentMap()
         self.data.ef_outputs = VarList()
 
         for con in self.model.component_data_objects(Constraint,
                                                      active=True):
-            self._remove_ef_from_expr(con, efSet)
+            self._remove_ef_from_expr(con)
 
         objs = list(self.model.component_data_objects(Objective,
                                                       active=True))
@@ -113,76 +118,75 @@ class TRFInterface(object):
             raise RuntimeError(
                 "transformForTrustRegion: "
                 "TrustRegion only supports models with a single active Objective.")
-        self._remove_ef_from_expr(objs[0], efSet)
+        self._remove_ef_from_expr(objs[0])
 
         for v in self.data.ef_outputs:
             self.data.ef_inputs[v] = \
                 list(identify_variables(self.data.truth_models[v],
                                         include_fixed=False))
 
-        # Process Model Problem (3) from Yoshio/Biegler (2020)
-        self.pmp = self.model.clone()
-        # Trust Region Subproblem (TRSP) (4) from Yoshio/Biegler (2020)
-        self.trsp = self.model.clone()
-
-    def solveModel(self, m, input_vars, output_vars):
-        """
-        Call the specified solver to solve the problem
-        """
-        solver = SolverFactory(self.config.solver)
-        results = solver.solve(m, keepfiles=self.config.keepfiles,
-                               tee=self.config.tee,
-                               load_solution=self.config.load_solution)
-
-        if ((results.solver.status == SolverStatus.ok)
-            and (results.solver.termination_condition ==
-                 TerminationCondition.optimal)):
-            m.solutions.load_from(results)
-            # TODO: Add results back to model here
-            for obj in m.component_data_objects(Objective, active=True):
-                return True, obj()
-        else:
-            print("Warning: Solver Status: %s" 
-                  % str(results.solver.status))
-            print("Termination Conditions: %s" 
-                  % str(results.solver.termination_condition))
-            return False, 0
-
-    def createComponents(self):
-        """
-        Create required components for the model(s)
-        """
-        pass
-
-    def setInitialValues(self):
-        """
-        Set initial values for first iteration
-        """
-        # We want to set x0 and d(w0) here
-        # x0 : solution to the process model problem (3)
-        # d(w0) : solution of high-fidelity model at initial inputs
-        pass
-
     def createConstraints(self):
         """
         Create constraints
         """
-        data_name = self.data.name
-
-        pmp_data = self.pmp.find_component(data_name)
+        b = self.data
         # This implements: y = b(w) from Yoshio/Biegler (2020)
-        @pmp_data.Constraint(pmp_data.ef_outputs.index_set())
+        @b.Constraint(b.ef_outputs.index_set())
         def basis_constraints(b, i):
             ef_output_var = b.ef_outputs[i]
             return ef_output_var == b.basis_expressions[ef_output_var]
+        b.basis_constraints.deactivate()
 
-        trsp_data = self.trsp.find_component(data_name)
+        b.INPUT_OUTPUT = Set(initialize=(
+            (i, j) for i in b.ef_outputs.index_set()
+            for j in range(len(b.ef_inputs[b.ef_outputs[i]]))
+        ))
+        b.basis_model_output = Param(b.ef_outputs.index_set(), mutable=True)
+        b.grad_basis_model_output = Param(b.INPUT_OUTPUT, mutable=True)
+        b.truth_model_output = Param(b.ef_outputs.index_set(), mutable=True)
+        b.grad_truth_model_output = Param(b.INPUT_OUTPUT, mutable=True)
         # This implements: y = r_k(w)
-        @trsp_data.Constraint(trsp_data.ef_outputs.index_set())
+        @b.Constraint(b.ef_outputs.index_set())
         def sm_constraint_basis(b, i):
             ef_output_var = b.ef_outputs[i]
-            return ef_output_var == b.basis_expressions[ef_output_var] # + \
-                # Other junk from Eq 5
+            return ef_output_var == b.basis_expressions[ef_output_var] + \
+                b.truth_model_output[i] - b.basis_model_output[i] + \
+                sum((b.grad_truth_model_output[i, j]
+                     - b.grad_basis_model_output[i, j])
+                    * (w - b.ef_input[j])
+                    for j, w in enumerate(b.ef_inputs[ef_output_var]))
+        b.sm_constraint_basis.deactivate()
+
+    def updateSurrogateModel(self):
+        """
+        Update relevant parameters
+        """
+        b = self.data
+        for i, y in b.ef_outputs.items():
+            b.basis_model_output[i] = value(b.basis_expressions[y])
+            b.truth_model_output[i] = value(b.truth_models[y])
+            gradBasis = differentiate(b.basis_expressions[y],
+                                      wrt_list=b.ef_inputs[y])
+            gradTruth = self.gradientOfEF(b.truth_models[y],
+                                          b.ef_inputs[y])
+            for j, w in enumerate(b.ef_inputs[y]):
+                b.grad_basis_model_output[i, j] = gradBasis[j]
+                b.grad_truth_model_output[i, j] = gradTruth[j]
+
+    def gradientOfEF(self, ef, inputs):
+        """
+        Finite difference gradient of an external function
+        TODO: MAGIC
+        """
+        pass
+
+    def calculateFeasibility(self):
+        """
+        Feasibility measure (theta(x)) is:
+            || y - d(w) ||_1
+        """
+        b = self.data
+        return sum(abs(value(y) - value(b.truth_model_output[i])) for i, y in b.ef_outputs.items())
 
     def initializeProblem(self):
         """
@@ -200,19 +204,38 @@ class TRFInterface(object):
             4. Create initial SM (difference btw. low + high fidelity models)
 
         """
-        pass
+        self.replaceExternalFunctionsWithVariables()
+        self.createConstraints()
+        self.data.basis_constraints.activate()
+        result, objective_value = self.solveModel()
+        if not result:
+            raise RuntimeError("ERROR: Basis model solve failed.")
+        self.data.basis_constraints.deactivate()
+        self.updateSurrogateModel()
+        feasibility = self.calculateFeasibility()
+        self.data.sm_constraint_basis.activate()
+        return objective_value, feasibility
 
-    def buildSM(self):
+    def solveModel(self):
         """
-        Build a surrogate model
+        Call the specified solver to solve the problem
         """
-        pass
+        results = self.solver.solve(self.model, keepfiles=self.config.keepfiles,
+                                    tee=self.config.tee,
+                                    load_solution=self.config.load_solution)
 
-    def TRSP(self):
-        """
-        Solve Trust Region Subproblem
-        """
-        pass
+        if ((results.solver.status == SolverStatus.ok)
+            and (results.solver.termination_condition ==
+                 TerminationCondition.optimal)):
+            self.model.solutions.load_from(results)
+            for obj in self.model.component_data_objects(Objective, active=True):
+                return True, obj()
+        else:
+            print("Warning: Solver Status: %s" 
+                  % str(results.solver.status))
+            print("Termination Conditions: %s" 
+                  % str(results.solver.termination_condition))
+            return False, 0
 
     def reset(self):
         """

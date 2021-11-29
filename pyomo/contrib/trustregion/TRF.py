@@ -53,11 +53,11 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
     # Initialize necessary TRF methods
     TRFLogger = IterationLogger()
     TRFilter = Filter()
-    interface = TRFInterface(model, config, ext_fcn_surrogate_map_rule)
+    interface = TRFInterface(model, ext_fcn_surrogate_map_rule, config)
 
     # Initialize the problem
     rebuildSM = False
-    obj, feasibility, SM = interface.initializeProblem() # TODO
+    obj_val, feasibility = interface.initializeProblem()
     # Initialize step_norm_k to a bogus value to enable termination check
     step_norm_k = 1
 
@@ -67,10 +67,10 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
 
         # Generate suggorate model r_k(w)
         if rebuildSM:
-            interface.buildSM() # TODO
+            interface.updateSurrogateModel()
 
         feasibility_k = feasibility
-        obj_k = obj
+        obj_val_k = obj_val
 
         # Check termination conditions
         if (feasibility_k <= feasibility_term) and (step_norm_k <= step_size_term):
@@ -93,7 +93,7 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
             # the boolean subopt_flag
             subopt_flag = False
 
-        success, obj_k = interface.TRSP() # TODO
+        success, obj_val_k = interface.solveModel()
         if not success:
             raise Exception('EXIT: Subproblem TRSP_k solve failed.\n')
 
@@ -102,9 +102,9 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
         feasibility_k = np.norm() # feasibility(x) = norm(y - d(w))_1
 
         TRFLogger.newIteration(iteration, inputs, outputs, other, params,
-                               feasibility_k, obj_k, trust_radius, step_norm_k)
+                               feasibility_k, obj_val_k, trust_radius, step_norm_k)
 
-        filterElement = FilterElement(feasibility_k, obj_k)
+        filterElement = FilterElement(feasibility_k, obj_val_k)
         if not TRFilter.isAcceptable(filterElement, max_feasibility):
             # Reject the step
             TRFLogger.iterrecord.rejected = True
@@ -115,7 +115,7 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
             continue
 
         # Switching condition: Eq. (7) in Yoshio/Biegler (2020)
-        if ((obj - obj_k >=
+        if ((obj_val - obj_val_k >=
              switch_cond_kappa_theta*pow(feasibility, switch_cond_gamma_s))
             and (feasibility <= min_feasibility)):
             # f-type step
@@ -126,7 +126,7 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
         else:
             # theta-type step
             TRFLogger.iterrecord.thetaStep = True
-            filterElement = FilterElement(obj_k - filter_param_gamma_f*feasibility_k,
+            filterElement = FilterElement(obj_val_k - filter_param_gamma_f*feasibility_k,
                                           (1 - filter_param_gamma_theta)*feasibility_k)
             TRFilter.addToFilter(filterElement)
             # Calculate ratio: Eq. (10) in Yoshio/Biegler (2020)
@@ -151,7 +151,7 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
         rebuildSM = True
         interface.reset() # TODO
         feasibility = feasibility_k
-        obj = obj_k
+        obj_val = obj_val_k
 
     if iteration > max_its:
         print('EXIT: Maximum iterations reached: {}.'.format(max_its))
