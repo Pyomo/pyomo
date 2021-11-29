@@ -15,7 +15,7 @@ from pyomo.environ import (
 from pyomo.core.expr.logical_expr import (
     EquivalenceExpression, NotExpression, AndExpression, ExactlyExpression)
 from pyomo.gdp import Disjunct, Disjunction
-from pyomo.gdp.util import GDP_Error
+from pyomo.gdp.util import GDP_Error, check_model_algebraic
 from pyomo.gdp.plugins.partition_disjuncts import (
     arbitrary_partition, compute_optimal_bounds, compute_fbbt_bounds)
 from pyomo.core import Block, value
@@ -1821,27 +1821,22 @@ class LogicalExpressions(unittest.TestCase, CommonTests):
                      'Gurobi direct solver not available')
     def test_solve_model_with_boolean_vars_on_disjuncts(self):
         # Make sure that we are making references to everything we need to so
-        # that transformed models are solveable.
+        # that transformed models are solvable. This is testing both that the
+        # LogicalConstraints are copied over correctly and that we know how to
+        # handle when BooleanVars are declared on Disjuncts.
         m = models.makeBooleanVarsOnDisjuncts()
         # This is actually useless because there is only one variable, but
         # that's fine--we just want to make sure the transformed model is
-        # solveable.
+        # solvable.
         TransformationFactory('gdp.between_steps').apply_to(
             m, variable_partitions=[[m.x]], 
             compute_bounds_method=compute_fbbt_bounds)
 
-        # ESJ: TODO: Argh, so the reason that this doesn't work is because I
-        # just created References to the old BooleanVars on the new Disjunct,
-        # but when I call logical_to_linear, it obviously doesn't notice, and so
-        # it creates the binary variables on the old Disjunct and then the
-        # writer can't find them.
-        SolverFactory('gurobi').solve(m)
+        self.assertTrue(check_model_algebraic(m))
+
+        SolverFactory('gurobi_direct').solve(m)
         self.assertAlmostEqual(value(m.x), 8)
         self.assertFalse(value(m.d[1].indicator_var))
         self.assertTrue(value(m.d[2].indicator_var))
         self.assertTrue(value(m.d[3].indicator_var))
         self.assertFalse(value(m.d[4].indicator_var))
-
-    def test_solve_model_with_indicator_vars_in_logical_constraints(self):
-        # TODO
-        pass
