@@ -574,24 +574,6 @@ class PartitionDisjuncts_Transformation(Transformation):
             self._transform_disjunctionData(disjunction, disjunction.index(),
                                             None, transformed_disjunct)
 
-        # Associate binary variables for every BooleanVar declared here (that
-        # isn't yet mapped to one), declaring them on the new Disjunct. We won't
-        # have to do this after #1032 is implemented for the writers (especially
-        # because it is pushing the limits of MIPifying in a GDP
-        # transformation), but for now we need to make sure those binaries make
-        # it into the active subtree because logical_to_linear will not create
-        # them in the right place.
-        for var in disjunct.component_data_objects(BooleanVar,
-                                                   descend_into=Block,
-                                                   active=None):
-            if var.get_associated_binary() is None:
-                new_binary = Var(domain=Binary)
-                transformed_disjunct.add_component(unique_component_name(
-                    transformed_disjunct,
-                    var.getname(fully_qualified=True,
-                                name_buffer=NAME_BUFFER)), new_binary)
-                var.associate_binary_var(new_binary)
-
         # create references to any variables declared here on the transformed
         # Disjunct (this will include the indicator_var) NOTE that we will not
         # have to do this when #1032 is implemented for the writers. But right
