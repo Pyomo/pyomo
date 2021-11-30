@@ -119,12 +119,12 @@ def _get_MindtPy_config():
     ))
     CONFIG.declare('single_tree', ConfigValue(
         default=False,
-        description='Use single tree implementation in solving the MILP main problem.',
+        description='Use single tree implementation in solving the MIP main problem.',
         domain=bool
     ))
     CONFIG.declare('solution_pool', ConfigValue(
         default=False,
-        description='Use solution pool in solving the MILP main problem.',
+        description='Use solution pool in solving the MIP main problem.',
         domain=bool
     ))
     CONFIG.declare('add_slack', ConfigValue(
@@ -224,28 +224,28 @@ def _add_subsolver_configs(CONFIG):
     CONFIG.declare('mip_solver_mipgap', ConfigValue(
         default=1E-4,
         domain=PositiveFloat,
-        description='mipgap passed to mip solver'
+        description='mipgap passed to MIP solver'
     ))
     CONFIG.declare('threads', ConfigValue(
         default=0,
         domain=NonNegativeInt,
         description='Threads',
-        doc='Threads used by milp solver and nlp solver.'
+        doc='Threads used by MIP solver and nlp solver.'
     ))
     CONFIG.declare('regularization_mip_threads', ConfigValue(
         default=0,
         domain=NonNegativeInt,
-        description='regularization mip threads',
-        doc='Threads used by milp solver to solve regularization main problem.'
+        description='regularization MIP threads',
+        doc='Threads used by MIP solver to solve regularization main problem.'
     ))
     CONFIG.declare('solver_tee', ConfigValue(
         default=False,
-        description='Stream the output of mip solver and nlp solver to terminal.',
+        description='Stream the output of MIP solver and nlp solver to terminal.',
         domain=bool
     ))
     CONFIG.declare('mip_solver_tee', ConfigValue(
         default=False,
-        description='Stream the output of mip solver to terminal.',
+        description='Stream the output of MIP solver to terminal.',
         domain=bool
     ))
     CONFIG.declare('nlp_solver_tee', ConfigValue(
@@ -312,7 +312,7 @@ def _add_bound_configs(CONFIG):
     CONFIG.declare('obj_bound', ConfigValue(
         default=1E15,
         domain=PositiveFloat,
-        description='Bound applied to the linearization of the objective function if main MILP is unbounded.'
+        description='Bound applied to the linearization of the objective function if main MIP is unbounded.'
     ))
     CONFIG.declare('continuous_var_bound', ConfigValue(
         default=1e10,
