@@ -32,23 +32,6 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
     """
     Main driver of the Trust Region algorithm.
     """
-    # Grab values from the configuration options
-    trust_radius = config.trust_radius
-    min_radius = config.minimum_radius
-    max_radius = config.maximum_radius
-    max_its = config.maximum_iterations
-    feasibility_term = config.feasibility_termination
-    step_size_term = config.step_size_termination
-    min_feasibility = config.minimum_feasibility
-    max_feasibility = config.maximum_feasibility
-    switch_cond_kappa_theta = config.kappa_theta
-    switch_cond_gamma_s = config.gamma_s
-    trf_update_param_gamma_c = config.gamma_c
-    trf_update_param_gamma_e = config.gamma_e
-    ratio_test_param_eta_1 = config.eta_1
-    ratio_test_param_eta_2 = config.eta_2
-    filter_param_gamma_theta = config.gamma_theta
-    filter_param_gamma_f = config.gamma_f
 
     # Initialize necessary TRF methods
     TRFLogger = IterationLogger()
@@ -58,30 +41,34 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
     # Initialize the problem
     rebuildSM = False
     obj_val, feasibility = interface.initializeProblem()
+    # Initialize first iteration feasibility/objective value to enable
+    # termination check
+    feasibility_k = feasibility
+    obj_val_k = obj_val
     # Initialize step_norm_k to a bogus value to enable termination check
     step_norm_k = 1
+    # Initialize trust region radius
+    trust_radius = config.trust_radius
 
     iteration = 0
-    while iteration < max_its:
+    while iteration < config.maximum_iterations:
         iteration += 1
 
         # Generate suggorate model r_k(w)
         if rebuildSM:
             interface.updateSurrogateModel()
 
-        feasibility_k = feasibility
-        obj_val_k = obj_val
-
         # Check termination conditions
-        if (feasibility_k <= feasibility_term) and (step_norm_k <= step_size_term):
+        if ((feasibility_k <= config.feasibility_termination)
+            and (step_norm_k <= config.step_size_termination)):
             print('EXIT: Optimal solution found.')
             break
 
         # If trust region very small and no progress is being made,
         # terminate. The following condition must hold for two
         # consecutive iterations.
-        if ((trust_radius <= min_radius) and
-            (feasibility_k < feasibility_term)):
+        if ((trust_radius <= config.minimum_radius) and
+            (feasibility_k < config.feasibility_termination)):
             if subopt_flag:
                 print('WARNING: Insufficient progress.')
                 print('EXIT: Feasible solution found.')
@@ -93,68 +80,67 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
             # the boolean subopt_flag
             subopt_flag = False
 
-        success, obj_val_k = interface.solveModel()
+        success, obj_val_k, step_norm_k, feasibility_k = interface.solveModel()
         if not success:
             raise Exception('EXIT: Subproblem TRSP_k solve failed.\n')
 
-        step_norm_k = np.norm() # Difference between init and new input/outputs
+        TRFLogger.newIteration(iteration, feasibility_k, obj_val_k,
+                               trust_radius, step_norm_k)
+
         # Check filter acceptance
-        feasibility_k = np.norm() # feasibility(x) = norm(y - d(w))_1
-
-        TRFLogger.newIteration(iteration, inputs, outputs, other, params,
-                               feasibility_k, obj_val_k, trust_radius, step_norm_k)
-
         filterElement = FilterElement(feasibility_k, obj_val_k)
-        if not TRFilter.isAcceptable(filterElement, max_feasibility):
+        if not TRFilter.isAcceptable(filterElement, config.maximum_feasibility):
             # Reject the step
             TRFLogger.iterrecord.rejected = True
-            trust_radius = max(min_radius,
-                               step_norm_k*trf_update_param_gamma_c)
+            trust_radius = max(config.minimum_radius,
+                               step_norm_k*config.radius_update_param_gamma_c)
             rebuildSM = False
-            interface.reset() # TODO
+            interface.rejectStep()
             continue
 
         # Switching condition: Eq. (7) in Yoshio/Biegler (2020)
         if ((obj_val - obj_val_k >=
-             switch_cond_kappa_theta*pow(feasibility, switch_cond_gamma_s))
-            and (feasibility <= min_feasibility)):
+             config.switch_condition_kappa_theta
+             * pow(feasibility, config.switch_condition_gamma_s))
+            and (feasibility <= config.minimum_feasibility)):
             # f-type step
             TRFLogger.iterrecord.fStep = True
-            trust_radius = min(max(step_norm_k*trf_update_param_gamma_e,
+            trust_radius = min(max(step_norm_k*config.radius_update_param_gamma_e,
                                    trust_radius),
-                               max_radius)
+                               config.maximum_radius)
         else:
             # theta-type step
             TRFLogger.iterrecord.thetaStep = True
-            filterElement = FilterElement(obj_val_k - filter_param_gamma_f*feasibility_k,
-                                          (1 - filter_param_gamma_theta)*feasibility_k)
+            filterElement = FilterElement(obj_val_k - config.filter_param_gamma_f*feasibility_k,
+                                          (1 - config.filter_param_gamma_theta)*feasibility_k)
             TRFilter.addToFilter(filterElement)
             # Calculate ratio: Eq. (10) in Yoshio/Biegler (2020)
-            rho_k = ((feasibility - feasibility_k + feasibility_term) /
-                     max(feasibility, feasibility_term))
+            rho_k = ((feasibility - feasibility_k + config.feasibility_termination) /
+                     max(feasibility, config.feasibility_termination))
             # Ratio tests: Eq. (8) in Yoshio/Biegler (2020)
             # If rho_k is between eta_1 and eta_2, trust radius stays same
-            if ((rho_k < ratio_test_param_eta_1) or
-                (feasibility > min_feasibility)):
-                trust_radius = max(min_radius,
-                                   trf_update_param_gamma_c*step_norm_k)
-            elif ((rho_k >= ratio_test_param_eta_2) and
-                  (feasibility <= min_feasibility)):
+            if ((rho_k < config.ratio_test_param_eta_1) or
+                (feasibility > config.minimum_feasibility)):
+                trust_radius = max(config.minimum_radius,
+                                   config.radius_update_param_gamma_c
+                                   * step_norm_k)
+            elif ((rho_k >= config.ratio_test_param_eta_2) and
+                  (feasibility <= config.minimum_feasibility)):
                 trust_radius = max(trust_radius,
-                                   max_radius,
-                                   trf_update_param_gamma_e*step_norm_k)
+                                   config.maximum_radius,
+                                   config.radius_update_param_gamma_e
+                                   * step_norm_k)
 
         # Log iteration information
         TRFLogger.logIteration()
 
         # Accept step and reset for next iteration
         rebuildSM = True
-        interface.reset() # TODO
         feasibility = feasibility_k
         obj_val = obj_val_k
 
-    if iteration > max_its:
-        print('EXIT: Maximum iterations reached: {}.'.format(max_its))
+    if iteration > config.maximum_iterations:
+        print('EXIT: Maximum iterations reached: {}.'.format(config.maximum_iterations))
 
 
 def _trf_config():
@@ -232,14 +218,14 @@ def _trf_config():
         description="Minimum feasibility measure (theta_min). "
                     "Default = 1e-4."
     ))
-    CONFIG.declare('kappa theta', ConfigValue(
+    CONFIG.declare('switch condition kappa theta', ConfigValue(
         default=0.1,
         domain=In(NumericRange(0, 1, 0, (False, False))),
         description="Switching condition parameter (kappa_theta). "
                     "Contained in open set (0, 1). "
                     "Default = 0.1."
     ))
-    CONFIG.declare('gamma s', ConfigValue(
+    CONFIG.declare('switch condition gamma s', ConfigValue(
         default=2.0,
         domain=PositiveFloat,
         description="Switching condition parameter (gamma_s). "
@@ -248,26 +234,26 @@ def _trf_config():
                     "Default = 2.0."
     ))
     ### Trust region update/ratio test parameters
-    CONFIG.declare('gamma c', ConfigValue(
+    CONFIG.declare('radius update param gamma c', ConfigValue(
         default=0.5,
         domain=In(NumericRange(0, 1, 0, (False, False))),
         description="Lower trust region update parameter (gamma_c). "
                     "Default = 0.5."
     ))
-    CONFIG.declare('gamma e', ConfigValue(
+    CONFIG.declare('radius update param gamma e', ConfigValue(
         default=2.5,
         domain=In(NumericRange(1, None, 0)),
         description="Upper trust region update parameter (gamma_e). "
                     "Default = 2.5."
     ))
-    CONFIG.declare('eta_1', ConfigValue(
+    CONFIG.declare('ratio test param eta_1', ConfigValue(
         default = 0.05,
         domain=In(NumericRange(0, 1, 0, (False, False))),
         description="Lower ratio test parameter (eta_1). "
                     "Must satisfy: 0 < eta_1 <= eta_2 < 1. "
                     "Default = 0.05."
     ))
-    CONFIG.declare('eta_2', ConfigValue(
+    CONFIG.declare('ratio test param eta_2', ConfigValue(
         default = 0.25,
         domain=In(NumericRange(0, 1, 0, (False, False))),
         description="Lower ratio test parameter (eta_2). "
@@ -282,13 +268,13 @@ def _trf_config():
                     "Parameter for use in filter method."
                     "Default = 50.0."
     ))
-    CONFIG.declare('gamma theta', ConfigValue(
+    CONFIG.declare('filter param gamma theta', ConfigValue(
         default=0.01,
         domain=In(NumericRange(0, 1, 0, (False, False))),
         description="Fixed filter parameter (gamma_theta) within (0, 1). "
                     "Default = 0.01"
     ))
-    CONFIG.declare('gamma f', ConfigValue(
+    CONFIG.declare('filter param gamma f', ConfigValue(
         default=0.01,
         domain=In(NumericRange(0, 1, 0, (False, False))),
         description="Fixed filter parameter (gamma_f) within (0, 1). "
@@ -342,4 +328,4 @@ class TrustRegionSolver(object):
             # If the user does not pass us a "basis" function,
             # we default to 0.
             ext_fcn_surrogate_map_rule = lambda comp,ef: 0
-        #trust_region_method(_local_config, model, ext_fcn_surrogate_map_rule)
+        trust_region_method(model, self.config, ext_fcn_surrogate_map_rule)

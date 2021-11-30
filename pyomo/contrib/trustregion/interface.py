@@ -11,12 +11,11 @@
 import logging
 
 from pyomo.common.dependencies import numpy as np
-from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.collections import ComponentMap
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import (
-    Block, Var, Param, ExternalFunction,
-    VarList, ConstraintList, Constraint,
-    Objective, ObjectiveList, value, Set
+    Block, Param, VarList, Constraint,
+    Objective, value, Set
     )
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.expr.visitor import (identify_variables,
@@ -59,7 +58,8 @@ class TRFInterface(object):
     def __init__(self, model, ext_fcn_surrogate_map_rule, config):
         self.original_model = model
         self.config = config
-        self.model = self.original_model.clone()
+        print(type(model))
+        self.model = model.clone()
         self.data = Block()
         self.model.add_component(unique_component_name(model, 'trf_data'),
                                  self.data)
@@ -103,6 +103,9 @@ class TRFInterface(object):
                         component, self.data.truth_models[v])
 
     def replaceExternalFunctionsWithVariables(self):
+        """
+        Triggers the replacement of EFs with variables in expression trees
+        """
         self.data.truth_models = ComponentMap()
         self.data.basis_expressions = ComponentMap()
         self.data.ef_inputs = ComponentMap()
@@ -153,7 +156,7 @@ class TRFInterface(object):
                 b.truth_model_output[i] - b.basis_model_output[i] + \
                 sum((b.grad_truth_model_output[i, j]
                      - b.grad_basis_model_output[i, j])
-                    * (w - b.ef_input[j])
+                    * (w - b.ef_inputs[j])
                     for j, w in enumerate(b.ef_inputs[ef_output_var]))
         b.sm_constraint_basis.deactivate()
 
@@ -173,12 +176,21 @@ class TRFInterface(object):
                 b.grad_basis_model_output[i, j] = gradBasis[j]
                 b.grad_truth_model_output[i, j] = gradTruth[j]
 
+    def getCurrentValues(self):
+        """
+        Return current variable values
+        """
+        for output_var in self.data.ef_outputs:
+            current_inputs = [value(input_var) for input_var in self.data.ef_inputs[output_var]]
+            current_outputs = value(output_var)
+        return current_inputs, current_outputs
+
     def gradientOfEF(self, ef, inputs):
         """
         Finite difference gradient of an external function
-        TODO: MAGIC
         """
-        pass
+        gradient = [value(inputs[i]) - value(ef[i]) for i in range(len(inputs))]
+        return gradient
 
     def calculateFeasibility(self):
         """
@@ -194,7 +206,7 @@ class TRFInterface(object):
 
         Returns
         -------
-            obj : Initial objective
+            objective_value : Initial objective
             feasibility : Initial feasibility measure
 
         STEPS:
@@ -207,7 +219,7 @@ class TRFInterface(object):
         self.replaceExternalFunctionsWithVariables()
         self.createConstraints()
         self.data.basis_constraints.activate()
-        result, objective_value = self.solveModel()
+        result, objective_value, _, _ = self.solveModel()
         if not result:
             raise RuntimeError("ERROR: Basis model solve failed.")
         self.data.basis_constraints.deactivate()
@@ -219,7 +231,11 @@ class TRFInterface(object):
     def solveModel(self):
         """
         Call the specified solver to solve the problem
+
+        This also caches the previous values of the vars, just in case
+        we need to access them later if a step is rejected
         """
+        self.cached_inputs, self.cached_outputs = self.getCurrentValues()
         results = self.solver.solve(self.model, keepfiles=self.config.keepfiles,
                                     tee=self.config.tee,
                                     load_solution=self.config.load_solution)
@@ -228,8 +244,14 @@ class TRFInterface(object):
             and (results.solver.termination_condition ==
                  TerminationCondition.optimal)):
             self.model.solutions.load_from(results)
+            # Find the step size norm between the values
+            new_inputs, new_outputs = self.getCurrentValues()
+            step_norm = np.linalg.norm(np.concatenate(self.cached_inputs - new_inputs,
+                                                      self.cached_outputs - new_outputs),
+                                       np.inf)
+            feasibility = self.calculateFeasibility()
             for obj in self.model.component_data_objects(Objective, active=True):
-                return True, obj()
+                return True, obj(), step_norm, feasibility
         else:
             print("Warning: Solver Status: %s" 
                   % str(results.solver.status))
@@ -237,8 +259,13 @@ class TRFInterface(object):
                   % str(results.solver.termination_condition))
             return False, 0
 
-    def reset(self):
+    def rejectStep(self):
         """
-        Reset problem for next iteration
+        If a step is rejected, we reset the model variables values back
+        to their cached state - which we set in solveModel
         """
-        pass
+        b = self.data
+        for i, v in b.ef_outputs.items():
+            b.ef_outputs[i].set_value(self.cached_outputs[i])
+            for j, y in enumerate(b.ef_inputs[v]):
+                y.set_value(self.cached_inputs[i][j])

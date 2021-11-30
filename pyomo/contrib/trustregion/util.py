@@ -59,18 +59,14 @@ class IterationRecord:
     Record relevant information at each individual iteration
     """
 
-    def __init__(self, iteration, inputs, outputs, other, params,
-                 thetak=None, objk=None, trustRadius=None, stepNorm=None):
+    def __init__(self, iteration, feasibility=None, objectiveValue=None,
+                 trustRadius=None, stepNorm=None):
         self.iteration = iteration
-        self.inputs = inputs
-        self.outputs = outputs
-        self.other = other
-        self.rmParams = params
         self.fStep, self.thetaStep, self.rejected = [False]*3
-        if thetak is not None:
-            self.thetak = thetak
-        if objk is not None:
-            self.objk = objk
+        if feasibility is not None:
+            self.feasibility = feasibility
+        if objectiveValue is not None:
+            self.objectiveValue = objectiveValue
         if trustRadius is not None:
             self.trustRadius = trustRadius
         if stepNorm is not None:
@@ -81,10 +77,8 @@ class IterationRecord:
         Print information about the iteration to the log.
         """
         logger.info("**** Iteration %d ****" % self.iteration)
-        logger.info(np.concatenate([self.inputs, self.outputs, self.other]))
-        logger.info("thetak = %s" % self.thetak)
-        logger.info("objk = %s" % self.objk)
-        logger.info("Reduced model parameters: %s" %self.rmParams)
+        logger.info("feasibility = %s" % self.feasibility)
+        logger.info("objectiveValue = %s" % self.objectiveValue)
         logger.info("trustRadius = %s" % self.trustRadius)
         logger.info("stepNorm = %s" % self.stepNorm)
         if self.fStep:
@@ -102,16 +96,16 @@ class IterationLogger:
     def __init__(self):
         self.iterations = []
 
-    def newIteration(self, iteration, inputs, outputs, other,
-                     params, thetak, objk, trustRadius, stepNorm):
+    def newIteration(self, iteration, feasibility, objectiveValue,
+                     trustRadius, stepNorm):
         """
         Add a new iteration to the list of iterations
         """
-        self.iterrecord = IterationRecord(iteration, inputs, outputs,
-                                       other, params,
-                                       thetak=thetak, objk=objk,
-                                       trustRadius=trustRadius,
-                                       stepNorm=stepNorm)
+        self.iterrecord = IterationRecord(iteration,
+                                          feasibility=feasibility,
+                                          objectiveValue=objectiveValue,
+                                          trustRadius=trustRadius,
+                                          stepNorm=stepNorm)
         self.iterations.append(self.iterrecord)
 
     def logIteration(self):
