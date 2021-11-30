@@ -368,11 +368,8 @@ class PartitionDisjuncts_Transformation(Transformation):
             if t.ctype is Disjunction:
                 # After preprocessing, we know that this is not indexed.
                 self._transform_disjunctionData(t, t.index())
-            else: # We know t.ctype in (Block, Disjunct) after preprocessing
-                if t.is_indexed():
-                    self._transform_block(t)
-                else:
-                    self._transform_blockData(t)
+            else: # We know this is a DisjunctData after preprocessing
+                self._transform_blockData(t)
 
     def _preprocess_targets(self, targets, instance, knownBlocks):
         gdp_tree = get_gdp_tree(targets, instance, knownBlocks)
@@ -406,10 +403,6 @@ class PartitionDisjuncts_Transformation(Transformation):
             NonNegativeIntegers)
 
         return transformation_block
-
-    def _transform_block(self, obj):
-        for block in obj.values(ordered=True):
-            self._transform_blockData(block)
 
     def _transform_blockData(self, obj):
         # compute the list of Disjunctions to transform *once*, then do it. Else
