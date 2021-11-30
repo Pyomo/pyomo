@@ -932,7 +932,7 @@ class CuttingPlane_Transformation(Transformation):
             logger.info("x* is:")
             for x_rbigm, x_hull, x_star in var_info:
                 if not x_rbigm.stale:
-                    x_star.set_value(x_rbigm.value, skip_validation=True)
+                    x_star.set_value(x_rbigm.value)
                     # initialize the X values
                     x_hull.set_value(x_rbigm.value, skip_validation=True)
                 if self.verbose:
