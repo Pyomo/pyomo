@@ -72,25 +72,26 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
                 continue
             elif coef > 0:
                 if constr.has_ub():
-                    new_ub = (value(constr.upper) - const) / coef
+                    new_ub = (constr.ub - const) / coef
                     var_ub = float('inf') if var.ub is None else var.ub
                     var.setub(min(var_ub, new_ub))
                 if constr.has_lb():
-                    new_lb = (value(constr.lower) - const) / coef
+                    new_lb = (constr.lb - const) / coef
                     var_lb = float('-inf') if var.lb is None else var.lb
                     var.setlb(max(var_lb, new_lb))
             elif coef < 0:
                 if constr.has_ub():
-                    new_lb = (value(constr.upper) - const) / coef
+                    new_lb = (constr.ub - const) / coef
                     var_lb = float('-inf') if var.lb is None else var.lb
                     var.setlb(max(var_lb, new_lb))
                 if constr.has_lb():
-                    new_ub = (value(constr.lower) - const) / coef
+                    new_ub = (constr.lb - const) / coef
                     var_ub = float('inf') if var.ub is None else var.ub
                     var.setub(min(var_ub, new_ub))
 
-            if var.is_integer() or var.is_binary():
-                # Make sure that the lb and ub are integral. Use safe construction if near to integer.
+            if var.is_integer():
+                # Make sure that the lb and ub are integral. Use safe
+                # construction if near to integer.
                 if var.has_lb():
                     var.setlb(int(min(math.ceil(var.lb - config.tolerance),
                                       math.ceil(var.lb))))
@@ -101,9 +102,14 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
             if var is not None and var.value is not None:
                 _adjust_var_value_if_not_feasible(var)
 
-            if (config.detect_fixed and var.has_lb() and var.has_ub() and
-                    fabs(value(var.lb) - value(var.ub)) <= config.tolerance):
-                var.fix(var.lb)
+            if config.detect_fixed and var.has_lb() and var.has_ub():
+                lb, ub = var.bounds
+                if lb == ub:
+                    var.fix(lb)
+                elif fabs(lb - ub) <= config.tolerance:
+                    # If the bounds are note exactly equal, set the
+                    # value to the midpoint
+                    var.fix((lb + ub) / 2)
 
             constr.deactivate()
 
@@ -116,11 +122,12 @@ def _adjust_var_value_if_not_feasible(var):
     # within its implied bounds, as the constraint we are
     # deactivating is not an invalid constraint, but rather we
     # are moving its implied bound directly onto the variable.
+    var_value = var.value
     if var.has_lb():
-        var_value = max(var.value, var.lb)
+        var_value = max(var_value, var.lb)
     if var.has_ub():
-        var_value = min(var.value, var.ub)
-    if var.is_integer() or var.is_binary():
+        var_value = min(var_value, var.ub)
+    if var.is_integer():
         var.set_value(int(var_value))
     else:
         var.set_value(var_value)
