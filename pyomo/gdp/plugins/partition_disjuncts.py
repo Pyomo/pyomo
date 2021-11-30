@@ -225,10 +225,14 @@ class PartitionDisjuncts_Transformation(Transformation):
         "transformed model will still be valid when fixed Vars are unfixed.",
         doc="""
         If True, the transformation will create a correct model even if fixed
-        variable are later unfixed. That is, bounds will be calculated based
+        variables are later unfixed. That is, bounds will be calculated based
         on fixed variables' bounds, not their values. However, if fixed 
         variables will never be unfixed, a possibly tigher model will result, 
         and fixed variables need not have bounds.
+
+        Note that this has no effect on fixed BooleanVars, including the
+        indicator variables of Disjuncts. The transformation is always correct
+        whether or not these remain fixed.
         """
     ))
     CONFIG.declare('compute_bounds_method', ConfigValue(
@@ -309,17 +313,6 @@ class PartitionDisjuncts_Transformation(Transformation):
                         fixed_vars[v] = value(v)
                         v.fixed = False
 
-                fixed_indicator_vars = ComponentMap()
-                for disjunct in instance.component_data_objects(
-                        Disjunct,
-                        descend_into=(Block,
-                                      Disjunct),
-                        active=True):
-                    ind_var = disjunct.indicator_var
-                    if ind_var.fixed:
-                        fixed_indicator_vars[disjunct] = value(ind_var)
-                        ind_var.fixed = False
-
             self._apply_to_impl(instance)
 
         finally:
@@ -327,8 +320,6 @@ class PartitionDisjuncts_Transformation(Transformation):
             if not self._config.assume_fixed_vars_permanent:
                 for v, val in fixed_vars.items():
                     v.fix(val)
-                for disjunct, val in fixed_indicator_vars.items():
-                    disjunct.transformation_block().indicator_var.fix(val)
 
             del self._config
             del self._transformation_blocks
@@ -563,6 +554,11 @@ class PartitionDisjuncts_Transformation(Transformation):
             transBlock,
             disjunct.getname(fully_qualified=True, name_buffer=NAME_BUFFER)),
                                  transformed_disjunct)
+        # If the original has an indicator_var fixed to something, fix this one
+        # too.
+        if disjunct.indicator_var.fixed:
+            transformed_disjunct.indicator_var.fix(
+                value(disjunct.indicator_var))
 
         # need to transform inner Disjunctions first (before we complain about
         # active Disjuncts)

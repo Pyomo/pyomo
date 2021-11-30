@@ -14,6 +14,7 @@ from pyomo.environ import (
     maximize, SolverFactory, Any, Reference, LogicalConstraint)
 from pyomo.core.expr.logical_expr import (
     EquivalenceExpression, NotExpression, AndExpression, ExactlyExpression)
+from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.util import GDP_Error, check_model_algebraic
 from pyomo.gdp.plugins.partition_disjuncts import (
@@ -548,6 +549,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
     def test_assume_fixed_vars_not_permanent(self):
         m = models.makeBetweenStepsPaperExample()
         m.x[1].fix(0)
+        m.disjunction.disjuncts[0].indicator_var.fix(True)
 
         # I'm using Gurobi because I'm assuming exact equality is going to work
         # out. And it definitely won't with ipopt. (And Gurobi direct is way
@@ -562,6 +564,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
 
         self.assertTrue(m.x[1].fixed)
         self.assertEqual(value(m.x[1]), 0)
+        self.assertTrue(m.disjunction_disjuncts[0].indicator_var.fixed)
+        self.assertTrue(value(m.disjunction.disjuncts[0].indicator_var))
 
         m.x[1].fixed = False
         # should be identical to the case where x[1] was not fixed
@@ -572,6 +576,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
     def test_assume_fixed_vars_permanent(self):
         m = models.makeBetweenStepsPaperExample()
         m.x[1].fix(0)
+        m.disjunction.disjuncts[0].indicator_var.fix(True)
 
         # I'm using Gurobi because I'm assuming exact equality is going to work
         # out. And it definitely won't with ipopt. (And Gurobi direct is way
@@ -583,6 +588,11 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             assume_fixed_vars_permanent=True,
             compute_bounds_solver=SolverFactory('gurobi_direct'),
             compute_bounds_method=compute_optimal_bounds)
+
+        # Fixing BooleanVars is the same either way. We just check that it was
+        # maintained through the transformation.
+        self.assertTrue(m.disjunction_disjuncts[0].indicator_var.fixed)
+        self.assertTrue(value(m.disjunction.disjuncts[0].indicator_var))
 
         # This actually changes the structure of the model because fixed vars
         # move to the constants. I think this is fair, and we should allow it
@@ -1769,7 +1779,7 @@ class CommonModels(unittest.TestCase, CommonTests):
         ct.check_untransformed_network_raises_GDPError( self,
                                                         'partition_disjuncts',
                                                         P=2)
-
+    @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_network_disjuncts(self):
         ct.check_network_disjuncts(self, True, 'between_steps', P=2)
         ct.check_network_disjuncts(self, False, 'between_steps', P=2)
