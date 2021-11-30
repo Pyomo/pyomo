@@ -507,6 +507,21 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
 
         self.check_transformation_block(m, 0, 72, 0, 72, -18, 32, -18, 32)
 
+    def test_no_solver_error(self):
+        m = models.makeBetweenStepsPaperExample()
+
+        with self.assertRaisesRegex(GDP_Error,
+                                    "No solver was specified to optimize the "
+                                    "subproblems for computing expression "
+                                    "bounds! "
+                                    "Please specify a configured solver in the "
+                                    "'compute_bounds_solver' argument if using "
+                                    "'compute_optimal_bounds.'"):
+            TransformationFactory('gdp.partition_disjuncts').apply_to(
+                m,
+                variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
+                compute_bounds_method=compute_optimal_bounds)
+
     @unittest.skipIf('gurobi_direct' not in solvers,
                      'Gurobi direct solver not available')
     def test_transformation_block_better_bounds_in_global_constraints(self):
@@ -1292,6 +1307,16 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             variable_partitions=[[m.x[1]], [m.x[2]], [m.x[3], m.x[4]]],
             compute_bounds_method=compute_fbbt_bounds)
 
+    def test_no_value_for_P_error(self):
+        m = models.makeBetweenStepsPaperExample()
+        with self.assertRaisesRegex(GDP_Error,
+                                    "No value for P was given for disjunction "
+                                    "disjunction! Please specify a value of P "
+                                    "\(number of "
+                                    "partitions\), if you do not specify the "
+                                    "partitions directly."):
+            TransformationFactory('gdp.partition_disjuncts').apply_to(m)
+
     def test_create_using(self):
         m = models.makeBetweenStepsPaperExample()
         self.diff_apply_to_and_create_using(m, P=2)
@@ -1544,6 +1569,30 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
             m,
             variable_partitions=[[m.x[3], m.x[2]], [m.x[1], m.x[4]]],
             compute_bounds_method=compute_fbbt_bounds)
+
+    def test_invalid_partition_error_multiply_vars_in_different_partition(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(-10,10))
+        m.y = Var(bounds=(-60,56))
+        m.d1 = Disjunct()
+        m.d1.c = Constraint(expr=m.x**2 + m.x*m.y + m.y**2 <= 32)
+        m.d2 = Disjunct()
+        m.d2.c = Constraint(expr=m.x**2 + m.y**2 <= 3)
+        m.disjunction = Disjunction(expr=[m.d1, m.d2])
+        with self.assertRaisesRegex(GDP_Error,
+                                    "Variables 'x' and 'y' are "
+                                    "multiplied in Constraint 'd1.c', "
+                                    "but they are in different "
+                                    "partitions! Please ensure that "
+                                    "all the constraints in the "
+                                    "disjunction are "
+                                    "additively separable with "
+                                    "respect to the specified "
+                                    "partition."):
+            TransformationFactory('gdp.partition_disjuncts').apply_to(
+                m,
+                variable_partitions=[[m.x], [m.y]],
+                compute_bounds_method=compute_fbbt_bounds)
 
     def test_non_additively_separable_expression(self):
         m = models.makeNonQuadraticNonlinearGDP()
@@ -1854,3 +1903,20 @@ class LogicalExpressions(unittest.TestCase, CommonTests):
     #     self.assertTrue(value(m.d[2].indicator_var))
     #     self.assertTrue(value(m.d[3].indicator_var))
     #     self.assertFalse(value(m.d[4].indicator_var))
+
+    @unittest.skipIf('gurobi_direct' not in solvers,
+                     'Gurobi direct solver not available')
+    def test_original_indicator_vars_in_logical_constraints(self):
+        m = models.makeLogicalConstraintsOnDisjuncts()
+        TransformationFactory('gdp.between_steps').apply_to(
+            m, variable_partitions=[[m.x]],
+            compute_bounds_method=compute_fbbt_bounds)
+
+        self.assertTrue(check_model_algebraic(m))
+
+        SolverFactory('gurobi_direct').solve(m)
+        self.assertAlmostEqual(value(m.x), 8)
+        self.assertFalse(value(m.d[1].indicator_var))
+        self.assertTrue(value(m.d[2].indicator_var))
+        self.assertTrue(value(m.d[3].indicator_var))
+        self.assertFalse(value(m.d[4].indicator_var))

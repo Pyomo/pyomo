@@ -94,7 +94,7 @@ def compute_optimal_bounds(expr, instance, global_constraints, opt):
     # nonconvex!
     if opt is None:
         raise GDP_Error("No solver was specified to optimize the "
-                        "subproblems for computing expression bounds!"
+                        "subproblems for computing expression bounds! "
                         "Please specify a configured solver in the "
                         "'compute_bounds_solver' argument if using "
                         "'compute_optimal_bounds.'")
@@ -668,8 +668,8 @@ class PartitionDisjuncts_Transformation(Transformation):
                 for i, (v1, v2) in enumerate(repn.quadratic_vars):
                     if v1 in var_list:
                         if v2 not in var_list:
-                            raise GDP_Error("Variables %s and %s are "
-                                            "multiplied in Constraint %s,"
+                            raise GDP_Error("Variables '%s' and '%s' are "
+                                            "multiplied in Constraint '%s', "
                                             "but they are in different "
                                             "partitions! Please ensure that "
                                             "all the constraints in the "
