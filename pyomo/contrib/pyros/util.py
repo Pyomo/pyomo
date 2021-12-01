@@ -269,7 +269,8 @@ def transform_to_standard_form(model):
     """
     Recast all model inequality constraints of the form `a <= g(v)` (`<= b`)
     to the 'standard' form `a - g(v) <= 0` (and `g(v) - b <= 0`),
-    in which `v` denotes all model variables.
+    in which `v` denotes all model variables and `a` and `b` are
+    contingent on model parameters.
 
     Parameters
     ----------
@@ -293,14 +294,17 @@ def transform_to_standard_form(model):
 
             if has_lb and has_ub:
                 if con.lower is con.upper:
+                    # recast as equality Constraint
                     con.set_value(con.lower == con.body)
                 else:
+                    # range inequality; split into two Constraints.
                     uniq_name = unique_component_name(model, con.name + '_lb')
                     model.add_component(uniq_name,
                                         Constraint(expr=con.lower-con.body
                                                    <= 0))
                     con.set_value(con.body - con.upper <= 0)
-            elif has_lb and not has_ub:
+            elif has_lb:
+                # not in standard form; recast.
                 con.set_value(con.lower-con.body <= 0)
             else:
                 # already standardized, or no upper/lower bounds
