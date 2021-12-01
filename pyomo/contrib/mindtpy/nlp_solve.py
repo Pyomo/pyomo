@@ -203,7 +203,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
 
     var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
     if config.add_no_good_cuts:
-        add_no_good_cuts(var_values, solve_data, config, feasible=True)
+        add_no_good_cuts(var_values, solve_data, config)
 
     config.call_after_subproblem_feasible(fixed_nlp, solve_data)
 
