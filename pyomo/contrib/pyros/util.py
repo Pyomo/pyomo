@@ -276,7 +276,7 @@ def transform_to_standard_form(model):
     ----------
     model : ConcreteModel
         The model to search for constraints. This will descend into all
-        active Blocks and sub-Blocks.
+        active Blocks and sub-Blocks as well.
 
     Note
     ----
@@ -299,16 +299,20 @@ def transform_to_standard_form(model):
                 else:
                     # range inequality; split into two Constraints.
                     uniq_name = unique_component_name(model, con.name + '_lb')
-                    model.add_component(uniq_name,
-                                        Constraint(expr=con.lower-con.body
-                                                   <= 0))
+                    model.add_component(
+                        uniq_name,
+                        Constraint(expr=con.lower - con.body <= 0)
+                    )
                     con.set_value(con.body - con.upper <= 0)
             elif has_lb:
                 # not in standard form; recast.
-                con.set_value(con.lower-con.body <= 0)
+                con.set_value(con.lower - con.body <= 0)
+            elif has_ub:
+                # move upper bound to body.
+                con.set_value(con.body - con.upper <= 0)
             else:
-                # already standardized, or no upper/lower bounds
-                pass
+                # unbounded constraint: deactivate
+                con.deactivate()
 
 
 def get_vars_from_component(block, ctype):

@@ -441,6 +441,15 @@ class testTransformToStandardForm(unittest.TestCase):
                              and con.upper is not None
                              and con.lower is not con.upper])
 
+        # count constraints with no bounds
+        num_nobound_cons = len([con for con in
+                             m.component_data_objects(Constraint,
+                                                      active=True,
+                                                      descend_into=True)
+                             if con.lower is None
+                             and con.upper is None
+                             ])
+
         transform_to_standard_form(m)
         cons = [con for con in m.component_data_objects(Constraint,
                                                         active=True,
@@ -461,7 +470,7 @@ class testTransformToStandardForm(unittest.TestCase):
                               m.component_data_objects(Constraint,
                                                        active=True,
                                                        descend_into=True)]),
-                              num_orig_cons + num_lbub_cons,
+                              num_orig_cons + num_lbub_cons - num_nobound_cons,
                               msg="Expected number of constraints after\n "
                                   "standardizing constraints not matched. "
                                   "Number of constraints after\n "
