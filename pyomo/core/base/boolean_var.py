@@ -593,9 +593,10 @@ class BooleanVarList(IndexedBooleanVar):
     Variable-length indexed variable objects used to construct Pyomo models.
     """
 
-    def __init__(self, **kwds):
+    def __init__(self, **kwargs):
+        self._starting_index = kwargs.pop('starting_index', 1)
         args = (Set(),)
-        IndexedBooleanVar.__init__(self, *args, **kwds)
+        IndexedBooleanVar.__init__(self, *args, **kwargs)
 
     def construct(self, data=None):
         """Construct this component."""
@@ -609,7 +610,7 @@ class BooleanVarList(IndexedBooleanVar):
         # then let _validate_index complain when we set the value.
         if self._value_init_value.__class__ is dict:
             for i in range(len(self._value_init_value)):
-                self._index.add(i+1)
+                self._index.add(i + self._starting_index)
         super(BooleanVarList,self).construct(data)
         # Note that the current Var initializer silently ignores
         # initialization data that is not in the underlying index set.  To
@@ -622,7 +623,7 @@ class BooleanVarList(IndexedBooleanVar):
 
     def add(self):
         """Add a variable to this list."""
-        next_idx = len(self._index) + 1
+        next_idx = len(self._index) + self._starting_index
         self._index.add(next_idx)
         return self[next_idx]
 

@@ -938,6 +938,37 @@ class TestVarList(PyomoModel):
         self.assertEqual( type(tmp), int)
         self.assertEqual( tmp, 3 )
 
+    def test_0based_add(self):
+        m = ConcreteModel()
+        m.x = VarList(starting_index=0)
+        m.x.add()
+        self.assertEqual(list(m.x.keys()), [0])
+        m.x.add()
+        self.assertEqual(list(m.x.keys()), [0, 1])
+        m.x.add()
+        self.assertEqual(list(m.x.keys()), [0, 1, 2])
+
+    def test_0based_initialize_with_dict(self):
+        """Test initialize option with a dictionary"""
+        self.model.x = VarList(initialize={1:1.3,2:2.3}, starting_index=0)
+        self.assertRaisesRegex(
+            KeyError, ".*Index '2' is not valid for indexed component 'x'",
+            self.model.create_instance
+        )
+
+    def test_0based_initialize_with_bad_dict(self):
+        """Test initialize option with a dictionary of subkeys"""
+        self.model.x = VarList(initialize={0:1.3, 1:2.3}, starting_index=0)
+        self.instance = self.model.create_instance()
+        self.assertEqual(self.instance.x[0].value, 1.3)
+        self.assertEqual(self.instance.x[1].value, 2.3)
+        self.instance.x[0] = 1
+        self.instance.x[1] = 2
+        self.assertEqual(self.instance.x[0].value, 1)
+        self.assertEqual(self.instance.x[1].value, 2)
+        self.instance.x.add()
+        self.assertEqual(list(self.instance.x.keys()), [0, 1, 2])
+
 
 class Test2DArrayVar(TestSimpleVar):
 
