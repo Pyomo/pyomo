@@ -23,6 +23,7 @@ class Measurements:
         self.measurement_all_info = measurement_index_time
         # a list of measurement names
         self.measurement_name = list(measurement_index_time.keys())
+        self.flatten_measurement()
 
 
     def name_and_index_generator(self, all_info):
@@ -68,6 +69,7 @@ class Measurements:
         print('All measurements are flattened.')
         print('Flatten measurement name:', self.flatten_measure_name)
         print('Flatten measurement timeset:', self.flatten_measure_timeset)
+        return self.flatten_measure_name, self.flatten_measure_timeset
 
     def generate_flatten_name(self, measure_name_and_index):
         '''Generate measurement flattened names
@@ -111,7 +113,7 @@ class Measurements:
     def check_subset(self,subset):
         '''
         Check if the subset is correctly defined with right name, index and time.
-
+        TODO: return True or False . Optional argument: throw error = False
         subset: measurement name and index involved in jacobian calculation
         '''
         flatten_subset = self.generate_flatten_name(subset)
