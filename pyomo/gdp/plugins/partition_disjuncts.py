@@ -65,6 +65,18 @@ def _generate_additively_separable_repn(nonlinear_part):
     return nonlinear_decomp
 
 def arbitrary_partition(disjunction, P):
+    """
+    Returns a valid partition into P sets of the variables that appear in
+    algebraic additively separable constraints in the Disjuncts in
+    'disjunction'. Note that this method may return an invalid partition
+    if the constraints are not additively separable!
+
+    Arguments:
+    ----------
+    disjunction : A Disjunction object for which the variable partition will be
+                 created.
+    P : An int, the number of partitions
+    """
     # collect variables
     v_set = ComponentSet()
     for disj in disjunction.disjuncts:
@@ -87,11 +99,22 @@ def arbitrary_partition(disjunction, P):
 
     return partitions
 
-def compute_optimal_bounds(expr, instance, global_constraints, opt):
-    # computes bounds on expr by minimizing and maximizing expr over the
-    # variable bounds and the global constraints. Note that even if expr is
-    # convex and the global constraints are a convex set, the max problem is
-    # nonconvex!
+def compute_optimal_bounds(expr, global_constraints, opt):
+    """
+    Returns a tuple (LB, UB) where LB and UB are the results of minimizing
+    and maximizing expr over the variable bounds and the constraints on the
+    global_constraints block. Note that if expr is nonlinear, even if one of
+    the min and max problems is convex, the other won't be!
+
+    Arguments:
+    ----------
+    expr : The subexpression whose bounds we will return
+    global_constraints : A Block which contains the global Constraints and Vars
+                         of the original model
+    opt : A configured SolverFactory to use to minimize and maximize expr over
+          the set defined by global_constraints. Note that if expr is nonlinear,
+          opt will need to be capable of optimizing nonconvex problems.
+    """
     if opt is None:
         raise GDP_Error("No solver was specified to optimize the "
                         "subproblems for computing expression bounds! "
@@ -101,8 +124,8 @@ def compute_optimal_bounds(expr, instance, global_constraints, opt):
 
     # add temporary objective and calculate bounds
     obj = Objective(expr=expr)
-    global_constraints.add_component(unique_component_name(instance, "tmp_obj"),
-                                     obj)
+    global_constraints.add_component(unique_component_name(global_constraints,
+                                                           "tmp_obj"), obj)
     results = opt.solve(global_constraints)
     if verify_successful_solve(results) is not NORMAL:
         logger.warning("Problem to find lower bound for expression %s"
@@ -127,20 +150,80 @@ def compute_optimal_bounds(expr, instance, global_constraints, opt):
 
     return (LB, UB)
 
-def compute_fbbt_bounds(expr, instance, transBlock, opt):
+def compute_fbbt_bounds(expr, global_constraints, opt):
+    """
+    Calls fbbt on expr and returns the lower and upper bounds on the expression
+    based on the bounds of the Vars that appear in the expression. Ignores
+    the global_constraints and opt arguments.
+    """
     return compute_bounds_on_expr(expr)
 
 @TransformationFactory.register('gdp.partition_disjuncts',
                                 doc="Reformulates a convex disjunctive model "
                                 "into a new GDP by splitting additively "
-                                "separable constraintson P sets of variables")
+                                "separable constraints on P sets of variables")
 class PartitionDisjuncts_Transformation(Transformation):
     """
-    TODO: This transformation does stuff!
+    Transform disjunctive model to equivalent disjunctive model (with
+    potentially tighter hull relaxation) by taking the "P-split" formulation
+    from Kronqvist et al. 2021 [1]. In each Disjunct, convex and additively
+    separable constraints are split into separate constraints by introducing
+    auxiliary variables that upperbound the subexpressions created by the split.
+    Increasing the number of partitions can result in tighter hull relaxations,
+    but at the cost of larger model sizes.
+
+    This transformation accepts the following keyword arguments:
+
+    Parameters
+    ----------
+    targets : (Block, Disjunction, or list of those types)
+        The targets to transform. This can be a Block, Disjunction, or a list
+        of Blocks and Disjunctions [default: the instance]
+    variable_partitions : (set of sets of Vars or dictionary mapping
+        Disjunctions to sets of sets of Vars)
+        A partition of the variables that appear in constraints on the disjuncts
+        being transformed (or such a partition for each Disjunction being
+        transformed. All the constraints being transformed must be additively
+        separable with respect to this partition. [default: None]
+    P : (integer, or dictionary mapping Disjunctions to integers)
+        The number of partitions to automatically generate, if
+        'variable_partitions' are not specified for a Disjunction.
+    variable_partitioning_method : (function, or dictionary mapping Disjunctions
+        to functions)
+        A function which accepts a Disjunction and an integer P and returns a
+        valid partitioning of the variables into P partitions, or a dictionary
+        mapping Disjunctions to such functions. This will not be used if the
+        partition for the Disjunction is specified via the 'variable_partitions'
+        parameter, and it requires that P is specifed.
+        [default: arbitrary_partition]
+    assume_fixed_vars_permanent : (bool)
+        Whether or not to transform such that the transformed model will be
+        correct if fixed Vars are later unfixed. If fixed Vars will never be
+        unfixed, setting this to True could potentially result in a tighter
+        model. [default: False]
+    compute_bounds_method : (function)
+        Function to compute lower and upper bounds on a subexpression. Accepts
+        an expression, a Block containing the global constraints of the
+        original GDP, and a configured solver. Returns both a lower and upper
+        bound for the expression. [default: contrib.fbbt.compute_bounds_on_expr]
+    compute_bounds_solver : (SolverFactory)
+        Configured solver for use in compute_bounds_method (if it is needed)
+        [default: None]
+
+    The transformation will create a new Block with a unique name beginning
+    "_pyomo_gdp_partition_disjuncts_reformulation".
+    The Block will have new Disjunct objects, each corresponding to one of the
+    Disjuncts being transformed. These will have the transformed constraints on
+    them, and be in new Disjunctions, each corresponding to one of the
+    originals. In addition, the auxiliary variables and the partitioned
+    constraints will be declared on this Block, as well as LogicalConstraints
+    linking the original indicator_vars with the ones of the transformed
+    Disjuncts. All original GDP components that were transformed will be
+    deactivated.
 
     References
     ----------
-        [1] J. Kronqvist, R. Misener, and C. Tsay, "Between Steps: Intermediate 
+        [1] J. Kronqvist, R. Misener, and C. Tsay, "Between Steps: Intermediate
             Relaxations between big-M and Convex Hull Reformulations," 2021.
     """
     CONFIG = ConfigBlock("gdp.partition_disjuncts")
@@ -161,7 +244,7 @@ class PartitionDisjuncts_Transformation(Transformation):
         domain=_to_dict,
         description="""Set of sets of variables which define valid partitions
         (i.e., the constraints are additively separable across these
-        partitions). These can be specified globally (for all active 
+        partitions). These can be specified globally (for all active
         Disjunctions), or by Disjunction.""",
         doc="""
         Specified variable partitions, either globally or per Disjunction.
@@ -169,15 +252,15 @@ class PartitionDisjuncts_Transformation(Transformation):
         Expects either a set of disjoint ComponentSets whose union is all the
         variables that appear in all Disjunctions or a mapping from each active
         Disjunction to a set of disjoint ComponentSets whose union is the set
-        of variables that appear in that Disjunction. In either case, if any 
+        of variables that appear in that Disjunction. In either case, if any
         constraints in the Disjunction are only partially additively separable,
         these sets must be a valid partition so that these constraints are
         additively separable with respect to this partition. To specify a
         default partition for Disjunctions that do not appear as keys in the
         map, map the partition to 'None.'
 
-        Last, note that in the case of constraints containing partially 
-        additively separable functions, it is required that the user specify 
+        Last, note that in the case of constraints containing partially
+        additively separable functions, it is required that the user specify
         the variable parition(s).
         """
     ))
@@ -185,7 +268,7 @@ class PartitionDisjuncts_Transformation(Transformation):
         default=None,
         domain=_to_dict,
         description="""Number of partitions of variables, if variable_paritions
-        is not specifed. Can be specified separately for specific Disjunctions 
+        is not specifed. Can be specified separately for specific Disjunctions
         if desired.""",
         doc="""
         Either a single value so that all Disjunctions will have variables
@@ -202,19 +285,19 @@ class PartitionDisjuncts_Transformation(Transformation):
     CONFIG.declare('variable_partitioning_method', ConfigValue(
         default=arbitrary_partition,
         domain=_to_dict,
-        description="""Method to partition the variables. By default, the 
+        description="""Method to partition the variables. By default, the
         partitioning will be done arbitrarily.""",
         doc="""
-        A function which takes a Disjunction object and a number P and return 
-        a valid partitioning of the variables that appear in the disjunction 
-        into P partitions. 
+        A function which takes a Disjunction object and a number P and return
+        a valid partitioning of the variables that appear in the disjunction
+        into P partitions.
 
         Note that you must give a value for 'P' if you are using this method
         to calculate partitions.
 
         Note that if any constraints contain partially additively separable
         functions, the partitions for the Disjunctions cannot be calculated
-        automatically. Please specify the paritions for the Disjunctions with 
+        automatically. Please specify the paritions for the Disjunctions with
         these Constraints in the variable_partitions argument.
         """
     ))
@@ -226,8 +309,8 @@ class PartitionDisjuncts_Transformation(Transformation):
         doc="""
         If True, the transformation will create a correct model even if fixed
         variables are later unfixed. That is, bounds will be calculated based
-        on fixed variables' bounds, not their values. However, if fixed 
-        variables will never be unfixed, a possibly tigher model will result, 
+        on fixed variables' bounds, not their values. However, if fixed
+        variables will never be unfixed, a possibly tigher model will result,
         and fixed variables need not have bounds.
 
         Note that this has no effect on fixed BooleanVars, including the
@@ -237,30 +320,29 @@ class PartitionDisjuncts_Transformation(Transformation):
     ))
     CONFIG.declare('compute_bounds_method', ConfigValue(
         default=compute_fbbt_bounds,
-        description="""Function which takes an expression, the instance, 
-        the partition_disjuncts transformation block, and a configured solver 
-        and returns both a lower and upper bound for the expression.""",
+        description="""Function which takes an expression, a Block containing
+        the global constraints of the original problem, and a configured
+        solver, and returns both a lower and upper bound for the expression.""",
         doc="""Callback for computing bounds on expressions, in order to bound
-        the auxilary variables created by the transformation. Some 
+        the auxilary variables created by the transformation. Some
         pre-implemented options include
             * compute_optimal_bounds, and
             * compute_fbbt_bounds (the default),
-        or you can write your own callback which accepts an Expression object, 
-        the original instance, a model containing the variables and global 
-        constraints of the original isntance, and a configured solver and 
-        returns a tuple (LB, UB) where either element can be None if no valid 
-        bound could be found.
+        or you can write your own callback which accepts an Expression object,
+        a model containing the variables and global constraints of the original
+        instance, and a configured solver and returns a tuple (LB, UB) where
+        either element can be None if no valid bound could be found.
         """
     ))
     CONFIG.declare('compute_bounds_solver', ConfigValue(
         default=None,
-        description="""Solver object to pass to compute_bounds_method. 
+        description="""Solver object to pass to compute_bounds_method.
         This is required if you are using 'compute_optimal_bounds'.""",
         doc="""
         Configured solver object for use in the compute_bounds_method.
 
-        In particular, if compute_bounds_method is 'compute_optimal_bounds', 
-        this will be used to solve the subproblems, so needs to handle 
+        In particular, if compute_bounds_method is 'compute_optimal_bounds',
+        this will be used to solve the subproblems, so needs to handle
         non-convex problems if any Disjunctions contain nonlinear constraints.
         """
     ))
@@ -338,19 +420,19 @@ class PartitionDisjuncts_Transformation(Transformation):
         # the compute_bounds_method, for if it wants them. We're making it a
         # separate model because we don't need it again
         global_constraints = ConcreteModel()
-        for cons in instance.component_objects( 
+        for cons in instance.component_objects(
                 Constraint, active=True, descend_into=Block,
                 sort=SortComponents.deterministic):
             global_constraints.add_component(unique_component_name(
                 global_constraints, cons.getname(fully_qualified=True,
-                                                 name_buffer=NAME_BUFFER)), 
+                                                 name_buffer=NAME_BUFFER)),
                                              Reference(cons))
         for var in instance.component_objects(
                 Var, descend_into=(Block, Disjunct),
                 sort=SortComponents.deterministic):
             global_constraints.add_component(unique_component_name(
                 global_constraints, var.getname(fully_qualified=True,
-                                                name_buffer=NAME_BUFFER)), 
+                                                name_buffer=NAME_BUFFER)),
                                              Reference(var))
         self._global_constraints = global_constraints
 
@@ -389,7 +471,7 @@ class PartitionDisjuncts_Transformation(Transformation):
     def _get_transformation_block(self, block):
         if self._transformation_blocks.get(block) is not None:
             return self._transformation_blocks[block]
-        
+
         # create a transformation block on which we will create the reformulated
         # GDP...
         self._transformation_blocks[block] = transformation_block = Block()
@@ -718,7 +800,7 @@ class PartitionDisjuncts_Transformation(Transformation):
                                                 'nonlinear_exprs'][i])
 
                 expr_lb, expr_ub = self._config.compute_bounds_method(
-                    expr, instance, self._global_constraints,
+                    expr, self._global_constraints,
                     self._config.compute_bounds_solver)
                 if expr_lb is None or expr_ub is None:
                     raise GDP_Error("Expression %s from constraint '%s' "
