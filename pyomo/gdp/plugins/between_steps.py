@@ -11,7 +11,7 @@
 """
 Between Steps (P-Split) reformulation for GDPs from:
 
-J. Kronqvist, R. Misener, and C. Tsay, "Between Steps: Intermediate 
+J. Kronqvist, R. Misener, and C. Tsay, "Between Steps: Intermediate
 Relaxations between big-M and Convex Hull Reformulations," 2021.
 """
 from pyomo.core import Transformation, TransformationFactory
@@ -27,7 +27,7 @@ class BetweenSteps_Transformation(Transformation):
 
     References
     ----------
-        [1] J. Kronqvist, R. Misener, and C. Tsay, "Between Steps: Intermediate 
+        [1] J. Kronqvist, R. Misener, and C. Tsay, "Between Steps: Intermediate
             Relaxations between big-M and Convex Hull Reformulations," 2021.
     """
     def __init__(self):
