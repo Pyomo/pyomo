@@ -556,7 +556,9 @@ class DesignOfExperiments:
             else:
                 prior_in_use = specified_prior
 
-            FIM_analysis = FIM_result(self.param_name, self.measure,
+            jacobian_split = Jac_splitter(self.param_name, self.measure, jaco_information=jac, prior_FIM=prior_in_use,
+                                          scale_constant_value=self.scale_constant_value)
+            FIM_analysis = FIM_result(self.param_name, self.measure, jacobian_split,
                                       prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
             # Store the Jacobian information for access by users
@@ -567,7 +569,7 @@ class DesignOfExperiments:
                 FIM_analysis.build_time = sum(time_allbuild)
                 FIM_analysis.solve_time = sum(time_allsolve)
 
-            return FIM_analysis
+            return FIM_analysis, jacobian_split
 
 
         elif self.mode in ['sequential_sipopt', 'sequential_kaug']:
@@ -1826,8 +1828,325 @@ class Scenario_data:
         # print('Return scenario dict as:', scenario_dict)
         return scenario_dict
 
+class Jac_splitter:
+    def __init__(self, para_name, measure_object, jaco_information=None, prior_FIM=None,
+                 verbose=True):
+        '''
+        Store overall Jacobian, prepare for splitting Jacobian based on different measurements
+
+        Parameters:
+        -----------
+        para_name: parameter names
+        measure_object: measurement information object
+        prior_FIM: if there's prior FIM to be added
+        verbose: if print statements are used
+        '''
+        self.para_name = para_name
+        self.measure_object = measure_object
+        self.measurement_variables = measure_object.measurement_name
+        self.measurement_timeset = measure_object.flatten_measure_timeset
+        self.flatten_all_measure = measure_object.flatten_measure_name
+        if jaco_information is None:
+            print('Reading the jacobian information...')
+            jaco_information = self.__extract_jacobian()
+        self.overall_jacobian = jaco_information
+        self.prior_FIM = prior_FIM
+        self.scale_constant_value = scale_constant_value
+        self.fim_scale_constant_value = scale_constant_value ** 2
+        self.max_condition_number = max_condition_number
+        self.verbose = verbose
+
+    def __extract_jacobian(self):
+        '''
+        Extract jacobian from simultaneous mode
+        Returns:
+            JAC: the overall jacobian
+        '''
+        no_para = len(self.para_name)
+        if y_set is not None:
+            no_y = len(y_set)
+            no_t = len(t_all_set)
+            JAC = np.ones((no_y, no_para, no_t))
+            for n1, name1 in enumerate(y_set):
+                for n2, name2 in enumerate(self.para_name):
+                    for t, tim in enumerate(t_all_set):
+                        JAC[n1, n2, t] = value(m.jac[name1, name2, tim])
+        return JAC
+
+    def jac_split(self, measure_subclass):
+        '''
+        Split jacobian
+        Args:
+            measure_subclass: the class of the measurement subsets
+
+        Returns:
+            jaco_info: splitted Jacobian
+        '''
+        # create a dict for FIM. It has the same keys as the Jacobian dict.
+        jaco_info = {}
+        ## split jacobian if needed
+        # flatten measurement variables needed for this calculation
+        jaco_involved = measure_subclass.measurement_all_info
+        # convert the form of jacobian for split
+        jaco_3D = self.__jac_reform_3D(self.overall_jacobian)
+
+        involved_flatten_index = measure_subclass.flatten_measure_name
+        print('involved flatten name:', involved_flatten_index)
+
+        # reorganize the jacobian subset with the same form of the jacobian
+        # loop over parameters
+        for p, par in enumerate(self.para_name):
+            jaco_info[par] = []
+            # loop over flatten measurements
+            for n, nam in enumerate(involved_flatten_index):
+                if nam in self.flatten_all_measure:
+                    print('get :', nam)
+                    n_all_measure = self.flatten_all_measure.index(nam)
+                    # loop over time
+                    for d in range(len(jaco_3D[n_all_measure, p, :])):
+                        jaco_info[par].append(jaco_3D[n_all_measure, p, d])
+        # print('jaco now:', jaco_info)
+        return jaco_info
+
+    def __jac_reform_3D(self, jac_original):
+        '''
+        Reform the Jacobian returned by __finite_calculation() to be a 3D numpy array, [measurements, parameters, time]
+        '''
+        # 3-D array form of jacobian [measurements, parameters, time]
+        self.measure_timeset = list(self.measurement_timeset.values())[0]
+        no_time = len(self.measure_timeset)
+        jac_3Darray = np.zeros((len(self.flatten_all_measure), len(self.para_name), no_time))
+        # reorganize the matrix
+        for m, mname in enumerate(self.flatten_all_measure):
+            for p, para in enumerate(self.para_name):
+                for t, tim in enumerate(self.measure_timeset):
+                    jac_3Darray[m, p, t] = jac_original[para][m * no_time + t]
+
+        return jac_3Darray
+
 
 class FIM_result:
+    def __init__(self, para_name, measure_object, jacobian_splitter, prior_FIM=None, store_FIM=None, scale_constant_value=1, max_condition_number=1.0E12,
+                 verbose=True):
+        '''
+        Analyze the FIM result for a single run
+
+        Parameters:
+        -----------
+        para_name: parameter names
+        measure_object: measurement information object
+        jacobian_splitter: the jacobian splitter class
+        prior_FIM: if there's prior FIM to be added
+        store_FIM: if storing the FIM in a .csv, give the file name here as a string, '**.csv' or '**.txt'.
+        scale_constant_value: the constant value used to scale the sensitivity
+        max_condition_number: max condition number
+        verbose: if print statements are used
+        '''
+        self.para_name = para_name
+        self.measure_object = measure_object
+        self.measurement_variables = measure_object.measurement_name
+        self.measurement_timeset = measure_object.flatten_measure_timeset
+        self.flatten_all_measure = measure_object.flatten_measure_name
+
+        self.jaco_information = jacobian_splitter.jac_split(measure_object)
+        print('Splitted jacobian:', self.jaco_information)
+
+        self.prior_FIM = prior_FIM
+        self.store_FIM = store_FIM
+        self.scale_constant_value = scale_constant_value
+        self.fim_scale_constant_value = scale_constant_value ** 2
+        self.max_condition_number = max_condition_number
+        self.verbose = verbose
+
+    def calculate_FIM(self, dv_values, result=None):
+        '''
+        Calculate FIM from Jacobian information. This is for grid search (combined models) results
+
+        Parameters:
+        -----------
+        dv_values: design variable value dictionary
+        result: solver status returned by IPOPT
+
+        Return:
+        ------
+        fim_info: a FIM dictionary containing the following key:value pairs
+            ~['FIM']: a list containing FIM itself
+            ~[design variable name]: a list of design variable values at each time point
+            ~['Trace']: a scalar number of Trace
+            ~['Determinant']: a scalar number of determinant
+            ~['Condition number:']: a scalar number of condition number
+            ~['Minimal eigen value:']: a scalar number of minimal eigen value
+            ~['Eigen values:']: a list of all eigen values
+            ~['Eigen vectors:']: a list of all eigen vectors
+        solver_info: a solver infomation dictionary containing the following key:value pairs
+            ~['square']: a string of square result solver status
+        '''
+        self.result = result
+        self.doe_result = None
+
+        # get number of parameters
+        no_param = len(self.para_name)
+        ### calculate the FIM
+        fim = np.zeros((no_param, no_param))
+        # loop over parameters
+        for row, para_n in enumerate(self.para_name):
+            for col, para_m in enumerate(self.para_name):
+                jaco_n = np.asarray(self.jaco_information[para_n])
+                jaco_m = np.asarray(self.jaco_information[para_m])
+                fim[row][col] = jaco_n.T@jaco_m
+
+        # add prior information
+        if (self.prior_FIM is not None):
+            try:
+                fim = fim + self.prior_FIM
+                print('Existed information has been added.')
+            except:
+                raise ValueError('Check the shape of prior FIM')
+
+        if np.linalg.cond(fim) > self.max_condition_number:
+            print("Warning: FIM is near singular.")
+            print('The condition number is:', np.linalg.cond(fim), ';')
+            print('A condition number bigger than ', self.max_condition_number, ' is considered near singular.')
+
+        # call private methods
+        self.__print_FIM_info(fim, dv_set=dv_values)
+        if self.result is not None:
+            self.__get_solver_info()
+
+        # if given store file name, store the FIM
+        if (self.store_FIM is not None):
+            self.__store_FIM()
+
+
+    def __print_FIM_info(self, FIM, dv_set=None):
+        '''
+        using a dictionary to store all FIM information
+
+        Parameters:
+        -----------
+        FIM: the Fisher Information Matrix, needs to be P.D. and symmetric
+        dv_set: design variable dictionary
+
+        Return:
+        ------
+        fim_info: a FIM dictionary containing the following key:value pairs
+            ~['FIM']: a list of FIM itself
+            ~[design variable name]: a list of design variable values at each time point
+            ~['Trace']: a scalar number of Trace
+            ~['Determinant']: a scalar number of determinant
+            ~['Condition number:']: a scalar number of condition number
+            ~['Minimal eigen value:']: a scalar number of minimal eigen value
+            ~['Eigen values:']: a list of all eigen values
+            ~['Eigen vectors:']: a list of all eigen vectors
+        '''
+        eig = np.linalg.eigvals(FIM)
+        self.FIM = FIM
+        self.trace = np.trace(FIM)
+        self.det = np.linalg.det(FIM)
+        self.min_eig = min(eig)
+        self.cond = max(eig) / min(eig)
+        self.eig_vals = eig
+        self.eig_vecs = np.linalg.eig(FIM)[1]
+
+        dv_names = list(dv_set.keys())
+
+        FIM_dv_info = {}
+        FIM_dv_info[dv_names[0]] = dv_set[dv_names[0]]
+        FIM_dv_info[dv_names[1]] = dv_set[dv_names[1]]
+
+        self.dv_info = FIM_dv_info
+
+        if self.verbose:
+            print('FIM:', self.FIM)
+
+            print('Trace:', self.trace)
+            print('Determinant:', self.det)
+            print('Condition number:', self.cond)
+            print('Minimal eigen value:', self.min_eig)
+            print('Eigen values:', self.eig_vals)
+            print('Eigen vectors:', self.eig_vecs)
+
+    def __solution_info(self, m, dv_set):
+        '''
+        Solution information. Only for optimization problem
+
+        Parameters:
+        -----------
+        m: model
+        dv_set: design variable dictionary
+
+        Return:
+        ------
+        model_info: model solutions dictionary containing the following key:value pairs
+            ~['obj']: a scalar number of objective function value
+            ~['det']: a scalar number of determinant calculated by the model (different from FIM_info['det'] which
+            is calculated by numpy)
+            -['trace']: a scalar number of trace calculated by the model
+            -[design variable name]: a list of design variable solution
+        '''
+        self.obj_value = value(m.obj)
+        print('Model objective:', self.obj_value)
+
+        if self.obj == 'det':
+            self.obj_det = np.exp(value(m.obj)) / (self.fim_scale_constant_value) ** (len(self.para_name))
+            print('Objective(determinant) is:', self.obj_det)
+        elif self.obj == 'trace':
+            self.obj_trace = np.exp(value(m.obj)) / (self.fim_scale_constant_value)
+            print('Objective(trace) is:', self.obj_trace)
+
+        dv_names = list(dv_set.keys())
+        dv_times = list(dv_set.values())
+
+        solution = {}
+        for d, dname in enumerate(dv_names):
+            sol = []
+            if dv_times[d] is not None:
+                for t, time in enumerate(dv_times[d]):
+                    newvar = eval('m.' + dname + '[' + str(time) + ']')
+                    sol.append(value(newvar))
+            else:
+                newvar = eval('m.' + dname)
+                sol.append(value(newvar))
+
+            solution[dname] = sol
+            if self.verbose:
+                print('Solution of ', dname, ' :', solution[dname])
+        self.solution = solution
+
+    def __store_FIM(self):
+        # if given store file name, store the FIM
+        store_dict = {}
+        for i, name in enumerate(self.para_name):
+            store_dict[name] = self.FIM[i]
+        FIM_store = pd.DataFrame(store_dict)
+        FIM_store.to_csv(self.store_FIM, index=False)
+
+    def __get_solver_info(self):
+        '''
+        Solver information dictionary
+
+        Return:
+        ------
+        solver_status: a solver infomation dictionary containing the following key:value pairs
+            ~['square']: a string of square result solver status
+            -['doe']: a string of doe result solver status
+        '''
+        print('======problem solver output======')
+
+        if (self.result.solver.status == SolverStatus.ok) and (
+                self.result.solver.termination_condition == TerminationCondition.optimal):
+            self.status = 'converged'
+            print('converged')
+        elif (self.result.solver.termination_condition == TerminationCondition.infeasible):
+            self.status = 'infeasible'
+            print('infeasible solution')
+        else:
+            self.status = self.result.solver.status
+            print('solver status:', self.result.solver.status)
+
+
+class FIM_result_old:
+    # going to be deleted. Keep for now.
     def __init__(self, para_name, measure_object, prior_FIM=None, store_FIM=None, scale_constant_value=1, max_condition_number=1.0E12,
                  verbose=True):
         '''
@@ -1883,7 +2202,6 @@ class FIM_result:
         self.result = result
         self.doe_result = None
         # create a dict for FIM. It has the same keys as the Jacobian dict.
-
         jaco_info =  {}
         ## split jacobian if needed
         # flatten measurement variables needed for this calculation
