@@ -36,6 +36,7 @@ from pyomo.contrib.pyros.util import (model_is_valid,
                                       validate_kwarg_inputs,
                                       transform_to_standard_form,
                                       turn_bounds_to_constraints,
+                                      replace_uncertain_bounds_with_constraints,
                                       output_logger)
 from pyomo.contrib.pyros.solve_data import ROSolveResults
 from pyomo.contrib.pyros.pyros_algorithm_methods import ROSolver_iterative_solve
@@ -373,6 +374,11 @@ class PyROS(object):
 
             # === Put model in standard form
             transform_to_standard_form(model_data.working_model)
+
+            # === Replace variable bounds depending on uncertain params with
+            #     explicit inequality constraints
+            replace_uncertain_bounds_with_constraints(model_data.working_model,
+                                                      model_data.working_model.util.uncertain_params)
 
             # === Add decision rule information
             add_decision_rule_variables(model_data, config)

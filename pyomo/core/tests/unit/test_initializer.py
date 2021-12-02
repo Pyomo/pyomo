@@ -11,13 +11,14 @@
 import pickle
 
 import pyomo.common.unittest as unittest
+from pyomo.common.config import ConfigValue, ConfigList, ConfigDict
 from pyomo.common.dependencies import pandas as pd, pandas_available
 
 from pyomo.core.base.util import flatten_tuple
 from pyomo.core.base.initializer import (
     Initializer, ConstantInitializer, ItemInitializer, ScalarCallInitializer,
     IndexedCallInitializer, CountedCallInitializer, CountedCallGenerator,
-    DataFrameInitializer,
+    DataFrameInitializer, DefaultInitializer,
 )
 from pyomo.environ import (
     ConcreteModel, Var,
@@ -506,3 +507,56 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(a.verified, b.verified)
         self.assertEqual(a(None, 1), 2)
         self.assertEqual(b(None, 2), 3)
+
+    def test_default_initializer(self):
+        a = Initializer({1:5})
+        d = DefaultInitializer(a, None, KeyError)
+        self.assertFalse(d.constant())
+        self.assertTrue(d.contains_indices())
+        self.assertEqual(list(d.indices()), [1])
+        self.assertEqual(d(None, 1), 5)
+        self.assertIsNone(d(None, 2))
+
+        def rule(m, i):
+            if i == 0:
+                return 10
+            elif i == 1:
+                raise KeyError("key")
+            elif i == 2:
+                raise TypeError("type")
+            else:
+                raise RuntimeError("runtime")
+        a = Initializer(rule)
+        d = DefaultInitializer(a, 100, (KeyError, RuntimeError))
+        self.assertFalse(d.constant())
+        self.assertFalse(d.contains_indices())
+        self.assertEqual(d(None, 0), 10)
+        self.assertEqual(d(None, 1), 100)
+        with self.assertRaisesRegex(TypeError, 'type'):
+            d(None, 2)
+        self.assertEqual(d(None, 3), 100)
+
+    def test_config_integration(self):
+        c = ConfigList()
+        c.add(1)
+        c.add(3)
+        c.add(5)
+        a = Initializer(c)
+        self.assertIs(type(a), ItemInitializer)
+        self.assertTrue(a.contains_indices())
+        self.assertEqual(list(a.indices()), [0, 1, 2])
+        self.assertEqual(a(None, 0), 1)
+        self.assertEqual(a(None, 1), 3)
+        self.assertEqual(a(None, 2), 5)
+
+        c = ConfigDict()
+        c.declare('opt_1', ConfigValue(default=1))
+        c.declare('opt_3', ConfigValue(default=3))
+        c.declare('opt_5', ConfigValue(default=5))
+        a = Initializer(c)
+        self.assertIs(type(a), ItemInitializer)
+        self.assertTrue(a.contains_indices())
+        self.assertEqual(list(a.indices()), ['opt_1', 'opt_3', 'opt_5'])
+        self.assertEqual(a(None, 'opt_1'), 1)
+        self.assertEqual(a(None, 'opt_3'), 3)
+        self.assertEqual(a(None, 'opt_5'), 5)

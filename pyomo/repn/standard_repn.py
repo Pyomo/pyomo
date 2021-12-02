@@ -768,22 +768,6 @@ def _collect_division(exp, multiplier, idMap, compute_values, verbose, quadratic
 
     return _collect_standard_repn(exp._args_[0], multiplier/denom, idMap, compute_values, verbose, quadratic)
 
-def _collect_reciprocal(exp, multiplier, idMap, compute_values, verbose, quadratic):
-    if exp._args_[0].__class__ in native_numeric_types or not exp._args_[0].is_potentially_variable():  # TODO: coverage?
-        if compute_values:
-            denom = 1.0 * value(exp._args_[0])
-        else:
-            denom = 1.0 * exp._args_[0]
-    else:
-        res =_collect_standard_repn(exp._args_[0], 1, idMap, compute_values, verbose, quadratic)
-        if not (res.nonl.__class__ in native_numeric_types and res.nonl == 0) or len(res.linear) > 0 or (quadratic and len(res.quadratic) > 0):
-            return Results(nonl=multiplier*exp)
-        else:
-            denom = 1.0*res.constant
-    if denom.__class__ in native_numeric_types and denom == 0:
-        raise ZeroDivisionError
-    return Results(constant=multiplier/denom)
-
 def _collect_branching_expr(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if exp._if.__class__ in native_numeric_types:           # TODO: coverage?
         if_val = exp._if
@@ -888,7 +872,6 @@ _repn_collectors = {
     EXPR.MonomialTermExpression                 : _collect_term,
     EXPR.PowExpression                          : _collect_pow,
     EXPR.DivisionExpression                     : _collect_division,
-    EXPR.ReciprocalExpression                   : _collect_reciprocal,
     EXPR.Expr_ifExpression                      : _collect_branching_expr,
     EXPR.UnaryFunctionExpression                : _collect_nonl,
     EXPR.AbsExpression                          : _collect_nonl,
@@ -1285,7 +1268,6 @@ _linear_repn_collectors = {
     EXPR.MonomialTermExpression                 : _linear_collect_term,
     EXPR.PowExpression                          : _linear_collect_pow,
     #EXPR.DivisionExpression                     : _linear_collect_division,
-    #EXPR.ReciprocalExpression                   : _linear_collect_reciprocal,
     EXPR.Expr_ifExpression                      : _linear_collect_branching_expr,
     #EXPR.UnaryFunctionExpression                : _linear_collect_nonl,
     #EXPR.AbsExpression                          : _linear_collect_nonl,

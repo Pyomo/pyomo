@@ -900,6 +900,21 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
                 "with a non-integer step"):
             RangeSet(0,None,0.5)
 
+        with LoggingIntercept() as LOG:
+            m = ConcreteModel()
+            m.p = Param(initialize=5, mutable=False)
+            m.I = RangeSet(0, m.p)
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(RangeSet(0,5,1), m.I)
+
+        with LoggingIntercept() as LOG:
+            m = ConcreteModel()
+            m.p = Param(initialize=5, mutable=True)
+            m.I = RangeSet(0, m.p)
+        self.assertIn("Constructing RangeSet 'I' from non-constant data",
+                      LOG.getvalue())
+        self.assertEqual(RangeSet(0,5,1), m.I)
+
         class _AlmostNumeric(object):
             def __init__(self, val):
                 self.val = val
@@ -2884,7 +2899,7 @@ A : Size=1, Index=None, Ordered=True
         ref="""
 J : Size=1, Index=None, Ordered=False
     Key  : Dimen : Domain  : Size : Members
-    None :     2 : Reals*I :  Inf : <[None..None], ([1], [2], [3])>
+    None :     2 : Reals*I :  Inf : <[-inf..inf], ([1], [2], [3])>
 """.strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
@@ -3564,7 +3579,7 @@ class TestSet(unittest.TestCase):
         self.assertEqual(m.I.dimen, 1)
 
         m = ConcreteModel()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, 'Set rule or initializer returned None'):
             m.I = Set(initialize=lambda m: None, dimen=2)
         self.assertTrue(m.I._init_values.constant())
@@ -4275,7 +4290,7 @@ class TestSet(unittest.TestCase):
         None :     2 :    Any :    2 : {(3, 4), (1, 2)}
     M : Size=1, Index=None, Ordered=False
         Key  : Dimen : Domain            : Size : Members
-        None :     1 : Reals - M_index_1 :  Inf : ([None..0) | (0..None])
+        None :     1 : Reals - M_index_1 :  Inf : ([-inf..0) | (0..inf])
     N : Size=1, Index=None, Ordered=False
         Key  : Dimen : Domain           : Size : Members
         None :     1 : Integers - Reals :  Inf :      []

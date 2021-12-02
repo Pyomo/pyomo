@@ -427,7 +427,7 @@ class ModelSolutions(object):
         for vdata in instance.component_data_objects(Var):
             id_ = id(vdata)
             if vdata.fixed:
-                tmp[id_] = (weakref_ref(vdata), {'Value':value(vdata)})
+                tmp[id_] = (weakref_ref(vdata), {'Value': vdata.value})
             elif (default_variable_value is not None) and \
                  (smap_id is not None) and \
                  (id_ in smap.byObject) and \
@@ -553,11 +553,9 @@ class Model(ScalarBlock):
         if cls != Model:
             return super(Model, cls).__new__(cls)
 
-        deprecation_warning(
-            "Using the 'Model' class is deprecated.  Please use the "
-            "AbstractModel or ConcreteModel class instead.",
-            version='4.3.11323')
-        return AbstractModel.__new__(AbstractModel)
+        raise TypeError(
+            "Directly creating the 'Model' class is not allowed.  Please use the "
+            "AbstractModel or ConcreteModel class instead.")
 
     def __init__(self, name='unknown', **kwargs):
         """Constructor"""
@@ -640,19 +638,6 @@ class Model(ScalarBlock):
                   "concrete instance with name=%s." % (filename, name)
             logger.warning(msg)
 
-        if 'clone' in kwds:
-            kwds.pop('clone')
-            deprecation_warning(
-                "Model.create_instance() no longer accepts the 'clone' "
-                "argument: the base abstract model is always cloned.",
-                version='5.4')
-        if 'preprocess' in kwds:
-            kwds.pop('preprocess')
-            deprecation_warning(
-                "Model.create_instance() no longer accepts the preprocess' "
-                "argument: preprocessing is always deferred to when the "
-                "model is sent to the solver",
-                version='5.4')
         if kwds:
             msg = \
 """Model.create_instance() passed the following unrecognized keyword
@@ -662,10 +647,6 @@ arguments (which have been ignored):"""
             logger.error(msg)
 
         if self.is_constructed():
-            deprecation_warning(
-                "Cannot call Model.create_instance() on a constructed "
-                "model; returning a clone of the current model instance.",
-                version='5.4')
             return self.clone()
 
         if report_timing:
@@ -730,35 +711,16 @@ arguments (which have been ignored):"""
     def preprocess(self, preprocessor=None):
         return
 
-    def load(self, arg, namespaces=[None], profile_memory=0, report_timing=None):
+    def load(self, arg, namespaces=[None], profile_memory=0):
         """
         Load the model with data from a file, dictionary or DataPortal object.
         """
-        if report_timing is not None:
-            deprecation_warning(
-                "The report_timing argument to Model.load() is deprecated.  "
-                "Use pyomo.common.timing.report_timing() to enable reporting "
-                "construction timing", version='5.4')
         if arg is None or isinstance(arg, str):
             dp = DataPortal(filename=arg, model=self)
         elif type(arg) is DataPortal:
             dp = arg
         elif type(arg) is dict:
             dp = DataPortal(data_dict=arg, model=self)
-        elif isinstance(arg, SolverResults):
-            if len(arg.solution):
-                deprecation_warning(
-                    "The Model.load() method is deprecated for loading "
-                    "solutions stored in SolverResults objects.  Call"
-                    "Model.solutions.load_from().", version='4.3.11323')
-                self.solutions.load_from(arg)
-            else:
-                deprecation_warning(
-                    "The Model.load() method is deprecated for loading "
-                    "solutions stored in SolverResults objects.  By default, "
-                    "results from solvers are immediately loaded into "
-                    "the original model instance.", version='4.3.11323')
-            return
         else:
             msg = "Cannot load model model data from with object of type '%s'"
             raise ValueError(msg % str( type(arg) ))
@@ -876,37 +838,6 @@ arguments (which have been ignored):"""
                 gc.collect()
                 mem_used = pympler.muppy.get_size(pympler.muppy.get_objects())
                 print("      Total memory = %d bytes following construction of component=%s (after garbage collection)" % (mem_used, component_name))
-
-
-    @deprecated("The Model.create() method is deprecated.  Call "
-                "Model.create_instance() to create a concrete instance "
-                "from an abstract model.  You do not need to call "
-                "Model.create() for a concrete model.", version='4.3.11323')
-    def create(self, filename=None, **kwargs):
-        """
-        Create a concrete instance of this Model, possibly using data
-        read in from a file.
-        """
-        return self.create_instance(filename=filename, **kwargs)
-
-    @deprecated("Model.transform() is deprecated.", version='4.3.11323')
-    def transform(self, name=None, **kwds):
-        if name is None:
-            deprecation_warning(
-                "Use the TransformationFactory iterator to get the list "
-                "of known transformations.", version='4.3.11323')
-            return list(TransformationFactory)
-
-        deprecation_warning(
-            "Use TransformationFactory('%s') to construct a transformation "
-            "object, or TransformationFactory('%s').apply_to(model) to "
-            "directly apply the transformation to the model instance." % (
-                name,name,), version='4.3.11323')
-
-        xfrm = TransformationFactory(name)
-        if xfrm is None:
-            raise ValueError("Unknown model transformation '%s'" % name)
-        return xfrm.apply_to(self, **kwds)
 
 
 @ModelComponentFactory.register('A concrete optimization model that does not defer construction of components.')

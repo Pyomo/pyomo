@@ -145,7 +145,7 @@ class TempfileManagerClass(object):
                 "unique names.  Users wishing sequentially numbered files "
                 "should create a temporary (empty) directory using mkdtemp "
                 "/ create_tempdir and place the sequential files within it.",
-                version='TBD')
+                version='6.2')
     def sequential_files(self, ctr=0):
         pass
 
