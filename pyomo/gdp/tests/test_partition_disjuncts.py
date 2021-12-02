@@ -90,10 +90,9 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
                              aux12lb, aux12ub, aux21lb, aux21ub, aux22lb,
                              aux22ub):
         self.assertEqual(len(aux_vars1), 2)
-        # TODO: gurobi default constraint tolerance is 1e-6, so let's say that's
+        # Gurobi default constraint tolerance is 1e-6, so let's say that's
         # our goal too. Have to tighten Gurobi's tolerance to even get here
-        # though... And are we okay with LBs being too high rather than too low,
-        # and vice versa for UB?
+        # though...
         self.assertAlmostEqual(aux_vars1[0].lb, aux11lb, places=6)
         self.assertAlmostEqual(aux_vars1[0].ub, aux11ub, places=6)
         self.assertAlmostEqual(aux_vars1[1].lb, aux12lb, places=6)
@@ -134,9 +133,9 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertIsInstance(equivalence, LogicalConstraint)
         self.assertEqual(len(equivalence), 2)
         for i, variables in enumerate(
-                [(original_disjunction.disjuncts[0].indicator_var, 
-                  disj1.indicator_var), 
-                 (original_disjunction.disjuncts[1].indicator_var, 
+                [(original_disjunction.disjuncts[0].indicator_var,
+                  disj1.indicator_var),
+                 (original_disjunction.disjuncts[1].indicator_var,
                   disj2.indicator_var)]):
             cons = equivalence[i]
             self.assertIsInstance(cons.body, EquivalenceExpression)
@@ -291,7 +290,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         (inner_b, inner_disj1,
          inner_disj2) = self.\
                         check_transformation_block_disjuncts_and_constraints(
-                            disj2, disjunction_parent.disj2.disjunction, 
+                            disj2, disjunction_parent.disj2.disjunction,
                             "%sdisj2.disjunction" % block_prefix)
 
         # Has it's own indicator var, the aux vars, and the Reference to the
@@ -401,9 +400,9 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.check_transformation_block_nested_disjunction(m, disj2, m.disj1.x)
 
     def check_hierarchical_nested_model(self, m):
-        (b, disj1, 
+        (b, disj1,
          disj2) = self.check_transformation_block_disjuncts_and_constraints(
-             m.disjunction_block, m.disjunction_block.disjunction, 
+             m.disjunction_block, m.disjunction_block.disjunction,
              "disjunction_block.disjunction")
         # each Disjunct has two variables declared on it (aux vars and indicator
         # var), plus a reference to the indicator_var from the original Disjunct
@@ -467,7 +466,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             m,
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
             compute_bounds_method=compute_fbbt_bounds)
-        
+
         self.check_hierarchical_nested_model(m)
 
     def test_transformation_block_nested_disjunction_target(self):
@@ -1351,9 +1350,9 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
         self.assertIsInstance(equivalence, LogicalConstraint)
         self.assertEqual(len(equivalence), 2)
         for i, variables in enumerate(
-                [(m.disjunction.disjuncts[0].indicator_var, 
-                  disj1.indicator_var), 
-                 (m.disjunction.disjuncts[1].indicator_var, 
+                [(m.disjunction.disjuncts[0].indicator_var,
+                  disj1.indicator_var),
+                 (m.disjunction.disjuncts[1].indicator_var,
                   disj2.indicator_var)]):
             cons = equivalence[i]
             self.assertIsInstance(cons.body, EquivalenceExpression)
@@ -1892,7 +1891,7 @@ class LogicalExpressions(unittest.TestCase, CommonTests):
     #     # that's fine--we just want to make sure the transformed model is
     #     # solvable.
     #     TransformationFactory('gdp.between_steps').apply_to(
-    #         m, variable_partitions=[[m.x]], 
+    #         m, variable_partitions=[[m.x]],
     #         compute_bounds_method=compute_fbbt_bounds)
 
     #     self.assertTrue(check_model_algebraic(m))
