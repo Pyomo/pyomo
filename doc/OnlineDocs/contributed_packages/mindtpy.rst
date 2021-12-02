@@ -229,17 +229,19 @@ Solve Nonconvex MINLPs
 Equality Relaxation
 ^^^^^^^^^^^^^^^^^^^
 
-To add
+Under certain assumptions concerning the convexity of the nonlinear functions, an equality constraint can be relaxed to be an inequality constraint. This property can be used in the MIP master problem to accumulate linear approximations(OA cuts). The sense of the equivalent inequality constraint is based on the sign of the dual values of the equality constraint. Therefore, the sense of the OA cuts for equality constraint should be determined according to both the objective sense and the sign of the dual values. In MindtPy, the dual value of the equality constraint is calculated as follows.
 
-.. tmp_duals are the value of the dual variables stored before using deactivate trivial contraints
-.. The values of the duals are computed as follows: (Complementary Slackness)
-
-.. | constraint | c_geq | status at x1 | tmp_dual (violation) |
-.. |------------|-------|--------------|----------------------|
-.. | g(x) <= b  | -1    | g(x1) <= b   | 0                    |
-.. | g(x) <= b  | -1    | g(x1) > b    | g(x1) - b            |
-.. | g(x) >= b  | +1    | g(x1) >= b   | 0                    |
-.. | g(x) >= b  | +1    | g(x1) < b    | b - g(x1)            |
++--------------------+-----------------------+-------------------------+
+|     constraint     | status at :math:`x_1` | dual values             |
++====================+=======================+=========================+
+| :math:`g(x) \le b` | :math:`g(x_1) \le b`  |           0             |
++--------------------+-----------------------+-------------------------+
+| :math:`g(x) \le b` | :math:`g(x_1) > b`    | :math:`g(x1) - b`       |
++--------------------+-----------------------+-------------------------+
+| :math:`g(x) \ge b` | :math:`g(x_1) \ge b`  |           0             |
++--------------------+-----------------------+-------------------------+
+| :math:`g(x) \ge b` | :math:`g(x_1) < b`    | :math:`b - g(x1)`       |
++--------------------+-----------------------+-------------------------+
 
 Augmented Penalty
 ^^^^^^^^^^^^^^^^^
