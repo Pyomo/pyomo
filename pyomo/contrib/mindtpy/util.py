@@ -28,7 +28,6 @@ import math
 
 pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 numpy = attempt_import('numpy')[0]
-logger = logging.getLogger('pyomo.contrib')
 
 
 class MindtPySolveData(object):
