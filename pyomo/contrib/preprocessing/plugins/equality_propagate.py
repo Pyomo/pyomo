@@ -18,6 +18,7 @@ from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.common.config import ConfigBlock, ConfigValue, add_docstring_list
+from pyomo.common.errors import InfeasibleConstraintException
 
 
 def _build_equality_set(m):
@@ -42,8 +43,8 @@ def _build_equality_set(m):
             # only take the variables with nonzero coefficients
             vars_ = [v for i, v in enumerate(repn.linear_vars)
                      if repn.linear_coefs[i]]
-            if (len(vars_) == 2 and
-                    sorted(l for l in repn.linear_coefs if l) == [-1, 1]):
+            if (len(vars_) == 2 and repn.constant == 0 and
+                sorted(l for l in repn.linear_coefs if l) == [-1, 1]):
                 # this is an a == b constraint.
                 v1 = vars_[0]
                 v2 = vars_[1]
@@ -123,7 +124,7 @@ class FixedVarPropagator(IsomorphicTransformation):
             eq_set = eq_var_map.get(v1, ComponentSet([v1]))
             for v2 in eq_set:
                 if (v2.fixed and value(v1) != value(v2)):
-                    raise ValueError(
+                    raise InfeasibleConstraintException(
                         'Variables {} and {} have conflicting fixed '
                         'values of {} and {}, but are linked by '
                         'equality constraints.'
@@ -191,16 +192,16 @@ class VarBoundPropagator(IsomorphicTransformation):
             ubs = [v.ub for v in var_equality_set if v.has_ub()]
             min_ub = min(ubs) if len(ubs) > 0 else None
 
-            # Check  for error due to bound cross-over
+            # Check for error due to bound cross-over
             if max_lb is not None and min_ub is not None and max_lb > min_ub:
-                # the lower bound is above the upper bound. Raise a ValueError.
+                # the lower bound is above the upper bound. Raise an exception.
                 # get variable with the highest lower bound
                 v1 = next(v for v in var_equality_set if v.lb == max_lb)
                 # get variable with the lowest upper bound
                 v2 = next(v for v in var_equality_set if v.ub == min_ub)
-                raise ValueError(
+                raise InfeasibleConstraintException(
                     'Variable {} has a lower bound {} '
-                    ' > the upper bound {} of variable {}, '
+                    '> the upper bound {} of variable {}, '
                     'but they are linked by equality constraints.'
                     .format(v1.name, value(v1.lb), value(v2.ub), v2.name))
 

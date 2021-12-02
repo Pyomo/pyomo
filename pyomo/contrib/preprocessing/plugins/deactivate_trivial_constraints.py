@@ -16,6 +16,7 @@ import logging
 from pyomo.common.collections import ComponentSet
 from pyomo.common.config import (ConfigBlock, ConfigValue, NonNegativeFloat,
                                  add_docstring_list)
+from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.transformation import TransformationFactory
 from pyomo.core.expr.numvalue import value
@@ -47,7 +48,7 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
     CONFIG.declare("ignore_infeasible", ConfigValue(
         default=False, domain=bool,
         description="True to skip over trivial constraints that are "
-        "infeasible instead of raising a ValueError."
+        "infeasible instead of raising an InfeasibleConstraintException."
     ))
     CONFIG.declare("return_trivial", ConfigValue(
         default=[],
@@ -94,7 +95,7 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
                 if config.ignore_infeasible:
                     continue
                 else:
-                    raise ValueError(
+                    raise InfeasibleConstraintException(
                         'Trivial constraint {} violates LB {} ≤ BODY {}.'
                         .format(constr.name, constr_lb, constr_value))
 
@@ -103,7 +104,7 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
                 if config.ignore_infeasible:
                     continue
                 else:
-                    raise ValueError(
+                    raise InfeasibleConstraintException(
                         'Trivial constraint {} violates BODY {} ≤ UB {}.'
                         .format(constr.name, constr_value, constr_ub))
 
