@@ -742,6 +742,7 @@ def set_up_logger(config):
     Args:
         config (ConfigBlock): the specific configurations for MindtPy.
     """
+    config.logger.handlers.clear()
     config.logger.propagate = False
     ch = logging.StreamHandler()
     ch.setLevel(config.logging_level)
