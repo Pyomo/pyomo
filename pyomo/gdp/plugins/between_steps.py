@@ -23,7 +23,13 @@ from pyomo.core import Transformation, TransformationFactory
                                 "reformulation.")
 class BetweenSteps_Transformation(Transformation):
     """
-    TODO: This transformation does stuff!
+    Transform disjunctive model to equivalent MI(N)LP using the between steps
+    transformation from Konqvist et al. 2021 [1].
+
+    This transformation first calls the 'gdp.partition_disjuncts' 
+    transformation, resulting in an equivalent GDP with the constraints
+    partitioned, and then takes the hull reformulation of that model to get
+    an algebraic model.
 
     References
     ----------
