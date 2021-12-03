@@ -220,8 +220,6 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     A parameter value, which may be defined over an index.
 
     Constructor Arguments:
-        name        
-            The name of this parameter
         domain      
             A set that defines the type of values that each parameter must be.
         within      
@@ -240,6 +238,10 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         mutable: `boolean`
             Flag indicating if the value of the parameter may change between
             calls to a solver. Defaults to `False`
+        name
+            Name for this component.
+        doc
+            Text describing this component.
     """
 
     DefaultMutable = False
@@ -259,8 +261,8 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
 
     @overload
     def __init__(self, *indexes, rule=..., initialize=...,
-                 domain=..., within=..., validate=..., mutable=...,
-                 default=..., initialize_as_dense=..., units=..., name=...): ...
+                 domain=..., within=..., validate=..., mutable=..., default=...,
+                 initialize_as_dense=..., units=..., name=..., doc=...): ...
 
     def __init__(self, *args, **kwd):
         _init = self._pop_from_kwargs(

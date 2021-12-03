@@ -639,10 +639,10 @@ class Constraint(ActiveIndexedComponent):
             A Pyomo expression for this constraint
         rule
             A function that is used to construct constraint expressions
-        doc
-            A text string describing this component
         name
             A name for this component
+        doc
+            A text string describing this component
 
     Public class attributes:
         doc
@@ -688,7 +688,7 @@ class Constraint(ActiveIndexedComponent):
             return super(Constraint, cls).__new__(IndexedConstraint)
     
     @overload
-    def __init__(self, *indexes, expr=..., rule=..., doc=..., name=...): ...
+    def __init__(self, *indexes, expr=..., rule=..., name=..., doc=...): ...
     
     def __init__(self, *args, **kwargs):
         _init = self._pop_from_kwargs(

@@ -583,6 +583,8 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
             to True.
         units (pyomo units expression, optional): Set the units corresponding
             to the entries in this variable.
+        name (str, optional): Name for this component.
+        doc (str, optional): Text describing this component.
     """
 
     _ComponentDataClass = _GeneralVarData
@@ -597,7 +599,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
 
     @overload
     def __init__(self, *indexes, domain=..., within=..., bounds=...,
-                 initialize=..., rule=..., dense=..., units=...): ...    
+                 initialize=..., rule=..., dense=..., units=..., name=..., doc=...): ...    
     
     def __init__(self, *args, **kwargs):
         #

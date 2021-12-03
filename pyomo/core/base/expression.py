@@ -241,6 +241,8 @@ class Expression(IndexedComponent):
                         used to initialize this object.
         expr        A synonym for initialize.
         rule        A rule function used to initialize this object.
+        name        Name for this component.
+        doc         Text describing this component.
     """
 
     _ComponentDataClass = _GeneralExpressionData
@@ -256,7 +258,7 @@ class Expression(IndexedComponent):
             return IndexedExpression.__new__(IndexedExpression)
 
     @overload
-    def __init__(self, *indexes, rule=..., expr=..., initialize=...): ...
+    def __init__(self, *indexes, rule=..., expr=..., initialize=..., name=..., doc=...): ...
 
     def __init__(self, *args, **kwds):
         _init = self._pop_from_kwargs(

@@ -214,11 +214,11 @@ class Objective(ActiveIndexedComponent):
             A function that is used to construct objective expressions
         sense
             Indicate whether minimizing (the default) or maximizing
-        doc
-            A text string describing this component
         name
             A name for this component
-
+        doc
+            A text string describing this component
+            
     Public class attributes:
         doc
             A text string describing this component
@@ -261,7 +261,7 @@ class Objective(ActiveIndexedComponent):
             return IndexedObjective.__new__(IndexedObjective)
 
     @overload
-    def __init__(self, expr=..., rule=..., sense=..., doc=..., name=...): ...
+    def __init__(self, expr=..., rule=..., sense=..., name=..., doc=...): ...
 
     def __init__(self, *args, **kwargs):
         _sense = kwargs.pop('sense', minimize)
