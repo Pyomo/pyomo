@@ -30,7 +30,7 @@ from pyomo.common.collections import ComponentSet
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr import current as EXPR
 from pyomo.opt import SolverFactory
-from pyomo.util.vars_from_expressions import get_vars_from_constraints
+from pyomo.util.vars_from_expressions import get_vars_from_components
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (is_child_of, _to_dict, verify_successful_solve,
@@ -80,8 +80,8 @@ def arbitrary_partition(disjunction, P):
     # collect variables
     v_set = ComponentSet()
     for disj in disjunction.disjuncts:
-        v_set.update(get_vars_from_constraints(disj, descend_into=Block,
-                                               active=True))
+        v_set.update(get_vars_from_components(disj, Constraint,
+                                              descend_into=Block, active=True))
     # assign them to partitions
     partitions = []
     V = len(v_set)
@@ -387,10 +387,11 @@ class PartitionDisjuncts_Transformation(Transformation):
 
             if not self._config.assume_fixed_vars_permanent:
                 fixed_vars = ComponentMap()
-                for v in get_vars_from_constraints(instance, include_fixed=True,
-                                                   active=True,
-                                                   descend_into=(Block,
-                                                                 Disjunct)):
+                for v in get_vars_from_components(instance, Constraint,
+                                                  include_fixed=True,
+                                                  active=True,
+                                                  descend_into=(Block,
+                                                                Disjunct)):
                     if v.fixed:
                         fixed_vars[v] = value(v)
                         v.fixed = False
