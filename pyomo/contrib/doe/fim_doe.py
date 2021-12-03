@@ -2143,6 +2143,30 @@ class FIM_result:
         else:
             self.status = self.result.solver.status
             print('solver status:', self.result.solver.status)
+            
+    def subset(self, measurement_subset):
+        ''' Create new FIM_result object corresponding to provided measurement_subset.
+        
+        This requires that measurement_subset is a true subset of the original measurement object.
+        
+        Arguments:
+            measurement_subset: Instance of Measurements class
+        
+        Returns:
+            new_result: New instance of FIM_result
+        
+        '''
+        
+        # Check that measurement_subset is a valid subset of self.measurement
+        
+        # Split Jacobian (should already be 3D)
+        # small_jac = self.__split_jacobian(measurement_subset)
+        
+        # Copy any "settings" from self into new FIM_result
+        # return FIM_result(...)
+    
+    def __split_jacobian(self, measurement_subset):
+        
 
 
 class FIM_result_old:
