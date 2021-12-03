@@ -688,7 +688,8 @@ class Constraint(ActiveIndexedComponent):
             return super(Constraint, cls).__new__(IndexedConstraint)
     
     @overload
-    def __init__(self, *indexes, expr=..., rule=..., name=..., doc=...): ...
+    def __init__(self, *indexes, expr=None, rule=None,
+                 name='Constraint', doc=None): ...
     
     def __init__(self, *args, **kwargs):
         _init = self._pop_from_kwargs(

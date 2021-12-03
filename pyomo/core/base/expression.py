@@ -258,7 +258,8 @@ class Expression(IndexedComponent):
             return IndexedExpression.__new__(IndexedExpression)
 
     @overload
-    def __init__(self, *indexes, rule=..., expr=..., initialize=..., name=..., doc=...): ...
+    def __init__(self, *indexes, rule=None, expr=None, initialize=None,
+                 name='Expression', doc=None): ...
 
     def __init__(self, *args, **kwds):
         _init = self._pop_from_kwargs(

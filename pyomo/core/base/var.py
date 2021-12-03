@@ -598,8 +598,8 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
             return super(Var, cls).__new__(IndexedVar)
 
     @overload
-    def __init__(self, *indexes, domain=..., within=..., bounds=...,
-                 initialize=..., rule=..., dense=..., units=..., name=..., doc=...): ...    
+    def __init__(self, *indexes, domain=Reals, within=Reals, bounds=None,
+                 initialize=None, rule=None, dense=True, units=None, name='Var', doc=None): ...    
     
     def __init__(self, *args, **kwargs):
         #

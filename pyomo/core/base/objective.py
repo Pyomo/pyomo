@@ -218,7 +218,7 @@ class Objective(ActiveIndexedComponent):
             A name for this component
         doc
             A text string describing this component
-            
+
     Public class attributes:
         doc
             A text string describing this component
@@ -261,7 +261,8 @@ class Objective(ActiveIndexedComponent):
             return IndexedObjective.__new__(IndexedObjective)
 
     @overload
-    def __init__(self, expr=..., rule=..., sense=..., name=..., doc=...): ...
+    def __init__(self, expr=None, rule=None, sense=minimize,
+                 name='Objective', doc=None): ...
 
     def __init__(self, *args, **kwargs):
         _sense = kwargs.pop('sense', minimize)

@@ -170,7 +170,8 @@ class Suffix(ComponentMap, ActiveComponent):
                            None: str(None)}
 
     @overload
-    def __init__(self, *, direction=..., datatype=..., initialize=..., rule=..., name=..., doc=...): ...
+    def __init__(self, *, direction=LOCAL, datatype=FLOAT,
+                 initialize=None, rule=None, name='Suffix', doc=None): ...
 
     def __init__(self, **kwds):
 

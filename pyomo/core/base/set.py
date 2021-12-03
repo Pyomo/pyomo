@@ -1911,8 +1911,9 @@ class Set(IndexedComponent):
             return newObj
 
     @overload
-    def __init__(self, *indexes, initialize=..., dimen=..., ordered=..., within=..., domain=...,
-                 bounds=..., filter=..., validate=..., name=..., doc=...): ...
+    def __init__(self, *indexes, initialize=None, dimen=UnknownSetDimen,
+                 ordered=InsertionOrder, within=None, domain=None,
+                 bounds=None, filter=None, validate=None, name='Set', doc=None): ...
 
     def __init__(self, *args, **kwds):
         kwds.setdefault('ctype', Set)
@@ -2723,16 +2724,16 @@ class RangeSet(Component):
     # But positional-only params syntax are not supported before python 3.8.
     # To emphasize they are positional-only, an underscore is added before their name. 
     @overload
-    def __init__(self, _end, *, finite=..., ranges=...,
-                 bounds=..., filter=..., validate=..., name=..., doc=...): ...
+    def __init__(self, _end, *, finite=None, ranges=(), bounds=None,
+                 filter=None, validate=None, name='RangeSet', doc=None): ...
 
     @overload
-    def __init__(self, _start, _end, _step=1, *, finite=..., ranges=...,
-                 bounds=..., filter=..., validate=..., name=..., doc=...): ...
+    def __init__(self, _start, _end, _step=1, *, finite=None, ranges=(), bounds=None,
+                 filter=None, validate=None, name='RangeSet', doc=None): ...
 
     @overload
-    def __init__(self, *, finite=..., ranges=...,
-                 bounds=..., filter=..., validate=..., name=..., doc=...): ...
+    def __init__(self, *, finite=None, ranges=(), bounds=None,
+                 filter=None, validate=None, name='RangeSet', doc=None): ...
 
     def __init__(self, *args, **kwds):
         # Finite was processed by __new__

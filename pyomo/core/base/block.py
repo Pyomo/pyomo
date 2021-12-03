@@ -1870,7 +1870,8 @@ class Block(ActiveIndexedComponent):
 
     # `options` is ignored since it is deprecated
     @overload
-    def __init__(self, *indexes, rule=..., concrete=..., dense=..., name=..., doc=...): ...
+    def __init__(self, *indexes, rule=None, concrete=False, dense=True,
+                 name='Block', doc=None): ...
 
     def __init__(self, *args, **kwargs):
         """Constructor"""
