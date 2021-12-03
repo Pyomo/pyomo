@@ -13,7 +13,7 @@ from pyomo.core.expr.numeric_expr import (
     LinearExpression, MonomialTermExpression, SumExpression,
     ProductExpression, DivisionExpression, PowExpression,
     NegationExpression, UnaryFunctionExpression, ExternalFunctionExpression,
-    Expr_ifExpression
+    Expr_ifExpression, AbsExpression
 )
 from pyomo.core.expr.logical_expr import (
     InequalityExpression, EqualityExpression, RangedExpression
@@ -120,7 +120,7 @@ class TestConvertToPrefixNotation(unittest.TestCase):
         m.x = pe.Var()
         e = abs(m.x)
         pn = convert_expression_to_prefix_notation(e)
-        expected = [(UnaryFunctionExpression, 1, 'abs'),
+        expected = [(AbsExpression, 1, 'abs'),
                     m.x]
         self.assertEqual(pn, expected)
 

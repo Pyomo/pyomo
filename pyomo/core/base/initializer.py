@@ -258,14 +258,14 @@ class CountedCallGenerator(object):
 
     This generator implements the older "counted call" scheme, where the
     first argument past the parent block is a monotonically-increasing
-    integer beginning at 1.
+    integer beginning at `start_at`.
     """
-    def __init__(self, ctype, fcn, scalar, parent, idx):
+    def __init__(self, ctype, fcn, scalar, parent, idx, start_at):
         # Note: this is called by a component using data from a Set (so
         # any tuple-like type should have already been checked and
         # converted to a tuple; or flattening is turned off and it is
         # the user's responsibility to sort things out.
-        self._count = 0
+        self._count = start_at - 1
         if scalar:
             self._fcn = lambda c: self._filter(ctype, fcn(parent, c))
         elif idx.__class__ is tuple:
@@ -320,13 +320,14 @@ class CountedCallInitializer(InitializerBase):
     # consistent form of the original implementation for backwards
     # compatability, but I believe that we should deprecate this syntax
     # entirely.
-    __slots__ = ('_fcn','_is_counted_rule', '_scalar','_ctype')
+    __slots__ = ('_fcn', '_is_counted_rule', '_scalar', '_ctype', '_start')
 
-    def __init__(self, obj, _indexed_init):
+    def __init__(self, obj, _indexed_init, starting_index=1):
         self._fcn = _indexed_init._fcn
         self._is_counted_rule = None
         self._scalar = not obj.is_indexed()
         self._ctype = obj.ctype
+        self._start = starting_index
         if self._scalar:
             self._is_counted_rule = True
 
@@ -342,7 +343,8 @@ class CountedCallInitializer(InitializerBase):
                 return self._fcn(parent, idx)
         if self._is_counted_rule == True:
             return CountedCallGenerator(
-                self._ctype, self._fcn, self._scalar, parent, idx)
+                self._ctype, self._fcn, self._scalar, parent, idx, self._start,
+            )
 
         # Note that this code will only be called once, and only if
         # the object is not a scalar.

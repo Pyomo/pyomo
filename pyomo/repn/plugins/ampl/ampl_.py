@@ -98,8 +98,8 @@ _intrinsic_function_operators = {
     'atanh':  'o47',
     'pow':    'o5',
     'abs':    'o15',
-    'ceil':   'o13',
-    'floor':  'o14'
+    'ceil':   'o14',
+    'floor':  'o13'
 }
 
 # build string templates

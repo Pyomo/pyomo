@@ -551,6 +551,7 @@ class ObjectiveList(IndexedObjective):
             raise ValueError(
                 "ObjectiveList does not accept the 'expr' keyword")
         _rule = kwargs.pop('rule', None)
+        self._starting_index = kwargs.pop('starting_index', 1)
 
         args = (Set(dimen=1),)
         super().__init__(*args, **kwargs)
@@ -560,7 +561,9 @@ class ObjectiveList(IndexedObjective):
         # after the base class is set up so that is_indexed() is
         # reliable.
         if self.rule is not None and type(self.rule) is IndexedCallInitializer:
-            self.rule = CountedCallInitializer(self, self.rule)
+            self.rule = CountedCallInitializer(
+                self, self.rule, self._starting_index
+            )
 
     def construct(self, data=None):
         """
@@ -587,7 +590,7 @@ class ObjectiveList(IndexedObjective):
 
     def add(self, expr, sense=minimize):
         """Add an objective to the list."""
-        next_idx = len(self._index) + 1
+        next_idx = len(self._index) + self._starting_index
         self._index.add(next_idx)
         ans = self.__setitem__(next_idx, expr)
         if ans is not None:
