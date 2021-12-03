@@ -21,6 +21,7 @@ import textwrap
 from inspect import isclass
 from operator import itemgetter
 from io import StringIO
+from typing import overload
 
 from pyomo.common.collections import Mapping
 from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedClass
@@ -1867,6 +1868,10 @@ class Block(ActiveIndexedComponent):
         else:
             return IndexedBlock.__new__(IndexedBlock)
 
+    # `options` is ignored since it is deprecated
+    @overload
+    def __init__(self, *indexes, rule=..., concrete=..., dense=..., name=..., doc=...): ...
+
     def __init__(self, *args, **kwargs):
         """Constructor"""
         self._suppress_ctypes = set()
@@ -2041,7 +2046,7 @@ class Block(ActiveIndexedComponent):
 
 
 class ScalarBlock(_BlockData, Block):
-
+    
     def __init__(self, *args, **kwds):
         _BlockData.__init__(self, component=self)
         Block.__init__(self, *args, **kwds)
