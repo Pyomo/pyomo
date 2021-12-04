@@ -187,7 +187,8 @@ class TestPyomoUnit(unittest.TestCase):
         self.assertEqual('dimensionless', str(dless))
 
 
-    def _get_check_units_ok(self, x, pyomo_units_container, str_check=None, expected_type=None):
+    def _get_check_units_ok(self, x, pyomo_units_container, str_check=None,
+                            expected_type=None):
         if expected_type is not None:
             self.assertEqual(expected_type, type(x))
 
@@ -198,7 +199,9 @@ class TestPyomoUnit(unittest.TestCase):
             # if str_check is None, then we expect the units to be None
             self.assertIsNone(pyomo_units_container.get_units(x))
 
-    def _get_check_units_fail(self, x, pyomo_units_container, expected_type=None, expected_error=InconsistentUnitsError):
+    def _get_check_units_fail(self, x, pyomo_units_container,
+                              expected_type=None,
+                              expected_error=InconsistentUnitsError):
         if expected_type is not None:
             self.assertEqual(expected_type, type(x))
 
@@ -269,8 +272,10 @@ class TestPyomoUnit(unittest.TestCase):
         # I don't think that there are combinations that can "fail" for products
 
         # test PowExpression, NPV_PowExpression
-        # ToDo: fix the str representation to combine the powers or the expression system
-        self._get_check_units_ok((model.x*kg**2)**3, uc, 'kg**6', EXPR.PowExpression) # would want this to be kg**6
+        self._get_check_units_ok(kg**2, uc, 'kg**2', EXPR.NPV_PowExpression)
+        self._get_check_units_ok(model.p**model.p, uc, 'None', EXPR.NPV_PowExpression)
+        self._get_check_units_ok(kg**model.p, uc, 'kg**42', EXPR.NPV_PowExpression)
+        self._get_check_units_ok((model.x*kg**2)**3, uc, 'kg**6', EXPR.PowExpression)
         self._get_check_units_fail(kg**model.x, uc, EXPR.PowExpression, UnitsError)
         self._get_check_units_fail(model.x**kg, uc, EXPR.PowExpression, UnitsError)
         self._get_check_units_ok(kg**2, uc, 'kg**2', EXPR.NPV_PowExpression)
@@ -298,6 +303,7 @@ class TestPyomoUnit(unittest.TestCase):
         self._get_check_units_ok(log10(3.0*model.p), uc, None, EXPR.NPV_UnaryFunctionExpression)
         self._get_check_units_fail(log10(3.0*kg), uc, EXPR.NPV_UnaryFunctionExpression, UnitsError)
         # sin
+        self._get_check_units_ok(sin(3.0*model.x), uc, None, EXPR.UnaryFunctionExpression)
         self._get_check_units_ok(sin(3.0*model.x*uc.radians), uc, None, EXPR.UnaryFunctionExpression)
         self._get_check_units_fail(sin(3.0*kg*model.x), uc, EXPR.UnaryFunctionExpression, UnitsError)
         self._get_check_units_fail(sin(3.0*kg*model.x*uc.kg), uc, EXPR.UnaryFunctionExpression, UnitsError)
@@ -456,6 +462,12 @@ class TestPyomoUnit(unittest.TestCase):
         linex2 = sum_product(model.vv, {'A': kg, 'B': m, 'C':kg}, index=['A', 'B', 'C'])
         self._get_check_units_fail(linex2, uc, EXPR.LinearExpression)
 
+    def test_bad_units(self):
+        uc = units
+        with self.assertRaisesRegex(
+                AttributeError, "Attribute unknown_bogus_unit not found."):
+            uc.unknown_bogus_unit
+
     def test_named_expression(self):
         uc = units
         m = ConcreteModel()
@@ -528,10 +540,16 @@ class TestPyomoUnit(unittest.TestCase):
         u = units
         x = 0.4535923
         expected_lb_value = 1.0
-        actual_lb_value = u.convert_value(num_value=x, from_units=u.kg, to_units=u.lb)
+        actual_lb_value = u.convert_value(
+            num_value=x, from_units=u.kg, to_units=u.lb)
         self.assertAlmostEqual(expected_lb_value, actual_lb_value, places=5)
-        actual_lb_value = u.convert_value(num_value=value(x*u.kg), from_units=u.kg, to_units=u.lb)
+        actual_lb_value = u.convert_value(
+            num_value=value(x*u.kg), from_units=u.kg, to_units=u.lb)
         self.assertAlmostEqual(expected_lb_value, actual_lb_value, places=5)
+
+        src = 5
+        ans = u.convert_value(src, u.m/u.s, u.m/u.s)
+        self.assertIs(src, ans)
 
         with self.assertRaises(UnitsError):
             # cannot convert from meters to pounds
