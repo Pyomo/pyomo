@@ -2144,7 +2144,7 @@ class FIM_result:
             self.status = self.result.solver.status
             print('solver status:', self.result.solver.status)
             
-    def subset(self, measurement_subset):
+    #def subset(self, measurement_subset):
         ''' Create new FIM_result object corresponding to provided measurement_subset.
         
         This requires that measurement_subset is a true subset of the original measurement object.
@@ -2165,7 +2165,7 @@ class FIM_result:
         # Copy any "settings" from self into new FIM_result
         # return FIM_result(...)
     
-    def __split_jacobian(self, measurement_subset):
+    #def __split_jacobian(self, measurement_subset):
         
 
 
