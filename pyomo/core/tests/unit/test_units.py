@@ -160,8 +160,12 @@ class TestPyomoUnit(unittest.TestCase):
         self.assertEqual(kg.to_string(), 'kg')
         # ToDo: is this really the correct behavior for verbose?
         self.assertEqual(kg.to_string(verbose=True), 'kg')
-        self.assertEqual(kg.to_string(), 'kg')
-        self.assertEqual(kg.to_string(), 'kg')
+        self.assertEqual((kg/uc.s).to_string(), 'kg/s')
+        self.assertEqual((kg*uc.m**2/uc.s).to_string(), 'kg*m**2/s')
+
+        m.v = Var(initialize=3, units=uc.J)
+        e = uc.convert(m.v, uc.g*uc.m**2/uc.s**2)
+        self.assertEqual(e.to_string(), '1000.0*(g*m**2/J/s**2)*v')
 
         # check __nonzero__ / __bool__
         with self.assertRaisesRegex(

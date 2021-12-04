@@ -360,11 +360,11 @@ class _PyomoUnit(NumericValue):
         : bool
            A string representation for the expression tree.
         """
-        if len(self._pint_unit.dimensionality) > 1 or any(
-                i < 0 for i in self._pint_unit.dimensionality.values()):
-            return "("+str(self)+")"
+        _str = str(self)
+        if any(map(_str.__contains__, ' */')):
+            return "(" + _str + ")"
         else:
-            return str(self)
+            return _str
 
     def __call__(self, exception=True):
         """Unit is treated as a constant value, and this method always returns 1.0
