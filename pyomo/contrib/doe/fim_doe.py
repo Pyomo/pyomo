@@ -556,9 +556,9 @@ class DesignOfExperiments:
             else:
                 prior_in_use = specified_prior
 
-            jacobian_split = Jac_splitter(self.param_name, self.measure, jaco_information=jac, prior_FIM=prior_in_use,
-                                          scale_constant_value=self.scale_constant_value)
-            FIM_analysis = FIM_result(self.param_name, self.measure, jacobian_split,
+            #jacobian_split = Jac_splitter(self.param_name, self.measure, jaco_information=jac, prior_FIM=prior_in_use,
+            #                              scale_constant_value=self.scale_constant_value)
+            FIM_analysis = FIM_result(self.param_name, self.measure, jacobian_info=None, all_jacobian_info=jac,
                                       prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
             # Store the Jacobian information for access by users
@@ -569,7 +569,7 @@ class DesignOfExperiments:
                 FIM_analysis.build_time = sum(time_allbuild)
                 FIM_analysis.solve_time = sum(time_allsolve)
 
-            return FIM_analysis, jacobian_split
+            return FIM_analysis
 
 
         elif self.mode in ['sequential_sipopt', 'sequential_kaug']:
@@ -1926,7 +1926,7 @@ class Jac_splitter:
 
 
 class FIM_result:
-    def __init__(self, para_name, measure_object, jacobian_splitter, prior_FIM=None, store_FIM=None, scale_constant_value=1, max_condition_number=1.0E12,
+    def __init__(self, para_name, measure_object, jacobian_info=None, all_jacobian_info=None, prior_FIM=None, store_FIM=None, scale_constant_value=1, max_condition_number=1.0E12,
                  verbose=True):
         '''
         Analyze the FIM result for a single run
@@ -1935,7 +1935,7 @@ class FIM_result:
         -----------
         para_name: parameter names
         measure_object: measurement information object
-        jacobian_splitter: the jacobian splitter class
+        jacobian_info: the jacobian for this measurement object
         prior_FIM: if there's prior FIM to be added
         store_FIM: if storing the FIM in a .csv, give the file name here as a string, '**.csv' or '**.txt'.
         scale_constant_value: the constant value used to scale the sensitivity
@@ -1948,7 +1948,11 @@ class FIM_result:
         self.measurement_timeset = measure_object.flatten_measure_timeset
         self.flatten_all_measure = measure_object.flatten_measure_name
 
-        self.jaco_information = jacobian_splitter.jac_split(measure_object)
+        if jacobian_info is None:
+            self.jaco_information = all_jacobian_info
+        else:
+            self.jaco_information = jacobian_info
+        self.all_jacobian_info = all_jacobian_info
         print('Splitted jacobian:', self.jaco_information)
 
         self.prior_FIM = prior_FIM
@@ -2016,6 +2020,80 @@ class FIM_result:
         # if given store file name, store the FIM
         if (self.store_FIM is not None):
             self.__store_FIM()
+
+    def subset(self, measurement_subset):
+        ''' Create new FIM_result object corresponding to provided measurement_subset.
+    
+        This requires that measurement_subset is a true subset of the original measurement object.
+    
+        Arguments:
+            measurement_subset: Instance of Measurements class
+    
+        Returns:
+            new_result: New instance of FIM_result
+    
+        '''
+
+        # Check that measurement_subset is a valid subset of self.measurement
+
+        # Split Jacobian (should already be 3D)
+        small_jac = self.__split_jacobian(measurement_subset)
+
+        FIM_subclass = FIM_result(self.para_name, measurement_subset, jacobian_info=small_jac, all_jacobian_info=self.all_jacobian_info, prior_FIM=self.prior_FIM, store_FIM=self.store_FIM, scale_constant_value=self.scale_constant_value, max_condition_number=self.max_condition_number)
+
+        # Copy any "settings" from self into new FIM_result
+        return FIM_subclass
+
+    def __split_jacobian(self, measurement_subset):
+        '''
+        Split jacobian
+        Args:
+            measure_subclass: the class of the measurement subsets
+
+        Returns:
+            jaco_info: splitted Jacobian
+        '''
+        # create a dict for FIM. It has the same keys as the Jacobian dict.
+        jaco_info = {}
+        ## split jacobian if needed
+        # flatten measurement variables needed for this calculation
+        #jaco_involved = measure_subclass.measurement_all_info
+        # convert the form of jacobian for split
+        jaco_3D = self.__jac_reform_3D(self.all_jacobian_info)
+
+        involved_flatten_index = measurement_subset.flatten_measure_name
+        print('involved flatten name:', involved_flatten_index)
+
+        # reorganize the jacobian subset with the same form of the jacobian
+        # loop over parameters
+        for p, par in enumerate(self.para_name):
+            jaco_info[par] = []
+            # loop over flatten measurements
+            for n, nam in enumerate(involved_flatten_index):
+                if nam in self.flatten_all_measure:
+                    print('get :', nam)
+                    n_all_measure = self.flatten_all_measure.index(nam)
+                    # loop over time
+                    for d in range(len(jaco_3D[n_all_measure, p, :])):
+                        jaco_info[par].append(jaco_3D[n_all_measure, p, d])
+        print('jaco now:', jaco_info)
+        return jaco_info
+
+    def __jac_reform_3D(self, jac_original):
+        '''
+        Reform the Jacobian returned by __finite_calculation() to be a 3D numpy array, [measurements, parameters, time]
+        '''
+        # 3-D array form of jacobian [measurements, parameters, time]
+        self.measure_timeset = list(self.measurement_timeset.values())[0]
+        no_time = len(self.measure_timeset)
+        jac_3Darray = np.zeros((len(self.flatten_all_measure), len(self.para_name), no_time))
+        # reorganize the matrix
+        for m, mname in enumerate(self.flatten_all_measure):
+            for p, para in enumerate(self.para_name):
+                for t, tim in enumerate(self.measure_timeset):
+                    jac_3Darray[m, p, t] = jac_original[para][m * no_time + t]
+
+        return jac_3Darray
 
 
     def __print_FIM_info(self, FIM, dv_set=None):
@@ -2144,33 +2222,11 @@ class FIM_result:
             self.status = self.result.solver.status
             print('solver status:', self.result.solver.status)
             
-    #def subset(self, measurement_subset):
-        ''' Create new FIM_result object corresponding to provided measurement_subset.
-        
-        This requires that measurement_subset is a true subset of the original measurement object.
-        
-        Arguments:
-            measurement_subset: Instance of Measurements class
-        
-        Returns:
-            new_result: New instance of FIM_result
-        
-        '''
-        
-        # Check that measurement_subset is a valid subset of self.measurement
-        
-        # Split Jacobian (should already be 3D)
-        # small_jac = self.__split_jacobian(measurement_subset)
-        
-        # Copy any "settings" from self into new FIM_result
-        # return FIM_result(...)
-    
-    #def __split_jacobian(self, measurement_subset):
+
         
 
 
 class FIM_result_old:
-    # going to be deleted. Keep for now.
     def __init__(self, para_name, measure_object, prior_FIM=None, store_FIM=None, scale_constant_value=1, max_condition_number=1.0E12,
                  verbose=True):
         '''
@@ -2197,6 +2253,7 @@ class FIM_result_old:
         self.fim_scale_constant_value = scale_constant_value ** 2
         self.max_condition_number = max_condition_number
         self.verbose = verbose
+
 
     def calculate_FIM(self, jaco_information, dv_values, jaco_involved=None, result=None):
         '''
