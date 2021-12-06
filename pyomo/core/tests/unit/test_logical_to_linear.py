@@ -15,10 +15,10 @@ import logging
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.core.plugins.transform.logical_to_linear import \
     update_boolean_vars_from_binary
-from pyomo.environ import ( ConcreteModel, BooleanVar, LogicalConstraint, lor,
-                            TransformationFactory, RangeSet, Var, Constraint,
-                            ComponentMap, value, BooleanSet, atleast, atmost,
-                            exactly, Block, Binary)
+from pyomo.environ import (
+    ConcreteModel, BooleanVar, LogicalConstraint, lor, TransformationFactory,
+    RangeSet, Var, Constraint, ComponentMap, value, BooleanSet, atleast, atmost,
+    exactly, Block, Binary, LogicalConstraintList)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.repn import generate_standard_repn
 from io import StringIO
@@ -79,7 +79,7 @@ def _constrs_contained_within(test_case, test_constr_tuples, constraint_list):
                 found_match = True
                 break
         test_case.assertTrue(
-            found_match, 
+            found_match,
             "{} <= {} <= {} was not found in constraint list.".format(
                 test_lower, test_body, test_upper))
 
@@ -108,7 +108,7 @@ class TestAtomicTransformations(unittest.TestCase):
 
     def test_constant_True(self):
         m = ConcreteModel()
-        with self.assertRaisesRegex(ValueError, 
+        with self.assertRaisesRegex(ValueError,
                                     "LogicalConstraint 'p' is always True."):
             m.p = LogicalConstraint(expr=True)
             TransformationFactory('core.logical_to_linear').apply_to(m)
@@ -119,7 +119,14 @@ class TestAtomicTransformations(unittest.TestCase):
         m.p = LogicalConstraint()
         TransformationFactory('core.logical_to_linear').apply_to(m)
         self.assertIsNone(m.component('logic_to_linear'))
+        self.assertFalse(m.p.active)
 
+    def test_deactivate_empty_logical_constraint_container(self):
+        m = ConcreteModel()
+        m.propositions = LogicalConstraintList()
+        TransformationFactory('core.logical_to_linear').apply_to(m)
+        self.assertIsNone(m.component('logic_to_linear'))
+        self.assertFalse(m.propositions.active)
 
 @unittest.skipUnless(sympy_available, "Sympy not available")
 class TestLogicalToLinearTransformation(unittest.TestCase):
@@ -364,7 +371,7 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
         m.b = Block()
         m.b.s = RangeSet(3)
         m.b.Y = BooleanVar(m.b.s)
-        m.b.p = LogicalConstraint(expr=m.b.Y[1].implies(lor(m.b.Y[2], 
+        m.b.p = LogicalConstraint(expr=m.b.Y[1].implies(lor(m.b.Y[2],
                                                             m.b.Y[3])))
         TransformationFactory('core.logical_to_linear').apply_to(m)
 
@@ -389,7 +396,7 @@ class TestLogicalToLinearTransformation(unittest.TestCase):
             ], m.b.logic_to_linear.transformed_constraints)
 
     def make_nested_block_model(self):
-        """For the next two tests: Has BooleanVar on model, but 
+        """For the next two tests: Has BooleanVar on model, but
         LogicalConstraints on a Block and a Block nested on that Block."""
         m = ConcreteModel()
         m.b = Block()
