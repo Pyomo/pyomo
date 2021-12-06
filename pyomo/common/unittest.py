@@ -40,11 +40,27 @@ from unittest import mock
 def _defaultFormatter(msg, default):
     return msg or default
 
+def _floatOrCall(val):
+    """Cast the value to float, if that fails call it and then cast.
+
+    This is an "augmented" version of float() to better support
+    integration with Pyomo NumericValue objects: if the initial cast to
+    float fails by throwing a TypeError (as non-constant NumericValue
+    objects will), then it falls back on calling the object and
+    returning that value cast to float.
+
+    """
+    try:
+        return float(val)
+    except TypeError:
+        return float(val())
+
 def assertStructuredAlmostEqual(first, second,
                                 places=None, msg=None, delta=None,
                                 reltol=None, abstol=None,
                                 allow_second_superset=False,
-                                item_callback=float, exception=ValueError,
+                                item_callback=_floatOrCall,
+                                exception=ValueError,
                                 formatter=_defaultFormatter):
     """Test that first and second are equal up to a tolerance
 
@@ -157,6 +173,7 @@ def _assertStructuredAlmostEqual(first, second,
     """Recursive implementation of assertStructuredAlmostEqual"""
 
     args = (first, second)
+    f, s = args
     if all(isinstance(_, Mapping) for _ in args):
         if exact and len(first) != len(second):
             raise exception(
@@ -226,11 +243,17 @@ def _assertStructuredAlmostEqual(first, second,
         except:
             pass
 
-    raise exception(
-        "%s !~= %s" % (
-            _unittest.case.safe_repr(first),
-            _unittest.case.safe_repr(second),
-        ))
+    msg = "%s !~= %s" % (
+        _unittest.case.safe_repr(first),
+        _unittest.case.safe_repr(second),
+    )
+    if f is not first or s is not second:
+        msg = "%s !~= %s (%s)" % (
+            _unittest.case.safe_repr(f),
+            _unittest.case.safe_repr(s),
+            msg,
+        )
+    raise exception(msg)
 
 
 def _category_to_tuple(_cat):
@@ -509,7 +532,7 @@ class TestCase(_unittest.TestCase):
                                     places=None, msg=None, delta=None,
                                     reltol=None, abstol=None,
                                     allow_second_superset=False,
-                                    item_callback=float):
+                                    item_callback=_floatOrCall):
         assertStructuredAlmostEqual(
             first=first,
             second=second,
@@ -561,16 +584,14 @@ def buildParser():
         action='store_true',
         dest='dryrun',
         help='Dry run: collect but do not execute the tests')
+    parser.add_argument('--show-log',
+        action='store_true',
+        dest='showlog',
+        help='Turn off log capture and allow warnings/deprecations to show.')
     return parser
 
-
-def runtests(options):
-
-    from pyomo.common.fileutils import PYOMO_ROOT_DIR as basedir, Executable
-    env = os.environ.copy()
-    os.chdir(basedir)
-
-    print("Running tests in directory %s" % (basedir,))
+def build_cmd(options, unknown, env):
+    from pyomo.common.fileutils import Executable
 
     if sys.platform.startswith('win'):
         binDir = os.path.join(sys.exec_prefix, 'Scripts')
@@ -602,10 +623,14 @@ def runtests(options):
         cmd.append('-x')
     if options.dryrun:
         cmd.append('--collect-only')
-
     if options.xunit:
         cmd.append('--with-xunit')
         cmd.append('--xunit-file=TEST-pyomo.xml')
+    if options.showlog:
+        cmd.append('--nologcapture')
+        cmd.append('--nocapture')
+    if unknown:
+        cmd.extend(unknown)
 
     attr = []
     _with_performance = False
@@ -658,6 +683,19 @@ def runtests(options):
         env['NOSE_WITH_FORCED_GC'] = '1'
 
     cmd.extend(options.targets)
+
+    return cmd
+
+def runtests(parser):
+
+    from pyomo.common.fileutils import PYOMO_ROOT_DIR as basedir
+    env = os.environ.copy()
+    os.chdir(basedir)
+
+    options, unknown = parser.parse_known_args()
+
+    print("Running tests in directory %s" % (basedir,))
+    cmd = build_cmd(options, unknown, env)
     print(cmd)
     print("Running...\n    %s\n" % (
             ' '.join( (x if ' ' not in x else '"'+x+'"') for x in cmd ), ))
@@ -669,5 +707,4 @@ def runtests(options):
 
 if __name__ == '__main__':
     parser = buildParser()
-    options = parser.parse_args()
-    sys.exit(runtests(options))
+    sys.exit(runtests(parser))

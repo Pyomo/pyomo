@@ -11,7 +11,7 @@
 """Iteration loop for MindtPy."""
 from __future__ import division
 import logging
-from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution
+from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution, copy_var_list_values_from_solution_pool
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 
 from pyomo.contrib.mindtpy.mip_solve import solve_main, handle_main_optimal, handle_main_infeasible, handle_main_other_conditions, handle_regularization_main_tc
@@ -23,6 +23,8 @@ from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt import SolverFactory
 from pyomo.common.dependencies import attempt_import
 from pyomo.contrib.gdpopt.util import copy_var_list_values
+from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
+from operator import itemgetter
 
 tabu_list, tabu_list_available = attempt_import(
     'pyomo.contrib.mindtpy.tabu_list')
@@ -97,7 +99,6 @@ def MindtPy_iteration_loop(solve_data, config):
                     solve_data, config)
                 handle_nlp_subproblem_tc(
                     fixed_nlp, fixed_nlp_result, solve_data, config)
-
         if algorithm_should_terminate(solve_data, config, check_cycling=True):
             last_iter_cuts = False
             break
@@ -105,17 +106,74 @@ def MindtPy_iteration_loop(solve_data, config):
         if not config.single_tree and config.strategy != 'ECP':  # if we don't use lazy callback, i.e. LP_NLP
             # Solve NLP subproblem
             # The constraint linearization happens in the handlers
-            fixed_nlp, fixed_nlp_result = solve_subproblem(solve_data, config)
-            handle_nlp_subproblem_tc(
-                fixed_nlp, fixed_nlp_result, solve_data, config)
+            if not config.solution_pool:
+                fixed_nlp, fixed_nlp_result = solve_subproblem(
+                    solve_data, config)
+                handle_nlp_subproblem_tc(
+                    fixed_nlp, fixed_nlp_result, solve_data, config)
 
-            # Call the NLP post-solve callback
-            with time_code(solve_data.timing, 'Call after subproblem solve'):
-                config.call_after_subproblem_solve(fixed_nlp, solve_data)
+                # Call the NLP post-solve callback
+                with time_code(solve_data.timing, 'Call after subproblem solve'):
+                    config.call_after_subproblem_solve(fixed_nlp, solve_data)
 
-        if algorithm_should_terminate(solve_data, config, check_cycling=False):
-            last_iter_cuts = True
-            break
+                if algorithm_should_terminate(solve_data, config, check_cycling=False):
+                    last_iter_cuts = True
+                    break
+            else:
+                if config.mip_solver == 'cplex_persistent':
+                    solution_pool_names = main_mip_results._solver_model.solution.pool.get_names()
+                elif config.mip_solver == 'gurobi_persistent':
+                    solution_pool_names = list(
+                        range(main_mip_results._solver_model.SolCount))
+                # list to store the name and objective value of the solutions in the solution pool
+                solution_name_obj = []
+                for name in solution_pool_names:
+                    if config.mip_solver == 'cplex_persistent':
+                        obj = main_mip_results._solver_model.solution.pool.get_objective_value(
+                            name)
+                    elif config.mip_solver == 'gurobi_persistent':
+                        main_mip_results._solver_model.setParam(
+                            gurobipy.GRB.Param.SolutionNumber, name)
+                        obj = main_mip_results._solver_model.PoolObjVal
+                    solution_name_obj.append([name, obj])
+                solution_name_obj.sort(
+                    key=itemgetter(1), reverse=solve_data.objective_sense == maximize)
+                counter = 0
+                for name, _ in solution_name_obj:
+                    # the optimal solution of the main problem has been added to integer_list above
+                    # so we should skip checking cycling for the first solution in the solution pool
+                    if counter >= 1:
+                        copy_var_list_values_from_solution_pool(solve_data.mip.MindtPy_utils.variable_list,
+                                                                solve_data.working_model.MindtPy_utils.variable_list,
+                                                                config, solver_model=main_mip_results._solver_model,
+                                                                var_map=main_mip_results._pyomo_var_to_solver_var_map,
+                                                                solution_name=name)
+                        solve_data.curr_int_sol = get_integer_solution(
+                            solve_data.working_model)
+                        if solve_data.curr_int_sol in set(solve_data.integer_list):
+                            config.logger.info(
+                                'The same combination has been explored and will be skipped here.')
+                            continue
+                        else:
+                            solve_data.integer_list.append(
+                                solve_data.curr_int_sol)
+                    counter += 1
+                    fixed_nlp, fixed_nlp_result = solve_subproblem(
+                        solve_data, config)
+                    handle_nlp_subproblem_tc(
+                        fixed_nlp, fixed_nlp_result, solve_data, config)
+
+                    # Call the NLP post-solve callback
+                    with time_code(solve_data.timing, 'Call after subproblem solve'):
+                        config.call_after_subproblem_solve(
+                            fixed_nlp, solve_data)
+
+                    if algorithm_should_terminate(solve_data, config, check_cycling=False):
+                        last_iter_cuts = True
+                        break
+
+                    if counter >= config.num_solution_iteration:
+                        break
 
         if config.strategy == 'ECP':
             add_ecp_cuts(solve_data.mip, solve_data, config)
@@ -133,7 +191,7 @@ def MindtPy_iteration_loop(solve_data, config):
         #     # bound does not improve before switching to OA
         #     max_nonimprove_iter = 5
         #     making_progress = True
-        #     # TODO-romeo Unneccesary for OA and ROA, right?
+        #     # TODO-romeo Unnecessary for OA and ROA, right?
         #     for i in range(1, max_nonimprove_iter + 1):
         #         try:
         #             if (sign_adjust * log[-i]

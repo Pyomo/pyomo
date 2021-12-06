@@ -900,6 +900,21 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
                 "with a non-integer step"):
             RangeSet(0,None,0.5)
 
+        with LoggingIntercept() as LOG:
+            m = ConcreteModel()
+            m.p = Param(initialize=5, mutable=False)
+            m.I = RangeSet(0, m.p)
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(RangeSet(0,5,1), m.I)
+
+        with LoggingIntercept() as LOG:
+            m = ConcreteModel()
+            m.p = Param(initialize=5, mutable=True)
+            m.I = RangeSet(0, m.p)
+        self.assertIn("Constructing RangeSet 'I' from non-constant data",
+                      LOG.getvalue())
+        self.assertEqual(RangeSet(0,5,1), m.I)
+
         class _AlmostNumeric(object):
             def __init__(self, val):
                 self.val = val
@@ -3564,7 +3579,7 @@ class TestSet(unittest.TestCase):
         self.assertEqual(m.I.dimen, 1)
 
         m = ConcreteModel()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 ValueError, 'Set rule or initializer returned None'):
             m.I = Set(initialize=lambda m: None, dimen=2)
         self.assertTrue(m.I._init_values.constant())

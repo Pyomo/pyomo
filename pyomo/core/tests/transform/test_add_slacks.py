@@ -87,7 +87,6 @@ class TestAddSlacks(unittest.TestCase):
         
         self.assertIsNone(cons.lower)
         self.assertEqual(cons.upper, 5)
-        
         self.assertEqual(cons.body.nargs(), 2)
 
         self.assertIs(cons.body.arg(0), m.x)
@@ -184,6 +183,12 @@ class TestAddSlacks(unittest.TestCase):
         # cons.body is a ScalarVar
         self.assertIs(cons.body, m.y)
 
+    def checkTargetSlackVar(self, transBlock):
+        self.assertIsNone(transBlock.component("_slack_minus_rule2"))
+        self.assertIsNone(transBlock.component("_slack_plus_rule2"))
+        self.assertFalse(hasattr(transBlock, "_slack_minus_rule3"))
+        self.assertIsInstance(transBlock.component("_slack_plus_rule3"), Var)
+
     def checkTargetSlackVars(self, transBlock):
         self.assertIsInstance(transBlock.component("_slack_minus_rule1"), Var)
         self.assertFalse(hasattr(transBlock, "_slack_plus_rule1"))
@@ -253,6 +258,11 @@ class TestAddSlacks(unittest.TestCase):
         self.checkRule1(m2)
         self.checkRule3(m2)
 
+    def checkTargetObj(self, m):
+        transBlock = m._core_add_slack_variables
+        obj = transBlock.component("_slack_objective")
+        self.assertIs(obj.expr, transBlock._slack_plus_rule3)
+
     def checkTargetsObj(self, m):
         transBlock = m._core_add_slack_variables
         obj = transBlock.component("_slack_objective")
@@ -311,6 +321,28 @@ class TestAddSlacks(unittest.TestCase):
             targets=[m.rule1, m.x]
             )
 
+    def test_deprecation_warning_for_cuid_target(self):
+        m = self.makeModel()
+        out = StringIO()
+        with LoggingIntercept(out, 'pyomo.core'):
+            TransformationFactory('core.add_slack_variables').apply_to(
+                m,
+                targets=ComponentUID(m.rule3))
+        self.assertRegex(out.getvalue(),
+                                 "DEPRECATED: In future releases ComponentUID "
+                                 "targets will no longer be\nsupported in the "
+                                 "core.add_slack_variables transformation. "
+                                 "Specify\ntargets as a Constraint or list of "
+                                 "Constraints.*")
+        
+        # make sure that it still worked though
+        self.checkNonTargetCons(m)
+        self.checkRule3(m)
+        self.assertFalse(m.obj.active)
+        self.checkTargetObj(m)
+        transBlock = m.component("_core_add_slack_variables")
+        self.checkTargetSlackVar(transBlock)
+
     def test_deprecation_warning_for_cuid_targets(self):
         m = self.makeModel()
         out = StringIO()
@@ -318,7 +350,7 @@ class TestAddSlacks(unittest.TestCase):
             TransformationFactory('core.add_slack_variables').apply_to(
                 m,
                 targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
-        self.assertRegex(out.getvalue(), 
+        self.assertRegex(out.getvalue(),
                                  "DEPRECATED: In future releases ComponentUID "
                                  "targets will no longer be\nsupported in the "
                                  "core.add_slack_variables transformation. "

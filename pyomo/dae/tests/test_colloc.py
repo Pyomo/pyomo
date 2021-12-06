@@ -75,6 +75,7 @@ class TestCollocation(unittest.TestCase):
 
         for idx, val in enumerate(list(m.t)):
             self.assertAlmostEqual(val, expected_disc_points[idx])
+            self.assertTrue(type(val) in [float, int])
 
         self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
         self.assertTrue(m._pyomo_dae_reclassified_derivativevars[0] is m.dv1)
@@ -174,6 +175,7 @@ class TestCollocation(unittest.TestCase):
 
         for idx, val in enumerate(list(m.t)):
             self.assertAlmostEqual(val, expected_disc_points[idx])
+            self.assertTrue(type(val) in [float, int])
 
         self.assertTrue(hasattr(m, '_pyomo_dae_reclassified_derivativevars'))
         self.assertTrue(m.dv1 in m._pyomo_dae_reclassified_derivativevars)
