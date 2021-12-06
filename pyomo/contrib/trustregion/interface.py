@@ -58,10 +58,9 @@ class TRFInterface(object):
     def __init__(self, model, ext_fcn_surrogate_map_rule, config):
         self.original_model = model
         self.config = config
-        print(type(model))
-        self.model = model.clone()
+        self.model = self.original_model.clone()
         self.data = Block()
-        self.model.add_component(unique_component_name(model, 'trf_data'),
+        self.model.add_component(unique_component_name(self.model, 'trf_data'),
                                  self.data)
         self.basis_expression_rule = ext_fcn_surrogate_map_rule
         self.efSet = None
@@ -96,7 +95,7 @@ class TRFInterface(object):
         new_expr = self.replaceEF(expr)
         if new_expr is not expr:
             component.set_value(new_expr)
-            new_output_vars = self.data.ef_outputs[next_ef_id:]
+            new_output_vars = list(self.data.ef_outputs[i+1] for i in range(next_ef_id, len(self.data.ef_outputs)))
             for v in new_output_vars:
                 self.data.basis_expressions[v] = \
                     self.basis_expression_rule(
@@ -108,7 +107,7 @@ class TRFInterface(object):
         """
         self.data.truth_models = ComponentMap()
         self.data.basis_expressions = ComponentMap()
-        self.data.ef_inputs = ComponentMap()
+        self.data.ef_inputs = {}
         self.data.ef_outputs = VarList()
 
         for con in self.model.component_data_objects(Constraint,
@@ -123,9 +122,9 @@ class TRFInterface(object):
                 "TrustRegion only supports models with a single active Objective.")
         self._remove_ef_from_expr(objs[0])
 
-        for v in self.data.ef_outputs:
-            self.data.ef_inputs[v] = \
-                list(identify_variables(self.data.truth_models[v],
+        for i in self.data.ef_outputs:
+            self.data.ef_inputs[i] = \
+                list(identify_variables(self.data.truth_models[self.data.ef_outputs[i]],
                                         include_fixed=False))
 
     def createConstraints(self):
