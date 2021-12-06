@@ -23,13 +23,25 @@ class Measurements:
         self.measurement_all_info = measurement_index_time
         # a list of measurement names
         self.measurement_name = list(measurement_index_time.keys())
-        self.flatten_measurement()
+        # begin flatten
+        self.__name_and_index_generator(self.measurement_all_info)
+        self.__generate_flatten_name(self.name_and_index)
+        self.__generate_flatten_timeset(self.measurement_all_info, self.flatten_measure_name, self.name_and_index)
+        print('All measurements are flattened.')
+        print('Flatten measurement name:', self.flatten_measure_name)
+        print('Flatten measurement timeset:', self.flatten_measure_timeset)
 
 
-    def name_and_index_generator(self, all_info):
+    def __name_and_index_generator(self, all_info):
         '''
         Generate a dictionary, keys are the variable names, values are the indexes of this variable.
         For e.g., name_and_index = {'C': ['CA', 'CB', 'CC']}
+        Arguments
+        ---------
+        all_info: a dictionary, keys are measurement variable names,
+                values are a dictionary, keys are its extra index, values are its measuring time points
+                values are a list of measuring time point if there is no extra index for this measurement
+            Note: all_info can be the self.measurement_all_info, but does not have to be it.
         '''
         measurement_name = list(all_info.keys())
         # a list of measurement extra indexes
@@ -48,30 +60,10 @@ class Measurements:
         name_and_index = {}
         for i, iname in enumerate(measurement_name):
             name_and_index[iname] = measurement_extra_index[i]
-        return name_and_index
 
-    def flatten_measurement(self):
-        '''Flatten measurements and their extra index (if any)
-        Flattened names consist of their original names in the model and their extra index value, connected with a '_index_'
-        For e.g., for the kinetics example, it should be 'C_index_CA', 'C_index_CB', 'C_index_CC'
-        This function converts all measurements passed for the DOE object
+        self.name_and_index = name_and_index
 
-        Returns
-        ------
-        flatten_name_and_index: a dictionary, keys are the variable names, values are the indexes of this variable.
-        flatten_measure_name: a list of flattened measurement name.
-        flatten_measure_timeset: a dictionary, keys are flattened measurement name, values are lists of measurement timepoints
-        '''
-        # check if measurement variables need to be flattened
-        self.name_and_index = self.name_and_index_generator(self.measurement_all_info)
-        self.flatten_measure_name = self.generate_flatten_name(self.name_and_index)
-        self.flatten_measure_timeset = self.generate_flatten_timeset(self.measurement_all_info,self.flatten_measure_name, self.name_and_index)
-        print('All measurements are flattened.')
-        print('Flatten measurement name:', self.flatten_measure_name)
-        print('Flatten measurement timeset:', self.flatten_measure_timeset)
-        return self.flatten_measure_name, self.flatten_measure_timeset
-
-    def generate_flatten_name(self, measure_name_and_index):
+    def __generate_flatten_name(self, measure_name_and_index):
         '''Generate measurement flattened names
         Parameters
         ----------
@@ -90,9 +82,9 @@ class Measurements:
             else:
                 flatten_names.append(j)
 
-        return flatten_names
+        self.flatten_measure_name = flatten_names
 
-    def generate_flatten_timeset(self, all_info, flatten_measure_name,name_and_index):
+    def __generate_flatten_timeset(self, all_info, flatten_measure_name,name_and_index):
         '''
         Generate flatten variables timeset. Return a dict where keys are the flattened variable names,
         values are a list of measurement time.
@@ -108,24 +100,28 @@ class Measurements:
                 flatten_measure_timeset[i] = all_info[measure_name][measure_index]
             else:
                 flatten_measure_timeset[i] = all_info[i]
-        return flatten_measure_timeset
+        self.flatten_measure_timeset = flatten_measure_timeset
 
-    def check_subset(self,subset):
+    def check_subset(self,subset, throw_error=True):
         '''
         Check if the subset is correctly defined with right name, index and time.
-        TODO: return True or False . Optional argument: throw error = False
         subset: measurement name and index involved in jacobian calculation
+        throw_error: if the given subset is not a subset of the measurement set, throw error message
         '''
-        flatten_subset = self.generate_flatten_name(subset)
-        flatten_name_index = self.name_and_index_generator(subset)
-        flatten_timeset = self.generate_flatten_timeset(subset, flatten_subset, flatten_name_index)
+        flatten_subset = subset.flatten_measure_name
+        flatten_timeset = subset.flatten_measure_timeset
+        # loop over subset measurement names
         for i in flatten_subset:
+            # check if subset measurement names are in the overall measurement names
             if i not in self.flatten_measure_name:
-                raise ValueError('This is not a legal subset of the measurement overall set!')
+                if throw_error:
+                    raise ValueError('This is not a legal subset of the measurement overall set!')
             else:
+                # check if subset measurement timepoints are in the overall measurement timepoints
                 for t in flatten_timeset[i]:
                     if t not in self.flatten_measure_timeset[i]:
-                        raise ValueError('The time of ', t, ' is not included as measurements before.')
+                        if throw_error:
+                            raise ValueError('The time of ', t, ' is not included as measurements before.')
 
 
 class DesignOfExperiments:
@@ -141,7 +137,7 @@ class DesignOfExperiments:
         param_init: a dictionary of parameter names and values. If they are an indexed variable, put the variable name and index, such as 'theta["A1"]'. Note: if sIPOPT is used, parameter shouldn't be indexed. 
         design_variable_timepoints: a dictionary, keys are design variable names, values are its control time points.
                 if this design var is independent of time (constant), set the time to [0]
-        measurement_index_and_time: the measurement object
+        measurement_object: the measurement object
         create_model: a function that returns the model, where:
                       - parameter and design variables are defined as variables
                       - define every state variables dependent on parameters with a scenario index
@@ -170,7 +166,8 @@ class DesignOfExperiments:
 
         # create the measurement information object
         self.measure = measurement_object
-        self.flatten_measure_name, self.flatten_measure_timeset = self.measure.flatten_measurement()
+        self.flatten_measure_name = self.measure.flatten_measure_name
+        self.flatten_measure_timeset = self.measure.flatten_meausre_timeset
         #print('The extra index:', self.measure.measurement_extra_index)
         #print('The extra index name:', self.measure.extra_measure_name)
 
