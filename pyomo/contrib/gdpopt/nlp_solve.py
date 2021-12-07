@@ -472,9 +472,13 @@ def solve_local_subproblem(mip_result, solve_data, config):
     if config.subproblem_presolve:
         try:
             preprocess_subproblem(subprob, config)
-        except InfeasibleConstraintException:
+        except InfeasibleConstraintException as e:
+            config.logger.info("NLP subproblem determined to be infeasible "
+                               "during preprocessing.")
+            config.logger.debug("Message from preprocessing: %s" % e)
             return get_infeasible_result_object(
-                subprob, "Preprocessing determined problem to be infeasible.")
+                subprob,
+                "Preprocessing determined problem to be infeasible.")
 
     if not any(constr.body.polynomial_degree() not in (1, 0) for constr in
                subprob.component_data_objects(Constraint, active=True)):
@@ -540,8 +544,8 @@ def solve_global_subproblem(mip_result, solve_data, config):
     if config.subproblem_presolve:
         try:
             preprocess_subproblem(subprob, config)
-        except InfeasibleConstraintException as e:
-            # FBBT found the problem to be infeasible
+        except InfeasibleConstraintException:
+            # Preprocessing found the problem to be infeasible
             return get_infeasible_result_object(
                 subprob, "Preprocessing determined problem to be infeasible.")
 
