@@ -369,6 +369,7 @@ class DesignOfExperiments:
                     tee_opt=True, scale_nominal_param_value=False, scale_constant_value=1,
                     store_output = None, read_output=None, extract_single_model=None,
                     formula='central', step=0.001,
+                    objective_option='det',jac_initial=None, fim_initial=None,
                     if_Cholesky=False, L_LB=1E-10, L_initial=None):
         '''
         This function solves a square Pyomo model with fixed design variables to compute the FIM.
@@ -431,12 +432,11 @@ class DesignOfExperiments:
 
         # if using simultaneous model
         if (self.mode == 'simultaneous_finite'):
+            
+            self.jac_initial = jac_initial
+            self.fim_initial = fim_initial
             # identify measurements involved in calculation
-            if jac_involved_measurement is not None:
-                self.jac_involved_name = self.measure.generate_flatten_name(jac_involved_measurement)
-
-            else:
-                self.jac_involved_name = self.flatten_measure_name.copy()
+            self.jac_involved_name = self.flatten_measure_name.copy()
 
             # generate the overall measurement time points set, including the measurement time for all measurements
             flatten_timepoint = list(self.flatten_measure_timeset.values())
@@ -974,18 +974,27 @@ class DesignOfExperiments:
 
         Returns
         ------
-        JAC: the overall jacobian
+        JAC: the overall jacobian as a dictionary
         '''
-        no_para = len(self.para_name)
-        if y_set is not None:
-            no_y = len(y_set)
-            no_t = len(t_all_set)
-            JAC = np.ones((no_y, no_para, no_t))
+        no_para = len(self.param_name)
+        #if y_set is not None:
+        #    no_y = len(y_set)
+        #    no_t = len(t_all_set)
+        #    JAC = np.ones((no_y, no_para, no_t))
+        #    for n1, name1 in enumerate(y_set):
+        #        for n2, name2 in enumerate(self.param_name):
+        #            for t, tim in enumerate(t_all_set):
+        #                JAC[n1, n2, t] = value(m.jac[name1, name2, tim])
+                        
+        jac = {}
+        for p in self.param_name: 
+            jac_para = []
             for n1, name1 in enumerate(y_set):
-                for n2, name2 in enumerate(self.para_name):
-                    for t, tim in enumerate(t_all_set):
-                        JAC[n1, n2, t] = value(m.jac[name1, name2, tim])
-        return JAC
+                for t, tim in enumerate(t_all_set):
+                    jac_para.append(value(m.jac[name1, p, tim]))
+            jac[p] = jac_para
+        
+        return jac
 
 
     def generate_sequential_experiments(self, design_values_set, mode='sequential_finite', tee_option=False,
@@ -1470,26 +1479,27 @@ class DesignOfExperiments:
         ### Constraints and Objective function
         m.dC_value = Constraint(m.y_set, m.para_set, m.tmea_set, rule=jac_numerical)
         m.ele_rule = Constraint(m.para_set, m.para_set, rule=calc_FIM)
-        #m.obj.deactivate()
+        
+        m.Obj.deactivate()
 
             # Only giving the objective function when there's Degree of freedom. Make OBJ=0 when it's a square problem, which helps converge.
         if self.optimize:
             # if cholesky, calculating L and evaluate the OBJ with Cholesky decomposition
             if self.Cholesky_option:
                 m.cholesky_cons = Constraint(m.para_set, m.para_set, rule=cholesky_imp)
-                m.obj = Objective(expr=2*sum(log(m.L_ele[j,j]) for j in m.para_set), sense=maximize)
+                m.Obj = Objective(expr=2*sum(log(m.L_ele[j,j]) for j in m.para_set), sense=maximize)
             # if not cholesky but determinant, calculating det and evaluate the OBJ with det 
             elif (self.objective_option=='det'):
                 m.det_rule =  Constraint(rule=det_general)
-                m.obj = Objective(expr=log(m.det), sense=maximize)
+                m.Obj = Objective(expr=log(m.det), sense=maximize)
             # if not determinant or cholesky, calculating the OBJ with trace
             elif (self.objective_option=='trace'):
                 m.trace_rule = Constraint(rule=trace_calc)
-                m.obj = Objective(expr=log(m.trace), sense=maximize)
+                m.Obj = Objective(expr=log(m.trace), sense=maximize)
             elif (self.objective_option=='zero'):
-                m.obj = Objective(expr=0)
+                m.Obj = Objective(expr=0)
         else:
-            m.obj = Objective(expr=0)
+            m.Obj = Objective(expr=0)
 
         return m
 
