@@ -1907,6 +1907,7 @@ class FIM_result:
         para_name: parameter names
         measure_object: measurement information object
         jacobian_info: the jacobian for this measurement object
+        all_jacobian_info: the overall jacobian
         prior_FIM: if there's prior FIM to be added
         store_FIM: if storing the FIM in a .csv, give the file name here as a string, '**.csv' or '**.txt'.
         scale_constant_value: the constant value used to scale the sensitivity
@@ -2002,7 +2003,6 @@ class FIM_result:
     
         Returns:
             new_result: New instance of FIM_result
-    
         '''
 
         # Check that measurement_subset is a valid subset of self.measurement
@@ -2011,9 +2011,9 @@ class FIM_result:
         # Split Jacobian (should already be 3D)
         small_jac = self.__split_jacobian(measurement_subset)
 
+        # create a new subject
         FIM_subclass = FIM_result(self.para_name, measurement_subset, jacobian_info=small_jac, all_jacobian_info=self.all_jacobian_info, prior_FIM=self.prior_FIM, store_FIM=self.store_FIM, scale_constant_value=self.scale_constant_value, max_condition_number=self.max_condition_number)
 
-        # Copy any "settings" from self into new FIM_result
         return FIM_subclass
 
     def __split_jacobian(self, measurement_subset):
@@ -2027,9 +2027,7 @@ class FIM_result:
         '''
         # create a dict for FIM. It has the same keys as the Jacobian dict.
         jaco_info = {}
-        ## split jacobian if needed
-        # flatten measurement variables needed for this calculation
-        #jaco_involved = measure_subclass.measurement_all_info
+
         # convert the form of jacobian for split
         jaco_3D = self.__jac_reform_3D(self.all_jacobian_info)
 
