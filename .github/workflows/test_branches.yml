@@ -697,17 +697,15 @@ jobs:
             cp -v $ARTIFACT/.coverage .coverage-$NAME
         done
         rm -vf .coverage coverage.xml
-        if [ ${{ matrix.TARGET }} == 'linux' ]; then
-          echo "Build: linux/other"
-          echo ""
-          FILES=.coverage-*_other-*
-          coverage combine --debug=dataio $FILES
-          if test ! -e .coverage; then
-              echo "No coverage to upload."
-          else
-              coverage xml || coverage xml -i
-              mv -v coverage.xml coverage-other.xml
-          fi
+        echo "Build: ${{ matrix.TARGET }}/other"
+        echo ""
+        FILES=.coverage-*_other-*
+        coverage combine --debug=dataio $FILES
+        if test ! -e .coverage; then
+            echo "No coverage to upload."
+        else
+            coverage xml || coverage xml -i
+            mv -v coverage.xml coverage-other.xml
         fi
         echo ""
         echo "Build: ${{ matrix.TARGET }}"
