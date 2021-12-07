@@ -207,10 +207,9 @@ class TestFileUtils(unittest.TestCase):
         )
 
     @unittest.skipIf(sys.version_info[:2] < (3, 8)
-                     and platform.mac_ver()[0].startswith('11.'),
+                     and platform.mac_ver()[0] == 10.16,
                      "find_library has known bugs in Big Sur for Python<3.8")
     def test_find_library_system(self):
-        print(sys.version_info, platform.mac_ver())
         # Find a system library (before we muck with the PATH)
         _args = {'cwd':False, 'include_PATH':False, 'pathlist':[]}
         if FileDownloader.get_sysinfo()[0] == 'windows':
