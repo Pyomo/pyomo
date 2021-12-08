@@ -763,6 +763,7 @@ class CPLEXDirect(DirectSolver):
             tokens = re.split('[ \t]+', line.strip())
             if len(tokens) >= 9 and tokens[0] == "MIP" and tokens[1] == "start" and tokens[7] == "objective":
                 self.results.solver.warm_start_objective_value = float(tokens[8].rstrip('.'))
+                break
 
         if _close_log_file:
             _log_file.close()
