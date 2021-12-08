@@ -20,6 +20,7 @@ from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn import generate_standard_repn
+from pyomo.solvers.plugins.solvers.cplex_helpers import get_tree_processing_time, get_root_node_processing_time
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
 from pyomo.core.kernel.objective import minimize, maximize
@@ -185,7 +186,7 @@ class CPLEXDirect(DirectSolver):
             self._solver_model.set_error_stream(*_log_file)
             if self._keepfiles:
                 print("Solver log file: "+self._log_file)
-            
+
             obj_degree = self._objective.expr.polynomial_degree()
             if obj_degree is None or obj_degree > 2:
                 raise DegreeError('CPLEXDirect does not support expressions of degree {0}.'\
@@ -194,21 +195,21 @@ class CPLEXDirect(DirectSolver):
                 quadratic_objective = True
             else:
                 quadratic_objective = False
-            
+
             num_integer_vars = self._solver_model.variables.get_num_integer()
             num_binary_vars = self._solver_model.variables.get_num_binary()
             num_sos = self._solver_model.SOS.get_num()
-            
+
             if self._solver_model.quadratic_constraints.get_num() != 0:
                 quadratic_cons = True
             else:
                 quadratic_cons = False
-            
+
             if (num_integer_vars + num_binary_vars + num_sos) > 0:
                 integer = True
             else:
                 integer = False
-            
+
             if integer:
                 if quadratic_cons:
                     self._solver_model.set_problem_type(self._solver_model.problem_type.MIQCP)
@@ -228,7 +229,7 @@ class CPLEXDirect(DirectSolver):
             # set cplex's mip.tolerances.mipgap
             if self.options.mipgap is not None:
                 self._solver_model.parameters.mip.tolerances.mipgap.set(float(self.options.mipgap))
-            
+
             for key, option in self.options.items():
                 if key == 'mipgap': # handled above
                     continue
@@ -747,12 +748,22 @@ class CPLEXDirect(DirectSolver):
         if self.version() >= (12, 5, 1) and isinstance(self._log_file, six.string_types):
             _log_file = open(self._log_file, 'r')
             _close_log_file = True
+            log_output: str = "".join(_log_file.readlines())
         else:
             _log_file = self._log_file
             _close_log_file = False
+            log_output: str = ""
+
+        # use regular expressions to use multi-line match patterns:
+        self.results.solver.root_node_processing_time = get_root_node_processing_time(
+            log_output=log_output
+        )
+        self.results.solver.tree_processing_time = get_tree_processing_time(
+            log_output=log_output
+        )
 
         mip_start_warning = False
-        for line in _log_file:
+        for line in log_output.split("\n"):
             if (
                     line.startswith('Warning')
                     and re.search(r'No solution found from \d+ MIP starts', line)

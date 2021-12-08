@@ -34,6 +34,7 @@ from pyomo.solvers.mockmip import MockMIP
 from pyomo.core.base import Var, Suffix, active_export_suffix_generator
 from pyomo.core.kernel.suffix import export_suffix_generator
 from pyomo.core.kernel.block import IBlock
+from pyomo.solvers.plugins.solvers.cplex_helpers import get_tree_processing_time, get_root_node_processing_time
 from pyomo.util.components import iter_component
 
 logger = logging.getLogger('pyomo.solvers')
@@ -522,17 +523,12 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         self._gap = None
 
         # use regular expressions to use multi-line match patterns:
-        root_node_processing_time = re.search(
-            r'Root node processing.*:\n\s+Real time\s+=\s+(\d+\.\d+) sec', output
+        self.results.solver.root_node_processing_time = get_root_node_processing_time(
+            log_output=output
         )
-        if root_node_processing_time:
-            results.solver.root_node_processing_time = float(root_node_processing_time.group(1))
-
-        tree_processing_time = re.search(
-            r'(?:Parallel|Sequential).*\n\s+Real time\s+=\s+(\d+\.\d+) sec', output
+        self.results.solver.tree_processing_time = get_tree_processing_time(
+            log_output=output
         )
-        if tree_processing_time:
-            results.solver.tree_processing_time = float(tree_processing_time.group(1))
 
         # Check if a mip start was attempted but failed
         mip_start_warning = re.search(r'Warning:\s+No solution found from \d+ MIP starts', output)
