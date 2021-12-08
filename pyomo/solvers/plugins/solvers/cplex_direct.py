@@ -763,6 +763,7 @@ class CPLEXDirect(DirectSolver):
         )
 
         mip_start_warning = False
+        self.results.solver.n_solutions_found = 0
         for line in log_output.split("\n"):
             if (
                     line.startswith('Warning')
@@ -773,8 +774,8 @@ class CPLEXDirect(DirectSolver):
             tokens = re.split('[ \t]+', line.strip())
             if len(tokens) >= 9 and tokens[0] == "MIP" and tokens[1] == "start" and tokens[7] == "objective":
                 self.results.solver.warm_start_objective_value = float(tokens[8].rstrip('.'))
-            elif len(tokens) >= 5 and tokens[0:2] == ["Solution", "pool:"] and tokens[3] in ["solution", "solutions"] and tokens[4] == "saved.":
-                self.results.solver.n_solutions_found = int(tokens[2])
+            elif line.startswith("Found incumbent of value"):
+                self.results.solver.n_solutions_found = +1
 
         if _close_log_file:
             _log_file.close()
