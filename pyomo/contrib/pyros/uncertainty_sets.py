@@ -100,7 +100,8 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         bounding_model.util = Block() # So that boundedness checks work for Cardinality and FactorModel sets
         bounding_model.uncertain_param_vars = IndexedVar(range(len(config.uncertain_params)), initialize=1)
         for idx, param in enumerate(config.uncertain_params):
-            bounding_model.uncertain_param_vars[idx].value = param.value
+            bounding_model.uncertain_param_vars[idx].set_value(
+                param.value, skip_validation=True)
 
         bounding_model.add_component("uncertainty_set_constraint",
                                      config.uncertainty_set.set_as_constraint(

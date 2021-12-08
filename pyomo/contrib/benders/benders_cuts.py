@@ -248,11 +248,11 @@ class BendersCutGeneratorData(_BlockData):
             for root_var in self.root_vars:
                 if root_var in complicating_vars_map:
                     sub_var = complicating_vars_map[root_var]
-                    sub_var.value = root_var.value
+                    sub_var.set_value(root_var.value, skip_validation=True)
                     new_con = subproblem.fix_complicating_vars.add(sub_var - root_var.value == 0)
                     var_to_con_map[root_var] = new_con
             subproblem.fix_eta = pyo.Constraint(expr=subproblem._eta - root_eta.value == 0)
-            subproblem._eta.value = root_eta.value
+            subproblem._eta.set_value(root_eta.value, skip_validation=True)
 
             subproblem_solver = self.subproblem_solvers[local_subproblem_ndx]
             if subproblem_solver.name not in solver_dual_sign_convention:
