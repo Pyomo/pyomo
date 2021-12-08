@@ -769,12 +769,12 @@ class CPLEXDirect(DirectSolver):
                     and re.search(r'No solution found from \d+ MIP starts', line)
             ):
                 mip_start_warning = True
-                break
 
             tokens = re.split('[ \t]+', line.strip())
             if len(tokens) >= 9 and tokens[0] == "MIP" and tokens[1] == "start" and tokens[7] == "objective":
                 self.results.solver.warm_start_objective_value = float(tokens[8].rstrip('.'))
-                break
+            elif len(tokens) >= 5 and tokens[0:2] == ["Solution", "pool:"] and tokens[3] in ["solution", "solutions"] and tokens[4] == "saved.":
+                self.results.solver.n_solutions_found = int(tokens[2])
 
         if _close_log_file:
             _log_file.close()
