@@ -523,10 +523,10 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         self._gap = None
 
         # use regular expressions to use multi-line match patterns:
-        self.results.solver.root_node_processing_time = get_root_node_processing_time(
+        results.solver.root_node_processing_time = get_root_node_processing_time(
             log_output=output
         )
-        self.results.solver.tree_processing_time = get_tree_processing_time(
+        results.solver.tree_processing_time = get_tree_processing_time(
             log_output=output
         )
 
