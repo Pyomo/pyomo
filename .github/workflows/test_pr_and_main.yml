@@ -747,7 +747,9 @@ jobs:
         flags: ${{ matrix.TARGET }}
 
     - name: Upload other coverage reports
-      if: github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main'
+      if: |
+        hashFiles('coverage-other.xml') != '' &&
+        (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
       uses: codecov/codecov-action@v2
       with:
         files: coverage-other.xml

@@ -729,7 +729,7 @@ jobs:
 
     - name: Upload other coverage reports
       if: |
-        matrix.TARGET  == 'linux' &&
+        hashFiles('coverage-other.xml') != '' &&
         (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
       uses: codecov/codecov-action@v2
       with:
