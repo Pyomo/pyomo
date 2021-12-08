@@ -775,7 +775,7 @@ class CPLEXDirect(DirectSolver):
             if len(tokens) >= 9 and tokens[0] == "MIP" and tokens[1] == "start" and tokens[7] == "objective":
                 self.results.solver.warm_start_objective_value = float(tokens[8].rstrip('.'))
             elif line.startswith("Found incumbent of value"):
-                self.results.solver.n_solutions_found = +1
+                self.results.solver.n_solutions_found += 1
 
         if _close_log_file:
             _log_file.close()
