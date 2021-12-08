@@ -760,6 +760,10 @@ class CPLEXDirect(DirectSolver):
                 mip_start_warning = True
                 break
 
+            tokens = re.split('[ \t]+', line.strip())
+            if len(tokens) >= 9 and tokens[0] == "MIP" and tokens[1] == "start" and tokens[7] == "objective":
+                self.results.solver.warm_start_objective_value = float(tokens[8].rstrip('.'))
+
         if _close_log_file:
             _log_file.close()
 
