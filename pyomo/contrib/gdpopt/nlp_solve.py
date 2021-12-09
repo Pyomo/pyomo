@@ -401,7 +401,7 @@ def solve_local_NLP(mip_var_values, solve_data, config):
         if val is None:
             continue
         if var.is_continuous():
-            var.value = val
+            var.set_value(val, skip_validation=True)
         elif ((fabs(val) > config.integer_tolerance and
                fabs(val - 1) > config.integer_tolerance)):
             raise ValueError(
@@ -413,7 +413,7 @@ def solve_local_NLP(mip_var_values, solve_data, config):
             if config.round_discrete_vars:
                 var.fix(int(round(val)))
             else:
-                var.fix(val)
+                var.fix(val, skip_validation=True)
     TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
 
     nlp_result = solve_NLP(nlp_model, solve_data, config)
@@ -472,9 +472,13 @@ def solve_local_subproblem(mip_result, solve_data, config):
     if config.subproblem_presolve:
         try:
             preprocess_subproblem(subprob, config)
-        except InfeasibleConstraintException:
+        except InfeasibleConstraintException as e:
+            config.logger.info("NLP subproblem determined to be infeasible "
+                               "during preprocessing.")
+            config.logger.debug("Message from preprocessing: %s" % e)
             return get_infeasible_result_object(
-                subprob, "Preprocessing determined problem to be infeasible.")
+                subprob,
+                "Preprocessing determined problem to be infeasible.")
 
     if not any(constr.body.polynomial_degree() not in (1, 0) for constr in
                subprob.component_data_objects(Constraint, active=True)):
@@ -540,8 +544,8 @@ def solve_global_subproblem(mip_result, solve_data, config):
     if config.subproblem_presolve:
         try:
             preprocess_subproblem(subprob, config)
-        except InfeasibleConstraintException as e:
-            # FBBT found the problem to be infeasible
+        except InfeasibleConstraintException:
+            # Preprocessing found the problem to be infeasible
             return get_infeasible_result_object(
                 subprob, "Preprocessing determined problem to be infeasible.")
 

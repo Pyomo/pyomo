@@ -588,7 +588,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         gurobi_vars = [self._pyomo_var_to_solver_var_map[i] for i in vars]
         var_values = self._solver_model.cbGetNodeRel(gurobi_vars)
         for i, v in enumerate(vars):
-            v.value = var_values[i]
+            v.set_value(var_values[i], skip_validation=True)
 
     def cbGetSolution(self, vars):
         """
@@ -601,7 +601,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         gurobi_vars = [self._pyomo_var_to_solver_var_map[i] for i in vars]
         var_values = self._solver_model.cbGetSolution(gurobi_vars)
         for i, v in enumerate(vars):
-            v.value = var_values[i]
+            v.set_value(var_values[i], skip_validation=True)
 
     def cbLazy(self, con):
         """
