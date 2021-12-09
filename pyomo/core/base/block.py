@@ -1871,7 +1871,7 @@ class Block(ActiveIndexedComponent):
     # `options` is ignored since it is deprecated
     @overload
     def __init__(self, *indexes, rule=None, concrete=False, dense=True,
-                 name='Block', doc=None): ...
+                 name=None, doc=None): ...
 
     def __init__(self, *args, **kwargs):
         """Constructor"""
@@ -2047,7 +2047,7 @@ class Block(ActiveIndexedComponent):
 
 
 class ScalarBlock(_BlockData, Block):
-    
+
     def __init__(self, *args, **kwds):
         _BlockData.__init__(self, component=self)
         Block.__init__(self, *args, **kwds)

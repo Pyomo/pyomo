@@ -262,7 +262,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     @overload
     def __init__(self, *indexes, rule=NOTSET, initialize=NOTSET,
                  domain=None, within=None, validate=None, mutable=False, default=NoValue,
-                 initialize_as_dense=False, units=None, name='Param', doc=None): ...
+                 initialize_as_dense=False, units=None, name=None, doc=None): ...
 
     def __init__(self, *args, **kwd):
         _init = self._pop_from_kwargs(

@@ -262,7 +262,7 @@ class Objective(ActiveIndexedComponent):
 
     @overload
     def __init__(self, expr=None, rule=None, sense=minimize,
-                 name='Objective', doc=None): ...
+                 name=None, doc=None): ...
 
     def __init__(self, *args, **kwargs):
         _sense = kwargs.pop('sense', minimize)
