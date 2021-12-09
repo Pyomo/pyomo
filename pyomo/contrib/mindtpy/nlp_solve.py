@@ -67,7 +67,6 @@ def solve_subproblem(solve_data, config):
             # if we don't have to
             rhs = value(c.upper) if c.has_ub() else value(c.lower)
             c_geq = -1 if c.has_ub() else 1
-            # c_leq = 1 if c.has_ub else -1
             try:
                 fixed_nlp.tmp_duals[c] = c_geq * max(
                     0, c_geq*(rhs - value(c.body)))
@@ -80,9 +79,6 @@ def solve_subproblem(solve_data, config):
                     solve_data.initial_var_values):
                 if not nlp_var.fixed and not nlp_var.is_binary():
                     nlp_var.set_value(orig_val, skip_validation=True)
-            # fixed_nlp.tmp_duals[c] = c_leq * max(
-            #     0, c_leq*(value(c.body) - rhs))
-            # TODO: change logic to c_leq based on benchmarking
     try:
         TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
             fixed_nlp, tmp=True, ignore_infeasible=False, tolerance=config.constraint_tolerance)
