@@ -103,7 +103,6 @@ class TestTrustRegionInterface(unittest.TestCase):
 
     def test_remove_ef_from_expr(self):
         model = self.m.clone()
-        
 
     def test_replaceExternalFunctionsWithVariables(self):
         self.interface.replaceExternalFunctionsWithVariables()
