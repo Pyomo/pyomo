@@ -171,8 +171,11 @@ class TRFInterface(object):
             # So this is possible to call
             gradBasis = differentiate(b.basis_expressions[y],
                                       wrt_list=b.ef_inputs[y])
-            # These, however, are external functions
-            gradTruth = self.gradientOfEF(b.truth_models[y],
+            # These, however, are external functions.
+            # TODO JDS: Add function call to ExternalFunction API for 
+            # finding derivatives
+            # Temporary name: evaluatefgh
+            gradTruth = evaluatefgh(b.truth_models[y],
                                           b.ef_inputs[y])
             for j, w in enumerate(b.ef_inputs[y]):
                 b.grad_basis_model_output[i, j] = gradBasis[j]
@@ -186,13 +189,6 @@ class TRFInterface(object):
             current_inputs = [value(input_var) for input_var in self.data.ef_inputs[output_var]]
             current_outputs = value(output_var)
         return current_inputs, current_outputs
-
-    def gradientOfEF(self, ef, inputs):
-        """
-        TODO: Finite difference gradient of an external function
-        """
-        gradient = []
-        return gradient
 
     def calculateFeasibility(self):
         """
