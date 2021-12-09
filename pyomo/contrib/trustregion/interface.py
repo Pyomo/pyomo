@@ -11,7 +11,7 @@
 import logging
 
 from pyomo.common.dependencies import numpy as np
-from pyomo.common.collections import ComponentMap
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import (
     Block, Param, VarList, Constraint,
@@ -21,6 +21,7 @@ from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.expr.visitor import (identify_variables,
                                      ExpressionReplacementVisitor)
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
+from pyomo.core.expr.numvalue import native_types
 from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
 
 
@@ -28,11 +29,23 @@ logger = logging.getLogger('pyomo.contrib.trustregion')
 
 
 class EFReplacement(ExpressionReplacementVisitor):
+    """
+    NOTE: We use an empty substitution map. The EFs to be substituted are
+          identified as part of exitNode.
+    """
     def __init__(self, trfData, efSet):
         super().__init__(descend_into_named_expressions=True,
                          remove_named_expressions=False)
         self.trfData = trfData
         self.efSet = efSet
+
+    def beforeChild(self, node, child, child_idx):
+        # We want to capture all of the variables on the model
+        descend, result = super().beforeChild(node, child, child_idx)
+        # TODO: Make this match whatever identify_variables uses
+        if not descend and result.__class__ not in native_types and result.is_variable_type():
+            self.trfData.all_variables.add(result)
+        return descend, result
 
     def exitNode(self, node, data):
         # This is where the replacement happens
@@ -105,6 +118,7 @@ class TRFInterface(object):
         """
         Triggers the replacement of EFs with variables in expression trees
         """
+        self.data.all_variables = ComponentSet()
         self.data.truth_models = ComponentMap()
         self.data.basis_expressions = ComponentMap()
         self.data.ef_inputs = {}
@@ -117,7 +131,7 @@ class TRFInterface(object):
         objs = list(self.model.component_data_objects(Objective,
                                                       active=True))
         if len(objs) != 1:
-            raise RuntimeError(
+            raise ValueError(
                 "transformForTrustRegion: "
                 "TrustRegion only supports models with a single active Objective.")
         self._remove_ef_from_expr(objs[0])
@@ -181,14 +195,16 @@ class TRFInterface(object):
                 b.grad_basis_model_output[i, j] = gradBasis[j]
                 b.grad_truth_model_output[i, j] = gradTruth[j]
 
-    def getCurrentValues(self):
+    def getCurrentEFValues(self):
         """
         Return current variable values
         """
+        ans = ComponentMap()
         for output_var in self.data.ef_outputs:
             current_inputs = [value(input_var) for input_var in self.data.ef_inputs[output_var]]
             current_outputs = value(output_var)
-        return current_inputs, current_outputs
+            ans[output_var] = (current_inputs, current_outputs)
+        return ans
 
     def calculateFeasibility(self):
         """
@@ -218,8 +234,6 @@ class TRFInterface(object):
         self.createConstraints()
         self.data.basis_constraints.activate()
         result, objective_value, _, _ = self.solveModel()
-        if not result:
-            raise RuntimeError("ERROR: Basis model solve failed.")
         self.data.basis_constraints.deactivate()
         self.updateSurrogateModel()
         feasibility = self.calculateFeasibility()
@@ -233,7 +247,9 @@ class TRFInterface(object):
         This also caches the previous values of the vars, just in case
         we need to access them later if a step is rejected
         """
+        # TODO: Update this for new return type
         self.cached_inputs, self.cached_outputs = self.getCurrentValues()
+        # TODO: need getModelVariables and setModelVariables
         results = self.solver.solve(self.model, keepfiles=self.config.keepfiles,
                                     tee=self.config.tee,
                                     load_solution=self.config.load_solution)
@@ -243,6 +259,7 @@ class TRFInterface(object):
                  TerminationCondition.optimal)):
             self.model.solutions.load_from(results)
             # Find the step size norm between the values
+            # TODO: Update this for new return type
             new_inputs, new_outputs = self.getCurrentValues()
             step_norm = np.linalg.norm(np.concatenate(self.cached_inputs - new_inputs,
                                                       self.cached_outputs - new_outputs),
@@ -251,17 +268,18 @@ class TRFInterface(object):
             for obj in self.model.component_data_objects(Objective, active=True):
                 return True, obj(), step_norm, feasibility
         else:
-            print("Warning: Solver Status: %s" 
-                  % str(results.solver.status))
-            print("Termination Conditions: %s" 
-                  % str(results.solver.termination_condition))
-            return False, 0
+            raise ArithmeticError('EXIT: Model solve failed with status {} and termination'
+                                  ' condition(s) {}.'.format(str(results.solver.status),
+                                                             str(results.solver.termination_condition)))
 
     def rejectStep(self):
         """
         If a step is rejected, we reset the model variables values back
         to their cached state - which we set in solveModel
         """
+        # TODO: Change this to correctly reset the entire state space
+        # TODO: need getModelVariables and setModelVariables
+        # At the very beginning, we need to build a list of ALL vars in the model
         b = self.data
         for i, v in b.ef_outputs.items():
             b.ef_outputs[i].set_value(self.cached_outputs[i])

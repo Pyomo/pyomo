@@ -81,8 +81,6 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
             subopt_flag = False
 
         success, obj_val_k, step_norm_k, feasibility_k = interface.solveModel()
-        if not success:
-            raise Exception('EXIT: Subproblem TRSP_k solve failed.\n')
 
         TRFLogger.newIteration(iteration, feasibility_k, obj_val_k,
                                trust_radius, step_norm_k)
