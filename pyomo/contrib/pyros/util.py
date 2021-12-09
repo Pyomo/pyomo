@@ -233,7 +233,8 @@ def add_bounds_for_uncertain_parameters(model, config):
     bounding_model.util = Block()
     bounding_model.util.uncertain_param_vars = IndexedVar(model.util.uncertain_param_vars.index_set())
     for tup in model.util.uncertain_param_vars.items():
-        bounding_model.util.uncertain_param_vars[tup[0]].value = tup[1].value
+        bounding_model.util.uncertain_param_vars[tup[0]].set_value(
+            tup[1].value, skip_validation=True)
 
     bounding_model.add_component("uncertainty_set_constraint",
                                  config.uncertainty_set.set_as_constraint(
@@ -684,7 +685,7 @@ def add_decision_rule_variables(model_data, config):
                         bounds=bounds,
                         domain=Reals))#bounds=(second_stage_variables[i].lb, second_stage_variables[i].ub)))
             # === For affine drs, the [0]th constant term is initialized to the control variable values, all other terms are initialized to 0
-            getattr(model_data.working_model, "decision_rule_var_" + str(i))[0].value = value(second_stage_variables[i])
+            getattr(model_data.working_model, "decision_rule_var_" + str(i))[0].set_value(value(second_stage_variables[i]), skip_validation=True)
             first_stage_variables.extend(list(getattr(model_data.working_model, "decision_rule_var_" + str(i)).values()))
             decision_rule_vars.append(getattr(model_data.working_model, "decision_rule_var_" + str(i)))
     elif degree == 2 or degree == 3 or degree == 4:
@@ -879,7 +880,7 @@ def load_final_solution(model_data, master_soln, config):
     varMap = list(zip(src_vars, local_vars))
 
     for src, local in varMap:
-        src.value = local.value
+        src.set_value(local.value, skip_validation=True)
 
     return
 

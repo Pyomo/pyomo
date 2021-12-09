@@ -69,4 +69,5 @@ def reinitialize_variables(model, config):
             continue
         val = var.value if var.value is not None else (var.lb + var.ub) / 2
         # apply reinitialization strategy to variable
-        var.value = strategies[config.strategy](val, var.lb, var.ub)
+        var.set_value(strategies[config.strategy](val, var.lb, var.ub),
+                      skip_validation=True)

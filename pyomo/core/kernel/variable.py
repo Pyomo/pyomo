@@ -385,6 +385,9 @@ class variable(IVariable):
     def value(self, value):
         self._value = value
 
+    def set_value(self, value, skip_validation=True):
+        self.value = value
+
     @property
     def fixed(self):
         """The fixed status of the variable"""
