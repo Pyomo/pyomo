@@ -622,21 +622,27 @@ def copy_var_list_values_from_solution_pool(from_list, to_list, config, solver_m
                 solver_model.setParam(
                     gurobipy.GRB.Param.SolutionNumber, solution_name)
                 var_val = var_map[v_from].Xn
+            # NOTE: PEP 2180 changes the var behavior so that domain /
+            # bounds violations no longer generate exceptions (and
+            # instead log warnings).  This means that the following will
+            # always succeed and the ValueError should never be raised.
             v_to.set_value(var_val)
         except ValueError as err:
             err_msg = getattr(err, 'message', str(err))
             rounded_val = int(round(var_val))
             # Check to see if this is just a tolerance issue
-            if ignore_integrality \
-                    and v_to.is_integer():
-                v_to.value = var_val
-            elif v_to.is_integer() and (abs(var_val - rounded_val) <= config.integer_tolerance):
+            if ignore_integrality and v_to.is_integer():
+                v_to.set_value(var_val, skip_validation=True)
+            elif v_to.is_integer() and (
+                    abs(var_val - rounded_val) <= config.integer_tolerance):
                 v_to.set_value(rounded_val)
             elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
                 v_to.set_value(0)
             else:
                 config.logger.error(
-                    'Unknown validation domain error setting variable %s', (v_to.name,))
+                    'Unknown validation domain error setting variable %s' %
+                    (v_to.name,)
+                )
                 raise
 
 

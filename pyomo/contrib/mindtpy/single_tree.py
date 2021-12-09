@@ -257,7 +257,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
             for var, val in zip(MindtPy.variable_list, var_values):
                 if not var.is_binary():
                     continue
-                var.value = val
+                var.set_value(val, skip_validation=True)
 
             # check to make sure that binary variables are all 0 or 1
             for v in binary_vars:

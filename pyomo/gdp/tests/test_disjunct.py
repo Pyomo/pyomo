@@ -376,16 +376,18 @@ class TestAutoVars(unittest.TestCase):
         self.assertEqual(m.iv.value, True)
         self.assertEqual(m.biv.value, 1)
 
-        with self.assertRaisesRegex(
-                ValueError, r"Numeric value `0.5` \(float\) is not in "
-                r"domain Binary for Var biv"):
+        with LoggingIntercept() as LOG:
             m.biv.fix(0.5)
-        self.assertEqual(m.iv.value, True)
-        self.assertEqual(m.biv.value, 1)
-
-        m.biv.fix(0.5, True)
+        self.assertEqual(LOG.getvalue().strip(), "Setting Var 'biv' to a "
+                         "value `0.5` (float) not in domain Binary.")
         self.assertEqual(m.iv.value, None)
         self.assertEqual(m.biv.value, 0.5)
+
+        with LoggingIntercept() as LOG:
+            m.biv.fix(0.55, True)
+        self.assertEqual(LOG.getvalue().strip(), "")
+        self.assertEqual(m.iv.value, None)
+        self.assertEqual(m.biv.value, 0.55)
 
         m.biv.fix(0)
         self.assertEqual(m.iv.value, False)
@@ -394,16 +396,18 @@ class TestAutoVars(unittest.TestCase):
         eps = AutoLinkedBinaryVar.INTEGER_TOLERANCE / 10
 
         # Note that fixing to a near-True value will toggle the iv
-        with self.assertRaisesRegex(
-                ValueError, r"Numeric value `0.9+` \(float\) is not in "
-                r"domain Binary for Var biv"):
+        with LoggingIntercept() as LOG:
             m.biv.fix(1-eps)
-        self.assertEqual(m.iv.value, False)
-        self.assertEqual(m.biv.value, 0)
-
-        m.biv.fix(1-eps, True)
+        self.assertEqual(LOG.getvalue().strip(), "Setting Var 'biv' to a "
+                         "value `%s` (float) not in domain Binary." % (1-eps))
         self.assertEqual(m.iv.value, True)
         self.assertEqual(m.biv.value, 1-eps)
+
+        with LoggingIntercept() as LOG:
+            m.biv.fix(eps, True)
+        self.assertEqual(LOG.getvalue().strip(), "")
+        self.assertEqual(m.iv.value, False)
+        self.assertEqual(m.biv.value, eps)
 
         m.iv.fix(True)
         self.assertEqual(m.iv.value, True)

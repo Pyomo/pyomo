@@ -18,7 +18,7 @@ from weakref import ref as weakref_ref
 from pyomo.common.collections import Sequence
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
-from pyomo.common.modeling import NoArgumentGiven
+from pyomo.common.modeling import NoArgumentGiven, NOTSET
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.core.expr.numvalue import (
@@ -221,7 +221,7 @@ class _VarData(ComponentData, NumericValue):
     # Abstract Interface
     #
 
-    def set_value(self, val, valid=False):
+    def set_value(self, val, skip_validation=False):
         """Set the current variable value."""
         raise NotImplementedError
 
@@ -255,18 +255,28 @@ class _VarData(ComponentData, NumericValue):
         """Return the stale indicator for this variable."""
         raise NotImplementedError
 
-    def fix(self, value=NoArgumentGiven, valid=False):
+    def fix(self, value=NOTSET, skip_validation=False):
+        """Fix the value of this variable (treat as nonvariable)
+
+        This sets the `fixed` indicator to True.  If ``value`` is
+        provided, the value (and the ``skip_validation`` flag) are first
+        passed to :py:meth:`set_value()`.
+
         """
-        Set the fixed indicator to True. Value argument is optional,
-        indicating the variable should be fixed at its current value.
-        """
-        raise NotImplementedError
+        self.fixed = True
+        if value is not NOTSET:
+            self.set_value(value, skip_validation)
 
     def unfix(self):
-        """Sets the fixed indicator to False."""
-        raise NotImplementedError
+        """Unfix this varaible (treat as variable)
+
+        This sets the `fixed` indicator to False.
+
+        """
+        self.fixed = False
 
     def free(self):
+        """Alias for :py:meth:`unfix`"""
         return self.unfix()
 
 
@@ -350,7 +360,7 @@ class _GeneralVarData(_VarData):
     # Abstract Interface
     #
 
-    def set_value(self, val, valid=False):
+    def set_value(self, val, skip_validation=False):
         """Set the current variable value.
 
         Set the value of this variable.  The incoming value is converted
@@ -382,19 +392,20 @@ class _GeneralVarData(_VarData):
             else:
                 val = value(val)
 
-        if not valid:
+        if not skip_validation:
             if val not in self.domain:
-                # logger.warning(
-                raise ValueError("Numeric value `%s` (%s) is not in "
-                                 "domain %s for Var %s" %
-                                 (val, type(val).__name__,
-                                  self.domain, self.name))
+                logger.warning(
+                    "Setting Var '%s' to a value `%s` (%s) not in domain %s." %
+                    (self.name, val, type(val).__name__, self.domain),
+                    extra={'id':'W1001'},
+                )
             elif (self._lb is not None and val < value(self._lb)) or (
                     self._ub is not None and val > value(self._ub)):
-                pass
-                # logger.warning(
-                #     "Setting Var '%s' to a numeric value `%s` "
-                #     "outside the bounds %s." % (self.name, val, self.bounds))
+                logger.warning(
+                    "Setting Var '%s' to a numeric value `%s` "
+                    "outside the bounds %s." % (self.name, val, self.bounds),
+                    extra={'id':'W1002'},
+                )
 
         self._value = val
         self.stale = False
@@ -405,8 +416,7 @@ class _GeneralVarData(_VarData):
         return self._value
     @value.setter
     def value(self, val):
-        # TODO: this should be changed to use valid=False
-        self.set_value(val, True)
+        self.set_value(val)
 
     @property
     def domain(self):
@@ -419,8 +429,9 @@ class _GeneralVarData(_VarData):
         except:
             logger.error(
                 "%s is not a valid domain. Variable domains must be an "
-                "instance of a Pyomo Set or convertable to a Pyomo Set.  "
-                "Examples: NonNegativeReals, Integers, Binary" % (domain,))
+                "instance of a Pyomo Set or convertable to a Pyomo Set."
+                % (domain,),
+                extra={'id': 'E2001'})
             raise
 
     @_VarData.bounds.getter
@@ -523,22 +534,6 @@ class _GeneralVarData(_VarData):
     # fixed is an attribute
 
     # stale is an attribute
-
-    def fix(self, value=NoArgumentGiven, valid=False):
-        """Fix the value of this variable (treat as nonvariable)
-
-        This sets the `fixed` indicator to True.  If ``value`` is
-        provided, the value (and the ``valid`` flag) are first passed to
-        :py:meth:`set_value()`.
-
-        """
-        self.fixed = True
-        if value is not NoArgumentGiven:
-            self.set_value(value, valid)
-
-    def unfix(self):
-        """Sets the fixed indicator to False."""
-        self.fixed = False
 
     def _process_bound(self, val, bound_type):
         if type(val) in native_numeric_types or val is None:
@@ -653,7 +648,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
 
     extract_values = get_values
 
-    def set_values(self, new_values, valid=False):
+    def set_values(self, new_values, skip_validation=False):
         """
         Set the values of a dictionary.
 
@@ -661,7 +656,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         dictionary.
         """
         for index, new_value in new_values.items():
-            self[index].set_value(new_value, valid)
+            self[index].set_value(new_value, skip_validation)
 
     def get_units(self):
         """Return the units expression for this Var."""
@@ -701,7 +696,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                     "with 'dense=True'.  Reverting to 'dense=False' as "
                     "it is not possible to make this variable dense.  "
                     "This warning can be suppressed by specifying "
-                    "'dense=False'")
+                    "'dense=False'" % (self.name,))
                 self._dense = False
 
             if ( self._rule_init is not None and
@@ -804,6 +799,22 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
             obj.set_value(self._rule_init(parent, index))
         return obj
 
+    #
+    # Because we need to do more initialization than simply calling
+    # set_value(), we need to override _setitem_when_not_present
+    #
+    def _setitem_when_not_present(self, index, value=NOTSET):
+        if value is self.Skip:
+            return None
+        try:
+            obj = self._getitem_when_not_present(index)
+            if value is not NOTSET:
+                obj.set_value(value)
+        except:
+            self._data.pop(index, None)
+            raise
+        return obj
+
     def _pprint(self):
         """Print component information."""
         headers = [
@@ -867,20 +878,30 @@ class IndexedVar(Var):
         for vardata in self.values():
             vardata.upper = val
 
-    def fix(self, value=NoArgumentGiven):
-        """
-        Set the fixed indicator to True. Value argument is optional,
-        indicating the variable should be fixed at its current value.
+    def fix(self, value=NOTSET, skip_validation=False):
+        """Fix all variables in this IndexedVar (treat as nonvariable)
+
+        This sets the `fixed` indicator to True for every variable in
+        this IndexedVar.  If ``value`` is provided, the value (and the
+        ``skip_validation`` flag) are first passed to
+        :py:meth:`set_value()`.
+
         """
         for vardata in self.values():
-            vardata.fix(value=value)
+            vardata.fix(value, skip_validation)
 
     def unfix(self):
-        """Sets the fixed indicator to False."""
+        """Unfix all varaibles in this IndexedVar (treat as variable)
+
+        This sets the `fixed` indicator to False for every variable in
+        this IndexedVar.
+
+        """
         for vardata in self.values():
             vardata.unfix()
 
     def free(self):
+        """Alias for :py:meth:`unfix`"""
         return self.unfix()
 
     @property
@@ -907,9 +928,10 @@ class VarList(IndexedVar):
     Variable-length indexed variable objects used to construct Pyomo models.
     """
 
-    def __init__(self, **kwds):
+    def __init__(self, **kwargs):
+        self._starting_index = kwargs.pop('starting_index', 1)
         args = (Set(dimen=1),)
-        IndexedVar.__init__(self, *args, **kwds)
+        IndexedVar.__init__(self, *args, **kwargs)
 
     def construct(self, data=None):
         """Construct this component."""
@@ -930,11 +952,11 @@ class VarList(IndexedVar):
         # then let _validate_index complain when we set the value.
         if self._rule_init is not None and self._rule_init.contains_indices():
             for i, idx in enumerate(self._rule_init.indices()):
-                self._index.add(i+1)
+                self._index.add(i + self._starting_index)
         super(VarList,self).construct(data)
 
     def add(self):
         """Add a variable to this list."""
-        next_idx = len(self._index) + 1
+        next_idx = len(self._index) + self._starting_index
         self._index.add(next_idx)
         return self[next_idx]
