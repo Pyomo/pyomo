@@ -317,8 +317,8 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
                 try:
                     lower_slack = nlc.lslack()
                 except (ValueError, OverflowError):
-                    lower_slack = -10
-                    # Use not fixed numbers in this case. Try some factor of ecp_tolerance
+                    # Set lower_slack (upper_slack below) less than -config.ecp_tolerance in this case.
+                    lower_slack = -10*config.ecp_tolerance
                 if lower_slack < -config.ecp_tolerance:
                     config.logger.debug(
                         'MindtPy-ECP continuing as {} has not met the '
@@ -329,7 +329,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
                 try:
                     upper_slack = nlc.uslack()
                 except (ValueError, OverflowError):
-                    upper_slack = -10
+                    upper_slack = -10*config.ecp_tolerance
                 if upper_slack < -config.ecp_tolerance:
                     config.logger.debug(
                         'MindtPy-ECP continuing as {} has not met the '
